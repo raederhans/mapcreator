@@ -19,16 +19,22 @@ const translations = {
       "Build from a world state, reshape ownership and control, layer context, and export a map that can actually carry a story.",
     heroPrimaryCta: "Open live demo",
     heroSecondaryCta: "View on GitHub",
-    productPreviewLabel: "Scenario Forge product preview",
-    productStageLabel: "Scenario Forge / Live workspace",
+    productPreviewLabel: "Scenario Forge generated cartography preview",
+    productStageLabel: "Scenario Forge / Generated atlas",
+    heroChipsLabel: "Hero scenario style",
+    heroMapHudOne: "Political baseline",
+    heroMapHudTwo: "Routes + lights",
+    heroMapLegend: "Scenario layer stack",
     brandHomeLabel: "Scenario Forge home",
     primaryNavLabel: "Primary navigation",
     languageSwitcherLabel: "Language switcher",
     statsLabel: "Scenario Forge product statistics",
-    productPreviewAlt: "Scenario Forge editor showing a world political map with side panels and toolbars.",
-    workOneAlt: "A wide overview of Scenario Forge editing a global political scenario.",
-    workTwoAlt: "Scenario Forge combining political ownership with night lights and labels.",
-    workThreeAlt: "Scenario Forge showing multiple workspace UI panels for appearance, transport, color, and inspector controls.",
+    productPreviewAlt:
+      "Generated Scenario Forge political map with borders, routes, city lights, and country labels.",
+    workOneAlt:
+      "Generated Scenario Forge showcase map with political borders, route overlays, and scenario labels.",
+    workTwoAlt: "Generated Japan preview map with night-light context and transport cues.",
+    workThreeAlt: "Generated modern world scenario template map.",
     chipBlank: "Blank",
     chipModern: "Modern",
     chipHoi4: "HOI4 1939",
@@ -58,6 +64,12 @@ const translations = {
     workThreeTitle: "Push toward a cleaner, calmer final map.",
     workThreeBody:
       "Dial back the noise, tune the layer stack, and export a map that reads like a finished visual, not just an internal workspace snapshot.",
+    showcaseEyebrow: "Cartography showcase",
+    showcaseTitle:
+      "A scenario page should look like it already knows how maps behave.",
+    showcaseBody:
+      "The homepage now uses generated map assets from checked-in topology, transport, and city data so the product story starts with geography.",
+    showcaseAlt: "Scenario Forge generated final map showcase.",
     previewEyebrow: "Live product preview",
     previewTitle: "Use a real pilot dataset as the first thing people can touch.",
     previewBody:
@@ -167,6 +179,10 @@ const translations = {
     templateHoi4Title: "HOI4 1936 / 1939",
     templateTnoTag: "Alternate history",
     templateTnoTitle: "TNO 1962",
+    templateBlankAlt: "Generated blank map scenario template.",
+    templateModernAlt: "Generated modern world scenario template.",
+    templateHoi4Alt: "Generated strategy baseline scenario template.",
+    templateTnoAlt: "Generated alternate-history scenario template.",
     dataEyebrow: "Data foundation",
     dataTitle: "A map product needs visible data trust.",
     dataBody:
@@ -301,16 +317,20 @@ const translations = {
       "从一个世界状态出发，改归属、调图层、加地理背景，最后导出一张能直接用于展示的地图。",
     heroPrimaryCta: "打开在线 Demo",
     heroSecondaryCta: "查看 GitHub",
-    productPreviewLabel: "Scenario Forge 产品预览",
-    productStageLabel: "Scenario Forge / 实时工作台",
+    productPreviewLabel: "Scenario Forge 生成式制图预览",
+    productStageLabel: "Scenario Forge / 生成图集",
+    heroChipsLabel: "首屏场景风格",
+    heroMapHudOne: "政治基线",
+    heroMapHudTwo: "路线与夜光",
+    heroMapLegend: "场景图层栈",
     brandHomeLabel: "Scenario Forge 首页",
     primaryNavLabel: "主导航",
     languageSwitcherLabel: "语言切换",
     statsLabel: "Scenario Forge 产品数据",
-    productPreviewAlt: "Scenario Forge 编辑器界面，展示世界政治地图、侧边面板和工具栏。",
-    workOneAlt: "Scenario Forge 正在编辑全球政治场景的宽幅总览。",
-    workTwoAlt: "Scenario Forge 将政治归属、夜间灯光和标签叠加在一起。",
-    workThreeAlt: "Scenario Forge 展示外观、交通、颜色库和检查器等多个工作台界面选项。",
+    productPreviewAlt: "生成式 Scenario Forge 政治地图，包含边界、路线、城市灯光和国家标签。",
+    workOneAlt: "生成式 Scenario Forge 展示地图，包含政治边界、路线覆盖层和场景标签。",
+    workTwoAlt: "生成式日本预览图，展示夜光上下文和交通线索。",
+    workThreeAlt: "生成式现代世界场景模板地图。",
     chipBlank: "空白地图",
     chipModern: "现代世界",
     chipHoi4: "HOI4 1939",
@@ -335,6 +355,10 @@ const translations = {
     workThreeLabel: "Atlas 风格输出",
     workThreeTitle: "把工作台里的地图整理成成品。",
     workThreeBody: "减少视觉噪音，理清图层关系，再导出一张更像最终稿的地图。",
+    showcaseEyebrow: "制图展示",
+    showcaseTitle: "场景页面应该一眼看起来就懂地图。",
+    showcaseBody: "首页现在使用从入库拓扑、交通和城市数据生成的地图资产，让产品叙事从地理空间开始。",
+    showcaseAlt: "Scenario Forge 生成式最终地图展示。",
     previewEyebrow: "产品预览",
     previewTitle: "用日本数据包提供真实预览。",
     previewBody: "日本交通包是当前最完整的样例：道路和铁路预览已经入库，有数量统计，也能追到来源清单。",
@@ -417,6 +441,10 @@ const translations = {
     templateHoi4Title: "HOI4 1936 / 1939",
     templateTnoTag: "架空历史",
     templateTnoTitle: "TNO 1962",
+    templateBlankAlt: "生成式空白地图场景模板。",
+    templateModernAlt: "生成式现代世界场景模板。",
+    templateHoi4Alt: "生成式策略基线场景模板。",
+    templateTnoAlt: "生成式架空历史场景模板。",
     dataEyebrow: "数据基础",
     dataTitle: "数据可信度是产品能力的一部分。",
     dataBody: "Scenario Forge 会跟踪来源台账、资产目录、构建审计和溯源文件，让地图声明能够回到真实文件。",
@@ -572,6 +600,47 @@ function formatMetricNumbers(language) {
   });
 }
 
+function initMetricCountUp() {
+  const motionQuery = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
+  const statNodes = Array.from(document.querySelectorAll("[data-stat-value]"));
+  if (motionQuery?.matches || !statNodes.length) return;
+
+  const animateNode = (node) => {
+    const target = Number.parseInt(node.getAttribute("data-stat-value") || "", 10);
+    if (Number.isNaN(target) || node.dataset.counted === "true") return;
+    node.dataset.counted = "true";
+    const language = document.documentElement.lang === "zh-CN" ? "zh" : "en";
+    const formatter = new Intl.NumberFormat(language === "zh" ? "zh-CN" : "en-US");
+    const duration = 760;
+    const start = globalThis.performance?.now?.() || Date.now();
+    const tick = (now) => {
+      const elapsed = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+      node.textContent = formatter.format(Math.round(target * eased));
+      if (elapsed < 1) globalThis.requestAnimationFrame(tick);
+    };
+    globalThis.requestAnimationFrame(tick);
+  };
+
+  if (!("IntersectionObserver" in globalThis)) {
+    statNodes.forEach(animateNode);
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        animateNode(entry.target);
+        observer.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.4 },
+  );
+
+  statNodes.forEach((node) => observer.observe(node));
+}
+
 function initScrollReveal() {
   const motionQuery = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
   if (motionQuery?.matches) return;
@@ -598,6 +667,36 @@ function initScrollReveal() {
   );
 
   revealNodes.forEach((node) => observer.observe(node));
+}
+
+function initHeroMap() {
+  const root = document.querySelector("[data-hero-map]");
+  const chips = Array.from(document.querySelectorAll("[data-hero-chip]"));
+  if (!root || !chips.length) return;
+
+  const setMode = (mode) => {
+    root.dataset.heroMode = mode;
+    chips.forEach((chip) => {
+      const active = chip.getAttribute("data-hero-chip") === mode;
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
+
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      setMode(chip.getAttribute("data-hero-chip") || "modern");
+    });
+  });
+}
+
+function initTopbarState() {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) return;
+  const update = () => {
+    topbar.classList.toggle("is-scrolled", globalThis.scrollY > 12);
+  };
+  update();
+  globalThis.addEventListener("scroll", update, { passive: true });
 }
 
 function initPreviewTabs() {
@@ -653,5 +752,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
   initPreviewTabs();
+  initHeroMap();
+  initTopbarState();
+  initMetricCountUp();
   initScrollReveal();
 });

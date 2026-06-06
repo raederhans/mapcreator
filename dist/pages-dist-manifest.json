@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36506,7 +36506,7 @@
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
-      "size_bytes": 23196
+      "size_bytes": 23379
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
@@ -36962,7 +36962,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_border_owner.js",
-      "size_bytes": 8670
+      "size_bytes": 9038
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_descriptor.js",
@@ -36970,7 +36970,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 12497
+      "size_bytes": 13009
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
@@ -37010,7 +37010,7 @@
     },
     {
       "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-      "size_bytes": 4433
+      "size_bytes": 4918
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -37194,11 +37194,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 36893
+      "size_bytes": 40829
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37221,8 +37221,32 @@
       "size_bytes": 832
     },
     {
+      "path": "assets/hero-cartography.svg",
+      "size_bytes": 64137
+    },
+    {
+      "path": "assets/japan-preview-cities.svg",
+      "size_bytes": 18211
+    },
+    {
+      "path": "assets/japan-preview-night.svg",
+      "size_bytes": 18263
+    },
+    {
+      "path": "assets/japan-preview-terrain.svg",
+      "size_bytes": 18200
+    },
+    {
+      "path": "assets/japan-preview-transport.svg",
+      "size_bytes": 18257
+    },
+    {
       "path": "assets/night-lights-political.webp",
       "size_bytes": 52610
+    },
+    {
+      "path": "assets/showcase-final-map.svg",
+      "size_bytes": 31074
     },
     {
       "path": "assets/social-preview.png",
@@ -37233,20 +37257,36 @@
       "size_bytes": 1513
     },
     {
+      "path": "assets/template-blank.svg",
+      "size_bytes": 31056
+    },
+    {
+      "path": "assets/template-hoi4.svg",
+      "size_bytes": 31054
+    },
+    {
+      "path": "assets/template-modern.svg",
+      "size_bytes": 31058
+    },
+    {
+      "path": "assets/template-tno.svg",
+      "size_bytes": 31052
+    },
+    {
       "path": "assets/workspace-overview.webp",
       "size_bytes": 79108
     },
     {
       "path": "index.html",
-      "size_bytes": 42534
+      "size_bytes": 42614
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1052227
+      "size_bytes": 1053078
     },
     {
       "path": "styles.css",
-      "size_bytes": 28336
+      "size_bytes": 29606
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37259,5 +37299,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109175251
+  "total_bytes": 1109475507
 }

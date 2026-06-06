@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LANDING_INDEX = REPO_ROOT / "landing" / "index.html"
 LANDING_APP_JS = REPO_ROOT / "landing" / "app.js"
 LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
+LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
@@ -30,6 +31,28 @@ class PagesDistStartupShellTest(unittest.TestCase):
             DIST_MANIFEST.exists(),
             "dist/pages-dist-manifest.json is a checked-in Pages dist contract",
         )
+
+    def test_landing_generated_cartography_assets_exist(self) -> None:
+        for asset_name in (
+            "hero-cartography.svg",
+            "showcase-final-map.svg",
+            "japan-preview-transport.svg",
+            "japan-preview-cities.svg",
+            "japan-preview-terrain.svg",
+            "japan-preview-night.svg",
+            "template-blank.svg",
+            "template-modern.svg",
+            "template-hoi4.svg",
+            "template-tno.svg",
+        ):
+            with self.subTest(asset_name=asset_name):
+                asset = LANDING_ASSETS / asset_name
+                self.assertTrue(asset.exists(), f"{asset_name} should be checked in for Pages")
+                text = asset.read_text(encoding="utf-8")
+                self.assertIn("<svg", text)
+                self.assertIn("viewBox", text)
+                self.assertIn("<path", text)
+                self.assertLess(asset.stat().st_size, 220_000)
 
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
@@ -121,12 +144,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            './assets/hero-cartography.svg',
+            'data-hero-map',
+            'data-hero-chip="modern"',
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
+            'data-i18n="showcaseEyebrow"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
+            'data-preview-image="transport"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
+            './assets/template-modern.svg',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
             'data-i18n="casesEyebrow"',
@@ -158,7 +187,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "formatMetricNumbers",
             "statsLabel",
             "sourcesEyebrow",
+            "showcaseEyebrow",
             "initPreviewTabs",
+            "initHeroMap",
+            "initMetricCountUp",
             "previewPanelTransportTitle",
             "dataCardOneTitle",
             "editionOneTitle",
@@ -167,6 +199,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
+            "heroChipsLabel",
             "brandHomeLabel",
             "languageSwitcherLabel",
             "productPreviewAlt",
@@ -180,6 +213,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertIn('html[data-reveal="enabled"]', styles_css)
         self.assertIn(".is-revealed", styles_css)
+        self.assertIn(".hero-cartography", styles_css)
+        self.assertIn("[data-preview-image=\"transport\"]", styles_css)
+        self.assertIn(".showcase-section", styles_css)
         self.assertRegex(
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
@@ -208,6 +244,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "roadmapOneTitle:",
             "roadmapTwoTitle:",
             "templatesTitle:",
+            "showcaseTitle:",
+            "templateModernAlt:",
             "updatesTitle:",
         ):
             with self.subTest(expected_fragment=expected_fragment):
@@ -228,6 +266,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "roadmapTwoTitle:",
             "ctaBody:",
             "templatesTitle:",
+            "showcaseTitle:",
+            "templateModernAlt:",
             "updatesTitle:",
             'metaTitle: "Scenario Forge — 场景优先政治地图工作台"',
         ):
@@ -256,12 +296,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            './assets/hero-cartography.svg',
+            'data-hero-map',
+            'data-hero-chip="modern"',
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
+            'data-i18n="showcaseEyebrow"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
+            'data-preview-image="transport"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
+            './assets/template-modern.svg',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
             'data-i18n="casesEyebrow"',
@@ -295,7 +341,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "formatMetricNumbers",
             "statsLabel",
             "sourcesEyebrow",
+            "showcaseEyebrow",
             "initPreviewTabs",
+            "initHeroMap",
+            "initMetricCountUp",
             "previewPanelTransportTitle",
             "dataCardOneTitle",
             "faqOneQuestion",
@@ -305,6 +354,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "updatesEyebrow",
             "productPreviewLabel",
             "productStageLabel",
+            "heroChipsLabel",
             "brandHomeLabel",
             "languageSwitcherLabel",
             "productPreviewAlt",
@@ -322,6 +372,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
+        self.assertIn(".hero-cartography", styles_css)
+        self.assertIn("[data-preview-image=\"transport\"]", styles_css)
+        self.assertIn(".showcase-section", styles_css)
         self.assertRegex(
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
@@ -373,8 +426,21 @@ class PagesDistStartupShellTest(unittest.TestCase):
         expected_hgo_runtime_paths = tuple(
             f"app/data/hgo_runtime/{file_name}" for file_name in build_pages_dist.HGO_RUNTIME_FILES
         )
+        expected_landing_asset_paths = (
+            "assets/hero-cartography.svg",
+            "assets/showcase-final-map.svg",
+            "assets/japan-preview-transport.svg",
+            "assets/japan-preview-cities.svg",
+            "assets/japan-preview-terrain.svg",
+            "assets/japan-preview-night.svg",
+            "assets/template-blank.svg",
+            "assets/template-modern.svg",
+            "assets/template-hoi4.svg",
+            "assets/template-tno.svg",
+        )
         for expected_path in (
             "index.html",
+            *expected_landing_asset_paths,
             "app/index.html",
             ".nojekyll",
             "app/js/main.js",
