@@ -55,6 +55,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("<path", text)
                 size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
                 self.assertLess(asset.stat().st_size, size_limit)
+                if asset_name == "europe-1936-showcase.svg":
+                    self.assertIn('data-showcase-viewport="true"', text)
+                    self.assertNotIn("data-showcase-viewport transform=", text)
 
     def test_landing_europe_1936_showcase_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
@@ -253,15 +256,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-showcase-root',
             'data-showcase-object',
             'id="showcase-map-object"',
-            'data-showcase-view-controls',
-            'data-showcase-view-action="zoom-in"',
-            'data-showcase-view-action="zoom-out"',
-            'data-showcase-view-action="pan-left"',
-            'data-showcase-view-action="pan-right"',
-            'data-showcase-view-action="pan-up"',
-            'data-showcase-view-action="pan-down"',
-            'data-showcase-view-action="reset"',
-            'data-i18n="showcaseViewResetShort"',
             'role="tabpanel"',
             'id="showcase-layer-panel"',
             'aria-controls="showcase-layer-panel"',
@@ -323,7 +317,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerError",
             "setShowcaseSvgLayer",
             "SHOWCASE_VIEW_SCALES",
-            "SHOWCASE_VIEW_PAN_STEP",
             "data-showcase-viewport",
             "showcaseViewZoomed",
             "clampShowcaseViewPosition",
@@ -331,6 +324,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "initShowcaseView",
             "pointerdown",
             "wheel",
+            "dblclick",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -367,8 +361,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
-        self.assertIn(".showcase-map__controls", styles_css)
-        self.assertIn("[data-showcase-view-action=\"reset\"]", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn("[data-showcase-object]", app_js)
         self.assertNotIn("SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political", app_js)
@@ -376,6 +368,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".showcase-map__object", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)
+        self.assertNotIn("data-showcase-view-controls", html)
+        self.assertNotIn("data-showcase-view-action", html)
+        self.assertNotIn("SHOWCASE_VIEW_PAN_STEP", app_js)
+        self.assertNotIn(".showcase-map__controls", styles_css)
         self.assertRegex(
             styles_css,
             re.compile(r"\.work-card__media img\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;", re.S),
@@ -407,8 +403,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
-            "showcaseViewControlsLabel:",
-            "showcaseViewResetShort:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
@@ -435,8 +429,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
-            "showcaseViewControlsLabel:",
-            "showcaseViewResetShort:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
@@ -512,9 +504,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             './assets/europe-1936-showcase.json',
             'data-showcase-root',
             'data-showcase-object',
-            'data-showcase-view-controls',
-            'data-showcase-view-action="zoom-in"',
-            'data-showcase-view-action="reset"',
             'data-showcase-layer-tab="political"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
@@ -565,6 +554,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "SHOWCASE_VIEW_SCALES",
             "showcaseViewZoomed",
             "clampShowcaseViewPosition",
+            "dblclick",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -597,9 +587,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
-        self.assertIn(".showcase-map__controls", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn(".showcase-map__object", styles_css)
+        self.assertNotIn(".showcase-map__controls", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)
         self.assertRegex(

@@ -39,7 +39,7 @@
     </style>
   </defs>
   <rect width="980" height="620" rx="28" fill="url(#seaGlow)" />
-  <g class="viewport" data-showcase-viewport transform="translate(0 0) scale(1)">
+  <g class="viewport" data-showcase-viewport="true" transform="translate(0 0) scale(1)">
   <g class="graticule" aria-hidden="true">
       <path d="M218.1 554.8 L361.2 53.6" />
       <path d="M329.2 576.7 L401.2 62.6" />

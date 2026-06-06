@@ -299,3 +299,6 @@
 
 ### tracked runtime state 要单独出提交路径
 - `.omx/` 这类已被 ignore 的运行态目录如果历史上仍有 tracked 文件，closeout 时先用 diff 判断是否只有计数和时间戳；这类本地状态用命名 stash 保存，产品提交只保留可复核的项目证据。
+
+### 嵌入式 SVG 交互要同时锁 XML 和行为
+- 通过 `<object type="image/svg+xml">` 嵌入的 SVG 走 XML 解析，自定义 `data-*` 属性必须写成带值形式；展示图缩放、拖拽、复位这类交互要有轻量行为测试覆盖。

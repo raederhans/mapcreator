@@ -482,7 +482,7 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
     </style>
   </defs>
   <rect width="{canvas.width}" height="{canvas.height}" rx="28" fill="url(#seaGlow)" />
-  <g class="viewport" data-showcase-viewport transform="translate(0 0) scale(1)">
+  <g class="viewport" data-showcase-viewport="true" transform="translate(0 0) scale(1)">
   <g class="graticule" aria-hidden="true">
       {graticule(canvas)}
   </g>

@@ -96,15 +96,6 @@ const translations = {
     showcaseMeta:
       "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail data.",
     showcaseMetaLink: "View layer data",
-    showcaseViewControlsLabel: "Map view controls",
-    showcaseViewZoomIn: "Zoom in",
-    showcaseViewZoomOut: "Zoom out",
-    showcaseViewPanLeft: "Pan left",
-    showcaseViewPanRight: "Pan right",
-    showcaseViewPanUp: "Pan up",
-    showcaseViewPanDown: "Pan down",
-    showcaseViewReset: "Reset map view",
-    showcaseViewResetShort: "Reset",
     previewEyebrow: "Live product preview",
     previewTitle: "Preview real transport layers before opening the editor.",
     previewBody:
@@ -414,15 +405,6 @@ const translations = {
     showcaseLayerScenarioBody: "焦点标记让访客进入完整编辑器之前，就能先看懂政治地图的主线。",
     showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路数据生成。",
     showcaseMetaLink: "查看图层数据",
-    showcaseViewControlsLabel: "地图视图控制",
-    showcaseViewZoomIn: "放大",
-    showcaseViewZoomOut: "缩小",
-    showcaseViewPanLeft: "向左平移",
-    showcaseViewPanRight: "向右平移",
-    showcaseViewPanUp: "向上平移",
-    showcaseViewPanDown: "向下平移",
-    showcaseViewReset: "重置地图视图",
-    showcaseViewResetShort: "重置",
     previewEyebrow: "产品预览",
     previewTitle: "进入编辑器之前，先预览真实交通图层。",
     previewBody: "日本视图可以在道路、铁路、城市、地形和夜光之间切换，让用户先看到地图能表达什么。",
@@ -625,7 +607,6 @@ const DEFAULT_SHOWCASE_LAYER = "political";
 const SHOWCASE_VIEW_WIDTH = 980;
 const SHOWCASE_VIEW_HEIGHT = 620;
 const SHOWCASE_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.3];
-const SHOWCASE_VIEW_PAN_STEP = 58;
 
 function getStoredLanguage() {
   try {
@@ -891,15 +872,6 @@ function zoomShowcaseView(root, direction) {
   });
 }
 
-function panShowcaseView(root, deltaX, deltaY) {
-  const state = getShowcaseViewState(root);
-  applyShowcaseViewState(root, {
-    scaleIndex: state.scaleIndex,
-    x: state.x + deltaX,
-    y: state.y + deltaY,
-  });
-}
-
 function resetShowcaseView(root) {
   applyShowcaseViewState(root, { scaleIndex: 0, x: 0, y: 0 });
 }
@@ -909,23 +881,11 @@ function initShowcaseView() {
   if (!root) return;
 
   const objectNode = root.querySelector("[data-showcase-object]");
-  const controls = Array.from(root.querySelectorAll("[data-showcase-view-action]"));
-  if (!objectNode || !controls.length) return;
+  if (!objectNode) return;
 
   let dragState = null;
 
-  const handleAction = (action) => {
-    if (action === "zoom-in") zoomShowcaseView(root, 1);
-    if (action === "zoom-out") zoomShowcaseView(root, -1);
-    if (action === "pan-left") panShowcaseView(root, SHOWCASE_VIEW_PAN_STEP, 0);
-    if (action === "pan-right") panShowcaseView(root, -SHOWCASE_VIEW_PAN_STEP, 0);
-    if (action === "pan-up") panShowcaseView(root, 0, SHOWCASE_VIEW_PAN_STEP);
-    if (action === "pan-down") panShowcaseView(root, 0, -SHOWCASE_VIEW_PAN_STEP);
-    if (action === "reset") resetShowcaseView(root);
-  };
-
   const onWheel = (event) => {
-    if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     zoomShowcaseView(root, event.deltaY < 0 ? 1 : -1);
   };
@@ -970,17 +930,15 @@ function initShowcaseView() {
     svg.addEventListener("pointermove", onPointerMove);
     svg.addEventListener("pointerup", onPointerEnd);
     svg.addEventListener("pointercancel", onPointerEnd);
+    svg.addEventListener("dblclick", () => resetShowcaseView(root));
   };
-
-  controls.forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.getAttribute("data-showcase-view-action") || ""));
-  });
 
   objectNode.addEventListener("wheel", onWheel, { passive: false });
   objectNode.addEventListener("pointerdown", onPointerDown);
   objectNode.addEventListener("pointermove", onPointerMove);
   objectNode.addEventListener("pointerup", onPointerEnd);
   objectNode.addEventListener("pointercancel", onPointerEnd);
+  objectNode.addEventListener("dblclick", () => resetShowcaseView(root));
   objectNode.addEventListener("load", bindEmbeddedSvg);
   resetShowcaseView(root);
   bindEmbeddedSvg();

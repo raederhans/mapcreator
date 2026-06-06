@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 55368
+      "size_bytes": 53695
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37218,7 +37218,7 @@
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 114803
+      "size_bytes": 114810
     },
     {
       "path": "assets/favicon.png",
@@ -37286,7 +37286,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 50550
+      "size_bytes": 49006
     },
     {
       "path": "pages-dist-manifest.json",
@@ -37294,7 +37294,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 34282
+      "size_bytes": 33230
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37307,5 +37307,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109625156
+  "total_bytes": 1109620894
 }
