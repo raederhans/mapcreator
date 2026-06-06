@@ -149,6 +149,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-hero-chip="modern"',
             'data-stat-value="21338"',
             'data-i18n="sourcesEyebrow"',
+            'class="source-marquee"',
+            'class="source-marquee__track"',
+            'aria-hidden="true"',
             'href="https://github.com/nvkelso/natural-earth-vector"',
             'href="https://github.com/wmgeolab/geoBoundaries"',
             'href="https://download.geonames.org/export/dump/"',
@@ -157,6 +160,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'href="https://planet.openstreetmap.org/"',
             'href="https://download.geofabrik.de/"',
             'href="https://nlftp.mlit.go.jp/ksj/index.html"',
+            'href="https://www.usgs.gov/programs/mineral-resources-program/mineral-resources-data"',
+            'href="https://www.data.gouv.fr/"',
+            'href="https://docs.camino.beta.gouv.fr/qgis/"',
+            'href="https://www.data.gouv.fr/datasets/base-de-donnees-des-installations-terminales-embranchees-fret-en-france-ite-3000"',
+            'href="https://railroads.dot.gov/maps-and-data/maps-geographic-information-system/maps-geographic-information-system"',
+            'href="https://www.opendatani.gov.uk/"',
+            'href="https://data-portal.networkrail.co.uk/"',
+            'href="https://www.data.gov.uk/dataset/naptan"',
             'data-i18n="showcaseEyebrow"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
@@ -224,6 +235,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("prefers-reduced-motion", styles_css)
         self.assertIn('html[data-reveal="enabled"]', styles_css)
         self.assertIn(".is-revealed", styles_css)
+        self.assertIn(".source-marquee__track", styles_css)
+        self.assertIn("@keyframes sourceMarquee", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)

@@ -575,15 +575,38 @@ a.button {
   padding-bottom: 66px;
 }
 
+.source-marquee {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 2px 0 8px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.source-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: sourceMarquee 54s linear infinite;
+}
+
+.source-marquee:hover .source-marquee__track,
+.source-marquee:focus-within .source-marquee__track {
+  animation-play-state: paused;
+}
+
 .source-strip {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
   gap: 10px;
+  padding-right: 10px;
 }
 
 .source-strip a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: 0 0 176px;
   min-height: 46px;
   padding: 0 16px;
   border: 1px solid rgba(7, 17, 31, 0.1);
@@ -591,6 +614,7 @@ a.button {
   background: rgba(255, 255, 255, 0.82);
   color: var(--text-primary);
   font-weight: 800;
+  white-space: nowrap;
   box-shadow: 0 10px 26px rgba(7, 17, 31, 0.05);
   text-decoration: none;
   transition:
@@ -609,6 +633,16 @@ a.button {
 .source-strip a:focus-visible {
   outline: 3px solid rgba(45, 127, 205, 0.32);
   outline-offset: 3px;
+}
+
+@keyframes sourceMarquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .works-grid--bento {
