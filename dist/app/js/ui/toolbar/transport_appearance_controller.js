@@ -3,6 +3,7 @@ import {
   resolveLinkedTransportOverviewScopeAndThreshold,
 } from "../../core/state.js";
 import {
+  getTransportOverviewDataLayerKeys,
   normalizeTransportOverviewVisualMode,
 } from "../../core/transport_capability_registry.js";
 import {
@@ -177,6 +178,20 @@ export function createTransportAppearanceController({
     renderTransportAppearanceUi();
   };
 
+  const getTransportOverviewDataLayerRequest = (familyId) => {
+    const layerKeys = getTransportOverviewDataLayerKeys(familyId);
+    if (layerKeys.length === 0) return null;
+    return layerKeys.length === 1 ? layerKeys[0] : layerKeys;
+  };
+
+  const requestTransportOverviewDataLayers = (familyId, reason, { renderNow = true } = {}) => {
+    const layerRequest = getTransportOverviewDataLayerRequest(familyId);
+    if (!layerRequest || typeof runtimeState.ensureContextLayerDataFn !== "function") return null;
+    return runtimeState.ensureContextLayerDataFn(layerRequest, { reason, renderNow })
+      .then(renderTransportAppearanceUi)
+      .catch(refreshTransportAppearanceUiAfterLayerLoad(familyId));
+  };
+
   const setTransportAppearanceGroupEnabled = (container, enabled) => {
     if (!(container instanceof HTMLElement)) return;
     container.classList.toggle("opacity-60", !enabled);
@@ -348,25 +363,17 @@ export function createTransportAppearanceController({
     if (normalized && hasVisibleTransportFamily()) {
       runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");
     }
-    if (normalized && runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("airports", { reason: "transport-master-toggle", renderNow: true })
-        .then(renderTransportAppearanceUi)
-        .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
+    if (normalized && runtimeState.showAirports) {
+      void requestTransportOverviewDataLayers("airport", "transport-master-toggle");
     }
-    if (normalized && runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("ports", { reason: "transport-master-toggle", renderNow: true })
-        .then(renderTransportAppearanceUi)
-        .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
+    if (normalized && runtimeState.showPorts) {
+      void requestTransportOverviewDataLayers("port", "transport-master-toggle");
     }
-    if (normalized && runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "transport-master-toggle", renderNow: true })
-        .then(renderTransportAppearanceUi)
-        .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
+    if (normalized && runtimeState.showRail) {
+      void requestTransportOverviewDataLayers("rail", "transport-master-toggle");
     }
-    if (normalized && runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-      void runtimeState.ensureContextLayerDataFn("roads", { reason: "transport-master-toggle", renderNow: true })
-        .then(renderTransportAppearanceUi)
-        .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
+    if (normalized && runtimeState.showRoad) {
+      void requestTransportOverviewDataLayers("road", "transport-master-toggle");
     }
     renderTransportAppearanceDirty("toggle-transport-overview");
   };
@@ -416,10 +423,8 @@ export function createTransportAppearanceController({
         if (runtimeState.showAirports) {
           releaseDeferredContextForTransportToggle("toggle-airports");
         }
-        if (runtimeState.showAirports && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("airports", { reason: "toolbar-toggle", renderNow: true })
-            .then(renderTransportAppearanceUi)
-            .catch(refreshTransportAppearanceUiAfterLayerLoad("airports"));
+        if (runtimeState.showAirports) {
+          void requestTransportOverviewDataLayers("airport", "toolbar-toggle");
         }
         renderTransportAppearanceDirty("toggle-airports");
       });
@@ -434,10 +439,8 @@ export function createTransportAppearanceController({
         if (runtimeState.showPorts) {
           releaseDeferredContextForTransportToggle("toggle-ports");
         }
-        if (runtimeState.showPorts && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("ports", { reason: "toolbar-toggle", renderNow: true })
-            .then(renderTransportAppearanceUi)
-            .catch(refreshTransportAppearanceUiAfterLayerLoad("ports"));
+        if (runtimeState.showPorts) {
+          void requestTransportOverviewDataLayers("port", "toolbar-toggle");
         }
         renderTransportAppearanceDirty("toggle-ports");
       });
@@ -452,10 +455,8 @@ export function createTransportAppearanceController({
         if (runtimeState.showRail) {
           releaseDeferredContextForTransportToggle("toggle-rail");
         }
-        if (runtimeState.showRail && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"], { reason: "toolbar-toggle", renderNow: true })
-            .then(renderTransportAppearanceUi)
-            .catch(refreshTransportAppearanceUiAfterLayerLoad("rail"));
+        if (runtimeState.showRail) {
+          void requestTransportOverviewDataLayers("rail", "toolbar-toggle");
         }
         renderTransportAppearanceDirty("toggle-rail");
       });
@@ -470,10 +471,8 @@ export function createTransportAppearanceController({
         if (runtimeState.showRoad) {
           releaseDeferredContextForTransportToggle("toggle-road");
         }
-        if (runtimeState.showRoad && typeof runtimeState.ensureContextLayerDataFn === "function") {
-          void runtimeState.ensureContextLayerDataFn("roads", { reason: "toolbar-toggle", renderNow: true })
-            .then(renderTransportAppearanceUi)
-            .catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));
+        if (runtimeState.showRoad) {
+          void requestTransportOverviewDataLayers("road", "toolbar-toggle");
         }
         renderTransportAppearanceDirty("toggle-road");
       });

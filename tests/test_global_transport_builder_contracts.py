@@ -656,7 +656,8 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('showRail', appearance_controller_content)
         self.assertIn('showRail', renderer_content)
         self.assertIn('showRail', file_manager_content)
-        self.assertIn('showRail', interaction_content)
+        self.assertIn('const visibilityField = getTransportOverviewVisibilityField(familyId);', interaction_content)
+        self.assertIn('const layerRequest = getContextLayerRequestFromKeys(getTransportOverviewDataLayerKeys(familyId));', interaction_content)
         self.assertIn('data.layerVisibility.showRail', file_manager_content)
         self.assertIn('restoreImportedLayerVisibilityState(state, data.layerVisibility);', interaction_content)
         self.assertIn('showRail: !!layerVisibility.showRail', state_content)
@@ -676,10 +677,14 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('showRoad', renderer_content)
         self.assertIn('layerName === "roads"', data_loader_content)
         self.assertIn('showRoad', file_manager_content)
-        self.assertIn('showRoad', interaction_content)
+        self.assertIn('const visibilityField = getTransportOverviewVisibilityField(familyId);', interaction_content)
+        self.assertIn('const layerRequest = getContextLayerRequestFromKeys(getTransportOverviewDataLayerKeys(familyId));', interaction_content)
         self.assertIn('data.layerVisibility.showRoad', file_manager_content)
         self.assertIn('showRoad: !!layerVisibility.showRoad', state_content)
-        self.assertIn('callRuntimeHook(state, "ensureContextLayerDataFn", "roads"', interaction_content)
+        self.assertIn('getTransportOverviewVisibilityField,', interaction_content)
+        self.assertIn('getTransportOverviewDataLayerKeys,', interaction_content)
+        self.assertIn('listTransportOverviewCapabilityFamilyIds,', interaction_content)
+        self.assertIn('await restoreImportedTransportOverviewDataLayers(state);', interaction_content)
 
     def test_transport_toggles_release_deferred_context_markers(self) -> None:
         appearance_controller_content = (
@@ -700,7 +705,11 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('if (normalized && hasVisibleTransportFamily()) {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");', appearance_controller_content)
         self.assertIn('reason === "hidden"', appearance_transport_summary_content)
-        self.assertIn('.catch(refreshTransportAppearanceUiAfterLayerLoad("roads"));', appearance_controller_content)
+        self.assertIn('getTransportOverviewDataLayerKeys,', appearance_controller_content)
+        self.assertIn('const getTransportOverviewDataLayerRequest = (familyId) => {', appearance_controller_content)
+        self.assertIn('const layerKeys = getTransportOverviewDataLayerKeys(familyId);', appearance_controller_content)
+        self.assertIn('const requestTransportOverviewDataLayers = (familyId, reason, { renderNow = true } = {}) => {', appearance_controller_content)
+        self.assertIn('runtimeState.ensureContextLayerDataFn(layerRequest, { reason, renderNow })', appearance_controller_content)
         self.assertIn('const releaseDeferredContextForTransportToggle = (reason) => {', appearance_controller_content)
         self.assertIn('runtimeState.releaseDeferredContextBasePassFn?.(reason);', appearance_controller_content)
         for reason in ("toggle-airports", "toggle-ports", "toggle-rail", "toggle-road"):
@@ -708,24 +717,24 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         toggle_expectations = {
             "toggleAirports.addEventListener": (
                 'releaseDeferredContextForTransportToggle("toggle-airports");',
-                'runtimeState.ensureContextLayerDataFn("airports"',
+                'requestTransportOverviewDataLayers("airport", "toolbar-toggle");',
             ),
             "togglePorts.addEventListener": (
                 'releaseDeferredContextForTransportToggle("toggle-ports");',
-                'runtimeState.ensureContextLayerDataFn("ports"',
+                'requestTransportOverviewDataLayers("port", "toolbar-toggle");',
             ),
             "toggleRail.addEventListener": (
                 'releaseDeferredContextForTransportToggle("toggle-rail");',
-                'runtimeState.ensureContextLayerDataFn(["railways", "rail_stations_major"]',
+                'requestTransportOverviewDataLayers("rail", "toolbar-toggle");',
             ),
             "toggleRoad.addEventListener": (
                 'releaseDeferredContextForTransportToggle("toggle-road");',
-                'runtimeState.ensureContextLayerDataFn("roads"',
+                'requestTransportOverviewDataLayers("road", "toolbar-toggle");',
             ),
         }
-        for anchor, (release_token, ensure_token) in toggle_expectations.items():
+        for anchor, (release_token, request_token) in toggle_expectations.items():
             section = appearance_controller_content.split(anchor, 1)[1].split("});", 1)[0]
-            self.assertLess(section.index(release_token), section.index(ensure_token))
+            self.assertLess(section.index(release_token), section.index(request_token))
 
     def test_rail_runtime_loader_uses_catalog_not_eager_pack(self) -> None:
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
@@ -740,11 +749,14 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('getTransportOverviewDataLayerKeys(familyId)', data_loader_content)
         self.assertIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES.has(name)', data_loader_content)
         self.assertIn('rail: Object.freeze(["railways", "rail_stations_major"])', registry_content)
+        self.assertIn('getTransportOverviewDataLayerKeys,', appearance_controller_content)
+        self.assertIn('const layerKeys = getTransportOverviewDataLayerKeys(familyId);', appearance_controller_content)
+        self.assertIn('getTransportOverviewDataLayerKeys,', (REPO_ROOT / 'js' / 'core' / 'interaction_funnel.js').read_text(encoding='utf-8'))
+        self.assertIn('const layerRequest = getContextLayerRequestFromKeys(getTransportOverviewDataLayerKeys(familyId));', (REPO_ROOT / 'js' / 'core' / 'interaction_funnel.js').read_text(encoding='utf-8'))
         default_eager_section = data_loader_content.split('if (includeContextLayers === true) {', 1)[1].split('}', 1)[0]
         self.assertIn('Object.keys(CONTEXT_LAYER_PACKS)', default_eager_section)
         self.assertNotIn('EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES', default_eager_section)
-        self.assertIn('["railways", "rail_stations_major"]', appearance_controller_content)
-        self.assertIn('["railways", "rail_stations_major"]', (REPO_ROOT / 'js' / 'core' / 'interaction_funnel.js').read_text(encoding='utf-8'))
+        self.assertIn('["railways", "rail_stations_major"]', registry_content)
 
     def test_road_runtime_loader_uses_catalog_roads_only(self) -> None:
         data_loader_content = (REPO_ROOT / 'js' / 'core' / 'data_loader.js').read_text(encoding='utf-8')
@@ -995,8 +1007,10 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('showRoad: !!appState.showRoad', file_manager_content)
         self.assertIn('data.layerVisibility.showRoad === undefined ? false : !!data.layerVisibility.showRoad', file_manager_content)
         self.assertIn('showRoad: !!layerVisibility.showRoad', ui_state_content)
-        self.assertIn('if (state.showTransport && state.showRoad) {', interaction_content)
-        self.assertIn('callRuntimeHook(state, "ensureContextLayerDataFn", "roads"', interaction_content)
+        self.assertIn('async function restoreImportedTransportOverviewDataLayers(importState) {', interaction_content)
+        self.assertIn('if (!importState.showTransport) return;', interaction_content)
+        self.assertIn('const visibilityField = getTransportOverviewVisibilityField(familyId);', interaction_content)
+        self.assertIn('if (!visibilityField || !importState[visibilityField]) continue;', interaction_content)
         self.assertIn('applyCompatibility: TRANSPORT_CAPABILITY_APPLY_COMPATIBILITY.mainMapBridge', registry_content)
         self.assertIn('function getTransportWorkbenchActivePackBridgeSupport(normalizedFamilyId, familyConfig = {}, compatibility = "")', registry_content)
         self.assertIn('if (!activePackId) return null;', registry_content)

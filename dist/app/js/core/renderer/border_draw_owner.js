@@ -370,6 +370,8 @@ export function createBorderDrawOwner({
     );
     const scenarioOwnerOnlyBorders =
       !!state.activeScenarioId && state.scenarioBorderMode === "scenario_owner_only";
+    // scenario_owner_only 模式只接受动态 owner mesh 或启动期 opening owner mesh；
+    // 这保证剧本边界完整性优先于 canonical 国家边界的视觉兜底。
     const dynamicOwnerMeshes =
       isDynamicBordersEnabled() && isUsableMesh(state.cachedDynamicOwnerBorders)
         ? [state.cachedDynamicOwnerBorders]

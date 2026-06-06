@@ -2,8 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { FileManager } from "../js/core/file_manager.js";
-import { resolveImportedTransportCountryOverlayPackIds } from "../js/core/interaction_funnel.js";
+import {
+  importProjectThroughFunnel,
+  resolveImportedTransportCountryOverlayPackIds,
+} from "../js/core/interaction_funnel.js";
 import { prepareProjectImportFile } from "../js/core/project_package_io.js";
+import { state } from "../js/core/state.js";
+import {
+  readRegisteredRuntimeHookSource,
+  registerRuntimeHook,
+} from "../js/core/state/index.js";
 import { unzipSync, zipSync, strFromU8, strToU8 } from "../vendor/fflate.browser.js";
 
 async function exportProjectPayload(appState) {
@@ -128,6 +136,88 @@ async function importProjectPayload(payload, observerHooks = {}) {
     await new Promise((resolve) => setTimeout(resolve, 0));
     return { callbacks, successes, errors };
   } finally {
+    globalThis.document = previousDocument;
+    globalThis.FileReader = previousFileReader;
+  }
+}
+
+function createTransportOverviewImportPayload(layerVisibility = {}) {
+  return {
+    schemaVersion: 21,
+    annotationView: {},
+    countryBaseColors: {},
+    exportWorkbenchUi: {},
+    featureOverrides: {},
+    layerVisibility: {
+      showCityPoints: false,
+      showPhysical: false,
+      showRivers: false,
+      showSpecialZones: false,
+      showTransport: true,
+      showUrban: false,
+      ...layerVisibility,
+    },
+    specialZoneLayers: {},
+    styleConfig: {},
+    transportWorkbenchUi: {},
+    waterRegionOverrides: {},
+  };
+}
+
+async function importProjectThroughFunnelPayload(payload) {
+  const previousDocument = globalThis.document;
+  const previousFileReader = globalThis.FileReader;
+  const previousEnsureContextLayerDataHook = readRegisteredRuntimeHookSource(state, "ensureContextLayerDataFn");
+  const previousTransportVisibilityState = {
+    showTransport: state.showTransport,
+    showAirports: state.showAirports,
+    showPorts: state.showPorts,
+    showRail: state.showRail,
+    showRoad: state.showRoad,
+  };
+  const requests = [];
+
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  globalThis.FileReader = class {
+    readAsText(file) {
+      this.result = file.text;
+      queueMicrotask(() => this.onload?.());
+    }
+  };
+  registerRuntimeHook(state, "ensureContextLayerDataFn", async (layerRequest, options) => {
+    requests.push({
+      layerRequest: Array.isArray(layerRequest) ? [...layerRequest] : layerRequest,
+      options: { ...options },
+    });
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      importProjectThroughFunnel(
+        {
+          name: "map_project.json",
+          text: JSON.stringify(payload),
+        },
+        {
+          ui: {
+            t: (value) => String(value || ""),
+            showToast: () => {},
+            showAppDialog: async () => false,
+          },
+          hooks: {
+            refreshColorState: () => {},
+            onProjectImportComplete: resolve,
+            onProjectImportError: () => reject(new Error("project import failed")),
+          },
+        }
+      );
+    });
+    return requests;
+  } finally {
+    Object.assign(state, previousTransportVisibilityState);
+    registerRuntimeHook(state, "ensureContextLayerDataFn", previousEnsureContextLayerDataHook);
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
   }
@@ -915,6 +1005,47 @@ test("project import overlay resolver preserves every main-map transport family"
   );
 
   assert.deepEqual(packIds, ["germany_road", "france_rail", "usa_airport", "usa_port", "germany_port"]);
+});
+
+test("project import through funnel restores visible transport overview layers from registry metadata", async () => {
+  const requests = await importProjectThroughFunnelPayload(
+    createTransportOverviewImportPayload({
+      showAirports: true,
+      showPorts: false,
+      showRail: true,
+      showRoad: true,
+      showTransport: true,
+    })
+  );
+
+  assert.deepEqual(requests, [
+    {
+      layerRequest: "roads",
+      options: { reason: "project-import", renderNow: false },
+    },
+    {
+      layerRequest: ["railways", "rail_stations_major"],
+      options: { reason: "project-import", renderNow: false },
+    },
+    {
+      layerRequest: "airports",
+      options: { reason: "project-import", renderNow: false },
+    },
+  ]);
+});
+
+test("project import through funnel skips transport overview layer restores when master visibility is off", async () => {
+  const requests = await importProjectThroughFunnelPayload(
+    createTransportOverviewImportPayload({
+      showAirports: true,
+      showPorts: true,
+      showRail: true,
+      showRoad: true,
+      showTransport: false,
+    })
+  );
+
+  assert.deepEqual(requests, []);
 });
 
 test("project import success is not reclassified when status observer fails", async () => {

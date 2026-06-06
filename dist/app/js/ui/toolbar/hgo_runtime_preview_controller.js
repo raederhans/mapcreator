@@ -42,6 +42,8 @@ function getButtonLabel(previewState) {
 function syncButton(button, runtimeState, { loadersConfigured = true } = {}) {
   const previewState = ensureHgoRuntimePreviewState(runtimeState);
   const developerMode = !!runtimeState?.ui?.developerMode;
+  // HGO preview 是开发者模式的临时画布覆盖层；隐藏按钮前先同步状态，
+  // 让关闭开发者模式、缺少 loader、按钮重建三条路径共享同一个可访问性合同。
   setButtonHidden(button, !developerMode || !loadersConfigured);
   if (!button) return previewState;
   const label = getButtonLabel(previewState);
@@ -81,6 +83,8 @@ function createHgoRuntimePreviewToolbarController({
     if (runtimeState?.ui?.developerMode) return;
     const previewState = previewController.getState();
     if (!previewState.enabled && !previewState.renderSummary) return;
+    // 主动关闭 preview 会释放旧 raster 的主 canvas 补画入口，
+    // 保证后续普通渲染重新接管画布。
     void previewController.setEnabled(false);
   };
   const sync = () => {
@@ -95,6 +99,8 @@ function createHgoRuntimePreviewToolbarController({
   const toggle = async () => setEnabled(!previewController.getState().enabled);
 
   if (previewButton && previewButton.dataset.bound !== "true") {
+    // 按钮可能由 toolbar bootstrap 或测试注入，dataset 标记保证重复 sync
+    // 只刷新状态，不重复绑定 click handler。
     previewButton.addEventListener("click", () => {
       void toggle();
     });
