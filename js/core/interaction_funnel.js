@@ -28,6 +28,11 @@ import {
   clearTransportCountryOverlayState,
   loadTransportCountryOverlayState,
 } from "./transport_country_overlay.js";
+import {
+  getTransportOverviewDataLayerKeys,
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "./transport_capability_registry.js";
 import { isTargetMainMapPackId } from "./transport_pack_resolver.js";
 import { syncProjectImportUiState as syncProjectImportUiStateHelper } from "./interaction_funnel/ui_sync.js";
 import {
@@ -69,6 +74,28 @@ function getScenarioDispatcherModule() {
     scenarioDispatcherModulePromise = import("./scenario_dispatcher.js");
   }
   return scenarioDispatcherModulePromise;
+}
+
+function getContextLayerRequestFromKeys(layerKeys = []) {
+  const normalizedKeys = (Array.isArray(layerKeys) ? layerKeys : [])
+    .map((key) => String(key || "").trim())
+    .filter(Boolean);
+  if (normalizedKeys.length === 0) return null;
+  return normalizedKeys.length === 1 ? normalizedKeys[0] : normalizedKeys;
+}
+
+async function restoreImportedTransportOverviewDataLayers(importState) {
+  if (!importState.showTransport) return;
+  for (const familyId of listTransportOverviewCapabilityFamilyIds()) {
+    const visibilityField = getTransportOverviewVisibilityField(familyId);
+    if (!visibilityField || !importState[visibilityField]) continue;
+    const layerRequest = getContextLayerRequestFromKeys(getTransportOverviewDataLayerKeys(familyId));
+    if (!layerRequest) continue;
+    await callRuntimeHook(importState, "ensureContextLayerDataFn", layerRequest, {
+      reason: "project-import",
+      renderNow: false,
+    });
+  }
 }
 
 function buildMapInteractionContext(kind, event) {
@@ -298,30 +325,7 @@ async function applyImportedProjectState(data, { ui, hooks }) {
       renderNow: false,
     });
   }
-  if (state.showTransport && state.showAirports) {
-    await callRuntimeHook(state, "ensureContextLayerDataFn", "airports", {
-      reason: "project-import",
-      renderNow: false,
-    });
-  }
-  if (state.showTransport && state.showPorts) {
-    await callRuntimeHook(state, "ensureContextLayerDataFn", "ports", {
-      reason: "project-import",
-      renderNow: false,
-    });
-  }
-  if (state.showTransport && state.showRail) {
-    await callRuntimeHook(state, "ensureContextLayerDataFn", ["railways", "rail_stations_major"], {
-      reason: "project-import",
-      renderNow: false,
-    });
-  }
-  if (state.showTransport && state.showRoad) {
-    await callRuntimeHook(state, "ensureContextLayerDataFn", "roads", {
-      reason: "project-import",
-      renderNow: false,
-    });
-  }
+  await restoreImportedTransportOverviewDataLayers(state);
   if (state.showUrban) {
     await callRuntimeHook(state, "ensureContextLayerDataFn", "urban", {
       reason: "project-import",

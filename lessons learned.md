@@ -293,3 +293,6 @@
 
 ### HGO preview 要绑定 renderer 生命周期
 - HGO raster 画到主 canvas 时，必须接入普通 `drawCanvas()` 后补画，并让 hover/click 先走同一套 raster inspect；toolbar 内部单次 render 会被主渲染和 app hit pipeline 覆盖。
+
+### funnel 行为测试要恢复 runtime hook 和 state
+- 通过真实 import funnel 写行为测试时，保存并在 `finally` 恢复旧 runtime hook、`document`、`FileReader` 和被导入路径改写的 state 字段，避免测试顺序污染。

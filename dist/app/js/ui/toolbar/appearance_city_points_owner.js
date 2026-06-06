@@ -79,6 +79,8 @@ export function createAppearanceCityPointsOwner({
       normalizedExisting.length === expected.length
       && normalizedExisting.every((value, index) => value === expected[index]);
     if (matchesExisting) {
+      // 语言切换时 option value 顺序保持稳定，只需要刷新 id/text；
+      // 重建节点可能扰动选择状态和辅助技术焦点。
       Array.from(nodes.cityPointsTheme.options || []).forEach((optionNode, index) => {
         const meta = CITY_POINTS_THEME_OPTIONS[index];
         if (!meta) return;
@@ -166,6 +168,8 @@ export function createAppearanceCityPointsOwner({
       nodes.toggleCityPoints.addEventListener("change", (event) => {
         runtimeState.showCityPoints = !!event.target.checked;
         if (runtimeState.showCityPoints) {
+          // 城市点开关同时触发基础城市数据和 scenario optional layer；
+          // 前者给普通城市标记，后者给剧本覆盖和首都提示。
           if (typeof runtimeState.ensureBaseCityDataFn === "function") {
             void runtimeState.ensureBaseCityDataFn({ reason: "toolbar-toggle", renderNow: true });
           }
@@ -184,6 +188,8 @@ export function createAppearanceCityPointsOwner({
     bindCityPointsChange(nodes.cityPointsTheme, (cfg, event) => {
       cfg.theme = getCityPointsThemeMeta(event.target.value || "classic_graphite").value;
       const themeStyle = getCityPointsThemeStyle(cfg.theme);
+      // theme 只是一组可继续编辑的起点；应用后仍写入 cityPointsConfig，
+      // 保证保存/撤销/后续滑杆调整都读同一个 runtimeState.styleConfig。
       applyCityPointsThemeStyle(cfg, themeStyle, clamp);
       renderCityPointsUi();
     }, "city-points-theme");

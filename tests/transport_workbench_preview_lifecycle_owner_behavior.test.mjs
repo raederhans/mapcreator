@@ -224,6 +224,63 @@ test("transport workbench preview lifecycle owner schedules carrier view sync as
   assert.equal(typeof rafCallback, "function");
 });
 
+test("transport workbench preview lifecycle owner skips stale preview generation inspector writes", async () => {
+  const runtimeState = { transportWorkbenchUi: { open: true, activeFamily: "road" } };
+  const previewResolvers = [];
+  const inspectorCalls = [];
+  const owner = createTransportWorkbenchPreviewLifecycleOwner(runtimeState, {
+    getCarrierMount: () => ({}),
+    listWarmupPlans: () => [],
+    renderFamilyPreview: (familyId, config, options) => new Promise((resolve) => {
+      previewResolvers.push({ familyId, config, options, resolve });
+    }),
+    renderInspector: (family, config, compareHeld) => {
+      inspectorCalls.push({ familyId: family.id, config, compareHeld });
+    },
+    setCarrierViewChangeListener: () => {},
+    setFamilyPreviewSelectionListener: () => {},
+    runtimeFamilyIds: ["road", "rail"],
+    scheduleTimeout: () => 0,
+  });
+  const roadContext = {
+    isOpen: true,
+    family: { id: "road" },
+    config: { scope: "motorway_only" },
+    compareHeld: false,
+  };
+  const railContext = {
+    isOpen: true,
+    family: { id: "rail" },
+    config: { scope: "mainline_only" },
+    compareHeld: true,
+  };
+
+  const stalePreview = owner.refreshPreview(roadContext, { allowCarrierPrep: false });
+  await flushMicrotasks();
+  assert.equal(previewResolvers.length, 1);
+  assert.equal(previewResolvers[0].familyId, "road");
+
+  runtimeState.transportWorkbenchUi.activeFamily = "rail";
+  const currentPreview = owner.refreshPreview(railContext, { allowCarrierPrep: false });
+  await flushMicrotasks();
+  assert.equal(previewResolvers.length, 2);
+  assert.equal(previewResolvers[1].familyId, "rail");
+
+  previewResolvers[0].resolve(null);
+  await stalePreview;
+  assert.deepEqual(inspectorCalls, []);
+
+  previewResolvers[1].resolve(null);
+  await currentPreview;
+  assert.deepEqual(inspectorCalls, [
+    {
+      familyId: "rail",
+      config: { scope: "mainline_only" },
+      compareHeld: true,
+    },
+  ]);
+});
+
 test("point preview effective pack merges update patches and removes deleted source features", () => {
   const sourcePack = {
     mode: "preview",

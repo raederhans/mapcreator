@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36426,7 +36426,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 16243
+      "size_bytes": 16630
     },
     {
       "path": "app/js/core/legend_manager.js",
@@ -36506,7 +36506,7 @@
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
-      "size_bytes": 23196
+      "size_bytes": 23379
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
@@ -36962,7 +36962,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_border_owner.js",
-      "size_bytes": 8670
+      "size_bytes": 9038
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_descriptor.js",
@@ -36970,7 +36970,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 12497
+      "size_bytes": 13009
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
@@ -37010,7 +37010,7 @@
     },
     {
       "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-      "size_bytes": 4433
+      "size_bytes": 4918
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -37034,7 +37034,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_appearance_controller.js",
-      "size_bytes": 43133
+      "size_bytes": 42134
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_apply_bridge_owner.js",
@@ -37194,11 +37194,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 2938
+      "size_bytes": 3007
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 863
+      "size_bytes": 880
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37259,5 +37259,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109175251
+  "total_bytes": 1109176396
 }
