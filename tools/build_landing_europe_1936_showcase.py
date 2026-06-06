@@ -24,11 +24,20 @@ RAIL_CATALOG = REPO_ROOT / "data" / "transport_layers" / "global_rail" / "catalo
 SHOWCASE_SVG = LANDING_ASSETS / "europe-1936-showcase.svg"
 SHOWCASE_METADATA = LANDING_ASSETS / "europe-1936-showcase.json"
 EUROPE_BBOX = (-12.5, 34.0, 41.5, 72.5)
+SHOWCASE_CANVAS_WIDTH = 980
+SHOWCASE_CANVAS_HEIGHT = 620
+SHOWCASE_CANVAS_PADDING = 36
+PROJECTION_CENTER_LON = 10.0
+PROJECTION_CENTER_LAT = 52.0
+RAIL_LINE_LIMIT = 220
+RAIL_MIN_LINES_PER_SHARD = 55
+RAIL_MIN_PROJECTED_PX = 8.0
+RAIL_DEDUPE_PIXEL_GRID = 2.0
 SCENARIO_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
 TRANSREGIONAL_EUROPE_SHOWCASE_TAGS = {"TUR"}
 SHOWCASE_LAYERS = (
     {"id": "political", "label": "1936 political ownership"},
-    {"id": "rail", "label": "Europe rail preview"},
+    {"id": "rail", "label": "Europe rail network"},
     {"id": "cities", "label": "capital anchors"},
     {"id": "scenario", "label": "scenario focus countries"},
 )
@@ -40,20 +49,66 @@ class Canvas:
     width: int
     height: int
     bbox: tuple[float, float, float, float]
+    projected_bounds: tuple[float, float, float, float]
+    scale: float
+    offset_x: float
+    offset_y: float
+
+    @classmethod
+    def create(cls, width: int, height: int, bbox: tuple[float, float, float, float]) -> "Canvas":
+        min_x, min_y, max_x, max_y = projection_bounds_for_bbox(bbox)
+        projected_width = max_x - min_x
+        projected_height = max_y - min_y
+        usable_width = width - SHOWCASE_CANVAS_PADDING * 2
+        usable_height = height - SHOWCASE_CANVAS_PADDING * 2
+        scale = min(usable_width / projected_width, usable_height / projected_height)
+        fitted_width = projected_width * scale
+        fitted_height = projected_height * scale
+        return cls(
+            width=width,
+            height=height,
+            bbox=bbox,
+            projected_bounds=(min_x, min_y, max_x, max_y),
+            scale=scale,
+            offset_x=(width - fitted_width) / 2.0,
+            offset_y=(height - fitted_height) / 2.0,
+        )
 
     def project(self, lon: float, lat: float) -> tuple[float, float]:
-        min_lon, min_lat, max_lon, max_lat = self.bbox
-        x = (lon - min_lon) / (max_lon - min_lon) * self.width
-        min_y = mercator_y(min_lat)
-        max_y = mercator_y(max_lat)
-        y = (max_y - mercator_y(lat)) / (max_y - min_y) * self.height
+        min_x, _min_y, _max_x, max_y = self.projected_bounds
+        raw_x, raw_y = project_laea(lon, lat)
+        x = self.offset_x + (raw_x - min_x) * self.scale
+        y = self.offset_y + (max_y - raw_y) * self.scale
         return x, y
 
 
-def mercator_y(lat: float) -> float:
-    clamped = max(min(lat, 84.0), -84.0)
-    radians = math.radians(clamped)
-    return math.log(math.tan(math.pi / 4.0 + radians / 2.0))
+def project_laea(lon: float, lat: float) -> tuple[float, float]:
+    lon0 = math.radians(PROJECTION_CENTER_LON)
+    lat0 = math.radians(PROJECTION_CENTER_LAT)
+    lon_rad = math.radians(lon)
+    lat_rad = math.radians(lat)
+    denominator = 1 + math.sin(lat0) * math.sin(lat_rad) + math.cos(lat0) * math.cos(lat_rad) * math.cos(lon_rad - lon0)
+    k = math.sqrt(2 / max(denominator, 1e-9))
+    x = k * math.cos(lat_rad) * math.sin(lon_rad - lon0)
+    y = k * (math.cos(lat0) * math.sin(lat_rad) - math.sin(lat0) * math.cos(lat_rad) * math.cos(lon_rad - lon0))
+    return x, y
+
+
+def projection_bounds_for_bbox(bbox: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    points: list[tuple[float, float]] = []
+    steps = 32
+    for index in range(steps + 1):
+        ratio = index / steps
+        lon = min_lon + (max_lon - min_lon) * ratio
+        lat = min_lat + (max_lat - min_lat) * ratio
+        points.append(project_laea(lon, min_lat))
+        points.append(project_laea(lon, max_lat))
+        points.append(project_laea(min_lon, lat))
+        points.append(project_laea(max_lon, lat))
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return (min(xs), min(ys), max(xs), max(ys))
 
 
 def read_json(path: Path) -> dict:
@@ -113,16 +168,16 @@ def scenario_paths() -> dict[str, Path]:
     }
 
 
-def rail_preview_paths() -> list[Path]:
+def rail_paths() -> list[Path]:
     catalog = read_json(RAIL_CATALOG)
     paths: list[Path] = []
     for entry in catalog.get("entries", []):
         if entry.get("region_id") != "europe":
             continue
         manifest = read_json(repo_relative_path(entry["manifest_path"]))
-        preview_path = manifest.get("paths", {}).get("preview", {}).get("railways")
-        if isinstance(preview_path, str) and preview_path:
-            paths.append(repo_relative_path(preview_path))
+        rail_path = manifest.get("paths", {}).get("full", {}).get("railways")
+        if isinstance(rail_path, str) and rail_path:
+            paths.append(repo_relative_path(rail_path))
     return paths
 
 
@@ -164,26 +219,31 @@ def ring_path(points: Iterable[tuple[float, float]], canvas: Canvas) -> str:
     return " ".join(commands)
 
 
-def line_path(geometry: BaseGeometry, canvas: Canvas) -> list[str]:
+def line_path(geometry: BaseGeometry, canvas: Canvas) -> list[tuple[str, float, str]]:
     if geometry.is_empty:
         return []
     if geometry.geom_type == "LineString":
-        return [project_line(geometry.coords, canvas)]
+        line = project_line(geometry.coords, canvas)
+        return [line] if line else []
     if geometry.geom_type == "MultiLineString":
-        paths: list[str] = []
+        paths: list[tuple[str, float, str]] = []
         for line in geometry.geoms:
             paths.extend(line_path(line, canvas))
-        return [path for path in paths if path]
+        return paths
     return []
 
 
-def project_line(points: Iterable[tuple[float, float]], canvas: Canvas) -> str:
+def project_line(points: Iterable[tuple[float, float]], canvas: Canvas) -> tuple[str, float, str] | None:
     projected = [canvas.project(float(lon), float(lat)) for lon, lat, *_ in points]
     if len(projected) < 2:
-        return ""
+        return None
     commands = [f"M{fmt(projected[0][0])} {fmt(projected[0][1])}"]
     commands.extend(f"L{fmt(x)} {fmt(y)}" for x, y in projected[1:])
-    return " ".join(commands)
+    length_px = sum(math.hypot(x2 - x1, y2 - y1) for (x1, y1), (x2, y2) in zip(projected, projected[1:]))
+    key_points = tuple((round(x / RAIL_DEDUPE_PIXEL_GRID), round(y / RAIL_DEDUPE_PIXEL_GRID)) for x, y in projected)
+    forward_key = "|".join(f"{x}:{y}" for x, y in key_points)
+    reverse_key = "|".join(f"{x}:{y}" for x, y in reversed(key_points))
+    return " ".join(commands), length_px, min(forward_key, reverse_key)
 
 
 def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
@@ -264,14 +324,14 @@ def load_capitals(canvas: Canvas) -> list[dict]:
     return sorted(capitals, key=lambda item: (not item["focus"], item["tag"]))[:22]
 
 
-def load_rail_paths(canvas: Canvas) -> tuple[list[str], int]:
+def load_rail_paths(canvas: Canvas) -> tuple[list[str], int, int, dict[str, int]]:
     clip = box(*canvas.bbox)
-    candidates: list[tuple[float, str]] = []
+    candidates: list[tuple[str, float, str, str]] = []
     inspected = 0
-    for shard in rail_preview_paths():
+    for shard in rail_paths():
+        shard_id = shard.parent.name
         for feature in topology_features(shard, "railways"):
             inspected += 1
-            properties = feature.get("properties") or {}
             geometry_payload = feature.get("geometry")
             if not geometry_payload:
                 continue
@@ -279,11 +339,38 @@ def load_rail_paths(canvas: Canvas) -> tuple[list[str], int]:
             if not geometry.intersects(clip):
                 continue
             clipped = valid_geometry(geometry.intersection(clip)).simplify(0.035, preserve_topology=True)
-            for path in line_path(clipped, canvas):
-                if path:
-                    candidates.append((float(properties.get("length_m") or 0), path))
-    candidates.sort(reverse=True)
-    return [path for _, path in candidates[:95]], inspected
+            for path, length_px, path_key in line_path(clipped, canvas):
+                if path and length_px >= RAIL_MIN_PROJECTED_PX:
+                    candidates.append((shard_id, length_px, path, path_key))
+    candidates_by_shard: dict[str, list[tuple[float, str, str]]] = defaultdict(list)
+    for shard_id, length_px, path, path_key in candidates:
+        candidates_by_shard[shard_id].append((length_px, path, path_key))
+
+    selected: list[str] = []
+    selected_keys: set[str] = set()
+    selected_by_shard: dict[str, int] = {}
+    for shard_id, shard_candidates in sorted(candidates_by_shard.items()):
+        shard_candidates.sort(reverse=True)
+        for _length_px, path, path_key in shard_candidates:
+            if selected_by_shard.get(shard_id, 0) >= RAIL_MIN_LINES_PER_SHARD:
+                break
+            if path_key in selected_keys:
+                continue
+            selected.append(path)
+            selected_keys.add(path_key)
+            selected_by_shard[shard_id] = selected_by_shard.get(shard_id, 0) + 1
+
+    all_candidates = sorted(((length_px, shard_id, path, path_key) for shard_id, length_px, path, path_key in candidates), reverse=True)
+    for _length_px, shard_id, path, path_key in all_candidates:
+        if len(selected) >= RAIL_LINE_LIMIT:
+            break
+        if path_key in selected_keys:
+            continue
+        selected.append(path)
+        selected_keys.add(path_key)
+        selected_by_shard[shard_id] = selected_by_shard.get(shard_id, 0) + 1
+
+    return selected, inspected, len(candidates), selected_by_shard
 
 
 def graticule(canvas: Canvas) -> str:
@@ -395,6 +482,7 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
     </style>
   </defs>
   <rect width="{canvas.width}" height="{canvas.height}" rx="28" fill="url(#seaGlow)" />
+  <g class="viewport" data-showcase-viewport transform="translate(0 0) scale(1)">
   <g class="graticule" aria-hidden="true">
       {graticule(canvas)}
   </g>
@@ -410,31 +498,52 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
   <g class="layer layer-scenario" data-layer="scenario">
 {scenario_nodes(capitals)}
   </g>
+  </g>
 </svg>
 """
 
 
 def build_metadata(
+    canvas: Canvas,
     political_counts: dict[str, int],
     territories: list[dict],
     capitals: list[dict],
-    rail_paths: list[str],
+    selected_rail_paths: list[str],
     rail_inspected: int,
+    rail_candidates: int,
+    rail_selected_by_shard: dict[str, int],
 ) -> dict:
     paths = scenario_paths()
-    rail_paths_source = rail_preview_paths()
+    rail_paths_source = rail_paths()
     territory_tags = sorted(item["tag"] for item in territories)
     capital_tags = sorted(item["tag"] for item in capitals)
+    min_x, min_y, max_x, max_y = canvas.projected_bounds
     return {
         "schema_version": 1,
         "scenario_id": "hoi4_1936",
         "title": "Europe 1936 homepage showcase",
         "bbox": list(EUROPE_BBOX),
+        "projection": {
+            "name": "lambert_azimuthal_equal_area",
+            "center_lon": PROJECTION_CENTER_LON,
+            "center_lat": PROJECTION_CENTER_LAT,
+            "canvas_width": canvas.width,
+            "canvas_height": canvas.height,
+            "canvas_padding": SHOWCASE_CANVAS_PADDING,
+            "projected_bounds": [min_x, min_y, max_x, max_y],
+            "scale": canvas.scale,
+        },
         "selection_policy": {
             "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
             "transregional_tags": sorted(TRANSREGIONAL_EUROPE_SHOWCASE_TAGS),
             "capital_limit": 22,
-            "rail_limit": 95,
+            "rail_source": "full",
+            "rail_limit": RAIL_LINE_LIMIT,
+            "rail_min_lines_per_shard": RAIL_MIN_LINES_PER_SHARD,
+            "rail_min_projected_px": RAIL_MIN_PROJECTED_PX,
+            "rail_dedupe_pixel_grid": RAIL_DEDUPE_PIXEL_GRID,
+            "rail_ranking_key": "clipped_projected_length_px",
+            "rail_dedupe_key": "projected_path_grid_or_reverse",
         },
         "sources": [
             repo_path(HOI4_MANIFEST),
@@ -449,9 +558,11 @@ def build_metadata(
             "territories": political_counts["territories"],
             "political_features": political_counts["source_features"],
             "capitals": len(capitals),
-            "rail_lines_selected": len(rail_paths),
+            "rail_lines_selected": len(selected_rail_paths),
+            "rail_lines_candidates": rail_candidates,
             "rail_features_inspected": rail_inspected,
         },
+        "rail_selected_by_shard": dict(sorted(rail_selected_by_shard.items())),
         "territory_tags": territory_tags,
         "capital_tags": capital_tags,
         "focus_tags": sorted(tag for tag in SCENARIO_FOCUS_TAGS if tag in territory_tags),
@@ -460,12 +571,21 @@ def build_metadata(
 
 
 def build_showcase() -> None:
-    canvas = Canvas(980, 620, EUROPE_BBOX)
+    canvas = Canvas.create(SHOWCASE_CANVAS_WIDTH, SHOWCASE_CANVAS_HEIGHT, EUROPE_BBOX)
     territories, political_counts = load_political_layers(canvas)
     capitals = load_capitals(canvas)
-    rails, rail_inspected = load_rail_paths(canvas)
+    rails, rail_inspected, rail_candidates, rail_selected_by_shard = load_rail_paths(canvas)
     write_text_lf(SHOWCASE_SVG, build_svg(canvas, territories, capitals, rails))
-    metadata = build_metadata(political_counts, territories, capitals, rails, rail_inspected)
+    metadata = build_metadata(
+        canvas,
+        political_counts,
+        territories,
+        capitals,
+        rails,
+        rail_inspected,
+        rail_candidates,
+        rail_selected_by_shard,
+    )
     write_text_lf(SHOWCASE_METADATA, json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 
 

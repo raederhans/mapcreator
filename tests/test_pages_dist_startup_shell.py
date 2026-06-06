@@ -53,7 +53,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("<svg", text)
                 self.assertIn("viewBox", text)
                 self.assertIn("<path", text)
-                self.assertLess(asset.stat().st_size, 220_000)
+                size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
+                self.assertLess(asset.stat().st_size, size_limit)
 
     def test_landing_europe_1936_showcase_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
@@ -74,14 +75,26 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 continue
             manifest_path = entry["manifest_path"]
             manifest = json.loads((REPO_ROOT / manifest_path).read_text(encoding="utf-8"))
-            expected_rail_sources.add(manifest["paths"]["preview"]["railways"])
+            expected_rail_sources.add(manifest["paths"]["full"]["railways"])
 
         self.assertEqual(payload["scenario_id"], "hoi4_1936")
         self.assertEqual([layer["id"] for layer in payload["layers"]], ["political", "rail", "cities", "scenario"])
+        self.assertEqual(payload["projection"]["name"], "lambert_azimuthal_equal_area")
+        self.assertEqual(payload["projection"]["center_lon"], 10.0)
+        self.assertEqual(payload["projection"]["center_lat"], 52.0)
+        self.assertEqual(payload["projection"]["canvas_width"], 980)
+        self.assertEqual(payload["projection"]["canvas_height"], 620)
+        self.assertEqual(payload["projection"]["canvas_padding"], 36)
         self.assertEqual(set(payload["sources"]), expected_scenario_sources | expected_rail_sources)
         self.assertEqual(payload["selection_policy"]["transregional_tags"], ["TUR"])
         self.assertEqual(payload["selection_policy"]["capital_limit"], 22)
-        self.assertEqual(payload["selection_policy"]["rail_limit"], 95)
+        self.assertEqual(payload["selection_policy"]["rail_source"], "full")
+        self.assertEqual(payload["selection_policy"]["rail_limit"], 220)
+        self.assertEqual(payload["selection_policy"]["rail_min_lines_per_shard"], 55)
+        self.assertEqual(payload["selection_policy"]["rail_min_projected_px"], 8.0)
+        self.assertEqual(payload["selection_policy"]["rail_dedupe_pixel_grid"], 2.0)
+        self.assertEqual(payload["selection_policy"]["rail_ranking_key"], "clipped_projected_length_px")
+        self.assertEqual(payload["selection_policy"]["rail_dedupe_key"], "projected_path_grid_or_reverse")
         self.assertEqual(payload["counts"]["territories"], len(payload["territory_tags"]))
         self.assertEqual(payload["counts"]["capitals"], len(payload["capital_tags"]))
         for expected_tag in ("ALB", "EST", "IRE", "LAT", "LIT", "LUX", "SWI", "TUR"):
@@ -90,7 +103,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["focus_tags"], ["CZE", "ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"])
         self.assertGreaterEqual(payload["counts"]["political_features"], 6000)
         self.assertGreaterEqual(payload["counts"]["capitals"], 12)
-        self.assertGreaterEqual(payload["counts"]["rail_lines_selected"], 60)
+        self.assertEqual(payload["counts"]["rail_lines_selected"], 220)
+        self.assertGreater(payload["counts"]["rail_lines_candidates"], payload["counts"]["rail_lines_selected"])
+        self.assertEqual(set(payload["rail_selected_by_shard"]), {"eu_e010_e025", "eu_e025_e045", "eu_w012_e010"})
+        for shard_id, selected_count in payload["rail_selected_by_shard"].items():
+            with self.subTest(shard_id=shard_id):
+                self.assertGreaterEqual(selected_count, 55)
 
     def test_landing_europe_1936_showcase_assets_match_builder_output(self) -> None:
         previous_svg = build_landing_europe_1936_showcase.SHOWCASE_SVG
@@ -234,6 +252,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             './assets/europe-1936-showcase.json',
             'data-showcase-root',
             'data-showcase-object',
+            'id="showcase-map-object"',
+            'data-showcase-view-controls',
+            'data-showcase-view-action="zoom-in"',
+            'data-showcase-view-action="zoom-out"',
+            'data-showcase-view-action="pan-left"',
+            'data-showcase-view-action="pan-right"',
+            'data-showcase-view-action="pan-up"',
+            'data-showcase-view-action="pan-down"',
+            'data-showcase-view-action="reset"',
+            'data-i18n="showcaseViewResetShort"',
             'role="tabpanel"',
             'id="showcase-layer-panel"',
             'aria-controls="showcase-layer-panel"',
@@ -294,6 +322,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "loadShowcaseMetadata",
             "showcaseLayerError",
             "setShowcaseSvgLayer",
+            "SHOWCASE_VIEW_SCALES",
+            "SHOWCASE_VIEW_PAN_STEP",
+            "data-showcase-viewport",
+            "showcaseViewZoomed",
+            "clampShowcaseViewPosition",
+            "applyShowcaseViewState",
+            "initShowcaseView",
+            "pointerdown",
+            "wheel",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -330,6 +367,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
+        self.assertIn(".showcase-map__controls", styles_css)
+        self.assertIn("[data-showcase-view-action=\"reset\"]", styles_css)
+        self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn("[data-showcase-object]", app_js)
         self.assertNotIn("SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political", app_js)
         self.assertIn("height: 44px", styles_css)
@@ -367,6 +407,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
+            "showcaseViewControlsLabel:",
+            "showcaseViewResetShort:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
@@ -393,6 +435,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseTitle:",
             "showcaseLayerPoliticalTitle:",
             "showcaseLayerRailTitle:",
+            "showcaseViewControlsLabel:",
+            "showcaseViewResetShort:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerScenarioTitle:",
             "templateModernAlt:",
@@ -468,6 +512,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             './assets/europe-1936-showcase.json',
             'data-showcase-root',
             'data-showcase-object',
+            'data-showcase-view-controls',
+            'data-showcase-view-action="zoom-in"',
+            'data-showcase-view-action="reset"',
             'data-showcase-layer-tab="political"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
@@ -514,6 +561,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerCitiesTitle",
             "showcaseLayerScenarioTitle",
             "initShowcaseLayers",
+            "initShowcaseView",
+            "SHOWCASE_VIEW_SCALES",
+            "showcaseViewZoomed",
+            "clampShowcaseViewPosition",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -546,6 +597,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
+        self.assertIn(".showcase-map__controls", styles_css)
+        self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn(".showcase-map__object", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
         self.assertIn(".showcase-section", styles_css)

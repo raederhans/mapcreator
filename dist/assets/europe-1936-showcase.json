@@ -8,13 +8,34 @@
     41.5,
     72.5
   ],
+  "projection": {
+    "name": "lambert_azimuthal_equal_area",
+    "center_lon": 10.0,
+    "center_lat": 52.0,
+    "canvas_width": 980,
+    "canvas_height": 620,
+    "canvas_padding": 36,
+    "projected_bounds": [
+      -0.3244604344837859,
+      -0.3128390268849723,
+      0.44727647666062786,
+      0.394157720514714
+    ],
+    "scale": 775.1096479800342
+  },
   "selection_policy": {
     "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
     "transregional_tags": [
       "TUR"
     ],
     "capital_limit": 22,
-    "rail_limit": 95
+    "rail_source": "full",
+    "rail_limit": 220,
+    "rail_min_lines_per_shard": 55,
+    "rail_min_projected_px": 8.0,
+    "rail_dedupe_pixel_grid": 2.0,
+    "rail_ranking_key": "clipped_projected_length_px",
+    "rail_dedupe_key": "projected_path_grid_or_reverse"
   },
   "sources": [
     "data/scenarios/hoi4_1936/manifest.json",
@@ -23,16 +44,22 @@
     "data/scenarios/hoi4_1936/owners.by_feature.json",
     "data/scenarios/hoi4_1936/capital_hints.json",
     "data/transport_layers/global_rail/catalog.json",
-    "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/railways.preview.topo.json",
-    "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/railways.preview.topo.json",
-    "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.preview.topo.json"
+    "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/railways.topo.json",
+    "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/railways.topo.json",
+    "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.topo.json"
   ],
   "counts": {
     "territories": 29,
     "political_features": 6803,
     "capitals": 22,
-    "rail_lines_selected": 95,
-    "rail_features_inspected": 4596
+    "rail_lines_selected": 220,
+    "rail_lines_candidates": 516,
+    "rail_features_inspected": 24267
+  },
+  "rail_selected_by_shard": {
+    "eu_e010_e025": 55,
+    "eu_e025_e045": 99,
+    "eu_w012_e010": 66
   },
   "territory_tags": [
     "ALB",
@@ -107,7 +134,7 @@
     },
     {
       "id": "rail",
-      "label": "Europe rail preview"
+      "label": "Europe rail network"
     },
     {
       "id": "cities",

@@ -81,10 +81,10 @@ const translations = {
       "Political ownership comes from the 1936 scenario data.",
     showcaseLayerPoliticalBody:
       "The map colors European territory through Scenario Forge's HOI4 1936 ownership table and country palette.",
-    showcaseLayerRailBadge: "Europe rail preview",
-    showcaseLayerRailTitle: "Rail corridors come from the global rail preview shards.",
+    showcaseLayerRailBadge: "Europe rail network",
+    showcaseLayerRailTitle: "Rail corridors come from the global rail source.",
     showcaseLayerRailBody:
-      "The rail layer selects visible European preview lines from the OpenStreetMap-derived transport package.",
+      "The rail layer samples visible European lines from the OpenStreetMap-derived transport package.",
     showcaseLayerCitiesBadge: "Capital anchors",
     showcaseLayerCitiesTitle: "Capitals make the scenario readable at a glance.",
     showcaseLayerCitiesBody:
@@ -94,8 +94,17 @@ const translations = {
     showcaseLayerScenarioBody:
       "Focus markers make the political surface easier to read before a visitor opens the full editor.",
     showcaseMeta:
-      "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail preview data.",
+      "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail data.",
     showcaseMetaLink: "View layer data",
+    showcaseViewControlsLabel: "Map view controls",
+    showcaseViewZoomIn: "Zoom in",
+    showcaseViewZoomOut: "Zoom out",
+    showcaseViewPanLeft: "Pan left",
+    showcaseViewPanRight: "Pan right",
+    showcaseViewPanUp: "Pan up",
+    showcaseViewPanDown: "Pan down",
+    showcaseViewReset: "Reset map view",
+    showcaseViewResetShort: "Reset",
     previewEyebrow: "Live product preview",
     previewTitle: "Preview real transport layers before opening the editor.",
     previewBody:
@@ -394,17 +403,26 @@ const translations = {
     showcaseLayerPoliticalBadge: "HOI4 1936 欧洲",
     showcaseLayerPoliticalTitle: "政治归属来自 1936 场景数据。",
     showcaseLayerPoliticalBody: "欧洲地块颜色来自仓库中的 HOI4 1936 归属表和国家配色。",
-    showcaseLayerRailBadge: "欧洲铁路预览",
-    showcaseLayerRailTitle: "铁路走廊来自 global rail 预览分片。",
-    showcaseLayerRailBody: "铁路图层选取仓库中 OpenStreetMap 衍生交通包里的欧洲预览线路。",
+    showcaseLayerRailBadge: "欧洲铁路网络",
+    showcaseLayerRailTitle: "铁路走廊来自 global rail 数据源。",
+    showcaseLayerRailBody: "铁路图层从仓库中 OpenStreetMap 衍生交通包里抽取欧洲可见线路。",
     showcaseLayerCitiesBadge: "首都锚点",
     showcaseLayerCitiesTitle: "首都点让场景一眼可读。",
     showcaseLayerCitiesBody: "城市标记使用 HOI4 1936 首都提示表，让柏林、巴黎、伦敦、华沙、罗马等锚点对应真实场景数据。",
     showcaseLayerScenarioBadge: "场景焦点",
     showcaseLayerScenarioTitle: "场景标记突出 1936 框架里的关键国家。",
     showcaseLayerScenarioBody: "焦点标记让访客进入完整编辑器之前，就能先看懂政治地图的主线。",
-    showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路预览数据生成。",
+    showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路数据生成。",
     showcaseMetaLink: "查看图层数据",
+    showcaseViewControlsLabel: "地图视图控制",
+    showcaseViewZoomIn: "放大",
+    showcaseViewZoomOut: "缩小",
+    showcaseViewPanLeft: "向左平移",
+    showcaseViewPanRight: "向右平移",
+    showcaseViewPanUp: "向上平移",
+    showcaseViewPanDown: "向下平移",
+    showcaseViewReset: "重置地图视图",
+    showcaseViewResetShort: "重置",
     previewEyebrow: "产品预览",
     previewTitle: "进入编辑器之前，先预览真实交通图层。",
     previewBody: "日本视图可以在道路、铁路、城市、地形和夜光之间切换，让用户先看到地图能表达什么。",
@@ -604,6 +622,10 @@ const SHOWCASE_LAYER_COPY_KEYS = {
 };
 const SHOWCASE_METADATA_URL = "./assets/europe-1936-showcase.json";
 const DEFAULT_SHOWCASE_LAYER = "political";
+const SHOWCASE_VIEW_WIDTH = 980;
+const SHOWCASE_VIEW_HEIGHT = 620;
+const SHOWCASE_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.3];
+const SHOWCASE_VIEW_PAN_STEP = 58;
 
 function getStoredLanguage() {
   try {
@@ -817,6 +839,153 @@ function setShowcaseSvgLayer(root) {
   svg.setAttribute("data-active-layer", layer);
 }
 
+function getShowcaseSvgViewport(root) {
+  const objectNode = root.querySelector("[data-showcase-object]");
+  if (!objectNode?.contentDocument) return null;
+  return objectNode.contentDocument.querySelector("[data-showcase-viewport]");
+}
+
+function getShowcaseViewState(root) {
+  const scaleIndex = Number.parseInt(root.dataset.showcaseViewScaleIndex || "0", 10);
+  return {
+    scaleIndex: Number.isNaN(scaleIndex) ? 0 : Math.max(0, Math.min(scaleIndex, SHOWCASE_VIEW_SCALES.length - 1)),
+    x: Number.parseFloat(root.dataset.showcaseViewX || "0") || 0,
+    y: Number.parseFloat(root.dataset.showcaseViewY || "0") || 0,
+  };
+}
+
+function clampShowcaseViewPosition(scale, x, y) {
+  if (scale <= 1) return { x: 0, y: 0 };
+  return {
+    x: Math.max(SHOWCASE_VIEW_WIDTH * (1 - scale), Math.min(0, x)),
+    y: Math.max(SHOWCASE_VIEW_HEIGHT * (1 - scale), Math.min(0, y)),
+  };
+}
+
+function applyShowcaseViewState(root, nextState) {
+  const scaleIndex = Math.max(0, Math.min(nextState.scaleIndex, SHOWCASE_VIEW_SCALES.length - 1));
+  const scale = SHOWCASE_VIEW_SCALES[scaleIndex];
+  const position = clampShowcaseViewPosition(scale, nextState.x, nextState.y);
+  root.dataset.showcaseViewScaleIndex = String(scaleIndex);
+  root.dataset.showcaseViewScale = scale.toFixed(2);
+  root.dataset.showcaseViewZoomed = scale > 1 ? "true" : "false";
+  root.dataset.showcaseViewX = position.x.toFixed(1);
+  root.dataset.showcaseViewY = position.y.toFixed(1);
+  const viewport = getShowcaseSvgViewport(root);
+  if (viewport) {
+    viewport.setAttribute("transform", `matrix(${scale} 0 0 ${scale} ${position.x.toFixed(1)} ${position.y.toFixed(1)})`);
+  }
+}
+
+function zoomShowcaseView(root, direction) {
+  const state = getShowcaseViewState(root);
+  const currentScale = SHOWCASE_VIEW_SCALES[state.scaleIndex];
+  const nextScaleIndex = Math.max(0, Math.min(state.scaleIndex + direction, SHOWCASE_VIEW_SCALES.length - 1));
+  const nextScale = SHOWCASE_VIEW_SCALES[nextScaleIndex];
+  const centerX = (SHOWCASE_VIEW_WIDTH / 2 - state.x) / currentScale;
+  const centerY = (SHOWCASE_VIEW_HEIGHT / 2 - state.y) / currentScale;
+  applyShowcaseViewState(root, {
+    scaleIndex: nextScaleIndex,
+    x: SHOWCASE_VIEW_WIDTH / 2 - centerX * nextScale,
+    y: SHOWCASE_VIEW_HEIGHT / 2 - centerY * nextScale,
+  });
+}
+
+function panShowcaseView(root, deltaX, deltaY) {
+  const state = getShowcaseViewState(root);
+  applyShowcaseViewState(root, {
+    scaleIndex: state.scaleIndex,
+    x: state.x + deltaX,
+    y: state.y + deltaY,
+  });
+}
+
+function resetShowcaseView(root) {
+  applyShowcaseViewState(root, { scaleIndex: 0, x: 0, y: 0 });
+}
+
+function initShowcaseView() {
+  const root = document.querySelector("[data-showcase-root]");
+  if (!root) return;
+
+  const objectNode = root.querySelector("[data-showcase-object]");
+  const controls = Array.from(root.querySelectorAll("[data-showcase-view-action]"));
+  if (!objectNode || !controls.length) return;
+
+  let dragState = null;
+
+  const handleAction = (action) => {
+    if (action === "zoom-in") zoomShowcaseView(root, 1);
+    if (action === "zoom-out") zoomShowcaseView(root, -1);
+    if (action === "pan-left") panShowcaseView(root, SHOWCASE_VIEW_PAN_STEP, 0);
+    if (action === "pan-right") panShowcaseView(root, -SHOWCASE_VIEW_PAN_STEP, 0);
+    if (action === "pan-up") panShowcaseView(root, 0, SHOWCASE_VIEW_PAN_STEP);
+    if (action === "pan-down") panShowcaseView(root, 0, -SHOWCASE_VIEW_PAN_STEP);
+    if (action === "reset") resetShowcaseView(root);
+  };
+
+  const onWheel = (event) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    zoomShowcaseView(root, event.deltaY < 0 ? 1 : -1);
+  };
+
+  const onPointerDown = (event) => {
+    const state = getShowcaseViewState(root);
+    if (SHOWCASE_VIEW_SCALES[state.scaleIndex] <= 1) return;
+    dragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      viewX: state.x,
+      viewY: state.y,
+    };
+    root.dataset.showcaseViewDragging = "true";
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+  };
+
+  const onPointerMove = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    applyShowcaseViewState(root, {
+      scaleIndex: getShowcaseViewState(root).scaleIndex,
+      x: dragState.viewX + event.clientX - dragState.startX,
+      y: dragState.viewY + event.clientY - dragState.startY,
+    });
+  };
+
+  const onPointerEnd = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    event.currentTarget?.releasePointerCapture?.(event.pointerId);
+    dragState = null;
+    delete root.dataset.showcaseViewDragging;
+  };
+
+  const bindEmbeddedSvg = () => {
+    applyShowcaseViewState(root, getShowcaseViewState(root));
+    const svg = objectNode.contentDocument?.querySelector("svg");
+    if (!svg || svg.dataset.showcaseViewBound === "true") return;
+    svg.dataset.showcaseViewBound = "true";
+    svg.addEventListener("wheel", onWheel, { passive: false });
+    svg.addEventListener("pointerdown", onPointerDown);
+    svg.addEventListener("pointermove", onPointerMove);
+    svg.addEventListener("pointerup", onPointerEnd);
+    svg.addEventListener("pointercancel", onPointerEnd);
+  };
+
+  controls.forEach((button) => {
+    button.addEventListener("click", () => handleAction(button.getAttribute("data-showcase-view-action") || ""));
+  });
+
+  objectNode.addEventListener("wheel", onWheel, { passive: false });
+  objectNode.addEventListener("pointerdown", onPointerDown);
+  objectNode.addEventListener("pointermove", onPointerMove);
+  objectNode.addEventListener("pointerup", onPointerEnd);
+  objectNode.addEventListener("pointercancel", onPointerEnd);
+  objectNode.addEventListener("load", bindEmbeddedSvg);
+  resetShowcaseView(root);
+  bindEmbeddedSvg();
+}
+
 function updateShowcaseLayerCopy(language = getActiveLanguage()) {
   const root = document.querySelector("[data-showcase-root]");
   if (!root) return;
@@ -942,6 +1111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   initPreviewTabs();
   initShowcaseLayers();
+  initShowcaseView();
   initHeroMap();
   initTopbarState();
   initMetricCountUp();
