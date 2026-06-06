@@ -581,7 +581,7 @@ a.button {
   gap: 10px;
 }
 
-.source-strip span {
+.source-strip a {
   display: inline-flex;
   align-items: center;
   min-height: 46px;
@@ -592,6 +592,23 @@ a.button {
   color: var(--text-primary);
   font-weight: 800;
   box-shadow: 0 10px 26px rgba(7, 17, 31, 0.05);
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.source-strip a:hover,
+.source-strip a:focus-visible {
+  border-color: rgba(31, 112, 184, 0.4);
+  background: rgba(255, 255, 255, 0.96);
+  transform: translateY(-1px);
+}
+
+.source-strip a:focus-visible {
+  outline: 3px solid rgba(45, 127, 205, 0.32);
+  outline-offset: 3px;
 }
 
 .works-grid--bento {
