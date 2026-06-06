@@ -35,6 +35,9 @@
 
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="alternate icon" href="./assets/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,600..800,40&family=Manrope:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="./app.js"></script>
   </head>
@@ -66,9 +69,6 @@
 
       <main id="main">
         <section id="hero" class="hero section section--dark">
-          <div class="hero__glow hero__glow--blue" aria-hidden="true"></div>
-          <div class="hero__glow hero__glow--gold" aria-hidden="true"></div>
-
           <div class="hero__copy" data-reveal>
             <p class="eyebrow eyebrow--dark" data-i18n="heroEyebrow">Scenario-first political map workbench</p>
             <h1>
@@ -85,27 +85,27 @@
           </div>
 
           <div class="hero__visual" data-reveal>
-            <div class="product-stage" aria-label="Scenario Forge product preview" data-i18n-aria-label="productPreviewLabel">
+            <div class="product-stage" aria-label="Scenario Forge generated cartography preview" data-i18n-aria-label="productPreviewLabel" data-hero-map data-hero-mode="modern">
               <div class="product-stage__bar" aria-hidden="true">
                 <span></span><span></span><span></span>
-                <strong data-i18n="productStageLabel">Scenario Forge / Live workspace</strong>
+                <strong data-i18n="productStageLabel">Scenario Forge / Generated atlas</strong>
               </div>
               <div class="product-stage__viewport">
-                <img
-                  src="./assets/workspace-overview.webp"
-                  alt="Scenario Forge editor showing a world political map with side panels and toolbars." data-i18n-alt="productPreviewAlt"
-                  loading="eager"
-                  fetchpriority="high"
-                  width="1440"
-                  height="960"
-                />
+                <img class="hero-cartography" src="./assets/hero-cartography.svg" alt="Generated Scenario Forge political map with borders, routes, city lights, and country labels." data-i18n-alt="productPreviewAlt" loading="eager" fetchpriority="high" width="980" height="680" />
+                <div class="hero-map__hud" aria-hidden="true">
+                  <span data-i18n="heroMapHudOne">Political baseline</span>
+                  <span data-i18n="heroMapHudTwo">Routes + lights</span>
+                </div>
+                <div class="hero-map__legend" aria-hidden="true">
+                  <i></i><span data-i18n="heroMapLegend">Scenario layer stack</span>
+                </div>
               </div>
             </div>
-            <div class="hero__chips" aria-hidden="true">
-              <span data-i18n="chipBlank">Blank</span>
-              <span data-i18n="chipModern">Modern</span>
-              <span data-i18n="chipHoi4">HOI4 1939</span>
-              <span data-i18n="chipTno">TNO 1962</span>
+            <div class="hero__chips" role="group" aria-label="Hero scenario style" data-i18n-aria-label="heroChipsLabel">
+              <button type="button" data-hero-chip="blank" aria-pressed="false" data-i18n="chipBlank">Blank</button>
+              <button type="button" data-hero-chip="modern" aria-pressed="true" data-i18n="chipModern">Modern</button>
+              <button type="button" data-hero-chip="hoi4" aria-pressed="false" data-i18n="chipHoi4">HOI4 1939</button>
+              <button type="button" data-hero-chip="tno" aria-pressed="false" data-i18n="chipTno">TNO 1962</button>
             </div>
           </div>
         </section>
@@ -163,7 +163,7 @@
           <div class="works-grid works-grid--bento">
             <article class="work-card work-card--tall" data-reveal>
               <div class="work-card__media work-card__media--workspace">
-                <img src="./assets/workspace-overview.webp" alt="A wide overview of Scenario Forge editing a global political scenario." data-i18n-alt="workOneAlt" loading="lazy" width="1440" height="960" />
+                <img src="./assets/showcase-final-map.svg" alt="Generated Scenario Forge showcase map with political borders, route overlays, and scenario labels." data-i18n-alt="workOneAlt" loading="lazy" width="560" height="360" />
               </div>
               <div class="work-card__copy">
                 <p class="work-card__label" data-i18n="workOneLabel">Alternate history baseline</p>
@@ -174,7 +174,7 @@
 
             <article class="work-card" data-reveal>
               <div class="work-card__media">
-                <img src="./assets/night-lights-political.webp" alt="Scenario Forge combining political ownership with night lights and labels." data-i18n-alt="workTwoAlt" loading="lazy" width="1280" height="720" />
+                <img src="./assets/japan-preview-night.svg" alt="Generated Japan preview map with night-light context and transport cues." data-i18n-alt="workTwoAlt" loading="lazy" width="680" height="440" />
               </div>
               <div class="work-card__copy">
                 <p class="work-card__label" data-i18n="workTwoLabel">Conflict and context</p>
@@ -185,7 +185,7 @@
 
             <article class="work-card" data-reveal>
               <div class="work-card__media">
-                <img src="./assets/atlas-physical.webp" alt="Scenario Forge showing multiple workspace UI panels for appearance, transport, color, and inspector controls." data-i18n-alt="workThreeAlt" loading="lazy" width="1280" height="720" />
+                <img src="./assets/template-modern.svg" alt="Generated modern world scenario template map." data-i18n-alt="workThreeAlt" loading="lazy" width="560" height="360" />
               </div>
               <div class="work-card__copy">
                 <p class="work-card__label" data-i18n="workThreeLabel">Atlas-style output</p>
@@ -194,6 +194,17 @@
               </div>
             </article>
           </div>
+        </section>
+
+        <section id="showcase" class="section showcase-section section--dark">
+          <div class="showcase-section__copy" data-reveal>
+            <p class="eyebrow eyebrow--dark" data-i18n="showcaseEyebrow">Cartography showcase</p>
+            <h2 data-i18n="showcaseTitle">A scenario page should look like it already knows how maps behave.</h2>
+            <p data-i18n="showcaseBody">The homepage now uses generated map assets from checked-in topology, transport, and city data so the product story starts with geography.</p>
+          </div>
+          <figure class="showcase-map" data-reveal>
+            <img src="./assets/showcase-final-map.svg" alt="Scenario Forge generated final map showcase." data-i18n-alt="showcaseAlt" loading="lazy" width="560" height="360" />
+          </figure>
         </section>
 
         <section id="product" class="section section--muted product-preview">
@@ -216,46 +227,10 @@
               </div>
 
               <div class="mini-map__surface" aria-hidden="true">
-                <svg class="japan-preview-map" viewBox="0 0 560 360" focusable="false">
-                  <defs>
-                    <linearGradient id="preview-sea" x1="0" x2="1" y1="0" y2="1">
-                      <stop offset="0" stop-color="#dbeafe" />
-                      <stop offset="1" stop-color="#a7f3d0" />
-                    </linearGradient>
-                    <linearGradient id="preview-land" x1="0" x2="1" y1="0" y2="1">
-                      <stop offset="0" stop-color="#f8fafc" />
-                      <stop offset="1" stop-color="#d9f99d" />
-                    </linearGradient>
-                  </defs>
-                  <rect width="560" height="360" rx="22" fill="url(#preview-sea)" />
-                  <path class="mini-map__terrain" d="M88 282 C126 244 164 236 196 200 C226 168 260 156 298 130 C334 106 376 82 432 54" />
-                  <path class="mini-map__terrain" d="M116 300 C156 266 198 246 238 210 C272 180 310 152 354 124 C396 98 432 78 476 64" />
-                  <path class="mini-map__land" d="M426 38 C456 58 456 96 424 116 C394 136 386 166 410 188 C434 210 420 240 382 248 C344 256 330 286 300 314 C270 342 226 328 232 292 C238 252 202 238 208 202 C214 164 260 160 284 132 C314 98 354 24 426 38Z" />
-                  <path class="mini-map__land mini-map__land--west" d="M122 238 C150 218 184 222 198 248 C214 278 184 316 146 314 C112 312 92 262 122 238Z" />
-                  <path class="mini-map__land mini-map__land--north" d="M458 42 C494 48 520 72 512 104 C504 136 456 132 438 104 C418 74 426 38 458 42Z" />
-                  <g class="mini-map__roads">
-                    <path d="M142 292 C190 258 228 228 274 188 C320 148 360 114 424 78" />
-                    <path d="M238 286 C272 248 310 220 350 190 C384 164 406 130 438 94" />
-                    <path d="M174 264 C214 260 256 238 292 208" />
-                    <path d="M304 178 C350 176 386 154 420 118" />
-                  </g>
-                  <g class="mini-map__rails">
-                    <path d="M158 300 C210 270 252 238 300 192 C342 152 382 112 434 66" />
-                    <path d="M254 282 C284 242 316 214 360 176 C396 144 420 112 456 82" />
-                  </g>
-                  <g class="mini-map__night">
-                    <circle cx="285" cy="224" r="54" />
-                    <circle cx="342" cy="166" r="36" />
-                    <circle cx="402" cy="104" r="28" />
-                  </g>
-                  <g class="mini-map__cities">
-                    <circle cx="284" cy="224" r="7" />
-                    <circle cx="342" cy="166" r="6" />
-                    <circle cx="402" cy="104" r="6" />
-                    <circle cx="178" cy="276" r="5" />
-                    <circle cx="446" cy="78" r="5" />
-                  </g>
-                </svg>
+                <img src="./assets/japan-preview-transport.svg" alt="" data-preview-image="transport" width="680" height="440" loading="lazy" />
+                <img src="./assets/japan-preview-cities.svg" alt="" data-preview-image="cities" width="680" height="440" loading="lazy" />
+                <img src="./assets/japan-preview-terrain.svg" alt="" data-preview-image="terrain" width="680" height="440" loading="lazy" />
+                <img src="./assets/japan-preview-night.svg" alt="" data-preview-image="night" width="680" height="440" loading="lazy" />
               </div>
 
               <div class="preview-tabs" role="tablist" aria-label="Preview layers" data-i18n-aria-label="previewTabsLabel">
@@ -432,18 +407,22 @@
           </div>
           <div class="template-grid">
             <article class="template-card template-card--blank" data-reveal>
+              <img src="./assets/template-blank.svg" alt="Generated blank map scenario template." data-i18n-alt="templateBlankAlt" loading="lazy" width="560" height="360" />
               <span data-i18n="templateBlankTag">Clean base</span>
               <h3 data-i18n="templateBlankTitle">Blank Map</h3>
             </article>
             <article class="template-card template-card--modern" data-reveal>
+              <img src="./assets/template-modern.svg" alt="Generated modern world scenario template." data-i18n-alt="templateModernAlt" loading="lazy" width="560" height="360" />
               <span data-i18n="templateModernTag">Current world</span>
               <h3 data-i18n="templateModernTitle">Modern World</h3>
             </article>
             <article class="template-card template-card--hoi4" data-reveal>
+              <img src="./assets/template-hoi4.svg" alt="Generated strategy baseline scenario template." data-i18n-alt="templateHoi4Alt" loading="lazy" width="560" height="360" />
               <span data-i18n="templateHoi4Tag">Strategy baseline</span>
               <h3 data-i18n="templateHoi4Title">HOI4 1936 / 1939</h3>
             </article>
             <article class="template-card template-card--tno" data-reveal>
+              <img src="./assets/template-tno.svg" alt="Generated alternate-history scenario template." data-i18n-alt="templateTnoAlt" loading="lazy" width="560" height="360" />
               <span data-i18n="templateTnoTag">Alternate history</span>
               <h3 data-i18n="templateTnoTitle">TNO 1962</h3>
             </article>
