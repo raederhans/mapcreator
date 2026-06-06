@@ -9,7 +9,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from tools import build_landing_europe_1936_showcase, build_pages_dist
+from tools import build_landing_europe_1936_showcase, build_landing_japan_preview, build_pages_dist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +55,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("viewBox", text)
                 self.assertIn("<path", text)
                 ET.fromstring(text)
-                size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
+                if asset_name.startswith("japan-preview-"):
+                    size_limit = 340_000
+                else:
+                    size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
                 self.assertLess(asset.stat().st_size, size_limit)
                 if asset_name == "europe-1936-showcase.svg":
                     self.assertIn('data-showcase-viewport="true"', text)
@@ -65,6 +68,66 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("animateTransform", text)
                     self.assertNotIn("data-showcase-viewport transform=", text)
                     self.assertNotIn('data-layer="scenario"', text)
+                if asset_name.startswith("japan-preview-"):
+                    self.assertIn('data-preview-map="japan"', text)
+                    self.assertIn('data-source="japan-corridor-carrier"', text)
+                    self.assertIn('data-source="japan-road-preview"', text)
+                    self.assertIn('data-source="japan-rail-preview"', text)
+                    self.assertIn('data-source="global-contours-major"', text)
+                    self.assertIn('data-source="nasa-black-marble-2016"', text)
+
+    def test_landing_japan_preview_metadata_uses_checked_in_sources(self) -> None:
+        metadata_path = LANDING_ASSETS / "japan-preview.json"
+        self.assertTrue(metadata_path.exists(), "Japan preview metadata should be checked in")
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        expected_sources = {
+            "data/transport_layers/japan_corridor/carrier.json",
+            "data/transport_layers/japan_road/roads.preview.topo.json",
+            "data/transport_layers/japan_rail/railways.preview.topo.json",
+            "data/transport_layers/japan_rail/rail_stations_major.preview.geojson",
+            "data/world_cities.geojson",
+            "data/global_contours.major.topo.json",
+            "data/global_contours.minor.topo.json",
+            "data/global_rivers.geojson",
+            "data/global_bathymetry.topo.json",
+            "js/core/city_lights_modern_asset.js",
+            "data/city_lights/historical_1930_entries.json",
+        }
+        self.assertEqual(set(payload["sources"]), expected_sources)
+        self.assertEqual(payload["scope"]["profile"], "japan main corridor")
+        self.assertEqual(payload["projection"]["name"], "geoConicConformal")
+        self.assertEqual(payload["projection"]["center"], [136.5, 35.0])
+        self.assertEqual(payload["projection"]["parallels"], [33.0, 37.0])
+        self.assertEqual(payload["selection_policy"]["road_limit"], 260)
+        self.assertEqual(payload["selection_policy"]["rail_limit"], 160)
+        self.assertEqual(payload["selection_policy"]["city_limit"], 32)
+        self.assertEqual(payload["counts"]["road_source_features"], 4794)
+        self.assertEqual(payload["counts"]["rail_source_features"], 1105)
+        self.assertGreater(payload["counts"]["road_eligible_paths"], payload["counts"]["road_lines_rendered"])
+        self.assertGreater(payload["counts"]["rail_eligible_paths"], payload["counts"]["rail_lines_rendered"])
+        self.assertEqual(payload["counts"]["road_lines_rendered"], 260)
+        self.assertEqual(payload["counts"]["rail_lines_rendered"], 160)
+        self.assertGreater(payload["counts"]["city_source_features"], payload["counts"]["city_points_rendered"])
+        self.assertGreater(payload["counts"]["city_eligible_points"], payload["counts"]["city_points_rendered"])
+        self.assertEqual(payload["counts"]["city_points_rendered"], 32)
+        self.assertEqual(payload["counts"]["night_points_rendered"], 88)
+        self.assertEqual(payload["counts"]["bathymetry_source_features"], 6)
+        self.assertEqual(payload["counts"]["bathymetry_eligible_paths"], 0)
+        self.assertEqual(payload["counts"]["bathymetry_lines_rendered"], 0)
+        self.assertEqual(
+            len(payload["counts"]["selected_city_titles"]),
+            payload["counts"]["city_points_rendered"],
+        )
+        self.assertEqual(
+            len(set(payload["counts"]["selected_city_titles"])),
+            payload["counts"]["city_points_rendered"],
+        )
+        self.assertNotIn("Sendai", payload["counts"]["selected_city_titles"])
+        self.assertIn("Sendai · Miyagi", payload["counts"]["selected_city_titles"])
+        self.assertGreater(payload["counts"]["carrier_paths"], 40)
+        self.assertGreater(payload["counts"]["terrain_major_lines_rendered"], 0)
+        self.assertGreater(payload["counts"]["terrain_minor_lines_rendered"], 0)
+        self.assertGreater(payload["counts"]["river_lines_rendered"], 0)
 
     def test_landing_europe_1936_showcase_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
@@ -142,6 +205,39 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 build_landing_europe_1936_showcase.SHOWCASE_SVG = previous_svg
                 build_landing_europe_1936_showcase.SHOWCASE_METADATA = previous_metadata
 
+    def test_landing_japan_preview_assets_match_builder_output(self) -> None:
+        previous_svg_paths = build_landing_japan_preview.JAPAN_PREVIEW_SVGS
+        previous_metadata_path = build_landing_japan_preview.JAPAN_PREVIEW_METADATA
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            build_landing_japan_preview.JAPAN_PREVIEW_SVGS = {
+                mode: tmp_root / f"japan-preview-{mode}.svg"
+                for mode in ("transport", "cities", "terrain", "night")
+            }
+            build_landing_japan_preview.JAPAN_PREVIEW_METADATA = tmp_root / "japan-preview.json"
+            try:
+                build_landing_japan_preview.build_preview()
+                self.assertEqual(
+                    build_landing_japan_preview.JAPAN_PREVIEW_METADATA.read_bytes(),
+                    (LANDING_ASSETS / "japan-preview.json").read_bytes(),
+                )
+                for mode, generated_path in build_landing_japan_preview.JAPAN_PREVIEW_SVGS.items():
+                    with self.subTest(mode=mode):
+                        ET.fromstring(generated_path.read_text(encoding="utf-8"))
+                        if mode == "cities":
+                            generated_text = generated_path.read_text(encoding="utf-8")
+                            self.assertIn("<title>Sendai · Miyagi</title>", generated_text)
+                            self.assertIsNone(
+                                re.search(r'<circle class="city"[^>]*><title>Sendai</title></circle>', generated_text)
+                            )
+                        self.assertEqual(
+                            generated_path.read_bytes(),
+                            (LANDING_ASSETS / f"japan-preview-{mode}.svg").read_bytes(),
+                        )
+            finally:
+                build_landing_japan_preview.JAPAN_PREVIEW_SVGS = previous_svg_paths
+                build_landing_japan_preview.JAPAN_PREVIEW_METADATA = previous_metadata_path
+
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
@@ -149,7 +245,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
         self.assertIn('newline="\\n"', source)
         self.assertIn("from tools.build_landing_europe_1936_showcase import build_showcase as build_landing_europe_1936_showcase", source)
+        self.assertIn("from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview", source)
         self.assertLess(source.index("build_landing_europe_1936_showcase()"), source.index("    reset_dist()"))
+        self.assertLess(source.index("build_landing_japan_preview()"), source.index("    reset_dist()"))
         self.assertNotIn(".write_text(", source)
         self.assertLess(
             source.index("normalize_dist_text_files_lf()"),
@@ -663,6 +761,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "assets/japan-preview-cities.svg",
             "assets/japan-preview-terrain.svg",
             "assets/japan-preview-night.svg",
+            "assets/japan-preview.json",
             "assets/template-blank.svg",
             "assets/template-modern.svg",
             "assets/template-hoi4.svg",
@@ -702,11 +801,27 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/transport_layers/japan_port/ports.core.geojson",
             "app/data/transport_layers/japan_port/ports.expanded.geojson",
             "app/data/transport_layers/japan_port/ports.geojson",
+            "app/data/transport_layers/japan_corridor/carrier.json",
             "app/data/transport_layers/japan_road/roads.preview.topo.json",
+            "app/data/transport_layers/japan_road/manifest.json",
+            "app/data/transport_layers/japan_rail/railways.preview.topo.json",
+            "app/data/transport_layers/japan_rail/rail_stations_major.preview.geojson",
+            "app/data/transport_layers/japan_rail/manifest.json",
+            "app/data/global_contours.major.topo.json",
+            "app/data/global_contours.minor.topo.json",
+            "app/data/global_rivers.geojson",
+            "app/data/global_bathymetry.topo.json",
             "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
         ):
             with self.subTest(expected_path=expected_path):
                 self.assertIn(expected_path, paths)
+
+        for expected_path in expected_landing_asset_paths:
+            with self.subTest(asset_copy=expected_path):
+                self.assertEqual(
+                    (REPO_ROOT / "dist" / expected_path).read_bytes(),
+                    (REPO_ROOT / "landing" / expected_path).read_bytes(),
+                )
 
         for excluded_path in (
             "app/data/PROBAV_LC100_global_v3.0.1_2019_discrete.tif",

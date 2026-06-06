@@ -303,3 +303,7 @@
 
 ### 嵌入式 SVG 交互要同时锁 XML 和行为
 - 通过 `<object type="image/svg+xml">` 嵌入的 SVG 走 XML 解析，自定义 `data-*` 属性必须写成带值形式；展示图缩放、拖拽、复位这类交互要有轻量行为测试覆盖。
+
+### 首页静态预览要公开真实抽样合同
+- 从真实数据生成 landing SVG 时，要同时写 metadata，记录 scope、projection、sources、selection policy 和实际渲染 count；文案只引用已渲染数量。
+- 物理图层源可能在目标视口内没有要素；这种情况应写入 metadata，并让可见文案描述实际存在的图层，避免展示页承诺空层。

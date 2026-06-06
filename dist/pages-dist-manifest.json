@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 53686
+      "size_bytes": 53745
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37234,19 +37234,23 @@
     },
     {
       "path": "assets/japan-preview-cities.svg",
-      "size_bytes": 18371
+      "size_bytes": 289271
     },
     {
       "path": "assets/japan-preview-night.svg",
-      "size_bytes": 18423
+      "size_bytes": 289308
     },
     {
       "path": "assets/japan-preview-terrain.svg",
-      "size_bytes": 18360
+      "size_bytes": 289285
     },
     {
       "path": "assets/japan-preview-transport.svg",
-      "size_bytes": 18417
+      "size_bytes": 289290
+    },
+    {
+      "path": "assets/japan-preview.json",
+      "size_bytes": 3752
     },
     {
       "path": "assets/night-lights-political.webp",
@@ -37290,7 +37294,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1053255
+      "size_bytes": 1053340
     },
     {
       "path": "styles.css",
@@ -37307,5 +37311,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109622922
+  "total_bytes": 1110710401
 }

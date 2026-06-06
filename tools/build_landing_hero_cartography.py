@@ -13,13 +13,8 @@ from topojson.utils import serialize_as_geojson
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 EUROPE_TOPOLOGY = REPO_ROOT / "data" / "europe_topology.json"
-JAPAN_ROADS = REPO_ROOT / "data" / "transport_layers" / "japan_road" / "roads.preview.topo.json"
-JAPAN_RAIL = REPO_ROOT / "data" / "transport_layers" / "japan_rail" / "railways.preview.topo.json"
-JAPAN_STATIONS = REPO_ROOT / "data" / "transport_layers" / "japan_rail" / "rail_stations_major.preview.geojson"
-WORLD_CITIES = REPO_ROOT / "data" / "world_cities.geojson"
 
 EUROPE_BBOX = (-12.5, 34.0, 41.5, 72.5)
-JAPAN_BBOX = (126.0, 29.0, 146.8, 45.8)
 
 
 def write_svg(path: Path, svg: str) -> None:
@@ -215,76 +210,6 @@ def build_hero_asset() -> None:
     write_svg(LANDING_ASSETS / "hero-cartography.svg", svg)
 
 
-def path_from_lonlat(points: Iterable[tuple[float, float]], canvas: Canvas, stride: int = 10) -> str:
-    return line_to_path(points, canvas, stride=stride)
-
-
-def japan_line_paths(path: Path, object_name: str, canvas: Canvas, stride: int = 10, limit: int = 90) -> list[str]:
-    paths: list[str] = []
-    for feature in topology_features(path, object_name):
-        geometry_payload = feature.get("geometry")
-        if not geometry_payload:
-            continue
-        paths.extend(line_paths(shape(geometry_payload), canvas, stride))
-        if len(paths) >= limit:
-            break
-    return paths[:limit]
-
-
-def japan_points(canvas: Canvas) -> list[tuple[float, float]]:
-    points: list[tuple[float, float]] = []
-    for feature in geojson_features(WORLD_CITIES):
-        coords = feature.get("geometry", {}).get("coordinates")
-        if not isinstance(coords, list) or len(coords) < 2:
-            continue
-        lon, lat = float(coords[0]), float(coords[1])
-        if JAPAN_BBOX[0] <= lon <= JAPAN_BBOX[2] and JAPAN_BBOX[1] <= lat <= JAPAN_BBOX[3]:
-            points.append(canvas.project(lon, lat))
-        if len(points) >= 18:
-            return points
-    for feature in geojson_features(JAPAN_STATIONS):
-        coords = feature.get("geometry", {}).get("coordinates")
-        if isinstance(coords, list) and len(coords) >= 2:
-            points.append(canvas.project(float(coords[0]), float(coords[1])))
-        if len(points) >= 18:
-            break
-    return points
-
-
-def build_japan_preview_assets() -> None:
-    canvas = Canvas(680, 440, JAPAN_BBOX)
-    roads = japan_line_paths(JAPAN_ROADS, "roads", canvas, stride=12, limit=80)
-    rails = japan_line_paths(JAPAN_RAIL, "railways", canvas, stride=8, limit=70)
-    points = japan_points(canvas)
-    point_nodes = "\n".join(f'    <circle cx="{fmt(x)}" cy="{fmt(y)}" r="4.8" />' for x, y in points[:16])
-    road_nodes = svg_path_elements(roads, "road", limit=70)
-    rail_nodes = svg_path_elements(rails, "rail", limit=62)
-    mode_styles = {
-        "transport": ".road{stroke:#e96b31;opacity:.58}.rail{stroke:#f4eee2;opacity:.72}.city{fill:#ffe08a}.terrain{opacity:.18}.night{opacity:.12}",
-        "cities": ".road,.rail{opacity:.18}.city{fill:#2dd4bf}.terrain{opacity:.1}.night{opacity:.08}",
-        "terrain": ".road,.rail,.city{opacity:.18}.terrain{opacity:.72}.night{opacity:.06}",
-        "night": ".road,.rail{opacity:.16}.city{fill:#ffd166}.terrain{opacity:.08}.night{opacity:.82}.sea{fill:#0a1324}.land{fill:#182235;stroke:#304057}",
-    }
-    for mode, style in mode_styles.items():
-        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="Japan {mode} preview map">
-  <style>
-    .sea{{fill:#c6e4e3}}.land{{fill:#f4ead5;stroke:#7c8a71;stroke-width:2}}.road,.rail,.terrain{{fill:none;stroke-linecap:round;stroke-linejoin:round}}.road{{stroke-width:2.2}}.rail{{stroke-width:2.6;stroke-dasharray:7 7}}.terrain{{stroke:#6d8f4e;stroke-width:10}}.city{{stroke:#fff;stroke-width:2.4}}.night{{fill:#ffd166;filter:url(#glow)}}{style}
-  </style>
-  <defs><filter id="glow"><feGaussianBlur stdDeviation="12"/></filter></defs>
-  <rect class="sea" width="{canvas.width}" height="{canvas.height}" rx="26" />
-  <path class="terrain" d="M110 384 C194 310 258 286 330 220 C400 154 486 106 604 48" />
-  <path class="terrain" d="M168 396 C256 326 326 280 392 214 C456 150 524 112 626 72" />
-  <path class="land" d="M535 28 C604 65 620 140 560 184 C506 224 516 282 470 330 C418 386 326 400 294 348 C258 292 312 252 308 202 C304 148 354 132 384 92 C420 46 468 -8 535 28Z" />
-  <path class="land" d="M150 285 C210 248 258 280 252 335 C246 392 170 415 122 374 C82 340 102 308 150 285Z" />
-  <g class="night"><circle cx="356" cy="271" r="48" /><circle cx="398" cy="227" r="35" /><circle cx="476" cy="148" r="28" /></g>
-  <g>{road_nodes}</g>
-  <g>{rail_nodes}</g>
-  <g class="city">{point_nodes}</g>
-</svg>
-"""
-        write_svg(LANDING_ASSETS / f"japan-preview-{mode}.svg", svg)
-
-
 def build_template_assets() -> None:
     canvas = Canvas(560, 360, EUROPE_BBOX)
     political = europe_political_paths(canvas, stride=5)[:110]
@@ -316,7 +241,6 @@ def build_template_assets() -> None:
 def main() -> None:
     LANDING_ASSETS.mkdir(parents=True, exist_ok=True)
     build_hero_asset()
-    build_japan_preview_assets()
     build_template_assets()
 
 
