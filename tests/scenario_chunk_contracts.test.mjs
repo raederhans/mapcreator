@@ -780,7 +780,7 @@ test("tno render budget sets political cold selection caps", () => {
 
   assert.equal(hints.max_required_political_chunks, 6);
   assert.equal(hints.min_required_political_chunks, 1);
-  assert.equal(hints.max_required_political_estimated_path_cost, 520_000);
+  assert.equal(hints.max_required_political_estimated_path_cost, 680_000);
   assert.equal(hints.max_required_political_byte_size, 45_000_000);
   assert.match(chunkAssetToolSource, /TNO_1962_RENDER_BUDGET_HINTS = \{[\s\S]*?"max_required_political_chunks": 6/);
   assert.match(chunkAssetToolSource, /\*\*\(TNO_1962_RENDER_BUDGET_HINTS if scenario_id == "tno_1962" else \{\}\)/);

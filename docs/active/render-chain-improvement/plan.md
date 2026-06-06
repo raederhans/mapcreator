@@ -102,3 +102,13 @@ Reduce political coarse chunk geometry cost at build time while preserving compl
 
 ### Review Fix Follow-Up
 Before regenerating checked-in scenario data, ensure every manifest field that describes geometry is derived from the final written payload. The first concrete fix is political coarse `feature_bounds`, which now follows optimized payload bounds instead of source feature bounds.
+
+### Acceptance Run Follow-Up
+The next execution lane must create a named real-data validator for TNO/HOI4 `political.coarse` chunks, regenerate both scenario chunk sets, run scenario/Pages/perf gates, and treat fresh `npm run perf:gate` success as a landing requirement.
+
+### Acceptance Evidence
+TNO and HOI4 scenario chunks were regenerated with political coarse LOD diagnostics. Fresh gates passed through chunk tests, scenario contracts, Pages dist, perf/report contracts, and `npm run perf:gate`. The regenerated coarse chunks cut TNO coarse bytes from `26.96MB` to `11.44MB` and HOI4 coarse bytes from `34.23MB` to `14.38MB`.
+
+Review caught one build-output contract issue during acceptance: root Pages dist text files were copied with CRLF working-tree bytes while `.gitattributes` publishes them as LF. The builder now normalizes root `dist/index.html`, `dist/app.js`, and `dist/styles.css` before writing `dist/pages-dist-manifest.json`; static recompute now matches the manifest total `1109157488`, and all four tracked Pages files report `w/lf`.
+
+UltraQA caught one data-contract issue during acceptance: TNO's top-level political path-cost budget still used the old `520000` value while the regenerated coarse chunk cost is `678774`. The budget hint is now `680000`, the generator default matches it, and the checked-in validator covers this relationship. Final perf gate passed after clearing a stale local `tools/dev_server.py` process on port `8000`.

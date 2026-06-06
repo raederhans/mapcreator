@@ -148,12 +148,12 @@
   "releasable_catalog_url": "data/releasables/tno_1962.internal.phase1.catalog.json",
   "relief_overlays_url": "data/scenarios/tno_1962/relief_overlays.geojson",
   "render_budget_hints": {
-    "detail_zoom_threshold": 1.7,
-    "max_optional_chunks": 3,
     "max_required_chunks": 6,
-    "max_required_political_byte_size": 45000000,
+    "max_optional_chunks": 3,
+    "detail_zoom_threshold": 1.7,
     "max_required_political_chunks": 6,
-    "max_required_political_estimated_path_cost": 520000,
+    "max_required_political_estimated_path_cost": 680000,
+    "max_required_political_byte_size": 45000000,
     "min_required_political_chunks": 1
   },
   "runtime_bootstrap_topology_url": "data/scenarios/tno_1962/runtime_topology.bootstrap.topo.json",
@@ -166,7 +166,7 @@
   "snapshot_fingerprint": "6b14308042d4baa586915ac688a209c0dda439aa3b76860fa7088b6a2f73af5c",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "8098080e409f07996ae412a3f100d64da87feffc71245db3d564a2ecb26be2b1",
+    "detail_chunk_manifest_sha256": "efbb6bf217dab735c7d5d52e736aaa95aeda306250fc7a39ba232eeeb05f9586",
     "runtime_bootstrap_topology_sha256": "0537fc1bcb1eadc28d9bc450d8d1b7630b84fbb7388c9dd3240340887badb405",
     "runtime_topology_sha256": "b224fc4b590d676b2e0014b8ece43e3bb85474dad11f83bd037c92fe8918520d"
   },

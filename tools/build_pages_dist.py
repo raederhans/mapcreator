@@ -119,6 +119,11 @@ TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
 }
 DISPOSABLE_DIST_NAMES = {"__pycache__"}
 DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
+LF_NORMALIZED_ROOT_DIST_PATHS = {
+    Path("index.html"),
+    Path("app.js"),
+    Path("styles.css"),
+}
 LF_NORMALIZED_APP_SUFFIXES = {".js", ".json"}
 BYTE_EXACT_APP_DATA_PATHS = {
     Path("app") / "data" / "hgo_runtime" / "manifest.json",
@@ -138,6 +143,8 @@ def should_normalize_dist_text_file_lf(path: Path) -> bool:
         return path.suffix.lower() in LF_NORMALIZED_APP_SUFFIXES
     if relative_path in BYTE_EXACT_APP_DATA_PATHS:
         return False
+    if relative_path in LF_NORMALIZED_ROOT_DIST_PATHS:
+        return True
     if relative_path.as_posix() == "app/index.html":
         return True
     return (

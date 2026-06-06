@@ -216,3 +216,23 @@
 - Fix: compute `feature_count` and `feature_bounds` from the final `chunk_payload.features` after political coarse simplification.
 - Additional hardening: accept only `Polygon` / `MultiPolygon` simplification results and keep original geometry if Shapely repair produces another type.
 - Diagnostics were expanded for the next regeneration/perf lane: `source/optimized` byte size and part count, `round_decimals`, and `preserve_topology`.
+
+## 2026-06-06 LOD Acceptance Run Context
+- Earlier entries are historical setup evidence; they do not count as acceptance evidence for this run.
+- This run must regenerate TNO/HOI4 scenario chunks, prove real `political.coarse` manifest fields against final written payloads, rerun scenario contracts, rerun Pages dist verification, and require a fresh `npm run perf:gate` pass before landing.
+- Autopilot consensus evidence exists from Codex App native subagents, but `omx state write` could not transition to `ultragoal` because this App run did not populate OMX `subagent-tracking.json`; continue with explicit file/subagent evidence and record the compatibility gap in final evidence.
+- Real-data regeneration completed for `data/scenarios/tno_1962` and `data/scenarios/hoi4_1939`.
+- Named validator passed: `python -m unittest tests.test_scenario_chunk_assets.ScenarioChunkAssetsTest.test_checked_in_political_coarse_lod_manifest_matches_payload -q`.
+- LOD diagnostics after regeneration:
+  - TNO coarse: byte size `26,960,504 -> 11,435,737`, coord count `629,841 -> 501,709`, estimated path cost `806,930 -> 678,774`.
+  - HOI4 coarse: byte size `34,229,015 -> 14,382,950`, coord count `715,490 -> 561,427`, estimated path cost `1,013,852 -> 859,821`.
+- Fresh `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json`; TNO p50 `totalStartupMs=5070.6ms`, `scenarioChunkPromotionVisualStageMs=522.8ms`, `buildHitCanvasMs=184.5ms`; HOI4 p50 `totalStartupMs=5608.7ms`, `scenarioChunkPromotionVisualStageMs=569.5ms`, `buildHitCanvasMs=176.2ms`.
+- Verification passed so far: py_compile for generator/checker entries and chunk test, chunk asset tests `15/15`, Node scenario chunk contracts `43/43`, TNO scenario contracts, HOI4 bundle check, Pages dist startup shell `22/22`, perf/report boundary contracts `28/28`, and perf gate.
+- Review found a real Pages dist contract issue: `dist/pages-dist-manifest.json` was computed from CRLF working-tree sizes for root `dist/app.js`, `dist/index.html`, and `dist/styles.css`, while `.gitattributes` publishes them as LF. The builder now normalizes those root files before manifest generation.
+- Review-fix verification: `python -m unittest tests.test_pages_dist_startup_shell.PagesDistStartupShellTest.test_pages_dist_generated_text_writes_use_lf -q` passed; `npm run verify:pages-dist` passed with `22/22`; manifest recompute matched `app.js=36893`, `index.html=42534`, `styles.css=28336`, TNO coarse `11435737`, HOI4 coarse `14382950`, and total `1109157488`.
+- Git line-ending proof after the review fix: `git ls-files --eol dist/app.js dist/index.html dist/styles.css dist/pages-dist-manifest.json` reported `w/lf` for all four tracked files.
+- Fresh post-review gates passed: `npm run test:node:scenario-chunk-contracts` `43/43`, `python -m unittest tests.test_perf_gate_contract tests.test_map_renderer_political_collection_boundary_contract tests.test_renderer_runtime_state_boundary_contract -q` `28/28`, `python -m unittest tests.test_scenario_chunk_assets -q` `15/15`, and `npm run perf:gate` passed.
+- Latest post-review perf gate p50 values: TNO `totalStartupMs=5502.1ms`, `scenarioChunkPromotionVisualStageMs=544.1ms`, `buildHitCanvasMs=192.6ms`; HOI4 `totalStartupMs=5748.3ms`, `scenarioChunkPromotionVisualStageMs=575.9ms`, `buildHitCanvasMs=186.3ms`.
+- UltraQA found and fixed a real budget blocker: TNO `render_budget_hints.max_required_political_estimated_path_cost` was still `520000`, below regenerated `political.coarse.r0c0.estimated_path_cost=678774`. The accepted hint is now `680000`, and the checked-in validator asserts any present political path-cost budget covers the real coarse chunk cost.
+- After the budget fix, the first perf reruns failed under a noisy local environment. A stale local `tools/dev_server.py` on port `8000` was stopped; the final clean-window `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json`.
+- Final acceptance perf p50 after the UltraQA fix: TNO `totalStartupMs=5410.6ms`, `scenarioChunkPromotionVisualStageMs=536.9ms`, `buildHitCanvasMs=188.9ms`; HOI4 `totalStartupMs=5975.9ms`, `scenarioChunkPromotionVisualStageMs=583.1ms`, `buildHitCanvasMs=180.5ms`.

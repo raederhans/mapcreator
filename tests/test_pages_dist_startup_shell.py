@@ -35,6 +35,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
         self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
+        self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
         self.assertIn('newline="\\n"', source)
         self.assertNotIn(".write_text(", source)
         self.assertLess(
@@ -49,6 +50,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             crlf_path.write_bytes(b"const ok = true;\r\n")
             build_pages_dist.normalize_dist_text_file_lf(crlf_path)
             self.assertEqual(crlf_path.read_bytes(), b"const ok = true;\n")
+
+        original_dist_root = build_pages_dist.DIST_ROOT
+        with tempfile.TemporaryDirectory() as tmpdir:
+            build_pages_dist.DIST_ROOT = Path(tmpdir)
+            try:
+                for relative_path in (Path("index.html"), Path("app.js"), Path("styles.css")):
+                    root_dist_path = Path(tmpdir) / relative_path
+                    root_dist_path.write_bytes(b"line 1\r\nline 2\r\n")
+                    build_pages_dist.normalize_dist_text_file_lf(root_dist_path)
+                    self.assertEqual(root_dist_path.read_bytes(), b"line 1\nline 2\n")
+            finally:
+                build_pages_dist.DIST_ROOT = original_dist_root
 
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")

@@ -64,6 +64,60 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                     self.assertTrue(chunk_path.exists(), str(chunk_path))
                     self.assertEqual(chunk.get("byte_size"), chunk_path.stat().st_size)
 
+    def test_checked_in_political_coarse_lod_manifest_matches_payload(self) -> None:
+        for scenario_id in ("hoi4_1939", "tno_1962"):
+            manifest_path = REPO_ROOT / "data" / "scenarios" / scenario_id / "detail_chunks.manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            scenario_manifest_path = REPO_ROOT / "data" / "scenarios" / scenario_id / "manifest.json"
+            scenario_manifest = json.loads(scenario_manifest_path.read_text(encoding="utf-8"))
+            coarse_chunk = next(
+                chunk for chunk in manifest.get("chunks", [])
+                if chunk.get("id") == "political.coarse.r0c0"
+            )
+            chunk_path = REPO_ROOT.joinpath(*str(coarse_chunk["url"]).split("/"))
+            payload = json.loads(chunk_path.read_text(encoding="utf-8"))
+            features = payload.get("features")
+            self.assertIsInstance(features, list)
+            assert isinstance(features, list)
+
+            with self.subTest(scenario_id=scenario_id):
+                diagnostics = coarse_chunk.get("lod_diagnostics")
+                self.assertIsInstance(diagnostics, dict)
+                assert isinstance(diagnostics, dict)
+
+                payload_cost = scenario_chunk_assets._summarize_payload_geometry_cost(payload)
+                payload_byte_size = scenario_chunk_assets._minified_json_byte_size(payload)
+                payload_bounds = [scenario_chunk_assets._feature_bounds(feature) for feature in features]
+
+                self.assertEqual(coarse_chunk.get("feature_count"), len(features))
+                self.assertEqual(coarse_chunk.get("feature_bounds"), payload_bounds)
+                self.assertEqual(coarse_chunk.get("byte_size"), chunk_path.stat().st_size)
+                self.assertEqual(coarse_chunk.get("sha256"), build_scenario_chunk_assets.sha256_path(chunk_path))
+                self.assertEqual(coarse_chunk.get("byte_size"), payload_byte_size)
+                self.assertEqual(coarse_chunk.get("coord_count"), payload_cost["coord_count"])
+                self.assertEqual(coarse_chunk.get("part_count"), payload_cost["part_count"])
+                self.assertEqual(coarse_chunk.get("estimated_path_cost"), payload_cost["estimated_path_cost"])
+                budget_hints = scenario_manifest.get("render_budget_hints")
+                self.assertIsInstance(budget_hints, dict)
+                assert isinstance(budget_hints, dict)
+                political_path_cost_budget = budget_hints.get("max_required_political_estimated_path_cost")
+                if political_path_cost_budget is not None:
+                    self.assertGreaterEqual(political_path_cost_budget, coarse_chunk.get("estimated_path_cost"))
+                self.assertEqual(diagnostics.get("optimized_feature_count"), len(features))
+                self.assertEqual(diagnostics.get("optimized_coord_count"), payload_cost["coord_count"])
+                self.assertEqual(diagnostics.get("optimized_part_count"), payload_cost["part_count"])
+                self.assertEqual(diagnostics.get("optimized_byte_size"), payload_byte_size)
+                self.assertEqual(diagnostics.get("optimized_estimated_path_cost"), payload_cost["estimated_path_cost"])
+                self.assertGreater(diagnostics.get("source_coord_count"), diagnostics.get("optimized_coord_count"))
+                self.assertGreater(diagnostics.get("source_byte_size"), diagnostics.get("optimized_byte_size"))
+                self.assertGreater(
+                    diagnostics.get("source_estimated_path_cost"),
+                    diagnostics.get("optimized_estimated_path_cost"),
+                )
+                self.assertGreater(diagnostics.get("coord_reduction"), 0)
+                self.assertGreater(diagnostics.get("byte_size_reduction"), 0)
+                self.assertGreater(diagnostics.get("estimated_path_cost_reduction"), 0)
+
     def test_write_json_wraps_permission_error_with_actionable_message(self) -> None:
         target = Path("C:/tmp/political.detail.country.rur.json")
         with patch.object(

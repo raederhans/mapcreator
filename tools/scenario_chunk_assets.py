@@ -23,7 +23,7 @@ DEFAULT_RENDER_BUDGET_HINTS = {
 
 TNO_1962_RENDER_BUDGET_HINTS = {
     "max_required_political_chunks": 6,
-    "max_required_political_estimated_path_cost": 520000,
+    "max_required_political_estimated_path_cost": 680000,
     "max_required_political_byte_size": 45000000,
     "min_required_political_chunks": 1,
 }

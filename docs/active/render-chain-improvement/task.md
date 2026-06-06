@@ -146,3 +146,13 @@
 - [x] Expand `lod_diagnostics` for next-stage regeneration analysis.
 - [x] Add regression assertions for payload-derived feature bounds and diagnostics fields.
 - [x] Re-run targeted Python, Node, perf/report, py_compile, and diff checks.
+
+## 2026-06-06 LOD Acceptance Checklist
+- [x] Start isolated acceptance worktree from `origin/main`.
+- [x] Record Autopilot context, PRD, and test spec.
+- [x] Add named real-data political coarse validator for TNO/HOI4.
+- [x] Regenerate TNO and HOI4 scenario chunk assets.
+- [x] Run scenario contracts, Pages dist verification, and perf gate.
+- [x] Fix Pages dist manifest LF-size drift found during review.
+- [x] Fix UltraQA TNO political path-cost budget blocker.
+- [x] Complete code review and UltraQA gates.

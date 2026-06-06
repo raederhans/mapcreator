@@ -30466,7 +30466,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/chunks/political.coarse.r0c0.json",
-      "size_bytes": 32002987
+      "size_bytes": 14382950
     },
     {
       "path": "app/data/scenarios/hoi4_1939/chunks/political.detail.country.ad.json",
@@ -31730,7 +31730,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/detail_chunks.manifest.json",
-      "size_bytes": 6273853
+      "size_bytes": 5345288
     },
     {
       "path": "app/data/scenarios/hoi4_1939/geo_aliases.startup.json",
@@ -31850,7 +31850,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
-      "size_bytes": 26833271
+      "size_bytes": 11435737
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/political.detail.country.ad.json",
@@ -33362,7 +33362,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
-      "size_bytes": 3581836
+      "size_bytes": 3082521
     },
     {
       "path": "app/data/scenarios/tno_1962/district_groups.manual.json",
@@ -37202,7 +37202,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 37550
+      "size_bytes": 36893
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37234,7 +37234,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 43188
+      "size_bytes": 42534
     },
     {
       "path": "pages-dist-manifest.json",
@@ -37242,7 +37242,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 29789
+      "size_bytes": 28336
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37255,5 +37255,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1143605703
+  "total_bytes": 1109157488
 }
