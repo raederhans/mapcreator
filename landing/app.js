@@ -95,7 +95,6 @@ const translations = {
       "Focus markers make the political surface easier to read before a visitor opens the full editor.",
     showcaseMeta:
       "Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail data.",
-    showcaseMetaLink: "View layer data",
     previewEyebrow: "Live product preview",
     previewTitle: "Preview real transport layers before opening the editor.",
     previewBody:
@@ -404,7 +403,6 @@ const translations = {
     showcaseLayerScenarioTitle: "场景标记突出 1936 框架里的关键国家。",
     showcaseLayerScenarioBody: "焦点标记让访客进入完整编辑器之前，就能先看懂政治地图的主线。",
     showcaseMeta: "由 HOI4 1936 归属、欧洲拓扑、首都提示和欧洲铁路数据生成。",
-    showcaseMetaLink: "查看图层数据",
     previewEyebrow: "产品预览",
     previewTitle: "进入编辑器之前，先预览真实交通图层。",
     previewBody: "日本视图可以在道路、铁路、城市、地形和夜光之间切换，让用户先看到地图能表达什么。",

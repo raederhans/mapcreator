@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 53695
+      "size_bytes": 53610
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37286,7 +37286,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 49006
+      "size_bytes": 48865
     },
     {
       "path": "pages-dist-manifest.json",
@@ -37307,5 +37307,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109620894
+  "total_bytes": 1109620668
 }
