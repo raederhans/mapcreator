@@ -312,6 +312,40 @@ class PagesDistStartupShellTest(unittest.TestCase):
             with self.subTest(stale_fragment=stale_fragment):
                 self.assertNotIn(stale_fragment, zh_table)
 
+    def test_landing_copy_stays_user_facing(self) -> None:
+        sources = {
+            "landing/index.html": LANDING_INDEX.read_text(encoding="utf-8"),
+            "landing/app.js": LANDING_APP_JS.read_text(encoding="utf-8"),
+        }
+        if DIST_ROOT_INDEX.exists():
+            sources["dist/index.html"] = DIST_ROOT_INDEX.read_text(encoding="utf-8")
+        if DIST_APP_JS.exists():
+            sources["dist/app.js"] = DIST_APP_JS.read_text(encoding="utf-8")
+
+        stale_fragments = (
+            "Every source claim below is tied to checked-in manifests",
+            "The Japan transport pack is the strongest current sample",
+            "Use the checked-in Japan transport manifests",
+            "Source ledgers, asset catalogs",
+            "Source signatures and build audits",
+            "Transport packs with manifests",
+            "Cataloged, reproducible, and inspectable",
+            "source ledgers, transport manifests",
+            "manifest review",
+            "manifest-led pipeline",
+            "已入库",
+            "入库清单",
+            "来源台账",
+            "构建审计",
+            "清单驱动流水线",
+            "数据入库基础",
+        )
+
+        for source_name, source in sources.items():
+            for stale_fragment in stale_fragments:
+                with self.subTest(source=source_name, stale_fragment=stale_fragment):
+                    self.assertNotIn(stale_fragment, source)
+
     def test_dist_root_index_keeps_landing_startup_contract(self) -> None:
         if not DIST_ROOT_INDEX.exists():
             self.skipTest("dist/index.html is only available after build_pages_dist runs")

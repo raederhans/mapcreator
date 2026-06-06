@@ -125,11 +125,11 @@
           </article>
           <article class="stat-card" data-reveal>
             <span class="stat-card__value" data-stat-value="641">641</span>
-            <span class="stat-card__label" data-i18n="statCatalog">cataloged data assets</span>
+            <span class="stat-card__label" data-i18n="statCatalog">map-ready data assets</span>
           </article>
           <article class="stat-card" data-reveal>
             <span class="stat-card__value" data-stat-value="5899">5899</span>
-            <span class="stat-card__label" data-i18n="statJapan">Japan road + rail preview features</span>
+            <span class="stat-card__label" data-i18n="statJapan">Japan transport map features</span>
           </article>
         </section>
 
@@ -137,7 +137,7 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="sourcesEyebrow">Data sources</p>
             <h2 data-i18n="sourcesTitle">Built on recognizable map data families.</h2>
-            <p data-i18n="sourcesBody">Every source claim below is tied to checked-in manifests, ledgers, or build audits.</p>
+            <p data-i18n="sourcesBody">Open any source button to see the public dataset or repository behind the maps.</p>
           </div>
           <div class="source-marquee" data-reveal>
             <div class="source-marquee__track">
@@ -230,7 +230,7 @@
           <div class="showcase-section__copy" data-reveal>
             <p class="eyebrow eyebrow--dark" data-i18n="showcaseEyebrow">Cartography showcase</p>
             <h2 data-i18n="showcaseTitle">A scenario page should look like it already knows how maps behave.</h2>
-            <p data-i18n="showcaseBody">The homepage now uses generated map assets from checked-in topology, transport, and city data so the product story starts with geography.</p>
+            <p data-i18n="showcaseBody">Scenario Forge presents political borders, routes, cities, and terrain together so the map reads like a finished geography-first scene.</p>
           </div>
           <figure class="showcase-map" data-reveal>
             <img src="./assets/showcase-final-map.svg" alt="Scenario Forge generated final map showcase." data-i18n-alt="showcaseAlt" loading="lazy" width="560" height="360" />
@@ -240,9 +240,9 @@
         <section id="product" class="section section--muted product-preview">
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="previewEyebrow">Live product preview</p>
-            <h2 data-i18n="previewTitle">Use a real pilot dataset as the first thing people can touch.</h2>
+            <h2 data-i18n="previewTitle">Preview real transport layers before opening the editor.</h2>
             <p data-i18n="previewBody">
-              The Japan transport pack is the strongest current sample: road and rail previews are checked in, counted, and tied back to source manifests.
+              The Japan view lets visitors switch between roads, rail, cities, terrain, and night context in a compact product preview.
             </p>
           </div>
 
@@ -253,7 +253,7 @@
                   <p class="mini-map__label" data-i18n="miniMapLabel">Japan pilot preview</p>
                   <h3 data-i18n="miniMapTitle">Road, rail, cities, terrain, and night-light context in one compact view.</h3>
                 </div>
-                <span class="status-badge" data-i18n="miniMapBadge">Checked-in sample</span>
+                <span class="status-badge" data-i18n="miniMapBadge">Interactive preview</span>
               </div>
 
               <div class="mini-map__surface" aria-hidden="true">
@@ -274,13 +274,13 @@
             <div class="preview-panels" data-reveal>
               <article id="preview-panel-transport" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-transport" data-preview-panel="transport">
                 <span class="status-badge" data-i18n="previewPanelTransportBadge">Japan road + rail</span>
-                <h3 data-i18n="previewPanelTransportTitle">4794 road preview features and 1105 rail preview features.</h3>
-                <p data-i18n="previewPanelTransportBody">Use the checked-in Japan transport manifests as a compact proof that infrastructure layers can become a real product surface.</p>
+                <h3 data-i18n="previewPanelTransportTitle">4794 road features and 1105 rail features are visible in the Japan preview.</h3>
+                <p data-i18n="previewPanelTransportBody">Use this view to judge whether transport corridors and rail hubs are clear enough for a scenario map.</p>
               </article>
               <article id="preview-panel-cities" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-cities" data-preview-panel="cities" hidden>
                 <span class="status-badge" data-i18n="previewPanelCitiesBadge">City points</span>
                 <h3 data-i18n="previewPanelCitiesTitle">Show settlement anchors, labels, and density cues before opening the editor.</h3>
-                <p data-i18n="previewPanelCitiesBody">The landing page can preview how world city assets become readable map context instead of a plain feature list.</p>
+                <p data-i18n="previewPanelCitiesBody">City points give the map recognizable anchors, so viewers can read scale and regional density at a glance.</p>
               </article>
               <article id="preview-panel-terrain" class="preview-panel" role="tabpanel" aria-labelledby="preview-tab-terrain" data-preview-panel="terrain" hidden>
                 <span class="status-badge" data-i18n="previewPanelTerrainBadge">Relief and physical context</span>
@@ -353,7 +353,7 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="featuresEyebrow">Product capabilities</p>
             <h2 data-i18n="featuresTitle">Organized like a serious map product.</h2>
-            <p data-i18n="featuresBody">Each capability group is organized around a real creator workflow and the data contracts behind it.</p>
+            <p data-i18n="featuresBody">Each capability group supports a real creator workflow, from editing political states to exporting presentation maps.</p>
           </div>
 
           <div class="feature-groups">
@@ -384,17 +384,17 @@
                 <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><path d="M8 5v14M16 5v14"/></svg>
               </span>
               <h3 data-i18n="featureGroupThreeTitle">Spatial data and analysis</h3>
-              <p data-i18n="featureGroupThreeBody">Source ledgers, asset catalogs, health checks, provenance sidecars, hierarchy data, and reusable geography pipelines.</p>
+              <p data-i18n="featureGroupThreeBody">Boundaries, settlements, hierarchy data, physical context, and source links that help maps stay readable and trustworthy.</p>
             </article>
             <article class="feature-group" data-reveal>
               <span class="feature-icon feature-icon--violet" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg>
               </span>
               <h3 data-i18n="featureGroupFourTitle">Transport and infrastructure</h3>
-              <p data-i18n="featureGroupFourBody">Road and rail previews are the current proof point; airports, ports, energy, industrial, and resource families are tracked as in-progress data packs.</p>
+              <p data-i18n="featureGroupFourBody">Roads and rail are already visible in the Japan preview, with airports, ports, energy, industry, and resources forming the next infrastructure views.</p>
               <ul class="feature-points">
                 <li data-i18n="featurePointTransport">Japan roads, rail, airports, ports, energy, industry, logistics, and resource families.</li>
-                <li data-i18n="featurePointAudits">Source signatures and build audits keep infrastructure packs reproducible.</li>
+                <li data-i18n="featurePointAudits">Source links help reviewers understand where infrastructure layers come from.</li>
               </ul>
             </article>
             <article class="feature-group" data-reveal>
@@ -409,7 +409,7 @@
                 <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
               </span>
               <h3 data-i18n="featureGroupSixTitle">Project management</h3>
-              <p data-i18n="featureGroupSixBody">Local save/load, bilingual UI, export workflows, future cloud save surfaces, and repeatable publishing contracts.</p>
+              <p data-i18n="featureGroupSixBody">Local save/load, bilingual UI, export workflows, and future team surfaces for sharing map projects.</p>
             </article>
           </div>
         </section>
@@ -463,7 +463,7 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="dataEyebrow">Data foundation</p>
             <h2 data-i18n="dataTitle">A map product needs visible data trust.</h2>
-            <p data-i18n="dataBody">Scenario Forge tracks source ledgers, asset catalogs, build audits, and provenance sidecars so map claims stay tied to real files.</p>
+            <p data-i18n="dataBody">Scenario Forge keeps source links close to the map experience, so viewers can understand where boundaries, places, terrain, and transport layers come from.</p>
           </div>
 
           <div class="data-grid">
@@ -479,13 +479,13 @@
             </article>
             <article class="data-card" data-reveal>
               <span class="data-card__tag" data-i18n="dataCardThreeTag">Infrastructure</span>
-              <h3 data-i18n="dataCardThreeTitle">Transport packs with manifests</h3>
-              <p data-i18n="dataCardThreeBody">Japan road and rail previews are checked in with manifests. Additional infrastructure families stay visible as expansion work.</p>
+              <h3 data-i18n="dataCardThreeTitle">Transport layers you can inspect</h3>
+              <p data-i18n="dataCardThreeBody">Japan roads and railways already appear as visible map layers. More infrastructure views can grow from the same product pattern.</p>
             </article>
             <article class="data-card" data-reveal>
               <span class="data-card__tag" data-i18n="dataCardFourTag">Governance</span>
-              <h3 data-i18n="dataCardFourTitle">Cataloged, reproducible, and inspectable</h3>
-              <p data-i18n="dataCardFourBody">The checked-in catalog, source ledger, provenance files, and strict contract tests keep source claims tied to files instead of marketing copy.</p>
+              <h3 data-i18n="dataCardFourTitle">Traceable from source to map</h3>
+              <p data-i18n="dataCardFourBody">Every public source button points to a real dataset family, making the data foundation easier to evaluate.</p>
             </article>
           </div>
         </section>
@@ -504,8 +504,8 @@
             </article>
             <article class="edition-card" data-reveal>
               <span class="status-badge" data-i18n="editionTwoBadge">Local creator workflow</span>
-              <h3 data-i18n="editionTwoTitle">Project files and reproducible data</h3>
-              <p data-i18n="editionTwoBody">Keep scenario work local, inspect data assets, and use source manifests when a map needs a clear provenance trail.</p>
+              <h3 data-i18n="editionTwoTitle">Project files and traceable data</h3>
+              <p data-i18n="editionTwoBody">Keep scenario work local, inspect map layers, and use source links when a map needs a clear data trail.</p>
             </article>
             <article class="edition-card" data-reveal>
               <span class="status-badge" data-i18n="editionThreeBadge">Future direction</span>
@@ -530,7 +530,7 @@
             <article class="case-card" data-reveal>
               <p class="case-card__label" data-i18n="caseTwoLabel">Infrastructure review</p>
               <h3 data-i18n="caseTwoTitle">Inspect Japan road and rail density.</h3>
-              <p data-i18n="caseTwoBody">Use preview packs to explain corridors, rail hubs, ports, and transport readiness before deeper editor work.</p>
+              <p data-i18n="caseTwoBody">Use the preview to explain corridors, rail hubs, ports, and transport readiness before deeper editor work.</p>
             </article>
             <article class="case-card" data-reveal>
               <p class="case-card__label" data-i18n="caseThreeLabel">Presentation map pack</p>
@@ -557,7 +557,7 @@
             </details>
             <details>
               <summary data-i18n="faqThreeQuestion">Can it work offline?</summary>
-              <p data-i18n="faqThreeAnswer">The checked-in demo assets run as a static web app. Larger source refresh and backend sharing workflows use local tooling or the local development backend.</p>
+              <p data-i18n="faqThreeAnswer">The public demo can run as a static web app in the browser. Larger refresh and sharing workflows belong to the local creator setup.</p>
             </details>
             <details>
               <summary data-i18n="faqFourQuestion">What can I export?</summary>
@@ -565,11 +565,11 @@
             </details>
             <details>
               <summary data-i18n="faqFiveQuestion">How mature are the transport layers?</summary>
-              <p data-i18n="faqFiveAnswer">Japan road and rail previews are the clearest current sample. Other infrastructure families are visible as expansion work and should be read through the in-progress roadmap.</p>
+              <p data-i18n="faqFiveAnswer">Japan roads and railways are the clearest current transport view. Other infrastructure families are shown as upcoming product areas.</p>
             </details>
             <details>
             <summary data-i18n="faqSixQuestion">What is the license model?</summary>
-              <p data-i18n="faqSixAnswer">The current public surface is a live demo and repository. Creator, team, and cloud packaging are product directions for a later release.</p>
+              <p data-i18n="faqSixAnswer">The current public surface is a live demo and repository. Creator, team, and cloud packaging are future product directions.</p>
             </details>
           </div>
         </section>
@@ -585,17 +585,17 @@
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusOne">Active preview</span>
               <h3 data-i18n="roadmapOneTitle">Transport workbench</h3>
-              <p data-i18n="roadmapOneBody">The workbench already carries transport pack inspection, manifest review, and route-density preview into the product surface.</p>
+              <p data-i18n="roadmapOneBody">The workbench already lets users inspect transport layers and understand route density inside the map experience.</p>
             </article>
             <article class="roadmap-item" data-reveal>
-              <span class="status-badge" data-i18n="roadmapStatusTwo">Mature sample</span>
+              <span class="status-badge" data-i18n="roadmapStatusTwo">Ready view</span>
               <h3 data-i18n="roadmapTwoTitle">Japan road preview</h3>
-              <p data-i18n="roadmapTwoBody">Currently the most mature transport sample inside the project.</p>
+              <p data-i18n="roadmapTwoBody">Currently the clearest transport view available in the product.</p>
             </article>
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusThree">Shell stage</span>
               <h3 data-i18n="roadmapThreeTitle">Rail and other infrastructure families</h3>
-              <p data-i18n="roadmapThreeBody">Rail, airport, port, energy, industrial, logistics, and resource packs are moving through the same manifest-led pipeline.</p>
+              <p data-i18n="roadmapThreeBody">Rail, airport, port, energy, industry, logistics, and resource views are expanding from the same map-layer pattern.</p>
             </article>
           </div>
         </section>
@@ -609,17 +609,17 @@
             <article class="update-item" data-reveal>
               <time datetime="2026-05-31" data-i18n="updateOneDate">May 31, 2026</time>
               <h3 data-i18n="updateOneTitle">Product-grade landing showcase</h3>
-              <p data-i18n="updateOneBody">The homepage now exposes live preview, data trust, editions, use cases, and FAQ in the first product narrative.</p>
+              <p data-i18n="updateOneBody">The homepage now gives visitors a faster path from product promise to visible maps, use cases, and answers.</p>
             </article>
             <article class="update-item" data-reveal>
               <time datetime="2026-05-31" data-i18n="updateTwoDate">May 31, 2026</time>
               <h3 data-i18n="updateTwoTitle">Cloud save foundation</h3>
-              <p data-i18n="updateTwoBody">Local backend boundaries and shared project contracts are now visible as the foundation for future team surfaces.</p>
+              <p data-i18n="updateTwoBody">The local creator setup now supports a clearer path toward future shared project spaces.</p>
             </article>
             <article class="update-item" data-reveal>
               <time datetime="2026-05-12" data-i18n="updateThreeDate">May 12, 2026</time>
-              <h3 data-i18n="updateThreeTitle">Cataloged data foundation</h3>
-              <p data-i18n="updateThreeBody">The checked-in catalog tracks 641 assets across source ledgers, transport manifests, topology, palettes, and runtime data.</p>
+              <h3 data-i18n="updateThreeTitle">Map data foundation</h3>
+              <p data-i18n="updateThreeBody">The data foundation now covers 641 map assets across geography, transport, palettes, and runtime views.</p>
             </article>
           </div>
         </section>
