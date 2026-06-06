@@ -5,142 +5,126 @@
 
 # Scenario Forge
 
-Create political maps that feel alive.
+Scenario Forge is a scenario-first map creation workbench for alternate history, strategy modding, and geopolitical storytelling.
 
-Scenario Forge is a scenario-first map workbench for alternate history, strategy modding, and geopolitical storytelling. It lets you switch between ready-made world states, repaint control and ownership, build overlays, tune presentation layers, and export a clean snapshot or a reusable project file.
+It gives creators one place to choose a world state, edit political control, tune the map's visual style, add strategic overlays, inspect transport layers, and export a polished map image or reusable project file.
 
 **Live demo:** https://raederhans.github.io/scenario-forge/
 
-## What you can do
+**Updated:** 2026-06-06
 
-- Jump between built-in baselines: **Blank Map**, **Modern World**, **HOI4 1936**, **HOI4 1939**, and **TNO 1962**.
-- Work with scenario views such as **ownership**, **controller**, and **frontline** states.
-- Save your work as a **project file**, then load it back without losing the core map state.
-- Export the visible map as a **PNG** or **JPG** snapshot.
-- Use built-in **palette packs** inspired by HOI4 Vanilla, Kaiserreich, The New Order, and Red Flood.
-- Turn on extra context layers including **physical regions**, **urban areas**, **city points**, **rivers**, **water regions**, and **special zones**.
-- Add map presentation details like **legends**, **operational lines**, **operation graphics**, and **unit-counter style overlays**.
-- Switch the interface between **English** and **Chinese**.
+## Highlights
 
-## Why it matters
+| Area | What you can do |
+| --- | --- |
+| Scenario maps | Start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. |
+| Political editing | Repaint ownership and controller state, inspect split ownership, and work across ownership, controller, and frontline views. |
+| Visual style | Tune oceans, borders, parent borders, physical regions, urban areas, city points, rivers, textures, day-night shading, and reference images. |
+| Strategic presentation | Add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays. |
+| Transport context | Explore roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through the Transport workbench. |
+| Export workflow | Export PNG/JPG snapshots, adjust image brightness/contrast/saturation, manage layer order, and prepare higher-resolution outputs up to 8K. |
+| Project files | Save an editable project JSON with scenario, appearance, transport, strategic annotations, reference alignment, and export settings. |
+| Community preview | In local backend mode, test account sessions, Cloud Saves, publishing, community downloads, comments, reports, and admin review tools. |
+| Modding preview | In developer/local preview mode, use HGO runtime preview and palette tools to validate HOI4-style country identity, flags, colors, and rendering. |
+| Localization | Use the interface in English or Simplified Chinese. |
 
-Most map workflows split your work across too many tools: one for painting, one for labels, one for exports, one for scenario state, and another for presentation polish.
+## Who It Is For
 
-Scenario Forge brings those jobs into one workspace. If you are building an alternate timeline, a strategy scenario, a mod concept, or a map-led presentation, you can move from idea to usable visual much faster.
+- Alternate-history creators who need fast, editable political maps.
+- HOI4, TNO, Kaiserreich, and Red Flood modders exploring world-state ideas.
+- Scenario and campaign designers preparing map-led concepts.
+- Writers, researchers, and presenters who need a clear geopolitical visual.
+- Map builders who want saved projects, style control, and clean exports in the same workspace.
 
-## Who it is for
+## Try It
 
-- Alternate-history creators
-- HOI4, TNO, and Kaiserreich modders
-- Scenario and campaign designers
-- Geopolitical storytellers
-- Map-first presenters, writers, and researchers
-
-## Quick start
-
-### Use it online
+### Online demo
 
 Open the live build:
 
 - https://raederhans.github.io/scenario-forge/
 
-### Run it locally
+The online version is the best starting point for scenario editing, appearance tuning, project files, and exports.
 
-1. Build the data and start the local server:
+### Local app
 
-   ```bat
-   start_dev.bat
-   ```
-
-2. Faster local boot without rebuilding:
-
-   ```bat
-   start_dev.bat fast
-   ```
-
-3. Clean repro with caches and startup worker disabled:
-
-   ```bat
-   start_dev.bat fresh
-   ```
-
-## What is still in progress
-
-Some parts of the app are intentionally not presented as finished:
-
-- The **transport workbench** is only **partially complete**.
-- The **Japan road preview** is the most developed transport sample right now.
-- **Rail** is still in a shell / baseline stage.
-- **Airport**, **Port**, **Mineral Resources**, **Energy Facilities**, and **Industrial Zones** are still waiting for deeper development.
-
-If a feature is not fully wired yet, it should be treated as **in progress**, not production-ready.
-
-## Major data sources
-
-This is not a full source ledger. It is the short list of major upstream data families used by the project.
-
-- Natural Earth: https://www.naturalearthdata.com/
-- geoBoundaries: https://www.geoboundaries.org/
-- GeoNames: https://www.geonames.org/
-- NOAA ETOPO 2022: https://www.ncei.noaa.gov/products/etopo-global-relief-model
-- NASA Black Marble: https://blackmarble.gsfc.nasa.gov/
-- OpenStreetMap: https://www.openstreetmap.org/
-- Geofabrik: https://download.geofabrik.de/
-- Japanese MLIT road data (N06): https://nlftp.mlit.go.jp/ksj/
-
-For more detailed provenance, see:
-
-- `data/source_ledger.json`
-- the `.provenance.json` sidecar files under `data/`
-
-## License
-
-The project code and documentation are available under the **MIT License**.
-
-Third-party datasets and derived assets in the repository are still tied to their original sources and provenance records. This README intentionally keeps the source list short; the detailed trace lives in `data/source_ledger.json`.
-
-## Maintained by
-
-Maintained by **[@raederhans](https://github.com/raederhans)**.
-
-## Bug reports
-
-If something breaks, looks wrong, or feels inconsistent, please open an issue:
-
-- https://github.com/raederhans/scenario-forge/issues
-
-Helpful bug reports usually include:
-
-- the scenario you were using
-- your browser and OS
-- the exact steps to reproduce the problem
-- a screenshot or exported project file when relevant
-
-## For contributors
-
-If you want to work on the project itself, the shortest path is:
+Run the full local editor:
 
 ```bat
 start_dev.bat
 ```
 
-Useful follow-up commands:
+Start faster after the data has already been built:
 
 ```bat
-build_data.bat
-run_server.bat
+start_dev.bat fast
 ```
 
-Browser and regression tooling:
+Start with a clean runtime session:
 
-```bash
-npm install
-npm run test:e2e
+```bat
+start_dev.bat fresh
 ```
 
-CI browser install policy (`.github/workflows/verify-shared.yml`):
+### Local backend preview
 
-- CI sets `PLAYWRIGHT_BROWSERS_PATH=.runtime/browser/ms-playwright` and caches that directory with `actions/cache`.
-- Browser provisioning uses `npx playwright install chromium` to match GitHub-hosted Ubuntu runner preinstalled system dependencies.
-- The install step runs with 2 retries and exponential backoff (1s, 2s) for transient download failures.
-- Fallback strategy: when runner image dependencies drift, use `npx playwright install --with-deps chromium` (or project script `npm run playwright:install:chromium`) in a dedicated remediation commit while validating the runner image changelog.
+Open the local backend and community preview:
+
+```bat
+start_backend_preview.bat
+```
+
+This local mode stores preview backend data under `.runtime/backend/` on your machine. It is useful for trying Cloud Saves, public community posts, downloads, comments, reports, and admin moderation flows.
+
+## Typical Workflow
+
+1. Choose a scenario baseline.
+2. Edit ownership, controller, or frontline state.
+3. Adjust visual layers such as borders, water, terrain, cities, rivers, transport, and reference imagery.
+4. Add presentation elements such as legends, operational lines, unit counters, labels, and operation graphics.
+5. Save an editable project JSON, then export the final image or layer package.
+
+## Feature Status
+
+The main editor path is ready for normal map creation: scenario switching, political edits, appearance controls, project save/load, strategic annotations, and exports.
+
+Some larger systems are shown as previews:
+
+- **Cloud Saves and community:** available through the local backend preview.
+- **Transport workbench:** source-backed and cached transport data is available across multiple categories. Roads, rail, airports, and ports currently connect most consistently to the main map; broader global coverage continues growing.
+- **HGO runtime preview:** a developer/local preview for country identity, palette, flag, and raster-render validation.
+
+## License
+
+The project code and documentation are available under the **MIT License**.
+
+Third-party datasets and derived assets keep their original source terms and provenance records.
+
+## Maintained By
+
+Maintained by **[@raederhans](https://github.com/raederhans)**.
+
+## Bug Reports
+
+If something breaks, looks wrong, or feels inconsistent, please open an issue:
+
+- https://github.com/raederhans/scenario-forge/issues
+
+Helpful bug reports usually include the scenario you were using, your browser and OS, exact steps to reproduce the issue, and a screenshot or exported project file when relevant.
+
+## Data Sources
+
+Scenario Forge combines public geographic and reference datasets with project-specific derived assets. The main source families include:
+
+| Source | Used for |
+| --- | --- |
+| [Natural Earth](https://www.naturalearthdata.com/) | Base geography, countries, coastlines, and small-scale reference layers. |
+| [geoBoundaries](https://www.geoboundaries.org/) | Administrative boundary reference data. |
+| [GeoNames](https://www.geonames.org/) | Place names and settlement reference data. |
+| [NOAA ETOPO 2022](https://www.ncei.noaa.gov/products/etopo-global-relief-model) | Global relief, bathymetry, and physical terrain context. |
+| [NASA Black Marble](https://blackmarble.gsfc.nasa.gov/) | Night lights and city-light texture context. |
+| [OpenStreetMap](https://www.openstreetmap.org/) | Roads, rail, facilities, and other transport/context features. |
+| [Geofabrik](https://download.geofabrik.de/) | Regional OpenStreetMap extracts used for transport workbench data. |
+| [Japanese MLIT road data (N06)](https://nlftp.mlit.go.jp/ksj/) | Japan road hardening and transport preview reference data. |
+
+Detailed provenance appears in `data/source_ledger.json`, `.provenance.json` files under `data/`, transport source recipes under `data/transport_layers/`, and generated asset source records.
