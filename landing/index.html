@@ -231,16 +231,16 @@
             <p class="eyebrow eyebrow--dark" data-i18n="showcaseEyebrow">Cartography showcase</p>
             <h2 data-i18n="showcaseTitle">A scenario page should look like it already knows how maps behave.</h2>
             <p data-i18n="showcaseBody">This Europe view is generated from the same scenario, topology, capital, and rail data that power the map workbench.</p>
-            <div class="showcase-layer-panel" aria-live="polite">
+            <div id="showcase-layer-panel" class="showcase-layer-panel" role="tabpanel" aria-live="polite" aria-labelledby="showcase-layer-political">
               <span class="status-badge status-badge--dark" data-showcase-layer-badge data-i18n="showcaseLayerPoliticalBadge">HOI4 1936 Europe</span>
               <h3 data-showcase-layer-title data-i18n="showcaseLayerPoliticalTitle">Political ownership comes from the 1936 scenario data.</h3>
               <p data-showcase-layer-body data-i18n="showcaseLayerPoliticalBody">The map colors European territory through Scenario Forge's HOI4 1936 ownership table and country palette.</p>
             </div>
             <div class="showcase-layer-tabs" role="tablist" aria-label="Europe 1936 showcase layers" data-i18n-aria-label="showcaseLayerTabsLabel">
-              <button type="button" role="tab" aria-selected="true" data-showcase-layer-tab="political" data-i18n="showcaseLayerPolitical">Political</button>
-              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="rail" data-i18n="showcaseLayerRail">Rail</button>
-              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="cities" data-i18n="showcaseLayerCities">Cities</button>
-              <button type="button" role="tab" aria-selected="false" tabindex="-1" data-showcase-layer-tab="scenario" data-i18n="showcaseLayerScenario">Scenario</button>
+              <button id="showcase-layer-political" type="button" role="tab" aria-selected="true" aria-controls="showcase-layer-panel" data-showcase-layer-tab="political" data-i18n="showcaseLayerPolitical">Political</button>
+              <button id="showcase-layer-rail" type="button" role="tab" aria-selected="false" aria-controls="showcase-layer-panel" tabindex="-1" data-showcase-layer-tab="rail" data-i18n="showcaseLayerRail">Rail</button>
+              <button id="showcase-layer-cities" type="button" role="tab" aria-selected="false" aria-controls="showcase-layer-panel" tabindex="-1" data-showcase-layer-tab="cities" data-i18n="showcaseLayerCities">Cities</button>
+              <button id="showcase-layer-scenario" type="button" role="tab" aria-selected="false" aria-controls="showcase-layer-panel" tabindex="-1" data-showcase-layer-tab="scenario" data-i18n="showcaseLayerScenario">Scenario</button>
             </div>
           </div>
           <figure class="showcase-map" data-reveal>

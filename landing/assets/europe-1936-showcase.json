@@ -8,6 +8,14 @@
     41.5,
     72.5
   ],
+  "selection_policy": {
+    "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
+    "transregional_tags": [
+      "TUR"
+    ],
+    "capital_limit": 22,
+    "rail_limit": 95
+  },
   "sources": [
     "data/scenarios/hoi4_1936/manifest.json",
     "data/scenarios/hoi4_1936/runtime_topology.topo.json",
@@ -20,12 +28,78 @@
     "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.preview.topo.json"
   ],
   "counts": {
-    "territories": 22,
-    "political_features": 6722,
+    "territories": 29,
+    "political_features": 6803,
     "capitals": 22,
     "rail_lines_selected": 95,
     "rail_features_inspected": 4596
   },
+  "territory_tags": [
+    "ALB",
+    "AUS",
+    "BEL",
+    "BUL",
+    "CZE",
+    "DEN",
+    "ENG",
+    "EST",
+    "FIN",
+    "FRA",
+    "GER",
+    "GRE",
+    "HOL",
+    "HUN",
+    "IRE",
+    "ITA",
+    "LAT",
+    "LIT",
+    "LUX",
+    "NOR",
+    "POL",
+    "POR",
+    "ROM",
+    "SOV",
+    "SPR",
+    "SWE",
+    "SWI",
+    "TUR",
+    "YUG"
+  ],
+  "capital_tags": [
+    "ALB",
+    "AUS",
+    "BEL",
+    "BUL",
+    "CZE",
+    "DEN",
+    "ENG",
+    "EST",
+    "FIN",
+    "FRA",
+    "GER",
+    "GRE",
+    "HOL",
+    "HUN",
+    "IRE",
+    "ITA",
+    "LAT",
+    "LIT",
+    "POL",
+    "ROM",
+    "SOV",
+    "YUG"
+  ],
+  "focus_tags": [
+    "CZE",
+    "ENG",
+    "FRA",
+    "GER",
+    "ITA",
+    "POL",
+    "ROM",
+    "SOV",
+    "YUG"
+  ],
   "layers": [
     {
       "id": "political",

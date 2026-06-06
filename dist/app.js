@@ -602,6 +602,8 @@ const SHOWCASE_LAYER_COPY_KEYS = {
     body: "showcaseLayerScenarioBody",
   },
 };
+const SHOWCASE_METADATA_URL = "./assets/europe-1936-showcase.json";
+const DEFAULT_SHOWCASE_LAYER = "political";
 
 function getStoredLanguage() {
   try {
@@ -773,19 +775,54 @@ function getActiveLanguage() {
   return document.documentElement.lang === "zh-CN" ? "zh" : "en";
 }
 
+function getShowcaseLayerIds(root) {
+  return String(root.dataset.showcaseLayerIds || Object.keys(SHOWCASE_LAYER_COPY_KEYS).join(","))
+    .split(",")
+    .map((layer) => layer.trim())
+    .filter(Boolean);
+}
+
+function isShowcaseLayerAllowed(root, layer) {
+  return getShowcaseLayerIds(root).includes(layer) && Object.prototype.hasOwnProperty.call(SHOWCASE_LAYER_COPY_KEYS, layer);
+}
+
+function resolveShowcaseLayer(root, layer) {
+  if (isShowcaseLayerAllowed(root, layer)) {
+    delete root.dataset.showcaseLayerError;
+    return layer;
+  }
+  root.dataset.showcaseLayerError = layer || "missing";
+  return null;
+}
+
+async function loadShowcaseMetadata(root) {
+  if (!globalThis.fetch) return;
+  const response = await fetch(SHOWCASE_METADATA_URL);
+  if (!response.ok) throw new Error(`Unable to load ${SHOWCASE_METADATA_URL}`);
+  const metadata = await response.json();
+  const layerIds = Array.isArray(metadata?.layers)
+    ? metadata.layers.map((layer) => String(layer?.id || "").trim()).filter(Boolean)
+    : [];
+  if (!layerIds.length) throw new Error("Europe showcase metadata is missing layers");
+  root.dataset.showcaseLayerIds = layerIds.join(",");
+}
+
 function setShowcaseSvgLayer(root) {
+  const layer = resolveShowcaseLayer(root, root.dataset.showcaseLayer || DEFAULT_SHOWCASE_LAYER);
+  if (!layer) return;
   const objectNode = root.querySelector("[data-showcase-object]");
   if (!objectNode?.contentDocument) return;
   const svg = objectNode.contentDocument.querySelector("svg");
   if (!svg) return;
-  svg.setAttribute("data-active-layer", root.dataset.showcaseLayer || "political");
+  svg.setAttribute("data-active-layer", layer);
 }
 
 function updateShowcaseLayerCopy(language = getActiveLanguage()) {
   const root = document.querySelector("[data-showcase-root]");
   if (!root) return;
-  const layer = root.dataset.showcaseLayer || "political";
-  const keys = SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political;
+  const layer = resolveShowcaseLayer(root, root.dataset.showcaseLayer || DEFAULT_SHOWCASE_LAYER);
+  if (!layer) return;
+  const keys = SHOWCASE_LAYER_COPY_KEYS[layer];
   const copy = translations[language] || translations.en;
   const badge = root.querySelector("[data-showcase-layer-badge]");
   const title = root.querySelector("[data-showcase-layer-title]");
@@ -800,10 +837,12 @@ function initShowcaseLayers() {
   if (!root) return;
 
   const tabs = Array.from(root.querySelectorAll("[data-showcase-layer-tab]"));
+  const panel = root.querySelector("[role=\"tabpanel\"]");
   if (!tabs.length) return;
 
   const selectLayer = (tab, shouldFocus = false) => {
-    const layer = tab.getAttribute("data-showcase-layer-tab") || "political";
+    const layer = resolveShowcaseLayer(root, tab.getAttribute("data-showcase-layer-tab") || DEFAULT_SHOWCASE_LAYER);
+    if (!layer) return;
     root.dataset.showcaseLayer = layer;
 
     tabs.forEach((item) => {
@@ -811,6 +850,7 @@ function initShowcaseLayers() {
       item.setAttribute("aria-selected", active ? "true" : "false");
       item.setAttribute("tabindex", active ? "0" : "-1");
     });
+    if (panel && tab.id) panel.setAttribute("aria-labelledby", tab.id);
 
     updateShowcaseLayerCopy();
     setShowcaseSvgLayer(root);
@@ -836,6 +876,14 @@ function initShowcaseLayers() {
 
   const objectNode = root.querySelector("[data-showcase-object]");
   objectNode?.addEventListener("load", () => setShowcaseSvgLayer(root));
+  loadShowcaseMetadata(root)
+    .then(() => {
+      const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
+      selectLayer(selectedTab);
+    })
+    .catch((error) => {
+      root.dataset.showcaseLayerError = error?.message || "metadata";
+    });
   updateShowcaseLayerCopy();
   setShowcaseSvgLayer(root);
 }

@@ -17,6 +17,7 @@ from tools.app_entry_resolver import (
     resolve_editor_entry_path,
     resolve_landing_entry_path,
 )
+from tools.build_landing_europe_1936_showcase import build_showcase as build_landing_europe_1936_showcase
 
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
@@ -798,6 +799,7 @@ def main() -> None:
     landing_entry = resolve_landing_entry_path(root=ROOT)
     editor_entry = resolve_editor_entry_path(root=ROOT)
 
+    build_landing_europe_1936_showcase()
     reset_dist()
     build_landing_dist(landing_entry)
     build_editor_dist(editor_entry)

@@ -8,7 +8,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from tools import build_pages_dist
+from tools import build_landing_europe_1936_showcase, build_pages_dist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -59,16 +59,59 @@ class PagesDistStartupShellTest(unittest.TestCase):
         metadata_path = LANDING_ASSETS / "europe-1936-showcase.json"
         self.assertTrue(metadata_path.exists(), "Europe 1936 showcase metadata should be checked in")
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        scenario_manifest = json.loads((REPO_ROOT / "data" / "scenarios" / "hoi4_1936" / "manifest.json").read_text(encoding="utf-8"))
+        rail_catalog = json.loads((REPO_ROOT / "data" / "transport_layers" / "global_rail" / "catalog.json").read_text(encoding="utf-8"))
+        expected_scenario_sources = {
+            "data/scenarios/hoi4_1936/manifest.json",
+            scenario_manifest["runtime_topology_url"],
+            scenario_manifest["countries_url"],
+            scenario_manifest["owners_url"],
+            scenario_manifest["capital_hints_url"],
+        }
+        expected_rail_sources = {"data/transport_layers/global_rail/catalog.json"}
+        for entry in rail_catalog["entries"]:
+            if entry.get("region_id") != "europe":
+                continue
+            manifest_path = entry["manifest_path"]
+            manifest = json.loads((REPO_ROOT / manifest_path).read_text(encoding="utf-8"))
+            expected_rail_sources.add(manifest["paths"]["preview"]["railways"])
+
         self.assertEqual(payload["scenario_id"], "hoi4_1936")
         self.assertEqual([layer["id"] for layer in payload["layers"]], ["political", "rail", "cities", "scenario"])
-        self.assertIn("data/scenarios/hoi4_1936/manifest.json", payload["sources"])
-        self.assertIn("data/scenarios/hoi4_1936/runtime_topology.topo.json", payload["sources"])
-        self.assertIn("data/scenarios/hoi4_1936/owners.by_feature.json", payload["sources"])
-        self.assertIn("data/scenarios/hoi4_1936/capital_hints.json", payload["sources"])
-        self.assertIn("data/transport_layers/global_rail/catalog.json", payload["sources"])
+        self.assertEqual(set(payload["sources"]), expected_scenario_sources | expected_rail_sources)
+        self.assertEqual(payload["selection_policy"]["transregional_tags"], ["TUR"])
+        self.assertEqual(payload["selection_policy"]["capital_limit"], 22)
+        self.assertEqual(payload["selection_policy"]["rail_limit"], 95)
+        self.assertEqual(payload["counts"]["territories"], len(payload["territory_tags"]))
+        self.assertEqual(payload["counts"]["capitals"], len(payload["capital_tags"]))
+        for expected_tag in ("ALB", "EST", "IRE", "LAT", "LIT", "LUX", "SWI", "TUR"):
+            with self.subTest(expected_tag=expected_tag):
+                self.assertIn(expected_tag, payload["territory_tags"])
+        self.assertEqual(payload["focus_tags"], ["CZE", "ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"])
         self.assertGreaterEqual(payload["counts"]["political_features"], 6000)
         self.assertGreaterEqual(payload["counts"]["capitals"], 12)
         self.assertGreaterEqual(payload["counts"]["rail_lines_selected"], 60)
+
+    def test_landing_europe_1936_showcase_assets_match_builder_output(self) -> None:
+        previous_svg = build_landing_europe_1936_showcase.SHOWCASE_SVG
+        previous_metadata = build_landing_europe_1936_showcase.SHOWCASE_METADATA
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            build_landing_europe_1936_showcase.SHOWCASE_SVG = tmp_root / "europe-1936-showcase.svg"
+            build_landing_europe_1936_showcase.SHOWCASE_METADATA = tmp_root / "europe-1936-showcase.json"
+            try:
+                build_landing_europe_1936_showcase.build_showcase()
+                self.assertEqual(
+                    build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
+                    (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
+                )
+                self.assertEqual(
+                    build_landing_europe_1936_showcase.SHOWCASE_METADATA.read_bytes(),
+                    (LANDING_ASSETS / "europe-1936-showcase.json").read_bytes(),
+                )
+            finally:
+                build_landing_europe_1936_showcase.SHOWCASE_SVG = previous_svg
+                build_landing_europe_1936_showcase.SHOWCASE_METADATA = previous_metadata
 
     def test_pages_dist_generated_text_writes_use_lf(self) -> None:
         source = (REPO_ROOT / "tools" / "build_pages_dist.py").read_text(encoding="utf-8")
@@ -76,6 +119,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
         self.assertIn('newline="\\n"', source)
+        self.assertIn("from tools.build_landing_europe_1936_showcase import build_showcase as build_landing_europe_1936_showcase", source)
+        self.assertLess(source.index("build_landing_europe_1936_showcase()"), source.index("    reset_dist()"))
         self.assertNotIn(".write_text(", source)
         self.assertLess(
             source.index("normalize_dist_text_files_lf()"),
@@ -189,6 +234,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             './assets/europe-1936-showcase.json',
             'data-showcase-root',
             'data-showcase-object',
+            'role="tabpanel"',
+            'id="showcase-layer-panel"',
+            'aria-controls="showcase-layer-panel"',
             'data-showcase-layer-tab="political"',
             'data-showcase-layer-tab="rail"',
             'data-showcase-layer-tab="cities"',
@@ -240,6 +288,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerCitiesTitle",
             "showcaseLayerScenarioTitle",
             "initShowcaseLayers",
+            "SHOWCASE_METADATA_URL",
+            "getShowcaseLayerIds",
+            "resolveShowcaseLayer",
+            "loadShowcaseMetadata",
+            "showcaseLayerError",
             "setShowcaseSvgLayer",
             "initPreviewTabs",
             "initHeroMap",
@@ -272,9 +325,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("height: 48px", styles_css)
         self.assertIn("height: 46px", styles_css)
         self.assertIn("height: 44px", styles_css)
+        self.assertIn("min-height: 44px", styles_css)
+        self.assertIn("line-height: 1.1", styles_css)
+        self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn("[data-showcase-object]", app_js)
+        self.assertNotIn("SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political", app_js)
         self.assertIn("height: 44px", styles_css)
         self.assertIn(".showcase-map__object", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)

@@ -766,6 +766,7 @@ a.button {
 
 .showcase-layer-tabs button {
   height: 44px;
+  min-height: 44px;
   min-width: 0;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -774,7 +775,9 @@ a.button {
   color: rgba(255, 255, 255, 0.74);
   font-size: 0.88rem;
   font-weight: 800;
+  line-height: 1.1;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }

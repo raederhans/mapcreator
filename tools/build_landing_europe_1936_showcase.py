@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+from xml.sax.saxutils import escape as xml_escape
 
 from shapely.geometry import box, shape
 from shapely.geometry.base import BaseGeometry
@@ -22,31 +24,15 @@ RAIL_CATALOG = REPO_ROOT / "data" / "transport_layers" / "global_rail" / "catalo
 SHOWCASE_SVG = LANDING_ASSETS / "europe-1936-showcase.svg"
 SHOWCASE_METADATA = LANDING_ASSETS / "europe-1936-showcase.json"
 EUROPE_BBOX = (-12.5, 34.0, 41.5, 72.5)
-FEATURED_TAGS = {
-    "AUS",
-    "BEL",
-    "BUL",
-    "CZE",
-    "DEN",
-    "ENG",
-    "FIN",
-    "FRA",
-    "GER",
-    "GRE",
-    "HOL",
-    "HUN",
-    "ITA",
-    "NOR",
-    "POL",
-    "POR",
-    "ROM",
-    "SOV",
-    "SPR",
-    "SWE",
-    "TUR",
-    "YUG",
-}
 SCENARIO_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
+TRANSREGIONAL_EUROPE_SHOWCASE_TAGS = {"TUR"}
+SHOWCASE_LAYERS = (
+    {"id": "political", "label": "1936 political ownership"},
+    {"id": "rail", "label": "Europe rail preview"},
+    {"id": "cities", "label": "capital anchors"},
+    {"id": "scenario", "label": "scenario focus countries"},
+)
+TAG_PATTERN = re.compile(r"^[A-Z0-9_]{2,12}$")
 
 
 @dataclass(frozen=True)
@@ -102,6 +88,12 @@ def clamp_hex(color: str | None, default: str = "#9fb6a7") -> str:
     return color
 
 
+def validate_tag(tag: str) -> str:
+    if not TAG_PATTERN.fullmatch(tag):
+        raise ValueError(f"Unexpected country tag for showcase SVG: {tag!r}")
+    return tag
+
+
 def topology_features(path: Path, object_name: str) -> list[dict]:
     payload = read_json(path)
     collection = serialize_as_geojson(payload, objectname=object_name)
@@ -138,6 +130,15 @@ def valid_geometry(geometry: BaseGeometry) -> BaseGeometry:
     if geometry.is_valid:
         return geometry
     return make_valid(geometry)
+
+
+def europe_country_tags(countries: dict) -> set[str]:
+    tags = {
+        tag
+        for tag, country in countries.items()
+        if isinstance(country, dict) and country.get("continent_id") == "continent_europe"
+    }
+    return tags | TRANSREGIONAL_EUROPE_SHOWCASE_TAGS
 
 
 def polygon_path(geometry: BaseGeometry, canvas: Canvas) -> list[str]:
@@ -189,6 +190,7 @@ def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
     paths = scenario_paths()
     countries = read_json(paths["countries"])["countries"]
     owners = read_json(paths["owners"])["owners"]
+    showcase_tags = europe_country_tags(countries)
     clip = box(*canvas.bbox)
     by_tag: dict[str, list[BaseGeometry]] = defaultdict(list)
     source_feature_count = 0
@@ -198,7 +200,7 @@ def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
         feature_id = properties.get("id") or feature.get("id")
         tag = owners.get(feature_id)
         country = countries.get(tag)
-        if tag not in FEATURED_TAGS or not country:
+        if tag not in showcase_tags or not country:
             continue
         geometry_payload = feature.get("geometry")
         if not geometry_payload:
@@ -236,6 +238,7 @@ def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
 def load_capitals(canvas: Canvas) -> list[dict]:
     paths = scenario_paths()
     countries = read_json(paths["countries"])["countries"]
+    showcase_tags = europe_country_tags(countries)
     entries = read_json(paths["capital_hints"])["entries"]
     capitals: list[dict] = []
     for entry in entries:
@@ -243,7 +246,7 @@ def load_capitals(canvas: Canvas) -> list[dict]:
         country = countries.get(tag)
         lon = entry.get("lon")
         lat = entry.get("lat")
-        if tag not in FEATURED_TAGS or not country or lon is None or lat is None:
+        if tag not in showcase_tags or not country or lon is None or lat is None:
             continue
         if not (canvas.bbox[0] <= lon <= canvas.bbox[2] and canvas.bbox[1] <= lat <= canvas.bbox[3]):
             continue
@@ -304,12 +307,14 @@ def graticule(canvas: Canvas) -> str:
 def territory_nodes(territories: list[dict]) -> str:
     nodes: list[str] = []
     for item in territories:
-        focus_class = " territory--focus" if item["tag"] in SCENARIO_FOCUS_TAGS else ""
+        tag = validate_tag(item["tag"])
+        escaped_tag = xml_escape(tag)
+        focus_class = " territory--focus" if tag in SCENARIO_FOCUS_TAGS else ""
         scenario_class = " territory--scenario" if item["scenario_only"] else ""
         for path in item["paths"]:
             nodes.append(
-                f'      <path class="territory territory--{item["tag"].lower()}{focus_class}{scenario_class}" '
-                f'data-tag="{item["tag"]}" fill="{item["color"]}" d="{path}" />'
+                f'      <path class="territory territory--{tag.lower()}{focus_class}{scenario_class}" '
+                f'data-tag="{escaped_tag}" fill="{item["color"]}" d="{path}" />'
             )
     return "\n".join(nodes)
 
@@ -321,11 +326,13 @@ def rail_nodes(paths: list[str]) -> str:
 def capital_nodes(capitals: list[dict]) -> str:
     nodes: list[str] = []
     for item in capitals:
+        tag = validate_tag(item["tag"])
+        escaped_tag = xml_escape(tag)
         focus_class = " capital--focus" if item["focus"] else ""
         nodes.append(
-            f'      <g class="capital{focus_class}" data-tag="{item["tag"]}">'
+            f'      <g class="capital{focus_class}" data-tag="{escaped_tag}">'
             f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="5.8" />'
-            f'<text x="{fmt(item["x"] + 9)}" y="{fmt(item["y"] - 7)}">{item["tag"]}</text>'
+            f'<text x="{fmt(item["x"] + 9)}" y="{fmt(item["y"] - 7)}">{escaped_tag}</text>'
             "</g>"
         )
     return "\n".join(nodes)
@@ -335,10 +342,12 @@ def scenario_nodes(capitals: list[dict]) -> str:
     focus = [item for item in capitals if item["focus"]]
     nodes: list[str] = []
     for item in focus:
+        tag = validate_tag(item["tag"])
+        escaped_tag = xml_escape(tag)
         nodes.append(
-            f'      <g class="scenario-marker" data-tag="{item["tag"]}">'
+            f'      <g class="scenario-marker" data-tag="{escaped_tag}">'
             f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="16" />'
-            f'<text x="{fmt(item["x"])}" y="{fmt(item["y"] + 4)}">{item["tag"]}</text>'
+            f'<text x="{fmt(item["x"])}" y="{fmt(item["y"] + 4)}">{escaped_tag}</text>'
             "</g>"
         )
     return "\n".join(nodes)
@@ -405,14 +414,28 @@ def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rai
 """
 
 
-def build_metadata(political_counts: dict[str, int], capitals: list[dict], rail_paths: list[str], rail_inspected: int) -> dict:
+def build_metadata(
+    political_counts: dict[str, int],
+    territories: list[dict],
+    capitals: list[dict],
+    rail_paths: list[str],
+    rail_inspected: int,
+) -> dict:
     paths = scenario_paths()
     rail_paths_source = rail_preview_paths()
+    territory_tags = sorted(item["tag"] for item in territories)
+    capital_tags = sorted(item["tag"] for item in capitals)
     return {
         "schema_version": 1,
         "scenario_id": "hoi4_1936",
         "title": "Europe 1936 homepage showcase",
         "bbox": list(EUROPE_BBOX),
+        "selection_policy": {
+            "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
+            "transregional_tags": sorted(TRANSREGIONAL_EUROPE_SHOWCASE_TAGS),
+            "capital_limit": 22,
+            "rail_limit": 95,
+        },
         "sources": [
             repo_path(HOI4_MANIFEST),
             repo_path(paths["runtime_topology"]),
@@ -429,12 +452,10 @@ def build_metadata(political_counts: dict[str, int], capitals: list[dict], rail_
             "rail_lines_selected": len(rail_paths),
             "rail_features_inspected": rail_inspected,
         },
-        "layers": [
-            {"id": "political", "label": "1936 political ownership"},
-            {"id": "rail", "label": "Europe rail preview"},
-            {"id": "cities", "label": "capital anchors"},
-            {"id": "scenario", "label": "scenario focus countries"},
-        ],
+        "territory_tags": territory_tags,
+        "capital_tags": capital_tags,
+        "focus_tags": sorted(tag for tag in SCENARIO_FOCUS_TAGS if tag in territory_tags),
+        "layers": list(SHOWCASE_LAYERS),
     }
 
 
@@ -444,7 +465,7 @@ def build_showcase() -> None:
     capitals = load_capitals(canvas)
     rails, rail_inspected = load_rail_paths(canvas)
     write_text_lf(SHOWCASE_SVG, build_svg(canvas, territories, capitals, rails))
-    metadata = build_metadata(political_counts, capitals, rails, rail_inspected)
+    metadata = build_metadata(political_counts, territories, capitals, rails, rail_inspected)
     write_text_lf(SHOWCASE_METADATA, json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 
 
