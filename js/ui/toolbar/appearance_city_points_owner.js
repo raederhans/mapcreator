@@ -13,6 +13,21 @@ function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function applyCityPointsThemeStyle(cityPointsConfig, themeStyle, clamp) {
+  cityPointsConfig.color = themeStyle.color;
+  cityPointsConfig.capitalColor = themeStyle.capitalColor;
+  const markerScale = Number(themeStyle.markerScale);
+  const markerDensity = Number(themeStyle.markerDensity);
+  const opacity = Number(themeStyle.opacity);
+  const labelSize = Number(themeStyle.labelSize);
+  const labelDensity = String(themeStyle.labelDensity || "").trim().toLowerCase();
+  if (Number.isFinite(markerScale)) cityPointsConfig.markerScale = clamp(markerScale, 0.75, 2.5);
+  if (Number.isFinite(markerDensity)) cityPointsConfig.markerDensity = clamp(markerDensity, 0.5, 2);
+  if (Number.isFinite(opacity)) cityPointsConfig.opacity = clamp(opacity, 0, 1);
+  if (["sparse", "balanced", "dense"].includes(labelDensity)) cityPointsConfig.labelDensity = labelDensity;
+  if (Number.isFinite(labelSize)) cityPointsConfig.labelSize = clamp(Math.round(labelSize), 8, 24);
+}
+
 function collectCityPointsNodes(documentRef) {
   return {
     toggleCityPoints: documentRef.getElementById("toggleCityPoints"),
@@ -110,8 +125,8 @@ export function createAppearanceCityPointsOwner({
         runtimeState.currentLanguage,
       );
     }
-    if (nodes.cityPointsColor) nodes.cityPointsColor.value = normalizeOceanFillColor(cityPointsConfig.color || "#2f343a");
-    if (nodes.cityPointsCapitalColor) nodes.cityPointsCapitalColor.value = normalizeOceanFillColor(cityPointsConfig.capitalColor || "#9f9072");
+    if (nodes.cityPointsColor) nodes.cityPointsColor.value = normalizeOceanFillColor(cityPointsConfig.color || "#20262e");
+    if (nodes.cityPointsCapitalColor) nodes.cityPointsCapitalColor.value = normalizeOceanFillColor(cityPointsConfig.capitalColor || "#f0b84f");
     if (nodes.cityPointsOpacity) nodes.cityPointsOpacity.value = String(Math.round(cityPointsConfig.opacity * 100));
     if (nodes.cityPointsOpacityValue) nodes.cityPointsOpacityValue.textContent = `${Math.round(cityPointsConfig.opacity * 100)}%`;
     if (nodes.cityPointLabelsEnabled) nodes.cityPointLabelsEnabled.checked = !!cityPointsConfig.showLabels;
@@ -169,11 +184,8 @@ export function createAppearanceCityPointsOwner({
     bindCityPointsChange(nodes.cityPointsTheme, (cfg, event) => {
       cfg.theme = getCityPointsThemeMeta(event.target.value || "classic_graphite").value;
       const themeStyle = getCityPointsThemeStyle(cfg.theme);
-      cfg.color = themeStyle.color;
-      cfg.capitalColor = themeStyle.capitalColor;
-      if (nodes.cityPointsThemeHint) nodes.cityPointsThemeHint.textContent = getCityPointsThemeHint(cfg.theme, runtimeState.currentLanguage);
-      if (nodes.cityPointsColor) nodes.cityPointsColor.value = normalizeOceanFillColor(cfg.color);
-      if (nodes.cityPointsCapitalColor) nodes.cityPointsCapitalColor.value = normalizeOceanFillColor(cfg.capitalColor);
+      applyCityPointsThemeStyle(cfg, themeStyle, clamp);
+      renderCityPointsUi();
     }, "city-points-theme");
 
     bindCityPointsInput(nodes.cityPointsMarkerScale, (cfg, event) => {

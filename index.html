@@ -337,25 +337,25 @@
                 <div class="appearance-subsection-stack mt-3">
                   <details class="appearance-mini-section">
                     <summary id="lblInternalBorders" class="section-header">Internal Borders</summary>
-                    <div class="space-y-3 mt-3">
+                    <div class="border-control-body mt-3">
                       <label class="toggle-label">
                         <input id="internalBorderAutoColor" type="checkbox" class="checkbox-input" checked />
                         <span data-i18n="Auto Contrast">Auto Contrast</span>
                       </label>
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="range-label" for="internalBorderColor">Color</label>
+                      <div class="border-control-row">
+                        <label class="range-label" for="internalBorderColor" data-i18n="Color">Color</label>
                         <input id="internalBorderColor" type="color" value="#cccccc" class="color-input" />
                       </div>
                       <div>
                         <div class="range-row">
-                          <label class="range-label" for="internalBorderOpacity">Opacity</label>
+                          <label class="range-label" for="internalBorderOpacity" data-i18n="Opacity">Opacity</label>
                           <span id="internalBorderOpacityValue" class="range-value">100%</span>
                         </div>
                         <input id="internalBorderOpacity" type="range" min="0" max="100" value="100" class="range-input" />
                       </div>
                       <div>
                         <div class="range-row">
-                          <label class="range-label" for="internalBorderWidth">Width</label>
+                          <label class="range-label" for="internalBorderWidth" data-i18n="Width">Width</label>
                           <span id="internalBorderWidthValue" class="range-value">0.5</span>
                         </div>
                         <input id="internalBorderWidth" type="range" min="0.01" max="2.0" step="0.01" value="0.5" class="range-input" />
@@ -364,15 +364,22 @@
                   </details>
 
                   <details class="appearance-mini-section">
-                    <summary id="lblEmpireBorders" class="section-header">Empire Borders</summary>
-                    <div class="space-y-3 mt-3">
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="range-label" for="empireBorderColor">Color</label>
+                    <summary id="lblEmpireBorders" class="section-header">Country Borders</summary>
+                    <div class="border-control-body mt-3">
+                      <div class="border-control-row">
+                        <label class="range-label" for="empireBorderColor" data-i18n="Color">Color</label>
                         <input id="empireBorderColor" type="color" value="#000000" class="color-input" />
                       </div>
                       <div>
                         <div class="range-row">
-                          <label class="range-label" for="empireBorderWidth">Width</label>
+                          <label class="range-label" for="empireBorderOpacity" data-i18n="Opacity">Opacity</label>
+                          <span id="empireBorderOpacityValue" class="range-value">90%</span>
+                        </div>
+                        <input id="empireBorderOpacity" type="range" min="0" max="100" value="90" class="range-input" />
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label class="range-label" for="empireBorderWidth" data-i18n="Width">Width</label>
                           <span id="empireBorderWidthValue" class="range-value">1.0</span>
                         </div>
                         <input id="empireBorderWidth" type="range" min="0.01" max="5.0" step="0.01" value="1.0" class="range-input" />
@@ -382,14 +389,21 @@
 
                   <details class="appearance-mini-section">
                     <summary id="lblCoastlines" class="section-header">Coastlines</summary>
-                    <div class="space-y-3 mt-3">
-                      <div class="flex items-center justify-between gap-3">
-                        <label class="range-label" for="coastlineColor">Color</label>
+                    <div class="border-control-body mt-3">
+                      <div class="border-control-row">
+                        <label class="range-label" for="coastlineColor" data-i18n="Color">Color</label>
                         <input id="coastlineColor" type="color" value="#333333" class="color-input" />
                       </div>
                       <div>
                         <div class="range-row">
-                          <label class="range-label" for="coastlineWidth">Width</label>
+                          <label class="range-label" for="coastlineOpacity" data-i18n="Opacity">Opacity</label>
+                          <span id="coastlineOpacityValue" class="range-value">80%</span>
+                        </div>
+                        <input id="coastlineOpacity" type="range" min="0" max="100" value="80" class="range-input" />
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label class="range-label" for="coastlineWidth" data-i18n="Width">Width</label>
                           <span id="coastlineWidthValue" class="range-value">1.2</span>
                         </div>
                         <input id="coastlineWidth" type="range" min="0.5" max="3.0" step="0.1" value="1.2" class="range-input" />
@@ -399,12 +413,12 @@
 
                   <details class="appearance-mini-section">
                     <summary id="lblParentBorders" class="section-header">Parent Unit Borders</summary>
-                    <div class="space-y-3 mt-3">
+                    <div class="border-control-body mt-3">
                       <label class="toggle-label">
                         <input id="parentBordersVisible" type="checkbox" class="checkbox-input" checked />
                         <span data-i18n="Show Parent Unit Borders">Show Parent Unit Borders</span>
                       </label>
-                      <div class="flex items-center justify-between gap-3">
+                      <div class="border-control-row">
                         <label id="lblParentBorderColor" class="range-label" for="parentBorderColor">Color</label>
                         <input id="parentBorderColor" type="color" value="#4b5563" class="color-input" />
                       </div>
@@ -736,7 +750,7 @@
                               <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
                               <path d="M12 7.5v.01M11.2 10.5h.8v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
                             </svg>
-                            <span id="cityPointsHelpTooltip" class="info-tooltip" data-i18n="Pick a restrained style, then tune marker density and label density for the current map scale.">Pick a restrained style, then tune marker density and label density for the current map scale.</span>
+                            <span id="cityPointsHelpTooltip" class="info-tooltip" data-i18n="Pick a city marker style, then tune marker density and label density for the current map scale.">Pick a city marker style, then tune marker density and label density for the current map scale.</span>
                           </span>
                         </div>
                         <div class="city-points-panel-stack">
@@ -744,15 +758,12 @@
                             <h4 id="lblCityPointsStyleGroup" class="appearance-control-card-title" data-i18n="Style">Style</h4>
                             <div class="appearance-control-card-stack">
                               <div>
-                                <div class="range-row">
-                                  <label id="lblCityPointsStylePreset" class="range-label" for="cityPointsTheme">Style Preset</label>
-                                </div>
-                                <select id="cityPointsTheme" class="select-input mt-2">
-                                  <option id="optCityPointsThemeClassicGraphite" value="classic_graphite" selected>Classic Graphite</option>
-                                  <option id="optCityPointsThemeAtlasInk" value="atlas_ink">Atlas Ink</option>
-                                  <option id="optCityPointsThemeParchmentSepia" value="parchment_sepia">Parchment Sepia</option>
-                                  <option id="optCityPointsThemeSlateBlue" value="slate_blue">Slate Blue</option>
-                                  <option id="optCityPointsThemeIvoryOutline" value="ivory_outline">Ivory Outline</option>
+                                <select id="cityPointsTheme" class="select-input">
+                                  <option id="optCityPointsThemeClassicGraphite" value="classic_graphite" selected>Graphite Signal</option>
+                                  <option id="optCityPointsThemeAtlasInk" value="atlas_ink">Cyan Beacon</option>
+                                  <option id="optCityPointsThemeParchmentSepia" value="parchment_sepia">Vermilion Ledger</option>
+                                  <option id="optCityPointsThemeSlateBlue" value="slate_blue">Royal Violet</option>
+                                  <option id="optCityPointsThemeIvoryOutline" value="ivory_outline">Ivory Night</option>
                                 </select>
                               </div>
                               <div>
@@ -765,16 +776,16 @@
                               <div>
                                 <div class="range-row">
                                   <label id="lblCityPointsMarkerDensity" class="range-label" for="cityPointsMarkerDensity" data-i18n="Point Density">Point Density</label>
-                                  <span id="cityPointsMarkerDensityValue" class="range-value">1.00x</span>
+                                  <span id="cityPointsMarkerDensityValue" class="range-value">0.95x</span>
                                 </div>
-                                <input id="cityPointsMarkerDensity" type="range" min="0.50" max="2.00" step="0.05" value="1.00" class="range-input" />
+                                <input id="cityPointsMarkerDensity" type="range" min="0.50" max="2.00" step="0.05" value="0.95" class="range-input" />
                               </div>
                               <div>
                                 <div class="range-row">
                                   <label id="lblCityPointsOpacity" class="range-label" for="cityPointsOpacity">Point Opacity</label>
-                                  <span id="cityPointsOpacityValue" class="range-value">94%</span>
+                                  <span id="cityPointsOpacityValue" class="range-value">96%</span>
                                 </div>
-                                <input id="cityPointsOpacity" type="range" min="0" max="100" value="94" class="range-input" />
+                                <input id="cityPointsOpacity" type="range" min="0" max="100" value="96" class="range-input" />
                               </div>
                             </div>
                           </section>
@@ -810,11 +821,11 @@
                             <div class="space-y-3 mt-3">
                               <div class="flex items-center justify-between gap-3">
                                 <label id="lblCityPointsColor" class="range-label" for="cityPointsColor">Point Color</label>
-                                <input id="cityPointsColor" type="color" value="#2f343a" class="color-input" />
+                                <input id="cityPointsColor" type="color" value="#20262e" class="color-input" />
                               </div>
                               <div class="flex items-center justify-between gap-3">
                                 <label id="lblCityPointsCapitalColor" class="range-label" for="cityPointsCapitalColor">Capital Highlight Color</label>
-                                <input id="cityPointsCapitalColor" type="color" value="#9f9072" class="color-input" />
+                                <input id="cityPointsCapitalColor" type="color" value="#f0b84f" class="color-input" />
                               </div>
                               <div>
                                 <div class="range-row">
@@ -1097,9 +1108,9 @@
                       <div>
                         <div class="range-row">
                           <label id="lblDayNightShadowOpacity" class="range-label" for="dayNightShadowOpacity">Shadow Opacity</label>
-                          <span id="dayNightShadowOpacityValue" class="range-value">24%</span>
+                          <span id="dayNightShadowOpacityValue" class="range-value">50%</span>
                         </div>
-                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="24" class="range-input" />
+                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="50" class="range-input" />
                       </div>
                       <div>
                         <div class="range-row">

@@ -8,7 +8,9 @@ TOOLBAR_JS = REPO_ROOT / "js" / "ui" / "toolbar.js"
 SIDEBAR_JS = REPO_ROOT / "js" / "ui" / "sidebar.js"
 DEV_WORKSPACE_JS = REPO_ROOT / "js" / "ui" / "dev_workspace.js"
 STATE_INDEX_JS = REPO_ROOT / "js" / "core" / "state" / "index.js"
+STATE_CONFIG_JS = REPO_ROOT / "js" / "core" / "state" / "config.js"
 STATE_BUS_JS = REPO_ROOT / "js" / "core" / "state" / "bus.js"
+MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 
 
 class RuntimeHooksBoundaryContractTest(unittest.TestCase):
@@ -37,6 +39,8 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "restoreSupportSurfaceFromUrlFn", restoreSupportSurfaceFromUrl);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "renderHgoRuntimePreviewFn", (options = {}) => (', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y) => (', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "renderCountryListFn", renderList);', sidebar_content)
         self.assertIn('registerRuntimeHook(state, "refreshCountryListRowsFn", refreshCountryRows);', sidebar_content)
         self.assertIn('registerRuntimeHook(state, "renderWaterRegionListFn", renderWaterRegionList);', sidebar_content)
@@ -62,6 +66,27 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn('callRuntimeHooks(state, [', history_content)
         self.assertIn('await callRuntimeHook(state, "ensureFullLocalizationDataReadyFn", {', i18n_content)
         self.assertIn('callRuntimeHooks(state, [', i18n_content)
+
+    def test_hgo_runtime_preview_hooks_are_registered_for_renderer_mode(self):
+        config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        for hook_name in [
+            "setHgoRuntimePreviewEnabledFn",
+            "toggleHgoRuntimePreviewFn",
+            "syncHgoRuntimePreviewUiFn",
+            "renderHgoRuntimePreviewFn",
+            "inspectHgoRuntimePreviewPointFn",
+        ]:
+            self.assertIn(f'"{hook_name}"', config_content)
+
+        self.assertIn('callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn"', renderer_content)
+        self.assertIn('callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn"', renderer_content)
+        self.assertIn("function inspectHgoRuntimePreviewFromEvent(", renderer_content)
+        self.assertIn("function normalizeHgoRuntimeHitPayload(", renderer_content)
+        self.assertIn('if (targetType === "hgo") {', renderer_content)
+        self.assertIn("normalized.hgoRuntime = hgoRuntime;", renderer_content)
+        self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', renderer_content)
 
 
 if __name__ == "__main__":

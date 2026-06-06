@@ -374,8 +374,10 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   await setInputValue(page, "#internalBorderOpacity", "42");
   await setInputValue(page, "#internalBorderWidth", "0.88");
   await setInputValue(page, "#empireBorderColor", "#135790");
+  await setInputValue(page, "#empireBorderOpacity", "66");
   await setInputValue(page, "#empireBorderWidth", "2.25");
   await setInputValue(page, "#coastlineColor", "#2468ac");
+  await setInputValue(page, "#coastlineOpacity", "73");
   await setInputValue(page, "#coastlineWidth", "2.4");
   await setInputValue(page, "#physicalOpacity", "61");
   await setSelectValue(page, "#physicalBlendMode", "overlay");
@@ -409,10 +411,12 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   });
   expect(initialExport.styleConfig.empireBorders).toMatchObject({
     color: "#135790",
+    opacity: 0.66,
     width: 2.25,
   });
   expect(initialExport.styleConfig.coastlines).toMatchObject({
     color: "#2468ac",
+    opacity: 0.73,
     width: 2.4,
   });
   expect(initialExport.styleConfig.physical).toMatchObject({
@@ -439,10 +443,12 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   };
   importedProject.styleConfig.empireBorders = {
     color: "#02468a",
+    opacity: 0.58,
     width: 3.14,
   };
   importedProject.styleConfig.coastlines = {
     color: "#0f8f6f",
+    opacity: 0.49,
     width: 2.7,
   };
   importedProject.styleConfig.physical = {
@@ -783,10 +789,12 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   });
   expect(legacyExport.styleConfig.empireBorders).toMatchObject({
     color: "#666666",
+    opacity: 0.9,
     width: 1,
   });
   expect(legacyExport.styleConfig.coastlines).toMatchObject({
     color: "#333333",
+    opacity: 0.8,
     width: 1.2,
   });
   expect(legacyExport.styleConfig.physical).toMatchObject({

@@ -240,6 +240,7 @@ function createHarness({
   countryTree = [],
   childSectionsByParent = new Map(),
   buildCountryRowMetaText = () => "",
+  getSelectedLandInspectorCountryCode = () => "",
   t = (value) => value,
 } = {}) {
   const host = new TestElement("section");
@@ -313,6 +314,7 @@ function createHarness({
       return { flags: 0, total: 0 };
     },
     getHgoIdentityStatus: () => ({ status: "idle" }),
+    getSelectedLandInspectorCountryCode,
     onHgoIdentitySettingsChange: () => {
       settingsChangeCalls += 1;
     },
@@ -406,6 +408,64 @@ test("HGO identity detail uses medium artwork before resolver preferred small ar
     const flag = harness.countryInspectorSelected.querySelector(".hgo-identity-detail-flag");
     assert.ok(flag);
     assert.equal(flag.src, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("selected land country quick tab appears only for current map land selection", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  try {
+    let selectedLandCode = "";
+    const harness = createHarness({
+      selectedCountry: { code: "ABK", displayName: "Scenario Abkhazia" },
+      countryEntries: [
+        { code: "ABK", displayName: "Scenario Abkhazia" },
+        { code: "USA", displayName: "United States" },
+      ],
+      countryTree: [
+        { id: "continent_europe", displayLabel: "Europe", countries: [{ code: "ABK" }] },
+        { id: "continent_north_america", displayLabel: "North America", countries: [{ code: "USA" }] },
+      ],
+      buildCountryRowMetaText: (countryState) => `tag ${countryState.code}`,
+      getSelectedLandInspectorCountryCode: () => selectedLandCode,
+    });
+
+    harness.controller.renderList();
+    assert.equal(harness.host.querySelector("[data-selected-land-country-quick-tab]"), null);
+
+    selectedLandCode = "ABK";
+    harness.runtimeState.selectedInspectorCountryCode = "ABK";
+    harness.controller.renderCountryInspectorDetail();
+
+    let tab = harness.host.querySelector("[data-selected-land-country-quick-tab]");
+    assert.ok(tab);
+    assert.equal(tab.classList.contains("hidden"), false);
+    assert.match(textOf(tab), /Selected map country/);
+    assert.match(textOf(tab), /Scenario Abkhazia/);
+    assert.match(textOf(tab), /ABK/);
+
+    selectedLandCode = "USA";
+    harness.runtimeState.selectedInspectorCountryCode = "USA";
+    harness.controller.refreshCountryRows({
+      countryCodes: ["ABK", "USA"],
+      refreshInspector: true,
+    });
+
+    tab = harness.host.querySelector("[data-selected-land-country-quick-tab]");
+    assert.match(textOf(tab), /United States/);
+    assert.match(textOf(tab), /USA/);
+    assert.doesNotMatch(textOf(tab), /Scenario Abkhazia/);
+
+    selectedLandCode = "";
+    harness.controller.renderCountryInspectorDetail();
+
+    tab = harness.host.querySelector("[data-selected-land-country-quick-tab]");
+    assert.ok(tab);
+    assert.equal(tab.classList.contains("hidden"), true);
+    assert.equal(textOf(tab), "");
   } finally {
     globalThis.document = previousDocument;
   }

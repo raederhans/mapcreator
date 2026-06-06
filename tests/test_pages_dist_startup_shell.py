@@ -63,6 +63,52 @@ class PagesDistStartupShellTest(unittest.TestCase):
             finally:
                 build_pages_dist.DIST_ROOT = original_dist_root
 
+    def test_pages_dist_reset_clears_previous_output_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir) / "dist"
+            old_file = tmp_root / "app" / "data" / "hgo_catalogs" / "flags_png" / "medium" / "AA" / "AAA.png"
+            old_file.parent.mkdir(parents=True)
+            old_file.write_bytes(b"old")
+            previous_dist_root = build_pages_dist.DIST_ROOT
+            previous_app_dist_root = build_pages_dist.APP_DIST_ROOT
+            build_pages_dist.DIST_ROOT = tmp_root
+            build_pages_dist.APP_DIST_ROOT = tmp_root / "app"
+            try:
+                build_pages_dist.reset_dist()
+                self.assertTrue(build_pages_dist.APP_DIST_ROOT.is_dir())
+                self.assertFalse(old_file.exists())
+            finally:
+                build_pages_dist.DIST_ROOT = previous_dist_root
+                build_pages_dist.APP_DIST_ROOT = previous_app_dist_root
+
+    def test_pages_dist_manifest_scan_retries_after_vanishing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            stable_path = tmp_root / "app" / "stable.json"
+            stable_path.parent.mkdir(parents=True)
+            stable_path.write_text("{}", encoding="utf-8")
+            vanished_path = tmp_root / "app" / "vanished.json"
+            previous_dist_root = build_pages_dist.DIST_ROOT
+            previous_iter_dist_files = build_pages_dist.iter_dist_files
+            previous_sleep = build_pages_dist.time.sleep
+            calls = {"count": 0}
+
+            def fake_iter_dist_files():
+                calls["count"] += 1
+                return [vanished_path, stable_path] if calls["count"] == 1 else [stable_path]
+
+            build_pages_dist.DIST_ROOT = tmp_root
+            build_pages_dist.iter_dist_files = fake_iter_dist_files
+            build_pages_dist.time.sleep = lambda _seconds: None
+            try:
+                records, total_bytes = build_pages_dist.get_dist_file_records()
+                self.assertEqual(records, [{"path": "app/stable.json", "size_bytes": 2}])
+                self.assertEqual(total_bytes, 2)
+            finally:
+                build_pages_dist.DIST_ROOT = previous_dist_root
+                build_pages_dist.iter_dist_files = previous_iter_dist_files
+                build_pages_dist.time.sleep = previous_sleep
+
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

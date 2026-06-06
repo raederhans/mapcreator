@@ -1971,22 +1971,20 @@ details.appearance-subsection > *:not(summary),
 }
 
 #appearancePanelBorders .appearance-subsection-stack {
-  gap: 0;
+  gap: 10px;
 }
 
 #appearancePanelBorders .appearance-mini-section {
-  border-top: 1px solid rgba(22, 35, 51, 0.14);
-}
-
-#appearancePanelBorders .appearance-mini-section:last-child {
-  border-bottom: 1px solid rgba(22, 35, 51, 0.14);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
 }
 
 #appearancePanelBorders .appearance-mini-section > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 0;
+  padding: 12px;
 }
 
 #appearancePanelBorders .appearance-mini-section > summary::after {
@@ -1995,11 +1993,24 @@ details.appearance-subsection > *:not(summary),
 }
 
 #appearancePanelBorders .appearance-mini-section > *:not(summary) {
-  padding: 0 0 16px;
+  padding: 0 12px 13px;
 }
 
 #appearancePanelBorders .appearance-mini-section > *:not(summary) > .mt-3 {
   margin-top: 0;
+}
+
+#appearancePanelBorders .border-control-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#appearancePanelBorders .border-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .appearance-mini-section-subtle {
@@ -2034,6 +2045,10 @@ details.appearance-subsection > *:not(summary),
 #appearancePanelLayers .appearance-subsection-stack,
 #appearancePanelTexture > .space-y-3 {
   margin-top: 10px;
+}
+
+#appearancePanelLayers .appearance-subsection-stack {
+  gap: 0;
 }
 
 .appearance-control-card {
@@ -2106,6 +2121,14 @@ details.appearance-subsection > *:not(summary),
 
 #appearancePanelLayers .appearance-mini-section > *:not(summary) {
   padding: 2px 12px 15px;
+}
+
+#appearancePanelLayers .appearance-mini-section > summary.section-header {
+  padding-inline: 0 12px;
+}
+
+#appearancePanelLayers .appearance-subsection-stack > .appearance-mini-section + .appearance-mini-section {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 #appearancePanelLayers .appearance-mini-section > *:not(summary) > .mt-3 {
@@ -10053,6 +10076,39 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
   border-color: rgba(32, 76, 119, 0.28);
   background: rgba(232, 239, 249, 0.92);
   color: var(--text-primary);
+}
+
+.selected-land-country-quick-tab {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid rgba(32, 76, 119, 0.16);
+  border-radius: 8px;
+  background: rgba(245, 249, 254, 0.78);
+}
+
+.selected-land-country-quick-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--inspector-font-meta);
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.selected-land-country-quick-code {
+  flex: 0 0 auto;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.selected-land-country-quick-card {
+  border-color: rgba(32, 76, 119, 0.18);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .country-select-identity-line {

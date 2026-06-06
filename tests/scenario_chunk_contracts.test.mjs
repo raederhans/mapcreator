@@ -1141,6 +1141,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function handleBrushPointerMove[\s\S]*?requestInteractionRender\("brush-preview"\);/.test(rendererSource)
       && /function addFeatureToDevSelection[\s\S]*?requestInteractionRender\("dev-selection-add"\);/.test(rendererSource)
       && /function toggleFeatureInDevSelection[\s\S]*?requestInteractionRender\("dev-selection-toggle"\);/.test(rendererSource)
+      && /function setDevSelectionDirty\(\)[\s\S]*?runtimeState\.refreshCountryListRowsFn\(\{[\s\S]*?refreshInspector: true,[\s\S]*?refreshPresetTree: true,[\s\S]*?\}\);/.test(rendererSource)
       && /function syncInspectorCountryToLandSelection[\s\S]*?runtimeState\.selectedInspectorCountryCode = nextCode;[\s\S]*?refreshPresetTree: true/.test(rendererSource)
       && /if \(event\?\.ctrlKey \|\| event\?\.metaKey\) \{[\s\S]*?toggleFeatureInDevSelection\(landId\);[\s\S]*?syncInspectorCountryToLandSelection\(feature, landId, landHit\);/.test(rendererSource)
       && !rendererSource.includes("runtimeState.devSelectionModeEnabled && (event?.ctrlKey || event?.metaKey)")

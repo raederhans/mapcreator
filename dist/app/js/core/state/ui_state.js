@@ -211,10 +211,12 @@ export function createDefaultStyleConfig() {
     },
     empireBorders: {
       color: "#666666",
+      opacity: 0.9,
       width: 1.0,
     },
     coastlines: {
       color: "#333333",
+      opacity: 0.8,
       width: 1.2,
     },
     parentBorders: {

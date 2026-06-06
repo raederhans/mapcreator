@@ -439,6 +439,7 @@ test("local project zip load unwraps editable project before import funnel", asy
   await projectFileInput.listeners.change();
 
   assert.equal(projectFileName.textContent, "map_project.zip");
+  assert.equal(projectFileName.dataset.projectFileState, "selected");
   assert.equal(dialogs[0].title, "Load Project Package");
   assert.match(dialogs[0].details, /Package: map_project\.zip/);
   assert.equal(importedFile.name, "map_project.json");

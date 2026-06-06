@@ -40,6 +40,26 @@ function createDeferred() {
   return { promise, reject, resolve };
 }
 
+function createCanvas() {
+  let putCount = 0;
+  let lastImageData = null;
+  return {
+    getPutCount: () => putCount,
+    getLastImageData: () => lastImageData,
+    getContext: () => ({
+      createImageData: (width, height) => ({
+        width,
+        height,
+        data: new Uint8ClampedArray(width * height * 4),
+      }),
+      putImageData: (imageData, x, y) => {
+        putCount += 1;
+        lastImageData = { imageData, x, y };
+      },
+    }),
+  };
+}
+
 function createController(overrides = {}) {
   let seedLoadCount = 0;
   let rasterLoadCount = 0;
@@ -91,6 +111,22 @@ test("loads seed and raster once while already enabled", async () => {
     unresolvedPixelCount: 0,
   });
   assert.equal(harness.storage.values.get(HGO_RUNTIME_PREVIEW_STORAGE_KEY), "true");
+});
+
+test("ready preview can repaint the same canvas after a normal map redraw", async () => {
+  const canvas = createCanvas();
+  const harness = createController({ canvas });
+
+  await harness.controller.setEnabled(true);
+  assert.equal(canvas.getPutCount(), 1);
+
+  const rendered = harness.controller.renderPreview();
+
+  assert.equal(canvas.getPutCount(), 2);
+  assert.equal(rendered.resolvedPixelCount, 1);
+  assert.equal(canvas.getLastImageData().x, 0);
+  assert.equal(canvas.getLastImageData().y, 0);
+  assert.deepEqual(Array.from(canvas.getLastImageData().imageData.data), [1, 2, 3, 255]);
 });
 
 test("ignores stale load completion after preview is disabled", async () => {

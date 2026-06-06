@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 283680
+      "size_bytes": 284967
     },
     {
       "path": "app/data/CATALOG.json",
@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758
+      "size_bytes": 242646
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29670,7 +29670,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8429169
+      "size_bytes": 8429259
     },
     {
       "path": "app/data/manifest.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642
+      "size_bytes": 209631
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36302,7 +36302,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 225867
+      "size_bytes": 226643
     },
     {
       "path": "app/js/api/backend_client.js",
@@ -36462,7 +36462,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 980462
+      "size_bytes": 986815
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36506,7 +36506,7 @@
     },
     {
       "path": "app/js/core/renderer/border_draw_owner.js",
-      "size_bytes": 22859
+      "size_bytes": 23196
     },
     {
       "path": "app/js/core/renderer/border_mesh_diagnostics.js",
@@ -36790,7 +36790,7 @@
     },
     {
       "path": "app/js/core/state/config.js",
-      "size_bytes": 7896
+      "size_bytes": 8061
     },
     {
       "path": "app/js/core/state/content_state.js",
@@ -36826,7 +36826,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 26487
+      "size_bytes": 26527
     },
     {
       "path": "app/js/core/state.js",
@@ -36838,7 +36838,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 58742
+      "size_bytes": 58744
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
@@ -36906,11 +36906,11 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 46011
+      "size_bytes": 46135
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 87051
+      "size_bytes": 87285
     },
     {
       "path": "app/js/ui/scenario_controls.js",
@@ -36922,11 +36922,11 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 48169
+      "size_bytes": 50496
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 52101
+      "size_bytes": 52288
     },
     {
       "path": "app/js/ui/sidebar/strategic_overlay/unit_counter_bind_events_helper.js",
@@ -36954,23 +36954,27 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 268042
+      "size_bytes": 269207
     },
     {
       "path": "app/js/ui/toast.js",
       "size_bytes": 3707
     },
     {
+      "path": "app/js/ui/toolbar/appearance_border_owner.js",
+      "size_bytes": 8670
+    },
+    {
       "path": "app/js/ui/toolbar/appearance_city_points_descriptor.js",
-      "size_bytes": 3823
+      "size_bytes": 4451
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 11899
+      "size_bytes": 12497
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 21037
+      "size_bytes": 21335
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
@@ -36990,7 +36994,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 37771
+      "size_bytes": 37770
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
@@ -37090,7 +37094,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 135861
+      "size_bytes": 130359
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -37190,11 +37194,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 3007
+      "size_bytes": 2938
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 880
+      "size_bytes": 863
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37238,7 +37242,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1052127
+      "size_bytes": 1052227
     },
     {
       "path": "styles.css",
@@ -37255,5 +37259,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109157488
+  "total_bytes": 1109175157
 }

@@ -308,7 +308,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   await expect(page.locator('#cityPointsPresetDensityGroupHint')).toHaveCount(0);
   await expect(page.locator('#cityPointsMarkerDensityHint')).toHaveCount(0);
   await expect(page.locator('#cityPointsLabelDensityHint')).toHaveCount(0);
-  await expect(page.locator('#cityPointsHelpTooltip')).toContainText('Pick a restrained style');
+  await expect(page.locator('#cityPointsHelpTooltip')).toContainText('Pick a city marker style');
   await expect(page.locator('#appearancePanelLayers .city-points-toggle-card')).toHaveCount(1);
   await expect(page.locator('#appearancePanelLayers .city-points-style-card')).toHaveCount(1);
   await expect(page.locator('#appearancePanelLayers .city-points-label-card')).toHaveCount(1);

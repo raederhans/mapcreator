@@ -476,9 +476,25 @@
       "en": "City Points",
       "zh": "城市点位"
     },
-    "Classic Graphite": {
-      "en": "Classic Graphite",
-      "zh": "经典石墨"
+    "Graphite Signal": {
+      "en": "Graphite Signal",
+      "zh": "石墨信标"
+    },
+    "Cyan Beacon": {
+      "en": "Cyan Beacon",
+      "zh": "青蓝灯塔"
+    },
+    "Vermilion Ledger": {
+      "en": "Vermilion Ledger",
+      "zh": "朱红档案"
+    },
+    "Royal Violet": {
+      "en": "Royal Violet",
+      "zh": "王室紫标"
+    },
+    "Ivory Night": {
+      "en": "Ivory Night",
+      "zh": "夜色象牙"
     },
     "Clean": {
       "en": "Clean",
@@ -3776,9 +3792,9 @@
       "en": "Overlay off.",
       "zh": "覆盖层已关闭。"
     },
-    "Pick a restrained style, then tune marker density and label density for the current map scale.": {
-      "en": "Pick a restrained style, then tune marker density and label density for the current map scale.",
-      "zh": "先选一种更克制的样式，再按当前地图比例调整标记密度和标签密度。"
+    "Pick a city marker style, then tune marker density and label density for the current map scale.": {
+      "en": "Pick a city marker style, then tune marker density and label density for the current map scale.",
+      "zh": "先选一种城市点位样式，再按当前地图比例调整标记密度和标签密度。"
     },
     "Plan lines.": {
       "en": "Plan lines.",

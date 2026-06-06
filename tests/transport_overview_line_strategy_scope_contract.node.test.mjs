@@ -417,12 +417,13 @@ test("appearance transport summary keeps invalid family ids explicit and empty",
 
 test("appearance city-points descriptor returns stable theme labels, colors, and hints", () => {
   const translated = getCityPointsThemeLabel("atlas_ink", (key, domain) => `${domain}:${key}`);
-  assert.equal(translated, "ui:Atlas Ink");
+  assert.equal(translated, "ui:Cyan Beacon");
   assert.equal(Object.isFrozen(getCityPointsThemeMeta("atlas_ink")), true);
   assert.equal(Object.isFrozen(getCityPointsThemeStyle("atlas_ink")), true);
   assert.equal(getCityPointsThemeMeta("missing_theme").value, "classic_graphite");
-  assert.equal(getCityPointsThemeStyle("atlas_ink").color, "#35506e");
-  assert.match(getCityPointsThemeHint("classic_graphite", "zh"), /石墨灰/);
+  assert.equal(getCityPointsThemeStyle("atlas_ink").color, "#008ea8");
+  assert.equal(getCityPointsThemeStyle("atlas_ink").markerDensity, 1.25);
+  assert.match(getCityPointsThemeHint("classic_graphite", "zh"), /深石墨/);
   assert.match(getCityPointsThemeHint("classic_graphite", "en"), /graphite/i);
   assert.match(getCityPointsLabelDensityHint("dense", "zh"), /P4 32/);
   assert.match(getCityPointsLabelDensityHint("sparse", "en"), /P4 16/);

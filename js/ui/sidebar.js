@@ -1502,6 +1502,7 @@ function initSidebar({ render } = {}) {
       field.htmlFor = id;
       const label = document.createElement("span");
       label.className = "sidebar-field-label";
+      label.setAttribute("data-i18n", labelText);
       label.textContent = t(labelText, "ui");
       const select = document.createElement("select");
       select.id = id;
@@ -1509,6 +1510,7 @@ function initSidebar({ render } = {}) {
       options.forEach(([value, text]) => {
         const option = document.createElement("option");
         option.value = value;
+        option.setAttribute("data-i18n", text);
         option.textContent = t(text, "ui");
         select.appendChild(option);
       });
@@ -1546,12 +1548,14 @@ function initSidebar({ render } = {}) {
     downloadBtn.id = "downloadProjectBtn";
     downloadBtn.type = "button";
     downloadBtn.className = "btn-primary";
+    downloadBtn.setAttribute("data-i18n", "Download Project");
     downloadBtn.textContent = t("Download Project", "ui");
 
     const uploadBtn = document.createElement("button");
     uploadBtn.id = "uploadProjectBtn";
     uploadBtn.type = "button";
     uploadBtn.className = "btn-secondary";
+    uploadBtn.setAttribute("data-i18n", "Load Project");
     uploadBtn.textContent = t("Load Project", "ui");
 
     const fileInput = document.createElement("input");
@@ -1567,11 +1571,13 @@ function initSidebar({ render } = {}) {
     const fileMetaLabel = document.createElement("span");
     fileMetaLabel.id = "lblProjectFile";
     fileMetaLabel.className = "section-header";
+    fileMetaLabel.setAttribute("data-i18n", "Selected File");
     fileMetaLabel.textContent = t("Selected File", "ui");
 
     const fileName = document.createElement("span");
     fileName.id = "projectFileName";
     fileName.className = "project-file-name u-truncate";
+    fileName.dataset.projectFileState = "empty";
     fileName.textContent = t("No file selected", "ui");
 
     fileMeta.appendChild(fileMetaLabel);
@@ -3935,7 +3941,14 @@ function initSidebar({ render } = {}) {
   };
 
 
-  if (projectFileName && !projectFileName.textContent.trim()) {
+  if (
+    projectFileName
+    && (
+      !projectFileName.textContent.trim()
+      || projectFileName.dataset?.projectFileState === "empty"
+    )
+  ) {
+    if (projectFileName.dataset) projectFileName.dataset.projectFileState = "empty";
     projectFileName.textContent = t("No file selected", "ui");
   }
 
@@ -4622,21 +4635,22 @@ function initSidebar({ render } = {}) {
     markDirty,
     showToast,
     getHgoIdentity: resolveHgoIdentityForCountry,
-  getHgoIdentityCoverage,
-  getHgoIdentityStatus: () => hgoIdentityLoadState,
-  onHgoIdentityRetry: () => {
-    if (hgoIdentityLoadState.status === "error") {
-      hgoIdentityLoadState.status = "idle";
-    }
-    ensureHgoIdentityAssetsLoaded();
-    renderList();
-  },
-  onHgoIdentitySettingsChange: () => {
-    const settings = ensureHgoIdentityRuntimeState();
-    requestHgoIdentityAssetsForSettings(settings, ensureHgoIdentityAssetsLoaded);
-    renderList();
-    render();
-  },
+    getSelectedLandInspectorCountryCode: () => getLastSelectedLandInspectorCountryCode(),
+    getHgoIdentityCoverage,
+    getHgoIdentityStatus: () => hgoIdentityLoadState,
+    onHgoIdentityRetry: () => {
+      if (hgoIdentityLoadState.status === "error") {
+        hgoIdentityLoadState.status = "idle";
+      }
+      ensureHgoIdentityAssetsLoaded();
+      renderList();
+    },
+    onHgoIdentitySettingsChange: () => {
+      const settings = ensureHgoIdentityRuntimeState();
+      requestHgoIdentityAssetsForSettings(settings, ensureHgoIdentityAssetsLoaded);
+      renderList();
+      render();
+    },
   });
   const {
     bindEvents: bindCountryInspectorEvents,
@@ -5875,15 +5889,28 @@ function initSidebar({ render } = {}) {
     return selectedId && runtimeState.landIndex?.has(selectedId) ? [selectedId] : [];
   };
 
+  const resolveSelectedLandFeatureCountryCode = (featureId) => {
+    const normalizedId = String(featureId || "").trim();
+    if (!normalizedId) return "";
+    const feature = runtimeState.landIndex?.get(normalizedId);
+    if (!feature) return "";
+    const ownerCode = normalizeCountryCode(getFeatureOwnerCode(normalizedId));
+    const featureCode = normalizeCountryCode(
+      getSharedFeatureCountryCode(feature || { id: normalizedId }, { useIdFallback: true })
+    );
+    return ownerCode || featureCode;
+  };
+
+  const getLastSelectedLandInspectorCountryCode = () => {
+    const selectedFeatureIds = getSelectedLandFeatureIdsForCountryInference();
+    const lastFeatureId = selectedFeatureIds[selectedFeatureIds.length - 1] || "";
+    return resolveSelectedLandFeatureCountryCode(lastFeatureId);
+  };
+
   const inferCountryCodesFromSelectedLand = () => {
     const codes = new Set();
     getSelectedLandFeatureIdsForCountryInference().forEach((featureId) => {
-      const feature = runtimeState.landIndex?.get(featureId);
-      const ownerCode = normalizeCountryCode(getFeatureOwnerCode(featureId));
-      const featureCode = normalizeCountryCode(
-        getSharedFeatureCountryCode(feature || { id: featureId }, { useIdFallback: true })
-      );
-      const code = ownerCode || featureCode;
+      const code = resolveSelectedLandFeatureCountryCode(featureId);
       if (code) {
         codes.add(code);
       }

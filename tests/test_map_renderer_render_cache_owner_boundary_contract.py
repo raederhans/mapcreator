@@ -114,6 +114,41 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
             r"context\.drawImage\(staticLayerCanvas, 0, 0\);",
         )
 
+    def test_modern_city_lights_advanced_controls_reach_draw_algorithms(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        texture_match = re.search(
+            r"function drawModernCityLightsTexture\(config, intensity\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(texture_match)
+        texture_body = texture_match.group("body")
+        self.assertIn("config.cityLightsTextureOpacity", texture_body)
+        self.assertIn("textureOpacity <= 0", texture_body)
+        self.assertIn("textureOpacity *", texture_body)
+
+        corridor_match = re.search(
+            r"function drawModernCityLightsCorridors\(config, intensity\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(corridor_match)
+        corridor_body = corridor_match.group("body")
+        self.assertIn("config.cityLightsCorridorStrength", corridor_body)
+        self.assertIn("corridorStrength <= 0", corridor_body)
+        self.assertIn("corridorStrength *", corridor_body)
+
+        core_match = re.search(
+            r"function drawModernCityLightsCores\(k, config, _intensity, coreEntries = null\) \{(?P<body>[\s\S]*?)\n\}",
+            renderer_content,
+        )
+        self.assertIsNotNone(core_match)
+        core_body = core_match.group("body")
+        self.assertIn("config.cityLightsCoreSharpness", core_body)
+        self.assertIn("haloSpread", core_body)
+        self.assertIn("coreSpread", core_body)
+        self.assertIn("coreInnerStop", core_body)
+        self.assertIn("coreMidStop", core_body)
+
     def test_active_scenario_shell_empty_political_baseline_cannot_fall_back_to_primary(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
 

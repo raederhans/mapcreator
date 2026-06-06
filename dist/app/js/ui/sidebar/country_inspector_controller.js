@@ -98,6 +98,7 @@ export function createCountryInspectorController({
   getHgoIdentity = null,
   getHgoIdentityCoverage = null,
   getHgoIdentityStatus = null,
+  getSelectedLandInspectorCountryCode = null,
   onHgoIdentityRetry = null,
   onHgoIdentitySettingsChange = null,
 }) {
@@ -324,6 +325,60 @@ export function createCountryInspectorController({
     controls.appendChild(suggestedLabel);
   };
 
+  const resolveSelectedLandInspectorCountryState = () => {
+    const selectedLandCode = typeof getSelectedLandInspectorCountryCode === "function"
+      ? normalizeCountryCode(getSelectedLandInspectorCountryCode())
+      : "";
+    if (!selectedLandCode) return null;
+    return getLatestCountryStatesByCode().get(selectedLandCode) || null;
+  };
+
+  const renderSelectedLandCountryQuickTab = () => {
+    const host = list?.parentElement;
+    if (!host) return;
+
+    const countryState = resolveSelectedLandInspectorCountryState();
+    let tab = host.querySelector("[data-selected-land-country-quick-tab]");
+    if (!countryState) {
+      if (tab) {
+        tab.classList.add("hidden");
+        tab.setAttribute("aria-hidden", "true");
+        tab.replaceChildren();
+      }
+      return;
+    }
+
+    if (!tab) {
+      tab = document.createElement("div");
+      tab.className = "selected-land-country-quick-tab";
+      tab.dataset.selectedLandCountryQuickTab = "true";
+      host.insertBefore(tab, list);
+    }
+    tab.classList.remove("hidden");
+    tab.setAttribute("aria-hidden", "false");
+    tab.replaceChildren();
+
+    const header = document.createElement("div");
+    header.className = "selected-land-country-quick-header";
+    const label = document.createElement("span");
+    label.textContent = t("Selected map country", "ui");
+    const code = document.createElement("span");
+    code.className = "selected-land-country-quick-code";
+    code.textContent = countryState.code;
+    header.appendChild(label);
+    header.appendChild(code);
+
+    tab.appendChild(header);
+    renderCountrySelectRow(tab, countryState, {
+      childSections: [],
+      hideExpandToggle: true,
+      registerRowRef: false,
+      rowClassName: "selected-land-country-quick-card",
+      showActivateSubaction: false,
+      showRelationMeta: true,
+    });
+  };
+
   const registerCountryRowRef = (countryCode, ref) => {
     const normalized = normalizeCountryCode(countryCode);
     if (!normalized || !ref) return;
@@ -430,6 +485,9 @@ export function createCountryInspectorController({
       childSections = null,
       forceExpanded = false,
       hideExpandToggle = false,
+      registerRowRef = true,
+      rowClassName = "",
+      showActivateSubaction = true,
       showRelationMeta = false,
     } = {}
   ) => {
@@ -445,6 +503,7 @@ export function createCountryInspectorController({
     const hasChildren = childCount > 0;
     const isActiveOwner = runtimeState.activeSovereignCode === countryState.code;
     const hasReleasableActivateAction = !!(
+      showActivateSubaction &&
       runtimeState.activeScenarioId &&
       countryState.releasable &&
       getPrimaryReleasablePresetRef(countryState)
@@ -456,6 +515,9 @@ export function createCountryInspectorController({
 
     const row = document.createElement("div");
     row.className = "country-select-row";
+    String(rowClassName || "").split(/\s+/).filter(Boolean).forEach((className) => {
+      row.classList.add(className);
+    });
     row.dataset.countryCode = countryState.code;
     const isSelected = runtimeState.selectedInspectorCountryCode === countryState.code;
     row.classList.toggle("is-selected", isSelected);
@@ -545,16 +607,18 @@ export function createCountryInspectorController({
     }
 
     if (!hasChildren && !hasReleasableActivateAction) {
-      registerCountryRowRef(countryState.code, {
-        row,
-        wrapper: null,
-        main,
-        flag,
-        swatch,
-        title,
-        meta,
-        showRelationMeta,
-      });
+      if (registerRowRef) {
+        registerCountryRowRef(countryState.code, {
+          row,
+          wrapper: null,
+          main,
+          flag,
+          swatch,
+          title,
+          meta,
+          showRelationMeta,
+        });
+      }
       parent.appendChild(row);
       return;
     }
@@ -604,16 +668,18 @@ export function createCountryInspectorController({
       });
       wrapper.appendChild(childList);
     }
-    registerCountryRowRef(countryState.code, {
-      row,
-      wrapper,
-      main,
-      flag,
-      swatch,
-      title,
-      meta,
-      showRelationMeta,
-    });
+    if (registerRowRef) {
+      registerCountryRowRef(countryState.code, {
+        row,
+        wrapper,
+        main,
+        flag,
+        swatch,
+        title,
+        meta,
+        showRelationMeta,
+      });
+    }
     parent.appendChild(wrapper);
   };
 
@@ -972,6 +1038,7 @@ export function createCountryInspectorController({
     const selectedCode = ensureSelectedInspectorCountry();
     const countryState = selectedCode ? latestCountryStatesByCode.get(selectedCode) : null;
     const isEmpty = !countryState;
+    renderSelectedLandCountryQuickTab();
 
     if (countryInspectorDetail) {
       countryInspectorDetail.classList.toggle("hidden", isEmpty);
@@ -1055,6 +1122,7 @@ export function createCountryInspectorController({
     countryRowRefsByCode.clear();
     ensureSelectedInspectorCountry();
     renderHgoIdentityControls(visibleCountryStates);
+    renderSelectedLandCountryQuickTab();
     list.replaceChildren();
 
     if (!visibleCountryStates.length) {

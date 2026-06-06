@@ -290,7 +290,7 @@ test("day-night owner renders modern defaults from normalized state", () => {
   assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrength.value, String(Math.round(defaults.cityLightsPopulationBoostStrength * 100)));
   assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrengthValue.textContent, "58%");
   assert.equal(harness.nodes.dayNightShadowOpacity.value, String(Math.round(defaults.shadowOpacity * 100)));
-  assert.equal(harness.nodes.dayNightShadowOpacityValue.textContent, "24%");
+  assert.equal(harness.nodes.dayNightShadowOpacityValue.textContent, "50%");
 });
 
 test("day-night modern range fallbacks match normalized defaults", () => {

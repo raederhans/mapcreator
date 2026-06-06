@@ -294574,9 +294574,9 @@
       "en": "Atlas + Contours",
       "zh": "图集 + 等高线"
     },
-    "Atlas Ink": {
-      "en": "Atlas Ink",
-      "zh": "图集墨蓝"
+    "Cyan Beacon": {
+      "en": "Cyan Beacon",
+      "zh": "青蓝灯塔"
     },
     "Atlas Intensity": {
       "en": "Atlas Intensity",
@@ -294926,9 +294926,9 @@
       "en": "Choose a line type below or from the bottom command bar to begin drawing.",
       "zh": "在下方或底部命令栏中选择线型以开始绘制。"
     },
-    "Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface.": {
-      "en": "Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface.",
-      "zh": "先选一种克制的地图表现方式，再调整允许显示的点标记和标签数量。"
+    "Choose a city marker treatment first, then tune how many point markers and labels are allowed to surface.": {
+      "en": "Choose a city marker treatment first, then tune how many point markers and labels are allowed to surface.",
+      "zh": "先选一种城市点位表现方式，再调整允许显示的点标记和标签数量。"
     },
     "Choose an active owner before changing political ownership or borders.": {
       "en": "Choose an active owner before changing political ownership or borders.",
@@ -295034,9 +295034,9 @@
       "en": "Classes",
       "zh": "类别"
     },
-    "Classic Graphite": {
-      "en": "Classic Graphite",
-      "zh": "经典石墨"
+    "Graphite Signal": {
+      "en": "Graphite Signal",
+      "zh": "石墨信标"
     },
     "Clean": {
       "en": "Clean",
@@ -295593,6 +295593,10 @@
     "Country Colors": {
       "en": "Country Colors",
       "zh": "国家配色"
+    },
+    "Country Borders": {
+      "en": "Country Borders",
+      "zh": "国家边界"
     },
     "Current country color": {
       "en": "Current country color",
@@ -296156,7 +296160,7 @@
     },
     "Empire Borders": {
       "en": "Empire Borders",
-      "zh": "帝国边界"
+      "zh": "国家边界"
     },
     "Enable All": {
       "en": "Enable All",
@@ -296966,9 +296970,9 @@
       "en": "Isolated industrial site",
       "zh": "孤立的工业场地"
     },
-    "Ivory Outline": {
-      "en": "Ivory Outline",
-      "zh": "象牙描边"
+    "Ivory Night": {
+      "en": "Ivory Night",
+      "zh": "夜色象牙"
     },
     "Japan": {
       "en": "Japan",
@@ -298410,9 +298414,9 @@
       "en": "Paper Scale",
       "zh": "纸张缩放"
     },
-    "Parchment Sepia": {
-      "en": "Parchment Sepia",
-      "zh": "纸面棕褐"
+    "Vermilion Ledger": {
+      "en": "Vermilion Ledger",
+      "zh": "朱红档案"
     },
     "Parent Country": {
       "en": "Parent Country",
@@ -298466,9 +298470,9 @@
       "en": "Physical Regions",
       "zh": "地貌区域"
     },
-    "Pick a restrained style, then tune marker density and label density for the current map scale.": {
-      "en": "Pick a restrained style, then tune marker density and label density for the current map scale.",
-      "zh": "先选一种更克制的样式，再按当前地图比例调整标记密度和标签密度。"
+    "Pick a city marker style, then tune marker density and label density for the current map scale.": {
+      "en": "Pick a city marker style, then tune marker density and label density for the current map scale.",
+      "zh": "先选一种城市点位样式，再按当前地图比例调整标记密度和标签密度。"
     },
     "Pilot scope stays on motorway, trunk, and primary.": {
       "en": "Pilot scope stays on motorway, trunk, and primary.",
@@ -299862,9 +299866,9 @@
       "en": "Skip to map workspace",
       "zh": "跳转到地图工作区"
     },
-    "Slate Blue": {
-      "en": "Slate Blue",
-      "zh": "石板蓝"
+    "Royal Violet": {
+      "en": "Royal Violet",
+      "zh": "王室紫标"
     },
     "Small": {
       "en": "Small",

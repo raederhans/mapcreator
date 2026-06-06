@@ -1092,12 +1092,14 @@ export function createProjectSupportDiagnosticsController({
         const file = projectFileInput.files?.[0];
         if (!file) {
           if (projectFileName) {
+            if (projectFileName.dataset) projectFileName.dataset.projectFileState = "empty";
             projectFileName.textContent = t("No file selected", "ui");
           }
           refreshProjectSaveStatus(t("No file selected", "ui"));
           return;
         }
         if (projectFileName) {
+          if (projectFileName.dataset) projectFileName.dataset.projectFileState = "selected";
           projectFileName.textContent = file.name;
         }
         refreshProjectSaveStatus(t("Project import started. Appearance and transport settings will be restored from the file.", "ui"));

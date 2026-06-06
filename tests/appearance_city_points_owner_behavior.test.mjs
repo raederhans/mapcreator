@@ -147,9 +147,9 @@ test("city-points owner renders theme options and current style controls", () =>
 
   assert.equal(harness.nodes.cityPointsTheme.options.length, 5);
   assert.equal(harness.nodes.cityPointsTheme.options[0].id, "optCityPointsThemeClassicGraphite");
-  assert.equal(harness.nodes.cityPointsTheme.options[0].textContent, "ui:Classic Graphite");
+  assert.equal(harness.nodes.cityPointsTheme.options[0].textContent, "ui:Graphite Signal");
   assert.equal(harness.nodes.cityPointsTheme.value, "atlas_ink");
-  assert.equal(harness.nodes.cityPointsThemeHint.textContent, "Cool blue-ink markers with a cleaner atlas feel and clearer outlines.");
+  assert.equal(harness.nodes.cityPointsThemeHint.textContent, "Bright cyan markers with denser labels for quick city debugging on busy maps.");
   assert.equal(harness.nodes.cityPointsMarkerScale.value, "1.50");
   assert.equal(harness.nodes.cityPointsMarkerScaleValue.textContent, "1.50x");
   assert.equal(harness.nodes.cityPointsMarkerDensity.value, "1.25");
@@ -173,10 +173,10 @@ test("city-points owner refreshes existing theme option labels without rebuildin
   harness.owner.ensureCityPointsThemeOptions();
 
   assert.equal(harness.nodes.cityPointsTheme.options[0], firstOption);
-  assert.equal(harness.nodes.cityPointsTheme.options[0].textContent, "ui:Classic Graphite");
+  assert.equal(harness.nodes.cityPointsTheme.options[0].textContent, "ui:Graphite Signal");
 });
 
-test("city-points owner binds theme changes once and updates derived colors", () => {
+test("city-points owner binds theme changes once and updates preset style controls", () => {
   const harness = createHarness(CITY_POINT_NODE_IDS);
 
   harness.owner.bindEvents();
@@ -186,10 +186,20 @@ test("city-points owner binds theme changes once and updates derived colors", ()
 
   assert.equal(harness.nodes.cityPointsTheme.listeners.get("change").length, 1);
   assert.equal(harness.runtimeState.styleConfig.cityPoints.theme, "parchment_sepia");
-  assert.equal(harness.runtimeState.styleConfig.cityPoints.color, "#866245");
-  assert.equal(harness.runtimeState.styleConfig.cityPoints.capitalColor, "#c78d55");
-  assert.equal(harness.nodes.cityPointsColor.value, "#866245");
-  assert.equal(harness.nodes.cityPointsCapitalColor.value, "#c78d55");
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.color, "#9b3f2f");
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.capitalColor, "#e6843a");
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.markerScale, 1.08);
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.markerDensity, 0.88);
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.opacity, 0.92);
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.labelDensity, "balanced");
+  assert.equal(harness.runtimeState.styleConfig.cityPoints.labelSize, 11);
+  assert.equal(harness.nodes.cityPointsColor.value, "#9b3f2f");
+  assert.equal(harness.nodes.cityPointsCapitalColor.value, "#e6843a");
+  assert.equal(harness.nodes.cityPointsMarkerScale.value, "1.08");
+  assert.equal(harness.nodes.cityPointsMarkerDensity.value, "0.88");
+  assert.equal(harness.nodes.cityPointsOpacity.value, "92");
+  assert.equal(harness.nodes.cityPointsLabelDensity.value, "balanced");
+  assert.equal(harness.nodes.cityPointsLabelSize.value, "11");
   assert.equal(harness.runtimeState.persistViewSettingsCount, 1);
   assert.deepEqual(harness.dirtyReasons, ["city-points-theme"]);
 });

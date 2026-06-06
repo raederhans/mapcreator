@@ -348,7 +348,21 @@ export function createBorderDrawOwner({
     const internalWidthBase = Number(internal.width) || 0.5;
     const coastWidthBase = Number(coast.width) || 1.2;
     const parentWidthBase = Number(parent.width) || 1.1;
-    const internalOpacity = Number.isFinite(Number(internal.opacity)) ? Number(internal.opacity) : 1;
+    const internalOpacity = clamp(
+      Number.isFinite(Number(internal.opacity)) ? Number(internal.opacity) : 1,
+      0,
+      1
+    );
+    const countryOpacity = clamp(
+      Number.isFinite(Number(empire.opacity)) ? Number(empire.opacity) : 0.9,
+      0,
+      1
+    );
+    const coastOpacity = clamp(
+      Number.isFinite(Number(coast.opacity)) ? Number(coast.opacity) : 0.8,
+      0,
+      1
+    );
     const parentOpacity = clamp(
       Number.isFinite(Number(parent.opacity)) ? Number(parent.opacity) : 0.85,
       0,
@@ -394,25 +408,25 @@ export function createBorderDrawOwner({
         ? state.cachedCoastlinesLow
         : (state.cachedCoastlines?.length ? state.cachedCoastlines : state.cachedCoastlinesHigh);
 
-      context.globalAlpha = 0.88;
+      context.globalAlpha = countryOpacity * 0.88;
       drawMeshCollection(empireMeshes, empireColor, countryWidth, { transformMesh: empireMeshTransform });
 
-      context.globalAlpha = 0.78;
+      context.globalAlpha = coastOpacity * 0.78;
       drawMeshCollection(coastlineLow, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
 
       context.globalAlpha = 1.0;
       return;
     }
 
-    const countryAlpha = 0.90;
+    const countryAlpha = countryOpacity;
     const regularProvinceAlpha = clamp(
       internalOpacity * (0.22 + 0.50 * t) * lowZoomDeclutter,
-      internalBorderProvinceMinAlpha,
+      0,
       0.74
     );
     let provinceAlpha = regularProvinceAlpha;
     if (k <= provinceBordersFadeStartZoom) {
-      provinceAlpha = provinceBordersFarAlpha;
+      provinceAlpha = provinceBordersFarAlpha * internalOpacity;
     } else if (k < provinceBordersTransitionEndZoom) {
       const fadeT = clamp(
         (k - provinceBordersFadeStartZoom)
@@ -420,21 +434,23 @@ export function createBorderDrawOwner({
         0,
         1
       );
-      provinceAlpha = provinceBordersFarAlpha
-        + ((provinceBordersTransitionAlpha - provinceBordersFarAlpha) * fadeT);
+      provinceAlpha = internalOpacity * (
+        provinceBordersFarAlpha
+        + ((provinceBordersTransitionAlpha - provinceBordersFarAlpha) * fadeT)
+      );
     } else {
-      provinceAlpha = Math.max(regularProvinceAlpha, provinceBordersTransitionAlpha);
+      provinceAlpha = Math.max(regularProvinceAlpha, provinceBordersTransitionAlpha * internalOpacity);
     }
     const localAlpha = clamp(
       internalOpacity * (0.08 + 0.34 * t) * lowZoomDeclutter * internalBorderLocalAlphaScale,
-      internalBorderLocalMinAlpha * internalBorderLocalAlphaScale,
+      0,
       0.48 * internalBorderLocalAlphaScale
     );
     const parentAlpha = clamp(parentOpacity * (0.55 + 0.25 * t), 0.30, 0.90);
-    const coastAlpha = clamp(0.74 + 0.12 * t, 0.74, 0.86);
+    const coastAlpha = coastOpacity * clamp(0.74 + 0.12 * t, 0.74, 0.86);
     const detailAdmAlpha = clamp(
-      (0.20 + 0.12 * t) * detailAdmBorderAlphaScale,
-      detailAdmBorderTargetMinAlpha,
+      internalOpacity * (0.20 + 0.12 * t) * detailAdmBorderAlphaScale,
+      0,
       detailAdmBorderTargetMaxAlpha
     );
 

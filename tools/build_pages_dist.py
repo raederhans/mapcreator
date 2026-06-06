@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -132,8 +134,15 @@ BYTE_EXACT_APP_DATA_PATHS = {
 
 
 def write_text_lf(path: Path, text: str) -> None:
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
+    for attempt in range(5):
+        try:
+            with path.open("w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+            return
+        except OSError:
+            if attempt >= 4:
+                raise
+            time.sleep(0.15 * (attempt + 1))
 
 
 def should_normalize_dist_text_file_lf(path: Path) -> bool:
@@ -174,8 +183,53 @@ def should_skip_disposable_dist_path(path: Path) -> bool:
 
 def reset_dist() -> None:
     if DIST_ROOT.exists():
-        shutil.rmtree(DIST_ROOT)
+        remove_tree_with_retries(DIST_ROOT)
     APP_DIST_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+def remove_tree_with_retries(path: Path, attempts: int = 20) -> None:
+    last_error: OSError | None = None
+    for attempt in range(attempts):
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError as exc:
+            last_error = exc
+            prune_tree_once(path)
+            if not path.exists():
+                return
+            time.sleep(0.2)
+    if last_error:
+        raise last_error
+
+
+def prune_tree_once(path: Path) -> None:
+    if not path.exists():
+        return
+    for current, directories, files in os.walk(path, topdown=False):
+        current_path = Path(current)
+        for file_name in files:
+            try:
+                (current_path / file_name).unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+        for directory_name in directories:
+            try:
+                (current_path / directory_name).rmdir()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+    try:
+        path.rmdir()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
 
 
 def copy_tree_contents(source_dir: Path, destination_dir: Path) -> None:
@@ -681,18 +735,25 @@ def iter_dist_files() -> list[Path]:
 
 
 def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:
-    records: list[dict[str, int | str]] = []
-    total_bytes = 0
-    for path in iter_dist_files():
-        size_bytes = path.stat().st_size
-        total_bytes += size_bytes
-        records.append(
-            {
-                "path": path.relative_to(DIST_ROOT).as_posix(),
-                "size_bytes": size_bytes,
-            }
-        )
-    return records, total_bytes
+    for attempt in range(5):
+        records: list[dict[str, int | str]] = []
+        total_bytes = 0
+        try:
+            for path in iter_dist_files():
+                size_bytes = path.stat().st_size
+                total_bytes += size_bytes
+                records.append(
+                    {
+                        "path": path.relative_to(DIST_ROOT).as_posix(),
+                        "size_bytes": size_bytes,
+                    }
+                )
+            return records, total_bytes
+        except FileNotFoundError:
+            if attempt >= 4:
+                raise
+            time.sleep(0.15 * (attempt + 1))
+    raise RuntimeError("Pages dist manifest scan did not complete")
 
 
 def validate_required_dist_files() -> None:

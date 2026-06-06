@@ -57,6 +57,9 @@
 - partial repaint 基线跟画布生命周期一起失效。
 - 视觉资源未就绪时，可见 fallback 和交互目标保持一致。
 
+### 边界样式参数覆盖所有绘制路径
+- 边界面板的颜色、透明度、宽度要同时接入 normal pass、interactive snapshot 和 scenario coastal accent 等可见路径；只接一条路径会让拖动、缩放或场景叠加时看起来像参数失效。
+
 ### 性能优化先减阻塞边界
 - startup 是 bundle-first 时，先缩 bundle 边界。
 - coarse preload、非关键 metadata、focus detail prewarm 这类高成本工作优先移出首屏阻塞链。
@@ -287,3 +290,6 @@
 
 ### manifest 几何字段要来自最终 payload
 - 构建器对 chunk payload 做简化、裁剪、rounding 或格式转换后，`feature_bounds`、count 和成本诊断必须从最终写盘 payload 计算；从 source feature 计算会让 contract 与运行时 viewport 选择漂移。
+
+### HGO preview 要绑定 renderer 生命周期
+- HGO raster 画到主 canvas 时，必须接入普通 `drawCanvas()` 后补画，并让 hover/click 先走同一套 raster inspect；toolbar 内部单次 render 会被主渲染和 app hit pipeline 覆盖。

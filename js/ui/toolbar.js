@@ -324,14 +324,6 @@ function initToolbar({ render } = {}) {
   const activeSovereignLabel = document.getElementById("activeSovereignLabel");
   const recalculateBordersBtn = document.getElementById("recalculateBordersBtn");
   const dynamicBorderStatus = document.getElementById("dynamicBorderStatus");
-  const internalBorderAutoColor = document.getElementById("internalBorderAutoColor");
-  const internalBorderColor = document.getElementById("internalBorderColor");
-  const internalBorderOpacity = document.getElementById("internalBorderOpacity");
-  const internalBorderWidth = document.getElementById("internalBorderWidth");
-  const empireBorderColor = document.getElementById("empireBorderColor");
-  const empireBorderWidth = document.getElementById("empireBorderWidth");
-  const coastlineColor = document.getElementById("coastlineColor");
-  const coastlineWidth = document.getElementById("coastlineWidth");
   const oceanFillColor = document.getElementById("oceanFillColor");
   const lakeLinkToOcean = document.getElementById("lakeLinkToOcean");
   const lakeFillColor = document.getElementById("lakeFillColor");
@@ -356,10 +348,6 @@ function initToolbar({ render } = {}) {
   const themeSelect = document.getElementById("themeSelect");
   const paletteLibraryToggleLabel = document.getElementById("paletteLibraryToggleLabel");
 
-  const internalBorderOpacityValue = document.getElementById("internalBorderOpacityValue");
-  const internalBorderWidthValue = document.getElementById("internalBorderWidthValue");
-  const empireBorderWidthValue = document.getElementById("empireBorderWidthValue");
-  const coastlineWidthValue = document.getElementById("coastlineWidthValue");
   const oceanTextureOpacityValue = document.getElementById("oceanTextureOpacityValue");
   const oceanTextureScaleValue = document.getElementById("oceanTextureScaleValue");
   const oceanContourStrengthValue = document.getElementById("oceanContourStrengthValue");
@@ -743,6 +731,12 @@ function initToolbar({ render } = {}) {
   ));
   registerRuntimeHook(state, "syncHgoRuntimePreviewUiFn", () => (
     hgoRuntimePreviewController?.sync?.()
+  ));
+  registerRuntimeHook(state, "renderHgoRuntimePreviewFn", (options = {}) => (
+    hgoRuntimePreviewController?.renderPreview?.(options) || null
+  ));
+  registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y) => (
+    hgoRuntimePreviewController?.inspectPoint?.(x, y) || null
   ));
 
   const syncExportPreviewSourceOptions = () => {
@@ -1408,12 +1402,15 @@ function initToolbar({ render } = {}) {
     return "flat";
   };
   const normalizeOceanFillColor = (value) => {
+    return normalizeHexColor(value, "#aadaff");
+  };
+  const normalizeHexColor = (value, fallbackColor) => {
     const candidate = String(value || "").trim();
     if (/^#(?:[0-9a-f]{6})$/i.test(candidate)) return candidate;
     if (/^#(?:[0-9a-f]{3})$/i.test(candidate)) {
       return `#${candidate[1]}${candidate[1]}${candidate[2]}${candidate[2]}${candidate[3]}${candidate[3]}`;
     }
-    return "#aadaff";
+    return fallbackColor;
   };
   if (!runtimeState.styleConfig.ocean || typeof runtimeState.styleConfig.ocean !== "object") {
     runtimeState.styleConfig.ocean = {};
@@ -1481,7 +1478,10 @@ function initToolbar({ render } = {}) {
   if (!runtimeState.styleConfig.internalBorders || typeof runtimeState.styleConfig.internalBorders !== "object") {
     runtimeState.styleConfig.internalBorders = {};
   }
-  runtimeState.styleConfig.internalBorders.color = normalizeOceanFillColor(runtimeState.styleConfig.internalBorders.color || "#cccccc");
+  runtimeState.styleConfig.internalBorders.color = normalizeHexColor(
+    runtimeState.styleConfig.internalBorders.color,
+    "#cccccc"
+  );
   runtimeState.styleConfig.internalBorders.colorMode =
     String(runtimeState.styleConfig.internalBorders.colorMode || "auto").trim().toLowerCase() === "manual"
       ? "manual"
@@ -1503,7 +1503,17 @@ function initToolbar({ render } = {}) {
   if (!runtimeState.styleConfig.empireBorders || typeof runtimeState.styleConfig.empireBorders !== "object") {
     runtimeState.styleConfig.empireBorders = {};
   }
-  runtimeState.styleConfig.empireBorders.color = normalizeOceanFillColor(runtimeState.styleConfig.empireBorders.color || "#666666");
+  runtimeState.styleConfig.empireBorders.color = normalizeHexColor(
+    runtimeState.styleConfig.empireBorders.color,
+    "#666666"
+  );
+  runtimeState.styleConfig.empireBorders.opacity = clamp(
+    Number.isFinite(Number(runtimeState.styleConfig.empireBorders.opacity))
+      ? Number(runtimeState.styleConfig.empireBorders.opacity)
+      : 0.9,
+    0,
+    1
+  );
   runtimeState.styleConfig.empireBorders.width = clamp(
     Number.isFinite(Number(runtimeState.styleConfig.empireBorders.width))
       ? Number(runtimeState.styleConfig.empireBorders.width)
@@ -1514,7 +1524,17 @@ function initToolbar({ render } = {}) {
   if (!runtimeState.styleConfig.coastlines || typeof runtimeState.styleConfig.coastlines !== "object") {
     runtimeState.styleConfig.coastlines = {};
   }
-  runtimeState.styleConfig.coastlines.color = normalizeOceanFillColor(runtimeState.styleConfig.coastlines.color || "#333333");
+  runtimeState.styleConfig.coastlines.color = normalizeHexColor(
+    runtimeState.styleConfig.coastlines.color,
+    "#333333"
+  );
+  runtimeState.styleConfig.coastlines.opacity = clamp(
+    Number.isFinite(Number(runtimeState.styleConfig.coastlines.opacity))
+      ? Number(runtimeState.styleConfig.coastlines.opacity)
+      : 0.8,
+    0,
+    1
+  );
   runtimeState.styleConfig.coastlines.width = clamp(
     Number.isFinite(Number(runtimeState.styleConfig.coastlines.width))
       ? Number(runtimeState.styleConfig.coastlines.width)
@@ -1649,6 +1669,7 @@ function initToolbar({ render } = {}) {
     bindEvents: bindAppearanceControlEvents,
     clearReferenceImage,
     renderAppearanceStyleControlsUi,
+    renderBorderUi,
     renderDayNightUI,
     renderParentBorderCountryList,
     renderRecentColors,
@@ -1907,44 +1928,7 @@ function initToolbar({ render } = {}) {
   registerRuntimeHook(state, "commitZoomInputValueFn", commitZoomInputValue);
 
   registerRuntimeHook(state, "updateToolbarInputsFn", () => {
-    const internalAutoColorEnabled = String(runtimeState.styleConfig.internalBorders.colorMode || "auto") !== "manual";
-    if (internalBorderAutoColor) {
-      internalBorderAutoColor.checked = internalAutoColorEnabled;
-    }
-    if (internalBorderColor) {
-      internalBorderColor.value = runtimeState.styleConfig.internalBorders.color;
-      internalBorderColor.disabled = internalAutoColorEnabled;
-    }
-    if (internalBorderOpacity) {
-      internalBorderOpacity.value = String(Math.round(runtimeState.styleConfig.internalBorders.opacity * 100));
-    }
-    if (internalBorderOpacityValue) {
-      internalBorderOpacityValue.textContent = `${Math.round(runtimeState.styleConfig.internalBorders.opacity * 100)}%`;
-    }
-    if (internalBorderWidth) {
-      internalBorderWidth.value = String(Number(runtimeState.styleConfig.internalBorders.width).toFixed(2));
-    }
-    if (internalBorderWidthValue) {
-      internalBorderWidthValue.textContent = Number(runtimeState.styleConfig.internalBorders.width).toFixed(2);
-    }
-    if (empireBorderColor) {
-      empireBorderColor.value = runtimeState.styleConfig.empireBorders.color;
-    }
-    if (empireBorderWidth) {
-      empireBorderWidth.value = String(Number(runtimeState.styleConfig.empireBorders.width).toFixed(2));
-    }
-    if (empireBorderWidthValue) {
-      empireBorderWidthValue.textContent = Number(runtimeState.styleConfig.empireBorders.width).toFixed(2);
-    }
-    if (coastlineColor) {
-      coastlineColor.value = runtimeState.styleConfig.coastlines.color;
-    }
-    if (coastlineWidth) {
-      coastlineWidth.value = String(Number(runtimeState.styleConfig.coastlines.width).toFixed(1));
-    }
-    if (coastlineWidthValue) {
-      coastlineWidthValue.textContent = Number(runtimeState.styleConfig.coastlines.width).toFixed(1);
-    }
+    renderBorderUi();
     syncParentBorderVisibilityUI();
     renderOceanLakeControlsUi();
     if (colorModeSelect) {
@@ -3008,99 +2992,6 @@ function initToolbar({ render } = {}) {
     });
   }
   bindPaletteLibraryPanelEvents();
-
-  if (internalBorderAutoColor) {
-    internalBorderAutoColor.checked = String(runtimeState.styleConfig.internalBorders.colorMode || "auto") !== "manual";
-    if (internalBorderColor) {
-      internalBorderColor.disabled = internalBorderAutoColor.checked;
-    }
-    internalBorderAutoColor.addEventListener("change", (event) => {
-      runtimeState.styleConfig.internalBorders.colorMode = event.target.checked ? "auto" : "manual";
-      if (internalBorderColor) {
-        internalBorderColor.disabled = event.target.checked;
-      }
-      renderDirty("internal-border-color-mode");
-    });
-  }
-  if (internalBorderColor) {
-    internalBorderColor.addEventListener("input", (event) => {
-      runtimeState.styleConfig.internalBorders.color = event.target.value;
-      runtimeState.styleConfig.internalBorders.colorMode = "manual";
-      if (internalBorderAutoColor) {
-        internalBorderAutoColor.checked = false;
-      }
-      internalBorderColor.disabled = false;
-      renderDirty("internal-border-color");
-    });
-  }
-  if (internalBorderOpacity) {
-    internalBorderOpacity.addEventListener("input", (event) => {
-      const value = Number(event.target.value) / 100;
-      runtimeState.styleConfig.internalBorders.opacity = Number.isFinite(value) ? value : 1;
-      if (internalBorderOpacityValue) {
-        internalBorderOpacityValue.textContent = `${event.target.value}%`;
-      }
-      renderDirty("internal-border-opacity");
-    });
-  }
-  if (internalBorderWidth) {
-    const initialInternalWidth = Number(internalBorderWidth.value);
-    if (Number.isFinite(initialInternalWidth)) {
-      runtimeState.styleConfig.internalBorders.width = initialInternalWidth;
-      if (internalBorderWidthValue) {
-        internalBorderWidthValue.textContent = initialInternalWidth.toFixed(2);
-      }
-    }
-    internalBorderWidth.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.internalBorders.width = Number.isFinite(value) ? value : 0.5;
-      if (internalBorderWidthValue) {
-        internalBorderWidthValue.textContent = value.toFixed(2);
-      }
-      renderDirty("internal-border-width");
-    });
-  }
-
-  if (empireBorderColor) {
-    empireBorderColor.addEventListener("input", (event) => {
-      runtimeState.styleConfig.empireBorders.color = event.target.value;
-      renderDirty("empire-border-color");
-    });
-  }
-  if (empireBorderWidth) {
-    const initialEmpireWidth = Number(empireBorderWidth.value);
-    if (Number.isFinite(initialEmpireWidth)) {
-      runtimeState.styleConfig.empireBorders.width = initialEmpireWidth;
-      if (empireBorderWidthValue) {
-        empireBorderWidthValue.textContent = initialEmpireWidth.toFixed(2);
-      }
-    }
-    empireBorderWidth.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.empireBorders.width = Number.isFinite(value) ? value : 1.0;
-      if (empireBorderWidthValue) {
-        empireBorderWidthValue.textContent = value.toFixed(2);
-      }
-      renderDirty("empire-border-width");
-    });
-  }
-
-  if (coastlineColor) {
-    coastlineColor.addEventListener("input", (event) => {
-      runtimeState.styleConfig.coastlines.color = event.target.value;
-      renderDirty("coastline-color");
-    });
-  }
-  if (coastlineWidth) {
-    coastlineWidth.addEventListener("input", (event) => {
-      const value = Number(event.target.value);
-      runtimeState.styleConfig.coastlines.width = Number.isFinite(value) ? value : 1.2;
-      if (coastlineWidthValue) {
-        coastlineWidthValue.textContent = value.toFixed(1);
-      }
-      renderDirty("coastline-width");
-    });
-  }
 
   if (!runtimeState.ui.overlayResizeBound) {
     const refreshResponsiveChromeLayout = () => {

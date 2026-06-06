@@ -617,84 +617,84 @@ const CITY_PRIMARY_POWER_TAGS = new Set(["USA", "GER", "JAP"]);
 const CITY_SECONDARY_POWER_TAGS = new Set(["ITA", "ENG", "FRA", "CAN", "BRA", "BRG", "RKM", "RKO", "RKU"]);
 const CITY_MARKER_THEME_TOKENS = {
   classic_graphite: {
-    fillTop: "rgba(126, 134, 143, 0.99)",
-    fillMid: "rgba(86, 94, 102, 0.99)",
-    fillBottom: "rgba(42, 48, 55, 0.99)",
-    rimDark: "rgba(15, 21, 28, 0.44)",
-    stroke: "rgba(202, 193, 176, 0.54)",
-    highlight: "rgba(244, 247, 250, 0.22)",
-    specular: "rgba(230, 236, 241, 0.14)",
-    baseShadow: "rgba(11, 17, 23, 0.26)",
-    capitalAccent: "rgba(175, 161, 126, 0.96)",
-    capitalHighlight: "rgba(246, 236, 208, 0.42)",
-    label: "rgba(56, 52, 46, 0.92)",
-    capitalLabel: "rgba(74, 67, 56, 0.96)",
-    halo: "rgba(255, 252, 245, 0.08)",
-    shadow: "rgba(20, 24, 31, 0.18)",
+    fillTop: "rgba(82, 91, 103, 0.99)",
+    fillMid: "rgba(48, 56, 68, 0.99)",
+    fillBottom: "rgba(24, 30, 39, 0.99)",
+    rimDark: "rgba(5, 9, 15, 0.58)",
+    stroke: "rgba(245, 188, 86, 0.72)",
+    highlight: "rgba(246, 249, 252, 0.2)",
+    specular: "rgba(242, 246, 252, 0.14)",
+    baseShadow: "rgba(4, 8, 13, 0.32)",
+    capitalAccent: "rgba(240, 184, 79, 0.98)",
+    capitalHighlight: "rgba(255, 237, 186, 0.5)",
+    label: "rgba(37, 40, 45, 0.96)",
+    capitalLabel: "rgba(95, 68, 30, 0.98)",
+    halo: "rgba(255, 242, 197, 0.12)",
+    shadow: "rgba(7, 11, 17, 0.22)",
   },
   atlas_ink: {
-    fillTop: "rgba(150, 173, 194, 0.99)",
-    fillMid: "rgba(95, 122, 150, 0.99)",
-    fillBottom: "rgba(45, 67, 95, 0.99)",
-    rimDark: "rgba(16, 26, 37, 0.44)",
-    stroke: "rgba(218, 224, 228, 0.58)",
-    highlight: "rgba(242, 248, 255, 0.26)",
-    specular: "rgba(233, 241, 252, 0.18)",
-    baseShadow: "rgba(10, 19, 28, 0.24)",
-    capitalAccent: "rgba(214, 183, 126, 0.96)",
-    capitalHighlight: "rgba(252, 236, 199, 0.46)",
-    label: "rgba(42, 57, 76, 0.94)",
-    capitalLabel: "rgba(72, 64, 44, 0.96)",
-    halo: "rgba(247, 251, 255, 0.11)",
-    shadow: "rgba(17, 24, 35, 0.2)",
+    fillTop: "rgba(96, 230, 244, 0.99)",
+    fillMid: "rgba(0, 142, 168, 0.99)",
+    fillBottom: "rgba(0, 74, 92, 0.99)",
+    rimDark: "rgba(0, 37, 50, 0.6)",
+    stroke: "rgba(221, 251, 255, 0.72)",
+    highlight: "rgba(241, 255, 255, 0.34)",
+    specular: "rgba(229, 254, 255, 0.24)",
+    baseShadow: "rgba(0, 31, 43, 0.3)",
+    capitalAccent: "rgba(255, 209, 102, 0.98)",
+    capitalHighlight: "rgba(255, 244, 196, 0.52)",
+    label: "rgba(0, 69, 82, 0.96)",
+    capitalLabel: "rgba(101, 72, 22, 0.98)",
+    halo: "rgba(211, 250, 255, 0.15)",
+    shadow: "rgba(0, 35, 50, 0.22)",
   },
   parchment_sepia: {
-    fillTop: "rgba(203, 180, 149, 0.99)",
-    fillMid: "rgba(158, 126, 92, 0.99)",
-    fillBottom: "rgba(103, 78, 54, 0.99)",
-    rimDark: "rgba(42, 31, 22, 0.42)",
-    stroke: "rgba(240, 226, 200, 0.56)",
-    highlight: "rgba(255, 247, 231, 0.24)",
-    specular: "rgba(247, 237, 216, 0.16)",
-    baseShadow: "rgba(26, 19, 14, 0.23)",
-    capitalAccent: "rgba(171, 105, 63, 0.96)",
-    capitalHighlight: "rgba(248, 210, 163, 0.46)",
-    label: "rgba(88, 61, 37, 0.94)",
-    capitalLabel: "rgba(110, 70, 42, 0.96)",
-    halo: "rgba(255, 247, 234, 0.08)",
-    shadow: "rgba(34, 25, 18, 0.18)",
+    fillTop: "rgba(211, 104, 82, 0.99)",
+    fillMid: "rgba(155, 63, 47, 0.99)",
+    fillBottom: "rgba(92, 37, 31, 0.99)",
+    rimDark: "rgba(52, 20, 18, 0.56)",
+    stroke: "rgba(255, 210, 168, 0.64)",
+    highlight: "rgba(255, 230, 210, 0.28)",
+    specular: "rgba(255, 221, 194, 0.2)",
+    baseShadow: "rgba(48, 19, 17, 0.28)",
+    capitalAccent: "rgba(230, 132, 58, 0.98)",
+    capitalHighlight: "rgba(255, 211, 160, 0.5)",
+    label: "rgba(90, 37, 31, 0.96)",
+    capitalLabel: "rgba(118, 60, 22, 0.98)",
+    halo: "rgba(255, 225, 198, 0.11)",
+    shadow: "rgba(56, 22, 18, 0.2)",
   },
   slate_blue: {
-    fillTop: "rgba(162, 177, 196, 0.99)",
-    fillMid: "rgba(106, 123, 149, 0.99)",
-    fillBottom: "rgba(59, 74, 99, 0.99)",
-    rimDark: "rgba(20, 28, 41, 0.42)",
-    stroke: "rgba(226, 232, 240, 0.56)",
-    highlight: "rgba(246, 249, 255, 0.24)",
-    specular: "rgba(236, 242, 252, 0.16)",
-    baseShadow: "rgba(14, 19, 28, 0.24)",
-    capitalAccent: "rgba(214, 184, 118, 0.96)",
-    capitalHighlight: "rgba(252, 238, 201, 0.44)",
-    label: "rgba(48, 58, 77, 0.94)",
-    capitalLabel: "rgba(71, 64, 49, 0.96)",
-    halo: "rgba(248, 251, 255, 0.1)",
-    shadow: "rgba(19, 24, 33, 0.18)",
+    fillTop: "rgba(160, 130, 240, 0.99)",
+    fillMid: "rgba(91, 66, 166, 0.99)",
+    fillBottom: "rgba(49, 35, 105, 0.99)",
+    rimDark: "rgba(25, 17, 69, 0.6)",
+    stroke: "rgba(226, 210, 255, 0.72)",
+    highlight: "rgba(249, 245, 255, 0.32)",
+    specular: "rgba(236, 228, 255, 0.22)",
+    baseShadow: "rgba(24, 18, 58, 0.3)",
+    capitalAccent: "rgba(215, 183, 255, 0.98)",
+    capitalHighlight: "rgba(246, 232, 255, 0.5)",
+    label: "rgba(53, 40, 102, 0.96)",
+    capitalLabel: "rgba(78, 53, 126, 0.98)",
+    halo: "rgba(237, 229, 255, 0.14)",
+    shadow: "rgba(28, 20, 66, 0.22)",
   },
   ivory_outline: {
-    fillTop: "rgba(252, 249, 242, 0.99)",
-    fillMid: "rgba(235, 227, 211, 0.99)",
-    fillBottom: "rgba(199, 189, 171, 0.99)",
-    rimDark: "rgba(39, 45, 54, 0.42)",
-    stroke: "rgba(58, 67, 79, 0.62)",
-    highlight: "rgba(255, 255, 255, 0.34)",
-    specular: "rgba(255, 255, 255, 0.2)",
-    baseShadow: "rgba(12, 17, 24, 0.2)",
-    capitalAccent: "rgba(142, 101, 60, 0.96)",
-    capitalHighlight: "rgba(244, 214, 164, 0.48)",
-    label: "rgba(70, 63, 53, 0.96)",
-    capitalLabel: "rgba(88, 64, 42, 0.98)",
-    halo: "rgba(255, 255, 255, 0.12)",
-    shadow: "rgba(20, 24, 31, 0.16)",
+    fillTop: "rgba(255, 252, 237, 0.99)",
+    fillMid: "rgba(243, 234, 210, 0.99)",
+    fillBottom: "rgba(199, 184, 146, 0.99)",
+    rimDark: "rgba(18, 24, 34, 0.7)",
+    stroke: "rgba(30, 41, 59, 0.78)",
+    highlight: "rgba(255, 255, 255, 0.4)",
+    specular: "rgba(255, 255, 255, 0.28)",
+    baseShadow: "rgba(6, 10, 18, 0.3)",
+    capitalAccent: "rgba(255, 159, 67, 0.98)",
+    capitalHighlight: "rgba(255, 220, 177, 0.56)",
+    label: "rgba(51, 45, 36, 0.98)",
+    capitalLabel: "rgba(112, 63, 16, 0.98)",
+    halo: "rgba(255, 249, 228, 0.18)",
+    shadow: "rgba(8, 12, 20, 0.24)",
   },
 };
 
@@ -8661,6 +8661,69 @@ function createHitResult(overrides = {}) {
   };
 }
 
+function isHgoRuntimePreviewReady() {
+  const preview = runtimeState.hgoRuntimePreview;
+  return !!preview?.enabled && preview.status === "ready";
+}
+
+function renderHgoRuntimePreviewIfReady(reason = "render") {
+  if (!isHgoRuntimePreviewReady()) return null;
+  return callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn", { reason }) || null;
+}
+
+function getHgoRuntimePreviewCanvasPointFromEvent(event) {
+  if (!mapSvg || !globalThis.d3?.pointer) return null;
+  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (![sx, sy].every(Number.isFinite)) return null;
+  const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
+    ? Number(runtimeState.dpr)
+    : 1;
+  return {
+    x: Math.round(Number(sx) * dpr),
+    y: Math.round(Number(sy) * dpr),
+    screenX: Number(sx),
+    screenY: Number(sy),
+    dpr,
+  };
+}
+
+function inspectHgoRuntimePreviewFromEvent(event, { eventType = "unknown" } = {}) {
+  if (!isHgoRuntimePreviewReady()) {
+    return { active: false, point: null, inspection: null, hit: createHitResult() };
+  }
+  const point = getHgoRuntimePreviewCanvasPointFromEvent(event);
+  const inspection = point
+    ? callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn", point.x, point.y, { eventType, point }) || null
+    : null;
+  const resolved = inspection?.resolved || null;
+  if (!resolved) {
+    return { active: true, point, inspection, hit: createHitResult() };
+  }
+  const ownerTag = String(resolved.ownerTag || resolved.controllerTag || "").trim().toUpperCase();
+  return {
+    active: true,
+    point,
+    inspection,
+    hit: createHitResult({
+      id: `hgo:province:${resolved.provinceId}`,
+      targetType: "hgo",
+      hitSource: "hgo-runtime-preview",
+      strict: true,
+      distancePx: 0,
+      hgoRuntime: Object.freeze({
+        provinceId: resolved.provinceId,
+        stateId: resolved.stateId,
+        ownerTag: resolved.ownerTag,
+        controllerTag: resolved.controllerTag,
+        pixelIndex: inspection.pixelIndex,
+        x: inspection.x,
+        y: inspection.y,
+        sourceRgb: inspection.sourceRgb,
+      }),
+    }),
+  };
+}
+
 function keyToHitColor(key) {
   const value = Math.max(0, Math.min(0xffffff, Number(key) || 0));
   const r = value & 255;
@@ -11277,14 +11340,26 @@ function drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa = false } = {}
   if (!context || !Array.isArray(entries) || !entries.length) return;
   const buckets = buildCoastalAccentStrokeBuckets(entries);
   if (!buckets.length) return;
+  const coastStyle = runtimeState.styleConfig?.coastlines || {};
+  const coastAccentColor = getSafeCanvasColor(coastStyle.color, TNO_COASTAL_ACCENT_COLOR);
+  const coastAccentOpacity = clamp(
+    Number.isFinite(Number(coastStyle.opacity)) ? Number(coastStyle.opacity) : 0.8,
+    0,
+    1
+  );
+  const coastAccentWidthScale = clamp(
+    (Number.isFinite(Number(coastStyle.width)) ? Number(coastStyle.width) : 1.2) / 1.2,
+    0.1,
+    3
+  );
   buckets.forEach((bucket) => {
     context.save();
     if (clipAtlantropa) {
       clipOutAtlantropaAccentRegions();
     }
-    context.strokeStyle = TNO_COASTAL_ACCENT_COLOR;
-    context.globalAlpha = bucket.alpha;
-    context.lineWidth = bucket.lineWidth;
+    context.strokeStyle = coastAccentColor;
+    context.globalAlpha = bucket.alpha * coastAccentOpacity;
+    context.lineWidth = bucket.lineWidth * coastAccentWidthScale;
     context.lineJoin = "round";
     context.lineCap = "round";
     context.beginPath();
@@ -15064,7 +15139,7 @@ function drawModernCityLightsTexture(config, intensity) {
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
     const alpha = clamp(
       intensity
-      * (0.16 + (textureOpacity * 0.52))
+      * (0.24 + (textureOpacity * 0.82))
       * (0.035 + (lumaWeight * 0.22))
       * zoomProfile.textureAlphaScale
       * densityDampen
@@ -15114,7 +15189,7 @@ function drawModernCityLightsCorridors(config, intensity) {
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
     const alpha = clamp(
       intensity
-      * (0.16 + (corridorStrength * 0.42))
+      * (0.25 + (corridorStrength * 0.75))
       * (0.03 + (corridorWeight * 0.2))
       * zoomProfile.corridorAlphaScale
       * latFade,
@@ -15125,7 +15200,7 @@ function drawModernCityLightsCorridors(config, intensity) {
     const jitter = getModernGridEntryJitter(entry, zoomProfile.corridorJitterStrength);
     const baseRadius = Math.max((entry.rx + entry.ry) * 0.5, 0.0001);
     const majorRadius = baseRadius
-      * (zoomProfile.corridorRadiusScale + 0.08 + (corridorStrength * 0.14) + (corridorWeight * 0.22));
+      * (zoomProfile.corridorRadiusScale + 0.08 + (corridorStrength * 0.34) + (corridorWeight * 0.22));
     drawSoftLightBlob(
       entry.x + jitter.dx,
       entry.y + jitter.dy,
@@ -15200,12 +15275,12 @@ function collectModernUrbanCoreEntries(k, config, intensity) {
     const baseRadiusPx = 0.88 + (weight * (1.1 + (coreSharpness * 0.82)));
     const aspectRatio = clamp(1.04 + (coreSharpness * 0.06) + (sample * 0.06), 1.04, 1.18);
     const haloAlpha = clamp(
-      intensity * weight * (0.14 + (textureOpacity * 0.18) + (sample * 0.22)) * zoomProfile.coreAlphaScale,
+      intensity * weight * (0.14 + (textureOpacity * 0.18) + (sample * 0.22) + ((1 - coreSharpness) * 0.06)) * zoomProfile.coreAlphaScale,
       0,
       0.32
     );
     const coreAlpha = clamp(
-      intensity * weight * (0.42 + (coreSharpness * 0.38) + (sample * 0.34)) * zoomProfile.coreAlphaScale,
+      intensity * weight * (0.34 + (coreSharpness * 0.48) + (sample * 0.34)) * zoomProfile.coreAlphaScale,
       0,
       0.48
     );
@@ -15227,42 +15302,49 @@ function collectModernUrbanCoreEntries(k, config, intensity) {
   return entries;
 }
 
-function drawModernCityLightsCores(k, _config, _intensity, coreEntries = null) {
+function drawModernCityLightsCores(k, config, _intensity, coreEntries = null) {
   const palette = getNightLightPalette("modern");
   const zoomProfile = getModernCityLightsZoomProfile();
   const haloRgb = getLightBlobRgb(palette.halo);
   const coreRgb = getLightBlobRgb(palette.core);
+  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const haloSpread = 1.35 - (coreSharpness * 0.2);
+  const coreSpread = 1.25 - (coreSharpness * 0.22);
+  const haloAlphaScale = 1 + ((1 - coreSharpness) * 0.2);
+  const coreAlphaScale = 0.9 + (coreSharpness * 0.5);
+  const coreInnerStop = 0.04 + ((1 - coreSharpness) * 0.06);
+  const coreMidStop = 0.36 + ((1 - coreSharpness) * 0.18);
   const entries = Array.isArray(coreEntries) ? coreEntries : [];
   entries.forEach((entry) => {
     drawSoftLightBlob(
       entry.cx,
       entry.cy,
-      (entry.baseRadiusPx * entry.aspectRatio * 1.12 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
-      (entry.baseRadiusPx * 1.06 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * entry.aspectRatio * 1.12 * haloSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * 1.06 * haloSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
       {
         rotation: entry.orientation,
         rgb: haloRgb,
-        alpha: entry.haloAlpha,
-        innerStop: 0.06,
-        midStop: 0.58,
+        alpha: entry.haloAlpha * haloAlphaScale,
+        innerStop: 0.06 + ((1 - coreSharpness) * 0.04),
+        midStop: 0.5 + ((1 - coreSharpness) * 0.16),
         innerAlphaScale: 0.94,
-        midAlphaScale: 0.28,
+        midAlphaScale: 0.22 + ((1 - coreSharpness) * 0.12),
       }
     );
 
     drawSoftLightBlob(
       entry.cx,
       entry.cy,
-      (entry.baseRadiusPx * entry.aspectRatio * 0.94 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
-      (entry.baseRadiusPx * 0.88 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * entry.aspectRatio * 0.94 * coreSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (entry.baseRadiusPx * 0.88 * coreSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
       {
         rotation: entry.orientation,
         rgb: coreRgb,
-        alpha: entry.coreAlpha,
-        innerStop: 0.04,
-        midStop: 0.46,
+        alpha: entry.coreAlpha * coreAlphaScale,
+        innerStop: coreInnerStop,
+        midStop: coreMidStop,
         innerAlphaScale: 1,
-        midAlphaScale: 0.46,
+        midAlphaScale: 0.34 + (coreSharpness * 0.18),
       }
     );
   });
@@ -15325,13 +15407,19 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
     const orientation = getSignedHashUnit(`${identitySeed}:rotation`) * (Math.PI / 80);
     const baseRadiusPx = 0.58 + (weight * (0.82 + (coreSharpness * 0.46)));
     const aspectRatio = clamp(1.04 + (coreSharpness * 0.05) + (sample * 0.04), 1.04, 1.14);
+    const haloSpread = 1.28 - (coreSharpness * 0.18);
+    const coreSpread = 1.2 - (coreSharpness * 0.2);
+    const haloAlphaScale = 1 + ((1 - coreSharpness) * 0.18);
+    const coreAlphaScale = 0.9 + (coreSharpness * 0.48);
+    const coreInnerStop = 0.04 + ((1 - coreSharpness) * 0.05);
+    const coreMidStop = 0.36 + ((1 - coreSharpness) * 0.16);
     const haloAlpha = clamp(
-      intensity * weight * (0.08 + (sample * 0.14)) * zoomProfile.coreAlphaScale,
+      intensity * weight * (0.08 + (sample * 0.14) + ((1 - coreSharpness) * 0.04)) * zoomProfile.coreAlphaScale,
       0,
       0.30
     );
     const coreAlpha = clamp(
-      intensity * weight * (0.22 + (sample * 0.24)) * zoomProfile.coreAlphaScale,
+      intensity * weight * (0.18 + (coreSharpness * 0.3) + (sample * 0.24)) * zoomProfile.coreAlphaScale,
       0,
       0.48
     );
@@ -15339,32 +15427,32 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
     drawSoftLightBlob(
       anchor[0],
       anchor[1],
-      (baseRadiusPx * aspectRatio * 1.14 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
-      (baseRadiusPx * 1.04 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * aspectRatio * 1.14 * haloSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 1.04 * haloSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
       {
         rotation: orientation,
         rgb: haloRgb,
-        alpha: haloAlpha,
-        innerStop: 0.05,
-        midStop: 0.54,
+        alpha: haloAlpha * haloAlphaScale,
+        innerStop: 0.05 + ((1 - coreSharpness) * 0.04),
+        midStop: 0.48 + ((1 - coreSharpness) * 0.16),
         innerAlphaScale: 0.92,
-        midAlphaScale: 0.28,
+        midAlphaScale: 0.22 + ((1 - coreSharpness) * 0.12),
       }
     );
 
     drawSoftLightBlob(
       anchor[0],
       anchor[1],
-      (baseRadiusPx * aspectRatio * 0.98 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
-      (baseRadiusPx * 0.94 * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * aspectRatio * 0.98 * coreSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
+      (baseRadiusPx * 0.94 * coreSpread * zoomProfile.coreRadiusScale) / Math.max(0.0001, k),
       {
         rotation: orientation,
         rgb: coreRgb,
-        alpha: coreAlpha,
-        innerStop: 0.04,
-        midStop: 0.42,
+        alpha: coreAlpha * coreAlphaScale,
+        innerStop: coreInnerStop,
+        midStop: coreMidStop,
         innerAlphaScale: 1,
-        midAlphaScale: 0.44,
+        midAlphaScale: 0.34 + (coreSharpness * 0.18),
       }
     );
   });
@@ -15414,14 +15502,14 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const areaRadiusBoost = clamp(Math.log10(entry.areaSqKm + 1) * 0.14, 0.06, 0.5);
     const baseRadiusPx = 0.7 + (boostWeight * 0.78) + areaRadiusBoost;
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.09 + (boostWeight * 0.16)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.13 + (boostWeight * 0.24)) * zoomProfile.coreAlphaScale,
       0,
-      0.28
+      0.36
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.18 + (boostWeight * 0.24)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.25 + (boostWeight * 0.38)) * zoomProfile.coreAlphaScale,
       0,
-      0.42
+      0.60
     );
     const aspectRatio = clamp(1.05 + (sampled * 0.08), 1.05, 1.16);
     drawSoftLightBlob(
@@ -15477,14 +15565,14 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const boostWeight = clamp((populationScore * 0.92) + (sampled * 0.16) + capitalBoost, 0.18, 1.24);
     const baseRadiusPx = 0.48 + (boostWeight * 0.58);
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.08 + (boostWeight * 0.11)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.12 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
       0,
-      0.19
+      0.28
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.15 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * (0.22 + (boostWeight * 0.28)) * zoomProfile.coreAlphaScale,
       0,
-      0.32
+      0.46
     );
     drawSoftLightBlob(
       anchor[0],
@@ -19789,6 +19877,7 @@ function drawCanvas() {
   if (drewExactFrame) {
     finalizePendingExactAfterSettleRefreshAfterPaint();
   }
+  renderHgoRuntimePreviewIfReady("draw-canvas");
   incrementPerfCounter("frames");
 }
 
@@ -22682,6 +22771,22 @@ function handleMouseMove(event) {
     return;
   }
 
+  const hgoRuntimeHover = inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });
+  if (hgoRuntimeHover.active) {
+    runtimeState.hoveredId = null;
+    runtimeState.hoveredWaterRegionId = null;
+    runtimeState.hoveredSpecialRegionId = null;
+    if (hoveredFacilityEntry) {
+      hoveredFacilityEntry = null;
+    }
+    updateDevHoverHit(hgoRuntimeHover.hit?.id ? hgoRuntimeHover.hit : null);
+    runtimeState.hoverOverlayDirty = true;
+    scheduleHoverOverlayRender();
+    queueTooltipUpdate({ visible: false });
+    setMapInteractionCursor(hgoRuntimeHover.hit?.id ? "pointer" : "");
+    return;
+  }
+
   const reducedHoverPhase =
     runtimeState.renderPhase !== RENDER_PHASE_IDLE
     || runtimeState.isInteracting
@@ -23113,16 +23218,37 @@ function requestRendererRender(reason = "renderer", { flush = false, fallback = 
 }
 
 function normalizeDevInteractionHit(hit = null) {
-  return hit?.id
-    ? {
-      id: String(hit.id || "").trim(),
-      targetType: String(hit.targetType || ""),
-      countryCode: String(hit.countryCode || "").trim().toUpperCase(),
-      hitSource: String(hit.hitSource || "spatial"),
-      viaSnap: !!hit.viaSnap,
-      strict: !!hit.strict,
+  if (!hit?.id) return null;
+  const targetType = String(hit.targetType || "");
+  const normalized = {
+    id: String(hit.id || "").trim(),
+    targetType,
+    countryCode: String(hit.countryCode || "").trim().toUpperCase(),
+    hitSource: String(hit.hitSource || "spatial"),
+    viaSnap: !!hit.viaSnap,
+    strict: !!hit.strict,
+  };
+  if (targetType === "hgo") {
+    const hgoRuntime = normalizeHgoRuntimeHitPayload(hit.hgoRuntime);
+    if (hgoRuntime) {
+      normalized.hgoRuntime = hgoRuntime;
     }
-    : null;
+  }
+  return normalized;
+}
+
+function normalizeHgoRuntimeHitPayload(payload = null) {
+  if (!payload || typeof payload !== "object") return null;
+  return Object.freeze({
+    provinceId: payload.provinceId,
+    stateId: payload.stateId,
+    ownerTag: payload.ownerTag,
+    controllerTag: payload.controllerTag,
+    pixelIndex: payload.pixelIndex,
+    x: payload.x,
+    y: payload.y,
+    sourceRgb: payload.sourceRgb,
+  });
 }
 
 function getDevInteractionHitSignature(hit = null) {
@@ -23165,6 +23291,16 @@ function setDevSelectionDirty() {
   runtimeState.devClipboardFallbackText = "";
   notifyDevWorkspace();
   refreshSpecialZonesWorkbenchUi();
+  if (typeof runtimeState.refreshCountryListRowsFn === "function") {
+    const selectedCode = canonicalCountryCode(runtimeState.selectedInspectorCountryCode);
+    runtimeState.refreshCountryListRowsFn({
+      countryCodes: selectedCode ? [selectedCode] : [],
+      refreshInspector: true,
+      refreshPresetTree: true,
+    });
+  } else if (typeof runtimeState.refreshCountryInspectorDetailFn === "function") {
+    runtimeState.refreshCountryInspectorDetailFn();
+  }
 }
 
 function updateDevHoverHit(hit = null) {
@@ -24121,6 +24257,21 @@ async function handleClick(event, _interactionContext = null) {
   }
   if (runtimeState.unitCounterEditor?.active) {
     placeUnitCounterFromEvent(event);
+    return;
+  }
+
+  const hgoRuntimeClick = inspectHgoRuntimePreviewFromEvent(event, { eventType: "click" });
+  if (hgoRuntimeClick.active) {
+    if (event?.preventDefault) event.preventDefault();
+    updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);
+    runtimeState.hoveredId = null;
+    runtimeState.hoveredWaterRegionId = null;
+    runtimeState.hoveredSpecialRegionId = null;
+    queueTooltipUpdate({ visible: false });
+    runtimeState.hoverOverlayDirty = true;
+    renderHoverOverlayIfNeeded({ eventType: "hgo-runtime-preview-click" });
+    requestInteractionRender("hgo-runtime-preview-click");
+    noteRenderAction(hgoRuntimeClick.hit?.id ? "hgo-runtime-preview-select" : "hgo-runtime-preview-empty", actionStart);
     return;
   }
 

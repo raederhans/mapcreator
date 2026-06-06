@@ -619,7 +619,7 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightShadowOpacity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.shadowOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.24, 0, 0.85);
+      dayNight.shadowOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 0.85);
     }, "day-night-shadow-opacity");
     bindDayNightInput(nodes.dayNightTwilightWidth, (event) => {
       const value = Number(event.target.value);

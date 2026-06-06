@@ -48,6 +48,16 @@ class MapRendererBorderDrawOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("function getViewportAwareCoastlineCollection(collection, k) {", owner_content)
         self.assertIn("function getBoundaryMeshTransform(kind, k) {", owner_content)
         self.assertIn("function drawHierarchicalBorders(k, { interactive = false } = {}) {", owner_content)
+        self.assertIn("const countryOpacity = clamp(", owner_content)
+        self.assertIn("const coastOpacity = clamp(", owner_content)
+        self.assertIn("context.globalAlpha = countryOpacity * 0.88;", owner_content)
+        self.assertIn("context.globalAlpha = coastOpacity * 0.78;", owner_content)
+        self.assertIn("const countryAlpha = countryOpacity;", owner_content)
+        self.assertIn("const coastAlpha = coastOpacity * clamp(", owner_content)
+        self.assertIn("const coastStyle = runtimeState.styleConfig?.coastlines || {};", renderer_content)
+        self.assertIn("const coastAccentColor = getSafeCanvasColor(coastStyle.color, TNO_COASTAL_ACCENT_COLOR);", renderer_content)
+        self.assertIn("context.globalAlpha = bucket.alpha * coastAccentOpacity;", renderer_content)
+        self.assertIn("context.lineWidth = bucket.lineWidth * coastAccentWidthScale;", renderer_content)
 
 
 if __name__ == "__main__":

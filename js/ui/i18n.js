@@ -400,7 +400,7 @@ function updateUIText() {
     ["appearanceTabBorders", "Borders"],
     ["lblBordersPanel", "Borders"],
     ["lblInternalBorders", "Internal Borders"],
-    ["lblEmpireBorders", "Empire Borders"],
+    ["lblEmpireBorders", "Country Borders"],
     ["lblCoastlines", "Coastlines"],
     ["appearanceTabLayers", "Context Layers"],
     ["appearanceTabDayNight", "Day / Night"],
@@ -504,13 +504,12 @@ function updateUIText() {
     ["lblCityPointsPanel", "City Points"],
     ["lblCityPointsLayer", "City Points"],
     ["lblCityPointsPresetDensityGroup", "Preset & Density"],
-    ["cityPointsPresetDensityGroupHint", "Choose a restrained map treatment first, then tune how many point markers and labels are allowed to surface."],
-    ["lblCityPointsStylePreset", "Style Preset"],
-    ["optCityPointsThemeClassicGraphite", "Classic Graphite"],
-    ["optCityPointsThemeAtlasInk", "Atlas Ink"],
-    ["optCityPointsThemeParchmentSepia", "Parchment Sepia"],
-    ["optCityPointsThemeSlateBlue", "Slate Blue"],
-    ["optCityPointsThemeIvoryOutline", "Ivory Outline"],
+    ["cityPointsPresetDensityGroupHint", "Choose a city marker treatment first, then tune how many point markers and labels are allowed to surface."],
+    ["optCityPointsThemeClassicGraphite", "Graphite Signal"],
+    ["optCityPointsThemeAtlasInk", "Cyan Beacon"],
+    ["optCityPointsThemeParchmentSepia", "Vermilion Ledger"],
+    ["optCityPointsThemeSlateBlue", "Royal Violet"],
+    ["optCityPointsThemeIvoryOutline", "Ivory Night"],
     ["lblCityPointsMarkerScale", "Marker Scale"],
     ["lblCityPointsMarkerDensity", "Point Density"],
     ["lblCityPointsLabelDensity", "Label Density"],
@@ -798,7 +797,14 @@ function updateUIText() {
   }
 
   const projectFileName = document.getElementById("projectFileName");
-  if (projectFileName && !projectFileName.textContent.trim()) {
+  if (
+    projectFileName
+    && (
+      !projectFileName.textContent.trim()
+      || projectFileName.dataset?.projectFileState === "empty"
+    )
+  ) {
+    if (projectFileName.dataset) projectFileName.dataset.projectFileState = "empty";
     projectFileName.textContent = t("No file selected", "ui");
   }
 

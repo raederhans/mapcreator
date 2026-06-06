@@ -2,6 +2,7 @@ import { normalizeUrbanStyleConfig } from "../../core/state.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
 import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
+import { createAppearanceBorderOwner } from "./appearance_border_owner.js";
 import { createAppearanceTextureOwner } from "./appearance_texture_owner.js";
 import { createAppearanceCityPointsOwner } from "./appearance_city_points_owner.js";
 import { createAppearancePhysicalOwner } from "./appearance_physical_owner.js";
@@ -10,7 +11,7 @@ import { createAppearanceRiversOwner } from "./appearance_rivers_owner.js";
 
 /**
  * Owns the Appearance 面板 shell plus urban controls.
- * Transport, texture/day-night, city-points, physical, reference, rivers, and parent-border details live in narrower owners.
+ * Transport, texture/day-night, city-points, physical, reference, rivers, and border details live in narrower owners.
  *
  * toolbar.js 继续保留更高层 facade：
  * - runtimeState callback 注册
@@ -113,6 +114,12 @@ export function createAppearanceControlsController({
     markDirty,
   });
   const renderReferenceOverlayUi = referenceOwner.renderReferenceOverlayUi;
+  const borderOwner = createAppearanceBorderOwner({
+    runtimeState,
+    clamp,
+    renderDirty,
+  });
+  const renderBorderUi = borderOwner.renderBorderUi;
   const parentBorderOwner = createAppearanceParentBorderOwner({
     runtimeState,
     nodes: {
@@ -236,6 +243,7 @@ export function createAppearanceControlsController({
     // 先让子 owner 刷到各自的稳定视图，再回填这个 shell 仍然直接拥有的原始 toggle/value。
     // 这样 transport/city/physical 的派生状态不会被后面的简单 DOM 赋值覆盖回旧值。
     cityPointsOwner.renderCityPointsUi();
+    renderBorderUi();
     if (toggleUrban) toggleUrban.checked = !!runtimeState.showUrban;
     physicalOwner.renderPhysicalUi();
     riversOwner.renderRiversUi();
@@ -300,6 +308,7 @@ export function createAppearanceControlsController({
     physicalOwner.bindEvents();
     riversOwner.bindEvents();
     referenceOwner.bindEvents();
+    borderOwner.bindEvents();
     parentBorderOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
@@ -425,6 +434,7 @@ export function createAppearanceControlsController({
     bindEvents,
     clearReferenceImage: referenceOwner.clearReferenceImage,
     renderAppearanceStyleControlsUi,
+    renderBorderUi,
     renderReferenceOverlayUi,
     renderParentBorderCountryList,
     renderRecentColors,
