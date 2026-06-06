@@ -56,6 +56,8 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {", content)
         self.assertIn("globalThis.topojson.merge(topology, geometries)", content)
         self.assertIn('devSelectionKey: `merged:${orderedIds.join("|")}`', content)
+        self.assertIn('selectionGeometry: "topology-boolean-merge"', content)
+        self.assertIn("Number(runtimeState.topologyRevision || 0)", content)
 
     def test_sidebar_reuses_sidebar_perf_factory(self):
         content = SIDEBAR_JS.read_text(encoding="utf-8")

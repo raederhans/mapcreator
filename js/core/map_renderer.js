@@ -6455,6 +6455,7 @@ function getDevSelectionOverlaySignature() {
   return [
     getOverlayProjectionSignature(),
     orderedIds.join("|"),
+    Number(runtimeState.topologyRevision || 0),
     Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
   ].join("::");
 }
@@ -6638,7 +6639,7 @@ function buildDevSelectionOverlayData(orderedIds, fallbackFeatures) {
     return [{
       type: "Feature",
       devSelectionKey: `merged:${orderedIds.join("|")}`,
-      properties: { id: "dev-selection-merged-overlay" },
+      properties: { id: "dev-selection-merged-overlay", selectionGeometry: "topology-boolean-merge" },
       geometry: mergedShape,
     }];
   } catch {
@@ -21834,7 +21835,7 @@ function renderHoverOverlay() {
     .attr("stroke", "#f1c40f")
     .attr("stroke-linejoin", "round")
     .attr("stroke-linecap", "round")
-    .attr("stroke-width", () => (runtimeState.hoveredWaterRegionId ? 1.25 : 2.0));
+    .attr("stroke-width", () => (runtimeState.hoveredWaterRegionId ? 1.25 : 1.45));
 
   selection.exit().remove();
 

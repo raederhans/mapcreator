@@ -70,7 +70,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("runtimeState.hoveredWaterRegionId", water_highlight_body)
         self.assertIn('.attr("stroke-linejoin", "round")', hover_overlay_body)
         self.assertIn('.attr("stroke-linecap", "round")', hover_overlay_body)
-        self.assertIn('runtimeState.hoveredWaterRegionId ? 1.25 : 2.0', hover_overlay_body)
+        self.assertIn('runtimeState.hoveredWaterRegionId ? 1.25 : 1.45', hover_overlay_body)
 
     def test_empty_click_clears_water_and_special_selection(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

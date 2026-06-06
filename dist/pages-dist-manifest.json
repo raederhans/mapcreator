@@ -36462,7 +36462,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 986815
+      "size_bytes": 986909
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -37259,5 +37259,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1109175157
+  "total_bytes": 1109175251
 }
