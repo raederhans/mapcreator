@@ -42,6 +42,8 @@ POLITICAL_COARSE_LOD_SPECS = (
 
 POLITICAL_COARSE_LOD_DIAGNOSTIC_TIER = "political-coarse-simplified-v1"
 POLITICAL_COARSE_SIMPLIFY_TOLERANCE = 0.01
+POLITICAL_COARSE_ROUND_DECIMALS = 4
+POLITICAL_COARSE_SIMPLIFY_GEOMETRY_TYPES = {"Polygon", "MultiPolygon"}
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -487,6 +489,10 @@ def _summarize_payload_geometry_cost(payload: dict[str, Any]) -> dict[str, int]:
     }
 
 
+def _minified_json_byte_size(payload: dict[str, Any]) -> int:
+    return len((json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"))
+
+
 def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict[str, Any]:
     geometry_cost = _summarize_payload_geometry_cost(payload)
     byte_size = int(chunk_path.stat().st_size) if chunk_path.exists() else len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
@@ -687,18 +693,26 @@ def _simplify_political_coarse_geometry(geometry: dict[str, Any] | None) -> dict
         return geometry
     if geom.is_empty:
         return geometry
+    if geom.geom_type not in POLITICAL_COARSE_SIMPLIFY_GEOMETRY_TYPES:
+        return geometry
     if not geom.is_valid:
         try:
             geom = make_valid(geom)
         except Exception:
             return geometry
+        if geom.is_empty or geom.geom_type not in POLITICAL_COARSE_SIMPLIFY_GEOMETRY_TYPES:
+            return geometry
     simplified = geom.simplify(POLITICAL_COARSE_SIMPLIFY_TOLERANCE, preserve_topology=True)
     if simplified.is_empty:
+        return geometry
+    if simplified.geom_type not in POLITICAL_COARSE_SIMPLIFY_GEOMETRY_TYPES:
         return geometry
     if not simplified.is_valid:
         try:
             simplified = make_valid(simplified)
         except Exception:
+            return geometry
+        if simplified.is_empty or simplified.geom_type not in POLITICAL_COARSE_SIMPLIFY_GEOMETRY_TYPES:
             return geometry
     return mapping(simplified)
 
@@ -741,7 +755,7 @@ def _optimize_political_coarse_payload(payload: dict[str, Any]) -> dict[str, Any
                             feature.get("geometry") if isinstance(feature.get("geometry"), dict) else None
                         )
                     },
-                    decimals=4,
+                    decimals=POLITICAL_COARSE_ROUND_DECIMALS,
                 ),
             }
         )
@@ -758,13 +772,20 @@ def _build_political_coarse_lod_diagnostics(
     return {
         "tier": POLITICAL_COARSE_LOD_DIAGNOSTIC_TIER,
         "simplify_tolerance": POLITICAL_COARSE_SIMPLIFY_TOLERANCE,
+        "round_decimals": POLITICAL_COARSE_ROUND_DECIMALS,
+        "preserve_topology": True,
         "source_feature_count": source_summary["feature_count"],
         "optimized_feature_count": optimized_summary["feature_count"],
         "source_coord_count": source_summary["coord_count"],
         "optimized_coord_count": optimized_summary["coord_count"],
+        "source_part_count": source_summary["part_count"],
+        "optimized_part_count": optimized_summary["part_count"],
+        "source_byte_size": source_summary["byte_size"],
+        "optimized_byte_size": optimized_summary["byte_size"],
         "source_estimated_path_cost": source_summary["estimated_path_cost"],
         "optimized_estimated_path_cost": optimized_summary["estimated_path_cost"],
         "coord_reduction": max(0, source_summary["coord_count"] - optimized_summary["coord_count"]),
+        "byte_size_reduction": max(0, source_summary["byte_size"] - optimized_summary["byte_size"]),
         "estimated_path_cost_reduction": max(
             0,
             source_summary["estimated_path_cost"] - optimized_summary["estimated_path_cost"],
@@ -953,8 +974,6 @@ def _build_chunk_payloads_for_feature_collection(
                     for index, feature in enumerate(features)
                     if _feature_id(feature, index) in selected_feature_ids
                 ]
-                payload_features = chunk_payload.get("features") if isinstance(chunk_payload, dict) else None
-                payload_feature_count = len(payload_features) if isinstance(payload_features, list) else 0
                 chunk_country_codes = sorted({
                     country_code
                     for feature in selected_features
@@ -968,9 +987,11 @@ def _build_chunk_payloads_for_feature_collection(
                 lod_diagnostics = None
                 if layer_key == "political" and spec["lod"] == "coarse":
                     source_lod_summary = _summarize_payload_geometry_cost(chunk_payload)
+                    source_lod_summary["byte_size"] = _minified_json_byte_size(chunk_payload)
                     chunk_payload = _optimize_political_coarse_payload(chunk_payload)
                     chunk_payload = _normalize_chunk_atlantropa_features_for_d3(chunk_payload)
                     optimized_lod_summary = _summarize_payload_geometry_cost(chunk_payload)
+                    optimized_lod_summary["byte_size"] = _minified_json_byte_size(chunk_payload)
                     lod_diagnostics = _build_political_coarse_lod_diagnostics(
                         source_lod_summary,
                         optimized_lod_summary,
@@ -981,11 +1002,14 @@ def _build_chunk_payloads_for_feature_collection(
                 else:
                     _write_json(chunk_path, chunk_payload)
                 chunk_cost_summary = _build_chunk_cost_summary(chunk_payload, chunk_path)
+                payload_features = chunk_payload.get("features") if isinstance(chunk_payload, dict) else None
+                payload_feature_count = len(payload_features) if isinstance(payload_features, list) else 0
                 include_feature_bounds = (
                     layer_key == "political"
                     or (layer_key == SCENARIO_ATLANTROPA_LAYER_KEY and spec["lod"] == "detail")
                 )
-                feature_bounds_summary = _build_feature_bounds_summary(selected_features) if include_feature_bounds else []
+                feature_bounds_features = payload_features if isinstance(payload_features, list) else selected_features
+                feature_bounds_summary = _build_feature_bounds_summary(feature_bounds_features) if include_feature_bounds else []
                 manifest_chunks.append({
                     "id": chunk_id,
                     "layer": layer_key,

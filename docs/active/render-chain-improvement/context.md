@@ -210,3 +210,9 @@
   - Implementation touchpoint is `tools/scenario_chunk_assets.py`; it already owns political coarse chunk generation and manifest cost fields.
   - Test touchpoint is `tests/test_scenario_chunk_assets.py`; it already covers political coarse source selection, manifest metadata, and payload contracts.
 - Scope decision: implement coarse political build-time simplification plus optional diagnostics; keep detail chunks and runtime full political payload contract unchanged.
+
+## 2026-06-05 Political LOD Review Fix Context
+- Review found a real generator contract bug: political coarse `feature_bounds` were still computed from pre-simplified selected features, so a regenerated manifest could drift from the final optimized payload.
+- Fix: compute `feature_count` and `feature_bounds` from the final `chunk_payload.features` after political coarse simplification.
+- Additional hardening: accept only `Polygon` / `MultiPolygon` simplification results and keep original geometry if Shapely repair produces another type.
+- Diagnostics were expanded for the next regeneration/perf lane: `source/optimized` byte size and part count, `round_decimals`, and `preserve_topology`.

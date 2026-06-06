@@ -137,3 +137,12 @@
 - Runtime JavaScript and checked-in scenario data remain out of scope unless the implementation evidence forces a narrower correction.
 - Architect verification approved the coarse-only scope and additive manifest field.
 - Post-deslop checks passed: `tests.test_scenario_chunk_assets` `14/14`, Python py_compile, `git diff --check`, Node scenario chunk contracts `43/43`, and perf/report Python contracts `28/28`.
+
+## 2026-06-05 Political LOD Review Fix Checklist
+- [x] Create isolated review/fix worktree from `origin/main`.
+- [x] Run independent code-review and architecture review lanes.
+- [x] Fix `feature_bounds` and `feature_count` to use final optimized payload features.
+- [x] Guard political coarse simplification to polygonal output types.
+- [x] Expand `lod_diagnostics` for next-stage regeneration analysis.
+- [x] Add regression assertions for payload-derived feature bounds and diagnostics fields.
+- [x] Re-run targeted Python, Node, perf/report, py_compile, and diff checks.

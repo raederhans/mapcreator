@@ -99,3 +99,6 @@ Reduce political coarse chunk geometry cost at build time while preserving compl
 - Keep political ids and existing coarse property whitelist.
 - Keep front-end runtime untouched for this spike.
 - Defer scenario data regeneration and perf-gate comparison to a later measured lane.
+
+### Review Fix Follow-Up
+Before regenerating checked-in scenario data, ensure every manifest field that describes geometry is derived from the final written payload. The first concrete fix is political coarse `feature_bounds`, which now follows optimized payload bounds instead of source feature bounds.

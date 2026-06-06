@@ -25,12 +25,17 @@ def _square(x: float, y: float, size: float = 1.0) -> Polygon:
     ])
 
 
-def _redundant_square(x: float, y: float, size: float = 1.0, steps: int = 12) -> Polygon:
-    bottom = [(x + (size * step / steps), y) for step in range(steps + 1)]
-    right = [(x + size, y + (size * step / steps)) for step in range(1, steps + 1)]
-    top = [(x + size - (size * step / steps), y + size) for step in range(1, steps + 1)]
-    left = [(x, y + size - (size * step / steps)) for step in range(1, steps + 1)]
-    return Polygon(bottom + right + top + left)
+def _bumped_square(x: float, y: float, size: float = 1.0, bump: float = 0.005) -> Polygon:
+    return Polygon([
+        (x, y),
+        (x + (size * 0.25), y),
+        (x + (size * 0.5), y - bump),
+        (x + (size * 0.75), y),
+        (x + size, y),
+        (x + size, y + size),
+        (x, y + size),
+        (x, y),
+    ])
 
 
 def _chunk_feature_ids(payload: dict) -> list[str]:
@@ -733,7 +738,7 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                             "__source": "detail",
                             "interactive": True,
                         },
-                        "geometry": _redundant_square(0, 0, size=4.0, steps=20).__geo_interface__,
+                        "geometry": _bumped_square(0, 0, size=4.0).__geo_interface__,
                     }
                 ],
             }
@@ -753,17 +758,23 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
             coarse_chunk = next(chunk for chunk in chunks if chunk["id"] == "political.coarse.r0c0")
             diagnostics = coarse_chunk["lod_diagnostics"]
             self.assertEqual(diagnostics["tier"], "political-coarse-simplified-v1")
+            self.assertEqual(diagnostics["round_decimals"], 4)
+            self.assertIs(diagnostics["preserve_topology"], True)
             self.assertEqual(diagnostics["source_feature_count"], 1)
             self.assertEqual(diagnostics["optimized_feature_count"], 1)
             self.assertEqual(coarse_chunk["feature_count"], 1)
             self.assertEqual(len(coarse_chunk["feature_bounds"]), coarse_chunk["feature_count"])
             self.assertGreater(diagnostics["source_coord_count"], diagnostics["optimized_coord_count"])
+            self.assertGreater(diagnostics["source_byte_size"], diagnostics["optimized_byte_size"])
+            self.assertEqual(diagnostics["optimized_byte_size"], coarse_chunk["byte_size"])
+            self.assertGreaterEqual(diagnostics["source_part_count"], diagnostics["optimized_part_count"])
             self.assertEqual(coarse_chunk["coord_count"], diagnostics["optimized_coord_count"])
             self.assertGreater(diagnostics["source_estimated_path_cost"], diagnostics["optimized_estimated_path_cost"])
             coarse_path = scenario_dir / "chunks" / "political.coarse.r0c0.json"
             coarse_text = coarse_path.read_text(encoding="utf-8")
             coarse_payload = json.loads(coarse_text)
             self.assertEqual(_chunk_feature_ids(coarse_payload), ["AAA-1"])
+            self.assertEqual(coarse_chunk["feature_bounds"], [scenario_chunk_assets._feature_bounds(coarse_payload["features"][0])])
             self.assertEqual(
                 sorted(coarse_payload["features"][0]["properties"].keys()),
                 ["__source", "admin1_group", "cntr_code", "id", "interactive", "name"],
