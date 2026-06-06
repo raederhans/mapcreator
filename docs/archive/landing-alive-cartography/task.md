@@ -12,4 +12,10 @@
 - [x] Sync dist and run targeted checks.
 - [ ] Run browser/manual visual QA. Blocked: Computer Use returned `native pipe path is unavailable`.
 - [x] Run review/bug/first-principles pass and fix findings.
-- [ ] Merge to main, commit, push, clean worktree, and archive docs.
+- [x] Merge to main, commit, push, clean worktree, and archive docs.
+
+## 2026-06-06 archive closeout
+
+- The landing work landed on `main` through `e8de45bc` and merge commit `10339b14`.
+- The isolated worktree path no longer exists, so this task record moves to `docs/archive/`.
+- Manual browser QA stayed blocked on the Windows Computer Use pipe issue; packaged verification is the final recorded evidence for this task.

@@ -15,6 +15,7 @@
 - Final review found and fixed: showcase responsive single-column behavior, Japan cities source priority, dist manifest asset assertions, and LF-stable generated SVG writes.
 - Browser visual QA attempted through Computer Use after user allowed it; Windows automation returned `Computer Use native pipe path is unavailable`, so no screenshot evidence was captured in this turn.
 - Verified publish contract with `npm run verify:pages-dist`; it rebuilt `dist/` and ran 25 pages-dist tests successfully.
+- 2026-06-06 doc hygiene pass confirmed the landing work is already on `main` via `e8de45bc` and merge commit `10339b14`; the old isolated worktree path is gone, so this task record is ready for archive.
 
 ## Live Process Ownership
 

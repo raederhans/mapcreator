@@ -155,9 +155,6 @@
 ### 窄侧栏长文本用 scoped grid
 - 右侧栏诊断、审计这类窄面板里，长 id 与状态值不要复用通用 `justify-between` flex 行；用面板专属 grid、固定状态列和 `overflow-wrap:anywhere` 锁住横向宽度。
 
-### worktree 补丁要锚定真实路径
-- 在隔离 worktree 开发时，`apply_patch` 使用 worktree 绝对路径；工具默认根目录可能仍指向主 checkout。
-
 ### 本地后端接入要同时锁 API 和 UI 状态机
 - 同源后端即使只是本地开发框架，私有读接口也要走 dev token / same-origin 边界；GET 读取用户数据时不能弱于 POST。
 - UI 的“已加载 / 已发布”状态要绑定真实事务完成点；异步导入只启动时，应写 started 状态，把 success/error 留给 callback。
@@ -238,6 +235,7 @@
 - carrier rebuild 后要同时跑 manifest 合同、catalog 检查和 `verify:pages-dist`，俄罗斯这类跨境外观数据还要用 provenance 锁住真实行政代码范围。
 
 ### runtime registry、catalog、Pages 发布要同链同步
+- 资产 manifest 记录 size/hash 时，源生成器、`.gitattributes`、Pages dist 字节处理和发布合同测试要同链更新；二级 manifest 还要逐项比对发布后的真实文件。
 - 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract，并刷新 `data/manifest.json` 的 size/hash。
 - 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` allowlist、`tests.test_pages_dist_startup_shell`，以及 `dist/pages-dist-manifest.json` 里的发布记录。
 - runtime manifest 如果继续暴露二级资源 URL，Pages 合同要遍历这些 URL，确认每个发布 URL 都被真正发布。
@@ -279,9 +277,6 @@
 ### deferred infra 用主派生状态信号控重建
 - chunk visual 阶段已经完成完整 political `landData` / derived state 时，deferred infra 只做收尾和诊断清理；用 `primaryDerivedStateReady` 控制 full restore，避免把同一批政治图层重建第二次。
 
-### 字节级 runtime manifest 要覆盖源文件和发布文件
-- 资产 manifest 记录 size/hash 时，源生成器、`.gitattributes`、Pages dist 字节处理和发布合同测试要同链更新；二级 manifest 还要逐项比对发布后的真实文件。
-
 ### 隐藏开发工具入口前先释放入口拥有状态
 - 开发者模式会隐藏 toolbar 入口时，入口 controller 要先关闭自己拥有的 preview/overlay 并触发 renderer restore，再同步按钮可见性，保证画布状态随入口一起恢复。
 
@@ -297,3 +292,6 @@
 
 ### funnel 行为测试要恢复 runtime hook 和 state
 - 通过真实 import funnel 写行为测试时，保存并在 `finally` 恢复旧 runtime hook、`document`、`FileReader` 和被导入路径改写的 state 字段，避免测试顺序污染。
+
+### tracked runtime state 要单独出提交路径
+- `.omx/` 这类已被 ignore 的运行态目录如果历史上仍有 tracked 文件，closeout 时先用 diff 判断是否只有计数和时间戳；这类本地状态用命名 stash 保存，产品提交只保留可复核的项目证据。
