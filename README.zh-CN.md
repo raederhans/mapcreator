@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/readme/logo-mark.webp" alt="Scenario Forge Logo" width="96">
+  <img src="docs/readme/logo-mark.png" alt="Scenario Forge Logo" width="96">
 
   <h1>Scenario Forge</h1>
 
