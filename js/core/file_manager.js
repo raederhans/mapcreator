@@ -19,6 +19,10 @@ import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
+import {
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "./transport_capability_registry.js";
 import { clearDirty } from "./dirty_state.js";
 import { buildExportArtifactManifest } from "./export_artifact_package.js";
 import { LegendManager } from "./legend_manager.js";
@@ -49,6 +53,26 @@ const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
 const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getTransportOverviewVisibilityFields() {
+  return listTransportOverviewCapabilityFamilyIds()
+    .map((familyId) => getTransportOverviewVisibilityField(familyId))
+    .filter(Boolean);
+}
+
+function buildTransportOverviewLayerVisibility(appState) {
+  const result = {};
+  getTransportOverviewVisibilityFields().forEach((field) => {
+    result[field] = !!appState[field];
+  });
+  return result;
+}
+
+function normalizeTransportOverviewLayerVisibility(layerVisibility) {
+  getTransportOverviewVisibilityFields().forEach((field) => {
+    layerVisibility[field] = layerVisibility[field] === undefined ? false : !!layerVisibility[field];
+  });
 }
 
 function normalizeTransportCountryOverlayProjectState(value) {
@@ -516,10 +540,7 @@ class FileManager {
         showPhysical: !!appState.showPhysical,
         showRivers: !!appState.showRivers,
         showTransport: appState.showTransport === undefined ? true : !!appState.showTransport,
-        showAirports: !!appState.showAirports,
-        showPorts: !!appState.showPorts,
-        showRail: !!appState.showRail,
-        showRoad: !!appState.showRoad,
+        ...buildTransportOverviewLayerVisibility(appState),
         showSpecialZones: !!appState.showSpecialZones,
       },
       styleConfig: {
@@ -855,14 +876,7 @@ class FileManager {
           data.layerVisibility.showRivers === undefined ? true : !!data.layerVisibility.showRivers;
         data.layerVisibility.showTransport =
           data.layerVisibility.showTransport === undefined ? true : !!data.layerVisibility.showTransport;
-        data.layerVisibility.showAirports =
-          data.layerVisibility.showAirports === undefined ? false : !!data.layerVisibility.showAirports;
-        data.layerVisibility.showPorts =
-          data.layerVisibility.showPorts === undefined ? false : !!data.layerVisibility.showPorts;
-        data.layerVisibility.showRail =
-          data.layerVisibility.showRail === undefined ? false : !!data.layerVisibility.showRail;
-        data.layerVisibility.showRoad =
-          data.layerVisibility.showRoad === undefined ? false : !!data.layerVisibility.showRoad;
+        normalizeTransportOverviewLayerVisibility(data.layerVisibility);
         data.layerVisibility.showSpecialZones =
           data.layerVisibility.showSpecialZones === undefined
             ? false

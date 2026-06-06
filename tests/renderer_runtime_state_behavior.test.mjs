@@ -25,6 +25,10 @@ import {
   createDefaultSpatialIndexState,
 } from "../js/core/state/spatial_index_state.js";
 import {
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "../js/core/transport_capability_registry.js";
+import {
   createDefaultBorderCacheState,
 } from "../js/core/state/border_cache_state.js";
 import {
@@ -116,8 +120,14 @@ test("open ocean defaults keep visibility separate from interaction", () => {
   });
 
   const restoredTarget = {};
+  const transportOverviewVisibility = Object.fromEntries(
+    listTransportOverviewCapabilityFamilyIds()
+      .map((familyId, index) => [getTransportOverviewVisibilityField(familyId), index % 2 === 0])
+      .filter(([field]) => !!field)
+  );
   const restored = restoreImportedLayerVisibilityState(restoredTarget, {
     showWaterRegions: true,
+    ...transportOverviewVisibility,
   });
   assert.deepEqual(restored, {
     allowOpenOceanSelect: false,
@@ -126,6 +136,9 @@ test("open ocean defaults keep visibility separate from interaction", () => {
   assert.equal(restoredTarget.showOpenOceanRegions, true);
   assert.equal(restoredTarget.allowOpenOceanSelect, false);
   assert.equal(restoredTarget.allowOpenOceanPaint, false);
+  for (const [field, value] of Object.entries(transportOverviewVisibility)) {
+    assert.equal(restoredTarget[field], value);
+  }
 });
 
 

@@ -66,6 +66,25 @@ function createRenderer() {
   });
 }
 
+function createWideRenderer() {
+  return createHgoRasterRenderer({
+    seed,
+    width: 4,
+    height: 2,
+    pixelFormat: "rgb",
+    pixels: [
+      10, 20, 30,
+      255, 255, 255,
+      11, 21, 31,
+      255, 255, 255,
+      255, 255, 255,
+      255, 255, 255,
+      255, 255, 255,
+      12, 22, 32,
+    ],
+  });
+}
+
 function createBmp24(rows) {
   const height = rows.length;
   const width = rows[0]?.length || 0;
@@ -94,6 +113,43 @@ function createBmp24(rows) {
   view.setUint32(34, pixelBytes.length, true);
   new Uint8Array(buffer, 54).set(pixelBytes);
   return buffer;
+}
+
+function createImageDataContext() {
+  const calls = {
+    clearRect: [],
+    drawImage: [],
+    putImageData: [],
+  };
+  const context = {
+    calls,
+    clearRect: (...args) => calls.clearRect.push(args),
+    createImageData: (width, height) => ({
+      width,
+      height,
+      data: new Uint8ClampedArray(width * height * 4),
+    }),
+    drawImage: (...args) => calls.drawImage.push(args),
+    putImageData: (...args) => calls.putImageData.push(args),
+  };
+  return context;
+}
+
+function withScratchCanvasFactory(callback) {
+  const previousDocument = globalThis.document;
+  const scratchContext = createImageDataContext();
+  globalThis.document = {
+    createElement: () => ({
+      width: 0,
+      height: 0,
+      getContext: () => scratchContext,
+    }),
+  };
+  try {
+    return callback(scratchContext);
+  } finally {
+    globalThis.document = previousDocument;
+  }
 }
 
 test("decodes 24-bit BMP province pixels into RGB raster source", () => {
@@ -182,6 +238,41 @@ test("renders owner colors from HGO province RGB pixels", () => {
   assert.deepEqual(Array.from(rendered.data.slice(0, 4)), [1, 2, 3, 255]);
   assert.deepEqual(Array.from(rendered.data.slice(4, 8)), [4, 5, 6, 255]);
   assert.deepEqual(Array.from(rendered.data.slice(8, 12)), [0, 0, 0, 0]);
+});
+
+test("scales rendered HGO raster to canvas dimensions", () => {
+  withScratchCanvasFactory((scratchContext) => {
+    const context = createImageDataContext();
+    const canvas = {
+      width: 2,
+      height: 1,
+      getContext: () => context,
+    };
+    const rendered = createWideRenderer().renderToCanvas(canvas);
+
+    assert.equal(rendered.width, 4);
+    assert.equal(rendered.height, 2);
+    assert.equal(rendered.canvasWidth, 2);
+    assert.equal(rendered.canvasHeight, 1);
+    assert.equal(rendered.scaledToCanvas, true);
+    assert.equal(scratchContext.calls.putImageData.length, 1);
+    assert.equal(context.calls.putImageData.length, 0);
+    assert.deepEqual(context.calls.clearRect[0], [0, 0, 2, 1]);
+    assert.deepEqual(context.calls.drawImage[0].slice(1), [0, 0, 4, 2, 0, 0, 2, 1]);
+  });
+});
+
+test("maps canvas inspection points back to source HGO raster coordinates", () => {
+  const renderer = createWideRenderer();
+  const hit = renderer.inspectCanvasPoint(1, 0, { width: 2, height: 1 });
+
+  assert.equal(hit.x, 2);
+  assert.equal(hit.y, 0);
+  assert.equal(hit.pixelIndex, 2);
+  assert.equal(hit.canvasX, 1);
+  assert.equal(hit.canvasY, 0);
+  assert.equal(hit.resolved.provinceId, 2);
+  assert.equal(renderer.inspectCanvasPoint(2, 0, { width: 2, height: 1 }), null);
 });
 
 test("renders controller colors when requested", () => {

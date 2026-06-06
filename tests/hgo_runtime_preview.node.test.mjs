@@ -216,3 +216,54 @@ test("restores persisted enabled setting and can inspect rendered pixels", async
   assert.equal(hit.resolved.provinceId, 1);
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.pixelIndex, 0);
 });
+
+test("preview inspection maps canvas coordinates to scaled source raster", async () => {
+  const storage = createStorage({ [HGO_RUNTIME_PREVIEW_STORAGE_KEY]: "true" });
+  const canvas = createCanvas();
+  canvas.width = 2;
+  canvas.height = 1;
+  const harness = createController({
+    storage,
+    canvas,
+    loadSeed: async () => ({
+      provinces: {
+        1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E", type: "land" },
+        2: { id: 2, rgb: [11, 21, 31], rgb_key: 726303, rgb_hex: "#0B151F", type: "land" },
+      },
+      states: [
+        { id: 1, owner: "AAA", controller: "AAA", province_ids: [1], province_count: 1 },
+        { id: 2, owner: "BBB", controller: "BBB", province_ids: [2], province_count: 1 },
+      ],
+      countries: {
+        AAA: { tag: "AAA", color_rgb: [1, 2, 3], color_hex: "#010203" },
+        BBB: { tag: "BBB", color_rgb: [4, 5, 6], color_hex: "#040506" },
+      },
+      province_to_state: { 1: 1, 2: 2 },
+    }),
+    loadRaster: async () => ({
+      width: 4,
+      height: 2,
+      pixelFormat: "rgb",
+      pixels: [
+        10, 20, 30,
+        255, 255, 255,
+        11, 21, 31,
+        255, 255, 255,
+        255, 255, 255,
+        255, 255, 255,
+        255, 255, 255,
+        255, 255, 255,
+      ],
+    }),
+  });
+
+  await harness.controller.setEnabled(true);
+  const hit = harness.controller.inspectPoint(1, 0);
+
+  assert.equal(hit.x, 2);
+  assert.equal(hit.y, 0);
+  assert.equal(hit.canvasX, 1);
+  assert.equal(hit.canvasY, 0);
+  assert.equal(hit.resolved.provinceId, 2);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.pixelIndex, 2);
+});

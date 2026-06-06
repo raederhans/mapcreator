@@ -2,53 +2,53 @@
   "schemaVersion": 1,
   "graphMode": "artifact-only",
   "summary": {
-    "specCount": 46,
-    "nodeCount": 57,
-    "reverseIndexKeyCount": 77,
+    "specCount": 48,
+    "nodeCount": 59,
+    "reverseIndexKeyCount": 79,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "js/core/map_renderer.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "js/core/scenario_dispatcher.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "js/core/state.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "js/ui/sidebar.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-app-paths.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-app.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-frontline-panel.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-project-import.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-web-server.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/startup-paths.js",
-        "specCount": 46
+        "specCount": 48
       },
       {
         "dependency": "tests/e2e/support/playwright-selectors.js",
@@ -75,16 +75,16 @@
         "specCount": 4
       },
       {
-        "dependency": "js/core/render_boundary.js",
-        "specCount": 3
-      },
-      {
         "dependency": "js/core/scenario_resources.js",
-        "specCount": 3
+        "specCount": 4
       },
       {
         "dependency": "js/ui/transport_workbench_carrier.js",
-        "specCount": 3
+        "specCount": 4
+      },
+      {
+        "dependency": "js/ui/transport_workbench_family_preview.js",
+        "specCount": 4
       }
     ]
   },
@@ -1249,6 +1249,63 @@
         "js/ui/sidebar.js"
       ]
     },
+    "tests/e2e/transport_phase_b_main_map_smoke.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_country_pack_loading.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
     "tests/e2e/transport_workbench_industrial_variants.spec.js": {
       "directDependencies": [
         "js/core/state.js",
@@ -1429,6 +1486,7 @@
     "tests/e2e/water_cache_strategy_regression.spec.js": {
       "directDependencies": [
         "js/core/map_renderer.js",
+        "js/core/scenario_resources.js",
         "js/core/state.js",
         "tests/e2e/support/playwright-app.js"
       ],
@@ -1436,6 +1494,7 @@
         "js/core/interaction_funnel.js",
         "js/core/map_renderer.js",
         "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
         "js/core/state.js",
         "js/ui/sidebar.js",
         "tests/e2e/support/playwright-app-paths.js",
@@ -1449,6 +1508,7 @@
         "js/core/interaction_funnel.js",
         "js/core/map_renderer.js",
         "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
         "js/core/state.js",
         "js/ui/sidebar.js"
       ]
@@ -1512,6 +1572,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1560,6 +1622,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1613,6 +1677,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1633,7 +1699,8 @@
     "js/core/scenario_resources.js": [
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/scenario_boundary_regression.spec.js",
-      "tests/e2e/startup_bundle_recovery_contract.spec.js"
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
     ],
     "js/core/sovereignty_manager.js": [
       "tests/e2e/dev_workspace_render_boundary.spec.js",
@@ -1682,6 +1749,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1746,6 +1815,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1755,11 +1826,13 @@
       "tests/e2e/water_cache_strategy_regression.spec.js"
     ],
     "js/ui/transport_workbench_carrier.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
     ],
     "js/ui/transport_workbench_family_preview.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
@@ -1925,6 +1998,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -1973,6 +2048,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -2021,6 +2098,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -2069,6 +2148,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -2128,6 +2209,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -2176,6 +2259,8 @@
       "tests/e2e/tno_named_water_rendering.spec.js",
       "tests/e2e/tno_open_ocean_rendering.spec.js",
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
       "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "tests/e2e/transport_workbench_label_rotation.spec.js",
       "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
@@ -2198,6 +2283,12 @@
     ],
     "tests/e2e/tno_startup_visible_context_layers_contract.spec.js": [
       "tests/e2e/tno_startup_visible_context_layers_contract.spec.js"
+    ],
+    "tests/e2e/transport_phase_b_main_map_smoke.spec.js": [
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js"
+    ],
+    "tests/e2e/transport_workbench_country_pack_loading.spec.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js"
     ],
     "tests/e2e/transport_workbench_industrial_variants.spec.js": [
       "tests/e2e/transport_workbench_industrial_variants.spec.js"

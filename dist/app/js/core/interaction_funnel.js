@@ -415,6 +415,8 @@ export function resetInteractionFunnelDebugState() {
   debugState.doubleClickCount = 0;
   debugState.importStartCount = 0;
   debugState.importApplyCount = 0;
+  debugState.importPhase = "idle";
+  debugState.lastImportError = "";
   debugState.lastClickContext = null;
   debugState.lastDoubleClickContext = null;
   debugState.lastImportFileName = "";

@@ -221,7 +221,7 @@ function createHgoRuntimePreviewController(runtimeState, {
 
   const inspectPoint = (x, y) => {
     if (!renderer) return null;
-    const hit = renderer.inspectPoint(x, y);
+    const hit = canvas ? renderer.inspectCanvasPoint(x, y, canvas) : renderer.inspectPoint(x, y);
     previewState.inspectResult = hit;
     return hit;
   };

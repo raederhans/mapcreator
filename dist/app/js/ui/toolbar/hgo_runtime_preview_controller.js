@@ -97,6 +97,12 @@ function createHgoRuntimePreviewToolbarController({
     return state;
   };
   const toggle = async () => setEnabled(!previewController.getState().enabled);
+  const restorePersistedPreviewIfNeeded = () => {
+    const previewState = previewController.getState();
+    if (!loadersConfigured || !runtimeState?.ui?.developerMode || !previewState.enabled) return;
+    if (previewState.status === HGO_RUNTIME_PREVIEW_STATUS.READY || previewState.status === HGO_RUNTIME_PREVIEW_STATUS.LOADING) return;
+    void setEnabled(true);
+  };
 
   if (previewButton && previewButton.dataset.bound !== "true") {
     // 按钮可能由 toolbar bootstrap 或测试注入，dataset 标记保证重复 sync
@@ -107,6 +113,7 @@ function createHgoRuntimePreviewToolbarController({
     previewButton.dataset.bound = "true";
   }
   sync();
+  restorePersistedPreviewIfNeeded();
 
   return Object.freeze({
     dispose: previewController.dispose,

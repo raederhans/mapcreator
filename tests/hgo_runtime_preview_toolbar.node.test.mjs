@@ -38,6 +38,21 @@ function createButton() {
   };
 }
 
+function createStorage(initial = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: (key) => values.has(key) ? values.get(key) : null,
+    setItem: (key, value) => values.set(key, String(value)),
+    values,
+  };
+}
+
+async function settleMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 test("toolbar preview button is hidden outside developer mode", () => {
   const runtimeState = { ui: { developerMode: false } };
   const button = createButton();
@@ -58,6 +73,43 @@ test("toolbar preview button stays hidden in developer mode until loaders are co
   assert.equal(button.classList.contains("hidden"), true);
   assert.equal(button.attributes.get("aria-hidden"), "true");
   assert.equal(button.attributes.get("aria-pressed"), "false");
+});
+
+test("toolbar restores persisted enabled preview in developer mode", async () => {
+  const runtimeState = { ui: { developerMode: true } };
+  const button = createButton();
+  const storage = createStorage({ "mapcreator:hgo-runtime-preview:enabled": "true" });
+  let seedLoadCount = 0;
+  let rasterLoadCount = 0;
+
+  createHgoRuntimePreviewToolbarController({
+    runtimeState,
+    button,
+    documentRef: null,
+    storage,
+    loadSeed: async () => {
+      seedLoadCount += 1;
+      return {
+        provinces: { 1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E" } },
+        states: [{ id: 1, owner: "AAA", controller: "AAA", province_ids: [1], province_count: 1 }],
+        countries: { AAA: { tag: "AAA", color_hex: "#010203", color_rgb: [1, 2, 3] } },
+        province_to_state: { 1: 1 },
+      };
+    },
+    loadRaster: async () => {
+      rasterLoadCount += 1;
+      return { width: 1, height: 1, pixelFormat: "rgb", pixels: [10, 20, 30] };
+    },
+  });
+
+  await settleMicrotasks();
+
+  assert.equal(seedLoadCount, 1);
+  assert.equal(rasterLoadCount, 1);
+  assert.equal(runtimeState.hgoRuntimePreview.enabled, true);
+  assert.equal(runtimeState.hgoRuntimePreview.status, "ready");
+  assert.equal(button.attributes.get("aria-pressed"), "true");
+  assert.equal(button.attributes.get("aria-label"), "HGO preview ready");
 });
 
 test("toolbar preview button enables injected preview loader in developer mode", async () => {

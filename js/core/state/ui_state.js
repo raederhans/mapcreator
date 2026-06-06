@@ -25,11 +25,18 @@ import {
   normalizeTransportWorkbenchUiState,
   normalizeUrbanStyleConfig,
 } from "../state_defaults.js";
-import { listTransportRuntimeCapabilityFamilyIds } from "../transport_capability_registry.js";
+import {
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+  listTransportRuntimeCapabilityFamilyIds,
+} from "../transport_capability_registry.js";
 import { getDefaultTransportWorkbenchPackIdForFamily } from "../transport_pack_resolver.js";
 import { createEmptySpecialZoneLayersState } from "../special_zone_layers.js";
 
 const TRANSPORT_WORKBENCH_RUNTIME_FAMILY_IDS = listTransportRuntimeCapabilityFamilyIds();
+const TRANSPORT_OVERVIEW_VISIBILITY_FIELDS = listTransportOverviewCapabilityFamilyIds()
+  .map((familyId) => getTransportOverviewVisibilityField(familyId))
+  .filter(Boolean);
 
 export function createDefaultManualSpecialZonesState() {
   return {
@@ -441,6 +448,10 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
     return null;
   }
   const openOceanLayerVisibility = normalizeOpenOceanLayerVisibility(layerVisibility);
+  const transportOverviewLayerVisibility = {};
+  TRANSPORT_OVERVIEW_VISIBILITY_FIELDS.forEach((field) => {
+    transportOverviewLayerVisibility[field] = !!layerVisibility[field];
+  });
   Object.assign(target, {
     showWaterRegions:
       layerVisibility.showWaterRegions === undefined ? true : !!layerVisibility.showWaterRegions,
@@ -465,10 +476,7 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
     showPhysical: !!layerVisibility.showPhysical,
     showRivers: !!layerVisibility.showRivers,
     showTransport: layerVisibility.showTransport === undefined ? true : !!layerVisibility.showTransport,
-    showAirports: !!layerVisibility.showAirports,
-    showPorts: !!layerVisibility.showPorts,
-    showRail: !!layerVisibility.showRail,
-    showRoad: !!layerVisibility.showRoad,
+    ...transportOverviewLayerVisibility,
     showSpecialZones:
       layerVisibility.showSpecialZones === undefined ? false : !!layerVisibility.showSpecialZones,
   });

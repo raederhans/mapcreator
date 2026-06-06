@@ -3,10 +3,16 @@ import assert from "node:assert/strict";
 
 import { FileManager } from "../js/core/file_manager.js";
 import {
+  getInteractionFunnelDebugState,
   importProjectThroughFunnel,
+  resetInteractionFunnelDebugState,
   resolveImportedTransportCountryOverlayPackIds,
 } from "../js/core/interaction_funnel.js";
 import { prepareProjectImportFile } from "../js/core/project_package_io.js";
+import {
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "../js/core/transport_capability_registry.js";
 import { state } from "../js/core/state.js";
 import {
   readRegisteredRuntimeHookSource,
@@ -223,6 +229,12 @@ async function importProjectThroughFunnelPayload(payload) {
   }
 }
 
+function getTransportOverviewVisibilityFields() {
+  return listTransportOverviewCapabilityFamilyIds()
+    .map((familyId) => getTransportOverviewVisibilityField(familyId))
+    .filter(Boolean);
+}
+
 test("project payload builder returns export schema without triggering download", () => {
   const payload = FileManager.buildProjectPayload({
     activeScenarioId: "tno_1962",
@@ -245,6 +257,9 @@ test("project payload builder returns export schema without triggering download"
   assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "byteLength"), false);
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "checksum"), false);
+  getTransportOverviewVisibilityFields().forEach((field) => {
+    assert.equal(Object.hasOwn(payload.layerVisibility, field), true, field);
+  });
   assert.equal(payload.legendLabels["#111111"], "大日耳曼国");
   assert.deepEqual(payload.legendConfig, {
     mode: "realm-area",
@@ -291,6 +306,72 @@ test("project import restores missing open ocean flags as visible without intera
   assert.equal(result.successes[0].layerVisibility.showOpenOceanRegions, true);
   assert.equal(result.successes[0].layerVisibility.allowOpenOceanSelect, false);
   assert.equal(result.successes[0].layerVisibility.allowOpenOceanPaint, false);
+});
+
+test("project import restores missing transport overview registry visibility as disabled", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+  getTransportOverviewVisibilityFields().forEach((field) => {
+    delete payload.layerVisibility[field];
+  });
+
+  const result = await importProjectPayload(payload);
+
+  getTransportOverviewVisibilityFields().forEach((field) => {
+    assert.equal(result.successes[0].layerVisibility[field], false, field);
+  });
+});
+
+test("interaction funnel debug reset clears stale import error state", async () => {
+  const previousDocument = globalThis.document;
+  const previousFileReader = globalThis.FileReader;
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  globalThis.FileReader = class {
+    readAsText(file) {
+      this.result = file.text;
+      queueMicrotask(() => this.onload?.());
+    }
+  };
+
+  try {
+    await new Promise((resolve) => {
+      importProjectThroughFunnel(
+        {
+          name: "map_project.json",
+          text: JSON.stringify(createTransportOverviewImportPayload()),
+        },
+        {
+          ui: {
+            t: (value) => String(value || ""),
+            showToast: () => {},
+            showAppDialog: async () => false,
+          },
+          hooks: {
+            invalidateFrontlineOverlayState: () => {
+              throw new Error("debug reset sentinel");
+            },
+            onProjectImportError: resolve,
+          },
+        }
+      );
+    });
+
+    assert.equal(getInteractionFunnelDebugState().importPhase, "error");
+    assert.match(getInteractionFunnelDebugState().lastImportError, /debug reset sentinel/);
+
+    resetInteractionFunnelDebugState();
+
+    assert.equal(getInteractionFunnelDebugState().importPhase, "idle");
+    assert.equal(getInteractionFunnelDebugState().lastImportError, "");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.FileReader = previousFileReader;
+  }
 });
 
 test("project zip download keeps editable project and manifest files", async () => {

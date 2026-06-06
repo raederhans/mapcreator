@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  getTransportOverviewDataLayerKeys,
+  listTransportOverviewCapabilityFamilyIds,
+} from "../js/core/transport_capability_registry.js";
 import { createTransportAppearanceController } from "../js/ui/toolbar/transport_appearance_controller.js";
 
 class TestElement {
@@ -115,12 +119,16 @@ test("transport appearance master toggle loads enabled family layers from regist
 
     assert.equal(harness.runtimeState.showTransport, true);
     assert.deepEqual(harness.releaseReasons, ["transport-master-toggle"]);
-    assert.deepEqual(harness.contextLayerLoads, [
-      { layerRequest: "airports", options: { reason: "transport-master-toggle", renderNow: true } },
-      { layerRequest: "ports", options: { reason: "transport-master-toggle", renderNow: true } },
-      { layerRequest: ["railways", "rail_stations_major"], options: { reason: "transport-master-toggle", renderNow: true } },
-      { layerRequest: "roads", options: { reason: "transport-master-toggle", renderNow: true } },
-    ]);
+    assert.deepEqual(
+      harness.contextLayerLoads,
+      listTransportOverviewCapabilityFamilyIds().map((familyId) => {
+        const layerKeys = getTransportOverviewDataLayerKeys(familyId);
+        return {
+          layerRequest: layerKeys.length === 1 ? layerKeys[0] : layerKeys,
+          options: { reason: "transport-master-toggle", renderNow: true },
+        };
+      })
+    );
     await Promise.resolve();
   } finally {
     harness.cleanup();

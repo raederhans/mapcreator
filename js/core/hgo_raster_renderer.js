@@ -104,6 +104,22 @@ function createRasterSource({ width, height, pixels, pixelFormat = PIXEL_FORMATS
   });
 }
 
+function normalizeCanvasDimension(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.round(number) : fallback;
+}
+
+function createScratchCanvas(width, height) {
+  if (typeof globalThis.OffscreenCanvas === "function") {
+    return new globalThis.OffscreenCanvas(width, height);
+  }
+  const canvas = globalThis.document?.createElement?.("canvas");
+  if (!canvas) return null;
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+}
+
 function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = {}) {
   const runtime = createHgoRuntimeIndex(seed || {});
   const source = createRasterSource({ width, height, pixels, pixelFormat });
@@ -137,6 +153,27 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
       return null;
     }
     return inspectPixelIndex(py * source.width + px);
+  };
+
+  const inspectCanvasPoint = (x, y, canvas = null) => {
+    assertActive();
+    const canvasWidth = normalizeCanvasDimension(canvas?.width, source.width);
+    const canvasHeight = normalizeCanvasDimension(canvas?.height, source.height);
+    const canvasX = Number(x);
+    const canvasY = Number(y);
+    if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY) || canvasX < 0 || canvasY < 0 || canvasX >= canvasWidth || canvasY >= canvasHeight) {
+      return null;
+    }
+    const sourceX = Math.min(source.width - 1, Math.floor((canvasX / canvasWidth) * source.width));
+    const sourceY = Math.min(source.height - 1, Math.floor((canvasY / canvasHeight) * source.height));
+    const hit = inspectPoint(sourceX, sourceY);
+    return hit ? Object.freeze({
+      ...hit,
+      canvasX,
+      canvasY,
+      canvasWidth,
+      canvasHeight,
+    }) : null;
   };
 
   const renderToBuffer = (options = {}) => {
@@ -176,10 +213,35 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
       throw new TypeError("HGO raster canvas must provide a 2D context with ImageData support.");
     }
     const rendered = renderToBuffer(options);
+    const targetWidth = normalizeCanvasDimension(canvas?.width, rendered.width);
+    const targetHeight = normalizeCanvasDimension(canvas?.height, rendered.height);
+    const shouldScaleToCanvas = targetWidth !== rendered.width || targetHeight !== rendered.height;
+    if (shouldScaleToCanvas && typeof context.drawImage === "function") {
+      const scratchCanvas = createScratchCanvas(rendered.width, rendered.height);
+      const scratchContext = scratchCanvas?.getContext?.("2d");
+      if (scratchContext?.createImageData && scratchContext?.putImageData) {
+        const scratchImageData = scratchContext.createImageData(rendered.width, rendered.height);
+        scratchImageData.data.set(rendered.data);
+        scratchContext.putImageData(scratchImageData, 0, 0);
+        context.clearRect?.(0, 0, targetWidth, targetHeight);
+        context.drawImage(scratchCanvas, 0, 0, rendered.width, rendered.height, 0, 0, targetWidth, targetHeight);
+        return {
+          ...rendered,
+          canvasWidth: targetWidth,
+          canvasHeight: targetHeight,
+          scaledToCanvas: true,
+        };
+      }
+    }
     const imageData = context.createImageData(rendered.width, rendered.height);
     imageData.data.set(rendered.data);
     context.putImageData(imageData, 0, 0);
-    return rendered;
+    return {
+      ...rendered,
+      canvasWidth: targetWidth,
+      canvasHeight: targetHeight,
+      scaledToCanvas: false,
+    };
   };
 
   const getSummary = () => Object.freeze({
@@ -198,6 +260,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     dispose,
     getSummary,
     inspectPixelIndex,
+    inspectCanvasPoint,
     inspectPoint,
     renderToBuffer,
     renderToCanvas,

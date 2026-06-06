@@ -4,6 +4,8 @@ import {
 } from "../../core/state.js";
 import {
   getTransportOverviewDataLayerKeys,
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
   normalizeTransportOverviewVisualMode,
 } from "../../core/transport_capability_registry.js";
 import {
@@ -192,6 +194,11 @@ export function createTransportAppearanceController({
       .catch(refreshTransportAppearanceUiAfterLayerLoad(familyId));
   };
 
+  const isTransportOverviewFamilyVisible = (familyId) => {
+    const visibilityField = getTransportOverviewVisibilityField(familyId);
+    return !!visibilityField && !!runtimeState[visibilityField];
+  };
+
   const setTransportAppearanceGroupEnabled = (container, enabled) => {
     if (!(container instanceof HTMLElement)) return;
     container.classList.toggle("opacity-60", !enabled);
@@ -363,17 +370,12 @@ export function createTransportAppearanceController({
     if (normalized && hasVisibleTransportFamily()) {
       runtimeState.releaseDeferredContextBasePassFn?.("transport-master-toggle");
     }
-    if (normalized && runtimeState.showAirports) {
-      void requestTransportOverviewDataLayers("airport", "transport-master-toggle");
-    }
-    if (normalized && runtimeState.showPorts) {
-      void requestTransportOverviewDataLayers("port", "transport-master-toggle");
-    }
-    if (normalized && runtimeState.showRail) {
-      void requestTransportOverviewDataLayers("rail", "transport-master-toggle");
-    }
-    if (normalized && runtimeState.showRoad) {
-      void requestTransportOverviewDataLayers("road", "transport-master-toggle");
+    if (normalized) {
+      for (const familyId of listTransportOverviewCapabilityFamilyIds()) {
+        if (isTransportOverviewFamilyVisible(familyId)) {
+          void requestTransportOverviewDataLayers(familyId, "transport-master-toggle");
+        }
+      }
     }
     renderTransportAppearanceDirty("toggle-transport-overview");
   };
@@ -382,11 +384,8 @@ export function createTransportAppearanceController({
     runtimeState.releaseDeferredContextBasePassFn?.(reason);
   };
 
-  const hasVisibleTransportFamily = () => !!(
-    runtimeState.showAirports
-    || runtimeState.showPorts
-    || runtimeState.showRail
-    || runtimeState.showRoad
+  const hasVisibleTransportFamily = () => (
+    listTransportOverviewCapabilityFamilyIds().some((familyId) => isTransportOverviewFamilyVisible(familyId))
   );
 
   const bindEvents = () => {
