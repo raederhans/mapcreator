@@ -1,32 +1,69 @@
-<p align="right">
-  <a href="./README.md"><img src="https://img.shields.io/badge/English-111111?style=for-the-badge" alt="English"></a>
-  <a href="./README.zh-CN.md"><img src="https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2563eb?style=for-the-badge" alt="Chinese"></a>
-</p>
+<div align="center">
+  <img src="docs/readme/logo-mark.webp" alt="Scenario Forge logo" width="96">
 
-# Scenario Forge
+  <h1>Scenario Forge</h1>
 
-Scenario Forge is a scenario-first map creation workbench for alternate history, strategy modding, and geopolitical storytelling.
+  Scenario Forge is a scenario-first map creation workbench for alternate history, strategy modding, and geopolitical storytelling.
 
-It gives creators one place to choose a world state, edit political control, tune the map's visual style, add strategic overlays, inspect transport layers, and export a polished map image or reusable project file.
+  <p>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge" alt="MIT License"></a>
+    <a href="https://raederhans.github.io/scenario-forge/"><img src="https://img.shields.io/badge/Live%20Demo-Scenario%20Forge-2563eb?style=for-the-badge" alt="Live Demo"></a>
+    <a href="https://github.com/raederhans/scenario-forge/actions/workflows/deploy.yml"><img src="https://github.com/raederhans/scenario-forge/actions/workflows/deploy.yml/badge.svg" alt="Deploy Status"></a>
+    <a href="https://github.com/raederhans/scenario-forge/issues"><img src="https://img.shields.io/badge/PRs-welcome-0f766e?style=for-the-badge" alt="PRs welcome"></a>
+    <a href="./README.md"><img src="https://img.shields.io/badge/English-111111?style=for-the-badge" alt="English"></a>
+    <a href="./README.zh-CN.md"><img src="https://img.shields.io/badge/%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2563eb?style=for-the-badge" alt="Simplified Chinese"></a>
+  </p>
 
-**Live demo:** https://raederhans.github.io/scenario-forge/
+  <p>
+    <a href="https://raederhans.github.io/scenario-forge/">Live Demo</a>
+    ·
+    <a href="https://github.com/raederhans/scenario-forge/issues">Report Bug</a>
+    ·
+    <a href="./README.zh-CN.md">简体中文</a>
+  </p>
 
-**Updated:** 2026-06-06
+  <img src="docs/readme/hero-workspace.webp" alt="Scenario Forge workspace showing a political map editor, sidebars, and map controls" width="860">
+</div>
 
-## Highlights
+## What It Does
 
-| Area | What you can do |
-| --- | --- |
-| Scenario maps | Start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. |
-| Political editing | Repaint ownership and controller state, inspect split ownership, and work across ownership, controller, and frontline views. |
-| Visual style | Tune oceans, borders, parent borders, physical regions, urban areas, city points, rivers, textures, day-night shading, and reference images. |
-| Strategic presentation | Add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays. |
-| Transport context | Explore roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through the Transport workbench. |
-| Export workflow | Export PNG/JPG snapshots, adjust image brightness/contrast/saturation, manage layer order, and prepare higher-resolution outputs up to 8K. |
-| Project files | Save an editable project JSON with scenario, appearance, transport, strategic annotations, reference alignment, and export settings. |
-| Community preview | In local backend mode, test account sessions, Cloud Saves, publishing, community downloads, comments, reports, and admin review tools. |
-| Modding preview | In developer/local preview mode, use HGO runtime preview and palette tools to validate HOI4-style country identity, flags, colors, and rendering. |
-| Localization | Use the interface in English or Simplified Chinese. |
+Scenario Forge gives creators one place to choose a world state, edit political control, tune the map's visual style, add strategic overlays, inspect transport layers, and export a polished map image or reusable project file.
+
+- **Scenario baselines:** start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962.
+- **Political editing:** repaint ownership and controller state, inspect split ownership, and switch between ownership, controller, and frontline views.
+- **Map appearance:** tune oceans, borders, parent borders, terrain, urban areas, city points, rivers, textures, day-night shading, and reference images.
+- **Strategic markup:** add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays.
+- **Transport workbench:** inspect roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer order.
+- **Bilingual export workflow:** use English or Simplified Chinese, save editable project files, and export PNG/JPG snapshots or higher-resolution outputs up to 8K.
+
+## See It In Action
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/readme/shot-scenario.webp" alt="Political scenario map view" width="100%"><br>
+      <strong>Political scenario maps</strong><br>
+      Switch baselines, review borders, and keep the map readable while editing.
+    </td>
+    <td width="50%">
+      <img src="docs/readme/shot-transport.webp" alt="Transport workbench with Japan road data" width="100%"><br>
+      <strong>Transport workbench</strong><br>
+      Inspect source-backed roads, rail, airports, ports, and other planning layers.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/readme/shot-night.webp" alt="Day-night and city-light style controls" width="100%"><br>
+      <strong>Presentation-ready styles</strong><br>
+      Combine borders, terrain, rivers, city lights, and texture controls into a clean map look.
+    </td>
+    <td width="50%">
+      <img src="docs/readme/shot-export.webp" alt="Export workbench with layer controls" width="100%"><br>
+      <strong>Layered export controls</strong><br>
+      Adjust image output, choose formats, reorder layers, and prepare final snapshots.
+    </td>
+  </tr>
+</table>
 
 ## Who It Is For
 
@@ -38,7 +75,7 @@ It gives creators one place to choose a world state, edit political control, tun
 
 ## Try It
 
-### Online demo
+### Online Demo
 
 Open the live build:
 
@@ -46,7 +83,13 @@ Open the live build:
 
 The online version is the best starting point for scenario editing, appearance tuning, project files, and exports.
 
-### Local app
+### Local Editor
+
+Prerequisites:
+
+- Windows is the supported path for the included `.bat` launchers.
+- Python 3 should be available through `py -3` or `python`.
+- The first launch can take longer while local data and runtime files are prepared.
 
 Run the full local editor:
 
@@ -54,7 +97,7 @@ Run the full local editor:
 start_dev.bat
 ```
 
-Start faster after the data has already been built:
+Start faster after local data has already been built:
 
 ```bat
 start_dev.bat fast
@@ -66,7 +109,7 @@ Start with a clean runtime session:
 start_dev.bat fresh
 ```
 
-### Local backend preview
+### Local Backend Preview
 
 Open the local backend and community preview:
 
@@ -88,31 +131,32 @@ This local mode stores preview backend data under `.runtime/backend/` on your ma
 
 The main editor path is ready for normal map creation: scenario switching, political edits, appearance controls, project save/load, strategic annotations, and exports.
 
-Some larger systems are shown as previews:
+Some larger systems are available as previews:
 
 - **Cloud Saves and community:** available through the local backend preview.
 - **Transport workbench:** source-backed and cached transport data is available across multiple categories. Roads, rail, airports, and ports currently connect most consistently to the main map; broader global coverage continues growing.
 - **HGO runtime preview:** a developer/local preview for country identity, palette, flag, and raster-render validation.
 
-## License
+<details>
+<summary><strong>Complete Capability Matrix</strong></summary>
 
-The project code and documentation are available under the **MIT License**.
+| Area | What you can do |
+| --- | --- |
+| Scenario maps | Start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. |
+| Political editing | Repaint ownership and controller state, inspect split ownership, and work across ownership, controller, and frontline views. |
+| Visual style | Tune oceans, borders, parent borders, physical regions, urban areas, city points, rivers, textures, day-night shading, and reference images. |
+| Strategic presentation | Add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays. |
+| Transport context | Explore roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through the Transport workbench. |
+| Export workflow | Export PNG/JPG snapshots, adjust image brightness/contrast/saturation, manage layer order, and prepare higher-resolution outputs up to 8K. |
+| Project files | Save an editable project JSON with scenario, appearance, transport, strategic annotations, reference alignment, and export settings. |
+| Community preview | In local backend mode, test account sessions, Cloud Saves, publishing, community downloads, comments, reports, and admin review tools. |
+| Modding preview | In developer/local preview mode, use HGO runtime preview and palette tools to validate HOI4-style country identity, flags, colors, and rendering. |
+| Localization | Use the interface in English or Simplified Chinese. |
 
-Third-party datasets and derived assets keep their original source terms and provenance records.
+</details>
 
-## Maintained By
-
-Maintained by **[@raederhans](https://github.com/raederhans)**.
-
-## Bug Reports
-
-If something breaks, looks wrong, or feels inconsistent, please open an issue:
-
-- https://github.com/raederhans/scenario-forge/issues
-
-Helpful bug reports usually include the scenario you were using, your browser and OS, exact steps to reproduce the issue, and a screenshot or exported project file when relevant.
-
-## Data Sources
+<details>
+<summary><strong>Data Sources and Provenance</strong></summary>
 
 Scenario Forge combines public geographic and reference datasets with project-specific derived assets. The main source families include:
 
@@ -128,3 +172,15 @@ Scenario Forge combines public geographic and reference datasets with project-sp
 | [Japanese MLIT road data (N06)](https://nlftp.mlit.go.jp/ksj/) | Japan road hardening and transport preview reference data. |
 
 Detailed provenance appears in `data/source_ledger.json`, `.provenance.json` files under `data/`, transport source recipes under `data/transport_layers/`, and generated asset source records.
+
+</details>
+
+## Project Info
+
+The project code and documentation are available under the **MIT License**. Third-party datasets and derived assets keep their original source terms and provenance records.
+
+Maintained by **[@raederhans](https://github.com/raederhans)**.
+
+If something breaks, looks wrong, or feels inconsistent, please open an issue:
+
+- https://github.com/raederhans/scenario-forge/issues
