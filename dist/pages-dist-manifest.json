@@ -37238,7 +37238,7 @@
     },
     {
       "path": "assets/hero-cartography.svg",
-      "size_bytes": 64366
+      "size_bytes": 64137
     },
     {
       "path": "assets/hero-hoi4-1936.json",
@@ -37343,5 +37343,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1111302630
+  "total_bytes": 1111302401
 }
