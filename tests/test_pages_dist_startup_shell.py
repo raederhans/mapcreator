@@ -91,6 +91,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn('class="map-edge-fog"', text)
                     self.assertIn("softEdgeBlur", text)
                     self.assertIn("railGlow", text)
+                    self.assertIn('data-showcase-city-detail="base"', text)
                     self.assertIn('class="urban-area"', text)
                     self.assertIn('class="river-line"', text)
                     self.assertIn('class="country-label"', text)
@@ -240,7 +241,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["selection_policy"]["urban_area_limit"], 96)
         self.assertEqual(payload["selection_policy"]["river_line_limit"], 82)
         self.assertEqual(payload["selection_policy"]["night_light_limit"], 54)
-        self.assertEqual(payload["selection_policy"]["city_label_source"], "scenario capital hints")
+        self.assertEqual(payload["selection_policy"]["city_label_source"], "scenario capital hints plus world_cities major populated places")
+        self.assertEqual(payload["selection_policy"]["city_label_tier_limits"], [8, 16, 26, 34])
+        self.assertEqual(payload["selection_policy"]["city_label_tier_min_distance_px"], [44.0, 36.0, 30.0, 24.0])
         self.assertEqual(payload["selection_policy"]["country_label_source"], "territory representative points")
         self.assertEqual(payload["selection_policy"]["country_label_limit"], 8)
         self.assertEqual(
@@ -268,7 +271,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertGreater(payload["counts"]["river_paths_candidates"], payload["counts"]["river_lines_rendered"])
         self.assertEqual(payload["counts"]["night_light_points_rendered"], 54)
         self.assertGreater(payload["counts"]["city_light_candidates"], payload["counts"]["night_light_points_rendered"])
-        self.assertEqual(payload["counts"]["city_labels_rendered"], payload["counts"]["capitals"])
+        self.assertEqual(payload["counts"]["city_labels_rendered"], 34)
+        self.assertEqual(payload["counts"]["city_label_tier_counts"], {"0": 8, "1": 8, "2": 10, "3": 8})
+        self.assertIn("Milan", payload["city_label_names"])
+        self.assertIn("Hamburg", payload["city_label_names"])
         self.assertEqual(payload["counts"]["country_labels_rendered"], 8)
         self.assertEqual(set(payload["rail_selected_by_shard"]), {"eu_e010_e025", "eu_e025_e045", "eu_w012_e010"})
         for shard_id, selected_count in payload["rail_selected_by_shard"].items():
@@ -296,6 +302,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn('svg[data-active-layer="rail"] .rail-line { opacity: .96; stroke: #ffc66d; stroke-width: 1.75; }', generated_text)
                 self.assertIn('svg[data-active-layer="rail"] .layer-country-labels { opacity: 0; }', generated_text)
                 self.assertIn('svg[data-active-layer="rail"] .layer-cities { opacity: 0; }', generated_text)
+                self.assertIn('data-showcase-city-detail="base"', generated_text)
+                self.assertIn('class="showcase-city showcase-city--tier-0 showcase-city--capital', generated_text)
+                self.assertIn('class="showcase-city showcase-city--tier-3', generated_text)
+                self.assertIn('svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-3 { opacity: 1; }', generated_text)
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),

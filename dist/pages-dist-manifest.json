@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 63287
+      "size_bytes": 63779
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37214,11 +37214,11 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 4516
+      "size_bytes": 5420
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 219682
+      "size_bytes": 226217
     },
     {
       "path": "assets/favicon.png",
@@ -37347,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112695698
+  "total_bytes": 1112703629
 }

@@ -142,6 +142,8 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
 
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
   assert.equal(harness.root.dataset.showcaseViewZoomed, "false");
+  assert.equal(harness.root.dataset.showcaseCityDetail, "base");
+  assert.equal(harness.svg.attributes["data-showcase-city-detail"], "base");
   assert.equal(harness.viewport.attributes.transform, "matrix(1.16 0 0 1.16 -78.4 -49.6)");
 
   const plainWheelEvent = createEvent({ deltaY: -120 });
@@ -154,6 +156,8 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(wheelEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "2");
   assert.equal(harness.root.dataset.showcaseViewZoomed, "true");
+  assert.equal(harness.root.dataset.showcaseCityDetail, "expanded");
+  assert.equal(harness.svg.attributes["data-showcase-city-detail"], "expanded");
   assert.match(harness.viewport.attributes.transform, /^matrix\(1\.34 0 0 1\.34 /);
 
   const zoomedWheelEvent = createEvent({ ctrlKey: true, deltaY: 120 });
@@ -189,9 +193,12 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   }
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "4");
   assert.equal(harness.root.dataset.showcaseViewScale, "1.80");
+  assert.equal(harness.root.dataset.showcaseCityDetail, "dense");
+  assert.equal(harness.svg.attributes["data-showcase-city-detail"], "dense");
 
   const keyboardResetEvent = createEvent({ key: "Escape" });
   harness.objectNode.dispatchEvent("keydown", keyboardResetEvent);
   assert.equal(keyboardResetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
+  assert.equal(harness.root.dataset.showcaseCityDetail, "base");
 });

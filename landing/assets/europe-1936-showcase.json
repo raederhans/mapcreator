@@ -62,7 +62,19 @@
     "river_line_simplify": 0.025,
     "river_min_projected_px": 16.0,
     "night_light_limit": 54,
-    "city_label_source": "scenario capital hints",
+    "city_label_source": "scenario capital hints plus world_cities major populated places",
+    "city_label_tier_limits": [
+      8,
+      16,
+      26,
+      34
+    ],
+    "city_label_tier_min_distance_px": [
+      44.0,
+      36.0,
+      30.0,
+      24.0
+    ],
     "country_label_source": "territory representative points",
     "country_label_tags": [
       "ENG",
@@ -108,7 +120,15 @@
     "city_source_features": 21338,
     "city_light_candidates": 8187,
     "night_light_points_rendered": 54,
-    "city_labels_rendered": 22,
+    "city_label_source_features": 21338,
+    "city_label_candidates": 380,
+    "city_labels_rendered": 34,
+    "city_label_tier_counts": {
+      "0": 8,
+      "1": 8,
+      "2": 10,
+      "3": 8
+    },
     "country_labels_rendered": 8
   },
   "rail_selected_by_shard": {
@@ -183,6 +203,42 @@
     "ROM",
     "SOV",
     "YUG"
+  ],
+  "city_label_names": [
+    "Prague",
+    "London",
+    "Rome",
+    "Warsaw",
+    "Bucharest",
+    "Moscow",
+    "Belgrade",
+    "København",
+    "Tallinn",
+    "Athens",
+    "Dublin",
+    "Vilnius",
+    "Istanbul",
+    "Madrid",
+    "Barcelona",
+    "Ankara",
+    "Algiers",
+    "Lisbon",
+    "Kyiv",
+    "Milan",
+    "İzmir",
+    "Frankfurt",
+    "Aleppo",
+    "Rabat",
+    "Tunis",
+    "Stockholm",
+    "Katowice",
+    "Hamburg",
+    "Oslo",
+    "Amsterdam",
+    "Leeds",
+    "Kharkiv",
+    "Konya",
+    "Lyon"
   ],
   "focus_tags": [
     "CZE",

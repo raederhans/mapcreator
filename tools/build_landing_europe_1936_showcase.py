@@ -86,6 +86,8 @@ HERO_MEDITERRANEAN_ISLAND_BBOXES = (
 )
 SHOWCASE_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
 SHOWCASE_COUNTRY_LABEL_TAGS = {"ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"}
+SHOWCASE_CITY_TIER_LIMITS = (8, 16, 26, 34)
+SHOWCASE_CITY_TIER_MIN_DISTANCE_PX = (44.0, 36.0, 30.0, 24.0)
 TRANSREGIONAL_EUROPE_SHOWCASE_TAGS = {"TUR"}
 SHOWCASE_BACKGROUND_TAGS = {
     "ALG",
@@ -733,6 +735,114 @@ def load_showcase_city_lights(
     return selected, source_count, len(candidates)
 
 
+def city_label_tier(index: int) -> int:
+    for tier, limit in enumerate(SHOWCASE_CITY_TIER_LIMITS):
+        if index < limit:
+            return tier
+    return len(SHOWCASE_CITY_TIER_LIMITS) - 1
+
+
+def city_label_distance_ok(candidate: dict, selected: list[dict], min_distance: float) -> bool:
+    for item in selected:
+        if math.hypot(candidate["x"] - item["x"], candidate["y"] - item["y"]) < min_distance:
+            return False
+    return True
+
+
+def load_showcase_city_labels(
+    canvas: Canvas,
+    capitals: list[dict],
+    clip_bbox: tuple[float, float, float, float] | None = None,
+) -> tuple[list[dict], int, int]:
+    candidates: list[tuple[float, str, dict]] = []
+    seen_names: set[str] = set()
+    source_count = 0
+    min_lon, min_lat, max_lon, max_lat = clip_bbox or canvas.bbox
+
+    for index, item in enumerate(capitals):
+        name = str(item["name"]).strip()
+        if not name or name in seen_names:
+            continue
+        seen_names.add(name)
+        focus_rank = 1_000_000 if item.get("focus") else 0
+        candidates.append(
+            (
+                5_000_000_000 + focus_rank - index,
+                name,
+                {
+                    "name": name,
+                    "country": item["country"],
+                    "x": item["x"],
+                    "y": item["y"],
+                    "population": 0.0,
+                    "capital": True,
+                    "source": "scenario_capital",
+                    "focus": bool(item.get("focus")),
+                },
+            )
+        )
+
+    for feature in geojson_features(WORLD_CITIES):
+        geometry_payload = feature.get("geometry") or {}
+        coordinates = geometry_payload.get("coordinates")
+        if geometry_payload.get("type") != "Point" or not isinstance(coordinates, list) or len(coordinates) < 2:
+            continue
+        source_count += 1
+        lon = float(coordinates[0])
+        lat = float(coordinates[1])
+        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
+            continue
+        properties = feature.get("properties") or {}
+        name = str(properties.get("name_en") or properties.get("name_ascii") or properties.get("name") or "").strip()
+        if not name or name in seen_names:
+            continue
+        population = float(properties.get("population") or 0)
+        if population < 250_000 and not properties.get("is_world_city"):
+            continue
+        seen_names.add(name)
+        x, y = canvas.project(lon, lat)
+        is_country_capital = bool(properties.get("is_country_capital"))
+        is_admin_capital = bool(properties.get("is_admin_capital") or properties.get("is_capital"))
+        is_world_city = bool(properties.get("is_world_city"))
+        rank = population
+        if is_world_city:
+            rank += 800_000
+        if is_country_capital:
+            rank += 700_000
+        elif is_admin_capital:
+            rank += 180_000
+        candidates.append(
+            (
+                rank,
+                name,
+                {
+                    "name": name,
+                    "country": str(properties.get("country_code") or ""),
+                    "x": x,
+                    "y": y,
+                    "population": population,
+                    "capital": is_country_capital,
+                    "source": "world_cities",
+                    "focus": False,
+                },
+            )
+        )
+
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    selected: list[dict] = []
+    for _rank, _name, candidate in candidates:
+        if len(selected) >= SHOWCASE_CITY_TIER_LIMITS[-1]:
+            break
+        tier = city_label_tier(len(selected))
+        min_distance = SHOWCASE_CITY_TIER_MIN_DISTANCE_PX[tier]
+        if not city_label_distance_ok(candidate, selected, min_distance):
+            continue
+        candidate["tier"] = tier
+        selected.append(candidate)
+
+    return selected, source_count, len(candidates)
+
+
 def graticule(canvas: Canvas) -> str:
     min_lon, min_lat, max_lon, max_lat = canvas.bbox
     lines: list[str] = []
@@ -822,6 +932,29 @@ def capital_nodes(capitals: list[dict]) -> str:
             f"<title>{escaped_name} · {escaped_country}</title>"
             f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="5.8" />'
             f'<text class="city-label" x="{fmt(item["x"] + 9)}" y="{fmt(item["y"] - 7)}">{escaped_name}</text>'
+            "</g>"
+        )
+    return "\n".join(nodes)
+
+
+def showcase_city_label_nodes(city_labels: list[dict]) -> str:
+    nodes: list[str] = []
+    for item in city_labels:
+        tier = int(item["tier"])
+        escaped_name = xml_escape(str(item["name"]))
+        escaped_country = xml_escape(str(item.get("country") or ""))
+        source = xml_escape(str(item.get("source") or ""))
+        capital_class = " showcase-city--capital" if item.get("capital") else ""
+        focus_class = " showcase-city--focus" if item.get("focus") else ""
+        radius = 4.8 if tier == 0 else 4.3 if tier == 1 else 3.8 if tier == 2 else 3.4
+        x_offset = 8.4 if tier <= 1 else 7.2
+        y_offset = -6.4 if tier <= 1 else -5.6
+        nodes.append(
+            f'      <g class="showcase-city showcase-city--tier-{tier}{capital_class}{focus_class}" '
+            f'data-city-tier="{tier}" data-city-source="{source}">'
+            f"<title>{escaped_name} · {escaped_country}</title>"
+            f'<circle cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" r="{fmt(radius)}" />'
+            f'<text class="city-label" x="{fmt(item["x"] + x_offset)}" y="{fmt(item["y"] + y_offset)}">{escaped_name}</text>'
             "</g>"
         )
     return "\n".join(nodes)
@@ -1232,12 +1365,13 @@ def build_svg(
     context_territories: list[dict],
     territories: list[dict],
     capitals: list[dict],
+    city_labels: list[dict],
     rails: list[str],
     urban_areas: list[str],
     rivers: list[str],
     city_lights: list[dict],
 ) -> str:
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="Europe 1936 scenario showcase built from Scenario Forge data" data-active-layer="political">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="Europe 1936 scenario showcase built from Scenario Forge data" data-active-layer="political" data-showcase-city-detail="base">
   <defs>
     <radialGradient id="seaGlow" cx="52%" cy="42%" r="76%">
       <stop offset="0" stop-color="#17395a" />
@@ -1266,7 +1400,10 @@ def build_svg(
       .rail-line {{ fill: none; stroke: #ffb969; stroke-width: 1.45; stroke-linecap: round; opacity: .24; vector-effect: non-scaling-stroke; filter: url(#railGlow); }}
       .capital circle {{ fill: #fff0af; stroke: #143044; stroke-width: 2; filter: url(#capitalGlow); opacity: .42; }}
       .capital text {{ fill: #f8fbff; font-family: Arial, sans-serif; paint-order: stroke; stroke: #07111f; opacity: .62; }}
-      .city-label {{ font-size: 14px; font-weight: 800; stroke-width: 4; }}
+      .showcase-city {{ opacity: 0; transition: opacity .25s ease; }}
+      .showcase-city circle {{ fill: #fff0af; stroke: #143044; stroke-width: 1.8; filter: url(#capitalGlow); opacity: .78; }}
+      .showcase-city--capital circle {{ fill: #fff5bc; opacity: .86; }}
+      .city-label {{ fill: #f8fbff; font-family: Arial, sans-serif; font-size: 12.2px; font-weight: 800; paint-order: stroke; stroke: #07111f; stroke-width: 3.2; opacity: .78; }}
       .capital-code {{ font-size: 11px; font-weight: 800; letter-spacing: 1px; stroke-width: 3; fill: #f8d77f; }}
       .country-label {{ fill: rgba(255,255,255,.82); font: 800 17px Arial, sans-serif; letter-spacing: 1px; text-anchor: middle; paint-order: stroke; stroke: #07111f; stroke-width: 5; opacity: .62; }}
       .layer-urban, .layer-rivers, .layer-rail, .layer-country-labels, .layer-cities, .layer-day-night {{ transition: opacity .25s ease; }}
@@ -1299,8 +1436,19 @@ def build_svg(
       svg[data-active-layer="cities"] .layer-rail {{ opacity: .3; }}
       svg[data-active-layer="cities"] .layer-country-labels {{ opacity: .42; }}
       svg[data-active-layer="cities"] .layer-cities {{ opacity: 1; }}
-      svg[data-active-layer="cities"] .capital circle {{ opacity: .95; }}
-      svg[data-active-layer="cities"] .capital text {{ opacity: 1; }}
+      svg[data-active-layer="cities"] .showcase-city--tier-0 {{ opacity: 1; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="expanded"] .showcase-city--tier-1,
+      svg[data-active-layer="cities"][data-showcase-city-detail="regional"] .showcase-city--tier-1,
+      svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-1 {{ opacity: 1; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="regional"] .showcase-city--tier-2,
+      svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-2 {{ opacity: 1; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-3 {{ opacity: 1; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="expanded"] .city-label {{ font-size: 11.5px; stroke-width: 3; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="regional"] .city-label {{ font-size: 10.8px; stroke-width: 2.8; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .city-label {{ font-size: 10.2px; stroke-width: 2.6; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="expanded"] .showcase-city circle {{ transform: scale(.94); transform-origin: center; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="regional"] .showcase-city circle {{ transform: scale(.88); transform-origin: center; }}
+      svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city circle {{ transform: scale(.82); transform-origin: center; }}
       svg[data-active-layer="cities"] .layer-day-night {{ opacity: 0; }}
       svg[data-active-layer="day-night"] .territory {{ opacity: .64; }}
       svg[data-active-layer="day-night"] .territory--focus {{ opacity: .9; }}
@@ -1338,7 +1486,7 @@ def build_svg(
 {country_label_nodes(territories)}
   </g>
   <g class="layer layer-cities" data-layer="cities">
-{capital_nodes(capitals)}
+{showcase_city_label_nodes(city_labels)}
   </g>
   <g class="layer layer-day-night" data-layer="day-night">
 {day_night_nodes(canvas, capitals, city_lights)}
@@ -1361,6 +1509,7 @@ def build_metadata(
     context_territories: list[dict],
     territories: list[dict],
     capitals: list[dict],
+    city_labels: list[dict],
     selected_rail_paths: list[str],
     rail_inspected: int,
     rail_candidates: int,
@@ -1374,12 +1523,18 @@ def build_metadata(
     city_lights: list[dict],
     city_source_count: int,
     city_candidates: int,
+    city_label_source_count: int,
+    city_label_candidates: int,
 ) -> dict:
     paths = scenario_paths()
     rail_paths_source = rail_paths()
     context_tags = sorted(item["tag"] for item in context_territories)
     territory_tags = sorted(item["tag"] for item in territories)
     capital_tags = sorted(item["tag"] for item in capitals)
+    city_label_tier_counts = {
+        str(tier): sum(1 for item in city_labels if int(item["tier"]) == tier)
+        for tier in range(len(SHOWCASE_CITY_TIER_LIMITS))
+    }
     min_x, min_y, max_x, max_y = canvas.projected_bounds
     return {
         "schema_version": 1,
@@ -1416,7 +1571,9 @@ def build_metadata(
             "river_line_simplify": RIVER_LINE_SIMPLIFY,
             "river_min_projected_px": RIVER_MIN_PROJECTED_PX,
             "night_light_limit": NIGHT_LIGHT_LIMIT,
-            "city_label_source": "scenario capital hints",
+            "city_label_source": "scenario capital hints plus world_cities major populated places",
+            "city_label_tier_limits": list(SHOWCASE_CITY_TIER_LIMITS),
+            "city_label_tier_min_distance_px": list(SHOWCASE_CITY_TIER_MIN_DISTANCE_PX),
             "country_label_source": "territory representative points",
             "country_label_tags": sorted(SHOWCASE_COUNTRY_LABEL_TAGS),
             "country_label_limit": len(SHOWCASE_COUNTRY_LABEL_TAGS),
@@ -1451,13 +1608,17 @@ def build_metadata(
             "city_source_features": city_source_count,
             "city_light_candidates": city_candidates,
             "night_light_points_rendered": len(city_lights),
-            "city_labels_rendered": len(capitals),
+            "city_label_source_features": city_label_source_count,
+            "city_label_candidates": city_label_candidates,
+            "city_labels_rendered": len(city_labels),
+            "city_label_tier_counts": city_label_tier_counts,
             "country_labels_rendered": sum(1 for item in territories if item["tag"] in SHOWCASE_COUNTRY_LABEL_TAGS),
         },
         "rail_selected_by_shard": dict(sorted(rail_selected_by_shard.items())),
         "context_territory_tags": context_tags,
         "territory_tags": territory_tags,
         "capital_tags": capital_tags,
+        "city_label_names": [str(item["name"]) for item in city_labels],
         "focus_tags": sorted(tag for tag in SHOWCASE_FOCUS_TAGS if tag in territory_tags),
         "layers": list(SHOWCASE_LAYERS),
     }
@@ -1468,13 +1629,28 @@ def build_showcase() -> None:
     context_territories, context_counts = load_context_territories(canvas)
     territories, political_counts = load_political_layers(canvas)
     capitals = load_capitals(canvas)
+    city_labels, city_label_source_count, city_label_candidates = load_showcase_city_labels(
+        canvas,
+        capitals,
+        SHOWCASE_DETAIL_BBOX,
+    )
     rails, rail_inspected, rail_candidates, rail_selected_by_shard = load_rail_paths(canvas, SHOWCASE_DETAIL_BBOX)
     urban_paths, urban_source_count, urban_candidates = load_urban_area_paths(canvas, SHOWCASE_DETAIL_BBOX)
     river_paths, river_source_count, river_candidates = load_river_paths(canvas, SHOWCASE_DETAIL_BBOX)
     city_lights, city_source_count, city_candidates = load_showcase_city_lights(canvas, SHOWCASE_DETAIL_BBOX)
     write_text_lf(
         SHOWCASE_SVG,
-        build_svg(canvas, context_territories, territories, capitals, rails, urban_paths, river_paths, city_lights),
+        build_svg(
+            canvas,
+            context_territories,
+            territories,
+            capitals,
+            city_labels,
+            rails,
+            urban_paths,
+            river_paths,
+            city_lights,
+        ),
     )
     metadata = build_metadata(
         canvas,
@@ -1483,6 +1659,7 @@ def build_showcase() -> None:
         context_territories,
         territories,
         capitals,
+        city_labels,
         rails,
         rail_inspected,
         rail_candidates,
@@ -1496,6 +1673,8 @@ def build_showcase() -> None:
         city_lights,
         city_source_count,
         city_candidates,
+        city_label_source_count,
+        city_label_candidates,
     )
     write_text_lf(SHOWCASE_METADATA, json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 

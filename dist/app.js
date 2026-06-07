@@ -904,6 +904,13 @@ function setShowcaseSvgLayer(root) {
   svg.setAttribute("data-active-layer", layer);
 }
 
+function getShowcaseCityDetail(scaleIndex) {
+  if (scaleIndex >= 4) return "dense";
+  if (scaleIndex >= 3) return "regional";
+  if (scaleIndex >= 2) return "expanded";
+  return "base";
+}
+
 function getShowcaseSvgViewport(root) {
   const objectNode = root.querySelector("[data-showcase-object]");
   if (!objectNode?.contentDocument) return null;
@@ -942,11 +949,17 @@ function applyShowcaseViewState(root, nextState) {
   root.dataset.showcaseViewScaleIndex = String(scaleIndex);
   root.dataset.showcaseViewScale = scale.toFixed(2);
   root.dataset.showcaseViewZoomed = scaleIndex > DEFAULT_SHOWCASE_VIEW_SCALE_INDEX ? "true" : "false";
+  root.dataset.showcaseCityDetail = getShowcaseCityDetail(scaleIndex);
   root.dataset.showcaseViewX = position.x.toFixed(1);
   root.dataset.showcaseViewY = position.y.toFixed(1);
   const viewport = getShowcaseSvgViewport(root);
   if (viewport) {
     viewport.setAttribute("transform", `matrix(${scale} 0 0 ${scale} ${position.x.toFixed(1)} ${position.y.toFixed(1)})`);
+  }
+  const objectNode = root.querySelector("[data-showcase-object]");
+  const svg = objectNode?.contentDocument?.querySelector("svg");
+  if (svg) {
+    svg.setAttribute("data-showcase-city-detail", root.dataset.showcaseCityDetail);
   }
 }
 
