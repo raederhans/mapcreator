@@ -307,3 +307,6 @@
 ### 首页静态预览要公开真实抽样合同
 - 从真实数据生成 landing SVG 时，要同时写 metadata，记录 scope、projection、sources、selection policy 和实际渲染 count；文案只引用已渲染数量。
 - 物理图层源可能在目标视口内没有要素；这种情况应写入 metadata，并让可见文案描述实际存在的图层，避免展示页承诺空层。
+
+### 空白底图生成要先粗筛再修几何
+- runtime topology 可能包含混合维度或大量视口外 feature；Blank 类静态底图先用 bounds 粗筛，再做 `make_valid/intersection/simplify`，并在 metadata 写清 path limit、dropped count 和排序规则。

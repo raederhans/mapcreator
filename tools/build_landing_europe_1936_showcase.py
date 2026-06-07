@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Iterable
 from xml.sax.saxutils import escape as xml_escape
 
-from shapely.geometry import box, shape
+from shapely.errors import GEOSException
+from shapely.geometry import GeometryCollection, box, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 from shapely.validation import make_valid
@@ -19,13 +20,37 @@ from topojson.utils import serialize_as_geojson
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 HOI4_MANIFEST = REPO_ROOT / "data" / "scenarios" / "hoi4_1936" / "manifest.json"
+HOI4_1939_MANIFEST = REPO_ROOT / "data" / "scenarios" / "hoi4_1939" / "manifest.json"
+TNO_1962_MANIFEST = REPO_ROOT / "data" / "scenarios" / "tno_1962" / "manifest.json"
+BLANK_BASE_MANIFEST = REPO_ROOT / "data" / "scenarios" / "blank_base" / "manifest.json"
+EUROPE_BLANK_TOPOLOGY = REPO_ROOT / "data" / "europe_topology.runtime_political_v1.json"
 RAIL_CATALOG = REPO_ROOT / "data" / "transport_layers" / "global_rail" / "catalog.json"
 
 SHOWCASE_SVG = LANDING_ASSETS / "europe-1936-showcase.svg"
 SHOWCASE_METADATA = LANDING_ASSETS / "europe-1936-showcase.json"
+HERO_SCENARIO_OUTPUTS = {
+    "blank": {
+        "svg": LANDING_ASSETS / "hero-blank.svg",
+        "metadata": LANDING_ASSETS / "hero-blank.json",
+    },
+    "hoi4-1936": {
+        "svg": LANDING_ASSETS / "hero-hoi4-1936.svg",
+        "metadata": LANDING_ASSETS / "hero-hoi4-1936.json",
+    },
+    "hoi4-1939": {
+        "svg": LANDING_ASSETS / "hero-hoi4-1939.svg",
+        "metadata": LANDING_ASSETS / "hero-hoi4-1939.json",
+    },
+    "tno-1962": {
+        "svg": LANDING_ASSETS / "hero-tno-1962.svg",
+        "metadata": LANDING_ASSETS / "hero-tno-1962.json",
+    },
+}
 EUROPE_BBOX = (-12.5, 34.0, 41.5, 72.5)
 SHOWCASE_CANVAS_WIDTH = 980
 SHOWCASE_CANVAS_HEIGHT = 620
+HERO_CANVAS_WIDTH = 980
+HERO_CANVAS_HEIGHT = 680
 SHOWCASE_CANVAS_PADDING = 36
 PROJECTION_CENTER_LON = 10.0
 PROJECTION_CENTER_LAT = 52.0
@@ -42,6 +67,51 @@ SHOWCASE_LAYERS = (
     {"id": "day-night", "label": "day-night cycle"},
 )
 TAG_PATTERN = re.compile(r"^[A-Z0-9_]{2,12}$")
+
+
+@dataclass(frozen=True)
+class HeroScenario:
+    mode: str
+    scenario_id: str
+    title: str
+    manifest_path: Path
+    palette_class: str
+    capital_defaults_path: Path | None = None
+    blank: bool = False
+
+
+HERO_SCENARIOS = (
+    HeroScenario(
+        mode="blank",
+        scenario_id="blank_base",
+        title="Blank Europe canvas",
+        manifest_path=BLANK_BASE_MANIFEST,
+        palette_class="blank",
+        blank=True,
+    ),
+    HeroScenario(
+        mode="hoi4-1936",
+        scenario_id="hoi4_1936",
+        title="HOI4 1936 Europe",
+        manifest_path=HOI4_MANIFEST,
+        palette_class="hoi4-1936",
+    ),
+    HeroScenario(
+        mode="hoi4-1939",
+        scenario_id="hoi4_1939",
+        title="HOI4 1939 Europe",
+        manifest_path=HOI4_1939_MANIFEST,
+        palette_class="hoi4-1939",
+    ),
+    HeroScenario(
+        mode="tno-1962",
+        scenario_id="tno_1962",
+        title="TNO 1962 Europe",
+        manifest_path=TNO_1962_MANIFEST,
+        palette_class="tno-1962",
+        capital_defaults_path=REPO_ROOT / "data" / "scenarios" / "tno_1962" / "capital_defaults.partial.json",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -158,14 +228,29 @@ def topology_features(path: Path, object_name: str) -> list[dict]:
     return [feature for feature in features if isinstance(feature, dict)]
 
 
-def scenario_paths() -> dict[str, Path]:
-    manifest = read_json(HOI4_MANIFEST)
-    return {
+def scenario_paths(manifest_path: Path = HOI4_MANIFEST, capital_defaults_path: Path | None = None) -> dict[str, Path]:
+    manifest = read_json(manifest_path)
+    paths = {
+        "manifest": manifest_path,
         "runtime_topology": repo_relative_path(manifest["runtime_topology_url"]),
         "owners": repo_relative_path(manifest["owners_url"]),
         "countries": repo_relative_path(manifest["countries_url"]),
-        "capital_hints": repo_relative_path(manifest["capital_hints_url"]),
     }
+    capital_hints_url = manifest.get("capital_hints_url")
+    if isinstance(capital_hints_url, str) and capital_hints_url:
+        paths["capital_hints"] = repo_relative_path(capital_hints_url)
+    city_overrides_url = manifest.get("city_overrides_url")
+    if isinstance(city_overrides_url, str) and city_overrides_url:
+        paths["city_overrides"] = repo_relative_path(city_overrides_url)
+    if capital_defaults_path is not None:
+        paths["capital_defaults"] = capital_defaults_path
+    atlantropa_topology_url = manifest.get("scenario_atlantropa_topology_url")
+    if isinstance(atlantropa_topology_url, str) and atlantropa_topology_url:
+        paths["atlantropa_topology"] = repo_relative_path(atlantropa_topology_url)
+    atlantropa_metadata_url = manifest.get("scenario_atlantropa_metadata_url")
+    if isinstance(atlantropa_metadata_url, str) and atlantropa_metadata_url:
+        paths["atlantropa_metadata"] = repo_relative_path(atlantropa_metadata_url)
+    return paths
 
 
 def rail_paths() -> list[Path]:
@@ -187,6 +272,16 @@ def valid_geometry(geometry: BaseGeometry) -> BaseGeometry:
     return make_valid(geometry)
 
 
+def renderable_geometry(geometry: BaseGeometry) -> BaseGeometry:
+    try:
+        return valid_geometry(geometry)
+    except GEOSException:
+        try:
+            return geometry.buffer(0)
+        except GEOSException:
+            return GeometryCollection()
+
+
 def europe_country_tags(countries: dict) -> set[str]:
     tags = {
         tag
@@ -196,15 +291,19 @@ def europe_country_tags(countries: dict) -> set[str]:
     return tags | TRANSREGIONAL_EUROPE_SHOWCASE_TAGS
 
 
-def polygon_path(geometry: BaseGeometry, canvas: Canvas) -> list[str]:
+def polygon_path(geometry: BaseGeometry, canvas: Canvas, include_interiors: bool = False) -> list[str]:
     if geometry.is_empty:
         return []
     if geometry.geom_type == "Polygon":
-        return [ring_path(geometry.exterior.coords, canvas)]
+        rings = [ring_path(geometry.exterior.coords, canvas)]
+        if include_interiors:
+            rings.extend(ring_path(interior.coords, canvas) for interior in geometry.interiors)
+        path = " ".join(ring for ring in rings if ring)
+        return [path] if path else []
     if geometry.geom_type == "MultiPolygon":
         paths: list[str] = []
         for polygon in sorted(geometry.geoms, key=lambda item: item.area, reverse=True):
-            paths.extend(polygon_path(polygon, canvas))
+            paths.extend(polygon_path(polygon, canvas, include_interiors=include_interiors))
         return [path for path in paths if path]
     return []
 
@@ -246,8 +345,14 @@ def project_line(points: Iterable[tuple[float, float]], canvas: Canvas) -> tuple
     return " ".join(commands), length_px, min(forward_key, reverse_key)
 
 
-def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
-    paths = scenario_paths()
+def load_scenario_territories(
+    canvas: Canvas,
+    manifest_path: Path = HOI4_MANIFEST,
+    *,
+    neutral: bool = False,
+    capital_defaults_path: Path | None = None,
+) -> tuple[list[dict], dict[str, int], dict[str, Path], dict]:
+    paths = scenario_paths(manifest_path, capital_defaults_path)
     countries = read_json(paths["countries"])["countries"]
     owners = read_json(paths["owners"])["owners"]
     showcase_tags = europe_country_tags(countries)
@@ -278,28 +383,54 @@ def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
     for tag, geometries in sorted(by_tag.items()):
         country = countries[tag]
         merged = unary_union(geometries).simplify(0.055, preserve_topology=True)
-        paths = polygon_path(merged, canvas)
-        if not paths:
+        path_commands = polygon_path(merged, canvas)
+        if not path_commands:
             continue
         territories.append(
             {
                 "tag": tag,
                 "name": country.get("display_name") or tag,
-                "color": clamp_hex(country.get("color_hex")),
-                "paths": paths[:18],
+                "color": "#a9bcb0" if neutral else clamp_hex(country.get("color_hex")),
+                "paths": path_commands[:18],
                 "scenario_only": bool(country.get("scenario_only")),
                 "notes": country.get("notes") or "",
             }
         )
 
-    return territories, {"source_features": source_feature_count, "territories": len(territories)}
+    return territories, {"source_features": source_feature_count, "territories": len(territories)}, paths, countries
 
 
-def load_capitals(canvas: Canvas) -> list[dict]:
-    paths = scenario_paths()
-    countries = read_json(paths["countries"])["countries"]
+def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
+    territories, counts, _paths, _countries = load_scenario_territories(canvas)
+    return territories, counts
+
+
+def capital_hint_entries(paths: dict[str, Path]) -> tuple[list[dict], list[Path]]:
+    if "capital_hints" in paths:
+        return read_json(paths["capital_hints"])["entries"], [paths["capital_hints"]]
+
+    for key in ("capital_defaults", "city_overrides"):
+        path = paths.get(key)
+        if path is None or not path.exists():
+            continue
+        payload = read_json(path)
+        hints = payload.get("capital_city_hints")
+        if not isinstance(hints, dict):
+            continue
+        return [hint for hint in hints.values() if isinstance(hint, dict)], [path]
+
+    return [], []
+
+
+def load_scenario_capitals(
+    canvas: Canvas,
+    countries: dict,
+    paths: dict[str, Path],
+    *,
+    limit: int = 22,
+) -> tuple[list[dict], list[Path]]:
     showcase_tags = europe_country_tags(countries)
-    entries = read_json(paths["capital_hints"])["entries"]
+    entries, source_paths = capital_hint_entries(paths)
     capitals: list[dict] = []
     for entry in entries:
         tag = entry.get("tag")
@@ -321,7 +452,14 @@ def load_capitals(canvas: Canvas) -> list[dict]:
                 "focus": tag in SHOWCASE_FOCUS_TAGS,
             }
         )
-    return sorted(capitals, key=lambda item: (not item["focus"], item["tag"]))[:22]
+    return sorted(capitals, key=lambda item: (not item["focus"], item["tag"]))[:limit], source_paths
+
+
+def load_capitals(canvas: Canvas) -> list[dict]:
+    paths = scenario_paths()
+    countries = read_json(paths["countries"])["countries"]
+    capitals, _source_paths = load_scenario_capitals(canvas, countries, paths)
+    return capitals
 
 
 def load_rail_paths(canvas: Canvas) -> tuple[list[str], int, int, dict[str, int]]:
@@ -457,6 +595,273 @@ def day_night_nodes(canvas: Canvas, capitals: list[dict]) -> str:
     <g class="night-lights" aria-hidden="true">
 {light_nodes}
     </g>"""
+
+
+def blank_land_nodes(paths: list[str]) -> str:
+    return "\n".join(f'      <path class="blank-land" fill-rule="evenodd" d="{path}" />' for path in paths)
+
+
+def load_blank_land_paths(canvas: Canvas) -> tuple[list[str], dict[str, int], list[Path]]:
+    clip = box(*canvas.bbox)
+    selected_paths: list[tuple[float, str]] = []
+    inspected = 0
+    candidate_count = 0
+    clipped_count = 0
+    for feature in topology_features(EUROPE_BLANK_TOPOLOGY, "political"):
+        geometry_payload = feature.get("geometry")
+        if not geometry_payload:
+            continue
+        inspected += 1
+        raw_geometry = shape(geometry_payload)
+        min_x, min_y, max_x, max_y = raw_geometry.bounds
+        if max_x < canvas.bbox[0] or min_x > canvas.bbox[2] or max_y < canvas.bbox[1] or min_y > canvas.bbox[3]:
+            continue
+        candidate_count += 1
+        geometry = renderable_geometry(raw_geometry)
+        if geometry.is_empty:
+            continue
+        clipped = renderable_geometry(geometry.intersection(clip)).simplify(0.045, preserve_topology=True)
+        if clipped.is_empty:
+            continue
+        clipped_count += 1
+        selected_paths.extend((clipped.area, path) for path in polygon_path(clipped, canvas, include_interiors=True))
+    selected_paths.sort(reverse=True)
+    land_path_limit = 900
+    path_commands = [path for _area, path in selected_paths[:land_path_limit]]
+    return path_commands, {
+        "land_features_inspected": inspected,
+        "land_features_candidates": candidate_count,
+        "land_features_clipped": clipped_count,
+        "land_paths_available": len(selected_paths),
+        "land_paths": len(path_commands),
+        "land_paths_dropped": max(0, len(selected_paths) - len(path_commands)),
+        "land_path_limit": land_path_limit,
+    }, [BLANK_BASE_MANIFEST, EUROPE_BLANK_TOPOLOGY]
+
+
+def load_atlantropa_paths(canvas: Canvas, paths: dict[str, Path]) -> tuple[dict[str, list[str]], dict[str, int], list[Path]]:
+    topology_path = paths.get("atlantropa_topology")
+    metadata_path = paths.get("atlantropa_metadata")
+    if topology_path is None:
+        return {}, {}, []
+    if metadata_path is not None:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if metadata.get("scenario_id") != "tno_1962":
+            raise ValueError(f"Unexpected Atlantropa metadata scenario in {metadata_path}")
+    clip = box(*canvas.bbox)
+    layer_paths: dict[str, list[str]] = {"water": [], "land": [], "shoal": []}
+    inspected = 0
+    clipped_count = 0
+    for feature in topology_features(topology_path, "scenario_atlantropa"):
+        properties = feature.get("properties") or {}
+        layer = properties.get("atl_render_layer")
+        if layer not in layer_paths:
+            continue
+        geometry_payload = feature.get("geometry")
+        if not geometry_payload:
+            continue
+        inspected += 1
+        geometry = valid_geometry(shape(geometry_payload))
+        if not geometry.intersects(clip):
+            continue
+        clipped = valid_geometry(geometry.intersection(clip)).simplify(0.04, preserve_topology=True)
+        if clipped.is_empty:
+            continue
+        clipped_count += 1
+        layer_paths[layer].extend(polygon_path(clipped, canvas))
+    for layer, items in layer_paths.items():
+        layer_paths[layer] = items[:90]
+    source_paths = [topology_path]
+    if metadata_path is not None:
+        source_paths.append(metadata_path)
+    counts = {
+        "atlantropa_features_inspected": inspected,
+        "atlantropa_features_clipped": clipped_count,
+        "atlantropa_paths": sum(len(items) for items in layer_paths.values()),
+    }
+    return layer_paths, counts, source_paths
+
+
+def hero_output_paths(output_dir: Path, mode: str) -> dict[str, Path]:
+    defaults = HERO_SCENARIO_OUTPUTS[mode]
+    if output_dir == LANDING_ASSETS:
+        return defaults
+    return {
+        "svg": output_dir / defaults["svg"].name,
+        "metadata": output_dir / defaults["metadata"].name,
+    }
+
+
+def hero_source_files(
+    paths: dict[str, Path],
+    capital_source_paths: list[Path],
+    overlay_source_paths: list[Path] | None = None,
+) -> list[str]:
+    ordered: list[Path] = [
+        paths["manifest"],
+        paths["runtime_topology"],
+        paths["owners"],
+        paths["countries"],
+    ]
+    ordered.extend(capital_source_paths)
+    ordered.extend(overlay_source_paths or [])
+    return [repo_path(path) for path in ordered]
+
+
+def atlantropa_nodes(paths_by_layer: dict[str, list[str]]) -> str:
+    nodes: list[str] = []
+    for layer in ("water", "shoal", "land"):
+        for path in paths_by_layer.get(layer, []):
+            nodes.append(f'      <path class="atlantropa atlantropa--{layer}" d="{path}" />')
+    return "\n".join(nodes)
+
+
+def build_hero_svg(
+    canvas: Canvas,
+    scenario: HeroScenario,
+    territories: list[dict],
+    capitals: list[dict],
+    land_paths: list[str],
+    overlay_paths: dict[str, list[str]] | None = None,
+) -> str:
+    title = xml_escape(scenario.title)
+    if scenario.blank:
+        political_layer = blank_land_nodes(land_paths)
+        capital_layer = ""
+    else:
+        political_layer = territory_nodes(territories)
+        capital_layer = capital_nodes(capitals)
+    atlantropa_layer = atlantropa_nodes(overlay_paths or {})
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="{title}" data-hero-scenario="{xml_escape(scenario.mode)}" data-scenario-id="{xml_escape(scenario.scenario_id)}">
+  <defs>
+    <radialGradient id="heroSeaGlow" cx="50%" cy="44%" r="78%">
+      <stop offset="0" stop-color="#244a68" />
+      <stop offset="1" stop-color="#071522" />
+    </radialGradient>
+    <filter id="heroCapitalGlow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      .hero-graticule path {{ fill: none; stroke: rgba(255,255,255,.13); stroke-width: 1; }}
+      .territory {{ stroke: #0b1725; stroke-width: 1.08; vector-effect: non-scaling-stroke; opacity: .9; }}
+      .territory--focus {{ stroke: #f5d675; stroke-width: 1.55; }}
+      .territory--scenario-only {{ stroke-dasharray: 5 4; }}
+      .blank-land {{ fill: #aab9ae; stroke: #d8e2db; stroke-width: 1.06; vector-effect: non-scaling-stroke; opacity: .74; }}
+      .atlantropa {{ vector-effect: non-scaling-stroke; opacity: .72; }}
+      .atlantropa--water {{ fill: #1e5772; stroke: #8fc7cc; stroke-width: .8; opacity: .42; }}
+      .atlantropa--shoal {{ fill: #b7a985; stroke: #f0dfaa; stroke-width: .8; opacity: .52; }}
+      .atlantropa--land {{ fill: #b8ad85; stroke: #f2d886; stroke-width: .9; opacity: .58; }}
+      .capital circle {{ fill: #050b12; stroke: #dfeaf0; stroke-width: 2.2; filter: url(#heroCapitalGlow); opacity: .84; }}
+      .capital text {{ fill: #edf7fb; font: 800 14px Arial, sans-serif; paint-order: stroke; stroke: #07111f; stroke-width: 4; opacity: .82; }}
+      svg[data-hero-scenario="blank"] .hero-graticule path {{ stroke: rgba(255,255,255,.18); }}
+      svg[data-hero-scenario="blank"] .blank-land {{ fill: #b6c3bb; stroke: #edf4ee; opacity: .82; }}
+      svg[data-hero-scenario="hoi4-1936"] .territory {{ opacity: .9; }}
+      svg[data-hero-scenario="hoi4-1939"] .territory {{ opacity: .93; }}
+      svg[data-hero-scenario="tno-1962"] .territory {{ stroke: #050b13; stroke-width: 1.18; opacity: .88; }}
+      svg[data-hero-scenario="tno-1962"] .territory--scenario-only {{ stroke: #f0c35f; }}
+    </style>
+  </defs>
+  <rect width="{canvas.width}" height="{canvas.height}" rx="28" fill="url(#heroSeaGlow)" />
+  <g class="hero-graticule" aria-hidden="true">
+      {graticule(canvas)}
+  </g>
+  <g class="hero-political" data-layer="political">
+{political_layer}
+  </g>
+  <g class="hero-atlantropa" data-layer="atlantropa">
+{atlantropa_layer}
+  </g>
+  <g class="hero-capitals" data-layer="capitals">
+{capital_layer}
+  </g>
+</svg>
+"""
+
+
+def build_hero_metadata(
+    canvas: Canvas,
+    scenario: HeroScenario,
+    source_files: list[str],
+    counts: dict[str, int],
+    territories: list[dict],
+    capitals: list[dict],
+) -> dict:
+    min_x, min_y, max_x, max_y = canvas.projected_bounds
+    selection_policy = {
+        "viewport": "Europe hero crop shared by all scenario chips",
+        "blank_canvas": scenario.blank,
+        "ownership_fill": not scenario.blank,
+        "capital_limit": 0 if scenario.blank else 18,
+    }
+    if scenario.blank:
+        selection_policy.update(
+            {
+                "land_path_limit": counts.get("land_path_limit"),
+                "land_path_ranking": "clipped geometry area descending",
+            }
+        )
+    return {
+        "schema_version": 1,
+        "asset_type": "landing_hero_scenario_map",
+        "scenario_id": scenario.scenario_id,
+        "mode": scenario.mode,
+        "title": scenario.title,
+        "palette_class": scenario.palette_class,
+        "viewport": {
+            "bbox": list(EUROPE_BBOX),
+            "projection": "lambert_azimuthal_equal_area",
+            "center_lon": PROJECTION_CENTER_LON,
+            "center_lat": PROJECTION_CENTER_LAT,
+            "canvas_width": canvas.width,
+            "canvas_height": canvas.height,
+            "canvas_padding": SHOWCASE_CANVAS_PADDING,
+            "projected_bounds": [min_x, min_y, max_x, max_y],
+            "scale": canvas.scale,
+        },
+        "source_files": source_files,
+        "feature_counts": dict(counts),
+        "counts": dict(counts),
+        "territory_tags": sorted(item["tag"] for item in territories),
+        "capital_tags": sorted(item["tag"] for item in capitals),
+        "selection_policy": selection_policy,
+    }
+
+
+def build_hero_scenario_maps(output_dir: Path = LANDING_ASSETS) -> None:
+    canvas = Canvas.create(HERO_CANVAS_WIDTH, HERO_CANVAS_HEIGHT, EUROPE_BBOX)
+    for scenario in HERO_SCENARIOS:
+        output_paths = hero_output_paths(output_dir, scenario.mode)
+        if scenario.blank:
+            land_paths, counts, blank_source_paths = load_blank_land_paths(canvas)
+            territories: list[dict] = []
+            capitals: list[dict] = []
+            source_files = [repo_path(path) for path in blank_source_paths]
+        else:
+            territories, political_counts, paths, countries = load_scenario_territories(
+                canvas,
+                scenario.manifest_path,
+                capital_defaults_path=scenario.capital_defaults_path,
+            )
+            capitals, capital_source_paths = load_scenario_capitals(canvas, countries, paths, limit=18)
+            overlay_paths, overlay_counts, overlay_source_paths = load_atlantropa_paths(canvas, paths)
+            counts = {
+                "territories": political_counts["territories"],
+                "political_features": political_counts["source_features"],
+                "capitals": len(capitals),
+                **overlay_counts,
+            }
+            source_files = hero_source_files(paths, capital_source_paths, overlay_source_paths)
+        write_text_lf(
+            output_paths["svg"],
+            build_hero_svg(
+                canvas,
+                scenario,
+                territories,
+                capitals,
+                land_paths if scenario.blank else [],
+                overlay_paths if not scenario.blank else {},
+            ),
+        )
+        metadata = build_hero_metadata(canvas, scenario, source_files, counts, territories, capitals)
+        write_text_lf(output_paths["metadata"], json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 
 
 def build_svg(canvas: Canvas, territories: list[dict], capitals: list[dict], rails: list[str]) -> str:
@@ -620,5 +1025,10 @@ def build_showcase() -> None:
     write_text_lf(SHOWCASE_METADATA, json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 
 
-if __name__ == "__main__":
+def build_landing_assets() -> None:
     build_showcase()
+    build_hero_scenario_maps()
+
+
+if __name__ == "__main__":
+    build_landing_assets()

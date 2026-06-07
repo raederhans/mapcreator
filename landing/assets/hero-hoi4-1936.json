@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "asset_type": "landing_hero_scenario_map",
+  "scenario_id": "hoi4_1936",
+  "mode": "hoi4-1936",
+  "title": "HOI4 1936 Europe",
+  "palette_class": "hoi4-1936",
+  "viewport": {
+    "bbox": [
+      -12.5,
+      34.0,
+      41.5,
+      72.5
+    ],
+    "projection": "lambert_azimuthal_equal_area",
+    "center_lon": 10.0,
+    "center_lat": 52.0,
+    "canvas_width": 980,
+    "canvas_height": 680,
+    "canvas_padding": 36,
+    "projected_bounds": [
+      -0.3244604344837859,
+      -0.3128390268849723,
+      0.44727647666062786,
+      0.394157720514714
+    ],
+    "scale": 859.9756678318628
+  },
+  "source_files": [
+    "data/scenarios/hoi4_1936/manifest.json",
+    "data/scenarios/hoi4_1936/runtime_topology.topo.json",
+    "data/scenarios/hoi4_1936/owners.by_feature.json",
+    "data/scenarios/hoi4_1936/countries.json",
+    "data/scenarios/hoi4_1936/capital_hints.json"
+  ],
+  "feature_counts": {
+    "territories": 29,
+    "political_features": 6803,
+    "capitals": 18
+  },
+  "counts": {
+    "territories": 29,
+    "political_features": 6803,
+    "capitals": 18
+  },
+  "territory_tags": [
+    "ALB",
+    "AUS",
+    "BEL",
+    "BUL",
+    "CZE",
+    "DEN",
+    "ENG",
+    "EST",
+    "FIN",
+    "FRA",
+    "GER",
+    "GRE",
+    "HOL",
+    "HUN",
+    "IRE",
+    "ITA",
+    "LAT",
+    "LIT",
+    "LUX",
+    "NOR",
+    "POL",
+    "POR",
+    "ROM",
+    "SOV",
+    "SPR",
+    "SWE",
+    "SWI",
+    "TUR",
+    "YUG"
+  ],
+  "capital_tags": [
+    "ALB",
+    "AUS",
+    "BEL",
+    "BUL",
+    "CZE",
+    "DEN",
+    "ENG",
+    "EST",
+    "FIN",
+    "FRA",
+    "GER",
+    "GRE",
+    "HOL",
+    "ITA",
+    "POL",
+    "ROM",
+    "SOV",
+    "YUG"
+  ],
+  "selection_policy": {
+    "viewport": "Europe hero crop shared by all scenario chips",
+    "blank_canvas": false,
+    "ownership_fill": true,
+    "capital_limit": 18
+  }
+}

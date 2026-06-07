@@ -30,15 +30,19 @@ const translations = {
     languageSwitcherLabel: "Language switcher",
     statsLabel: "Scenario Forge product statistics",
     productPreviewAlt:
-      "Generated Scenario Forge political map with borders, routes, city lights, and country labels.",
+      "Generated Scenario Forge HOI4 1936 political map with borders and capital labels.",
+    heroAltBlank: "Generated neutral blank Europe map with land, water, borders, and grid lines.",
+    heroAltHoi41936: "Generated Scenario Forge HOI4 1936 Europe political map with capital labels.",
+    heroAltHoi41939: "Generated Scenario Forge HOI4 1939 Europe political map with capital labels.",
+    heroAltTno1962: "Generated Scenario Forge TNO 1962 Europe political map with Atlantropa context and capital labels.",
     workOneAlt:
       "Generated Scenario Forge showcase map with political borders, route overlays, and scenario labels.",
     workTwoAlt: "Generated Japan preview map with night-light context and transport cues.",
     workThreeAlt: "Generated modern world scenario template map.",
     chipBlank: "Blank",
-    chipModern: "Modern",
-    chipHoi4: "HOI4 1939",
-    chipTno: "TNO 1962",
+    chipHoi41936: "HOI4 1936",
+    chipHoi41939: "HOI4 1939",
+    chipTno1962: "TNO 1962",
     statScenarios: "built-in scenarios",
     statCities: "world city points",
     statAliases: "city aliases",
@@ -352,14 +356,18 @@ const translations = {
     primaryNavLabel: "主导航",
     languageSwitcherLabel: "语言切换",
     statsLabel: "Scenario Forge 产品数据",
-    productPreviewAlt: "生成式 Scenario Forge 政治地图，包含边界、路线、城市灯光和国家标签。",
+    productPreviewAlt: "生成式 Scenario Forge HOI4 1936 欧洲政治地图，包含边界和首都标签。",
+    heroAltBlank: "生成式中性欧洲空白地图，包含陆地、水域、边界和网格线。",
+    heroAltHoi41936: "生成式 Scenario Forge HOI4 1936 欧洲政治地图，包含首都标签。",
+    heroAltHoi41939: "生成式 Scenario Forge HOI4 1939 欧洲政治地图，包含首都标签。",
+    heroAltTno1962: "生成式 Scenario Forge TNO 1962 欧洲政治地图，包含 Atlantropa 上下文和首都标签。",
     workOneAlt: "生成式 Scenario Forge 展示地图，包含政治边界、路线覆盖层和场景标签。",
     workTwoAlt: "生成式日本预览图，展示夜光上下文和交通线索。",
     workThreeAlt: "生成式现代世界场景模板地图。",
     chipBlank: "空白地图",
-    chipModern: "现代世界",
-    chipHoi4: "HOI4 1939",
-    chipTno: "TNO 1962",
+    chipHoi41936: "HOI4 1936",
+    chipHoi41939: "HOI4 1939",
+    chipTno1962: "TNO 1962",
     statScenarios: "内置场景",
     statCities: "世界城市点",
     statAliases: "城市别名",
@@ -605,6 +613,29 @@ const DEFAULT_SHOWCASE_LAYER = "political";
 const SHOWCASE_VIEW_WIDTH = 980;
 const SHOWCASE_VIEW_HEIGHT = 620;
 const SHOWCASE_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.3];
+const DEFAULT_HERO_MODE = "hoi4-1936";
+const HERO_SCENARIO_ASSETS = {
+  blank: {
+    src: "./assets/hero-blank.svg",
+    metadata: "./assets/hero-blank.json",
+    altKey: "heroAltBlank",
+  },
+  "hoi4-1936": {
+    src: "./assets/hero-hoi4-1936.svg",
+    metadata: "./assets/hero-hoi4-1936.json",
+    altKey: "heroAltHoi41936",
+  },
+  "hoi4-1939": {
+    src: "./assets/hero-hoi4-1939.svg",
+    metadata: "./assets/hero-hoi4-1939.json",
+    altKey: "heroAltHoi41939",
+  },
+  "tno-1962": {
+    src: "./assets/hero-tno-1962.svg",
+    metadata: "./assets/hero-tno-1962.json",
+    altKey: "heroAltTno1962",
+  },
+};
 
 function getStoredLanguage() {
   try {
@@ -655,6 +686,7 @@ function applyLanguage(language) {
   if (twitterTitle) twitterTitle.setAttribute("content", copy.metaTitle);
   formatMetricNumbers(language);
   updateShowcaseLayerCopy(language);
+  syncHeroMapFromDom();
 
   try {
     globalThis.localStorage?.setItem(STORAGE_KEY, language);
@@ -742,22 +774,64 @@ function initScrollReveal() {
   revealNodes.forEach((node) => observer.observe(node));
 }
 
+function resolveHeroMode(mode) {
+  return Object.prototype.hasOwnProperty.call(HERO_SCENARIO_ASSETS, mode) ? mode : DEFAULT_HERO_MODE;
+}
+
+function syncHeroMap(root, mode, options = {}) {
+  const nextMode = resolveHeroMode(mode);
+  const asset = HERO_SCENARIO_ASSETS[nextMode];
+  const image = root.querySelector("[data-hero-image]");
+  const chips = Array.from(document.querySelectorAll("[data-hero-chip]"));
+  const copy = translations[getActiveLanguage()] || translations.en;
+
+  root.dataset.heroMode = nextMode;
+  if (asset.metadata) {
+    root.dataset.heroMetadata = asset.metadata;
+  }
+
+  if (image) {
+    const swapImage = () => {
+      image.src = asset.src;
+      image.alt = copy[asset.altKey] || copy.productPreviewAlt;
+    };
+    if (options.animate) {
+      root.dataset.heroTransition = "loading";
+      root.dataset.heroPendingMode = nextMode;
+      globalThis.setTimeout(() => {
+        if (root.dataset.heroPendingMode !== nextMode) return;
+        swapImage();
+        root.dataset.heroTransition = "ready";
+        delete root.dataset.heroPendingMode;
+      }, 80);
+    } else {
+      delete root.dataset.heroPendingMode;
+      swapImage();
+      root.dataset.heroTransition = "ready";
+    }
+  }
+
+  chips.forEach((chip) => {
+    const active = chip.getAttribute("data-hero-chip") === nextMode;
+    chip.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function syncHeroMapFromDom() {
+  const root = document.querySelector("[data-hero-map]");
+  if (!root) return;
+  syncHeroMap(root, root.dataset.heroMode || DEFAULT_HERO_MODE);
+}
+
 function initHeroMap() {
   const root = document.querySelector("[data-hero-map]");
   const chips = Array.from(document.querySelectorAll("[data-hero-chip]"));
   if (!root || !chips.length) return;
-
-  const setMode = (mode) => {
-    root.dataset.heroMode = mode;
-    chips.forEach((chip) => {
-      const active = chip.getAttribute("data-hero-chip") === mode;
-      chip.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-  };
+  syncHeroMap(root, root.dataset.heroMode || DEFAULT_HERO_MODE);
 
   chips.forEach((chip) => {
     chip.addEventListener("click", () => {
-      setMode(chip.getAttribute("data-hero-chip") || "modern");
+      syncHeroMap(root, chip.getAttribute("data-hero-chip") || DEFAULT_HERO_MODE, { animate: true });
     });
   });
 }

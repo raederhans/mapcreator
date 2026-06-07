@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 53745
+      "size_bytes": 56657
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37229,8 +37229,40 @@
       "size_bytes": 832
     },
     {
+      "path": "assets/hero-blank.json",
+      "size_bytes": 1549
+    },
+    {
+      "path": "assets/hero-blank.svg",
+      "size_bytes": 254049
+    },
+    {
       "path": "assets/hero-cartography.svg",
       "size_bytes": 64366
+    },
+    {
+      "path": "assets/hero-hoi4-1936.json",
+      "size_bytes": 1837
+    },
+    {
+      "path": "assets/hero-hoi4-1936.svg",
+      "size_bytes": 87680
+    },
+    {
+      "path": "assets/hero-hoi4-1939.json",
+      "size_bytes": 1815
+    },
+    {
+      "path": "assets/hero-hoi4-1939.svg",
+      "size_bytes": 89031
+    },
+    {
+      "path": "assets/hero-tno-1962.json",
+      "size_bytes": 2242
+    },
+    {
+      "path": "assets/hero-tno-1962.svg",
+      "size_bytes": 150358
     },
     {
       "path": "assets/japan-preview-cities.svg",
@@ -37290,15 +37322,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 48868
+      "size_bytes": 48899
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1053340
+      "size_bytes": 1053988
     },
     {
       "path": "styles.css",
-      "size_bytes": 33230
+      "size_bytes": 33307
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37311,5 +37343,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1110710401
+  "total_bytes": 1111302630
 }

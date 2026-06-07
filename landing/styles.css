@@ -432,19 +432,22 @@ a.button {
   object-position: 52% 48%;
   opacity: 0.96;
   transform: translate3d(-3%, -3%, 0) scale(1.02);
-  transition: filter var(--transition-medium), transform var(--transition-medium);
+  transition: opacity var(--transition-medium), transform var(--transition-medium);
 }
 
-.product-stage[data-hero-mode="blank"] .hero-cartography {
-  filter: saturate(0.5) brightness(1.16) contrast(0.92);
+.product-stage[data-hero-transition="loading"] .hero-cartography {
+  opacity: 0.18;
 }
 
-.product-stage[data-hero-mode="hoi4"] .hero-cartography {
-  filter: sepia(0.26) saturate(1.1) contrast(1.05);
+.product-stage[data-hero-mode="blank"] .hero-cartography,
+.product-stage[data-hero-mode="hoi4-1936"] .hero-cartography,
+.product-stage[data-hero-mode="hoi4-1939"] .hero-cartography,
+.product-stage[data-hero-mode="tno-1962"] .hero-cartography {
+  filter: none;
 }
 
-.product-stage[data-hero-mode="tno"] .hero-cartography {
-  filter: saturate(0.72) contrast(1.22) brightness(0.78);
+.product-stage[data-hero-mode="blank"] .hero-map__hud {
+  opacity: 0.78;
 }
 
 .hero-map__hud,
@@ -473,7 +476,7 @@ a.button {
 
 .hero-map__legend {
   right: 18px;
-  bottom: 18px;
+  bottom: 70px;
   padding: 10px 12px;
   border-radius: 14px;
 }

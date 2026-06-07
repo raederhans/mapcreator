@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "asset_type": "landing_hero_scenario_map",
+  "scenario_id": "blank_base",
+  "mode": "blank",
+  "title": "Blank Europe canvas",
+  "palette_class": "blank",
+  "viewport": {
+    "bbox": [
+      -12.5,
+      34.0,
+      41.5,
+      72.5
+    ],
+    "projection": "lambert_azimuthal_equal_area",
+    "center_lon": 10.0,
+    "center_lat": 52.0,
+    "canvas_width": 980,
+    "canvas_height": 680,
+    "canvas_padding": 36,
+    "projected_bounds": [
+      -0.3244604344837859,
+      -0.3128390268849723,
+      0.44727647666062786,
+      0.394157720514714
+    ],
+    "scale": 859.9756678318628
+  },
+  "source_files": [
+    "data/scenarios/blank_base/manifest.json",
+    "data/europe_topology.runtime_political_v1.json"
+  ],
+  "feature_counts": {
+    "land_features_inspected": 23426,
+    "land_features_candidates": 7263,
+    "land_features_clipped": 7261,
+    "land_paths_available": 8242,
+    "land_paths": 900,
+    "land_paths_dropped": 7342,
+    "land_path_limit": 900
+  },
+  "counts": {
+    "land_features_inspected": 23426,
+    "land_features_candidates": 7263,
+    "land_features_clipped": 7261,
+    "land_paths_available": 8242,
+    "land_paths": 900,
+    "land_paths_dropped": 7342,
+    "land_path_limit": 900
+  },
+  "territory_tags": [],
+  "capital_tags": [],
+  "selection_policy": {
+    "viewport": "Europe hero crop shared by all scenario chips",
+    "blank_canvas": true,
+    "ownership_fill": false,
+    "capital_limit": 0,
+    "land_path_limit": 900,
+    "land_path_ranking": "clipped geometry area descending"
+  }
+}
