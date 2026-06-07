@@ -957,9 +957,22 @@ function initShowcaseView() {
 
   let dragState = null;
 
+  const isModifiedWheelEvent = (event) => Boolean(event.ctrlKey || event.metaKey || event.altKey);
+
   const onWheel = (event) => {
+    if (!isModifiedWheelEvent(event)) return;
     event.preventDefault();
     zoomShowcaseView(root, event.deltaY < 0 ? 1 : -1);
+  };
+
+  const onDoubleClick = (event) => {
+    event.preventDefault();
+    const state = getShowcaseViewState(root);
+    if (SHOWCASE_VIEW_SCALES[state.scaleIndex] <= 1) {
+      zoomShowcaseView(root, 1);
+    } else {
+      resetShowcaseView(root);
+    }
   };
 
   const onPointerDown = (event) => {
@@ -1002,7 +1015,7 @@ function initShowcaseView() {
     svg.addEventListener("pointermove", onPointerMove);
     svg.addEventListener("pointerup", onPointerEnd);
     svg.addEventListener("pointercancel", onPointerEnd);
-    svg.addEventListener("dblclick", () => resetShowcaseView(root));
+    svg.addEventListener("dblclick", onDoubleClick);
   };
 
   objectNode.addEventListener("wheel", onWheel, { passive: false });
@@ -1010,7 +1023,7 @@ function initShowcaseView() {
   objectNode.addEventListener("pointermove", onPointerMove);
   objectNode.addEventListener("pointerup", onPointerEnd);
   objectNode.addEventListener("pointercancel", onPointerEnd);
-  objectNode.addEventListener("dblclick", () => resetShowcaseView(root));
+  objectNode.addEventListener("dblclick", onDoubleClick);
   objectNode.addEventListener("load", bindEmbeddedSvg);
   resetShowcaseView(root);
   bindEmbeddedSvg();

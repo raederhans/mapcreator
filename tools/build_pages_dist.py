@@ -18,6 +18,7 @@ from tools.app_entry_resolver import (
     resolve_landing_entry_path,
 )
 from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase
+from tools.build_landing_hero_cartography import main as build_landing_hero_cartography
 from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview
 
 DIST_ROOT = ROOT / "dist"
@@ -128,7 +129,7 @@ LF_NORMALIZED_ROOT_DIST_PATHS = {
     Path("app.js"),
     Path("styles.css"),
 }
-LF_NORMALIZED_APP_SUFFIXES = {".js", ".json"}
+LF_NORMALIZED_APP_SUFFIXES = {".css", ".html", ".js", ".json", ".md", ".svg", ".txt"}
 BYTE_EXACT_APP_DATA_PATHS = {
     Path("app") / "data" / "hgo_runtime" / "manifest.json",
     Path("app") / "data" / "hgo_runtime" / "seed.json",
@@ -155,8 +156,6 @@ def should_normalize_dist_text_file_lf(path: Path) -> bool:
     if relative_path in BYTE_EXACT_APP_DATA_PATHS:
         return False
     if relative_path in LF_NORMALIZED_ROOT_DIST_PATHS:
-        return True
-    if relative_path.as_posix() == "app/index.html":
         return True
     return (
         len(relative_path.parts) >= 2
@@ -802,6 +801,7 @@ def main() -> None:
     editor_entry = resolve_editor_entry_path(root=ROOT)
 
     # landing builder 的输出先落到 landing/assets，再由 reset_dist 后的复制步骤发布到 dist。
+    build_landing_hero_cartography()
     build_landing_europe_1936_showcase()
     build_landing_japan_preview()
     reset_dist()

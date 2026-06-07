@@ -9,7 +9,12 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from tools import build_landing_europe_1936_showcase, build_landing_japan_preview, build_pages_dist
+from tools import (
+    build_landing_europe_1936_showcase,
+    build_landing_hero_cartography,
+    build_landing_japan_preview,
+    build_pages_dist,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -313,9 +318,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
         self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
+        self.assertIn('".css"', source)
+        self.assertIn('".svg"', source)
+        self.assertIn('".md"', source)
+        self.assertIn('".txt"', source)
         self.assertIn('newline="\\n"', source)
         self.assertIn("from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase", source)
+        self.assertIn("from tools.build_landing_hero_cartography import main as build_landing_hero_cartography", source)
         self.assertIn("from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview", source)
+        self.assertLess(source.index("build_landing_hero_cartography()"), source.index("    reset_dist()"))
         self.assertLess(source.index("build_landing_europe_1936_showcase()"), source.index("    reset_dist()"))
         self.assertLess(source.index("build_landing_japan_preview()"), source.index("    reset_dist()"))
         self.assertNotIn(".write_text(", source)
@@ -341,8 +352,46 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     root_dist_path.write_bytes(b"line 1\r\nline 2\r\n")
                     build_pages_dist.normalize_dist_text_file_lf(root_dist_path)
                     self.assertEqual(root_dist_path.read_bytes(), b"line 1\nline 2\n")
+                for relative_path in (
+                    Path("app") / "css" / "style.css",
+                    Path("app") / "index.html",
+                    Path("app") / "vendor" / "textures" / "README.md",
+                    Path("app") / "vendor" / "textures" / "paper_vintage_01.svg",
+                    Path("app") / "vendor" / "fflate.LICENSE.txt",
+                ):
+                    app_dist_path = Path(tmpdir) / relative_path
+                    app_dist_path.parent.mkdir(parents=True, exist_ok=True)
+                    app_dist_path.write_bytes(b"line 1\r\nline 2\r\n")
+                    build_pages_dist.normalize_dist_text_file_lf(app_dist_path)
+                    self.assertEqual(app_dist_path.read_bytes(), b"line 1\nline 2\n")
+                exact_json_path = Path(tmpdir) / "app" / "data" / "hgo_runtime" / "manifest.json"
+                exact_json_path.parent.mkdir(parents=True, exist_ok=True)
+                exact_json_path.write_bytes(b"{\r\n}\r\n")
+                build_pages_dist.normalize_dist_text_file_lf(exact_json_path)
+                self.assertEqual(exact_json_path.read_bytes(), b"{\r\n}\r\n")
             finally:
                 build_pages_dist.DIST_ROOT = original_dist_root
+
+    def test_landing_hero_cartography_builder_keeps_checked_in_assets_current(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            previous_assets_dir = build_landing_hero_cartography.LANDING_ASSETS
+            try:
+                build_landing_hero_cartography.LANDING_ASSETS = tmp_root
+                build_landing_hero_cartography.main()
+                for asset_name in (
+                    "hero-cartography.svg",
+                    "showcase-final-map.svg",
+                    "template-blank.svg",
+                    "template-modern.svg",
+                    "template-hoi4.svg",
+                    "template-tno.svg",
+                ):
+                    with self.subTest(asset_name=asset_name):
+                        generated_path = tmp_root / asset_name
+                        self.assertEqual(generated_path.read_bytes(), (LANDING_ASSETS / asset_name).read_bytes())
+            finally:
+                build_landing_hero_cartography.LANDING_ASSETS = previous_assets_dir
 
     def test_pages_dist_reset_clears_previous_output_tree(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

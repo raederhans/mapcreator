@@ -143,7 +143,12 @@ test("landing showcase view uses wheel zoom and drag without bottom controls", (
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
   assert.equal(harness.viewport.attributes.transform, "matrix(1 0 0 1 0.0 0.0)");
 
-  const wheelEvent = createEvent({ deltaY: -120 });
+  const plainWheelEvent = createEvent({ deltaY: -120 });
+  harness.svg.dispatchEvent("wheel", plainWheelEvent);
+  assert.equal(plainWheelEvent.defaultPrevented, false);
+  assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
+
+  const wheelEvent = createEvent({ ctrlKey: true, deltaY: -120 });
   harness.svg.dispatchEvent("wheel", wheelEvent);
   assert.equal(wheelEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
@@ -158,8 +163,15 @@ test("landing showcase view uses wheel zoom and drag without bottom controls", (
   assert.notEqual(harness.root.dataset.showcaseViewX, xBeforeDrag);
   assert.notEqual(harness.root.dataset.showcaseViewY, yBeforeDrag);
 
-  harness.svg.dispatchEvent("dblclick", createEvent());
+  const resetEvent = createEvent();
+  harness.svg.dispatchEvent("dblclick", resetEvent);
+  assert.equal(resetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
   assert.equal(harness.root.dataset.showcaseViewZoomed, "false");
   assert.equal(harness.viewport.attributes.transform, "matrix(1 0 0 1 0.0 0.0)");
+
+  harness.svg.dispatchEvent("dblclick", createEvent());
+  assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
+  harness.svg.dispatchEvent("dblclick", createEvent());
+  assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
 });

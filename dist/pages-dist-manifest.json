@@ -6,7 +6,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 284967
+      "size_bytes": 272282
     },
     {
       "path": "app/data/CATALOG.json",
@@ -37186,7 +37186,7 @@
     },
     {
       "path": "app/vendor/fflate.LICENSE.txt",
-      "size_bytes": 1089
+      "size_bytes": 1069
     },
     {
       "path": "app/vendor/milsymbol.js",
@@ -37194,11 +37194,11 @@
     },
     {
       "path": "app/vendor/textures/paper_vintage_01.svg",
-      "size_bytes": 3007
+      "size_bytes": 2938
     },
     {
       "path": "app/vendor/textures/README.md",
-      "size_bytes": 880
+      "size_bytes": 863
     },
     {
       "path": "app/vendor/topojson-client.min.js",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 56640
+      "size_bytes": 57009
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37226,7 +37226,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 832
+      "size_bytes": 818
     },
     {
       "path": "assets/hero-blank.json",
@@ -37290,7 +37290,7 @@
     },
     {
       "path": "assets/showcase-final-map.svg",
-      "size_bytes": 31201
+      "size_bytes": 31074
     },
     {
       "path": "assets/social-preview.png",
@@ -37298,23 +37298,23 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1513
+      "size_bytes": 1495
     },
     {
       "path": "assets/template-blank.svg",
-      "size_bytes": 31183
+      "size_bytes": 31056
     },
     {
       "path": "assets/template-hoi4.svg",
-      "size_bytes": 31181
+      "size_bytes": 31054
     },
     {
       "path": "assets/template-modern.svg",
-      "size_bytes": 31185
+      "size_bytes": 31058
     },
     {
       "path": "assets/template-tno.svg",
-      "size_bytes": 31179
+      "size_bytes": 31052
     },
     {
       "path": "assets/workspace-overview.webp",
@@ -37343,5 +37343,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1111304927
+  "total_bytes": 1111291838
 }
