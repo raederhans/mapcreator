@@ -202,6 +202,9 @@
 ### 失败的性能实验也要锁合同
 - 渲染链路里被测试并拒绝的 cache 签名收窄、entry 复用等实验，要用合同测试钉住当前边界；只在文档里记录原因，后续容易被同类优化重新引入。
 
+### 投影缓存签名要覆盖反投影输入
+- 依赖 `projection.invert()` 或 `transform.invert()` 的 raster/cache key，除了尺寸、DPR、projection 参数和 zoom `k/x/y`，还要记录自定义 transform identity 或明确不可变合同；只记录数值字段会让不同 inverse 映射复用旧 buffer。
+
 ### render benchmark 优化先看采样窗口
 - post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
 - scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。

@@ -191,9 +191,10 @@ function formatSignatureArray(value) {
   return Array.isArray(value) ? value.map(formatSignatureNumber).join(",") : "";
 }
 
-function getProjectionTransformSignature(transform) {
+function getProjectionTransformSignature(transform, transformId = "none") {
   if (!transform) return "none";
   return [
+    transformId,
     formatSignatureNumber(transform.k),
     formatSignatureNumber(transform.x),
     formatSignatureNumber(transform.y),
@@ -202,6 +203,7 @@ function getProjectionTransformSignature(transform) {
 
 function createProjectionRenderCacheKey({
   projectionId,
+  projectionTransformId,
   renderOptions,
   targetWidth,
   targetHeight,
@@ -220,7 +222,7 @@ function createProjectionRenderCacheKey({
     formatSignatureArray(projection?.translate?.()),
     formatSignatureArray(projection?.center?.()),
     formatSignatureArray(projection?.rotate?.()),
-    getProjectionTransformSignature(renderOptions.projectionTransform),
+    getProjectionTransformSignature(renderOptions.projectionTransform, projectionTransformId),
   ].join("|");
 }
 
@@ -230,7 +232,9 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
   let disposed = false;
   let projectedRenderCache = null;
   let nextProjectionId = 1;
+  let nextProjectionTransformId = 1;
   const projectionIds = new WeakMap();
+  const projectionTransformIds = new WeakMap();
 
   const assertActive = () => {
     if (disposed) {
@@ -330,6 +334,16 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
       nextProjectionId += 1;
     }
     return projectionIds.get(projection);
+  };
+
+  const getProjectionTransformId = (transform) => {
+    if (!transform || typeof transform.invert !== "function") return "none";
+    if ((typeof transform !== "function" && typeof transform !== "object") || transform === null) return "none";
+    if (!projectionTransformIds.has(transform)) {
+      projectionTransformIds.set(transform, nextProjectionTransformId);
+      nextProjectionTransformId += 1;
+    }
+    return projectionTransformIds.get(transform);
   };
 
   const renderProjectedToBuffer = (options = {}) => {
@@ -460,6 +474,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     const renderOptions = normalizeRenderOptions(options);
     const cacheKey = createProjectionRenderCacheKey({
       projectionId: getProjectionId(renderOptions.projection),
+      projectionTransformId: getProjectionTransformId(renderOptions.projectionTransform),
       renderOptions,
       targetWidth,
       targetHeight,

@@ -36398,7 +36398,7 @@
     },
     {
       "path": "app/js/core/hgo_raster_renderer.js",
-      "size_bytes": 20098
+      "size_bytes": 20824
     },
     {
       "path": "app/js/core/hgo_runtime_asset_loader.js",
@@ -37403,5 +37403,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1113281944
+  "total_bytes": 1113282670
 }

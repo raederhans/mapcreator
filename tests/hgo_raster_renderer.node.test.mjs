@@ -133,6 +133,12 @@ function createCountingLinearProjection() {
   return projection;
 }
 
+function createProjectionTransform(offsetX = 0) {
+  return {
+    invert: ([x, y]) => [x + offsetX, y],
+  };
+}
+
 function createBmp24(rows) {
   const height = rows.length;
   const width = rows[0]?.length || 0;
@@ -479,6 +485,31 @@ test("reuses projected render buffer while repainting the target canvas", () => 
 
   renderer.renderProjectedToCanvas(canvas, { projection, projectionTransform: { k: 2, x: 0, y: 0 } });
   assert.equal(projection.getInvertCount(), 16);
+});
+
+test("invalidates projected render cache when custom transform invert changes", () => {
+  const context = createImageDataContext();
+  const canvas = {
+    width: 4,
+    height: 2,
+    getContext: () => context,
+  };
+  const projection = createCountingLinearProjection();
+  const renderer = createProjectedRenderer();
+
+  renderer.renderProjectedToCanvas(canvas, {
+    projection,
+    projectionTransform: createProjectionTransform(0),
+  });
+  assert.equal(projection.getInvertCount(), 8);
+  assert.deepEqual(Array.from(context.calls.putImageData[0][0].data.slice(0, 4)), [1, 2, 3, 255]);
+
+  renderer.renderProjectedToCanvas(canvas, {
+    projection,
+    projectionTransform: createProjectionTransform(1),
+  });
+  assert.equal(projection.getInvertCount(), 16);
+  assert.deepEqual(Array.from(context.calls.putImageData[1][0].data.slice(0, 4)), [4, 5, 6, 255]);
 });
 
 test("renders controller colors when requested", () => {
