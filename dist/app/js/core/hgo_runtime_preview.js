@@ -10,6 +10,8 @@ const HGO_RUNTIME_PREVIEW_STATUS = Object.freeze({
   ERROR: "error",
 });
 
+const HGO_RUNTIME_PREVIEW_LAYER_OWNER = "hgo-runtime-preview";
+
 function createDefaultHgoRuntimePreviewState() {
   return {
     enabled: false,
@@ -64,9 +66,12 @@ function persistPreviewEnabled(storage, enabled) {
   } catch {}
 }
 
-function buildRenderSummary(rendered) {
+function buildRenderSummary(rendered, { reason = "manual", renderCount = 0 } = {}) {
   if (!rendered) return null;
   return Object.freeze({
+    layerOwner: HGO_RUNTIME_PREVIEW_LAYER_OWNER,
+    reason: String(reason || "manual"),
+    renderCount: Math.max(0, Math.floor(Number(renderCount) || 0)),
     width: rendered.width,
     height: rendered.height,
     canvasWidth: rendered.canvasWidth || rendered.width,
@@ -110,6 +115,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   let renderer = null;
   let loadingPromise = null;
   let loadGeneration = 0;
+  let renderCount = previewState.renderSummary?.renderCount || 0;
 
   const disposeRenderer = () => {
     if (renderer) {
@@ -123,10 +129,12 @@ function createHgoRuntimePreviewController(runtimeState, {
     }
   };
 
-  const renderPreview = () => {
+  const renderPreview = (options = {}) => {
     if (!renderer) return null;
+    const reason = options && typeof options === "object" ? options.reason : "manual";
     const rendered = canvas ? renderer.renderToCanvas(canvas, renderOptions) : renderer.renderToBuffer(renderOptions);
-    previewState.renderSummary = buildRenderSummary(rendered);
+    renderCount += 1;
+    previewState.renderSummary = buildRenderSummary(rendered, { reason, renderCount });
     return rendered;
   };
 
@@ -141,7 +149,7 @@ function createHgoRuntimePreviewController(runtimeState, {
     }
     renderer = createHgoRasterRenderer({ seed, ...raster });
     previewState.summary = renderer.getSummary();
-    renderPreview();
+    renderPreview({ reason: "load" });
     return renderer;
   };
 
@@ -158,6 +166,7 @@ function createHgoRuntimePreviewController(runtimeState, {
       previewState.summary = null;
       previewState.renderSummary = null;
       previewState.inspectResult = null;
+      renderCount = 0;
       persistPreviewEnabled(storage, false);
       if (shouldRestoreTarget) {
         restoreRenderedTarget();
@@ -167,7 +176,7 @@ function createHgoRuntimePreviewController(runtimeState, {
 
     if (previewState.enabled && renderer) {
       previewState.status = HGO_RUNTIME_PREVIEW_STATUS.READY;
-      renderPreview();
+      renderPreview({ reason: "enable-ready" });
       return previewState;
     }
 
@@ -205,6 +214,7 @@ function createHgoRuntimePreviewController(runtimeState, {
           previewState.summary = null;
           previewState.renderSummary = null;
           previewState.inspectResult = null;
+          renderCount = 0;
           persistPreviewEnabled(storage, false);
           if (shouldRestoreTarget) {
             restoreRenderedTarget();
@@ -241,6 +251,7 @@ function createHgoRuntimePreviewController(runtimeState, {
     previewState.summary = null;
     previewState.renderSummary = null;
     previewState.inspectResult = null;
+    renderCount = 0;
     persistPreviewEnabled(storage, false);
     if (shouldRestoreTarget) {
       restoreRenderedTarget();

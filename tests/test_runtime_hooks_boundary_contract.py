@@ -69,6 +69,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
 
     def test_hgo_runtime_preview_hooks_are_registered_for_renderer_mode(self):
         config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
 
         for hook_name in [
@@ -82,11 +83,42 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
 
         self.assertIn('callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn"', renderer_content)
         self.assertIn('callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn"', renderer_content)
+        self.assertIn(
+            'hgoRuntimePreviewController?.renderPreview?.(options) || null',
+            toolbar_content,
+        )
         self.assertIn("function inspectHgoRuntimePreviewFromEvent(", renderer_content)
         self.assertIn("function normalizeHgoRuntimeHitPayload(", renderer_content)
         self.assertIn('if (targetType === "hgo") {', renderer_content)
         self.assertIn("normalized.hgoRuntime = hgoRuntime;", renderer_content)
         self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', renderer_content)
+
+        draw_start = renderer_content.index("function drawCanvas() {")
+        draw_end = renderer_content.index("function buildExactAfterSettleRefreshPlan(", draw_start)
+        draw_body = renderer_content[draw_start:draw_end]
+        self.assertIn('renderHgoRuntimePreviewIfReady("draw-canvas");', draw_body)
+        self.assertLess(
+            draw_body.index("finalizePendingExactAfterSettleRefreshAfterPaint();"),
+            draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),
+        )
+        self.assertLess(
+            draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),
+            draw_body.index('incrementPerfCounter("frames");'),
+        )
+
+        hover_start = renderer_content.index("function handleMouseMove(event) {")
+        hover_end = renderer_content.index("const reducedHoverPhase =", hover_start)
+        hover_body = renderer_content[hover_start:hover_end]
+        self.assertIn('inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });', hover_body)
+        self.assertIn("if (hgoRuntimeHover.active) {", hover_body)
+        self.assertIn("updateDevHoverHit(hgoRuntimeHover.hit?.id ? hgoRuntimeHover.hit : null);", hover_body)
+
+        click_start = renderer_content.index("async function handleClick(event, _interactionContext = null) {")
+        click_end = renderer_content.index("const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);", click_start)
+        click_body = renderer_content[click_start:click_end]
+        self.assertIn('inspectHgoRuntimePreviewFromEvent(event, { eventType: "click" });', click_body)
+        self.assertIn("if (hgoRuntimeClick.active) {", click_body)
+        self.assertIn("updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);", click_body)
 
 
 if __name__ == "__main__":

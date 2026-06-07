@@ -95,7 +95,7 @@ test("keeps HGO runtime preview disabled by default", () => {
   assert.equal(preview.status, HGO_RUNTIME_PREVIEW_STATUS.IDLE);
 });
 
-test("loads seed and raster once while already enabled", async () => {
+test("loads seed and raster once while already enabled and repaints existing renderer", async () => {
   const harness = createController();
 
   await harness.controller.setEnabled(true);
@@ -106,6 +106,9 @@ test("loads seed and raster once while already enabled", async () => {
   assert.equal(harness.getSeedLoadCount(), 1);
   assert.equal(harness.getRasterLoadCount(), 1);
   assert.deepEqual(harness.runtimeState.hgoRuntimePreview.renderSummary, {
+    layerOwner: "hgo-runtime-preview",
+    reason: "enable-ready",
+    renderCount: 2,
     width: 1,
     height: 1,
     canvasWidth: 1,
@@ -126,13 +129,21 @@ test("ready preview can repaint the same canvas after a normal map redraw", asyn
   await harness.controller.setEnabled(true);
   assert.equal(canvas.getPutCount(), 1);
 
-  const rendered = harness.controller.renderPreview();
+  const rendered = harness.controller.renderPreview({ reason: "draw-canvas" });
 
   assert.equal(canvas.getPutCount(), 2);
   assert.equal(rendered.resolvedPixelCount, 1);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.layerOwner, "hgo-runtime-preview");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "draw-canvas");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 2);
   assert.equal(canvas.getLastImageData().x, 0);
   assert.equal(canvas.getLastImageData().y, 0);
   assert.deepEqual(Array.from(canvas.getLastImageData().imageData.data), [1, 2, 3, 255]);
+
+  harness.controller.renderPreview(null);
+
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "manual");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 3);
 });
 
 test("ignores stale load completion after preview is disabled", async () => {

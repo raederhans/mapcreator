@@ -140,6 +140,12 @@ test("toolbar preview button enables injected preview loader in developer mode",
   assert.equal(button.attributes.get("aria-label"), "HGO preview ready");
   assert.equal(runtimeState.hgoRuntimePreview.status, "ready");
 
+  controller.renderPreview({ reason: "draw-canvas" });
+
+  assert.equal(runtimeState.hgoRuntimePreview.renderSummary.layerOwner, "hgo-runtime-preview");
+  assert.equal(runtimeState.hgoRuntimePreview.renderSummary.reason, "draw-canvas");
+  assert.equal(runtimeState.hgoRuntimePreview.renderSummary.renderCount, 2);
+
   await controller.setEnabled(false);
 
   assert.equal(restoreCount, 1);

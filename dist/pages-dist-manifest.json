@@ -36406,7 +36406,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 8455
+      "size_bytes": 9048
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -37347,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112683043
+  "total_bytes": 1112683636
 }
