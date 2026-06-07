@@ -37214,11 +37214,11 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 5420
+      "size_bytes": 5593
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 226217
+      "size_bytes": 251550
     },
     {
       "path": "assets/favicon.png",
@@ -37347,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112703629
+  "total_bytes": 1112729135
 }

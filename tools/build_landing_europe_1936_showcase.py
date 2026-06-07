@@ -73,7 +73,10 @@ URBAN_AREA_SIMPLIFY = 0.045
 RIVER_LINE_LIMIT = 82
 RIVER_LINE_SIMPLIFY = 0.025
 RIVER_MIN_PROJECTED_PX = 16.0
-NIGHT_LIGHT_LIMIT = 54
+NIGHT_LIGHT_LIMIT = 72
+NIGHT_LIGHT_BELT_LIMIT = 54
+NIGHT_LIGHT_BELT_MIN_DISTANCE_PX = 14.0
+NIGHT_LIGHT_BELT_MAX_DISTANCE_PX = 74.0
 BLANK_LAND_SIMPLIFY = 0.08
 BLANK_INTERNAL_STROKE_WIDTH = 0.25
 BLANK_COASTLINE_STROKE_WIDTH = 0.5
@@ -975,6 +978,65 @@ def city_light_nodes(city_lights: list[dict]) -> str:
     return "\n".join(nodes)
 
 
+def night_light_texture_nodes(city_lights: list[dict]) -> str:
+    nodes: list[str] = []
+    ranked = sorted(city_lights, key=lambda item: float(item.get("population") or 0.0), reverse=True)
+    for index, item in enumerate(ranked[:42]):
+        escaped_name = xml_escape(str(item["name"]))
+        population = float(item.get("population") or 0.0)
+        population_scale = math.sqrt(max(population, 1.0))
+        rx = 9.0 + min(24.0, population_scale / 620.0)
+        ry = 3.8 + min(10.0, population_scale / 1450.0)
+        name_seed = sum(ord(char) for char in escaped_name)
+        angle = (name_seed % 52) - 26
+        tier_class = " night-light-smear--major" if index < 12 or item.get("capital") else ""
+        nodes.append(
+            f'      <ellipse class="night-light-smear{tier_class}" '
+            f'cx="{fmt(item["x"])}" cy="{fmt(item["y"])}" rx="{fmt(rx)}" ry="{fmt(ry)}" '
+            f'transform="rotate({fmt(angle)} {fmt(item["x"])} {fmt(item["y"])})">'
+            f"<title>{escaped_name}</title></ellipse>"
+        )
+    return "\n".join(nodes)
+
+
+def night_light_belt_nodes(city_lights: list[dict]) -> str:
+    candidates: list[tuple[float, str, str]] = []
+    ranked = sorted(city_lights, key=lambda item: float(item.get("population") or 0.0), reverse=True)
+    for index, first in enumerate(ranked):
+        for second in ranked[index + 1 :]:
+            dx = float(second["x"]) - float(first["x"])
+            dy = float(second["y"]) - float(first["y"])
+            distance = math.hypot(dx, dy)
+            if distance < NIGHT_LIGHT_BELT_MIN_DISTANCE_PX or distance > NIGHT_LIGHT_BELT_MAX_DISTANCE_PX:
+                continue
+            first_population = math.sqrt(max(float(first.get("population") or 0.0), 1.0))
+            second_population = math.sqrt(max(float(second.get("population") or 0.0), 1.0))
+            score = (first_population + second_population) / (distance + 12.0)
+            if first.get("capital") or second.get("capital"):
+                score *= 1.18
+            midpoint_x = (float(first["x"]) + float(second["x"])) / 2.0
+            midpoint_y = (float(first["y"]) + float(second["y"])) / 2.0
+            curve = min(16.0, max(4.0, distance * 0.16))
+            direction = -1 if (sum(ord(char) for char in str(first["name"]) + str(second["name"])) % 2) else 1
+            control_x = midpoint_x - (dy / distance) * curve * direction
+            control_y = midpoint_y + (dx / distance) * curve * direction
+            path = (
+                f'M{fmt(first["x"])} {fmt(first["y"])} '
+                f'Q{fmt(control_x)} {fmt(control_y)} {fmt(second["x"])} {fmt(second["y"])}'
+            )
+            title = xml_escape(f'{first["name"]} - {second["name"]}')
+            candidates.append((score, title, path))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    nodes: list[str] = []
+    for _score, title, path in candidates[:NIGHT_LIGHT_BELT_LIMIT]:
+        nodes.append(
+            f'      <path class="night-light-belt night-light-belt--halo" d="{path}"><title>{title}</title></path>'
+        )
+        nodes.append(f'      <path class="night-light-belt night-light-belt--core" d="{path}" />')
+    return "\n".join(nodes)
+
+
 def day_night_nodes(canvas: Canvas, capitals: list[dict], city_lights: list[dict]) -> str:
     shade_start = -canvas.width * 0.64
     shade_end = canvas.width * 0.64
@@ -989,6 +1051,17 @@ def day_night_nodes(canvas: Canvas, capitals: list[dict], city_lights: list[dict
         f"{fmt(canvas.width * 0.52)} {fmt(canvas.height * 0.92)} "
         f"{fmt(canvas.width * 0.6)} {fmt(canvas.height * 1.06)}"
     )
+    night_shadow_path = (
+        f"M{fmt(band_x)} {fmt(-canvas.height * 0.12)} "
+        f"L{fmt(canvas.width * 0.24)} {fmt(-canvas.height * 0.06)} "
+        f"C{fmt(canvas.width * 0.33)} {fmt(canvas.height * 0.19)} "
+        f"{fmt(canvas.width * 0.31)} {fmt(canvas.height * 0.4)} "
+        f"{fmt(canvas.width * 0.39)} {fmt(canvas.height * 0.63)} "
+        f"C{fmt(canvas.width * 0.44)} {fmt(canvas.height * 0.81)} "
+        f"{fmt(canvas.width * 0.52)} {fmt(canvas.height * 0.92)} "
+        f"{fmt(canvas.width * 0.6)} {fmt(canvas.height * 1.06)} "
+        f"L{fmt(band_x)} {fmt(canvas.height * 1.12)} Z"
+    )
     nodes: list[str] = []
     for item in capitals:
         tag = validate_tag(item["tag"])
@@ -1000,15 +1073,30 @@ def day_night_nodes(canvas: Canvas, capitals: list[dict], city_lights: list[dict
         )
     light_nodes = "\n".join(nodes)
     ambient_nodes = city_light_nodes(city_lights)
-    return f"""    <g class="day-night-shade" aria-hidden="true">
+    texture_nodes = night_light_texture_nodes(city_lights)
+    belt_nodes = night_light_belt_nodes(city_lights)
+    return f"""    <clipPath id="nightActivityClip" clipPathUnits="userSpaceOnUse">
+      <path d="{night_shadow_path}">
+        <animateTransform attributeName="transform" type="translate" values="{fmt(shade_start)} 0;{fmt(shade_end)} 0;{fmt(shade_start)} 0" dur="24s" repeatCount="indefinite" />
+      </path>
+    </clipPath>
+    <g class="day-night-shade" aria-hidden="true">
       <animateTransform attributeName="transform" type="translate" values="{fmt(shade_start)} 0;{fmt(shade_end)} 0;{fmt(shade_start)} 0" dur="24s" repeatCount="indefinite" />
       <rect class="night-band" x="{fmt(band_x)}" y="0" width="{fmt(band_width)}" height="{fmt(canvas.height)}" />
+      <path class="night-shadow-core" d="{night_shadow_path}" />
+      <path class="night-shadow-texture" d="{night_shadow_path}" />
       <path class="terminator-line" d="{terminator_path}" />
     </g>
-    <g class="ambient-night-lights" aria-hidden="true">
+    <g class="night-light-texture" aria-hidden="true" clip-path="url(#nightActivityClip)">
+{texture_nodes}
+    </g>
+    <g class="night-light-belts" aria-hidden="true" clip-path="url(#nightActivityClip)">
+{belt_nodes}
+    </g>
+    <g class="ambient-night-lights" aria-hidden="true" clip-path="url(#nightActivityClip)">
 {ambient_nodes}
     </g>
-    <g class="night-lights" aria-hidden="true">
+    <g class="night-lights" aria-hidden="true" clip-path="url(#nightActivityClip)">
 {light_nodes}
     </g>"""
 
@@ -1384,9 +1472,20 @@ def build_svg(
       <stop offset="72%" stop-color="#f8d77f" stop-opacity=".1" />
       <stop offset="100%" stop-color="#f8d77f" stop-opacity="0" />
     </linearGradient>
+    <linearGradient id="nightShadowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0" stop-color="#01050d" stop-opacity=".82" />
+      <stop offset="58%" stop-color="#031020" stop-opacity=".74" />
+      <stop offset="84%" stop-color="#09233c" stop-opacity=".38" />
+      <stop offset="100%" stop-color="#09233c" stop-opacity="0" />
+    </linearGradient>
     <filter id="capitalGlow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="nightLightGlow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="ambientLightGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="nightLightBeltGlow"><feGaussianBlur stdDeviation="5.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="nightTexture" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency=".018 .034" numOctaves="3" seed="1936" result="noise" />
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 .12 0 0 0 0 .28 0 0 0 0 .42 0 0 0 .2 0" />
+    </filter>
     <filter id="railGlow"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="softEdgeBlur"><feGaussianBlur stdDeviation="20" /></filter>
     <style>
@@ -1409,10 +1508,17 @@ def build_svg(
       .layer-urban, .layer-rivers, .layer-rail, .layer-country-labels, .layer-cities, .layer-day-night {{ transition: opacity .25s ease; }}
       .layer-day-night {{ opacity: 0; pointer-events: none; }}
       .night-band {{ fill: url(#nightCycleGradient); opacity: .9; }}
+      .night-shadow-core {{ fill: url(#nightShadowGradient); opacity: .96; mix-blend-mode: multiply; }}
+      .night-shadow-texture {{ fill: #6fb5df; opacity: .22; filter: url(#nightTexture); mix-blend-mode: screen; }}
       .terminator-line {{ fill: none; stroke: rgba(248,215,127,.82); stroke-width: 7; stroke-linecap: round; opacity: .78; filter: url(#capitalGlow); }}
       .night-light {{ fill: #ffe48a; opacity: .86; filter: url(#nightLightGlow); }}
       .ambient-night-light {{ fill: #ffd66b; opacity: .72; filter: url(#ambientLightGlow); }}
       .ambient-night-light--capital {{ fill: #fff3a8; opacity: .9; }}
+      .night-light-smear {{ fill: #f9c96f; opacity: .18; filter: url(#nightLightBeltGlow); mix-blend-mode: screen; }}
+      .night-light-smear--major {{ fill: #fff0a8; opacity: .26; }}
+      .night-light-belt {{ fill: none; stroke-linecap: round; stroke-linejoin: round; mix-blend-mode: screen; }}
+      .night-light-belt--halo {{ stroke: #f8a85c; stroke-width: 7.2; opacity: .18; filter: url(#nightLightBeltGlow); }}
+      .night-light-belt--core {{ stroke: #ffe08a; stroke-width: 2.1; opacity: .58; }}
       .map-edge-fog rect {{ filter: url(#softEdgeBlur); pointer-events: none; }}
       svg[data-active-layer="political"] .territory {{ opacity: .9; }}
       svg[data-active-layer="political"] .layer-urban {{ opacity: .56; }}
@@ -1571,6 +1677,8 @@ def build_metadata(
             "river_line_simplify": RIVER_LINE_SIMPLIFY,
             "river_min_projected_px": RIVER_MIN_PROJECTED_PX,
             "night_light_limit": NIGHT_LIGHT_LIMIT,
+            "night_light_belt_limit": NIGHT_LIGHT_BELT_LIMIT,
+            "day_night_visual_policy": "animated curved night mask with clipped deterministic texture, city-light smears, and ranked light belts",
             "city_label_source": "scenario capital hints plus world_cities major populated places",
             "city_label_tier_limits": list(SHOWCASE_CITY_TIER_LIMITS),
             "city_label_tier_min_distance_px": list(SHOWCASE_CITY_TIER_MIN_DISTANCE_PX),

@@ -11,9 +11,20 @@
       <stop offset="72%" stop-color="#f8d77f" stop-opacity=".1" />
       <stop offset="100%" stop-color="#f8d77f" stop-opacity="0" />
     </linearGradient>
+    <linearGradient id="nightShadowGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0" stop-color="#01050d" stop-opacity=".82" />
+      <stop offset="58%" stop-color="#031020" stop-opacity=".74" />
+      <stop offset="84%" stop-color="#09233c" stop-opacity=".38" />
+      <stop offset="100%" stop-color="#09233c" stop-opacity="0" />
+    </linearGradient>
     <filter id="capitalGlow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="nightLightGlow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="ambientLightGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="nightLightBeltGlow"><feGaussianBlur stdDeviation="5.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="nightTexture" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency=".018 .034" numOctaves="3" seed="1936" result="noise" />
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 .12 0 0 0 0 .28 0 0 0 0 .42 0 0 0 .2 0" />
+    </filter>
     <filter id="railGlow"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="softEdgeBlur"><feGaussianBlur stdDeviation="20" /></filter>
     <style>
@@ -36,10 +47,17 @@
       .layer-urban, .layer-rivers, .layer-rail, .layer-country-labels, .layer-cities, .layer-day-night { transition: opacity .25s ease; }
       .layer-day-night { opacity: 0; pointer-events: none; }
       .night-band { fill: url(#nightCycleGradient); opacity: .9; }
+      .night-shadow-core { fill: url(#nightShadowGradient); opacity: .96; mix-blend-mode: multiply; }
+      .night-shadow-texture { fill: #6fb5df; opacity: .22; filter: url(#nightTexture); mix-blend-mode: screen; }
       .terminator-line { fill: none; stroke: rgba(248,215,127,.82); stroke-width: 7; stroke-linecap: round; opacity: .78; filter: url(#capitalGlow); }
       .night-light { fill: #ffe48a; opacity: .86; filter: url(#nightLightGlow); }
       .ambient-night-light { fill: #ffd66b; opacity: .72; filter: url(#ambientLightGlow); }
       .ambient-night-light--capital { fill: #fff3a8; opacity: .9; }
+      .night-light-smear { fill: #f9c96f; opacity: .18; filter: url(#nightLightBeltGlow); mix-blend-mode: screen; }
+      .night-light-smear--major { fill: #fff0a8; opacity: .26; }
+      .night-light-belt { fill: none; stroke-linecap: round; stroke-linejoin: round; mix-blend-mode: screen; }
+      .night-light-belt--halo { stroke: #f8a85c; stroke-width: 7.2; opacity: .18; filter: url(#nightLightBeltGlow); }
+      .night-light-belt--core { stroke: #ffe08a; stroke-width: 2.1; opacity: .58; }
       .map-edge-fog rect { filter: url(#softEdgeBlur); pointer-events: none; }
       svg[data-active-layer="political"] .territory { opacity: .9; }
       svg[data-active-layer="political"] .layer-urban { opacity: .56; }
@@ -875,12 +893,173 @@
       <g class="showcase-city showcase-city--tier-3" data-city-tier="3" data-city-source="world_cities"><title>Lyon · FR</title><circle cx="397.6" cy="383.8" r="3.4" /><text class="city-label" x="404.8" y="378.2">Lyon</text></g>
   </g>
   <g class="layer layer-day-night" data-layer="day-night">
+    <clipPath id="nightActivityClip" clipPathUnits="userSpaceOnUse">
+      <path d="M-980 -74.4 L235.2 -37.2 C323.4 117.8 303.8 248 382.2 390.6 C431.2 502.2 509.6 570.4 588 657.2 L-980 694.4 Z">
+        <animateTransform attributeName="transform" type="translate" values="-627.2 0;627.2 0;-627.2 0" dur="24s" repeatCount="indefinite" />
+      </path>
+    </clipPath>
     <g class="day-night-shade" aria-hidden="true">
       <animateTransform attributeName="transform" type="translate" values="-627.2 0;627.2 0;-627.2 0" dur="24s" repeatCount="indefinite" />
       <rect class="night-band" x="-980" y="0" width="1293.6" height="620" />
+      <path class="night-shadow-core" d="M-980 -74.4 L235.2 -37.2 C323.4 117.8 303.8 248 382.2 390.6 C431.2 502.2 509.6 570.4 588 657.2 L-980 694.4 Z" />
+      <path class="night-shadow-texture" d="M-980 -74.4 L235.2 -37.2 C323.4 117.8 303.8 248 382.2 390.6 C431.2 502.2 509.6 570.4 588 657.2 L-980 694.4 Z" />
       <path class="terminator-line" d="M235.2 -37.2 C323.4 117.8 303.8 248 382.2 390.6 C431.2 502.2 509.6 570.4 588 657.2" />
     </g>
-    <g class="ambient-night-lights" aria-hidden="true">
+    <g class="night-light-texture" aria-hidden="true" clip-path="url(#nightActivityClip)">
+      <ellipse class="night-light-smear night-light-smear--major" cx="610.5" cy="420.4" rx="15.4" ry="6.5" transform="rotate(-24 610.5 420.4)"><title>Istanbul</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="621.4" cy="230.2" rx="14.2" ry="6" transform="rotate(-18 621.4 230.2)"><title>Moscow</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="380.5" cy="345.1" rx="14.1" ry="6" transform="rotate(17 380.5 345.1)"><title>Paris</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="365.5" cy="311.2" rx="13.8" ry="5.9" transform="rotate(20 365.5 311.2)"><title>London</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="315.9" cy="437.6" rx="12.8" ry="5.4" transform="rotate(-5 315.9 437.6)"><title>Madrid</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="560.8" cy="198.2" rx="12.7" ry="5.4" transform="rotate(16 560.8 198.2)"><title>Saint Petersburg</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="370" cy="433.7" rx="12.6" ry="5.3" transform="rotate(-7 370 433.7)"><title>Barcelona</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="648" cy="423.2" rx="12.1" ry="5.1" transform="rotate(-8 648 423.2)"><title>Ankara</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="465.4" cy="303.7" rx="12" ry="5.1" transform="rotate(6 465.4 303.7)"><title>Berlin</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="373.8" cy="489.8" rx="12" ry="5.1" transform="rotate(9 373.8 489.8)"><title>Algiers</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="463.1" cy="431" rx="11.9" ry="5.1" transform="rotate(13 463.1 431)"><title>Rome</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="570.3" cy="466.2" rx="11.9" ry="5" transform="rotate(13 570.3 466.2)"><title>Athens</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="613.7" cy="429.6" rx="11.8" ry="5" transform="rotate(15 613.7 429.6)"><title>Bursa</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="433.8" cy="388.7" rx="11.8" ry="5" transform="rotate(3 433.8 388.7)"><title>Milan</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="434.1" cy="349" rx="11.8" ry="5" transform="rotate(16 434.1 349)"><title>Stuttgart</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="601" cy="454.7" rx="11.8" ry="5" transform="rotate(0 601 454.7)"><title>İzmir</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="430.5" cy="333" rx="11.7" ry="5" transform="rotate(-15 430.5 333)"><title>Frankfurt</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="262.7" cy="446.5" rx="11.7" ry="5" transform="rotate(17 262.7 446.5)"><title>Lisbon</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="594.7" cy="307.2" rx="11.7" ry="5" transform="rotate(-23 594.7 307.2)"><title>Kyiv</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="509.5" cy="327.1" rx="11.7" ry="4.9" transform="rotate(17 509.5 327.1)"><title>Katowice</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="699.3" cy="452.5" rx="11.7" ry="4.9" transform="rotate(11 699.3 452.5)"><title>Aleppo</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="442.2" cy="491.7" rx="11.5" ry="4.9" transform="rotate(-15 442.2 491.7)"><title>Tunis</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="491.4" cy="353.7" rx="11.5" ry="4.9" transform="rotate(11 491.4 353.7)"><title>Vienna</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="428.7" cy="340.5" rx="11.5" ry="4.9" transform="rotate(7 428.7 340.5)"><title>Mannheim</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="354.3" cy="297.7" rx="11.4" ry="4.8" transform="rotate(8 354.3 297.7)"><title>Birmingham</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="479.4" cy="442.7" rx="11.4" ry="4.8" transform="rotate(13 479.4 442.7)"><title>Naples</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="353.9" cy="285.5" rx="11.4" ry="4.8" transform="rotate(20 353.9 285.5)"><title>Manchester</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="698.1" cy="442" rx="11.4" ry="4.8" transform="rotate(21 698.1 442)"><title>Gaziantep</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="577.4" cy="386.2" rx="11.2" ry="4.8" transform="rotate(19 577.4 386.2)"><title>Bucharest</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="440.6" cy="292" rx="11.2" ry="4.7" transform="rotate(8 440.6 292)"><title>Hamburg</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="679.9" cy="449.6" rx="11.2" ry="4.7" transform="rotate(-25 679.9 449.6)"><title>Adana</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="563.1" cy="272.8" rx="11.2" ry="4.7" transform="rotate(20 563.1 272.8)"><title>Minsk</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="719.7" cy="422.3" rx="11.2" ry="4.7" transform="rotate(4 719.7 422.3)"><title>Diyarbakır</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="398" cy="322.7" rx="11.1" ry="4.7" transform="rotate(-7 398 322.7)"><title>Brussels</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="418.3" cy="316.6" rx="11.1" ry="4.7" transform="rotate(16 418.3 316.6)"><title>Essen</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="513.6" cy="360" rx="11.1" ry="4.7" transform="rotate(18 513.6 360)"><title>Budapest</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="521" cy="301.7" rx="11.1" ry="4.7" transform="rotate(-21 521 301.7)"><title>Warsaw</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="273" cy="506.6" rx="11.1" ry="4.7" transform="rotate(-4 273 506.6)"><title>Rabat</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="421" cy="393.1" rx="11.1" ry="4.7" transform="rotate(-16 421 393.1)"><title>Turin</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="359.4" cy="282.5" rx="11" ry="4.7" transform="rotate(-1 359.4 282.5)"><title>Leeds</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="489.9" cy="220.1" rx="11" ry="4.6" transform="rotate(-14 489.9 220.1)"><title>Stockholm</title></ellipse>
+      <ellipse class="night-light-smear night-light-smear--major" cx="451.4" cy="408.8" rx="11" ry="4.6" transform="rotate(8 451.4 408.8)"><title>Florence</title></ellipse>
+    </g>
+    <g class="night-light-belts" aria-hidden="true" clip-path="url(#nightActivityClip)">
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q363 301.9 354.3 297.7"><title>London - Birmingham</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q363 301.9 354.3 297.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q367.5 330.5 365.5 311.2"><title>Paris - London</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q367.5 330.5 365.5 311.2" />
+      <path class="night-light-belt night-light-belt--halo" d="M434.1 349 Q428.4 341.9 430.5 333"><title>Stuttgart - Frankfurt</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M434.1 349 Q428.4 341.9 430.5 333" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q600.3 436 601 454.7"><title>Istanbul - İzmir</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q600.3 436 601 454.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q628.8 427.8 648 423.2"><title>Istanbul - Ankara</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q628.8 427.8 648 423.2" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q366.2 298.3 359.2 287.5"><title>London - Sheffield</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q366.2 298.3 359.2 287.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q363.8 296.5 353.9 285.5"><title>London - Manchester</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q363.8 296.5 353.9 285.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q392.8 336.7 398 322.7"><title>Paris - Brussels</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q392.8 336.7 398 322.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M463.1 431 Q468.9 440.1 479.4 442.7"><title>Rome - Naples</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M463.1 431 Q468.9 440.1 479.4 442.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q357.8 297.8 359.4 282.5"><title>London - Leeds</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q357.8 297.8 359.4 282.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M354.3 297.7 Q353.1 288.9 359.4 282.5"><title>Birmingham - Leeds</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M354.3 297.7 Q353.1 288.9 359.4 282.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M699.3 452.5 Q690.2 447.1 679.9 449.6"><title>Aleppo - Adana</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M699.3 452.5 Q690.2 447.1 679.9 449.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M398 322.7 Q402.3 315.5 398.7 308"><title>Brussels - The Hague</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M398 322.7 Q402.3 315.5 398.7 308" />
+      <path class="night-light-belt night-light-belt--halo" d="M434.1 349 Q427.7 356.3 428.9 365.9"><title>Stuttgart - Zürich</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M434.1 349 Q427.7 356.3 428.9 365.9" />
+      <path class="night-light-belt night-light-belt--halo" d="M430.5 333 Q421.2 327.2 418.3 316.6"><title>Frankfurt - Essen</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M430.5 333 Q421.2 327.2 418.3 316.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q383.5 311.7 398 322.7"><title>London - Brussels</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q383.5 311.7 398 322.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q381.6 304.3 398.7 308"><title>London - The Hague</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q381.6 304.3 398.7 308" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q588.5 408.6 577.4 386.2"><title>Istanbul - Bucharest</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q588.5 408.6 577.4 386.2" />
+      <path class="night-light-belt night-light-belt--halo" d="M430.5 333 Q420.7 329 416.5 319.3"><title>Frankfurt - Düsseldorf</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M430.5 333 Q420.7 329 416.5 319.3" />
+      <path class="night-light-belt night-light-belt--halo" d="M698.1 442 Q687.5 442.1 679.9 449.6"><title>Gaziantep - Adana</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M698.1 442 Q687.5 442.1 679.9 449.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M434.1 349 Q442.2 356.6 453.2 356.6"><title>Stuttgart - Munich</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M434.1 349 Q442.2 356.6 453.2 356.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M613.7 429.6 Q611.4 444.2 601 454.7"><title>Bursa - İzmir</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M613.7 429.6 Q611.4 444.2 601 454.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M648 423.2 Q645.6 436.1 651.2 447.9"><title>Ankara - Konya</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M648 423.2 Q645.6 436.1 651.2 447.9" />
+      <path class="night-light-belt night-light-belt--halo" d="M430.5 333 Q426.5 322.3 416.5 316.8"><title>Frankfurt - Duisburg</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M430.5 333 Q426.5 322.3 416.5 316.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q626.5 440.6 651.2 447.9"><title>Istanbul - Konya</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q626.5 440.6 651.2 447.9" />
+      <path class="night-light-belt night-light-belt--halo" d="M463.1 431 Q453.7 421.8 451.4 408.8"><title>Rome - Florence</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M463.1 431 Q453.7 421.8 451.4 408.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M491.4 353.7 Q503.6 353 513.6 360"><title>Vienna - Budapest</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M491.4 353.7 Q503.6 353 513.6 360" />
+      <path class="night-light-belt night-light-belt--halo" d="M465.4 303.7 Q454.9 293.9 440.6 292"><title>Berlin - Hamburg</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M465.4 303.7 Q454.9 293.9 440.6 292" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q395.5 329.5 398.7 308"><title>Paris - The Hague</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q395.5 329.5 398.7 308" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q617.2 446.4 637.7 463.8"><title>Istanbul - Antalya</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q617.2 446.4 637.7 463.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q395.2 361.7 397.6 383.8"><title>Paris - Lyon</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q395.2 361.7 397.6 383.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M365.5 311.2 Q385.4 314 403.3 304.8"><title>London - Amsterdam</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M365.5 311.2 Q385.4 314 403.3 304.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M398 322.7 Q407 315.8 418.3 316.6"><title>Brussels - Essen</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M398 322.7 Q407 315.8 418.3 316.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M273 506.6 Q282.8 504.5 291 510.2"><title>Rabat - Fez</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M273 506.6 Q282.8 504.5 291 510.2" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q597.8 449.7 570.3 466.2"><title>Istanbul - Athens</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q597.8 449.7 570.3 466.2" />
+      <path class="night-light-belt night-light-belt--halo" d="M398 322.7 Q406.5 317.1 416.5 319.3"><title>Brussels - Düsseldorf</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M398 322.7 Q406.5 317.1 416.5 319.3" />
+      <path class="night-light-belt night-light-belt--halo" d="M648 423.2 Q631.9 431.9 613.7 429.6"><title>Ankara - Bursa</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M648 423.2 Q631.9 431.9 613.7 429.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M570.3 466.2 Q583.8 455.5 601 454.7"><title>Athens - İzmir</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M570.3 466.2 Q583.8 455.5 601 454.7" />
+      <path class="night-light-belt night-light-belt--halo" d="M648 423.2 Q660.6 430.5 675.2 429.1"><title>Ankara - Kayseri</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M648 423.2 Q660.6 430.5 675.2 429.1" />
+      <path class="night-light-belt night-light-belt--halo" d="M433.8 388.7 Q427.4 378.1 428.9 365.9"><title>Milan - Zürich</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M433.8 388.7 Q427.4 378.1 428.9 365.9" />
+      <path class="night-light-belt night-light-belt--halo" d="M421 393.1 Q417.9 383.5 408.7 379.1"><title>Turin - Geneva</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M421 393.1 Q417.9 383.5 408.7 379.1" />
+      <path class="night-light-belt night-light-belt--halo" d="M398 322.7 Q408.4 323.6 416.5 316.8"><title>Brussels - Duisburg</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M398 322.7 Q408.4 323.6 416.5 316.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q405.3 350.5 428.7 340.5"><title>Paris - Mannheim</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q405.3 350.5 428.7 340.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M679.9 449.6 Q673.6 440.3 675.2 429.1"><title>Adana - Kayseri</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M679.9 449.6 Q673.6 440.3 675.2 429.1" />
+      <path class="night-light-belt night-light-belt--halo" d="M610.5 420.4 Q585.5 407.4 557.5 411.4"><title>Istanbul - Sofia</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M610.5 420.4 Q585.5 407.4 557.5 411.4" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q407.4 347.1 430.5 333"><title>Paris - Frankfurt</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q407.4 347.1 430.5 333" />
+      <path class="night-light-belt night-light-belt--halo" d="M560.8 198.2 Q545.7 205.9 529 203.5"><title>Saint Petersburg - Helsinki</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M560.8 198.2 Q545.7 205.9 529 203.5" />
+      <path class="night-light-belt night-light-belt--halo" d="M398 322.7 Q396.8 312.6 403.3 304.8"><title>Brussels - Amsterdam</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M398 322.7 Q396.8 312.6 403.3 304.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M433.8 388.7 Q445.8 395.9 451.4 408.8"><title>Milan - Florence</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M433.8 388.7 Q445.8 395.9 451.4 408.8" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q400 357.6 408.7 379.1"><title>Paris - Geneva</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q400 357.6 408.7 379.1" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q394.3 326.4 416.5 319.3"><title>Paris - Düsseldorf</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q394.3 326.4 416.5 319.3" />
+      <path class="night-light-belt night-light-belt--halo" d="M380.5 345.1 Q394.8 324.8 418.3 316.6"><title>Paris - Essen</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M380.5 345.1 Q394.8 324.8 418.3 316.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M428.7 340.5 Q419.7 330.2 418.3 316.6"><title>Mannheim - Essen</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M428.7 340.5 Q419.7 330.2 418.3 316.6" />
+      <path class="night-light-belt night-light-belt--halo" d="M418.3 316.6 Q413.3 307.5 403.3 304.8"><title>Essen - Amsterdam</title></path>
+      <path class="night-light-belt night-light-belt--core" d="M418.3 316.6 Q413.3 307.5 403.3 304.8" />
+    </g>
+    <g class="ambient-night-lights" aria-hidden="true" clip-path="url(#nightActivityClip)">
       <circle class="ambient-night-light ambient-night-light--capital" cx="610.5" cy="420.4" r="7.3"><title>Istanbul</title></circle>
       <circle class="ambient-night-light ambient-night-light--capital" cx="621.4" cy="230.2" r="6.4"><title>Moscow</title></circle>
       <circle class="ambient-night-light ambient-night-light--capital" cx="380.5" cy="345.1" r="6.3"><title>Paris</title></circle>
@@ -935,8 +1114,26 @@
       <circle class="ambient-night-light ambient-night-light--capital" cx="416.5" cy="316.8" r="3.9"><title>Duisburg</title></circle>
       <circle class="ambient-night-light ambient-night-light--capital" cx="453.2" cy="356.6" r="3.9"><title>Munich</title></circle>
       <circle class="ambient-night-light ambient-night-light--capital" cx="529.3" cy="390.4" r="3.9"><title>Belgrade</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="408.7" cy="379.1" r="3.9"><title>Geneva</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="416.5" cy="319.3" r="3.9"><title>Düsseldorf</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="288.7" cy="469.1" r="3.9"><title>Seville</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="291" cy="510.2" r="3.9"><title>Fez</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="557.5" cy="411.4" r="3.9"><title>Sofia</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="474.6" cy="332.4" r="3.9"><title>Prague</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="345.5" cy="254.8" r="3.9"><title>Glasgow</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="457.9" cy="266.3" r="3.9"><title>Copenhagen</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="674.9" cy="319.6" r="3.9"><title>Rostov-on-Don</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="529" cy="203.5" r="3.8"><title>Helsinki</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="428.9" cy="365.9" r="3.8"><title>Zürich</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="445.1" cy="215.9" r="3.8"><title>Oslo</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="325.6" cy="281.6" r="3.8"><title>Dublin</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="635.1" cy="319.2" r="3.8"><title>Dnipro</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="650.6" cy="271.5" r="3.8"><title>Voronezh</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="286.8" cy="488.3" r="3.8"><title>Tangier</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="403.3" cy="304.8" r="3.8"><title>Amsterdam</title></circle>
+      <circle class="ambient-night-light ambient-night-light--capital" cx="609.2" cy="352.7" r="3.8"><title>Odessa</title></circle>
     </g>
-    <g class="night-lights" aria-hidden="true">
+    <g class="night-lights" aria-hidden="true" clip-path="url(#nightActivityClip)">
       <circle class="night-light" data-tag="CZE" cx="474.6" cy="332.4" r="7.8" />
       <circle class="night-light" data-tag="ENG" cx="365.5" cy="311.2" r="7.8" />
       <circle class="night-light" data-tag="FRA" cx="380.5" cy="345.1" r="7.8" />
