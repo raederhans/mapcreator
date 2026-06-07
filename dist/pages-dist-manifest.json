@@ -36394,7 +36394,7 @@
     },
     {
       "path": "app/js/core/hgo_raster_renderer.js",
-      "size_bytes": 9426
+      "size_bytes": 11761
     },
     {
       "path": "app/js/core/hgo_runtime_asset_loader.js",
@@ -36406,7 +36406,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 8243
+      "size_bytes": 8455
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 56657
+      "size_bytes": 56640
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37322,11 +37322,11 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 48899
+      "size_bytes": 48894
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1053988
+      "size_bytes": 1053989
     },
     {
       "path": "styles.css",
@@ -37343,5 +37343,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1111302401
+  "total_bytes": 1111304927
 }

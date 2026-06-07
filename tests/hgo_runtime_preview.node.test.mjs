@@ -56,6 +56,8 @@ function createCanvas() {
         putCount += 1;
         lastImageData = { imageData, x, y };
       },
+      clearRect: () => {},
+      drawImage: () => {},
     }),
   };
 }
@@ -106,6 +108,10 @@ test("loads seed and raster once while already enabled", async () => {
   assert.deepEqual(harness.runtimeState.hgoRuntimePreview.renderSummary, {
     width: 1,
     height: 1,
+    canvasWidth: 1,
+    canvasHeight: 1,
+    viewport: null,
+    scaledToCanvas: false,
     ownershipMode: "owner",
     resolvedPixelCount: 1,
     unresolvedPixelCount: 0,
@@ -217,11 +223,11 @@ test("restores persisted enabled setting and can inspect rendered pixels", async
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.pixelIndex, 0);
 });
 
-test("preview inspection maps canvas coordinates to scaled source raster", async () => {
+test("preview inspection maps canvas coordinates through the HGO viewport", async () => {
   const storage = createStorage({ [HGO_RUNTIME_PREVIEW_STORAGE_KEY]: "true" });
   const canvas = createCanvas();
   canvas.width = 2;
-  canvas.height = 1;
+  canvas.height = 2;
   const harness = createController({
     storage,
     canvas,
@@ -264,6 +270,18 @@ test("preview inspection maps canvas coordinates to scaled source raster", async
   assert.equal(hit.y, 0);
   assert.equal(hit.canvasX, 1);
   assert.equal(hit.canvasY, 0);
+  assert.deepEqual(hit.viewport, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1,
+    canvasWidth: 2,
+    canvasHeight: 2,
+    sourceWidth: 4,
+    sourceHeight: 2,
+    fitMode: "contain",
+  });
   assert.equal(hit.resolved.provinceId, 2);
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.pixelIndex, 2);
+  assert.equal(harness.controller.inspectPoint(1, 1), null);
 });

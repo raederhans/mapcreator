@@ -69,6 +69,10 @@ function buildRenderSummary(rendered) {
   return Object.freeze({
     width: rendered.width,
     height: rendered.height,
+    canvasWidth: rendered.canvasWidth || rendered.width,
+    canvasHeight: rendered.canvasHeight || rendered.height,
+    viewport: rendered.viewport || null,
+    scaledToCanvas: rendered.scaledToCanvas === true,
     ownershipMode: rendered.ownershipMode,
     resolvedPixelCount: rendered.resolvedPixelCount,
     unresolvedPixelCount: rendered.unresolvedPixelCount,

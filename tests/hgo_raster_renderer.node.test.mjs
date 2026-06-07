@@ -240,12 +240,12 @@ test("renders owner colors from HGO province RGB pixels", () => {
   assert.deepEqual(Array.from(rendered.data.slice(8, 12)), [0, 0, 0, 0]);
 });
 
-test("scales rendered HGO raster to canvas dimensions", () => {
+test("preserves HGO raster aspect ratio inside the canvas viewport", () => {
   withScratchCanvasFactory((scratchContext) => {
     const context = createImageDataContext();
     const canvas = {
       width: 2,
-      height: 1,
+      height: 2,
       getContext: () => context,
     };
     const rendered = createWideRenderer().renderToCanvas(canvas);
@@ -253,26 +253,79 @@ test("scales rendered HGO raster to canvas dimensions", () => {
     assert.equal(rendered.width, 4);
     assert.equal(rendered.height, 2);
     assert.equal(rendered.canvasWidth, 2);
-    assert.equal(rendered.canvasHeight, 1);
+    assert.equal(rendered.canvasHeight, 2);
     assert.equal(rendered.scaledToCanvas, true);
+    assert.deepEqual(rendered.viewport, {
+      x: 0,
+      y: 0,
+      width: 2,
+      height: 1,
+      canvasWidth: 2,
+      canvasHeight: 2,
+      sourceWidth: 4,
+      sourceHeight: 2,
+      fitMode: "contain",
+    });
     assert.equal(scratchContext.calls.putImageData.length, 1);
     assert.equal(context.calls.putImageData.length, 0);
-    assert.deepEqual(context.calls.clearRect[0], [0, 0, 2, 1]);
+    assert.deepEqual(context.calls.clearRect[0], [0, 0, 2, 2]);
     assert.deepEqual(context.calls.drawImage[0].slice(1), [0, 0, 4, 2, 0, 0, 2, 1]);
   });
 });
 
-test("maps canvas inspection points back to source HGO raster coordinates", () => {
+test("maps canvas inspection points through the aspect-preserving viewport", () => {
   const renderer = createWideRenderer();
-  const hit = renderer.inspectCanvasPoint(1, 0, { width: 2, height: 1 });
+  const hit = renderer.inspectCanvasPoint(1, 0, { width: 2, height: 2 });
 
   assert.equal(hit.x, 2);
   assert.equal(hit.y, 0);
   assert.equal(hit.pixelIndex, 2);
   assert.equal(hit.canvasX, 1);
   assert.equal(hit.canvasY, 0);
+  assert.deepEqual(hit.viewport, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1,
+    canvasWidth: 2,
+    canvasHeight: 2,
+    sourceWidth: 4,
+    sourceHeight: 2,
+    fitMode: "contain",
+  });
   assert.equal(hit.resolved.provinceId, 2);
-  assert.equal(renderer.inspectCanvasPoint(2, 0, { width: 2, height: 1 }), null);
+  assert.equal(renderer.inspectCanvasPoint(1, 1, { width: 2, height: 2 }), null);
+  assert.equal(renderer.inspectCanvasPoint(2, 0, { width: 2, height: 2 }), null);
+});
+
+test("centers HGO raster viewport when the canvas is wider than the source aspect", () => {
+  withScratchCanvasFactory(() => {
+    const context = createImageDataContext();
+    const canvas = {
+      width: 6,
+      height: 2,
+      getContext: () => context,
+    };
+    const renderer = createWideRenderer();
+    const rendered = renderer.renderToCanvas(canvas);
+    const hit = renderer.inspectCanvasPoint(3, 0, canvas);
+
+    assert.deepEqual(rendered.viewport, {
+      x: 1,
+      y: 0,
+      width: 4,
+      height: 2,
+      canvasWidth: 6,
+      canvasHeight: 2,
+      sourceWidth: 4,
+      sourceHeight: 2,
+      fitMode: "contain",
+    });
+    assert.deepEqual(context.calls.drawImage[0].slice(1), [0, 0, 4, 2, 1, 0, 4, 2]);
+    assert.equal(hit.x, 2);
+    assert.equal(hit.y, 0);
+    assert.equal(renderer.inspectCanvasPoint(0, 0, canvas), null);
+  });
 });
 
 test("renders controller colors when requested", () => {

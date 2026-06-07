@@ -309,7 +309,7 @@ const translations = {
     updateThreeDate: "May 12, 2026",
     updateThreeTitle: "Map data foundation",
     updateThreeBody:
-      "The data foundation now covers 641 map assets across geography, transport, palettes, and runtime views.",
+      "The checked-in catalog tracks 641 assets across geography, transport, palettes, and runtime views.",
     ctaEyebrow: "Ready to open the workbench?",
     ctaTitle: "Step into the editor when you want to move from idea to map.",
     ctaBody:
@@ -570,7 +570,7 @@ const translations = {
     updateTwoBody: "本地创作者设置为后续共享项目空间提供了更清晰的路径。",
     updateThreeDate: "2026 年 5 月 12 日",
     updateThreeTitle: "地图数据基础",
-    updateThreeBody: "数据基础已经覆盖 641 个地图资源，包括地理、交通、调色板和运行时视图。",
+    updateThreeBody: "入库目录跟踪 641 个资产，包括地理、交通、调色板和运行时视图。",
     ctaEyebrow: "打开工作台",
     ctaTitle: "从想法到地图，下一步在编辑器里完成。",
     ctaBody: "展示页用于介绍产品，编辑器用于完成具体制图工作。",

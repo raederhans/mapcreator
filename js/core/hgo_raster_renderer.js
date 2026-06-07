@@ -109,6 +109,39 @@ function normalizeCanvasDimension(value, fallback) {
   return Number.isFinite(number) && number > 0 ? Math.round(number) : fallback;
 }
 
+function createHgoRasterViewport(sourceWidth, sourceHeight, canvasWidth, canvasHeight) {
+  const normalizedSourceWidth = normalizePositiveInteger(sourceWidth, "viewport source width");
+  const normalizedSourceHeight = normalizePositiveInteger(sourceHeight, "viewport source height");
+  const normalizedCanvasWidth = normalizeCanvasDimension(canvasWidth, normalizedSourceWidth);
+  const normalizedCanvasHeight = normalizeCanvasDimension(canvasHeight, normalizedSourceHeight);
+  const sourceAspect = normalizedSourceWidth / normalizedSourceHeight;
+  const canvasAspect = normalizedCanvasWidth / normalizedCanvasHeight;
+  let viewportWidth = normalizedCanvasWidth;
+  let viewportHeight = normalizedCanvasHeight;
+
+  if (canvasAspect > sourceAspect) {
+    viewportHeight = normalizedCanvasHeight;
+    viewportWidth = Math.max(1, Math.min(normalizedCanvasWidth, Math.round(viewportHeight * sourceAspect)));
+  } else if (canvasAspect < sourceAspect) {
+    viewportWidth = normalizedCanvasWidth;
+    viewportHeight = Math.max(1, Math.min(normalizedCanvasHeight, Math.round(viewportWidth / sourceAspect)));
+  }
+
+  const x = Math.max(0, Math.floor((normalizedCanvasWidth - viewportWidth) / 2));
+  const y = Math.max(0, Math.floor((normalizedCanvasHeight - viewportHeight) / 2));
+  return Object.freeze({
+    x,
+    y,
+    width: viewportWidth,
+    height: viewportHeight,
+    canvasWidth: normalizedCanvasWidth,
+    canvasHeight: normalizedCanvasHeight,
+    sourceWidth: normalizedSourceWidth,
+    sourceHeight: normalizedSourceHeight,
+    fitMode: "contain",
+  });
+}
+
 function createScratchCanvas(width, height) {
   if (typeof globalThis.OffscreenCanvas === "function") {
     return new globalThis.OffscreenCanvas(width, height);
@@ -159,13 +192,22 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     assertActive();
     const canvasWidth = normalizeCanvasDimension(canvas?.width, source.width);
     const canvasHeight = normalizeCanvasDimension(canvas?.height, source.height);
+    const viewport = createHgoRasterViewport(source.width, source.height, canvasWidth, canvasHeight);
     const canvasX = Number(x);
     const canvasY = Number(y);
     if (!Number.isFinite(canvasX) || !Number.isFinite(canvasY) || canvasX < 0 || canvasY < 0 || canvasX >= canvasWidth || canvasY >= canvasHeight) {
       return null;
     }
-    const sourceX = Math.min(source.width - 1, Math.floor((canvasX / canvasWidth) * source.width));
-    const sourceY = Math.min(source.height - 1, Math.floor((canvasY / canvasHeight) * source.height));
+    if (
+      canvasX < viewport.x
+      || canvasY < viewport.y
+      || canvasX >= viewport.x + viewport.width
+      || canvasY >= viewport.y + viewport.height
+    ) {
+      return null;
+    }
+    const sourceX = Math.min(source.width - 1, Math.floor(((canvasX - viewport.x) / viewport.width) * source.width));
+    const sourceY = Math.min(source.height - 1, Math.floor(((canvasY - viewport.y) / viewport.height) * source.height));
     const hit = inspectPoint(sourceX, sourceY);
     return hit ? Object.freeze({
       ...hit,
@@ -173,6 +215,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
       canvasY,
       canvasWidth,
       canvasHeight,
+      viewport,
     }) : null;
   };
 
@@ -215,8 +258,12 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     const rendered = renderToBuffer(options);
     const targetWidth = normalizeCanvasDimension(canvas?.width, rendered.width);
     const targetHeight = normalizeCanvasDimension(canvas?.height, rendered.height);
-    const shouldScaleToCanvas = targetWidth !== rendered.width || targetHeight !== rendered.height;
-    if (shouldScaleToCanvas && typeof context.drawImage === "function") {
+    const viewport = createHgoRasterViewport(rendered.width, rendered.height, targetWidth, targetHeight);
+    const shouldScaleToViewport = viewport.width !== rendered.width
+      || viewport.height !== rendered.height
+      || viewport.x !== 0
+      || viewport.y !== 0;
+    if (shouldScaleToViewport && typeof context.drawImage === "function") {
       const scratchCanvas = createScratchCanvas(rendered.width, rendered.height);
       const scratchContext = scratchCanvas?.getContext?.("2d");
       if (scratchContext?.createImageData && scratchContext?.putImageData) {
@@ -224,11 +271,22 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
         scratchImageData.data.set(rendered.data);
         scratchContext.putImageData(scratchImageData, 0, 0);
         context.clearRect?.(0, 0, targetWidth, targetHeight);
-        context.drawImage(scratchCanvas, 0, 0, rendered.width, rendered.height, 0, 0, targetWidth, targetHeight);
+        context.drawImage(
+          scratchCanvas,
+          0,
+          0,
+          rendered.width,
+          rendered.height,
+          viewport.x,
+          viewport.y,
+          viewport.width,
+          viewport.height,
+        );
         return {
           ...rendered,
           canvasWidth: targetWidth,
           canvasHeight: targetHeight,
+          viewport,
           scaledToCanvas: true,
         };
       }
@@ -240,6 +298,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
       ...rendered,
       canvasWidth: targetWidth,
       canvasHeight: targetHeight,
+      viewport: createHgoRasterViewport(rendered.width, rendered.height, rendered.width, rendered.height),
       scaledToCanvas: false,
     };
   };
