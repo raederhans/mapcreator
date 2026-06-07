@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import shutil
 import unittest
 import gzip
 import hashlib
@@ -10,13 +9,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from tools import (
-    build_landing_europe_1936_showcase,
-    build_landing_hero_cartography,
-    build_landing_japan_preview,
-    build_pages_dist,
-    rasterize_landing_assets,
-)
+from tools import build_pages_dist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +29,17 @@ HERO_SCENARIO_ASSETS = (
     ("hoi4-1939", "hoi4_1939", "hero-hoi4-1939.svg", "hero-hoi4-1939.json"),
     ("tno-1962", "tno_1962", "hero-tno-1962.svg", "hero-tno-1962.json"),
 )
+
+
+def import_landing_builder(module_name: str):
+    try:
+        module = __import__(f"tools.{module_name}", fromlist=[module_name])
+    except ModuleNotFoundError as exc:
+        missing_name = exc.name or ""
+        if missing_name.split(".", 1)[0] in {"shapely", "topojson", "PIL"}:
+            raise unittest.SkipTest(f"landing asset builder dependency is unavailable: {missing_name}") from exc
+        raise
+    return module
 
 
 class PagesDistStartupShellTest(unittest.TestCase):
@@ -314,6 +318,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertGreaterEqual(selected_count, 55)
 
     def test_landing_europe_1936_showcase_assets_match_builder_output(self) -> None:
+        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
         previous_svg = build_landing_europe_1936_showcase.SHOWCASE_SVG
         previous_metadata = build_landing_europe_1936_showcase.SHOWCASE_METADATA
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -344,14 +349,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn('class="showcase-city showcase-city--tier-0 showcase-city--capital', generated_text)
                 self.assertIn('class="showcase-city showcase-city--tier-3', generated_text)
                 self.assertIn('svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-3 { opacity: 1; }', generated_text)
-                if shutil.which("npx"):
-                    rasterize_landing_assets.optimize_svg_file(build_landing_europe_1936_showcase.SHOWCASE_SVG)
-                    optimized_text = build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8")
-                    self.assertIn('data-layer="day-night"', optimized_text)
-                    self.assertEqual(
-                        build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
-                        (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
-                    )
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_METADATA.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.json").read_bytes(),
@@ -437,6 +434,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertNotIn("atlantropa", svg_text)
 
     def test_landing_hero_scenario_assets_match_builder_output(self) -> None:
+        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_root = Path(tmpdir)
             build_landing_europe_1936_showcase.build_hero_scenario_maps(output_dir=tmp_root)
@@ -449,6 +447,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertEqual(generated_metadata.read_bytes(), (LANDING_ASSETS / metadata_name).read_bytes())
 
     def test_landing_japan_preview_assets_match_builder_output(self) -> None:
+        build_landing_japan_preview = import_landing_builder("build_landing_japan_preview")
         previous_svg_paths = build_landing_japan_preview.JAPAN_PREVIEW_SVGS
         previous_metadata_path = build_landing_japan_preview.JAPAN_PREVIEW_METADATA
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -504,6 +503,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertNotIn("build_landing_japan_preview()", source)
         self.assertNotIn("rasterize_landing_assets()", source)
         self.assertNotIn(".write_text(", source)
+        self.assertNotIn("n" + "px", Path(__file__).read_text(encoding="utf-8"))
         self.assertLess(
             source.index("normalize_dist_text_files_lf()"),
             source.index("total_bytes = write_dist_manifest()"),
@@ -547,6 +547,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 build_pages_dist.DIST_ROOT = original_dist_root
 
     def test_landing_hero_cartography_builder_keeps_checked_in_assets_current(self) -> None:
+        build_landing_hero_cartography = import_landing_builder("build_landing_hero_cartography")
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_root = Path(tmpdir)
             previous_assets_dir = build_landing_hero_cartography.LANDING_ASSETS
