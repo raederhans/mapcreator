@@ -768,6 +768,7 @@ def validate_required_dist_files() -> None:
 def write_dist_manifest() -> int:
     DIST_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     last_manifest_text = ""
+    # manifest 会记录自己；首次写入会改变自身大小，所以要迭代到文本稳定。
     for _ in range(5):
         records, total_bytes = get_dist_file_records()
         payload = {
@@ -800,6 +801,7 @@ def main() -> None:
     landing_entry = resolve_landing_entry_path(root=ROOT)
     editor_entry = resolve_editor_entry_path(root=ROOT)
 
+    # landing builder 的输出先落到 landing/assets，再由 reset_dist 后的复制步骤发布到 dist。
     build_landing_europe_1936_showcase()
     build_landing_japan_preview()
     reset_dist()

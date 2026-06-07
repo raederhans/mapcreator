@@ -176,6 +176,7 @@ def build_hero_asset() -> None:
         "se": (15.0, 61.0, "SE"),
     }
     territory = "\n".join(
+        # 首页首屏 hero 只需要稳定抽样；完整政治拓扑继续留给编辑器运行时。
         f'      <path class="territory territory--{code[:2]}" d="{path}" />' for code, path in political[:260]
     )
     label_nodes = []
@@ -212,6 +213,7 @@ def build_hero_asset() -> None:
 
 def build_template_assets() -> None:
     canvas = Canvas(560, 360, EUROPE_BBOX)
+    # 模板缩略图共用同一批真实路径，只换 palette，避免各模板的地理范围互相漂移。
     political = europe_political_paths(canvas, stride=5)[:110]
     palettes = {
         "blank": ("#eff3ec", "#b7c3a7", "#48564c", "#faf8ef"),
