@@ -28,25 +28,34 @@
   },
   "source_files": [
     "data/scenarios/blank_base/manifest.json",
-    "data/europe_topology.runtime_political_v1.json"
+    "data/europe_topology.runtime_political_v1.json",
+    "data/europe_land_bg.geojson"
   ],
   "feature_counts": {
     "land_features_inspected": 23426,
     "land_features_candidates": 7263,
     "land_features_clipped": 7261,
     "land_paths_available": 8242,
-    "land_paths": 900,
-    "land_paths_dropped": 7342,
-    "land_path_limit": 900
+    "land_paths": 8242,
+    "land_paths_dropped": 0,
+    "land_simplify_tolerance": 0.08,
+    "coastline_features_inspected": 9,
+    "coastline_features_candidates": 9,
+    "coastline_features_clipped": 9,
+    "coastline_paths": 1088
   },
   "counts": {
     "land_features_inspected": 23426,
     "land_features_candidates": 7263,
     "land_features_clipped": 7261,
     "land_paths_available": 8242,
-    "land_paths": 900,
-    "land_paths_dropped": 7342,
-    "land_path_limit": 900
+    "land_paths": 8242,
+    "land_paths_dropped": 0,
+    "land_simplify_tolerance": 0.08,
+    "coastline_features_inspected": 9,
+    "coastline_features_candidates": 9,
+    "coastline_features_clipped": 9,
+    "coastline_paths": 1088
   },
   "territory_tags": [],
   "capital_tags": [],
@@ -55,7 +64,12 @@
     "blank_canvas": true,
     "ownership_fill": false,
     "capital_limit": 0,
-    "land_path_limit": 900,
-    "land_path_ranking": "clipped geometry area descending"
+    "territory_path_limit_per_tag": 0,
+    "land_simplify_tolerance": 0.08,
+    "land_path_limit": null,
+    "land_path_ranking": "clipped geometry area descending",
+    "blank_internal_stroke_width": 0.25,
+    "coastline_stroke_width": 0.5,
+    "coastline_source": "data/europe_land_bg.geojson exterior rings"
   }
 }

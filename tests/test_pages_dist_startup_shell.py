@@ -70,16 +70,27 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn("viewBox", text)
                 self.assertIn("<path", text)
                 ET.fromstring(text)
-                if asset_name.startswith("japan-preview-"):
+                if asset_name == "hero-blank.svg":
+                    size_limit = 1_350_000
+                elif asset_name.startswith("japan-preview-"):
                     size_limit = 340_000
                 elif asset_name.startswith("hero-") and asset_name != "hero-cartography.svg":
                     size_limit = 320_000
                 else:
-                    size_limit = 320_000 if asset_name == "europe-1936-showcase.svg" else 220_000
+                    size_limit = 520_000 if asset_name == "europe-1936-showcase.svg" else 220_000
                 self.assertLess(asset.stat().st_size, size_limit)
                 if asset_name == "europe-1936-showcase.svg":
                     self.assertIn('data-showcase-viewport="true"', text)
+                    self.assertIn('data-layer="urban"', text)
+                    self.assertIn('data-layer="rivers"', text)
+                    self.assertIn('data-layer="country-labels"', text)
                     self.assertIn('data-layer="day-night"', text)
+                    self.assertIn('class="urban-area"', text)
+                    self.assertIn('class="river-line"', text)
+                    self.assertIn('class="country-label"', text)
+                    self.assertIn('class="city-label"', text)
+                    self.assertIn('class="ambient-night-light', text)
+                    self.assertIn("ambientLightGlow", text)
                     self.assertIn("nightCycleGradient", text)
                     self.assertIn("terminator-line", text)
                     self.assertIn("animateTransform", text)
@@ -89,13 +100,26 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     expected_mode = asset_name.removeprefix("hero-").removesuffix(".svg")
                     self.assertIn(f'data-hero-scenario="{expected_mode}"', text)
                     self.assertIn('data-layer="political"', text)
+                    if asset_name == "hero-blank.svg":
+                        self.assertIn('class="blank-coastline"', text)
+                        self.assertIn("stroke-width: .25", text)
+                        self.assertIn("stroke-width: .5", text)
                 if asset_name.startswith("japan-preview-"):
                     self.assertIn('data-preview-map="japan"', text)
                     self.assertIn('data-source="japan-corridor-carrier"', text)
                     self.assertIn('data-source="japan-road-preview"', text)
+                    self.assertIn('data-source="japan-main-corridor"', text)
                     self.assertIn('data-source="japan-rail-preview"', text)
+                    self.assertIn('data-source="world-cities-japan-focus"', text)
                     self.assertIn('data-source="global-contours-major"', text)
                     self.assertIn('data-source="nasa-black-marble-2016"', text)
+                    self.assertIn('class="main-corridor"', text)
+                    self.assertIn('class="focus-city"', text)
+                    self.assertIn("corridorGlow", text)
+                    self.assertIn("cityGlow", text)
+                    self.assertIn("<title>Tokyo</title>", text)
+                    self.assertIn("<title>Osaka</title>", text)
+                    self.assertIn("<title>Nagoya · Aichi</title>", text)
 
     def test_landing_japan_preview_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "japan-preview.json"
@@ -121,16 +145,22 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["projection"]["parallels"], [33.0, 37.0])
         self.assertEqual(payload["selection_policy"]["road_limit"], 260)
         self.assertEqual(payload["selection_policy"]["rail_limit"], 160)
+        self.assertEqual(payload["selection_policy"]["main_corridor_limit"], 1)
         self.assertEqual(payload["selection_policy"]["city_limit"], 32)
+        self.assertEqual(payload["selection_policy"]["focus_city_names"], ["Tokyo", "Osaka", "Nagoya"])
         self.assertEqual(payload["counts"]["road_source_features"], 4794)
         self.assertEqual(payload["counts"]["rail_source_features"], 1105)
         self.assertGreater(payload["counts"]["road_eligible_paths"], payload["counts"]["road_lines_rendered"])
         self.assertGreater(payload["counts"]["rail_eligible_paths"], payload["counts"]["rail_lines_rendered"])
         self.assertEqual(payload["counts"]["road_lines_rendered"], 260)
         self.assertEqual(payload["counts"]["rail_lines_rendered"], 160)
+        self.assertEqual(payload["counts"]["main_corridor_paths_rendered"], 1)
+        self.assertEqual(len(payload["counts"]["main_corridor_titles"]), 1)
         self.assertGreater(payload["counts"]["city_source_features"], payload["counts"]["city_points_rendered"])
         self.assertGreater(payload["counts"]["city_eligible_points"], payload["counts"]["city_points_rendered"])
         self.assertEqual(payload["counts"]["city_points_rendered"], 32)
+        self.assertEqual(payload["counts"]["focus_city_points_rendered"], 3)
+        self.assertEqual(payload["counts"]["focus_city_titles"], ["Tokyo", "Osaka", "Nagoya · Aichi"])
         self.assertEqual(payload["counts"]["night_points_rendered"], 88)
         self.assertEqual(payload["counts"]["bathymetry_source_features"], 6)
         self.assertEqual(payload["counts"]["bathymetry_eligible_paths"], 0)
@@ -164,6 +194,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             scenario_manifest["capital_hints_url"],
         }
         expected_rail_sources = {"data/transport_layers/global_rail/catalog.json"}
+        expected_context_sources = {
+            "data/europe_urban.geojson",
+            "data/europe_rivers.geojson",
+            "data/world_cities.geojson",
+        }
         for entry in rail_catalog["entries"]:
             if entry.get("region_id") != "europe":
                 continue
@@ -179,7 +214,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["projection"]["canvas_width"], 980)
         self.assertEqual(payload["projection"]["canvas_height"], 620)
         self.assertEqual(payload["projection"]["canvas_padding"], 36)
-        self.assertEqual(set(payload["sources"]), expected_scenario_sources | expected_rail_sources)
+        self.assertEqual(set(payload["sources"]), expected_scenario_sources | expected_rail_sources | expected_context_sources)
         self.assertEqual(payload["selection_policy"]["transregional_tags"], ["TUR"])
         self.assertEqual(payload["selection_policy"]["capital_limit"], 22)
         self.assertEqual(payload["selection_policy"]["rail_source"], "full")
@@ -189,6 +224,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["selection_policy"]["rail_dedupe_pixel_grid"], 2.0)
         self.assertEqual(payload["selection_policy"]["rail_ranking_key"], "clipped_projected_length_px")
         self.assertEqual(payload["selection_policy"]["rail_dedupe_key"], "projected_path_grid_or_reverse")
+        self.assertEqual(payload["selection_policy"]["urban_area_limit"], 96)
+        self.assertEqual(payload["selection_policy"]["river_line_limit"], 82)
+        self.assertEqual(payload["selection_policy"]["night_light_limit"], 54)
+        self.assertEqual(payload["selection_policy"]["city_label_source"], "scenario capital hints")
+        self.assertEqual(payload["selection_policy"]["country_label_source"], "territory representative points")
+        self.assertEqual(payload["selection_policy"]["country_label_limit"], 8)
+        self.assertEqual(
+            payload["selection_policy"]["country_label_tags"],
+            ["ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"],
+        )
         self.assertEqual(payload["counts"]["territories"], len(payload["territory_tags"]))
         self.assertEqual(payload["counts"]["capitals"], len(payload["capital_tags"]))
         for expected_tag in ("ALB", "EST", "IRE", "LAT", "LIT", "LUX", "SWI", "TUR"):
@@ -199,6 +244,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertGreaterEqual(payload["counts"]["capitals"], 12)
         self.assertEqual(payload["counts"]["rail_lines_selected"], 220)
         self.assertGreater(payload["counts"]["rail_lines_candidates"], payload["counts"]["rail_lines_selected"])
+        self.assertEqual(payload["counts"]["urban_areas_rendered"], 96)
+        self.assertGreater(payload["counts"]["urban_paths_candidates"], payload["counts"]["urban_areas_rendered"])
+        self.assertEqual(payload["counts"]["river_lines_rendered"], 82)
+        self.assertGreater(payload["counts"]["river_paths_candidates"], payload["counts"]["river_lines_rendered"])
+        self.assertEqual(payload["counts"]["night_light_points_rendered"], 54)
+        self.assertGreater(payload["counts"]["city_light_candidates"], payload["counts"]["night_light_points_rendered"])
+        self.assertEqual(payload["counts"]["city_labels_rendered"], payload["counts"]["capitals"])
+        self.assertEqual(payload["counts"]["country_labels_rendered"], 8)
         self.assertEqual(set(payload["rail_selected_by_shard"]), {"eu_e010_e025", "eu_e025_e045", "eu_w012_e010"})
         for shard_id, selected_count in payload["rail_selected_by_shard"].items():
             with self.subTest(shard_id=shard_id):
@@ -213,7 +266,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             build_landing_europe_1936_showcase.SHOWCASE_METADATA = tmp_root / "europe-1936-showcase.json"
             try:
                 build_landing_europe_1936_showcase.build_showcase()
-                ET.fromstring(build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8"))
+                generated_text = build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8")
+                ET.fromstring(generated_text)
+                self.assertEqual(len(re.findall(r'class="country-label"', generated_text)), 8)
+                self.assertIn('.country-label { fill: rgba(255,255,255,.82);', generated_text)
+                self.assertIn('opacity: .62;', generated_text)
+                self.assertIn('svg[data-active-layer="political"] .layer-cities { opacity: 0; }', generated_text)
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
@@ -244,14 +302,19 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 if mode == "blank":
                     self.assertIn("data/scenarios/blank_base/manifest.json", payload["source_files"])
                     self.assertIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
+                    self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertTrue(payload["selection_policy"]["blank_canvas"])
+                    self.assertEqual(payload["selection_policy"]["land_simplify_tolerance"], 0.08)
+                    self.assertIsNone(payload["selection_policy"]["land_path_limit"])
+                    self.assertEqual(payload["selection_policy"]["blank_internal_stroke_width"], 0.25)
+                    self.assertEqual(payload["selection_policy"]["coastline_stroke_width"], 0.5)
                     self.assertGreater(payload["feature_counts"]["land_paths"], 0)
-                    self.assertEqual(payload["selection_policy"]["land_path_limit"], 900)
+                    self.assertGreater(payload["feature_counts"]["coastline_paths"], 0)
                     self.assertEqual(
-                        payload["feature_counts"]["land_paths_available"] - payload["feature_counts"]["land_paths"],
-                        payload["feature_counts"]["land_paths_dropped"],
+                        payload["feature_counts"]["land_paths_available"],
+                        payload["feature_counts"]["land_paths"],
                     )
-                    self.assertLessEqual(payload["feature_counts"]["land_paths"], 900)
+                    self.assertEqual(payload["feature_counts"]["land_paths_dropped"], 0)
                     self.assertEqual(payload["territory_tags"], [])
                 else:
                     self.assertIn(f"data/scenarios/{scenario_id}/manifest.json", payload["source_files"])
@@ -259,14 +322,43 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn(f"data/scenarios/{scenario_id}/owners.by_feature.json", payload["source_files"])
                     self.assertIn(f"data/scenarios/{scenario_id}/countries.json", payload["source_files"])
                     self.assertFalse(payload["selection_policy"]["blank_canvas"])
+                    self.assertEqual(payload["selection_policy"]["capital_limit"], 8)
+                    self.assertEqual(payload["selection_policy"]["territory_path_limit_per_tag"], 48)
                     self.assertGreater(payload["feature_counts"]["territories"], 20)
                     self.assertGreater(payload["feature_counts"]["political_features"], payload["feature_counts"]["territories"])
-                    self.assertGreater(payload["feature_counts"]["capitals"], 8)
+                    self.assertGreaterEqual(payload["feature_counts"]["capitals"], 6)
+                    self.assertLessEqual(payload["feature_counts"]["capitals"], 8)
+                    self.assertEqual(len(re.findall(r'class="city-label"', svg_text)), payload["feature_counts"]["capitals"])
+                    self.assertNotIn("territory--scenario-only", svg_text)
+                    self.assertNotIn("stroke-dasharray: 5 4", svg_text)
+                    self.assertNotIn('class="capital-code"', svg_text)
+                    self.assertNotIn('class="country-label"', svg_text)
                 if mode == "tno-1962":
                     self.assertIn("data/scenarios/tno_1962/capital_defaults.partial.json", payload["source_files"])
-                    self.assertIn("data/scenarios/tno_1962/scenario_atlantropa.topo.json", payload["source_files"])
-                    self.assertIn("data/scenarios/tno_1962/scenario_atlantropa_metadata.json", payload["source_files"])
-                    self.assertGreater(payload["feature_counts"]["atlantropa_paths"], 0)
+                    self.assertNotIn("data/scenarios/tno_1962/scenario_atlantropa.topo.json", payload["source_files"])
+                    self.assertNotIn("data/scenarios/tno_1962/scenario_atlantropa_metadata.json", payload["source_files"])
+                    self.assertIn("data/europe_topology.runtime_political_v1.json", payload["source_files"])
+                    self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
+                    self.assertEqual(
+                        payload["selection_policy"]["hero_geometry_source"],
+                        "runtime_topology base sea and political ownership crop",
+                    )
+                    self.assertEqual(payload["selection_policy"]["atlantropa_overlay"], "disabled_for_landing_hero")
+                    self.assertEqual(
+                        payload["selection_policy"]["base_underlay"],
+                        "original Europe land and coastline for small Mediterranean islands",
+                    )
+                    self.assertEqual(payload["selection_policy"]["base_underlay_path_limit"], 360)
+                    self.assertEqual(payload["selection_policy"]["base_underlay_coastline_limit"], 360)
+                    self.assertGreater(payload["feature_counts"]["base_land_paths"], 0)
+                    self.assertLessEqual(payload["feature_counts"]["base_land_paths"], 420)
+                    self.assertGreater(payload["feature_counts"]["base_mediterranean_island_paths"], 0)
+                    self.assertGreater(payload["feature_counts"]["base_coastline_paths"], 0)
+                    self.assertLessEqual(payload["feature_counts"]["base_coastline_paths"], 360)
+                    self.assertIn('class="base-land"', svg_text)
+                    self.assertIn('class="base-coastline"', svg_text)
+                    self.assertNotIn("atlantropa_paths", payload["feature_counts"])
+                    self.assertNotIn("atlantropa", svg_text)
 
     def test_landing_hero_scenario_assets_match_builder_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -298,9 +390,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 )
                 for mode, generated_path in build_landing_japan_preview.JAPAN_PREVIEW_SVGS.items():
                     with self.subTest(mode=mode):
-                        ET.fromstring(generated_path.read_text(encoding="utf-8"))
+                        generated_text = generated_path.read_text(encoding="utf-8")
+                        ET.fromstring(generated_text)
+                        self.assertIn('class="main-corridor"', generated_text)
+                        self.assertIn('class="focus-city"', generated_text)
+                        self.assertIn('data-source="japan-main-corridor"', generated_text)
+                        self.assertIn('data-source="world-cities-japan-focus"', generated_text)
+                        self.assertIn("<title>Tokyo</title>", generated_text)
+                        self.assertIn("<title>Osaka</title>", generated_text)
+                        self.assertIn("<title>Nagoya · Aichi</title>", generated_text)
                         if mode == "cities":
-                            generated_text = generated_path.read_text(encoding="utf-8")
                             self.assertIn("<title>Sendai · Miyagi</title>", generated_text)
                             self.assertIsNone(
                                 re.search(r'<circle class="city"[^>]*><title>Sendai</title></circle>', generated_text)
@@ -451,6 +550,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            'class="brandmark__logo"',
+            './assets/favicon.svg',
             './assets/hero-hoi4-1936.svg',
             'data-hero-map',
             'data-hero-chip="blank"',
@@ -482,6 +583,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             './assets/europe-1936-showcase.svg',
             'data-showcase-root',
             'data-showcase-object',
+            'data-showcase-object tabindex="0"',
             'id="showcase-map-object"',
             'role="tabpanel"',
             'id="showcase-layer-panel"',
@@ -493,7 +595,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="showcaseLayerPoliticalTitle"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
+            'data-preview-surface',
+            'data-preview-viewport',
             'data-preview-image="transport"',
+            'class="mini-map__controls"',
+            'data-preview-zoom="1"',
+            'data-preview-zoom="-1"',
+            'data-preview-zoom="reset"',
+            'data-i18n-aria-label="previewZoomIn"',
+            'data-i18n-aria-label="previewZoomOut"',
+            'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
             './assets/template-modern.svg',
@@ -550,7 +661,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseViewZoomed",
             "clampShowcaseViewPosition",
             "applyShowcaseViewState",
+            "isModifiedWheelEvent",
+            "onKeyDown",
             "initShowcaseView",
+            "PREVIEW_VIEW_SCALES",
+            "clampPreviewViewPosition",
+            "applyPreviewViewState",
+            "initPreviewView",
+            "previewZoomed",
+            "previewDragging",
             "pointerdown",
             "wheel",
             "dblclick",
@@ -598,6 +717,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("line-height: 1.1", styles_css)
         self.assertIn("overflow-wrap: anywhere", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
+        self.assertIsNotNone(hero_chips_style)
+        self.assertNotIn("position: absolute", hero_chips_style.group("body"))
+        self.assertIn(".brandmark__logo", styles_css)
+        self.assertNotIn(".brandmark__dot", styles_css)
         self.assertIn('[data-hero-transition="loading"]', styles_css)
         self.assertIn('[data-hero-mode="blank"]', styles_css)
         self.assertIn('[data-hero-mode="hoi4-1936"]', styles_css)
@@ -608,8 +733,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("[data-showcase-object]", app_js)
         self.assertNotIn("SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political", app_js)
         self.assertIn("height: 44px", styles_css)
+        self.assertIn(".showcase-map__viewport", styles_css)
+        self.assertIn(".showcase-map__viewport::after", styles_css)
+        self.assertIn("radial-gradient(ellipse at center", styles_css)
+        self.assertIn("inset 0 0 92px", styles_css)
         self.assertIn(".showcase-map__object", styles_css)
+        self.assertIn(".showcase-map__object:focus-visible", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
+        self.assertIn("--preview-scale", styles_css)
+        self.assertIn(".mini-map__viewport", styles_css)
+        self.assertIn(".mini-map__controls", styles_css)
+        self.assertIn('[data-preview-zoomed="true"]', styles_css)
+        self.assertIn('[data-preview-dragging="true"]', styles_css)
         self.assertIn(".showcase-section", styles_css)
         self.assertNotIn("data-showcase-view-controls", html)
         self.assertNotIn("data-showcase-view-action", html)
@@ -649,6 +784,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "previewSurfaceLabel:",
+            "previewZoomControlsLabel:",
+            "previewZoomIn:",
+            "previewZoomOut:",
+            "previewZoomReset:",
             "chipHoi41936:",
             "chipHoi41939:",
             "chipTno1962:",
@@ -752,6 +892,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="heroTitle"',
             'data-i18n="heroTitleAccent"',
             'data-i18n="productStageLabel"',
+            'class="brandmark__logo"',
+            './assets/favicon.svg',
             './assets/hero-hoi4-1936.svg',
             'data-hero-map',
             'data-hero-chip="blank"',
@@ -770,7 +912,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-showcase-layer-tab="day-night"',
             'data-i18n="previewEyebrow"',
             'data-preview-root',
+            'data-preview-surface',
+            'data-preview-viewport',
             'data-preview-image="transport"',
+            'class="mini-map__controls"',
+            'data-preview-zoom="1"',
+            'data-preview-zoom="-1"',
+            'data-preview-zoom="reset"',
+            'data-i18n-aria-label="previewZoomIn"',
+            'data-i18n-aria-label="previewZoomOut"',
+            'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
             './assets/template-modern.svg',
@@ -819,6 +970,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseViewZoomed",
             "clampShowcaseViewPosition",
             "dblclick",
+            "PREVIEW_VIEW_SCALES",
+            "clampPreviewViewPosition",
+            "applyPreviewViewState",
+            "initPreviewView",
+            "previewZoomed",
+            "previewDragging",
             "initPreviewTabs",
             "initHeroMap",
             "initMetricCountUp",
@@ -859,6 +1016,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertRegex(styles_css, re.compile(r'\[data-reveal(?:=["\']enabled["\'])?\]'))
         self.assertIn(".is-revealed", styles_css)
         self.assertIn(".hero-cartography", styles_css)
+        self.assertIn("translateY(-18px) perspective(1200px)", styles_css)
+        hero_chips_style = re.search(r"\.hero__chips\s*\{(?P<body>[^}]*)\}", styles_css, re.S)
+        self.assertIsNotNone(hero_chips_style)
+        self.assertNotIn("position: absolute", hero_chips_style.group("body"))
+        self.assertIn(".brandmark__logo", styles_css)
+        self.assertNotIn(".brandmark__dot", styles_css)
         self.assertIn('[data-hero-transition="loading"]', styles_css)
         self.assertIn('[data-hero-mode="blank"]', styles_css)
         self.assertIn('[data-hero-mode="hoi4-1936"]', styles_css)
@@ -866,9 +1029,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
+        self.assertIn(".showcase-map__viewport", styles_css)
+        self.assertIn(".showcase-map__viewport::after", styles_css)
+        self.assertIn("radial-gradient(ellipse at center", styles_css)
+        self.assertIn("inset 0 0 92px", styles_css)
         self.assertIn(".showcase-map__object", styles_css)
         self.assertNotIn(".showcase-map__controls", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
+        self.assertIn("--preview-scale", styles_css)
+        self.assertIn(".mini-map__viewport", styles_css)
+        self.assertIn(".mini-map__controls", styles_css)
+        self.assertIn('[data-preview-zoomed="true"]', styles_css)
+        self.assertIn('[data-preview-dragging="true"]', styles_css)
         self.assertIn(".showcase-section", styles_css)
         self.assertRegex(
             styles_css,

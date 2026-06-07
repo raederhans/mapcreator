@@ -47,7 +47,7 @@
     <div class="site-shell">
       <header class="topbar">
         <a class="brandmark" href="#hero" aria-label="Scenario Forge home" data-i18n-aria-label="brandHomeLabel">
-          <span class="brandmark__dot" aria-hidden="true"></span>
+          <img class="brandmark__logo" src="./assets/logo-mark.png" alt="" aria-hidden="true" width="32" height="32" />
           <span class="brandmark__text">Scenario Forge</span>
         </a>
 
@@ -95,9 +95,6 @@
                 <div class="hero-map__hud" aria-hidden="true">
                   <span data-i18n="heroMapHudOne">Political baseline</span>
                   <span data-i18n="heroMapHudTwo">Routes + lights</span>
-                </div>
-                <div class="hero-map__legend" aria-hidden="true">
-                  <i></i><span data-i18n="heroMapLegend">Scenario layer stack</span>
                 </div>
               </div>
             </div>
@@ -244,9 +241,11 @@
             </div>
           </div>
           <figure class="showcase-map" data-reveal>
-            <object id="showcase-map-object" class="showcase-map__object" type="image/svg+xml" data="./assets/europe-1936-showcase.svg" aria-label="Europe 1936 generated scenario showcase map" data-i18n-aria-label="showcaseMapLabel" data-showcase-object width="980" height="620">
-              <img src="./assets/europe-1936-showcase.svg" alt="Europe 1936 generated scenario showcase map." data-i18n-alt="showcaseAlt" loading="lazy" width="980" height="620" />
-            </object>
+            <div class="showcase-map__viewport">
+              <object id="showcase-map-object" class="showcase-map__object" type="image/svg+xml" data="./assets/europe-1936-showcase.svg" aria-label="Europe 1936 generated scenario showcase map" data-i18n-aria-label="showcaseMapLabel" data-showcase-object tabindex="0" width="980" height="620">
+                <img src="./assets/europe-1936-showcase.svg" alt="Europe 1936 generated scenario showcase map." data-i18n-alt="showcaseAlt" loading="lazy" width="980" height="620" />
+              </object>
+            </div>
             <figcaption>
               <span data-i18n="showcaseMeta">Generated from HOI4 1936 ownership, Europe topology, capital hints, and Europe rail data.</span>
             </figcaption>
@@ -272,11 +271,18 @@
                 <span class="status-badge" data-i18n="miniMapBadge">Interactive preview</span>
               </div>
 
-              <div class="mini-map__surface" aria-hidden="true">
-                <img src="./assets/japan-preview-transport.svg" alt="" data-preview-image="transport" width="680" height="440" loading="lazy" />
-                <img src="./assets/japan-preview-cities.svg" alt="" data-preview-image="cities" width="680" height="440" loading="lazy" />
-                <img src="./assets/japan-preview-terrain.svg" alt="" data-preview-image="terrain" width="680" height="440" loading="lazy" />
-                <img src="./assets/japan-preview-night.svg" alt="" data-preview-image="night" width="680" height="440" loading="lazy" />
+              <div class="mini-map__surface" data-preview-surface data-i18n-aria-label="previewSurfaceLabel" aria-label="Japan preview map viewport" tabindex="0">
+                <div class="mini-map__viewport" data-preview-viewport>
+                  <img src="./assets/japan-preview-transport.svg" alt="" data-preview-image="transport" width="680" height="440" loading="lazy" />
+                  <img src="./assets/japan-preview-cities.svg" alt="" data-preview-image="cities" width="680" height="440" loading="lazy" />
+                  <img src="./assets/japan-preview-terrain.svg" alt="" data-preview-image="terrain" width="680" height="440" loading="lazy" />
+                  <img src="./assets/japan-preview-night.svg" alt="" data-preview-image="night" width="680" height="440" loading="lazy" />
+                </div>
+                <div class="mini-map__controls" data-i18n-aria-label="previewZoomControlsLabel" aria-label="Japan preview zoom controls">
+                  <button type="button" data-preview-zoom="-1" data-i18n-aria-label="previewZoomOut" aria-label="Zoom out">−</button>
+                  <button type="button" data-preview-zoom="reset" data-i18n-aria-label="previewZoomReset" aria-label="Reset preview zoom">1×</button>
+                  <button type="button" data-preview-zoom="1" data-i18n-aria-label="previewZoomIn" aria-label="Zoom in">+</button>
+                </div>
               </div>
 
               <div class="preview-tabs" role="tablist" aria-label="Preview layers" data-i18n-aria-label="previewTabsLabel">

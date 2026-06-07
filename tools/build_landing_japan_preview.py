@@ -42,6 +42,8 @@ CANVAS_PADDING = 24
 ROAD_LIMIT = 260
 RAIL_LIMIT = 160
 CITY_LIMIT = 32
+FOCUS_CITY_LIMIT = 3
+MAIN_CORRIDOR_LIMIT = 1
 MAJOR_CONTOUR_LIMIT = 80
 MINOR_CONTOUR_LIMIT = 120
 RIVER_LIMIT = 42
@@ -60,6 +62,7 @@ FOCUS_CITY_NAMES = {
     "Kyoto",
     "Kobe",
 }
+LANDING_FOCUS_CITY_NAMES = ("Tokyo", "Osaka", "Nagoya")
 
 
 @dataclass(frozen=True)
@@ -115,6 +118,7 @@ class PathEntry:
     d: str
     rank: float
     source: str
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -327,6 +331,15 @@ def road_rank(properties: dict, length_px: float) -> float:
     return class_weight * 10000 + dense_bonus * 1000 + length_px
 
 
+def corridor_label(properties: dict) -> str:
+    name = str(properties.get("name") or properties.get("official_name") or "").strip()
+    ref = str(properties.get("ref") or properties.get("official_ref") or "").strip()
+    road_class = str(properties.get("road_class") or "road").strip()
+    if name and ref:
+        return f"{name} / {ref}"
+    return name or ref or road_class
+
+
 def rail_rank(properties: dict, length_px: float) -> float:
     class_weight = {
         "high_speed": 8,
@@ -368,6 +381,27 @@ def select_line_layer(
             entries.append(PathEntry(d=d, rank=rank, source=source))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
     return entries[:limit], len(features), len(entries)
+
+
+def select_main_corridor_path(canvas: Canvas, clip: BaseGeometry) -> list[PathEntry]:
+    entries: list[PathEntry] = []
+    for feature in topology_features(JAPAN_ROADS, "roads"):
+        properties = feature.get("properties", {})
+        road_class = str(properties.get("road_class") or "").lower()
+        if road_class not in {"motorway", "trunk"}:
+            continue
+        geometry = feature_geometry(feature, clip)
+        if geometry is None or geometry.is_empty:
+            continue
+        length_px = projected_length(geometry, canvas)
+        if length_px < 2.0:
+            continue
+        rank = road_rank(properties, length_px)
+        label = corridor_label(properties)
+        for d in geometry_line_paths(geometry, canvas, stride=2):
+            entries.append(PathEntry(d=d, rank=rank, source="japan-main-corridor", label=label))
+    entries.sort(key=lambda entry: entry.rank, reverse=True)
+    return entries[:MAIN_CORRIDOR_LIMIT]
 
 
 def select_topology_lines(
@@ -444,6 +478,35 @@ def select_cities(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
     points.sort(key=lambda point: point.rank, reverse=True)
     selected = dedupe_points(points, grid_px=18.0, limit=CITY_LIMIT)
     return selected, source_features, len(points)
+
+
+def select_focus_cities(canvas: Canvas) -> list[PointEntry]:
+    points_by_name: dict[str, PointEntry] = {}
+    min_lon, min_lat, max_lon, max_lat = canvas.bbox
+    for feature in geojson_features(WORLD_CITIES):
+        properties = feature.get("properties", {})
+        if properties.get("country_code") != "JP":
+            continue
+        base_name = str(properties.get("name_ascii") or properties.get("name") or "")
+        if base_name not in LANDING_FOCUS_CITY_NAMES:
+            continue
+        coords = feature.get("geometry", {}).get("coordinates")
+        if not isinstance(coords, list) or len(coords) < 2:
+            continue
+        lon, lat = float(coords[0]), float(coords[1])
+        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
+            continue
+        x, y = canvas.project(lon, lat)
+        population = float(properties.get("population") or 0)
+        points_by_name[base_name] = PointEntry(
+            x=x,
+            y=y,
+            rank=population,
+            source="world-cities-japan-focus",
+            name=city_display_name(base_name, properties),
+            radius=7.6,
+        )
+    return [points_by_name[name] for name in LANDING_FOCUS_CITY_NAMES if name in points_by_name][:FOCUS_CITY_LIMIT]
 
 
 def select_station_points(canvas: Canvas, limit: int) -> list[PointEntry]:
@@ -526,10 +589,13 @@ def select_night_points(canvas: Canvas) -> tuple[list[PointEntry], int, int]:
 
 
 def path_nodes(entries: Iterable[PathEntry], class_name: str, layer: str) -> str:
-    return "\n".join(
-        f'    <path class="{class_name}" data-layer="{layer}" data-source="{entry.source}" d="{entry.d}" />'
-        for entry in entries
-    )
+    nodes: list[str] = []
+    for entry in entries:
+        title = f"<title>{xml_escape(entry.label)}</title>" if entry.label else ""
+        nodes.append(
+            f'    <path class="{class_name}" data-layer="{layer}" data-source="{entry.source}" d="{entry.d}">{title}</path>'
+        )
+    return "\n".join(nodes)
 
 
 def base_nodes(paths: Iterable[str]) -> str:
@@ -564,18 +630,18 @@ def graticule(canvas: Canvas) -> str:
 
 def build_svg(mode: str, canvas: Canvas, layers: dict, metadata: dict) -> str:
     mode_styles = {
-        "transport": ".road{opacity:.62}.rail{opacity:.78}.station{opacity:.9}.city{opacity:.7}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.15}.night-light{opacity:.16}",
-        "cities": ".road,.rail{opacity:.18}.station{opacity:.38}.city{opacity:.95}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.16}.night-light{opacity:.12}",
-        "terrain": ".road,.rail,.station,.city{opacity:.2}.terrain-major{opacity:.72}.terrain-minor{opacity:.38}.river{opacity:.64}.bathymetry{opacity:.34}.night-light{opacity:.08}",
-        "night": ".road,.rail,.station{opacity:.18}.city{opacity:.55}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.16}.night-light{opacity:.82}.sea{fill:#081324}.land{fill:#182b34;stroke:#334654}",
+        "transport": ".road{opacity:.62}.rail{opacity:.78}.main-corridor{opacity:1}.station{opacity:.9}.city{opacity:.58}.focus-city{opacity:1}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.15}.night-light{opacity:.16}",
+        "cities": ".road,.rail{opacity:.18}.main-corridor{opacity:.72}.station{opacity:.38}.city{opacity:.82}.focus-city{opacity:1}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.16}.night-light{opacity:.12}",
+        "terrain": ".road,.rail,.station,.city{opacity:.2}.main-corridor{opacity:.52}.focus-city{opacity:.72}.terrain-major{opacity:.72}.terrain-minor{opacity:.38}.river{opacity:.64}.bathymetry{opacity:.34}.night-light{opacity:.08}",
+        "night": ".road,.rail,.station{opacity:.18}.main-corridor{opacity:.62}.city{opacity:.42}.focus-city{opacity:.86}.terrain-major,.terrain-minor,.river,.bathymetry{opacity:.16}.night-light{opacity:.82}.sea{fill:#081324}.land{fill:#182b34;stroke:#334654}",
     }
     embedded = xml_escape(json.dumps({"mode": mode, "counts": metadata["counts"]}, sort_keys=True, separators=(",", ":")))
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {canvas.width} {canvas.height}" role="img" aria-label="Japan {mode} preview map generated from Scenario Forge data" data-preview-map="japan" data-preview-mode="{mode}">
   <metadata>{embedded}</metadata>
   <style>
-    .sea{{fill:#c6e4e3}}.graticule{{fill:none;stroke:#56706e;stroke-width:.6;opacity:.18}}.land{{fill:#f4ead5;stroke:#7c8a71;stroke-width:1.5}}.road,.rail,.terrain-major,.terrain-minor,.river,.bathymetry{{fill:none;stroke-linecap:round;stroke-linejoin:round}}.road{{stroke:#e96b31;stroke-width:1.7}}.rail{{stroke:#fff7df;stroke-width:2.1;stroke-dasharray:6 6}}.station{{fill:#fff7df;stroke:#17324a;stroke-width:1.2}}.city{{fill:#28c7b7;stroke:#fff;stroke-width:1.6}}.terrain-major{{stroke:#6f8d4e;stroke-width:2.2}}.terrain-minor{{stroke:#8fa86b;stroke-width:1.2}}.river{{stroke:#4aa3bd;stroke-width:1.5}}.bathymetry{{stroke:#2d6f8f;stroke-width:1.2;stroke-dasharray:5 7}}.night-light{{fill:#ffd166;filter:url(#glow)}}{mode_styles[mode]}
+    .sea{{fill:#c6e4e3}}.graticule{{fill:none;stroke:#56706e;stroke-width:.6;opacity:.18}}.land{{fill:#f4ead5;stroke:#7c8a71;stroke-width:1.5}}.road,.rail,.main-corridor,.terrain-major,.terrain-minor,.river,.bathymetry{{fill:none;stroke-linecap:round;stroke-linejoin:round}}.road{{stroke:#e96b31;stroke-width:1.7}}.rail{{stroke:#fff7df;stroke-width:2.1;stroke-dasharray:6 6}}.main-corridor{{stroke:#ffb547;stroke-width:5;paint-order:stroke;filter:url(#corridorGlow)}}.station{{fill:#fff7df;stroke:#17324a;stroke-width:1.2}}.city{{fill:#28c7b7;stroke:#fff;stroke-width:1.6}}.focus-city{{fill:#ffd166;stroke:#073142;stroke-width:2.4;filter:url(#cityGlow)}}.terrain-major{{stroke:#6f8d4e;stroke-width:2.2}}.terrain-minor{{stroke:#8fa86b;stroke-width:1.2}}.river{{stroke:#4aa3bd;stroke-width:1.5}}.bathymetry{{stroke:#2d6f8f;stroke-width:1.2;stroke-dasharray:5 7}}.night-light{{fill:#ffd166;filter:url(#glow)}}{mode_styles[mode]}
   </style>
-  <defs><filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs>
+  <defs><filter id="glow"><feGaussianBlur stdDeviation="8"/></filter><filter id="corridorGlow"><feGaussianBlur stdDeviation="2"/></filter><filter id="cityGlow"><feGaussianBlur stdDeviation="2.4"/></filter></defs>
   <rect class="sea" width="{canvas.width}" height="{canvas.height}" rx="26" />
   <g data-layer="graticule">
     {graticule(canvas)}
@@ -592,10 +658,12 @@ def build_svg(mode: str, canvas: Canvas, layers: dict, metadata: dict) -> str:
   <g data-layer="transport" data-source="data/transport_layers/japan_road/roads.preview.topo.json data/transport_layers/japan_rail/railways.preview.topo.json">
 {path_nodes(layers["roads"], "road", "transport")}
 {path_nodes(layers["rails"], "rail", "transport")}
+{path_nodes(layers["main_corridor"], "main-corridor", "transport")}
 {point_nodes(layers["stations"], "station", "transport")}
   </g>
   <g data-layer="cities" data-source="data/world_cities.geojson">
 {point_nodes(layers["cities"], "city", "cities")}
+{point_nodes(layers["focus_cities"], "focus-city", "cities")}
   </g>
   <g data-layer="night" data-source="js/core/city_lights_modern_asset.js data/city_lights/historical_1930_entries.json">
 {point_nodes(layers["night"], "night-light", "night")}
@@ -613,7 +681,9 @@ def build_preview() -> None:
     base = build_base_paths(carrier, canvas)
     roads, road_source_features, road_eligible_paths = select_line_layer(JAPAN_ROADS, "roads", canvas, clip, ROAD_LIMIT, "japan-road-preview", road_rank, stride=5)
     rails, rail_source_features, rail_eligible_paths = select_line_layer(JAPAN_RAIL, "railways", canvas, clip, RAIL_LIMIT, "japan-rail-preview", rail_rank, stride=4)
+    main_corridor = select_main_corridor_path(canvas, clip)
     cities, city_source_features, city_eligible_points = select_cities(canvas)
+    focus_cities = select_focus_cities(canvas)
     stations = select_station_points(canvas, limit=20)
     terrain_major, major_source_features, major_eligible_paths = select_topology_lines(CONTOURS_MAJOR, "contours", canvas, clip, MAJOR_CONTOUR_LIMIT, "global-contours-major", stride=8)
     terrain_minor, minor_source_features, minor_eligible_paths = select_topology_lines(CONTOURS_MINOR, "contours", canvas, clip, MINOR_CONTOUR_LIMIT, "global-contours-minor", stride=12)
@@ -625,7 +695,9 @@ def build_preview() -> None:
         "base": base,
         "roads": roads,
         "rails": rails,
+        "main_corridor": main_corridor,
         "cities": cities,
+        "focus_cities": focus_cities,
         "stations": stations,
         "terrain_major": terrain_major,
         "terrain_minor": terrain_minor,
@@ -676,8 +748,11 @@ def build_preview() -> None:
             "rail_source": "preview",
             "rail_limit": RAIL_LIMIT,
             "rail_ranking_key": "line_class_weight_plus_projected_length_px",
+            "main_corridor_limit": MAIN_CORRIDOR_LIMIT,
+            "main_corridor_ranking_key": "motorway_or_trunk_rank_plus_projected_length_px",
             "city_limit": CITY_LIMIT,
             "city_ranking_key": "population_plus_focus_city_bonus",
+            "focus_city_names": list(LANDING_FOCUS_CITY_NAMES),
             "night_grid_limit": NIGHT_GRID_LIMIT,
             "night_source": "NASA Black Marble 2016 grid sampled over the Japan map bbox",
             "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan main corridor bbox.",
@@ -690,10 +765,14 @@ def build_preview() -> None:
             "rail_source_features": rail_source_features,
             "rail_eligible_paths": rail_eligible_paths,
             "rail_lines_rendered": len(rails),
+            "main_corridor_paths_rendered": len(main_corridor),
+            "main_corridor_titles": [path.label for path in main_corridor],
             "major_station_points_rendered": len(stations),
             "city_source_features": city_source_features,
             "city_eligible_points": city_eligible_points,
             "selected_city_titles": [point.name for point in cities],
+            "focus_city_titles": [point.name for point in focus_cities],
+            "focus_city_points_rendered": len(focus_cities),
             "city_points_rendered": len(cities),
             "terrain_major_source_features": major_source_features,
             "terrain_major_eligible_paths": major_eligible_paths,

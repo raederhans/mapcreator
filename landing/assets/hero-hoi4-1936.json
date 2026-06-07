@@ -36,12 +36,12 @@
   "feature_counts": {
     "territories": 29,
     "political_features": 6803,
-    "capitals": 18
+    "capitals": 8
   },
   "counts": {
     "territories": 29,
     "political_features": 6803,
-    "capitals": 18
+    "capitals": 8
   },
   "territory_tags": [
     "ALB",
@@ -75,29 +75,20 @@
     "YUG"
   ],
   "capital_tags": [
-    "ALB",
-    "AUS",
-    "BEL",
-    "BUL",
     "CZE",
-    "DEN",
     "ENG",
-    "EST",
-    "FIN",
     "FRA",
     "GER",
-    "GRE",
-    "HOL",
     "ITA",
     "POL",
     "ROM",
-    "SOV",
-    "YUG"
+    "SOV"
   ],
   "selection_policy": {
     "viewport": "Europe hero crop shared by all scenario chips",
     "blank_canvas": false,
     "ownership_fill": true,
-    "capital_limit": 18
+    "capital_limit": 8,
+    "territory_path_limit_per_tag": 48
   }
 }

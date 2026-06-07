@@ -7,6 +7,16 @@
     "city_eligible_points": 758,
     "city_points_rendered": 32,
     "city_source_features": 773,
+    "focus_city_points_rendered": 3,
+    "focus_city_titles": [
+      "Tokyo",
+      "Osaka",
+      "Nagoya · Aichi"
+    ],
+    "main_corridor_paths_rendered": 1,
+    "main_corridor_titles": [
+      "首都圏中央連絡自動車道 / C4"
+    ],
     "major_station_points_rendered": 20,
     "night_anchor_candidates": 54,
     "night_grid_candidates": 297,
@@ -112,6 +122,13 @@
     "bathymetry_scope_note": "The checked-in global bathymetry topology has no lines intersecting the Japan main corridor bbox.",
     "city_limit": 32,
     "city_ranking_key": "population_plus_focus_city_bonus",
+    "focus_city_names": [
+      "Tokyo",
+      "Osaka",
+      "Nagoya"
+    ],
+    "main_corridor_limit": 1,
+    "main_corridor_ranking_key": "motorway_or_trunk_rank_plus_projected_length_px",
     "night_grid_limit": 78,
     "night_source": "NASA Black Marble 2016 grid sampled over the Japan map bbox",
     "rail_limit": 160,

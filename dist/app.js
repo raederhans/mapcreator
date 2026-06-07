@@ -24,7 +24,6 @@ const translations = {
     heroChipsLabel: "Hero scenario style",
     heroMapHudOne: "Political baseline",
     heroMapHudTwo: "Routes + lights",
-    heroMapLegend: "Scenario layer stack",
     brandHomeLabel: "Scenario Forge home",
     primaryNavLabel: "Primary navigation",
     languageSwitcherLabel: "Language switcher",
@@ -107,6 +106,11 @@ const translations = {
     miniMapTitle:
       "A readable sample of Japan roads, rail, cities, terrain, rivers, and night-light context.",
     miniMapBadge: "Interactive preview",
+    previewSurfaceLabel: "Japan preview map viewport",
+    previewZoomControlsLabel: "Japan preview zoom controls",
+    previewZoomIn: "Zoom in",
+    previewZoomOut: "Zoom out",
+    previewZoomReset: "Reset preview zoom",
     previewTabsLabel: "Preview layers",
     previewTabTransport: "Transport",
     previewTabCities: "Cities",
@@ -351,7 +355,6 @@ const translations = {
     heroChipsLabel: "首屏场景风格",
     heroMapHudOne: "政治基线",
     heroMapHudTwo: "路线与夜光",
-    heroMapLegend: "场景图层栈",
     brandHomeLabel: "Scenario Forge 首页",
     primaryNavLabel: "主导航",
     languageSwitcherLabel: "语言切换",
@@ -417,6 +420,11 @@ const translations = {
     miniMapLabel: "日本数据预览",
     miniMapTitle: "用可读抽样查看日本道路、铁路、城市、地形、河流和夜光上下文。",
     miniMapBadge: "可交互预览",
+    previewSurfaceLabel: "日本预览地图视口",
+    previewZoomControlsLabel: "日本预览缩放控件",
+    previewZoomIn: "放大",
+    previewZoomOut: "缩小",
+    previewZoomReset: "重置预览缩放",
     previewTabsLabel: "预览图层",
     previewTabTransport: "交通",
     previewTabCities: "城市",
@@ -613,6 +621,9 @@ const DEFAULT_SHOWCASE_LAYER = "political";
 const SHOWCASE_VIEW_WIDTH = 980;
 const SHOWCASE_VIEW_HEIGHT = 620;
 const SHOWCASE_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.3];
+const PREVIEW_VIEW_WIDTH = 680;
+const PREVIEW_VIEW_HEIGHT = 440;
+const PREVIEW_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.25];
 const DEFAULT_HERO_MODE = "hoi4-1936";
 const HERO_SCENARIO_ASSETS = {
   blank: {
@@ -1005,6 +1016,23 @@ function initShowcaseView() {
     delete root.dataset.showcaseViewDragging;
   };
 
+  const onKeyDown = (event) => {
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      zoomShowcaseView(root, 1);
+      return;
+    }
+    if (event.key === "-" || event.key === "_") {
+      event.preventDefault();
+      zoomShowcaseView(root, -1);
+      return;
+    }
+    if (event.key === "0" || event.key === "Escape") {
+      event.preventDefault();
+      resetShowcaseView(root);
+    }
+  };
+
   const bindEmbeddedSvg = () => {
     applyShowcaseViewState(root, getShowcaseViewState(root));
     const svg = objectNode.contentDocument?.querySelector("svg");
@@ -1023,6 +1051,7 @@ function initShowcaseView() {
   objectNode.addEventListener("pointermove", onPointerMove);
   objectNode.addEventListener("pointerup", onPointerEnd);
   objectNode.addEventListener("pointercancel", onPointerEnd);
+  objectNode.addEventListener("keydown", onKeyDown);
   objectNode.addEventListener("dblclick", onDoubleClick);
   objectNode.addEventListener("load", bindEmbeddedSvg);
   resetShowcaseView(root);
@@ -1100,6 +1129,138 @@ function initShowcaseLayers() {
   setShowcaseSvgLayer(root);
 }
 
+function getPreviewViewState(root) {
+  const scaleIndex = Number.parseInt(root.dataset.previewScaleIndex || "0", 10);
+  return {
+    scaleIndex: Number.isNaN(scaleIndex) ? 0 : Math.max(0, Math.min(scaleIndex, PREVIEW_VIEW_SCALES.length - 1)),
+    x: Number.parseFloat(root.dataset.previewX || "0") || 0,
+    y: Number.parseFloat(root.dataset.previewY || "0") || 0,
+  };
+}
+
+function clampPreviewViewPosition(scale, x, y) {
+  if (scale <= 1) return { x: 0, y: 0 };
+  return {
+    x: Math.max(PREVIEW_VIEW_WIDTH * (1 - scale), Math.min(0, x)),
+    y: Math.max(PREVIEW_VIEW_HEIGHT * (1 - scale), Math.min(0, y)),
+  };
+}
+
+function applyPreviewViewState(root, nextState) {
+  const scaleIndex = Math.max(0, Math.min(nextState.scaleIndex, PREVIEW_VIEW_SCALES.length - 1));
+  const scale = PREVIEW_VIEW_SCALES[scaleIndex];
+  const position = clampPreviewViewPosition(scale, nextState.x, nextState.y);
+  root.dataset.previewScaleIndex = String(scaleIndex);
+  root.dataset.previewScale = scale.toFixed(2);
+  root.dataset.previewZoomed = scale > 1 ? "true" : "false";
+  root.dataset.previewX = position.x.toFixed(1);
+  root.dataset.previewY = position.y.toFixed(1);
+  const viewport = root.querySelector("[data-preview-viewport]");
+  if (viewport) {
+    viewport.style.setProperty("--preview-scale", scale.toFixed(2));
+    viewport.style.setProperty("--preview-x", `${position.x.toFixed(1)}px`);
+    viewport.style.setProperty("--preview-y", `${position.y.toFixed(1)}px`);
+  }
+}
+
+function zoomPreviewView(root, direction) {
+  const state = getPreviewViewState(root);
+  const currentScale = PREVIEW_VIEW_SCALES[state.scaleIndex];
+  const nextScaleIndex = Math.max(0, Math.min(state.scaleIndex + direction, PREVIEW_VIEW_SCALES.length - 1));
+  const nextScale = PREVIEW_VIEW_SCALES[nextScaleIndex];
+  const centerX = (PREVIEW_VIEW_WIDTH / 2 - state.x) / currentScale;
+  const centerY = (PREVIEW_VIEW_HEIGHT / 2 - state.y) / currentScale;
+  applyPreviewViewState(root, {
+    scaleIndex: nextScaleIndex,
+    x: PREVIEW_VIEW_WIDTH / 2 - centerX * nextScale,
+    y: PREVIEW_VIEW_HEIGHT / 2 - centerY * nextScale,
+  });
+}
+
+function resetPreviewView(root) {
+  applyPreviewViewState(root, { scaleIndex: 0, x: 0, y: 0 });
+}
+
+function initPreviewView() {
+  const root = document.querySelector("[data-preview-root]");
+  const surface = root?.querySelector("[data-preview-surface]");
+  if (!root || !surface) return;
+
+  let dragState = null;
+
+  const onPointerDown = (event) => {
+    if (event.target?.closest?.("[data-preview-zoom]")) return;
+    const state = getPreviewViewState(root);
+    if (PREVIEW_VIEW_SCALES[state.scaleIndex] <= 1) return;
+    dragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      viewX: state.x,
+      viewY: state.y,
+    };
+    root.dataset.previewDragging = "true";
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+  };
+
+  const onPointerMove = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    applyPreviewViewState(root, {
+      scaleIndex: getPreviewViewState(root).scaleIndex,
+      x: dragState.viewX + event.clientX - dragState.startX,
+      y: dragState.viewY + event.clientY - dragState.startY,
+    });
+  };
+
+  const onPointerEnd = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    event.currentTarget?.releasePointerCapture?.(event.pointerId);
+    dragState = null;
+    delete root.dataset.previewDragging;
+  };
+
+  surface.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    zoomPreviewView(root, event.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+  surface.addEventListener("pointerdown", onPointerDown);
+  surface.addEventListener("pointermove", onPointerMove);
+  surface.addEventListener("pointerup", onPointerEnd);
+  surface.addEventListener("pointercancel", onPointerEnd);
+  surface.addEventListener("dblclick", () => {
+    if (getPreviewViewState(root).scaleIndex > 0) {
+      resetPreviewView(root);
+    } else {
+      zoomPreviewView(root, 1);
+    }
+  });
+  surface.addEventListener("keydown", (event) => {
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      zoomPreviewView(root, 1);
+    }
+    if (event.key === "-") {
+      event.preventDefault();
+      zoomPreviewView(root, -1);
+    }
+    if (event.key === "0" || event.key === "Escape") {
+      event.preventDefault();
+      resetPreviewView(root);
+    }
+  });
+  root.querySelectorAll("[data-preview-zoom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.getAttribute("data-preview-zoom");
+      if (action === "reset") {
+        resetPreviewView(root);
+      } else {
+        zoomPreviewView(root, action === "1" ? 1 : -1);
+      }
+    });
+  });
+  resetPreviewView(root);
+}
+
 function initPreviewTabs() {
   const root = document.querySelector("[data-preview-root]");
   if (!root) return;
@@ -1153,6 +1314,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
   initPreviewTabs();
+  initPreviewView();
   initShowcaseLayers();
   initShowcaseView();
   initHeroMap();

@@ -130,7 +130,7 @@ function createShowcaseHarness() {
   };
 }
 
-test("landing showcase view uses wheel zoom and drag without bottom controls", () => {
+test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag without bottom controls", () => {
   const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
   const harness = createShowcaseHarness();
   vm.createContext(harness.context);
@@ -155,6 +155,14 @@ test("landing showcase view uses wheel zoom and drag without bottom controls", (
   assert.equal(harness.root.dataset.showcaseViewZoomed, "true");
   assert.match(harness.viewport.attributes.transform, /^matrix\(1\.25 0 0 1\.25 /);
 
+  const zoomedWheelEvent = createEvent({ ctrlKey: true, deltaY: 120 });
+  harness.svg.dispatchEvent("wheel", zoomedWheelEvent);
+  assert.equal(zoomedWheelEvent.defaultPrevented, true);
+  assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
+
+  harness.svg.dispatchEvent("dblclick", createEvent());
+  assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
+
   const xBeforeDrag = harness.root.dataset.showcaseViewX;
   const yBeforeDrag = harness.root.dataset.showcaseViewY;
   harness.svg.dispatchEvent("pointerdown", createEvent({ clientX: 100, clientY: 100, pointerId: 7 }));
@@ -170,8 +178,13 @@ test("landing showcase view uses wheel zoom and drag without bottom controls", (
   assert.equal(harness.root.dataset.showcaseViewZoomed, "false");
   assert.equal(harness.viewport.attributes.transform, "matrix(1 0 0 1 0.0 0.0)");
 
-  harness.svg.dispatchEvent("dblclick", createEvent());
+  const keyboardZoomEvent = createEvent({ key: "+" });
+  harness.objectNode.dispatchEvent("keydown", keyboardZoomEvent);
+  assert.equal(keyboardZoomEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
-  harness.svg.dispatchEvent("dblclick", createEvent());
+
+  const keyboardResetEvent = createEvent({ key: "Escape" });
+  harness.objectNode.dispatchEvent("keydown", keyboardResetEvent);
+  assert.equal(keyboardResetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "0");
 });

@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 57009
+      "size_bytes": 62790
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37214,11 +37214,11 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 2980
+      "size_bytes": 3930
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 116993
+      "size_bytes": 209364
     },
     {
       "path": "assets/favicon.png",
@@ -37230,11 +37230,11 @@
     },
     {
       "path": "assets/hero-blank.json",
-      "size_bytes": 1549
+      "size_bytes": 2111
     },
     {
       "path": "assets/hero-blank.svg",
-      "size_bytes": 254049
+      "size_bytes": 1279335
     },
     {
       "path": "assets/hero-cartography.svg",
@@ -37242,47 +37242,51 @@
     },
     {
       "path": "assets/hero-hoi4-1936.json",
-      "size_bytes": 1837
+      "size_bytes": 1764
     },
     {
       "path": "assets/hero-hoi4-1936.svg",
-      "size_bytes": 87680
+      "size_bytes": 102038
     },
     {
       "path": "assets/hero-hoi4-1939.json",
-      "size_bytes": 1815
+      "size_bytes": 1742
     },
     {
       "path": "assets/hero-hoi4-1939.svg",
-      "size_bytes": 89031
+      "size_bytes": 103175
     },
     {
       "path": "assets/hero-tno-1962.json",
-      "size_bytes": 2242
+      "size_bytes": 3491
     },
     {
       "path": "assets/hero-tno-1962.svg",
-      "size_bytes": 150358
+      "size_bytes": 296143
     },
     {
       "path": "assets/japan-preview-cities.svg",
-      "size_bytes": 289271
+      "size_bytes": 294700
     },
     {
       "path": "assets/japan-preview-night.svg",
-      "size_bytes": 289308
+      "size_bytes": 294739
     },
     {
       "path": "assets/japan-preview-terrain.svg",
-      "size_bytes": 289285
+      "size_bytes": 294716
     },
     {
       "path": "assets/japan-preview-transport.svg",
-      "size_bytes": 289290
+      "size_bytes": 294718
     },
     {
       "path": "assets/japan-preview.json",
-      "size_bytes": 3752
+      "size_bytes": 4192
+    },
+    {
+      "path": "assets/logo-mark.png",
+      "size_bytes": 65759
     },
     {
       "path": "assets/night-lights-political.webp",
@@ -37322,15 +37326,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 48894
+      "size_bytes": 49640
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1053989
+      "size_bytes": 1054069
     },
     {
       "path": "styles.css",
-      "size_bytes": 33307
+      "size_bytes": 35428
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37343,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1111291838
+  "total_bytes": 1112683043
 }

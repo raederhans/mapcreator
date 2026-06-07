@@ -35,7 +35,26 @@
     "rail_min_projected_px": 8.0,
     "rail_dedupe_pixel_grid": 2.0,
     "rail_ranking_key": "clipped_projected_length_px",
-    "rail_dedupe_key": "projected_path_grid_or_reverse"
+    "rail_dedupe_key": "projected_path_grid_or_reverse",
+    "urban_area_limit": 96,
+    "urban_area_simplify": 0.045,
+    "river_line_limit": 82,
+    "river_line_simplify": 0.025,
+    "river_min_projected_px": 16.0,
+    "night_light_limit": 54,
+    "city_label_source": "scenario capital hints",
+    "country_label_source": "territory representative points",
+    "country_label_tags": [
+      "ENG",
+      "FRA",
+      "GER",
+      "ITA",
+      "POL",
+      "ROM",
+      "SOV",
+      "YUG"
+    ],
+    "country_label_limit": 8
   },
   "sources": [
     "data/scenarios/hoi4_1936/manifest.json",
@@ -46,7 +65,10 @@
     "data/transport_layers/global_rail/catalog.json",
     "data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/railways.topo.json",
     "data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/railways.topo.json",
-    "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.topo.json"
+    "data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/railways.topo.json",
+    "data/europe_urban.geojson",
+    "data/europe_rivers.geojson",
+    "data/world_cities.geojson"
   ],
   "counts": {
     "territories": 29,
@@ -54,7 +76,18 @@
     "capitals": 22,
     "rail_lines_selected": 220,
     "rail_lines_candidates": 516,
-    "rail_features_inspected": 24267
+    "rail_features_inspected": 24267,
+    "urban_source_features": 4045,
+    "urban_paths_candidates": 3887,
+    "urban_areas_rendered": 96,
+    "river_source_features": 220,
+    "river_paths_candidates": 131,
+    "river_lines_rendered": 82,
+    "city_source_features": 21338,
+    "city_light_candidates": 8187,
+    "night_light_points_rendered": 54,
+    "city_labels_rendered": 22,
+    "country_labels_rendered": 8
   },
   "rail_selected_by_shard": {
     "eu_e010_e025": 55,
