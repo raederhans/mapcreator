@@ -11,6 +11,8 @@ const HGO_RUNTIME_PREVIEW_STATUS = Object.freeze({
 });
 
 const HGO_RUNTIME_PREVIEW_LAYER_OWNER = "hgo-runtime-preview";
+const HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON = "manual";
+const HGO_RUNTIME_PREVIEW_MAX_RENDER_REASON_LENGTH = 64;
 
 function createDefaultHgoRuntimePreviewState() {
   return {
@@ -66,11 +68,20 @@ function persistPreviewEnabled(storage, enabled) {
   } catch {}
 }
 
-function buildRenderSummary(rendered, { reason = "manual", renderCount = 0 } = {}) {
+function normalizeRenderReason(value) {
+  if (typeof value !== "string") return HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
+  const normalized = value.trim();
+  if (!normalized) return HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
+  return normalized.length > HGO_RUNTIME_PREVIEW_MAX_RENDER_REASON_LENGTH
+    ? normalized.slice(0, HGO_RUNTIME_PREVIEW_MAX_RENDER_REASON_LENGTH)
+    : normalized;
+}
+
+function buildRenderSummary(rendered, { reason = HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON, renderCount = 0 } = {}) {
   if (!rendered) return null;
   return Object.freeze({
     layerOwner: HGO_RUNTIME_PREVIEW_LAYER_OWNER,
-    reason: String(reason || "manual"),
+    reason: normalizeRenderReason(reason),
     renderCount: Math.max(0, Math.floor(Number(renderCount) || 0)),
     width: rendered.width,
     height: rendered.height,
@@ -131,7 +142,9 @@ function createHgoRuntimePreviewController(runtimeState, {
 
   const renderPreview = (options = {}) => {
     if (!renderer) return null;
-    const reason = options && typeof options === "object" ? options.reason : "manual";
+    const reason = options && typeof options === "object"
+      ? normalizeRenderReason(options.reason)
+      : HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
     const rendered = canvas ? renderer.renderToCanvas(canvas, renderOptions) : renderer.renderToBuffer(renderOptions);
     renderCount += 1;
     previewState.renderSummary = buildRenderSummary(rendered, { reason, renderCount });

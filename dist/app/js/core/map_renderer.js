@@ -8708,6 +8708,7 @@ function inspectHgoRuntimePreviewFromEvent(event, { eventType = "unknown" } = {}
     hit: createHitResult({
       id: `hgo:province:${resolved.provinceId}`,
       targetType: "hgo",
+      countryCode: ownerTag,
       hitSource: "hgo-runtime-preview",
       strict: true,
       distancePx: 0,

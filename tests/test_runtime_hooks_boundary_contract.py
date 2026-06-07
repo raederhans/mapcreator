@@ -93,6 +93,13 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("normalized.hgoRuntime = hgoRuntime;", renderer_content)
         self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', renderer_content)
 
+        hgo_hit_start = renderer_content.index('id: `hgo:province:${resolved.provinceId}`')
+        hgo_hit_end = renderer_content.index("hgoRuntime: Object.freeze({", hgo_hit_start)
+        hgo_hit_body = renderer_content[hgo_hit_start:hgo_hit_end]
+        self.assertIn('targetType: "hgo",', hgo_hit_body)
+        self.assertIn("countryCode: ownerTag,", hgo_hit_body)
+        self.assertIn('hitSource: "hgo-runtime-preview",', hgo_hit_body)
+
         draw_start = renderer_content.index("function drawCanvas() {")
         draw_end = renderer_content.index("function buildExactAfterSettleRefreshPlan(", draw_start)
         draw_body = renderer_content[draw_start:draw_end]

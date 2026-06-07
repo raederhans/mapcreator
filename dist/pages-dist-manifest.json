@@ -36406,7 +36406,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 9048
+      "size_bytes": 9663
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36462,7 +36462,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 986909
+      "size_bytes": 986938
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -37347,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112683636
+  "total_bytes": 1112684280
 }

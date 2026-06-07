@@ -144,6 +144,20 @@ test("ready preview can repaint the same canvas after a normal map redraw", asyn
 
   assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "manual");
   assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 3);
+
+  harness.controller.renderPreview({ reason: "   " });
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "manual");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 4);
+
+  harness.controller.renderPreview({ reason: { source: "debugger" } });
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "manual");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 5);
+
+  const longReason = "x".repeat(80);
+  harness.controller.renderPreview({ reason: longReason });
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason.length, 64);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, longReason.slice(0, 64));
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 6);
 });
 
 test("ignores stale load completion after preview is disabled", async () => {
