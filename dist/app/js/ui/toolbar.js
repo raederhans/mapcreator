@@ -518,6 +518,7 @@ function initToolbar({ render } = {}) {
     canvas: runtimeState.colorCanvas || document.getElementById("colorCanvas"),
     loadSeed: hgoRuntimePreviewLoaders.loadSeed,
     loadRaster: hgoRuntimePreviewLoaders.loadRaster,
+    renderOptions: () => callRuntimeHook(state, "getHgoRuntimePreviewProjectionOptionsFn") || {},
     restorePreviewTarget: render,
     storage: globalThis.localStorage,
     documentRef: document,
@@ -735,8 +736,8 @@ function initToolbar({ render } = {}) {
   registerRuntimeHook(state, "renderHgoRuntimePreviewFn", (options = {}) => (
     hgoRuntimePreviewController?.renderPreview?.(options) || null
   ));
-  registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y) => (
-    hgoRuntimePreviewController?.inspectPoint?.(x, y) || null
+  registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y, options = {}) => (
+    hgoRuntimePreviewController?.inspectPoint?.(x, y, options) || null
   ));
 
   const syncExportPreviewSourceOptions = () => {

@@ -85,6 +85,54 @@ function createWideRenderer() {
   });
 }
 
+function createProjectedRenderer() {
+  return createHgoRasterRenderer({
+    seed,
+    width: 4,
+    height: 2,
+    pixelFormat: "rgb",
+    pixels: [
+      10, 20, 30,
+      11, 21, 31,
+      10, 20, 30,
+      11, 21, 31,
+      11, 21, 31,
+      10, 20, 30,
+      11, 21, 31,
+      10, 20, 30,
+    ],
+  });
+}
+
+function createLinearProjection() {
+  const projection = (lonLat) => lonLat;
+  projection.invert = ([x, y]) => [
+    -180 + x * 90,
+    90 - y * 90,
+  ];
+  return projection;
+}
+
+function createNullProjection() {
+  const projection = () => null;
+  projection.invert = () => null;
+  return projection;
+}
+
+function createCountingLinearProjection() {
+  let invertCount = 0;
+  const projection = (lonLat) => lonLat;
+  projection.invert = ([x, y]) => {
+    invertCount += 1;
+    return [
+      -180 + x * 90,
+      90 - y * 90,
+    ];
+  };
+  projection.getInvertCount = () => invertCount;
+  return projection;
+}
+
 function createBmp24(rows) {
   const height = rows.length;
   const width = rows[0]?.length || 0;
@@ -326,6 +374,111 @@ test("centers HGO raster viewport when the canvas is wider than the source aspec
     assert.equal(hit.y, 0);
     assert.equal(renderer.inspectCanvasPoint(0, 0, canvas), null);
   });
+});
+
+test("renders projected HGO pixels and inspects with the same source mapping", () => {
+  const renderer = createProjectedRenderer();
+  const projection = createLinearProjection();
+  const rendered = renderer.renderProjectedToBuffer({
+    projection,
+    targetWidth: 4,
+    targetHeight: 2,
+  });
+  const hit = renderer.inspectProjectedCanvasPoint(2, 0, { width: 4, height: 2 }, { projection });
+
+  assert.equal(rendered.width, 4);
+  assert.equal(rendered.height, 2);
+  assert.equal(rendered.projectionName, "equalEarth");
+  assert.equal(rendered.sourceProjection, "equirectangular");
+  assert.equal(rendered.projectedPixelCount, 8);
+  assert.equal(rendered.unprojectedPixelCount, 0);
+  assert.deepEqual(Array.from(rendered.data.slice(8, 12)), [1, 2, 3, 255]);
+  assert.equal(hit.pixelIndex, 2);
+  assert.equal(hit.resolved.provinceId, 1);
+  assert.equal(hit.projectionName, "equalEarth");
+  assert.equal(hit.viewport.fitMode, "projection");
+});
+
+test("projected inspection maps physical canvas pixels through dpr", () => {
+  const renderer = createProjectedRenderer();
+  const hit = renderer.inspectProjectedCanvasPoint(2, 0, { width: 4, height: 2 }, {
+    projection: createLinearProjection(),
+    projectionPixelRatio: 2,
+  });
+
+  assert.equal(hit.pixelIndex, 1);
+  assert.equal(hit.resolved.provinceId, 2);
+  assert.equal(hit.projectionPixelRatio, 2);
+});
+
+test("unprojectable HGO pixels render as unknown and inspect as empty", () => {
+  const renderer = createProjectedRenderer();
+  const projection = createNullProjection();
+  const rendered = renderer.renderProjectedToBuffer({
+    projection,
+    targetWidth: 2,
+    targetHeight: 1,
+  });
+
+  assert.equal(rendered.projectedPixelCount, 0);
+  assert.equal(rendered.unprojectedPixelCount, 2);
+  assert.equal(rendered.resolvedPixelCount, 0);
+  assert.equal(rendered.unresolvedPixelCount, 2);
+  assert.deepEqual(Array.from(rendered.data), [0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.equal(renderer.inspectProjectedCanvasPoint(0, 0, { width: 2, height: 1 }, { projection }), null);
+});
+
+test("writes projected pixels directly into the target canvas", () => {
+  const context = createImageDataContext();
+  const canvas = {
+    width: 4,
+    height: 2,
+    getContext: () => context,
+  };
+  const rendered = createProjectedRenderer().renderProjectedToCanvas(canvas, {
+    projection: createLinearProjection(),
+  });
+
+  assert.equal(rendered.scaledToCanvas, false);
+  assert.deepEqual(rendered.viewport, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 2,
+    canvasWidth: 4,
+    canvasHeight: 2,
+    sourceWidth: 4,
+    sourceHeight: 2,
+    fitMode: "projection",
+    projectionName: "equalEarth",
+    sourceProjection: "equirectangular",
+    projectionPixelRatio: 1,
+  });
+  assert.deepEqual(context.calls.clearRect[0], [0, 0, 4, 2]);
+  assert.equal(context.calls.putImageData.length, 1);
+  assert.equal(context.calls.drawImage.length, 0);
+  assert.deepEqual(Array.from(context.calls.putImageData[0][0].data.slice(8, 12)), [1, 2, 3, 255]);
+});
+
+test("reuses projected render buffer while repainting the target canvas", () => {
+  const context = createImageDataContext();
+  const canvas = {
+    width: 4,
+    height: 2,
+    getContext: () => context,
+  };
+  const projection = createCountingLinearProjection();
+  const renderer = createProjectedRenderer();
+
+  renderer.renderProjectedToCanvas(canvas, { projection });
+  assert.equal(projection.getInvertCount(), 8);
+
+  renderer.renderProjectedToCanvas(canvas, { projection });
+  assert.equal(projection.getInvertCount(), 8);
+  assert.equal(context.calls.putImageData.length, 2);
+
+  renderer.renderProjectedToCanvas(canvas, { projection, projectionTransform: { k: 2, x: 0, y: 0 } });
+  assert.equal(projection.getInvertCount(), 16);
 });
 
 test("renders controller colors when requested", () => {

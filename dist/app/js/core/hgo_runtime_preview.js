@@ -79,7 +79,7 @@ function normalizeRenderReason(value) {
 
 function buildRenderSummary(rendered, { reason = HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON, renderCount = 0 } = {}) {
   if (!rendered) return null;
-  return Object.freeze({
+  const summary = {
     layerOwner: HGO_RUNTIME_PREVIEW_LAYER_OWNER,
     reason: normalizeRenderReason(reason),
     renderCount: Math.max(0, Math.floor(Number(renderCount) || 0)),
@@ -92,7 +92,37 @@ function buildRenderSummary(rendered, { reason = HGO_RUNTIME_PREVIEW_DEFAULT_REN
     ownershipMode: rendered.ownershipMode,
     resolvedPixelCount: rendered.resolvedPixelCount,
     unresolvedPixelCount: rendered.unresolvedPixelCount,
-  });
+  };
+  if (rendered.projectionName) {
+    summary.projectionName = rendered.projectionName;
+  }
+  if (rendered.sourceProjection) {
+    summary.sourceProjection = rendered.sourceProjection;
+  }
+  if (Number.isFinite(Number(rendered.projectionPixelRatio))) {
+    summary.projectionPixelRatio = Number(rendered.projectionPixelRatio);
+  }
+  if (Number.isFinite(Number(rendered.projectedPixelCount))) {
+    summary.projectedPixelCount = Number(rendered.projectedPixelCount);
+  }
+  if (Number.isFinite(Number(rendered.unprojectedPixelCount))) {
+    summary.unprojectedPixelCount = Number(rendered.unprojectedPixelCount);
+  }
+  return Object.freeze(summary);
+}
+
+function resolvePreviewRenderOptions(baseOptions, callOptions) {
+  const resolvedBaseOptions = typeof baseOptions === "function"
+    ? baseOptions(callOptions)
+    : baseOptions;
+  const normalizedBaseOptions = resolvedBaseOptions && typeof resolvedBaseOptions === "object"
+    ? resolvedBaseOptions
+    : {};
+  const normalizedCallOptions = callOptions && typeof callOptions === "object" ? callOptions : {};
+  return {
+    ...normalizedBaseOptions,
+    ...normalizedCallOptions,
+  };
 }
 
 function setPreviewUnavailable(previewState, message) {
@@ -145,7 +175,14 @@ function createHgoRuntimePreviewController(runtimeState, {
     const reason = options && typeof options === "object"
       ? normalizeRenderReason(options.reason)
       : HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
-    const rendered = canvas ? renderer.renderToCanvas(canvas, renderOptions) : renderer.renderToBuffer(renderOptions);
+    const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
+    const rendered = canvas && effectiveRenderOptions.projection
+      ? renderer.renderProjectedToCanvas(canvas, effectiveRenderOptions)
+      : effectiveRenderOptions.projection
+        ? renderer.renderProjectedToBuffer(effectiveRenderOptions)
+        : canvas
+        ? renderer.renderToCanvas(canvas, effectiveRenderOptions)
+        : renderer.renderToBuffer(effectiveRenderOptions);
     renderCount += 1;
     previewState.renderSummary = buildRenderSummary(rendered, { reason, renderCount });
     return rendered;
@@ -246,9 +283,14 @@ function createHgoRuntimePreviewController(runtimeState, {
 
   const toggle = () => setEnabled(!previewState.enabled);
 
-  const inspectPoint = (x, y) => {
+  const inspectPoint = (x, y, options = {}) => {
     if (!renderer) return null;
-    const hit = canvas ? renderer.inspectCanvasPoint(x, y, canvas) : renderer.inspectPoint(x, y);
+    const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
+    const hit = canvas && effectiveRenderOptions.projection
+      ? renderer.inspectProjectedCanvasPoint(x, y, canvas, effectiveRenderOptions)
+      : canvas
+        ? renderer.inspectCanvasPoint(x, y, canvas)
+        : renderer.inspectPoint(x, y);
     previewState.inspectResult = hit;
     return hit;
   };

@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646
+      "size_bytes": 242758
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631
+      "size_bytes": 209642
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -36393,8 +36393,12 @@
       "size_bytes": 10452
     },
     {
+      "path": "app/js/core/hgo_projection_model.js",
+      "size_bytes": 6964
+    },
+    {
       "path": "app/js/core/hgo_raster_renderer.js",
-      "size_bytes": 11761
+      "size_bytes": 20098
     },
     {
       "path": "app/js/core/hgo_runtime_asset_loader.js",
@@ -36406,7 +36410,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 9663
+      "size_bytes": 11403
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36462,7 +36466,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 986938
+      "size_bytes": 987734
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36790,7 +36794,7 @@
     },
     {
       "path": "app/js/core/state/config.js",
-      "size_bytes": 8061
+      "size_bytes": 8106
     },
     {
       "path": "app/js/core/state/content_state.js",
@@ -37094,7 +37098,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 130359
+      "size_bytes": 130480
     },
     {
       "path": "app/js/ui/transport_workbench_airport_preview.js",
@@ -37226,7 +37230,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 832
+      "size_bytes": 818
     },
     {
       "path": "assets/hero-blank.json",
@@ -37302,7 +37306,7 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1513
+      "size_bytes": 1495
     },
     {
       "path": "assets/template-blank.svg",
@@ -37330,7 +37334,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1054069
+      "size_bytes": 1054161
     },
     {
       "path": "styles.css",
@@ -37347,5 +37351,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112729135
+  "total_bytes": 1112747321
 }

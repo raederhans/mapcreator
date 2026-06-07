@@ -2,6 +2,11 @@ import {
   createHgoRuntimeIndex,
   normalizeHgoRuntimeRgb,
 } from "./hgo_runtime_index.js";
+import {
+  HGO_DEFAULT_TARGET_PROJECTION,
+  HGO_SOURCE_PROJECTION,
+  createHgoProjectionModel,
+} from "./hgo_projection_model.js";
 
 const PIXEL_FORMATS = Object.freeze({
   RGB: "rgb",
@@ -85,6 +90,13 @@ function normalizeRenderOptions(options = {}) {
   return {
     ownershipMode,
     unknownColor: normalizeUnknownColor(options.unknownColor),
+    projection: options.projection || null,
+    projectionName: String(options.projectionName || HGO_DEFAULT_TARGET_PROJECTION).trim() || HGO_DEFAULT_TARGET_PROJECTION,
+    sourceProjection: String(options.sourceProjection || HGO_SOURCE_PROJECTION).trim() || HGO_SOURCE_PROJECTION,
+    projectionPixelRatio: Number.isFinite(Number(options.projectionPixelRatio)) && Number(options.projectionPixelRatio) > 0
+      ? Number(options.projectionPixelRatio)
+      : 1,
+    projectionTransform: options.projectionTransform || null,
   };
 }
 
@@ -142,6 +154,23 @@ function createHgoRasterViewport(sourceWidth, sourceHeight, canvasWidth, canvasH
   });
 }
 
+function createProjectedHgoRasterViewport(sourceWidth, sourceHeight, canvasWidth, canvasHeight, renderOptions) {
+  return Object.freeze({
+    x: 0,
+    y: 0,
+    width: canvasWidth,
+    height: canvasHeight,
+    canvasWidth,
+    canvasHeight,
+    sourceWidth,
+    sourceHeight,
+    fitMode: "projection",
+    projectionName: renderOptions.projectionName,
+    sourceProjection: renderOptions.sourceProjection,
+    projectionPixelRatio: renderOptions.projectionPixelRatio,
+  });
+}
+
 function createScratchCanvas(width, height) {
   if (typeof globalThis.OffscreenCanvas === "function") {
     return new globalThis.OffscreenCanvas(width, height);
@@ -153,10 +182,55 @@ function createScratchCanvas(width, height) {
   return canvas;
 }
 
+function formatSignatureNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(6) : "";
+}
+
+function formatSignatureArray(value) {
+  return Array.isArray(value) ? value.map(formatSignatureNumber).join(",") : "";
+}
+
+function getProjectionTransformSignature(transform) {
+  if (!transform) return "none";
+  return [
+    formatSignatureNumber(transform.k),
+    formatSignatureNumber(transform.x),
+    formatSignatureNumber(transform.y),
+  ].join(",");
+}
+
+function createProjectionRenderCacheKey({
+  projectionId,
+  renderOptions,
+  targetWidth,
+  targetHeight,
+}) {
+  const projection = renderOptions.projection;
+  return [
+    targetWidth,
+    targetHeight,
+    renderOptions.ownershipMode,
+    renderOptions.unknownColor.join(","),
+    renderOptions.projectionName,
+    renderOptions.sourceProjection,
+    formatSignatureNumber(renderOptions.projectionPixelRatio),
+    projectionId,
+    formatSignatureNumber(projection?.scale?.()),
+    formatSignatureArray(projection?.translate?.()),
+    formatSignatureArray(projection?.center?.()),
+    formatSignatureArray(projection?.rotate?.()),
+    getProjectionTransformSignature(renderOptions.projectionTransform),
+  ].join("|");
+}
+
 function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = {}) {
   const runtime = createHgoRuntimeIndex(seed || {});
   const source = createRasterSource({ width, height, pixels, pixelFormat });
   let disposed = false;
+  let projectedRenderCache = null;
+  let nextProjectionId = 1;
+  const projectionIds = new WeakMap();
 
   const assertActive = () => {
     if (disposed) {
@@ -249,6 +323,78 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     };
   };
 
+  const getProjectionId = (projection) => {
+    if ((typeof projection !== "function" && typeof projection !== "object") || projection === null) return "none";
+    if (!projectionIds.has(projection)) {
+      projectionIds.set(projection, nextProjectionId);
+      nextProjectionId += 1;
+    }
+    return projectionIds.get(projection);
+  };
+
+  const renderProjectedToBuffer = (options = {}) => {
+    assertActive();
+    const renderOptions = normalizeRenderOptions(options);
+    const targetWidth = normalizeCanvasDimension(options.targetWidth, source.width);
+    const targetHeight = normalizeCanvasDimension(options.targetHeight, source.height);
+    const projectionModel = createHgoProjectionModel({
+      projection: renderOptions.projection,
+      sourceWidth: source.width,
+      sourceHeight: source.height,
+      targetWidth,
+      targetHeight,
+      projectionName: renderOptions.projectionName,
+      sourceProjection: renderOptions.sourceProjection,
+      projectionPixelRatio: renderOptions.projectionPixelRatio,
+      projectionTransform: renderOptions.projectionTransform,
+    });
+    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    let projectedPixelCount = 0;
+    let unprojectedPixelCount = 0;
+    let resolvedPixelCount = 0;
+    let unresolvedPixelCount = 0;
+
+    for (let targetY = 0; targetY < targetHeight; targetY += 1) {
+      for (let targetX = 0; targetX < targetWidth; targetX += 1) {
+        const outputIndex = targetY * targetWidth + targetX;
+        const mapped = projectionModel.mapCanvasPointToSource(targetX, targetY);
+        if (!mapped) {
+          unprojectedPixelCount += 1;
+          unresolvedPixelCount += 1;
+          writeOutputColor(output, outputIndex, renderOptions.unknownColor);
+          continue;
+        }
+        projectedPixelCount += 1;
+        const sourceRgb = readSourceRgb(source, mapped.pixelIndex);
+        const resolved = runtime.resolveProvinceByRgb(sourceRgb);
+        const color = resolveCountryColor(runtime, resolved, renderOptions.ownershipMode);
+        if (color) {
+          resolvedPixelCount += 1;
+          writeOutputColor(output, outputIndex, color);
+        } else {
+          unresolvedPixelCount += 1;
+          writeOutputColor(output, outputIndex, renderOptions.unknownColor);
+        }
+      }
+    }
+
+    return {
+      width: targetWidth,
+      height: targetHeight,
+      sourceWidth: source.width,
+      sourceHeight: source.height,
+      data: output,
+      ownershipMode: renderOptions.ownershipMode,
+      projectionName: projectionModel.projectionName,
+      sourceProjection: projectionModel.sourceProjection,
+      projectionPixelRatio: projectionModel.projectionPixelRatio,
+      projectedPixelCount,
+      unprojectedPixelCount,
+      resolvedPixelCount,
+      unresolvedPixelCount,
+    };
+  };
+
   const renderToCanvas = (canvas, options = {}) => {
     assertActive();
     const context = canvas?.getContext?.("2d");
@@ -303,6 +449,80 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     };
   };
 
+  const renderProjectedToCanvas = (canvas, options = {}) => {
+    assertActive();
+    const context = canvas?.getContext?.("2d");
+    if (!context?.createImageData || !context?.putImageData) {
+      throw new TypeError("HGO raster canvas must provide a 2D context with ImageData support.");
+    }
+    const targetWidth = normalizeCanvasDimension(canvas?.width, source.width);
+    const targetHeight = normalizeCanvasDimension(canvas?.height, source.height);
+    const renderOptions = normalizeRenderOptions(options);
+    const cacheKey = createProjectionRenderCacheKey({
+      projectionId: getProjectionId(renderOptions.projection),
+      renderOptions,
+      targetWidth,
+      targetHeight,
+    });
+    const rendered = projectedRenderCache?.key === cacheKey
+      ? projectedRenderCache.rendered
+      : renderProjectedToBuffer({
+        ...options,
+        targetWidth,
+        targetHeight,
+      });
+    if (projectedRenderCache?.key !== cacheKey) {
+      projectedRenderCache = { key: cacheKey, rendered };
+    }
+    const imageData = context.createImageData(rendered.width, rendered.height);
+    imageData.data.set(rendered.data);
+    context.clearRect?.(0, 0, targetWidth, targetHeight);
+    context.putImageData(imageData, 0, 0);
+    return {
+      ...rendered,
+      canvasWidth: targetWidth,
+      canvasHeight: targetHeight,
+      viewport: createProjectedHgoRasterViewport(source.width, source.height, targetWidth, targetHeight, renderOptions),
+      scaledToCanvas: false,
+    };
+  };
+
+  const inspectProjectedCanvasPoint = (x, y, canvas = null, options = {}) => {
+    assertActive();
+    const renderOptions = normalizeRenderOptions(options);
+    const canvasWidth = normalizeCanvasDimension(canvas?.width, source.width);
+    const canvasHeight = normalizeCanvasDimension(canvas?.height, source.height);
+    const projectionModel = createHgoProjectionModel({
+      projection: renderOptions.projection,
+      sourceWidth: source.width,
+      sourceHeight: source.height,
+      targetWidth: canvasWidth,
+      targetHeight: canvasHeight,
+      projectionName: renderOptions.projectionName,
+      sourceProjection: renderOptions.sourceProjection,
+      projectionPixelRatio: renderOptions.projectionPixelRatio,
+      projectionTransform: renderOptions.projectionTransform,
+    });
+    const mapped = projectionModel.mapCanvasPointToSource(x, y);
+    if (!mapped) return null;
+    const hit = inspectPoint(mapped.sourceX, mapped.sourceY);
+    return hit ? Object.freeze({
+      ...hit,
+      canvasX: mapped.canvasX,
+      canvasY: mapped.canvasY,
+      canvasWidth,
+      canvasHeight,
+      lon: mapped.lon,
+      lat: mapped.lat,
+      projectionX: mapped.projectionX,
+      projectionY: mapped.projectionY,
+      projectionName: mapped.projectionName,
+      sourceProjection: mapped.sourceProjection,
+      projectionPixelRatio: mapped.projectionPixelRatio,
+      viewport: projectionModel.getViewport(),
+    }) : null;
+  };
+
   const getSummary = () => Object.freeze({
     width: source.width,
     height: source.height,
@@ -313,6 +533,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
 
   const dispose = () => {
     disposed = true;
+    projectedRenderCache = null;
   };
 
   return Object.freeze({
@@ -320,7 +541,10 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     getSummary,
     inspectPixelIndex,
     inspectCanvasPoint,
+    inspectProjectedCanvasPoint,
     inspectPoint,
+    renderProjectedToBuffer,
+    renderProjectedToCanvas,
     renderToBuffer,
     renderToCanvas,
   });

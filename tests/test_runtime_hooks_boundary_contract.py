@@ -40,7 +40,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "renderHgoRuntimePreviewFn", (options = {}) => (', toolbar_content)
-        self.assertIn('registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y) => (', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y, options = {}) => (', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "renderCountryListFn", renderList);', sidebar_content)
         self.assertIn('registerRuntimeHook(state, "refreshCountryListRowsFn", refreshCountryRows);', sidebar_content)
         self.assertIn('registerRuntimeHook(state, "renderWaterRegionListFn", renderWaterRegionList);', sidebar_content)
@@ -76,17 +76,36 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
             "setHgoRuntimePreviewEnabledFn",
             "toggleHgoRuntimePreviewFn",
             "syncHgoRuntimePreviewUiFn",
+            "getHgoRuntimePreviewProjectionOptionsFn",
             "renderHgoRuntimePreviewFn",
             "inspectHgoRuntimePreviewPointFn",
         ]:
             self.assertIn(f'"{hook_name}"', config_content)
 
+        self.assertIn(
+            'renderOptions: () => callRuntimeHook(state, "getHgoRuntimePreviewProjectionOptionsFn") || {},',
+            toolbar_content,
+        )
         self.assertIn('callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn"', renderer_content)
         self.assertIn('callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn"', renderer_content)
         self.assertIn(
             'hgoRuntimePreviewController?.renderPreview?.(options) || null',
             toolbar_content,
         )
+        self.assertIn(
+            'hgoRuntimePreviewController?.inspectPoint?.(x, y, options) || null',
+            toolbar_content,
+        )
+        self.assertIn("function getHgoRuntimePreviewProjectionOptions()", renderer_content)
+        self.assertIn("HGO_DEFAULT_TARGET_PROJECTION", renderer_content)
+        self.assertIn("HGO_SOURCE_PROJECTION", renderer_content)
+        self.assertIn(
+            'registerRuntimeHook(runtimeState, "getHgoRuntimePreviewProjectionOptionsFn", getHgoRuntimePreviewProjectionOptions);',
+            renderer_content,
+        )
+        self.assertIn("projectionPixelRatio: runtimeState.dpr,", renderer_content)
+        self.assertIn("projectionTransform: runtimeState.zoomTransform || null,", renderer_content)
+        self.assertIn("...getHgoRuntimePreviewProjectionOptions(),", renderer_content)
         self.assertIn("function inspectHgoRuntimePreviewFromEvent(", renderer_content)
         self.assertIn("function normalizeHgoRuntimeHitPayload(", renderer_content)
         self.assertIn('if (targetType === "hgo") {', renderer_content)

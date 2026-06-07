@@ -103,6 +103,10 @@ import { enqueueFrameTask, getFrameSchedulerQueueLength } from "./frame_schedule
 import { flushRenderBoundary, getRenderBoundaryDebugState, requestRender } from "./render_boundary.js";
 import { callRuntimeHook, registerRuntimeHook } from "./state/index.js";
 import {
+  HGO_DEFAULT_TARGET_PROJECTION,
+  HGO_SOURCE_PROJECTION,
+} from "./hgo_projection_model.js";
+import {
   bindInteractionFunnel,
   dispatchMapClick,
   dispatchMapDoubleClick,
@@ -223,6 +227,8 @@ const state = runtimeState;
 const DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT = 78;
 const DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT = 74;
 const DEFAULT_UNIT_COUNTER_BASE_FILL = "#f4f0e6";
+const HGO_RUNTIME_PREVIEW_PROJECTION_NAME = HGO_DEFAULT_TARGET_PROJECTION;
+const HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION = HGO_SOURCE_PROJECTION;
 const UNIT_COUNTER_STATS_PRESETS = Object.freeze({
   elite: Object.freeze({ organizationPct: 94, equipmentPct: 92 }),
   regular: Object.freeze({ organizationPct: 82, equipmentPct: 78 }),
@@ -8667,9 +8673,24 @@ function isHgoRuntimePreviewReady() {
   return !!preview?.enabled && preview.status === "ready";
 }
 
+function getHgoRuntimePreviewProjectionOptions() {
+  return {
+    projection,
+    projectionName: HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
+    sourceProjection: HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
+    projectionPixelRatio: runtimeState.dpr,
+    projectionTransform: runtimeState.zoomTransform || null,
+  };
+}
+
+registerRuntimeHook(runtimeState, "getHgoRuntimePreviewProjectionOptionsFn", getHgoRuntimePreviewProjectionOptions);
+
 function renderHgoRuntimePreviewIfReady(reason = "render") {
   if (!isHgoRuntimePreviewReady()) return null;
-  return callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn", { reason }) || null;
+  return callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn", {
+    reason,
+    ...getHgoRuntimePreviewProjectionOptions(),
+  }) || null;
 }
 
 function getHgoRuntimePreviewCanvasPointFromEvent(event) {
@@ -8694,7 +8715,11 @@ function inspectHgoRuntimePreviewFromEvent(event, { eventType = "unknown" } = {}
   }
   const point = getHgoRuntimePreviewCanvasPointFromEvent(event);
   const inspection = point
-    ? callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn", point.x, point.y, { eventType, point }) || null
+    ? callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn", point.x, point.y, {
+      eventType,
+      point,
+      ...getHgoRuntimePreviewProjectionOptions(),
+    }) || null
     : null;
   const resolved = inspection?.resolved || null;
   if (!resolved) {

@@ -40,6 +40,15 @@ function createDeferred() {
   return { promise, reject, resolve };
 }
 
+function createLinearProjection() {
+  const projection = (lonLat) => lonLat;
+  projection.invert = ([x, y]) => [
+    -180 + x * 90,
+    90 - y * 90,
+  ];
+  return projection;
+}
+
 function createCanvas() {
   let putCount = 0;
   let lastImageData = null;
@@ -309,4 +318,109 @@ test("preview inspection maps canvas coordinates through the HGO viewport", asyn
   assert.equal(hit.resolved.provinceId, 2);
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.pixelIndex, 2);
   assert.equal(harness.controller.inspectPoint(1, 1), null);
+});
+
+test("preview render and inspect share projection render options", async () => {
+  const storage = createStorage({ [HGO_RUNTIME_PREVIEW_STORAGE_KEY]: "true" });
+  const canvas = createCanvas();
+  canvas.width = 4;
+  canvas.height = 2;
+  const projection = createLinearProjection();
+  const harness = createController({
+    storage,
+    canvas,
+    renderOptions: () => ({
+      projection,
+      projectionName: "equalEarth",
+      sourceProjection: "equirectangular",
+      projectionPixelRatio: 1,
+    }),
+    loadSeed: async () => ({
+      provinces: {
+        1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E", type: "land" },
+        2: { id: 2, rgb: [11, 21, 31], rgb_key: 726303, rgb_hex: "#0B151F", type: "land" },
+      },
+      states: [
+        { id: 1, owner: "AAA", controller: "AAA", province_ids: [1], province_count: 1 },
+        { id: 2, owner: "BBB", controller: "BBB", province_ids: [2], province_count: 1 },
+      ],
+      countries: {
+        AAA: { tag: "AAA", color_rgb: [1, 2, 3], color_hex: "#010203" },
+        BBB: { tag: "BBB", color_rgb: [4, 5, 6], color_hex: "#040506" },
+      },
+      province_to_state: { 1: 1, 2: 2 },
+    }),
+    loadRaster: async () => ({
+      width: 4,
+      height: 2,
+      pixelFormat: "rgb",
+      pixels: [
+        10, 20, 30,
+        11, 21, 31,
+        10, 20, 30,
+        11, 21, 31,
+        11, 21, 31,
+        10, 20, 30,
+        11, 21, 31,
+        10, 20, 30,
+      ],
+    }),
+  });
+
+  await harness.controller.setEnabled(true);
+  const hit = harness.controller.inspectPoint(2, 0);
+
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "load");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectionName, "equalEarth");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.sourceProjection, "equirectangular");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectedPixelCount, 8);
+  assert.deepEqual(Array.from(canvas.getLastImageData().imageData.data.slice(8, 12)), [1, 2, 3, 255]);
+  assert.equal(hit.pixelIndex, 2);
+  assert.equal(hit.resolved.provinceId, 1);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.projectionName, "equalEarth");
+});
+
+test("preview can render projected buffers without a canvas", async () => {
+  const projection = createLinearProjection();
+  const harness = createController({
+    renderOptions: () => ({ projection }),
+    loadSeed: async () => ({
+      provinces: {
+        1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E", type: "land" },
+        2: { id: 2, rgb: [11, 21, 31], rgb_key: 726303, rgb_hex: "#0B151F", type: "land" },
+      },
+      states: [
+        { id: 1, owner: "AAA", controller: "AAA", province_ids: [1], province_count: 1 },
+        { id: 2, owner: "BBB", controller: "BBB", province_ids: [2], province_count: 1 },
+      ],
+      countries: {
+        AAA: { tag: "AAA", color_rgb: [1, 2, 3], color_hex: "#010203" },
+        BBB: { tag: "BBB", color_rgb: [4, 5, 6], color_hex: "#040506" },
+      },
+      province_to_state: { 1: 1, 2: 2 },
+    }),
+    loadRaster: async () => ({
+      width: 4,
+      height: 2,
+      pixelFormat: "rgb",
+      pixels: [
+        10, 20, 30,
+        11, 21, 31,
+        10, 20, 30,
+        11, 21, 31,
+        11, 21, 31,
+        10, 20, 30,
+        11, 21, 31,
+        10, 20, 30,
+      ],
+    }),
+  });
+
+  await harness.controller.setEnabled(true);
+  const rendered = harness.controller.renderPreview({ reason: "headless-projection" });
+
+  assert.equal(rendered.projectionName, "equalEarth");
+  assert.equal(rendered.projectedPixelCount, 8);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "headless-projection");
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectedPixelCount, 8);
 });
