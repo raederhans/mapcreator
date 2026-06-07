@@ -800,16 +800,16 @@ a.button {
 .showcase-map__viewport::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -1px;
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(7, 17, 31, 0.38), rgba(7, 17, 31, 0) 16%, rgba(7, 17, 31, 0) 84%, rgba(7, 17, 31, 0.38)),
-    linear-gradient(180deg, rgba(7, 17, 31, 0.36), rgba(7, 17, 31, 0) 17%, rgba(7, 17, 31, 0) 83%, rgba(7, 17, 31, 0.36)),
-    radial-gradient(ellipse at center, rgba(7, 17, 31, 0) 58%, rgba(7, 17, 31, 0.18) 80%, rgba(7, 17, 31, 0.34) 100%);
+    linear-gradient(90deg, rgba(7, 17, 31, 0.5), rgba(7, 17, 31, 0.08) 13%, rgba(7, 17, 31, 0) 25%, rgba(7, 17, 31, 0) 75%, rgba(7, 17, 31, 0.08) 87%, rgba(7, 17, 31, 0.5)),
+    linear-gradient(180deg, rgba(7, 17, 31, 0.48), rgba(7, 17, 31, 0.08) 14%, rgba(7, 17, 31, 0) 26%, rgba(7, 17, 31, 0) 74%, rgba(7, 17, 31, 0.08) 86%, rgba(7, 17, 31, 0.48)),
+    radial-gradient(ellipse at center, rgba(7, 17, 31, 0) 55%, rgba(7, 17, 31, 0.16) 76%, rgba(7, 17, 31, 0.38) 100%);
   box-shadow:
-    inset 0 0 42px rgba(7, 17, 31, 0.34),
-    inset 0 0 92px rgba(7, 17, 31, 0.42);
+    inset 0 0 54px rgba(7, 17, 31, 0.42),
+    inset 0 0 112px rgba(7, 17, 31, 0.5);
 }
 
 .showcase-map__object,
@@ -1746,4 +1746,3 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
     transform: none !important;
   }
 }
-

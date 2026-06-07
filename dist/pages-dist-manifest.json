@@ -26,7 +26,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758
+      "size_bytes": 242646
     },
     {
       "path": "app/data/europe_topology.json",
@@ -29786,7 +29786,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642
+      "size_bytes": 209631
     },
     {
       "path": "app/data/runtime_asset_registry.json",
@@ -37206,7 +37206,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 62790
+      "size_bytes": 63287
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37214,11 +37214,11 @@
     },
     {
       "path": "assets/europe-1936-showcase.json",
-      "size_bytes": 3930
+      "size_bytes": 4516
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 209364
+      "size_bytes": 219682
     },
     {
       "path": "assets/favicon.png",
@@ -37226,7 +37226,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 818
+      "size_bytes": 832
     },
     {
       "path": "assets/hero-blank.json",
@@ -37302,7 +37302,7 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1495
+      "size_bytes": 1513
     },
     {
       "path": "assets/template-blank.svg",
@@ -37334,7 +37334,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 35428
+      "size_bytes": 35536
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37347,5 +37347,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112684280
+  "total_bytes": 1112695698
 }

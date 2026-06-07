@@ -81,10 +81,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertLess(asset.stat().st_size, size_limit)
                 if asset_name == "europe-1936-showcase.svg":
                     self.assertIn('data-showcase-viewport="true"', text)
+                    self.assertIn('data-layer="context-land"', text)
                     self.assertIn('data-layer="urban"', text)
                     self.assertIn('data-layer="rivers"', text)
                     self.assertIn('data-layer="country-labels"', text)
                     self.assertIn('data-layer="day-night"', text)
+                    self.assertIn('class="territory-context territory-context--egy"', text)
+                    self.assertIn('class="territory-context territory-context--syr"', text)
+                    self.assertIn('class="map-edge-fog"', text)
+                    self.assertIn("softEdgeBlur", text)
+                    self.assertIn("railGlow", text)
                     self.assertIn('class="urban-area"', text)
                     self.assertIn('class="river-line"', text)
                     self.assertIn('class="country-label"', text)
@@ -214,8 +220,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["projection"]["canvas_width"], 980)
         self.assertEqual(payload["projection"]["canvas_height"], 620)
         self.assertEqual(payload["projection"]["canvas_padding"], 36)
+        self.assertEqual(payload["bbox"], [-14.0, 29.0, 44.0, 72.5])
+        self.assertEqual(payload["detail_bbox"], [-12.5, 34.0, 41.5, 72.5])
         self.assertEqual(set(payload["sources"]), expected_scenario_sources | expected_rail_sources | expected_context_sources)
         self.assertEqual(payload["selection_policy"]["transregional_tags"], ["TUR"])
+        self.assertEqual(
+            payload["selection_policy"]["context_tags"],
+            ["ALG", "EGY", "IRQ", "JOR", "LBA", "LEB", "MOR", "PAL", "SAU", "SYR", "TUN"],
+        )
+        self.assertIn("low-detail background color", payload["selection_policy"]["context_layer"])
         self.assertEqual(payload["selection_policy"]["capital_limit"], 22)
         self.assertEqual(payload["selection_policy"]["rail_source"], "full")
         self.assertEqual(payload["selection_policy"]["rail_limit"], 220)
@@ -235,6 +248,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             ["ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"],
         )
         self.assertEqual(payload["counts"]["territories"], len(payload["territory_tags"]))
+        self.assertEqual(payload["counts"]["context_territories"], len(payload["context_territory_tags"]))
+        self.assertEqual(
+            payload["context_territory_tags"],
+            ["ALG", "EGY", "IRQ", "JOR", "LBA", "LEB", "MOR", "PAL", "SAU", "SYR", "TUN"],
+        )
         self.assertEqual(payload["counts"]["capitals"], len(payload["capital_tags"]))
         for expected_tag in ("ALB", "EST", "IRE", "LAT", "LIT", "LUX", "SWI", "TUR"):
             with self.subTest(expected_tag=expected_tag):
@@ -269,9 +287,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 generated_text = build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8")
                 ET.fromstring(generated_text)
                 self.assertEqual(len(re.findall(r'class="country-label"', generated_text)), 8)
+                self.assertIn('data-layer="context-land"', generated_text)
+                self.assertIn('class="territory-context territory-context--egy"', generated_text)
+                self.assertIn('class="map-edge-fog"', generated_text)
                 self.assertIn('.country-label { fill: rgba(255,255,255,.82);', generated_text)
                 self.assertIn('opacity: .62;', generated_text)
                 self.assertIn('svg[data-active-layer="political"] .layer-cities { opacity: 0; }', generated_text)
+                self.assertIn('svg[data-active-layer="rail"] .rail-line { opacity: .96; stroke: #ffc66d; stroke-width: 1.75; }', generated_text)
+                self.assertIn('svg[data-active-layer="rail"] .layer-country-labels { opacity: 0; }', generated_text)
+                self.assertIn('svg[data-active-layer="rail"] .layer-cities { opacity: 0; }', generated_text)
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
@@ -736,7 +760,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".showcase-map__viewport", styles_css)
         self.assertIn(".showcase-map__viewport::after", styles_css)
         self.assertIn("radial-gradient(ellipse at center", styles_css)
-        self.assertIn("inset 0 0 92px", styles_css)
+        self.assertIn("inset 0 0 112px", styles_css)
         self.assertIn(".showcase-map__object", styles_css)
         self.assertIn(".showcase-map__object:focus-visible", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)
@@ -1032,7 +1056,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".showcase-map__viewport", styles_css)
         self.assertIn(".showcase-map__viewport::after", styles_css)
         self.assertIn("radial-gradient(ellipse at center", styles_css)
-        self.assertIn("inset 0 0 92px", styles_css)
+        self.assertIn("inset 0 0 112px", styles_css)
         self.assertIn(".showcase-map__object", styles_css)
         self.assertNotIn(".showcase-map__controls", styles_css)
         self.assertIn("[data-preview-image=\"transport\"]", styles_css)

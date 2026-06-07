@@ -311,3 +311,6 @@
 
 ### 空白底图生成要先粗筛再修几何
 - runtime topology 可能包含混合维度或大量视口外 feature；Blank 类静态底图先用 bounds 粗筛，再做 `make_valid/intersection/simplify`，并在 metadata 写清 path limit、dropped count 和排序规则。
+
+### 首页展示图背景范围和细节范围要分离
+- 展示图需要把周边国家当背景板时，生成器应拆成 context bbox 和 detail bbox；背景国家只进低细节底色层，首都、铁路、河流、城市、标签继续绑定 detail bbox，避免一扩视口就把周边细节带进来。

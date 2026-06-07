@@ -3,6 +3,12 @@
   "scenario_id": "hoi4_1936",
   "title": "Europe 1936 homepage showcase",
   "bbox": [
+    -14.0,
+    29.0,
+    44.0,
+    72.5
+  ],
+  "detail_bbox": [
     -12.5,
     34.0,
     41.5,
@@ -16,18 +22,32 @@
     "canvas_height": 620,
     "canvas_padding": 36,
     "projected_bounds": [
-      -0.3244604344837859,
-      -0.3128390268849723,
-      0.44727647666062786,
-      0.394157720514714
+      -0.36750932182024026,
+      -0.39871699441076125,
+      0.5115107279746364,
+      0.40034009040215973
     ],
-    "scale": 775.1096479800342
+    "scale": 685.808323854985
   },
   "selection_policy": {
-    "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
+    "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused detail viewport",
     "transregional_tags": [
       "TUR"
     ],
+    "context_tags": [
+      "ALG",
+      "EGY",
+      "IRQ",
+      "JOR",
+      "LBA",
+      "LEB",
+      "MOR",
+      "PAL",
+      "SAU",
+      "SYR",
+      "TUN"
+    ],
+    "context_layer": "adjacent North Africa and Near East territories rendered as low-detail background color only",
     "capital_limit": 22,
     "rail_source": "full",
     "rail_limit": 220,
@@ -73,15 +93,17 @@
   "counts": {
     "territories": 29,
     "political_features": 6803,
+    "context_territories": 11,
+    "context_political_features": 172,
     "capitals": 22,
     "rail_lines_selected": 220,
-    "rail_lines_candidates": 516,
+    "rail_lines_candidates": 395,
     "rail_features_inspected": 24267,
     "urban_source_features": 4045,
     "urban_paths_candidates": 3887,
     "urban_areas_rendered": 96,
     "river_source_features": 220,
-    "river_paths_candidates": 131,
+    "river_paths_candidates": 122,
     "river_lines_rendered": 82,
     "city_source_features": 21338,
     "city_light_candidates": 8187,
@@ -91,9 +113,22 @@
   },
   "rail_selected_by_shard": {
     "eu_e010_e025": 55,
-    "eu_e025_e045": 99,
-    "eu_w012_e010": 66
+    "eu_e025_e045": 98,
+    "eu_w012_e010": 67
   },
+  "context_territory_tags": [
+    "ALG",
+    "EGY",
+    "IRQ",
+    "JOR",
+    "LBA",
+    "LEB",
+    "MOR",
+    "PAL",
+    "SAU",
+    "SYR",
+    "TUN"
+  ],
   "territory_tags": [
     "ALB",
     "AUS",

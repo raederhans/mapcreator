@@ -620,7 +620,8 @@ const SHOWCASE_METADATA_URL = "./assets/europe-1936-showcase.json";
 const DEFAULT_SHOWCASE_LAYER = "political";
 const SHOWCASE_VIEW_WIDTH = 980;
 const SHOWCASE_VIEW_HEIGHT = 620;
-const SHOWCASE_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.3];
+const SHOWCASE_VIEW_SCALES = [1, 1.16, 1.34, 1.58, 1.8];
+const DEFAULT_SHOWCASE_VIEW_SCALE_INDEX = 1;
 const PREVIEW_VIEW_WIDTH = 680;
 const PREVIEW_VIEW_HEIGHT = 440;
 const PREVIEW_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.25];
@@ -926,13 +927,21 @@ function clampShowcaseViewPosition(scale, x, y) {
   };
 }
 
+function getCenteredShowcaseViewPosition(scale) {
+  if (scale <= 1) return { x: 0, y: 0 };
+  return {
+    x: (SHOWCASE_VIEW_WIDTH * (1 - scale)) / 2,
+    y: (SHOWCASE_VIEW_HEIGHT * (1 - scale)) / 2,
+  };
+}
+
 function applyShowcaseViewState(root, nextState) {
   const scaleIndex = Math.max(0, Math.min(nextState.scaleIndex, SHOWCASE_VIEW_SCALES.length - 1));
   const scale = SHOWCASE_VIEW_SCALES[scaleIndex];
   const position = clampShowcaseViewPosition(scale, nextState.x, nextState.y);
   root.dataset.showcaseViewScaleIndex = String(scaleIndex);
   root.dataset.showcaseViewScale = scale.toFixed(2);
-  root.dataset.showcaseViewZoomed = scale > 1 ? "true" : "false";
+  root.dataset.showcaseViewZoomed = scaleIndex > DEFAULT_SHOWCASE_VIEW_SCALE_INDEX ? "true" : "false";
   root.dataset.showcaseViewX = position.x.toFixed(1);
   root.dataset.showcaseViewY = position.y.toFixed(1);
   const viewport = getShowcaseSvgViewport(root);
@@ -956,7 +965,13 @@ function zoomShowcaseView(root, direction) {
 }
 
 function resetShowcaseView(root) {
-  applyShowcaseViewState(root, { scaleIndex: 0, x: 0, y: 0 });
+  const scale = SHOWCASE_VIEW_SCALES[DEFAULT_SHOWCASE_VIEW_SCALE_INDEX];
+  const position = getCenteredShowcaseViewPosition(scale);
+  applyShowcaseViewState(root, {
+    scaleIndex: DEFAULT_SHOWCASE_VIEW_SCALE_INDEX,
+    x: position.x,
+    y: position.y,
+  });
 }
 
 function initShowcaseView() {
@@ -979,7 +994,7 @@ function initShowcaseView() {
   const onDoubleClick = (event) => {
     event.preventDefault();
     const state = getShowcaseViewState(root);
-    if (SHOWCASE_VIEW_SCALES[state.scaleIndex] <= 1) {
+    if (state.scaleIndex <= DEFAULT_SHOWCASE_VIEW_SCALE_INDEX) {
       zoomShowcaseView(root, 1);
     } else {
       resetShowcaseView(root);

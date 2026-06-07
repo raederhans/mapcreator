@@ -51,6 +51,8 @@ HERO_SCENARIO_OUTPUTS = {
     },
 }
 EUROPE_BBOX = (-12.5, 34.0, 41.5, 72.5)
+SHOWCASE_BBOX = (-14.0, 29.0, 44.0, 72.5)
+SHOWCASE_DETAIL_BBOX = EUROPE_BBOX
 SHOWCASE_CANVAS_WIDTH = 980
 SHOWCASE_CANVAS_HEIGHT = 620
 HERO_CANVAS_WIDTH = 980
@@ -85,6 +87,19 @@ HERO_MEDITERRANEAN_ISLAND_BBOXES = (
 SHOWCASE_FOCUS_TAGS = {"GER", "POL", "CZE", "ROM", "SOV", "YUG", "ITA", "FRA", "ENG"}
 SHOWCASE_COUNTRY_LABEL_TAGS = {"ENG", "FRA", "GER", "ITA", "POL", "ROM", "SOV", "YUG"}
 TRANSREGIONAL_EUROPE_SHOWCASE_TAGS = {"TUR"}
+SHOWCASE_BACKGROUND_TAGS = {
+    "ALG",
+    "EGY",
+    "IRQ",
+    "JOR",
+    "LBA",
+    "LEB",
+    "MOR",
+    "PAL",
+    "SAU",
+    "SYR",
+    "TUN",
+}
 SHOWCASE_LAYERS = (
     {"id": "political", "label": "1936 political ownership"},
     {"id": "rail", "label": "Europe rail network"},
@@ -439,12 +454,14 @@ def load_scenario_territories(
     *,
     neutral: bool = False,
     capital_defaults_path: Path | None = None,
+    tag_filter: set[str] | None = None,
+    clip_bbox: tuple[float, float, float, float] | None = None,
 ) -> tuple[list[dict], dict[str, int], dict[str, Path], dict]:
     paths = scenario_paths(manifest_path, capital_defaults_path)
     countries = read_json(paths["countries"])["countries"]
     owners = read_json(paths["owners"])["owners"]
-    showcase_tags = europe_country_tags(countries)
-    clip = box(*canvas.bbox)
+    showcase_tags = tag_filter or europe_country_tags(countries)
+    clip = box(*(clip_bbox or canvas.bbox))
     by_tag: dict[str, list[BaseGeometry]] = defaultdict(list)
     source_feature_count = 0
 
@@ -494,7 +511,16 @@ def load_scenario_territories(
 
 
 def load_political_layers(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
-    territories, counts, _paths, _countries = load_scenario_territories(canvas)
+    territories, counts, _paths, _countries = load_scenario_territories(canvas, clip_bbox=SHOWCASE_DETAIL_BBOX)
+    return territories, counts
+
+
+def load_context_territories(canvas: Canvas) -> tuple[list[dict], dict[str, int]]:
+    territories, counts, _paths, _countries = load_scenario_territories(
+        canvas,
+        tag_filter=SHOWCASE_BACKGROUND_TAGS,
+        clip_bbox=SHOWCASE_BBOX,
+    )
     return territories, counts
 
 
@@ -521,9 +547,11 @@ def load_scenario_capitals(
     paths: dict[str, Path],
     *,
     limit: int = 22,
+    clip_bbox: tuple[float, float, float, float] | None = None,
 ) -> tuple[list[dict], list[Path]]:
     showcase_tags = europe_country_tags(countries)
     entries, source_paths = capital_hint_entries(paths)
+    min_lon, min_lat, max_lon, max_lat = clip_bbox or canvas.bbox
     capitals: list[dict] = []
     for entry in entries:
         tag = entry.get("tag")
@@ -532,7 +560,7 @@ def load_scenario_capitals(
         lat = entry.get("lat")
         if tag not in showcase_tags or not country or lon is None or lat is None:
             continue
-        if not (canvas.bbox[0] <= lon <= canvas.bbox[2] and canvas.bbox[1] <= lat <= canvas.bbox[3]):
+        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
             continue
         x, y = canvas.project(float(lon), float(lat))
         capitals.append(
@@ -551,12 +579,15 @@ def load_scenario_capitals(
 def load_capitals(canvas: Canvas) -> list[dict]:
     paths = scenario_paths()
     countries = read_json(paths["countries"])["countries"]
-    capitals, _source_paths = load_scenario_capitals(canvas, countries, paths)
+    capitals, _source_paths = load_scenario_capitals(canvas, countries, paths, clip_bbox=SHOWCASE_DETAIL_BBOX)
     return capitals
 
 
-def load_rail_paths(canvas: Canvas) -> tuple[list[str], int, int, dict[str, int]]:
-    clip = box(*canvas.bbox)
+def load_rail_paths(
+    canvas: Canvas,
+    clip_bbox: tuple[float, float, float, float] | None = None,
+) -> tuple[list[str], int, int, dict[str, int]]:
+    clip = box(*(clip_bbox or canvas.bbox))
     candidates: list[tuple[str, float, str, str]] = []
     inspected = 0
     for shard in rail_paths():
@@ -604,8 +635,11 @@ def load_rail_paths(canvas: Canvas) -> tuple[list[str], int, int, dict[str, int]
     return selected, inspected, len(candidates), selected_by_shard
 
 
-def load_urban_area_paths(canvas: Canvas) -> tuple[list[str], int, int]:
-    clip = box(*canvas.bbox)
+def load_urban_area_paths(
+    canvas: Canvas,
+    clip_bbox: tuple[float, float, float, float] | None = None,
+) -> tuple[list[str], int, int]:
+    clip = box(*(clip_bbox or canvas.bbox))
     candidates: list[tuple[float, str]] = []
     source_count = 0
     for feature in geojson_features(EUROPE_URBAN_AREAS):
@@ -628,8 +662,11 @@ def load_urban_area_paths(canvas: Canvas) -> tuple[list[str], int, int]:
     return selected, source_count, len(candidates)
 
 
-def load_river_paths(canvas: Canvas) -> tuple[list[str], int, int]:
-    clip = box(*canvas.bbox)
+def load_river_paths(
+    canvas: Canvas,
+    clip_bbox: tuple[float, float, float, float] | None = None,
+) -> tuple[list[str], int, int]:
+    clip = box(*(clip_bbox or canvas.bbox))
     candidates: list[tuple[float, str]] = []
     source_count = 0
     for feature in geojson_features(EUROPE_RIVERS):
@@ -650,10 +687,14 @@ def load_river_paths(canvas: Canvas) -> tuple[list[str], int, int]:
     return selected, source_count, len(candidates)
 
 
-def load_showcase_city_lights(canvas: Canvas) -> tuple[list[dict], int, int]:
+def load_showcase_city_lights(
+    canvas: Canvas,
+    clip_bbox: tuple[float, float, float, float] | None = None,
+) -> tuple[list[dict], int, int]:
     candidates: list[tuple[float, dict]] = []
     seen_names: set[str] = set()
     source_count = 0
+    min_lon, min_lat, max_lon, max_lat = clip_bbox or canvas.bbox
     for feature in geojson_features(WORLD_CITIES):
         geometry_payload = feature.get("geometry") or {}
         coordinates = geometry_payload.get("coordinates")
@@ -662,7 +703,7 @@ def load_showcase_city_lights(canvas: Canvas) -> tuple[list[dict], int, int]:
         source_count += 1
         lon = float(coordinates[0])
         lat = float(coordinates[1])
-        if not (canvas.bbox[0] <= lon <= canvas.bbox[2] and canvas.bbox[1] <= lat <= canvas.bbox[3]):
+        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
             continue
         properties = feature.get("properties") or {}
         name = str(properties.get("name_en") or properties.get("name_ascii") or properties.get("name") or "").strip()
@@ -723,6 +764,19 @@ def territory_nodes(territories: list[dict], include_scenario_only_class: bool =
             nodes.append(
                 f'      <path class="territory territory--{tag.lower()}{focus_class}{scenario_only_class}" '
                 f'data-tag="{escaped_tag}" fill="{item["color"]}" d="{path}" />'
+            )
+    return "\n".join(nodes)
+
+
+def context_territory_nodes(territories: list[dict]) -> str:
+    nodes: list[str] = []
+    for item in territories:
+        tag = validate_tag(item["tag"])
+        escaped_tag = xml_escape(tag)
+        for path in item["paths"]:
+            nodes.append(
+                f'      <path class="territory-context territory-context--{tag.lower()}" '
+                f'data-context-tag="{escaped_tag}" fill="{item["color"]}" d="{path}" />'
             )
     return "\n".join(nodes)
 
@@ -1175,6 +1229,7 @@ def build_hero_scenario_maps(output_dir: Path = LANDING_ASSETS) -> None:
 
 def build_svg(
     canvas: Canvas,
+    context_territories: list[dict],
     territories: list[dict],
     capitals: list[dict],
     rails: list[str],
@@ -1198,14 +1253,17 @@ def build_svg(
     <filter id="capitalGlow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="nightLightGlow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="ambientLightGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="railGlow"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="softEdgeBlur"><feGaussianBlur stdDeviation="20" /></filter>
     <style>
       .graticule path {{ fill: none; stroke: rgba(255,255,255,.12); stroke-width: 1; }}
+      .territory-context {{ stroke: #10273e; stroke-width: .7; vector-effect: non-scaling-stroke; opacity: .36; }}
       .territory {{ stroke: #091426; stroke-width: 1.05; vector-effect: non-scaling-stroke; opacity: .78; }}
       .territory--focus {{ stroke: #f8d77f; stroke-width: 1.45; opacity: .92; }}
       .territory--scenario-only {{ stroke-dasharray: 5 4; }}
       .urban-area {{ fill: #f1d891; stroke: #51351f; stroke-width: .55; opacity: .46; vector-effect: non-scaling-stroke; }}
       .river-line {{ fill: none; stroke: #8fd6f6; stroke-width: 1.65; stroke-linecap: round; opacity: .58; vector-effect: non-scaling-stroke; }}
-      .rail-line {{ fill: none; stroke: #f2a65a; stroke-width: 2.1; stroke-linecap: round; opacity: .22; vector-effect: non-scaling-stroke; }}
+      .rail-line {{ fill: none; stroke: #ffb969; stroke-width: 1.45; stroke-linecap: round; opacity: .24; vector-effect: non-scaling-stroke; filter: url(#railGlow); }}
       .capital circle {{ fill: #fff0af; stroke: #143044; stroke-width: 2; filter: url(#capitalGlow); opacity: .42; }}
       .capital text {{ fill: #f8fbff; font-family: Arial, sans-serif; paint-order: stroke; stroke: #07111f; opacity: .62; }}
       .city-label {{ font-size: 14px; font-weight: 800; stroke-width: 4; }}
@@ -1218,6 +1276,7 @@ def build_svg(
       .night-light {{ fill: #ffe48a; opacity: .86; filter: url(#nightLightGlow); }}
       .ambient-night-light {{ fill: #ffd66b; opacity: .72; filter: url(#ambientLightGlow); }}
       .ambient-night-light--capital {{ fill: #fff3a8; opacity: .9; }}
+      .map-edge-fog rect {{ filter: url(#softEdgeBlur); pointer-events: none; }}
       svg[data-active-layer="political"] .territory {{ opacity: .9; }}
       svg[data-active-layer="political"] .layer-urban {{ opacity: .56; }}
       svg[data-active-layer="political"] .layer-rivers {{ opacity: .62; }}
@@ -1225,13 +1284,14 @@ def build_svg(
       svg[data-active-layer="political"] .layer-country-labels {{ opacity: .86; }}
       svg[data-active-layer="political"] .layer-cities {{ opacity: 0; }}
       svg[data-active-layer="political"] .layer-day-night {{ opacity: 0; }}
-      svg[data-active-layer="rail"] .territory {{ opacity: .48; }}
-      svg[data-active-layer="rail"] .layer-urban {{ opacity: .3; }}
-      svg[data-active-layer="rail"] .layer-rivers {{ opacity: .45; }}
-      svg[data-active-layer="rail"] .layer-rail {{ opacity: 1; }}
-      svg[data-active-layer="rail"] .rail-line {{ opacity: .92; stroke-width: 2.7; }}
-      svg[data-active-layer="rail"] .layer-country-labels {{ opacity: .42; }}
-      svg[data-active-layer="rail"] .layer-cities {{ opacity: .5; }}
+      svg[data-active-layer="rail"] .territory-context {{ opacity: .16; }}
+      svg[data-active-layer="rail"] .territory {{ opacity: .34; }}
+      svg[data-active-layer="rail"] .layer-urban {{ opacity: .16; }}
+      svg[data-active-layer="rail"] .layer-rivers {{ opacity: .22; }}
+      svg[data-active-layer="rail"] .layer-rail {{ opacity: 1; mix-blend-mode: screen; }}
+      svg[data-active-layer="rail"] .rail-line {{ opacity: .96; stroke: #ffc66d; stroke-width: 1.75; }}
+      svg[data-active-layer="rail"] .layer-country-labels {{ opacity: 0; }}
+      svg[data-active-layer="rail"] .layer-cities {{ opacity: 0; }}
       svg[data-active-layer="rail"] .layer-day-night {{ opacity: 0; }}
       svg[data-active-layer="cities"] .territory {{ opacity: .52; }}
       svg[data-active-layer="cities"] .layer-urban {{ opacity: .72; }}
@@ -1259,6 +1319,9 @@ def build_svg(
   <g class="graticule" aria-hidden="true">
       {graticule(canvas)}
   </g>
+  <g class="layer layer-context-land" data-layer="context-land" aria-hidden="true">
+{context_territory_nodes(context_territories)}
+  </g>
   <g class="layer layer-political" data-layer="political">
 {territory_nodes(territories)}
   </g>
@@ -1281,6 +1344,12 @@ def build_svg(
 {day_night_nodes(canvas, capitals, city_lights)}
   </g>
   </g>
+  <g class="map-edge-fog" aria-hidden="true">
+    <rect x="-34" y="-34" width="{canvas.width + 68}" height="92" fill="#07111f" opacity=".34" />
+    <rect x="-34" y="{canvas.height - 58}" width="{canvas.width + 68}" height="92" fill="#07111f" opacity=".3" />
+    <rect x="-34" y="-34" width="92" height="{canvas.height + 68}" fill="#07111f" opacity=".34" />
+    <rect x="{canvas.width - 58}" y="-34" width="92" height="{canvas.height + 68}" fill="#07111f" opacity=".34" />
+  </g>
 </svg>
 """
 
@@ -1288,6 +1357,8 @@ def build_svg(
 def build_metadata(
     canvas: Canvas,
     political_counts: dict[str, int],
+    context_counts: dict[str, int],
+    context_territories: list[dict],
     territories: list[dict],
     capitals: list[dict],
     selected_rail_paths: list[str],
@@ -1306,6 +1377,7 @@ def build_metadata(
 ) -> dict:
     paths = scenario_paths()
     rail_paths_source = rail_paths()
+    context_tags = sorted(item["tag"] for item in context_territories)
     territory_tags = sorted(item["tag"] for item in territories)
     capital_tags = sorted(item["tag"] for item in capitals)
     min_x, min_y, max_x, max_y = canvas.projected_bounds
@@ -1313,7 +1385,8 @@ def build_metadata(
         "schema_version": 1,
         "scenario_id": "hoi4_1936",
         "title": "Europe 1936 homepage showcase",
-        "bbox": list(EUROPE_BBOX),
+        "bbox": list(SHOWCASE_BBOX),
+        "detail_bbox": list(SHOWCASE_DETAIL_BBOX),
         "projection": {
             "name": "lambert_azimuthal_equal_area",
             "center_lon": PROJECTION_CENTER_LON,
@@ -1325,8 +1398,10 @@ def build_metadata(
             "scale": canvas.scale,
         },
         "selection_policy": {
-            "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused viewport",
+            "territories": "countries with continent_id=continent_europe plus configured transregional tags inside the Europe-focused detail viewport",
             "transregional_tags": sorted(TRANSREGIONAL_EUROPE_SHOWCASE_TAGS),
+            "context_tags": sorted(SHOWCASE_BACKGROUND_TAGS),
+            "context_layer": "adjacent North Africa and Near East territories rendered as low-detail background color only",
             "capital_limit": 22,
             "rail_source": "full",
             "rail_limit": RAIL_LINE_LIMIT,
@@ -1361,6 +1436,8 @@ def build_metadata(
         "counts": {
             "territories": political_counts["territories"],
             "political_features": political_counts["source_features"],
+            "context_territories": context_counts["territories"],
+            "context_political_features": context_counts["source_features"],
             "capitals": len(capitals),
             "rail_lines_selected": len(selected_rail_paths),
             "rail_lines_candidates": rail_candidates,
@@ -1378,6 +1455,7 @@ def build_metadata(
             "country_labels_rendered": sum(1 for item in territories if item["tag"] in SHOWCASE_COUNTRY_LABEL_TAGS),
         },
         "rail_selected_by_shard": dict(sorted(rail_selected_by_shard.items())),
+        "context_territory_tags": context_tags,
         "territory_tags": territory_tags,
         "capital_tags": capital_tags,
         "focus_tags": sorted(tag for tag in SHOWCASE_FOCUS_TAGS if tag in territory_tags),
@@ -1386,17 +1464,23 @@ def build_metadata(
 
 
 def build_showcase() -> None:
-    canvas = Canvas.create(SHOWCASE_CANVAS_WIDTH, SHOWCASE_CANVAS_HEIGHT, EUROPE_BBOX)
+    canvas = Canvas.create(SHOWCASE_CANVAS_WIDTH, SHOWCASE_CANVAS_HEIGHT, SHOWCASE_BBOX)
+    context_territories, context_counts = load_context_territories(canvas)
     territories, political_counts = load_political_layers(canvas)
     capitals = load_capitals(canvas)
-    rails, rail_inspected, rail_candidates, rail_selected_by_shard = load_rail_paths(canvas)
-    urban_paths, urban_source_count, urban_candidates = load_urban_area_paths(canvas)
-    river_paths, river_source_count, river_candidates = load_river_paths(canvas)
-    city_lights, city_source_count, city_candidates = load_showcase_city_lights(canvas)
-    write_text_lf(SHOWCASE_SVG, build_svg(canvas, territories, capitals, rails, urban_paths, river_paths, city_lights))
+    rails, rail_inspected, rail_candidates, rail_selected_by_shard = load_rail_paths(canvas, SHOWCASE_DETAIL_BBOX)
+    urban_paths, urban_source_count, urban_candidates = load_urban_area_paths(canvas, SHOWCASE_DETAIL_BBOX)
+    river_paths, river_source_count, river_candidates = load_river_paths(canvas, SHOWCASE_DETAIL_BBOX)
+    city_lights, city_source_count, city_candidates = load_showcase_city_lights(canvas, SHOWCASE_DETAIL_BBOX)
+    write_text_lf(
+        SHOWCASE_SVG,
+        build_svg(canvas, context_territories, territories, capitals, rails, urban_paths, river_paths, city_lights),
+    )
     metadata = build_metadata(
         canvas,
         political_counts,
+        context_counts,
+        context_territories,
         territories,
         capitals,
         rails,
