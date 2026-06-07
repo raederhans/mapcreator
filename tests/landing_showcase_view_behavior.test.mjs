@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
@@ -129,6 +129,25 @@ function createShowcaseHarness() {
     viewport,
   };
 }
+
+test("landing local asset references exist", () => {
+  const html = readFileSync(new URL("../landing/index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const referencedAssets = new Set();
+  const assetPattern = /\.\/assets\/[^"')\s]+/g;
+
+  for (const source of [html, app]) {
+    for (const match of source.matchAll(assetPattern)) {
+      referencedAssets.add(match[0]);
+    }
+  }
+
+  assert.ok(referencedAssets.size > 0, "expected landing page to reference local assets");
+  for (const assetPath of referencedAssets) {
+    const assetUrl = new URL(`../landing/${assetPath.slice(2)}`, import.meta.url);
+    assert.ok(existsSync(assetUrl), `missing landing asset referenced by HTML/JS: ${assetPath}`);
+  }
+});
 
 test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag without bottom controls", () => {
   const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");

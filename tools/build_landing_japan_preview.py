@@ -214,6 +214,100 @@ def topology_features(path: Path, object_name: str) -> list[dict]:
     return [feature for feature in features if isinstance(feature, dict)]
 
 
+def topology_arc_coordinates(payload: dict, arc_index: int) -> list[tuple[float, float]]:
+    transform = payload.get("transform", {})
+    scale = transform.get("scale", [1, 1])
+    translate = transform.get("translate", [0, 0])
+    actual_index = ~arc_index if arc_index < 0 else arc_index
+    raw_arc = payload["arcs"][actual_index]
+    x = 0
+    y = 0
+    coordinates: list[tuple[float, float]] = []
+    for dx, dy in raw_arc:
+        x += dx
+        y += dy
+        coordinates.append((x * scale[0] + translate[0], y * scale[1] + translate[1]))
+    if arc_index < 0:
+        coordinates.reverse()
+    return coordinates
+
+
+def topology_line_coordinates(payload: dict, arc_indexes: list[int]) -> list[tuple[float, float]]:
+    coordinates: list[tuple[float, float]] = []
+    for arc_index in arc_indexes:
+        arc_coordinates = topology_arc_coordinates(payload, arc_index)
+        if not arc_coordinates:
+            continue
+        if coordinates:
+            coordinates.extend(arc_coordinates[1:])
+        else:
+            coordinates.extend(arc_coordinates)
+    return coordinates
+
+
+def bounds_intersect(left: tuple[float, float, float, float], right: tuple[float, float, float, float]) -> bool:
+    return left[0] <= right[2] and left[2] >= right[0] and left[1] <= right[3] and left[3] >= right[1]
+
+
+def coordinates_bounds(coordinates: Iterable[tuple[float, float]]) -> tuple[float, float, float, float] | None:
+    iterator = iter(coordinates)
+    try:
+        first_x, first_y = next(iterator)
+    except StopIteration:
+        return None
+    min_x = max_x = first_x
+    min_y = max_y = first_y
+    for x, y in iterator:
+        min_x = min(min_x, x)
+        max_x = max(max_x, x)
+        min_y = min(min_y, y)
+        max_y = max(max_y, y)
+    return (min_x, min_y, max_x, max_y)
+
+
+def topology_line_features(path: Path, object_name: str, clip_bounds: tuple[float, float, float, float]) -> tuple[list[dict], int]:
+    payload = read_json(path)
+    geometries = payload.get("objects", {}).get(object_name, {}).get("geometries", [])
+    if not isinstance(geometries, list):
+        return [], 0
+
+    features: list[dict] = []
+    for geometry in geometries:
+        if not isinstance(geometry, dict):
+            continue
+        geometry_type = geometry.get("type")
+        arcs = geometry.get("arcs")
+        lines: list[list[tuple[float, float]]] = []
+        if geometry_type == "LineString" and isinstance(arcs, list):
+            lines = [topology_line_coordinates(payload, arcs)]
+        elif geometry_type == "MultiLineString" and isinstance(arcs, list):
+            lines = [topology_line_coordinates(payload, line_arcs) for line_arcs in arcs if isinstance(line_arcs, list)]
+        else:
+            continue
+
+        kept_lines: list[list[tuple[float, float]]] = []
+        for coordinates in lines:
+            if len(coordinates) < 2:
+                continue
+            bounds = coordinates_bounds(coordinates)
+            if bounds and bounds_intersect(bounds, clip_bounds):
+                kept_lines.append(coordinates)
+        if not kept_lines:
+            continue
+        if len(kept_lines) == 1:
+            geometry_payload = {"type": "LineString", "coordinates": kept_lines[0]}
+        else:
+            geometry_payload = {"type": "MultiLineString", "coordinates": kept_lines}
+        features.append(
+            {
+                "type": "Feature",
+                "properties": geometry.get("properties", {}),
+                "geometry": geometry_payload,
+            }
+        )
+    return features, len(geometries)
+
+
 def geojson_features(path: Path) -> list[dict]:
     payload = read_json(path)
     features = payload.get("features")
@@ -368,7 +462,7 @@ def select_line_layer(
     stride: int,
 ) -> tuple[list[PathEntry], int, int]:
     entries: list[PathEntry] = []
-    features = topology_features(path, object_name)
+    features, source_feature_count = topology_line_features(path, object_name, clip.bounds)
     for feature in features:
         geometry = feature_geometry(feature, clip)
         if geometry is None or geometry.is_empty:
@@ -380,7 +474,7 @@ def select_line_layer(
         for d in geometry_line_paths(geometry, canvas, stride):
             entries.append(PathEntry(d=d, rank=rank, source=source))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
-    return entries[:limit], len(features), len(entries)
+    return entries[:limit], source_feature_count, len(entries)
 
 
 def select_main_corridor_path(canvas: Canvas, clip: BaseGeometry) -> list[PathEntry]:
@@ -414,7 +508,7 @@ def select_topology_lines(
     stride: int,
 ) -> tuple[list[PathEntry], int, int]:
     entries: list[PathEntry] = []
-    features = topology_features(path, object_name)
+    features, source_feature_count = topology_line_features(path, object_name, clip.bounds)
     for feature in features:
         geometry = feature_geometry(feature, clip)
         if geometry is None or geometry.is_empty:
@@ -425,7 +519,7 @@ def select_topology_lines(
         for d in geometry_line_paths(geometry, canvas, stride):
             entries.append(PathEntry(d=d, rank=length_px, source=source))
     entries.sort(key=lambda entry: entry.rank, reverse=True)
-    return entries[:limit], len(features), len(entries)
+    return entries[:limit], source_feature_count, len(entries)
 
 
 def select_geojson_lines(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import unittest
 import gzip
 import hashlib
@@ -14,6 +15,7 @@ from tools import (
     build_landing_hero_cartography,
     build_landing_japan_preview,
     build_pages_dist,
+    rasterize_landing_assets,
 )
 
 
@@ -45,7 +47,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         )
 
     def test_landing_generated_cartography_assets_exist(self) -> None:
-        for asset_name in (
+        source_svg_assets = (
             "hero-cartography.svg",
             "hero-blank.svg",
             "hero-hoi4-1936.svg",
@@ -61,7 +63,23 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "template-modern.svg",
             "template-hoi4.svg",
             "template-tno.svg",
-        ):
+        )
+        webp_delivery_assets = (
+            "hero-blank.webp",
+            "hero-hoi4-1936.webp",
+            "hero-hoi4-1939.webp",
+            "hero-tno-1962.webp",
+            "showcase-final-map.webp",
+            "japan-preview-transport.webp",
+            "japan-preview-cities.webp",
+            "japan-preview-terrain.webp",
+            "japan-preview-night.webp",
+            "template-blank.webp",
+            "template-modern.webp",
+            "template-hoi4.webp",
+            "template-tno.webp",
+        )
+        for asset_name in source_svg_assets:
             with self.subTest(asset_name=asset_name):
                 asset = LANDING_ASSETS / asset_name
                 self.assertTrue(asset.exists(), f"{asset_name} should be checked in for Pages")
@@ -103,9 +121,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("nightTexture", text)
                     self.assertIn("night-light-belt", text)
                     self.assertIn("night-light-smear", text)
-                    self.assertIn("night-shadow-core", text)
+                    self.assertIn("day-night-shade", text)
                     self.assertIn("nightActivityClip", text)
-                    self.assertIn("terminator-line", text)
+                    self.assertIn("nightCycleGradient", text)
                     self.assertIn("animateTransform", text)
                     self.assertNotIn("data-showcase-viewport transform=", text)
                     self.assertNotIn('data-layer="scenario"', text)
@@ -133,6 +151,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("<title>Tokyo</title>", text)
                     self.assertIn("<title>Osaka</title>", text)
                     self.assertIn("<title>Nagoya · Aichi</title>", text)
+
+        for asset_name in webp_delivery_assets:
+            with self.subTest(asset_name=asset_name):
+                asset = LANDING_ASSETS / asset_name
+                self.assertTrue(asset.exists(), f"{asset_name} should be checked in for Pages delivery")
+                self.assertLess(asset.stat().st_size, 120_000)
 
     def test_landing_japan_preview_metadata_uses_checked_in_sources(self) -> None:
         metadata_path = LANDING_ASSETS / "japan-preview.json"
@@ -320,10 +344,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn('class="showcase-city showcase-city--tier-0 showcase-city--capital', generated_text)
                 self.assertIn('class="showcase-city showcase-city--tier-3', generated_text)
                 self.assertIn('svg[data-active-layer="cities"][data-showcase-city-detail="dense"] .showcase-city--tier-3 { opacity: 1; }', generated_text)
-                self.assertEqual(
-                    build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
-                    (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
-                )
+                if shutil.which("npx"):
+                    rasterize_landing_assets.optimize_svg_file(build_landing_europe_1936_showcase.SHOWCASE_SVG)
+                    optimized_text = build_landing_europe_1936_showcase.SHOWCASE_SVG.read_text(encoding="utf-8")
+                    self.assertIn('data-layer="day-night"', optimized_text)
+                    self.assertEqual(
+                        build_landing_europe_1936_showcase.SHOWCASE_SVG.read_bytes(),
+                        (LANDING_ASSETS / "europe-1936-showcase.svg").read_bytes(),
+                    )
                 self.assertEqual(
                     build_landing_europe_1936_showcase.SHOWCASE_METADATA.read_bytes(),
                     (LANDING_ASSETS / "europe-1936-showcase.json").read_bytes(),
@@ -470,12 +498,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('".md"', source)
         self.assertIn('".txt"', source)
         self.assertIn('newline="\\n"', source)
-        self.assertIn("from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase", source)
-        self.assertIn("from tools.build_landing_hero_cartography import main as build_landing_hero_cartography", source)
-        self.assertIn("from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview", source)
-        self.assertLess(source.index("build_landing_hero_cartography()"), source.index("    reset_dist()"))
-        self.assertLess(source.index("build_landing_europe_1936_showcase()"), source.index("    reset_dist()"))
-        self.assertLess(source.index("build_landing_japan_preview()"), source.index("    reset_dist()"))
+        self.assertIn("Landing assets are committed delivery inputs here.", source)
+        self.assertNotIn("build_landing_hero_cartography()", source)
+        self.assertNotIn("build_landing_europe_1936_showcase()", source)
+        self.assertNotIn("build_landing_japan_preview()", source)
+        self.assertNotIn("rasterize_landing_assets()", source)
         self.assertNotIn(".write_text(", source)
         self.assertLess(
             source.index("normalize_dist_text_files_lf()"),
@@ -600,7 +627,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="productStageLabel"',
             'class="brandmark__logo"',
             './assets/favicon.svg',
-            './assets/hero-hoi4-1936.svg',
+            './assets/hero-hoi4-1936.webp',
             'data-hero-map',
             'data-hero-chip="blank"',
             'data-hero-chip="hoi4-1936"',
@@ -655,7 +682,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
-            './assets/template-modern.svg',
+            './assets/template-modern.webp',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
             'data-i18n="casesEyebrow"',
@@ -726,8 +753,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "DEFAULT_HERO_MODE",
             "HERO_SCENARIO_ASSETS",
             "hero-hoi4-1936.json",
-            "hero-hoi4-1939.svg",
-            "hero-tno-1962.svg",
+            "hero-hoi4-1939.webp",
+            "hero-tno-1962.webp",
             "syncHeroMap",
             "initMetricCountUp",
             "previewPanelTransportTitle",
@@ -942,7 +969,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="productStageLabel"',
             'class="brandmark__logo"',
             './assets/favicon.svg',
-            './assets/hero-hoi4-1936.svg',
+            './assets/hero-hoi4-1936.webp',
             'data-hero-map',
             'data-hero-chip="blank"',
             'data-hero-chip="hoi4-1936"',
@@ -972,7 +999,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-aria-label="previewZoomReset"',
             'role="tablist"',
             'data-i18n="templatesEyebrow"',
-            './assets/template-modern.svg',
+            './assets/template-modern.webp',
             'data-i18n="dataEyebrow"',
             'data-i18n="editionsEyebrow"',
             'data-i18n="casesEyebrow"',
@@ -1043,8 +1070,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "DEFAULT_HERO_MODE",
             "HERO_SCENARIO_ASSETS",
             "hero-hoi4-1936.json",
-            "hero-hoi4-1939.svg",
-            "hero-tno-1962.svg",
+            "hero-hoi4-1939.webp",
+            "hero-tno-1962.webp",
             "syncHeroMap",
             "heroAltHoi41936",
             "heroAltHoi41939",
@@ -1144,25 +1171,38 @@ class PagesDistStartupShellTest(unittest.TestCase):
         expected_landing_asset_paths = (
             "assets/hero-cartography.svg",
             "assets/hero-blank.svg",
+            "assets/hero-blank.webp",
             "assets/hero-blank.json",
             "assets/hero-hoi4-1936.svg",
+            "assets/hero-hoi4-1936.webp",
             "assets/hero-hoi4-1936.json",
             "assets/hero-hoi4-1939.svg",
+            "assets/hero-hoi4-1939.webp",
             "assets/hero-hoi4-1939.json",
             "assets/hero-tno-1962.svg",
+            "assets/hero-tno-1962.webp",
             "assets/hero-tno-1962.json",
             "assets/showcase-final-map.svg",
+            "assets/showcase-final-map.webp",
             "assets/europe-1936-showcase.svg",
             "assets/europe-1936-showcase.json",
             "assets/japan-preview-transport.svg",
+            "assets/japan-preview-transport.webp",
             "assets/japan-preview-cities.svg",
+            "assets/japan-preview-cities.webp",
             "assets/japan-preview-terrain.svg",
+            "assets/japan-preview-terrain.webp",
             "assets/japan-preview-night.svg",
+            "assets/japan-preview-night.webp",
             "assets/japan-preview.json",
             "assets/template-blank.svg",
+            "assets/template-blank.webp",
             "assets/template-modern.svg",
+            "assets/template-modern.webp",
             "assets/template-hoi4.svg",
+            "assets/template-hoi4.webp",
             "assets/template-tno.svg",
+            "assets/template-tno.webp",
         )
         for expected_path in (
             "index.html",

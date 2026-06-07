@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/readme/logo-mark.png" alt="Scenario Forge logo" width="96">
+  <img src="docs/readme/logo-mark.webp" alt="Scenario Forge logo" width="96">
 
   <h1>Scenario Forge</h1>
 
@@ -34,7 +34,7 @@ Scenario Forge gives creators one place to choose a world state, edit political 
 - **Map appearance:** tune oceans, borders, parent borders, terrain, urban areas, city points, rivers, textures, day-night shading, and reference images.
 - **Strategic markup:** add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays.
 - **Transport workbench:** inspect roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer order.
-- **Bilingual export workflow:** use English or Simplified Chinese, save editable project files, and export PNG/JPG snapshots or higher-resolution outputs up to 8K.
+- **Bilingual export workflow:** use English or Simplified Chinese, save editable project files, and export PNG/JPG presentation snapshots at 1x-4x scale.
 
 ## See It In Action
 
@@ -125,7 +125,7 @@ This local mode stores preview backend data under `.runtime/backend/` on your ma
 2. Edit ownership, controller, or frontline state.
 3. Adjust visual layers such as borders, water, terrain, cities, rivers, transport, and reference imagery.
 4. Add presentation elements such as legends, operational lines, unit counters, labels, and operation graphics.
-5. Save an editable project JSON, then export the final image or layer package.
+5. Save an editable project JSON, then export the final PNG/JPG presentation snapshot.
 
 ## Feature Status
 
@@ -147,7 +147,7 @@ Some larger systems are available as previews:
 | Visual style | Tune oceans, borders, parent borders, physical regions, urban areas, city points, rivers, textures, day-night shading, and reference images. |
 | Strategic presentation | Add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays. |
 | Transport context | Explore roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through the Transport workbench. |
-| Export workflow | Export PNG/JPG snapshots, adjust image brightness/contrast/saturation, manage layer order, and prepare higher-resolution outputs up to 8K. |
+| Export workflow | Export PNG/JPG presentation snapshots at 1x-4x scale, adjust image brightness/contrast/saturation, and manage layer order. |
 | Project files | Save an editable project JSON with scenario, appearance, transport, strategic annotations, reference alignment, and export settings. |
 | Community preview | In local backend mode, test account sessions, Cloud Saves, publishing, community downloads, comments, reports, and admin review tools. |
 | Modding preview | In developer/local preview mode, use HGO runtime preview and palette tools to validate HOI4-style country identity, flags, colors, and rendering. |

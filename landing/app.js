@@ -628,22 +628,22 @@ const PREVIEW_VIEW_SCALES = [1, 1.25, 1.55, 1.9, 2.25];
 const DEFAULT_HERO_MODE = "hoi4-1936";
 const HERO_SCENARIO_ASSETS = {
   blank: {
-    src: "./assets/hero-blank.svg",
+    src: "./assets/hero-blank.webp",
     metadata: "./assets/hero-blank.json",
     altKey: "heroAltBlank",
   },
   "hoi4-1936": {
-    src: "./assets/hero-hoi4-1936.svg",
+    src: "./assets/hero-hoi4-1936.webp",
     metadata: "./assets/hero-hoi4-1936.json",
     altKey: "heroAltHoi41936",
   },
   "hoi4-1939": {
-    src: "./assets/hero-hoi4-1939.svg",
+    src: "./assets/hero-hoi4-1939.webp",
     metadata: "./assets/hero-hoi4-1939.json",
     altKey: "heroAltHoi41939",
   },
   "tno-1962": {
-    src: "./assets/hero-tno-1962.svg",
+    src: "./assets/hero-tno-1962.webp",
     metadata: "./assets/hero-tno-1962.json",
     altKey: "heroAltTno1962",
   },
@@ -776,6 +776,11 @@ function initScrollReveal() {
     (entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
+        const siblings = Array.from(entry.target.parentElement?.children || []).filter((node) =>
+          node.hasAttribute?.("data-reveal"),
+        );
+        const revealIndex = Math.max(0, siblings.indexOf(entry.target));
+        entry.target.style.setProperty("--reveal-delay", `${Math.min(revealIndex, 8) * 60}ms`);
         entry.target.classList.add("is-revealed");
         observer.unobserve(entry.target);
       });
@@ -788,6 +793,44 @@ function initScrollReveal() {
 
 function resolveHeroMode(mode) {
   return Object.prototype.hasOwnProperty.call(HERO_SCENARIO_ASSETS, mode) ? mode : DEFAULT_HERO_MODE;
+}
+
+function decodeHeroAsset(src) {
+  if (!src || typeof globalThis.Image !== "function") return Promise.resolve(false);
+  return new Promise((resolve, reject) => {
+    const preload = new globalThis.Image();
+    preload.decoding = "async";
+    preload.onload = () => {
+      if (typeof preload.decode === "function") {
+        preload.decode().then(() => resolve(true)).catch(() => resolve(true));
+      } else {
+        resolve(true);
+      }
+    };
+    preload.onerror = () => reject(new Error(`Unable to preload ${src}`));
+    preload.src = src;
+  });
+}
+
+function prefetchHeroAssets(activeMode) {
+  const preloadRest = () => {
+    Object.entries(HERO_SCENARIO_ASSETS).forEach(([mode, asset]) => {
+      if (mode === activeMode) return;
+      decodeHeroAsset(asset.src).catch(() => {});
+    });
+  };
+
+  if (typeof globalThis.requestIdleCallback === "function") {
+    globalThis.requestIdleCallback(preloadRest, { timeout: 1800 });
+  } else {
+    globalThis.setTimeout(preloadRest, 300);
+  }
+}
+
+function isCurrentHeroAsset(image, src) {
+  const currentSrc = image.getAttribute("src") || "";
+  const normalizedSrc = src.replace(/^\.\//, "");
+  return currentSrc === src || currentSrc.endsWith(normalizedSrc);
 }
 
 function syncHeroMap(root, mode, options = {}) {
@@ -807,15 +850,21 @@ function syncHeroMap(root, mode, options = {}) {
       image.src = asset.src;
       image.alt = copy[asset.altKey] || copy.productPreviewAlt;
     };
-    if (options.animate) {
+    if (isCurrentHeroAsset(image, asset.src) && image.complete && image.naturalWidth > 0) {
+      image.alt = copy[asset.altKey] || copy.productPreviewAlt;
+      root.dataset.heroTransition = "ready";
+      delete root.dataset.heroPendingMode;
+    } else if (options.animate) {
       root.dataset.heroTransition = "loading";
       root.dataset.heroPendingMode = nextMode;
-      globalThis.setTimeout(() => {
-        if (root.dataset.heroPendingMode !== nextMode) return;
-        swapImage();
-        root.dataset.heroTransition = "ready";
-        delete root.dataset.heroPendingMode;
-      }, 80);
+      decodeHeroAsset(asset.src)
+        .catch(() => false)
+        .then(() => {
+          if (root.dataset.heroPendingMode !== nextMode) return;
+          swapImage();
+          root.dataset.heroTransition = "ready";
+          delete root.dataset.heroPendingMode;
+        });
     } else {
       delete root.dataset.heroPendingMode;
       swapImage();
@@ -839,11 +888,15 @@ function initHeroMap() {
   const root = document.querySelector("[data-hero-map]");
   const chips = Array.from(document.querySelectorAll("[data-hero-chip]"));
   if (!root || !chips.length) return;
+  const motionQuery = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
   syncHeroMap(root, root.dataset.heroMode || DEFAULT_HERO_MODE);
+  prefetchHeroAssets(resolveHeroMode(root.dataset.heroMode || DEFAULT_HERO_MODE));
 
   chips.forEach((chip) => {
     chip.addEventListener("click", () => {
-      syncHeroMap(root, chip.getAttribute("data-hero-chip") || DEFAULT_HERO_MODE, { animate: true });
+      const nextMode = chip.getAttribute("data-hero-chip") || DEFAULT_HERO_MODE;
+      if (resolveHeroMode(root.dataset.heroMode || DEFAULT_HERO_MODE) === resolveHeroMode(nextMode)) return;
+      syncHeroMap(root, nextMode, { animate: !motionQuery?.matches });
     });
   });
 }
@@ -856,6 +909,41 @@ function initTopbarState() {
   };
   update();
   globalThis.addEventListener("scroll", update, { passive: true });
+}
+
+function initScrollSpy() {
+  const navLinks = Array.from(document.querySelectorAll(".topnav a[href^='#']"));
+  const sections = navLinks
+    .map((link) => {
+      const id = link.getAttribute("href")?.slice(1);
+      return id ? document.getElementById(id) : null;
+    })
+    .filter(Boolean);
+  if (!navLinks.length || !sections.length || !("IntersectionObserver" in globalThis)) return;
+
+  const setActiveSection = (id) => {
+    navLinks.forEach((link) => {
+      const active = link.getAttribute("href") === `#${id}`;
+      link.classList.toggle("is-active", active);
+      if (active) {
+        link.setAttribute("aria-current", "true");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visibleEntries = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visibleEntries[0]?.target?.id) setActiveSection(visibleEntries[0].target.id);
+    },
+    { rootMargin: "-34% 0px -52% 0px", threshold: [0.08, 0.22, 0.4, 0.58] },
+  );
+
+  sections.forEach((section) => observer.observe(section));
 }
 
 function getActiveLanguage() {
@@ -1347,6 +1435,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initShowcaseView();
   initHeroMap();
   initTopbarState();
+  initScrollSpy();
   initMetricCountUp();
   initScrollReveal();
 });

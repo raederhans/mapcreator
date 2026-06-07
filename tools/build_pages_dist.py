@@ -17,10 +17,6 @@ from tools.app_entry_resolver import (
     resolve_editor_entry_path,
     resolve_landing_entry_path,
 )
-from tools.build_landing_europe_1936_showcase import build_landing_assets as build_landing_europe_1936_showcase
-from tools.build_landing_hero_cartography import main as build_landing_hero_cartography
-from tools.build_landing_japan_preview import build_preview as build_landing_japan_preview
-
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
@@ -800,10 +796,8 @@ def main() -> None:
     landing_entry = resolve_landing_entry_path(root=ROOT)
     editor_entry = resolve_editor_entry_path(root=ROOT)
 
-    # landing builder 的输出先落到 landing/assets，再由 reset_dist 后的复制步骤发布到 dist。
-    build_landing_hero_cartography()
-    build_landing_europe_1936_showcase()
-    build_landing_japan_preview()
+    # Landing assets are committed delivery inputs here. Regenerate them with
+    # the dedicated landing asset scripts before running this dist copier.
     reset_dist()
     build_landing_dist(landing_entry)
     build_editor_dist(editor_entry)

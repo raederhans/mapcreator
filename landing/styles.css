@@ -10,6 +10,7 @@
   --line-soft: rgba(7, 17, 31, 0.1);
   --line-strong: rgba(7, 17, 31, 0.18);
   --accent: #147f77;
+  --accent-deep: #0f5f59;
   --accent-soft: rgba(20, 127, 119, 0.12);
   --accent-cyan: #5eead4;
   --accent-warm: #d99a45;
@@ -18,8 +19,8 @@
   --hero-bg-deep: #060a10;
   --danger-soft: #fff2f2;
   --danger: #dc2626;
-  --success-soft: #eff6ff;
-  --success: #1d4ed8;
+  --success-soft: rgba(20, 127, 119, 0.1);
+  --success: var(--accent);
   --shadow-soft: 0 32px 90px rgba(7, 17, 31, 0.12);
   --shadow-card: 0 18px 45px rgba(7, 17, 31, 0.08);
   --shadow-deep: 0 42px 120px rgba(0, 0, 0, 0.42);
@@ -56,7 +57,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
-  -webkit-tap-highlight-color: rgba(31, 111, 235, 0.14);
+  -webkit-tap-highlight-color: rgba(20, 127, 119, 0.16);
 }
 
 img,
@@ -94,7 +95,7 @@ a.button {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(31, 111, 235, 0.78);
+  outline: 2px solid rgba(20, 127, 119, 0.78);
   outline-offset: 3px;
 }
 
@@ -158,13 +159,26 @@ a.button {
 }
 
 .topnav a {
+  position: relative;
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 .topnav a:hover,
-.topnav a:focus-visible {
+.topnav a:focus-visible,
+.topnav a.is-active {
   color: var(--text-primary);
+}
+
+.topnav a.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .lang-switch {
@@ -221,7 +235,7 @@ a.button {
 .button--primary {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 14px 28px rgba(31, 111, 235, 0.2);
+  box-shadow: 0 14px 28px rgba(20, 127, 119, 0.22);
 }
 
 .button--secondary {
@@ -257,13 +271,13 @@ a.button {
 }
 
 #why.section--muted {
-  border-color: rgba(31, 111, 235, 0.14);
+  border-color: rgba(20, 127, 119, 0.14);
   background:
-    linear-gradient(145deg, rgba(31, 111, 235, 0.08), rgba(31, 111, 235, 0) 34rem),
-    linear-gradient(180deg, #eaf3ff 0%, #edf7ff 100%);
+    linear-gradient(145deg, rgba(20, 127, 119, 0.08), rgba(20, 127, 119, 0) 34rem),
+    linear-gradient(180deg, rgba(237, 244, 239, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 26px 72px rgba(31, 111, 235, 0.08);
+    0 26px 72px rgba(20, 127, 119, 0.08);
 }
 
 .section--dark,
@@ -311,7 +325,7 @@ a.button {
 .hero h1 {
   margin: 0;
   max-width: 10.8ch;
-  font-size: clamp(4.8rem, 5.6rem, 6.2rem);
+  font-size: clamp(3.4rem, 6vw, 6.2rem);
   font-family: var(--font-display);
   font-weight: 760;
   line-height: 0.96;
@@ -510,7 +524,7 @@ a.button {
 
 .section-heading h2 {
   margin: 0 0 14px;
-  font-size: clamp(3rem, 3.6rem, 4.2rem);
+  font-size: clamp(3rem, 4vw, 4.2rem);
   line-height: 1;
   letter-spacing: 0;
   text-wrap: balance;
@@ -554,7 +568,7 @@ a.button {
 .stat-card__value {
   display: block;
   color: var(--text-primary);
-  font-size: clamp(2rem, 2.35rem, 2.8rem);
+  font-size: clamp(2rem, 2.6vw, 2.8rem);
   font-weight: 900;
   line-height: 0.96;
   letter-spacing: 0;
@@ -658,6 +672,32 @@ a.button {
   border-radius: var(--radius-xl);
   background: var(--surface-strong);
   box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.work-card:hover,
+.feature-group:hover,
+.data-card:hover,
+.case-card:hover,
+.edition-card:hover,
+.template-card:hover,
+.step-card:hover,
+.roadmap-item:hover,
+.update-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 58px rgba(7, 17, 31, 0.13);
+}
+
+.work-card:hover,
+.feature-group:hover,
+.data-card:hover,
+.case-card:hover,
+.edition-card:hover,
+.template-card:hover,
+.step-card:hover,
+.roadmap-item:hover,
+.update-item:hover {
+  border-color: rgba(20, 127, 119, 0.18);
 }
 
 .work-card--tall {
@@ -692,6 +732,12 @@ a.button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--transition-medium);
+}
+
+.work-card:hover .work-card__media img,
+.template-card:hover img {
+  transform: scale(1.04);
 }
 
 .work-card__media--workspace img {
@@ -719,7 +765,7 @@ a.button {
 .showcase-section h2 {
   margin: 0 0 16px;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 3.7rem, 4.4rem);
+  font-size: clamp(3rem, 4.4vw, 4.4rem);
   font-weight: 760;
   line-height: 0.98;
 }
@@ -794,7 +840,7 @@ a.button {
 .showcase-map__viewport {
   position: relative;
   overflow: hidden;
-  background: #0f3659;
+  background: var(--accent-deep);
 }
 
 .showcase-map__viewport::after {
@@ -938,7 +984,7 @@ a.button {
 .edition-card h3,
 .case-card h3 {
   margin: 0;
-  font-size: clamp(1.28rem, 1.45rem, 1.72rem);
+  font-size: clamp(1.28rem, 1.5vw, 1.72rem);
   line-height: 1.14;
   letter-spacing: 0;
 }
@@ -951,7 +997,7 @@ a.button {
   position: relative;
   overflow: hidden;
   border-radius: 22px;
-  background: #dbeafe;
+  background: rgba(20, 127, 119, 0.12);
   box-shadow: inset 0 0 0 1px rgba(7, 17, 31, 0.08);
   aspect-ratio: 17 / 11;
   cursor: grab;
@@ -1066,7 +1112,7 @@ a.button {
 }
 
 .preview-tabs button[aria-selected="true"] {
-  border-color: rgba(31, 111, 235, 0.28);
+  border-color: rgba(20, 127, 119, 0.34);
   background: var(--accent);
   color: #fff;
 }
@@ -1101,7 +1147,7 @@ a.button {
 .roadmap-item h3,
 .cta-panel h2 {
   margin: 0;
-  font-size: clamp(1.52rem, 1.72rem, 2.05rem);
+  font-size: clamp(1.52rem, 1.85vw, 2.05rem);
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -1119,6 +1165,7 @@ a.button {
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 12px 30px rgba(7, 17, 31, 0.05);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .comparison-card ul {
@@ -1165,7 +1212,7 @@ a.button {
 }
 
 .comparison-card--solution li span {
-  background: rgba(29, 78, 216, 0.12);
+  background: rgba(20, 127, 119, 0.12);
   color: var(--success);
 }
 
@@ -1183,8 +1230,8 @@ a.button {
 .step-card__index {
   display: block;
   margin-bottom: 28px;
-  color: rgba(31, 111, 235, 0.12);
-  font-size: clamp(4.2rem, 4.75rem, 5.5rem);
+  color: rgba(20, 127, 119, 0.14);
+  font-size: clamp(4.2rem, 5.3vw, 5.5rem);
   font-weight: 900;
   line-height: 0.8;
   letter-spacing: 0;
@@ -1253,12 +1300,12 @@ a.button {
   stroke-linejoin: round;
 }
 
-.feature-icon--blue { background: linear-gradient(135deg, #1f6feb, #5eead4); }
-.feature-icon--green { background: linear-gradient(135deg, #059669, #38bdf8); }
-.feature-icon--amber { background: linear-gradient(135deg, #d97706, #ef4444); }
-.feature-icon--violet { background: linear-gradient(135deg, #7c3aed, #ec4899); }
-.feature-icon--rose { background: linear-gradient(135deg, #be123c, #f59e0b); }
-.feature-icon--slate { background: linear-gradient(135deg, #334155, #14b8a6); }
+.feature-icon--blue { background: linear-gradient(135deg, var(--accent), var(--accent-cyan)); }
+.feature-icon--green { background: linear-gradient(135deg, #1f7a4d, var(--accent)); }
+.feature-icon--amber { background: linear-gradient(135deg, var(--accent-warm), #8f6732); }
+.feature-icon--violet { background: linear-gradient(135deg, var(--accent-clay), #6f4931); }
+.feature-icon--rose { background: linear-gradient(135deg, #9a7652, #d6b47a); }
+.feature-icon--slate { background: linear-gradient(135deg, var(--hero-bg), var(--accent-deep)); }
 
 .data-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1275,8 +1322,9 @@ a.button {
   padding: 24px;
   border: 1px solid rgba(7, 17, 31, 0.08);
   border-radius: var(--radius-lg);
-  background: linear-gradient(145deg, #ffffff, #edf7ff);
+  background: linear-gradient(145deg, #ffffff, #edf4ef);
   box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .template-card::before {
@@ -1296,6 +1344,7 @@ a.button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform var(--transition-medium);
 }
 
 .template-card span,
@@ -1318,24 +1367,24 @@ a.button {
 .template-card h3 {
   position: relative;
   z-index: 2;
-  margin-top: 118px;
   color: #fff;
   margin: 0;
-  font-size: clamp(1.7rem, 1.95rem, 2.35rem);
+  font-size: clamp(1.7rem, 2.25vw, 2.35rem);
   line-height: 1;
   letter-spacing: 0;
   text-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
 }
 
 .template-card--blank { background: linear-gradient(145deg, #ffffff, #f1f5f9); }
-.template-card--modern { background: linear-gradient(145deg, #ecfeff, #eff6ff); }
+.template-card--modern { background: linear-gradient(145deg, #ecfeff, #edf4ef); }
 .template-card--hoi4 { background: linear-gradient(145deg, #fff7ed, #fef3c7); }
-.template-card--tno { background: linear-gradient(145deg, #f8fafc, #e0e7ff); }
+.template-card--tno { background: linear-gradient(145deg, #f8fafc, #e6ddd4); }
 
 .data-card,
 .edition-card,
 .case-card {
   padding: 28px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .data-card {
@@ -1361,11 +1410,12 @@ a.button {
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.94)),
     radial-gradient(circle at 100% 0%, rgba(227, 168, 90, 0.14), rgba(227, 168, 90, 0));
   box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .update-item h3 {
   margin: 0;
-  font-size: clamp(1.4rem, 1.55rem, 1.8rem);
+  font-size: clamp(1.4rem, 1.65vw, 1.8rem);
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -1432,7 +1482,7 @@ a.button {
 }
 
 .audience-item strong {
-  font-size: clamp(1.45rem, 1.8rem, 2.3rem);
+  font-size: clamp(1.45rem, 2.1vw, 2.3rem);
   line-height: 1.1;
   letter-spacing: 0;
 }
@@ -1478,7 +1528,7 @@ a.button {
 
 .cta-panel h2 {
   color: #fff;
-  font-size: clamp(2.5rem, 3rem, 3.7rem);
+  font-size: clamp(2.5rem, 3.7vw, 3.7rem);
 }
 
 .footer {
@@ -1522,11 +1572,12 @@ a.button {
 
 html[data-reveal="enabled"] [data-reveal] {
   transition: opacity var(--transition-medium), transform var(--transition-medium);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
 html[data-reveal="enabled"] [data-reveal]:not(.is-revealed) {
-  opacity: 0.86;
-  transform: translateY(18px);
+  opacity: 0;
+  transform: translateY(24px);
 }
 
 html[data-reveal="enabled"] [data-reveal].is-revealed {

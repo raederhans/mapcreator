@@ -37210,7 +37210,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 63779
+      "size_bytes": 67148
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37222,7 +37222,7 @@
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 251550
+      "size_bytes": 135666
     },
     {
       "path": "assets/favicon.png",
@@ -37241,6 +37241,10 @@
       "size_bytes": 1279335
     },
     {
+      "path": "assets/hero-blank.webp",
+      "size_bytes": 89880
+    },
+    {
       "path": "assets/hero-cartography.svg",
       "size_bytes": 64137
     },
@@ -37253,12 +37257,20 @@
       "size_bytes": 102038
     },
     {
+      "path": "assets/hero-hoi4-1936.webp",
+      "size_bytes": 70598
+    },
+    {
       "path": "assets/hero-hoi4-1939.json",
       "size_bytes": 1742
     },
     {
       "path": "assets/hero-hoi4-1939.svg",
       "size_bytes": 103175
+    },
+    {
+      "path": "assets/hero-hoi4-1939.webp",
+      "size_bytes": 71380
     },
     {
       "path": "assets/hero-tno-1962.json",
@@ -37269,20 +37281,40 @@
       "size_bytes": 296143
     },
     {
+      "path": "assets/hero-tno-1962.webp",
+      "size_bytes": 59486
+    },
+    {
       "path": "assets/japan-preview-cities.svg",
       "size_bytes": 294700
+    },
+    {
+      "path": "assets/japan-preview-cities.webp",
+      "size_bytes": 40114
     },
     {
       "path": "assets/japan-preview-night.svg",
       "size_bytes": 294739
     },
     {
+      "path": "assets/japan-preview-night.webp",
+      "size_bytes": 34654
+    },
+    {
       "path": "assets/japan-preview-terrain.svg",
       "size_bytes": 294716
     },
     {
+      "path": "assets/japan-preview-terrain.webp",
+      "size_bytes": 47404
+    },
+    {
       "path": "assets/japan-preview-transport.svg",
       "size_bytes": 294718
+    },
+    {
+      "path": "assets/japan-preview-transport.webp",
+      "size_bytes": 43370
     },
     {
       "path": "assets/japan-preview.json",
@@ -37301,6 +37333,10 @@
       "size_bytes": 31074
     },
     {
+      "path": "assets/showcase-final-map.webp",
+      "size_bytes": 41876
+    },
+    {
       "path": "assets/social-preview.png",
       "size_bytes": 122058
     },
@@ -37313,16 +37349,32 @@
       "size_bytes": 31056
     },
     {
+      "path": "assets/template-blank.webp",
+      "size_bytes": 34704
+    },
+    {
       "path": "assets/template-hoi4.svg",
       "size_bytes": 31054
+    },
+    {
+      "path": "assets/template-hoi4.webp",
+      "size_bytes": 37926
     },
     {
       "path": "assets/template-modern.svg",
       "size_bytes": 31058
     },
     {
+      "path": "assets/template-modern.webp",
+      "size_bytes": 39086
+    },
+    {
       "path": "assets/template-tno.svg",
       "size_bytes": 31052
+    },
+    {
+      "path": "assets/template-tno.webp",
+      "size_bytes": 33860
     },
     {
       "path": "assets/workspace-overview.webp",
@@ -37330,15 +37382,15 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 49640
+      "size_bytes": 49652
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1054161
+      "size_bytes": 1055264
     },
     {
       "path": "styles.css",
-      "size_bytes": 35536
+      "size_bytes": 37221
     }
   ],
   "max_allowed_bytes": 1153433600,
@@ -37351,5 +37403,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1112747321
+  "total_bytes": 1113281944
 }
