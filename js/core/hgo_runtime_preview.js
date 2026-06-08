@@ -176,6 +176,7 @@ function createHgoRuntimePreviewController(runtimeState, {
       ? normalizeRenderReason(options.reason)
       : HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
     const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
+    // 有投影和 canvas 时直接写主画布，保证预览像素跟 app 渲染生命周期同步。
     const rendered = canvas && effectiveRenderOptions.projection
       ? renderer.renderProjectedToCanvas(canvas, effectiveRenderOptions)
       : effectiveRenderOptions.projection
@@ -194,6 +195,7 @@ function createHgoRuntimePreviewController(runtimeState, {
       return null;
     }
     const [seed, raster] = await Promise.all([loadSeed(), loadRaster()]);
+    // generation 是异步加载代次；用户关闭或重开后，旧 seed/raster 结果不能回写 READY。
     if (generation !== loadGeneration || !previewState.enabled) {
       return null;
     }

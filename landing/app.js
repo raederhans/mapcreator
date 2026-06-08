@@ -840,6 +840,7 @@ function syncHeroMap(root, mode, options = {}) {
   const chips = Array.from(document.querySelectorAll("[data-hero-chip]"));
   const copy = translations[getActiveLanguage()] || translations.en;
 
+  // heroMetadata 跟随当前图片一起切换，保证文案和可见资产都指向同一份生成器 metadata。
   root.dataset.heroMode = nextMode;
   if (asset.metadata) {
     root.dataset.heroMetadata = asset.metadata;
@@ -993,6 +994,7 @@ function setShowcaseSvgLayer(root) {
   if (!objectNode?.contentDocument) return;
   const svg = objectNode.contentDocument.querySelector("svg");
   if (!svg) return;
+  // 这里写入 SVG 根节点属性，真实显隐由生成 SVG 内的 CSS/SMIL 合同执行。
   svg.setAttribute("data-active-layer", layer);
   const animationState = layer === "day-night" && !isReducedMotionPreferred() ? "running" : "paused";
   svg.setAttribute("data-showcase-animation", animationState);
@@ -1045,6 +1047,7 @@ function applyShowcaseViewState(root, nextState) {
   const scaleIndex = Math.max(0, Math.min(nextState.scaleIndex, SHOWCASE_VIEW_SCALES.length - 1));
   const scale = SHOWCASE_VIEW_SCALES[scaleIndex];
   const position = clampShowcaseViewPosition(scale, nextState.x, nextState.y);
+  // data-* 同时驱动外层 CSS、嵌入 SVG 的城市细节层和测试合同，更新时要保持同一波次。
   root.dataset.showcaseViewScaleIndex = String(scaleIndex);
   root.dataset.showcaseViewScale = scale.toFixed(2);
   root.dataset.showcaseViewZoomed = scaleIndex > DEFAULT_SHOWCASE_VIEW_SCALE_INDEX ? "true" : "false";
@@ -1165,6 +1168,7 @@ function initShowcaseView() {
     const svg = objectNode.contentDocument?.querySelector("svg");
     if (!svg || svg.dataset.showcaseViewBound === "true") return;
     svg.dataset.showcaseViewBound = "true";
+    // <object> 内部 SVG 有独立 document，外层 object 和内层 svg 都要绑定，才能同时覆盖加载前后事件。
     svg.addEventListener("wheel", onWheel, { passive: false });
     svg.addEventListener("pointerdown", onPointerDown);
     svg.addEventListener("pointermove", onPointerMove);

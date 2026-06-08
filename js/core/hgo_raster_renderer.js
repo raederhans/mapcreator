@@ -209,6 +209,7 @@ function createProjectionRenderCacheKey({
   targetHeight,
 }) {
   const projection = renderOptions.projection;
+  // 投影对象 identity 和可读数值一起进 key；缩放/平移变化会失效缓存，等价重绘仍能复用像素结果。
   return [
     targetWidth,
     targetHeight,
@@ -351,6 +352,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     const renderOptions = normalizeRenderOptions(options);
     const targetWidth = normalizeCanvasDimension(options.targetWidth, source.width);
     const targetHeight = normalizeCanvasDimension(options.targetHeight, source.height);
+    // 投影渲染逐目标像素反查源图，保证主 canvas 预览和 hover/click 命中读取同一套坐标模型。
     const projectionModel = createHgoProjectionModel({
       projection: renderOptions.projection,
       sourceWidth: source.width,
@@ -507,6 +509,7 @@ function createHgoRasterRenderer({ seed, width, height, pixels, pixelFormat } = 
     const renderOptions = normalizeRenderOptions(options);
     const canvasWidth = normalizeCanvasDimension(canvas?.width, source.width);
     const canvasHeight = normalizeCanvasDimension(canvas?.height, source.height);
+    // 命中检测重新建立 projection model，避免读取已经过期的 projectedRenderCache 视口。
     const projectionModel = createHgoProjectionModel({
       projection: renderOptions.projection,
       sourceWidth: source.width,

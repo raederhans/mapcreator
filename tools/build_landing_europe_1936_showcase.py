@@ -466,6 +466,7 @@ def load_scenario_territories(
     countries = read_json(paths["countries"])["countries"]
     owners = read_json(paths["owners"])["owners"]
     showcase_tags = tag_filter or europe_country_tags(countries)
+    # detail bbox 和 context bbox 都走同一入口，避免展示页背景国和细节国使用两套裁剪语义。
     clip = box(*(clip_bbox or canvas.bbox))
     by_tag: dict[str, list[BaseGeometry]] = defaultdict(list)
     source_feature_count = 0
@@ -616,6 +617,7 @@ def load_rail_paths(
     selected: list[str] = []
     selected_keys: set[str] = set()
     selected_by_shard: dict[str, int] = {}
+    # 第一轮给每个 shard 保留最低可见线数，第二轮再按长度补满整体上限，防止长线挤掉局部铁路纹理。
     for shard_id, shard_candidates in sorted(candidates_by_shard.items()):
         shard_candidates.sort(reverse=True)
         for _length_px, path, path_key in shard_candidates:
@@ -762,6 +764,7 @@ def load_showcase_city_labels(
     source_count = 0
     min_lon, min_lat, max_lon, max_lat = clip_bbox or canvas.bbox
 
+    # scenario capitals 先入候选池并给高分，保证关键首都不会被人口更高的普通城市挤出标签层。
     for index, item in enumerate(capitals):
         name = str(item["name"]).strip()
         if not name or name in seen_names:
@@ -981,6 +984,7 @@ def city_light_nodes(city_lights: list[dict]) -> str:
 def night_light_texture_nodes(city_lights: list[dict]) -> str:
     nodes: list[str] = []
     ranked = sorted(city_lights, key=lambda item: float(item.get("population") or 0.0), reverse=True)
+    # 光斑只取头部城市，夜幕动画和灯光密度一起读这批节点，避免低权重点把 SVG 体积推高。
     for index, item in enumerate(ranked[:42]):
         escaped_name = xml_escape(str(item["name"]))
         population = float(item.get("population") or 0.0)
