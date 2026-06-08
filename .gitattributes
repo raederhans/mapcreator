@@ -1,4 +1,5 @@
 .gitattributes text eol=lf
+"lessons learned.md" text eol=lf
 
 # Scenario contracts store byte-exact sizes and sha256 values for these assets.
 data/manifest.json text eol=lf
@@ -47,3 +48,6 @@ dist/app/**/*.json text eol=lf
 dist/app/**/*.md text eol=lf
 dist/app/**/*.svg text eol=lf
 dist/app/**/*.txt text eol=lf
+docs/archive/**/*.md text eol=lf
+tests/landing_showcase_view_behavior.test.mjs text eol=lf
+tools/svgo.landing.config.mjs text eol=lf

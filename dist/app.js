@@ -970,6 +970,10 @@ function resolveShowcaseLayer(root, layer) {
   return null;
 }
 
+function isReducedMotionPreferred() {
+  return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+}
+
 async function loadShowcaseMetadata(root) {
   if (!globalThis.fetch) return;
   const response = await fetch(SHOWCASE_METADATA_URL);
@@ -990,6 +994,13 @@ function setShowcaseSvgLayer(root) {
   const svg = objectNode.contentDocument.querySelector("svg");
   if (!svg) return;
   svg.setAttribute("data-active-layer", layer);
+  const animationState = layer === "day-night" && !isReducedMotionPreferred() ? "running" : "paused";
+  svg.setAttribute("data-showcase-animation", animationState);
+  if (animationState === "running") {
+    svg.unpauseAnimations?.();
+  } else {
+    svg.pauseAnimations?.();
+  }
 }
 
 function getShowcaseCityDetail(scaleIndex) {
@@ -1233,6 +1244,9 @@ function initShowcaseLayers() {
 
   const objectNode = root.querySelector("[data-showcase-object]");
   objectNode?.addEventListener("load", () => setShowcaseSvgLayer(root));
+  const motionQuery = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
+  motionQuery?.addEventListener?.("change", () => setShowcaseSvgLayer(root));
+  motionQuery?.addListener?.(() => setShowcaseSvgLayer(root));
   loadShowcaseMetadata(root)
     .then(() => {
       const selectedTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];

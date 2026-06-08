@@ -38,6 +38,10 @@ class TestNode {
     this.attributes[name] = String(value);
   }
 
+  focus() {
+    this.focused = true;
+  }
+
   querySelector() {
     return null;
   }
@@ -48,18 +52,22 @@ class TestNode {
 }
 
 class ShowcaseRoot extends TestNode {
-  constructor(objectNode) {
+  constructor(objectNode, tabs, panel) {
     super();
     this.objectNode = objectNode;
+    this.tabs = tabs;
+    this.panel = panel;
   }
 
   querySelector(selector) {
     if (selector === "[data-showcase-object]") return this.objectNode;
+    if (selector === "[role=\"tabpanel\"]") return this.panel;
     return null;
   }
 
   querySelectorAll(selector) {
     if (selector === "[data-showcase-view-action]") return [];
+    if (selector === "[data-showcase-layer-tab]") return this.tabs;
     return [];
   }
 }
@@ -77,12 +85,23 @@ function createEvent(overrides = {}) {
   };
 }
 
-function createShowcaseHarness() {
+function createShowcaseHarness({ reducedMotion = true } = {}) {
   const viewport = new TestNode();
   const svg = new TestNode();
   const objectNode = new TestNode();
-  const root = new ShowcaseRoot(objectNode);
+  const panel = new TestNode();
+  const tabs = ["political", "rail", "cities", "day-night"].map((layer, index) => {
+    const tab = new TestNode();
+    tab.id = `showcase-layer-${layer}`;
+    tab.setAttribute("data-showcase-layer-tab", layer);
+    tab.setAttribute("aria-selected", index === 0 ? "true" : "false");
+    return tab;
+  });
+  const root = new ShowcaseRoot(objectNode, tabs, panel);
   const domContentLoaded = [];
+  svg.animationCalls = [];
+  svg.pauseAnimations = () => svg.animationCalls.push("pause");
+  svg.unpauseAnimations = () => svg.animationCalls.push("unpause");
 
   objectNode.contentDocument = {
     querySelector(selector) {
@@ -120,12 +139,14 @@ function createShowcaseHarness() {
         getItem: () => "en",
         setItem: () => {},
       },
-      matchMedia: () => ({ matches: true }),
+      matchMedia: () => ({ matches: reducedMotion }),
     },
     domContentLoaded,
     objectNode,
+    panel,
     root,
     svg,
+    tabs,
     viewport,
   };
 }
@@ -147,6 +168,62 @@ test("landing local asset references exist", () => {
     const assetUrl = new URL(`../landing/${assetPath.slice(2)}`, import.meta.url);
     assert.ok(existsSync(assetUrl), `missing landing asset referenced by HTML/JS: ${assetPath}`);
   }
+});
+
+test("landing showcase SVG keeps interactive layer groups after optimization", () => {
+  const svg = readFileSync(new URL("../landing/assets/europe-1936-showcase.svg", import.meta.url), "utf8");
+  const decodedSvg = svg.replaceAll("&quot;", "\"");
+  for (const required of [
+    'class="layer layer-rail"',
+    'class="layer layer-cities"',
+    'class="layer layer-day-night"',
+    'svg[data-active-layer="rail"] .layer-rail',
+    'svg[data-active-layer="cities"] .layer-cities',
+    'svg[data-active-layer="day-night"] .layer-day-night',
+    'class="day-night-shade"',
+  ]) {
+    assert.ok(decodedSvg.includes(required), `missing showcase SVG contract: ${required}`);
+  }
+  assert.equal((decodedSvg.match(/<animateTransform\b/g) || []).length, 2);
+  assert.equal((decodedSvg.match(/dur="24s"/g) || []).length, 2);
+  assert.equal((decodedSvg.match(/repeatCount="indefinite"/g) || []).length, 2);
+});
+
+test("landing showcase layer tabs pause and resume embedded SVG animation", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createShowcaseHarness({ reducedMotion: false });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.svg.attributes["data-active-layer"], "political");
+  assert.equal(harness.svg.attributes["data-showcase-animation"], "paused");
+  assert.equal(harness.svg.animationCalls.at(-1), "pause");
+
+  harness.tabs.find((tab) => tab.getAttribute("data-showcase-layer-tab") === "day-night").dispatchEvent("click");
+  assert.equal(harness.root.dataset.showcaseLayer, "day-night");
+  assert.equal(harness.svg.attributes["data-active-layer"], "day-night");
+  assert.equal(harness.svg.attributes["data-showcase-animation"], "running");
+  assert.equal(harness.svg.animationCalls.at(-1), "unpause");
+
+  harness.tabs.find((tab) => tab.getAttribute("data-showcase-layer-tab") === "rail").dispatchEvent("click");
+  assert.equal(harness.root.dataset.showcaseLayer, "rail");
+  assert.equal(harness.svg.attributes["data-showcase-animation"], "paused");
+  assert.equal(harness.svg.animationCalls.at(-1), "pause");
+});
+
+test("landing showcase day-night layer respects reduced motion", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createShowcaseHarness({ reducedMotion: true });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  harness.tabs.find((tab) => tab.getAttribute("data-showcase-layer-tab") === "day-night").dispatchEvent("click");
+  assert.equal(harness.root.dataset.showcaseLayer, "day-night");
+  assert.equal(harness.svg.attributes["data-active-layer"], "day-night");
+  assert.equal(harness.svg.attributes["data-showcase-animation"], "paused");
+  assert.equal(harness.svg.animationCalls.at(-1), "pause");
 });
 
 test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag without bottom controls", () => {
