@@ -325,3 +325,6 @@
 
 ### 交互 SVG 压缩要固定 SVGO 配置
 - `<object>` 引用的交互 SVG 里，隐藏图层也是运行时状态的一部分；跑 SVGO 时要显式保留 hidden elements 和稳定 id，并用结构/行为测试锁住可切换图层。
+
+### 改 drawCanvas 生命周期要跑 runtime hooks 合同
+- `verify:pages-dist` 只覆盖 Pages 发布合同；移动 `drawCanvas()` 内 HGO、last-good、finalize 的顺序时，要额外跑 `python -m unittest tests.test_runtime_hooks_boundary_contract -q`。
