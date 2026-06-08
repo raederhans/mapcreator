@@ -1523,7 +1523,7 @@ def build_svg(
       .night-light-belt {{ fill: none; stroke-linecap: round; stroke-linejoin: round; mix-blend-mode: screen; }}
       .night-light-belt--halo {{ stroke: #f8a85c; stroke-width: 7.2; opacity: .18; filter: url(#nightLightBeltGlow); }}
       .night-light-belt--core {{ stroke: #ffe08a; stroke-width: 2.1; opacity: .58; }}
-      .map-edge-fog rect {{ filter: url(#softEdgeBlur); pointer-events: none; }}
+      .map-edge-fog > * {{ filter: url(#softEdgeBlur); pointer-events: none; }}
       svg[data-active-layer="political"] .territory {{ opacity: .9; }}
       svg[data-active-layer="political"] .layer-urban {{ opacity: .56; }}
       svg[data-active-layer="political"] .layer-rivers {{ opacity: .62; }}

@@ -1089,6 +1089,10 @@ function resetShowcaseView(root) {
   });
 }
 
+function isModifiedZoomWheelEvent(event) {
+  return Boolean(event.ctrlKey || event.metaKey || event.altKey);
+}
+
 function initShowcaseView() {
   const root = document.querySelector("[data-showcase-root]");
   if (!root) return;
@@ -1098,10 +1102,8 @@ function initShowcaseView() {
 
   let dragState = null;
 
-  const isModifiedWheelEvent = (event) => Boolean(event.ctrlKey || event.metaKey || event.altKey);
-
   const onWheel = (event) => {
-    if (!isModifiedWheelEvent(event)) return;
+    if (!isModifiedZoomWheelEvent(event)) return;
     event.preventDefault();
     zoomShowcaseView(root, event.deltaY < 0 ? 1 : -1);
   };
@@ -1354,6 +1356,7 @@ function initPreviewView() {
   };
 
   surface.addEventListener("wheel", (event) => {
+    if (!isModifiedZoomWheelEvent(event)) return;
     event.preventDefault();
     zoomPreviewView(root, event.deltaY < 0 ? 1 : -1);
   }, { passive: false });

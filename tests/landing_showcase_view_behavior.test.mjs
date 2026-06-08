@@ -14,7 +14,11 @@ class TestNode {
     this.dataset = {};
     this.eventListeners = new Map();
     this.classList = new TestClassList();
-    this.style = {};
+    this.style = {
+      setProperty: (name, value) => {
+        this.style[name] = String(value);
+      },
+    };
     this.textContent = "";
   }
 
@@ -72,6 +76,26 @@ class ShowcaseRoot extends TestNode {
   }
 }
 
+class PreviewRoot extends TestNode {
+  constructor(surface, viewport, zoomButtons = []) {
+    super();
+    this.surface = surface;
+    this.viewport = viewport;
+    this.zoomButtons = zoomButtons;
+  }
+
+  querySelector(selector) {
+    if (selector === "[data-preview-surface]") return this.surface;
+    if (selector === "[data-preview-viewport]") return this.viewport;
+    return null;
+  }
+
+  querySelectorAll(selector) {
+    if (selector === "[data-preview-zoom]") return this.zoomButtons;
+    return [];
+  }
+}
+
 function createEvent(overrides = {}) {
   return {
     defaultPrevented: false,
@@ -82,6 +106,47 @@ function createEvent(overrides = {}) {
       this.defaultPrevented = true;
     },
     ...overrides,
+  };
+}
+
+function createPreviewHarness() {
+  const surface = new TestNode();
+  const viewport = new TestNode();
+  const root = new PreviewRoot(surface, viewport);
+  const domContentLoaded = [];
+  surface.setPointerCapture = () => {};
+  surface.releasePointerCapture = () => {};
+
+  const document = {
+    documentElement: { lang: "en", dataset: {} },
+    title: "",
+    addEventListener(name, callback) {
+      if (name === "DOMContentLoaded") domContentLoaded.push(callback);
+    },
+    querySelector(selector) {
+      if (selector === "[data-preview-root]") return root;
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+
+  return {
+    context: {
+      console,
+      document,
+      Intl,
+      localStorage: {
+        getItem: () => "en",
+        setItem: () => {},
+      },
+      matchMedia: () => ({ matches: true }),
+    },
+    domContentLoaded,
+    root,
+    surface,
+    viewport,
   };
 }
 
@@ -172,7 +237,9 @@ test("landing local asset references exist", () => {
 
 test("landing showcase SVG keeps interactive layer groups after optimization", () => {
   const svg = readFileSync(new URL("../landing/assets/europe-1936-showcase.svg", import.meta.url), "utf8");
-  const decodedSvg = svg.replaceAll("&quot;", "\"");
+  const decodedSvg = svg
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&gt;", ">");
   for (const required of [
     'class="layer layer-rail"',
     'class="layer layer-cities"',
@@ -181,6 +248,7 @@ test("landing showcase SVG keeps interactive layer groups after optimization", (
     'svg[data-active-layer="cities"] .layer-cities',
     'svg[data-active-layer="day-night"] .layer-day-night',
     'class="day-night-shade"',
+    '.map-edge-fog > * { filter: url(#softEdgeBlur); pointer-events: none; }',
   ]) {
     assert.ok(decodedSvg.includes(required), `missing showcase SVG contract: ${required}`);
   }
@@ -297,4 +365,26 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(keyboardResetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
   assert.equal(harness.root.dataset.showcaseCityDetail, "base");
+});
+
+test("landing preview view keeps normal wheel scrolling and uses modified wheel zoom", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createPreviewHarness();
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+
+  assert.equal(harness.domContentLoaded.length, 1);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.root.dataset.previewScaleIndex, "0");
+  const plainWheelEvent = createEvent({ deltaY: -120 });
+  harness.surface.dispatchEvent("wheel", plainWheelEvent);
+  assert.equal(plainWheelEvent.defaultPrevented, false);
+  assert.equal(harness.root.dataset.previewScaleIndex, "0");
+
+  const modifiedWheelEvent = createEvent({ ctrlKey: true, deltaY: -120 });
+  harness.surface.dispatchEvent("wheel", modifiedWheelEvent);
+  assert.equal(modifiedWheelEvent.defaultPrevented, true);
+  assert.equal(harness.root.dataset.previewScaleIndex, "1");
+  assert.equal(harness.root.dataset.previewZoomed, "true");
 });

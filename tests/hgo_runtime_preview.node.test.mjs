@@ -383,7 +383,7 @@ test("preview render and inspect share projection render options", async () => {
 test("preview can render projected buffers without a canvas", async () => {
   const projection = createLinearProjection();
   const harness = createController({
-    renderOptions: () => ({ projection }),
+    renderOptions: () => ({ projection, projectionTransform: { x: -1, y: 0, k: 1 } }),
     loadSeed: async () => ({
       provinces: {
         1: { id: 1, rgb: [10, 20, 30], rgb_key: 660510, rgb_hex: "#0A141E", type: "land" },
@@ -418,9 +418,13 @@ test("preview can render projected buffers without a canvas", async () => {
 
   await harness.controller.setEnabled(true);
   const rendered = harness.controller.renderPreview({ reason: "headless-projection" });
+  const hit = harness.controller.inspectPoint(0, 0);
 
   assert.equal(rendered.projectionName, "equalEarth");
-  assert.equal(rendered.projectedPixelCount, 8);
+  assert.equal(rendered.projectedPixelCount, 6);
   assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "headless-projection");
-  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectedPixelCount, 8);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectedPixelCount, 6);
+  assert.equal(hit.pixelIndex, 1);
+  assert.equal(hit.resolved.provinceId, 2);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.projectionName, "equalEarth");
 });

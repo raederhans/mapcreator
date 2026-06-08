@@ -17,6 +17,7 @@ LANDING_INDEX = REPO_ROOT / "landing" / "index.html"
 LANDING_APP_JS = REPO_ROOT / "landing" / "app.js"
 LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
+MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
@@ -111,6 +112,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn('class="territory-context territory-context--egy"', text)
                     self.assertIn('class="territory-context territory-context--syr"', text)
                     self.assertIn('class="map-edge-fog"', text)
+                    self.assertRegex(text, r"\.map-edge-fog (?:>|&gt;) \*")
                     self.assertIn("softEdgeBlur", text)
                     self.assertIn("railGlow", text)
                     self.assertIn('data-showcase-city-detail="base"', text)
@@ -333,6 +335,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertIn('data-layer="context-land"', generated_text)
                 self.assertIn('class="territory-context territory-context--egy"', generated_text)
                 self.assertIn('class="map-edge-fog"', generated_text)
+                self.assertIn(".map-edge-fog > *", generated_text)
                 self.assertIn('.country-label { fill: rgba(255,255,255,.82);', generated_text)
                 self.assertIn('opacity: .62;', generated_text)
                 self.assertIn('svg[data-active-layer="political"] .layer-cities { opacity: 0; }', generated_text)
@@ -737,7 +740,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseViewZoomed",
             "clampShowcaseViewPosition",
             "applyShowcaseViewState",
-            "isModifiedWheelEvent",
+            "isModifiedZoomWheelEvent",
             "onKeyDown",
             "initShowcaseView",
             "PREVIEW_VIEW_SCALES",
@@ -835,6 +838,23 @@ class PagesDistStartupShellTest(unittest.TestCase):
             styles_css,
             re.compile(r"\.work-card__media\s*\{[^}]*aspect-ratio:\s*16\s*/\s*9;", re.S),
         )
+
+    def test_hgo_runtime_preview_reuses_last_good_frame_during_interaction(self) -> None:
+        source = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        start = source.index("function drawCanvas(")
+        end = source.index("function buildExactAfterSettleRefreshPlan", start)
+        body = source[start:end]
+
+        self.assertIn("preferLastGoodFrameForHgoPreview", body)
+        self.assertLess(
+            body.index("preferLastGoodFrameForHgoPreview"),
+            body.index("drawTransformedFrameFromCaches"),
+        )
+        self.assertLess(
+            body.index('renderHgoRuntimePreviewIfReady("draw-canvas")'),
+            body.index("captureLastGoodFrame("),
+        )
+        self.assertIn("!useTransformedFrame || drewExactFrame", body)
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

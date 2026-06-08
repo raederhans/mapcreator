@@ -124,8 +124,12 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         draw_body = renderer_content[draw_start:draw_end]
         self.assertIn('renderHgoRuntimePreviewIfReady("draw-canvas");', draw_body)
         self.assertLess(
-            draw_body.index("finalizePendingExactAfterSettleRefreshAfterPaint();"),
             draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),
+            draw_body.index("captureLastGoodFrame("),
+        )
+        self.assertLess(
+            draw_body.index("captureLastGoodFrame("),
+            draw_body.index("finalizePendingExactAfterSettleRefreshAfterPaint();"),
         )
         self.assertLess(
             draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),

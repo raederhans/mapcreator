@@ -288,7 +288,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   const inspectPoint = (x, y, options = {}) => {
     if (!renderer) return null;
     const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
-    const hit = canvas && effectiveRenderOptions.projection
+    const hit = effectiveRenderOptions.projection
       ? renderer.inspectProjectedCanvasPoint(x, y, canvas, effectiveRenderOptions)
       : canvas
         ? renderer.inspectCanvasPoint(x, y, canvas)

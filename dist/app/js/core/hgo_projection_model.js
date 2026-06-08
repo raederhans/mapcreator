@@ -134,6 +134,7 @@ function createHgoProjectionModel({
       (x + 0.5) / pixelRatio,
       (y + 0.5) / pixelRatio,
     ];
+    // canvas -> zoom transform -> map projection -> HGO equirectangular source，render 和 inspect 共用这条链路。
     const projectionPoint = invertProjectionTransform(projectionTransform, logicalPoint);
     if (!projectionPoint) return null;
     const lonLat = normalizeLonLat(normalizedProjection.invert(projectionPoint));

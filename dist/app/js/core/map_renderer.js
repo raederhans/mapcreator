@@ -19843,13 +19843,20 @@ function drawCanvas() {
   let usedBaseVisibleFallback = false;
   let keptPreviousPixels = false;
   let drewExactFrame = false;
-  if (useTransformedFrame) {
+  const preferLastGoodFrameForHgoPreview = useTransformedFrame && isHgoRuntimePreviewReady();
+  if (preferLastGoodFrameForHgoPreview) {
+    drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+    usedLastGoodFallback = drewFrame;
+  }
+  if (useTransformedFrame && !drewFrame) {
     drewFrame = drawTransformedFrameFromCaches(frameTimings, {
       interactiveBorders: runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle,
     });
     if (!drewFrame) {
-      drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      usedLastGoodFallback = drewFrame;
+      if (!preferLastGoodFrameForHgoPreview) {
+        drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+        usedLastGoodFallback = drewFrame;
+      }
       if (!drewFrame) {
         if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
           noteMissingVisibleFrameSkippedDuringInteraction("missing-fast-frame-no-continuity");
@@ -19871,6 +19878,10 @@ function drawCanvas() {
     if (!drewExactFrame) {
       abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");
     }
+  }
+
+  if (!useTransformedFrame || drewExactFrame) {
+    renderHgoRuntimePreviewIfReady("draw-canvas");
   }
 
   const cache = getRenderPassCacheState();
@@ -19904,7 +19915,6 @@ function drawCanvas() {
   if (drewExactFrame) {
     finalizePendingExactAfterSettleRefreshAfterPaint();
   }
-  renderHgoRuntimePreviewIfReady("draw-canvas");
   incrementPerfCounter("frames");
 }
 
