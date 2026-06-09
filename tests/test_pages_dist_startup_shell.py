@@ -22,6 +22,7 @@ DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
 DIST_APP_INDEX = REPO_ROOT / "dist" / "app" / "index.html"
+DIST_APP_JS_ROOT = REPO_ROOT / "dist" / "app" / "js"
 DIST_MANIFEST = REPO_ROOT / "dist" / "pages-dist-manifest.json"
 VERIFY_SHARED_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "verify-shared.yml"
 HERO_SCENARIO_ASSETS = (
@@ -1287,6 +1288,16 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(
                     (REPO_ROOT / "dist" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
                     (REPO_ROOT / "landing" / relative_path).read_text(encoding="utf-8").replace("\r\n", "\n"),
+                )
+
+        for dist_js_path in sorted(DIST_APP_JS_ROOT.rglob("*.js")):
+            source_relative_path = Path("js") / dist_js_path.relative_to(DIST_APP_JS_ROOT)
+            source_path = REPO_ROOT / source_relative_path
+            with self.subTest(app_js_mirror=str(source_relative_path).replace("\\", "/")):
+                self.assertTrue(source_path.exists(), f"{source_relative_path} should be the source for {dist_js_path}")
+                self.assertEqual(
+                    dist_js_path.read_text(encoding="utf-8").replace("\r\n", "\n"),
+                    source_path.read_text(encoding="utf-8").replace("\r\n", "\n"),
                 )
 
         for excluded_path in (

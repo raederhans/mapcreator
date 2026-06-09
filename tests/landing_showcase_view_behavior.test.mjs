@@ -309,11 +309,20 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(harness.root.dataset.showcaseCityDetail, "base");
   assert.equal(harness.svg.attributes["data-showcase-city-detail"], "base");
   assert.equal(harness.viewport.attributes.transform, "matrix(1.16 0 0 1.16 -78.4 -49.6)");
+  assert.equal(harness.objectNode.style.touchAction, "pan-y");
+  assert.equal(harness.svg.style.touchAction, "pan-y");
 
   const plainWheelEvent = createEvent({ deltaY: -120 });
   harness.svg.dispatchEvent("wheel", plainWheelEvent);
   assert.equal(plainWheelEvent.defaultPrevented, false);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
+  const defaultXBeforeDrag = harness.root.dataset.showcaseViewX;
+  const defaultYBeforeDrag = harness.root.dataset.showcaseViewY;
+  harness.svg.dispatchEvent("pointerdown", createEvent({ clientX: 90, clientY: 95, pointerId: 3 }));
+  harness.svg.dispatchEvent("pointermove", createEvent({ clientX: 30, clientY: 35, pointerId: 3 }));
+  assert.equal(harness.root.dataset.showcaseViewX, defaultXBeforeDrag);
+  assert.equal(harness.root.dataset.showcaseViewY, defaultYBeforeDrag);
+  assert.equal(harness.root.dataset.showcaseViewDragging, undefined);
 
   const wheelEvent = createEvent({ ctrlKey: true, deltaY: -120 });
   harness.svg.dispatchEvent("wheel", wheelEvent);
@@ -322,15 +331,19 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(harness.root.dataset.showcaseViewZoomed, "true");
   assert.equal(harness.root.dataset.showcaseCityDetail, "expanded");
   assert.equal(harness.svg.attributes["data-showcase-city-detail"], "expanded");
+  assert.equal(harness.objectNode.style.touchAction, "none");
+  assert.equal(harness.svg.style.touchAction, "none");
   assert.match(harness.viewport.attributes.transform, /^matrix\(1\.34 0 0 1\.34 /);
 
   const zoomedWheelEvent = createEvent({ ctrlKey: true, deltaY: 120 });
   harness.svg.dispatchEvent("wheel", zoomedWheelEvent);
   assert.equal(zoomedWheelEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
+  assert.equal(harness.svg.style.touchAction, "pan-y");
 
   harness.svg.dispatchEvent("dblclick", createEvent());
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "2");
+  assert.equal(harness.svg.style.touchAction, "none");
 
   const xBeforeDrag = harness.root.dataset.showcaseViewX;
   const yBeforeDrag = harness.root.dataset.showcaseViewY;
@@ -345,12 +358,14 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(resetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
   assert.equal(harness.root.dataset.showcaseViewZoomed, "false");
+  assert.equal(harness.svg.style.touchAction, "pan-y");
   assert.equal(harness.viewport.attributes.transform, "matrix(1.16 0 0 1.16 -78.4 -49.6)");
 
   const keyboardZoomEvent = createEvent({ key: "+" });
   harness.objectNode.dispatchEvent("keydown", keyboardZoomEvent);
   assert.equal(keyboardZoomEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "2");
+  assert.equal(harness.svg.style.touchAction, "none");
 
   for (let index = 0; index < 6; index += 1) {
     harness.objectNode.dispatchEvent("keydown", createEvent({ key: "+" }));
@@ -365,6 +380,7 @@ test("landing showcase view uses modified wheel zoom, keyboard zoom, and drag wi
   assert.equal(keyboardResetEvent.defaultPrevented, true);
   assert.equal(harness.root.dataset.showcaseViewScaleIndex, "1");
   assert.equal(harness.root.dataset.showcaseCityDetail, "base");
+  assert.equal(harness.svg.style.touchAction, "pan-y");
 });
 
 test("landing preview view keeps normal wheel scrolling and uses modified wheel zoom", () => {

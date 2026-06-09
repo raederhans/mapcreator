@@ -1060,8 +1060,15 @@ function applyShowcaseViewState(root, nextState) {
   }
   const objectNode = root.querySelector("[data-showcase-object]");
   const svg = objectNode?.contentDocument?.querySelector("svg");
+  const touchAction = scaleIndex > DEFAULT_SHOWCASE_VIEW_SCALE_INDEX ? "none" : "pan-y";
+  if (objectNode?.style) {
+    objectNode.style.touchAction = touchAction;
+  }
   if (svg) {
     svg.setAttribute("data-showcase-city-detail", root.dataset.showcaseCityDetail);
+    if (svg.style) {
+      svg.style.touchAction = touchAction;
+    }
   }
 }
 
@@ -1120,7 +1127,7 @@ function initShowcaseView() {
 
   const onPointerDown = (event) => {
     const state = getShowcaseViewState(root);
-    if (SHOWCASE_VIEW_SCALES[state.scaleIndex] <= 1) return;
+    if (state.scaleIndex <= DEFAULT_SHOWCASE_VIEW_SCALE_INDEX) return;
     dragState = {
       pointerId: event.pointerId,
       startX: event.clientX,

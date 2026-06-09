@@ -36466,7 +36466,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 988141
+      "size_bytes": 988395
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -37210,7 +37210,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 68310
+      "size_bytes": 68558
     },
     {
       "path": "assets/atlas-physical.webp",
@@ -37403,5 +37403,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1113288794
+  "total_bytes": 1113289296
 }
