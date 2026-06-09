@@ -19843,6 +19843,7 @@ function drawCanvas() {
   let usedBaseVisibleFallback = false;
   let keptPreviousPixels = false;
   let drewExactFrame = false;
+  // HGO 预览画在主 canvas 上；交互帧优先复用上一张完整图，避免半帧投影结果覆盖拖拽中的可见连续性。
   const preferLastGoodFrameForHgoPreview = useTransformedFrame && isHgoRuntimePreviewReady();
   if (preferLastGoodFrameForHgoPreview) {
     drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
@@ -19881,6 +19882,7 @@ function drawCanvas() {
   }
 
   if (!useTransformedFrame || drewExactFrame) {
+    // 跳过交互/settle 的缓存帧；非 transformed 路径或 exact frame 成功后再刷新 HGO 预览。
     renderHgoRuntimePreviewIfReady("draw-canvas");
   }
 

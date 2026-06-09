@@ -383,6 +383,7 @@ test("preview render and inspect share projection render options", async () => {
 test("preview can render projected buffers without a canvas", async () => {
   const projection = createLinearProjection();
   const harness = createController({
+    // headless render 和 inspect 都走同一份 projectionTransform，保证无 canvas 环境也能复现主图坐标映射。
     renderOptions: () => ({ projection, projectionTransform: { x: -1, y: 0, k: 1 } }),
     loadSeed: async () => ({
       provinces: {

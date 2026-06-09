@@ -845,6 +845,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         end = source.index("function buildExactAfterSettleRefreshPlan", start)
         body = source[start:end]
 
+        # Pages 构建会复制源码 drawCanvas；这里把 HGO last-good 顺序纳入 Pages shell 合同。
         self.assertIn("preferLastGoodFrameForHgoPreview", body)
         self.assertLess(
             body.index("preferLastGoodFrameForHgoPreview"),

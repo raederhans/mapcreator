@@ -377,6 +377,7 @@ test("landing preview view keeps normal wheel scrolling and uses modified wheel 
   harness.domContentLoaded[0]();
 
   assert.equal(harness.root.dataset.previewScaleIndex, "0");
+  // 首页预览嵌在普通页面流里；未按修饰键的滚轮保持页面滚动，只把显式缩放手势交给预览。
   const plainWheelEvent = createEvent({ deltaY: -120 });
   harness.surface.dispatchEvent("wheel", plainWheelEvent);
   assert.equal(plainWheelEvent.defaultPrevented, false);

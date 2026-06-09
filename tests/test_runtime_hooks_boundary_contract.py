@@ -119,6 +119,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("countryCode: ownerTag,", hgo_hit_body)
         self.assertIn('hitSource: "hgo-runtime-preview",', hgo_hit_body)
 
+        # HGO 预览、last-good capture、settle finalize 共用同一帧顺序；这里锁住顺序，避免后续移动 drawCanvas 步骤时出现旧像素回写。
         draw_start = renderer_content.index("function drawCanvas() {")
         draw_end = renderer_content.index("function buildExactAfterSettleRefreshPlan(", draw_start)
         draw_body = renderer_content[draw_start:draw_end]
