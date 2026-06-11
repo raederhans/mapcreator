@@ -5,13 +5,13 @@
   "durations": {},
   "environment": {},
   "feature_count": 11894,
-  "generated_at": "2026-06-11T04:55:46.442365+00:00",
+  "generated_at": "2026-06-11T06:19:48.535221+00:00",
   "input_sha": {
     "capital_hints.json": "6bce61633c115ab7910fc9b81035ffdaa699a07c5e4fb69e170eab47b0d4aa69",
     "city_overrides.json": "f057e315559ec0ac1882309b83c4a76204b51f54adb782b59371d9b4c051335d",
-    "cores.by_feature.json": "ae6670ee200818e78b890093c454b240bac8041e4c5dd484548bb59a2bcc82fe",
-    "countries.json": "dbc32fd33ef3f8c20e923111bf82cd0be512f118e9fe940d4505e776784e39fe",
-    "owners.by_feature.json": "3d13775cb781bbef628ed9851a888412e27d164bd48a42b725bd0ee15168b246",
+    "cores.by_feature.json": "d7250ba4a9565e6ac9d944e1021354c13e6f1169711594cd1db89c82ae75f223",
+    "countries.json": "6cc0c18fd976eaf203af8ed311b678719950191a9e2a0729f2367dd4840ae488",
+    "owners.by_feature.json": "aee43f2657ad60497032d33284a791962b1cc626bc3ca8919e9adb6165328032",
     "runtime_topology.topo.json": "bb9fa521076155f23e92c11e336f6a4231458ba1d8d18196b04194eb19820eeb",
     "special_zone_layers.json": "4565092b196e374cdf1054eaf5bf0f2982f7f028f14ff7d183984f7dfa75b56f"
   },
@@ -19,6 +19,6 @@
   "profile": "hgo_vector",
   "report_paths": {},
   "scenario_id": "hgo_1936",
-  "snapshot_fingerprint": "7de3ae44a10c5582b72a482c9125af36859f44b1109036bf041b273cbca54cb4",
+  "snapshot_fingerprint": "ff7e8741cab10fc8a9c98cf76f96c3787c3773802316d4a2cb6352887ea54bda",
   "water_count": 0
 }
