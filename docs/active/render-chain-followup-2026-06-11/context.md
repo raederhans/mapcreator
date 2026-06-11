@@ -22,3 +22,10 @@
 - The first fresh `652d0354` gate sample was invalid as branch evidence: its `.runtime/dev/active_server.json` pointed at port `8810` with a dead pid, while the live `8810` server belonged to the main worktree.
 - Fixed `tools/perf/run_baseline.mjs` so reusable dev-server metadata must match the current repo path and a live pid before probing the URL.
 - After removing the stale review-fix `active_server.json`, `652d0354` fresh gate passed using its own `8000` server: TNO `5215.8ms`, HOI4 `5659.4ms`, `contractMismatches=[]`, `failures=[]`.
+
+## R0 Merge Verification
+- Merged `codex/render-recovery-review-fix` into `main` as `4cfb5e1d`; Git moved the branch doc updates into `docs/archive/render-chain-improvement`.
+- `npm run verify:perf-gate-contract`: 22 tests passed.
+- `node tests/scenario_chunk_contracts.test.mjs`: 43 tests passed.
+- `npm run verify:pages-dist`: dist build passed, `tests.test_pages_dist_startup_shell` 34 tests passed, landing showcase Node tests 6 passed.
+- Final `npm run perf:gate` at `4cfb5e1d` passed: TNO `4913.3ms`, HOI4 `5355.8ms`, `contractMismatches=[]`, `failures=[]`.

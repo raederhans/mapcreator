@@ -18,4 +18,5 @@
 ## Current Status
 - [x] R0 docs/archive move submitted as `ddd94ba9`.
 - [x] Perf blocker diagnosed with fresh evidence: stale `active_server.json` allowed a gate run to reuse the wrong worktree server.
-- [ ] `codex/render-recovery-review-fix` either merged cleanly or held with blocker evidence.
+- [x] `codex/render-recovery-review-fix` merged into `main` as `4cfb5e1d` after clean fresh perf evidence.
+- [ ] R1 visual/pixel smoke and color-path diagnosis remain follow-up work.
