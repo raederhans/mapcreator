@@ -1,8 +1,9 @@
 # HGO Scenario Platformization Task Board
 
-## Todo
+## Closeout
 
-- [ ] Merge, push, and clean worktree.
+- [x] Merge, push, and clean worktree.
+- [x] Archive the completed task record under `docs/archive/hgo-scenario-platformization/`.
 
 ## Done
 

@@ -1,7 +1,8 @@
 # Render Chain Improvement Task
 
-## Current Step
-- Next performance implementation pass after progressive recovery: chunk-internal visible political feature subset for primary promotion, then verify `promotedVisibleFeatureCount < promotedTotalFeatureCount` with perf evidence.
+## Archive Status
+- This task record is complete and archived.
+- The last implementation batch merged to `main`, pushed to `origin/main`, and removed its isolated worktree on 2026-06-11.
 
 ## Checklist
 - [x] Report identity includes target URL, service/process hints, repository path, git head, benchmark argv, and scenario ids.
@@ -37,11 +38,6 @@
 - [x] Verify current viewport hover/click/double-click assumptions with existing contracts and targeted benchmark evidence.
 - [x] Startup and render-sample hot paths are below `perf:gate` thresholds.
 
-## Remaining Work
-- Run a targeted visual screenshot smoke when the next browser-owned validation window opens: startup first frame, chunk promotion frame, and idle-ready frame for TNO/HOI4.
-- Run `bench:editor-performance` with an explicit localhost URL for a broader current/baseline/before-fix/after-fix comparison.
-- Continue the next optimization lane on remaining measured costs: `scenarioChunkPromotionVisualStage`, `buildHitCanvas`, and the idle completion shape for deferred full political background cache.
-
 ## 2026-06-04 Next Evaluation Checklist
 - [x] Clean worktree created from local `main` merge commit.
 - [x] `perf:gate` current-main evidence recorded.
@@ -75,9 +71,6 @@
 - Water behavior decision: keep the current default. TNO improved by about `235ms` p50 in `contextScenarioDurationDeltaMs`, while HOI4 was essentially flat at about `0.4ms` p50, and both recommendations stayed `delta-signal-insufficient`.
 - Stage 4 evidence supports staying on 2D Canvas for the next production step. Multi-layer canvas, OffscreenCanvas worker, MapLibre, and deck.gl remain useful spikes, but the first local architecture proof should reduce selected feature volume inside the current chunk promotion path.
 - Final review found two concrete correctness risks and fixed both: silent context-probe scenario typos and invalid dpr handling in hit-canvas reads. Independent native review was unavailable because the session had reached the agent thread limit.
-
-## Recommended Next Step
-- Next validation lane: run `perf:gate` and explicit-url `bench:editor-performance` to confirm HOI4/TNO now report `promotedVisibleFeatureCount` below `promotedTotalFeatureCount`, then decide whether the next bottleneck is full restore, hit canvas, or startup non-render long tail.
 
 ## 2026-06-05 Correctness Repair Checklist
 - [x] Independently verify the audit report against current source and data.
