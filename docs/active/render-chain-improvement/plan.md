@@ -132,7 +132,7 @@ Fix the progressive political recovery completion path so the idle-built full fi
 - [x] Add focused regression coverage to the existing scenario chunk contract test.
 - [x] Run syntax, node contract, packaged dist, perf, and diff verification as applicable.
 - [x] Run independent static review and fix concrete findings.
-- [ ] Merge back to `main`, push, and remove the isolated worktree.
+- [x] Merge back to `main`, push, and remove the isolated worktree.
 
 ### Acceptance Criteria
 - Deferred full cache completion records the existing completion metric, invalidates the political pass, and schedules a render with the same reason.
@@ -151,3 +151,4 @@ Main agent owns all tests, builds, perf gates, browser/dev-server commands, and 
 - `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json`.
 - `git diff --check` passed with line-ending warnings only.
 - Independent static review found one P2 coverage gap: the contract test did not require the recovery quiet-window guard to run before Path2D slice construction. The contract now asserts `!isInteractionRecoverySettled({ quietMs: 600 })` appears before `const startedAt = nowMs()` and `getPoliticalFeaturePathEntry(... allowBuild: true ...)`; `npm run test:node:scenario-chunk-contracts` passed `43/43` after the fix.
+- Closeout: implementation commit `ca1dc9c0` was fast-forward merged to `main`, pushed to `origin/main`, and the isolated worktree was removed.
