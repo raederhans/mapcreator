@@ -39,6 +39,7 @@ function decodeGridByte(byte) {
   return numeric === 128 ? INTENSITY_FIELD_GRID.neutral : Math.max(0, Math.min(2, numeric / 127.5));
 }
 
+// 项目文件只保存 base grid 的 RLE-u8；composite 在加载后重建，避免把派生数据写进保存合同。
 function encodeGrid(values) {
   const encoded = [];
   let index = 0;
@@ -93,6 +94,7 @@ export function createDefaultIntensityFieldsState() {
 
 export function normalizeIntensityFieldsState(rawState) {
   const raw = rawState && typeof rawState === "object" ? rawState : {};
+  // 运行时对象已持有 Float32Array 时保持原引用，避免每帧编辑把大网格反复解码和复制。
   const runtimeReady = INTENSITY_FIELD_CHANNEL_IDS.every((channelId) => {
     const channel = raw.channels?.[channelId];
     return (

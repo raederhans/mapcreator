@@ -138,6 +138,7 @@ export function createAppearancePhysicalOwner({
       if (clearAtlasGrid) {
         channel.grid.base.fill(INTENSITY_FIELD_GRID.neutral);
       }
+      // 面板旧状态负责可读点位，intensityFields.physicalAtlas 负责渲染；同一次提交必须同步两边。
       channel.points = runtimeState.physicalIntensityField.points.map((point) => ({
         id: point.id,
         lon: point.lon,

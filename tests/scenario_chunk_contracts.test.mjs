@@ -1103,8 +1103,13 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set\(\[[\s\S]*?"refresh-colors"[\s\S]*?"progressive-political-full-cache-ready"[\s\S]*?\]\);/.test(rendererSource)
       && /targetPassNames\.includes\("political"\)[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);/.test(rendererSource),
     politicalFullReferenceOnlyWrittenByFullPass:
-      /function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?setPassReferenceTransform\(passName, transform\);[\s\S]*?if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(rendererSource)
-      && !/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(rendererSource),
+      (() => {
+        const body = rendererSource.match(/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";
+        return body.includes("setPassReferenceTransform(passName, referenceTransform);")
+          && /if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(body)
+          && (body.match(/setPassFullReferenceTransform\(/g) || []).length === 1
+          && !/if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(body);
+      })(),
     politicalPartialRequiresFullReferenceBaseline:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(rendererSource),
     politicalPartialNeverMutatesFullReferenceBaseline:
@@ -1400,11 +1405,26 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
       && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
       && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
+      && (() => {
+        const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
+        return body.includes("runtimeState.deferExactAfterSettle")
+          && body.includes("isExactAfterSettleControllerActive()")
+          && body.includes("cache.dirty?.political")
+          && body.includes("scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork")
+          && body.includes("isInteractionRecoverySettled({ quietMs: 600 })")
+          && /!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?const startedAt = nowMs\(\)[\s\S]*?getPoliticalFeaturePathEntry\([\s\S]*?allowBuild: true/.test(body)
+          && body.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"');
+      })()
       && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
       && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
       && rendererSource.includes('metricName: "scenarioPoliticalBackgroundDeferredFullCacheBuild"')
       && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheSlice"')
       && rendererSource.includes('reason: "progressive-coarse-underlay"'),
+    progressiveFullCacheReadyRequestsPoliticalRepaint:
+      (() => {
+        const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
+        return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(context\) render\(\);/.test(body);
+      })(),
     chunkedRuntimeSkipsBlockingDetailPromotion:
       /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
     unconfirmedDetailPromotionStillWarnsBeforeHealthGate:

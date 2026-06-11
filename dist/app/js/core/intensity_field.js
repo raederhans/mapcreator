@@ -7,6 +7,7 @@ export const INTENSITY_FIELD_GRID = Object.freeze({
   max: 2,
 });
 
+// 强度场是可保存的全局乘数网格：1 表示不改动原图层，0-2 只表达相对增强/削弱。
 export const INTENSITY_FIELD_CHANNELS = Object.freeze({
   physicalAtlas: Object.freeze({
     id: "physicalAtlas",
@@ -140,6 +141,7 @@ export function bakeIntensityComposite(channel) {
   const target = channel && typeof channel === "object" ? channel : createIntensityFieldChannel("physicalAtlas");
   const base = normalizeGridValues(target.grid?.base || target.base);
   const composite = new Float32Array(base);
+  // points 是可解释的编辑意图，composite 是渲染热路径读取的烘焙结果；每次写入后都重建一次。
   const points = (Array.isArray(target.points) ? target.points : [])
     .map(normalizeIntensityPoint)
     .filter(Boolean);
@@ -188,6 +190,7 @@ export function stampIntensityBrush(channel, { lon, lat, radiusDeg = 3, strength
   let maxColumn = 0;
   let maxRow = 0;
   let touched = false;
+  // brush 直接写 base grid，并返回受影响矩形，方便 history 或后续局部同步只保存变更窗口。
   for (let row = 0; row < INTENSITY_FIELD_GRID.rows; row += 1) {
     for (let column = 0; column < INTENSITY_FIELD_GRID.columns; column += 1) {
       const { lon: cellLon, lat: cellLat } = getCellLonLat(column, row);

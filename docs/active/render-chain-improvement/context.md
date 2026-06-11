@@ -236,3 +236,28 @@
 - UltraQA found and fixed a real budget blocker: TNO `render_budget_hints.max_required_political_estimated_path_cost` was still `520000`, below regenerated `political.coarse.r0c0.estimated_path_cost=678774`. The accepted hint is now `680000`, and the checked-in validator asserts any present political path-cost budget covers the real coarse chunk cost.
 - After the budget fix, the first perf reruns failed under a noisy local environment. A stale local `tools/dev_server.py` on port `8000` was stopped; the final clean-window `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json`.
 - Final acceptance perf p50 after the UltraQA fix: TNO `totalStartupMs=5410.6ms`, `scenarioChunkPromotionVisualStageMs=536.9ms`, `buildHitCanvasMs=188.9ms`; HOI4 `totalStartupMs=5975.9ms`, `scenarioChunkPromotionVisualStageMs=583.1ms`, `buildHitCanvasMs=180.5ms`.
+
+## 2026-06-11 Progressive Full Cache Ready Render Recovery Context
+- Worktree: `C:\Users\raede\Desktop\dev\mapcreator-render-chain-progressive-recovery`.
+- Branch: `codex/render-chain-progressive-recovery`, based on `origin/main` at `a416dc98`.
+- Parent checkout note: main worktree has unrelated `.omx/metrics.json` modification; this batch keeps all code/doc edits in the isolated worktree until merge.
+- Live process owner: main agent only. No subagent may start, poll, retry, stop, or interpret active test/build/perf/dev-server processes for this batch.
+- Current source evidence: `runScenarioPoliticalBackgroundDeferredFullCacheSlice()` finishes the deferred full cache, records `scenarioPoliticalBackgroundDeferredFullCacheComplete`, clears `scenarioPoliticalBackgroundDeferredFullCacheState`, and calls `invalidateRenderPasses("political", "progressive-political-full-cache-ready")`. It currently returns immediately after invalidation, so the newly ready full fine political cache can wait for an unrelated later render.
+- Existing helper evidence: `requestRendererRender(reason, { flush, fallback })` already wraps `requestRender()` and falls back to direct `render()` when needed. Exact-after-settle abort recovery already uses the same helper with a context render fallback.
+- Implementation target: after invalidating the political pass for `progressive-political-full-cache-ready`, request a non-flush renderer pass with the same reason and the existing context fallback.
+- Test target: extend `tests/scenario_chunk_contracts.test.mjs` so the progressive recovery contract requires completion metric, cache-preserving invalidation, and the post-completion render request in that order.
+- UltraQA matrix:
+  - Normal path: idle deferred full cache completion requests the repaint.
+  - Regression path: completion still records the existing diagnostic metrics and preserves the path cache invalidation reason.
+  - Boundary path: exact-after-settle abort recovery remains covered by its existing contract.
+- Build-output path: source/dist sync is verified by `verify:pages-dist` if packaged output changes.
+- Process-safety path: all long commands run under this main owner with logs under `.runtime/`.
+
+## 2026-06-11 Progressive Full Cache Ready Render Recovery Result
+- Implemented `progressive-political-full-cache-ready` as a real render request after deferred full cache completion, using `requestRendererRender(..., { flush: false, fallback: () => render() })`.
+- Performance correction: deferred full-cache slice work now waits for `isInteractionRecoverySettled({ quietMs: 600 })` before building or publishing the full fine cache. This keeps startup/interaction recovery from paying the idle full-cache cost.
+- Regression coverage now locks the completion path order: completion metric, state clear, political invalidation reason, and post-cache-ready render request.
+- E2E coverage now waits for a fresh `settleExactRefreshPasses.sequence` after the focused exact refresh is scheduled, so the exact-after-settle test reads the current refresh instead of a previous metric.
+- First perf attempt after adding the repaint failed on HOI4 `totalStartupMs` (`6231.8ms` vs limit `5986.6ms`). After moving the full-cache slice work behind the settled recovery gate, `npm run perf:gate` passed.
+- Final verification evidence before independent review: `node --check` for changed source/dist/test JS, `npm run test:node:scenario-chunk-contracts` `43/43`, `npm run verify:pages-dist` packaged `34/34` plus landing `6/6`, `npm run test:e2e:dev:scenario-chunk-runtime` `6/6`, `npm run perf:gate` passed, and `git diff --check` passed with line-ending warnings only.
+- Independent static review result: production review found no blocking issue. Verification review found one P2 coverage gap around the quiet-window guard order. Fixed by requiring the guard before `const startedAt = nowMs()` and `getPoliticalFeaturePathEntry(... allowBuild: true ...)`; post-fix `npm run test:node:scenario-chunk-contracts` passed `43/43`.

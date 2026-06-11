@@ -339,3 +339,6 @@
 
 ### Pages manifest 重建要使用干净 worktree
 - `dist/pages-dist-manifest.json` 会记录当前 `dist` 文件大小；同一 worktree 里若混有无关 source/dist 改动，先切到干净 worktree 重建，避免把旁路改动写进发布合同。
+
+### deferred full cache 要整体避开恢复窗口
+- progressive full cache ready 这类 idle 优化只延后最终 repaint 还不够；slice 构建本身也会挤占 startup/interaction recovery，先等 `isInteractionRecoverySettled()` 再建和发布。

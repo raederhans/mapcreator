@@ -112,3 +112,42 @@ TNO and HOI4 scenario chunks were regenerated with political coarse LOD diagnost
 Review caught one build-output contract issue during acceptance: root Pages dist text files were copied with CRLF working-tree bytes while `.gitattributes` publishes them as LF. The builder now normalizes root `dist/index.html`, `dist/app.js`, and `dist/styles.css` before writing `dist/pages-dist-manifest.json`; static recompute now matches the manifest total `1109157488`, and all four tracked Pages files report `w/lf`.
 
 UltraQA caught one data-contract issue during acceptance: TNO's top-level political path-cost budget still used the old `520000` value while the regenerated coarse chunk cost is `678774`. The budget hint is now `680000`, the generator default matches it, and the checked-in validator covers this relationship. Final perf gate passed after clearing a stale local `tools/dev_server.py` process on port `8000`.
+
+## 2026-06-11 Progressive Full Cache Ready Render Recovery Plan
+
+### Intent
+Fix the progressive political recovery completion path so the idle-built full fine political background cache is actually painted after it becomes ready. The current code invalidates the political pass with `progressive-political-full-cache-ready`, but it does not request the next render in the same completion path.
+
+### Boundaries
+- Keep HGO, transport, appearance, worker raster, and renderer migration out of scope.
+- Keep the existing default progressive recovery mode and exact recovery override.
+- Reuse the current render scheduling helper instead of introducing a new render loop or fallback layer.
+- Extend existing scenario chunk contracts; add a new test file only if existing coverage cannot express the regression.
+
+### Checklist
+- [x] Create isolated worktree `C:\Users\raede\Desktop\dev\mapcreator-render-chain-progressive-recovery` on `codex/render-chain-progressive-recovery`.
+- [x] Verify current source still has the gap: `runScenarioPoliticalBackgroundDeferredFullCacheSlice()` records completion and invalidates the political pass without a matching render request.
+- [x] Reuse `docs/active/render-chain-improvement` as the task record.
+- [x] Add a post-cache-ready render request through `requestRendererRender("progressive-political-full-cache-ready", ...)`.
+- [x] Add focused regression coverage to the existing scenario chunk contract test.
+- [x] Run syntax, node contract, packaged dist, perf, and diff verification as applicable.
+- [x] Run independent static review and fix concrete findings.
+- [ ] Merge back to `main`, push, and remove the isolated worktree.
+
+### Acceptance Criteria
+- Deferred full cache completion records the existing completion metric, invalidates the political pass, and schedules a render with the same reason.
+- The render request uses existing renderer scheduling semantics and keeps the context render fallback for environments where queued rendering is unavailable.
+- Existing exact-after-settle recovery behavior remains covered and green.
+- Source and packaged output stay synchronized through the repository's existing verification gate.
+
+### Live Process Ownership
+Main agent owns all tests, builds, perf gates, browser/dev-server commands, and log polling for this 2026-06-11 batch. Other agents may inspect files and completed logs only.
+
+### Verification Evidence
+- `node --check` passed for `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `tests/scenario_chunk_contracts.test.mjs`, and `tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js`.
+- `npm run test:node:scenario-chunk-contracts` passed `43/43`.
+- `npm run verify:pages-dist` passed packaged shell unittest `34/34` and landing showcase tests `6/6`; generated dist size `1092.09 MiB`.
+- `npm run test:e2e:dev:scenario-chunk-runtime` passed `6/6`.
+- `npm run perf:gate` passed against `docs\perf\baseline_2026-04-20.json`.
+- `git diff --check` passed with line-ending warnings only.
+- Independent static review found one P2 coverage gap: the contract test did not require the recovery quiet-window guard to run before Path2D slice construction. The contract now asserts `!isInteractionRecoverySettled({ quietMs: 600 })` appears before `const startedAt = nowMs()` and `getPoliticalFeaturePathEntry(... allowBuild: true ...)`; `npm run test:node:scenario-chunk-contracts` passed `43/43` after the fix.

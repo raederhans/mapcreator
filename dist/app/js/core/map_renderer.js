@@ -17222,6 +17222,8 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   if (
     runtimeState.renderPhase !== RENDER_PHASE_IDLE
     || runtimeState.deferExactAfterSettle
+    || isExactAfterSettleControllerActive()
+    || !isInteractionRecoverySettled({ quietMs: 600 })
     || cache.dirty?.political
   ) {
     scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
@@ -17302,6 +17304,25 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
     return builtCount > 0;
   }
 
+  if (!isInteractionRecoverySettled({ quietMs: 600 })) {
+    scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
+      runScenarioPoliticalBackgroundDeferredFullCacheSlice,
+      { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
+    );
+    if (!state.repaintDeferredRecorded) {
+      state.repaintDeferredRecorded = true;
+      recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred", 0, {
+        phase: "idle",
+        recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
+        reason: "interaction-recovery-active",
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        renderPhase: String(runtimeState.renderPhase || ""),
+        deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+      });
+    }
+    return false;
+  }
+
   const finalized = getScenarioPoliticalBackgroundFullPassGroups(normalizedEntries, {
     transform,
     allowBuild: true,
@@ -17322,6 +17343,12 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   });
   scenarioPoliticalBackgroundDeferredFullCacheState = null;
   invalidateRenderPasses("political", "progressive-political-full-cache-ready");
+  requestRendererRender("progressive-political-full-cache-ready", {
+    flush: false,
+    fallback: () => {
+      if (context) render();
+    },
+  });
   return true;
 }
 

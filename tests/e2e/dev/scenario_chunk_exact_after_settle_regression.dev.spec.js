@@ -67,10 +67,10 @@ async function dragMap(page, { dx = 180, dy = 24, steps = 8 } = {}) {
 }
 
 async function scheduleExactAfterSettleRefreshForFocusedTest(page) {
-  await page.evaluate(async () => {
+  return page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
     const { scheduleExactAfterSettleRefresh } = await import("/js/core/map_renderer.js");
-    if (state.deferExactAfterSettle || state.exactAfterSettleHandle) return;
+    if (state.deferExactAfterSettle || state.exactAfterSettleHandle) return false;
     state.deferExactAfterSettle = true;
     scheduleExactAfterSettleRefresh({
       scaleDelta: 0,
@@ -78,6 +78,7 @@ async function scheduleExactAfterSettleRefreshForFocusedTest(page) {
       settleDurationMs: 0,
       exactQuietWindowMs: 0,
     });
+    return true;
   });
 }
 
@@ -316,16 +317,28 @@ test("exact-after-settle repaints political pass with stable invalidation metric
 
   const beforeRefresh = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
+    const metrics = state.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+      ? state.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
     return {
       activeScenarioId: String(state.activeScenarioId || ""),
       politicalPassRenders: Number(state.renderPassCache?.counters?.politicalPassRenders || 0),
+      settleExactRefreshPassesSequence: Number(metrics.settleExactRefreshPasses?.sequence || 0),
     };
   });
 
   expect(beforeRefresh.activeScenarioId).toBe("tno_1962");
 
-  await scheduleExactAfterSettleRefreshForFocusedTest(page);
+  const scheduled = await scheduleExactAfterSettleRefreshForFocusedTest(page);
+  expect(scheduled).toBe(true);
   await waitForStableExactRender(page, { timeout: 30_000 });
+  await page.waitForFunction((previousSequence) => {
+    const state = globalThis.__playwrightStateRef || null;
+    const metrics = state?.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+      ? state.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
+    return Number(metrics.settleExactRefreshPasses?.sequence || 0) > Number(previousSequence || 0);
+  }, beforeRefresh.settleExactRefreshPassesSequence, { timeout: 30_000 });
 
   const afterRefresh = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");

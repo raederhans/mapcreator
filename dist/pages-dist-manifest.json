@@ -45567,7 +45567,7 @@
     },
     {
       "path": "app/js/core/intensity_field.js",
-      "size_bytes": 11334,
+      "size_bytes": 11696,
       "source_kind": "dist"
     },
     {
@@ -45632,7 +45632,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 993963,
+      "size_bytes": 995039,
       "source_kind": "dist"
     },
     {
@@ -46072,7 +46072,7 @@
     },
     {
       "path": "app/js/core/state/intensity_field_state.js",
-      "size_bytes": 5444,
+      "size_bytes": 5685,
       "source_kind": "dist"
     },
     {
@@ -46292,7 +46292,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 25143,
+      "size_bytes": 25270,
       "source_kind": "dist"
     },
     {
@@ -46357,7 +46357,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_appearance_controller.js",
-      "size_bytes": 46533,
+      "size_bytes": 46863,
       "source_kind": "dist"
     },
     {
@@ -46811,5 +46811,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145140779
+  "total_bytes": 1145142915
 }

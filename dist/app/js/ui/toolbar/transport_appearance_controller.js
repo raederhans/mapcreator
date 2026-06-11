@@ -147,6 +147,7 @@ export function createTransportAppearanceController({
   let transportAppearanceUiFrameId = 0;
 
   const getEffectiveTransportScopeState = (familyId, familyConfig) => (
+    // linked 模式让 coverageReach 推导 scope/threshold；manual 模式保留用户显式选择。
     getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "scopeLinkMode", "linked") === "manual"
       ? {
         scope: String(getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "scope", "")).trim().toLowerCase(),
@@ -195,6 +196,7 @@ export function createTransportAppearanceController({
   const getTransportOverviewDataLayerRequest = (familyId) => {
     const layerKeys = getTransportOverviewDataLayerKeys(familyId);
     if (layerKeys.length === 0) return null;
+    // rail 这类 family 需要主线和站点等多个 layer 同波次加载，单项 family 继续传字符串。
     return layerKeys.length === 1 ? layerKeys[0] : layerKeys;
   };
 
@@ -446,6 +448,7 @@ export function createTransportAppearanceController({
       transportFacilityUnderlyingMapSelection.dataset.bound = "true";
     }
 
+    // 以下 family toggle 同时承担可见性、context layer 加载和 summary 刷新的提交边界。
     if (toggleAirports && !toggleAirports.dataset.bound) {
       toggleAirports.checked = !!runtimeState.showAirports;
       toggleAirports.addEventListener("change", (event) => {

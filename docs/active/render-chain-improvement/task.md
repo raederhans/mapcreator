@@ -156,3 +156,21 @@
 - [x] Fix Pages dist manifest LF-size drift found during review.
 - [x] Fix UltraQA TNO political path-cost budget blocker.
 - [x] Complete code review and UltraQA gates.
+
+## 2026-06-11 Progressive Full Cache Ready Render Recovery Checklist
+- [x] Create isolated worktree from `origin/main`.
+- [x] Confirm current progressive deferred full cache completion invalidates the political pass without scheduling the repaint.
+- [x] Record this batch's boundaries, acceptance criteria, and live process ownership in active docs.
+- [x] Add the post-cache-ready render request.
+- [x] Extend existing scenario chunk contracts for the regression.
+- [x] Run syntax and targeted contract verification.
+- [x] Run packaged-output verification and performance gate if the source/dist contract requires it.
+- [x] Run independent static review, fix concrete findings, and record the final evidence.
+- [ ] Merge to `main`, push, and clean the worktree.
+
+## 2026-06-11 Current Result
+- Progressive full cache completion now schedules a non-flush repaint with reason `progressive-political-full-cache-ready` after recovery is settled.
+- The deferred full-cache worker waits for the interaction recovery quiet window before doing slice work or publishing the full cache. This prevents HOI4 startup recovery from paying the idle fine-cache cost.
+- Tests and gates passed from this worktree: `node --check` for changed source/dist/test JS, `npm run test:node:scenario-chunk-contracts` `43/43`, `npm run verify:pages-dist` packaged `34/34` plus landing `6/6`, `npm run test:e2e:dev:scenario-chunk-runtime` `6/6`, `npm run perf:gate`, and `git diff --check`.
+- Independent static review found and fixed one P2 test coverage gap: the contract now requires the recovery quiet-window guard before full-cache Path2D slice construction. Post-fix `npm run test:node:scenario-chunk-contracts` passed `43/43`.
+- Remaining work: final commit/merge/push and isolated worktree cleanup.
