@@ -76,21 +76,21 @@
     "water_regions_default": false
   },
   "render_budget_hints": {
-    "max_required_chunks": 6,
+    "detail_zoom_threshold": 1.7,
     "max_optional_chunks": 3,
-    "detail_zoom_threshold": 1.7
+    "max_required_chunks": 6
   },
   "runtime_bootstrap_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
   "runtime_meta_url": "data/scenarios/hoi4_1939/runtime_meta.json",
   "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
   "scenario_contract_profile": "hoi4_chunked",
   "scenario_id": "hoi4_1939",
-  "snapshot_fingerprint": "2ecac740f6ed9cd2c2f4c54413074f68b89f0c99d74c63ffd1e39f02eb8757b9",
+  "snapshot_fingerprint": "b64e336470f10691a3e3c0fc4ab303a3118985655e2c49fb5a9015e14670594b",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "detail_chunk_manifest_sha256": "3ef67d974df243b8830b6ecb74e96df76555f75218cc47cf766c05b365cf7fb8",
     "runtime_bootstrap_topology_sha256": "943ccb7c98116a037df3536392363355db74059acdfa74168f1c7ce84724a0c4",
-    "runtime_topology_sha256": "3291de9cd0cb5f95356fd9024d0374076ea3b2a3dcae8622044b41a91080c39e"
+    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53"
   },
   "special_zone_layers_url": "data/scenarios/hoi4_1939/special_zone_layers.json",
   "startup_bootstrap_strategy": "chunked-coarse-first",

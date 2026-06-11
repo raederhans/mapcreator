@@ -1,7 +1,7 @@
 {
   "version": 1,
   "scenario_id": "hgo_1936",
-  "generated_at": "2026-06-11T06:19:48.535221+00:00",
+  "generated_at": "2026-06-11T15:33:24.058294+00:00",
   "default_country": "USA",
   "countries": {
     "2RA": {
@@ -20537,7 +20537,8 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": "owner"
+      "entry_kind": "owner",
+      "hidden_from_country_list": true
     },
     "WVI": {
       "tag": "WVI",

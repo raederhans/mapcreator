@@ -209,4 +209,3 @@ def vectorize_hgo_states(
         "top_owner_feature_counts": dict(owner_counts.most_common(20)),
     }
     return topology, runtime_features, diagnostics
-

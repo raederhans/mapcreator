@@ -55,7 +55,7 @@
     "hgo_state_feature_count": 11894,
     "hgo_owner_count": 570
   },
-  "generated_at": "2026-06-11T06:19:48.535221+00:00",
+  "generated_at": "2026-06-11T15:33:24.058294+00:00",
   "performance_hints": {
     "render_profile_default": "balanced",
     "dynamic_borders_default": false,
@@ -80,5 +80,5 @@
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
     "runtime_topology_sha256": "bb9fa521076155f23e92c11e336f6a4231458ba1d8d18196b04194eb19820eeb"
   },
-  "snapshot_fingerprint": "ff7e8741cab10fc8a9c98cf76f96c3787c3773802316d4a2cb6352887ea54bda"
+  "snapshot_fingerprint": "50e4549461533a3d7bf6c4b4e400a69252e9a37d0b040d20be9cdc594bc03b3a"
 }

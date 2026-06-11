@@ -637,6 +637,8 @@ SCENARIO_PUBLISH_FILENAMES_BY_SCOPE = {
         "audit.json",
         "special_regions.geojson",
         "special_zone_layers.json",
+        "city_overrides.json",
+        "capital_hints.json",
         SCENARIO_CHECKPOINT_WATER_FILENAME,
         SCENARIO_CHECKPOINT_RELIEF_FILENAME,
         SCENARIO_CHECKPOINT_BATHYMETRY_FILENAME,

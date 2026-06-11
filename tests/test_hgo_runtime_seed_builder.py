@@ -307,6 +307,10 @@ class HgoRuntimeSeedBuilderTest(unittest.TestCase):
         self.assertEqual(compiled["manifest"]["featured_tags"], ["USA"])
         self.assertEqual(compiled["owners"]["owners"]["HGO-S1"], "WTR")
         self.assertIn("WTR", compiled["countries"]["countries"])
+        self.assertTrue(compiled["countries"]["countries"]["WTR"]["hidden_from_country_list"])
+        self.assertFalse(
+            compiled["countries"]["countries"]["USA"].get("hidden_from_country_list", False)
+        )
 
     def test_hgo_builder_does_not_emit_synthetic_capital_city_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -37367,7 +37367,7 @@
     },
     {
       "path": "app/data/scenarios/hgo_1936/countries.json",
-      "size_bytes": 586947,
+      "size_bytes": 586987,
       "source_kind": "generated_ignored"
     },
     {
@@ -37392,7 +37392,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/build_snapshot.json",
-      "size_bytes": 2246,
+      "size_bytes": 2340,
       "source_kind": "generated_ignored"
     },
     {
@@ -38117,7 +38117,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/build_snapshot.json",
-      "size_bytes": 2246,
+      "size_bytes": 2340,
       "source_kind": "generated_ignored"
     },
     {
@@ -39732,7 +39732,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
-      "size_bytes": 2009446,
+      "size_bytes": 2012592,
       "source_kind": "generated_ignored"
     },
     {
@@ -39772,7 +39772,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1942455,
+      "size_bytes": 1942449,
       "source_kind": "generated_ignored"
     },
     {
@@ -39782,7 +39782,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1942456,
+      "size_bytes": 1942450,
       "source_kind": "generated_ignored"
     },
     {
@@ -46811,5 +46811,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145142915
+  "total_bytes": 1145146277
 }

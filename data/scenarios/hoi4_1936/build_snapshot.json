@@ -7,13 +7,14 @@
   "feature_count": 22502,
   "generated_at": "2026-04-04T02:45:46.798067+00:00",
   "input_sha": {
-    "city_overrides.json": "20c0f7edd3b5aa7e62e5ed7e04407bbe921f581c8711f1233bfc6a44b80e8c7c",
+    "capital_hints.json": "dbe109eb38f141f126f1994a038c7a14f7ebb9a9dc76bf57ba3e488c36d5d7ed",
+    "city_overrides.json": "fac04b535304d48f7c262c90880f8a339c0cb7dc91deebe39c382b1419e9a3c1",
     "cores.by_feature.json": "7d3a5d121836147249539d0303e30a6e1ff605d710d61e7ec913cd077f99ba86",
     "countries.json": "cd0b1625545a5ba0b1494eccbf56b7e46e77572addd290b546763e24be75fbe2",
     "geo_locale_patch.json": "14d7f72268de5006a47ae6ddffa887ffc395b377ce48513024602a929dcf1a64",
     "owners.by_feature.json": "1351992020d5c55e619eb0172baebbba80973c4d46b86320476693e4e051381f",
     "runtime_topology.topo.json": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53",
-    "special_zone_layers.json": "9e34b1f10517e1b1279d140dce6c5bedce8fbb3e5b9051c8428a2fc0d53d3df2"
+    "special_zone_layers.json": "4565092b196e374cdf1054eaf5bf0f2982f7f028f14ff7d183984f7dfa75b56f"
   },
   "output_sha": {
     "context_lod.manifest.json": "37d4173e9ddf81e87ef5b54fae72f8fdb9919b752e1affbe902184f59be90c91",
@@ -31,6 +32,6 @@
   "profile": "hoi4_chunked",
   "report_paths": {},
   "scenario_id": "hoi4_1936",
-  "snapshot_fingerprint": "cb73324faeb8f4ea5f78d1ae5263fe5213a0c57dc263a9c0b684edd6f7c892da",
+  "snapshot_fingerprint": "58726cf71369412310cbf7e78799e9043bfbdc8f903783bb0b35f9da77b7f734",
   "water_count": 0
 }

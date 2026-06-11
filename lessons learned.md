@@ -336,6 +336,7 @@
 - 数字开头的 HGO owner tag 只应从显式 `country_code` / owner 数据链路进入；从 `NUTS_ID` 或 feature id 派生国家码时继续按字母前缀解析，避免 `DE1` 变成国家码。
 - 生成器支持自定义输出目录时，默认不要更新全局 scenario registry；只有 checked-in `data/scenarios/{id}` 输出才自动登记。
 - manifest 声明的可发布 JSON 资产要进入 snapshot input sha；发布入口缺失的 controller 产物应删除或接通，避免生成一个运行时不会读取的伪合同。
+- HGO manifest URL、scenario publish scope、system owner 隐藏标记和 strict source hash 要作为同一合同更新；改完用生成器重建 checked-in 场景，再跑 `verify:scenario-contracts:hgo` 与 `verify:pages-dist`。
 
 ### Pages manifest 重建要使用干净 worktree
 - `dist/pages-dist-manifest.json` 会记录当前 `dist` 文件大小；同一 worktree 里若混有无关 source/dist 改动，先切到干净 worktree 重建，避免把旁路改动写进发布合同。

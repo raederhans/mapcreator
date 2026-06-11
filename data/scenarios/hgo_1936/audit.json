@@ -4,15 +4,15 @@
     "feature_count": 11894,
     "water_count": 0
   },
-  "generated_at": "2026-06-11T06:19:48.535221+00:00",
+  "generated_at": "2026-06-11T15:33:24.058294+00:00",
   "owner_bucket_mismatch_count": 0,
   "profile": "hgo_vector",
   "reverse_coverage_gap_count": 0,
   "scenario_id": "hgo_1936",
-  "snapshot_fingerprint": "ff7e8741cab10fc8a9c98cf76f96c3787c3773802316d4a2cb6352887ea54bda",
+  "snapshot_fingerprint": "50e4549461533a3d7bf6c4b4e400a69252e9a37d0b040d20be9cdc594bc03b3a",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "458774138f61515ef8f3f95fad8241cb2bbd6168acf81324bed53de7d2f267e2",
+    "build_snapshot_sha256": "ddb1ea544caf573736c10037254d8d75022146bc23fbe99300b795dfa74aef3e",
     "hgo_provinces_bmp_sha256": "d353ea3b41ca98fd1029eae290b5a43cacce12e5d5603cd970d47f87398c49a2",
     "hgo_seed_sha256": "7bbf8cf338a4b9961f9c5f19217cc4b8df457463685e47cb051f77a475ff6e69",
     "runtime_topology_sha256": "bb9fa521076155f23e92c11e336f6a4231458ba1d8d18196b04194eb19820eeb"

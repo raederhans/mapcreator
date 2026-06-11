@@ -171,6 +171,15 @@ def _featured_tags(seed: dict[str, Any], limit: int = 12) -> list[str]:
     return featured
 
 
+def _hide_system_owner_countries(compiled: dict[str, Any]) -> None:
+    countries = compiled.get("countries", {}).get("countries", {})
+    if not isinstance(countries, dict):
+        return
+    for tag, country in countries.items():
+        if isinstance(country, dict) and is_hgo_system_owner(str(tag), country):
+            country["hidden_from_country_list"] = True
+
+
 def _bookmark(seed: dict[str, Any], display_name: str) -> BookmarkRecord:
     featured_tags = _featured_tags(seed)
     default_country = featured_tags[0] if featured_tags else "HGO"
@@ -212,6 +221,7 @@ def compile_hgo_scenario(
             "enforce_scenario_extensions": False,
         },
     )
+    _hide_system_owner_countries(compiled)
     manifest = compiled["manifest"]
     manifest["palette_id"] = "hgo"
     manifest["scenario_contract_profile"] = "hgo_vector"
@@ -233,4 +243,3 @@ def compile_hgo_scenario(
         **compiled,
         "runtime_topology": topology,
     }
-

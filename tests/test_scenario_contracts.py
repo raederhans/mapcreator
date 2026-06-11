@@ -791,6 +791,47 @@ class ScenarioContractTest(unittest.TestCase):
                 any("manifest.source.base_topology_sha256 must match" in error for error in errors)
             )
 
+    def test_validate_scenario_contract_strict_mode_rejects_hgo_source_sha_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            hgo_source_dir = tmp_root / "data" / "hgo_runtime"
+            seed_path = hgo_source_dir / "seed.json"
+            provinces_bmp_path = hgo_source_dir / "provinces.bmp"
+            seed_path.parent.mkdir(parents=True)
+            seed_path.write_text('{"seed":1}', encoding="utf-8")
+            provinces_bmp_path.write_bytes(b"bmp-v1")
+            scenario_dir = _create_scenario_dir(tmp_root, "hgo_1936")
+            _write_strict_bundle_files(scenario_dir)
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["source"] = {
+                **manifest["source"],
+                "hgo_seed_sha256": _sha256_path(seed_path),
+                "hgo_provinces_bmp_sha256": _sha256_path(provinces_bmp_path),
+            }
+            snapshot_payload = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+            manifest["snapshot_fingerprint"] = snapshot_payload["snapshot_fingerprint"]
+            _write_json(manifest_path, manifest)
+            check_scenario_contracts._refresh_audit_payload(
+                scenario_dir,
+                manifest,
+                snapshot_payload=snapshot_payload,
+            )
+            seed_path.write_text('{"seed":2}', encoding="utf-8")
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {}, strict=True)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(
+                any("manifest.source.hgo_seed_sha256 must match" in error for error in errors),
+                errors,
+            )
+
     def test_capture_safe_repair_hashes_tracks_startup_bundle_gzip_sidecars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             scenario_dir = Path(tmp_dir) / "data" / "scenarios" / "hash_capture"

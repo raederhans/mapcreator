@@ -188,6 +188,14 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
             _write_json(checkpoint_dir / "audit.json", {"ok": True})
             _write_json(checkpoint_dir / "special_regions.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "special_zone_layers.json", {"version": 1, "layers": [], "activeLayerId": "", "topologyFingerprint": "", "diagnostics": []})
+            _write_json(
+                checkpoint_dir / "city_overrides.json",
+                {"version": 1, "scenario_id": "scenario", "capitals_by_tag": {}, "capital_city_hints": {}},
+            )
+            _write_json(
+                checkpoint_dir / "capital_hints.json",
+                {"version": 1, "scenario_id": "scenario", "entries": []},
+            )
             _write_json(checkpoint_dir / "water_regions.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "relief_overlays.geojson", {"type": "FeatureCollection", "features": []})
             _write_json(checkpoint_dir / "bathymetry.topo.json", {"type": "Topology"})
@@ -214,6 +222,8 @@ class ScenarioBundlePlatformTest(unittest.TestCase):
 
             self.assertTrue((scenario_dir / "derived" / "marine_regions_named_waters.snapshot.geojson").exists())
             self.assertTrue((scenario_dir / "derived" / "water_regions.provenance.json").exists())
+            self.assertTrue((scenario_dir / "city_overrides.json").exists())
+            self.assertTrue((scenario_dir / "capital_hints.json").exists())
             self.assertFalse((scenario_dir / "controllers.by_feature.json").exists())
 
     def test_ensure_runtime_topology_checkpoints_accepts_runtime_publish_surface(self) -> None:
