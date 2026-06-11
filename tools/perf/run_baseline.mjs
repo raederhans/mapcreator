@@ -144,8 +144,38 @@ async function probeUrl(baseUrl) {
   }
 }
 
+function normalizeMetadataPath(value) {
+  const normalizedPath = path.resolve(String(value || "").trim());
+  return process.platform === "win32" ? normalizedPath.toLowerCase() : normalizedPath;
+}
+
+function isProcessIdRunning(pid) {
+  const numericPid = Number(pid);
+  if (!Number.isInteger(numericPid) || numericPid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(numericPid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+function activeServerMetadataMatchesRepo(metadata) {
+  const metadataCwd = String(metadata?.cwd || "").trim();
+  return (
+    !!metadataCwd
+    && normalizeMetadataPath(metadataCwd) === normalizeMetadataPath(REPO_ROOT)
+    && isProcessIdRunning(metadata?.pid)
+  );
+}
+
 async function resolveExistingServerBaseUrl() {
   const metadata = await readJson(ACTIVE_SERVER_PATH, {});
+  if (!activeServerMetadataMatchesRepo(metadata)) {
+    return "";
+  }
   const baseUrl = String(metadata?.base_url || metadata?.url || "").trim();
   return (await probeUrl(baseUrl)) ? baseUrl : "";
 }

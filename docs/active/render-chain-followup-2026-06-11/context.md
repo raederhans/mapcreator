@@ -1,0 +1,24 @@
+# Render Chain Follow-Up Context 2026-06-11
+
+## Initial Evidence
+- `main` started at `54de2faf` with `.omx/metrics.json` modified and completed docs records moved from active to archive.
+- Review-fix worktree: `C:\Users\raede\Desktop\dev\mapcreator-render-recovery-review-fix`.
+- Review-fix branch head before R0 merge work: `652d0354`.
+- `codex/render-recovery-review-fix` contains the progressive cache repaint diagnostics patch but remains blocked by repeated `npm run perf:gate` failures.
+
+## R0 Docs Cleanup
+- Submitted docs/archive cleanup as `ddd94ba9`.
+- Included paths: `docs/archive/render-chain-improvement`, `docs/archive/hgo-scenario-platformization`, and `lessons learned.md`.
+- Excluded `.omx/metrics.json`.
+
+## Live Process Ownership
+- Main agent owns `npm run perf:baseline`, `npm run perf:gate`, `npm run verify:pages-dist`, browser/e2e commands, and any dev server those commands launch.
+- Subagents are read-only evidence lanes and may not run or monitor live processes.
+
+## R0 Perf Diagnosis
+- Main baseline probes at `ddd94ba9` failed against the old threshold on this machine: TNO total startup `6960.6ms` / `6980.1ms`; HOI4 total startup `7235.5ms` / `7706.4ms`.
+- Isolated `ca1dc9c0` gate failed while using its own `8000` server: TNO `6735.4ms`, HOI4 `7197.4ms`, `contractMismatches=[]`.
+- Isolated `54de2faf` gate failed only on HOI4 while using its own `8000` server: TNO `6287.4ms`, HOI4 `7065.4ms`, `contractMismatches=[]`.
+- The first fresh `652d0354` gate sample was invalid as branch evidence: its `.runtime/dev/active_server.json` pointed at port `8810` with a dead pid, while the live `8810` server belonged to the main worktree.
+- Fixed `tools/perf/run_baseline.mjs` so reusable dev-server metadata must match the current repo path and a live pid before probing the URL.
+- After removing the stale review-fix `active_server.json`, `652d0354` fresh gate passed using its own `8000` server: TNO `5215.8ms`, HOI4 `5659.4ms`, `contractMismatches=[]`, `failures=[]`.
