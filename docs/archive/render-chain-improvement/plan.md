@@ -152,3 +152,12 @@ Main agent owns all tests, builds, perf gates, browser/dev-server commands, and 
 - `git diff --check` passed with line-ending warnings only.
 - Independent static review found one P2 coverage gap: the contract test did not require the recovery quiet-window guard to run before Path2D slice construction. The contract now asserts `!isInteractionRecoverySettled({ quietMs: 600 })` appears before `const startedAt = nowMs()` and `getPoliticalFeaturePathEntry(... allowBuild: true ...)`; `npm run test:node:scenario-chunk-contracts` passed `43/43` after the fix.
 - Closeout: implementation commit `ca1dc9c0` was fast-forward merged to `main`, pushed to `origin/main`, and the isolated worktree was removed.
+
+### Review Fix Evidence
+- Follow-up review found no BLOCK issue. Architect status was `WATCH` until repaint diagnostics were hardened.
+- Fixed observability and stale-state cleanup: ready full-cache state now records deferred repaint requeue from the top guard, clears already-published pending state before recovery gating, and records `scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest.repaintRequested`.
+- Contract coverage now locks the ready-deferred metric helper, guard-before-build order, post-loop quiet-window requeue path, and repaint request diagnostic field.
+- Review-fix verification before rebasing onto local `main` passed: `npm run test:node:scenario-chunk-contracts` `43/43`, `npm run verify:pages-dist` packaged `34/34` plus landing `6/6`, `npm run test:e2e:dev:scenario-chunk-runtime` `6/6`, and `npm run perf:gate`.
+- Final branch base is `origin/main` commit `54de2faf`.
+- Final-base verification passed for syntax, scenario chunk contracts `43/43`, Pages dist packaged `34/34` plus landing `6/6`, and scenario runtime e2e `6/6`.
+- Remaining landing blocker: post-rebase `npm run perf:gate` failed three times on broad startup timing. Latest failure before the final-base rebase: TNO `totalStartupMs=7791.6ms` against limit `6676.1ms`; HOI4 `totalStartupMs=7766.1ms` against limit `5986.6ms`.

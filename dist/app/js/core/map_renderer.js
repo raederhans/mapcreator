@@ -17270,6 +17270,19 @@ function isScenarioPoliticalBackgroundFullPassCacheKeyReady(fullPassCacheKey = "
   );
 }
 
+function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state) {
+  if (!state || state.repaintDeferredRecorded) return;
+  state.repaintDeferredRecorded = true;
+  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred", 0, {
+    phase: "idle",
+    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
+    reason: "interaction-recovery-active",
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    renderPhase: String(runtimeState.renderPhase || ""),
+    deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+  });
+}
+
 function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   const state = scenarioPoliticalBackgroundDeferredFullCacheState;
   scenarioPoliticalBackgroundDeferredFullCacheHandle = null;
@@ -17277,26 +17290,30 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
     scenarioPoliticalBackgroundDeferredFullCacheState = null;
     return false;
   }
+  const normalizedEntries = state.entries;
+  if (isScenarioPoliticalBackgroundFullPassCacheKeyReady(state.fullPassCacheKey)) {
+    scenarioPoliticalBackgroundDeferredFullCacheState = null;
+    return false;
+  }
   const cache = getRenderPassCacheState();
+  const recoverySettled = isInteractionRecoverySettled({ quietMs: 600 });
   if (
     runtimeState.renderPhase !== RENDER_PHASE_IDLE
     || runtimeState.deferExactAfterSettle
     || isExactAfterSettleControllerActive()
-    || !isInteractionRecoverySettled({ quietMs: 600 })
+    || !recoverySettled
     || cache.dirty?.political
   ) {
     scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork(
       runScenarioPoliticalBackgroundDeferredFullCacheSlice,
       { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
     );
+    if (!recoverySettled && state.index >= normalizedEntries.length) {
+      recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
+    }
     return false;
   }
   const transform = state.transform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
-  const normalizedEntries = state.entries;
-  if (isScenarioPoliticalBackgroundFullPassCacheKeyReady(state.fullPassCacheKey)) {
-    scenarioPoliticalBackgroundDeferredFullCacheState = null;
-    return false;
-  }
 
   const startedAt = nowMs();
   let processedCount = 0;
@@ -17368,17 +17385,7 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
       runScenarioPoliticalBackgroundDeferredFullCacheSlice,
       { timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS },
     );
-    if (!state.repaintDeferredRecorded) {
-      state.repaintDeferredRecorded = true;
-      recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred", 0, {
-        phase: "idle",
-        recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
-        reason: "interaction-recovery-active",
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        renderPhase: String(runtimeState.renderPhase || ""),
-        deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
-      });
-    }
+    recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(state);
     return false;
   }
 
@@ -17402,13 +17409,20 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   });
   scenarioPoliticalBackgroundDeferredFullCacheState = null;
   invalidateRenderPasses("political", "progressive-political-full-cache-ready");
-  requestRendererRender("progressive-political-full-cache-ready", {
+  const repaintRequested = requestRendererRender("progressive-political-full-cache-ready", {
     flush: false,
     fallback: () => {
       if (context) render();
     },
   });
-  return true;
+  recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest", 0, {
+    phase: "idle",
+    recoveryQuality: POLITICAL_RECOVERY_QUALITY_PROGRESSIVE,
+    reason: "progressive-political-full-cache-ready",
+    repaintRequested: !!repaintRequested,
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+  return repaintRequested;
 }
 
 function scheduleScenarioPoliticalBackgroundDeferredFullCache(entries = [], {
