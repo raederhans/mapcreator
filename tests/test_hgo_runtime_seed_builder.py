@@ -248,6 +248,144 @@ class HgoRuntimeSeedBuilderTest(unittest.TestCase):
             for geometry in compiled["runtime_topology"]["objects"]["political"]["geometries"]
         })
 
+    def test_hgo_vector_scenario_keeps_water_out_of_playable_bookmark(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bmp_path = Path(tmp_dir) / "provinces.bmp"
+            write_bmp24(bmp_path, [[(10, 20, 30), (40, 50, 60), (70, 80, 90)]])
+            seed = {
+                "schema_version": 1,
+                "summary": {"state_count": 3, "province_count": 3},
+                "provinces": {
+                    "1": {"id": 1, "rgb": [10, 20, 30], "rgb_key": 660510, "rgb_hex": "#0A141E"},
+                    "2": {"id": 2, "rgb": [40, 50, 60], "rgb_key": 2634300, "rgb_hex": "#28323C"},
+                    "3": {"id": 3, "rgb": [70, 80, 90], "rgb_key": 4608090, "rgb_hex": "#46505A"},
+                },
+                "province_to_state": {"1": 1, "2": 2, "3": 3},
+                "states": [
+                    {
+                        "id": 1,
+                        "name_key": "STATE_WATER_1",
+                        "owner": "WTR",
+                        "controller": "WTR",
+                        "core_tags": ["WTR"],
+                        "province_ids": [1],
+                        "category": "water",
+                    },
+                    {
+                        "id": 2,
+                        "name_key": "STATE_WATER_2",
+                        "owner": "WTR",
+                        "controller": "WTR",
+                        "core_tags": ["WTR"],
+                        "province_ids": [2],
+                        "category": "water",
+                    },
+                    {
+                        "id": 3,
+                        "name_key": "STATE_USA",
+                        "owner": "USA",
+                        "controller": "USA",
+                        "core_tags": ["USA"],
+                        "province_ids": [3],
+                        "category": "town",
+                    },
+                ],
+                "countries": {
+                    "WTR": {"tag": "WTR", "color_hex": "#002B58", "source_path": "common/countries/Water.txt"},
+                    "USA": {"tag": "USA", "color_hex": "#1414FF", "source_path": "common/countries/USA.txt"},
+                },
+            }
+
+            compiled = compile_hgo_scenario(
+                seed=seed,
+                provinces_bmp_path=bmp_path,
+                scenario_id="hgo_test",
+                display_name="HGO Test",
+            )
+
+        self.assertEqual(compiled["manifest"]["default_country"], "USA")
+        self.assertEqual(compiled["manifest"]["featured_tags"], ["USA"])
+        self.assertEqual(compiled["owners"]["owners"]["HGO-S1"], "WTR")
+        self.assertIn("WTR", compiled["countries"]["countries"])
+
+    def test_hgo_builder_does_not_emit_synthetic_capital_city_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            bmp_path = tmp_path / "provinces.bmp"
+            output_dir = tmp_path / "hgo_temp"
+            report_dir = tmp_path / "report"
+            write_bmp24(bmp_path, [[(10, 20, 30), (40, 50, 60), (70, 80, 90)]])
+            seed_path = tmp_path / "seed.json"
+            seed_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "summary": {"state_count": 3, "province_count": 3},
+                        "provinces": {
+                            "1": {"id": 1, "rgb": [10, 20, 30], "rgb_key": 660510, "rgb_hex": "#0A141E"},
+                            "2": {"id": 2, "rgb": [40, 50, 60], "rgb_key": 2634300, "rgb_hex": "#28323C"},
+                            "3": {"id": 3, "rgb": [70, 80, 90], "rgb_key": 4608090, "rgb_hex": "#46505A"},
+                        },
+                        "province_to_state": {"1": 1, "2": 2, "3": 3},
+                        "states": [
+                            {
+                                "id": 1,
+                                "name_key": "STATE_WATER_1",
+                                "owner": "WTR",
+                                "controller": "WTR",
+                                "core_tags": ["WTR"],
+                                "province_ids": [1],
+                                "category": "water",
+                            },
+                            {
+                                "id": 2,
+                                "name_key": "STATE_WATER_2",
+                                "owner": "WTR",
+                                "controller": "WTR",
+                                "core_tags": ["WTR"],
+                                "province_ids": [2],
+                                "category": "water",
+                            },
+                            {
+                                "id": 3,
+                                "name_key": "STATE_USA",
+                                "owner": "USA",
+                                "controller": "USA",
+                                "core_tags": ["USA"],
+                                "province_ids": [3],
+                                "category": "town",
+                            },
+                        ],
+                        "countries": {
+                            "WTR": {"tag": "WTR", "color_hex": "#002B58", "source_path": "common/countries/Water.txt"},
+                            "USA": {"tag": "USA", "color_hex": "#1414FF", "source_path": "common/countries/USA.txt"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            build_hgo_scenario(
+                seed_path=seed_path,
+                provinces_bmp_path=bmp_path,
+                scenario_id="hgo_temp",
+                display_name="HGO Temp",
+                scenario_output_dir=output_dir,
+                report_dir=report_dir,
+                update_index=False,
+            )
+
+            city_overrides = json.loads((output_dir / "city_overrides.json").read_text(encoding="utf-8"))
+            capital_hints = json.loads((output_dir / "capital_hints.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(city_overrides["capitals_by_tag"], {})
+        self.assertIn("USA", city_overrides["capital_city_hints"])
+        self.assertNotIn("WTR", city_overrides["capital_city_hints"])
+        self.assertNotIn("city_id", city_overrides["capital_city_hints"]["USA"])
+        self.assertEqual(capital_hints["entries"], [])
+        self.assertNotIn("HGO::", json.dumps(city_overrides, sort_keys=True))
+        self.assertNotIn("HGO::", json.dumps(capital_hints, sort_keys=True))
+
     def test_builds_runtime_seed_from_minimal_hgo_source(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)

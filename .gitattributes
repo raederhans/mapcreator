@@ -13,6 +13,7 @@ data/palettes/*.json text eol=lf
 data/hgo_catalogs/hgo_identity_aliases.json text eol=lf
 data/hgo_runtime/*.json text eol=lf
 data/hgo_runtime/*.bmp binary
+data/scenarios/index.json text eol=lf
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
 data/scenarios/**/context_lod.manifest.json text eol=lf
@@ -21,6 +22,13 @@ data/scenarios/**/mesh_pack.json text eol=lf
 data/scenarios/**/build_snapshot.json text eol=lf
 data/scenarios/**/audit.json text eol=lf
 data/scenarios/**/manifest.json text eol=lf
+data/scenarios/**/runtime_topology.topo.json text eol=lf
+data/scenarios/**/owners.by_feature.json text eol=lf
+data/scenarios/**/cores.by_feature.json text eol=lf
+data/scenarios/**/countries.json text eol=lf
+data/scenarios/**/city_overrides.json text eol=lf
+data/scenarios/**/capital_hints.json text eol=lf
+data/scenarios/**/special_zone_layers.json text eol=lf
 data/scenarios/**/geo_locale_patch*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json text eol=lf
 data/scenarios/**/startup.bundle.*.json.gz binary

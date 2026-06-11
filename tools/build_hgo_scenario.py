@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from map_builder.contracts import sha256_path
 from map_builder.io.writers import write_json_atomic
-from scenario_builder.hgo.compiler import compile_hgo_scenario
+from scenario_builder.hgo.compiler import compile_hgo_scenario, is_hgo_system_owner
 from tools import check_scenario_contracts
 
 DEFAULT_SEED = PROJECT_ROOT / "data" / "hgo_runtime" / "seed.json"
@@ -55,33 +55,32 @@ def _empty_special_zone_layers() -> dict[str, Any]:
 
 def _city_overrides(compiled: dict[str, Any], scenario_id: str) -> dict[str, Any]:
     countries = compiled.get("countries", {}).get("countries", {})
-    capitals_by_tag = {
-        str(tag): f"HGO::{str(tag)}"
-        for tag in sorted(countries)
-        if str(tag).strip()
-    }
+    manifest = compiled.get("manifest") if isinstance(compiled.get("manifest"), dict) else {}
+    featured_tags = manifest.get("featured_tags") if isinstance(manifest.get("featured_tags"), list) else []
+    capital_city_hints = {}
+    for tag in featured_tags:
+        normalized_tag = str(tag or "").strip().upper()
+        country = countries.get(normalized_tag, {}) if isinstance(countries.get(normalized_tag), dict) else {}
+        if not normalized_tag or is_hgo_system_owner(normalized_tag, country):
+            continue
+        capital_city_hints[normalized_tag] = {
+            "tag": normalized_tag,
+            "label": str(country.get("display_name") or normalized_tag),
+            "source": "hgo_country_without_capital_city_source",
+        }
     return {
         "version": 1,
         "scenario_id": scenario_id,
-        "capitals_by_tag": capitals_by_tag,
-        "capital_city_hints": {},
+        "capitals_by_tag": {},
+        "capital_city_hints": capital_city_hints,
     }
 
 
-def _capital_hints(compiled: dict[str, Any], scenario_id: str) -> dict[str, Any]:
-    countries = compiled.get("countries", {}).get("countries", {})
+def _capital_hints(_compiled: dict[str, Any], scenario_id: str) -> dict[str, Any]:
     return {
         "version": 1,
         "scenario_id": scenario_id,
-        "entries": [
-            {
-                "tag": str(tag),
-                "label": str(record.get("display_name") or tag),
-                "feature_id": f"HGO::{str(tag)}",
-            }
-            for tag, record in sorted(countries.items())
-            if isinstance(record, dict)
-        ],
+        "entries": [],
     }
 
 

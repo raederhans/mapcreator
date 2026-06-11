@@ -77,3 +77,11 @@ test("intensity field serialization preserves zero-strength grid cells", () => {
   assert.equal(restored.channels.physicalAtlas.grid.base[0], 0);
   assert.equal(restored.channels.physicalAtlas.grid.composite[0], 0);
 });
+
+test("intensity field serialization keeps neutral grid cells exact", () => {
+  const restored = normalizeIntensityFieldsState(serializeIntensityFieldsState(createIntensityFieldsState()));
+
+  assert.equal(restored.channels.physicalAtlas.grid.base[0], 1);
+  assert.equal(restored.channels.physicalAtlas.grid.composite[0], 1);
+  assert.ok(restored.channels.physicalAtlas.grid.base.every((value) => value === 1));
+});

@@ -1,8 +1,8 @@
 {
   "version": 1,
   "scenario_id": "hgo_1936",
-  "generated_at": "2026-06-11T03:37:04.212989+00:00",
-  "default_country": "WTR",
+  "generated_at": "2026-06-11T04:55:46.442365+00:00",
+  "default_country": "USA",
   "countries": {
     "2RA": {
       "tag": "2RA",
@@ -5751,7 +5751,7 @@
       "lookup_iso2": "FEA",
       "provenance_iso2": "FEA",
       "scenario_only": true,
-      "featured": false,
+      "featured": true,
       "capital_state_id": null,
       "continent_id": "",
       "continent_label": "",
@@ -20514,7 +20514,7 @@
       "lookup_iso2": "WTR",
       "provenance_iso2": "WTR",
       "scenario_only": true,
-      "featured": true,
+      "featured": false,
       "capital_state_id": null,
       "continent_id": "",
       "continent_label": "",

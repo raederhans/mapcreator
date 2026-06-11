@@ -12,6 +12,8 @@ from scenario_builder.hoi4.models import (
     StateRecord,
 )
 
+HGO_SYSTEM_OWNER_TAGS = frozenset({"WTR"})
+
 
 def _country_display_name(tag: str, country: dict[str, Any]) -> str:
     source_path = str(country.get("source_path") or "").strip()
@@ -22,6 +24,15 @@ def _country_display_name(tag: str, country: dict[str, Any]) -> str:
             if label:
                 return label
     return tag
+
+
+def is_hgo_system_owner(tag: str, country: dict[str, Any] | None = None) -> bool:
+    normalized_tag = str(tag or "").strip().upper()
+    if normalized_tag in HGO_SYSTEM_OWNER_TAGS:
+        return True
+    if not isinstance(country, dict):
+        return False
+    return _country_display_name(normalized_tag, country).strip().casefold() == "water"
 
 
 def _build_palette_pack(seed: dict[str, Any]) -> dict[str, Any]:
@@ -141,12 +152,21 @@ def _owner_rules(seed: dict[str, Any]) -> list[ScenarioRule]:
 
 def _featured_tags(seed: dict[str, Any], limit: int = 12) -> list[str]:
     states = seed.get("states") if isinstance(seed.get("states"), list) else []
+    countries = seed.get("countries") if isinstance(seed.get("countries"), dict) else {}
     counts = Counter(
         str(state.get("owner") or "").strip().upper()
         for state in states
         if isinstance(state, dict) and str(state.get("owner") or "").strip()
     )
-    return [tag for tag, _count in counts.most_common(limit)]
+    featured: list[str] = []
+    for tag, _count in counts.most_common():
+        country = countries.get(tag, {}) if isinstance(countries.get(tag), dict) else {}
+        if is_hgo_system_owner(tag, country):
+            continue
+        featured.append(tag)
+        if len(featured) >= limit:
+            break
+    return featured
 
 
 def _bookmark(seed: dict[str, Any], display_name: str) -> BookmarkRecord:

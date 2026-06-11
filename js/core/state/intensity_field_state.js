@@ -29,16 +29,24 @@ function fromBase64(value) {
   return bytes;
 }
 
+function encodeGridByte(value) {
+  const numeric = Number(value);
+  return Math.max(0, Math.min(255, Math.round((Number.isFinite(numeric) ? numeric : 1) * 127.5)));
+}
+
+function decodeGridByte(byte) {
+  const numeric = Math.max(0, Math.min(255, Number(byte) || 0));
+  return numeric === 128 ? INTENSITY_FIELD_GRID.neutral : Math.max(0, Math.min(2, numeric / 127.5));
+}
+
 function encodeGrid(values) {
   const encoded = [];
   let index = 0;
   while (index < values.length) {
-    const value = Number(values[index]);
-    const byte = Math.max(0, Math.min(255, Math.round((Number.isFinite(value) ? value : 1) * 127.5)));
+    const byte = encodeGridByte(values[index]);
     let runLength = 1;
     while (index + runLength < values.length && runLength < 255) {
-      const nextValue = Number(values[index + runLength]);
-      const nextByte = Math.max(0, Math.min(255, Math.round((Number.isFinite(nextValue) ? nextValue : 1) * 127.5)));
+      const nextByte = encodeGridByte(values[index + runLength]);
       if (nextByte !== byte) break;
       runLength += 1;
     }
@@ -59,7 +67,7 @@ function decodeGrid(payload) {
   let cursor = 0;
   for (let index = 0; index + 1 < bytes.length && cursor < expectedLength; index += 2) {
     const runLength = bytes[index];
-    const value = Math.max(0, Math.min(2, bytes[index + 1] / 127.5));
+    const value = decodeGridByte(bytes[index + 1]);
     for (let runIndex = 0; runIndex < runLength && cursor < expectedLength; runIndex += 1) {
       values[cursor] = value;
       cursor += 1;

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "scenario_id": "hgo_1936",
-  "generated_at": "2026-06-11T03:37:04.212989+00:00",
+  "generated_at": "2026-06-11T04:55:46.442365+00:00",
   "baseline_hash": "09a45e6e49a60b6da984d4d09af0c17e1d853fd9409b69e9b29cf60a5b1c57c7",
   "cores": {
     "HGO-S1": [

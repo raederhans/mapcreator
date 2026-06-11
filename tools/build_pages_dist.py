@@ -130,6 +130,9 @@ BYTE_EXACT_APP_DATA_PATHS = {
     Path("app") / "data" / "hgo_runtime" / "manifest.json",
     Path("app") / "data" / "hgo_runtime" / "seed.json",
 }
+GENERATED_IGNORED_DIST_DIRS = (
+    Path("app") / "data",
+)
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -731,6 +734,16 @@ def iter_dist_files() -> list[Path]:
     )
 
 
+def dist_record_source_kind(relative_path: Path) -> str:
+    for generated_dir in GENERATED_IGNORED_DIST_DIRS:
+        try:
+            relative_path.relative_to(generated_dir)
+            return "generated_ignored"
+        except ValueError:
+            continue
+    return "dist"
+
+
 def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:
     for attempt in range(5):
         records: list[dict[str, int | str]] = []
@@ -743,6 +756,7 @@ def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:
                     {
                         "path": path.relative_to(DIST_ROOT).as_posix(),
                         "size_bytes": size_bytes,
+                        "source_kind": dist_record_source_kind(path.relative_to(DIST_ROOT)),
                     }
                 )
             return records, total_bytes
@@ -764,7 +778,7 @@ def write_dist_manifest() -> int:
     DIST_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
     last_manifest_text = ""
     # manifest 会记录自己；首次写入会改变自身大小，所以要迭代到文本稳定。
-    for _ in range(5):
+    for _ in range(20):
         records, total_bytes = get_dist_file_records()
         payload = {
             "schema_version": 1,
@@ -778,7 +792,8 @@ def write_dist_manifest() -> int:
             break
         write_text_lf(DIST_MANIFEST_PATH, manifest_text)
         last_manifest_text = manifest_text
-    _records, total_bytes = get_dist_file_records()
+    else:
+        raise RuntimeError("Pages dist manifest did not stabilize after 20 iterations")
     return total_bytes
 
 

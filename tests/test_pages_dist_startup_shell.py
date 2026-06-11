@@ -611,7 +611,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             build_pages_dist.time.sleep = lambda _seconds: None
             try:
                 records, total_bytes = build_pages_dist.get_dist_file_records()
-                self.assertEqual(records, [{"path": "app/stable.json", "size_bytes": 2}])
+                self.assertEqual(records, [{"path": "app/stable.json", "size_bytes": 2, "source_kind": "dist"}])
                 self.assertEqual(total_bytes, 2)
             finally:
                 build_pages_dist.DIST_ROOT = previous_dist_root
@@ -1171,6 +1171,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for record in payload["files"]:
             manifest_path = record["path"]
             with self.subTest(manifest_path=manifest_path):
+                expected_source_kind = "generated_ignored" if manifest_path.startswith("app/data/") else "dist"
+                self.assertEqual(record.get("source_kind"), expected_source_kind)
                 dist_path = REPO_ROOT / "dist" / manifest_path
                 self.assertTrue(dist_path.exists())
                 self.assertEqual(record["size_bytes"], dist_path.stat().st_size)
