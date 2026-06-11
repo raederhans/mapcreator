@@ -1403,6 +1403,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       && rendererSource.includes('"progressive-political-full-cache-ready"')
       && rendererSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
       && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
+      && /function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\) \{[\s\S]*?state\.repaintDeferredRecorded = true;[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"/.test(rendererSource)
       && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
       && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
       && (() => {
@@ -1411,9 +1412,9 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
           && body.includes("isExactAfterSettleControllerActive()")
           && body.includes("cache.dirty?.political")
           && body.includes("scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork")
-          && body.includes("isInteractionRecoverySettled({ quietMs: 600 })")
-          && /!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?const startedAt = nowMs\(\)[\s\S]*?getPoliticalFeaturePathEntry\([\s\S]*?allowBuild: true/.test(body)
-          && body.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"');
+          && body.includes("const recoverySettled = isInteractionRecoverySettled({ quietMs: 600 });")
+          && /!recoverySettled[\s\S]*?state\.index >= normalizedEntries\.length[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?const startedAt = nowMs\(\)[\s\S]*?getPoliticalFeaturePathEntry\([\s\S]*?allowBuild: true/.test(body)
+          && /if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork\([\s\S]*?runScenarioPoliticalBackgroundDeferredFullCacheSlice,[\s\S]*?\{ timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS \},[\s\S]*?\);[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?return false;[\s\S]*?\}/.test(body);
       })()
       && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
       && rendererSource.includes('recordRenderPerfMetric("scenarioPoliticalBackgroundProgressiveRecovery"')
@@ -1423,7 +1424,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     progressiveFullCacheReadyRequestsPoliticalRepaint:
       (() => {
         const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
-        return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(context\) render\(\);/.test(body);
+        return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(context\) render\(\);[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
       })(),
     chunkedRuntimeSkipsBlockingDetailPromotion:
       /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
