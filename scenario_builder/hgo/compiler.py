@@ -12,6 +12,7 @@ from scenario_builder.hoi4.models import (
     StateRecord,
 )
 
+# HGO seed 会把水域也写成 owner-like 记录；这些 tag 只能进入几何背景，不能进入可玩国家推荐。
 HGO_SYSTEM_OWNER_TAGS = frozenset({"WTR"})
 
 
@@ -129,6 +130,7 @@ def _owner_rules(seed: dict[str, Any]) -> list[ScenarioRule]:
     rules: list[ScenarioRule] = []
     for owner, feature_ids in sorted(features_by_owner.items()):
         country = countries.get(owner, {}) if isinstance(countries.get(owner), dict) else {}
+        # 这里从 state owner 生成规则，让 HGO 继续复用 HOI4 scenario compiler 的国家/颜色/审计链。
         rules.append(
             ScenarioRule(
                 rule_id=f"hgo_owner_{owner}",
@@ -189,6 +191,7 @@ def compile_hgo_scenario(
     display_name: str = "HGO 1936",
 ) -> dict[str, Any]:
     topology, runtime_features, vector_diagnostics = vectorize_hgo_states(seed, provinces_bmp_path)
+    # HGO 的差异只在 vectorized runtime features 和宽松 profile；bundle 结构仍走共享 HOI4 编译入口。
     compiled = compile_scenario_bundle(
         scenario_id=scenario_id,
         display_name=display_name,

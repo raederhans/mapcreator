@@ -58,6 +58,7 @@ def _city_overrides(compiled: dict[str, Any], scenario_id: str) -> dict[str, Any
     manifest = compiled.get("manifest") if isinstance(compiled.get("manifest"), dict) else {}
     featured_tags = manifest.get("featured_tags") if isinstance(manifest.get("featured_tags"), list) else []
     capital_city_hints = {}
+    # HGO 暂缺真实城市源时只写 hint，不写 capitals_by_tag，避免把国家标签伪装成已确认首都。
     for tag in featured_tags:
         normalized_tag = str(tag or "").strip().upper()
         country = countries.get(normalized_tag, {}) if isinstance(countries.get(normalized_tag), dict) else {}
@@ -160,6 +161,7 @@ def build_hgo_scenario(
     snapshot_payload = check_scenario_contracts._build_snapshot_for_scenario(scenario_output_dir, manifest)
     manifest["snapshot_fingerprint"] = snapshot_payload["snapshot_fingerprint"]
     write_json(scenario_output_dir / "manifest.json", manifest)
+    # snapshot 指纹进入 manifest 后再刷新 audit，保证 manifest/audit 记录同一轮产物状态。
     audit_payload = check_scenario_contracts._refresh_audit_payload(
         scenario_output_dir,
         manifest,

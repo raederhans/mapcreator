@@ -152,6 +152,7 @@ def _write_strict_bundle_files(
     controllers_payload = controllers if controllers is not None else {"F-1": "AAA", "F-2": "AAA"}
     cores_payload = cores if cores is not None else {"F-1": ["AAA"], "F-2": ["AAA"]}
     runtime_ids = runtime_feature_ids if runtime_feature_ids is not None else ["F-1", "F-2"]
+    # fixture 要按真实 strict 链路写 manifest source、snapshot 和 audit，避免测试只验证孤立 JSON 字段。
     project_root = scenario_dir.parents[2]
     base_topology_path = project_root / "data" / "europe_topology.json"
     if not base_topology_path.exists():
