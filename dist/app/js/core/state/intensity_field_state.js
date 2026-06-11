@@ -1,0 +1,160 @@
+import {
+  INTENSITY_FIELD_CHANNEL_IDS,
+  INTENSITY_FIELD_GRID,
+  bakeIntensityComposite,
+  createIntensityFieldsState,
+} from "../intensity_field.js";
+
+function toBase64(bytes) {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(bytes).toString("base64");
+  }
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return globalThis.btoa(binary);
+}
+
+function fromBase64(value) {
+  if (!value) return new Uint8Array();
+  if (typeof Buffer !== "undefined") {
+    return new Uint8Array(Buffer.from(String(value), "base64"));
+  }
+  const binary = globalThis.atob(String(value));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function encodeGrid(values) {
+  const encoded = [];
+  let index = 0;
+  while (index < values.length) {
+    const value = Number(values[index]);
+    const byte = Math.max(0, Math.min(255, Math.round((Number.isFinite(value) ? value : 1) * 127.5)));
+    let runLength = 1;
+    while (index + runLength < values.length && runLength < 255) {
+      const nextValue = Number(values[index + runLength]);
+      const nextByte = Math.max(0, Math.min(255, Math.round((Number.isFinite(nextValue) ? nextValue : 1) * 127.5)));
+      if (nextByte !== byte) break;
+      runLength += 1;
+    }
+    encoded.push(runLength, byte);
+    index += runLength;
+  }
+  return {
+    encoding: "rle-u8-base64",
+    data: toBase64(Uint8Array.from(encoded)),
+  };
+}
+
+function decodeGrid(payload) {
+  const expectedLength = INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows;
+  const values = new Float32Array(expectedLength).fill(INTENSITY_FIELD_GRID.neutral);
+  if (!payload || payload.encoding !== "rle-u8-base64") return values;
+  const bytes = fromBase64(payload.data);
+  let cursor = 0;
+  for (let index = 0; index + 1 < bytes.length && cursor < expectedLength; index += 2) {
+    const runLength = bytes[index];
+    const value = Math.max(0, Math.min(2, bytes[index + 1] / 127.5));
+    for (let runIndex = 0; runIndex < runLength && cursor < expectedLength; runIndex += 1) {
+      values[cursor] = value;
+      cursor += 1;
+    }
+  }
+  return values;
+}
+
+function clonePoint(point) {
+  return {
+    id: point.id,
+    lon: point.lon,
+    lat: point.lat,
+    strength: point.strength,
+    radiusDeg: point.radiusDeg,
+    falloff: point.falloff,
+  };
+}
+
+export function createDefaultIntensityFieldsState() {
+  return createIntensityFieldsState();
+}
+
+export function normalizeIntensityFieldsState(rawState) {
+  const raw = rawState && typeof rawState === "object" ? rawState : {};
+  const runtimeReady = INTENSITY_FIELD_CHANNEL_IDS.every((channelId) => {
+    const channel = raw.channels?.[channelId];
+    return (
+      channel
+      && channel.grid?.base instanceof Float32Array
+      && channel.grid?.composite instanceof Float32Array
+      && channel.grid.base.length === INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows
+      && channel.grid.composite.length === INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows
+    );
+  });
+  if (runtimeReady) return raw;
+  const rawChannels = raw.channels && typeof raw.channels === "object" ? raw.channels : raw;
+  const decodedChannels = {};
+  INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
+    const rawChannel = rawChannels[channelId] && typeof rawChannels[channelId] === "object"
+      ? rawChannels[channelId]
+      : {};
+    decodedChannels[channelId] = {
+      ...rawChannel,
+      grid: {
+        ...(rawChannel.grid || {}),
+        base: rawChannel.grid?.base?.encoding ? decodeGrid(rawChannel.grid.base) : rawChannel.grid?.base,
+      },
+    };
+  });
+  return createIntensityFieldsState({ channels: decodedChannels });
+}
+
+export function serializeIntensityFieldsState(rawState) {
+  const fields = normalizeIntensityFieldsState(rawState);
+  const channels = {};
+  INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
+    const channel = bakeIntensityComposite(fields.channels[channelId]);
+    channels[channelId] = {
+      schemaVersion: 1,
+      channelId,
+      enabled: !!channel.enabled,
+      revision: Math.max(0, Math.round(Number(channel.revision) || 0)),
+      points: channel.points.map(clonePoint),
+      grid: {
+        bounds: [...INTENSITY_FIELD_GRID.bounds],
+        columns: INTENSITY_FIELD_GRID.columns,
+        rows: INTENSITY_FIELD_GRID.rows,
+        base: encodeGrid(channel.grid.base),
+      },
+    };
+  });
+  return {
+    schemaVersion: 1,
+    channels,
+  };
+}
+
+export function bumpIntensityFieldChannelRevision(rawState, channelId) {
+  const fields = normalizeIntensityFieldsState(rawState);
+  const channel = fields.channels[channelId];
+  if (!channel) return fields;
+  channel.revision = (Math.max(0, Math.round(Number(channel.revision) || 0)) + 1);
+  bakeIntensityComposite(channel);
+  return fields;
+}
+
+export function updateIntensityFieldChannel(rawState, channelId, mutate) {
+  const fields = normalizeIntensityFieldsState(rawState);
+  const channel = fields.channels[channelId];
+  if (!channel) return fields;
+  if (typeof mutate === "function") {
+    mutate(channel, fields);
+  }
+  channel.revision = (Math.max(0, Math.round(Number(channel.revision) || 0)) + 1);
+  bakeIntensityComposite(channel);
+  return fields;
+}

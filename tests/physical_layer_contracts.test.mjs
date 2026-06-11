@@ -63,14 +63,22 @@ test("physical layer source contracts stay wired to the expected renderer and st
         < renderPipelinePassesSource.indexOf('["contextBase", (k) => drawContextBasePass(k)]'),
     hasPhysicalReliefOverlayHelper:
       /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
+    hasPhysicalIntensityFieldHelper:
+      /function drawPhysicalIntensityFieldLayer\(\{ clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
+    physicalBaseSignatureTracksIntensityRevision:
+      /if \(passName === "physicalBase"\) \{[\s\S]*?`intensity:\$\{normalizePhysicalIntensityFieldState\(runtimeState\.physicalIntensityField\)\.revision\}`/.test(rendererSource),
     reliefOverlayBlendClamp:
       /function getPhysicalReliefOverlayBlendMode\(cfg, presetProfile\)/.test(rendererSource)
       && /if \(requestedMode === "overlay" \|\| requestedMode === "multiply"\) \{[\s\S]*?return "soft-light";/.test(rendererSource),
     physicalBaseKeepsPhysicalFillUnderPolitical:
       physicalBaseSource.includes("const semanticRenderedCount = drawPhysicalAtlasLayer(k, { interactive });")
+      && physicalBaseSource.includes("const intensityRenderedCount = drawPhysicalIntensityFieldLayer();")
       && physicalBaseSource.includes("const reliefRenderedCount = drawPhysicalReliefOverlayLayer(k, { interactive });")
       && physicalBaseSource.indexOf("drawPhysicalAtlasLayer(k, { interactive });")
-        < physicalBaseSource.indexOf("drawPhysicalReliefOverlayLayer(k, { interactive });"),
+        < physicalBaseSource.indexOf("drawPhysicalIntensityFieldLayer();")
+      && physicalBaseSource.indexOf("drawPhysicalIntensityFieldLayer();")
+        < physicalBaseSource.indexOf("drawPhysicalReliefOverlayLayer(k, { interactive });")
+      && physicalBaseSource.includes("const renderedCount = semanticRenderedCount + intensityRenderedCount + reliefRenderedCount;"),
     hasPhysicalExactRefresh:
       /invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(rendererSource),
     contextBaseKeepsReliefBelowPolitical:
@@ -99,7 +107,12 @@ test("physical layer source contracts stay wired to the expected renderer and st
       && /function drawContourCollection[\s\S]*?const visibleFeatures = getContourVisibleFeatures\(collection, \{/.test(rendererSource),
     contourUsesStrokeBatching:
       /function drawContourCollection[\s\S]*?const strokeBatches = new Map\(\);/.test(rendererSource)
-      && /strokeBatches\.forEach\(\(features, strokeColor\) => \{[\s\S]*?features\.forEach\(\(feature\) => \{[\s\S]*?pathCanvas\(feature\);/.test(rendererSource),
+      && /const batchKey = `\$\{strokeColor\}\|\$\{multiplier\.toFixed\(2\)\}`;/.test(rendererSource)
+      && /strokeBatches\.forEach\(\(\{ features, strokeColor, multiplier \}\) => \{[\s\S]*?context\.globalAlpha = clamp\(\(interactive \? Math\.min\(opacity, 0\.22\) : opacity\) \* multiplier, 0, 1\);[\s\S]*?features\.forEach\(\(feature\) => \{[\s\S]*?pathCanvas\(feature\);/.test(rendererSource),
+    physicalIntensityFieldsModulateAtlasAndContours:
+      /baseOpacity \* getAtlasFeatureAlphaMultiplier\(atlasClass, cfg\) \* getFieldFeatureMultiplier\("physicalAtlas", feature\)/.test(rendererSource)
+      && /const resolveContourIntensity = \(feature\) => getFieldFeatureMultiplier\("physicalContour", feature\);/.test(rendererSource)
+      && /opacityMultiplierResolver: resolveContourIntensity,/.test(rendererSource),
     contourFirstIdleKeepsFastPath:
       /function shouldPreferImmediateExactContextBaseRefresh\(reuseDecision = null\)/.test(rendererSource) === false
       && /const deferredReuseDecision = state\.deferExactAfterSettle \? getContextBaseReuseDecision\(\) : null;/.test(rendererSource) === false,

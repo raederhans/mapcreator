@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getTransportCapabilityDefaultOverviewConfig,
   getTransportOverviewDataLayerKeys,
   listTransportOverviewCapabilityFamilyIds,
 } from "../js/core/transport_capability_registry.js";
@@ -48,11 +49,33 @@ const TRANSPORT_TOGGLE_NODE_IDS = [
   "toggleRoad",
 ];
 
+const TRANSPORT_DEFAULT_NODE_IDS = [
+  "railVisualStrength",
+  "railVisualStrengthValue",
+  "railOpacity",
+  "railOpacityValue",
+  "railCoverageReach",
+  "railCoverageReachValue",
+  "railScope",
+  "railImportanceThreshold",
+  "roadVisualStrength",
+  "roadVisualStrengthValue",
+  "roadOpacity",
+  "roadOpacityValue",
+  "roadCoverageReach",
+  "roadCoverageReachValue",
+  "roadScope",
+  "roadImportanceThreshold",
+];
+
 function createHarness(runtimeOverrides = {}) {
   const previousDocument = globalThis.document;
   const previousHTMLElement = globalThis.HTMLElement;
   const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
-  const nodes = buildNodes(TRANSPORT_TOGGLE_NODE_IDS);
+  const nodes = buildNodes([
+    ...TRANSPORT_TOGGLE_NODE_IDS,
+    ...TRANSPORT_DEFAULT_NODE_IDS,
+  ]);
   const contextLayerLoads = [];
   const dirtyReasons = [];
   const releaseReasons = [];
@@ -130,6 +153,31 @@ test("transport appearance master toggle loads enabled family layers from regist
       })
     );
     await Promise.resolve();
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("transport appearance renders registry defaults for line families", () => {
+  const harness = createHarness({
+    showTransport: true,
+  });
+  try {
+    const railDefaults = getTransportCapabilityDefaultOverviewConfig("rail");
+    const roadDefaults = getTransportCapabilityDefaultOverviewConfig("road");
+
+    harness.controller.renderTransportAppearanceUi();
+
+    assert.equal(harness.nodes.railVisualStrength.value, String(Math.round(railDefaults.visualStrength * 100)));
+    assert.equal(harness.nodes.railOpacity.value, String(Math.round(railDefaults.opacity * 100)));
+    assert.equal(harness.nodes.railCoverageReach.value, String(Math.round(railDefaults.coverageReach * 100)));
+    assert.equal(harness.nodes.railScope.value, railDefaults.scope);
+    assert.equal(harness.nodes.railImportanceThreshold.value, railDefaults.importanceThreshold);
+    assert.equal(harness.nodes.roadVisualStrength.value, String(Math.round(roadDefaults.visualStrength * 100)));
+    assert.equal(harness.nodes.roadOpacity.value, String(Math.round(roadDefaults.opacity * 100)));
+    assert.equal(harness.nodes.roadCoverageReach.value, String(Math.round(roadDefaults.coverageReach * 100)));
+    assert.equal(harness.nodes.roadScope.value, roadDefaults.scope);
+    assert.equal(harness.nodes.roadImportanceThreshold.value, roadDefaults.importanceThreshold);
   } finally {
     harness.cleanup();
   }

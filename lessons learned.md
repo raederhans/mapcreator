@@ -193,6 +193,7 @@
 
 ### 可保存 UI 状态要只有一个真源
 - legend labels/config 这类会写入项目文件的 UI 状态应以 `runtimeState` 为真源；manager 可以负责 normalize 和派生计算，渲染路径不能再读静态缓存。
+- 多通道可保存状态进入 history 时，要把 touched channel 列表和 payload 一起保存；回放只写本次编辑触达的 channel，避免默认补齐的空 channel 覆盖其他面板数据。
 
 ### 渐进恢复要同时移出背景缓存和细节绘制
 - 大场景启动恢复里，只把 full-pass Path2D cache 延后还会留下细粒度 feature fill loop 成本；progressive 模式要把粗 underlay、细节 loop 跳过、idle full cache 三件事一起设计，并让 `refresh-colors` 继续走精确反馈路径。

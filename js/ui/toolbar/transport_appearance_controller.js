@@ -3,6 +3,7 @@ import {
   resolveLinkedTransportOverviewScopeAndThreshold,
 } from "../../core/state.js";
 import {
+  getTransportCapabilityDefaultOverviewConfig,
   getTransportOverviewDataLayerKeys,
   getTransportOverviewVisibilityField,
   listTransportOverviewCapabilityFamilyIds,
@@ -129,6 +130,14 @@ export function createTransportAppearanceController({
     "distribution",
   );
 
+  const getTransportFamilyDefaults = (familyId) => (
+    getTransportCapabilityDefaultOverviewConfig(familyId) || {}
+  );
+
+  const getTransportFamilyValue = (familyConfig, familyDefaults, key, fallback) => (
+    familyConfig?.[key] ?? familyDefaults?.[key] ?? fallback
+  );
+
   const scheduleTransportAppearanceFrame = (callback) => {
     const scheduleFrame = typeof requestAnimationFrame === "function"
       ? requestAnimationFrame
@@ -138,12 +147,15 @@ export function createTransportAppearanceController({
   let transportAppearanceUiFrameId = 0;
 
   const getEffectiveTransportScopeState = (familyId, familyConfig) => (
-    familyConfig.scopeLinkMode === "manual"
+    getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "scopeLinkMode", "linked") === "manual"
       ? {
-        scope: String(familyConfig.scope || "").trim().toLowerCase(),
-        importanceThreshold: String(familyConfig.importanceThreshold || "").trim().toLowerCase(),
+        scope: String(getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "scope", "")).trim().toLowerCase(),
+        importanceThreshold: String(getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "importanceThreshold", "")).trim().toLowerCase(),
       }
-      : resolveLinkedTransportOverviewScopeAndThreshold(familyId, familyConfig.coverageReach)
+      : resolveLinkedTransportOverviewScopeAndThreshold(
+        familyId,
+        getTransportFamilyValue(familyConfig, getTransportFamilyDefaults(familyId), "coverageReach", 0.5),
+      )
   );
 
   const buildTransportFamilySummaryText = (familyId, masterEnabled, familyEnabled, familyConfig, effectiveScope) =>
@@ -210,6 +222,10 @@ export function createTransportAppearanceController({
     const portConfig = transportConfig.port || {};
     const railConfig = transportConfig.rail || {};
     const roadConfig = transportConfig.road || {};
+    const airportDefaults = getTransportFamilyDefaults("airport");
+    const portDefaults = getTransportFamilyDefaults("port");
+    const railDefaults = getTransportFamilyDefaults("rail");
+    const roadDefaults = getTransportFamilyDefaults("road");
     const visualMode = normalizeTransportOverviewVisualMode(transportConfig.visualMode, "distribution");
     const transportEnabled = runtimeState.showTransport !== false;
     const airportScopeState = getEffectiveTransportScopeState("airport", airportConfig);
@@ -223,87 +239,103 @@ export function createTransportAppearanceController({
       transportFacilityUnderlyingMapSelection.checked = !!transportConfig.allowFacilityUnderlyingMapSelection;
     }
 
-    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportConfig.visualStrength ?? 0.62) * 100));
-    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportConfig.visualStrength ?? 0.62);
-    if (airportOpacity) airportOpacity.value = String(Math.round(Number(airportConfig.opacity ?? 0.82) * 100));
-    if (airportOpacityValue) airportOpacityValue.textContent = formatTransportPercent(airportConfig.opacity ?? 0.82);
-    if (airportPrimaryColor) airportPrimaryColor.value = normalizeOceanFillColor(airportConfig.primaryColor || "#1d4ed8");
-    if (airportLabelsEnabled) airportLabelsEnabled.checked = !!airportConfig.labelsEnabled;
-    if (airportLabelDensity) airportLabelDensity.value = String(airportConfig.labelDensity || "balanced");
-    if (airportLabelMode) airportLabelMode.value = String(airportConfig.labelMode || "adaptive");
-    if (airportLabelSize) airportLabelSize.value = String(Math.round(Number(airportConfig.labelSize ?? 9)));
-    if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${Math.round(Number(airportConfig.labelSize ?? 9))}px`;
-    if (airportLabelHalo) airportLabelHalo.value = String(Math.round(Number(airportConfig.labelHalo ?? 0.22) * 100));
-    if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(airportConfig.labelHalo ?? 0.22);
-    if (airportCoverageReach) airportCoverageReach.value = String(Math.round(Number(airportConfig.coverageReach ?? 0.5) * 100));
-    if (airportCoverageReachValue) airportCoverageReachValue.textContent = formatTransportPercent(airportConfig.coverageReach ?? 0.5);
-    if (airportScopeLinked) airportScopeLinked.checked = String(airportConfig.scopeLinkMode || "linked") !== "manual";
+    const airportVisualStrengthValueRaw = getTransportFamilyValue(airportConfig, airportDefaults, "visualStrength", 0.62);
+    const airportOpacityValueRaw = getTransportFamilyValue(airportConfig, airportDefaults, "opacity", 0.82);
+    const airportLabelSizeValueRaw = getTransportFamilyValue(airportConfig, airportDefaults, "labelSize", 9);
+    const airportLabelHaloValueRaw = getTransportFamilyValue(airportConfig, airportDefaults, "labelHalo", 0.22);
+    const airportCoverageReachValueRaw = getTransportFamilyValue(airportConfig, airportDefaults, "coverageReach", 0.38);
+    if (airportVisualStrength) airportVisualStrength.value = String(Math.round(Number(airportVisualStrengthValueRaw) * 100));
+    if (airportVisualStrengthValue) airportVisualStrengthValue.textContent = formatTransportPercent(airportVisualStrengthValueRaw);
+    if (airportOpacity) airportOpacity.value = String(Math.round(Number(airportOpacityValueRaw) * 100));
+    if (airportOpacityValue) airportOpacityValue.textContent = formatTransportPercent(airportOpacityValueRaw);
+    if (airportPrimaryColor) airportPrimaryColor.value = normalizeOceanFillColor(getTransportFamilyValue(airportConfig, airportDefaults, "primaryColor", "#1d4ed8"));
+    if (airportLabelsEnabled) airportLabelsEnabled.checked = !!getTransportFamilyValue(airportConfig, airportDefaults, "labelsEnabled", true);
+    if (airportLabelDensity) airportLabelDensity.value = String(getTransportFamilyValue(airportConfig, airportDefaults, "labelDensity", "sparse"));
+    if (airportLabelMode) airportLabelMode.value = String(getTransportFamilyValue(airportConfig, airportDefaults, "labelMode", "adaptive"));
+    if (airportLabelSize) airportLabelSize.value = String(Math.round(Number(airportLabelSizeValueRaw)));
+    if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${Math.round(Number(airportLabelSizeValueRaw))}px`;
+    if (airportLabelHalo) airportLabelHalo.value = String(Math.round(Number(airportLabelHaloValueRaw) * 100));
+    if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(airportLabelHaloValueRaw);
+    if (airportCoverageReach) airportCoverageReach.value = String(Math.round(Number(airportCoverageReachValueRaw) * 100));
+    if (airportCoverageReachValue) airportCoverageReachValue.textContent = formatTransportPercent(airportCoverageReachValueRaw);
+    if (airportScopeLinked) airportScopeLinked.checked = String(getTransportFamilyValue(airportConfig, airportDefaults, "scopeLinkMode", "linked")) !== "manual";
     if (airportScopeResolved) airportScopeResolved.textContent = t(formatTransportScopeLabel(airportScopeState.scope), "ui");
     if (airportThresholdResolved) airportThresholdResolved.textContent = t(formatTransportThresholdLabel(airportScopeState.importanceThreshold), "ui");
-    if (airportScope) airportScope.value = String(airportConfig.scope || "major_civil");
-    if (airportImportanceThreshold) airportImportanceThreshold.value = String(airportConfig.importanceThreshold || "secondary");
+    if (airportScope) airportScope.value = String(getTransportFamilyValue(airportConfig, airportDefaults, "scope", "major_civil"));
+    if (airportImportanceThreshold) airportImportanceThreshold.value = String(getTransportFamilyValue(airportConfig, airportDefaults, "importanceThreshold", "secondary"));
     if (toggleAirports) toggleAirports.checked = !!runtimeState.showAirports;
     if (transportAirportSummaryMeta) {
       transportAirportSummaryMeta.textContent = buildTransportFamilySummaryText("airport", transportEnabled, !!runtimeState.showAirports, airportConfig, airportScopeState);
     }
 
-    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portConfig.visualStrength ?? 0.58) * 100));
-    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portConfig.visualStrength ?? 0.58);
-    if (portOpacity) portOpacity.value = String(Math.round(Number(portConfig.opacity ?? 0.78) * 100));
-    if (portOpacityValue) portOpacityValue.textContent = formatTransportPercent(portConfig.opacity ?? 0.78);
-    if (portPrimaryColor) portPrimaryColor.value = normalizeOceanFillColor(portConfig.primaryColor || "#b45309");
-    if (portLabelsEnabled) portLabelsEnabled.checked = !!portConfig.labelsEnabled;
-    if (portLabelDensity) portLabelDensity.value = String(portConfig.labelDensity || "balanced");
-    if (portLabelMode) portLabelMode.value = String(portConfig.labelMode || "adaptive");
-    if (portLabelSize) portLabelSize.value = String(Math.round(Number(portConfig.labelSize ?? 9)));
-    if (portLabelSizeValue) portLabelSizeValue.textContent = `${Math.round(Number(portConfig.labelSize ?? 9))}px`;
-    if (portLabelHalo) portLabelHalo.value = String(Math.round(Number(portConfig.labelHalo ?? 0.22) * 100));
-    if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(portConfig.labelHalo ?? 0.22);
-    if (portCoverageReach) portCoverageReach.value = String(Math.round(Number(portConfig.coverageReach ?? 0.5) * 100));
-    if (portCoverageReachValue) portCoverageReachValue.textContent = formatTransportPercent(portConfig.coverageReach ?? 0.5);
-    if (portScopeLinked) portScopeLinked.checked = String(portConfig.scopeLinkMode || "linked") !== "manual";
+    const portVisualStrengthValueRaw = getTransportFamilyValue(portConfig, portDefaults, "visualStrength", 0.58);
+    const portOpacityValueRaw = getTransportFamilyValue(portConfig, portDefaults, "opacity", 0.78);
+    const portLabelSizeValueRaw = getTransportFamilyValue(portConfig, portDefaults, "labelSize", 9);
+    const portLabelHaloValueRaw = getTransportFamilyValue(portConfig, portDefaults, "labelHalo", 0.22);
+    const portCoverageReachValueRaw = getTransportFamilyValue(portConfig, portDefaults, "coverageReach", 0.38);
+    if (portVisualStrength) portVisualStrength.value = String(Math.round(Number(portVisualStrengthValueRaw) * 100));
+    if (portVisualStrengthValue) portVisualStrengthValue.textContent = formatTransportPercent(portVisualStrengthValueRaw);
+    if (portOpacity) portOpacity.value = String(Math.round(Number(portOpacityValueRaw) * 100));
+    if (portOpacityValue) portOpacityValue.textContent = formatTransportPercent(portOpacityValueRaw);
+    if (portPrimaryColor) portPrimaryColor.value = normalizeOceanFillColor(getTransportFamilyValue(portConfig, portDefaults, "primaryColor", "#b45309"));
+    if (portLabelsEnabled) portLabelsEnabled.checked = !!getTransportFamilyValue(portConfig, portDefaults, "labelsEnabled", true);
+    if (portLabelDensity) portLabelDensity.value = String(getTransportFamilyValue(portConfig, portDefaults, "labelDensity", "sparse"));
+    if (portLabelMode) portLabelMode.value = String(getTransportFamilyValue(portConfig, portDefaults, "labelMode", "adaptive"));
+    if (portLabelSize) portLabelSize.value = String(Math.round(Number(portLabelSizeValueRaw)));
+    if (portLabelSizeValue) portLabelSizeValue.textContent = `${Math.round(Number(portLabelSizeValueRaw))}px`;
+    if (portLabelHalo) portLabelHalo.value = String(Math.round(Number(portLabelHaloValueRaw) * 100));
+    if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(portLabelHaloValueRaw);
+    if (portCoverageReach) portCoverageReach.value = String(Math.round(Number(portCoverageReachValueRaw) * 100));
+    if (portCoverageReachValue) portCoverageReachValue.textContent = formatTransportPercent(portCoverageReachValueRaw);
+    if (portScopeLinked) portScopeLinked.checked = String(getTransportFamilyValue(portConfig, portDefaults, "scopeLinkMode", "linked")) !== "manual";
     if (portScopeResolved) portScopeResolved.textContent = t(formatTransportScopeLabel(portScopeState.scope), "ui");
     if (portThresholdResolved) portThresholdResolved.textContent = t(formatTransportThresholdLabel(portScopeState.importanceThreshold), "ui");
-    if (portTier) portTier.value = String(portConfig.scope || "regional");
-    if (portImportanceThreshold) portImportanceThreshold.value = String(portConfig.importanceThreshold || "secondary");
+    if (portTier) portTier.value = String(getTransportFamilyValue(portConfig, portDefaults, "scope", "regional"));
+    if (portImportanceThreshold) portImportanceThreshold.value = String(getTransportFamilyValue(portConfig, portDefaults, "importanceThreshold", "secondary"));
     if (togglePorts) togglePorts.checked = !!runtimeState.showPorts;
     if (transportPortSummaryMeta) {
       transportPortSummaryMeta.textContent = buildTransportFamilySummaryText("port", transportEnabled, !!runtimeState.showPorts, portConfig, portScopeState);
     }
 
-    if (railVisualStrength) railVisualStrength.value = String(Math.round(Number(railConfig.visualStrength ?? 0.5) * 100));
-    if (railVisualStrengthValue) railVisualStrengthValue.textContent = formatTransportPercent(railConfig.visualStrength ?? 0.5);
-    if (railOpacity) railOpacity.value = String(Math.round(Number(railConfig.opacity ?? 0.72) * 100));
-    if (railOpacityValue) railOpacityValue.textContent = formatTransportPercent(railConfig.opacity ?? 0.72);
-    if (railPrimaryColor) railPrimaryColor.value = normalizeOceanFillColor(railConfig.primaryColor || "#0f172a");
-    if (railLabelsEnabled) railLabelsEnabled.checked = !!railConfig.labelsEnabled;
-    if (railLabelDensity) railLabelDensity.value = String(railConfig.labelDensity || "sparse");
-    if (railCoverageReach) railCoverageReach.value = String(Math.round(Number(railConfig.coverageReach ?? 0.2) * 100));
-    if (railCoverageReachValue) railCoverageReachValue.textContent = formatTransportPercent(railConfig.coverageReach ?? 0.2);
-    if (railScopeLinked) railScopeLinked.checked = String(railConfig.scopeLinkMode || "linked") !== "manual";
+    const railVisualStrengthValueRaw = getTransportFamilyValue(railConfig, railDefaults, "visualStrength", 0.72);
+    const railOpacityValueRaw = getTransportFamilyValue(railConfig, railDefaults, "opacity", 0.8);
+    const railCoverageReachValueRaw = getTransportFamilyValue(railConfig, railDefaults, "coverageReach", 0.62);
+    if (railVisualStrength) railVisualStrength.value = String(Math.round(Number(railVisualStrengthValueRaw) * 100));
+    if (railVisualStrengthValue) railVisualStrengthValue.textContent = formatTransportPercent(railVisualStrengthValueRaw);
+    if (railOpacity) railOpacity.value = String(Math.round(Number(railOpacityValueRaw) * 100));
+    if (railOpacityValue) railOpacityValue.textContent = formatTransportPercent(railOpacityValueRaw);
+    if (railPrimaryColor) railPrimaryColor.value = normalizeOceanFillColor(getTransportFamilyValue(railConfig, railDefaults, "primaryColor", "#0f172a"));
+    if (railLabelsEnabled) railLabelsEnabled.checked = !!getTransportFamilyValue(railConfig, railDefaults, "labelsEnabled", false);
+    if (railLabelDensity) railLabelDensity.value = String(getTransportFamilyValue(railConfig, railDefaults, "labelDensity", "sparse"));
+    if (railCoverageReach) railCoverageReach.value = String(Math.round(Number(railCoverageReachValueRaw) * 100));
+    if (railCoverageReachValue) railCoverageReachValue.textContent = formatTransportPercent(railCoverageReachValueRaw);
+    if (railScopeLinked) railScopeLinked.checked = String(getTransportFamilyValue(railConfig, railDefaults, "scopeLinkMode", "linked")) !== "manual";
     if (railScopeResolved) railScopeResolved.textContent = t(formatTransportScopeLabel(railScopeState.scope), "ui");
     if (railThresholdResolved) railThresholdResolved.textContent = t(formatTransportThresholdLabel(railScopeState.importanceThreshold), "ui");
-    if (railScope) railScope.value = String(railConfig.scope || "mainline_only");
-    if (railImportanceThreshold) railImportanceThreshold.value = String(railConfig.importanceThreshold || "primary");
+    if (railScope) railScope.value = String(getTransportFamilyValue(railConfig, railDefaults, "scope", "mainline_plus_regional"));
+    if (railImportanceThreshold) railImportanceThreshold.value = String(getTransportFamilyValue(railConfig, railDefaults, "importanceThreshold", "secondary"));
     if (toggleRail) toggleRail.checked = !!runtimeState.showRail;
     if (transportRailSummaryMeta) {
       transportRailSummaryMeta.textContent = buildTransportFamilySummaryText("rail", transportEnabled, !!runtimeState.showRail, railConfig, railScopeState);
     }
 
-    if (roadVisualStrength) roadVisualStrength.value = String(Math.round(Number(roadConfig.visualStrength ?? 0.5) * 100));
-    if (roadVisualStrengthValue) roadVisualStrengthValue.textContent = formatTransportPercent(roadConfig.visualStrength ?? 0.5);
-    if (roadOpacity) roadOpacity.value = String(Math.round(Number(roadConfig.opacity ?? 0.72) * 100));
-    if (roadOpacityValue) roadOpacityValue.textContent = formatTransportPercent(roadConfig.opacity ?? 0.72);
-    if (roadPrimaryColor) roadPrimaryColor.value = normalizeOceanFillColor(roadConfig.primaryColor || "#374151");
-    if (roadLabelsEnabled) roadLabelsEnabled.checked = !!roadConfig.labelsEnabled;
-    if (roadLabelDensity) roadLabelDensity.value = String(roadConfig.labelDensity || "sparse");
-    if (roadCoverageReach) roadCoverageReach.value = String(Math.round(Number(roadConfig.coverageReach ?? 0.2) * 100));
-    if (roadCoverageReachValue) roadCoverageReachValue.textContent = formatTransportPercent(roadConfig.coverageReach ?? 0.2);
-    if (roadScopeLinked) roadScopeLinked.checked = String(roadConfig.scopeLinkMode || "linked") !== "manual";
+    const roadVisualStrengthValueRaw = getTransportFamilyValue(roadConfig, roadDefaults, "visualStrength", 0.76);
+    const roadOpacityValueRaw = getTransportFamilyValue(roadConfig, roadDefaults, "opacity", 0.84);
+    const roadCoverageReachValueRaw = getTransportFamilyValue(roadConfig, roadDefaults, "coverageReach", 0.62);
+    if (roadVisualStrength) roadVisualStrength.value = String(Math.round(Number(roadVisualStrengthValueRaw) * 100));
+    if (roadVisualStrengthValue) roadVisualStrengthValue.textContent = formatTransportPercent(roadVisualStrengthValueRaw);
+    if (roadOpacity) roadOpacity.value = String(Math.round(Number(roadOpacityValueRaw) * 100));
+    if (roadOpacityValue) roadOpacityValue.textContent = formatTransportPercent(roadOpacityValueRaw);
+    if (roadPrimaryColor) roadPrimaryColor.value = normalizeOceanFillColor(getTransportFamilyValue(roadConfig, roadDefaults, "primaryColor", "#374151"));
+    if (roadLabelsEnabled) roadLabelsEnabled.checked = !!getTransportFamilyValue(roadConfig, roadDefaults, "labelsEnabled", false);
+    if (roadLabelDensity) roadLabelDensity.value = String(getTransportFamilyValue(roadConfig, roadDefaults, "labelDensity", "sparse"));
+    if (roadCoverageReach) roadCoverageReach.value = String(Math.round(Number(roadCoverageReachValueRaw) * 100));
+    if (roadCoverageReachValue) roadCoverageReachValue.textContent = formatTransportPercent(roadCoverageReachValueRaw);
+    if (roadScopeLinked) roadScopeLinked.checked = String(getTransportFamilyValue(roadConfig, roadDefaults, "scopeLinkMode", "linked")) !== "manual";
     if (roadScopeResolved) roadScopeResolved.textContent = t(formatTransportScopeLabel(roadScopeState.scope), "ui");
     if (roadThresholdResolved) roadThresholdResolved.textContent = t(formatTransportThresholdLabel(roadScopeState.importanceThreshold), "ui");
-    if (roadScope) roadScope.value = String(roadConfig.scope || "motorway_only");
-    if (roadImportanceThreshold) roadImportanceThreshold.value = String(roadConfig.importanceThreshold || "primary");
+    if (roadScope) roadScope.value = String(getTransportFamilyValue(roadConfig, roadDefaults, "scope", "motorway_trunk"));
+    if (roadImportanceThreshold) roadImportanceThreshold.value = String(getTransportFamilyValue(roadConfig, roadDefaults, "importanceThreshold", "secondary"));
     if (toggleRoad) toggleRoad.checked = !!runtimeState.showRoad;
     if (transportRoadSummaryMeta) {
       transportRoadSummaryMeta.textContent = buildTransportFamilySummaryText("road", transportEnabled, !!runtimeState.showRoad, roadConfig, roadScopeState);
@@ -494,43 +526,47 @@ export function createTransportAppearanceController({
       });
       element.dataset.bound = "true";
     };
+    const airportDefaults = getTransportFamilyDefaults("airport");
+    const portDefaults = getTransportFamilyDefaults("port");
+    const railDefaults = getTransportFamilyDefaults("rail");
+    const roadDefaults = getTransportFamilyDefaults("road");
 
     bindInput(airportVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.62, 0, 1);
+      getTransportAppearanceConfig().airport.visualStrength = clamp(Number.isFinite(value) ? value / 100 : airportDefaults.visualStrength, 0, 1);
     }, "transport-airport-visual-strength");
     bindInput(airportOpacity, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().airport.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.82, 0.2, 1);
+      getTransportAppearanceConfig().airport.opacity = clamp(Number.isFinite(value) ? value / 100 : airportDefaults.opacity, 0.2, 1);
     }, "transport-airport-opacity");
     bindInput(airportPrimaryColor, (event) => {
-      getTransportAppearanceConfig().airport.primaryColor = normalizeOceanFillColor(event.target.value || "#1d4ed8");
+      getTransportAppearanceConfig().airport.primaryColor = normalizeOceanFillColor(event.target.value || airportDefaults.primaryColor);
     }, "transport-airport-primary-color");
     bindChange(airportLabelsEnabled, (event) => {
       getTransportAppearanceConfig().airport.labelsEnabled = !!event.target.checked;
     }, "transport-airport-labels-enabled");
     bindChange(airportLabelDensity, (event) => {
-      getTransportAppearanceConfig().airport.labelDensity = String(event.target.value || "balanced");
+      getTransportAppearanceConfig().airport.labelDensity = String(event.target.value || airportDefaults.labelDensity);
     }, "transport-airport-label-density");
     bindChange(airportLabelMode, (event) => {
-      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || "adaptive");
+      getTransportAppearanceConfig().airport.labelMode = String(event.target.value || airportDefaults.labelMode);
     }, "transport-airport-label-mode");
     bindInput(airportLabelSize, (event) => {
       const value = Number(event.target.value);
-      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : airportDefaults.labelSize), 7, 16);
       getTransportAppearanceConfig().airport.labelSize = labelSize;
       if (airportLabelSizeValue) airportLabelSizeValue.textContent = `${labelSize}px`;
     }, "transport-airport-label-size");
     bindInput(airportLabelHalo, (event) => {
       const value = Number(event.target.value);
-      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : airportDefaults.labelHalo, 0, 1);
       getTransportAppearanceConfig().airport.labelHalo = labelHalo;
       if (airportLabelHaloValue) airportLabelHaloValue.textContent = formatTransportPercent(labelHalo);
     }, "transport-airport-label-halo");
     bindInput(airportCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().airport;
-      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
+      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : airportDefaults.coverageReach, 0, 1);
       if (String(config.scopeLinkMode || "linked") !== "manual") {
         const linked = resolveLinkedTransportOverviewScopeAndThreshold("airport", config.coverageReach);
         config.scope = linked.scope;
@@ -549,50 +585,50 @@ export function createTransportAppearanceController({
     bindChange(airportScope, (event) => {
       const config = getTransportAppearanceConfig().airport;
       config.scopeLinkMode = "manual";
-      config.scope = String(event.target.value || "major_civil");
+      config.scope = String(event.target.value || airportDefaults.scope);
     }, "transport-airport-scope");
     bindChange(airportImportanceThreshold, (event) => {
       const config = getTransportAppearanceConfig().airport;
       config.scopeLinkMode = "manual";
-      config.importanceThreshold = String(event.target.value || "secondary");
+      config.importanceThreshold = String(event.target.value || airportDefaults.importanceThreshold);
     }, "transport-airport-importance-threshold");
 
     bindInput(portVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.58, 0, 1);
+      getTransportAppearanceConfig().port.visualStrength = clamp(Number.isFinite(value) ? value / 100 : portDefaults.visualStrength, 0, 1);
     }, "transport-port-visual-strength");
     bindInput(portOpacity, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().port.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.78, 0.2, 1);
+      getTransportAppearanceConfig().port.opacity = clamp(Number.isFinite(value) ? value / 100 : portDefaults.opacity, 0.2, 1);
     }, "transport-port-opacity");
     bindInput(portPrimaryColor, (event) => {
-      getTransportAppearanceConfig().port.primaryColor = normalizeOceanFillColor(event.target.value || "#b45309");
+      getTransportAppearanceConfig().port.primaryColor = normalizeOceanFillColor(event.target.value || portDefaults.primaryColor);
     }, "transport-port-primary-color");
     bindChange(portLabelsEnabled, (event) => {
       getTransportAppearanceConfig().port.labelsEnabled = !!event.target.checked;
     }, "transport-port-labels-enabled");
     bindChange(portLabelDensity, (event) => {
-      getTransportAppearanceConfig().port.labelDensity = String(event.target.value || "balanced");
+      getTransportAppearanceConfig().port.labelDensity = String(event.target.value || portDefaults.labelDensity);
     }, "transport-port-label-density");
     bindChange(portLabelMode, (event) => {
-      getTransportAppearanceConfig().port.labelMode = String(event.target.value || "adaptive");
+      getTransportAppearanceConfig().port.labelMode = String(event.target.value || portDefaults.labelMode);
     }, "transport-port-label-mode");
     bindInput(portLabelSize, (event) => {
       const value = Number(event.target.value);
-      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : 9), 7, 16);
+      const labelSize = clamp(Math.round(Number.isFinite(value) ? value : portDefaults.labelSize), 7, 16);
       getTransportAppearanceConfig().port.labelSize = labelSize;
       if (portLabelSizeValue) portLabelSizeValue.textContent = `${labelSize}px`;
     }, "transport-port-label-size");
     bindInput(portLabelHalo, (event) => {
       const value = Number(event.target.value);
-      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : 0.22, 0, 1);
+      const labelHalo = clamp(Number.isFinite(value) ? value / 100 : portDefaults.labelHalo, 0, 1);
       getTransportAppearanceConfig().port.labelHalo = labelHalo;
       if (portLabelHaloValue) portLabelHaloValue.textContent = formatTransportPercent(labelHalo);
     }, "transport-port-label-halo");
     bindInput(portCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().port;
-      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
+      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : portDefaults.coverageReach, 0, 1);
       if (String(config.scopeLinkMode || "linked") !== "manual") {
         const linked = resolveLinkedTransportOverviewScopeAndThreshold("port", config.coverageReach);
         config.scope = linked.scope;
@@ -611,35 +647,35 @@ export function createTransportAppearanceController({
     bindChange(portTier, (event) => {
       const config = getTransportAppearanceConfig().port;
       config.scopeLinkMode = "manual";
-      config.scope = String(event.target.value || "regional");
+      config.scope = String(event.target.value || portDefaults.scope);
     }, "transport-port-scope");
     bindChange(portImportanceThreshold, (event) => {
       const config = getTransportAppearanceConfig().port;
       config.scopeLinkMode = "manual";
-      config.importanceThreshold = String(event.target.value || "secondary");
+      config.importanceThreshold = String(event.target.value || portDefaults.importanceThreshold);
     }, "transport-port-importance-threshold");
 
     bindInput(railVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().rail.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
+      getTransportAppearanceConfig().rail.visualStrength = clamp(Number.isFinite(value) ? value / 100 : railDefaults.visualStrength, 0, 1);
     }, "transport-rail-visual-strength");
     bindInput(railOpacity, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().rail.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0.2, 1);
+      getTransportAppearanceConfig().rail.opacity = clamp(Number.isFinite(value) ? value / 100 : railDefaults.opacity, 0.2, 1);
     }, "transport-rail-opacity");
     bindInput(railPrimaryColor, (event) => {
-      getTransportAppearanceConfig().rail.primaryColor = normalizeOceanFillColor(event.target.value || "#0f172a");
+      getTransportAppearanceConfig().rail.primaryColor = normalizeOceanFillColor(event.target.value || railDefaults.primaryColor);
     }, "transport-rail-primary-color");
     bindChange(railLabelsEnabled, (event) => {
       getTransportAppearanceConfig().rail.labelsEnabled = !!event.target.checked;
     }, "transport-rail-labels-enabled");
     bindChange(railLabelDensity, (event) => {
-      getTransportAppearanceConfig().rail.labelDensity = String(event.target.value || "sparse");
+      getTransportAppearanceConfig().rail.labelDensity = String(event.target.value || railDefaults.labelDensity);
     }, "transport-rail-label-density");
     bindInput(railCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().rail;
-      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : 0.2, 0, 1);
+      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : railDefaults.coverageReach, 0, 1);
       if (String(config.scopeLinkMode || "linked") !== "manual") {
         const linked = resolveLinkedTransportOverviewScopeAndThreshold("rail", config.coverageReach);
         config.scope = linked.scope;
@@ -658,35 +694,35 @@ export function createTransportAppearanceController({
     bindChange(railScope, (event) => {
       const config = getTransportAppearanceConfig().rail;
       config.scopeLinkMode = "manual";
-      config.scope = String(event.target.value || "mainline_only");
+      config.scope = String(event.target.value || railDefaults.scope);
     }, "transport-rail-scope");
     bindChange(railImportanceThreshold, (event) => {
       const config = getTransportAppearanceConfig().rail;
       config.scopeLinkMode = "manual";
-      config.importanceThreshold = String(event.target.value || "primary");
+      config.importanceThreshold = String(event.target.value || railDefaults.importanceThreshold);
     }, "transport-rail-importance-threshold");
 
     bindInput(roadVisualStrength, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().road.visualStrength = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 1);
+      getTransportAppearanceConfig().road.visualStrength = clamp(Number.isFinite(value) ? value / 100 : roadDefaults.visualStrength, 0, 1);
     }, "transport-road-visual-strength");
     bindInput(roadOpacity, (event) => {
       const value = Number(event.target.value);
-      getTransportAppearanceConfig().road.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.72, 0.2, 1);
+      getTransportAppearanceConfig().road.opacity = clamp(Number.isFinite(value) ? value / 100 : roadDefaults.opacity, 0.2, 1);
     }, "transport-road-opacity");
     bindInput(roadPrimaryColor, (event) => {
-      getTransportAppearanceConfig().road.primaryColor = normalizeOceanFillColor(event.target.value || "#374151");
+      getTransportAppearanceConfig().road.primaryColor = normalizeOceanFillColor(event.target.value || roadDefaults.primaryColor);
     }, "transport-road-primary-color");
     bindChange(roadLabelsEnabled, (event) => {
       getTransportAppearanceConfig().road.labelsEnabled = !!event.target.checked;
     }, "transport-road-labels-enabled");
     bindChange(roadLabelDensity, (event) => {
-      getTransportAppearanceConfig().road.labelDensity = String(event.target.value || "sparse");
+      getTransportAppearanceConfig().road.labelDensity = String(event.target.value || roadDefaults.labelDensity);
     }, "transport-road-label-density");
     bindInput(roadCoverageReach, (event) => {
       const value = Number(event.target.value);
       const config = getTransportAppearanceConfig().road;
-      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : 0.2, 0, 1);
+      config.coverageReach = clamp(Number.isFinite(value) ? value / 100 : roadDefaults.coverageReach, 0, 1);
       if (String(config.scopeLinkMode || "linked") !== "manual") {
         const linked = resolveLinkedTransportOverviewScopeAndThreshold("road", config.coverageReach);
         config.scope = linked.scope;
@@ -705,12 +741,12 @@ export function createTransportAppearanceController({
     bindChange(roadScope, (event) => {
       const config = getTransportAppearanceConfig().road;
       config.scopeLinkMode = "manual";
-      config.scope = String(event.target.value || "motorway_only");
+      config.scope = String(event.target.value || roadDefaults.scope);
     }, "transport-road-scope");
     bindChange(roadImportanceThreshold, (event) => {
       const config = getTransportAppearanceConfig().road;
       config.scopeLinkMode = "manual";
-      config.importanceThreshold = String(event.target.value || "primary");
+      config.importanceThreshold = String(event.target.value || roadDefaults.importanceThreshold);
     }, "transport-road-importance-threshold");
 
   };

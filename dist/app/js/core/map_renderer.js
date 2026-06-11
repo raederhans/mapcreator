@@ -7,8 +7,10 @@ import {
   normalizeCityLayerStyleConfig,
   normalizeColorStateForRender,
   normalizeDayNightStyleConfig,
+  normalizeIntensityFieldsState,
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
+  normalizePhysicalIntensityFieldState,
   normalizePhysicalStyleConfig,
   normalizeTransportOverviewStyleConfig,
   normalizeTextureMode,
@@ -16,6 +18,7 @@ import {
   normalizeUrbanStyleConfig,
   PHYSICAL_ATLAS_PALETTE,
   replaceResolvedColorsState,
+  sampleIntensityField,
   setResolvedColorForFeature,
   state as runtimeState,
 } from "./state.js";
@@ -3041,6 +3044,7 @@ function getRenderPassTransformSignature(passName, transform = runtimeState.zoom
 
 function getRenderPassSignature(passName, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
   const transformSignature = getRenderPassTransformSignature(passName, transform);
+  const intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
   if (passName === "background") {
     return [
       transformSignature,
@@ -3059,6 +3063,8 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.showPhysical ? "physical:on" : "physical:off",
       `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
       `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+      `intensity:${normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField).revision}`,
+      `field:${Number(intensityFields.channels.physicalAtlas?.revision || 0)}`,
       stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
     ].join("::");
   }
@@ -3112,6 +3118,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       `context-colors:${shouldRefreshContextBaseForColorChanges() ? Number(runtimeState.colorRevision || 0) : 0}`,
       `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
       `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
+      `field:${Number(intensityFields.channels.physicalContour?.revision || 0)}`,
       String(runtimeState.renderProfile || "auto"),
       stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
       stableJson(normalizeUrbanStyleConfig(runtimeState.styleConfig?.urban || {})),
@@ -12141,13 +12148,58 @@ function drawPhysicalAtlasCollectionLayer(
     const fillColor = getSafeCanvasColor(PHYSICAL_ATLAS_PALETTE[atlasClass], null);
     if (!fillColor) return;
     context.globalAlpha = clamp(
-      baseOpacity * getAtlasFeatureAlphaMultiplier(atlasClass, cfg),
+      baseOpacity * getAtlasFeatureAlphaMultiplier(atlasClass, cfg) * getFieldFeatureMultiplier("physicalAtlas", feature),
       0,
       1
     );
     context.fillStyle = fillColor;
     context.beginPath();
     pathCanvas(feature);
+    context.fill();
+    renderedCount += 1;
+  });
+  context.restore();
+  return renderedCount;
+}
+
+function getFieldFeatureMultiplier(channelId, feature) {
+  const fields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  const channel = fields.channels?.[channelId];
+  if (!channel?.enabled) return 1;
+  const centroid = getFeatureGeoCentroid(feature);
+  if (!centroid) return 1;
+  return sampleIntensityField(fields, channelId, centroid[0], centroid[1]);
+}
+
+function drawPhysicalIntensityFieldLayer({ clipAlreadyApplied = false } = {}) {
+  const fieldState = normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField);
+  if (!fieldState.enabled || !fieldState.points.length || !projection || !context) return 0;
+  let renderedCount = 0;
+  const zoomScale = Math.max(0.35, Number(runtimeState.zoomTransform?.k || 1));
+  context.save();
+  if (!clipAlreadyApplied) {
+    applyPhysicalLandClipMask();
+  }
+  context.globalCompositeOperation = "soft-light";
+  fieldState.points.forEach((point) => {
+    const projected = projection([point.lon, point.lat]);
+    if (!Array.isArray(projected) || projected.length < 2) return;
+    const radiusPx = clamp((point.radiusKm / 95) * Math.sqrt(zoomScale), 6, 120);
+    const strength = clamp(Math.abs(Number(point.weight) || 0), 0, 2);
+    const gradient = context.createRadialGradient(projected[0], projected[1], 0, projected[0], projected[1], radiusPx);
+    const alpha = clamp(0.08 + strength * 0.13, 0.08, 0.34);
+    const coreColor = point.weight < 0
+      ? `rgba(84, 46, 20, ${alpha})`
+      : `rgba(216, 236, 255, ${alpha})`;
+    const edgeColor = point.weight < 0
+      ? "rgba(84, 46, 20, 0)"
+      : "rgba(216, 236, 255, 0)";
+    gradient.addColorStop(0, coreColor);
+    gradient.addColorStop(point.falloff === "linear" ? 0.65 : 0.45, coreColor);
+    gradient.addColorStop(1, edgeColor);
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(projected[0], projected[1], radiusPx, 0, Math.PI * 2);
     context.fill();
     renderedCount += 1;
   });
@@ -12263,12 +12315,14 @@ function drawPhysicalBasePass(k, { interactive = false } = {}) {
   }
 
   const semanticRenderedCount = drawPhysicalAtlasLayer(k, { interactive });
+  const intensityRenderedCount = drawPhysicalIntensityFieldLayer();
   const reliefRenderedCount = drawPhysicalReliefOverlayLayer(k, { interactive });
-  const renderedCount = semanticRenderedCount + reliefRenderedCount;
+  const renderedCount = semanticRenderedCount + intensityRenderedCount + reliefRenderedCount;
   collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
     featureCount: atlasCollection.features.length,
     renderedCount,
     semanticRenderedCount,
+    intensityRenderedCount,
     reliefRenderedCount,
     interactive: !!interactive,
     skipped: renderedCount === 0,
@@ -12353,6 +12407,7 @@ function drawContourCollection(
     excludeIntervalM = 0,
     minScreenSpanPx = 0,
     maxFeatures = 0,
+    opacityMultiplierResolver = null,
   } = {}
 ) {
   if (!Array.isArray(collection?.features) || collection.features.length === 0) {
@@ -12381,17 +12436,27 @@ function drawContourCollection(
       ? getSafeCanvasColor(colorResolver(feature), color)
       : color;
     if (!strokeColor) return;
-    if (!strokeBatches.has(strokeColor)) {
-      strokeBatches.set(strokeColor, []);
+    const rawMultiplier = typeof opacityMultiplierResolver === "function"
+      ? opacityMultiplierResolver(feature)
+      : 1;
+    const multiplier = clamp(Math.round((Number(rawMultiplier) || 1) / 0.05) * 0.05, 0, 2);
+    const batchKey = `${strokeColor}|${multiplier.toFixed(2)}`;
+    if (!strokeBatches.has(batchKey)) {
+      strokeBatches.set(batchKey, {
+        strokeColor,
+        multiplier,
+        features: [],
+      });
     }
-    strokeBatches.get(strokeColor).push(feature);
+    strokeBatches.get(batchKey).features.push(feature);
   });
 
   let drewAny = false;
   let renderedCount = 0;
-  strokeBatches.forEach((features, strokeColor) => {
+  strokeBatches.forEach(({ features, strokeColor, multiplier }) => {
     if (!Array.isArray(features) || !features.length) return;
     context.strokeStyle = strokeColor;
+    context.globalAlpha = clamp((interactive ? Math.min(opacity, 0.22) : opacity) * multiplier, 0, 1);
     context.beginPath();
     features.forEach((feature) => {
       pathCanvas(feature);
@@ -12461,6 +12526,7 @@ function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied =
     1
   );
   const resolveContourColor = (feature) => getAdaptiveContourStrokeColor(feature, contourColor);
+  const resolveContourIntensity = (feature) => getFieldFeatureMultiplier("physicalContour", feature);
   const majorInterval = clamp(
     (clamp(Number(cfg.contourMajorIntervalM) || 500, 500, 2000) * zoomProfile.majorIntervalMultiplier),
     500,
@@ -12489,6 +12555,7 @@ function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied =
     lowReliefCutoff: majorLowReliefCutoff,
     intervalM: majorInterval,
     minScreenSpanPx: zoomProfile.majorMinScreenSpanPx,
+    opacityMultiplierResolver: resolveContourIntensity,
   });
 
   if (cfg.contourMinorVisible && zoomProfile.minorVisible && k >= presetProfile.minorContourMinZoom) {
@@ -12514,6 +12581,7 @@ function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied =
         excludeIntervalM: majorInterval,
         minScreenSpanPx: zoomProfile.minorMinScreenSpanPx,
         maxFeatures: dynamicMinorMaxFeatures,
+        opacityMultiplierResolver: resolveContourIntensity,
       });
     } else {
       if (shouldReportDeferredContextLayerGap("physical_contours_minor")) {
@@ -14691,10 +14759,19 @@ function getCurrentUtcMinutes() {
   return getCurrentUtcMinutesFromDate(new Date());
 }
 
+function getCycleUtcMinutes(config = getDayNightStyleConfig(), now = new Date()) {
+  const secondsPerDay = clamp(Math.round(Number(config.cycleSecondsPerDay) || 180), 10, 600);
+  const elapsedSeconds = (now.getTime() / 1000) % secondsPerDay;
+  return clamp(Math.floor((elapsedSeconds / secondsPerDay) * 24 * 60), 0, 24 * 60 - 1);
+}
+
 function getDayNightSignatureClockToken(config = getDayNightStyleConfig(), now = new Date()) {
   const dayKey = getUtcDateKey(now);
   if (config.mode === "utc") {
     return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
+  }
+  if (config.mode === "cycle") {
+    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now)}`;
   }
   return `${dayKey}|manual:${config.manualUtcMinutes}`;
 }
@@ -14703,6 +14780,9 @@ function getDayNightLiveClockToken(config = getDayNightStyleConfig(), now = new 
   const dayKey = getUtcDateKey(now);
   if (config.mode === "utc") {
     return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
+  }
+  if (config.mode === "cycle") {
+    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now)}`;
   }
   return `${dayKey}|manual-day`;
 }
@@ -14723,9 +14803,12 @@ function getSolarDeclinationRadians(date = new Date(), utcMinutes = getCurrentUt
 
 function getCurrentSolarState(config = getDayNightStyleConfig()) {
   const now = new Date();
-  const utcMinutes = config.mode === "utc"
+  const mode = String(config.mode || "manual");
+  const utcMinutes = mode === "utc"
     ? getCurrentUtcMinutesFromDate(now)
-    : clamp(Math.round(Number(config.manualUtcMinutes) || 0), 0, 24 * 60 - 1);
+    : mode === "cycle"
+      ? getCycleUtcMinutes(config, now)
+      : clamp(Math.round(Number(config.manualUtcMinutes) || 0), 0, 24 * 60 - 1);
   const declinationDeg = getSolarDeclinationRadians(now, utcMinutes) * (180 / Math.PI);
   const subsolarLongitude = normalizeLongitude(180 - (utcMinutes / 4));
   return {
@@ -16154,7 +16237,8 @@ function clearDayNightClockTimer() {
 
 function syncDayNightClockTimer() {
   const initialConfig = getDayNightStyleConfig();
-  if (!initialConfig.enabled || String(initialConfig.mode || "manual") !== "utc") {
+  const initialMode = String(initialConfig.mode || "manual");
+  if (!initialConfig.enabled || (initialMode !== "utc" && initialMode !== "cycle")) {
     clearDayNightClockTimer();
     return false;
   }
@@ -16162,7 +16246,8 @@ function syncDayNightClockTimer() {
   lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
   dayNightClockTimerId = globalThis.setInterval(() => {
     const config = getDayNightStyleConfig();
-    if (!config.enabled || String(config.mode || "manual") !== "utc") {
+    const mode = String(config.mode || "manual");
+    if (!config.enabled || (mode !== "utc" && mode !== "cycle")) {
       clearDayNightClockTimer();
       return;
     }

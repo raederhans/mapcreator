@@ -59,6 +59,13 @@ const PHYSICAL_NODE_IDS = [
   "physicalContourMajorLowReliefCutoff",
   "physicalContourMinorLowReliefCutoff",
   "physicalBlendMode",
+  "physicalIntensityFieldEnabled",
+  "physicalIntensityFieldWeight",
+  "physicalIntensityFieldRadius",
+  "physicalIntensityFieldStampCenterBtn",
+  "physicalIntensityFieldAddCenterBtn",
+  "physicalIntensityFieldClearBtn",
+  "physicalIntensityFieldPointCount",
   "physicalOpacityValue",
   "physicalAtlasIntensityValue",
   "physicalRainforestEmphasisValue",
@@ -69,6 +76,8 @@ const PHYSICAL_NODE_IDS = [
   "physicalContourMinorIntervalValue",
   "physicalContourMajorLowReliefCutoffValue",
   "physicalContourMinorLowReliefCutoffValue",
+  "physicalIntensityFieldWeightValue",
+  "physicalIntensityFieldRadiusValue",
   ...Object.values(PHYSICAL_CLASS_TOGGLE_IDS),
 ];
 
@@ -100,10 +109,24 @@ function createHarness(ids = PHYSICAL_NODE_IDS, runtimeOverrides = {}) {
   const nodes = buildNodes(ids);
   const dirtyReasons = [];
   const contextLayerLoads = [];
+  const historyEntries = [];
   const runtimeState = {
     showPhysical: true,
     styleConfig: {
       physical: createPhysicalConfig(),
+    },
+    intensityFields: undefined,
+    physicalIntensityField: {
+      schemaVersion: 1,
+      enabled: false,
+      revision: 0,
+      points: [],
+      grid: {
+        bounds: [-180, -90, 180, 90],
+        columns: 0,
+        rows: 0,
+        values: [],
+      },
     },
     ensureContextLayerDataFn(layers, options) {
       contextLayerLoads.push({ layers, options });
@@ -117,9 +140,16 @@ function createHarness(ids = PHYSICAL_NODE_IDS, runtimeOverrides = {}) {
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
     normalizeOceanFillColor: (value) => String(value || "").toLowerCase(),
     renderDirty: (reason) => dirtyReasons.push(reason),
+    captureHistoryState: () => ({
+      physicalIntensityField: JSON.parse(JSON.stringify(runtimeState.physicalIntensityField)),
+    }),
+    pushHistoryEntry: (entry) => {
+      historyEntries.push(entry);
+      return true;
+    },
     documentRef: createTestDocument(nodes),
   });
-  return { contextLayerLoads, dirtyReasons, nodes, owner, runtimeState };
+  return { contextLayerLoads, dirtyReasons, historyEntries, nodes, owner, runtimeState };
 }
 
 test("physical owner renders preset, value labels, and class toggles", () => {
@@ -146,6 +176,10 @@ test("physical owner renders preset, value labels, and class toggles", () => {
   assert.equal(harness.nodes.physicalContourMinorIntervalValue.textContent, "200");
   assert.equal(harness.nodes.physicalClassDesert.checked, false);
   assert.equal(harness.nodes.physicalClassMountain.checked, true);
+  assert.equal(harness.nodes.physicalIntensityFieldEnabled.checked, false);
+  assert.equal(harness.nodes.physicalIntensityFieldWeight.value, "100");
+  assert.equal(harness.nodes.physicalIntensityFieldRadius.value, "500");
+  assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "0");
 });
 
 test("physical owner toggles visibility and requests physical context layers", () => {
@@ -228,4 +262,57 @@ test("physical owner updates class visibility through class toggles", () => {
 
   assert.equal(harness.runtimeState.styleConfig.physical.atlasClassVisibility.mountain_high_relief, false);
   assert.deepEqual(harness.dirtyReasons, ["physical-class-mountain_high_relief"]);
+});
+
+test("physical owner edits intensity field through history-backed controls", () => {
+  const harness = createHarness();
+
+  harness.owner.bindEvents();
+  harness.nodes.physicalIntensityFieldEnabled.checked = true;
+  harness.nodes.physicalIntensityFieldEnabled.dispatch("change");
+  harness.nodes.physicalIntensityFieldWeight.value = "-125";
+  harness.nodes.physicalIntensityFieldWeight.dispatch("input");
+  harness.nodes.physicalIntensityFieldRadius.value = "1250";
+  harness.nodes.physicalIntensityFieldRadius.dispatch("input");
+  harness.nodes.physicalIntensityFieldStampCenterBtn.dispatch("click");
+  harness.nodes.physicalIntensityFieldAddCenterBtn.dispatch("click");
+
+  assert.equal(harness.runtimeState.physicalIntensityField.enabled, true);
+  assert.equal(harness.nodes.physicalIntensityFieldEnabled.checked, true);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.enabled, true);
+  assert.equal(harness.runtimeState.physicalIntensityField.revision, 3);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.revision, 3);
+  assert.equal(harness.runtimeState.physicalIntensityField.points.length, 1);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 1);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points[0].strength, 0.5625);
+  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite instanceof Float32Array);
+  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.some((value) => value < 1));
+  assert.deepEqual(harness.runtimeState.physicalIntensityField.points[0], {
+    id: "point-1",
+    lon: 0,
+    lat: 0,
+    weight: -1.25,
+    radiusKm: 1250,
+    falloff: "smooth",
+  });
+  assert.equal(harness.nodes.physicalIntensityFieldWeightValue.textContent, "-125%");
+  assert.equal(harness.nodes.physicalIntensityFieldRadiusValue.textContent, "1250 km");
+  assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "1");
+  assert.equal(harness.historyEntries.length, 3);
+  assert.deepEqual(harness.dirtyReasons, [
+    "physical-intensity-field-enabled",
+    "physical-intensity-field-stamp-brush",
+    "physical-intensity-field-add-point",
+  ]);
+
+  harness.nodes.physicalIntensityFieldClearBtn.dispatch("click");
+
+  assert.equal(harness.runtimeState.physicalIntensityField.revision, 4);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.revision, 4);
+  assert.equal(harness.runtimeState.physicalIntensityField.points.length, 0);
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 0);
+  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.base.every((value) => value === 1));
+  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.every((value) => value === 1));
+  assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "0");
+  assert.equal(harness.historyEntries.length, 4);
 });

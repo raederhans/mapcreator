@@ -10,7 +10,9 @@ import {
   markLegacyColorStateDirty,
 } from "./sovereignty_manager.js";
 import {
+  normalizeIntensityFieldsState,
   normalizeMapSemanticMode,
+  normalizePhysicalIntensityFieldState,
   restoreImportedAnnotationOverlayState,
   restoreImportedLayerVisibilityState,
   restoreImportedStyleConfigState,
@@ -287,6 +289,8 @@ async function applyImportedProjectState(data, { ui, hooks }) {
   });
   state.parentBorderEnabledByCountry = normalizedParentEnabled;
   restoreImportedStyleConfigState(state, data.styleConfig);
+  state.intensityFields = normalizeIntensityFieldsState(data.intensityFields);
+  state.physicalIntensityField = normalizePhysicalIntensityFieldState(data.physicalIntensityField);
   restoreImportedLayerVisibilityState(state, data.layerVisibility);
   state.customPresets =
     data.customPresets && typeof data.customPresets === "object" ? data.customPresets : {};

@@ -1,8 +1,17 @@
 import {
+  INTENSITY_FIELD_GRID,
+  bumpPhysicalIntensityFieldRevision,
   createPhysicalStyleConfigForPreset,
+  normalizePhysicalIntensityFieldState,
   normalizePhysicalPreset,
   normalizePhysicalStyleConfig,
+  stampIntensityBrush,
+  updateIntensityFieldChannel,
 } from "../../core/state.js";
+import {
+  captureHistoryState as captureRuntimeHistoryState,
+  pushHistoryEntry as pushRuntimeHistoryEntry,
+} from "../../core/history_manager.js";
 
 export const PHYSICAL_CLASS_TOGGLE_IDS = Object.freeze({
   mountain_high_relief: "physicalClassMountain",
@@ -45,6 +54,13 @@ function collectPhysicalNodes(documentRef) {
     physicalContourMajorLowReliefCutoff: documentRef.getElementById("physicalContourMajorLowReliefCutoff"),
     physicalContourMinorLowReliefCutoff: documentRef.getElementById("physicalContourMinorLowReliefCutoff"),
     physicalBlendMode: documentRef.getElementById("physicalBlendMode"),
+    physicalIntensityFieldEnabled: documentRef.getElementById("physicalIntensityFieldEnabled"),
+    physicalIntensityFieldWeight: documentRef.getElementById("physicalIntensityFieldWeight"),
+    physicalIntensityFieldRadius: documentRef.getElementById("physicalIntensityFieldRadius"),
+    physicalIntensityFieldStampCenterBtn: documentRef.getElementById("physicalIntensityFieldStampCenterBtn"),
+    physicalIntensityFieldAddCenterBtn: documentRef.getElementById("physicalIntensityFieldAddCenterBtn"),
+    physicalIntensityFieldClearBtn: documentRef.getElementById("physicalIntensityFieldClearBtn"),
+    physicalIntensityFieldPointCount: documentRef.getElementById("physicalIntensityFieldPointCount"),
     physicalOpacityValue: documentRef.getElementById("physicalOpacityValue"),
     physicalAtlasIntensityValue: documentRef.getElementById("physicalAtlasIntensityValue"),
     physicalRainforestEmphasisValue: documentRef.getElementById("physicalRainforestEmphasisValue"),
@@ -55,6 +71,8 @@ function collectPhysicalNodes(documentRef) {
     physicalContourMinorIntervalValue: documentRef.getElementById("physicalContourMinorIntervalValue"),
     physicalContourMajorLowReliefCutoffValue: documentRef.getElementById("physicalContourMajorLowReliefCutoffValue"),
     physicalContourMinorLowReliefCutoffValue: documentRef.getElementById("physicalContourMinorLowReliefCutoffValue"),
+    physicalIntensityFieldWeightValue: documentRef.getElementById("physicalIntensityFieldWeightValue"),
+    physicalIntensityFieldRadiusValue: documentRef.getElementById("physicalIntensityFieldRadiusValue"),
     physicalClassToggles,
   };
 }
@@ -66,6 +84,8 @@ export function createAppearancePhysicalOwner({
   renderDirty = () => {},
   normalizeOceanFillColor = (value) => value,
   documentRef = globalThis.document,
+  captureHistoryState = captureRuntimeHistoryState,
+  pushHistoryEntry = pushRuntimeHistoryEntry,
 } = {}) {
   const nodes = collectPhysicalNodes(documentRef);
 
@@ -75,6 +95,73 @@ export function createAppearancePhysicalOwner({
       runtimeState.styleConfig.physical.contourColor || "#6b5947",
     );
     return runtimeState.styleConfig.physical;
+  };
+
+  const syncPhysicalIntensityField = () => {
+    runtimeState.physicalIntensityField = normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField);
+    return runtimeState.physicalIntensityField;
+  };
+
+  const getPhysicalIntensityDraft = () => {
+    const weightValue = Number(nodes.physicalIntensityFieldWeight?.value);
+    const radiusValue = Number(nodes.physicalIntensityFieldRadius?.value);
+    return {
+      weight: clamp(Number.isFinite(weightValue) ? weightValue / 100 : 1, -2, 2),
+      radiusKm: clamp(Number.isFinite(radiusValue) ? radiusValue : 500, 25, 5000),
+    };
+  };
+
+  const renderPhysicalIntensityFieldUi = () => {
+    const fieldState = syncPhysicalIntensityField();
+    const firstPoint = fieldState.points[0] || {};
+    const weight = Number.isFinite(Number(firstPoint.weight)) ? Number(firstPoint.weight) : 1;
+    const radiusKm = Number.isFinite(Number(firstPoint.radiusKm)) ? Number(firstPoint.radiusKm) : 500;
+    if (nodes.physicalIntensityFieldEnabled) nodes.physicalIntensityFieldEnabled.checked = !!fieldState.enabled;
+    if (nodes.physicalIntensityFieldWeight) nodes.physicalIntensityFieldWeight.value = String(Math.round(weight * 100));
+    if (nodes.physicalIntensityFieldWeightValue) nodes.physicalIntensityFieldWeightValue.textContent = `${Math.round(weight * 100)}%`;
+    if (nodes.physicalIntensityFieldRadius) nodes.physicalIntensityFieldRadius.value = String(Math.round(radiusKm));
+    if (nodes.physicalIntensityFieldRadiusValue) nodes.physicalIntensityFieldRadiusValue.textContent = `${Math.round(radiusKm)} km`;
+    if (nodes.physicalIntensityFieldPointCount) nodes.physicalIntensityFieldPointCount.textContent = String(fieldState.points.length);
+    return fieldState;
+  };
+
+  const commitPhysicalIntensityField = (mutate, reason, { clearAtlasGrid = false } = {}) => {
+    const before = captureHistoryState({
+      intensityFieldChannels: ["physicalAtlas"],
+      physicalIntensityField: true,
+    });
+    const current = syncPhysicalIntensityField();
+    mutate(current);
+    runtimeState.physicalIntensityField = bumpPhysicalIntensityFieldRevision(current);
+    runtimeState.intensityFields = updateIntensityFieldChannel(runtimeState.intensityFields, "physicalAtlas", (channel) => {
+      channel.enabled = !!runtimeState.physicalIntensityField.enabled;
+      if (clearAtlasGrid) {
+        channel.grid.base.fill(INTENSITY_FIELD_GRID.neutral);
+      }
+      channel.points = runtimeState.physicalIntensityField.points.map((point) => ({
+        id: point.id,
+        lon: point.lon,
+        lat: point.lat,
+        strength: clamp(1 + (Number(point.weight || 0) * 0.35), 0, 2),
+        radiusDeg: clamp(Number(point.radiusKm || 500) / 111, 0.25, 30),
+        falloff: point.falloff,
+      }));
+    });
+    const after = captureHistoryState({
+      intensityFieldChannels: ["physicalAtlas"],
+      physicalIntensityField: true,
+    });
+    pushHistoryEntry({
+      label: "Physical intensity field",
+      before,
+      after,
+      meta: {
+        reason,
+        affectsPhysicalIntensityField: true,
+      },
+    });
+    renderPhysicalIntensityFieldUi();
+    renderDirty(reason);
   };
 
   const applyPhysicalPresetConfig = (preset, { preserveMode = true } = {}) => {
@@ -130,6 +217,7 @@ export function createAppearancePhysicalOwner({
     if (nodes.physicalContourMinorLowReliefCutoff) nodes.physicalContourMinorLowReliefCutoff.value = String(Math.round(physicalConfig.contourMinorLowReliefCutoffM));
     if (nodes.physicalContourMinorLowReliefCutoffValue) nodes.physicalContourMinorLowReliefCutoffValue.textContent = `${Math.round(physicalConfig.contourMinorLowReliefCutoffM)}`;
     if (nodes.physicalBlendMode) nodes.physicalBlendMode.value = physicalConfig.blendMode;
+    renderPhysicalIntensityFieldUi();
     Object.entries(nodes.physicalClassToggles).forEach(([key, element]) => {
       if (element) element.checked = physicalConfig.atlasClassVisibility?.[key] !== false;
     });
@@ -254,6 +342,102 @@ export function createAppearancePhysicalOwner({
       cfg.blendMode = String(event.target.value || "source-over");
     }, "physical-blend");
 
+    if (nodes.physicalIntensityFieldEnabled && nodes.physicalIntensityFieldEnabled.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldEnabled.addEventListener("change", (event) => {
+        commitPhysicalIntensityField((fieldState) => {
+          fieldState.enabled = !!event.target.checked;
+        }, "physical-intensity-field-enabled");
+      });
+      nodes.physicalIntensityFieldEnabled.dataset.bound = "true";
+    }
+
+    if (nodes.physicalIntensityFieldWeight && nodes.physicalIntensityFieldWeight.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldWeight.addEventListener("input", () => {
+        const draft = getPhysicalIntensityDraft();
+        if (nodes.physicalIntensityFieldWeightValue) nodes.physicalIntensityFieldWeightValue.textContent = `${Math.round(draft.weight * 100)}%`;
+      });
+      nodes.physicalIntensityFieldWeight.dataset.bound = "true";
+    }
+
+    if (nodes.physicalIntensityFieldRadius && nodes.physicalIntensityFieldRadius.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldRadius.addEventListener("input", () => {
+        const draft = getPhysicalIntensityDraft();
+        if (nodes.physicalIntensityFieldRadiusValue) nodes.physicalIntensityFieldRadiusValue.textContent = `${Math.round(draft.radiusKm)} km`;
+      });
+      nodes.physicalIntensityFieldRadius.dataset.bound = "true";
+    }
+
+    if (nodes.physicalIntensityFieldStampCenterBtn && nodes.physicalIntensityFieldStampCenterBtn.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldStampCenterBtn.addEventListener("click", () => {
+        const before = captureHistoryState({
+          intensityFieldChannels: ["physicalAtlas"],
+          physicalIntensityField: true,
+        });
+        const draft = getPhysicalIntensityDraft();
+        const current = syncPhysicalIntensityField();
+        current.enabled = true;
+        runtimeState.physicalIntensityField = bumpPhysicalIntensityFieldRevision(current);
+        runtimeState.intensityFields = updateIntensityFieldChannel(runtimeState.intensityFields, "physicalAtlas", (channel) => {
+          channel.enabled = true;
+          stampIntensityBrush(channel, {
+            lon: 0,
+            lat: 0,
+            radiusDeg: clamp(draft.radiusKm / 111, 0.25, 30),
+            strength: clamp(1 + (draft.weight * 0.35), 0, 2),
+          });
+        });
+        const after = captureHistoryState({
+          intensityFieldChannels: ["physicalAtlas"],
+          physicalIntensityField: true,
+        });
+        pushHistoryEntry({
+          label: "Physical intensity brush",
+          before,
+          after,
+          meta: {
+            reason: "physical-intensity-field-stamp-brush",
+            affectsIntensityField: true,
+          },
+        });
+        if (nodes.physicalIntensityFieldEnabled) nodes.physicalIntensityFieldEnabled.checked = true;
+        if (nodes.physicalIntensityFieldPointCount) {
+          nodes.physicalIntensityFieldPointCount.textContent = String(runtimeState.physicalIntensityField.points.length);
+        }
+        renderDirty("physical-intensity-field-stamp-brush");
+      });
+      nodes.physicalIntensityFieldStampCenterBtn.dataset.bound = "true";
+    }
+
+    if (nodes.physicalIntensityFieldAddCenterBtn && nodes.physicalIntensityFieldAddCenterBtn.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldAddCenterBtn.addEventListener("click", () => {
+        commitPhysicalIntensityField((fieldState) => {
+          const draft = getPhysicalIntensityDraft();
+          fieldState.enabled = true;
+          fieldState.points = [
+            ...fieldState.points,
+            {
+              id: `point-${fieldState.points.length + 1}`,
+              lon: 0,
+              lat: 0,
+              weight: draft.weight,
+              radiusKm: draft.radiusKm,
+              falloff: "smooth",
+            },
+          ];
+        }, "physical-intensity-field-add-point");
+      });
+      nodes.physicalIntensityFieldAddCenterBtn.dataset.bound = "true";
+    }
+
+    if (nodes.physicalIntensityFieldClearBtn && nodes.physicalIntensityFieldClearBtn.dataset.bound !== "true") {
+      nodes.physicalIntensityFieldClearBtn.addEventListener("click", () => {
+        commitPhysicalIntensityField((fieldState) => {
+          fieldState.points = [];
+        }, "physical-intensity-field-clear", { clearAtlasGrid: true });
+      });
+      nodes.physicalIntensityFieldClearBtn.dataset.bound = "true";
+    }
+
     Object.entries(nodes.physicalClassToggles).forEach(([key, element]) => {
       if (!element || element.dataset.bound === "true") return;
       element.addEventListener("change", (event) => {
@@ -272,7 +456,9 @@ export function createAppearancePhysicalOwner({
     applyPhysicalPresetConfig,
     bindEvents,
     getPhysicalPresetHint,
+    renderPhysicalIntensityFieldUi,
     renderPhysicalUi,
+    syncPhysicalIntensityField,
     syncPhysicalConfig,
   };
 }

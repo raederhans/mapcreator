@@ -5,6 +5,8 @@ import {
   normalizeDayNightStyleConfig,
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
+  normalizeIntensityFieldsState,
+  normalizePhysicalIntensityFieldState,
   normalizePhysicalStyleConfig,
   normalizeReferenceImageState,
   normalizeRiversStyleConfig,
@@ -14,6 +16,8 @@ import {
   normalizeTransportWorkbenchUiState,
   normalizeExportWorkbenchUiState,
   normalizeTextureStyleConfig,
+  serializeIntensityFieldsState,
+  serializePhysicalIntensityFieldState,
 } from "./state.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
@@ -518,6 +522,8 @@ class FileManager {
       operationalLines: normalizeOperationalLines(appState.operationalLines),
       operationGraphics: normalizeOperationGraphics(appState.operationGraphics),
       unitCounters: normalizeUnitCounters(appState.unitCounters),
+      intensityFields: serializeIntensityFieldsState(appState.intensityFields),
+      physicalIntensityField: serializePhysicalIntensityFieldState(appState.physicalIntensityField),
       customPresets: appState.customPresets || {},
       referenceImageState: normalizeReferenceImageState(appState.referenceImageState),
       recentColors: normalizeRecentColors(appState.recentColors),
@@ -781,6 +787,8 @@ class FileManager {
         data.styleConfig.cityPoints = normalizeCityLayerStyleConfig(data.styleConfig.cityPoints);
         data.styleConfig.urban = normalizeUrbanStyleConfig(data.styleConfig.urban);
         data.styleConfig.physical = normalizePhysicalStyleConfig(data.styleConfig.physical);
+        data.intensityFields = normalizeIntensityFieldsState(data.intensityFields);
+        data.physicalIntensityField = normalizePhysicalIntensityFieldState(data.physicalIntensityField);
         data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
         data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
         if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {

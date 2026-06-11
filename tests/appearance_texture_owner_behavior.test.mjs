@@ -186,6 +186,27 @@ test("texture owner binds range inputs once and commits texture history on chang
   assert.deepEqual(harness.historyEntries[0].after.stylePaths, TEXTURE_STYLE_PATHS);
 });
 
+test("texture owner commits a pending history entry before a different control starts", () => {
+  const harness = createHarness([
+    "texturePaperScale",
+    "texturePaperWarmth",
+  ]);
+
+  harness.owner.bindEvents();
+  harness.nodes.texturePaperScale.value = "150";
+  harness.nodes.texturePaperScale.dispatch("input");
+  harness.nodes.texturePaperWarmth.value = "70";
+  harness.nodes.texturePaperWarmth.dispatch("input");
+  harness.nodes.texturePaperWarmth.dispatch("change");
+
+  assert.equal(harness.runtimeState.styleConfig.texture.paper.scale, 1.5);
+  assert.equal(harness.runtimeState.styleConfig.texture.paper.warmth, 0.7);
+  assert.deepEqual(
+    harness.historyEntries.map((entry) => entry.kind),
+    ["texture-paper-scale", "texture-paper-warmth"],
+  );
+});
+
 test("texture paper scale roundtrips back to one-to-one size", () => {
   const harness = createHarness([
     "texturePaperScale",
@@ -239,14 +260,72 @@ test("day-night owner syncs computer UTC time into the manual slider", () => {
   assert.deepEqual(harness.dirtyReasons, ["day-night-time", "day-night-sync-computer-utc"]);
 });
 
-test("day-night normalization retires legacy live UTC mode", () => {
-  const normalized = normalizeDayNightStyleConfig({
+test("day-night normalization preserves live UTC and cycle modes", () => {
+  const utc = normalizeDayNightStyleConfig({
     mode: "utc",
     manualUtcMinutes: 18 * 60,
   });
+  const cycle = normalizeDayNightStyleConfig({
+    mode: "cycle",
+    cycleSecondsPerDay: 45,
+  });
 
-  assert.equal(normalized.mode, "manual");
-  assert.equal(normalized.manualUtcMinutes, 18 * 60);
+  assert.equal(utc.mode, "utc");
+  assert.equal(utc.manualUtcMinutes, 18 * 60);
+  assert.equal(cycle.mode, "cycle");
+  assert.equal(cycle.cycleSecondsPerDay, 45);
+});
+
+test("day-night owner toggles mode panels and writes cycle speed", () => {
+  const harness = createHarness([
+    "dayNightMode",
+    "dayNightManualControls",
+    "dayNightCycleControls",
+    "dayNightManualTime",
+    "dayNightManualTimeValue",
+    "dayNightCycleSpeed",
+    "dayNightCycleSpeedValue",
+  ], {
+    styleConfig: {
+      texture: { mode: "none" },
+      dayNight: {
+        enabled: true,
+        mode: "cycle",
+        manualUtcMinutes: 720,
+        cycleSecondsPerDay: 120,
+      },
+    },
+  });
+
+  harness.owner.renderDayNightUI();
+  harness.owner.bindEvents();
+
+  assert.equal(harness.nodes.dayNightMode.value, "cycle");
+  assert.equal(harness.nodes.dayNightManualControls.classList.contains("hidden"), true);
+  assert.equal(harness.nodes.dayNightCycleControls.classList.contains("hidden"), false);
+  assert.equal(harness.nodes.dayNightCycleSpeed.value, "120");
+  assert.equal(harness.nodes.dayNightCycleSpeedValue.textContent, "120s / day");
+
+  harness.nodes.dayNightMode.value = "utc";
+  harness.nodes.dayNightMode.dispatch("change");
+  assert.equal(harness.runtimeState.styleConfig.dayNight.mode, "utc");
+  assert.equal(harness.nodes.dayNightManualControls.classList.contains("hidden"), true);
+  assert.equal(harness.nodes.dayNightCycleControls.classList.contains("hidden"), true);
+
+  harness.nodes.dayNightCycleSpeed.value = "45";
+  harness.nodes.dayNightCycleSpeed.dispatch("input");
+  assert.equal(harness.runtimeState.styleConfig.dayNight.mode, "cycle");
+  assert.equal(harness.runtimeState.styleConfig.dayNight.cycleSecondsPerDay, 45);
+});
+
+test("day-night renderer supports utc and cycle clock tokens", () => {
+  const source = readFileSync(join(process.cwd(), "js", "core", "map_renderer.js"), "utf8");
+
+  assert.match(source, /function getCycleUtcMinutes\(config = getDayNightStyleConfig\(\), now = new Date\(\)\)/);
+  assert.match(source, /if \(config\.mode === "cycle"\) \{\s*return `\$\{dayKey\}\|cycle:/);
+  assert.match(source, /mode === "cycle"\s*\?\s*getCycleUtcMinutes\(config, now\)/);
+  assert.match(source, /initialMode !== "utc" && initialMode !== "cycle"/);
+  assert.match(source, /mode !== "utc" && mode !== "cycle"/);
 });
 
 test("day-night owner renders modern defaults from normalized state", () => {
@@ -352,4 +431,6 @@ test("day-night HTML initial values match normalized defaults", () => {
     Math.round(defaults.historicalCityLightsSecondaryRetention * 100),
   );
   assertRangeDefault("dayNightShadowOpacity", Math.round(defaults.shadowOpacity * 100));
+  assert.match(html, new RegExp(`<input[^>]*id="dayNightCycleSpeed"[^>]*value="${defaults.cycleSecondsPerDay}"`, "s"));
+  assert.match(html, new RegExp(`<span[^>]*id="dayNightCycleSpeedValue"[^>]*>${defaults.cycleSecondsPerDay}s \\/ day<\\/span>`, "s"));
 });

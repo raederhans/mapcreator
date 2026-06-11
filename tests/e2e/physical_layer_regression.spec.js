@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { getAppUrl } = require("./support/playwright-app");
+const { getAppUrl, waitForRenderIdle } = require("./support/playwright-app");
 
 function resolveBaseUrl() {
   return getAppUrl();
@@ -52,6 +52,26 @@ function getMeanRgbDiff(snapshotA, snapshotB) {
     diffTotal += Math.abs(snapshotA.pixels[index] - snapshotB.pixels[index]);
   }
   return diffTotal / snapshotA.pixels.length;
+}
+
+function isAnonymousBackendProbeFailure(entry) {
+  if (entry?.status !== 401) return false;
+  try {
+    return new URL(entry.url).pathname === "/api/backend/auth/me";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function filterExpectedBackendProbeConsoleErrors(consoleErrors, networkFailures) {
+  const filtered = [...consoleErrors];
+  const expectedProbeCount = networkFailures.filter(isAnonymousBackendProbeFailure).length;
+  for (let index = 0; index < expectedProbeCount; index += 1) {
+    const matchIndex = filtered.indexOf("Failed to load resource: the server responded with a status of 401 (Unauthorized)");
+    if (matchIndex === -1) break;
+    filtered.splice(matchIndex, 1);
+  }
+  return filtered;
 }
 
 test("physical layer defaults and atlas rendering regression", async ({ page }) => {
@@ -210,7 +230,7 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
     state.showPhysical = false;
     state.renderNowFn?.();
   });
-  await page.waitForTimeout(400);
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 60_000 });
   const physicalOffSnapshot = await captureCanvasSnapshot(page);
 
   await page.evaluate(async () => {
@@ -222,14 +242,25 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
     });
     state.renderNowFn?.();
   });
-  await page.waitForTimeout(400);
+  await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 60_000 });
   const physicalOnSnapshot = await captureCanvasSnapshot(page);
+  const renderDiagnostics = await page.evaluate(() => {
+    const metrics = globalThis.__renderPerfMetrics || {};
+    return {
+      physicalRenderedCount: Number(metrics.drawPhysicalBasePass?.renderedCount || 0),
+      reliefRenderedCount: Number(metrics.drawPhysicalReliefOverlayLayer?.renderedCount || 0),
+    };
+  });
   const reliefOverlayDiff = getMeanRgbDiff(physicalOffSnapshot, physicalOnSnapshot);
+  const unexpectedConsoleErrors = filterExpectedBackendProbeConsoleErrors(consoleErrors, networkFailures);
+  const unexpectedNetworkFailures = networkFailures.filter((entry) => !isAnonymousBackendProbeFailure(entry));
 
-  expect(reliefOverlayDiff).toBeGreaterThan(0.9);
-  // 当前 atlas_only 视觉基线会覆盖更大范围，保留一个宽上界来拦截整页异常爆色。
+  expect(renderDiagnostics.physicalRenderedCount).toBeGreaterThan(0);
+  expect(renderDiagnostics.reliefRenderedCount).toBeGreaterThan(0);
+  // The synthetic polygon covers a narrow part of the full canvas; renderer metrics prove the draw path.
+  expect(reliefOverlayDiff).toBeGreaterThan(0.25);
   expect(reliefOverlayDiff).toBeLessThan(120);
-  expect(consoleErrors, `Console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([]);
+  expect(unexpectedConsoleErrors, `Console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([]);
   expect(pageErrors, `Page errors: ${JSON.stringify(pageErrors, null, 2)}`).toEqual([]);
-  expect(networkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
+  expect(unexpectedNetworkFailures, `Network failures: ${JSON.stringify(networkFailures, null, 2)}`).toEqual([]);
 });

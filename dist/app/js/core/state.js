@@ -37,6 +37,12 @@ import {
   createDefaultSpatialIndexState,
 } from "./state/spatial_index_state.js";
 import {
+  createDefaultIntensityFieldsState,
+} from "./state/intensity_field_state.js";
+import {
+  createDefaultPhysicalIntensityFieldState,
+} from "./physical_intensity_field_state.js";
+import {
   createDefaultBootState,
 } from "./state/boot_state.js";
 import {
@@ -55,6 +61,9 @@ import {
 export * from "./state_defaults.js";
 export * from "./state_catalog.js";
 export * from "./state/index.js";
+export * from "./intensity_field.js";
+export * from "./state/intensity_field_state.js";
+export * from "./physical_intensity_field_state.js";
 
 export const state = {
   ...createDefaultBootState(),
@@ -71,6 +80,8 @@ export const state = {
   ...createDefaultHistoryState(),
   ...createDefaultColorPresetState(),
   ...createDefaultUiChromeState(),
+  intensityFields: createDefaultIntensityFieldsState(),
+  physicalIntensityField: createDefaultPhysicalIntensityFieldState(),
 
   countryPalette,
   defaultCountryPalette,

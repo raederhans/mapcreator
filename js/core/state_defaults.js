@@ -760,6 +760,7 @@ function createDefaultDayNightStyleConfig() {
     enabled: false,
     mode: "manual",
     manualUtcMinutes: 12 * 60,
+    cycleSecondsPerDay: 180,
     shadowOpacity: 0.5,
     twilightWidthDeg: 6,
     cityLightsEnabled: true,
@@ -778,15 +779,22 @@ function createDefaultDayNightStyleConfig() {
 function normalizeDayNightStyleConfig(rawConfig) {
   const defaults = createDefaultDayNightStyleConfig();
   const raw = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
+  const rawMode = String(raw.mode || defaults.mode).trim().toLowerCase();
+  const mode = rawMode === "utc" || rawMode === "cycle" ? rawMode : "manual";
   const cityLightsStyle = String(raw.cityLightsStyle || defaults.cityLightsStyle).trim().toLowerCase();
 
   return {
     enabled: raw.enabled === undefined ? defaults.enabled : !!raw.enabled,
-    mode: "manual",
+    mode,
     manualUtcMinutes: clamp(
       Math.round(toFiniteNumber(raw.manualUtcMinutes, defaults.manualUtcMinutes)),
       0,
       24 * 60 - 1
+    ),
+    cycleSecondsPerDay: clamp(
+      Math.round(toFiniteNumber(raw.cycleSecondsPerDay, defaults.cycleSecondsPerDay)),
+      10,
+      600
     ),
     shadowOpacity: clamp(toFiniteNumber(raw.shadowOpacity, defaults.shadowOpacity), 0, 0.85),
     twilightWidthDeg: clamp(Math.round(toFiniteNumber(raw.twilightWidthDeg, defaults.twilightWidthDeg)), 2, 28),

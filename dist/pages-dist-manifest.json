@@ -36338,7 +36338,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 226643
+      "size_bytes": 230532
     },
     {
       "path": "app/js/api/backend_client.js",
@@ -36418,7 +36418,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 43732
+      "size_bytes": 44248
     },
     {
       "path": "app/js/core/frame_scheduler.js",
@@ -36450,7 +36450,11 @@
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 11708
+      "size_bytes": 13658
+    },
+    {
+      "path": "app/js/core/intensity_field.js",
+      "size_bytes": 11334
     },
     {
       "path": "app/js/core/interaction_funnel/import_apply_orchestration.js",
@@ -36466,7 +36470,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 16700
+      "size_bytes": 16952
     },
     {
       "path": "app/js/core/legend_manager.js",
@@ -36502,7 +36506,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 989804
+      "size_bytes": 993963
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36519,6 +36523,10 @@
     {
       "path": "app/js/core/perf_probe.js",
       "size_bytes": 3767
+    },
+    {
+      "path": "app/js/core/physical_intensity_field_state.js",
+      "size_bytes": 3311
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
@@ -36849,6 +36857,10 @@
       "size_bytes": 7712
     },
     {
+      "path": "app/js/core/state/intensity_field_state.js",
+      "size_bytes": 5299
+    },
+    {
       "path": "app/js/core/state/renderer_runtime_state.js",
       "size_bytes": 16027
     },
@@ -36870,7 +36882,7 @@
     },
     {
       "path": "app/js/core/state.js",
-      "size_bytes": 2257
+      "size_bytes": 2712
     },
     {
       "path": "app/js/core/state_catalog.js",
@@ -36878,7 +36890,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 58744
+      "size_bytes": 59060
     },
     {
       "path": "app/js/core/transport_capability_registry.js",
@@ -36946,7 +36958,7 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 46135
+      "size_bytes": 46829
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
@@ -37010,7 +37022,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_city_points_owner.js",
-      "size_bytes": 13009
+      "size_bytes": 12697
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
@@ -37022,7 +37034,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 16163
+      "size_bytes": 25143
     },
     {
       "path": "app/js/ui/toolbar/appearance_reference_owner.js",
@@ -37034,7 +37046,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 37770
+      "size_bytes": 39070
     },
     {
       "path": "app/js/ui/toolbar/appearance_transport_summary.js",
@@ -37074,7 +37086,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_appearance_controller.js",
-      "size_bytes": 42131
+      "size_bytes": 46533
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_apply_bridge_owner.js",
@@ -37422,7 +37434,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1056207
+      "size_bytes": 1056493
     },
     {
       "path": "styles.css",
@@ -37439,5 +37451,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1144767156
+  "total_bytes": 1144813987
 }

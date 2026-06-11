@@ -504,6 +504,38 @@
                             <option id="optPhysicalBlendNormal" value="source-over" selected>Normal</option>
                           </select>
                         </div>
+                        <div class="appearance-prop-group">
+                          <h3 id="lblPhysicalIntensityFieldPanel" class="appearance-prop-heading">Intensity Field</h3>
+                          <div class="space-y-2 mt-2">
+                            <label class="toggle-label">
+                              <input id="physicalIntensityFieldEnabled" type="checkbox" class="checkbox-input" />
+                              <span id="lblPhysicalIntensityFieldEnabled">Enable Intensity Field</span>
+                            </label>
+                            <div>
+                              <div class="range-row">
+                                <label id="lblPhysicalIntensityFieldWeight" class="range-label" for="physicalIntensityFieldWeight">Weight</label>
+                                <span id="physicalIntensityFieldWeightValue" class="range-value">100%</span>
+                              </div>
+                              <input id="physicalIntensityFieldWeight" type="range" min="-200" max="200" value="100" class="range-input" />
+                            </div>
+                            <div>
+                              <div class="range-row">
+                                <label id="lblPhysicalIntensityFieldRadius" class="range-label" for="physicalIntensityFieldRadius">Radius</label>
+                                <span id="physicalIntensityFieldRadiusValue" class="range-value">500 km</span>
+                              </div>
+                              <input id="physicalIntensityFieldRadius" type="range" min="25" max="5000" step="25" value="500" class="range-input" />
+                            </div>
+                            <div class="flex items-center justify-between gap-2">
+                              <button id="physicalIntensityFieldStampCenterBtn" type="button" class="sidebar-action-secondary">Stamp Center Brush</button>
+                              <button id="physicalIntensityFieldAddCenterBtn" type="button" class="sidebar-action-secondary">Add Center Point</button>
+                              <button id="physicalIntensityFieldClearBtn" type="button" class="sidebar-action-secondary">Clear</button>
+                            </div>
+                            <div class="range-row">
+                              <span id="lblPhysicalIntensityFieldPointCount" class="range-label">Points</span>
+                              <span id="physicalIntensityFieldPointCount" class="range-value">0</span>
+                            </div>
+                          </div>
+                        </div>
                         <div class="ml-5 space-y-3">
                           <div class="appearance-prop-group">
                             <h3 id="lblTerrainAtlasPanel" class="appearance-prop-heading">Terrain Atlas</h3>
@@ -925,6 +957,15 @@
                     <span id="lblDayNightEnabled">Enable Day / Night Cycle</span>
                   </label>
 
+                  <div class="appearance-day-night-card">
+                    <label id="lblDayNightMode" class="section-header-block" for="dayNightMode">Clock Mode</label>
+                    <select id="dayNightMode" class="select-input mt-2">
+                      <option id="optDayNightModeManual" value="manual" selected>Manual UTC</option>
+                      <option id="optDayNightModeUtc" value="utc">Live Computer UTC</option>
+                      <option id="optDayNightModeCycle" value="cycle">Continuous Cycle</option>
+                    </select>
+                  </div>
+
                   <div id="dayNightManualControls" class="appearance-day-night-card">
                     <div class="range-row">
                       <label id="lblDayNightTime" class="range-label" for="dayNightManualTime">UTC Time</label>
@@ -946,6 +987,22 @@
                     >
                       Sync Computer UTC Time
                     </button>
+                  </div>
+
+                  <div id="dayNightCycleControls" class="appearance-day-night-card hidden">
+                    <div class="range-row">
+                      <label id="lblDayNightCycleSpeed" class="range-label" for="dayNightCycleSpeed">Cycle Speed</label>
+                      <span id="dayNightCycleSpeedValue" class="range-value">180s / day</span>
+                    </div>
+                    <input
+                      id="dayNightCycleSpeed"
+                      type="range"
+                      min="10"
+                      max="600"
+                      step="5"
+                      value="180"
+                      class="range-input"
+                    />
                   </div>
 
                   <div class="appearance-day-night-card">

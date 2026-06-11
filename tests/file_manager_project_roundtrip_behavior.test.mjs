@@ -15,6 +15,13 @@ import {
 } from "../js/core/transport_capability_registry.js";
 import { state } from "../js/core/state.js";
 import {
+  createIntensityFieldsState,
+  sampleIntensityField,
+} from "../js/core/intensity_field.js";
+import {
+  updateIntensityFieldChannel,
+} from "../js/core/state/intensity_field_state.js";
+import {
   readRegisteredRuntimeHookSource,
   registerRuntimeHook,
 } from "../js/core/state/index.js";
@@ -170,7 +177,7 @@ function createTransportOverviewImportPayload(layerVisibility = {}) {
   };
 }
 
-async function importProjectThroughFunnelPayload(payload) {
+async function importProjectThroughFunnelPayload(payload, { capturePhysicalIntensityField = false } = {}) {
   const previousDocument = globalThis.document;
   const previousFileReader = globalThis.FileReader;
   const previousEnsureContextLayerDataHook = readRegisteredRuntimeHookSource(state, "ensureContextLayerDataFn");
@@ -181,7 +188,9 @@ async function importProjectThroughFunnelPayload(payload) {
     showRail: state.showRail,
     showRoad: state.showRoad,
   };
+  const previousPhysicalIntensityField = state.physicalIntensityField;
   const requests = [];
+  let importedPhysicalIntensityField = null;
 
   globalThis.document = {
     getElementById: () => null,
@@ -220,9 +229,15 @@ async function importProjectThroughFunnelPayload(payload) {
         }
       );
     });
-    return requests;
+    if (capturePhysicalIntensityField) {
+      importedPhysicalIntensityField = JSON.parse(JSON.stringify(state.physicalIntensityField));
+    }
+    return capturePhysicalIntensityField
+      ? { requests, physicalIntensityField: importedPhysicalIntensityField }
+      : requests;
   } finally {
     Object.assign(state, previousTransportVisibilityState);
+    state.physicalIntensityField = previousPhysicalIntensityField;
     registerRuntimeHook(state, "ensureContextLayerDataFn", previousEnsureContextLayerDataHook);
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
@@ -290,6 +305,87 @@ test("project payload builder keeps open ocean visible with interaction off by d
   assert.equal(payload.layerVisibility.allowOpenOceanPaint, false);
 });
 
+test("project export and import preserve physical intensity field state", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+    physicalIntensityField: {
+      enabled: true,
+      revision: 7,
+      points: [{
+        id: "ridge-1",
+        lon: 12.5,
+        lat: 45.25,
+        weight: 1.4,
+        radiusKm: 900,
+        falloff: "linear",
+      }],
+      grid: {
+        bounds: [-20, 30, 30, 60],
+        columns: 2,
+        rows: 2,
+        values: [0, 0.5, -0.25, 1.2],
+      },
+    },
+  });
+
+  assert.equal(payload.physicalIntensityField.enabled, true);
+  assert.equal(payload.physicalIntensityField.revision, 7);
+  assert.equal(payload.physicalIntensityField.points[0].id, "ridge-1");
+  assert.deepEqual(payload.physicalIntensityField.grid.values, [0, 0.5, -0.25, 1.2]);
+
+  const result = await importProjectPayload(payload);
+  assert.equal(result.successes.length, 1);
+  assert.equal(result.successes[0].physicalIntensityField.enabled, true);
+  assert.equal(result.successes[0].physicalIntensityField.points[0].falloff, "linear");
+});
+
+test("project export and import preserve unified intensity fields", async () => {
+  const intensityFields = updateIntensityFieldChannel(createIntensityFieldsState(), "physicalAtlas", (channel) => {
+    channel.enabled = true;
+    channel.points = [{
+      id: "alps-field",
+      lon: 10,
+      lat: 46,
+      strength: 1.75,
+      radiusDeg: 7,
+      falloff: "smooth",
+    }];
+  });
+
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+    intensityFields,
+  });
+
+  assert.equal(payload.intensityFields.channels.physicalAtlas.enabled, true);
+  assert.equal(payload.intensityFields.channels.physicalAtlas.points[0].id, "alps-field");
+  assert.equal(payload.intensityFields.channels.physicalAtlas.grid.base.encoding, "rle-u8-base64");
+
+  const result = await importProjectPayload(payload);
+  assert.equal(result.successes.length, 1);
+  assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.enabled, true);
+  assert.ok(sampleIntensityField(result.successes[0].intensityFields, "physicalAtlas", 10, 46) > 1.4);
+});
+
+test("project import defaults missing physical intensity field to an empty state", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+  delete payload.physicalIntensityField;
+
+  const result = await importProjectPayload(payload);
+
+  assert.equal(result.successes[0].physicalIntensityField.enabled, false);
+  assert.equal(result.successes[0].physicalIntensityField.revision, 0);
+  assert.deepEqual(result.successes[0].physicalIntensityField.points, []);
+});
+
 test("project import restores missing open ocean flags as visible without interaction", async () => {
   const payload = await exportProjectPayload({
     annotationView: {},
@@ -323,6 +419,24 @@ test("project import restores missing transport overview registry visibility as 
   getTransportOverviewVisibilityFields().forEach((field) => {
     assert.equal(result.successes[0].layerVisibility[field], false, field);
   });
+});
+
+test("project import through funnel restores physical intensity field into runtime state", async () => {
+  const result = await importProjectThroughFunnelPayload(
+    {
+      ...createTransportOverviewImportPayload(),
+      physicalIntensityField: {
+        enabled: true,
+        revision: 3,
+        points: [{ id: "peak", lon: 8, lat: 47, weight: 1, radiusKm: 650 }],
+      },
+    },
+    { capturePhysicalIntensityField: true },
+  );
+
+  assert.equal(result.physicalIntensityField.enabled, true);
+  assert.equal(result.physicalIntensityField.revision, 3);
+  assert.equal(result.physicalIntensityField.points[0].id, "peak");
 });
 
 test("interaction funnel debug reset clears stale import error state", async () => {

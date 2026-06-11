@@ -138,29 +138,30 @@ export function createAppearanceCityPointsOwner({
     return cityPointsConfig;
   };
 
-  const bindCityPointsInput = (element, mutate, reason, afterMutate = () => {}) => {
+  const bindCityPointsControl = (
+    element,
+    mutate,
+    reason,
+    { events = ["input"], afterMutate = () => {} } = {},
+  ) => {
     if (!element || element.dataset.bound === "true") return;
-    element.addEventListener("input", (event) => {
-      const cfg = syncCityPointsConfig();
-      mutate(cfg, event);
-      afterMutate(cfg);
-      persistCityViewSettings();
-      renderDirty(reason);
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, (event) => {
+        const cfg = syncCityPointsConfig();
+        mutate(cfg, event);
+        afterMutate(cfg);
+        persistCityViewSettings();
+        renderDirty(reason);
+      });
     });
     element.dataset.bound = "true";
   };
 
-  const bindCityPointsChange = (element, mutate, reason, afterMutate = () => {}) => {
-    if (!element || element.dataset.bound === "true") return;
-    element.addEventListener("change", (event) => {
-      const cfg = syncCityPointsConfig();
-      mutate(cfg, event);
-      afterMutate(cfg);
-      persistCityViewSettings();
-      renderDirty(reason);
-    });
-    element.dataset.bound = "true";
-  };
+  const bindCityPointsInput = (element, mutate, reason, afterMutate = () => {}) =>
+    bindCityPointsControl(element, mutate, reason, { events: ["input"], afterMutate });
+
+  const bindCityPointsChange = (element, mutate, reason, afterMutate = () => {}) =>
+    bindCityPointsControl(element, mutate, reason, { events: ["change"], afterMutate });
 
   const bindEvents = () => {
     if (nodes.toggleCityPoints && nodes.toggleCityPoints.dataset.bound !== "true") {
@@ -200,19 +201,11 @@ export function createAppearanceCityPointsOwner({
       if (nodes.cityPointsMarkerScaleValue) nodes.cityPointsMarkerScaleValue.textContent = `${Number(cfg.markerScale).toFixed(2)}x`;
     }, "city-points-marker-scale");
 
-    if (nodes.cityPointsMarkerDensity && nodes.cityPointsMarkerDensity.dataset.bound !== "true") {
-      const syncMarkerDensity = (event) => {
-        const cfg = syncCityPointsConfig();
+    bindCityPointsControl(nodes.cityPointsMarkerDensity, (cfg, event) => {
         const value = Number(event.target.value);
         cfg.markerDensity = clamp(Number.isFinite(value) ? value : 1, 0.5, 2);
         if (nodes.cityPointsMarkerDensityValue) nodes.cityPointsMarkerDensityValue.textContent = formatCityPointsDensityValue(cfg.markerDensity);
-        persistCityViewSettings();
-        renderDirty("city-points-marker-density");
-      };
-      nodes.cityPointsMarkerDensity.addEventListener("input", syncMarkerDensity);
-      nodes.cityPointsMarkerDensity.addEventListener("change", syncMarkerDensity);
-      nodes.cityPointsMarkerDensity.dataset.bound = "true";
-    }
+    }, "city-points-marker-density", { events: ["input", "change"] });
 
     bindCityPointsChange(nodes.cityPointsLabelDensity, (cfg, event) => {
       cfg.labelDensity = String(event.target.value || "balanced");
