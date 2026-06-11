@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -45422,7 +45422,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 230532,
+      "size_bytes": 231806,
       "source_kind": "dist"
     },
     {
@@ -45522,7 +45522,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 44248,
+      "size_bytes": 45544,
       "source_kind": "dist"
     },
     {
@@ -45562,12 +45562,12 @@
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 13658,
+      "size_bytes": 13083,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/intensity_field.js",
-      "size_bytes": 11696,
+      "size_bytes": 15281,
       "source_kind": "dist"
     },
     {
@@ -45587,7 +45587,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 16952,
+      "size_bytes": 16812,
       "source_kind": "dist"
     },
     {
@@ -45632,7 +45632,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 995039,
+      "size_bytes": 1007015,
       "source_kind": "dist"
     },
     {
@@ -45653,11 +45653,6 @@
     {
       "path": "app/js/core/perf_probe.js",
       "size_bytes": 3767,
-      "source_kind": "dist"
-    },
-    {
-      "path": "app/js/core/physical_intensity_field_state.js",
-      "size_bytes": 3311,
       "source_kind": "dist"
     },
     {
@@ -46047,7 +46042,7 @@
     },
     {
       "path": "app/js/core/state/config.js",
-      "size_bytes": 8106,
+      "size_bytes": 8135,
       "source_kind": "dist"
     },
     {
@@ -46077,7 +46072,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 16027,
+      "size_bytes": 16246,
       "source_kind": "dist"
     },
     {
@@ -46097,12 +46092,12 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 26837,
+      "size_bytes": 26957,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/state.js",
-      "size_bytes": 2712,
+      "size_bytes": 2592,
       "source_kind": "dist"
     },
     {
@@ -46112,7 +46107,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 59060,
+      "size_bytes": 59330,
       "source_kind": "dist"
     },
     {
@@ -46197,12 +46192,12 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 46829,
+      "size_bytes": 47023,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 87285,
+      "size_bytes": 87683,
       "source_kind": "dist"
     },
     {
@@ -46282,17 +46277,17 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 21335,
+      "size_bytes": 21494,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/appearance_parent_border_owner.js",
-      "size_bytes": 9335,
+      "size_bytes": 9554,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 25270,
+      "size_bytes": 30016,
       "source_kind": "dist"
     },
     {
@@ -46432,7 +46427,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 130480,
+      "size_bytes": 130597,
       "source_kind": "dist"
     },
     {
@@ -46597,7 +46592,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 818,
+      "size_bytes": 832,
       "source_kind": "dist"
     },
     {
@@ -46737,7 +46732,7 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1495,
+      "size_bytes": 1513,
       "source_kind": "dist"
     },
     {
@@ -46792,7 +46787,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1445995,
+      "size_bytes": 1445866,
       "source_kind": "dist"
     },
     {
@@ -46811,5 +46806,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145146277
+  "total_bytes": 1145166513
 }

@@ -507,33 +507,48 @@
                         <div class="appearance-prop-group">
                           <h3 id="lblPhysicalIntensityFieldPanel" class="appearance-prop-heading">Intensity Field</h3>
                           <div class="space-y-2 mt-2">
+                            <div class="flex items-center gap-3">
+                              <label class="toggle-label">
+                                <input id="physicalIntensityFieldChannelAtlas" name="physicalIntensityFieldChannel" type="radio" value="physicalAtlas" checked />
+                                <span id="lblPhysicalIntensityFieldChannelAtlas">Atlas</span>
+                              </label>
+                              <label class="toggle-label">
+                                <input id="physicalIntensityFieldChannelContour" name="physicalIntensityFieldChannel" type="radio" value="physicalContour" />
+                                <span id="lblPhysicalIntensityFieldChannelContour">Contour</span>
+                              </label>
+                            </div>
                             <label class="toggle-label">
                               <input id="physicalIntensityFieldEnabled" type="checkbox" class="checkbox-input" />
-                              <span id="lblPhysicalIntensityFieldEnabled">Enable Intensity Field</span>
+                              <span id="lblPhysicalIntensityFieldEnabled">Enable Channel</span>
                             </label>
+                            <div class="flex items-center justify-between gap-2">
+                              <button id="physicalIntensityFieldToolToggleBtn" type="button" class="sidebar-action-secondary">Enter Tool</button>
+                              <button id="physicalIntensityFieldPaintBtn" type="button" class="sidebar-action-secondary">Paint</button>
+                              <button id="physicalIntensityFieldEraseBtn" type="button" class="sidebar-action-secondary">Erase</button>
+                              <button id="physicalIntensityFieldPointsBtn" type="button" class="sidebar-action-secondary">Points</button>
+                            </div>
                             <div>
                               <div class="range-row">
-                                <label id="lblPhysicalIntensityFieldWeight" class="range-label" for="physicalIntensityFieldWeight">Weight</label>
+                                <label id="lblPhysicalIntensityFieldWeight" class="range-label" for="physicalIntensityFieldWeight">Strength</label>
                                 <span id="physicalIntensityFieldWeightValue" class="range-value">100%</span>
                               </div>
-                              <input id="physicalIntensityFieldWeight" type="range" min="-200" max="200" value="100" class="range-input" />
+                              <input id="physicalIntensityFieldWeight" type="range" min="0" max="200" value="100" class="range-input" />
                             </div>
                             <div>
                               <div class="range-row">
                                 <label id="lblPhysicalIntensityFieldRadius" class="range-label" for="physicalIntensityFieldRadius">Radius</label>
-                                <span id="physicalIntensityFieldRadiusValue" class="range-value">500 km</span>
+                                <span id="physicalIntensityFieldRadiusValue" class="range-value">≈ 333 km</span>
                               </div>
-                              <input id="physicalIntensityFieldRadius" type="range" min="25" max="5000" step="25" value="500" class="range-input" />
+                              <input id="physicalIntensityFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
                             </div>
                             <div class="flex items-center justify-between gap-2">
-                              <button id="physicalIntensityFieldStampCenterBtn" type="button" class="sidebar-action-secondary">Stamp Center Brush</button>
-                              <button id="physicalIntensityFieldAddCenterBtn" type="button" class="sidebar-action-secondary">Add Center Point</button>
-                              <button id="physicalIntensityFieldClearBtn" type="button" class="sidebar-action-secondary">Clear</button>
+                              <button id="physicalIntensityFieldClearBtn" type="button" class="sidebar-action-secondary">Clear Channel</button>
                             </div>
                             <div class="range-row">
                               <span id="lblPhysicalIntensityFieldPointCount" class="range-label">Points</span>
                               <span id="physicalIntensityFieldPointCount" class="range-value">0</span>
                             </div>
+                            <div id="physicalIntensityFieldPointList" class="space-y-2"></div>
                           </div>
                         </div>
                         <div class="ml-5 space-y-3">

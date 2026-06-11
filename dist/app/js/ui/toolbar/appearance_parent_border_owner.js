@@ -1,5 +1,6 @@
 // Appearance parent-border owner.
 // 父国界列表可能随场景反复刷新；这里把列表模型和 DOM 复用从总 controller 中收拢出来。
+import { PARENT_BORDER_STYLE_DEFAULTS } from "../../core/state.js";
 
 export function normalizeParentBorderEnabledMap(runtimeState) {
   const supported = Array.isArray(runtimeState.parentBorderSupportedCountries)
@@ -70,14 +71,14 @@ export function createAppearanceParentBorderOwner({
 
   const syncStyleControls = () => {
     const style = getParentBorderStyle();
-    const color = String(style.color || "#4b5563");
+    const color = String(style.color || PARENT_BORDER_STYLE_DEFAULTS.color);
     const opacity = clamp(
-      Math.round((Number.isFinite(Number(style.opacity)) ? Number(style.opacity) : 0.85) * 100),
+      Math.round((Number.isFinite(Number(style.opacity)) ? Number(style.opacity) : PARENT_BORDER_STYLE_DEFAULTS.opacity) * 100),
       0,
       100
     );
     const width = clamp(
-      Number.isFinite(Number(style.width)) ? Number(style.width) : 1.1,
+      Number.isFinite(Number(style.width)) ? Number(style.width) : PARENT_BORDER_STYLE_DEFAULTS.width,
       0.2,
       4
     );
@@ -188,7 +189,7 @@ export function createAppearanceParentBorderOwner({
     if (opacityInput && opacityInput.dataset.parentBorderBound !== "true") {
       opacityInput.addEventListener("input", (event) => {
         const value = Number(event.target.value);
-        const opacity = clamp(Number.isFinite(value) ? value / 100 : 0.85, 0, 1);
+        const opacity = clamp(Number.isFinite(value) ? value / 100 : PARENT_BORDER_STYLE_DEFAULTS.opacity, 0, 1);
         getParentBorderStyle().opacity = opacity;
         if (opacityValue) opacityValue.textContent = `${Math.round(opacity * 100)}%`;
         renderDirty("parent-border-opacity");
@@ -199,7 +200,7 @@ export function createAppearanceParentBorderOwner({
     if (widthInput && widthInput.dataset.parentBorderBound !== "true") {
       widthInput.addEventListener("input", (event) => {
         const value = Number(event.target.value);
-        const width = clamp(Number.isFinite(value) ? value : 1.1, 0.2, 4);
+        const width = clamp(Number.isFinite(value) ? value : PARENT_BORDER_STYLE_DEFAULTS.width, 0.2, 4);
         getParentBorderStyle().width = width;
         if (widthValue) widthValue.textContent = width.toFixed(2);
         renderDirty("parent-border-width");

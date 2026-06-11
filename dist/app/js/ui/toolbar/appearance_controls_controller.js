@@ -1,4 +1,8 @@
-import { normalizeUrbanStyleConfig } from "../../core/state.js";
+import {
+  URBAN_ADAPTIVE_TINT_DEFAULT_COLOR,
+  URBAN_MANUAL_DEFAULT_COLOR,
+  normalizeUrbanStyleConfig,
+} from "../../core/state.js";
 import { normalizeHexColor } from "../../core/palette_manager.js";
 import { createTransportAppearanceController } from "./transport_appearance_controller.js";
 import { createAppearanceParentBorderOwner } from "./appearance_parent_border_owner.js";
@@ -167,9 +171,9 @@ export function createAppearanceControlsController({
   const syncUrbanConfig = () => {
     runtimeState.styleConfig.urban = normalizeUrbanStyleConfig(runtimeState.styleConfig.urban);
     if (runtimeState.styleConfig.urban.mode === "manual") {
-      runtimeState.styleConfig.urban.color = normalizeOceanFillColor(runtimeState.styleConfig.urban.color || "#4b5563");
+      runtimeState.styleConfig.urban.color = normalizeOceanFillColor(runtimeState.styleConfig.urban.color || URBAN_MANUAL_DEFAULT_COLOR);
     }
-    runtimeState.styleConfig.urban.adaptiveTintColor = normalizeOceanFillColor(runtimeState.styleConfig.urban.adaptiveTintColor || "#f2dea1");
+    runtimeState.styleConfig.urban.adaptiveTintColor = normalizeOceanFillColor(runtimeState.styleConfig.urban.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR);
     return runtimeState.styleConfig.urban;
   };
 
@@ -226,7 +230,7 @@ export function createAppearanceControlsController({
     if (urbanToneBias) urbanToneBias.value = String(Math.round(urbanConfig.toneBias * 100));
     if (urbanToneBiasValue) urbanToneBiasValue.textContent = formatUrbanToneBias(urbanConfig.toneBias);
     if (urbanAdaptiveTintEnabled) urbanAdaptiveTintEnabled.checked = !!urbanConfig.adaptiveTintEnabled;
-    if (urbanAdaptiveTintColor) urbanAdaptiveTintColor.value = urbanConfig.adaptiveTintColor || "#f2dea1";
+    if (urbanAdaptiveTintColor) urbanAdaptiveTintColor.value = urbanConfig.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR;
     if (urbanAdaptiveTintStrength) urbanAdaptiveTintStrength.value = String(Math.round((urbanConfig.adaptiveTintStrength || 0) * 100));
     if (urbanAdaptiveTintStrengthValue) urbanAdaptiveTintStrengthValue.textContent = `${Math.round((urbanConfig.adaptiveTintStrength || 0) * 100)}%`;
     [urbanAdaptiveStrength, urbanStrokeOpacity, urbanToneBias, urbanAdaptiveTintEnabled, urbanAdaptiveTintColor, urbanAdaptiveTintStrength].forEach((element) => {
@@ -402,7 +406,7 @@ export function createAppearanceControlsController({
     if (urbanAdaptiveTintColor && urbanAdaptiveTintColor.dataset.bound !== "true") {
       urbanAdaptiveTintColor.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
-        cfg.adaptiveTintColor = normalizeOceanFillColor(event.target.value || cfg.adaptiveTintColor || "#f2dea1");
+        cfg.adaptiveTintColor = normalizeOceanFillColor(event.target.value || cfg.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR);
         renderDirty("urban-adaptive-tint-color");
       });
       urbanAdaptiveTintColor.dataset.bound = "true";

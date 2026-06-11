@@ -10,6 +10,17 @@ export function createDefaultRendererInfrastructureState() {
   };
 }
 
+export function createDefaultIntensityFieldToolState() {
+  return {
+    active: false,
+    channelId: "physicalAtlas",
+    subMode: "paint",
+    brushRadiusDeg: 3,
+    brushStrength: 1,
+    selectedPointId: "",
+  };
+}
+
 export function createDefaultExactAfterSettleControllerState() {
   return {
     generation: 0,

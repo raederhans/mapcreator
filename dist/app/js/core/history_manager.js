@@ -3,7 +3,6 @@ import {
   normalizeIntensityFieldsState,
   serializeIntensityFieldsState,
 } from "./state/intensity_field_state.js";
-import { normalizePhysicalIntensityFieldState } from "./physical_intensity_field_state.js";
 import { markDirty } from "./dirty_state.js";
 import { markLegacyColorStateDirty, rebuildOwnerIndex } from "./sovereignty_manager.js";
 import { flushRenderBoundary } from "./render_boundary.js";
@@ -60,7 +59,6 @@ function captureHistoryState({
   stylePaths = [],
   strategicOverlay = false,
   intensityFieldChannels = [],
-  physicalIntensityField = false,
 } = {}) {
   // history snapshot 只抓本次编辑真实触达的键，避免把整份 runtime state 塞进 undo 栈。
   // 这里缺省键写成 null，后面 apply 时才能表达“这次撤销后应该删除该键”。
@@ -117,12 +115,6 @@ function captureHistoryState({
     });
     snapshot.intensityFieldChannels = intensityChannels;
     snapshot.intensityFields = serializeIntensityFieldsState(selectedFields);
-  }
-
-  if (physicalIntensityField) {
-    snapshot.physicalIntensityField = cloneStructuredValue(
-      normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField),
-    );
   }
 
   return snapshot;
@@ -282,10 +274,6 @@ function applyHistorySnapshot(snapshot, direction, entry) {
   }
   if (typeof snapshot.specialZoneMembershipBrushMode === "string") {
     runtimeState.specialZoneMembershipBrushMode = snapshot.specialZoneMembershipBrushMode || "add";
-  }
-  if (snapshot.physicalIntensityField && typeof snapshot.physicalIntensityField === "object") {
-    runtimeState.physicalIntensityField = normalizePhysicalIntensityFieldState(snapshot.physicalIntensityField);
-    markDirty("physical-intensity-field-history");
   }
   if (snapshot.intensityFields && typeof snapshot.intensityFields === "object") {
     const current = normalizeIntensityFieldsState(runtimeState.intensityFields);

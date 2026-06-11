@@ -5,8 +5,9 @@ import {
   normalizeDayNightStyleConfig,
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
+  INTENSITY_FIELD_GRID,
   normalizeIntensityFieldsState,
-  normalizePhysicalIntensityFieldState,
+  normalizeIntensityPoint,
   normalizePhysicalStyleConfig,
   normalizeReferenceImageState,
   normalizeRiversStyleConfig,
@@ -17,7 +18,7 @@ import {
   normalizeExportWorkbenchUiState,
   normalizeTextureStyleConfig,
   serializeIntensityFieldsState,
-  serializePhysicalIntensityFieldState,
+  updateIntensityFieldChannel,
 } from "./state.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
@@ -57,6 +58,33 @@ const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
 const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function migrateLegacyPhysicalIntensityField(intensityFields, legacyField) {
+  if (!legacyField || typeof legacyField !== "object") return intensityFields;
+  const legacyPoints = Array.isArray(legacyField.points) ? legacyField.points : [];
+  if (!legacyPoints.length) return intensityFields;
+  const normalizedFields = normalizeIntensityFieldsState(intensityFields);
+  if (normalizedFields.channels.physicalAtlas?.points?.length) return normalizedFields;
+  const migratedPoints = legacyPoints
+    .map((point, index) => normalizeIntensityPoint({
+      id: point?.id || `legacy-physical-${index + 1}`,
+      lon: point?.lon,
+      lat: point?.lat,
+      strength: clamp(1 + (Number(point?.weight || 0) * 0.35), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max),
+      radiusDeg: clamp(Number(point?.radiusKm || 500) / 111, 0.25, 30),
+      falloff: point?.falloff || "smooth",
+    }, index))
+    .filter(Boolean);
+  if (!migratedPoints.length) return normalizedFields;
+  return updateIntensityFieldChannel(normalizedFields, "physicalAtlas", (channel) => {
+    channel.enabled = legacyField.enabled === undefined ? true : !!legacyField.enabled;
+    channel.points = migratedPoints;
+    channel.revision = Math.max(
+      Math.max(0, Math.round(Number(channel.revision) || 0)),
+      Math.max(0, Math.round(Number(legacyField.revision) || 0)),
+    );
+  });
 }
 
 function getTransportOverviewVisibilityFields() {
@@ -523,7 +551,6 @@ class FileManager {
       operationGraphics: normalizeOperationGraphics(appState.operationGraphics),
       unitCounters: normalizeUnitCounters(appState.unitCounters),
       intensityFields: serializeIntensityFieldsState(appState.intensityFields),
-      physicalIntensityField: serializePhysicalIntensityFieldState(appState.physicalIntensityField),
       customPresets: appState.customPresets || {},
       referenceImageState: normalizeReferenceImageState(appState.referenceImageState),
       recentColors: normalizeRecentColors(appState.recentColors),
@@ -787,8 +814,11 @@ class FileManager {
         data.styleConfig.cityPoints = normalizeCityLayerStyleConfig(data.styleConfig.cityPoints);
         data.styleConfig.urban = normalizeUrbanStyleConfig(data.styleConfig.urban);
         data.styleConfig.physical = normalizePhysicalStyleConfig(data.styleConfig.physical);
-        data.intensityFields = normalizeIntensityFieldsState(data.intensityFields);
-        data.physicalIntensityField = normalizePhysicalIntensityFieldState(data.physicalIntensityField);
+        data.intensityFields = migrateLegacyPhysicalIntensityField(
+          normalizeIntensityFieldsState(data.intensityFields),
+          data.physicalIntensityField,
+        );
+        delete data.physicalIntensityField;
         data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
         data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
         if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {

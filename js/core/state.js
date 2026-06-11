@@ -31,6 +31,7 @@ import {
 } from "./state/border_cache_state.js";
 import {
   createDefaultRendererInfrastructureState,
+  createDefaultIntensityFieldToolState,
   createDefaultRendererTransientRuntimeState,
 } from "./state/renderer_runtime_state.js";
 import {
@@ -39,9 +40,6 @@ import {
 import {
   createDefaultIntensityFieldsState,
 } from "./state/intensity_field_state.js";
-import {
-  createDefaultPhysicalIntensityFieldState,
-} from "./physical_intensity_field_state.js";
 import {
   createDefaultBootState,
 } from "./state/boot_state.js";
@@ -63,7 +61,6 @@ export * from "./state_catalog.js";
 export * from "./state/index.js";
 export * from "./intensity_field.js";
 export * from "./state/intensity_field_state.js";
-export * from "./physical_intensity_field_state.js";
 
 export const state = {
   ...createDefaultBootState(),
@@ -80,8 +77,8 @@ export const state = {
   ...createDefaultHistoryState(),
   ...createDefaultColorPresetState(),
   ...createDefaultUiChromeState(),
+  intensityFieldTool: createDefaultIntensityFieldToolState(),
   intensityFields: createDefaultIntensityFieldsState(),
-  physicalIntensityField: createDefaultPhysicalIntensityFieldState(),
 
   countryPalette,
   defaultCountryPalette,

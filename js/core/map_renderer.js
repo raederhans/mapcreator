@@ -7,10 +7,10 @@ import {
   normalizeCityLayerStyleConfig,
   normalizeColorStateForRender,
   normalizeDayNightStyleConfig,
+  INTENSITY_FIELD_GRID,
   normalizeIntensityFieldsState,
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
-  normalizePhysicalIntensityFieldState,
   normalizePhysicalStyleConfig,
   normalizeTransportOverviewStyleConfig,
   normalizeTextureMode,
@@ -21,6 +21,8 @@ import {
   sampleIntensityField,
   setResolvedColorForFeature,
   state as runtimeState,
+  bakeIntensityComposite,
+  stampIntensityBrush,
 } from "./state.js";
 import {
   createDefaultOperationGraphicsEditorState,
@@ -32,6 +34,7 @@ import {
   createDefaultProjectedBoundsCacheState,
   createDefaultProjectedBoundsDiagnostics,
   createDefaultExactAfterSettleControllerState,
+  createDefaultIntensityFieldToolState,
   ensureExactAfterSettleControllerState,
   ensureRenderPassCacheState,
   ensureSidebarPerfState,
@@ -104,7 +107,7 @@ import {
 } from "./unit_counter_presets.js";
 import { enqueueFrameTask, getFrameSchedulerQueueLength } from "./frame_scheduler.js";
 import { flushRenderBoundary, getRenderBoundaryDebugState, requestRender } from "./render_boundary.js";
-import { callRuntimeHook, registerRuntimeHook } from "./state/index.js";
+import { callRuntimeHook, callRuntimeHooks, registerRuntimeHook } from "./state/index.js";
 import {
   HGO_DEFAULT_TARGET_PROJECTION,
   HGO_SOURCE_PROJECTION,
@@ -2158,6 +2161,49 @@ function releaseDeferredContextBasePass(reason = "deferred-context-release") {
 
 registerRuntimeHook(runtimeState, "releaseDeferredContextBasePassFn", releaseDeferredContextBasePass);
 
+const INTENSITY_FIELD_TOOL_CHANNELS = new Set(["physicalAtlas", "physicalContour"]);
+const INTENSITY_FIELD_TOOL_SUBMODES = new Set(["paint", "erase", "points"]);
+
+function normalizeIntensityFieldToolState(next = {}, current = runtimeState.intensityFieldTool) {
+  const defaults = createDefaultIntensityFieldToolState();
+  const source = current && typeof current === "object" ? current : defaults;
+  const draft = next && typeof next === "object" ? next : {};
+  const channelId = INTENSITY_FIELD_TOOL_CHANNELS.has(String(draft.channelId || source.channelId || ""))
+    ? String(draft.channelId || source.channelId)
+    : defaults.channelId;
+  const subMode = INTENSITY_FIELD_TOOL_SUBMODES.has(String(draft.subMode || source.subMode || ""))
+    ? String(draft.subMode || source.subMode)
+    : defaults.subMode;
+  return {
+    active: draft.active === undefined ? !!source.active : !!draft.active,
+    channelId,
+    subMode,
+    brushRadiusDeg: clamp(Number.isFinite(Number(draft.brushRadiusDeg)) ? Number(draft.brushRadiusDeg) : Number(source.brushRadiusDeg || defaults.brushRadiusDeg), 0.25, 30),
+    brushStrength: clamp(Number.isFinite(Number(draft.brushStrength)) ? Number(draft.brushStrength) : Number(source.brushStrength || defaults.brushStrength), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max),
+    selectedPointId: String(draft.selectedPointId === undefined ? (source.selectedPointId || "") : (draft.selectedPointId || "")),
+  };
+}
+
+function getIntensityFieldTool() {
+  runtimeState.intensityFieldTool = normalizeIntensityFieldToolState();
+  return runtimeState.intensityFieldTool;
+}
+
+function setIntensityFieldTool(next = {}) {
+  runtimeState.intensityFieldTool = normalizeIntensityFieldToolState(next);
+  if (runtimeState.intensityFieldTool.active) {
+    runtimeState.currentTool = "physical-intensity-field";
+    runtimeState.brushModeEnabled = false;
+    if (runtimeState.specialZoneEditor && typeof runtimeState.specialZoneEditor === "object") {
+      runtimeState.specialZoneEditor.active = false;
+    }
+  }
+  callRuntimeHooks(runtimeState, ["updateToolUIFn", "updateToolbarInputsFn"]);
+  return runtimeState.intensityFieldTool;
+}
+
+registerRuntimeHook(runtimeState, "setIntensityFieldToolFn", setIntensityFieldTool);
+
 function isBootInteractionReady() {
   return String(runtimeState.bootPhase || "").trim().toLowerCase() === "ready" && !runtimeState.bootBlocking;
 }
@@ -3063,7 +3109,6 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.showPhysical ? "physical:on" : "physical:off",
       `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
       `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
-      `intensity:${normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField).revision}`,
       `field:${Number(intensityFields.channels.physicalAtlas?.revision || 0)}`,
       stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
     ].join("::");
@@ -12163,7 +12208,8 @@ function drawPhysicalAtlasCollectionLayer(
 }
 
 function getFieldFeatureMultiplier(channelId, feature) {
-  const fields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  const fields = runtimeState.intensityFields;
   const channel = fields.channels?.[channelId];
   if (!channel?.enabled) return 1;
   const centroid = getFeatureGeoCentroid(feature);
@@ -12171,11 +12217,23 @@ function getFieldFeatureMultiplier(channelId, feature) {
   return sampleIntensityField(fields, channelId, centroid[0], centroid[1]);
 }
 
+function getProjectedDegreeRadiusPx(lon, lat, radiusDeg) {
+  const center = projection([lon, lat]);
+  if (!Array.isArray(center) || center.length < 2) return 0;
+  const eastLon = lon >= 179 ? lon - 1 : lon + 1;
+  const northLat = clamp(lat + 1, -90, 90);
+  const east = projection([eastLon, lat]);
+  const north = projection([lon, northLat]);
+  const eastDistance = Array.isArray(east) ? Math.hypot(east[0] - center[0], east[1] - center[1]) : 0;
+  const northDistance = Array.isArray(north) ? Math.hypot(north[0] - center[0], north[1] - center[1]) : 0;
+  return clamp(Math.max(eastDistance, northDistance, 0) * clamp(radiusDeg, 0.25, 30), 6, 160);
+}
+
 function drawPhysicalIntensityFieldLayer({ clipAlreadyApplied = false } = {}) {
-  const fieldState = normalizePhysicalIntensityFieldState(runtimeState.physicalIntensityField);
-  if (!fieldState.enabled || !fieldState.points.length || !projection || !context) return 0;
+  runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  const fieldState = runtimeState.intensityFields.channels.physicalAtlas;
+  if (!fieldState?.enabled || !fieldState.points.length || !projection || !context) return 0;
   let renderedCount = 0;
-  const zoomScale = Math.max(0.35, Number(runtimeState.zoomTransform?.k || 1));
   context.save();
   if (!clipAlreadyApplied) {
     applyPhysicalLandClipMask();
@@ -12184,14 +12242,15 @@ function drawPhysicalIntensityFieldLayer({ clipAlreadyApplied = false } = {}) {
   fieldState.points.forEach((point) => {
     const projected = projection([point.lon, point.lat]);
     if (!Array.isArray(projected) || projected.length < 2) return;
-    const radiusPx = clamp((point.radiusKm / 95) * Math.sqrt(zoomScale), 6, 120);
-    const strength = clamp(Math.abs(Number(point.weight) || 0), 0, 2);
+    const radiusPx = getProjectedDegreeRadiusPx(point.lon, point.lat, point.radiusDeg);
+    if (radiusPx <= 0) return;
+    const strengthDelta = clamp(Math.abs(Number(point.strength || 1) - 1), 0, 1);
     const gradient = context.createRadialGradient(projected[0], projected[1], 0, projected[0], projected[1], radiusPx);
-    const alpha = clamp(0.08 + strength * 0.13, 0.08, 0.34);
-    const coreColor = point.weight < 0
+    const alpha = clamp(0.08 + strengthDelta * 0.26, 0.08, 0.34);
+    const coreColor = Number(point.strength || 1) < 1
       ? `rgba(84, 46, 20, ${alpha})`
       : `rgba(216, 236, 255, ${alpha})`;
-    const edgeColor = point.weight < 0
+    const edgeColor = Number(point.strength || 1) < 1
       ? "rgba(84, 46, 20, 0)"
       : "rgba(216, 236, 255, 0)";
     gradient.addColorStop(0, coreColor);
@@ -22890,6 +22949,227 @@ function getMapLonLatFromEvent(event) {
   return [lon, clamp(lat, -90, 90)];
 }
 
+let physicalIntensityDragSession = null;
+let physicalIntensityRenderFrame = null;
+
+function getPhysicalIntensityChannel(channelId = "") {
+  runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  const normalizedChannelId = INTENSITY_FIELD_TOOL_CHANNELS.has(String(channelId || ""))
+    ? String(channelId)
+    : "physicalAtlas";
+  return runtimeState.intensityFields.channels[normalizedChannelId];
+}
+
+function getIntensityFieldPassName(channelId) {
+  return channelId === "physicalContour" ? "contextBase" : "physicalBase";
+}
+
+function schedulePhysicalIntensityRender(channelId, reason) {
+  invalidateRenderPasses([getIntensityFieldPassName(channelId)], reason);
+  if (physicalIntensityRenderFrame !== null) return;
+  physicalIntensityRenderFrame = requestAnimationFrame(() => {
+    physicalIntensityRenderFrame = null;
+    requestInteractionRender(reason);
+  });
+}
+
+function refreshPhysicalIntensityUi() {
+  callRuntimeHook(runtimeState, "updateToolbarInputsFn");
+}
+
+function projectGeoToScreen(lon, lat) {
+  if (!projection) return null;
+  const projected = projection([lon, lat]);
+  if (!Array.isArray(projected) || projected.length < 2) return null;
+  const t = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
+  return [
+    (projected[0] * Number(t.k || 1)) + Number(t.x || 0),
+    (projected[1] * Number(t.k || 1)) + Number(t.y || 0),
+  ];
+}
+
+function getPhysicalIntensityPointHit(channel, lonLat) {
+  if (!channel || !Array.isArray(channel.points) || !lonLat) return null;
+  const pointerScreen = projectGeoToScreen(lonLat[0], lonLat[1]);
+  if (!pointerScreen) return null;
+  let best = null;
+  channel.points.forEach((point) => {
+    const pointScreen = projectGeoToScreen(point.lon, point.lat);
+    if (!pointScreen) return;
+    const centerDistance = Math.hypot(pointerScreen[0] - pointScreen[0], pointerScreen[1] - pointScreen[1]);
+    const radiusPx = getProjectedDegreeRadiusPx(point.lon, point.lat, point.radiusDeg);
+    const radiusDistance = Math.abs(centerDistance - radiusPx);
+    if (centerDistance <= 12 && (!best || centerDistance < best.distance)) {
+      best = { point, mode: "move", distance: centerDistance };
+    } else if (radiusDistance <= 10 && (!best || radiusDistance < best.distance)) {
+      best = { point, mode: "radius", distance: radiusDistance };
+    }
+  });
+  return best;
+}
+
+function createIntensityPoint(channel, lonLat, tool) {
+  const nextIndex = channel.points.length + 1;
+  return {
+    id: `point-${Date.now().toString(36)}-${nextIndex}`,
+    lon: clamp(Number(lonLat[0]) || 0, -180, 180),
+    lat: clamp(Number(lonLat[1]) || 0, -90, 90),
+    strength: clamp(Number(tool.brushStrength || 1), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max),
+    radiusDeg: clamp(Number(tool.brushRadiusDeg || 3), 0.25, 30),
+    falloff: "smooth",
+  };
+}
+
+function commitPhysicalIntensitySession(reason = "physical-intensity-field") {
+  const current = physicalIntensityDragSession;
+  physicalIntensityDragSession = null;
+  if (!current) return false;
+  if (interactionRect?.node && current.pointerId !== undefined) {
+    try {
+      interactionRect.node().releasePointerCapture(current.pointerId);
+    } catch (_error) {
+      // Pointer capture may already be released by the browser.
+    }
+  }
+  if (!current.changed) return false;
+  const channel = getPhysicalIntensityChannel(current.channelId);
+  if (current.subMode === "points") {
+    bakeIntensityComposite(channel);
+  }
+  channel.revision = Math.max(0, Math.round(Number(channel.revision) || 0)) + 1;
+  const after = captureHistoryState({ intensityFieldChannels: [current.channelId] });
+  pushHistoryEntry({
+    kind: current.subMode === "points" ? "physical-intensity-point" : "physical-intensity-brush",
+    before: current.before,
+    after,
+    meta: {
+      reason,
+      affectsIntensityField: true,
+    },
+  });
+  suppressNextClickAfterBrush = true;
+  schedulePhysicalIntensityRender(current.channelId, reason);
+  refreshPhysicalIntensityUi();
+  return true;
+}
+
+function applyPhysicalIntensityBrushAt(event) {
+  const current = physicalIntensityDragSession;
+  if (!current || current.subMode === "points") return false;
+  const lonLat = getMapLonLatFromEvent(event);
+  if (!lonLat) return false;
+  const channel = getPhysicalIntensityChannel(current.channelId);
+  channel.enabled = true;
+  const dirtyRect = stampIntensityBrush(channel, {
+    lon: lonLat[0],
+    lat: lonLat[1],
+    radiusDeg: current.brushRadiusDeg,
+    strength: current.brushStrength,
+    mode: current.subMode,
+  });
+  if (!dirtyRect) return false;
+  current.changed = true;
+  schedulePhysicalIntensityRender(current.channelId, "physical-intensity-field-drag");
+  return true;
+}
+
+function applyPhysicalIntensityPointDrag(event) {
+  const current = physicalIntensityDragSession;
+  if (!current || current.subMode !== "points" || !current.pointId) return false;
+  const lonLat = getMapLonLatFromEvent(event);
+  if (!lonLat) return false;
+  const channel = getPhysicalIntensityChannel(current.channelId);
+  const point = channel.points.find((entry) => entry.id === current.pointId);
+  if (!point) return false;
+  if (current.pointDragMode === "radius") {
+    const deltaLon = Math.abs(point.lon - lonLat[0]);
+    const deltaLat = Math.abs(point.lat - lonLat[1]);
+    point.radiusDeg = clamp(Math.hypot(Math.min(deltaLon, 360 - deltaLon), deltaLat), 0.25, 30);
+  } else {
+    point.lon = clamp(lonLat[0], -180, 180);
+    point.lat = clamp(lonLat[1], -90, 90);
+  }
+  channel.enabled = true;
+  current.changed = true;
+  schedulePhysicalIntensityRender(current.channelId, "physical-intensity-point-drag");
+  refreshPhysicalIntensityUi();
+  return true;
+}
+
+function handlePhysicalIntensityPointerDown(event) {
+  const tool = getIntensityFieldTool();
+  if (!tool.active) return false;
+  if (physicalIntensityDragSession) return true;
+  if (runtimeState.startupReadonly) {
+    if (event?.preventDefault) event.preventDefault();
+    blockStartupReadonlyInteraction();
+    return true;
+  }
+  if ((event.buttons & 1) !== 1) return true;
+  const lonLat = getMapLonLatFromEvent(event);
+  if (!lonLat) return true;
+  if (event?.preventDefault) event.preventDefault();
+  if (interactionRect?.node && event.pointerId !== undefined) {
+    try {
+      interactionRect.node().setPointerCapture(event.pointerId);
+    } catch (_error) {
+      // Pointer capture is best-effort across browser targets.
+    }
+  }
+  const channel = getPhysicalIntensityChannel(tool.channelId);
+  physicalIntensityDragSession = {
+    pointerId: event.pointerId,
+    channelId: tool.channelId,
+    subMode: tool.subMode,
+    brushRadiusDeg: tool.brushRadiusDeg,
+    brushStrength: tool.brushStrength,
+    before: captureHistoryState({ intensityFieldChannels: [tool.channelId] }),
+    changed: false,
+    pointId: "",
+    pointDragMode: "move",
+  };
+  if (tool.subMode === "points") {
+    const hit = getPhysicalIntensityPointHit(channel, lonLat);
+    if (hit?.point) {
+      setIntensityFieldTool({ selectedPointId: hit.point.id });
+      physicalIntensityDragSession.pointId = hit.point.id;
+      physicalIntensityDragSession.pointDragMode = hit.mode;
+    } else {
+      const point = createIntensityPoint(channel, lonLat, tool);
+      channel.enabled = true;
+      channel.points.push(point);
+      setIntensityFieldTool({ selectedPointId: point.id });
+      physicalIntensityDragSession.pointId = point.id;
+      physicalIntensityDragSession.changed = true;
+      schedulePhysicalIntensityRender(tool.channelId, "physical-intensity-point-add");
+      refreshPhysicalIntensityUi();
+    }
+    return true;
+  }
+  applyPhysicalIntensityBrushAt(event);
+  return true;
+}
+
+function handlePhysicalIntensityPointerMove(event) {
+  if (!physicalIntensityDragSession) return false;
+  if ((event.buttons & 1) !== 1) {
+    commitPhysicalIntensitySession("physical-intensity-pointer-lost-buttons");
+    return true;
+  }
+  if (event?.preventDefault) event.preventDefault();
+  if (physicalIntensityDragSession.subMode === "points") {
+    return applyPhysicalIntensityPointDrag(event);
+  }
+  return applyPhysicalIntensityBrushAt(event);
+}
+
+function handlePhysicalIntensityPointerEnd(event) {
+  if (!physicalIntensityDragSession) return false;
+  if (event?.preventDefault) event.preventDefault();
+  commitPhysicalIntensitySession("physical-intensity-field-commit");
+  return true;
+}
+
 function updateSpecialZoneEditorUI() {
   if (typeof runtimeState.updateSpecialZoneEditorUIFn === "function") {
     runtimeState.updateSpecialZoneEditorUIFn();
@@ -24371,6 +24651,7 @@ function handleBrushPointerDown(event) {
     blockStartupReadonlyInteraction();
     return;
   }
+  if (handlePhysicalIntensityPointerDown(event)) return;
   if (handleSpecialZoneMembershipPointerDown(event)) return;
   if (!runtimeState.brushModeEnabled || runtimeState.currentTool === "eyedropper" || runtimeState.specialZoneEditor?.active) return;
   if (isBrushNavigationModifier(event)) return;
@@ -24383,6 +24664,7 @@ function handleBrushPointerMove(event) {
   if (runtimeState.startupReadonly) {
     return;
   }
+  if (handlePhysicalIntensityPointerMove(event)) return;
   if (specialZoneMembershipDragSession) {
     if ((event.buttons & 1) !== 1) {
       flushSpecialZoneMembershipDragSession();
@@ -24429,6 +24711,9 @@ async function handleClick(event, _interactionContext = null) {
   }
   if (typeof runtimeState.dismissOnboardingHintFn === "function") {
     runtimeState.dismissOnboardingHintFn();
+  }
+  if (getIntensityFieldTool().active) {
+    return;
   }
   if (runtimeState.specialZoneEditor?.active) {
     appendSpecialZoneVertexFromEvent(event);
@@ -25386,6 +25671,8 @@ function bindEvents() {
     mapDoubleClick: handleDoubleClick,
   });
   interactionRect.on("mousemove", handleMouseMove);
+  interactionRect.on("pointerdown.fieldTool", handlePhysicalIntensityPointerDown);
+  interactionRect.on("pointermove.fieldTool", handlePhysicalIntensityPointerMove);
   interactionRect.on("mousedown.brush", handleBrushPointerDown);
   interactionRect.on("mousemove.brush", handleBrushPointerMove);
   interactionRect.on("mouseleave", () => {
@@ -25405,6 +25692,9 @@ function bindEvents() {
     flushSpecialZoneMembershipDragSession();
     flushBrushSession();
   });
+  window.addEventListener("pointerup", handlePhysicalIntensityPointerEnd);
+  window.addEventListener("pointercancel", handlePhysicalIntensityPointerEnd);
+  interactionRect.node()?.addEventListener?.("lostpointercapture", handlePhysicalIntensityPointerEnd);
   window.addEventListener("resize", handleResize);
   window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);
   window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));

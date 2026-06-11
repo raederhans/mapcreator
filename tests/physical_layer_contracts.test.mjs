@@ -66,7 +66,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
     hasPhysicalIntensityFieldHelper:
       /function drawPhysicalIntensityFieldLayer\(\{ clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
     physicalBaseSignatureTracksIntensityRevision:
-      /if \(passName === "physicalBase"\) \{[\s\S]*?`intensity:\$\{normalizePhysicalIntensityFieldState\(runtimeState\.physicalIntensityField\)\.revision\}`/.test(rendererSource),
+      /if \(passName === "physicalBase"\) \{[\s\S]*?`field:\$\{Number\(intensityFields\.channels\.physicalAtlas\?\.revision \|\| 0\)\}`/.test(rendererSource),
     reliefOverlayBlendClamp:
       /function getPhysicalReliefOverlayBlendMode\(cfg, presetProfile\)/.test(rendererSource)
       && /if \(requestedMode === "overlay" \|\| requestedMode === "multiply"\) \{[\s\S]*?return "soft-light";/.test(rendererSource),
@@ -113,6 +113,10 @@ test("physical layer source contracts stay wired to the expected renderer and st
       /baseOpacity \* getAtlasFeatureAlphaMultiplier\(atlasClass, cfg\) \* getFieldFeatureMultiplier\("physicalAtlas", feature\)/.test(rendererSource)
       && /const resolveContourIntensity = \(feature\) => getFieldFeatureMultiplier\("physicalContour", feature\);/.test(rendererSource)
       && /opacityMultiplierResolver: resolveContourIntensity,/.test(rendererSource),
+    physicalIntensityToolHookRegistered:
+      /registerRuntimeHook\(runtimeState, "setIntensityFieldToolFn", setIntensityFieldTool\);/.test(rendererSource),
+    physicalIntensityPointCommitRebakesComposite:
+      /if \(current\.subMode === "points"\) \{\s*bakeIntensityComposite\(channel\);\s*\}/.test(rendererSource),
     contourFirstIdleKeepsFastPath:
       /function shouldPreferImmediateExactContextBaseRefresh\(reuseDecision = null\)/.test(rendererSource) === false
       && /const deferredReuseDecision = state\.deferExactAfterSettle \? getContextBaseReuseDecision\(\) : null;/.test(rendererSource) === false,

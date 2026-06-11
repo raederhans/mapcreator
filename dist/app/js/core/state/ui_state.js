@@ -14,6 +14,7 @@ import {
   createDefaultTransportWorkbenchPointDeltas,
   createDefaultUrbanStyleConfig,
   defaultZoom,
+  PARENT_BORDER_STYLE_DEFAULTS,
   normalizeAnnotationView,
   normalizeCityLayerStyleConfig,
   normalizeDayNightStyleConfig,
@@ -227,9 +228,9 @@ export function createDefaultStyleConfig() {
       width: 1.2,
     },
     parentBorders: {
-      color: "#4b5563",
-      opacity: 0.85,
-      width: 1.1,
+      color: PARENT_BORDER_STYLE_DEFAULTS.color,
+      opacity: PARENT_BORDER_STYLE_DEFAULTS.opacity,
+      width: PARENT_BORDER_STYLE_DEFAULTS.width,
     },
     ocean: {
       preset: "flat",

@@ -143,6 +143,15 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (hgoRuntimeClick.active) {", click_body)
         self.assertIn("updateDevSelectedHit(hgoRuntimeClick.hit?.id ? hgoRuntimeClick.hit : null);", click_body)
 
+    def test_physical_intensity_tool_hook_is_registered_for_renderer_mode(self):
+        config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+
+        self.assertIn('"setIntensityFieldToolFn"', config_content)
+        self.assertIn('registerRuntimeHook(runtimeState, "setIntensityFieldToolFn", setIntensityFieldTool);', renderer_content)
+        self.assertIn("runtimeState.intensityFieldTool = normalizeIntensityFieldToolState(next);", renderer_content)
+        self.assertIn("handlePhysicalIntensityPointerDown", renderer_content)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,9 +15,10 @@ async function waitForMapReady(page) {
   await page.waitForTimeout(1_500);
 }
 
-async function captureCanvasSnapshot(page) {
-  return page.evaluate(() => {
-    const canvas = document.getElementById("map-canvas");
+async function capturePhysicalBasePassSnapshot(page) {
+  return page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const canvas = state.renderPassCache?.canvases?.physicalBase || null;
     const context = canvas instanceof HTMLCanvasElement
       ? canvas.getContext("2d", { willReadFrequently: true })
       : null;
@@ -204,7 +205,7 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
       },
       geometry: {
         type: "Polygon",
-        coordinates: [[[-12, 36], [32, 36], [32, 60], [-12, 60], [-12, 36]]],
+        coordinates: [[[-160, -50], [160, -50], [160, 70], [-160, 70], [-160, -50]]],
       },
     };
 
@@ -217,9 +218,9 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
       ...state.styleConfig.physical,
       preset: "balanced",
       mode: "atlas_only",
-      opacity: 0.56,
-      atlasOpacity: 0.44,
-      atlasIntensity: 0.96,
+      opacity: 1,
+      atlasOpacity: 1,
+      atlasIntensity: 1,
       blendMode: "source-over",
       contourMinorVisible: false,
     });
@@ -231,7 +232,7 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
     state.renderNowFn?.();
   });
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 60_000 });
-  const physicalOffSnapshot = await captureCanvasSnapshot(page);
+  const physicalOffSnapshot = await capturePhysicalBasePassSnapshot(page);
 
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -243,7 +244,7 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
     state.renderNowFn?.();
   });
   await waitForRenderIdle(page, { scenarioId: "tno_1962", timeout: 60_000 });
-  const physicalOnSnapshot = await captureCanvasSnapshot(page);
+  const physicalOnSnapshot = await capturePhysicalBasePassSnapshot(page);
   const renderDiagnostics = await page.evaluate(() => {
     const metrics = globalThis.__renderPerfMetrics || {};
     return {
@@ -257,8 +258,8 @@ test("physical layer defaults and atlas rendering regression", async ({ page }) 
 
   expect(renderDiagnostics.physicalRenderedCount).toBeGreaterThan(0);
   expect(renderDiagnostics.reliefRenderedCount).toBeGreaterThan(0);
-  // The synthetic polygon covers a narrow part of the full canvas; renderer metrics prove the draw path.
-  expect(reliefOverlayDiff).toBeGreaterThan(0.25);
+  // The physicalBase pass canvas proves the layer changed even when later political fills reduce main-canvas deltas.
+  expect(reliefOverlayDiff).toBeGreaterThan(0.05);
   expect(reliefOverlayDiff).toBeLessThan(120);
   expect(unexpectedConsoleErrors, `Console errors: ${JSON.stringify(consoleErrors, null, 2)}`).toEqual([]);
   expect(pageErrors, `Page errors: ${JSON.stringify(pageErrors, null, 2)}`).toEqual([]);

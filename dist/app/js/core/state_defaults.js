@@ -316,8 +316,16 @@ function normalizeLakeStyleConfig(rawConfig) {
   };
 }
 
-const LEGACY_URBAN_STYLE_DEFAULTS = Object.freeze({
+export const URBAN_MANUAL_DEFAULT_COLOR = "#4b5563";
+export const URBAN_ADAPTIVE_TINT_DEFAULT_COLOR = "#f2dea1";
+export const PARENT_BORDER_STYLE_DEFAULTS = Object.freeze({
   color: "#4b5563",
+  opacity: 0.85,
+  width: 1.1,
+});
+
+const LEGACY_URBAN_STYLE_DEFAULTS = Object.freeze({
+  color: URBAN_MANUAL_DEFAULT_COLOR,
   opacity: 0.4,
   blendMode: "multiply",
   minAreaPx: 8,
@@ -333,7 +341,7 @@ function createDefaultUrbanStyleConfig() {
     adaptiveStrength: 0.3,
     toneBias: 0.12,
     adaptiveTintEnabled: false,
-    adaptiveTintColor: "#f2dea1",
+    adaptiveTintColor: URBAN_ADAPTIVE_TINT_DEFAULT_COLOR,
     adaptiveTintStrength: 0,
     minAreaPx: 1,
   };

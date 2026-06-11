@@ -343,3 +343,6 @@
 
 ### deferred full cache 要整体避开恢复窗口
 - progressive full cache ready 这类 idle 优化只延后最终 repaint 还不够；slice 构建本身也会挤占 startup/interaction recovery，先等 `isInteractionRecoverySettled()` 再建和发布。
+
+### 渲染 pass 回归要采样 owning canvas
+- 多 pass 合成后，最终 canvas 可能被后续政治填色等层压低局部差异；锁单个图层强度时优先采样该 pass 的 owning canvas，再用端到端截图确认可见链路。

@@ -1,6 +1,7 @@
 // Toolbar UI (Phase 13)
 import {
   state as runtimeState,
+  PARENT_BORDER_STYLE_DEFAULTS,
   PALETTE_THEMES,
   normalizeExportWorkbenchUiState,
   normalizeLakeStyleConfig,
@@ -1106,7 +1107,7 @@ function initToolbar({ render } = {}) {
       scenarioContextModeText.setAttribute(
         "title",
         showScenarioState
-          ? `${t("Mode", "ui")}: ${modeLabel} · ${t("View", "ui")}: ${t("Ownership", "ui")}`
+          ? `${t("Mode", "ui")}: ${modeLabel} · ${t("View", "ui")}: ${scenarioViewLabel}`
           : `${t("Mode", "ui")}: ${modeLabel}`
       );
     }
@@ -1547,19 +1548,19 @@ function initToolbar({ render } = {}) {
     runtimeState.styleConfig.parentBorders = {};
   }
   runtimeState.styleConfig.parentBorders.color = String(
-    runtimeState.styleConfig.parentBorders.color || "#4b5563"
+    runtimeState.styleConfig.parentBorders.color || PARENT_BORDER_STYLE_DEFAULTS.color
   );
   runtimeState.styleConfig.parentBorders.opacity = clamp(
     Number.isFinite(Number(runtimeState.styleConfig.parentBorders.opacity))
       ? Number(runtimeState.styleConfig.parentBorders.opacity)
-      : 0.85,
+      : PARENT_BORDER_STYLE_DEFAULTS.opacity,
     0,
     1
   );
   runtimeState.styleConfig.parentBorders.width = clamp(
     Number.isFinite(Number(runtimeState.styleConfig.parentBorders.width))
       ? Number(runtimeState.styleConfig.parentBorders.width)
-      : 1.1,
+      : PARENT_BORDER_STYLE_DEFAULTS.width,
     0.2,
     4
   );

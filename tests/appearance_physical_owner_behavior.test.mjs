@@ -5,6 +5,10 @@ import {
   PHYSICAL_CLASS_TOGGLE_IDS,
   createAppearancePhysicalOwner,
 } from "../js/ui/toolbar/appearance_physical_owner.js";
+import {
+  createIntensityFieldsState,
+  updateIntensityFieldChannel,
+} from "../js/core/state.js";
 
 class TestElement {
   constructor() {
@@ -59,13 +63,18 @@ const PHYSICAL_NODE_IDS = [
   "physicalContourMajorLowReliefCutoff",
   "physicalContourMinorLowReliefCutoff",
   "physicalBlendMode",
+  "physicalIntensityFieldChannelAtlas",
+  "physicalIntensityFieldChannelContour",
   "physicalIntensityFieldEnabled",
+  "physicalIntensityFieldToolToggleBtn",
+  "physicalIntensityFieldPaintBtn",
+  "physicalIntensityFieldEraseBtn",
+  "physicalIntensityFieldPointsBtn",
   "physicalIntensityFieldWeight",
   "physicalIntensityFieldRadius",
-  "physicalIntensityFieldStampCenterBtn",
-  "physicalIntensityFieldAddCenterBtn",
   "physicalIntensityFieldClearBtn",
   "physicalIntensityFieldPointCount",
+  "physicalIntensityFieldPointList",
   "physicalOpacityValue",
   "physicalAtlasIntensityValue",
   "physicalRainforestEmphasisValue",
@@ -116,18 +125,7 @@ function createHarness(ids = PHYSICAL_NODE_IDS, runtimeOverrides = {}) {
       physical: createPhysicalConfig(),
     },
     intensityFields: undefined,
-    physicalIntensityField: {
-      schemaVersion: 1,
-      enabled: false,
-      revision: 0,
-      points: [],
-      grid: {
-        bounds: [-180, -90, 180, 90],
-        columns: 0,
-        rows: 0,
-        values: [],
-      },
-    },
+    intensityFieldTool: undefined,
     ensureContextLayerDataFn(layers, options) {
       contextLayerLoads.push({ layers, options });
       return Promise.resolve();
@@ -140,9 +138,7 @@ function createHarness(ids = PHYSICAL_NODE_IDS, runtimeOverrides = {}) {
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
     normalizeOceanFillColor: (value) => String(value || "").toLowerCase(),
     renderDirty: (reason) => dirtyReasons.push(reason),
-    captureHistoryState: () => ({
-      physicalIntensityField: JSON.parse(JSON.stringify(runtimeState.physicalIntensityField)),
-    }),
+    captureHistoryState: () => ({ intensityFields: runtimeState.intensityFields }),
     pushHistoryEntry: (entry) => {
       historyEntries.push(entry);
       return true;
@@ -178,7 +174,7 @@ test("physical owner renders preset, value labels, and class toggles", () => {
   assert.equal(harness.nodes.physicalClassMountain.checked, true);
   assert.equal(harness.nodes.physicalIntensityFieldEnabled.checked, false);
   assert.equal(harness.nodes.physicalIntensityFieldWeight.value, "100");
-  assert.equal(harness.nodes.physicalIntensityFieldRadius.value, "500");
+  assert.equal(harness.nodes.physicalIntensityFieldRadius.value, "300");
   assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "0");
 });
 
@@ -270,49 +266,78 @@ test("physical owner edits intensity field through history-backed controls", () 
   harness.owner.bindEvents();
   harness.nodes.physicalIntensityFieldEnabled.checked = true;
   harness.nodes.physicalIntensityFieldEnabled.dispatch("change");
-  harness.nodes.physicalIntensityFieldWeight.value = "-125";
+  harness.nodes.physicalIntensityFieldWeight.value = "150";
   harness.nodes.physicalIntensityFieldWeight.dispatch("input");
   harness.nodes.physicalIntensityFieldRadius.value = "1250";
   harness.nodes.physicalIntensityFieldRadius.dispatch("input");
-  harness.nodes.physicalIntensityFieldStampCenterBtn.dispatch("click");
-  harness.nodes.physicalIntensityFieldAddCenterBtn.dispatch("click");
+  harness.nodes.physicalIntensityFieldToolToggleBtn.dispatch("click");
+  harness.nodes.physicalIntensityFieldEraseBtn.dispatch("click");
 
-  assert.equal(harness.runtimeState.physicalIntensityField.enabled, true);
   assert.equal(harness.nodes.physicalIntensityFieldEnabled.checked, true);
   assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.enabled, true);
-  assert.equal(harness.runtimeState.physicalIntensityField.revision, 3);
-  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.revision, 3);
-  assert.equal(harness.runtimeState.physicalIntensityField.points.length, 1);
-  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 1);
-  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points[0].strength, 0.5625);
-  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite instanceof Float32Array);
-  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.some((value) => value < 1));
-  assert.deepEqual(harness.runtimeState.physicalIntensityField.points[0], {
-    id: "point-1",
-    lon: 0,
-    lat: 0,
-    weight: -1.25,
-    radiusKm: 1250,
-    falloff: "smooth",
+  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.revision, 1);
+  assert.equal(harness.runtimeState.intensityFieldTool.active, true);
+  assert.equal(harness.runtimeState.intensityFieldTool.subMode, "erase");
+  assert.equal(harness.runtimeState.intensityFieldTool.brushStrength, 1.5);
+  assert.equal(harness.runtimeState.intensityFieldTool.brushRadiusDeg, 12.5);
+  assert.equal(harness.nodes.physicalIntensityFieldWeightValue.textContent, "150%");
+  assert.equal(harness.nodes.physicalIntensityFieldRadiusValue.textContent, "≈ 1388 km");
+  assert.equal(harness.historyEntries.length, 1);
+  assert.deepEqual(harness.dirtyReasons, ["physical-intensity-field-enabled"]);
+
+  const seededIntensityFields = updateIntensityFieldChannel(createIntensityFieldsState(), "physicalAtlas", (channel) => {
+    channel.enabled = true;
+    channel.points = [{
+      id: "ridge-1",
+      lon: 10,
+      lat: 46,
+      strength: 1.25,
+      radiusDeg: 4,
+      falloff: "smooth",
+    }];
   });
-  assert.equal(harness.nodes.physicalIntensityFieldWeightValue.textContent, "-125%");
-  assert.equal(harness.nodes.physicalIntensityFieldRadiusValue.textContent, "1250 km");
-  assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "1");
-  assert.equal(harness.historyEntries.length, 3);
-  assert.deepEqual(harness.dirtyReasons, [
-    "physical-intensity-field-enabled",
-    "physical-intensity-field-stamp-brush",
-    "physical-intensity-field-add-point",
-  ]);
 
-  harness.nodes.physicalIntensityFieldClearBtn.dispatch("click");
+  const selectedPointHarness = createHarness(PHYSICAL_NODE_IDS, {
+    intensityFields: seededIntensityFields,
+    intensityFieldTool: {
+      active: true,
+      brushRadiusDeg: 12.5,
+      brushStrength: 1.5,
+      channelId: "physicalAtlas",
+      selectedPointId: "ridge-1",
+      subMode: "points",
+    },
+  });
+  selectedPointHarness.owner.bindEvents();
+  selectedPointHarness.owner.renderPhysicalIntensityFieldUi();
+  selectedPointHarness.nodes.physicalIntensityFieldWeight.value = "175";
+  selectedPointHarness.nodes.physicalIntensityFieldWeight.dispatch("input");
+  selectedPointHarness.nodes.physicalIntensityFieldWeight.dispatch("change");
 
-  assert.equal(harness.runtimeState.physicalIntensityField.revision, 4);
-  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.revision, 4);
-  assert.equal(harness.runtimeState.physicalIntensityField.points.length, 0);
-  assert.equal(harness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 0);
-  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.base.every((value) => value === 1));
-  assert.ok(harness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.every((value) => value === 1));
-  assert.equal(harness.nodes.physicalIntensityFieldPointCount.textContent, "0");
-  assert.equal(harness.historyEntries.length, 4);
+  assert.equal(selectedPointHarness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 1);
+  assert.equal(selectedPointHarness.runtimeState.intensityFields.channels.physicalAtlas.points[0].strength, 1.75);
+  assert.equal(selectedPointHarness.nodes.physicalIntensityFieldPointCount.textContent, "1");
+  assert.equal(selectedPointHarness.historyEntries.length, 1);
+  assert.equal(selectedPointHarness.dirtyReasons.at(-1), "physical-intensity-field-point-strength");
+
+  const clearChannelHarness = createHarness(PHYSICAL_NODE_IDS, {
+    intensityFields: seededIntensityFields,
+    intensityFieldTool: {
+      active: true,
+      brushRadiusDeg: 12.5,
+      brushStrength: 1.5,
+      channelId: "physicalAtlas",
+      selectedPointId: "ridge-1",
+      subMode: "points",
+    },
+  });
+  clearChannelHarness.owner.bindEvents();
+  clearChannelHarness.owner.renderPhysicalIntensityFieldUi();
+  clearChannelHarness.nodes.physicalIntensityFieldClearBtn.dispatch("click");
+
+  assert.equal(clearChannelHarness.runtimeState.intensityFields.channels.physicalAtlas.points.length, 0);
+  assert.ok(clearChannelHarness.runtimeState.intensityFields.channels.physicalAtlas.grid.base.every((value) => value === 1));
+  assert.ok(clearChannelHarness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.every((value) => value === 1));
+  assert.equal(clearChannelHarness.nodes.physicalIntensityFieldPointCount.textContent, "0");
+  assert.equal(clearChannelHarness.historyEntries.length, 1);
 });

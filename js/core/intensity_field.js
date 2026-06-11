@@ -36,11 +36,25 @@ function createNeutralGridValues() {
   return new Float32Array(INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows).fill(INTENSITY_FIELD_GRID.neutral);
 }
 
+function getGridLength() {
+  return INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows;
+}
+
 function normalizeGridValues(values) {
-  const expectedLength = INTENSITY_FIELD_GRID.columns * INTENSITY_FIELD_GRID.rows;
-  const next = createNeutralGridValues();
-  if (!values) return next;
+  const expectedLength = getGridLength();
+  if (!values) return createNeutralGridValues();
   const source = ArrayBuffer.isView(values) || Array.isArray(values) ? values : [];
+  if (source instanceof Float32Array && source.length === expectedLength) {
+    for (let index = 0; index < expectedLength; index += 1) {
+      source[index] = clampNumber(
+        toFiniteNumber(source[index], INTENSITY_FIELD_GRID.neutral),
+        INTENSITY_FIELD_GRID.min,
+        INTENSITY_FIELD_GRID.max,
+      );
+    }
+    return source;
+  }
+  const next = createNeutralGridValues();
   const limit = Math.min(source.length, expectedLength);
   for (let index = 0; index < limit; index += 1) {
     next[index] = clampNumber(toFiniteNumber(source[index], INTENSITY_FIELD_GRID.neutral), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max);
@@ -137,35 +151,89 @@ function getPointInfluence(point, lon, lat) {
   return point.falloff === "linear" ? linear : smoothstep(0, 1, linear);
 }
 
-export function bakeIntensityComposite(channel) {
+function normalizeRect(rect) {
+  if (!rect || typeof rect !== "object") return null;
+  const x = clampNumber(Math.floor(toFiniteNumber(rect.x, 0)), 0, INTENSITY_FIELD_GRID.columns - 1);
+  const y = clampNumber(Math.floor(toFiniteNumber(rect.y, 0)), 0, INTENSITY_FIELD_GRID.rows - 1);
+  const width = clampNumber(Math.ceil(toFiniteNumber(rect.width, 0)), 0, INTENSITY_FIELD_GRID.columns - x);
+  const height = clampNumber(Math.ceil(toFiniteNumber(rect.height, 0)), 0, INTENSITY_FIELD_GRID.rows - y);
+  return width > 0 && height > 0 ? { x, y, width, height } : null;
+}
+
+function mergeRects(left, right) {
+  if (!left) return right || null;
+  if (!right) return left;
+  const minX = Math.min(left.x, right.x);
+  const minY = Math.min(left.y, right.y);
+  const maxX = Math.max(left.x + left.width - 1, right.x + right.width - 1);
+  const maxY = Math.max(left.y + left.height - 1, right.y + right.height - 1);
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+function getBrushRowWindow(centerLat, radius) {
+  const latStep = 180 / INTENSITY_FIELD_GRID.rows;
+  const top = clampNumber(centerLat + radius, -90, 90);
+  const bottom = clampNumber(centerLat - radius, -90, 90);
+  return {
+    start: clampNumber(Math.floor((90 - top) / latStep) - 1, 0, INTENSITY_FIELD_GRID.rows - 1),
+    end: clampNumber(Math.ceil((90 - bottom) / latStep) + 1, 0, INTENSITY_FIELD_GRID.rows - 1),
+  };
+}
+
+function getBrushColumnRanges(centerLon, radius) {
+  const lonStep = 360 / INTENSITY_FIELD_GRID.columns;
+  const minLon = centerLon - radius;
+  const maxLon = centerLon + radius;
+  const toColumn = (lon) => clampNumber(Math.floor(((lon + 180) / 360) * INTENSITY_FIELD_GRID.columns), 0, INTENSITY_FIELD_GRID.columns - 1);
+  if (minLon < -180 || maxLon > 180) {
+    const wrappedMin = minLon < -180 ? minLon + 360 : minLon;
+    const wrappedMax = maxLon > 180 ? maxLon - 360 : maxLon;
+    return [
+      { start: 0, end: toColumn(wrappedMax) + 1 },
+      { start: toColumn(wrappedMin) - 1, end: INTENSITY_FIELD_GRID.columns - 1 },
+    ].map((range) => ({
+      start: clampNumber(range.start, 0, INTENSITY_FIELD_GRID.columns - 1),
+      end: clampNumber(range.end, 0, INTENSITY_FIELD_GRID.columns - 1),
+    }));
+  }
+  return [{
+    start: clampNumber(toColumn(minLon) - 1, 0, INTENSITY_FIELD_GRID.columns - 1),
+    end: clampNumber(toColumn(maxLon) + 1, 0, INTENSITY_FIELD_GRID.columns - 1),
+  }];
+}
+
+function bakeCompositeCell(target, points, column, row) {
+  const { lon, lat } = getCellLonLat(column, row);
+  const index = getGridIndex(column, row);
+  target.grid.composite[index] = target.grid.base[index];
+  let influenceTotal = 0;
+  let weightedTotal = 0;
+  points.forEach((point) => {
+    const influence = getPointInfluence(point, lon, lat);
+    if (influence <= 0) return;
+    influenceTotal += influence;
+    weightedTotal += influence * point.strength;
+  });
+  if (influenceTotal > 0) {
+    const baked = weightedTotal / influenceTotal;
+    const blend = clampNumber(influenceTotal, 0, 1);
+    target.grid.composite[index] = clampNumber(
+      target.grid.base[index] + ((baked - target.grid.base[index]) * blend),
+      INTENSITY_FIELD_GRID.min,
+      INTENSITY_FIELD_GRID.max,
+    );
+  }
+}
+
+export function bakeIntensityComposite(channel, rect = null) {
   const target = channel && typeof channel === "object" ? channel : createIntensityFieldChannel("physicalAtlas");
   const base = normalizeGridValues(target.grid?.base || target.base);
-  const composite = new Float32Array(base);
-  // points 是可解释的编辑意图，composite 是渲染热路径读取的烘焙结果；每次写入后都重建一次。
+  const composite = target.grid?.composite instanceof Float32Array && target.grid.composite.length === getGridLength()
+    ? normalizeGridValues(target.grid.composite)
+    : createNeutralGridValues();
   const points = (Array.isArray(target.points) ? target.points : [])
     .map(normalizeIntensityPoint)
     .filter(Boolean);
-  if (points.length) {
-    for (let row = 0; row < INTENSITY_FIELD_GRID.rows; row += 1) {
-      for (let column = 0; column < INTENSITY_FIELD_GRID.columns; column += 1) {
-        const { lon, lat } = getCellLonLat(column, row);
-        let influenceTotal = 0;
-        let weightedTotal = 0;
-        points.forEach((point) => {
-          const influence = getPointInfluence(point, lon, lat);
-          if (influence <= 0) return;
-          influenceTotal += influence;
-          weightedTotal += influence * point.strength;
-        });
-        if (influenceTotal > 0) {
-          const baked = weightedTotal / influenceTotal;
-          const blend = clampNumber(influenceTotal, 0, 1);
-          const index = getGridIndex(column, row);
-          composite[index] = clampNumber(base[index] + ((baked - base[index]) * blend), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max);
-        }
-      }
-    }
-  }
   target.grid = {
     bounds: [...INTENSITY_FIELD_GRID.bounds],
     columns: INTENSITY_FIELD_GRID.columns,
@@ -174,43 +242,68 @@ export function bakeIntensityComposite(channel) {
     composite,
   };
   target.points = points;
+  const dirtyRect = normalizeRect(rect);
+  if (!dirtyRect) {
+    target.grid.composite.set(base);
+  }
+  const scanRect = dirtyRect || {
+    x: 0,
+    y: 0,
+    width: INTENSITY_FIELD_GRID.columns,
+    height: INTENSITY_FIELD_GRID.rows,
+  };
+  for (let row = scanRect.y; row < scanRect.y + scanRect.height; row += 1) {
+    for (let column = scanRect.x; column < scanRect.x + scanRect.width; column += 1) {
+      bakeCompositeCell(target, points, column, row);
+    }
+  }
   return target;
 }
 
 export function stampIntensityBrush(channel, { lon, lat, radiusDeg = 3, strength = 1, mode = "paint" } = {}) {
-  const target = bakeIntensityComposite(channel);
+  const target = bakeIntensityComposite(channel, { x: 0, y: 0, width: 0, height: 0 });
   const centerLon = clampNumber(toFiniteNumber(lon, 0), -180, 180);
   const centerLat = clampNumber(toFiniteNumber(lat, 0), -90, 90);
   const radius = clampNumber(toFiniteNumber(radiusDeg, 3), 0.25, 30);
   const nextStrength = mode === "erase"
     ? INTENSITY_FIELD_GRID.neutral
     : clampNumber(toFiniteNumber(strength, INTENSITY_FIELD_GRID.neutral), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max);
-  let minColumn = INTENSITY_FIELD_GRID.columns;
-  let minRow = INTENSITY_FIELD_GRID.rows;
-  let maxColumn = 0;
-  let maxRow = 0;
+  const rowWindow = getBrushRowWindow(centerLat, radius);
+  const columnRanges = getBrushColumnRanges(centerLon, radius);
+  let dirtyRect = null;
   let touched = false;
-  // brush 直接写 base grid，并返回受影响矩形，方便 history 或后续局部同步只保存变更窗口。
-  for (let row = 0; row < INTENSITY_FIELD_GRID.rows; row += 1) {
-    for (let column = 0; column < INTENSITY_FIELD_GRID.columns; column += 1) {
-      const { lon: cellLon, lat: cellLat } = getCellLonLat(column, row);
-      const influence = getPointInfluence({ lon: centerLon, lat: centerLat, radiusDeg: radius, falloff: "smooth" }, cellLon, cellLat);
-      if (influence <= 0) continue;
-      const index = getGridIndex(column, row);
-      target.grid.base[index] = clampNumber(
-        target.grid.base[index] + ((nextStrength - target.grid.base[index]) * influence),
-        INTENSITY_FIELD_GRID.min,
-        INTENSITY_FIELD_GRID.max,
-      );
-      minColumn = Math.min(minColumn, column);
-      minRow = Math.min(minRow, row);
-      maxColumn = Math.max(maxColumn, column);
-      maxRow = Math.max(maxRow, row);
-      touched = true;
+  columnRanges.forEach((range) => {
+    let localMinColumn = INTENSITY_FIELD_GRID.columns;
+    let localMaxColumn = 0;
+    let localTouched = false;
+    for (let row = rowWindow.start; row <= rowWindow.end; row += 1) {
+      for (let column = range.start; column <= range.end; column += 1) {
+        const { lon: cellLon, lat: cellLat } = getCellLonLat(column, row);
+        const influence = getPointInfluence({ lon: centerLon, lat: centerLat, radiusDeg: radius, falloff: "smooth" }, cellLon, cellLat);
+        if (influence <= 0) continue;
+        const index = getGridIndex(column, row);
+        target.grid.base[index] = clampNumber(
+          target.grid.base[index] + ((nextStrength - target.grid.base[index]) * influence),
+          INTENSITY_FIELD_GRID.min,
+          INTENSITY_FIELD_GRID.max,
+        );
+        localMinColumn = Math.min(localMinColumn, column);
+        localMaxColumn = Math.max(localMaxColumn, column);
+        localTouched = true;
+        touched = true;
+      }
     }
-  }
-  bakeIntensityComposite(target);
-  return touched ? { x: minColumn, y: minRow, width: maxColumn - minColumn + 1, height: maxRow - minRow + 1 } : null;
+    if (localTouched) {
+      dirtyRect = mergeRects(dirtyRect, {
+        x: localMinColumn,
+        y: rowWindow.start,
+        width: localMaxColumn - localMinColumn + 1,
+        height: rowWindow.end - rowWindow.start + 1,
+      });
+    }
+  });
+  if (dirtyRect) bakeIntensityComposite(target, dirtyRect);
+  return touched ? dirtyRect : null;
 }
 
 export function sampleIntensityField(fieldsState, channelId, lon, lat) {
@@ -253,7 +346,7 @@ export function extractFieldRectPatch(channel, rect) {
 }
 
 export function applyFieldRectPatch(channel, patch) {
-  const target = bakeIntensityComposite(channel);
+  const target = bakeIntensityComposite(channel, { x: 0, y: 0, width: 0, height: 0 });
   const x = clampNumber(Math.round(patch?.x || 0), 0, INTENSITY_FIELD_GRID.columns - 1);
   const y = clampNumber(Math.round(patch?.y || 0), 0, INTENSITY_FIELD_GRID.rows - 1);
   const width = clampNumber(Math.round(patch?.width || 0), 0, INTENSITY_FIELD_GRID.columns - x);
@@ -270,6 +363,6 @@ export function applyFieldRectPatch(channel, patch) {
       cursor += 1;
     }
   }
-  bakeIntensityComposite(target);
+  bakeIntensityComposite(target, { x, y, width, height });
   return target;
 }

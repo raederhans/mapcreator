@@ -821,6 +821,8 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Single select": {"zh": "单选", "en": "Single select"},
   "Solid": {"zh": "纯色", "en": "Solid"},
   "Special Region Overrides Retired": {"zh": "特殊区域覆盖已退役", "en": "Special Region Overrides Retired"},
+  "Special Region Reference": {"zh": "特殊区域参考", "en": "Special Region Reference"},
+  "Special region color overrides retired. Use Special Zones layers for editable narrative regions.": {"zh": "特殊区域颜色覆盖已退役。请使用特殊区域图层编辑叙事区域。", "en": "Special region color overrides retired. Use Special Zones layers for editable narrative regions."},
   "Special zone layer load failed": {"zh": "特殊区域图层加载失败", "en": "Special zone layer load failed"},
   "Special zone layers workbench": {"zh": "特殊区域图层工作台", "en": "Special zone layers workbench"},
   "Special zone topology fingerprint mismatch is listed in the workbench diagnostics.": {"zh": "特殊区域拓扑指纹不匹配已列入工作台诊断。", "en": "Special zone topology fingerprint mismatch is listed in the workbench diagnostics."},

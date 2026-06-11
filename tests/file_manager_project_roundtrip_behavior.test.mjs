@@ -177,7 +177,7 @@ function createTransportOverviewImportPayload(layerVisibility = {}) {
   };
 }
 
-async function importProjectThroughFunnelPayload(payload, { capturePhysicalIntensityField = false } = {}) {
+async function importProjectThroughFunnelPayload(payload, { captureIntensityFields = false } = {}) {
   const previousDocument = globalThis.document;
   const previousFileReader = globalThis.FileReader;
   const previousEnsureContextLayerDataHook = readRegisteredRuntimeHookSource(state, "ensureContextLayerDataFn");
@@ -188,9 +188,9 @@ async function importProjectThroughFunnelPayload(payload, { capturePhysicalInten
     showRail: state.showRail,
     showRoad: state.showRoad,
   };
-  const previousPhysicalIntensityField = state.physicalIntensityField;
+  const previousIntensityFields = state.intensityFields;
   const requests = [];
-  let importedPhysicalIntensityField = null;
+  let importedIntensityFields = null;
 
   globalThis.document = {
     getElementById: () => null,
@@ -229,15 +229,15 @@ async function importProjectThroughFunnelPayload(payload, { capturePhysicalInten
         }
       );
     });
-    if (capturePhysicalIntensityField) {
-      importedPhysicalIntensityField = JSON.parse(JSON.stringify(state.physicalIntensityField));
+    if (captureIntensityFields) {
+      importedIntensityFields = state.intensityFields;
     }
-    return capturePhysicalIntensityField
-      ? { requests, physicalIntensityField: importedPhysicalIntensityField }
+    return captureIntensityFields
+      ? { requests, intensityFields: importedIntensityFields }
       : requests;
   } finally {
     Object.assign(state, previousTransportVisibilityState);
-    state.physicalIntensityField = previousPhysicalIntensityField;
+    state.intensityFields = previousIntensityFields;
     registerRuntimeHook(state, "ensureContextLayerDataFn", previousEnsureContextLayerDataHook);
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
@@ -305,42 +305,6 @@ test("project payload builder keeps open ocean visible with interaction off by d
   assert.equal(payload.layerVisibility.allowOpenOceanPaint, false);
 });
 
-test("project export and import preserve physical intensity field state", async () => {
-  const payload = await exportProjectPayload({
-    annotationView: {},
-    exportWorkbenchUi: {},
-    styleConfig: {},
-    physicalIntensityField: {
-      enabled: true,
-      revision: 7,
-      points: [{
-        id: "ridge-1",
-        lon: 12.5,
-        lat: 45.25,
-        weight: 1.4,
-        radiusKm: 900,
-        falloff: "linear",
-      }],
-      grid: {
-        bounds: [-20, 30, 30, 60],
-        columns: 2,
-        rows: 2,
-        values: [0, 0.5, -0.25, 1.2],
-      },
-    },
-  });
-
-  assert.equal(payload.physicalIntensityField.enabled, true);
-  assert.equal(payload.physicalIntensityField.revision, 7);
-  assert.equal(payload.physicalIntensityField.points[0].id, "ridge-1");
-  assert.deepEqual(payload.physicalIntensityField.grid.values, [0, 0.5, -0.25, 1.2]);
-
-  const result = await importProjectPayload(payload);
-  assert.equal(result.successes.length, 1);
-  assert.equal(result.successes[0].physicalIntensityField.enabled, true);
-  assert.equal(result.successes[0].physicalIntensityField.points[0].falloff, "linear");
-});
-
 test("project export and import preserve unified intensity fields", async () => {
   const intensityFields = updateIntensityFieldChannel(createIntensityFieldsState(), "physicalAtlas", (channel) => {
     channel.enabled = true;
@@ -364,6 +328,7 @@ test("project export and import preserve unified intensity fields", async () => 
   assert.equal(payload.intensityFields.channels.physicalAtlas.enabled, true);
   assert.equal(payload.intensityFields.channels.physicalAtlas.points[0].id, "alps-field");
   assert.equal(payload.intensityFields.channels.physicalAtlas.grid.base.encoding, "rle-u8-base64");
+  assert.equal(Object.hasOwn(payload, "physicalIntensityField"), false);
 
   const result = await importProjectPayload(payload);
   assert.equal(result.successes.length, 1);
@@ -371,19 +336,49 @@ test("project export and import preserve unified intensity fields", async () => 
   assert.ok(sampleIntensityField(result.successes[0].intensityFields, "physicalAtlas", 10, 46) > 1.4);
 });
 
-test("project import defaults missing physical intensity field to an empty state", async () => {
+test("project import defaults missing intensity fields to empty unified channels", async () => {
   const payload = await exportProjectPayload({
     annotationView: {},
     exportWorkbenchUi: {},
     styleConfig: {},
   });
-  delete payload.physicalIntensityField;
+  delete payload.intensityFields;
 
   const result = await importProjectPayload(payload);
 
-  assert.equal(result.successes[0].physicalIntensityField.enabled, false);
-  assert.equal(result.successes[0].physicalIntensityField.revision, 0);
-  assert.deepEqual(result.successes[0].physicalIntensityField.points, []);
+  assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.enabled, false);
+  assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.revision, 0);
+  assert.deepEqual(result.successes[0].intensityFields.channels.physicalAtlas.points, []);
+});
+
+test("project import migrates legacy physical intensity field points into physical atlas channel", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+  payload.physicalIntensityField = {
+    enabled: true,
+    revision: 7,
+    points: [{
+      id: "ridge-1",
+      lon: 12.5,
+      lat: 45.25,
+      weight: 1.4,
+      radiusKm: 900,
+      falloff: "linear",
+    }],
+  };
+  payload.intensityFields.channels.physicalAtlas.points = [];
+
+  const result = await importProjectPayload(payload);
+  const channel = result.successes[0].intensityFields.channels.physicalAtlas;
+
+  assert.equal(channel.enabled, true);
+  assert.equal(channel.points[0].id, "ridge-1");
+  assert.equal(channel.points[0].strength, 1.49);
+  assert.equal(Number(channel.points[0].radiusDeg.toFixed(3)), Number((900 / 111).toFixed(3)));
+  assert.equal(channel.points[0].falloff, "linear");
 });
 
 test("project import restores missing open ocean flags as visible without interaction", async () => {
@@ -421,7 +416,7 @@ test("project import restores missing transport overview registry visibility as 
   });
 });
 
-test("project import through funnel restores physical intensity field into runtime state", async () => {
+test("project import through funnel restores legacy physical intensity into unified runtime state", async () => {
   const result = await importProjectThroughFunnelPayload(
     {
       ...createTransportOverviewImportPayload(),
@@ -431,12 +426,13 @@ test("project import through funnel restores physical intensity field into runti
         points: [{ id: "peak", lon: 8, lat: 47, weight: 1, radiusKm: 650 }],
       },
     },
-    { capturePhysicalIntensityField: true },
+    { captureIntensityFields: true },
   );
 
-  assert.equal(result.physicalIntensityField.enabled, true);
-  assert.equal(result.physicalIntensityField.revision, 3);
-  assert.equal(result.physicalIntensityField.points[0].id, "peak");
+  const channel = result.intensityFields.channels.physicalAtlas;
+  assert.equal(channel.enabled, true);
+  assert.equal(channel.points[0].id, "peak");
+  assert.equal(channel.points[0].strength, 1.35);
 });
 
 test("interaction funnel debug reset clears stale import error state", async () => {

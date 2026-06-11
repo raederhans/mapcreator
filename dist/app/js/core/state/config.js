@@ -127,6 +127,7 @@ export const STATE_HANDLER_HOOK_NAMES = Object.freeze([
   "runToolSelectionFn",
   "runBrushModeToggleFn",
   "runHistoryActionFn",
+  "setIntensityFieldToolFn",
   "setHgoRuntimePreviewEnabledFn",
   "toggleHgoRuntimePreviewFn",
   "syncHgoRuntimePreviewUiFn",

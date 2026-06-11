@@ -133,13 +133,13 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("function renderPaletteLibrary()", owner_content)
         self.assertIn("async function handlePaletteSourceChange", owner_content)
         self.assertIn("const ensurePaletteLibrarySectionState =", owner_content)
-        self.assertIn("const buildPaletteLibraryGroups =", owner_content)
+        self.assertIn("function buildPaletteLibraryGroups(", owner_content)
 
     def test_palette_library_roving_focus_ignores_collapsed_section_rows(self):
         owner_content = PALETTE_LIBRARY_PANEL_JS.read_text(encoding="utf-8")
 
         self.assertIn("function isPaletteLibraryRowVisible(row)", owner_content)
-        self.assertIn('querySelectorAll(".palette-library-row")', owner_content)
+        self.assertIn('querySelectorAll(".palette-library-row, .palette-library-variant-btn")', owner_content)
         self.assertIn(".filter(isPaletteLibraryRowVisible);", owner_content)
         self.assertRegex(
             owner_content,
@@ -229,7 +229,6 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("function createScenarioGuidePopoverController", owner_content)
         self.assertIn("const renderScenarioGuideSection =", owner_content)
         self.assertIn("const focusScenarioGuideSectionButton =", owner_content)
-        self.assertIn("const renderScenarioGuideStatus =", owner_content)
         self.assertIn("const syncScenarioGuideTriggerButtons =", owner_content)
         self.assertIn("const openScenarioGuideSurface =", owner_content)
         self.assertIn("const closeScenarioGuideSurface =", owner_content)
@@ -256,13 +255,13 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def test_scenario_context_bar_supplies_guide_status_labels(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
         refresh_start = content.index("const refreshScenarioContextBar = () => {")
-        render_status = content.index("renderScenarioGuideStatus({", refresh_start)
-        refresh_prefix = content[refresh_start:render_status]
+        sync_trigger = content.index("syncScenarioGuideTriggerButtons({", refresh_start)
+        refresh_prefix = content[refresh_start:sync_trigger]
 
         self.assertIn("const splitCount = Number(runtimeState.scenarioOwnerControllerDiffCount || 0);", refresh_prefix)
         self.assertIn('const scenarioViewLabel = String(runtimeState.scenarioViewMode || "ownership") === "frontline"', refresh_prefix)
-        self.assertIn("scenarioViewLabel,", content[render_status:content.index("refreshWorkspaceStatus();", render_status)])
-        self.assertIn("splitCount,", content[render_status:content.index("refreshWorkspaceStatus();", render_status)])
+        self.assertIn("${scenarioViewLabel}", refresh_prefix)
+        self.assertIn("refreshWorkspaceStatus();", content[sync_trigger:content.index("applyScenarioOverlaySafeLayout();", sync_trigger)])
 
     def test_special_zone_editor_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -591,7 +590,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("transportWorkbenchPreviewLifecycleOwner.refreshPreview(context, { allowCarrierPrep })", owner_content)
         self.assertIn("transportWorkbenchPreviewLifecycleOwner.initializeRuntimeHooks();", owner_content)
         self.assertIn("transportWorkbenchPreviewLifecycleOwner.dispose();", owner_content)
-        self.assertIn("renderTransportWorkbenchFamilyPreview(context.family.id, context.config, {", preview_lifecycle_owner_content)
+        self.assertIn("renderFamilyPreview(context.family.id, context.config, {", preview_lifecycle_owner_content)
         self.assertIn("isCurrent: () => isRenderGenerationCurrent(candidateGeneration, context.family.id),", preview_lifecycle_owner_content)
         self.assertIn("listWarmupPlans = listTransportWorkbenchWarmupPlans,", preview_lifecycle_owner_content)
         self.assertIn("warmFamilyPreview = warmTransportWorkbenchFamilyPreview,", preview_lifecycle_owner_content)
@@ -745,9 +744,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("familyTabs: transportWorkbenchFamilyTabs,", owner_content)
         self.assertIn("inspectorTabButtons: transportWorkbenchInspectorTabButtons,", owner_content)
         self.assertIn("handlePopoverEscape: (event) => transportWorkbenchPopoverOwner.handleEscape(event),", owner_content)
-        self.assertIn('button.addEventListener("pointerdown", (event) => {', event_owner_content)
-        self.assertIn('["pointerup", "pointercancel", "pointerleave", "blur"].forEach((eventName) => {', event_owner_content)
-        self.assertIn("event.preventDefault();", event_owner_content)
+        self.assertIn('tabButton.addEventListener("click", () => {', event_owner_content)
         self.assertIn('button.addEventListener("click", async () => {', event_owner_content)
         self.assertIn("await applyFamilyToMainMap(context);", event_owner_content)
         self.assertIn("renderShell(getRenderContext());", event_owner_content)
@@ -961,7 +958,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("runtimeState.syncDayNightClockTimerFn?.();", owner_content)
         self.assertIn("const updateTextureStyle = (mutate, { historyKind = \"texture-style\", commitHistory = false } = {}) => {", owner_content)
         self.assertIn("const bindTextureRange = (element, handler) => {", owner_content)
-        self.assertIn("const bindTextureColorInput = (element, handler) => {", owner_content)
+        self.assertIn("bindTextureRange(nodes.textureGraticuleColor,", owner_content)
+        self.assertIn("bindTextureRange(nodes.textureDraftColor,", owner_content)
         self.assertNotIn('document.getElementById("textureSelect")', controller_content)
         self.assertNotIn('document.getElementById("dayNightEnabled")', controller_content)
         self.assertNotIn('document.getElementById("textureSelect")', toolbar_content)

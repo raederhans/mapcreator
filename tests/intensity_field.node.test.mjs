@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  INTENSITY_FIELD_GRID,
   bakeIntensityComposite,
   createIntensityFieldsState,
   extractFieldRectPatch,
@@ -44,10 +45,51 @@ test("intensity brush writes grid values and patch extraction captures the dirty
 
   assert.ok(rect.width > 0);
   assert.ok(rect.height > 0);
+  assert.ok(rect.width < INTENSITY_FIELD_GRID.columns / 8);
+  assert.ok(rect.height < INTENSITY_FIELD_GRID.rows / 8);
   assert.ok(sampleIntensityField({ channels: { physicalContour: { ...channel, enabled: true } } }, "physicalContour", 0, 0) > 1.2);
 
   const patch = extractFieldRectPatch(channel, rect);
   assert.equal(patch.values.length, rect.width * rect.height);
+});
+
+test("intensity brush incremental bake matches full bake", () => {
+  const fields = createIntensityFieldsState();
+  const channel = fields.channels.physicalAtlas;
+  channel.enabled = true;
+  channel.points = [
+    { id: "peak", lon: 8, lat: 46, strength: 1.35, radiusDeg: 5, falloff: "smooth" },
+  ];
+
+  const rect = stampIntensityBrush(channel, {
+    lon: 10,
+    lat: 45,
+    radiusDeg: 3,
+    strength: 0.55,
+  });
+  const incrementalComposite = new Float32Array(channel.grid.composite);
+  bakeIntensityComposite(channel);
+
+  assert.ok(rect.width > 0);
+  for (let index = 0; index < incrementalComposite.length; index += 1) {
+    assert.equal(channel.grid.composite[index], incrementalComposite[index]);
+  }
+});
+
+test("intensity brush handles wrapped longitude windows", () => {
+  const fields = createIntensityFieldsState();
+  const channel = fields.channels.physicalAtlas;
+  channel.enabled = true;
+
+  const rect = stampIntensityBrush(channel, {
+    lon: 179.7,
+    lat: 0,
+    radiusDeg: 2,
+    strength: 1.8,
+  });
+
+  assert.ok(rect.width > 0);
+  assert.ok(sampleIntensityField(fields, "physicalAtlas", -179.7, 0) > 1.2);
 });
 
 test("intensity field serialization roundtrips enabled channels and points", () => {
