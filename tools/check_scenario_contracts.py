@@ -316,6 +316,7 @@ def _collect_snapshot_inputs(
         "relief_overlays_url": "relief_overlays.geojson",
         "bathymetry_topology_url": "bathymetry.topo.json",
         "city_overrides_url": "city_overrides.json",
+        "capital_hints_url": "capital_hints.json",
         "scenario_atlantropa_topology_url": "scenario_atlantropa.topo.json",
         "scenario_atlantropa_metadata_url": "scenario_atlantropa_metadata.json",
     }

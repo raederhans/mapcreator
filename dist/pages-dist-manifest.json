@@ -29877,6 +29877,42 @@
       "size_bytes": 1546
     },
     {
+      "path": "app/data/scenarios/hgo_1936/build_snapshot.json",
+      "size_bytes": 1143
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/capital_hints.json",
+      "size_bytes": 51285
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/city_overrides.json",
+      "size_bytes": 13213
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/cores.by_feature.json",
+      "size_bytes": 452966
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/countries.json",
+      "size_bytes": 586947
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/manifest.json",
+      "size_bytes": 2821
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/owners.by_feature.json",
+      "size_bytes": 286451
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/runtime_topology.topo.json",
+      "size_bytes": 30079615
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/special_zone_layers.json",
+      "size_bytes": 108
+    },
+    {
       "path": "app/data/scenarios/hoi4_1936/build_snapshot.json",
       "size_bytes": 2246
     },
@@ -31798,7 +31834,7 @@
     },
     {
       "path": "app/data/scenarios/index.json",
-      "size_bytes": 810
+      "size_bytes": 952
     },
     {
       "path": "app/data/scenarios/modern_world/build_snapshot.json",
@@ -36350,7 +36386,7 @@
     },
     {
       "path": "app/js/core/country_code_aliases.js",
-      "size_bytes": 339
+      "size_bytes": 342
     },
     {
       "path": "app/js/core/country_feature_policies.js",
@@ -36378,7 +36414,7 @@
     },
     {
       "path": "app/js/core/feature_identity_shared.js",
-      "size_bytes": 4535
+      "size_bytes": 4855
     },
     {
       "path": "app/js/core/file_manager.js",
@@ -36410,7 +36446,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_preview.js",
-      "size_bytes": 11611
+      "size_bytes": 11793
     },
     {
       "path": "app/js/core/history_manager.js",
@@ -36466,7 +36502,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 988395
+      "size_bytes": 989804
     },
     {
       "path": "app/js/core/mapcreator_snapshot.js",
@@ -36558,7 +36594,7 @@
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
-      "size_bytes": 7467
+      "size_bytes": 7554
     },
     {
       "path": "app/js/core/renderer/river_layer_render_owner.js",
@@ -36814,7 +36850,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 15945
+      "size_bytes": 16027
     },
     {
       "path": "app/js/core/state/scenario_runtime_state.js",
@@ -37014,7 +37050,7 @@
     },
     {
       "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-      "size_bytes": 5325
+      "size_bytes": 5468
     },
     {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
@@ -37386,7 +37422,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1055264
+      "size_bytes": 1056207
     },
     {
       "path": "styles.css",
@@ -37403,5 +37439,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1113289296
+  "total_bytes": 1144767156
 }

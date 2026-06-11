@@ -329,3 +329,8 @@
 
 ### 改 drawCanvas 生命周期要跑 runtime hooks 合同
 - `verify:pages-dist` 只覆盖 Pages 发布合同；移动 `drawCanvas()` 内 HGO、last-good、finalize 的顺序时，要额外跑 `python -m unittest tests.test_runtime_hooks_boundary_contract -q`。
+
+### HGO 场景发布要分清显式 tag 和派生 id
+- 数字开头的 HGO owner tag 只应从显式 `country_code` / owner 数据链路进入；从 `NUTS_ID` 或 feature id 派生国家码时继续按字母前缀解析，避免 `DE1` 变成国家码。
+- 生成器支持自定义输出目录时，默认不要更新全局 scenario registry；只有 checked-in `data/scenarios/{id}` 输出才自动登记。
+- manifest 声明的可发布 JSON 资产要进入 snapshot input sha；发布入口缺失的 controller 产物应删除或接通，避免生成一个运行时不会读取的伪合同。

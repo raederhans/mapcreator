@@ -4,7 +4,7 @@ const COUNTRY_CODE_ALIASES = Object.freeze({
 });
 
 function normalizeCountryCodeAlias(rawCode) {
-  const code = String(rawCode || "").trim().toUpperCase().replace(/[^A-Z]/g, "");
+  const code = String(rawCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!code) return "";
   return COUNTRY_CODE_ALIASES[code] || code;
 }

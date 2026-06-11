@@ -18,6 +18,8 @@ from tools.build_hgo_runtime_seed import (
     build_smoke_report,
     dump_json,
 )
+from tools.build_hgo_scenario import build_hgo_scenario, should_update_scenario_index
+from scenario_builder.hgo.compiler import compile_hgo_scenario
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -131,6 +133,121 @@ def write_palette_source(path: Path, entries: dict[str, dict[str, str]]) -> None
 
 
 class HgoRuntimeSeedBuilderTest(unittest.TestCase):
+    def test_hgo_builder_custom_output_does_not_update_scenario_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            custom_output = tmp_path / "hgo_custom"
+            default_output = REPO_ROOT / "data" / "scenarios" / "hgo_1936"
+
+            self.assertFalse(should_update_scenario_index("hgo_1936", custom_output))
+            self.assertTrue(should_update_scenario_index("hgo_1936", default_output))
+
+    def test_hgo_builder_removes_retired_controller_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            bmp_path = tmp_path / "provinces.bmp"
+            output_dir = tmp_path / "hgo_temp"
+            report_dir = tmp_path / "report"
+            write_bmp24(bmp_path, [[(10, 20, 30)]])
+            seed_path = tmp_path / "seed.json"
+            seed_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "summary": {"state_count": 1, "province_count": 1},
+                        "provinces": {
+                            "1": {"id": 1, "rgb": [10, 20, 30], "rgb_key": 660510, "rgb_hex": "#0A141E"},
+                        },
+                        "province_to_state": {"1": 1},
+                        "states": [
+                            {
+                                "id": 1,
+                                "name_key": "STATE_1",
+                                "owner": "AAA",
+                                "controller": "BBB",
+                                "core_tags": ["AAA"],
+                                "province_ids": [1],
+                                "category": "town",
+                            },
+                        ],
+                        "countries": {
+                            "AAA": {"tag": "AAA", "color_hex": "#010203", "source_path": "common/countries/Testland.txt"},
+                            "BBB": {"tag": "BBB", "color_hex": "#020304", "source_path": "common/countries/Controller.txt"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            output_dir.mkdir()
+            (output_dir / "controllers.by_feature.json").write_text("{}", encoding="utf-8")
+
+            build_hgo_scenario(
+                seed_path=seed_path,
+                provinces_bmp_path=bmp_path,
+                scenario_id="hgo_temp",
+                display_name="HGO Temp",
+                scenario_output_dir=output_dir,
+                report_dir=report_dir,
+                update_index=False,
+            )
+
+            self.assertFalse((output_dir / "controllers.by_feature.json").exists())
+
+    def test_hgo_vector_scenario_preserves_digit_prefixed_owner_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bmp_path = Path(tmp_dir) / "provinces.bmp"
+            write_bmp24(bmp_path, [[(10, 20, 30), (40, 50, 60)]])
+            seed = {
+                "schema_version": 1,
+                "summary": {"state_count": 2, "province_count": 2},
+                "provinces": {
+                    "1": {"id": 1, "rgb": [10, 20, 30], "rgb_key": 660510, "rgb_hex": "#0A141E"},
+                    "2": {"id": 2, "rgb": [40, 50, 60], "rgb_key": 2634300, "rgb_hex": "#28323C"},
+                },
+                "province_to_state": {"1": 1, "2": 2},
+                "states": [
+                    {
+                        "id": 1,
+                        "name_key": "STATE_1",
+                        "owner": "2RA",
+                        "controller": "2RA",
+                        "core_tags": ["2RA"],
+                        "province_ids": [1],
+                        "category": "town",
+                    },
+                    {
+                        "id": 2,
+                        "name_key": "STATE_2",
+                        "owner": "AAA",
+                        "controller": "AAA",
+                        "core_tags": ["AAA"],
+                        "province_ids": [2],
+                        "category": "town",
+                    },
+                ],
+                "countries": {
+                    "2RA": {"tag": "2RA", "color_hex": "#F50C37", "source_path": "common/countries/Second Red Army.txt"},
+                    "AAA": {"tag": "AAA", "color_hex": "#010203", "source_path": "common/countries/Testland.txt"},
+                },
+            }
+
+            compiled = compile_hgo_scenario(
+                seed=seed,
+                provinces_bmp_path=bmp_path,
+                scenario_id="hgo_test",
+                display_name="HGO Test",
+            )
+
+        self.assertEqual(compiled["manifest"]["palette_id"], "hgo")
+        self.assertEqual(compiled["manifest"]["scenario_contract_profile"], "hgo_vector")
+        self.assertEqual(compiled["owners"]["owners"]["HGO-S1"], "2RA")
+        self.assertEqual(compiled["cores"]["cores"]["HGO-S1"], ["2RA"])
+        self.assertIn("2RA", compiled["countries"]["countries"])
+        self.assertIn("HGO-S1", {
+            geometry["id"]
+            for geometry in compiled["runtime_topology"]["objects"]["political"]["geometries"]
+        })
+
     def test_builds_runtime_seed_from_minimal_hgo_source(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)

@@ -77,6 +77,7 @@ function createHgoRuntimePreviewToolbarController({
     renderOptions,
     restorePreviewTarget,
     storage,
+    useDefaultCanvasTarget: false,
   });
 
   const disablePreviewWhenDeveloperModeIsOff = () => {
@@ -94,6 +95,9 @@ function createHgoRuntimePreviewToolbarController({
   const setEnabled = async (nextEnabled) => {
     const state = await previewController.setEnabled(nextEnabled);
     sync();
+    if (state?.enabled && typeof restorePreviewTarget === "function") {
+      restorePreviewTarget();
+    }
     return state;
   };
   const toggle = async () => setEnabled(!previewController.getState().enabled);

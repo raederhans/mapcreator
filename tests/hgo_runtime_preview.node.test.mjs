@@ -169,6 +169,31 @@ test("ready preview can repaint the same canvas after a normal map redraw", asyn
   assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.renderCount, 6);
 });
 
+test("preview can target a render-pass canvas without writing the default canvas", async () => {
+  const defaultCanvas = createCanvas();
+  const passCanvas = createCanvas();
+  const harness = createController({
+    canvas: defaultCanvas,
+    useDefaultCanvasTarget: false,
+  });
+
+  await harness.controller.setEnabled(true);
+
+  assert.equal(defaultCanvas.getPutCount(), 0);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "load");
+
+  const rendered = harness.controller.renderPreview({
+    reason: "hgo-preview-pass",
+    targetCanvas: passCanvas,
+  });
+
+  assert.equal(defaultCanvas.getPutCount(), 0);
+  assert.equal(passCanvas.getPutCount(), 1);
+  assert.equal(rendered.resolvedPixelCount, 1);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "hgo-preview-pass");
+  assert.deepEqual(Array.from(passCanvas.getLastImageData().imageData.data), [1, 2, 3, 255]);
+});
+
 test("ignores stale load completion after preview is disabled", async () => {
   const delayedRaster = createDeferred();
   const harness = createController({

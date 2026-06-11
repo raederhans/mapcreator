@@ -840,23 +840,21 @@ class PagesDistStartupShellTest(unittest.TestCase):
             re.compile(r"\.work-card__media\s*\{[^}]*aspect-ratio:\s*16\s*/\s*9;", re.S),
         )
 
-    def test_hgo_runtime_preview_reuses_last_good_frame_during_interaction(self) -> None:
+    def test_hgo_runtime_preview_renders_through_dedicated_pass(self) -> None:
         source = MAP_RENDERER_JS.read_text(encoding="utf-8")
         start = source.index("function drawCanvas(")
         end = source.index("function buildExactAfterSettleRefreshPlan", start)
         body = source[start:end]
+        pass_start = source.index("function drawHgoPreviewPass(")
+        pass_end = source.index("function drawEffectsPass(", pass_start)
+        pass_body = source[pass_start:pass_end]
 
-        # Pages 构建会复制源码 drawCanvas；这里把 HGO last-good 顺序纳入 Pages shell 合同。
-        self.assertIn("preferLastGoodFrameForHgoPreview", body)
-        self.assertLess(
-            body.index("preferLastGoodFrameForHgoPreview"),
-            body.index("drawTransformedFrameFromCaches"),
-        )
-        self.assertLess(
-            body.index('renderHgoRuntimePreviewIfReady("draw-canvas")'),
-            body.index("captureLastGoodFrame("),
-        )
-        self.assertIn("!useTransformedFrame || drewExactFrame", body)
+        # Pages 构建会复制源码 drawCanvas；这里把 HGO preview pass 合同纳入 Pages shell 验证。
+        self.assertNotIn("preferLastGoodFrameForHgoPreview", body)
+        self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas")', body)
+        self.assertIn('renderHgoRuntimePreviewIfReady("hgo-preview-pass", {', pass_body)
+        self.assertIn("targetCanvas,", pass_body)
+        self.assertIn("projectionTransform: null,", pass_body)
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

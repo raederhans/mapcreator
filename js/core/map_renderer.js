@@ -807,6 +807,7 @@ export const RENDER_PASS_NAMES = [
   "background",
   "physicalBase",
   "political",
+  "hgoPreview",
   "contextBase",
   "contextScenario",
   "effects",
@@ -821,6 +822,7 @@ const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
   "background",
   "physicalBase",
   "political",
+  "hgoPreview",
   "contextBase",
   "contextScenario",
   "effects",
@@ -835,6 +837,7 @@ const INTERACTION_COMPOSITE_PASS_NAMES = [
   "background",
   "physicalBase",
   "political",
+  "hgoPreview",
   "contextBase",
   "contextScenario",
   "effects",
@@ -846,6 +849,7 @@ const TRANSFORMED_FRAME_PASS_NAMES = [
   "background",
   "physicalBase",
   "political",
+  "hgoPreview",
   "contextBase",
   "contextScenario",
   "effects",
@@ -1552,6 +1556,7 @@ function getRenderPipelinePassesOwner() {
       drawBackgroundPass,
       drawPhysicalBasePass,
       drawPoliticalPass,
+      drawHgoPreviewPass,
       drawContextBasePass,
       drawContextScenarioPass,
       drawEffectsPass,
@@ -3063,6 +3068,21 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       getPoliticalPassStaticSignature(transform),
     ].join("::");
   }
+  if (passName === "hgoPreview") {
+    const preview = runtimeState.hgoRuntimePreview || {};
+    const summary = preview.summary || {};
+    return [
+      isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off",
+      String(preview.status || ""),
+      Number(runtimeState.dpr || 1).toFixed(2),
+      Number(runtimeState.width || 0),
+      Number(runtimeState.height || 0),
+      projection ? getTransformSignature({ x: 0, y: 0, k: 1 }) : "projection:none",
+      HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
+      HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
+      `seed:${Number(summary.provinceCount || summary.province_count || 0)}:${Number(summary.stateCount || summary.state_count || 0)}:${Number(summary.countryCount || summary.country_count || 0)}`,
+    ].join("::");
+  }
   if (passName === "effects") {
     return [
       transformSignature,
@@ -4538,6 +4558,7 @@ function getPassCounterNames(passName) {
   if (passName === "background") return ["backgroundPassRenders"];
   if (passName === "physicalBase") return ["contextPassRenders", "physicalBasePassRenders"];
   if (passName === "political") return ["politicalPassRenders"];
+  if (passName === "hgoPreview") return ["hgoPreviewPassRenders"];
   if (passName === "effects") return ["effectsPassRenders"];
   if (passName === "contextBase") return ["contextPassRenders", "contextBasePassRenders"];
   if (passName === "contextScenario") return ["contextPassRenders", "contextScenarioPassRenders"];
@@ -8673,23 +8694,24 @@ function isHgoRuntimePreviewReady() {
   return !!preview?.enabled && preview.status === "ready";
 }
 
-function getHgoRuntimePreviewProjectionOptions() {
+function getHgoRuntimePreviewProjectionOptions(overrides = {}) {
   return {
     projection,
     projectionName: HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
     sourceProjection: HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
     projectionPixelRatio: runtimeState.dpr,
     projectionTransform: runtimeState.zoomTransform || null,
+    ...overrides,
   };
 }
 
 registerRuntimeHook(runtimeState, "getHgoRuntimePreviewProjectionOptionsFn", getHgoRuntimePreviewProjectionOptions);
 
-function renderHgoRuntimePreviewIfReady(reason = "render") {
+function renderHgoRuntimePreviewIfReady(reason = "render", options = {}) {
   if (!isHgoRuntimePreviewReady()) return null;
   return callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn", {
     reason,
-    ...getHgoRuntimePreviewProjectionOptions(),
+    ...getHgoRuntimePreviewProjectionOptions(options),
   }) || null;
 }
 
@@ -19076,6 +19098,30 @@ function drawScenarioRegionOverlaysPass(k) {
   });
 }
 
+function drawHgoPreviewPass() {
+  const targetCanvas = context?.canvas || null;
+  const targetContext = targetCanvas?.getContext?.("2d") || null;
+  if (!targetCanvas || !targetContext) return;
+  resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);
+  if (!isHgoRuntimePreviewReady()) return;
+  const startedAt = nowMs();
+  const rendered = renderHgoRuntimePreviewIfReady("hgo-preview-pass", {
+    targetCanvas,
+    targetWidth: targetCanvas.width,
+    targetHeight: targetCanvas.height,
+    projectionTransform: null,
+  });
+  recordRenderPerfMetric("drawHgoPreviewPass", nowMs() - startedAt, {
+    skipped: !rendered,
+    projectedPixelCount: Number(rendered?.projectedPixelCount || 0),
+    unprojectedPixelCount: Number(rendered?.unprojectedPixelCount || 0),
+    resolvedPixelCount: Number(rendered?.resolvedPixelCount || 0),
+    unresolvedPixelCount: Number(rendered?.unresolvedPixelCount || 0),
+    projectionPixelRatio: Number(runtimeState.dpr || 1),
+    active: isHgoRuntimePreviewReady(),
+  });
+}
+
 
 function drawEffectsPass(k, { interactive = false } = {}) {
   const texture = getTextureStyleConfig();
@@ -19321,7 +19367,10 @@ function renderPassToCache(passName, drawFn, transform, timings) {
     const k = prepareTargetContext(passContext, transform, layout);
     drawFn(k);
   });
-  setPassReferenceTransform(passName, transform);
+  const referenceTransform = passName === "hgoPreview"
+    ? { x: 0, y: 0, k: 1 }
+    : transform;
+  setPassReferenceTransform(passName, referenceTransform);
   if (passName === "political") {
     setPassFullReferenceTransform(passName, transform);
   }
@@ -19843,21 +19892,13 @@ function drawCanvas() {
   let usedBaseVisibleFallback = false;
   let keptPreviousPixels = false;
   let drewExactFrame = false;
-  // HGO 预览画在主 canvas 上；交互帧优先复用上一张完整图，避免半帧投影结果覆盖拖拽中的可见连续性。
-  const preferLastGoodFrameForHgoPreview = useTransformedFrame && isHgoRuntimePreviewReady();
-  if (preferLastGoodFrameForHgoPreview) {
-    drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-    usedLastGoodFallback = drewFrame;
-  }
   if (useTransformedFrame && !drewFrame) {
     drewFrame = drawTransformedFrameFromCaches(frameTimings, {
       interactiveBorders: runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle,
     });
     if (!drewFrame) {
-      if (!preferLastGoodFrameForHgoPreview) {
-        drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-        usedLastGoodFallback = drewFrame;
-      }
+      drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
+      usedLastGoodFallback = drewFrame;
       if (!drewFrame) {
         if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
           noteMissingVisibleFrameSkippedDuringInteraction("missing-fast-frame-no-continuity");
@@ -19879,11 +19920,6 @@ function drawCanvas() {
     if (!drewExactFrame) {
       abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");
     }
-  }
-
-  if (!useTransformedFrame || drewExactFrame) {
-    // 跳过交互/settle 的缓存帧；非 transformed 路径或 exact frame 成功后再刷新 HGO 预览。
-    renderHgoRuntimePreviewIfReady("draw-canvas");
   }
 
   const cache = getRenderPassCacheState();

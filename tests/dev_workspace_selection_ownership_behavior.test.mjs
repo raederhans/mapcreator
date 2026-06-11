@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { state } from "../js/core/state.js";
+import {
+  getFeatureIdsForOwner,
+  getFeatureOwnerCode,
+  setFeatureOwnerCode,
+} from "../js/core/sovereignty_manager.js";
 import { createSelectionOwnershipController } from "../js/ui/dev_workspace/selection_ownership_controller.js";
 
 class TestButton {
@@ -135,5 +140,43 @@ test("quickbar remove selected reuses the selection clipboard toggle for the cur
     state.activeScenarioId = previousActiveScenarioId;
     state.devScenarioEditor = previousDevScenarioEditor;
     state.landIndex = previousLandIndex;
+  }
+});
+
+test("scenario ownership edits preserve digit-prefixed HGO owner tags", () => {
+  const previousLandIndex = state.landIndex;
+  const previousLandData = state.landData;
+  const previousSovereigntyByFeatureId = state.sovereigntyByFeatureId;
+  const previousOwnerToFeatureIds = state.ownerToFeatureIds;
+  const previousSovereigntyInitialized = state.sovereigntyInitialized;
+  const previousMapSemanticMode = state.mapSemanticMode;
+  const feature = {
+    id: "HGO-S1",
+    properties: {
+      id: "HGO-S1",
+      country_code: "AAA",
+    },
+  };
+
+  try {
+    state.landIndex = new Map([["HGO-S1", feature]]);
+    state.landData = { features: [feature] };
+    state.sovereigntyByFeatureId = { "HGO-S1": "AAA" };
+    state.ownerToFeatureIds = new Map();
+    state.sovereigntyInitialized = false;
+    state.mapSemanticMode = "ownership";
+
+    assert.equal(setFeatureOwnerCode("HGO-S1", "2ra"), true);
+
+    assert.equal(getFeatureOwnerCode("HGO-S1"), "2RA");
+    assert.deepEqual(getFeatureIdsForOwner("2RA"), ["HGO-S1"]);
+    assert.deepEqual(getFeatureIdsForOwner("RA"), []);
+  } finally {
+    state.landIndex = previousLandIndex;
+    state.landData = previousLandData;
+    state.sovereigntyByFeatureId = previousSovereigntyByFeatureId;
+    state.ownerToFeatureIds = previousOwnerToFeatureIds;
+    state.sovereigntyInitialized = previousSovereigntyInitialized;
+    state.mapSemanticMode = previousMapSemanticMode;
   }
 });

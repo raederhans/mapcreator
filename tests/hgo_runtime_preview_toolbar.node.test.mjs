@@ -173,7 +173,7 @@ test("toolbar preview button enables injected preview loader in developer mode",
 
   await controller.setEnabled(false);
 
-  assert.equal(restoreCount, 1);
+  assert.equal(restoreCount, 2);
   assert.equal(button.attributes.get("aria-pressed"), "false");
 });
 
@@ -261,7 +261,7 @@ test("developer mode sync disables active preview before hiding the control", as
 
   assert.equal(runtimeState.hgoRuntimePreview.enabled, false);
   assert.equal(runtimeState.hgoRuntimePreview.renderSummary, null);
-  assert.equal(restoreCount, 1);
+  assert.equal(restoreCount, 2);
   assert.equal(button.classList.contains("hidden"), true);
   assert.equal(button.attributes.get("aria-pressed"), "false");
 });

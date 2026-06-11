@@ -96,7 +96,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
             'hgoRuntimePreviewController?.inspectPoint?.(x, y, options) || null',
             toolbar_content,
         )
-        self.assertIn("function getHgoRuntimePreviewProjectionOptions()", renderer_content)
+        self.assertIn("function getHgoRuntimePreviewProjectionOptions(overrides = {})", renderer_content)
         self.assertIn("HGO_DEFAULT_TARGET_PROJECTION", renderer_content)
         self.assertIn("HGO_SOURCE_PROJECTION", renderer_content)
         self.assertIn(
@@ -105,7 +105,10 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("projectionPixelRatio: runtimeState.dpr,", renderer_content)
         self.assertIn("projectionTransform: runtimeState.zoomTransform || null,", renderer_content)
-        self.assertIn("...getHgoRuntimePreviewProjectionOptions(),", renderer_content)
+        self.assertIn("function drawHgoPreviewPass()", renderer_content)
+        self.assertIn('renderHgoRuntimePreviewIfReady("hgo-preview-pass"', renderer_content)
+        self.assertIn("targetCanvas,", renderer_content)
+        self.assertIn("...getHgoRuntimePreviewProjectionOptions(options),", renderer_content)
         self.assertIn("function inspectHgoRuntimePreviewFromEvent(", renderer_content)
         self.assertIn("function normalizeHgoRuntimeHitPayload(", renderer_content)
         self.assertIn('if (targetType === "hgo") {', renderer_content)
@@ -119,23 +122,12 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn("countryCode: ownerTag,", hgo_hit_body)
         self.assertIn('hitSource: "hgo-runtime-preview",', hgo_hit_body)
 
-        # HGO 预览、last-good capture、settle finalize 共用同一帧顺序；这里锁住顺序，避免后续移动 drawCanvas 步骤时出现旧像素回写。
+        # HGO 预览必须作为 render pass 参与合成；drawCanvas 末尾不能再直写主 canvas。
         draw_start = renderer_content.index("function drawCanvas() {")
         draw_end = renderer_content.index("function buildExactAfterSettleRefreshPlan(", draw_start)
         draw_body = renderer_content[draw_start:draw_end]
-        self.assertIn('renderHgoRuntimePreviewIfReady("draw-canvas");', draw_body)
-        self.assertLess(
-            draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),
-            draw_body.index("captureLastGoodFrame("),
-        )
-        self.assertLess(
-            draw_body.index("captureLastGoodFrame("),
-            draw_body.index("finalizePendingExactAfterSettleRefreshAfterPaint();"),
-        )
-        self.assertLess(
-            draw_body.index('renderHgoRuntimePreviewIfReady("draw-canvas");'),
-            draw_body.index('incrementPerfCounter("frames");'),
-        )
+        self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas");', draw_body)
+        self.assertNotIn("preferLastGoodFrameForHgoPreview", draw_body)
 
         hover_start = renderer_content.index("function handleMouseMove(event) {")
         hover_end = renderer_content.index("const reducedHoverPhase =", hover_start)

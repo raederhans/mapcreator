@@ -1,0 +1,2856 @@
+{
+  "version": 1,
+  "scenario_id": "hgo_1936",
+  "entries": [
+    {
+      "tag": "2RA",
+      "label": "Second Red Army",
+      "feature_id": "HGO::2RA"
+    },
+    {
+      "tag": "ABD",
+      "label": "Abu Dhabi",
+      "feature_id": "HGO::ABD"
+    },
+    {
+      "tag": "ABK",
+      "label": "Abkhazia",
+      "feature_id": "HGO::ABK"
+    },
+    {
+      "tag": "ADH",
+      "label": "Dhala",
+      "feature_id": "HGO::ADH"
+    },
+    {
+      "tag": "ADJ",
+      "label": "Adjara",
+      "feature_id": "HGO::ADJ"
+    },
+    {
+      "tag": "ADR",
+      "label": "Andorra",
+      "feature_id": "HGO::ADR"
+    },
+    {
+      "tag": "AFG",
+      "label": "AFG",
+      "feature_id": "HGO::AFG"
+    },
+    {
+      "tag": "AHI",
+      "label": "Ashanti",
+      "feature_id": "HGO::AHI"
+    },
+    {
+      "tag": "AHL",
+      "label": "Audhali",
+      "feature_id": "HGO::AHL"
+    },
+    {
+      "tag": "AIQ",
+      "label": "Irqa",
+      "feature_id": "HGO::AIQ"
+    },
+    {
+      "tag": "AJG",
+      "label": "Ajaigarh",
+      "feature_id": "HGO::AJG"
+    },
+    {
+      "tag": "AJM",
+      "label": "Ajman",
+      "feature_id": "HGO::AJM"
+    },
+    {
+      "tag": "AKT",
+      "label": "Akalkot",
+      "feature_id": "HGO::AKT"
+    },
+    {
+      "tag": "ALA",
+      "label": "Alaska",
+      "feature_id": "HGO::ALA"
+    },
+    {
+      "tag": "ALB",
+      "label": "ALB",
+      "feature_id": "HGO::ALB"
+    },
+    {
+      "tag": "ALN",
+      "label": "Aland",
+      "feature_id": "HGO::ALN"
+    },
+    {
+      "tag": "ALR",
+      "label": "Ali Rajpur",
+      "feature_id": "HGO::ALR"
+    },
+    {
+      "tag": "ALW",
+      "label": "Alawite",
+      "feature_id": "HGO::ALW"
+    },
+    {
+      "tag": "AMB",
+      "label": "Amb",
+      "feature_id": "HGO::AMB"
+    },
+    {
+      "tag": "ANG",
+      "label": "ANG",
+      "feature_id": "HGO::ANG"
+    },
+    {
+      "tag": "ANK",
+      "label": "Ankole",
+      "feature_id": "HGO::ANK"
+    },
+    {
+      "tag": "AQR",
+      "label": "Aqrabi",
+      "feature_id": "HGO::AQR"
+    },
+    {
+      "tag": "ARG",
+      "label": "ARG",
+      "feature_id": "HGO::ARG"
+    },
+    {
+      "tag": "ASH",
+      "label": "Upper Aulaqi Sheikhdom",
+      "feature_id": "HGO::ASH"
+    },
+    {
+      "tag": "ASL",
+      "label": "Upper Aulaqi Sultanate",
+      "feature_id": "HGO::ASL"
+    },
+    {
+      "tag": "ASS",
+      "label": "Aussa",
+      "feature_id": "HGO::ASS"
+    },
+    {
+      "tag": "AST",
+      "label": "AST",
+      "feature_id": "HGO::AST"
+    },
+    {
+      "tag": "ATK",
+      "label": "Athmallik",
+      "feature_id": "HGO::ATK"
+    },
+    {
+      "tag": "AUN",
+      "label": "Aundh",
+      "feature_id": "HGO::AUN"
+    },
+    {
+      "tag": "AUS",
+      "label": "AUS",
+      "feature_id": "HGO::AUS"
+    },
+    {
+      "tag": "AWH",
+      "label": "Hawra",
+      "feature_id": "HGO::AWH"
+    },
+    {
+      "tag": "AWI",
+      "label": "Alawi",
+      "feature_id": "HGO::AWI"
+    },
+    {
+      "tag": "AWR",
+      "label": "Alwar",
+      "feature_id": "HGO::AWR"
+    },
+    {
+      "tag": "BAH",
+      "label": "BAH",
+      "feature_id": "HGO::BAH"
+    },
+    {
+      "tag": "BAO",
+      "label": "Baoni",
+      "feature_id": "HGO::BAO"
+    },
+    {
+      "tag": "BAR",
+      "label": "Barbados",
+      "feature_id": "HGO::BAR"
+    },
+    {
+      "tag": "BAS",
+      "label": "BAS",
+      "feature_id": "HGO::BAS"
+    },
+    {
+      "tag": "BDA",
+      "label": "Baroda",
+      "feature_id": "HGO::BDA"
+    },
+    {
+      "tag": "BDH",
+      "label": "Baudh",
+      "feature_id": "HGO::BDH"
+    },
+    {
+      "tag": "BDI",
+      "label": "Bundi",
+      "feature_id": "HGO::BDI"
+    },
+    {
+      "tag": "BEI",
+      "label": "Brunei",
+      "feature_id": "HGO::BEI"
+    },
+    {
+      "tag": "BEL",
+      "label": "BEL",
+      "feature_id": "HGO::BEL"
+    },
+    {
+      "tag": "BER",
+      "label": "Bermuda",
+      "feature_id": "HGO::BER"
+    },
+    {
+      "tag": "BHN",
+      "label": "Beihan",
+      "feature_id": "HGO::BHN"
+    },
+    {
+      "tag": "BHO",
+      "label": "Bhopal",
+      "feature_id": "HGO::BHO"
+    },
+    {
+      "tag": "BHP",
+      "label": "Bharatpur",
+      "feature_id": "HGO::BHP"
+    },
+    {
+      "tag": "BHR",
+      "label": "Bahrain",
+      "feature_id": "HGO::BHR"
+    },
+    {
+      "tag": "BHU",
+      "label": "BHU",
+      "feature_id": "HGO::BHU"
+    },
+    {
+      "tag": "BHV",
+      "label": "Bhavnagar",
+      "feature_id": "HGO::BHV"
+    },
+    {
+      "tag": "BHW",
+      "label": "Bahawalpur",
+      "feature_id": "HGO::BHW"
+    },
+    {
+      "tag": "BIJ",
+      "label": "Bijawar",
+      "feature_id": "HGO::BIJ"
+    },
+    {
+      "tag": "BJA",
+      "label": "Bajura",
+      "feature_id": "HGO::BJA"
+    },
+    {
+      "tag": "BJH",
+      "label": "Bajhang",
+      "feature_id": "HGO::BJH"
+    },
+    {
+      "tag": "BKN",
+      "label": "Bikaner",
+      "feature_id": "HGO::BKN"
+    },
+    {
+      "tag": "BKT",
+      "label": "Bhirkot",
+      "feature_id": "HGO::BKT"
+    },
+    {
+      "tag": "BLR",
+      "label": "BLR",
+      "feature_id": "HGO::BLR"
+    },
+    {
+      "tag": "BLS",
+      "label": "Balasinor",
+      "feature_id": "HGO::BLS"
+    },
+    {
+      "tag": "BLZ",
+      "label": "BLZ",
+      "feature_id": "HGO::BLZ"
+    },
+    {
+      "tag": "BML",
+      "label": "Buryat-Mongolia",
+      "feature_id": "HGO::BML"
+    },
+    {
+      "tag": "BMM",
+      "label": "Bamra",
+      "feature_id": "HGO::BMM"
+    },
+    {
+      "tag": "BND",
+      "label": "Bansda",
+      "feature_id": "HGO::BND"
+    },
+    {
+      "tag": "BNJ",
+      "label": "Bonaj",
+      "feature_id": "HGO::BNJ"
+    },
+    {
+      "tag": "BNP",
+      "label": "Banganapelle",
+      "feature_id": "HGO::BNP"
+    },
+    {
+      "tag": "BNR",
+      "label": "Benares",
+      "feature_id": "HGO::BNR"
+    },
+    {
+      "tag": "BNS",
+      "label": "Banswara",
+      "feature_id": "HGO::BNS"
+    },
+    {
+      "tag": "BNY",
+      "label": "Bunyoro",
+      "feature_id": "HGO::BNY"
+    },
+    {
+      "tag": "BOL",
+      "label": "BOL",
+      "feature_id": "HGO::BOL"
+    },
+    {
+      "tag": "BOT",
+      "label": "BOT",
+      "feature_id": "HGO::BOT"
+    },
+    {
+      "tag": "BRA",
+      "label": "BRA",
+      "feature_id": "HGO::BRA"
+    },
+    {
+      "tag": "BRR",
+      "label": "Bhor",
+      "feature_id": "HGO::BRR"
+    },
+    {
+      "tag": "BRX",
+      "label": "Beri",
+      "feature_id": "HGO::BRX"
+    },
+    {
+      "tag": "BRY",
+      "label": "Bariya",
+      "feature_id": "HGO::BRY"
+    },
+    {
+      "tag": "BSA",
+      "label": "South Antilles",
+      "feature_id": "HGO::BSA"
+    },
+    {
+      "tag": "BSG",
+      "label": "Busoga",
+      "feature_id": "HGO::BSG"
+    },
+    {
+      "tag": "BSH",
+      "label": "Bashkortostan",
+      "feature_id": "HGO::BSH"
+    },
+    {
+      "tag": "BSP",
+      "label": "Bilaspur",
+      "feature_id": "HGO::BSP"
+    },
+    {
+      "tag": "BTR",
+      "label": "Bastar",
+      "feature_id": "HGO::BTR"
+    },
+    {
+      "tag": "BUG",
+      "label": "Buganda",
+      "feature_id": "HGO::BUG"
+    },
+    {
+      "tag": "BUL",
+      "label": "BUL",
+      "feature_id": "HGO::BUL"
+    },
+    {
+      "tag": "BUN",
+      "label": "Baraunda",
+      "feature_id": "HGO::BUN"
+    },
+    {
+      "tag": "BWH",
+      "label": "Bhawhal",
+      "feature_id": "HGO::BWH"
+    },
+    {
+      "tag": "BWR",
+      "label": "Barwani",
+      "feature_id": "HGO::BWR"
+    },
+    {
+      "tag": "CAN",
+      "label": "CAN",
+      "feature_id": "HGO::CAN"
+    },
+    {
+      "tag": "CAT",
+      "label": "CAT",
+      "feature_id": "HGO::CAT"
+    },
+    {
+      "tag": "CAY",
+      "label": "CAY",
+      "feature_id": "HGO::CAY"
+    },
+    {
+      "tag": "CBR",
+      "label": "Beri",
+      "feature_id": "HGO::CBR"
+    },
+    {
+      "tag": "CBY",
+      "label": "Cambay",
+      "feature_id": "HGO::CBY"
+    },
+    {
+      "tag": "CCG",
+      "label": "Chungking",
+      "feature_id": "HGO::CCG"
+    },
+    {
+      "tag": "CGG",
+      "label": "Changbhakar",
+      "feature_id": "HGO::CGG"
+    },
+    {
+      "tag": "CH2",
+      "label": "Cherra",
+      "feature_id": "HGO::CH2"
+    },
+    {
+      "tag": "CHB",
+      "label": "Cooch Behar",
+      "feature_id": "HGO::CHB"
+    },
+    {
+      "tag": "CHH",
+      "label": "Chhatarpur",
+      "feature_id": "HGO::CHH"
+    },
+    {
+      "tag": "CHI",
+      "label": "CHI",
+      "feature_id": "HGO::CHI"
+    },
+    {
+      "tag": "CHL",
+      "label": "CHL",
+      "feature_id": "HGO::CHL"
+    },
+    {
+      "tag": "CHM",
+      "label": "Chamba",
+      "feature_id": "HGO::CHM"
+    },
+    {
+      "tag": "CHN",
+      "label": "Choni",
+      "feature_id": "HGO::CHN"
+    },
+    {
+      "tag": "CHS",
+      "label": "Chuosi",
+      "feature_id": "HGO::CHS"
+    },
+    {
+      "tag": "CIH",
+      "label": "Chiang Hang",
+      "feature_id": "HGO::CIH"
+    },
+    {
+      "tag": "CKD",
+      "label": "Chhuikadan",
+      "feature_id": "HGO::CKD"
+    },
+    {
+      "tag": "CKH",
+      "label": "Charkhari",
+      "feature_id": "HGO::CKH"
+    },
+    {
+      "tag": "CMR",
+      "label": "CMR",
+      "feature_id": "HGO::CMR"
+    },
+    {
+      "tag": "CNL",
+      "label": "Cinta Larga",
+      "feature_id": "HGO::CNL"
+    },
+    {
+      "tag": "COC",
+      "label": "Cochin",
+      "feature_id": "HGO::COC"
+    },
+    {
+      "tag": "COG",
+      "label": "COG",
+      "feature_id": "HGO::COG"
+    },
+    {
+      "tag": "COL",
+      "label": "COL",
+      "feature_id": "HGO::COL"
+    },
+    {
+      "tag": "COS",
+      "label": "COS",
+      "feature_id": "HGO::COS"
+    },
+    {
+      "tag": "CRC",
+      "label": "CRC",
+      "feature_id": "HGO::CRC"
+    },
+    {
+      "tag": "CRM",
+      "label": "Crimea",
+      "feature_id": "HGO::CRM"
+    },
+    {
+      "tag": "CTL",
+      "label": "Chitral",
+      "feature_id": "HGO::CTL"
+    },
+    {
+      "tag": "CTU",
+      "label": "Chengtu",
+      "feature_id": "HGO::CTU"
+    },
+    {
+      "tag": "CUB",
+      "label": "CUB",
+      "feature_id": "HGO::CUB"
+    },
+    {
+      "tag": "CUD",
+      "label": "Chota Udaipur",
+      "feature_id": "HGO::CUD"
+    },
+    {
+      "tag": "CVD",
+      "label": "Cape Verde",
+      "feature_id": "HGO::CVD"
+    },
+    {
+      "tag": "CVS",
+      "label": "Chuvashia",
+      "feature_id": "HGO::CVS"
+    },
+    {
+      "tag": "CYP",
+      "label": "CYP",
+      "feature_id": "HGO::CYP"
+    },
+    {
+      "tag": "CZE",
+      "label": "CZE",
+      "feature_id": "HGO::CZE"
+    },
+    {
+      "tag": "DAG",
+      "label": "Dagestan",
+      "feature_id": "HGO::DAG"
+    },
+    {
+      "tag": "DAN",
+      "label": "Danzig",
+      "feature_id": "HGO::DAN"
+    },
+    {
+      "tag": "DEN",
+      "label": "DEN",
+      "feature_id": "HGO::DEN"
+    },
+    {
+      "tag": "DGB",
+      "label": "Dangba",
+      "feature_id": "HGO::DGB"
+    },
+    {
+      "tag": "DGH",
+      "label": "Dhrangadhra",
+      "feature_id": "HGO::DGH"
+    },
+    {
+      "tag": "DGP",
+      "label": "Dungarpur",
+      "feature_id": "HGO::DGP"
+    },
+    {
+      "tag": "DHA",
+      "label": "Dhar",
+      "feature_id": "HGO::DHA"
+    },
+    {
+      "tag": "DHB",
+      "label": "Dhiebi",
+      "feature_id": "HGO::DHB"
+    },
+    {
+      "tag": "DHK",
+      "label": "Dhenkanal",
+      "feature_id": "HGO::DHK"
+    },
+    {
+      "tag": "DIR",
+      "label": "Dir",
+      "feature_id": "HGO::DIR"
+    },
+    {
+      "tag": "DJI",
+      "label": "DJI",
+      "feature_id": "HGO::DJI"
+    },
+    {
+      "tag": "DJN",
+      "label": "Dujana",
+      "feature_id": "HGO::DJN"
+    },
+    {
+      "tag": "DLL",
+      "label": "Daspalla",
+      "feature_id": "HGO::DLL"
+    },
+    {
+      "tag": "DLP",
+      "label": "Dholpur",
+      "feature_id": "HGO::DLP"
+    },
+    {
+      "tag": "DNG",
+      "label": "Drango",
+      "feature_id": "HGO::DNG"
+    },
+    {
+      "tag": "DNT",
+      "label": "Danta",
+      "feature_id": "HGO::DNT"
+    },
+    {
+      "tag": "DOM",
+      "label": "DOM",
+      "feature_id": "HGO::DOM"
+    },
+    {
+      "tag": "DRL",
+      "label": "Dhrol",
+      "feature_id": "HGO::DRL"
+    },
+    {
+      "tag": "DRP",
+      "label": "Dharampur",
+      "feature_id": "HGO::DRP"
+    },
+    {
+      "tag": "DTA",
+      "label": "Datia",
+      "feature_id": "HGO::DTA"
+    },
+    {
+      "tag": "DTH",
+      "label": "Dathina",
+      "feature_id": "HGO::DTH"
+    },
+    {
+      "tag": "DUB",
+      "label": "Dubai",
+      "feature_id": "HGO::DUB"
+    },
+    {
+      "tag": "DWJ",
+      "label": "Dewas Junior",
+      "feature_id": "HGO::DWJ"
+    },
+    {
+      "tag": "DWR",
+      "label": "Dwara",
+      "feature_id": "HGO::DWR"
+    },
+    {
+      "tag": "DWS",
+      "label": "Dewas Senior",
+      "feature_id": "HGO::DWS"
+    },
+    {
+      "tag": "ECU",
+      "label": "ECU",
+      "feature_id": "HGO::ECU"
+    },
+    {
+      "tag": "EGY",
+      "label": "EGY",
+      "feature_id": "HGO::EGY"
+    },
+    {
+      "tag": "EHC",
+      "label": "East Hebei",
+      "feature_id": "HGO::EHC"
+    },
+    {
+      "tag": "ELS",
+      "label": "ELS",
+      "feature_id": "HGO::ELS"
+    },
+    {
+      "tag": "ENG",
+      "label": "ENG",
+      "feature_id": "HGO::ENG"
+    },
+    {
+      "tag": "EQG",
+      "label": "EQG",
+      "feature_id": "HGO::EQG"
+    },
+    {
+      "tag": "ERI",
+      "label": "ERI",
+      "feature_id": "HGO::ERI"
+    },
+    {
+      "tag": "ESM",
+      "label": "Eastern Samoa",
+      "feature_id": "HGO::ESM"
+    },
+    {
+      "tag": "EST",
+      "label": "EST",
+      "feature_id": "HGO::EST"
+    },
+    {
+      "tag": "ETH",
+      "label": "ETH",
+      "feature_id": "HGO::ETH"
+    },
+    {
+      "tag": "ETM",
+      "label": "East Timor",
+      "feature_id": "HGO::ETM"
+    },
+    {
+      "tag": "FAL",
+      "label": "Falklands",
+      "feature_id": "HGO::FAL"
+    },
+    {
+      "tag": "FAR",
+      "label": "Faroe",
+      "feature_id": "HGO::FAR"
+    },
+    {
+      "tag": "FDH",
+      "label": "Fadhli",
+      "feature_id": "HGO::FDH"
+    },
+    {
+      "tag": "FEA",
+      "label": "FrenchEquatorialAfrica",
+      "feature_id": "HGO::FEA"
+    },
+    {
+      "tag": "FIJ",
+      "label": "FIJ",
+      "feature_id": "HGO::FIJ"
+    },
+    {
+      "tag": "FIN",
+      "label": "FIN",
+      "feature_id": "HGO::FIN"
+    },
+    {
+      "tag": "FND",
+      "label": "French India",
+      "feature_id": "HGO::FND"
+    },
+    {
+      "tag": "FRA",
+      "label": "FRA",
+      "feature_id": "HGO::FRA"
+    },
+    {
+      "tag": "FRK",
+      "label": "Faridkot",
+      "feature_id": "HGO::FRK"
+    },
+    {
+      "tag": "FUJ",
+      "label": "Fujairah",
+      "feature_id": "HGO::FUJ"
+    },
+    {
+      "tag": "FWA",
+      "label": "FrenchWestAfrica",
+      "feature_id": "HGO::FWA"
+    },
+    {
+      "tag": "GAM",
+      "label": "GAM",
+      "feature_id": "HGO::GAM"
+    },
+    {
+      "tag": "GB2",
+      "label": "Bathurst",
+      "feature_id": "HGO::GB2"
+    },
+    {
+      "tag": "GCO",
+      "label": "Gold Coast",
+      "feature_id": "HGO::GCO"
+    },
+    {
+      "tag": "GDL",
+      "label": "GDL",
+      "feature_id": "HGO::GDL"
+    },
+    {
+      "tag": "GER",
+      "label": "GER",
+      "feature_id": "HGO::GER"
+    },
+    {
+      "tag": "GGP",
+      "label": "Gangpur",
+      "feature_id": "HGO::GGP"
+    },
+    {
+      "tag": "GIB",
+      "label": "Gibraltar",
+      "feature_id": "HGO::GIB"
+    },
+    {
+      "tag": "GKS",
+      "label": "Goloks",
+      "feature_id": "HGO::GKS"
+    },
+    {
+      "tag": "GNB",
+      "label": "GNB",
+      "feature_id": "HGO::GNB"
+    },
+    {
+      "tag": "GND",
+      "label": "Guangdong Clique",
+      "feature_id": "HGO::GND"
+    },
+    {
+      "tag": "GNH",
+      "label": "Northern Ghana",
+      "feature_id": "HGO::GNH"
+    },
+    {
+      "tag": "GNL",
+      "label": "Gondal",
+      "feature_id": "HGO::GNL"
+    },
+    {
+      "tag": "GNW",
+      "label": "Gandhwani",
+      "feature_id": "HGO::GNW"
+    },
+    {
+      "tag": "GOA",
+      "label": "Goa",
+      "feature_id": "HGO::GOA"
+    },
+    {
+      "tag": "GRE",
+      "label": "GRE",
+      "feature_id": "HGO::GRE"
+    },
+    {
+      "tag": "GSY",
+      "label": "Guernsey",
+      "feature_id": "HGO::GSY"
+    },
+    {
+      "tag": "GUA",
+      "label": "GUA",
+      "feature_id": "HGO::GUA"
+    },
+    {
+      "tag": "GUM",
+      "label": "GUM",
+      "feature_id": "HGO::GUM"
+    },
+    {
+      "tag": "GWA",
+      "label": "Gwalior",
+      "feature_id": "HGO::GWA"
+    },
+    {
+      "tag": "GXC",
+      "label": "GXC",
+      "feature_id": "HGO::GXC"
+    },
+    {
+      "tag": "GYA",
+      "label": "GYA",
+      "feature_id": "HGO::GYA"
+    },
+    {
+      "tag": "HAI",
+      "label": "HAI",
+      "feature_id": "HGO::HAI"
+    },
+    {
+      "tag": "HAW",
+      "label": "HAW",
+      "feature_id": "HGO::HAW"
+    },
+    {
+      "tag": "HKG",
+      "label": "Hong Kong",
+      "feature_id": "HGO::HKG"
+    },
+    {
+      "tag": "HMI",
+      "label": "Hami",
+      "feature_id": "HGO::HMI"
+    },
+    {
+      "tag": "HNN",
+      "label": "Hunan",
+      "feature_id": "HGO::HNN"
+    },
+    {
+      "tag": "HOL",
+      "label": "HOL",
+      "feature_id": "HGO::HOL"
+    },
+    {
+      "tag": "HON",
+      "label": "HON",
+      "feature_id": "HGO::HON"
+    },
+    {
+      "tag": "HPC",
+      "label": "Chinese 29th Army",
+      "feature_id": "HGO::HPC"
+    },
+    {
+      "tag": "HSH",
+      "label": "Haushabi",
+      "feature_id": "HGO::HSH"
+    },
+    {
+      "tag": "HSL",
+      "label": "Inner Sierra Leone",
+      "feature_id": "HGO::HSL"
+    },
+    {
+      "tag": "HUM",
+      "label": "Humanity",
+      "feature_id": "HGO::HUM"
+    },
+    {
+      "tag": "HUN",
+      "label": "HUN",
+      "feature_id": "HGO::HUN"
+    },
+    {
+      "tag": "HYD",
+      "label": "Hyderabad",
+      "feature_id": "HGO::HYD"
+    },
+    {
+      "tag": "HZA",
+      "label": "Hunza",
+      "feature_id": "HGO::HZA"
+    },
+    {
+      "tag": "HZR",
+      "label": "Hazara",
+      "feature_id": "HGO::HZR"
+    },
+    {
+      "tag": "ICE",
+      "label": "ICE",
+      "feature_id": "HGO::ICE"
+    },
+    {
+      "tag": "IDR",
+      "label": "Idar",
+      "feature_id": "HGO::IDR"
+    },
+    {
+      "tag": "IFN",
+      "label": "Ifni",
+      "feature_id": "HGO::IFN"
+    },
+    {
+      "tag": "IMO",
+      "label": "Oman",
+      "feature_id": "HGO::IMO"
+    },
+    {
+      "tag": "INC",
+      "label": "Indochina",
+      "feature_id": "HGO::INC"
+    },
+    {
+      "tag": "INI",
+      "label": "Inini",
+      "feature_id": "HGO::INI"
+    },
+    {
+      "tag": "INR",
+      "label": "Indore",
+      "feature_id": "HGO::INR"
+    },
+    {
+      "tag": "INS",
+      "label": "INS",
+      "feature_id": "HGO::INS"
+    },
+    {
+      "tag": "IRE",
+      "label": "IRE",
+      "feature_id": "HGO::IRE"
+    },
+    {
+      "tag": "IRQ",
+      "label": "IRQ",
+      "feature_id": "HGO::IRQ"
+    },
+    {
+      "tag": "ITA",
+      "label": "ITA",
+      "feature_id": "HGO::ITA"
+    },
+    {
+      "tag": "JAF",
+      "label": "Jafrabad",
+      "feature_id": "HGO::JAF"
+    },
+    {
+      "tag": "JAM",
+      "label": "JAM",
+      "feature_id": "HGO::JAM"
+    },
+    {
+      "tag": "JAP",
+      "label": "JAP",
+      "feature_id": "HGO::JAP"
+    },
+    {
+      "tag": "JDP",
+      "label": "Jodhpur",
+      "feature_id": "HGO::JDP"
+    },
+    {
+      "tag": "JEB",
+      "label": "Jabal Druze",
+      "feature_id": "HGO::JEB"
+    },
+    {
+      "tag": "JGH",
+      "label": "Junagadh",
+      "feature_id": "HGO::JGH"
+    },
+    {
+      "tag": "JGN",
+      "label": "Jigni",
+      "feature_id": "HGO::JGN"
+    },
+    {
+      "tag": "JHB",
+      "label": "Jhabua",
+      "feature_id": "HGO::JHB"
+    },
+    {
+      "tag": "JHL",
+      "label": "Jhalawar",
+      "feature_id": "HGO::JHL"
+    },
+    {
+      "tag": "JIP",
+      "label": "Jaipur",
+      "feature_id": "HGO::JIP"
+    },
+    {
+      "tag": "JJA",
+      "label": "Janjira",
+      "feature_id": "HGO::JJA"
+    },
+    {
+      "tag": "JJT",
+      "label": "Jajarkot",
+      "feature_id": "HGO::JJT"
+    },
+    {
+      "tag": "JMK",
+      "label": "Jamkhandi",
+      "feature_id": "HGO::JMK"
+    },
+    {
+      "tag": "JND",
+      "label": "Jind",
+      "feature_id": "HGO::JND"
+    },
+    {
+      "tag": "JOH",
+      "label": "Johor",
+      "feature_id": "HGO::JOH"
+    },
+    {
+      "tag": "JOR",
+      "label": "JOR",
+      "feature_id": "HGO::JOR"
+    },
+    {
+      "tag": "JRA",
+      "label": "Jaora",
+      "feature_id": "HGO::JRA"
+    },
+    {
+      "tag": "JRN",
+      "label": "Jirang",
+      "feature_id": "HGO::JRN"
+    },
+    {
+      "tag": "JSM",
+      "label": "Jaisalmer",
+      "feature_id": "HGO::JSM"
+    },
+    {
+      "tag": "JSO",
+      "label": "Jaso",
+      "feature_id": "HGO::JSO"
+    },
+    {
+      "tag": "JSP",
+      "label": "Jashpur",
+      "feature_id": "HGO::JSP"
+    },
+    {
+      "tag": "JSY",
+      "label": "Jersey",
+      "feature_id": "HGO::JSY"
+    },
+    {
+      "tag": "JTH",
+      "label": "Jath",
+      "feature_id": "HGO::JTH"
+    },
+    {
+      "tag": "JWH",
+      "label": "Jawhar",
+      "feature_id": "HGO::JWH"
+    },
+    {
+      "tag": "KAH",
+      "label": "Kalahandi",
+      "feature_id": "HGO::KAH"
+    },
+    {
+      "tag": "KAR",
+      "label": "Karelia",
+      "feature_id": "HGO::KAR"
+    },
+    {
+      "tag": "KAS",
+      "label": "Kashmir",
+      "feature_id": "HGO::KAS"
+    },
+    {
+      "tag": "KAZ",
+      "label": "KAZ",
+      "feature_id": "HGO::KAZ"
+    },
+    {
+      "tag": "KBA",
+      "label": "Kalba",
+      "feature_id": "HGO::KBA"
+    },
+    {
+      "tag": "KDH",
+      "label": "Kawardha",
+      "feature_id": "HGO::KDH"
+    },
+    {
+      "tag": "KED",
+      "label": "Kedah",
+      "feature_id": "HGO::KED"
+    },
+    {
+      "tag": "KEL",
+      "label": "Kelantan",
+      "feature_id": "HGO::KEL"
+    },
+    {
+      "tag": "KEN",
+      "label": "KEN",
+      "feature_id": "HGO::KEN"
+    },
+    {
+      "tag": "KGG",
+      "label": "Kel Ahaggar",
+      "feature_id": "HGO::KGG"
+    },
+    {
+      "tag": "KGH",
+      "label": "Khairagarh",
+      "feature_id": "HGO::KGH"
+    },
+    {
+      "tag": "KGN",
+      "label": "Kwangan",
+      "feature_id": "HGO::KGN"
+    },
+    {
+      "tag": "KHD",
+      "label": "Khaniadhana",
+      "feature_id": "HGO::KHD"
+    },
+    {
+      "tag": "KHG",
+      "label": "Kishangarh",
+      "feature_id": "HGO::KHG"
+    },
+    {
+      "tag": "KHH",
+      "label": "Kushalgarh",
+      "feature_id": "HGO::KHH"
+    },
+    {
+      "tag": "KHM",
+      "label": "Khondmals",
+      "feature_id": "HGO::KHM"
+    },
+    {
+      "tag": "KHP",
+      "label": "Kolhapur",
+      "feature_id": "HGO::KHP"
+    },
+    {
+      "tag": "KHR",
+      "label": "Kharan",
+      "feature_id": "HGO::KHR"
+    },
+    {
+      "tag": "KHS",
+      "label": "Kohistan",
+      "feature_id": "HGO::KHS"
+    },
+    {
+      "tag": "KIR",
+      "label": "Kiribati",
+      "feature_id": "HGO::KIR"
+    },
+    {
+      "tag": "KJH",
+      "label": "Keonjhar",
+      "feature_id": "HGO::KJH"
+    },
+    {
+      "tag": "KLA",
+      "label": "Kalat",
+      "feature_id": "HGO::KLA"
+    },
+    {
+      "tag": "KLC",
+      "label": "Kilchipur",
+      "feature_id": "HGO::KLC"
+    },
+    {
+      "tag": "KMK",
+      "label": "Kalmykia",
+      "feature_id": "HGO::KMK"
+    },
+    {
+      "tag": "KNK",
+      "label": "Kanker",
+      "feature_id": "HGO::KNK"
+    },
+    {
+      "tag": "KNM",
+      "label": "Kansu Ma",
+      "feature_id": "HGO::KNM"
+    },
+    {
+      "tag": "KNS",
+      "label": "Khangsar",
+      "feature_id": "HGO::KNS"
+    },
+    {
+      "tag": "KOI",
+      "label": "Kothi",
+      "feature_id": "HGO::KOI"
+    },
+    {
+      "tag": "KOR",
+      "label": "KOR",
+      "feature_id": "HGO::KOR"
+    },
+    {
+      "tag": "KOT",
+      "label": "Kotah",
+      "feature_id": "HGO::KOT"
+    },
+    {
+      "tag": "KPK",
+      "label": "Karalpakstan",
+      "feature_id": "HGO::KPK"
+    },
+    {
+      "tag": "KPT",
+      "label": "Kapurthala",
+      "feature_id": "HGO::KPT"
+    },
+    {
+      "tag": "KPU",
+      "label": "Khairpur",
+      "feature_id": "HGO::KPU"
+    },
+    {
+      "tag": "KRA",
+      "label": "KoreaInd",
+      "feature_id": "HGO::KRA"
+    },
+    {
+      "tag": "KRR",
+      "label": "Kurram",
+      "feature_id": "HGO::KRR"
+    },
+    {
+      "tag": "KSW",
+      "label": "Kharsawan",
+      "feature_id": "HGO::KSW"
+    },
+    {
+      "tag": "KTR",
+      "label": "Kathiri",
+      "feature_id": "HGO::KTR"
+    },
+    {
+      "tag": "KUL",
+      "label": "Karauli",
+      "feature_id": "HGO::KUL"
+    },
+    {
+      "tag": "KUN",
+      "label": "Kurunwad",
+      "feature_id": "HGO::KUN"
+    },
+    {
+      "tag": "KUT",
+      "label": "Cutch",
+      "feature_id": "HGO::KUT"
+    },
+    {
+      "tag": "KUW",
+      "label": "KUW",
+      "feature_id": "HGO::KUW"
+    },
+    {
+      "tag": "KWC",
+      "label": "Kweichow",
+      "feature_id": "HGO::KWC"
+    },
+    {
+      "tag": "KYB",
+      "label": "Khyber",
+      "feature_id": "HGO::KYB"
+    },
+    {
+      "tag": "KYM",
+      "label": "Khryim",
+      "feature_id": "HGO::KYM"
+    },
+    {
+      "tag": "KYR",
+      "label": "KYR",
+      "feature_id": "HGO::KYR"
+    },
+    {
+      "tag": "LAG",
+      "label": "Langrin",
+      "feature_id": "HGO::LAG"
+    },
+    {
+      "tag": "LAQ",
+      "label": "Lower Aulaqi",
+      "feature_id": "HGO::LAQ"
+    },
+    {
+      "tag": "LAT",
+      "label": "LAT",
+      "feature_id": "HGO::LAT"
+    },
+    {
+      "tag": "LBA",
+      "label": "LBA",
+      "feature_id": "HGO::LBA"
+    },
+    {
+      "tag": "LBC",
+      "label": "La Boca",
+      "feature_id": "HGO::LBC"
+    },
+    {
+      "tag": "LBE",
+      "label": "Las Bela",
+      "feature_id": "HGO::LBE"
+    },
+    {
+      "tag": "LBG",
+      "label": "Labrang",
+      "feature_id": "HGO::LBG"
+    },
+    {
+      "tag": "LEB",
+      "label": "LEB",
+      "feature_id": "HGO::LEB"
+    },
+    {
+      "tag": "LES",
+      "label": "lesotho",
+      "feature_id": "HGO::LES"
+    },
+    {
+      "tag": "LHJ",
+      "label": "Lahej",
+      "feature_id": "HGO::LHJ"
+    },
+    {
+      "tag": "LHR",
+      "label": "Loharu",
+      "feature_id": "HGO::LHR"
+    },
+    {
+      "tag": "LIB",
+      "label": "LIB",
+      "feature_id": "HGO::LIB"
+    },
+    {
+      "tag": "LIE",
+      "label": "Liechtenstein",
+      "feature_id": "HGO::LIE"
+    },
+    {
+      "tag": "LIT",
+      "label": "LIT",
+      "feature_id": "HGO::LIT"
+    },
+    {
+      "tag": "LMS",
+      "label": "Mustang",
+      "feature_id": "HGO::LMS"
+    },
+    {
+      "tag": "LMU",
+      "label": "Langmu",
+      "feature_id": "HGO::LMU"
+    },
+    {
+      "tag": "LNG",
+      "label": "Langiong",
+      "feature_id": "HGO::LNG"
+    },
+    {
+      "tag": "LNT",
+      "label": "Lingtsang",
+      "feature_id": "HGO::LNT"
+    },
+    {
+      "tag": "LNV",
+      "label": "Lunavada",
+      "feature_id": "HGO::LNV"
+    },
+    {
+      "tag": "LUX",
+      "label": "LUX",
+      "feature_id": "HGO::LUX"
+    },
+    {
+      "tag": "LYF",
+      "label": "Lower Yafa",
+      "feature_id": "HGO::LYF"
+    },
+    {
+      "tag": "MAD",
+      "label": "MAD",
+      "feature_id": "HGO::MAD"
+    },
+    {
+      "tag": "MAL",
+      "label": "MAL",
+      "feature_id": "HGO::MAL"
+    },
+    {
+      "tag": "MAN",
+      "label": "MAN",
+      "feature_id": "HGO::MAN"
+    },
+    {
+      "tag": "MAT",
+      "label": "Mount Athos",
+      "feature_id": "HGO::MAT"
+    },
+    {
+      "tag": "MAZ",
+      "label": "Mazur",
+      "feature_id": "HGO::MAZ"
+    },
+    {
+      "tag": "MBJ",
+      "label": "Magurbhanj",
+      "feature_id": "HGO::MBJ"
+    },
+    {
+      "tag": "MCO",
+      "label": "Monaco",
+      "feature_id": "HGO::MCO"
+    },
+    {
+      "tag": "MCU",
+      "label": "Macau",
+      "feature_id": "HGO::MCU"
+    },
+    {
+      "tag": "MDH",
+      "label": "Mudhol",
+      "feature_id": "HGO::MDH"
+    },
+    {
+      "tag": "MEN",
+      "label": "MEN",
+      "feature_id": "HGO::MEN"
+    },
+    {
+      "tag": "MEX",
+      "label": "MEX",
+      "feature_id": "HGO::MEX"
+    },
+    {
+      "tag": "MFL",
+      "label": "Muflihi",
+      "feature_id": "HGO::MFL"
+    },
+    {
+      "tag": "MHA",
+      "label": "Mahra",
+      "feature_id": "HGO::MHA"
+    },
+    {
+      "tag": "MHD",
+      "label": "Mahdi",
+      "feature_id": "HGO::MHD"
+    },
+    {
+      "tag": "MHM",
+      "label": "Maharam",
+      "feature_id": "HGO::MHM"
+    },
+    {
+      "tag": "MHR",
+      "label": "Maihar",
+      "feature_id": "HGO::MHR"
+    },
+    {
+      "tag": "MKN",
+      "label": "Makran",
+      "feature_id": "HGO::MKN"
+    },
+    {
+      "tag": "MKO",
+      "label": "Maler Kotla",
+      "feature_id": "HGO::MKO"
+    },
+    {
+      "tag": "MKR",
+      "label": "Makrai",
+      "feature_id": "HGO::MKR"
+    },
+    {
+      "tag": "MLD",
+      "label": "MLD",
+      "feature_id": "HGO::MLD"
+    },
+    {
+      "tag": "MLT",
+      "label": "MLT",
+      "feature_id": "HGO::MLT"
+    },
+    {
+      "tag": "MLW",
+      "label": "MLW",
+      "feature_id": "HGO::MLW"
+    },
+    {
+      "tag": "MMB",
+      "label": "Mombasa",
+      "feature_id": "HGO::MMB"
+    },
+    {
+      "tag": "MNP",
+      "label": "Manipur",
+      "feature_id": "HGO::MNP"
+    },
+    {
+      "tag": "MNX",
+      "label": "Isle of Man",
+      "feature_id": "HGO::MNX"
+    },
+    {
+      "tag": "MOL",
+      "label": "MOL",
+      "feature_id": "HGO::MOL"
+    },
+    {
+      "tag": "MON",
+      "label": "MON",
+      "feature_id": "HGO::MON"
+    },
+    {
+      "tag": "MOR",
+      "label": "MOR",
+      "feature_id": "HGO::MOR"
+    },
+    {
+      "tag": "MOV",
+      "label": "Morvi",
+      "feature_id": "HGO::MOV"
+    },
+    {
+      "tag": "MPL",
+      "label": "Mawphlang",
+      "feature_id": "HGO::MPL"
+    },
+    {
+      "tag": "MRD",
+      "label": "Mordovia",
+      "feature_id": "HGO::MRD"
+    },
+    {
+      "tag": "MRS",
+      "label": "Mauritius",
+      "feature_id": "HGO::MRS"
+    },
+    {
+      "tag": "MRW",
+      "label": "Marriw",
+      "feature_id": "HGO::MRW"
+    },
+    {
+      "tag": "MSO",
+      "label": "Malai Sohmat",
+      "feature_id": "HGO::MSO"
+    },
+    {
+      "tag": "MTQ",
+      "label": "Martinique",
+      "feature_id": "HGO::MTQ"
+    },
+    {
+      "tag": "MUL",
+      "label": "Muli",
+      "feature_id": "HGO::MUL"
+    },
+    {
+      "tag": "MWD",
+      "label": "Mawdon",
+      "feature_id": "HGO::MWD"
+    },
+    {
+      "tag": "MWL",
+      "label": "Mawlong",
+      "feature_id": "HGO::MWL"
+    },
+    {
+      "tag": "MWN",
+      "label": "Mawiang",
+      "feature_id": "HGO::MWN"
+    },
+    {
+      "tag": "MWR",
+      "label": "Mawsynram",
+      "feature_id": "HGO::MWR"
+    },
+    {
+      "tag": "MYL",
+      "label": "Mylliem",
+      "feature_id": "HGO::MYL"
+    },
+    {
+      "tag": "MYS",
+      "label": "Mysore",
+      "feature_id": "HGO::MYS"
+    },
+    {
+      "tag": "MZB",
+      "label": "MZB",
+      "feature_id": "HGO::MZB"
+    },
+    {
+      "tag": "NAG",
+      "label": "Nagar",
+      "feature_id": "HGO::NAG"
+    },
+    {
+      "tag": "NAK",
+      "label": "Nakhchivan",
+      "feature_id": "HGO::NAK"
+    },
+    {
+      "tag": "NAU",
+      "label": "Nauru",
+      "feature_id": "HGO::NAU"
+    },
+    {
+      "tag": "NBH",
+      "label": "Nabha",
+      "feature_id": "HGO::NBH"
+    },
+    {
+      "tag": "NBO",
+      "label": "NorthBorneo",
+      "feature_id": "HGO::NBO"
+    },
+    {
+      "tag": "NBP",
+      "label": "Nobosohphoh",
+      "feature_id": "HGO::NBP"
+    },
+    {
+      "tag": "NCL",
+      "label": "New Caledonia",
+      "feature_id": "HGO::NCL"
+    },
+    {
+      "tag": "NCM",
+      "label": "NorthCameroons",
+      "feature_id": "HGO::NCM"
+    },
+    {
+      "tag": "NEA",
+      "label": "Northeastern Army",
+      "feature_id": "HGO::NEA"
+    },
+    {
+      "tag": "NEP",
+      "label": "NEP",
+      "feature_id": "HGO::NEP"
+    },
+    {
+      "tag": "NFI",
+      "label": "Norfolk Island",
+      "feature_id": "HGO::NFI"
+    },
+    {
+      "tag": "NFL",
+      "label": "New Foundland",
+      "feature_id": "HGO::NFL"
+    },
+    {
+      "tag": "NFT",
+      "label": "Northeast Frontier Tracts",
+      "feature_id": "HGO::NFT"
+    },
+    {
+      "tag": "NG1",
+      "label": "North Greenland",
+      "feature_id": "HGO::NG1"
+    },
+    {
+      "tag": "NGA",
+      "label": "NGA",
+      "feature_id": "HGO::NGA"
+    },
+    {
+      "tag": "NGG",
+      "label": "Ninglang",
+      "feature_id": "HGO::NGG"
+    },
+    {
+      "tag": "NGH",
+      "label": "Nangchan",
+      "feature_id": "HGO::NGH"
+    },
+    {
+      "tag": "NGL",
+      "label": "Naga",
+      "feature_id": "HGO::NGL"
+    },
+    {
+      "tag": "NGN",
+      "label": "Nandgaon",
+      "feature_id": "HGO::NGN"
+    },
+    {
+      "tag": "NGU",
+      "label": "NewGuinea",
+      "feature_id": "HGO::NGU"
+    },
+    {
+      "tag": "NGW",
+      "label": "Ngawa",
+      "feature_id": "HGO::NGW"
+    },
+    {
+      "tag": "NIC",
+      "label": "NIC",
+      "feature_id": "HGO::NIC"
+    },
+    {
+      "tag": "NIX",
+      "label": "Ningxia Ma Clique",
+      "feature_id": "HGO::NIX"
+    },
+    {
+      "tag": "NKH",
+      "label": "Nongkhlaw",
+      "feature_id": "HGO::NKH"
+    },
+    {
+      "tag": "NLG",
+      "label": "Nilgiri",
+      "feature_id": "HGO::NLG"
+    },
+    {
+      "tag": "NLW",
+      "label": "Nonglwai",
+      "feature_id": "HGO::NLW"
+    },
+    {
+      "tag": "NMB",
+      "label": "NMB",
+      "feature_id": "HGO::NMB"
+    },
+    {
+      "tag": "NNS",
+      "label": "Nongspung",
+      "feature_id": "HGO::NNS"
+    },
+    {
+      "tag": "NOR",
+      "label": "NOR",
+      "feature_id": "HGO::NOR"
+    },
+    {
+      "tag": "NRG",
+      "label": "Narsingarh",
+      "feature_id": "HGO::NRG"
+    },
+    {
+      "tag": "NSE",
+      "label": "North Sentinel Island",
+      "feature_id": "HGO::NSE"
+    },
+    {
+      "tag": "NST",
+      "label": "Nongstoin",
+      "feature_id": "HGO::NST"
+    },
+    {
+      "tag": "NVN",
+      "label": "Nawanagar",
+      "feature_id": "HGO::NVN"
+    },
+    {
+      "tag": "NWA",
+      "label": "Ngulwa",
+      "feature_id": "HGO::NWA"
+    },
+    {
+      "tag": "NWR",
+      "label": "Northwestern Army",
+      "feature_id": "HGO::NWR"
+    },
+    {
+      "tag": "NYG",
+      "label": "Nayagarh",
+      "feature_id": "HGO::NYG"
+    },
+    {
+      "tag": "NZL",
+      "label": "NZL",
+      "feature_id": "HGO::NZL"
+    },
+    {
+      "tag": "OML",
+      "label": "SMO Malta",
+      "feature_id": "HGO::OML"
+    },
+    {
+      "tag": "OMN",
+      "label": "OmanNew",
+      "feature_id": "HGO::OMN"
+    },
+    {
+      "tag": "ORC",
+      "label": "Orchha",
+      "feature_id": "HGO::ORC"
+    },
+    {
+      "tag": "PAA",
+      "label": "Patna",
+      "feature_id": "HGO::PAA"
+    },
+    {
+      "tag": "PAC",
+      "label": "Pacific Islands",
+      "feature_id": "HGO::PAC"
+    },
+    {
+      "tag": "PAG",
+      "label": "Pamsanngut",
+      "feature_id": "HGO::PAG"
+    },
+    {
+      "tag": "PAL",
+      "label": "PAL",
+      "feature_id": "HGO::PAL"
+    },
+    {
+      "tag": "PAN",
+      "label": "PAN",
+      "feature_id": "HGO::PAN"
+    },
+    {
+      "tag": "PAR",
+      "label": "PAR",
+      "feature_id": "HGO::PAR"
+    },
+    {
+      "tag": "PBD",
+      "label": "Porbandar",
+      "feature_id": "HGO::PBD"
+    },
+    {
+      "tag": "PCZ",
+      "label": "Panama Canal Zone",
+      "feature_id": "HGO::PCZ"
+    },
+    {
+      "tag": "PER",
+      "label": "PER",
+      "feature_id": "HGO::PER"
+    },
+    {
+      "tag": "PHI",
+      "label": "PHI",
+      "feature_id": "HGO::PHI"
+    },
+    {
+      "tag": "PHT",
+      "label": "Phaltah",
+      "feature_id": "HGO::PHT"
+    },
+    {
+      "tag": "PIL",
+      "label": "Pailingmiao Council",
+      "feature_id": "HGO::PIL"
+    },
+    {
+      "tag": "PLD",
+      "label": "Paldeo",
+      "feature_id": "HGO::PLD"
+    },
+    {
+      "tag": "PLH",
+      "label": "Pal Lahara",
+      "feature_id": "HGO::PLH"
+    },
+    {
+      "tag": "PLP",
+      "label": "Palanpur",
+      "feature_id": "HGO::PLP"
+    },
+    {
+      "tag": "PLS",
+      "label": "Perlis",
+      "feature_id": "HGO::PLS"
+    },
+    {
+      "tag": "PNA",
+      "label": "Panna",
+      "feature_id": "HGO::PNA"
+    },
+    {
+      "tag": "PNG",
+      "label": "PNG",
+      "feature_id": "HGO::PNG"
+    },
+    {
+      "tag": "POL",
+      "label": "POL",
+      "feature_id": "HGO::POL"
+    },
+    {
+      "tag": "POR",
+      "label": "POR",
+      "feature_id": "HGO::POR"
+    },
+    {
+      "tag": "PRC",
+      "label": "PRC",
+      "feature_id": "HGO::PRC"
+    },
+    {
+      "tag": "PRG",
+      "label": "Partab Garh",
+      "feature_id": "HGO::PRG"
+    },
+    {
+      "tag": "PRU",
+      "label": "PRU",
+      "feature_id": "HGO::PRU"
+    },
+    {
+      "tag": "PTC",
+      "label": "Pitcairn Islands",
+      "feature_id": "HGO::PTC"
+    },
+    {
+      "tag": "PTD",
+      "label": "Pataudi",
+      "feature_id": "HGO::PTD"
+    },
+    {
+      "tag": "PTI",
+      "label": "Patiala",
+      "feature_id": "HGO::PTI"
+    },
+    {
+      "tag": "PUD",
+      "label": "Pudukkottai",
+      "feature_id": "HGO::PUD"
+    },
+    {
+      "tag": "PUE",
+      "label": "PUE",
+      "feature_id": "HGO::PUE"
+    },
+    {
+      "tag": "PVD",
+      "label": "Parva Domus",
+      "feature_id": "HGO::PVD"
+    },
+    {
+      "tag": "QAT",
+      "label": "QAT",
+      "feature_id": "HGO::QAT"
+    },
+    {
+      "tag": "QTI",
+      "label": "Quaiti",
+      "feature_id": "HGO::QTI"
+    },
+    {
+      "tag": "RAJ",
+      "label": "RAJ",
+      "feature_id": "HGO::RAJ"
+    },
+    {
+      "tag": "RAK",
+      "label": "Ras Al Khaimah",
+      "feature_id": "HGO::RAK"
+    },
+    {
+      "tag": "RAP",
+      "label": "Ranpur",
+      "feature_id": "HGO::RAP"
+    },
+    {
+      "tag": "RBR",
+      "label": "Rambrai",
+      "feature_id": "HGO::RBR"
+    },
+    {
+      "tag": "RDO",
+      "label": "Rio de Oro",
+      "feature_id": "HGO::RDO"
+    },
+    {
+      "tag": "REU",
+      "label": "Reunion",
+      "feature_id": "HGO::REU"
+    },
+    {
+      "tag": "REW",
+      "label": "Rewa",
+      "feature_id": "HGO::REW"
+    },
+    {
+      "tag": "RGH",
+      "label": "Raigarh",
+      "feature_id": "HGO::RGH"
+    },
+    {
+      "tag": "RHP",
+      "label": "Radhanpur",
+      "feature_id": "HGO::RHP"
+    },
+    {
+      "tag": "RIF",
+      "label": "Rif",
+      "feature_id": "HGO::RIF"
+    },
+    {
+      "tag": "RJK",
+      "label": "Rajkot",
+      "feature_id": "HGO::RJK"
+    },
+    {
+      "tag": "RKL",
+      "label": "Rairakhol",
+      "feature_id": "HGO::RKL"
+    },
+    {
+      "tag": "RLM",
+      "label": "Ratlam",
+      "feature_id": "HGO::RLM"
+    },
+    {
+      "tag": "RMP",
+      "label": "Rampur",
+      "feature_id": "HGO::RMP"
+    },
+    {
+      "tag": "RND",
+      "label": "Redonda",
+      "feature_id": "HGO::RND"
+    },
+    {
+      "tag": "ROM",
+      "label": "ROM",
+      "feature_id": "HGO::ROM"
+    },
+    {
+      "tag": "RPL",
+      "label": "Raajpipla",
+      "feature_id": "HGO::RPL"
+    },
+    {
+      "tag": "RUS",
+      "label": "Russia",
+      "feature_id": "HGO::RUS"
+    },
+    {
+      "tag": "RUU",
+      "label": "RuandaUrundi",
+      "feature_id": "HGO::RUU"
+    },
+    {
+      "tag": "SAF",
+      "label": "SAF",
+      "feature_id": "HGO::SAF"
+    },
+    {
+      "tag": "SAM",
+      "label": "SAM",
+      "feature_id": "HGO::SAM"
+    },
+    {
+      "tag": "SAO",
+      "label": "Sao Tome",
+      "feature_id": "HGO::SAO"
+    },
+    {
+      "tag": "SAU",
+      "label": "SAU",
+      "feature_id": "HGO::SAU"
+    },
+    {
+      "tag": "SCM",
+      "label": "SouthCameroons",
+      "feature_id": "HGO::SCM"
+    },
+    {
+      "tag": "SDR",
+      "label": "Sandur",
+      "feature_id": "HGO::SDR"
+    },
+    {
+      "tag": "SEH",
+      "label": "Seguia El Hamra",
+      "feature_id": "HGO::SEH"
+    },
+    {
+      "tag": "SEY",
+      "label": "Seychelles",
+      "feature_id": "HGO::SEY"
+    },
+    {
+      "tag": "SG1",
+      "label": "South Greenland",
+      "feature_id": "HGO::SG1"
+    },
+    {
+      "tag": "SGG",
+      "label": "Songgang",
+      "feature_id": "HGO::SGG"
+    },
+    {
+      "tag": "SGH",
+      "label": "Sarangarh",
+      "feature_id": "HGO::SGH"
+    },
+    {
+      "tag": "SGJ",
+      "label": "Surguja",
+      "feature_id": "HGO::SGJ"
+    },
+    {
+      "tag": "SGR",
+      "label": "South Algeria",
+      "feature_id": "HGO::SGR"
+    },
+    {
+      "tag": "SGT",
+      "label": "Sangli",
+      "feature_id": "HGO::SGT"
+    },
+    {
+      "tag": "SGY",
+      "label": "Sagya",
+      "feature_id": "HGO::SGY"
+    },
+    {
+      "tag": "SHA",
+      "label": "Shan",
+      "feature_id": "HGO::SHA"
+    },
+    {
+      "tag": "SHB",
+      "label": "Shaib",
+      "feature_id": "HGO::SHB"
+    },
+    {
+      "tag": "SHG",
+      "label": "Shangdong",
+      "feature_id": "HGO::SHG"
+    },
+    {
+      "tag": "SHH",
+      "label": "Shanghai",
+      "feature_id": "HGO::SHH"
+    },
+    {
+      "tag": "SHJ",
+      "label": "Sharjah",
+      "feature_id": "HGO::SHJ"
+    },
+    {
+      "tag": "SHX",
+      "label": "SHX",
+      "feature_id": "HGO::SHX"
+    },
+    {
+      "tag": "SIA",
+      "label": "SIA",
+      "feature_id": "HGO::SIA"
+    },
+    {
+      "tag": "SIE",
+      "label": "SIE",
+      "feature_id": "HGO::SIE"
+    },
+    {
+      "tag": "SIK",
+      "label": "SIK",
+      "feature_id": "HGO::SIK"
+    },
+    {
+      "tag": "SJM",
+      "label": "Sanjeda Mehvassi",
+      "feature_id": "HGO::SJM"
+    },
+    {
+      "tag": "SKI",
+      "label": "Sakti",
+      "feature_id": "HGO::SKI"
+    },
+    {
+      "tag": "SKK",
+      "label": "Sokwo Arik",
+      "feature_id": "HGO::SKK"
+    },
+    {
+      "tag": "SKL",
+      "label": "Saraikela",
+      "feature_id": "HGO::SKL"
+    },
+    {
+      "tag": "SKM",
+      "label": "Sikkim",
+      "feature_id": "HGO::SKM"
+    },
+    {
+      "tag": "SLB",
+      "label": "Svalbard",
+      "feature_id": "HGO::SLB"
+    },
+    {
+      "tag": "SLL",
+      "label": "Shella",
+      "feature_id": "HGO::SLL"
+    },
+    {
+      "tag": "SMD",
+      "label": "Shimdrok",
+      "feature_id": "HGO::SMD"
+    },
+    {
+      "tag": "SML",
+      "label": "Somalialand",
+      "feature_id": "HGO::SML"
+    },
+    {
+      "tag": "SMR",
+      "label": "San Marino",
+      "feature_id": "HGO::SMR"
+    },
+    {
+      "tag": "SMT",
+      "label": "Samthar",
+      "feature_id": "HGO::SMT"
+    },
+    {
+      "tag": "SNP",
+      "label": "Sonpur",
+      "feature_id": "HGO::SNP"
+    },
+    {
+      "tag": "SNT",
+      "label": "Sant",
+      "feature_id": "HGO::SNT"
+    },
+    {
+      "tag": "SNW",
+      "label": "Sanwi",
+      "feature_id": "HGO::SNW"
+    },
+    {
+      "tag": "SOG",
+      "label": "Sohiong",
+      "feature_id": "HGO::SOG"
+    },
+    {
+      "tag": "SOL",
+      "label": "SOL",
+      "feature_id": "HGO::SOL"
+    },
+    {
+      "tag": "SOM",
+      "label": "SOM",
+      "feature_id": "HGO::SOM"
+    },
+    {
+      "tag": "SPM",
+      "label": "Saint Pierre-Miquelon",
+      "feature_id": "HGO::SPM"
+    },
+    {
+      "tag": "SPR",
+      "label": "SPR",
+      "feature_id": "HGO::SPR"
+    },
+    {
+      "tag": "SRG",
+      "label": "Surgana",
+      "feature_id": "HGO::SRG"
+    },
+    {
+      "tag": "SRH",
+      "label": "Sirohi",
+      "feature_id": "HGO::SRH"
+    },
+    {
+      "tag": "SRL",
+      "label": "SRL",
+      "feature_id": "HGO::SRL"
+    },
+    {
+      "tag": "SRM",
+      "label": "Sirmur",
+      "feature_id": "HGO::SRM"
+    },
+    {
+      "tag": "SRW",
+      "label": "Sarawak",
+      "feature_id": "HGO::SRW"
+    },
+    {
+      "tag": "STH",
+      "label": "Saint Helena",
+      "feature_id": "HGO::STH"
+    },
+    {
+      "tag": "STI",
+      "label": "Santai",
+      "feature_id": "HGO::STI"
+    },
+    {
+      "tag": "STR",
+      "label": "StraitsSettlements",
+      "feature_id": "HGO::STR"
+    },
+    {
+      "tag": "SUD",
+      "label": "SUD",
+      "feature_id": "HGO::SUD"
+    },
+    {
+      "tag": "SUI",
+      "label": "Suiyan",
+      "feature_id": "HGO::SUI"
+    },
+    {
+      "tag": "SUO",
+      "label": "Suomo",
+      "feature_id": "HGO::SUO"
+    },
+    {
+      "tag": "SUR",
+      "label": "SUR",
+      "feature_id": "HGO::SUR"
+    },
+    {
+      "tag": "SUT",
+      "label": "Suket",
+      "feature_id": "HGO::SUT"
+    },
+    {
+      "tag": "SVN",
+      "label": "Savanur",
+      "feature_id": "HGO::SVN"
+    },
+    {
+      "tag": "SVV",
+      "label": "Savantvadi",
+      "feature_id": "HGO::SVV"
+    },
+    {
+      "tag": "SWE",
+      "label": "SWE",
+      "feature_id": "HGO::SWE"
+    },
+    {
+      "tag": "SWI",
+      "label": "SWI",
+      "feature_id": "HGO::SWI"
+    },
+    {
+      "tag": "SWT",
+      "label": "Swat",
+      "feature_id": "HGO::SWT"
+    },
+    {
+      "tag": "SWZ",
+      "label": "swaziland",
+      "feature_id": "HGO::SWZ"
+    },
+    {
+      "tag": "SYN",
+      "label": "Salyan",
+      "feature_id": "HGO::SYN"
+    },
+    {
+      "tag": "SYR",
+      "label": "SYR",
+      "feature_id": "HGO::SYR"
+    },
+    {
+      "tag": "TAH",
+      "label": "TAH",
+      "feature_id": "HGO::TAH"
+    },
+    {
+      "tag": "TAJ",
+      "label": "TAJ",
+      "feature_id": "HGO::TAJ"
+    },
+    {
+      "tag": "TAN",
+      "label": "TAN",
+      "feature_id": "HGO::TAN"
+    },
+    {
+      "tag": "TCH",
+      "label": "Tochi",
+      "feature_id": "HGO::TCH"
+    },
+    {
+      "tag": "TEU",
+      "label": "Teutonic Order",
+      "feature_id": "HGO::TEU"
+    },
+    {
+      "tag": "TGA",
+      "label": "Terengganu",
+      "feature_id": "HGO::TGA"
+    },
+    {
+      "tag": "TGN",
+      "label": "Tuguan",
+      "feature_id": "HGO::TGN"
+    },
+    {
+      "tag": "TGR",
+      "label": "Tangier",
+      "feature_id": "HGO::TGR"
+    },
+    {
+      "tag": "TGW",
+      "label": "Tehrigawhal",
+      "feature_id": "HGO::TGW"
+    },
+    {
+      "tag": "THD",
+      "label": "Tharad",
+      "feature_id": "HGO::THD"
+    },
+    {
+      "tag": "TIB",
+      "label": "TIB",
+      "feature_id": "HGO::TIB"
+    },
+    {
+      "tag": "TLC",
+      "label": "Talcher",
+      "feature_id": "HGO::TLC"
+    },
+    {
+      "tag": "TLG",
+      "label": "Tanglang Guowa",
+      "feature_id": "HGO::TLG"
+    },
+    {
+      "tag": "TMS",
+      "label": "TMS",
+      "feature_id": "HGO::TMS"
+    },
+    {
+      "tag": "TNA",
+      "label": "Turkana",
+      "feature_id": "HGO::TNA"
+    },
+    {
+      "tag": "TNK",
+      "label": "Tonk",
+      "feature_id": "HGO::TNK"
+    },
+    {
+      "tag": "TOG",
+      "label": "TOG",
+      "feature_id": "HGO::TOG"
+    },
+    {
+      "tag": "TON",
+      "label": "tonga",
+      "feature_id": "HGO::TON"
+    },
+    {
+      "tag": "TOR",
+      "label": "Toro",
+      "feature_id": "HGO::TOR"
+    },
+    {
+      "tag": "TPA",
+      "label": "Tripura",
+      "feature_id": "HGO::TPA"
+    },
+    {
+      "tag": "TRH",
+      "label": "Trehor",
+      "feature_id": "HGO::TRH"
+    },
+    {
+      "tag": "TRI",
+      "label": "TRI",
+      "feature_id": "HGO::TRI"
+    },
+    {
+      "tag": "TRM",
+      "label": "Tarim",
+      "feature_id": "HGO::TRM"
+    },
+    {
+      "tag": "TRR",
+      "label": "Touren",
+      "feature_id": "HGO::TRR"
+    },
+    {
+      "tag": "TSC",
+      "label": "Transcaucasia",
+      "feature_id": "HGO::TSC"
+    },
+    {
+      "tag": "TTR",
+      "label": "Tatarstan",
+      "feature_id": "HGO::TTR"
+    },
+    {
+      "tag": "TUG",
+      "label": "Tunganistan",
+      "feature_id": "HGO::TUG"
+    },
+    {
+      "tag": "TUN",
+      "label": "TUN",
+      "feature_id": "HGO::TUN"
+    },
+    {
+      "tag": "TUR",
+      "label": "TUR",
+      "feature_id": "HGO::TUR"
+    },
+    {
+      "tag": "TVC",
+      "label": "Travancore",
+      "feature_id": "HGO::TVC"
+    },
+    {
+      "tag": "TVL",
+      "label": "Tavolara",
+      "feature_id": "HGO::TVL"
+    },
+    {
+      "tag": "TWN",
+      "label": "Taiwan",
+      "feature_id": "HGO::TWN"
+    },
+    {
+      "tag": "TZN",
+      "label": "TZN",
+      "feature_id": "HGO::TZN"
+    },
+    {
+      "tag": "UAQ",
+      "label": "Umm Al Quwain",
+      "feature_id": "HGO::UAQ"
+    },
+    {
+      "tag": "UDM",
+      "label": "Udmurtia",
+      "feature_id": "HGO::UDM"
+    },
+    {
+      "tag": "UDP",
+      "label": "Udaipur",
+      "feature_id": "HGO::UDP"
+    },
+    {
+      "tag": "UGA",
+      "label": "UGA",
+      "feature_id": "HGO::UGA"
+    },
+    {
+      "tag": "UHH",
+      "label": "Unchahra",
+      "feature_id": "HGO::UHH"
+    },
+    {
+      "tag": "UKR",
+      "label": "UKR",
+      "feature_id": "HGO::UKR"
+    },
+    {
+      "tag": "UNC",
+      "label": "Unclaimed",
+      "feature_id": "HGO::UNC"
+    },
+    {
+      "tag": "UP2",
+      "label": "Udaipur",
+      "feature_id": "HGO::UP2"
+    },
+    {
+      "tag": "URG",
+      "label": "URG",
+      "feature_id": "HGO::URG"
+    },
+    {
+      "tag": "USA",
+      "label": "USA",
+      "feature_id": "HGO::USA"
+    },
+    {
+      "tag": "UYF",
+      "label": "Upper Yafa",
+      "feature_id": "HGO::UYF"
+    },
+    {
+      "tag": "UZB",
+      "label": "UZB",
+      "feature_id": "HGO::UZB"
+    },
+    {
+      "tag": "VAN",
+      "label": "vanuatu",
+      "feature_id": "HGO::VAN"
+    },
+    {
+      "tag": "VCT",
+      "label": "Vatican",
+      "feature_id": "HGO::VCT"
+    },
+    {
+      "tag": "VEN",
+      "label": "VEN",
+      "feature_id": "HGO::VEN"
+    },
+    {
+      "tag": "VGR",
+      "label": "Volga Germany",
+      "feature_id": "HGO::VGR"
+    },
+    {
+      "tag": "VIJ",
+      "label": "Vijayanagar",
+      "feature_id": "HGO::VIJ"
+    },
+    {
+      "tag": "WAA",
+      "label": "Wana",
+      "feature_id": "HGO::WAA"
+    },
+    {
+      "tag": "WAF",
+      "label": "Wallis and Futuna",
+      "feature_id": "HGO::WAF"
+    },
+    {
+      "tag": "WBA",
+      "label": "Wahidi Bir Ali",
+      "feature_id": "HGO::WBA"
+    },
+    {
+      "tag": "WBH",
+      "label": "Wahidi Haban",
+      "feature_id": "HGO::WBH"
+    },
+    {
+      "tag": "WBL",
+      "label": "Wahidi Balhaf",
+      "feature_id": "HGO::WBL"
+    },
+    {
+      "tag": "WKR",
+      "label": "Wankaner",
+      "feature_id": "HGO::WKR"
+    },
+    {
+      "tag": "WTO",
+      "label": "WestTogo",
+      "feature_id": "HGO::WTO"
+    },
+    {
+      "tag": "WTR",
+      "label": "Water",
+      "feature_id": "HGO::WTR"
+    },
+    {
+      "tag": "WVI",
+      "label": "West Virgin Islands",
+      "feature_id": "HGO::WVI"
+    },
+    {
+      "tag": "XIG",
+      "label": "Xikang",
+      "feature_id": "HGO::XIG"
+    },
+    {
+      "tag": "XJK",
+      "label": "Kashgar",
+      "feature_id": "HGO::XJK"
+    },
+    {
+      "tag": "XSM",
+      "label": "XSM",
+      "feature_id": "HGO::XSM"
+    },
+    {
+      "tag": "YEM",
+      "label": "YEM",
+      "feature_id": "HGO::YEM"
+    },
+    {
+      "tag": "YKT",
+      "label": "Yakutsk",
+      "feature_id": "HGO::YKT"
+    },
+    {
+      "tag": "YLN",
+      "label": "Yulin",
+      "feature_id": "HGO::YLN"
+    },
+    {
+      "tag": "YMM",
+      "label": "Yanomami",
+      "feature_id": "HGO::YMM"
+    },
+    {
+      "tag": "YSH",
+      "label": "Yushu Tribes",
+      "feature_id": "HGO::YSH"
+    },
+    {
+      "tag": "YUG",
+      "label": "YUG",
+      "feature_id": "HGO::YUG"
+    },
+    {
+      "tag": "YUN",
+      "label": "YUN",
+      "feature_id": "HGO::YUN"
+    },
+    {
+      "tag": "ZAM",
+      "label": "ZAM",
+      "feature_id": "HGO::ZAM"
+    },
+    {
+      "tag": "ZAN",
+      "label": "zanzibar",
+      "feature_id": "HGO::ZAN"
+    },
+    {
+      "tag": "ZHJ",
+      "label": "Zhuokeji",
+      "feature_id": "HGO::ZHJ"
+    },
+    {
+      "tag": "ZIM",
+      "label": "ZIM",
+      "feature_id": "HGO::ZIM"
+    }
+  ]
+}

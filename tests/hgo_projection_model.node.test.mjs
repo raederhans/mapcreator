@@ -60,6 +60,76 @@ test("inverts projected canvas pixels through dpr and zoom transform", () => {
   assert.equal(mapped.sourceY, 0);
 });
 
+test("keeps canvas-to-source mapping stable across dpr zoom and size matrix", () => {
+  const projectionPoint = [2.5, 1.5];
+  const expectedSource = { sourceX: 5, sourceY: 3, pixelIndex: 29 };
+  const cases = [
+    { dpr: 1, width: 800, height: 400, transform: { k: 1, x: 0, y: 0 } },
+    { dpr: 1.25, width: 1000, height: 500, transform: { k: 1, x: 0, y: 0 } },
+    { dpr: 1.5, width: 1200, height: 600, transform: { k: 2.5, x: 4, y: 3 } },
+    { dpr: 0.72, width: 576, height: 288, transform: { k: 2.5, x: -1.2, y: 2.4 } },
+  ];
+
+  for (const { dpr, width, height, transform } of cases) {
+    const model = createHgoProjectionModel({
+      projection: createLinearProjection(),
+      sourceWidth: 8,
+      sourceHeight: 4,
+      targetWidth: width,
+      targetHeight: height,
+      projectionPixelRatio: dpr,
+      projectionTransform: transform,
+    });
+    const canvasX = ((projectionPoint[0] * transform.k) + transform.x) * dpr - 0.5;
+    const canvasY = ((projectionPoint[1] * transform.k) + transform.y) * dpr - 0.5;
+    const mapped = model.mapCanvasPointToSource(canvasX, canvasY);
+
+    assert.equal(mapped.projectionPixelRatio, dpr);
+    assert.equal(mapped.projectionX.toFixed(6), projectionPoint[0].toFixed(6));
+    assert.equal(mapped.projectionY.toFixed(6), projectionPoint[1].toFixed(6));
+    assert.equal(mapped.sourceX, expectedSource.sourceX);
+    assert.equal(mapped.sourceY, expectedSource.sourceY);
+    assert.equal(mapped.pixelIndex, expectedSource.pixelIndex);
+  }
+});
+
+test("matches identity pass pixels after affine zoom reuse", () => {
+  const projectionPoint = [2.5, 1.5];
+  const dpr = 1.5;
+  const zoom = { k: 2.5, x: 4, y: 3 };
+  const identityModel = createHgoProjectionModel({
+    projection: createLinearProjection(),
+    sourceWidth: 8,
+    sourceHeight: 4,
+    targetWidth: 1200,
+    targetHeight: 600,
+    projectionPixelRatio: dpr,
+    projectionTransform: null,
+  });
+  const zoomedModel = createHgoProjectionModel({
+    projection: createLinearProjection(),
+    sourceWidth: 8,
+    sourceHeight: 4,
+    targetWidth: 1200,
+    targetHeight: 600,
+    projectionPixelRatio: dpr,
+    projectionTransform: zoom,
+  });
+
+  const identityHit = identityModel.mapCanvasPointToSource(
+    projectionPoint[0] * dpr - 0.5,
+    projectionPoint[1] * dpr - 0.5,
+  );
+  const zoomedHit = zoomedModel.mapCanvasPointToSource(
+    ((projectionPoint[0] * zoom.k) + zoom.x) * dpr - 0.5,
+    ((projectionPoint[1] * zoom.k) + zoom.y) * dpr - 0.5,
+  );
+
+  assert.equal(zoomedHit.pixelIndex, identityHit.pixelIndex);
+  assert.equal(zoomedHit.sourceX, identityHit.sourceX);
+  assert.equal(zoomedHit.sourceY, identityHit.sourceY);
+});
+
 test("returns null for unprojectable canvas points", () => {
   const projection = () => null;
   projection.invert = () => null;

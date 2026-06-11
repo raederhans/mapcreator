@@ -218,6 +218,31 @@ class ScenarioContractTest(unittest.TestCase):
 
         self.assertEqual(registry.get("default_scenario_id"), "tno_1962")
 
+    def test_hgo_scenarios_use_vector_contract_profile(self) -> None:
+        profile = check_scenario_contracts.resolve_scenario_contract_profile("hgo_1936")
+
+        self.assertEqual(profile.profile_id, "hgo_vector")
+        self.assertTrue(profile.expect_runtime_topology)
+        self.assertFalse(profile.expect_chunk_assets)
+        self.assertFalse(profile.expect_startup_assets)
+
+    def test_checked_in_hgo_scene_uses_vector_topology_not_runtime_bmp(self) -> None:
+        manifest_path = Path(__file__).resolve().parents[1] / "data" / "scenarios" / "hgo_1936" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_urls = {
+            key: str(value)
+            for key, value in manifest.items()
+            if key.endswith("_url")
+        }
+
+        self.assertEqual(
+            manifest_urls["runtime_topology_url"],
+            "data/scenarios/hgo_1936/runtime_topology.topo.json",
+        )
+        self.assertTrue(manifest["source"]["hgo_provinces_bmp_sha256"])
+        self.assertTrue(all("hgo_runtime/provinces.bmp" not in value for value in manifest_urls.values()))
+        self.assertTrue(all(not value.lower().endswith(".bmp") for value in manifest_urls.values()))
+
     def test_checked_in_hoi4_scenarios_pass_shared_strict_review(self) -> None:
         scenarios_root = Path(__file__).resolve().parents[1] / "data" / "scenarios"
         duplicate_scenario_dirs = collect_duplicate_scenario_dirs(
@@ -864,6 +889,36 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertIn("relief_overlays.geojson", input_sha)
             self.assertIn("bathymetry.topo.json", input_sha)
             self.assertIn("city_overrides.json", input_sha)
+            self.assertIn("capital_hints.json", input_sha)
+
+    def test_build_snapshot_fingerprint_changes_when_capital_hints_payload_drifts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "snapshot_capitals")
+            _write_strict_bundle_files(scenario_dir)
+            capital_hints_path = scenario_dir / "capital_hints.json"
+            manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+
+            try:
+                first_snapshot = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+                _write_json(
+                    capital_hints_path,
+                    {
+                        "version": 1,
+                        "scenario_id": "snapshot_capitals",
+                        "entries": [{"tag": "AAA", "label": "Changed Capital", "feature_id": "CITY::changed"}],
+                    },
+                )
+                second_snapshot = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertNotEqual(
+                first_snapshot["snapshot_fingerprint"],
+                second_snapshot["snapshot_fingerprint"],
+            )
 
     def test_validate_startup_bundle_sources_rejects_missing_source_sha(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

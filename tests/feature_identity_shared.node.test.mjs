@@ -20,7 +20,10 @@ test("main-thread feature identity keeps alias and reserved-code behavior in sha
   assert.equal(featureIdentity.getCountryCode(feature), "GB");
   assert.equal(featureIdentity.getStableKey(feature), "stable::gb-001");
   assert.equal(featureIdentity.getCountryCode({ id: "RU_shell_01", properties: {} }), "RU");
+  assert.equal(featureIdentity.getCountryCode({ properties: { NUTS_ID: "DE1" } }), "DE");
+  assert.equal(featureIdentity.getCountryCode({ id: "FR12", properties: {} }), "FR");
   assert.equal(featureIdentity.getCountryCode({ id: "ZZ_001", properties: {} }), "");
+  assert.equal(featureIdentity.getCountryCode({ properties: { country_code: "2ra" } }), "2RA");
 });
 
 test("startup worker delegates feature identity rules to the worker-safe shared helper", () => {

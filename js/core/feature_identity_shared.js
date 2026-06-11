@@ -53,15 +53,24 @@ var SCENARIO_FORGE_FEATURE_IDENTITY_SHARED = globalThis.__scenarioForgeFeatureId
   }
 
   function defaultCountryCodeNormalizer(rawCode) {
-    return normalizeText(rawCode).toUpperCase().replace(/[^A-Z]/g, "");
+    return normalizeText(rawCode).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
+
+  function isCountryCodeLike(value) {
+    return /^[A-Z0-9]{2,3}$/.test(value) && /[A-Z]/.test(value);
+  }
+
+  function isDerivedCountryCodeLike(value) {
+    return /^[A-Z]{2,3}$/.test(value);
   }
 
   function extractCountryCodeFromId(value) {
     const text = normalizeText(value).toUpperCase();
     if (!text) return "";
     const prefix = text.split(/[-_]/)[0];
-    if (/^[A-Z]{2,3}$/.test(prefix)) return prefix;
-    return prefix.match(/^[A-Z]{2,3}/)?.[0] || "";
+    if (isDerivedCountryCodeLike(prefix)) return prefix;
+    const match = prefix.match(/^[A-Z]{2,3}/)?.[0] || "";
+    return isDerivedCountryCodeLike(match) ? match : "";
   }
 
   function normalizeFeatureCountryCode(rawCode, options = {}) {
@@ -70,7 +79,7 @@ var SCENARIO_FORGE_FEATURE_IDENTITY_SHARED = globalThis.__scenarioForgeFeatureId
       normalizeAlias = defaultCountryCodeNormalizer,
     } = normalizeFeatureIdentityOptions(options);
     const code = normalizeAlias(rawCode);
-    if (!/^[A-Z]{2,3}$/.test(code)) return "";
+    if (!isCountryCodeLike(code)) return "";
     if (!allowReserved && RESERVED_COUNTRY_CODES.has(code)) return "";
     return code;
   }
@@ -138,6 +147,8 @@ var SCENARIO_FORGE_FEATURE_IDENTITY_SHARED = globalThis.__scenarioForgeFeatureId
     getCountryCode,
     getFeatureId,
     getStableKey,
+    isDerivedCountryCodeLike,
+    isCountryCodeLike,
     normalizeFeatureCountryCode,
     normalizeFeatureIdentityOptions,
     normalizeText,

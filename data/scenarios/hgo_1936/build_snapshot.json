@@ -1,0 +1,24 @@
+{
+  "builder_version": "scenario-data-governance-v1",
+  "chunk_count": 0,
+  "contract_version": "2026-05-01.v1",
+  "durations": {},
+  "environment": {},
+  "feature_count": 11894,
+  "generated_at": "2026-06-11T03:37:04.212989+00:00",
+  "input_sha": {
+    "capital_hints.json": "082e6d27225f5e347ae3b601e12b06f96da4a7b5c345c39804b0ed865de46866",
+    "city_overrides.json": "2cc5f3506a5be1d79e676badc0c71e00bbb32b87809b7b5a8f136680fe4e7de7",
+    "cores.by_feature.json": "f836ffb40265bdd5e66aa39393e9ac7392eea5a52461b27c5678e42a1ea91cd1",
+    "countries.json": "4a93d3b0c52ef57c5c1765a131935570e39c9096ad2062a8a9d6386cc1426058",
+    "owners.by_feature.json": "89ab90bddd051aa756dfc8c4e20e9bc1cf80456534bf3e130711f69817faa76a",
+    "runtime_topology.topo.json": "bb9fa521076155f23e92c11e336f6a4231458ba1d8d18196b04194eb19820eeb",
+    "special_zone_layers.json": "4565092b196e374cdf1054eaf5bf0f2982f7f028f14ff7d183984f7dfa75b56f"
+  },
+  "output_sha": {},
+  "profile": "hgo_vector",
+  "report_paths": {},
+  "scenario_id": "hgo_1936",
+  "snapshot_fingerprint": "352766efda9d97f4bd58f29efc58547aaeba37063de57e95a64c09680374bf5b",
+  "water_count": 0
+}

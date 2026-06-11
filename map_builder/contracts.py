@@ -696,6 +696,16 @@ SCENARIO_PROFILE_LIGHTWEIGHT_BASE = ScenarioContractProfile(
     expect_audit=True,
     startup_support_base_topology="data/europe_topology.json",
 )
+SCENARIO_PROFILE_HGO_VECTOR = ScenarioContractProfile(
+    profile_id="hgo_vector",
+    gate_mode="shadow",
+    expect_runtime_topology=True,
+    expect_runtime_bootstrap=False,
+    expect_chunk_assets=False,
+    expect_startup_assets=False,
+    expect_audit=True,
+    startup_support_base_topology="data/europe_topology.json",
+)
 
 
 def resolve_scenario_publish_filenames(scope: str) -> tuple[str, ...]:
@@ -717,6 +727,8 @@ def resolve_scenario_contract_profile(scenario_id: str) -> ScenarioContractProfi
     # 这里保持“按 scenario 家族分合同”，这样 builder 和 checker 可以共用同一套分流规则。
     if normalized == "tno_1962":
         return SCENARIO_PROFILE_TNO_FULL
+    if normalized.startswith("hgo_"):
+        return SCENARIO_PROFILE_HGO_VECTOR
     if normalized.startswith("hoi4_"):
         return SCENARIO_PROFILE_HOI4_CHUNKED
     if normalized in {"blank_base", "modern_world"}:

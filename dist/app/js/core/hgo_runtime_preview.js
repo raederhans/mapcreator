@@ -142,6 +142,7 @@ function createHgoRuntimePreviewController(runtimeState, {
   storage = globalThis.localStorage,
   renderOptions = {},
   restorePreviewTarget = null,
+  useDefaultCanvasTarget = true,
 } = {}) {
   const previewState = ensureHgoRuntimePreviewState(runtimeState);
   const persisted = readPersistedPreviewEnabled(storage);
@@ -176,13 +177,13 @@ function createHgoRuntimePreviewController(runtimeState, {
       ? normalizeRenderReason(options.reason)
       : HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
     const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
-    // 有投影和 canvas 时直接写主画布，保证预览像素跟 app 渲染生命周期同步。
-    const rendered = canvas && effectiveRenderOptions.projection
-      ? renderer.renderProjectedToCanvas(canvas, effectiveRenderOptions)
+    const targetCanvas = effectiveRenderOptions.targetCanvas || (useDefaultCanvasTarget ? canvas : null);
+    const rendered = targetCanvas && effectiveRenderOptions.projection
+      ? renderer.renderProjectedToCanvas(targetCanvas, effectiveRenderOptions)
       : effectiveRenderOptions.projection
         ? renderer.renderProjectedToBuffer(effectiveRenderOptions)
-        : canvas
-        ? renderer.renderToCanvas(canvas, effectiveRenderOptions)
+        : targetCanvas
+        ? renderer.renderToCanvas(targetCanvas, effectiveRenderOptions)
         : renderer.renderToBuffer(effectiveRenderOptions);
     renderCount += 1;
     previewState.renderSummary = buildRenderSummary(rendered, { reason, renderCount });
@@ -288,10 +289,11 @@ function createHgoRuntimePreviewController(runtimeState, {
   const inspectPoint = (x, y, options = {}) => {
     if (!renderer) return null;
     const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
+    const targetCanvas = effectiveRenderOptions.targetCanvas || (useDefaultCanvasTarget ? canvas : null);
     const hit = effectiveRenderOptions.projection
-      ? renderer.inspectProjectedCanvasPoint(x, y, canvas, effectiveRenderOptions)
-      : canvas
-        ? renderer.inspectCanvasPoint(x, y, canvas)
+      ? renderer.inspectProjectedCanvasPoint(x, y, targetCanvas, effectiveRenderOptions)
+      : targetCanvas
+        ? renderer.inspectCanvasPoint(x, y, targetCanvas)
         : renderer.inspectPoint(x, y);
     previewState.inspectResult = hit;
     return hit;
