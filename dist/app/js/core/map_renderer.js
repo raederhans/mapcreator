@@ -4350,6 +4350,15 @@ function buildCountryDominantFillColorMap() {
   return result;
 }
 
+function getAdmin0BackgroundFillColor(countryCode) {
+  const canonicalCode = canonicalCountryCode(countryCode);
+  const dominantFillColor = buildCountryDominantFillColorMap().get(canonicalCode);
+  return getSafeCanvasColor(dominantFillColor, null)
+    || getSafeCanvasColor(getColorByCanonicalCountryCode(runtimeState.sovereignBaseColors, canonicalCode), null)
+    || getSafeCanvasColor(getColorByCanonicalCountryCode(runtimeState.countryBaseColors, canonicalCode), null)
+    || LAND_FILL_COLOR;
+}
+
 function getInternalBorderStrokeColor(countryCode, fallbackColor) {
   const colorMode = String(runtimeState.styleConfig?.internalBorders?.colorMode || "auto").trim().toLowerCase();
   const manualColor = getSafeCanvasColor(runtimeState.styleConfig?.internalBorders?.color, fallbackColor || "#cccccc");
@@ -17847,11 +17856,7 @@ function drawAdmin0BackgroundFills({
     if (!projectedBoundsIntersectScreenRects(projectedBounds, screenRects, { transform })) {
       return;
     }
-    const color =
-      (runtimeState.sovereignBaseColors && runtimeState.sovereignBaseColors[code]) ||
-      (runtimeState.countryBaseColors && runtimeState.countryBaseColors[code]) ||
-      null;
-    const fillColor = getSafeCanvasColor(color, null) || LAND_FILL_COLOR;
+    const fillColor = getAdmin0BackgroundFillColor(code);
 
     context.beginPath();
     pathCanvas(mergedFeature || {

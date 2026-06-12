@@ -1660,6 +1660,8 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
   const checkScenarioContractsSource = readRepoFile("tools", "check_scenario_contracts.py");
+  const colorCoverageE2eSource = readRepoFile("tests", "e2e", "dev", "scenario_chunk_exact_after_settle_regression.dev.spec.js");
+  const pixelProbeSource = readRepoFile("tests", "e2e", "support", "political-pixel-probe.js");
   const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
 
   const checks = {
@@ -1707,6 +1709,20 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
     backgroundMergeFiltersVisualHelpersButKeepsVisibleNonInteractiveLand:
       /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(feature, id\)/.test(rendererSource)
       && /function buildScenarioPoliticalBackgroundEntriesFromSpatialItems\(items = \[\]\) \{[\s\S]*?shouldExcludePoliticalVisualFeature\(entry\.feature, entry\.id\)/.test(rendererSource),
+    admin0BackgroundUsesDominantResolvedFillBeforeBaseColor:
+      /function getAdmin0BackgroundFillColor\(countryCode\) \{[\s\S]*?const dominantFillColor = buildCountryDominantFillColorMap\(\)\.get\(canonicalCode\);[\s\S]*?return getSafeCanvasColor\(dominantFillColor, null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.sovereignBaseColors, canonicalCode\), null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.countryBaseColors, canonicalCode\), null\)[\s\S]*?\|\| LAND_FILL_COLOR;[\s\S]*?\}/.test(rendererSource)
+      && /function drawAdmin0BackgroundFills\([\s\S]*?const fillColor = getAdmin0BackgroundFillColor\(code\);/.test(rendererSource),
+    colorCoverageOwnerDiagnosticsUseDisplayOwnerCode:
+      /"ISO_A2_EH"[\s\S]*?"ADM0_A2"[\s\S]*?"__city_country_code"/.test(colorCoverageE2eSource)
+      && /extractCountryCodeFromId\(props\.id \|\| props\.NUTS_ID\)[\s\S]*?extractCountryCodeFromId\(feature\?\.id\)[\s\S]*?extractCountryCodeFromId\(fallback\)/.test(colorCoverageE2eSource)
+      && /const getDisplayOwnerCode = \(feature, featureId, fallbackCountryCode = ""\) => \{[\s\S]*?state\.sovereigntyByFeatureId\?\.\[featureId\][\s\S]*?state\.scenarioAutoShellOwnerByFeatureId\?\.\[featureId\][\s\S]*?shellCandidate\.startsWith\("RU_ARCTIC_FB_"\)[\s\S]*?props\.name[\s\S]*?shell fallback[\s\S]*?const displayOwnerCode = getDisplayOwnerCode\(feature, featureId, countryCode\);/.test(colorCoverageE2eSource)
+      && /countryOwnerSourceMismatches\.push\(\{[\s\S]*?classification: "display-owner-source-mismatch"/.test(colorCoverageE2eSource)
+      && /expect\(coverage\.missingOwnerColorCount,[\s\S]*?display owner base colors/.test(colorCoverageE2eSource),
+    pixelProbeOwnerColorUsesDisplayOwnerCode:
+      /"ISO_A2_EH"[\s\S]*?"ADM0_A2"[\s\S]*?"__city_country_code"/.test(pixelProbeSource)
+      && /shellCandidate\.startsWith\("RU_ARCTIC_FB_"\)[\s\S]*?props\.name[\s\S]*?shell fallback/.test(pixelProbeSource)
+      && /const displayOwnerCode = getDisplayOwnerCode\(matchedFeature, featureId, countryCode\);/.test(pixelProbeSource)
+      && /state\.sovereignBaseColors\?\.\[displayOwnerCode\][\s\S]*?state\.countryBaseColors\?\.\[displayOwnerCode\]/.test(pixelProbeSource),
     scenarioBackgroundMergeUsesVisualLandCollection:
       /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landData \|\| runtimeState\.landDataFull;[\s\S]*?\}/.test(rendererSource)
       && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?runtimeState\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(rendererSource)

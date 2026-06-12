@@ -625,6 +625,7 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
 
   const coverage = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
+    const { normalizeCountryCodeAlias } = await import("/js/core/country_code_aliases.js");
     const spatialItems = Array.isArray(state.spatialItems) ? state.spatialItems : [];
     const colors = state.colors && typeof state.colors === "object" ? state.colors : {};
     const ownerColors = {
@@ -635,18 +636,115 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
     const missingResolvedColors = [];
     const missingFullResolvedColors = [];
     const missingOwnerColors = [];
+    const countryOwnerSourceMismatches = [];
     const fullFeatures = Array.isArray(state.landDataFull?.features) && state.landDataFull.features.length
       ? state.landDataFull.features
       : (Array.isArray(state.landData?.features) ? state.landData.features : []);
     const interactiveFeatureCount = Array.isArray(state.landData?.features) ? state.landData.features.length : 0;
+    const normalizeCode = (value) => normalizeCountryCodeAlias(value);
+    const countryCodeKeys = [
+      "cntr_code",
+      "CNTR_CODE",
+      "CNTR",
+      "iso_a2",
+      "ISO_A2",
+      "iso_a2_eh",
+      "ISO_A2_EH",
+      "adm0_a2",
+      "ADM0_A2",
+      "country_code",
+      "countryCode",
+      "__city_country_code",
+    ];
+    const extractCountryCodeFromId = (value) => {
+      const text = String(value || "").trim().toUpperCase();
+      if (!text) return "";
+      const prefix = text.split(/[-_]/)[0];
+      const match = /^[A-Z]{2,3}$/.test(prefix) ? prefix : (prefix.match(/^[A-Z]{2,3}/)?.[0] || "");
+      return /^[A-Z]{2,3}$/.test(match) ? normalizeCode(match) : "";
+    };
     const getFeatureId = (feature, fallback = "") => {
       const props = feature?.properties || {};
       return String(props.id || props.NUTS_ID || feature?.id || fallback).trim();
     };
+    const landFeatureIds = new Set(
+      (Array.isArray(state.landData?.features) ? state.landData.features : [])
+        .map((feature, index) => getFeatureId(feature, `feature-${index}`))
+        .filter(Boolean)
+    );
+    const fullFeatureIds = new Set(
+      fullFeatures
+        .map((feature, index) => getFeatureId(feature, `feature-${index}`))
+        .filter(Boolean)
+    );
+    const getFeatureCountryCode = (feature, fallback = "") => {
+      const props = feature?.properties || {};
+      for (const key of countryCodeKeys) {
+        const code = normalizeCode(props[key]);
+        if (code) return code;
+      }
+      return normalizeCode(fallback)
+        || extractCountryCodeFromId(props.id || props.NUTS_ID)
+        || extractCountryCodeFromId(feature?.id)
+        || extractCountryCodeFromId(fallback);
+    };
+    const getBaseColorFields = (countryCode) => {
+      const code = normalizeCode(countryCode);
+      const countryBaseColor = String(state.countryBaseColors?.[code] || "");
+      const sovereignBaseColor = String(state.sovereignBaseColors?.[code] || "");
+      return {
+        countryBaseColor,
+        sovereignBaseColor,
+        baseColor: sovereignBaseColor || countryBaseColor,
+      };
+    };
+    const getDisplayOwnerCode = (feature, featureId, fallbackCountryCode = "") => {
+      const props = feature?.properties || {};
+      const directOwnerCode = normalizeCode(state.sovereigntyByFeatureId?.[featureId] || "");
+      const shellOwnerCode = normalizeCode(
+        state.scenarioAutoShellOwnerByFeatureId?.[featureId]
+        || props.scenario_shell_owner_hint
+        || props.scenario_shell_controller_hint
+        || ""
+      );
+      const featureCountryCode = getFeatureCountryCode(feature, fallbackCountryCode);
+      const shellCandidate = String(props.id ?? featureId ?? feature?.id ?? "").trim().toUpperCase();
+      const isScenarioShell = String(props.scenario_helper_kind || "").trim().toLowerCase() === "shell_fallback"
+        || shellCandidate.startsWith("RU_ARCTIC_FB_")
+        || String(props.name || "").toLowerCase().includes("shell fallback");
+      if (String(state.mapSemanticMode || "").trim().toLowerCase() === "blank") {
+        return isScenarioShell ? (directOwnerCode || shellOwnerCode || "") : directOwnerCode;
+      }
+      return isScenarioShell
+        ? (directOwnerCode || shellOwnerCode || "")
+        : (directOwnerCode || featureCountryCode || "");
+    };
+    const getSourceCollection = (featureId) => {
+      if (landFeatureIds.has(featureId)) return "landData";
+      if (fullFeatureIds.has(featureId)) return "landDataFull";
+      return "spatialItems";
+    };
+    const getRawOwnerFields = (props = {}) => ({
+      owner: props.owner,
+      sovereign: props.sovereign,
+      cntr_code: props.cntr_code,
+      CNTR_CODE: props.CNTR_CODE,
+      CNTR: props.CNTR,
+      iso_a2: props.iso_a2,
+      ISO_A2: props.ISO_A2,
+      iso_a2_eh: props.iso_a2_eh,
+      adm0_a2: props.adm0_a2,
+      country_code: props.country_code,
+      countryCode: props.countryCode,
+      scenario_shell_owner_hint: props.scenario_shell_owner_hint,
+      scenario_shell_controller_hint: props.scenario_shell_controller_hint,
+      scenario_helper_kind: props.scenario_helper_kind,
+      render_as_base_geography: props.render_as_base_geography,
+    });
     for (const [index, feature] of fullFeatures.entries()) {
       const props = feature?.properties || {};
       const featureId = getFeatureId(feature, `feature-${index}`);
-      const countryCode = String(props.cntr_code || "").trim().toUpperCase();
+      const countryCode = getFeatureCountryCode(feature);
       if (countryCode === "ATL") {
         continue;
       }
@@ -662,7 +760,12 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
       const feature = item?.feature || null;
       const props = feature?.properties || {};
       const featureId = String(item?.featureId || getFeatureId(feature) || "").trim();
-      const countryCode = String(props.cntr_code || item?.countryCode || "").trim().toUpperCase();
+      const countryCode = getFeatureCountryCode(feature, item?.countryCode);
+      const displayOwnerCode = getDisplayOwnerCode(feature, featureId, countryCode);
+      const countryBase = getBaseColorFields(countryCode);
+      const displayOwnerBase = getBaseColorFields(displayOwnerCode);
+      const resolvedColor = String(colors[featureId] || "");
+      const sourceCollection = getSourceCollection(featureId);
       if (!featureId) {
         missingFeatureIds.push({
           drawOrder: Number(item?.drawOrder || 0),
@@ -673,18 +776,51 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
       if (countryCode === "ATL") {
         continue;
       }
-      if (!String(colors[featureId] || "").trim()) {
+      if (!resolvedColor.trim()) {
         missingResolvedColors.push({
           featureId,
           countryCode,
           drawOrder: Number(item?.drawOrder || 0),
         });
       }
-      if (countryCode && !String(ownerColors[countryCode] || "").trim()) {
+      if (displayOwnerCode && !displayOwnerBase.baseColor.trim()) {
         missingOwnerColors.push({
           featureId,
           countryCode,
+          displayOwnerCode,
+          resolvedColor,
+          countryBaseColor: countryBase.countryBaseColor,
+          sovereignBaseColor: countryBase.sovereignBaseColor,
+          displayOwnerCountryBaseColor: displayOwnerBase.countryBaseColor,
+          displayOwnerSovereignBaseColor: displayOwnerBase.sovereignBaseColor,
           drawOrder: Number(item?.drawOrder || 0),
+          sourceCollection,
+          borderMeshCountryCode: item?.borderMeshCountryCode || "",
+          rawOwnerFields: getRawOwnerFields(props),
+          classification: "base-color-key-missing",
+        });
+      }
+      if (
+        countryCode
+        && displayOwnerCode
+        && countryCode !== displayOwnerCode
+        && !countryBase.baseColor.trim()
+        && displayOwnerBase.baseColor.trim()
+      ) {
+        countryOwnerSourceMismatches.push({
+          featureId,
+          countryCode,
+          displayOwnerCode,
+          resolvedColor,
+          countryBaseColor: countryBase.countryBaseColor,
+          sovereignBaseColor: countryBase.sovereignBaseColor,
+          displayOwnerCountryBaseColor: displayOwnerBase.countryBaseColor,
+          displayOwnerSovereignBaseColor: displayOwnerBase.sovereignBaseColor,
+          drawOrder: Number(item?.drawOrder || 0),
+          sourceCollection,
+          borderMeshCountryCode: item?.borderMeshCountryCode || "",
+          rawOwnerFields: getRawOwnerFields(props),
+          classification: "display-owner-source-mismatch",
         });
       }
     }
@@ -699,10 +835,12 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
       missingResolvedColors: missingResolvedColors.slice(0, 20),
       missingFullResolvedColors: missingFullResolvedColors.slice(0, 20),
       missingOwnerColors: missingOwnerColors.slice(0, 20),
+      countryOwnerSourceMismatches: countryOwnerSourceMismatches.slice(0, 20),
       missingFeatureIdCount: missingFeatureIds.length,
       missingResolvedColorCount: missingResolvedColors.length,
       missingFullResolvedColorCount: missingFullResolvedColors.length,
       missingOwnerColorCount: missingOwnerColors.length,
+      countryOwnerSourceMismatchCount: countryOwnerSourceMismatches.length,
     };
   });
 
@@ -714,4 +852,5 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
   expect(coverage.missingFeatureIdCount, `spatial items missing feature ids: ${JSON.stringify(coverage)}`).toBe(0);
   expect(coverage.missingFullResolvedColorCount, `full visual features missing resolved colors: ${JSON.stringify(coverage)}`).toBe(0);
   expect(coverage.missingResolvedColorCount, `rendered spatial items missing resolved colors: ${JSON.stringify(coverage)}`).toBe(0);
+  expect(coverage.missingOwnerColorCount, `rendered spatial items missing display owner base colors: ${JSON.stringify(coverage)}`).toBe(0);
 });
