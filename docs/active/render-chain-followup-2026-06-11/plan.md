@@ -15,9 +15,19 @@
 - Main agent owns all perf, e2e, dev-server, and build/test live processes.
 - Subagents may inspect files and completed logs only.
 
+## R1 Acceptance
+- Add a browser pixel regression for TNO zoom/shrink political color visibility.
+- Diagnose permanent missing-color candidates through feature id, resolved color, owner/base color, and spatial/full collection coverage.
+- Keep fixes limited to color resolution source consistency unless evidence points to spatial index or detail-promotion ownership.
+- Preserve owner/base color gaps as R2 coarse-underlay evidence when resolved colors and final pixels are healthy.
+
 ## Current Status
 - [x] R0 docs/archive move submitted as `ddd94ba9`.
 - [x] Perf blocker diagnosed with fresh evidence: stale `active_server.json` allowed a gate run to reuse the wrong worktree server.
 - [x] `codex/render-recovery-review-fix` merged into `main` as `4cfb5e1d` after clean fresh perf evidence.
 - [x] Current HEAD `fe7d69e5` passed a fresh isolated `npm run perf:gate` after two noisy HOI4 failures; push is unblocked with the instability recorded as evidence.
-- [ ] R1 visual/pixel smoke and color-path diagnosis remain follow-up work.
+- [x] R1 pixel probe added for Great Lakes Congo zoom-end visible political fill stability.
+- [x] R1 color source fix makes `runtimeState.colors` cover `landDataFull` and owner refresh full-only feature ids.
+- [x] R1 final verification passed, including clean-worktree `npm run verify:pages-dist`.
+- [ ] R1 final review, commit amendment, and push remain open.
+- [ ] R2 coarse-underlay owner/base color gaps remain follow-up work.

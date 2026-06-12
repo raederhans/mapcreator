@@ -6844,17 +6844,20 @@ function rebuildResolvedColors() {
   });
 
   const nextColors = {};
-  if (!runtimeState.landData?.features?.length) {
+  const colorSourceFeatures = getResolvedColorSourceFeatures();
+  if (!colorSourceFeatures.length) {
     replaceResolvedColorsState(state, nextColors);
     recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
       featureCount: 0,
+      sourceFeatureCount: 0,
+      source: "none",
     });
     return nextColors;
   }
 
   // Resolved colors are feature data, so full-table rebuilds stay independent
   // from the current canvas, zoom, pan, and draw-time culling decisions.
-  runtimeState.landData.features.forEach((feature, index) => {
+  colorSourceFeatures.forEach((feature, index) => {
     const id = getFeatureId(feature) || `feature-${index}`;
     if (!id) return;
     const resolved = getResolvedFeatureColor(feature, id);
@@ -6868,8 +6871,64 @@ function rebuildResolvedColors() {
   invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
   recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
     featureCount: Object.keys(nextColors).length,
+    sourceFeatureCount: colorSourceFeatures.length,
+    source: getResolvedColorSourceName(),
   });
   return nextColors;
+}
+
+function getResolvedColorSourceFeatures() {
+  const fullFeatures = getFullLandDataFeatures();
+  if (fullFeatures.length) {
+    return fullFeatures;
+  }
+  return Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features : [];
+}
+
+function getResolvedColorSourceName() {
+  return Array.isArray(runtimeState.landDataFull?.features) && runtimeState.landDataFull.features.length
+    ? "landDataFull"
+    : "landData";
+}
+
+function findResolvedColorFeatureById(featureId) {
+  const id = String(featureId || "").trim();
+  if (!id) return null;
+  const indexedFeature = runtimeState.landIndex?.get(id);
+  if (indexedFeature) {
+    return indexedFeature;
+  }
+  const features = getResolvedColorSourceFeatures();
+  for (const feature of features) {
+    if (getFeatureId(feature) === id) {
+      return feature;
+    }
+  }
+  return null;
+}
+
+function collectResolvedColorFeatureIdsForOwners(ownerCodes = []) {
+  const ownerSet = new Set(
+    (Array.isArray(ownerCodes) ? ownerCodes : [])
+      .map((ownerCode) => canonicalCountryCode(ownerCode))
+      .filter(Boolean)
+  );
+  const ids = new Set();
+  ownerSet.forEach((ownerCode) => {
+    getFeatureIdsForOwner(ownerCode).forEach((id) => ids.add(id));
+  });
+  getResolvedColorSourceFeatures().forEach((feature, index) => {
+    const id = getFeatureId(feature) || `feature-${index}`;
+    if (!id) return;
+    const ownerCode = canonicalCountryCode(
+      getDisplayOwnerCode(feature, id)
+      || getFeatureCountryCodeNormalized(feature)
+    );
+    if (ownerSet.has(ownerCode)) {
+      ids.add(id);
+    }
+  });
+  return Array.from(ids);
 }
 
 function shouldRefreshContextBaseContoursForColorChanges() {
@@ -6905,7 +6964,7 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}
     ? Array.from(new Set(featureIds.map((value) => String(value || "").trim()).filter(Boolean)))
     : [];
   ids.forEach((id) => {
-    const feature = runtimeState.landIndex?.get(id);
+    const feature = findResolvedColorFeatureById(id);
     if (!feature) {
       setResolvedColorForFeature(state, id, null);
       return;
@@ -6931,11 +6990,7 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}
 }
 
 function refreshResolvedColorsForOwners(ownerCodes, { renderNow = false } = {}) {
-  const codes = Array.isArray(ownerCodes) ? ownerCodes : [];
-  const ids = [];
-  codes.forEach((ownerCode) => {
-    getFeatureIdsForOwner(ownerCode).forEach((id) => ids.push(id));
-  });
+  const ids = collectResolvedColorFeatureIdsForOwners(ownerCodes);
   refreshResolvedColorsForFeatures(ids, { renderNow });
 }
 

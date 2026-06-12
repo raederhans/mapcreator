@@ -34,6 +34,18 @@ class MapRendererColorResolutionStrategyBoundaryContractTest(unittest.TestCase):
         rebuild_body = renderer_content[rebuild_start:rebuild_end]
         self.assertNotIn("getLogicalCanvasDimensions", rebuild_body)
         self.assertNotIn("shouldSkipFeature", rebuild_body)
+        self.assertIn("const colorSourceFeatures = getResolvedColorSourceFeatures();", rebuild_body)
+        self.assertIn("colorSourceFeatures.forEach((feature, index) => {", rebuild_body)
+        self.assertIn("function findResolvedColorFeatureById(featureId) {", rebuild_body)
+        refresh_start = renderer_content.index("function refreshResolvedColorsForFeatures(")
+        refresh_end = renderer_content.index("function refreshResolvedColorsForOwners(", refresh_start)
+        refresh_body = renderer_content[refresh_start:refresh_end]
+        self.assertIn("const feature = findResolvedColorFeatureById(id);", refresh_body)
+        self.assertIn("function collectResolvedColorFeatureIdsForOwners(ownerCodes = []) {", renderer_content)
+        owner_refresh_start = renderer_content.index("function refreshResolvedColorsForOwners(")
+        owner_refresh_end = renderer_content.index("function refreshColorState(", owner_refresh_start)
+        owner_refresh_body = renderer_content[owner_refresh_start:owner_refresh_end]
+        self.assertIn("const ids = collectResolvedColorFeatureIdsForOwners(ownerCodes);", owner_refresh_body)
         derived_start = renderer_content.index("function rebuildRuntimeDerivedState({")
         derived_end = renderer_content.index("async function buildHitCanvasAfterStartup(", derived_start)
         derived_body = renderer_content[derived_start:derived_end]

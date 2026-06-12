@@ -5,6 +5,9 @@ const {
   waitForAppInteractive,
   waitForScenarioSelectReady,
 } = require("../support/playwright-app");
+const {
+  samplePoliticalFeaturePixels,
+} = require("../support/political-pixel-probe");
 const { DEFAULT_FAST_APP_OPEN_PATH, toRootPath } = require("../support/startup-paths");
 
 test.setTimeout(120_000);
@@ -458,6 +461,10 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
       : (globalThis.__renderPerfMetrics || {});
     const d3 = globalThis.d3;
     const features = Array.isArray(state.landData?.features) ? state.landData.features : [];
+    const getFeatureId = (feature) => {
+      const props = feature?.properties || {};
+      return String(props.id || props.NUTS_ID || feature?.id || "").trim();
+    };
     const results = probes.map((probe) => {
       let matchedFeature = null;
       for (const feature of features) {
@@ -471,7 +478,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
         }
       }
       const props = matchedFeature?.properties || {};
-      const featureId = String(props.id || "").trim();
+      const featureId = getFeatureId(matchedFeature);
       return {
         ...probe,
         featureId,
@@ -491,6 +498,14 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
     expect(probe.featureId, `missing feature before zoom at ${probe.id}`).toBeTruthy();
     expect(probe.countryCode, `missing country before zoom at ${probe.id}`).toBeTruthy();
     expect(probe.resolvedColor, `missing color before zoom at ${probe.id}`).toBeTruthy();
+  }
+  const beforePixelSamples = await samplePoliticalFeaturePixels(page, landProbes);
+  for (const sample of beforePixelSamples) {
+    expect(sample.error, `pixel probe failed before zoom at ${sample.id}: ${JSON.stringify(sample)}`).toBeFalsy();
+    expect(sample.nonLandPixelCount, `land-fill-only pixels before zoom at ${sample.id}: ${JSON.stringify(sample)}`)
+      .toBeGreaterThan(0);
+    expect(sample.bestResolvedDistance, `visible pixel does not match resolved color before zoom at ${sample.id}: ${JSON.stringify(sample)}`)
+      .toBeLessThan(55);
   }
 
   await page.evaluate(async () => {
@@ -536,6 +551,10 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
     const loadedChunkIds = Array.isArray(state.activeScenarioChunks?.loadedChunkIds)
       ? state.activeScenarioChunks.loadedChunkIds.map((chunkId) => String(chunkId || ""))
       : [];
+    const getFeatureId = (feature) => {
+      const props = feature?.properties || {};
+      return String(props.id || props.NUTS_ID || feature?.id || "").trim();
+    };
     const results = probes.map((probe) => {
       let matchedFeature = null;
       for (const feature of features) {
@@ -549,7 +568,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
         }
       }
       const props = matchedFeature?.properties || {};
-      const featureId = String(props.id || "").trim();
+      const featureId = getFeatureId(matchedFeature);
       return {
         ...probe,
         featureId,
@@ -579,6 +598,7 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   expect(afterZoom.blackFrameCount).toBe(beforeZoom.blackFrameCount);
   expect(afterZoom.requiredChunkIds).toContain("political.detail.country.gco");
   expect(afterZoom.loadedChunkIds).toContain("political.detail.country.gco");
+  const afterPixelSamples = await samplePoliticalFeaturePixels(page, landProbes);
   for (const [index, probe] of afterZoom.results.entries()) {
     const beforeProbe = beforeZoom.results[index];
     expect(probe.featureId, `missing feature after zoom at ${probe.id}`).toBeTruthy();
@@ -586,4 +606,112 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
     expect(probe.resolvedColor, `missing color after zoom at ${probe.id}`).toBeTruthy();
     expect(probe.resolvedColor, `color changed after zoom at ${probe.id}`).toBe(beforeProbe.resolvedColor);
   }
+  for (const [index, sample] of afterPixelSamples.entries()) {
+    const beforeSample = beforePixelSamples[index];
+    expect(sample.error, `pixel probe failed after zoom at ${sample.id}: ${JSON.stringify(sample)}`).toBeFalsy();
+    expect(sample.nonLandPixelCount, `land-fill-only pixels after zoom at ${sample.id}: ${JSON.stringify(sample)}`)
+      .toBeGreaterThan(0);
+    expect(sample.bestResolvedDistance, `visible pixel does not match resolved color after zoom at ${sample.id}: ${JSON.stringify(sample)}`)
+      .toBeLessThan(55);
+    expect(sample.resolvedColor, `pixel resolved color changed after zoom at ${sample.id}`).toBe(beforeSample.resolvedColor);
+  }
+});
+
+test("tno runtime color coverage includes rendered spatial items", async ({ page }) => {
+  await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await ensureScenario(page, "tno_1962", "TNO 1962");
+  await waitForStableExactRender(page);
+
+  const coverage = await page.evaluate(async () => {
+    const { state } = await import("/js/core/state.js");
+    const spatialItems = Array.isArray(state.spatialItems) ? state.spatialItems : [];
+    const colors = state.colors && typeof state.colors === "object" ? state.colors : {};
+    const ownerColors = {
+      ...(state.countryBaseColors || {}),
+      ...(state.sovereignBaseColors || {}),
+    };
+    const missingFeatureIds = [];
+    const missingResolvedColors = [];
+    const missingFullResolvedColors = [];
+    const missingOwnerColors = [];
+    const fullFeatures = Array.isArray(state.landDataFull?.features) && state.landDataFull.features.length
+      ? state.landDataFull.features
+      : (Array.isArray(state.landData?.features) ? state.landData.features : []);
+    const interactiveFeatureCount = Array.isArray(state.landData?.features) ? state.landData.features.length : 0;
+    const getFeatureId = (feature, fallback = "") => {
+      const props = feature?.properties || {};
+      return String(props.id || props.NUTS_ID || feature?.id || fallback).trim();
+    };
+    for (const [index, feature] of fullFeatures.entries()) {
+      const props = feature?.properties || {};
+      const featureId = getFeatureId(feature, `feature-${index}`);
+      const countryCode = String(props.cntr_code || "").trim().toUpperCase();
+      if (countryCode === "ATL") {
+        continue;
+      }
+      if (featureId && !String(colors[featureId] || "").trim()) {
+        missingFullResolvedColors.push({
+          featureId,
+          countryCode,
+          index,
+        });
+      }
+    }
+    for (const item of spatialItems) {
+      const feature = item?.feature || null;
+      const props = feature?.properties || {};
+      const featureId = String(item?.featureId || getFeatureId(feature) || "").trim();
+      const countryCode = String(props.cntr_code || item?.countryCode || "").trim().toUpperCase();
+      if (!featureId) {
+        missingFeatureIds.push({
+          drawOrder: Number(item?.drawOrder || 0),
+          countryCode,
+        });
+        continue;
+      }
+      if (countryCode === "ATL") {
+        continue;
+      }
+      if (!String(colors[featureId] || "").trim()) {
+        missingResolvedColors.push({
+          featureId,
+          countryCode,
+          drawOrder: Number(item?.drawOrder || 0),
+        });
+      }
+      if (countryCode && !String(ownerColors[countryCode] || "").trim()) {
+        missingOwnerColors.push({
+          featureId,
+          countryCode,
+          drawOrder: Number(item?.drawOrder || 0),
+        });
+      }
+    }
+    return {
+      activeScenarioId: String(state.activeScenarioId || ""),
+      spatialItemCount: spatialItems.length,
+      fullFeatureCount: fullFeatures.length,
+      interactiveFeatureCount,
+      colorCount: Object.keys(colors).length,
+      ownerColorCount: Object.keys(ownerColors).length,
+      missingFeatureIds: missingFeatureIds.slice(0, 20),
+      missingResolvedColors: missingResolvedColors.slice(0, 20),
+      missingFullResolvedColors: missingFullResolvedColors.slice(0, 20),
+      missingOwnerColors: missingOwnerColors.slice(0, 20),
+      missingFeatureIdCount: missingFeatureIds.length,
+      missingResolvedColorCount: missingResolvedColors.length,
+      missingFullResolvedColorCount: missingFullResolvedColors.length,
+      missingOwnerColorCount: missingOwnerColors.length,
+    };
+  });
+
+  expect(coverage.activeScenarioId).toBe("tno_1962");
+  expect(coverage.spatialItemCount).toBeGreaterThan(0);
+  expect(coverage.fullFeatureCount).toBeGreaterThanOrEqual(coverage.interactiveFeatureCount);
+  expect(coverage.colorCount).toBeGreaterThan(0);
+  expect(coverage.ownerColorCount).toBeGreaterThan(0);
+  expect(coverage.missingFeatureIdCount, `spatial items missing feature ids: ${JSON.stringify(coverage)}`).toBe(0);
+  expect(coverage.missingFullResolvedColorCount, `full visual features missing resolved colors: ${JSON.stringify(coverage)}`).toBe(0);
+  expect(coverage.missingResolvedColorCount, `rendered spatial items missing resolved colors: ${JSON.stringify(coverage)}`).toBe(0);
 });

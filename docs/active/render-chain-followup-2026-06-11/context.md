@@ -34,3 +34,15 @@
 - After committing the self-review fix, current HEAD `735d99f0` passed `npm run verify:perf-gate-contract`, then isolated `npm run perf:gate` failed twice on HOI4 only: `6921.6ms` and `6830.0ms` versus limit `5986.6ms`; both runs had `contractMismatches=[]`.
 - A fresh isolated rerun at current HEAD `fe7d69e5` passed `npm run perf:gate`: TNO `6204.8ms`, HOI4 `5665.8ms`, `contractMismatches=[]`, `failures=[]`.
 - Push is unblocked, with the repeated HOI4 variance recorded as a follow-up risk for future perf gate interpretation.
+
+## R1 Color Visibility Work
+- Reused `tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js` rather than creating a separate e2e suite.
+- Added `tests/e2e/support/political-pixel-probe.js` to sample final `map-canvas` pixels through d3 projection, `zoomTransform`, and DPR.
+- Extended the Great Lakes Congo zoom-end regression to assert final canvas pixels match `state.colors[featureId]` before and after zoom-end detail promotion.
+- Added runtime color coverage diagnostics for TNO: `landDataFull` visual features and rendered `spatialItems` must have resolved colors.
+- First R1 coverage run found `resolvedColor` complete for rendered `spatialItems`, while 648 rendered items lacked owner/base colors such as `AL` and `AT`; this is R2 coarse-underlay evidence, not a final-pixel R1 blocker.
+- Fixed `rebuildResolvedColors()` to build from `getFullLandDataFeatures()` so full visual collection features receive stable resolved colors.
+- Fixed `refreshResolvedColorsForFeatures()` to fall back from `landIndex` to full color-source features.
+- Fixed `refreshResolvedColorsForOwners()` to include full color-source features for owner refreshes, preventing full-only features from keeping stale colors after owner/base color edits.
+- Final R1 e2e rerun passed 2/2; latest log path is `.runtime/logs/political-progressive-recovery-final-20260612.log`.
+- Clean worktree `C:\Users\raede\Desktop\dev\mapcreator-r1-pages-verify` passed `npm run verify:pages-dist`; the resulting `dist/pages-dist-manifest.json` was copied back to the main checkout.

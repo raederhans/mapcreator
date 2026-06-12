@@ -349,3 +349,6 @@
 
 ### perf gate 复用 server 要校验身份
 - `.runtime/dev/active_server.json` 可能残留死 pid；只按 URL 探通会让隔离 worktree 测到另一个 worktree 的 server。perf gate 默认应使用自己的 runtime root，显式复用时再校验 `pid` 存活且 `cwd` 等于当前 repo。
+
+### full visual collection 要覆盖 resolved colors
+- 渐进渲染场景里 `landDataFull` 可能比 interactive `landData` 更接近最终可见集合；resolved color 表和 owner 刷新要覆盖 full visual collection，空间索引继续服务交互集合。
