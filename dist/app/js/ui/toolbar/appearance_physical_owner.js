@@ -1,16 +1,15 @@
 import {
-  INTENSITY_FIELD_GRID,
   createPhysicalStyleConfigForPreset,
-  normalizeIntensityFieldsState,
   normalizePhysicalPreset,
   normalizePhysicalStyleConfig,
-  updateIntensityFieldChannel,
 } from "../../core/state.js";
-import { createDefaultIntensityFieldToolState } from "../../core/state/renderer_runtime_state.js";
 import {
   captureHistoryState as captureRuntimeHistoryState,
   pushHistoryEntry as pushRuntimeHistoryEntry,
 } from "../../core/history_manager.js";
+import {
+  createIntensityFieldEditorSection,
+} from "./intensity_field_editor_section.js";
 
 export const PHYSICAL_CLASS_TOGGLE_IDS = Object.freeze({
   mountain_high_relief: "physicalClassMountain",
@@ -26,9 +25,6 @@ export const PHYSICAL_CLASS_TOGGLE_IDS = Object.freeze({
   desert_bare: "physicalClassDesert",
   tundra_ice: "physicalClassTundra",
 });
-
-const FIELD_CHANNEL_IDS = Object.freeze(["physicalAtlas", "physicalContour"]);
-const FIELD_SUBMODES = Object.freeze(["paint", "erase", "points"]);
 
 function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -104,156 +100,38 @@ export function createAppearancePhysicalOwner({
     return runtimeState.styleConfig.physical;
   };
 
-  const syncIntensityFields = () => {
-    runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
-    return runtimeState.intensityFields;
-  };
-
-  const normalizeTool = (next = {}) => {
-    const defaults = createDefaultIntensityFieldToolState();
-    const current = runtimeState.intensityFieldTool && typeof runtimeState.intensityFieldTool === "object"
-      ? runtimeState.intensityFieldTool
-      : defaults;
-    const channelId = FIELD_CHANNEL_IDS.includes(String(next.channelId || current.channelId || ""))
-      ? String(next.channelId || current.channelId)
-      : "physicalAtlas";
-    const subMode = FIELD_SUBMODES.includes(String(next.subMode || current.subMode || ""))
-      ? String(next.subMode || current.subMode)
-      : "paint";
-    return {
-      active: next.active === undefined ? !!current.active : !!next.active,
-      channelId,
-      subMode,
-      brushRadiusDeg: clamp(Number.isFinite(Number(next.brushRadiusDeg)) ? Number(next.brushRadiusDeg) : Number(current.brushRadiusDeg || 3), 0.25, 30),
-      brushStrength: clamp(Number.isFinite(Number(next.brushStrength)) ? Number(next.brushStrength) : Number(current.brushStrength || 1), INTENSITY_FIELD_GRID.min, INTENSITY_FIELD_GRID.max),
-      selectedPointId: String(next.selectedPointId === undefined ? (current.selectedPointId || "") : (next.selectedPointId || "")),
-    };
-  };
-
-  const setToolState = (next = {}) => {
-    const normalized = normalizeTool(next);
-    if (typeof runtimeState.setIntensityFieldToolFn === "function") {
-      runtimeState.setIntensityFieldToolFn(normalized);
-    } else {
-      runtimeState.intensityFieldTool = normalized;
-    }
-    return runtimeState.intensityFieldTool || normalized;
-  };
-
-  const getToolState = () => {
-    runtimeState.intensityFieldTool = normalizeTool();
-    return runtimeState.intensityFieldTool;
-  };
-
-  const getSelectedChannelId = () => getToolState().channelId;
-
-  const getSelectedChannel = () => {
-    const fields = syncIntensityFields();
-    return fields.channels[getSelectedChannelId()];
-  };
-
-  const formatRadiusLabel = (radiusDeg) => `≈ ${Math.round(clamp(radiusDeg, 0.25, 30) * 111)} km`;
-
-  const getSelectedPoint = (channel, tool) => (
-    Array.isArray(channel?.points)
-      ? channel.points.find((point) => point.id === tool.selectedPointId) || null
-      : null
-  );
-
-  const renderPointList = (channel, tool) => {
-    const list = nodes.physicalIntensityFieldPointList;
-    if (!list) return;
-    list.textContent = "";
-    if (typeof documentRef.createElement !== "function") return;
-    channel.points.forEach((point, index) => {
-      const row = documentRef.createElement("div");
-      row.className = "flex items-center justify-between gap-2";
-      const selectButton = documentRef.createElement("button");
-      selectButton.type = "button";
-      selectButton.className = "sidebar-action-secondary";
-      selectButton.textContent = `${tool.selectedPointId === point.id ? "Selected " : ""}Point ${index + 1}`;
-      selectButton.addEventListener("click", () => {
-        setToolState({ selectedPointId: point.id, subMode: "points", active: true });
-        renderPhysicalIntensityFieldUi();
-      });
-      const deleteButton = documentRef.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "sidebar-action-secondary";
-      deleteButton.textContent = "Delete";
-      deleteButton.addEventListener("click", () => deleteSelectedPoint(point.id));
-      row.appendChild(selectButton);
-      row.appendChild(deleteButton);
-      list.appendChild(row);
-    });
-  };
-
-  const renderPhysicalIntensityFieldUi = () => {
-    const fields = syncIntensityFields();
-    const tool = getToolState();
-    const channel = fields.channels[tool.channelId] || fields.channels.physicalAtlas;
-    const selectedPoint = getSelectedPoint(channel, tool);
-    const radiusDeg = selectedPoint ? selectedPoint.radiusDeg : tool.brushRadiusDeg;
-    const strength = selectedPoint ? selectedPoint.strength : tool.brushStrength;
-    if (nodes.physicalIntensityFieldChannelAtlas) nodes.physicalIntensityFieldChannelAtlas.checked = tool.channelId === "physicalAtlas";
-    if (nodes.physicalIntensityFieldChannelContour) nodes.physicalIntensityFieldChannelContour.checked = tool.channelId === "physicalContour";
-    if (nodes.physicalIntensityFieldEnabled) nodes.physicalIntensityFieldEnabled.checked = !!channel.enabled;
-    if (nodes.physicalIntensityFieldToolToggleBtn) nodes.physicalIntensityFieldToolToggleBtn.textContent = tool.active ? "Exit Tool" : "Enter Tool";
-    if (nodes.physicalIntensityFieldPaintBtn) nodes.physicalIntensityFieldPaintBtn.disabled = tool.subMode === "paint";
-    if (nodes.physicalIntensityFieldEraseBtn) nodes.physicalIntensityFieldEraseBtn.disabled = tool.subMode === "erase";
-    if (nodes.physicalIntensityFieldPointsBtn) nodes.physicalIntensityFieldPointsBtn.disabled = tool.subMode === "points";
-    if (nodes.physicalIntensityFieldWeight) nodes.physicalIntensityFieldWeight.value = String(Math.round(clamp(strength, 0, 2) * 100));
-    if (nodes.physicalIntensityFieldWeightValue) nodes.physicalIntensityFieldWeightValue.textContent = `${Math.round(clamp(strength, 0, 2) * 100)}%`;
-    if (nodes.physicalIntensityFieldRadius) nodes.physicalIntensityFieldRadius.value = String(Math.round(clamp(radiusDeg, 0.25, 30) * 100));
-    if (nodes.physicalIntensityFieldRadiusValue) nodes.physicalIntensityFieldRadiusValue.textContent = formatRadiusLabel(radiusDeg);
-    if (nodes.physicalIntensityFieldPointCount) nodes.physicalIntensityFieldPointCount.textContent = String(channel.points.length);
-    renderPointList(channel, tool);
-    return channel;
-  };
-
-  const commitIntensityFieldChannel = (channelId, mutate, reason) => {
-    const before = captureHistoryState({ intensityFieldChannels: [channelId] });
-    runtimeState.intensityFields = updateIntensityFieldChannel(runtimeState.intensityFields, channelId, mutate);
-    const after = captureHistoryState({ intensityFieldChannels: [channelId] });
-    pushHistoryEntry({
-      label: "Physical intensity field",
-      before,
-      after,
-      meta: {
-        reason,
-        affectsIntensityField: true,
+  const intensityFieldEditor = createIntensityFieldEditorSection({
+    runtimeState,
+    nodes: {
+      channelInputs: {
+        physicalAtlas: nodes.physicalIntensityFieldChannelAtlas,
+        physicalContour: nodes.physicalIntensityFieldChannelContour,
       },
-    });
-    renderPhysicalIntensityFieldUi();
-    renderDirty(reason);
-  };
-
-  const updateSelectedPointFromControls = (reason) => {
-    const tool = getToolState();
-    const channelId = tool.channelId;
-    const pointId = tool.selectedPointId;
-    if (!pointId) return false;
-    const strength = clamp(Number(nodes.physicalIntensityFieldWeight?.value || 100) / 100, 0, 2);
-    const radiusDeg = clamp(Number(nodes.physicalIntensityFieldRadius?.value || 300) / 100, 0.25, 30);
-    commitIntensityFieldChannel(channelId, (channel) => {
-      const point = channel.points.find((entry) => entry.id === pointId);
-      if (!point) return;
-      point.strength = strength;
-      point.radiusDeg = radiusDeg;
-      channel.enabled = true;
-    }, reason);
-    return true;
-  };
-
-  function deleteSelectedPoint(pointId = "") {
-    const tool = getToolState();
-    const targetPointId = String(pointId || tool.selectedPointId || "");
-    if (!targetPointId) return;
-    commitIntensityFieldChannel(tool.channelId, (channel) => {
-      channel.points = channel.points.filter((point) => point.id !== targetPointId);
-    }, "physical-intensity-field-delete-point");
-    setToolState({ selectedPointId: "" });
-    renderPhysicalIntensityFieldUi();
-  }
+      enabled: nodes.physicalIntensityFieldEnabled,
+      toolToggleBtn: nodes.physicalIntensityFieldToolToggleBtn,
+      paintBtn: nodes.physicalIntensityFieldPaintBtn,
+      eraseBtn: nodes.physicalIntensityFieldEraseBtn,
+      pointsBtn: nodes.physicalIntensityFieldPointsBtn,
+      weight: nodes.physicalIntensityFieldWeight,
+      radius: nodes.physicalIntensityFieldRadius,
+      clearBtn: nodes.physicalIntensityFieldClearBtn,
+      pointCount: nodes.physicalIntensityFieldPointCount,
+      pointList: nodes.physicalIntensityFieldPointList,
+      weightValue: nodes.physicalIntensityFieldWeightValue,
+      radiusValue: nodes.physicalIntensityFieldRadiusValue,
+    },
+    channelIds: ["physicalAtlas", "physicalContour"],
+    defaultChannelId: "physicalAtlas",
+    historyLabel: "Physical intensity field",
+    reasonPrefix: "physical-intensity-field",
+    t,
+    clamp,
+    renderDirty,
+    captureHistoryState,
+    pushHistoryEntry,
+    documentRef,
+  });
+  const renderPhysicalIntensityFieldUi = () => intensityFieldEditor.render();
 
   const applyPhysicalPresetConfig = (preset, { preserveMode = true } = {}) => {
     const current = syncPhysicalConfig();
@@ -412,81 +290,7 @@ export function createAppearancePhysicalOwner({
     }, "physical-contour-minor-low-relief-cutoff");
     bindPhysicalChange(nodes.physicalBlendMode, (cfg, event) => { cfg.blendMode = String(event.target.value || "source-over"); }, "physical-blend");
 
-    [nodes.physicalIntensityFieldChannelAtlas, nodes.physicalIntensityFieldChannelContour].forEach((element) => {
-      if (!element || element.dataset.bound === "true") return;
-      element.addEventListener("change", (event) => {
-        if (!event.target.checked) return;
-        setToolState({ channelId: event.target.value || "physicalAtlas", selectedPointId: "" });
-        renderPhysicalIntensityFieldUi();
-      });
-      element.dataset.bound = "true";
-    });
-    if (nodes.physicalIntensityFieldEnabled && nodes.physicalIntensityFieldEnabled.dataset.bound !== "true") {
-      nodes.physicalIntensityFieldEnabled.addEventListener("change", (event) => {
-        const channelId = getSelectedChannelId();
-        commitIntensityFieldChannel(channelId, (channel) => { channel.enabled = !!event.target.checked; }, "physical-intensity-field-enabled");
-      });
-      nodes.physicalIntensityFieldEnabled.dataset.bound = "true";
-    }
-    if (nodes.physicalIntensityFieldToolToggleBtn && nodes.physicalIntensityFieldToolToggleBtn.dataset.bound !== "true") {
-      nodes.physicalIntensityFieldToolToggleBtn.addEventListener("click", () => {
-        const tool = getToolState();
-        setToolState({ active: !tool.active });
-        renderPhysicalIntensityFieldUi();
-      });
-      nodes.physicalIntensityFieldToolToggleBtn.dataset.bound = "true";
-    }
-    [
-      [nodes.physicalIntensityFieldPaintBtn, "paint"],
-      [nodes.physicalIntensityFieldEraseBtn, "erase"],
-      [nodes.physicalIntensityFieldPointsBtn, "points"],
-    ].forEach(([element, subMode]) => {
-      if (!element || element.dataset.bound === "true") return;
-      element.addEventListener("click", () => {
-        setToolState({ active: true, subMode });
-        renderPhysicalIntensityFieldUi();
-      });
-      element.dataset.bound = "true";
-    });
-    if (nodes.physicalIntensityFieldWeight && nodes.physicalIntensityFieldWeight.dataset.bound !== "true") {
-      nodes.physicalIntensityFieldWeight.addEventListener("input", () => {
-        const strength = clamp(Number(nodes.physicalIntensityFieldWeight.value || 100) / 100, 0, 2);
-        setToolState({ brushStrength: strength });
-        if (nodes.physicalIntensityFieldWeightValue) nodes.physicalIntensityFieldWeightValue.textContent = `${Math.round(strength * 100)}%`;
-      });
-      nodes.physicalIntensityFieldWeight.addEventListener("change", () => updateSelectedPointFromControls("physical-intensity-field-point-strength"));
-      nodes.physicalIntensityFieldWeight.dataset.bound = "true";
-    }
-    if (nodes.physicalIntensityFieldRadius && nodes.physicalIntensityFieldRadius.dataset.bound !== "true") {
-      nodes.physicalIntensityFieldRadius.addEventListener("input", () => {
-        const radiusDeg = clamp(Number(nodes.physicalIntensityFieldRadius.value || 300) / 100, 0.25, 30);
-        setToolState({ brushRadiusDeg: radiusDeg });
-        if (nodes.physicalIntensityFieldRadiusValue) nodes.physicalIntensityFieldRadiusValue.textContent = formatRadiusLabel(radiusDeg);
-      });
-      nodes.physicalIntensityFieldRadius.addEventListener("change", () => updateSelectedPointFromControls("physical-intensity-field-point-radius"));
-      nodes.physicalIntensityFieldRadius.dataset.bound = "true";
-    }
-    if (nodes.physicalIntensityFieldClearBtn && nodes.physicalIntensityFieldClearBtn.dataset.bound !== "true") {
-      nodes.physicalIntensityFieldClearBtn.addEventListener("click", () => {
-        const channelId = getSelectedChannelId();
-        commitIntensityFieldChannel(channelId, (channel) => {
-          channel.grid.base.fill(INTENSITY_FIELD_GRID.neutral);
-          channel.points = [];
-        }, "physical-intensity-field-clear");
-        setToolState({ selectedPointId: "" });
-      });
-      nodes.physicalIntensityFieldClearBtn.dataset.bound = "true";
-    }
-    if (documentRef?.addEventListener && !documentRef.__physicalIntensityFieldDeleteBound) {
-      documentRef.addEventListener("keydown", (event) => {
-        if (event.key !== "Delete" && event.key !== "Backspace") return;
-        const tool = getToolState();
-        if (!tool.active || tool.subMode !== "points" || !tool.selectedPointId) return;
-        event.preventDefault?.();
-        deleteSelectedPoint(tool.selectedPointId);
-      });
-      documentRef.__physicalIntensityFieldDeleteBound = true;
-    }
+    intensityFieldEditor.bindEvents();
 
     Object.entries(nodes.physicalClassToggles).forEach(([key, element]) => {
       if (!element || element.dataset.bound === "true") return;
@@ -508,7 +312,7 @@ export function createAppearancePhysicalOwner({
     getPhysicalPresetHint,
     renderPhysicalIntensityFieldUi,
     renderPhysicalUi,
-    syncPhysicalIntensityField: getSelectedChannel,
+    syncPhysicalIntensityField: intensityFieldEditor.getSelectedChannel,
     syncPhysicalConfig,
   };
 }

@@ -22,6 +22,11 @@ import {
   updateIntensityFieldChannel,
 } from "../js/core/state/intensity_field_state.js";
 import {
+  createAppearancePresetFromRuntimeState,
+  createDefaultAppearancePresetsState,
+  upsertAppearancePreset,
+} from "../js/core/state/appearance_preset_state.js";
+import {
   readRegisteredRuntimeHookSource,
   registerRuntimeHook,
 } from "../js/core/state/index.js";
@@ -306,7 +311,7 @@ test("project payload builder keeps open ocean visible with interaction off by d
 });
 
 test("project export and import preserve unified intensity fields", async () => {
-  const intensityFields = updateIntensityFieldChannel(createIntensityFieldsState(), "physicalAtlas", (channel) => {
+  let intensityFields = updateIntensityFieldChannel(createIntensityFieldsState(), "physicalAtlas", (channel) => {
     channel.enabled = true;
     channel.points = [{
       id: "alps-field",
@@ -314,6 +319,28 @@ test("project export and import preserve unified intensity fields", async () => 
       lat: 46,
       strength: 1.75,
       radiusDeg: 7,
+      falloff: "smooth",
+    }];
+  });
+  intensityFields = updateIntensityFieldChannel(intensityFields, "urbanGlow", (channel) => {
+    channel.enabled = true;
+    channel.points = [{
+      id: "tokyo-glow",
+      lon: 139.7,
+      lat: 35.7,
+      strength: 1.6,
+      radiusDeg: 5,
+      falloff: "smooth",
+    }];
+  });
+  intensityFields = updateIntensityFieldChannel(intensityFields, "oceanDepth", (channel) => {
+    channel.enabled = true;
+    channel.points = [{
+      id: "atlantic-depth",
+      lon: -35,
+      lat: 28,
+      strength: 1.55,
+      radiusDeg: 12,
       falloff: "smooth",
     }];
   });
@@ -327,13 +354,21 @@ test("project export and import preserve unified intensity fields", async () => 
 
   assert.equal(payload.intensityFields.channels.physicalAtlas.enabled, true);
   assert.equal(payload.intensityFields.channels.physicalAtlas.points[0].id, "alps-field");
+  assert.equal(payload.intensityFields.channels.urbanGlow.enabled, true);
+  assert.equal(payload.intensityFields.channels.urbanGlow.points[0].id, "tokyo-glow");
+  assert.equal(payload.intensityFields.channels.oceanDepth.enabled, true);
+  assert.equal(payload.intensityFields.channels.oceanDepth.points[0].id, "atlantic-depth");
   assert.equal(payload.intensityFields.channels.physicalAtlas.grid.base.encoding, "rle-u8-base64");
   assert.equal(Object.hasOwn(payload, "physicalIntensityField"), false);
 
   const result = await importProjectPayload(payload);
   assert.equal(result.successes.length, 1);
   assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.enabled, true);
+  assert.equal(result.successes[0].intensityFields.channels.urbanGlow.enabled, true);
+  assert.equal(result.successes[0].intensityFields.channels.oceanDepth.enabled, true);
   assert.ok(sampleIntensityField(result.successes[0].intensityFields, "physicalAtlas", 10, 46) > 1.4);
+  assert.ok(sampleIntensityField(result.successes[0].intensityFields, "urbanGlow", 139.7, 35.7) > 1.3);
+  assert.ok(sampleIntensityField(result.successes[0].intensityFields, "oceanDepth", -35, 28) > 1.3);
 });
 
 test("project import defaults missing intensity fields to empty unified channels", async () => {
@@ -349,6 +384,85 @@ test("project import defaults missing intensity fields to empty unified channels
   assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.enabled, false);
   assert.equal(result.successes[0].intensityFields.channels.physicalAtlas.revision, 0);
   assert.deepEqual(result.successes[0].intensityFields.channels.physicalAtlas.points, []);
+  assert.equal(result.successes[0].intensityFields.channels.urbanGlow.enabled, false);
+  assert.equal(result.successes[0].intensityFields.channels.urbanGlow.revision, 0);
+  assert.deepEqual(result.successes[0].intensityFields.channels.urbanGlow.points, []);
+  assert.equal(result.successes[0].intensityFields.channels.oceanDepth.enabled, false);
+  assert.equal(result.successes[0].intensityFields.channels.oceanDepth.revision, 0);
+  assert.deepEqual(result.successes[0].intensityFields.channels.oceanDepth.points, []);
+});
+
+test("project export and import preserve appearance presets", async () => {
+  const presetRuntime = {
+    styleConfig: {
+      ocean: {
+        fillColor: "#102030",
+      },
+      urban: {
+        mode: "manual",
+        color: "#405060",
+      },
+    },
+    showUrban: false,
+    showPhysical: true,
+    showRivers: false,
+    intensityFields: updateIntensityFieldChannel(
+      createIntensityFieldsState(),
+      "urbanGlow",
+      (channel) => {
+        channel.enabled = true;
+        channel.points = [{ id: "glow", lon: 139.7, lat: 35.7, strength: 1.6, radiusDeg: 6 }];
+      },
+    ),
+  };
+  const appearancePresets = upsertAppearancePreset(
+    createDefaultAppearancePresetsState(),
+    createAppearancePresetFromRuntimeState(presetRuntime, {
+      id: "glow-preset",
+      name: "Glow Preset",
+      now: Date.UTC(2026, 5, 12),
+    }),
+  );
+
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    appearancePresets,
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+
+  assert.equal(payload.appearancePresets.byId["glow-preset"].name, "Glow Preset");
+  assert.equal(payload.appearancePresets.byId["glow-preset"].snapshot.styleConfig.ocean.fillColor, "#102030");
+  assert.equal(Object.hasOwn(payload.appearancePresets.byId["glow-preset"].snapshot, "referenceImageState"), false);
+
+  const result = await importProjectPayload(payload);
+
+  assert.equal(result.successes[0].appearancePresets.byId["glow-preset"].name, "Glow Preset");
+  assert.equal(result.successes[0].appearancePresets.byId["glow-preset"].snapshot.layerVisibility.showUrban, false);
+  assert.ok(sampleIntensityField(
+    result.successes[0].appearancePresets.byId["glow-preset"].snapshot.intensityFields,
+    "urbanGlow",
+    139.7,
+    35.7,
+  ) > 1.3);
+});
+
+test("project import defaults missing appearance presets to an empty preset library", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+  });
+  delete payload.appearancePresets;
+
+  const result = await importProjectPayload(payload);
+
+  assert.deepEqual(result.successes[0].appearancePresets, {
+    schemaVersion: 1,
+    selectedPresetId: "",
+    order: [],
+    byId: {},
+  });
 });
 
 test("project import migrates legacy physical intensity field points into physical atlas channel", async () => {

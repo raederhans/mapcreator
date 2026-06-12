@@ -3,6 +3,12 @@ import {
   normalizeIntensityFieldsState,
   serializeIntensityFieldsState,
 } from "./state/intensity_field_state.js";
+import {
+  applyAppearancePresetToRuntimeState,
+  createAppearanceSnapshotFromRuntimeState,
+  normalizeAppearancePresetsState,
+  serializeAppearancePresetsState,
+} from "./state/appearance_preset_state.js";
 import { markDirty } from "./dirty_state.js";
 import { markLegacyColorStateDirty, rebuildOwnerIndex } from "./sovereignty_manager.js";
 import { flushRenderBoundary } from "./render_boundary.js";
@@ -59,6 +65,8 @@ function captureHistoryState({
   stylePaths = [],
   strategicOverlay = false,
   intensityFieldChannels = [],
+  appearancePresets = false,
+  appearanceState = false,
 } = {}) {
   // history snapshot 只抓本次编辑真实触达的键，避免把整份 runtime state 塞进 undo 栈。
   // 这里缺省键写成 null，后面 apply 时才能表达“这次撤销后应该删除该键”。
@@ -115,6 +123,14 @@ function captureHistoryState({
     });
     snapshot.intensityFieldChannels = intensityChannels;
     snapshot.intensityFields = serializeIntensityFieldsState(selectedFields);
+  }
+
+  if (appearancePresets) {
+    snapshot.appearancePresets = serializeAppearancePresetsState(runtimeState.appearancePresets);
+  }
+
+  if (appearanceState) {
+    snapshot.appearanceState = createAppearanceSnapshotFromRuntimeState(runtimeState);
   }
 
   return snapshot;
@@ -287,6 +303,14 @@ function applyHistorySnapshot(snapshot, direction, entry) {
     });
     runtimeState.intensityFields = current;
     markDirty("intensity-field-history");
+  }
+  if (snapshot.appearancePresets && typeof snapshot.appearancePresets === "object") {
+    runtimeState.appearancePresets = normalizeAppearancePresetsState(snapshot.appearancePresets);
+    markDirty("appearance-presets-history");
+  }
+  if (snapshot.appearanceState && typeof snapshot.appearanceState === "object") {
+    applyAppearancePresetToRuntimeState(runtimeState, snapshot.appearanceState);
+    markDirty("appearance-state-history");
   }
   if (hasAnnotationView) {
     runtimeState.frontlineOverlayDirty = true;

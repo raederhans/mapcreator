@@ -41,6 +41,9 @@ import {
   createDefaultIntensityFieldsState,
 } from "./state/intensity_field_state.js";
 import {
+  createDefaultAppearancePresetsState,
+} from "./state/appearance_preset_state.js";
+import {
   createDefaultBootState,
 } from "./state/boot_state.js";
 import {
@@ -61,6 +64,7 @@ export * from "./state_catalog.js";
 export * from "./state/index.js";
 export * from "./intensity_field.js";
 export * from "./state/intensity_field_state.js";
+export * from "./state/appearance_preset_state.js";
 
 export const state = {
   ...createDefaultBootState(),
@@ -79,6 +83,7 @@ export const state = {
   ...createDefaultUiChromeState(),
   intensityFieldTool: createDefaultIntensityFieldToolState(),
   intensityFields: createDefaultIntensityFieldsState(),
+  appearancePresets: createDefaultAppearancePresetsState(),
 
   countryPalette,
   defaultCountryPalette,

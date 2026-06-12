@@ -7,7 +7,9 @@ import {
   normalizeCityLayerStyleConfig,
   normalizeColorStateForRender,
   normalizeDayNightStyleConfig,
+  INTENSITY_FIELD_CHANNEL_IDS,
   INTENSITY_FIELD_GRID,
+  getIntensityFieldTargetPasses,
   normalizeIntensityFieldsState,
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
@@ -144,6 +146,7 @@ import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime
 import { getSpatialBucketKey } from "./renderer/spatial_index_runtime_builders.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
   buildFacilityInfoCardBody,
   buildFacilityInfoCardFieldSections,
@@ -286,6 +289,7 @@ let specialZoneEditorGroup = null;
 let hoverGroup = null;
 let devSelectionGroup = null;
 let inspectorHighlightGroup = null;
+let intensityFieldPreviewGroup = null;
 let legendControlElement = null;
 let legendControlHeaderElement = null;
 let legendControlBodyElement = null;
@@ -535,6 +539,12 @@ const OCEAN_MASK_MODE_TOPOLOGY = "topology_ocean";
 const OCEAN_MASK_MODE_SPHERE_MINUS_LAND = "sphere_minus_land";
 const OCEAN_MASK_MODE_BATHYMETRY = "bathymetry_features";
 const OCEAN_MASK_MIN_QUALITY = 0.35;
+const OCEAN_DEPTH_MASK_BLEND_MODE = "soft-light";
+const OCEAN_DEPTH_MASK_GRAY_MAP = Object.freeze({
+  min: 28,
+  neutral: 128,
+  max: 232,
+});
 const GLOBAL_BATHYMETRY_TOPOLOGY_URL = resolveDataAssetUrl("bathymetry:global_topology");
 const BATHYMETRY_BANDS_OBJECT_NAME = "bathymetry_bands";
 const BATHYMETRY_CONTOURS_OBJECT_NAME = "bathymetry_contours";
@@ -1040,6 +1050,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let intensityFieldMaskOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
 function getStrategicOverlayHelpersOwner() {
@@ -1547,6 +1558,17 @@ function getRenderCacheOwner() {
     },
   });
   return renderCacheOwner;
+}
+
+function getIntensityFieldMaskOwner() {
+  if (intensityFieldMaskOwner) {
+    return intensityFieldMaskOwner;
+  }
+  intensityFieldMaskOwner = createIntensityFieldMaskOwner({
+    getFieldsState: () => runtimeState.intensityFields,
+    getProjection: () => projection,
+  });
+  return intensityFieldMaskOwner;
 }
 
 function getRenderPipelinePassesOwner() {
@@ -2161,7 +2183,7 @@ function releaseDeferredContextBasePass(reason = "deferred-context-release") {
 
 registerRuntimeHook(runtimeState, "releaseDeferredContextBasePassFn", releaseDeferredContextBasePass);
 
-const INTENSITY_FIELD_TOOL_CHANNELS = new Set(["physicalAtlas", "physicalContour"]);
+const INTENSITY_FIELD_TOOL_CHANNELS = new Set(INTENSITY_FIELD_CHANNEL_IDS);
 const INTENSITY_FIELD_TOOL_SUBMODES = new Set(["paint", "erase", "points"]);
 
 function normalizeIntensityFieldToolState(next = {}, current = runtimeState.intensityFieldTool) {
@@ -3097,6 +3119,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.topologyRevision || 0,
       runtimeState.oceanMaskMode || "topology_ocean",
       Number(runtimeState.oceanMaskQuality || 1).toFixed(3),
+      `field:oceanDepth:${Number(intensityFields.channels.oceanDepth?.revision || 0)}`,
       stableJson(runtimeState.styleConfig?.ocean || {}),
     ].join("::");
   }
@@ -3163,7 +3186,8 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       `context-colors:${shouldRefreshContextBaseForColorChanges() ? Number(runtimeState.colorRevision || 0) : 0}`,
       `mask:${maskInfo.maskSource}:${maskInfo.maskFeatureCount}:${maskInfo.maskArcRefEstimate ?? "na"}:${maskInfo.maskQualityToken || "unchecked"}`,
       `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
-      `field:${Number(intensityFields.channels.physicalContour?.revision || 0)}`,
+      `field:physicalContour:${Number(intensityFields.channels.physicalContour?.revision || 0)}`,
+      `field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`,
       String(runtimeState.renderProfile || "auto"),
       stableJson(normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical || {})),
       stableJson(normalizeUrbanStyleConfig(runtimeState.styleConfig?.urban || {})),
@@ -3229,6 +3253,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
     return [
       transformSignature,
       runtimeState.topologyRevision || 0,
+      `field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`,
       stableJson(dayNightConfig),
       getDayNightSignatureClockToken(dayNightConfig),
     ].join("::");
@@ -7418,6 +7443,16 @@ function ensureHybridLayers() {
     .attr("aria-label", "Inspector highlight overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
+
+  intensityFieldPreviewGroup = svg.select("g.intensity-field-preview-layer");
+  if (intensityFieldPreviewGroup.empty()) {
+    intensityFieldPreviewGroup = svg.append("g").attr("class", "intensity-field-preview-layer");
+  }
+  intensityFieldPreviewGroup
+    .style("pointer-events", "none")
+    .attr("aria-hidden", "true")
+    .attr("focusable", "false")
+    .style("display", "none");
 
   svg.select("g.legend-group").remove();
   ensureLegendControlElement();
@@ -12272,6 +12307,15 @@ function getFieldFeatureMultiplier(channelId, feature) {
   return sampleIntensityField(fields, channelId, centroid[0], centroid[1]);
 }
 
+function getUrbanGlowMultiplierAt(lon, lat) {
+  runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  return sampleIntensityField(runtimeState.intensityFields, "urbanGlow", lon, lat);
+}
+
+function getUrbanGlowFeatureMultiplier(feature) {
+  return getFieldFeatureMultiplier("urbanGlow", feature);
+}
+
 function getProjectedDegreeRadiusPx(lon, lat, radiusDeg) {
   const center = projection([lon, lat]);
   if (!Array.isArray(center) || center.length < 2) return 0;
@@ -12879,16 +12923,17 @@ function drawUrbanLayer(k, { interactive = false } = {}) {
     const adaptivePaint = effectiveMode === "adaptive" ? getUrbanAdaptivePaint(feature, cfg) : null;
     const fillColor = getSafeCanvasColor(adaptivePaint?.fillColor, manualColor);
     const outlineColor = getSafeCanvasColor(adaptivePaint?.strokeColor, null);
+    const glowMultiplier = getUrbanGlowFeatureMultiplier(feature);
     if (!fillColor) return;
     context.beginPath();
     pathCanvas(feature);
     context.fillStyle = fillColor;
-    context.globalAlpha = interactive ? Math.min(fillOpacity, 0.15) : fillOpacity;
+    context.globalAlpha = clamp((interactive ? Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier, 0, 1);
     context.fill();
     if (effectiveMode === "adaptive" && outlineColor) {
       context.strokeStyle = outlineColor;
       context.lineWidth = strokeWidth;
-      context.globalAlpha = interactive ? Math.min(strokeOpacity, 0.18) : strokeOpacity;
+      context.globalAlpha = clamp((interactive ? Math.min(strokeOpacity, 0.18) : strokeOpacity) * glowMultiplier, 0, 1);
       context.stroke();
     }
   });
@@ -15132,6 +15177,8 @@ function getModernCityLightsGeometry() {
       }
 
       const entry = {
+        lon,
+        lat,
         x: center[0],
         y: center[1],
         rx: clampedRx,
@@ -15375,6 +15422,7 @@ function drawModernCityLightsTexture(config, intensity) {
 
   geometry.baseEntries.forEach((entry) => {
     if (shouldCullModernLightEntry(entry, overscan)) return;
+    const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
     const normalized = normalizeModernCityLightsValue(entry.value);
     const lumaWeight = Math.pow(normalized, 0.78);
     const densityDampen = entry.neighborCount >= 7 ? 0.56
@@ -15383,7 +15431,7 @@ function drawModernCityLightsTexture(config, intensity) {
       : 1.0;
     const isolationAlphaBoost = entry.neighborCount <= 1 ? 0.06 : 0;
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
-    const alpha = clamp(
+    const baseAlpha = clamp(
       intensity
       * (0.24 + (textureOpacity * 0.82))
       * (0.035 + (lumaWeight * 0.22))
@@ -15393,6 +15441,7 @@ function drawModernCityLightsTexture(config, intensity) {
       0,
       0.16
     );
+    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.16);
     if (alpha <= 0.002) return;
     const jitter = getModernGridEntryJitter(entry, zoomProfile.textureJitterStrength);
     const isolationSpread = entry.neighborCount <= 1 ? 1.38
@@ -15430,10 +15479,11 @@ function drawModernCityLightsCorridors(config, intensity) {
 
   geometry.corridorEntries.forEach((entry) => {
     if (shouldCullModernLightEntry(entry, overscan)) return;
+    const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
     const normalized = normalizeModernCityLightsValue(entry.value);
     const corridorWeight = Math.pow(normalized, 0.82);
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
-    const alpha = clamp(
+    const baseAlpha = clamp(
       intensity
       * (0.25 + (corridorStrength * 0.75))
       * (0.03 + (corridorWeight * 0.2))
@@ -15442,6 +15492,7 @@ function drawModernCityLightsCorridors(config, intensity) {
       0,
       0.12
     );
+    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.12);
     if (alpha <= 0.003) return;
     const jitter = getModernGridEntryJitter(entry, zoomProfile.corridorJitterStrength);
     const baseRadius = Math.max((entry.rx + entry.ry) * 0.5, 0.0001);
@@ -15488,8 +15539,11 @@ function collectModernUrbanCoreEntries(k, config, intensity) {
     const sample = geographicCentroid
       ? sampleModernCityLightsGridNormalized(geographicCentroid[0], geographicCentroid[1])
       : 0;
+    const glowMultiplier = geographicCentroid
+      ? getUrbanGlowMultiplierAt(geographicCentroid[0], geographicCentroid[1])
+      : 1;
     const sampledBoost = clamp(0.56 + (Math.pow(sample, 0.52) * 1.4), 0.8, 1.8);
-    const weight = clamp(heuristicWeight * sampledBoost, 0.06, 1.4);
+    const weight = clamp(heuristicWeight * sampledBoost * glowMultiplier, 0.06, 1.4);
     if (sample <= 0.01 && heuristicWeight < 0.34) return;
     if (weight < 0.16) return;
     if (zoomScale <= 1.35 && weight < 0.44) return;
@@ -15636,8 +15690,11 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
     const sample = geographicCoords
       ? sampleModernCityLightsGridNormalized(geographicCoords[0], geographicCoords[1])
       : 0;
+    const glowMultiplier = geographicCoords
+      ? getUrbanGlowMultiplierAt(geographicCoords[0], geographicCoords[1])
+      : 1;
     const weight = clamp(
-      (isCapital ? 0.46 : 0.28) + (populationScore * 0.52) + (sample * 0.44),
+      ((isCapital ? 0.46 : 0.28) + (populationScore * 0.52) + (sample * 0.44)) * glowMultiplier,
       0.2,
       1.12
     );
@@ -15737,11 +15794,14 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const sampled = geographicCentroid
       ? sampleModernCityLightsGridNormalized(geographicCentroid[0], geographicCentroid[1])
       : 0;
+    const glowMultiplier = geographicCentroid
+      ? getUrbanGlowMultiplierAt(geographicCentroid[0], geographicCentroid[1])
+      : 1;
     const populationScore = clamp(Math.log10(entry.populationSum + 1) / 7.35, 0.12, 1.28);
     const densityScore = clamp(Math.log10(entry.density + 1) / 4.4, 0.08, 1.24);
     const capitalBoost = entry.capitalScore >= 3 ? 0.18 : entry.capitalScore >= 2 ? 0.1 : 0;
     const boostWeight = clamp(
-      (populationScore * 0.78) + (densityScore * 0.78) + (sampled * 0.16) + capitalBoost,
+      ((populationScore * 0.78) + (densityScore * 0.78) + (sampled * 0.16) + capitalBoost) * glowMultiplier,
       0.16,
       1.55
     );
@@ -15806,9 +15866,12 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const sampled = geographicCoords
       ? sampleModernCityLightsGridNormalized(geographicCoords[0], geographicCoords[1])
       : 0;
+    const glowMultiplier = geographicCoords
+      ? getUrbanGlowMultiplierAt(geographicCoords[0], geographicCoords[1])
+      : 1;
     const populationScore = clamp(Math.log10(entry.population + 1) / 6.8, 0.12, 1.08);
     const capitalBoost = entry.capitalScore >= 3 ? 0.24 : entry.capitalScore >= 2 ? 0.14 : 0;
-    const boostWeight = clamp((populationScore * 0.92) + (sampled * 0.16) + capitalBoost, 0.18, 1.24);
+    const boostWeight = clamp(((populationScore * 0.92) + (sampled * 0.16) + capitalBoost) * glowMultiplier, 0.18, 1.24);
     const baseRadiusPx = 0.48 + (boostWeight * 0.58);
     const haloAlpha = clamp(
       intensity * boostStrength * (0.12 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
@@ -15877,6 +15940,7 @@ function getModernCityLightsStaticLayerKey(config) {
     runtimeState.topologyRevision || 0,
     runtimeState.contextLayerRevision || 0,
     runtimeState.cityLayerRevision || 0,
+    `field:urbanGlow:${Number(normalizeIntensityFieldsState(runtimeState.intensityFields).channels.urbanGlow?.revision || 0)}`,
     getModernCityLightsStaticConfigSignature(config),
   ].join("::");
 }
@@ -16181,6 +16245,8 @@ function getHistoricalDerivedGlowEntries(historicalEntries, config) {
     const projected = projection ? projection([entry.lon, entry.lat]) : null;
     if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) continue;
     entries.push({
+      lon: entry.lon,
+      lat: entry.lat,
       cx: Number(projected[0]),
       cy: Number(projected[1]),
       weight,
@@ -16208,8 +16274,9 @@ function drawHistoricalDerivedGlowLayer(k, historicalEntries, config, intensity,
     ) {
       return;
     }
-    const glowRadiusPx = (1.1 + (entry.weight * 1.45)) * density;
-    context.globalAlpha = clamp(intensity * density * entry.weight * 0.036, 0, 0.085);
+    const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
+    const glowRadiusPx = (1.1 + (entry.weight * 1.45 * glowMultiplier)) * density;
+    context.globalAlpha = clamp(intensity * density * entry.weight * glowMultiplier * 0.036, 0, 0.085);
     drawLightEllipse(
       entry.cx,
       entry.cy,
@@ -16247,6 +16314,7 @@ function drawHistoricalNightLightsLayer(k, config, solarState) {
     if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) return;
     const weight = clamp(Number(entry.weight || 0), 0, 1.08);
     if (weight <= 0) return;
+    const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
 
     const cx = Number(projected[0]);
     const cy = Number(projected[1]);
@@ -16267,8 +16335,8 @@ function drawHistoricalNightLightsLayer(k, config, solarState) {
     const haloRadiusPx = baseRadiusPx * (1.24 + (capitalBoost * 0.3));
     const haloAlphaMax = clamp(0.28 * density, 0, 0.48);
     const coreAlphaMax = clamp(0.52 * density, 0, 0.82);
-    const haloAlpha = clamp(intensity * weight * 0.12 * density, 0, haloAlphaMax);
-    const coreAlpha = clamp(intensity * weight * 0.22 * density, 0, coreAlphaMax);
+    const haloAlpha = clamp(intensity * weight * glowMultiplier * 0.12 * density, 0, haloAlphaMax);
+    const coreAlpha = clamp(intensity * weight * glowMultiplier * 0.22 * density, 0, coreAlphaMax);
     const orientation = (stringHash(
       entry.nameAscii ||
       `${entry.lon}:${entry.lat}`
@@ -17867,6 +17935,57 @@ function drawAdmin0BackgroundFills({
   });
 }
 
+function drawOceanDepthMaskLayer() {
+  if (!context || !projection) return null;
+  const intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+  runtimeState.intensityFields = intensityFields;
+  const channel = intensityFields.channels.oceanDepth;
+  if (!channel?.enabled) return null;
+
+  const layout = getRenderPassLayout("background");
+  const widthPx = Number(layout?.pixelWidth || context.canvas?.width || 0);
+  const heightPx = Number(layout?.pixelHeight || context.canvas?.height || 0);
+  const startedAt = nowMs();
+  const maskResult = getIntensityFieldMaskOwner().getMaskCanvas("oceanDepth", {
+    transform: runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+    widthPx,
+    heightPx,
+    dpr: Number(layout?.dpr || runtimeState.dpr || 1),
+    offsetX: Number(layout?.offsetX || 0),
+    offsetY: Number(layout?.offsetY || 0),
+    grayMap: OCEAN_DEPTH_MASK_GRAY_MAP,
+    projectionKey: getProjectionRenderSignature(),
+  });
+
+  if (!maskResult?.canvas) {
+    recordRenderPerfMetric("drawOceanDepthMaskLayer", nowMs() - startedAt, {
+      drawn: false,
+      reason: maskResult?.reason || "empty",
+      cacheHit: !!maskResult?.cacheHit,
+      renderedRunCount: Number(maskResult?.renderedRunCount || 0),
+      renderedCellCount: Number(maskResult?.renderedCellCount || 0),
+    });
+    return maskResult || null;
+  }
+
+  context.save();
+  applyOceanClipMask(runtimeState.oceanMaskMode || OCEAN_MASK_MODE_TOPOLOGY);
+  context.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE;
+  context.globalAlpha = 1;
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.drawImage(maskResult.canvas, 0, 0);
+  context.restore();
+
+  recordRenderPerfMetric("drawOceanDepthMaskLayer", nowMs() - startedAt, {
+    drawn: true,
+    blendMode: OCEAN_DEPTH_MASK_BLEND_MODE,
+    cacheHit: !!maskResult.cacheHit,
+    renderedRunCount: Number(maskResult.renderedRunCount || 0),
+    renderedCellCount: Number(maskResult.renderedCellCount || 0),
+  });
+  return maskResult;
+}
+
 function drawBackgroundPass() {
   const oceanFillColor = getOceanBaseFillColor();
   context.fillStyle = oceanFillColor;
@@ -17881,6 +18000,7 @@ function drawBackgroundPass() {
     context.fill();
   }
   drawOceanStyle();
+  drawOceanDepthMaskLayer();
 }
 
 function getCachedPoliticalPassStaticSignature(signature) {
@@ -23020,6 +23140,7 @@ function getMapLonLatFromEvent(event) {
 
 let physicalIntensityDragSession = null;
 let physicalIntensityRenderFrame = null;
+let physicalIntensityPreviewLonLat = null;
 
 function getPhysicalIntensityChannel(channelId = "") {
   runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
@@ -23029,12 +23150,13 @@ function getPhysicalIntensityChannel(channelId = "") {
   return runtimeState.intensityFields.channels[normalizedChannelId];
 }
 
-function getIntensityFieldPassName(channelId) {
-  return channelId === "physicalContour" ? "contextBase" : "physicalBase";
+function getIntensityFieldPassNames(channelId) {
+  const targetPasses = getIntensityFieldTargetPasses(channelId);
+  return targetPasses.length ? targetPasses : ["physicalBase"];
 }
 
 function schedulePhysicalIntensityRender(channelId, reason) {
-  invalidateRenderPasses([getIntensityFieldPassName(channelId)], reason);
+  invalidateRenderPasses(getIntensityFieldPassNames(channelId), reason);
   if (physicalIntensityRenderFrame !== null) return;
   physicalIntensityRenderFrame = requestAnimationFrame(() => {
     physicalIntensityRenderFrame = null;
@@ -23055,6 +23177,62 @@ function projectGeoToScreen(lon, lat) {
     (projected[0] * Number(t.k || 1)) + Number(t.x || 0),
     (projected[1] * Number(t.k || 1)) + Number(t.y || 0),
   ];
+}
+
+function hidePhysicalIntensityBrushPreview() {
+  physicalIntensityPreviewLonLat = null;
+  if (intensityFieldPreviewGroup) {
+    intensityFieldPreviewGroup.style("display", "none");
+  }
+}
+
+function renderPhysicalIntensityBrushPreview(lonLat = physicalIntensityPreviewLonLat) {
+  if (!intensityFieldPreviewGroup || !globalThis.d3) return false;
+  const tool = getIntensityFieldTool();
+  if (!tool.active || !Array.isArray(lonLat) || lonLat.length < 2) {
+    hidePhysicalIntensityBrushPreview();
+    return false;
+  }
+  const screenPoint = projectGeoToScreen(lonLat[0], lonLat[1]);
+  if (!screenPoint) {
+    hidePhysicalIntensityBrushPreview();
+    return false;
+  }
+  const radiusPx = getProjectedDegreeRadiusPx(lonLat[0], lonLat[1], tool.brushRadiusDeg);
+  if (!Number.isFinite(radiusPx) || radiusPx <= 0) {
+    hidePhysicalIntensityBrushPreview();
+    return false;
+  }
+  physicalIntensityPreviewLonLat = [lonLat[0], lonLat[1]];
+  intensityFieldPreviewGroup.style("display", null);
+  const preview = intensityFieldPreviewGroup
+    .selectAll("circle.intensity-field-brush-preview")
+    .data([{
+      x: screenPoint[0],
+      y: screenPoint[1],
+      r: radiusPx,
+      mode: tool.subMode,
+    }]);
+  preview.join("circle")
+    .attr("class", "intensity-field-brush-preview")
+    .attr("cx", (entry) => entry.x)
+    .attr("cy", (entry) => entry.y)
+    .attr("r", (entry) => entry.r)
+    .attr("fill", (entry) => (entry.mode === "erase" ? "rgba(251, 191, 36, 0.08)" : "rgba(56, 189, 248, 0.08)"))
+    .attr("stroke", (entry) => (entry.mode === "erase" ? "rgba(251, 191, 36, 0.92)" : "rgba(56, 189, 248, 0.92)"))
+    .attr("stroke-width", 1.5)
+    .attr("stroke-dasharray", (entry) => (entry.mode === "points" ? "3 4" : "6 4"));
+  return true;
+}
+
+function updatePhysicalIntensityBrushPreviewFromEvent(event) {
+  const tool = getIntensityFieldTool();
+  if (!tool.active) {
+    hidePhysicalIntensityBrushPreview();
+    return false;
+  }
+  const lonLat = getMapLonLatFromEvent(event);
+  return renderPhysicalIntensityBrushPreview(lonLat);
 }
 
 function getPhysicalIntensityPointHit(channel, lonLat) {
@@ -23177,6 +23355,7 @@ function handlePhysicalIntensityPointerDown(event) {
   if ((event.buttons & 1) !== 1) return true;
   const lonLat = getMapLonLatFromEvent(event);
   if (!lonLat) return true;
+  renderPhysicalIntensityBrushPreview(lonLat);
   if (event?.preventDefault) event.preventDefault();
   if (interactionRect?.node && event.pointerId !== undefined) {
     try {
@@ -23220,6 +23399,7 @@ function handlePhysicalIntensityPointerDown(event) {
 }
 
 function handlePhysicalIntensityPointerMove(event) {
+  updatePhysicalIntensityBrushPreviewFromEvent(event);
   if (!physicalIntensityDragSession) return false;
   if ((event.buttons & 1) !== 1) {
     commitPhysicalIntensitySession("physical-intensity-pointer-lost-buttons");
@@ -23235,6 +23415,7 @@ function handlePhysicalIntensityPointerMove(event) {
 function handlePhysicalIntensityPointerEnd(event) {
   if (!physicalIntensityDragSession) return false;
   if (event?.preventDefault) event.preventDefault();
+  updatePhysicalIntensityBrushPreviewFromEvent(event);
   commitPhysicalIntensitySession("physical-intensity-field-commit");
   return true;
 }
@@ -25346,6 +25527,7 @@ function updateMap(transform) {
   if (viewportGroup) {
     viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
   }
+  renderPhysicalIntensityBrushPreview();
   getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom();
   syncSpecialZonePatternTransformDuringZoom();
   drawCanvas();
@@ -25754,6 +25936,7 @@ function bindEvents() {
     renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
     queueTooltipUpdate({ visible: false });
     setMapInteractionCursor("");
+    hidePhysicalIntensityBrushPreview();
   });
   interactionRect.on("click", dispatchMapClick);
   interactionRect.on("dblclick", dispatchMapDoubleClick);

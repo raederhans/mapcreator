@@ -921,6 +921,15 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("if (transportAppearanceUiFrameId) return;", transport_owner_content)
         self.assertIn("transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {", transport_owner_content)
 
+    def test_appearance_preset_apply_loads_city_points_base_data_before_optional_layer(self):
+        owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        loader_body = self._arrow_function_body(owner_content, "ensureAppearancePresetLayerData")
+
+        self.assertIn('const loadOptions = { reason: "appearance-preset-apply", renderNow: true };', loader_body)
+        base_loader = loader_body.index("runtimeState.ensureBaseCityDataFn(loadOptions);")
+        optional_loader = loader_body.index('ensureActiveScenarioOptionalLayerLoaded("cities", loadOptions);')
+        self.assertLess(base_loader, optional_loader)
+
     def test_toolbar_keeps_appearance_facade_and_state_registration_contract(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")
         call_body = self._controller_call_body(content, "createAppearanceControlsController")

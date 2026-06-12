@@ -87,6 +87,8 @@ class BackendServiceTest(unittest.TestCase):
                     "specialZoneLayers": {"zones": []},
                     "operationGraphics": [{"id": "op-1"}],
                     "unitCounters": {"counters": []},
+                    "intensityFields": {"channels": {"physicalAtlas": {"enabled": True}}},
+                    "appearancePresets": {"byId": {"dark": {"id": "dark"}}},
                     "transportCountryOverlayState": {"country": "JPN"},
                     "referenceImageState": {"dataUrl": "data:image/png;base64,private"},
                     "dynamicBordersDirty": True,
@@ -104,11 +106,22 @@ class BackendServiceTest(unittest.TestCase):
         self.assertEqual(project["paintMode"], "visual")
         self.assertEqual(
             list(project.keys()),
-            ["schemaVersion", "specialZoneLayers", "paintMode", "operationGraphics", "unitCounters", "transportCountryOverlayState"],
+            [
+                "schemaVersion",
+                "specialZoneLayers",
+                "paintMode",
+                "operationGraphics",
+                "unitCounters",
+                "appearancePresets",
+                "intensityFields",
+                "transportCountryOverlayState",
+            ],
         )
         self.assertEqual(project["specialZoneLayers"], {"zones": []})
         self.assertEqual(project["operationGraphics"], [{"id": "op-1"}])
         self.assertEqual(project["unitCounters"], {"counters": []})
+        self.assertEqual(project["appearancePresets"], {"byId": {"dark": {"id": "dark"}}})
+        self.assertEqual(project["intensityFields"], {"channels": {"physicalAtlas": {"enabled": True}}})
         self.assertEqual(project["transportCountryOverlayState"], {"country": "JPN"})
         self.assertNotIn("referenceImageState", project)
         self.assertNotIn("dynamicBordersDirty", project)

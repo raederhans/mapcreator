@@ -12,6 +12,20 @@ import { createAppearanceCityPointsOwner } from "./appearance_city_points_owner.
 import { createAppearancePhysicalOwner } from "./appearance_physical_owner.js";
 import { createAppearanceReferenceOwner } from "./appearance_reference_owner.js";
 import { createAppearanceRiversOwner } from "./appearance_rivers_owner.js";
+import { createAppearancePresetsOwner } from "./appearance_presets_owner.js";
+import {
+  getTransportOverviewDataLayerKeys,
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "../../core/transport_capability_registry.js";
+import {
+  captureHistoryState as captureRuntimeHistoryState,
+  pushHistoryEntry as pushRuntimeHistoryEntry,
+} from "../../core/history_manager.js";
+import {
+  createIntensityFieldEditorNodes,
+  createIntensityFieldEditorSection,
+} from "./intensity_field_editor_section.js";
 
 /**
  * Owns the Appearance 面板 shell plus urban controls.
@@ -72,6 +86,64 @@ export function createAppearanceControlsController({
   const parentBorderDisableAll = document.getElementById("parentBorderDisableAll");
   const parentBorderCountryList = document.getElementById("parentBorderCountryList");
   const parentBorderEmpty = document.getElementById("parentBorderEmpty");
+  const getContextLayerRequestFromKeys = (layerKeys = []) => {
+    const normalizedKeys = (Array.isArray(layerKeys) ? layerKeys : [])
+      .map((key) => String(key || "").trim())
+      .filter(Boolean);
+    if (normalizedKeys.length === 0) return null;
+    return normalizedKeys.length === 1 ? normalizedKeys[0] : normalizedKeys;
+  };
+  const ensureAppearancePresetLayerData = () => {
+    if (runtimeState.showCityPoints) {
+      const loadOptions = { reason: "appearance-preset-apply", renderNow: true };
+      if (typeof runtimeState.ensureBaseCityDataFn === "function") {
+        void runtimeState.ensureBaseCityDataFn(loadOptions);
+      }
+      if (typeof ensureActiveScenarioOptionalLayerLoaded === "function") {
+        void ensureActiveScenarioOptionalLayerLoaded("cities", loadOptions);
+      }
+    }
+    if (typeof runtimeState.ensureContextLayerDataFn !== "function") return;
+    const requests = [];
+    if (runtimeState.showUrban) requests.push("urban");
+    if (runtimeState.showPhysical) requests.push(["physical-set", "physical-contours-set"]);
+    if (runtimeState.showRivers) requests.push("rivers");
+    if (runtimeState.showTransport !== false) {
+      listTransportOverviewCapabilityFamilyIds().forEach((familyId) => {
+        const visibilityField = getTransportOverviewVisibilityField(familyId);
+        if (!visibilityField || !runtimeState[visibilityField]) return;
+        const layerRequest = getContextLayerRequestFromKeys(getTransportOverviewDataLayerKeys(familyId));
+        if (layerRequest) requests.push(layerRequest);
+      });
+    }
+    requests.forEach((layerRequest) => {
+      void runtimeState.ensureContextLayerDataFn(layerRequest, {
+        reason: "appearance-preset-apply",
+        renderNow: true,
+      });
+    });
+  };
+  const appearancePresetsOwner = createAppearancePresetsOwner({
+    runtimeState,
+    nodes: {
+      nameInput: document.getElementById("appearancePresetName"),
+      select: document.getElementById("appearancePresetSelect"),
+      saveButton: document.getElementById("appearancePresetSaveBtn"),
+      applyButton: document.getElementById("appearancePresetApplyBtn"),
+      deleteButton: document.getElementById("appearancePresetDeleteBtn"),
+      exportButton: document.getElementById("appearancePresetExportBtn"),
+      importButton: document.getElementById("appearancePresetImportBtn"),
+      importInput: document.getElementById("appearancePresetImportFile"),
+      summary: document.getElementById("appearancePresetSummary"),
+      list: document.getElementById("appearancePresetList"),
+    },
+    t,
+    renderDirty,
+    captureHistoryState: captureRuntimeHistoryState,
+    pushHistoryEntry: pushRuntimeHistoryEntry,
+    requestUiRefresh: () => renderAppearanceStyleControlsUi(),
+    afterApply: ensureAppearancePresetLayerData,
+  });
 
   // Appearance shell 自己只保留跨分区的 tab/filter/toggle 编排。
   // 细分面板各自维护自己的脏标记、状态归一化和 UI 刷新，避免再次回到 toolbar.js 式的大一统逻辑。
@@ -105,6 +177,21 @@ export function createAppearanceControlsController({
     clamp,
     renderDirty,
     normalizeOceanFillColor,
+  });
+  const urbanIntensityFieldEditor = createIntensityFieldEditorSection({
+    runtimeState,
+    nodes: createIntensityFieldEditorNodes(document, {
+      prefix: "urbanIntensityField",
+    }),
+    channelIds: ["urbanGlow"],
+    defaultChannelId: "urbanGlow",
+    historyLabel: "Urban intensity field",
+    reasonPrefix: "urban-intensity-field",
+    t,
+    clamp,
+    renderDirty,
+    captureHistoryState: captureRuntimeHistoryState,
+    pushHistoryEntry: pushRuntimeHistoryEntry,
   });
   const riversOwner = createAppearanceRiversOwner({
     runtimeState,
@@ -252,6 +339,8 @@ export function createAppearanceControlsController({
     physicalOwner.renderPhysicalUi();
     riversOwner.renderRiversUi();
     syncUrbanControls();
+    urbanIntensityFieldEditor.render();
+    appearancePresetsOwner.renderAppearancePresetsUi();
   };
 
   const renderRecentColors = () => {
@@ -310,10 +399,12 @@ export function createAppearanceControlsController({
     textureOwner.bindEvents();
     cityPointsOwner.bindEvents();
     physicalOwner.bindEvents();
+    urbanIntensityFieldEditor.bindEvents();
     riversOwner.bindEvents();
     referenceOwner.bindEvents();
     borderOwner.bindEvents();
     parentBorderOwner.bindEvents();
+    appearancePresetsOwner.bindEvents();
 
     if (toggleUrban && toggleUrban.dataset.bound !== "true") {
       toggleUrban.checked = !!runtimeState.showUrban;

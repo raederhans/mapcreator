@@ -6,6 +6,9 @@ import {
   createAppearancePhysicalOwner,
 } from "../js/ui/toolbar/appearance_physical_owner.js";
 import {
+  createIntensityFieldEditorSection,
+} from "../js/ui/toolbar/intensity_field_editor_section.js";
+import {
   createIntensityFieldsState,
   updateIntensityFieldChannel,
 } from "../js/core/state.js";
@@ -14,6 +17,7 @@ class TestElement {
   constructor() {
     this.checked = false;
     this.dataset = {};
+    this.disabled = false;
     this.listeners = new Map();
     this.textContent = "";
     this.value = "";
@@ -340,4 +344,85 @@ test("physical owner edits intensity field through history-backed controls", () 
   assert.ok(clearChannelHarness.runtimeState.intensityFields.channels.physicalAtlas.grid.composite.every((value) => value === 1));
   assert.equal(clearChannelHarness.nodes.physicalIntensityFieldPointCount.textContent, "0");
   assert.equal(clearChannelHarness.historyEntries.length, 1);
+});
+
+test("shared intensity field editor owns urban glow channel without stealing physical tools", () => {
+  const nodes = buildNodes([
+    "urbanIntensityFieldEnabled",
+    "urbanIntensityFieldToolToggleBtn",
+    "urbanIntensityFieldPaintBtn",
+    "urbanIntensityFieldEraseBtn",
+    "urbanIntensityFieldPointsBtn",
+    "urbanIntensityFieldWeight",
+    "urbanIntensityFieldRadius",
+    "urbanIntensityFieldClearBtn",
+    "urbanIntensityFieldPointCount",
+    "urbanIntensityFieldPointList",
+    "urbanIntensityFieldWeightValue",
+    "urbanIntensityFieldRadiusValue",
+  ]);
+  const dirtyReasons = [];
+  const historyEntries = [];
+  const runtimeState = {
+    intensityFields: undefined,
+    intensityFieldTool: {
+      active: true,
+      brushRadiusDeg: 4,
+      brushStrength: 1.25,
+      channelId: "physicalAtlas",
+      selectedPointId: "",
+      subMode: "paint",
+    },
+  };
+  const section = createIntensityFieldEditorSection({
+    runtimeState,
+    nodes: {
+      enabled: nodes.urbanIntensityFieldEnabled,
+      toolToggleBtn: nodes.urbanIntensityFieldToolToggleBtn,
+      paintBtn: nodes.urbanIntensityFieldPaintBtn,
+      eraseBtn: nodes.urbanIntensityFieldEraseBtn,
+      pointsBtn: nodes.urbanIntensityFieldPointsBtn,
+      weight: nodes.urbanIntensityFieldWeight,
+      radius: nodes.urbanIntensityFieldRadius,
+      clearBtn: nodes.urbanIntensityFieldClearBtn,
+      pointCount: nodes.urbanIntensityFieldPointCount,
+      pointList: nodes.urbanIntensityFieldPointList,
+      weightValue: nodes.urbanIntensityFieldWeightValue,
+      radiusValue: nodes.urbanIntensityFieldRadiusValue,
+    },
+    channelIds: ["urbanGlow"],
+    defaultChannelId: "urbanGlow",
+    historyLabel: "Urban intensity field",
+    reasonPrefix: "urban-intensity-field",
+    t: (value, scope) => `${scope}:${value}`,
+    captureHistoryState: () => ({ intensityFields: runtimeState.intensityFields }),
+    pushHistoryEntry: (entry) => {
+      historyEntries.push(entry);
+      return true;
+    },
+    renderDirty: (reason) => dirtyReasons.push(reason),
+    documentRef: createTestDocument(nodes),
+  });
+
+  section.bindEvents();
+  section.render();
+
+  assert.equal(nodes.urbanIntensityFieldToolToggleBtn.textContent, "ui:Enter Tool");
+  assert.equal(nodes.urbanIntensityFieldPointCount.textContent, "0");
+
+  nodes.urbanIntensityFieldEnabled.checked = true;
+  nodes.urbanIntensityFieldEnabled.dispatch("change");
+  nodes.urbanIntensityFieldWeight.value = "165";
+  nodes.urbanIntensityFieldWeight.dispatch("input");
+  nodes.urbanIntensityFieldToolToggleBtn.dispatch("click");
+  nodes.urbanIntensityFieldEraseBtn.dispatch("click");
+
+  assert.equal(runtimeState.intensityFields.channels.urbanGlow.enabled, true);
+  assert.equal(runtimeState.intensityFields.channels.urbanGlow.revision, 1);
+  assert.equal(runtimeState.intensityFieldTool.active, true);
+  assert.equal(runtimeState.intensityFieldTool.channelId, "urbanGlow");
+  assert.equal(runtimeState.intensityFieldTool.subMode, "erase");
+  assert.equal(runtimeState.intensityFieldTool.brushStrength, 1.65);
+  assert.equal(historyEntries.length, 1);
+  assert.deepEqual(dirtyReasons, ["urban-intensity-field-enabled"]);
 });

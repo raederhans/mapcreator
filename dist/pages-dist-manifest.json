@@ -45422,7 +45422,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 231806,
+      "size_bytes": 241110,
       "source_kind": "dist"
     },
     {
@@ -45522,7 +45522,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 45544,
+      "size_bytes": 45790,
       "source_kind": "dist"
     },
     {
@@ -45562,12 +45562,12 @@
     },
     {
       "path": "app/js/core/history_manager.js",
-      "size_bytes": 13083,
+      "size_bytes": 14036,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/intensity_field.js",
-      "size_bytes": 15281,
+      "size_bytes": 15966,
       "source_kind": "dist"
     },
     {
@@ -45587,7 +45587,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 16812,
+      "size_bytes": 16932,
       "source_kind": "dist"
     },
     {
@@ -45632,7 +45632,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1009413,
+      "size_bytes": 1016913,
       "source_kind": "dist"
     },
     {
@@ -45728,6 +45728,11 @@
     {
       "path": "app/js/core/renderer/facility_surface.js",
       "size_bytes": 12609,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/intensity_field_mask_owner.js",
+      "size_bytes": 9644,
       "source_kind": "dist"
     },
     {
@@ -46021,6 +46026,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/state/appearance_preset_state.js",
+      "size_bytes": 11384,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/state/boot_state.js",
       "size_bytes": 4350,
       "source_kind": "dist"
@@ -46097,7 +46107,7 @@
     },
     {
       "path": "app/js/core/state.js",
-      "size_bytes": 2592,
+      "size_bytes": 2797,
       "source_kind": "dist"
     },
     {
@@ -46277,7 +46287,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 21494,
+      "size_bytes": 25502,
       "source_kind": "dist"
     },
     {
@@ -46287,7 +46297,12 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_physical_owner.js",
-      "size_bytes": 30016,
+      "size_bytes": 19356,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/toolbar/appearance_presets_owner.js",
+      "size_bytes": 9678,
       "source_kind": "dist"
     },
     {
@@ -46326,8 +46341,13 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
+      "size_bytes": 13362,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
-      "size_bytes": 18689,
+      "size_bytes": 19373,
       "source_kind": "dist"
     },
     {
@@ -46787,7 +46807,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1445866,
+      "size_bytes": 1446398,
       "source_kind": "dist"
     },
     {
@@ -46806,5 +46826,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145169002
+  "total_bytes": 1145226647
 }

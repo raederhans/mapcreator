@@ -352,3 +352,6 @@
 
 ### full visual collection 要覆盖 resolved colors
 - 渐进渲染场景里 `landDataFull` 可能比 interactive `landData` 更接近最终可见集合；resolved color 表和 owner 刷新要覆盖 full visual collection，空间索引继续服务交互集合。
+
+### 外观预设 apply 要恢复数据依赖链
+- 预设恢复图层可见性后，要重放对应 owner 的数据加载前置条件；城市点应先加载 base city data，再加载 scenario optional cities，并同步验证 source 与 `dist/app` 两条交付链。

@@ -4,6 +4,10 @@ import {
   SCENARIO_PRESENTATION_FEATURES,
   scenarioHasPresentationFeature,
 } from "../../core/scenario/presentation_hint_helpers.js";
+import {
+  createIntensityFieldEditorNodes,
+  createIntensityFieldEditorSection,
+} from "./intensity_field_editor_section.js";
 
 /**
  * Owns ocean / lake appearance controls.
@@ -54,6 +58,7 @@ export function createOceanLakeControlsController({
   oceanDeepFadeEndZoomValue,
   oceanScenarioSyntheticContourFadeEndZoomValue,
   oceanScenarioShallowContourFadeEndZoomValue,
+  documentRef = globalThis.document,
 }) {
   let pendingOceanVisualFrame = 0;
   let pendingOceanVisualReason = "";
@@ -63,6 +68,22 @@ export function createOceanLakeControlsController({
     "styleConfig.lakes.fillColor",
   ];
   let lakeHistoryBefore = null;
+  const oceanDepthFieldEditor = createIntensityFieldEditorSection({
+    runtimeState: state,
+    nodes: createIntensityFieldEditorNodes(documentRef, {
+      prefix: "oceanDepthField",
+    }),
+    channelIds: ["oceanDepth"],
+    defaultChannelId: "oceanDepth",
+    historyLabel: "Ocean depth field",
+    reasonPrefix: "ocean-depth-field",
+    t,
+    clamp,
+    renderDirty,
+    captureHistoryState,
+    pushHistoryEntry,
+    documentRef,
+  });
 
   const flushPendingOceanVisualUpdates = () => {
     pendingOceanVisualFrame = 0;
@@ -295,6 +316,7 @@ export function createOceanLakeControlsController({
     renderOceanAdvancedStylesUi();
     renderOceanCoastalAccentUi();
     renderOceanBathymetryDebugUi();
+    oceanDepthFieldEditor.render();
     renderLakeUi();
   };
 
@@ -319,6 +341,8 @@ export function createOceanLakeControlsController({
   };
 
   const bindEvents = () => {
+    oceanDepthFieldEditor.bindEvents();
+
     if (oceanFillColor) {
       bindOceanVisualInput(oceanFillColor, (event, commitNow) => {
         state.styleConfig.ocean.fillColor = normalizeOceanFillColor(event.target.value);

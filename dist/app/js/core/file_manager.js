@@ -6,6 +6,7 @@ import {
   normalizeLakeStyleConfig,
   normalizeMapSemanticMode,
   INTENSITY_FIELD_GRID,
+  normalizeAppearancePresetsState,
   normalizeIntensityFieldsState,
   normalizeIntensityPoint,
   normalizePhysicalStyleConfig,
@@ -17,6 +18,7 @@ import {
   normalizeTransportWorkbenchUiState,
   normalizeExportWorkbenchUiState,
   normalizeTextureStyleConfig,
+  serializeAppearancePresetsState,
   serializeIntensityFieldsState,
   updateIntensityFieldChannel,
 } from "./state.js";
@@ -551,6 +553,7 @@ class FileManager {
       operationGraphics: normalizeOperationGraphics(appState.operationGraphics),
       unitCounters: normalizeUnitCounters(appState.unitCounters),
       intensityFields: serializeIntensityFieldsState(appState.intensityFields),
+      appearancePresets: serializeAppearancePresetsState(appState.appearancePresets),
       customPresets: appState.customPresets || {},
       referenceImageState: normalizeReferenceImageState(appState.referenceImageState),
       recentColors: normalizeRecentColors(appState.recentColors),
@@ -819,6 +822,7 @@ class FileManager {
           data.physicalIntensityField,
         );
         delete data.physicalIntensityField;
+        data.appearancePresets = normalizeAppearancePresetsState(data.appearancePresets);
         data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
         data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
         if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {

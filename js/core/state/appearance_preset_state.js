@@ -1,0 +1,308 @@
+import {
+  getTransportOverviewVisibilityField,
+  listTransportOverviewCapabilityFamilyIds,
+} from "../transport_capability_registry.js";
+import {
+  normalizeIntensityFieldsState,
+  serializeIntensityFieldsState,
+} from "./intensity_field_state.js";
+import {
+  createDefaultStyleConfig,
+  normalizeOpenOceanLayerVisibility,
+  restoreImportedLayerVisibilityState,
+  restoreImportedStyleConfigState,
+} from "./ui_state.js";
+
+export const APPEARANCE_PRESET_SCHEMA_VERSION = 1;
+export const APPEARANCE_PRESET_EXPORT_KIND = "appearance-preset";
+
+const DEFAULT_TIMESTAMP = "1970-01-01T00:00:00.000Z";
+const BASE_LAYER_VISIBILITY_FIELDS = Object.freeze([
+  "showWaterRegions",
+  "showOpenOceanRegions",
+  "allowOpenOceanSelect",
+  "allowOpenOceanPaint",
+  "showScenarioSpecialRegions",
+  "showScenarioAtlantropa",
+  "showScenarioReliefOverlays",
+  "showCityPoints",
+  "showUrban",
+  "showPhysical",
+  "showRivers",
+  "showTransport",
+  "showSpecialZones",
+]);
+
+function getTransportOverviewLayerVisibilityFields() {
+  return listTransportOverviewCapabilityFamilyIds()
+    .map((familyId) => getTransportOverviewVisibilityField(familyId))
+    .filter(Boolean);
+}
+
+export function getAppearancePresetLayerVisibilityFields() {
+  return [
+    ...BASE_LAYER_VISIBILITY_FIELDS,
+    ...getTransportOverviewLayerVisibilityFields(),
+  ];
+}
+
+export const APPEARANCE_PRESET_LAYER_VISIBILITY_FIELDS = Object.freeze(
+  getAppearancePresetLayerVisibilityFields(),
+);
+
+function cloneAppearanceValue(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizePresetId(value) {
+  return String(value || "").trim();
+}
+
+function formatTimestamp(value, fallback = DEFAULT_TIMESTAMP) {
+  const date = value ? new Date(value) : new Date(fallback);
+  if (Number.isFinite(date.getTime())) return date.toISOString();
+  return fallback;
+}
+
+export function createAppearancePresetId(name = "appearance preset", now = Date.now()) {
+  const slug = String(name || "appearance preset")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "appearance-preset";
+  const suffixNumber = Number.isFinite(Number(now)) ? Number(now) : Date.now();
+  return `${slug}-${Math.max(0, Math.floor(suffixNumber)).toString(36)}`;
+}
+
+export function normalizeAppearanceLayerVisibility(layerVisibility = null) {
+  const source = layerVisibility && typeof layerVisibility === "object" ? layerVisibility : {};
+  const openOceanLayerVisibility = normalizeOpenOceanLayerVisibility(source);
+  const normalized = {
+    showWaterRegions: source.showWaterRegions === undefined ? true : !!source.showWaterRegions,
+    showOpenOceanRegions: openOceanLayerVisibility.showOpenOceanRegions,
+    allowOpenOceanSelect: openOceanLayerVisibility.allowOpenOceanSelect,
+    allowOpenOceanPaint: openOceanLayerVisibility.allowOpenOceanPaint,
+    showScenarioSpecialRegions:
+      source.showScenarioSpecialRegions === undefined
+        ? true
+        : !!source.showScenarioSpecialRegions,
+    showScenarioAtlantropa:
+      source.showScenarioAtlantropa === undefined ? true : !!source.showScenarioAtlantropa,
+    showScenarioReliefOverlays:
+      source.showScenarioReliefOverlays === undefined
+        ? true
+        : !!source.showScenarioReliefOverlays,
+    showCityPoints: source.showCityPoints === undefined ? true : !!source.showCityPoints,
+    showUrban: source.showUrban === undefined ? true : !!source.showUrban,
+    showPhysical: source.showPhysical === undefined ? true : !!source.showPhysical,
+    showRivers: source.showRivers === undefined ? true : !!source.showRivers,
+    showTransport: source.showTransport === undefined ? true : !!source.showTransport,
+    showSpecialZones: source.showSpecialZones === undefined ? false : !!source.showSpecialZones,
+  };
+  getTransportOverviewLayerVisibilityFields().forEach((field) => {
+    normalized[field] = !!source[field];
+  });
+  return normalized;
+}
+
+export function normalizeAppearanceStyleSnapshot(styleConfig = null) {
+  const target = {
+    styleConfig: createDefaultStyleConfig(),
+  };
+  restoreImportedStyleConfigState(target, styleConfig);
+  return cloneAppearanceValue(target.styleConfig);
+}
+
+export function createAppearanceSnapshotFromRuntimeState(runtimeState = {}) {
+  return {
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    styleConfig: normalizeAppearanceStyleSnapshot(runtimeState.styleConfig),
+    layerVisibility: normalizeAppearanceLayerVisibility(runtimeState),
+    intensityFields: serializeIntensityFieldsState(runtimeState.intensityFields),
+  };
+}
+
+export function normalizeAppearancePresetSnapshot(value = null) {
+  const source = value && typeof value === "object" ? value : {};
+  const rawSnapshot =
+    source.snapshot && typeof source.snapshot === "object" ? source.snapshot : source;
+  return {
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    styleConfig: normalizeAppearanceStyleSnapshot(rawSnapshot.styleConfig),
+    layerVisibility: normalizeAppearanceLayerVisibility(rawSnapshot.layerVisibility),
+    intensityFields: serializeIntensityFieldsState(rawSnapshot.intensityFields),
+  };
+}
+
+export function createAppearancePresetFromRuntimeState(
+  runtimeState = {},
+  { id = "", name = "", now = Date.now() } = {},
+) {
+  const presetName = String(name || "Appearance Preset").trim() || "Appearance Preset";
+  const timestamp = formatTimestamp(now, new Date().toISOString());
+  return {
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    id: normalizePresetId(id) || createAppearancePresetId(presetName, now),
+    name: presetName,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    snapshot: createAppearanceSnapshotFromRuntimeState(runtimeState),
+  };
+}
+
+export function normalizeAppearancePreset(value = null, index = 0) {
+  const source =
+    value && typeof value === "object" && value.preset && typeof value.preset === "object"
+      ? value.preset
+      : value;
+  const raw = source && typeof source === "object" ? source : {};
+  const fallbackName = `Appearance Preset ${index + 1}`;
+  const name = String(raw.name || fallbackName).trim() || fallbackName;
+  const id = normalizePresetId(raw.id) || createAppearancePresetId(name, index + 1);
+  return {
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    id,
+    name,
+    createdAt: formatTimestamp(raw.createdAt),
+    updatedAt: formatTimestamp(raw.updatedAt || raw.createdAt),
+    snapshot: normalizeAppearancePresetSnapshot(raw),
+  };
+}
+
+export function createDefaultAppearancePresetsState() {
+  return {
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    selectedPresetId: "",
+    order: [],
+    byId: {},
+  };
+}
+
+function getRawPresetEntries(rawState = null) {
+  if (!rawState || typeof rawState !== "object") return [];
+  if (rawState.kind === APPEARANCE_PRESET_EXPORT_KIND && rawState.preset) {
+    return [rawState.preset];
+  }
+  if (rawState.preset && typeof rawState.preset === "object") {
+    return [rawState.preset];
+  }
+  if (Array.isArray(rawState.presets)) {
+    return rawState.presets;
+  }
+  if (Array.isArray(rawState)) {
+    return rawState;
+  }
+  if (rawState.byId && typeof rawState.byId === "object") {
+    const orderedIds = Array.isArray(rawState.order)
+      ? rawState.order.map((id) => String(id || "")).filter(Boolean)
+      : Object.keys(rawState.byId);
+    const orderedEntries = orderedIds
+      .map((id) => rawState.byId[id])
+      .filter((preset) => preset && typeof preset === "object");
+    const seen = new Set(orderedIds);
+    Object.entries(rawState.byId).forEach(([id, preset]) => {
+      if (seen.has(id) || !preset || typeof preset !== "object") return;
+      orderedEntries.push(preset);
+    });
+    return orderedEntries;
+  }
+  if (rawState.snapshot && typeof rawState.snapshot === "object") {
+    return [rawState];
+  }
+  return [];
+}
+
+export function normalizeAppearancePresetsState(rawState = null) {
+  const source = rawState && typeof rawState === "object" ? rawState : {};
+  const normalized = createDefaultAppearancePresetsState();
+  getRawPresetEntries(source).forEach((entry, index) => {
+    const preset = normalizeAppearancePreset(entry, index);
+    if (!preset.id) return;
+    normalized.byId[preset.id] = preset;
+    if (!normalized.order.includes(preset.id)) {
+      normalized.order.push(preset.id);
+    }
+  });
+  const selectedPresetId = normalizePresetId(source.selectedPresetId);
+  normalized.selectedPresetId = normalized.byId[selectedPresetId]
+    ? selectedPresetId
+    : normalized.order[0] || "";
+  return normalized;
+}
+
+export function serializeAppearancePresetsState(rawState = null) {
+  return cloneAppearanceValue(normalizeAppearancePresetsState(rawState));
+}
+
+export function upsertAppearancePreset(rawState = null, preset = null) {
+  const normalized = normalizeAppearancePresetsState(rawState);
+  const nextPreset = normalizeAppearancePreset(preset, normalized.order.length);
+  const existing = normalized.byId[nextPreset.id];
+  if (existing && !preset?.createdAt) {
+    nextPreset.createdAt = existing.createdAt;
+  }
+  normalized.byId[nextPreset.id] = nextPreset;
+  if (!normalized.order.includes(nextPreset.id)) {
+    normalized.order.push(nextPreset.id);
+  }
+  normalized.selectedPresetId = nextPreset.id;
+  return normalized;
+}
+
+export function deleteAppearancePreset(rawState = null, presetId = "") {
+  const normalized = normalizeAppearancePresetsState(rawState);
+  const id = normalizePresetId(presetId);
+  if (!id || !normalized.byId[id]) return normalized;
+  delete normalized.byId[id];
+  normalized.order = normalized.order.filter((entryId) => entryId !== id);
+  if (normalized.selectedPresetId === id) {
+    normalized.selectedPresetId = normalized.order[0] || "";
+  }
+  return normalized;
+}
+
+export function getSelectedAppearancePreset(rawState = null) {
+  const normalized = normalizeAppearancePresetsState(rawState);
+  return normalized.byId[normalized.selectedPresetId] || null;
+}
+
+export function normalizeAppearancePresetImportPayload(payload = null) {
+  return getRawPresetEntries(payload)
+    .map((entry, index) => normalizeAppearancePreset(entry, index))
+    .filter((preset) => !!preset.id);
+}
+
+export function mergeAppearancePresetImportPayload(rawState = null, payload = null) {
+  let nextState = normalizeAppearancePresetsState(rawState);
+  normalizeAppearancePresetImportPayload(payload).forEach((preset) => {
+    nextState = upsertAppearancePreset(nextState, {
+      ...preset,
+      updatedAt: new Date().toISOString(),
+    });
+  });
+  return nextState;
+}
+
+export function buildAppearancePresetExportPayload(preset = null) {
+  const normalizedPreset = normalizeAppearancePreset(preset);
+  return {
+    kind: APPEARANCE_PRESET_EXPORT_KIND,
+    schemaVersion: APPEARANCE_PRESET_SCHEMA_VERSION,
+    preset: normalizedPreset,
+  };
+}
+
+export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = null) {
+  if (!target || typeof target !== "object") return null;
+  const source =
+    presetOrSnapshot && typeof presetOrSnapshot === "object" && presetOrSnapshot.snapshot
+      ? presetOrSnapshot.snapshot
+      : presetOrSnapshot;
+  const snapshot = normalizeAppearancePresetSnapshot(source);
+  restoreImportedStyleConfigState(target, snapshot.styleConfig);
+  restoreImportedLayerVisibilityState(target, snapshot.layerVisibility);
+  target.intensityFields = normalizeIntensityFieldsState(snapshot.intensityFields);
+  return snapshot;
+}

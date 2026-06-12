@@ -11,17 +11,38 @@ export const INTENSITY_FIELD_GRID = Object.freeze({
 export const INTENSITY_FIELD_CHANNELS = Object.freeze({
   physicalAtlas: Object.freeze({
     id: "physicalAtlas",
-    targetPass: "physicalBase",
+    targetPasses: Object.freeze(["physicalBase"]),
     applyMode: "featureMultiplier",
+    label: "Atlas",
   }),
   physicalContour: Object.freeze({
     id: "physicalContour",
-    targetPass: "contextBase",
+    targetPasses: Object.freeze(["contextBase"]),
     applyMode: "featureMultiplier",
+    label: "Contour",
+  }),
+  urbanGlow: Object.freeze({
+    id: "urbanGlow",
+    targetPasses: Object.freeze(["contextBase", "dayNight"]),
+    applyMode: "featureMultiplier",
+    label: "Glow",
+  }),
+  oceanDepth: Object.freeze({
+    id: "oceanDepth",
+    targetPasses: Object.freeze(["background"]),
+    applyMode: "passMask",
+    label: "Depth",
   }),
 });
 
 export const INTENSITY_FIELD_CHANNEL_IDS = Object.freeze(Object.keys(INTENSITY_FIELD_CHANNELS));
+
+export function getIntensityFieldTargetPasses(channelId) {
+  const channel = INTENSITY_FIELD_CHANNELS[channelId];
+  if (!channel) return [];
+  if (Array.isArray(channel.targetPasses)) return [...channel.targetPasses];
+  return channel.targetPass ? [channel.targetPass] : [];
+}
 
 function clampNumber(value, min, max) {
   return Math.min(max, Math.max(min, value));

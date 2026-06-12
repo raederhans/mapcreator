@@ -183,6 +183,18 @@
                 >
                   Transport
                 </button>
+                <button
+                  id="appearanceTabPresets"
+                  type="button"
+                  class="appearance-tab-btn"
+                  data-appearance-tab="presets"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="appearancePanelPresets"
+                  data-i18n="Presets"
+                >
+                  Presets
+                </button>
               </div>
             </div>
             <div class="appearance-stack mt-4">
@@ -263,6 +275,44 @@
                         </div>
                         <input id="oceanContourStrength" type="range" min="0" max="100" value="75" class="range-input" />
                       </div>
+                    </div>
+                  </section>
+
+                  <section class="appearance-control-card" aria-labelledby="lblOceanDepthFieldCard">
+                    <h3 id="lblOceanDepthFieldCard" class="appearance-control-card-title" data-i18n="Depth Field">Depth Field</h3>
+                    <div class="appearance-control-card-stack">
+                      <label class="toggle-label">
+                        <input id="oceanDepthFieldEnabled" type="checkbox" class="checkbox-input" />
+                        <span id="lblOceanDepthFieldEnabled">Enable Channel</span>
+                      </label>
+                      <div class="flex items-center justify-between gap-2">
+                        <button id="oceanDepthFieldToolToggleBtn" type="button" class="sidebar-action-secondary">Enter Tool</button>
+                        <button id="oceanDepthFieldPaintBtn" type="button" class="sidebar-action-secondary">Paint</button>
+                        <button id="oceanDepthFieldEraseBtn" type="button" class="sidebar-action-secondary">Erase</button>
+                        <button id="oceanDepthFieldPointsBtn" type="button" class="sidebar-action-secondary">Points</button>
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanDepthFieldWeight" class="range-label" for="oceanDepthFieldWeight">Strength</label>
+                          <span id="oceanDepthFieldWeightValue" class="range-value">100%</span>
+                        </div>
+                        <input id="oceanDepthFieldWeight" type="range" min="0" max="200" value="100" class="range-input" />
+                      </div>
+                      <div>
+                        <div class="range-row">
+                          <label id="lblOceanDepthFieldRadius" class="range-label" for="oceanDepthFieldRadius">Radius</label>
+                          <span id="oceanDepthFieldRadiusValue" class="range-value">≈ 333 km</span>
+                        </div>
+                        <input id="oceanDepthFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
+                      </div>
+                      <div class="flex items-center justify-between gap-2">
+                        <button id="oceanDepthFieldClearBtn" type="button" class="sidebar-action-secondary">Clear Channel</button>
+                      </div>
+                      <div class="range-row">
+                        <span id="lblOceanDepthFieldPointCount" class="range-label">Points</span>
+                        <span id="oceanDepthFieldPointCount" class="range-value">0</span>
+                      </div>
+                      <div id="oceanDepthFieldPointList" class="space-y-2"></div>
                     </div>
                   </section>
                   <details id="oceanBathymetryDebugDetails" class="appearance-mini-section dev-only">
@@ -778,6 +828,43 @@
                             <span id="urbanMinAreaValue" class="range-value">1</span>
                           </div>
                           <input id="urbanMinArea" type="range" min="1" max="80" value="1" class="range-input" />
+                        </div>
+                        <div class="appearance-prop-group">
+                          <h3 id="lblUrbanIntensityFieldPanel" class="appearance-prop-heading">Glow Field</h3>
+                          <div class="space-y-2 mt-2">
+                            <label class="toggle-label">
+                              <input id="urbanIntensityFieldEnabled" type="checkbox" class="checkbox-input" />
+                              <span id="lblUrbanIntensityFieldEnabled">Enable Glow Field</span>
+                            </label>
+                            <div class="flex items-center justify-between gap-2">
+                              <button id="urbanIntensityFieldToolToggleBtn" type="button" class="sidebar-action-secondary">Enter Tool</button>
+                              <button id="urbanIntensityFieldPaintBtn" type="button" class="sidebar-action-secondary">Paint</button>
+                              <button id="urbanIntensityFieldEraseBtn" type="button" class="sidebar-action-secondary">Erase</button>
+                              <button id="urbanIntensityFieldPointsBtn" type="button" class="sidebar-action-secondary">Points</button>
+                            </div>
+                            <div>
+                              <div class="range-row">
+                                <label id="lblUrbanIntensityFieldWeight" class="range-label" for="urbanIntensityFieldWeight">Strength</label>
+                                <span id="urbanIntensityFieldWeightValue" class="range-value">100%</span>
+                              </div>
+                              <input id="urbanIntensityFieldWeight" type="range" min="0" max="200" value="100" class="range-input" />
+                            </div>
+                            <div>
+                              <div class="range-row">
+                                <label id="lblUrbanIntensityFieldRadius" class="range-label" for="urbanIntensityFieldRadius">Radius</label>
+                                <span id="urbanIntensityFieldRadiusValue" class="range-value">≈ 333 km</span>
+                              </div>
+                              <input id="urbanIntensityFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
+                            </div>
+                            <div class="flex items-center justify-between gap-2">
+                              <button id="urbanIntensityFieldClearBtn" type="button" class="sidebar-action-secondary">Clear Channel</button>
+                            </div>
+                            <div class="range-row">
+                              <span id="lblUrbanIntensityFieldPointCount" class="range-label">Points</span>
+                              <span id="urbanIntensityFieldPointCount" class="range-value">0</span>
+                            </div>
+                            <div id="urbanIntensityFieldPointList" class="space-y-2"></div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1837,6 +1924,48 @@
                       <h3 id="lblTransportWorkbenchReminder" class="appearance-prop-heading" data-i18n="Transport Workbench">Transport Workbench</h3>
                       <p id="transportWorkbenchReminderHint" class="panel-hint" data-i18n="Open the dedicated workbench for country or region-level transport review and editing.">Open the dedicated workbench for country or region-level transport review and editing.</p>
                       <button id="transportAppearanceWorkbenchBtn" type="button" class="btn-secondary" data-i18n="Open Transport Workbench">Open Transport Workbench</button>
+                    </div>
+                  </section>
+                </div>
+              </section>
+              <section
+                id="appearancePanelPresets"
+                class="card-flat appearance-subsection appearance-tab-panel"
+                data-appearance-panel="presets"
+                role="tabpanel"
+                aria-labelledby="appearanceTabPresets"
+                hidden
+              >
+                <h2 id="lblAppearancePresetsPanel" class="section-header" data-i18n="Appearance Presets">Appearance Presets</h2>
+                <div class="appearance-panel-body mt-3">
+                  <section class="appearance-control-card" aria-labelledby="lblAppearancePresetSave">
+                    <h3 id="lblAppearancePresetSave" class="appearance-control-card-title" data-i18n="Save Current Appearance">Save Current Appearance</h3>
+                    <div class="appearance-control-card-stack">
+                      <div>
+                        <label id="lblAppearancePresetName" class="range-label" for="appearancePresetName" data-i18n="Preset Name">Preset Name</label>
+                        <input id="appearancePresetName" type="text" class="select-input mt-2" autocomplete="off" />
+                      </div>
+                      <button id="appearancePresetSaveBtn" type="button" class="btn-secondary" data-i18n="Save Preset">Save Preset</button>
+                    </div>
+                  </section>
+                  <section class="appearance-control-card" aria-labelledby="lblAppearancePresetLibrary">
+                    <h3 id="lblAppearancePresetLibrary" class="appearance-control-card-title" data-i18n="Preset Library">Preset Library</h3>
+                    <div class="appearance-control-card-stack">
+                      <div>
+                        <label id="lblAppearancePresetSelect" class="range-label" for="appearancePresetSelect" data-i18n="Preset">Preset</label>
+                        <select id="appearancePresetSelect" class="select-input mt-2"></select>
+                      </div>
+                      <p id="appearancePresetSummary" class="panel-hint">0 presets</p>
+                      <p id="appearancePresetList" class="parent-border-empty"></p>
+                      <div class="sidebar-equal-actions">
+                        <button id="appearancePresetApplyBtn" type="button" class="btn-secondary" disabled data-i18n="Apply">Apply</button>
+                        <button id="appearancePresetDeleteBtn" type="button" class="btn-secondary" disabled data-i18n="Delete">Delete</button>
+                      </div>
+                      <div class="sidebar-equal-actions">
+                        <button id="appearancePresetImportBtn" type="button" class="btn-secondary" data-i18n="Import">Import</button>
+                        <button id="appearancePresetExportBtn" type="button" class="btn-secondary" disabled data-i18n="Export">Export</button>
+                      </div>
+                      <input id="appearancePresetImportFile" type="file" accept="application/json,.json" class="hidden" />
                     </div>
                   </section>
                 </div>

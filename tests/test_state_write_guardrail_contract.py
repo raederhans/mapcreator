@@ -62,6 +62,13 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             allowlist.get("files", []),
         )
 
+    def test_intensity_field_editor_section_is_explicit_state_writer(self):
+        allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
+        self.assertIn(
+            "js/ui/toolbar/intensity_field_editor_section.js",
+            allowlist.get("files", []),
+        )
+
     def test_appearance_reference_owner_is_explicit_state_writer(self):
         allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
         self.assertIn(

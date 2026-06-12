@@ -51,7 +51,11 @@ test("scenario runtime factory returns fresh nested objects and maps", () => {
 });
 
 test("scenario activation commit helper centralizes staged runtime writes", () => {
-  const runtimeState = createDefaultScenarioRuntimeState();
+  const globalIntensityFields = { channels: { physicalAtlas: { enabled: true } } };
+  const runtimeState = {
+    ...createDefaultScenarioRuntimeState(),
+    intensityFields: globalIntensityFields,
+  };
   const districtGroupByFeatureId = new Map([["A", "group-a"]]);
 
   commitScenarioActivationRuntimeState(runtimeState, {
@@ -114,6 +118,7 @@ test("scenario activation commit helper centralizes staged runtime writes", () =
   assert.deepEqual(runtimeState.scenarioGeneratedColorTags, ["FRA"]);
   assert.deepEqual(runtimeState.scenarioFixedOwnerColors, { FRA: "#0055aa" });
   assert.equal(runtimeState.activeSovereignCode, "FRA");
+  assert.equal(runtimeState.intensityFields, globalIntensityFields);
 });
 
 test("scenario perf metrics are written through the scenario runtime owner", () => {

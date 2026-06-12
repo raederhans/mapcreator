@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  INTENSITY_FIELD_CHANNELS,
   INTENSITY_FIELD_GRID,
   bakeIntensityComposite,
   createIntensityFieldsState,
   extractFieldRectPatch,
+  getIntensityFieldTargetPasses,
   sampleIntensityField,
   stampIntensityBrush,
 } from "../js/core/intensity_field.js";
@@ -29,6 +31,32 @@ test("intensity field samples neutral when disabled and weighted when enabled", 
 
   assert.ok(sampleIntensityField(fields, "physicalAtlas", 10, 46) > 1.5);
   assert.equal(sampleIntensityField(fields, "physicalAtlas", -120, -30), 1);
+});
+
+test("intensity field channel registry exposes urban glow target passes", () => {
+  const fields = createIntensityFieldsState();
+  const passes = getIntensityFieldTargetPasses("urbanGlow");
+
+  assert.deepEqual(passes, ["contextBase", "dayNight"]);
+  passes.push("mutated");
+  assert.deepEqual(getIntensityFieldTargetPasses("urbanGlow"), ["contextBase", "dayNight"]);
+  assert.equal(INTENSITY_FIELD_CHANNELS.urbanGlow.applyMode, "featureMultiplier");
+  assert.equal(fields.channels.urbanGlow.enabled, false);
+  assert.equal(fields.channels.urbanGlow.revision, 0);
+  assert.deepEqual(fields.channels.urbanGlow.points, []);
+});
+
+test("intensity field channel registry exposes ocean depth pass mask", () => {
+  const fields = createIntensityFieldsState();
+  const passes = getIntensityFieldTargetPasses("oceanDepth");
+
+  assert.deepEqual(passes, ["background"]);
+  passes.push("mutated");
+  assert.deepEqual(getIntensityFieldTargetPasses("oceanDepth"), ["background"]);
+  assert.equal(INTENSITY_FIELD_CHANNELS.oceanDepth.applyMode, "passMask");
+  assert.equal(fields.channels.oceanDepth.enabled, false);
+  assert.equal(fields.channels.oceanDepth.revision, 0);
+  assert.deepEqual(fields.channels.oceanDepth.points, []);
 });
 
 test("intensity brush writes grid values and patch extraction captures the dirty rect", () => {

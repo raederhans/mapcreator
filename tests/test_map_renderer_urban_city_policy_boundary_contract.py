@@ -64,6 +64,38 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"function\s+compareCapitalCandidateEntries\s*\(", renderer_content))
         self.assertIsNone(re.search(r"function\s+applyScenarioCityOverride\s*\(", renderer_content))
 
+    def test_urban_glow_intensity_field_invalidates_and_modulates_urban_light_passes(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        intensity_content = (REPO_ROOT / "js" / "core" / "intensity_field.js").read_text(encoding="utf-8")
+        context_base_body = renderer_content.split('if (passName === "contextBase") {', 1)[1].split(
+            '\n  }',
+            1,
+        )[0]
+        day_night_body = renderer_content.split('if (passName === "dayNight") {', 1)[1].split(
+            '\n  }',
+            1,
+        )[0]
+        urban_layer_body = renderer_content.split("function drawUrbanLayer(k, { interactive = false } = {}) {", 1)[1].split(
+            "\nfunction recordDeferredRiversLayerMetric",
+            1,
+        )[0]
+        modern_static_key_body = renderer_content.split("function getModernCityLightsStaticLayerKey(config) {", 1)[1].split(
+            "\n}",
+            1,
+        )[0]
+
+        self.assertIn('id: "urbanGlow"', intensity_content)
+        self.assertIn('targetPasses: Object.freeze(["contextBase", "dayNight"])', intensity_content)
+        self.assertIn("function getIntensityFieldTargetPasses(channelId)", intensity_content)
+        self.assertIn('`field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`', context_base_body)
+        self.assertIn('`field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`', day_night_body)
+        self.assertIn('getFieldFeatureMultiplier("urbanGlow", feature)', renderer_content)
+        self.assertIn("const glowMultiplier = getUrbanGlowFeatureMultiplier(feature);", urban_layer_body)
+        self.assertIn("Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier", urban_layer_body)
+        self.assertIn("Math.min(strokeOpacity, 0.18) : strokeOpacity) * glowMultiplier", urban_layer_body)
+        self.assertGreaterEqual(renderer_content.count("getUrbanGlowMultiplierAt("), 8)
+        self.assertIn('`field:urbanGlow:${Number(normalizeIntensityFieldsState(runtimeState.intensityFields).channels.urbanGlow?.revision || 0)}`', modern_static_key_body)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -49,6 +49,8 @@ SHARED_PROJECT_FIELD_ALLOWLIST = (
     "operationGraphics",
     "unitCounters",
     "customPresets",
+    "appearancePresets",
+    "intensityFields",
     "recentColors",
     "layerVisibility",
     "styleConfig",
