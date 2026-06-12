@@ -10,6 +10,11 @@ import {
   normalizeScenarioChunkManifest,
   selectScenarioChunks,
 } from "../js/core/scenario_chunk_manager.js";
+import {
+  getCountryCode as getSharedFeatureCountryCode,
+  getFeatureId as getSharedFeatureId,
+  normalizeFeatureCountryCode,
+} from "../js/core/feature_identity.js";
 import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.js";
 import { buildSpatialGridSnapshot, getSpatialBucketKey } from "../js/core/renderer/spatial_index_runtime_builders.js";
 
@@ -1654,6 +1659,31 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   });
 });
 
+test("owner/base diagnostics separate geometry country from display owner", () => {
+  const feature = {
+    id: "AL011",
+    properties: {
+      id: "AL011",
+      name: "AL011",
+    },
+  };
+  const state = {
+    sovereigntyByFeatureId: {
+      AL011: "ITA",
+    },
+  };
+  const featureId = getSharedFeatureId(feature);
+  const geometryCountryCode = getSharedFeatureCountryCode(feature);
+  const displayOwnerCode = normalizeFeatureCountryCode(
+    state.sovereigntyByFeatureId[featureId],
+    { allowReserved: true }
+  );
+
+  assert.equal(featureId, "AL011");
+  assert.equal(geometryCountryCode, "AL");
+  assert.equal(displayOwnerCode, "ITA");
+});
+
 test("Atlantropa field-driven interaction contracts preserve explicit render and hit layers", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
@@ -1713,13 +1743,23 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       /function getAdmin0BackgroundFillColor\(countryCode\) \{[\s\S]*?const dominantFillColor = buildCountryDominantFillColorMap\(\)\.get\(canonicalCode\);[\s\S]*?return getSafeCanvasColor\(dominantFillColor, null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.sovereignBaseColors, canonicalCode\), null\)[\s\S]*?getSafeCanvasColor\(getColorByCanonicalCountryCode\(runtimeState\.countryBaseColors, canonicalCode\), null\)[\s\S]*?\|\| LAND_FILL_COLOR;[\s\S]*?\}/.test(rendererSource)
       && /function drawAdmin0BackgroundFills\([\s\S]*?const fillColor = getAdmin0BackgroundFillColor\(code\);/.test(rendererSource),
     colorCoverageOwnerDiagnosticsUseDisplayOwnerCode:
-      /"ISO_A2_EH"[\s\S]*?"ADM0_A2"[\s\S]*?"__city_country_code"/.test(colorCoverageE2eSource)
-      && /extractCountryCodeFromId\(props\.id \|\| props\.NUTS_ID\)[\s\S]*?extractCountryCodeFromId\(feature\?\.id\)[\s\S]*?extractCountryCodeFromId\(fallback\)/.test(colorCoverageE2eSource)
+      /import\("\/js\/core\/feature_identity\.js"\)/.test(colorCoverageE2eSource)
+      && /getCountryCode:\s*getSharedFeatureCountryCode/.test(colorCoverageE2eSource)
+      && /getFeatureId:\s*getSharedFeatureId/.test(colorCoverageE2eSource)
+      && /const normalizeCode = \(value\) => normalizeFeatureCountryCode\(value, \{ allowReserved: true \}\);/.test(colorCoverageE2eSource)
+      && /getSharedFeatureCountryCode\(feature, \{[\s\S]*?fallbackCountryCode: fallback,[\s\S]*?fallbackId: fallback,[\s\S]*?\}\)/.test(colorCoverageE2eSource)
+      && /getSharedFeatureId\(feature, \{ fallback \}\)/.test(colorCoverageE2eSource)
+      && /ISO_A2_EH: props\.ISO_A2_EH[\s\S]*?ADM0_A2: props\.ADM0_A2[\s\S]*?__city_country_code: props\.__city_country_code/.test(colorCoverageE2eSource)
       && /const getDisplayOwnerCode = \(feature, featureId, fallbackCountryCode = ""\) => \{[\s\S]*?state\.sovereigntyByFeatureId\?\.\[featureId\][\s\S]*?state\.scenarioAutoShellOwnerByFeatureId\?\.\[featureId\][\s\S]*?shellCandidate\.startsWith\("RU_ARCTIC_FB_"\)[\s\S]*?props\.name[\s\S]*?shell fallback[\s\S]*?const displayOwnerCode = getDisplayOwnerCode\(feature, featureId, countryCode\);/.test(colorCoverageE2eSource)
       && /countryOwnerSourceMismatches\.push\(\{[\s\S]*?classification: "display-owner-source-mismatch"/.test(colorCoverageE2eSource)
       && /expect\(coverage\.missingOwnerColorCount,[\s\S]*?display owner base colors/.test(colorCoverageE2eSource),
     pixelProbeOwnerColorUsesDisplayOwnerCode:
-      /"ISO_A2_EH"[\s\S]*?"ADM0_A2"[\s\S]*?"__city_country_code"/.test(pixelProbeSource)
+      /import\("\/js\/core\/feature_identity\.js"\)/.test(pixelProbeSource)
+      && /getCountryCode:\s*getSharedFeatureCountryCode/.test(pixelProbeSource)
+      && /getFeatureId:\s*getSharedFeatureId/.test(pixelProbeSource)
+      && /getSharedFeatureCountryCode\(feature, \{[\s\S]*?fallbackCountryCode: fallback,[\s\S]*?fallbackId: fallback,[\s\S]*?\}\)/.test(pixelProbeSource)
+      && /getSharedFeatureId\(feature\)/.test(pixelProbeSource)
+      && /normalizeFeatureCountryCode\(state\.sovereigntyByFeatureId\?\.\[featureId\][\s\S]*?allowReserved: true/.test(pixelProbeSource)
       && /shellCandidate\.startsWith\("RU_ARCTIC_FB_"\)[\s\S]*?props\.name[\s\S]*?shell fallback/.test(pixelProbeSource)
       && /const displayOwnerCode = getDisplayOwnerCode\(matchedFeature, featureId, countryCode\);/.test(pixelProbeSource)
       && /state\.sovereignBaseColors\?\.\[displayOwnerCode\][\s\S]*?state\.countryBaseColors\?\.\[displayOwnerCode\]/.test(pixelProbeSource),

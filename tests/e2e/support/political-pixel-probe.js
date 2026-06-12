@@ -11,7 +11,11 @@ function channelDistance(left = [], right = []) {
 async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
   return page.evaluate(async ({ sampleProbes, sampleRadius, landFillRgb }) => {
     const { state } = await import("/js/core/state.js");
-    const { normalizeCountryCodeAlias } = await import("/js/core/country_code_aliases.js");
+    const {
+      getCountryCode: getSharedFeatureCountryCode,
+      getFeatureId: getSharedFeatureId,
+      normalizeFeatureCountryCode,
+    } = await import("/js/core/feature_identity.js");
     const canvas = document.getElementById("map-canvas");
     const context = canvas instanceof HTMLCanvasElement
       ? canvas.getContext("2d", { willReadFrequently: true })
@@ -48,53 +52,27 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
     }
 
     function getFeatureId(feature) {
-      const props = feature?.properties || {};
-      return String(props.id || props.NUTS_ID || feature?.id || "").trim();
-    }
-
-    const countryCodeKeys = [
-      "cntr_code",
-      "CNTR_CODE",
-      "CNTR",
-      "iso_a2",
-      "ISO_A2",
-      "iso_a2_eh",
-      "ISO_A2_EH",
-      "adm0_a2",
-      "ADM0_A2",
-      "country_code",
-      "countryCode",
-      "__city_country_code",
-    ];
-
-    function extractCountryCodeFromId(value) {
-      const text = String(value || "").trim().toUpperCase();
-      if (!text) return "";
-      const prefix = text.split(/[-_]/)[0];
-      const match = /^[A-Z]{2,3}$/.test(prefix) ? prefix : (prefix.match(/^[A-Z]{2,3}/)?.[0] || "");
-      return /^[A-Z]{2,3}$/.test(match) ? normalizeCountryCodeAlias(match) : "";
+      return getSharedFeatureId(feature);
     }
 
     function getFeatureCountryCode(feature, fallback = "") {
-      const props = feature?.properties || {};
-      for (const key of countryCodeKeys) {
-        const code = normalizeCountryCodeAlias(props[key]);
-        if (code) return code;
-      }
-      return normalizeCountryCodeAlias(fallback)
-        || extractCountryCodeFromId(props.id || props.NUTS_ID)
-        || extractCountryCodeFromId(feature?.id)
-        || extractCountryCodeFromId(fallback);
+      return getSharedFeatureCountryCode(feature, {
+        fallbackCountryCode: fallback,
+        fallbackId: fallback,
+      });
     }
 
     function getDisplayOwnerCode(feature, featureId, fallbackCountryCode = "") {
       const props = feature?.properties || {};
-      const directOwnerCode = normalizeCountryCodeAlias(state.sovereigntyByFeatureId?.[featureId] || "");
-      const shellOwnerCode = normalizeCountryCodeAlias(
+      const directOwnerCode = normalizeFeatureCountryCode(state.sovereigntyByFeatureId?.[featureId] || "", {
+        allowReserved: true,
+      });
+      const shellOwnerCode = normalizeFeatureCountryCode(
         state.scenarioAutoShellOwnerByFeatureId?.[featureId]
         || props.scenario_shell_owner_hint
         || props.scenario_shell_controller_hint
-        || ""
+        || "",
+        { allowReserved: true }
       );
       const featureCountryCode = getFeatureCountryCode(feature, fallbackCountryCode);
       const shellCandidate = String(props.id ?? featureId ?? feature?.id ?? "").trim().toUpperCase();

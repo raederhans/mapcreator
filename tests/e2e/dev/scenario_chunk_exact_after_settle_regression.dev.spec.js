@@ -625,7 +625,11 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
 
   const coverage = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
-    const { normalizeCountryCodeAlias } = await import("/js/core/country_code_aliases.js");
+    const {
+      getCountryCode: getSharedFeatureCountryCode,
+      getFeatureId: getSharedFeatureId,
+      normalizeFeatureCountryCode,
+    } = await import("/js/core/feature_identity.js");
     const spatialItems = Array.isArray(state.spatialItems) ? state.spatialItems : [];
     const colors = state.colors && typeof state.colors === "object" ? state.colors : {};
     const ownerColors = {
@@ -641,31 +645,9 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
       ? state.landDataFull.features
       : (Array.isArray(state.landData?.features) ? state.landData.features : []);
     const interactiveFeatureCount = Array.isArray(state.landData?.features) ? state.landData.features.length : 0;
-    const normalizeCode = (value) => normalizeCountryCodeAlias(value);
-    const countryCodeKeys = [
-      "cntr_code",
-      "CNTR_CODE",
-      "CNTR",
-      "iso_a2",
-      "ISO_A2",
-      "iso_a2_eh",
-      "ISO_A2_EH",
-      "adm0_a2",
-      "ADM0_A2",
-      "country_code",
-      "countryCode",
-      "__city_country_code",
-    ];
-    const extractCountryCodeFromId = (value) => {
-      const text = String(value || "").trim().toUpperCase();
-      if (!text) return "";
-      const prefix = text.split(/[-_]/)[0];
-      const match = /^[A-Z]{2,3}$/.test(prefix) ? prefix : (prefix.match(/^[A-Z]{2,3}/)?.[0] || "");
-      return /^[A-Z]{2,3}$/.test(match) ? normalizeCode(match) : "";
-    };
+    const normalizeCode = (value) => normalizeFeatureCountryCode(value, { allowReserved: true });
     const getFeatureId = (feature, fallback = "") => {
-      const props = feature?.properties || {};
-      return String(props.id || props.NUTS_ID || feature?.id || fallback).trim();
+      return getSharedFeatureId(feature, { fallback });
     };
     const landFeatureIds = new Set(
       (Array.isArray(state.landData?.features) ? state.landData.features : [])
@@ -678,15 +660,10 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
         .filter(Boolean)
     );
     const getFeatureCountryCode = (feature, fallback = "") => {
-      const props = feature?.properties || {};
-      for (const key of countryCodeKeys) {
-        const code = normalizeCode(props[key]);
-        if (code) return code;
-      }
-      return normalizeCode(fallback)
-        || extractCountryCodeFromId(props.id || props.NUTS_ID)
-        || extractCountryCodeFromId(feature?.id)
-        || extractCountryCodeFromId(fallback);
+      return getSharedFeatureCountryCode(feature, {
+        fallbackCountryCode: fallback,
+        fallbackId: fallback,
+      });
     };
     const getBaseColorFields = (countryCode) => {
       const code = normalizeCode(countryCode);
@@ -733,9 +710,12 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
       iso_a2: props.iso_a2,
       ISO_A2: props.ISO_A2,
       iso_a2_eh: props.iso_a2_eh,
+      ISO_A2_EH: props.ISO_A2_EH,
       adm0_a2: props.adm0_a2,
+      ADM0_A2: props.ADM0_A2,
       country_code: props.country_code,
       countryCode: props.countryCode,
+      __city_country_code: props.__city_country_code,
       scenario_shell_owner_hint: props.scenario_shell_owner_hint,
       scenario_shell_controller_hint: props.scenario_shell_controller_hint,
       scenario_helper_kind: props.scenario_helper_kind,
