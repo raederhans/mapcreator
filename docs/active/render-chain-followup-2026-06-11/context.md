@@ -31,3 +31,5 @@
 - Final `npm run perf:gate` at `4cfb5e1d` passed: TNO `4913.3ms`, HOI4 `5355.8ms`, `contractMismatches=[]`, `failures=[]`.
 - Self-review found that valid but long-lived local dev servers can still make local perf samples noisy. The perf script now starts a dedicated `.runtime/tmp/perf-baseline-runtime` server by default; existing active server reuse requires `PERF_REUSE_ACTIVE_SERVER=1`.
 - Default isolated `npm run perf:gate` with the self-review fix passed: TNO `6153.6ms`, HOI4 `5398.5ms`, `contractMismatches=[]`, `failures=[]`.
+- After committing the self-review fix, current HEAD `735d99f0` passed `npm run verify:perf-gate-contract`, then isolated `npm run perf:gate` failed twice on HOI4 only: `6921.6ms` and `6830.0ms` versus limit `5986.6ms`; both runs had `contractMismatches=[]`.
+- Push is held until the HOI4 startup gate either passes on a quiet machine or receives a targeted performance fix with fresh evidence.
