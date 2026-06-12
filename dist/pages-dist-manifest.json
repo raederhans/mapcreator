@@ -45632,7 +45632,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1016913,
+      "size_bytes": 1017198,
       "source_kind": "dist"
     },
     {
@@ -46342,7 +46342,7 @@
     },
     {
       "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
-      "size_bytes": 13362,
+      "size_bytes": 13361,
       "source_kind": "dist"
     },
     {
@@ -46826,5 +46826,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145226647
+  "total_bytes": 1145226931
 }
