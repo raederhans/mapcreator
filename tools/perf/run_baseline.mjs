@@ -16,6 +16,8 @@ const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", "baseline_202
 const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-04-20.md");
 const DEFAULT_RAW_DIR = path.join(REPO_ROOT, ".runtime", "output", "perf", "baseline_2026-04-20");
 const ACTIVE_SERVER_PATH = path.join(REPO_ROOT, ".runtime", "dev", "active_server.json");
+const PERF_SERVER_RUNTIME_ROOT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-runtime");
+const PERF_SERVER_ACTIVE_SERVER_PATH = path.join(PERF_SERVER_RUNTIME_ROOT, "dev", "active_server.json");
 const DEV_SERVER_OUT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-dev-server.out.log");
 const DEV_SERVER_ERR = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-dev-server.err.log");
 const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
@@ -162,6 +164,10 @@ function isProcessIdRunning(pid) {
   }
 }
 
+function shouldReuseActiveServer() {
+  return /^(1|true|yes|on)$/i.test(String(process.env.PERF_REUSE_ACTIVE_SERVER || "").trim());
+}
+
 function activeServerMetadataMatchesRepo(metadata) {
   const metadataCwd = String(metadata?.cwd || "").trim();
   return (
@@ -171,8 +177,8 @@ function activeServerMetadataMatchesRepo(metadata) {
   );
 }
 
-async function resolveExistingServerBaseUrl() {
-  const metadata = await readJson(ACTIVE_SERVER_PATH, {});
+async function resolveExistingServerBaseUrl(activeServerPath) {
+  const metadata = await readJson(activeServerPath, {});
   if (!activeServerMetadataMatchesRepo(metadata)) {
     return "";
   }
@@ -186,6 +192,7 @@ function spawnDevServer() {
   const env = {
     ...process.env,
     MAPCREATOR_OPEN_BROWSER: "0",
+    MAPCREATOR_RUNTIME_ROOT: PERF_SERVER_RUNTIME_ROOT,
   };
   return Promise.all([
     ensureDir(path.dirname(DEV_SERVER_OUT)),
@@ -205,15 +212,17 @@ function spawnDevServer() {
 }
 
 async function ensureServerBaseUrl() {
-  const existingBaseUrl = await resolveExistingServerBaseUrl();
-  if (existingBaseUrl) {
-    return { baseUrl: existingBaseUrl, serverOwner: null };
+  if (shouldReuseActiveServer()) {
+    const existingBaseUrl = await resolveExistingServerBaseUrl(ACTIVE_SERVER_PATH);
+    if (existingBaseUrl) {
+      return { baseUrl: existingBaseUrl, serverOwner: null };
+    }
   }
   const serverOwner = await spawnDevServer();
   try {
     const startedAt = Date.now();
     while (Date.now() - startedAt < DEV_SERVER_READY_TIMEOUT_MS) {
-      const nextBaseUrl = await resolveExistingServerBaseUrl();
+      const nextBaseUrl = await resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH);
       if (nextBaseUrl) {
         return { baseUrl: nextBaseUrl, serverOwner };
       }

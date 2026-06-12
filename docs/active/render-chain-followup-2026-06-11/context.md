@@ -29,3 +29,5 @@
 - `node tests/scenario_chunk_contracts.test.mjs`: 43 tests passed.
 - `npm run verify:pages-dist`: dist build passed, `tests.test_pages_dist_startup_shell` 34 tests passed, landing showcase Node tests 6 passed.
 - Final `npm run perf:gate` at `4cfb5e1d` passed: TNO `4913.3ms`, HOI4 `5355.8ms`, `contractMismatches=[]`, `failures=[]`.
+- Self-review found that valid but long-lived local dev servers can still make local perf samples noisy. The perf script now starts a dedicated `.runtime/tmp/perf-baseline-runtime` server by default; existing active server reuse requires `PERF_REUSE_ACTIVE_SERVER=1`.
+- Default isolated `npm run perf:gate` with the self-review fix passed: TNO `6153.6ms`, HOI4 `5398.5ms`, `contractMismatches=[]`, `failures=[]`.

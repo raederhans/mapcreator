@@ -348,4 +348,4 @@
 - 多 pass 合成后，最终 canvas 可能被后续政治填色等层压低局部差异；锁单个图层强度时优先采样该 pass 的 owning canvas，再用端到端截图确认可见链路。
 
 ### perf gate 复用 server 要校验身份
-- `.runtime/dev/active_server.json` 可能残留死 pid；只按 URL 探通会让隔离 worktree 测到另一个 worktree 的 server。复用前要校验 `pid` 存活且 `cwd` 等于当前 repo。
+- `.runtime/dev/active_server.json` 可能残留死 pid；只按 URL 探通会让隔离 worktree 测到另一个 worktree 的 server。perf gate 默认应使用自己的 runtime root，显式复用时再校验 `pid` 存活且 `cwd` 等于当前 repo。
