@@ -25,6 +25,7 @@ USER_STATUS_BANNED = "banned"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 UNSAFE_IMAGE_URL_CHARS = {"'", "\"", "`", "(", ")", "<", ">", "\\"}
 SHARED_PROJECT_FIELD_ALLOWLIST = (
+    # 社区下载只暴露可重新导入的项目字段；账号、审核和本地私有运行态继续留在后端表和私有 payload。
     "schemaVersion",
     "countryBaseColors",
     "featureOverrides",
@@ -457,6 +458,7 @@ class BackendService:
                 raise BackendError("user_not_found", "User was not found.", status=404)
             updates: list[str] = []
             values: list[object] = []
+            # 动态 UPDATE 只由固定字段名组成；外部输入先归一化成枚举值再进入 values。
             if "role" in payload:
                 role = self._normalize_role(payload.get("role"))
                 updates.append("role = ?")
@@ -854,6 +856,7 @@ class BackendService:
 
     def _share_project_payload(self, payload: dict[str, object]) -> dict[str, object]:
         # Public community downloads keep the importable project contract while dropping local-only/private runtime fields.
+        # 这里和 SHARED_PROJECT_FIELD_ALLOWLIST 是同一条分享边界，新增字段前先确认它适合公开下载。
         return {
             key: payload[key]
             for key in SHARED_PROJECT_FIELD_ALLOWLIST

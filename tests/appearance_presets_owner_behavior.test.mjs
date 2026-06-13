@@ -115,6 +115,7 @@ test("appearance presets owner saves current appearance and applies selected pre
   harness.runtimeState.showUrban = true;
   harness.runtimeState.intensityFields = createIntensityFieldsState();
 
+  // 这个断言锁住预设 apply 的完整快照语义：style、layer visibility 和 intensityFields 要同波次恢复。
   assert.equal(harness.owner.applySelectedAppearancePreset(), true);
   assert.equal(harness.runtimeState.styleConfig.ocean.fillColor, "#224466");
   assert.equal(harness.runtimeState.showUrban, false);

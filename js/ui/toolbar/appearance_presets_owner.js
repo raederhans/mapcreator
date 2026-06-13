@@ -124,6 +124,7 @@ export function createAppearancePresetsOwner({
     const currentState = ensurePresetState();
     const selectedPreset = getSelectedAppearancePreset(currentState);
     const requestedName = String(nodes.nameInput?.value || "").trim();
+    // 空名称表示覆盖当前选中预设；输入新名称表示 fork 一个新预设，便于 UI 保留“保存/另存为”单入口。
     const shouldUpdateSelected = !!selectedPreset && (!requestedName || requestedName === selectedPreset.name);
     const timestamp = now();
     const preset = createAppearancePresetFromRuntimeState(runtimeState, {
@@ -161,6 +162,7 @@ export function createAppearancePresetsOwner({
     const preset = getSelectedPreset();
     if (!preset) return false;
     const before = captureHistoryState({ appearanceState: true });
+    // apply 影响真实渲染态，历史快照只包 appearanceState；预设列表本身保持不变。
     applyAppearancePresetToRuntimeState(runtimeState, preset);
     const after = captureHistoryState({ appearanceState: true });
     pushAppearancePresetHistory(before, after, "appearance-preset-apply");

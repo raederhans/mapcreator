@@ -116,6 +116,7 @@ test("intensity field mask owner renders row runs, caches, and invalidates by ch
 
   assert.ok(first.canvas);
   assert.equal(first.cacheHit, false);
+  // 相邻同强度 cell 合并为一个 run，单独低强度 cell 保持独立，防止 mask 优化吞掉强度边界。
   assert.equal(first.renderedRunCount, 2);
   assert.equal(first.renderedCellCount, 4);
   assert.equal(canvases.length, 1);
