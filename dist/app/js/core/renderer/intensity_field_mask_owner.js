@@ -76,6 +76,7 @@ function buildMaskCacheKey(channelId, channel, {
   grayMap,
   projectionKey,
 }) {
+  // cache key 绑定 projection/transform/DPR/grayMap；任一视觉输入变化都要重建 mask，避免缩放后复用旧像素。
   return [
     channelId,
     Number(channel?.revision || 0),
@@ -120,6 +121,7 @@ function fillProjectedRun(maskContext, {
   offsetX,
   offsetY,
 }) {
+  // 同一行连续同强度 cell 合并成一个投影四边形，减少 fill 次数，同时保留经纬网格边界语义。
   const lonStep = 360 / INTENSITY_FIELD_GRID.columns;
   const latStep = 180 / INTENSITY_FIELD_GRID.rows;
   const lon0 = INTENSITY_FIELD_GRID.bounds[0] + (colStart * lonStep);
@@ -244,6 +246,7 @@ export function createIntensityFieldMaskOwner({
         }
         const colStart = col;
         col += 1;
+        // run-length 扫描只合并相同 gray byte；跨强度合并会破坏 mask 采样的单调性。
         while (col < INTENSITY_FIELD_GRID.columns) {
           const nextByte = mapIntensityToMaskGrayByte(composite[rowOffset + col], grayMap);
           if (nextByte !== byte) break;

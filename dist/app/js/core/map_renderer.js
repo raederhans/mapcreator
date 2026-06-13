@@ -6933,8 +6933,10 @@ function findResolvedColorFeatureById(featureId) {
     return indexedFeature;
   }
   const features = getResolvedColorSourceFeatures();
-  for (const feature of features) {
-    if (getFeatureId(feature) === id) {
+  for (let index = 0; index < features.length; index += 1) {
+    const feature = features[index];
+    const candidateId = getFeatureId(feature) || `feature-${index}`;
+    if (candidateId === id) {
       return feature;
     }
   }
@@ -17429,6 +17431,7 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   }
   const cache = getRenderPassCacheState();
   const recoverySettled = isInteractionRecoverySettled({ quietMs: 600 });
+  // 交互恢复期只预热 full cache，不立刻请求重绘；这样滚轮/拖拽后的稳定帧不会被后台精细缓存打断。
   if (
     runtimeState.renderPhase !== RENDER_PHASE_IDLE
     || runtimeState.deferExactAfterSettle
@@ -17793,6 +17796,7 @@ function drawScenarioPoliticalBackgroundFills({
     && visibleEntries.length > POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT
   );
   if (useProgressiveRecovery) {
+    // progressive 恢复先用 admin0 粗底图守住颜色可见性；refresh-colors 保持精确路径，避免编辑反馈被粗底图吞掉。
     const cachedFullPass = getScenarioPoliticalBackgroundFullPassGroups(visibleEntries, {
       transform,
       allowBuild: false,

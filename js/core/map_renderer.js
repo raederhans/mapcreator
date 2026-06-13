@@ -6933,8 +6933,10 @@ function findResolvedColorFeatureById(featureId) {
     return indexedFeature;
   }
   const features = getResolvedColorSourceFeatures();
-  for (const feature of features) {
-    if (getFeatureId(feature) === id) {
+  for (let index = 0; index < features.length; index += 1) {
+    const feature = features[index];
+    const candidateId = getFeatureId(feature) || `feature-${index}`;
+    if (candidateId === id) {
       return feature;
     }
   }

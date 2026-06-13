@@ -14,7 +14,11 @@ import {
   updateIntensityFieldChannel,
 } from "../js/core/state.js";
 
-function createRuntimeAppearanceState() {
+function createRuntimeAppearanceState({
+  pointLon = 139.7,
+  pointLat = 35.7,
+  pointStrength = 1.65,
+} = {}) {
   const intensityFields = updateIntensityFieldChannel(
     createIntensityFieldsState(),
     "urbanGlow",
@@ -23,9 +27,9 @@ function createRuntimeAppearanceState() {
       channel.revision = 3;
       channel.points = [{
         id: "metro-glow",
-        lon: 139.7,
-        lat: 35.7,
-        strength: 1.65,
+        lon: pointLon,
+        lat: pointLat,
+        strength: pointStrength,
         radiusDeg: 6,
         falloff: "smooth",
       }];
@@ -95,6 +99,38 @@ test("appearance preset applies a full appearance snapshot to runtime state", ()
   assert.equal(target.showRivers, false);
   assert.equal(target.showAirports, true);
   assert.ok(sampleIntensityField(target.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
+});
+
+test("appearance preset apply bumps intensity revisions beyond the current runtime state", () => {
+  const first = createAppearancePresetFromRuntimeState(createRuntimeAppearanceState(), {
+    id: "first-glow",
+    name: "First Glow",
+    now: Date.UTC(2026, 5, 12),
+  });
+  const second = createAppearancePresetFromRuntimeState(createRuntimeAppearanceState({
+    pointLon: -73.9,
+    pointLat: 40.7,
+    pointStrength: 0.45,
+  }), {
+    id: "second-glow",
+    name: "Second Glow",
+    now: Date.UTC(2026, 5, 13),
+  });
+  assert.equal(
+    first.snapshot.intensityFields.channels.urbanGlow.revision,
+    second.snapshot.intensityFields.channels.urbanGlow.revision,
+  );
+  const target = {
+    styleConfig: {},
+    intensityFields: createIntensityFieldsState(),
+  };
+
+  applyAppearancePresetToRuntimeState(target, first);
+  const firstAppliedRevision = target.intensityFields.channels.urbanGlow.revision;
+  applyAppearancePresetToRuntimeState(target, second);
+
+  assert.equal(target.intensityFields.channels.urbanGlow.revision, firstAppliedRevision + 1);
+  assert.ok(sampleIntensityField(target.intensityFields, "urbanGlow", -73.9, 40.7) < 0.8);
 });
 
 test("appearance preset library upserts, deletes, and imports exported presets", () => {

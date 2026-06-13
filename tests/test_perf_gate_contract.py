@@ -81,14 +81,19 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("sampleSpread: buildAggregateSampleSpread(runs)", script)
         self.assertIn("workloadIdentity: buildScenarioWorkloadIdentity", script)
         self.assertIn("workloadIdentity: buildReportWorkloadIdentity(options, measurement)", script)
-        self.assertIn("function activeServerMetadataMatchesRepo(metadata)", script)
-        self.assertIn("isProcessIdRunning(metadata?.pid)", script)
+        self.assertIn("function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {})", script)
+        self.assertIn("expectedPid = null", script)
+        self.assertIn("const metadataPid = Number(metadata?.pid);", script)
+        self.assertIn("isProcessIdRunning(metadataPid)", script)
+        self.assertIn("Number.isInteger(expectedNumericPid)", script)
+        self.assertIn("metadataPid === expectedNumericPid", script)
         self.assertIn("normalizeMetadataPath(metadataCwd) === normalizeMetadataPath(REPO_ROOT)", script)
         self.assertIn('MAPCREATOR_RUNTIME_ROOT: PERF_SERVER_RUNTIME_ROOT', script)
         self.assertIn("function shouldReuseActiveServer()", script)
         self.assertIn("process.env.PERF_REUSE_ACTIVE_SERVER", script)
-        self.assertIn("resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH)", script)
-        self.assertIn("if (!activeServerMetadataMatchesRepo(metadata))", script)
+        self.assertIn("resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH, {", script)
+        self.assertIn("expectedPid: serverOwner.child.pid", script)
+        self.assertIn("if (!activeServerMetadataMatchesRepo(metadata, options))", script)
         self.assertIn("manifestSha256", script)
         self.assertIn("function validateGateCurrentReport(currentReport, scenarioIds", script)
         self.assertIn("Current report has invalid gate metrics for scenarios", script)
@@ -925,10 +930,6 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertEqual(visual_fallback_metric["source"], "zoomEndChunkVisible.renderMetrics.scenarioChunkPromotionVisualStage")
         self.assertEqual(visual_fallback_metric["details"]["selectedVia"], "visual-stage-fallback")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
 class SettleExactMetricOwnershipTest(unittest.TestCase):
     def test_settle_exact_metric_ignores_legacy_fast_exact_and_keeps_skip_probe(self):
         benchmark = load_editor_benchmark_module()
@@ -973,3 +974,7 @@ class SettleExactMetricOwnershipTest(unittest.TestCase):
         script = EDITOR_BENCHMARK_SCRIPT.read_text(encoding="utf-8")
         self.assertIn("settlePoliticalFastExactSkipped", script)
         self.assertNotIn('"zoomSettleFullRedraw.renderMetrics.settlePoliticalFastExact"', script)
+
+
+if __name__ == "__main__":
+    unittest.main()

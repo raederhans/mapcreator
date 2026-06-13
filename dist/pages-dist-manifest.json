@@ -45632,7 +45632,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1017198,
+      "size_bytes": 1017605,
       "source_kind": "dist"
     },
     {
@@ -45732,7 +45732,7 @@
     },
     {
       "path": "app/js/core/renderer/intensity_field_mask_owner.js",
-      "size_bytes": 9644,
+      "size_bytes": 10016,
       "source_kind": "dist"
     },
     {
@@ -46027,7 +46027,7 @@
     },
     {
       "path": "app/js/core/state/appearance_preset_state.js",
-      "size_bytes": 11384,
+      "size_bytes": 12569,
       "source_kind": "dist"
     },
     {
@@ -46302,7 +46302,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_presets_owner.js",
-      "size_bytes": 9678,
+      "size_bytes": 9931,
       "source_kind": "dist"
     },
     {
@@ -46807,7 +46807,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1446398,
+      "size_bytes": 1446399,
       "source_kind": "dist"
     },
     {
@@ -46826,5 +46826,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145226931
+  "total_bytes": 1145229149
 }

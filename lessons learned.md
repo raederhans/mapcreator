@@ -355,3 +355,6 @@
 
 ### 外观预设 apply 要恢复数据依赖链
 - 预设恢复图层可见性后，要重放对应 owner 的数据加载前置条件；城市点应先加载 base city data，再加载 scenario optional cities，并同步验证 source 与 `dist/app` 两条交付链。
+
+### 外观预设 apply 要推进强度场 revision
+- 预设恢复 `intensityFields` 时要把 channel revision 作为新的应用批次递增；连续应用两个内容不同但 revision 相同的预设会命中旧 render pass。按当前 runtime 和快照 revision 的最大值 + 1 写回。

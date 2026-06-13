@@ -168,18 +168,23 @@ function shouldReuseActiveServer() {
   return /^(1|true|yes|on)$/i.test(String(process.env.PERF_REUSE_ACTIVE_SERVER || "").trim());
 }
 
-function activeServerMetadataMatchesRepo(metadata) {
+function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {}) {
   const metadataCwd = String(metadata?.cwd || "").trim();
+  const metadataPid = Number(metadata?.pid);
+  const expectedNumericPid = expectedPid === null
+    ? null
+    : Number(expectedPid);
   return (
     !!metadataCwd
     && normalizeMetadataPath(metadataCwd) === normalizeMetadataPath(REPO_ROOT)
-    && isProcessIdRunning(metadata?.pid)
+    && isProcessIdRunning(metadataPid)
+    && (expectedNumericPid === null || (Number.isInteger(expectedNumericPid) && metadataPid === expectedNumericPid))
   );
 }
 
-async function resolveExistingServerBaseUrl(activeServerPath) {
+async function resolveExistingServerBaseUrl(activeServerPath, options = {}) {
   const metadata = await readJson(activeServerPath, {});
-  if (!activeServerMetadataMatchesRepo(metadata)) {
+  if (!activeServerMetadataMatchesRepo(metadata, options)) {
     return "";
   }
   const baseUrl = String(metadata?.base_url || metadata?.url || "").trim();
@@ -223,7 +228,9 @@ async function ensureServerBaseUrl() {
   try {
     const startedAt = Date.now();
     while (Date.now() - startedAt < DEV_SERVER_READY_TIMEOUT_MS) {
-      const nextBaseUrl = await resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH);
+      const nextBaseUrl = await resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH, {
+        expectedPid: serverOwner.child.pid,
+      });
       if (nextBaseUrl) {
         return { baseUrl: nextBaseUrl, serverOwner };
       }

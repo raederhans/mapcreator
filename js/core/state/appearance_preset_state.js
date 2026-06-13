@@ -3,6 +3,9 @@ import {
   listTransportOverviewCapabilityFamilyIds,
 } from "../transport_capability_registry.js";
 import {
+  INTENSITY_FIELD_CHANNEL_IDS,
+} from "../intensity_field.js";
+import {
   normalizeIntensityFieldsState,
   serializeIntensityFieldsState,
 } from "./intensity_field_state.js";
@@ -296,6 +299,19 @@ export function buildAppearancePresetExportPayload(preset = null) {
   };
 }
 
+function restorePresetIntensityFieldsState(target, rawIntensityFields) {
+  const previousFields = normalizeIntensityFieldsState(target?.intensityFields);
+  const restoredFields = normalizeIntensityFieldsState(rawIntensityFields);
+  INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
+    const channel = restoredFields.channels[channelId];
+    if (!channel) return;
+    const previousRevision = Math.max(0, Math.round(Number(previousFields.channels[channelId]?.revision) || 0));
+    const restoredRevision = Math.max(0, Math.round(Number(channel.revision) || 0));
+    channel.revision = Math.max(previousRevision, restoredRevision) + 1;
+  });
+  return restoredFields;
+}
+
 export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = null) {
   if (!target || typeof target !== "object") return null;
   const source =
@@ -306,6 +322,6 @@ export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = n
   // 应用顺序和导入顺序保持一致：先恢复 style/layer，再替换 intensityFields，避免局部状态混用旧 schema。
   restoreImportedStyleConfigState(target, snapshot.styleConfig);
   restoreImportedLayerVisibilityState(target, snapshot.layerVisibility);
-  target.intensityFields = normalizeIntensityFieldsState(snapshot.intensityFields);
+  target.intensityFields = restorePresetIntensityFieldsState(target, snapshot.intensityFields);
   return snapshot;
 }
