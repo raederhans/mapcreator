@@ -479,6 +479,7 @@ function createScenarioBootstrapBundleFromCache({
     specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
     reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
     cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
+    strategicValuesPayload: priorBundle?.strategicValuesPayload || null,
     geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(cachedLocalePayload?.geoLocalePatchPayload),
     geoLocalePatchPayloadsByLanguage: {
       ...(priorBundle?.geoLocalePatchPayloadsByLanguage || {}),
@@ -635,6 +636,7 @@ async function createStartupScenarioBundleFromPayload({
     specialZoneLayersPayload: null,
     reliefOverlaysPayload: null,
     cityOverridesPayload: null,
+    strategicValuesPayload: null,
     geoLocalePatchPayload,
     geoLocalePatchPayloadsByLanguage: geoLocalePatchPayload ? { [language === "zh" ? "zh" : "en"]: geoLocalePatchPayload } : {},
     runtimeTopologyPayload,
@@ -840,6 +842,7 @@ function createScenarioBundleAssembler({
       specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
       reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
       cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
+      strategicValuesPayload: priorBundle?.strategicValuesPayload || null,
       geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value),
       geoLocalePatchPayloadsByLanguage: {
         ...(priorBundle?.geoLocalePatchPayloadsByLanguage || {}),

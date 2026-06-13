@@ -9,6 +9,11 @@ from pathlib import Path
 from unittest import mock
 
 from tools import check_scenario_contracts
+from map_builder.contracts import (
+    SCENARIO_PUBLISH_SCOPE_SCENARIO_DATA,
+    SCENARIO_STRATEGIC_VALUES_FILENAME,
+    resolve_scenario_publish_filenames,
+)
 from tools.check_scenario_contracts import (
     collect_duplicate_scenario_dirs,
     discover_scenario_dirs,
@@ -213,6 +218,12 @@ def _write_strict_bundle_files(
 
 
 class ScenarioContractTest(unittest.TestCase):
+    def test_scenario_publish_scope_includes_strategic_values_asset(self) -> None:
+        self.assertIn(
+            SCENARIO_STRATEGIC_VALUES_FILENAME,
+            resolve_scenario_publish_filenames(SCENARIO_PUBLISH_SCOPE_SCENARIO_DATA),
+        )
+
     def test_checked_in_scenario_registry_defaults_to_tno_1962(self) -> None:
         registry_path = Path(__file__).resolve().parents[1] / "data" / "scenarios" / "index.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -683,6 +694,57 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertEqual(warnings, [])
             self.assertTrue(any("scenario_runtime_topology_object_count must equal" in error for error in errors), errors)
             self.assertTrue(any("runtime_meta.json runtime_topology_object_count must equal" in error for error in errors), errors)
+
+    def test_validate_scenario_contract_strict_mode_rejects_partial_strategic_feature_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(tmp_root, "hoi4_partial_strategic")
+            _write_strict_bundle_files(
+                scenario_dir,
+                owners={"F-1": "AAA", "F-2": "AAA"},
+                controllers={"F-1": "AAA", "F-2": "AAA"},
+                cores={"F-1": ["AAA"], "F-2": ["AAA"]},
+                runtime_feature_ids=["F-1", "F-2"],
+                manifest_feature_count=2,
+            )
+            manifest_path = scenario_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["strategic_values_url"] = (
+                "data/scenarios/hoi4_partial_strategic/strategic_values.by_feature.json"
+            )
+            _write_json(
+                scenario_dir / "strategic_values.by_feature.json",
+                {
+                    "version": 1,
+                    "scenario_id": "hoi4_partial_strategic",
+                    "baseline_hash": manifest["baseline_hash"],
+                    "metrics": {"steel": {"kind": "additive", "min": 0, "max": 1, "p95": 1}},
+                    "buckets": {"s1": {"steel": 1}},
+                    "bucket_by_feature": {"F-1": "s1"},
+                    "resource_points": {"type": "FeatureCollection", "features": []},
+                },
+            )
+            snapshot_payload = check_scenario_contracts._build_snapshot_for_scenario(scenario_dir, manifest)
+            manifest["snapshot_fingerprint"] = snapshot_payload["snapshot_fingerprint"]
+            _write_json(manifest_path, manifest)
+            check_scenario_contracts._refresh_audit_payload(
+                scenario_dir,
+                manifest,
+                snapshot_payload=snapshot_payload,
+            )
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {}, strict=True)
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(
+                any("strategic_values.by_feature.json bucket_by_feature must cover owner features" in error for error in errors),
+                errors,
+            )
 
     def test_atlantropa_publish_mirror_must_match_runtime_object_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

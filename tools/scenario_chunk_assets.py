@@ -380,6 +380,18 @@ def _count_geometry_coordinates(node: Any) -> int:
     return len(coordinates)
 
 
+def _collect_feature_geometry_coordinates(geometry: Any, sink: list[tuple[float, float]]) -> None:
+    if not isinstance(geometry, dict):
+        return
+    geometry_type = str(geometry.get("type") or "").strip()
+    if geometry_type == "GeometryCollection":
+        geometries = geometry.get("geometries") if isinstance(geometry.get("geometries"), list) else []
+        for child in geometries:
+            _collect_feature_geometry_coordinates(child, sink)
+        return
+    _collect_coordinates(geometry.get("coordinates"), sink)
+
+
 def _count_geometry_parts(geometry: dict[str, Any] | None) -> int:
     if not isinstance(geometry, dict):
         return 0
@@ -507,7 +519,7 @@ def _build_chunk_cost_summary(payload: dict[str, Any], chunk_path: Path) -> dict
 
 def _feature_bounds(feature: dict[str, Any]) -> list[float]:
     coordinates: list[tuple[float, float]] = []
-    _collect_coordinates((feature.get("geometry") or {}).get("coordinates"), coordinates)
+    _collect_feature_geometry_coordinates(feature.get("geometry"), coordinates)
     if not coordinates:
         return [-180.0, -90.0, 180.0, 90.0]
     longitudes = [coord[0] for coord in coordinates]
@@ -531,7 +543,9 @@ def _bounds_area(bounds: list[float]) -> float:
 def _build_feature_bounds_summary(features: list[dict[str, Any]]) -> list[list[float]]:
     bounds_summary: list[list[float]] = []
     for feature in features:
-        bounds_summary.append(_feature_bounds(feature))
+        bounds = _feature_bounds(feature)
+        if _bounds_area(bounds) > 0:
+            bounds_summary.append(bounds)
     return bounds_summary
 
 

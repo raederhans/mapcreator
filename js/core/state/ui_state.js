@@ -341,6 +341,8 @@ export function createDefaultUiState() {
     showScenarioAtlantropa: true,
     showScenarioReliefOverlays: true,
     showCityPoints: true,
+    showStrategicResourceMarkers: false,
+    strategicChoroplethMetric: "",
     showUrban: true,
     showPhysical: true,
     showRivers: true,
@@ -473,6 +475,11 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
         : !!layerVisibility.showScenarioReliefOverlays,
     showCityPoints:
       layerVisibility.showCityPoints === undefined ? true : !!layerVisibility.showCityPoints,
+    showStrategicResourceMarkers:
+      layerVisibility.showStrategicResourceMarkers === undefined
+        ? false
+        : !!layerVisibility.showStrategicResourceMarkers,
+    strategicChoroplethMetric: String(layerVisibility.strategicChoroplethMetric || ""),
     showUrban: !!layerVisibility.showUrban,
     showPhysical: !!layerVisibility.showPhysical,
     showRivers: !!layerVisibility.showRivers,

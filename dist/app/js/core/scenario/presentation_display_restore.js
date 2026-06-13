@@ -36,6 +36,8 @@ function createScenarioDisplayRestoreRuntime({
       showScenarioSpecialRegions: state.showScenarioSpecialRegions !== false,
       showScenarioAtlantropa: state.showScenarioAtlantropa !== false,
       showScenarioReliefOverlays: state.showScenarioReliefOverlays !== false,
+      showStrategicResourceMarkers: !!state.showStrategicResourceMarkers,
+      strategicChoroplethMetric: String(state.strategicChoroplethMetric || ""),
     };
     return state.scenarioDisplaySettingsBeforeActivate;
   }
@@ -78,6 +80,8 @@ function createScenarioDisplayRestoreRuntime({
       state.showScenarioSpecialRegions = snapshot.showScenarioSpecialRegions !== false;
       state.showScenarioAtlantropa = snapshot.showScenarioAtlantropa !== false;
       state.showScenarioReliefOverlays = snapshot.showScenarioReliefOverlays !== false;
+      state.showStrategicResourceMarkers = !!snapshot.showStrategicResourceMarkers;
+      state.strategicChoroplethMetric = String(snapshot.strategicChoroplethMetric || "");
     }
     state.scenarioDisplaySettingsBeforeActivate = null;
     state.activeScenarioPerformanceHints = null;

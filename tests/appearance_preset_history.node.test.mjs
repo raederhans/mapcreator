@@ -33,6 +33,8 @@ function resetRuntimeAppearance() {
   state.showPhysical = true;
   state.showRivers = true;
   state.showTransport = true;
+  state.showStrategicResourceMarkers = false;
+  state.strategicChoroplethMetric = "";
   state.intensityFields = createIntensityFieldsState();
 }
 
@@ -47,6 +49,8 @@ function createPresetRuntime() {
     showPhysical: true,
     showRivers: false,
     showTransport: true,
+    showStrategicResourceMarkers: true,
+    strategicChoroplethMetric: "steel",
     intensityFields: updateIntensityFieldChannel(
       createIntensityFieldsState(),
       "urbanGlow",
@@ -93,15 +97,21 @@ test("history undo and redo restore applied appearance style, visibility, and in
   assert.equal(pushHistoryEntry({ before, after, meta: { kind: "appearance-preset-apply" } }), true);
   assert.equal(state.styleConfig.ocean.fillColor, "#112233");
   assert.equal(state.showUrban, false);
+  assert.equal(state.showStrategicResourceMarkers, true);
+  assert.equal(state.strategicChoroplethMetric, "steel");
   assert.ok(sampleIntensityField(state.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
 
   assert.equal(undoHistory(), true);
   assert.equal(state.styleConfig.ocean.fillColor, "#aadaff");
   assert.equal(state.showUrban, true);
+  assert.equal(state.showStrategicResourceMarkers, false);
+  assert.equal(state.strategicChoroplethMetric, "");
   assert.equal(sampleIntensityField(state.intensityFields, "urbanGlow", 139.7, 35.7), 1);
 
   assert.equal(redoHistory(), true);
   assert.equal(state.styleConfig.ocean.fillColor, "#112233");
   assert.equal(state.showUrban, false);
+  assert.equal(state.showStrategicResourceMarkers, true);
+  assert.equal(state.strategicChoroplethMetric, "steel");
   assert.ok(sampleIntensityField(state.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
 });

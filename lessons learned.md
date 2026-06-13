@@ -358,3 +358,7 @@
 
 ### 外观预设 apply 要推进强度场 revision
 - 预设恢复 `intensityFields` 时要把 channel revision 作为新的应用批次递增；连续应用两个内容不同但 revision 相同的预设会命中旧 render pass。按当前 runtime 和快照 revision 的最大值 + 1 写回。
+
+### 新 scenario manifest URL 要接入发布和覆盖合同
+- 新增 scenario JSON 资产时，同步更新 manifest URL、publish scope、snapshot input、bundle checker 和 strict checker；只验证文件存在会漏掉发布包缺资产和 partial feature coverage。
+- `GeometryCollection` 没有顶层 `coordinates`；chunk bounds、contract bounds 和生成器预算统计要递归读取 `geometries`，避免空坐标退化成全球 bbox。

@@ -1,5 +1,9 @@
 import { normalizeCityLayerStyleConfig } from "../../core/state.js";
 import {
+  STRATEGIC_CHOROPLETH_METRIC_IDS,
+  isStrategicChoroplethMetric,
+} from "../../core/renderer/strategic_choropleth.js";
+import {
   CITY_POINTS_THEME_OPTIONS,
   formatCityPointsDensityValue,
   getCityPointsLabelDensityHint,
@@ -31,6 +35,8 @@ function applyCityPointsThemeStyle(cityPointsConfig, themeStyle, clamp) {
 function collectCityPointsNodes(documentRef) {
   return {
     toggleCityPoints: documentRef.getElementById("toggleCityPoints"),
+    toggleStrategicResourceMarkers: documentRef.getElementById("toggleStrategicResourceMarkers"),
+    strategicChoroplethMetric: documentRef.getElementById("strategicChoroplethMetric"),
     cityPointsTheme: documentRef.getElementById("cityPointsTheme"),
     cityPointsThemeHint: documentRef.getElementById("cityPointsThemeHint"),
     cityPointsMarkerScale: documentRef.getElementById("cityPointsMarkerScale"),
@@ -50,6 +56,21 @@ function collectCityPointsNodes(documentRef) {
     cityPointsLabelSizeValue: documentRef.getElementById("cityPointsLabelSizeValue"),
   };
 }
+
+const STRATEGIC_CHOROPLETH_METRIC_LABELS = Object.freeze({
+  manpower: "Manpower",
+  steel: "Steel",
+  oil: "Oil",
+  aluminium: "Aluminium",
+  rubber: "Rubber",
+  tungsten: "Tungsten",
+  chromium: "Chromium",
+  coal: "Coal",
+  infrastructure: "Infrastructure",
+  military_factories: "Military Factories",
+  civilian_factories: "Civilian Factories",
+  factories_total: "Total Factories",
+});
 
 export function createAppearanceCityPointsOwner({
   runtimeState,
@@ -100,8 +121,42 @@ export function createAppearanceCityPointsOwner({
     nodes.cityPointsTheme.replaceChildren(fragment);
   };
 
+  const ensureStrategicChoroplethMetricOptions = () => {
+    if (!nodes.strategicChoroplethMetric) return;
+    const expectedValues = ["", ...STRATEGIC_CHOROPLETH_METRIC_IDS];
+    const currentValues = Array.from(nodes.strategicChoroplethMetric.options || [])
+      .map((option) => String(option.value || ""));
+    const matchesExisting =
+      currentValues.length === expectedValues.length
+      && currentValues.every((value, index) => value === expectedValues[index]);
+    if (!matchesExisting) {
+      const fragment = documentRef.createDocumentFragment();
+      expectedValues.forEach((metricId) => {
+        const option = documentRef.createElement("option");
+        option.value = metricId;
+        fragment.appendChild(option);
+      });
+      nodes.strategicChoroplethMetric.replaceChildren(fragment);
+    }
+    Array.from(nodes.strategicChoroplethMetric.options || []).forEach((option) => {
+      const metricId = String(option.value || "");
+      const label = metricId
+        ? (STRATEGIC_CHOROPLETH_METRIC_LABELS[metricId] || metricId)
+        : "None";
+      option.textContent = t(label, "ui");
+    });
+  };
+
   const renderCityPointsUi = () => {
     if (nodes.toggleCityPoints) nodes.toggleCityPoints.checked = !!runtimeState.showCityPoints;
+    if (nodes.toggleStrategicResourceMarkers) {
+      nodes.toggleStrategicResourceMarkers.checked = !!runtimeState.showStrategicResourceMarkers;
+    }
+    ensureStrategicChoroplethMetricOptions();
+    if (nodes.strategicChoroplethMetric) {
+      const metricId = String(runtimeState.strategicChoroplethMetric || "").trim();
+      nodes.strategicChoroplethMetric.value = isStrategicChoroplethMetric(metricId) ? metricId : "";
+    }
     const cityPointsConfig = syncCityPointsConfig();
     ensureCityPointsThemeOptions();
     if (nodes.cityPointsTheme) nodes.cityPointsTheme.value = String(cityPointsConfig.theme || "classic_graphite");
@@ -181,6 +236,33 @@ export function createAppearanceCityPointsOwner({
       });
       nodes.toggleCityPoints.dataset.bound = "true";
     }
+
+    if (nodes.toggleStrategicResourceMarkers && nodes.toggleStrategicResourceMarkers.dataset.bound !== "true") {
+      nodes.toggleStrategicResourceMarkers.checked = !!runtimeState.showStrategicResourceMarkers;
+      nodes.toggleStrategicResourceMarkers.addEventListener("change", (event) => {
+        runtimeState.showStrategicResourceMarkers = !!event.target.checked;
+        if (runtimeState.showStrategicResourceMarkers) {
+          void ensureActiveScenarioOptionalLayerLoaded("strategicvalues", {
+            reason: "toolbar-toggle",
+            renderNow: true,
+          });
+        }
+        persistCityViewSettings();
+        renderDirty("toggle-strategic-resource-markers");
+      });
+      nodes.toggleStrategicResourceMarkers.dataset.bound = "true";
+    }
+
+    bindCityPointsChange(nodes.strategicChoroplethMetric, (_cfg, event) => {
+      const metricId = String(event.target.value || "").trim();
+      runtimeState.strategicChoroplethMetric = isStrategicChoroplethMetric(metricId) ? metricId : "";
+      if (runtimeState.strategicChoroplethMetric) {
+        void ensureActiveScenarioOptionalLayerLoaded("strategicvalues", {
+          reason: "toolbar-strategic-choropleth",
+          renderNow: true,
+        });
+      }
+    }, "strategic-choropleth-metric");
 
     bindCityPointsInput(nodes.cityPointsColor, (cfg, event) => {
       cfg.color = normalizeOceanFillColor(event.target.value);

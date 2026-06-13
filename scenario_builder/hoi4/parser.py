@@ -117,6 +117,10 @@ def _parse_int_list(raw: str) -> list[int]:
     return values
 
 
+def _strip_comments(raw: str) -> str:
+    return re.sub(r"#[^\n]*", "", raw)
+
+
 def _parse_date_key(raw: object) -> tuple[int, int, int, int] | None:
     tokens = [token for token in str(raw or "").strip().split(".") if token]
     if not tokens:
@@ -164,6 +168,25 @@ def _extract_assignment_block(text: str, key: str) -> str:
     return text[open_index + 1 : close_index]
 
 
+def _iter_assignment_blocks(text: str, key: str) -> list[str]:
+    blocks: list[str] = []
+    cursor = 0
+    pattern = re.compile(rf"\b{re.escape(key)}\s*=\s*\{{")
+    while True:
+        match = pattern.search(text, cursor)
+        if not match:
+            break
+        open_index = text.find("{", match.start())
+        if open_index < 0:
+            break
+        close_index = _find_matching_brace(text, open_index)
+        if close_index < 0:
+            break
+        blocks.append(text[open_index + 1 : close_index])
+        cursor = close_index + 1
+    return blocks
+
+
 def _strip_dated_blocks(text: str) -> str:
     stripped = text
     cursor = 0
@@ -208,12 +231,166 @@ def _extract_tag_assignments(text: str, key: str) -> list[str]:
     return [normalized for normalized in (normalize_tag(match) for match in pattern.findall(text)) if normalized]
 
 
+def _parse_number_token(raw: object) -> float | None:
+    try:
+        return float(str(raw).strip())
+    except ValueError:
+        return None
+
+
+def _parse_numeric_assignments(block: str, *, key_pattern: str) -> dict[str, float]:
+    values: dict[str, float] = {}
+    cursor = 0
+    pattern = re.compile(rf"\b(?P<key>{key_pattern})\s*=")
+    while cursor < len(block):
+        match = pattern.search(block, cursor)
+        if not match:
+            break
+        key = match.group("key")
+        value_start = match.end()
+        while value_start < len(block) and block[value_start].isspace():
+            value_start += 1
+        if value_start < len(block) and block[value_start] == "{":
+            close_index = _find_matching_brace(block, value_start)
+            cursor = close_index + 1 if close_index >= 0 else value_start + 1
+            continue
+        value_match = re.match(r"[-+]?\d+(?:\.\d+)?", block[value_start:])
+        if value_match:
+            parsed = _parse_number_token(value_match.group(0))
+            if parsed is not None:
+                values[key] = parsed
+            cursor = value_start + value_match.end()
+        else:
+            cursor = match.end()
+    return values
+
+
+def _parse_resources_block(text: str) -> dict[str, float]:
+    resources_block = _extract_assignment_block(text, "resources")
+    if not resources_block:
+        return {}
+    return _parse_numeric_assignments(resources_block, key_pattern=r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _parse_buildings_block(block: str) -> tuple[dict[str, int], dict[int, dict[str, int]]]:
+    state_buildings: dict[str, int] = {}
+    province_buildings: dict[int, dict[str, int]] = {}
+    cursor = 0
+    pattern = re.compile(r"\b(?P<key>[A-Za-z_][A-Za-z0-9_]*|\d+)\s*=")
+    while cursor < len(block):
+        match = pattern.search(block, cursor)
+        if not match:
+            break
+        key = match.group("key")
+        value_start = match.end()
+        while value_start < len(block) and block[value_start].isspace():
+            value_start += 1
+        if value_start < len(block) and block[value_start] == "{":
+            close_index = _find_matching_brace(block, value_start)
+            if close_index < 0:
+                break
+            if key.isdigit():
+                nested = block[value_start + 1 : close_index]
+                parsed = _parse_numeric_assignments(
+                    nested,
+                    key_pattern=r"[A-Za-z_][A-Za-z0-9_]*",
+                )
+                if parsed:
+                    province_buildings[int(key)] = {
+                        building_key: int(value)
+                        for building_key, value in parsed.items()
+                    }
+            cursor = close_index + 1
+            continue
+        value_match = re.match(r"[-+]?\d+(?:\.\d+)?", block[value_start:])
+        if value_match and not key.isdigit():
+            parsed = _parse_number_token(value_match.group(0))
+            if parsed is not None:
+                state_buildings[key] = int(parsed)
+            cursor = value_start + value_match.end()
+        else:
+            cursor = match.end()
+    return state_buildings, province_buildings
+
+
+def _merge_buildings(
+    target_state: dict[str, int],
+    target_province: dict[int, dict[str, int]],
+    source_state: dict[str, int],
+    source_province: dict[int, dict[str, int]],
+) -> None:
+    target_state.update(source_state)
+    for province_id, buildings in source_province.items():
+        target_province.setdefault(province_id, {}).update(buildings)
+
+
+def _parse_effective_buildings(history_block: str, resolved_as_of: tuple[int, int, int, int] | None) -> tuple[dict[str, int], dict[int, dict[str, int]]]:
+    state_buildings: dict[str, int] = {}
+    province_buildings: dict[int, dict[str, int]] = {}
+    base_history = _strip_dated_blocks(history_block)
+    base_block = _extract_assignment_block(base_history, "buildings")
+    if base_block:
+        state, province = _parse_buildings_block(base_block)
+        _merge_buildings(state_buildings, province_buildings, state, province)
+    if resolved_as_of is None:
+        return state_buildings, province_buildings
+    for block_date, block_body in _iter_dated_blocks(history_block):
+        if block_date > resolved_as_of:
+            continue
+        dated_block = _extract_assignment_block(block_body, "buildings")
+        if not dated_block:
+            continue
+        state, province = _parse_buildings_block(dated_block)
+        _merge_buildings(state_buildings, province_buildings, state, province)
+    return state_buildings, province_buildings
+
+
+def _parse_victory_point_pairs(raw: str) -> list[tuple[int, int]]:
+    tokens = _parse_int_list(raw)
+    pairs: list[tuple[int, int]] = []
+    for index in range(0, len(tokens) - 1, 2):
+        pairs.append((tokens[index], tokens[index + 1]))
+    return pairs
+
+
+def _parse_add_victory_points(raw: str) -> tuple[int, int] | None:
+    values = _parse_numeric_assignments(raw, key_pattern=r"[A-Za-z_][A-Za-z0-9_]*")
+    province_id = values.get("province")
+    value = values.get("value")
+    if province_id is None or value is None:
+        return None
+    return (int(province_id), int(value))
+
+
+def _parse_effective_victory_points(
+    history_block: str,
+    resolved_as_of: tuple[int, int, int, int] | None,
+) -> list[tuple[int, int]]:
+    effective_blocks = [_strip_dated_blocks(history_block)]
+    if resolved_as_of is not None:
+        effective_blocks.extend(
+            block_body
+            for block_date, block_body in _iter_dated_blocks(history_block)
+            if block_date <= resolved_as_of
+        )
+
+    victory_points: list[tuple[int, int]] = []
+    for block in effective_blocks:
+        for vp_block in _iter_assignment_blocks(block, "victory_points"):
+            victory_points.extend(_parse_victory_point_pairs(vp_block))
+        for add_block in _iter_assignment_blocks(block, "add_victory_points"):
+            parsed = _parse_add_victory_points(add_block)
+            if parsed is not None:
+                victory_points.append(parsed)
+    return victory_points
+
+
 def parse_state_file(
     path: Path,
     *,
     as_of_date: tuple[int, int, int, int] | str | None = None,
 ) -> StateRecord | None:
-    text = path.read_text(encoding="utf-8-sig", errors="ignore")
+    text = _strip_comments(path.read_text(encoding="utf-8-sig", errors="ignore"))
     state_id_match = re.search(r"\bid\s*=\s*(\d+)", text)
     history_block = _extract_assignment_block(text, "history")
     owner_match = re.search(r"\bowner\s*=\s*([A-Z0-9_]+)", history_block)
@@ -221,10 +398,6 @@ def parse_state_file(
     provinces_match = re.search(r"\bprovinces\s*=\s*\{([^}]*)\}", text, re.S)
     state_category = re.search(r"\bstate_category\s*=\s*([a-zA-Z0-9_]+)", text)
     manpower_match = re.search(r"\bmanpower\s*=\s*(\d+)", text)
-    vp_blocks = re.findall(r"\bvictory_points\s*=\s*\{([^}]*)\}", text, re.S)
-    victory_points: list[int] = []
-    for block in vp_blocks:
-        victory_points.extend(_parse_int_list(block))
     if not state_id_match or not owner_match:
         return None
 
@@ -257,6 +430,7 @@ def parse_state_file(
                 core_tags.discard(removed_tag)
 
     controller_tag = controller_tag or owner_tag
+    buildings, province_buildings = _parse_effective_buildings(history_block, resolved_as_of)
 
     return StateRecord(
         state_id=int(state_id_match.group(1)),
@@ -267,7 +441,10 @@ def parse_state_file(
         province_ids=_parse_int_list(provinces_match.group(1) if provinces_match else ""),
         state_category=state_category.group(1).strip() if state_category else "",
         manpower=int(manpower_match.group(1)) if manpower_match else None,
-        victory_points=victory_points,
+        victory_points=_parse_effective_victory_points(history_block, resolved_as_of),
+        resources=_parse_resources_block(text),
+        buildings=buildings,
+        province_buildings=province_buildings,
     )
 
 

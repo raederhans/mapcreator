@@ -133,3 +133,264 @@ test("visibility sync clears stale special zone layers when declared asset load 
   }
 });
 
+function createStrategicValuesFixture() {
+  return {
+    version: 1,
+    scenario_id: "hoi4_optional_test",
+    baseline_hash: "baseline-1",
+    metrics: {
+      steel: { kind: "additive", min: 0, max: 20, p95: 20 },
+    },
+    buckets: {
+      s1: {
+        state_id: 1,
+        owner_tag: "GER",
+        steel: 20,
+      },
+    },
+    bucket_by_feature: {
+      "GER-1": "s1",
+    },
+    victory_points: [
+      {
+        province_id: 6521,
+        value: 50,
+        state_id: 1,
+        owner_tag: "GER",
+        name: "Berlin",
+        host_feature_id: "GER-1",
+        city_id: "berlin",
+      },
+    ],
+    resource_points: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [13.4, 52.5] },
+          properties: {
+            resource: "steel",
+            amount: 20,
+            tier: 3,
+            state_id: 1,
+            owner_tag: "GER",
+          },
+        },
+      ],
+    },
+    diagnostics: {
+      vp_total: 1,
+      vp_matched: 1,
+      resource_point_count: 1,
+    },
+  };
+}
+
+test("strategic values optional layer load normalizes runtime payload and bumps revision", async () => {
+  const previousActiveScenarioId = state.activeScenarioId;
+  const previousActiveScenarioManifest = state.activeScenarioManifest;
+  const previousBundleCache = state.scenarioBundleCacheById;
+  const previousStrategicValues = state.scenarioStrategicValuesData;
+  const previousStrategicRevision = state.scenarioStrategicValuesRevision;
+  const previousBaselineHash = state.scenarioBaselineHash;
+  const previousFetch = globalThis.fetch;
+
+  state.activeScenarioId = "hoi4_optional_test";
+  state.scenarioBaselineHash = "baseline-1";
+  state.activeScenarioManifest = {
+    scenario_id: "hoi4_optional_test",
+    baseline_hash: "baseline-1",
+    strategic_values_url: "data/scenarios/hoi4_optional_test/strategic_values.by_feature.json",
+  };
+  state.scenarioStrategicValuesData = null;
+  state.scenarioStrategicValuesRevision = 0;
+  state.scenarioBundleCacheById = {
+    hoi4_optional_test: {
+      manifest: state.activeScenarioManifest,
+      optionalLayerPromises: {},
+      optionalLayerSettledByKey: {},
+    },
+  };
+  globalThis.fetch = async (url) => {
+    assert.match(String(url), /strategic_values\.by_feature\.json/);
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify(createStrategicValuesFixture()),
+    };
+  };
+
+  try {
+    const payload = await ensureActiveScenarioOptionalLayerLoaded("strategic_values", {
+      d3Client: { json: async () => null },
+      renderNow: false,
+    });
+
+    assert.equal(payload.diagnostics.errors.length, 0);
+    assert.equal(state.scenarioStrategicValuesData.bucketByFeature["GER-1"], "s1");
+    assert.equal(state.scenarioStrategicValuesData.victoryPointsByFeature["GER-1"][0].name, "Berlin");
+    assert.equal(state.scenarioStrategicValuesData.resourcePoints.features[0].properties.resource, "steel");
+    assert.equal(state.scenarioStrategicValuesRevision, 1);
+  } finally {
+    state.activeScenarioId = previousActiveScenarioId;
+    state.activeScenarioManifest = previousActiveScenarioManifest;
+    state.scenarioBundleCacheById = previousBundleCache;
+    state.scenarioStrategicValuesData = previousStrategicValues;
+    state.scenarioStrategicValuesRevision = previousStrategicRevision;
+    state.scenarioBaselineHash = previousBaselineHash;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("visibility sync loads strategic values when resource markers are enabled", async () => {
+  const previousActiveScenarioId = state.activeScenarioId;
+  const previousActiveScenarioManifest = state.activeScenarioManifest;
+  const previousBundleCache = state.scenarioBundleCacheById;
+  const previousStrategicValues = state.scenarioStrategicValuesData;
+  const previousStrategicRevision = state.scenarioStrategicValuesRevision;
+  const previousShowStrategicResourceMarkers = state.showStrategicResourceMarkers;
+  const previousShowWaterRegions = state.showWaterRegions;
+  const previousShowScenarioSpecialRegions = state.showScenarioSpecialRegions;
+  const previousShowScenarioAtlantropa = state.showScenarioAtlantropa;
+  const previousShowScenarioReliefOverlays = state.showScenarioReliefOverlays;
+  const previousShowCityPoints = state.showCityPoints;
+  const previousShowSpecialZones = state.showSpecialZones;
+  const previousBaselineHash = state.scenarioBaselineHash;
+  const previousFetch = globalThis.fetch;
+
+  state.activeScenarioId = "hoi4_optional_test";
+  state.scenarioBaselineHash = "baseline-1";
+  state.activeScenarioManifest = {
+    scenario_id: "hoi4_optional_test",
+    baseline_hash: "baseline-1",
+    strategic_values_url: "data/scenarios/hoi4_optional_test/strategic_values.by_feature.json",
+  };
+  state.showStrategicResourceMarkers = true;
+  state.showWaterRegions = false;
+  state.showScenarioSpecialRegions = false;
+  state.showScenarioAtlantropa = false;
+  state.showScenarioReliefOverlays = false;
+  state.showCityPoints = false;
+  state.showSpecialZones = false;
+  state.scenarioStrategicValuesData = null;
+  state.scenarioStrategicValuesRevision = 0;
+  state.scenarioBundleCacheById = {
+    hoi4_optional_test: {
+      manifest: state.activeScenarioManifest,
+      optionalLayerPromises: {},
+      optionalLayerSettledByKey: {},
+    },
+  };
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    text: async () => JSON.stringify(createStrategicValuesFixture()),
+  });
+
+  try {
+    const payloads = await ensureActiveScenarioOptionalLayersForVisibility({
+      d3Client: { json: async () => null },
+      renderNow: false,
+    });
+
+    assert.equal(payloads.length, 1);
+    assert.equal(payloads[0].resourcePoints.features.length, 1);
+    assert.equal(state.scenarioStrategicValuesData.buckets.s1.steel, 20);
+    assert.equal(state.scenarioStrategicValuesRevision, 1);
+  } finally {
+    state.activeScenarioId = previousActiveScenarioId;
+    state.activeScenarioManifest = previousActiveScenarioManifest;
+    state.scenarioBundleCacheById = previousBundleCache;
+    state.scenarioStrategicValuesData = previousStrategicValues;
+    state.scenarioStrategicValuesRevision = previousStrategicRevision;
+    state.showStrategicResourceMarkers = previousShowStrategicResourceMarkers;
+    state.showWaterRegions = previousShowWaterRegions;
+    state.showScenarioSpecialRegions = previousShowScenarioSpecialRegions;
+    state.showScenarioAtlantropa = previousShowScenarioAtlantropa;
+    state.showScenarioReliefOverlays = previousShowScenarioReliefOverlays;
+    state.showCityPoints = previousShowCityPoints;
+    state.showSpecialZones = previousShowSpecialZones;
+    state.scenarioBaselineHash = previousBaselineHash;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("visibility sync loads strategic values when choropleth metric is enabled", async () => {
+  const previousActiveScenarioId = state.activeScenarioId;
+  const previousActiveScenarioManifest = state.activeScenarioManifest;
+  const previousBundleCache = state.scenarioBundleCacheById;
+  const previousStrategicValues = state.scenarioStrategicValuesData;
+  const previousStrategicRevision = state.scenarioStrategicValuesRevision;
+  const previousShowStrategicResourceMarkers = state.showStrategicResourceMarkers;
+  const previousStrategicChoroplethMetric = state.strategicChoroplethMetric;
+  const previousShowWaterRegions = state.showWaterRegions;
+  const previousShowScenarioSpecialRegions = state.showScenarioSpecialRegions;
+  const previousShowScenarioAtlantropa = state.showScenarioAtlantropa;
+  const previousShowScenarioReliefOverlays = state.showScenarioReliefOverlays;
+  const previousShowCityPoints = state.showCityPoints;
+  const previousShowSpecialZones = state.showSpecialZones;
+  const previousBaselineHash = state.scenarioBaselineHash;
+  const previousFetch = globalThis.fetch;
+
+  state.activeScenarioId = "hoi4_optional_test";
+  state.scenarioBaselineHash = "baseline-1";
+  state.activeScenarioManifest = {
+    scenario_id: "hoi4_optional_test",
+    baseline_hash: "baseline-1",
+    strategic_values_url: "data/scenarios/hoi4_optional_test/strategic_values.by_feature.json",
+  };
+  state.showStrategicResourceMarkers = false;
+  state.strategicChoroplethMetric = "steel";
+  state.showWaterRegions = false;
+  state.showScenarioSpecialRegions = false;
+  state.showScenarioAtlantropa = false;
+  state.showScenarioReliefOverlays = false;
+  state.showCityPoints = false;
+  state.showSpecialZones = false;
+  state.scenarioStrategicValuesData = null;
+  state.scenarioStrategicValuesRevision = 0;
+  state.scenarioBundleCacheById = {
+    hoi4_optional_test: {
+      manifest: state.activeScenarioManifest,
+      optionalLayerPromises: {},
+      optionalLayerSettledByKey: {},
+    },
+  };
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    text: async () => JSON.stringify(createStrategicValuesFixture()),
+  });
+
+  try {
+    const payloads = await ensureActiveScenarioOptionalLayersForVisibility({
+      d3Client: { json: async () => null },
+      renderNow: false,
+    });
+
+    assert.equal(payloads.length, 1);
+    assert.equal(payloads[0].resourcePoints.features.length, 1);
+    assert.equal(state.scenarioStrategicValuesData.buckets.s1.steel, 20);
+    assert.equal(state.scenarioStrategicValuesRevision, 1);
+  } finally {
+    state.activeScenarioId = previousActiveScenarioId;
+    state.activeScenarioManifest = previousActiveScenarioManifest;
+    state.scenarioBundleCacheById = previousBundleCache;
+    state.scenarioStrategicValuesData = previousStrategicValues;
+    state.scenarioStrategicValuesRevision = previousStrategicRevision;
+    state.showStrategicResourceMarkers = previousShowStrategicResourceMarkers;
+    state.strategicChoroplethMetric = previousStrategicChoroplethMetric;
+    state.showWaterRegions = previousShowWaterRegions;
+    state.showScenarioSpecialRegions = previousShowScenarioSpecialRegions;
+    state.showScenarioAtlantropa = previousShowScenarioAtlantropa;
+    state.showScenarioReliefOverlays = previousShowScenarioReliefOverlays;
+    state.showCityPoints = previousShowCityPoints;
+    state.showSpecialZones = previousShowSpecialZones;
+    state.scenarioBaselineHash = previousBaselineHash;
+    globalThis.fetch = previousFetch;
+  }
+});
+

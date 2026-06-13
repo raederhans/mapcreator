@@ -8,6 +8,7 @@ import json
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest.mock import patch
 
 from tools import build_pages_dist
 
@@ -45,6 +46,38 @@ def import_landing_builder(module_name: str):
 
 
 class PagesDistStartupShellTest(unittest.TestCase):
+
+    def test_landing_valid_geometry_recovers_from_mixed_dimension_make_valid_error(self) -> None:
+        from shapely.errors import GEOSException
+        from shapely.geometry import Polygon
+
+        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
+        bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)])
+
+        with patch.object(
+            build_landing_europe_1936_showcase,
+            "make_valid",
+            side_effect=GEOSException("IllegalArgumentException: Overlay input is mixed-dimension"),
+        ):
+            geometry = build_landing_europe_1936_showcase.valid_geometry(bowtie)
+
+        self.assertFalse(geometry.is_empty)
+        self.assertTrue(geometry.is_valid)
+
+    def test_landing_polygon_path_renders_geometry_collection_polygons(self) -> None:
+        from shapely.geometry import GeometryCollection, LineString, Polygon
+
+        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
+        canvas = build_landing_europe_1936_showcase.Canvas.create(100, 100, (0, 0, 2, 2))
+        geometry = GeometryCollection([
+            LineString([(0, 0), (1, 1)]),
+            Polygon([(0, 0), (1, 0), (1, 1), (0, 0)]),
+        ])
+
+        paths = build_landing_europe_1936_showcase.polygon_path(geometry, canvas)
+
+        self.assertEqual(len(paths), 1)
+        self.assertTrue(paths[0].startswith("M"))
 
     def test_checked_in_pages_dist_manifest_exists(self) -> None:
         self.assertTrue(
@@ -382,16 +415,26 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn("data/europe_land_bg.geojson", payload["source_files"])
                     self.assertTrue(payload["selection_policy"]["blank_canvas"])
                     self.assertEqual(payload["selection_policy"]["land_simplify_tolerance"], 0.08)
-                    self.assertIsNone(payload["selection_policy"]["land_path_limit"])
+                    self.assertEqual(payload["selection_policy"]["land_path_limit"], 8600)
+                    self.assertEqual(payload["selection_policy"]["coastline_path_limit"], 1000)
                     self.assertEqual(payload["selection_policy"]["blank_internal_stroke_width"], 0.25)
                     self.assertEqual(payload["selection_policy"]["coastline_stroke_width"], 0.5)
                     self.assertGreater(payload["feature_counts"]["land_paths"], 0)
                     self.assertGreater(payload["feature_counts"]["coastline_paths"], 0)
-                    self.assertEqual(
+                    self.assertEqual(payload["feature_counts"]["land_path_limit"], 8600)
+                    self.assertEqual(payload["feature_counts"]["land_paths"], 8600)
+                    self.assertEqual(payload["feature_counts"]["coastline_path_limit"], 1000)
+                    self.assertEqual(payload["feature_counts"]["coastline_paths"], 1000)
+                    self.assertGreater(
+                        payload["feature_counts"]["coastline_paths_available"],
+                        payload["feature_counts"]["coastline_paths"],
+                    )
+                    self.assertGreater(payload["feature_counts"]["coastline_paths_dropped"], 0)
+                    self.assertGreater(
                         payload["feature_counts"]["land_paths_available"],
                         payload["feature_counts"]["land_paths"],
                     )
-                    self.assertEqual(payload["feature_counts"]["land_paths_dropped"], 0)
+                    self.assertGreater(payload["feature_counts"]["land_paths_dropped"], 0)
                     self.assertEqual(payload["territory_tags"], [])
                 else:
                     self.assertIn(f"data/scenarios/{scenario_id}/manifest.json", payload["source_files"])

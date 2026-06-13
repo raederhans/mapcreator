@@ -59,6 +59,8 @@ HERO_CANVAS_WIDTH = 980
 HERO_CANVAS_HEIGHT = 680
 HERO_CAPITAL_LIMIT = 8
 HERO_TERRITORY_PATH_LIMIT_PER_TAG = 48
+HERO_BLANK_LAND_PATH_LIMIT = 8600
+HERO_BLANK_COASTLINE_PATH_LIMIT = 1000
 HERO_BASE_UNDERLAY_PATH_LIMIT = 360
 HERO_BASE_UNDERLAY_COASTLINE_LIMIT = 360
 SHOWCASE_CANVAS_PADDING = 36
@@ -322,7 +324,14 @@ def rail_paths() -> list[Path]:
 def valid_geometry(geometry: BaseGeometry) -> BaseGeometry:
     if geometry.is_valid:
         return geometry
-    return make_valid(geometry)
+    try:
+        return make_valid(geometry)
+    except GEOSException:
+        try:
+            repaired = geometry.buffer(0)
+        except GEOSException:
+            return GeometryCollection()
+        return repaired if repaired.is_valid else GeometryCollection()
 
 
 def renderable_geometry(geometry: BaseGeometry) -> BaseGeometry:
@@ -357,6 +366,11 @@ def polygon_path(geometry: BaseGeometry, canvas: Canvas, include_interiors: bool
         paths: list[str] = []
         for polygon in sorted(geometry.geoms, key=lambda item: item.area, reverse=True):
             paths.extend(polygon_path(polygon, canvas, include_interiors=include_interiors))
+        return [path for path in paths if path]
+    if geometry.geom_type == "GeometryCollection":
+        paths: list[str] = []
+        for part in sorted(polygon_parts(geometry), key=lambda item: item.area, reverse=True):
+            paths.extend(polygon_path(part, canvas, include_interiors=include_interiors))
         return [path for path in paths if path]
     return []
 
@@ -1172,17 +1186,23 @@ def load_blank_land_paths(canvas: Canvas) -> tuple[list[str], list[str], dict[st
         clipped_count += 1
         selected_paths.extend((clipped.area, path) for path in polygon_path(clipped, canvas, include_interiors=True))
     selected_paths.sort(reverse=True)
-    path_commands = [path for _area, path in selected_paths]
+    path_commands = [path for _area, path in selected_paths[:HERO_BLANK_LAND_PATH_LIMIT]]
     coastline_paths, coastline_counts = load_blank_coastline_paths(canvas)
-    return path_commands, coastline_paths, {
+    limited_coastline_paths = coastline_paths[:HERO_BLANK_COASTLINE_PATH_LIMIT]
+    return path_commands, limited_coastline_paths, {
         "land_features_inspected": inspected,
         "land_features_candidates": candidate_count,
         "land_features_clipped": clipped_count,
         "land_paths_available": len(selected_paths),
+        "land_path_limit": HERO_BLANK_LAND_PATH_LIMIT,
         "land_paths": len(path_commands),
         "land_paths_dropped": max(0, len(selected_paths) - len(path_commands)),
         "land_simplify_tolerance": BLANK_LAND_SIMPLIFY,
         **coastline_counts,
+        "coastline_path_limit": HERO_BLANK_COASTLINE_PATH_LIMIT,
+        "coastline_paths": len(limited_coastline_paths),
+        "coastline_paths_available": len(coastline_paths),
+        "coastline_paths_dropped": max(0, len(coastline_paths) - len(limited_coastline_paths)),
     }, [BLANK_BASE_MANIFEST, EUROPE_BLANK_TOPOLOGY, EUROPE_BLANK_COASTLINE]
 
 
@@ -1372,10 +1392,11 @@ def build_hero_metadata(
         selection_policy.update(
             {
                 "land_simplify_tolerance": BLANK_LAND_SIMPLIFY,
-                "land_path_limit": None,
+                "land_path_limit": HERO_BLANK_LAND_PATH_LIMIT,
                 "land_path_ranking": "clipped geometry area descending",
                 "blank_internal_stroke_width": BLANK_INTERNAL_STROKE_WIDTH,
                 "coastline_stroke_width": BLANK_COASTLINE_STROKE_WIDTH,
+                "coastline_path_limit": HERO_BLANK_COASTLINE_PATH_LIMIT,
                 "coastline_source": "data/europe_land_bg.geojson exterior rings",
             }
         )

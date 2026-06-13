@@ -41,6 +41,8 @@ def _create_valid_hoi4_bundle(tmp_root: Path, scenario_name: str = "hoi4_1936") 
             "owners_url": f"data/scenarios/{scenario_name}/owners.by_feature.json",
             "cores_url": f"data/scenarios/{scenario_name}/cores.by_feature.json",
             "audit_url": f"data/scenarios/{scenario_name}/audit.json",
+            "strategic_values_url": f"data/scenarios/{scenario_name}/strategic_values.by_feature.json",
+            "special_zone_layers_url": f"data/scenarios/{scenario_name}/special_zone_layers.json",
             "city_overrides_url": f"data/scenarios/{scenario_name}/city_overrides.json",
             "capital_hints_url": f"data/scenarios/{scenario_name}/capital_hints.json",
             "summary": {
@@ -51,6 +53,11 @@ def _create_valid_hoi4_bundle(tmp_root: Path, scenario_name: str = "hoi4_1936") 
                 "geometry_blocker_count": 0,
                 "failed_region_check_count": 0,
                 "synthetic_owner_feature_count": 0,
+                "strategic_vp_total": 1,
+                "strategic_vp_matched": 1,
+                "strategic_states_anchored": 1,
+                "strategic_states_pooled": 0,
+                "strategic_resource_point_count": 1,
             },
             "generated_at": "2026-04-03T00:00:00Z",
             "performance_hints": {"render_profile_default": "balanced"},
@@ -126,6 +133,77 @@ def _create_valid_hoi4_bundle(tmp_root: Path, scenario_name: str = "hoi4_1936") 
     _write_json(scenario_dir / "controllers.by_feature.json", {"controllers": {"F-1": "AAA"}})
     _write_json(scenario_dir / "cores.by_feature.json", {"cores": {"F-1": ["AAA"]}})
     _write_json(
+        scenario_dir / "strategic_values.by_feature.json",
+        {
+            "version": 1,
+            "scenario_id": scenario_name,
+            "baseline_hash": "abc123",
+            "as_of_date": "1936.1.1.12",
+            "metrics": {
+                "manpower": {"kind": "additive", "min": 0, "max": 100, "p95": 100}
+            },
+            "buckets": {
+                "s1": {
+                    "state_id": 1,
+                    "owner_tag": "AAA",
+                    "attribution": "vp_anchor",
+                    "manpower": 100,
+                }
+            },
+            "bucket_by_feature": {"F-1": "s1"},
+            "victory_points": [
+                {
+                    "province_id": 1,
+                    "value": 10,
+                    "state_id": 1,
+                    "owner_tag": "AAA",
+                    "name": "Capital",
+                    "city_id": "CITY::capital",
+                    "stable_key": "id::capital",
+                    "host_feature_id": "F-1",
+                    "lon": 0,
+                    "lat": 0,
+                    "match_method": "name_owner_match",
+                    "confidence": "high",
+                }
+            ],
+            "resource_points": {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [0, 0]},
+                        "properties": {
+                            "resource": "steel",
+                            "amount": 1,
+                            "state_id": 1,
+                            "owner_tag": "AAA",
+                            "anchor_kind": "vp_city",
+                            "tier": 3,
+                        },
+                    }
+                ],
+            },
+            "diagnostics": {
+                "vp_total": 1,
+                "vp_matched": 1,
+                "states_anchored": 1,
+                "states_pooled": 0,
+                "resource_point_count": 1,
+            },
+        },
+    )
+    _write_json(
+        scenario_dir / "special_zone_layers.json",
+        {
+            "version": 1,
+            "layers": [],
+            "activeLayerId": "",
+            "topologyFingerprint": "",
+            "diagnostics": [],
+        },
+    )
+    _write_json(
         scenario_dir / "audit.json",
         {
             "diagnostics": {
@@ -150,7 +228,13 @@ def _create_valid_hoi4_bundle(tmp_root: Path, scenario_name: str = "hoi4_1936") 
         {
             "scenario_id": scenario_name,
             "require_controllers": True,
+            "manifest_required_fields": ["strategic_values_url"],
             "summary_equals": {"feature_count": 1},
+            "strategic_diagnostics_min": {
+                "vp_total": 1,
+                "vp_matched": 1,
+                "states_anchored": 1,
+            },
             "featured_tags_contains": ["AAA"],
             "diagnostics_equals": {
                 "owner_rule_paths": [
@@ -319,3 +403,66 @@ class CheckHoi4ScenarioBundleTest(unittest.TestCase):
             self.assertEqual(report["status"], "ok")
             self.assertEqual(report["shared_errors"], [])
             self.assertEqual(report["domain_errors"], [])
+
+    def test_inspect_hoi4_scenario_bundle_rejects_stale_strategic_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            scenario_dir, report_dir, expectation_path = _create_valid_hoi4_bundle(tmp_root)
+            strategic_path = scenario_dir / "strategic_values.by_feature.json"
+            strategic_payload = json.loads(strategic_path.read_text(encoding="utf-8"))
+            strategic_payload["baseline_hash"] = "stale"
+            _write_json(strategic_path, strategic_payload)
+
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            try:
+                report = inspect_hoi4_scenario_bundle(
+                    scenario_dir,
+                    report_dir,
+                    expectation_path=expectation_path,
+                )
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(report["status"], "failed")
+            self.assertTrue(
+                any("strategic_values.by_feature.json.baseline_hash" in error for error in report["domain_errors"])
+            )
+
+    def test_inspect_hoi4_scenario_bundle_rejects_partial_strategic_feature_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            scenario_dir, report_dir, expectation_path = _create_valid_hoi4_bundle(tmp_root)
+            _write_json(
+                scenario_dir / "owners.by_feature.json",
+                {"owners": {"F-1": "AAA", "F-2": "AAA"}},
+            )
+            _write_json(
+                scenario_dir / "controllers.by_feature.json",
+                {"controllers": {"F-1": "AAA", "F-2": "AAA"}},
+            )
+            _write_json(
+                scenario_dir / "cores.by_feature.json",
+                {"cores": {"F-1": ["AAA"], "F-2": ["AAA"]}},
+            )
+            strategic_path = scenario_dir / "strategic_values.by_feature.json"
+            strategic_payload = json.loads(strategic_path.read_text(encoding="utf-8"))
+            strategic_payload["bucket_by_feature"] = {"F-1": "s1"}
+            _write_json(strategic_path, strategic_payload)
+
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            try:
+                report = inspect_hoi4_scenario_bundle(
+                    scenario_dir,
+                    report_dir,
+                    expectation_path=expectation_path,
+                )
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(report["status"], "failed")
+            self.assertTrue(
+                any("bucket_by_feature is missing owner feature IDs" in error for error in report["domain_errors"]),
+                report["domain_errors"],
+            )

@@ -523,7 +523,7 @@ class FileManager {
     // export 的职责是把当前 runtimeState 收敛成稳定 schema。
     // 这里宁可集中做一次 normalize，也不要让读取方承担多套历史字段和 UI 派生状态。
     const payload = {
-      schemaVersion: 21,
+      schemaVersion: 22,
       countryBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
       featureOverrides: appState.visualOverrides || appState.featureOverrides || {},
       sovereignBaseColors: appState.sovereignBaseColors || appState.countryBaseColors || {},
@@ -572,6 +572,8 @@ class FileManager {
         showScenarioReliefOverlays:
           appState.showScenarioReliefOverlays === undefined ? true : !!appState.showScenarioReliefOverlays,
         showCityPoints: appState.showCityPoints === undefined ? true : !!appState.showCityPoints,
+        showStrategicResourceMarkers: !!appState.showStrategicResourceMarkers,
+        strategicChoroplethMetric: String(appState.strategicChoroplethMetric || ""),
         showUrban: !!appState.showUrban,
         showPhysical: !!appState.showPhysical,
         showRivers: !!appState.showRivers,
@@ -910,6 +912,11 @@ class FileManager {
             : !!data.layerVisibility.showScenarioReliefOverlays;
         data.layerVisibility.showCityPoints =
           data.layerVisibility.showCityPoints === undefined ? true : !!data.layerVisibility.showCityPoints;
+        data.layerVisibility.showStrategicResourceMarkers =
+          data.layerVisibility.showStrategicResourceMarkers === undefined
+            ? false
+            : !!data.layerVisibility.showStrategicResourceMarkers;
+        data.layerVisibility.strategicChoroplethMetric = String(data.layerVisibility.strategicChoroplethMetric || "");
         data.layerVisibility.showUrban =
           data.layerVisibility.showUrban === undefined ? true : !!data.layerVisibility.showUrban;
         data.layerVisibility.showPhysical =

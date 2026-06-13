@@ -323,6 +323,13 @@ async function applyImportedProjectState(data, { ui, hooks }) {
     await callRuntimeHook(state, "ensureBaseCityDataFn", { reason: "project-import", renderNow: false });
     await ensureActiveScenarioOptionalLayerLoaded("cities", { renderNow: false });
   }
+  if (
+    state.activeScenarioId
+    && (state.showStrategicResourceMarkers || String(state.strategicChoroplethMetric || "").trim())
+  ) {
+    const { ensureActiveScenarioOptionalLayerLoaded } = await getScenarioResourcesModule();
+    await ensureActiveScenarioOptionalLayerLoaded("strategicvalues", { renderNow: false });
+  }
   if (state.showRivers) {
     await callRuntimeHook(state, "ensureContextLayerDataFn", "rivers", {
       reason: "project-import",

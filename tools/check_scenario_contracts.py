@@ -30,6 +30,7 @@ from map_builder.contracts import (
     SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE,
     SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS,
     SCENARIO_STRICT_REQUIRED_FILENAMES,
+    SCENARIO_STRATEGIC_VALUES_FILENAME,
     build_scenario_snapshot_payload,
     normalize_scenario_contract_tag,
     resolve_scenario_contract_profile,
@@ -262,6 +263,7 @@ def _load_layer_payloads_from_manifest(manifest: dict[str, Any]) -> dict[str, di
         "special_zone_layers": manifest.get("special_zone_layers_url"),
         "relief": manifest.get("relief_overlays_url"),
         "cities": manifest.get("city_overrides_url"),
+        "strategic_values": manifest.get("strategic_values_url"),
     }.items():
         value = str(raw_url or "").strip()
         if not value:
@@ -317,6 +319,7 @@ def _collect_snapshot_inputs(
         "bathymetry_topology_url": "bathymetry.topo.json",
         "city_overrides_url": "city_overrides.json",
         "capital_hints_url": "capital_hints.json",
+        "strategic_values_url": SCENARIO_STRATEGIC_VALUES_FILENAME,
         "scenario_atlantropa_topology_url": "scenario_atlantropa.topo.json",
         "scenario_atlantropa_metadata_url": "scenario_atlantropa_metadata.json",
     }
@@ -1168,6 +1171,8 @@ def _required_profile_filenames(profile_id: str, manifest: dict[str, Any]) -> li
         required.append("audit.json")
     if str(manifest.get("special_zone_layers_url") or "").strip():
         required.append("special_zone_layers.json")
+    if str(manifest.get("strategic_values_url") or "").strip():
+        required.append(SCENARIO_STRATEGIC_VALUES_FILENAME)
     if str(manifest.get("scenario_atlantropa_topology_url") or "").strip():
         required.append("scenario_atlantropa.topo.json")
     if str(manifest.get("scenario_atlantropa_metadata_url") or "").strip():
@@ -1227,10 +1232,22 @@ def _collect_geojson_coordinates(value: Any, coordinates: list[tuple[float, floa
         _collect_geojson_coordinates(item, coordinates)
 
 
+def _collect_geojson_feature_coordinates(geometry: Any, coordinates: list[tuple[float, float]]) -> None:
+    if not isinstance(geometry, dict):
+        return
+    geometry_type = str(geometry.get("type") or "").strip()
+    if geometry_type == "GeometryCollection":
+        geometries = geometry.get("geometries") if isinstance(geometry.get("geometries"), list) else []
+        for child in geometries:
+            _collect_geojson_feature_coordinates(child, coordinates)
+        return
+    _collect_geojson_coordinates(geometry.get("coordinates"), coordinates)
+
+
 def _feature_bounds_for_contract(feature: dict[str, Any]) -> list[float]:
     coordinates: list[tuple[float, float]] = []
     geometry = feature.get("geometry") if isinstance(feature.get("geometry"), dict) else {}
-    _collect_geojson_coordinates(geometry.get("coordinates"), coordinates)
+    _collect_geojson_feature_coordinates(geometry, coordinates)
     if not coordinates:
         return [-180.0, -90.0, 180.0, 90.0]
     longitudes = [coord[0] for coord in coordinates]
@@ -2004,6 +2021,52 @@ def validate_strict_bundle_contract(
             f"core_only={core_only_ids[:10]} "
             f"owner_only={owner_only_ids[:10]}."
         )
+
+    strategic_payload = required_payloads.get(SCENARIO_STRATEGIC_VALUES_FILENAME)
+    if strategic_payload is not None:
+        if strategic_payload.get("scenario_id") != manifest.get("scenario_id"):
+            errors.append(
+                f"{SCENARIO_STRATEGIC_VALUES_FILENAME} scenario_id must match manifest.scenario_id."
+            )
+        if strategic_payload.get("baseline_hash") != owners_payload.get("baseline_hash"):
+            errors.append(
+                f"{SCENARIO_STRATEGIC_VALUES_FILENAME} baseline_hash must match owners.by_feature.json baseline_hash."
+            )
+        strategic_buckets = strategic_payload.get("buckets")
+        strategic_bucket_by_feature = strategic_payload.get("bucket_by_feature")
+        strategic_resource_points = strategic_payload.get("resource_points")
+        if not isinstance(strategic_buckets, dict) or not strategic_buckets:
+            errors.append(f"{SCENARIO_STRATEGIC_VALUES_FILENAME} buckets must be a non-empty object.")
+        if not isinstance(strategic_bucket_by_feature, dict):
+            errors.append(f"{SCENARIO_STRATEGIC_VALUES_FILENAME} bucket_by_feature must be an object.")
+        else:
+            strategic_feature_ids = {
+                str(feature_id).strip()
+                for feature_id in strategic_bucket_by_feature.keys()
+                if str(feature_id).strip()
+            }
+            unknown_strategic_ids = sorted(strategic_feature_ids - owner_ids)
+            if unknown_strategic_ids:
+                errors.append(
+                    f"{SCENARIO_STRATEGIC_VALUES_FILENAME} bucket_by_feature must only reference owner features. "
+                    f"Sample: {unknown_strategic_ids[:10]}."
+                )
+            missing_strategic_ids = sorted(owner_ids - strategic_feature_ids)
+            if missing_strategic_ids:
+                errors.append(
+                    f"{SCENARIO_STRATEGIC_VALUES_FILENAME} bucket_by_feature must cover owner features. "
+                    f"Sample: {missing_strategic_ids[:10]}."
+                )
+            if report is not None:
+                report.setdefault("artifact_counts", {})["strategic_features"] = len(strategic_feature_ids)
+        if not (
+            isinstance(strategic_resource_points, dict)
+            and strategic_resource_points.get("type") == "FeatureCollection"
+            and isinstance(strategic_resource_points.get("features"), list)
+        ):
+            errors.append(
+                f"{SCENARIO_STRATEGIC_VALUES_FILENAME} resource_points must be a GeoJSON FeatureCollection."
+            )
 
     manifest_summary = manifest.get("summary") if isinstance(manifest.get("summary"), dict) else {}
     manifest_feature_count = manifest_summary.get("feature_count")

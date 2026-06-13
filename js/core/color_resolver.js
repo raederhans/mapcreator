@@ -1,3 +1,8 @@
+import {
+  buildStrategicChoroplethColorInput,
+  isStrategicChoroplethMetric,
+} from "./renderer/strategic_choropleth.js";
+
 // Central color resolver for land features.
 // It keeps canonical visual/owner state precedence in one small, testable place.
 
@@ -9,6 +14,62 @@ function readSafeColor(colorMap, key, getSafeColor) {
 function defaultSafeColor(value, fallback = "") {
   const raw = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(raw) ? raw.toLowerCase() : fallback;
+}
+
+function parseHexColor(value) {
+  const color = defaultSafeColor(value, "");
+  if (!color) return null;
+  return {
+    r: Number.parseInt(color.slice(1, 3), 16),
+    g: Number.parseInt(color.slice(3, 5), 16),
+    b: Number.parseInt(color.slice(5, 7), 16),
+  };
+}
+
+function mixHexColor(left, right, amount) {
+  const leftRgb = parseHexColor(left);
+  const rightRgb = parseHexColor(right);
+  if (!leftRgb || !rightRgb) return defaultSafeColor(right || left, "");
+  const t = Math.min(1, Math.max(0, Number(amount) || 0));
+  const channel = (start, end) => Math.round(start + ((end - start) * t)).toString(16).padStart(2, "0");
+  return `#${channel(leftRgb.r, rightRgb.r)}${channel(leftRgb.g, rightRgb.g)}${channel(leftRgb.b, rightRgb.b)}`;
+}
+
+function getStrategicChoroplethStops(metricFamily) {
+  const family = String(metricFamily || "").trim().toLowerCase();
+  if (family === "resource") {
+    return ["#e0f2fe", "#0369a1"];
+  }
+  if (family === "building") {
+    return ["#f1f5f9", "#be123c"];
+  }
+  return ["#ecfdf5", "#047857"];
+}
+
+function resolveStrategicChoroplethColor(id, ctx, getSafeColor) {
+  const runtimeState = ctx.state && typeof ctx.state === "object" ? ctx.state : {};
+  const metricId = String(runtimeState.strategicChoroplethMetric || "").trim().toLowerCase();
+  const payload = runtimeState.scenarioStrategicValuesData;
+  if (!metricId || !isStrategicChoroplethMetric(metricId) || !payload || typeof payload !== "object") {
+    return null;
+  }
+  if (Array.isArray(payload.diagnostics?.errors) && payload.diagnostics.errors.length > 0) {
+    return null;
+  }
+  const input = buildStrategicChoroplethColorInput(payload, ctx.feature || id, metricId);
+  if (!input.bucketId) {
+    return null;
+  }
+  const [lowColor, highColor] = getStrategicChoroplethStops(input.metric?.family);
+  const color = getSafeColor(mixHexColor(lowColor, highColor, input.t), "");
+  return color
+    ? {
+      color,
+      source: `strategic:${input.metricId}`,
+      featureId: id,
+      ownerCode: "",
+    }
+    : null;
 }
 
 function resolveFeatureColor(featureId, ctx = {}) {
@@ -43,6 +104,11 @@ function resolveFeatureColor(featureId, ctx = {}) {
       featureId: id,
       ownerCode: "",
     };
+  }
+
+  const strategicColor = resolveStrategicChoroplethColor(id, ctx, getSafeColor);
+  if (strategicColor) {
+    return strategicColor;
   }
 
   const visualColor = readSafeColor(runtimeState.visualOverrides, id, getSafeColor);

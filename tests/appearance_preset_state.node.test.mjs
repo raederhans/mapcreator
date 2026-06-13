@@ -52,6 +52,8 @@ function createRuntimeAppearanceState({
     showRivers: false,
     showTransport: true,
     showAirports: true,
+    showStrategicResourceMarkers: true,
+    strategicChoroplethMetric: "steel",
     referenceImageState: {
       dataUrl: "data:image/png;base64,private",
     },
@@ -71,6 +73,8 @@ test("appearance preset snapshots style, layer visibility, and intensity fields 
   assert.equal(preset.snapshot.styleConfig.ocean.fillColor, "#123456");
   assert.equal(preset.snapshot.layerVisibility.showUrban, false);
   assert.equal(preset.snapshot.layerVisibility.showAirports, true);
+  assert.equal(preset.snapshot.layerVisibility.showStrategicResourceMarkers, true);
+  assert.equal(preset.snapshot.layerVisibility.strategicChoroplethMetric, "steel");
   assert.ok(sampleIntensityField(preset.snapshot.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
   assert.equal(Object.hasOwn(preset.snapshot, "referenceImageState"), false);
 });
@@ -87,6 +91,8 @@ test("appearance preset applies a full appearance snapshot to runtime state", ()
     showPhysical: false,
     showRivers: true,
     showAirports: false,
+    showStrategicResourceMarkers: false,
+    strategicChoroplethMetric: "",
     intensityFields: createIntensityFieldsState(),
   };
 
@@ -98,6 +104,8 @@ test("appearance preset applies a full appearance snapshot to runtime state", ()
   assert.equal(target.showPhysical, true);
   assert.equal(target.showRivers, false);
   assert.equal(target.showAirports, true);
+  assert.equal(target.showStrategicResourceMarkers, true);
+  assert.equal(target.strategicChoroplethMetric, "steel");
   assert.ok(sampleIntensityField(target.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
 });
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "scenario_id": "hoi4_1939",
-  "generated_at": "2026-04-05T14:41:47.336788+00:00",
+  "generated_at": "2026-06-13T20:18:28.172319+00:00",
   "default_country": "GER",
   "countries": {
     "AEF": {
@@ -714,7 +714,7 @@
       "display_name": "China",
       "color_hex": "#28288c",
       "feature_count": 1445,
-      "controller_feature_count": 839,
+      "controller_feature_count": 1445,
       "quality": "manual_reviewed",
       "source": "direct_active_owner",
       "base_iso2": "CN",
@@ -1073,8 +1073,8 @@
       "tag": "ENG",
       "display_name": "Britain",
       "color_hex": "#c9385d",
-      "feature_count": 498,
-      "controller_feature_count": 498,
+      "feature_count": 636,
+      "controller_feature_count": 636,
       "quality": "approx_existing_geometry",
       "source": "direct_active_owner",
       "base_iso2": "GB",
@@ -1221,8 +1221,8 @@
       "tag": "GER",
       "display_name": "Germany",
       "color_hex": "#3c3c3c",
-      "feature_count": 912,
-      "controller_feature_count": 912,
+      "feature_count": 997,
+      "controller_feature_count": 997,
       "quality": "manual_reviewed",
       "source": "direct_active_owner",
       "base_iso2": "DE",
@@ -1249,6 +1249,41 @@
       ],
       "source_types": [
         "hoi4_owner"
+      ],
+      "historical_fidelity_summary": [
+        "vanilla"
+      ],
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "subject_kind": "",
+      "entry_kind": ""
+    },
+    "GF": {
+      "tag": "GF",
+      "display_name": "French Guiana",
+      "color_hex": "#4b6658",
+      "feature_count": 1,
+      "controller_feature_count": 1,
+      "quality": "approx_existing_geometry",
+      "source": "fallback_current_code",
+      "base_iso2": "GF",
+      "lookup_iso2": "GF",
+      "provenance_iso2": "GF",
+      "scenario_only": true,
+      "featured": false,
+      "capital_state_id": null,
+      "continent_id": "",
+      "continent_label": "",
+      "subregion_id": "",
+      "subregion_label": "",
+      "notes": "",
+      "synthetic_owner": true,
+      "source_type": "synthetic_fallback",
+      "historical_fidelity": "vanilla",
+      "primary_rule_source": "",
+      "rule_sources": [],
+      "source_types": [
+        "synthetic_fallback"
       ],
       "historical_fidelity_summary": [
         "vanilla"
@@ -1290,6 +1325,41 @@
       ],
       "historical_fidelity_summary": [
         "extended"
+      ],
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "subject_kind": "",
+      "entry_kind": ""
+    },
+    "GP": {
+      "tag": "GP",
+      "display_name": "Guadeloupe",
+      "color_hex": "#5f6959",
+      "feature_count": 1,
+      "controller_feature_count": 1,
+      "quality": "approx_existing_geometry",
+      "source": "fallback_current_code",
+      "base_iso2": "GP",
+      "lookup_iso2": "GP",
+      "provenance_iso2": "GP",
+      "scenario_only": true,
+      "featured": false,
+      "capital_state_id": null,
+      "continent_id": "",
+      "continent_label": "",
+      "subregion_id": "",
+      "subregion_label": "",
+      "notes": "",
+      "synthetic_owner": true,
+      "source_type": "synthetic_fallback",
+      "historical_fidelity": "vanilla",
+      "primary_rule_source": "",
+      "rule_sources": [],
+      "source_types": [
+        "synthetic_fallback"
+      ],
+      "historical_fidelity_summary": [
+        "vanilla"
       ],
       "parent_owner_tag": "",
       "parent_owner_tags": [],
@@ -1631,8 +1701,8 @@
       "lookup_iso2": "ID",
       "provenance_iso2": "ID",
       "scenario_only": false,
-      "featured": false,
-      "capital_state_id": 335,
+      "featured": true,
+      "capital_state_id": 1058,
       "continent_id": "continent_asia",
       "continent_label": "Asia",
       "subregion_id": "subregion_south_eastern_asia",
@@ -1772,7 +1842,7 @@
       "display_name": "Japan",
       "color_hex": "#ffc9b2",
       "feature_count": 47,
-      "controller_feature_count": 83,
+      "controller_feature_count": 47,
       "quality": "direct_country_copy",
       "source": "direct_active_owner",
       "base_iso2": "JP",
@@ -2253,7 +2323,7 @@
       "display_name": "Mengjiang",
       "color_hex": "#b9ff98",
       "feature_count": 17,
-      "controller_feature_count": 23,
+      "controller_feature_count": 17,
       "quality": "manual_reviewed",
       "source": "manual_rule",
       "base_iso2": "CN",
@@ -2429,6 +2499,41 @@
       "subject_kind": "protectorate",
       "entry_kind": "scenario_subject"
     },
+    "MQ": {
+      "tag": "MQ",
+      "display_name": "Martinique",
+      "color_hex": "#676a5a",
+      "feature_count": 1,
+      "controller_feature_count": 1,
+      "quality": "approx_existing_geometry",
+      "source": "fallback_current_code",
+      "base_iso2": "MQ",
+      "lookup_iso2": "MQ",
+      "provenance_iso2": "MQ",
+      "scenario_only": true,
+      "featured": false,
+      "capital_state_id": null,
+      "continent_id": "",
+      "continent_label": "",
+      "subregion_id": "",
+      "subregion_label": "",
+      "notes": "",
+      "synthetic_owner": true,
+      "source_type": "synthetic_fallback",
+      "historical_fidelity": "vanilla",
+      "primary_rule_source": "",
+      "rule_sources": [],
+      "source_types": [
+        "synthetic_fallback"
+      ],
+      "historical_fidelity_summary": [
+        "vanilla"
+      ],
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "subject_kind": "",
+      "entry_kind": ""
+    },
     "MZB": {
       "tag": "MZB",
       "display_name": "Mozambique",
@@ -2467,46 +2572,6 @@
       ],
       "subject_kind": "colony",
       "entry_kind": "scenario_subject"
-    },
-    "NCP": {
-      "tag": "NCP",
-      "display_name": "North China Political Council",
-      "color_hex": "#8f6b3a",
-      "feature_count": 0,
-      "controller_feature_count": 244,
-      "quality": "manual_reviewed",
-      "source": "controller_rule",
-      "base_iso2": "CN",
-      "lookup_iso2": "CN",
-      "provenance_iso2": "CN",
-      "scenario_only": true,
-      "featured": false,
-      "capital_state_id": null,
-      "continent_id": "continent_asia",
-      "continent_label": "Asia",
-      "subregion_id": "subregion_eastern_asia",
-      "subregion_label": "Eastern Asia",
-      "notes": "North China collaboration administration across Beijing, Tianjin, the occupied Hebei core, and Shandong while leaving MAN, MEN, and direct Japanese bridgeheads out.",
-      "synthetic_owner": false,
-      "source_type": "controller_overlay",
-      "historical_fidelity": "vanilla",
-      "primary_rule_source": "1939_frontline_north_china_political_council_control",
-      "rule_sources": [
-        "1939_frontline_north_china_political_council_control",
-        "1939_frontline_north_china_political_council_shandong"
-      ],
-      "source_types": [
-        "controller_overlay"
-      ],
-      "historical_fidelity_summary": [
-        "vanilla"
-      ],
-      "parent_owner_tag": "JAP",
-      "parent_owner_tags": [
-        "JAP"
-      ],
-      "subject_kind": "",
-      "entry_kind": "controller_only"
     },
     "NEP": {
       "tag": "NEP",
@@ -2769,7 +2834,7 @@
       "lookup_iso2": "PY",
       "provenance_iso2": "PY",
       "scenario_only": false,
-      "featured": false,
+      "featured": true,
       "capital_state_id": 301,
       "continent_id": "continent_south_america",
       "continent_label": "South America",
@@ -3165,46 +3230,40 @@
       "subject_kind": "colonial_government",
       "entry_kind": "scenario_subject"
     },
-    "RGC": {
-      "tag": "RGC",
-      "display_name": "Reformed Government of China",
-      "color_hex": "#b67f2a",
-      "feature_count": 0,
-      "controller_feature_count": 320,
-      "quality": "manual_reviewed",
-      "source": "controller_rule",
-      "base_iso2": "CN",
-      "lookup_iso2": "CN",
-      "provenance_iso2": "CN",
+    "RE": {
+      "tag": "RE",
+      "display_name": "Reunion",
+      "color_hex": "#546758",
+      "feature_count": 1,
+      "controller_feature_count": 1,
+      "quality": "approx_existing_geometry",
+      "source": "fallback_current_code",
+      "base_iso2": "RE",
+      "lookup_iso2": "RE",
+      "provenance_iso2": "RE",
       "scenario_only": true,
       "featured": false,
       "capital_state_id": null,
-      "continent_id": "continent_asia",
-      "continent_label": "Asia",
-      "subregion_id": "subregion_eastern_asia",
-      "subregion_label": "Eastern Asia",
-      "notes": "Shanghai municipality shifts from direct Japanese controller coloring to the Reformed Government preview layer.",
-      "synthetic_owner": false,
-      "source_type": "controller_overlay",
+      "continent_id": "",
+      "continent_label": "",
+      "subregion_id": "",
+      "subregion_label": "",
+      "notes": "",
+      "synthetic_owner": true,
+      "source_type": "synthetic_fallback",
       "historical_fidelity": "vanilla",
-      "primary_rule_source": "1939_frontline_reformed_government_shanghai",
-      "rule_sources": [
-        "1939_frontline_reformed_government_shanghai",
-        "1939_frontline_reformed_government_phase1_lower_yangtze_and_central_axis",
-        "1939_frontline_reformed_government_phase2_south_china_corridors"
-      ],
+      "primary_rule_source": "",
+      "rule_sources": [],
       "source_types": [
-        "controller_overlay"
+        "synthetic_fallback"
       ],
       "historical_fidelity_summary": [
         "vanilla"
       ],
-      "parent_owner_tag": "JAP",
-      "parent_owner_tags": [
-        "JAP"
-      ],
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": "controller_only"
+      "entry_kind": ""
     },
     "ROM": {
       "tag": "ROM",
@@ -3368,7 +3427,7 @@
       "lookup_iso2": "CN",
       "provenance_iso2": "CN",
       "scenario_only": true,
-      "featured": false,
+      "featured": true,
       "capital_state_id": 615,
       "continent_id": "continent_asia",
       "continent_label": "Asia",
@@ -3406,8 +3465,8 @@
       "lookup_iso2": "TH",
       "provenance_iso2": "TH",
       "scenario_only": false,
-      "featured": false,
-      "capital_state_id": 289,
+      "featured": true,
+      "capital_state_id": 1076,
       "continent_id": "continent_asia",
       "continent_label": "Asia",
       "subregion_id": "subregion_south_eastern_asia",
@@ -3583,8 +3642,8 @@
       "tag": "SOV",
       "display_name": "Soviet Union",
       "color_hex": "#7d0d18",
-      "feature_count": 12949,
-      "controller_feature_count": 12949,
+      "feature_count": 13645,
+      "controller_feature_count": 13645,
       "quality": "manual_reviewed",
       "source": "manual_rule",
       "base_iso2": "RU",
@@ -4045,7 +4104,7 @@
       "lookup_iso2": "UY",
       "provenance_iso2": "UY",
       "scenario_only": false,
-      "featured": false,
+      "featured": true,
       "capital_state_id": 300,
       "continent_id": "continent_south_america",
       "continent_label": "South America",
@@ -4241,6 +4300,41 @@
       "rule_sources": [],
       "source_types": [
         "hoi4_owner"
+      ],
+      "historical_fidelity_summary": [
+        "vanilla"
+      ],
+      "parent_owner_tag": "",
+      "parent_owner_tags": [],
+      "subject_kind": "",
+      "entry_kind": ""
+    },
+    "YT": {
+      "tag": "YT",
+      "display_name": "Mayotte",
+      "color_hex": "#796c5b",
+      "feature_count": 1,
+      "controller_feature_count": 1,
+      "quality": "approx_existing_geometry",
+      "source": "fallback_current_code",
+      "base_iso2": "YT",
+      "lookup_iso2": "YT",
+      "provenance_iso2": "YT",
+      "scenario_only": true,
+      "featured": false,
+      "capital_state_id": null,
+      "continent_id": "",
+      "continent_label": "",
+      "subregion_id": "",
+      "subregion_label": "",
+      "notes": "",
+      "synthetic_owner": true,
+      "source_type": "synthetic_fallback",
+      "historical_fidelity": "vanilla",
+      "primary_rule_source": "",
+      "rule_sources": [],
+      "source_types": [
+        "synthetic_fallback"
       ],
       "historical_fidelity_summary": [
         "vanilla"

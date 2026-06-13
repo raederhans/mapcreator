@@ -5,7 +5,8 @@
     "countries_url",
     "owners_url",
     "cores_url",
-    "audit_url"
+    "audit_url",
+    "strategic_values_url"
   ],
   "required_country_fields": [
     "provenance_iso2",
@@ -75,16 +76,26 @@
   ],
   "summary_equals": {
     "blocker_count": 0,
-    "feature_count": 22502,
-    "owner_count": 115,
-    "controller_count": 117,
-    "synthetic_owner_feature_count": 18
+    "feature_count": 23426,
+    "owner_count": 120,
+    "controller_count": 120,
+    "synthetic_owner_feature_count": 23,
+    "owner_controller_split_feature_count": 0,
+    "controller_rule_count": 0
   },
   "summary_min": {
     "feature_count": 10000,
     "owner_count": 91,
-    "owner_controller_split_feature_count": 383,
-    "controller_rule_count": 6
+    "strategic_vp_total": 100,
+    "strategic_vp_matched": 50,
+    "strategic_states_anchored": 50,
+    "strategic_resource_point_count": 50
+  },
+  "strategic_diagnostics_min": {
+    "vp_total": 100,
+    "vp_matched": 50,
+    "states_anchored": 50,
+    "resource_point_count": 50
   },
   "controller_set_assertions": [
     {

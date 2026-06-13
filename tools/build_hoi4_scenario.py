@@ -24,6 +24,7 @@ from map_builder.contracts import (
     SCENARIO_LOCALE_LANGUAGES,
     SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE,
     SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS,
+    SCENARIO_STRATEGIC_VALUES_FILENAME,
 )
 from tools.build_startup_bootstrap_assets import build_startup_bootstrap_assets
 from tools.build_startup_bundle import (
@@ -46,6 +47,7 @@ from scenario_builder.hoi4.parser import (
     parse_definition_csv,
     parse_states,
 )
+from scenario_builder.hoi4.strategic import parse_victory_point_localisation
 
 
 DEFAULT_SCENARIO_ID = "hoi4_1936"
@@ -522,6 +524,13 @@ def main() -> int:
                 key=lambda item: (-item[1], item[0]),
             )[:120]
         ),
+        "strategic_values_inputs": {
+            "victory_points_localisation": str(
+                source_root / "localisation/english/victory_points_l_english.yml"
+            ),
+            "world_cities": str(PROJECT_ROOT / "data/world_cities.geojson"),
+            "runtime_topology": str(runtime_topology_path),
+        },
     }
     if baseline_date:
         diagnostics["baseline_as_of_date"] = baseline_date
@@ -544,6 +553,14 @@ def main() -> int:
         palette_pack=palette_pack,
         palette_map=palette_map,
         diagnostics=diagnostics,
+        strategic_inputs={
+            "as_of_date": as_of_date,
+            "runtime_topology_payload": runtime_topology_payload,
+            "vp_localisation": parse_victory_point_localisation(
+                source_root / "localisation/english/victory_points_l_english.yml"
+            ),
+            "world_cities_path": PROJECT_ROOT / "data/world_cities.geojson",
+        },
     )
 
     atlas_dir = report_dir / "source_atlas"
@@ -564,6 +581,7 @@ def main() -> int:
     if stale_controllers_path.exists():
         stale_controllers_path.unlink()
     write_json(scenario_output_dir / "cores.by_feature.json", bundle["cores"])
+    write_json(scenario_output_dir / SCENARIO_STRATEGIC_VALUES_FILENAME, bundle["strategic_values"])
     write_json(scenario_output_dir / "audit.json", bundle["audit"])
     write_json(scenario_output_dir / "runtime_topology.topo.json", runtime_topology_payload)
     write_json(

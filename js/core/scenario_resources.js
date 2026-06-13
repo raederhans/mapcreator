@@ -125,6 +125,9 @@ import {
   createScenarioAuditPayloadLoader,
   createImportedScenarioBaselineValidator,
 } from "./scenario/bundle_loader.js";
+import {
+  normalizeScenarioStrategicValuesPayload,
+} from "./scenario/strategic_values.js";
 import { consumeScenarioTestHook } from "./scenario_recovery.js";
 import { t } from "../ui/i18n.js";
 import { showToast } from "../ui/toast.js";
@@ -187,6 +190,14 @@ const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
     objectName: "",
     visibilityField: "showCityPoints",
     revisionField: "cityLayerRevision",
+  },
+  strategicvalues: {
+    bundleField: "strategicValuesPayload",
+    stateField: "scenarioStrategicValuesData",
+    urlField: "strategic_values_url",
+    objectName: "",
+    visibilityField: "showStrategicResourceMarkers",
+    revisionField: "scenarioStrategicValuesRevision",
   },
 };
 
@@ -359,9 +370,12 @@ function areScenarioFeatureCollectionsEquivalent(leftPayload, rightPayload) {
 
 function normalizeScenarioOptionalLayerKey(value) {
   const rawKey = String(value || "").trim().toLowerCase();
-  const key = rawKey === "special_zone_layers" || rawKey === "special-zone-layers"
-    ? "specialzonelayers"
-    : rawKey;
+  let key = rawKey;
+  if (rawKey === "special_zone_layers" || rawKey === "special-zone-layers") {
+    key = "specialzonelayers";
+  } else if (rawKey === "strategic_values" || rawKey === "strategic-values") {
+    key = "strategicvalues";
+  }
   return Object.prototype.hasOwnProperty.call(SCENARIO_OPTIONAL_LAYER_CONFIGS, key) ? key : "";
 }
 
@@ -654,6 +668,13 @@ function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
   }
   if (config.stateField === "scenarioCityOverridesData") {
     syncScenarioLocalizationState({ cityOverridesPayload: payload });
+  } else if (config.stateField === "scenarioStrategicValuesData") {
+    state[config.stateField] = normalizeScenarioStrategicValuesPayload(payload, {
+      expected: {
+        scenario_id: bundleScenarioId,
+        baseline_hash: state.scenarioBaselineHash || bundle?.manifest?.baseline_hash || "",
+      },
+    });
   } else if (config.stateField === "specialZoneLayers") {
     if (!payload || typeof payload !== "object") {
       const manifestHasLayerUrl = !!String(bundle?.manifest?.[config.urlField] || "").trim();
@@ -772,6 +793,13 @@ async function loadScenarioOptionalLayerPayload(
             defaultSource: "scenario",
             topologyFingerprint: resolveSpecialZoneTopologyFingerprint(state),
           })
+          : config.stateField === "scenarioStrategicValuesData"
+            ? normalizeScenarioStrategicValuesPayload(rawPayload, {
+              expected: {
+                scenario_id: getScenarioBundleId(bundle),
+                baseline_hash: state.scenarioBaselineHash || bundle?.manifest?.baseline_hash || "",
+              },
+            })
           : config.objectName
             ? getScenarioTopologyFeatureCollection(rawPayload, config.objectName)
               || normalizeScenarioFeatureCollection(rawPayload)
@@ -855,6 +883,13 @@ async function ensureActiveScenarioOptionalLayerLoaded(
   return payload;
 }
 
+function isScenarioOptionalLayerRequestedForVisibility(layerKey, config) {
+  if (layerKey === "strategicvalues") {
+    return !!state.showStrategicResourceMarkers || !!String(state.strategicChoroplethMetric || "").trim();
+  }
+  return !!state[config.visibilityField];
+}
+
 async function ensureActiveScenarioOptionalLayersForVisibility(
   {
     bundle = null,
@@ -869,7 +904,7 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
   // 前者交给 chunk refresh 统一决策，后者才在这里补拉 payload。
   // 这样可以避免把 chunk layer 当成普通 JSON 再加载一遍。
   const requestedChunkedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
-    .filter(([, config]) => state[config.visibilityField])
+    .filter(([layerKey, config]) => isScenarioOptionalLayerRequestedForVisibility(layerKey, config))
     .map(([layerKey]) => layerKey)
     .filter((layerKey) => scenarioBundleUsesChunkedLayer(activeBundle, layerKey));
   if (requestedChunkedLayers.length) {
@@ -879,7 +914,7 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     });
   }
   const requestedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
-    .filter(([, config]) => state[config.visibilityField])
+    .filter(([layerKey, config]) => isScenarioOptionalLayerRequestedForVisibility(layerKey, config))
     .filter(([layerKey]) => !scenarioBundleUsesChunkedLayer(activeBundle, layerKey))
     .filter(([layerKey]) => activeBundle.optionalLayerSettledByKey?.[layerKey] !== true)
     .filter(([layerKey, config]) => {

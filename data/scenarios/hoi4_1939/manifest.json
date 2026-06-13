@@ -1,6 +1,6 @@
 {
   "audit_url": "data/scenarios/hoi4_1939/audit.json",
-  "baseline_hash": "0cbd7d4131516139b0ecabf8c63a0e017245c6ae079798fd80c8a338763568bf",
+  "baseline_hash": "bae1300c43e275df18d16b4b2743582ef53930ebf96ce36e7c60357d056b78b7",
   "bookmark_date": "1939.8.14.12",
   "bookmark_description": "BLITZKRIEG_DESC",
   "bookmark_name": "BLITZKRIEG_NAME",
@@ -55,13 +55,18 @@
     "BRA",
     "CHL",
     "ARG",
+    "PAR",
+    "URG",
     "AFG",
     "BEL",
     "IRQ",
     "PER",
-    "PHI"
+    "PHI",
+    "SHX",
+    "SIA",
+    "INS"
   ],
-  "generated_at": "2026-04-05T14:41:47.388433+00:00",
+  "generated_at": "2026-06-13T20:18:28.229146+00:00",
   "geo_locale_patch_url": "data/scenarios/hoi4_1939/geo_locale_patch.json",
   "geo_locale_patch_url_en": "data/scenarios/hoi4_1939/geo_locale_patch.en.json",
   "geo_locale_patch_url_zh": "data/scenarios/hoi4_1939/geo_locale_patch.zh.json",
@@ -85,12 +90,12 @@
   "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
   "scenario_contract_profile": "hoi4_chunked",
   "scenario_id": "hoi4_1939",
-  "snapshot_fingerprint": "b64e336470f10691a3e3c0fc4ab303a3118985655e2c49fb5a9015e14670594b",
+  "snapshot_fingerprint": "94e377db0560b1e17449acd69ab90722a07f8c05796dd3f5220790fb34872bcf",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "detail_chunk_manifest_sha256": "3ef67d974df243b8830b6ecb74e96df76555f75218cc47cf766c05b365cf7fb8",
-    "runtime_bootstrap_topology_sha256": "943ccb7c98116a037df3536392363355db74059acdfa74168f1c7ce84724a0c4",
-    "runtime_topology_sha256": "0efc563a9a6ace2bdd892981b147b764db7cc5beb7e7b3db77ebb1db74b55e53"
+    "detail_chunk_manifest_sha256": "cad6417659503a78668cf1c1874ddcbf4842a4279f8adfdf1a98142cb34f8d48",
+    "runtime_bootstrap_topology_sha256": "74d6f39ab2280fa524109d9bd35e15149df48681688deb22ecfac60911527115",
+    "runtime_topology_sha256": "50cad6f666725fa6518b8aa5f8519a1b520946f3b4c2e46614029234ad8be0c3"
   },
   "special_zone_layers_url": "data/scenarios/hoi4_1939/special_zone_layers.json",
   "startup_bootstrap_strategy": "chunked-coarse-first",
@@ -98,40 +103,47 @@
   "startup_bundle_url_zh": "data/scenarios/hoi4_1939/startup.bundle.zh.json",
   "startup_bundle_version": 5,
   "startup_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
+  "strategic_values_url": "data/scenarios/hoi4_1939/strategic_values.by_feature.json",
   "style_defaults": {
     "ocean": {
       "fillColor": "#2d4769"
     }
   },
   "summary": {
-    "approximate_count": 452,
+    "approximate_count": 457,
     "belarus_hybrid_feature_count": 35,
     "blocker_count": 0,
-    "changed_feature_count": 16978,
-    "controller_count": 117,
-    "controller_rule_count": 8,
+    "changed_feature_count": 17691,
+    "controller_count": 120,
+    "controller_rule_count": 0,
     "critical_region_check_count": 13,
     "critical_unresolved_count": 0,
     "failed_region_check_count": 4,
-    "feature_count": 22502,
+    "feature_count": 23426,
     "geometry_blocker_count": 0,
-    "manual_reviewed_feature_count": 16526,
+    "manual_reviewed_feature_count": 17234,
     "manual_reviewed_region_count": 13,
-    "owner_controller_split_feature_count": 606,
-    "owner_count": 115,
+    "owner_controller_split_feature_count": 0,
+    "owner_count": 120,
     "quality_counts": {
-      "approx_existing_geometry": 452,
-      "direct_country_copy": 5524,
-      "manual_reviewed": 16526
+      "approx_existing_geometry": 457,
+      "direct_country_copy": 5735,
+      "manual_reviewed": 17234
     },
     "scenario_rule_blocker_count": 0,
     "source_counts": {
-      "direct_active_owner": 5524,
+      "direct_active_owner": 5735,
+      "fallback_current_code": 5,
       "fallback_mapped_tag": 18,
-      "manual_rule": 16960
+      "manual_rule": 17668
     },
-    "synthetic_count": 18,
-    "synthetic_owner_feature_count": 18,
+    "strategic_resource_point_count": 677,
+    "strategic_states_anchored": 914,
+    "strategic_states_pooled": 167,
+    "strategic_vp_matched": 1391,
+    "strategic_vp_total": 1501,
+    "synthetic_count": 23,
+    "synthetic_owner_feature_count": 23,
     "topology_blocker_count": 0
   },
   "version": 2

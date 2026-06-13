@@ -203,6 +203,60 @@ export function createUrbanCityPolicyOwner({
     });
   }
 
+  function normalizeStrategicCityReference(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function getStrategicVictoryPointForCity(feature) {
+    const strategicValues = state?.scenarioStrategicValuesData;
+    const byFeature = strategicValues?.victoryPointsByFeature
+      && typeof strategicValues.victoryPointsByFeature === "object"
+      ? strategicValues.victoryPointsByFeature
+      : {};
+    const props = feature?.properties || {};
+    const hostFeatureIds = Array.from(new Set([
+      props.__city_host_feature_id,
+      props.host_feature_id,
+      props.hostFeatureId,
+    ].map((value) => String(value || "").trim()).filter(Boolean)));
+    const candidates = hostFeatureIds.flatMap((featureId) => (
+      Array.isArray(byFeature[featureId]) ? byFeature[featureId] : []
+    ));
+    if (!candidates.length) {
+      return null;
+    }
+    const cityRefs = new Set([
+      getCityCanonicalId(feature),
+      getCityFeatureKey(feature),
+      props.city_id,
+      props.cityId,
+      props.stable_key,
+      props.stableKey,
+      props.__city_stable_key,
+    ].map(normalizeStrategicCityReference).filter(Boolean));
+    const exactMatch = candidates.find((entry) => (
+      cityRefs.has(normalizeStrategicCityReference(entry.city_id || entry.cityId))
+      || cityRefs.has(normalizeStrategicCityReference(entry.stable_key || entry.stableKey))
+    ));
+    return exactMatch || candidates
+      .slice()
+      .sort((left, right) => Math.max(0, Number(right?.value || 0)) - Math.max(0, Number(left?.value || 0)))[0] || null;
+  }
+
+  function applyStrategicVictoryPointRank(feature) {
+    const entry = getStrategicVictoryPointForCity(feature);
+    const value = Math.max(0, Number(entry?.value || 0));
+    if (!entry || value <= 0) {
+      return feature;
+    }
+    return cloneCityFeature(feature, {
+      __city_scenario_victory_points: value,
+      __city_scenario_vp_name: String(entry.name || "").trim(),
+      __city_scenario_vp_province_id: entry.province_id ?? entry.provinceId ?? "",
+      __city_scenario_vp_match_method: String(entry.match_method || entry.matchMethod || "").trim(),
+    });
+  }
+
   function buildCityRevealPlan(cityCollection, scale, transform, config = {}) {
     const phase = getCityRevealPhase(scale);
     const countryProfiles = getCityCountryProfileIndex(cityCollection);
@@ -363,16 +417,20 @@ export function createUrbanCityPolicyOwner({
   function getEffectiveCityCollection() {
     const baseRef = state?.worldCitiesData || null;
     const scenarioRef = state?.scenarioCityOverridesData || null;
+    const strategicValuesRef = state?.scenarioStrategicValuesData || null;
     const scenarioCountriesRef = state?.scenarioCountriesByTag || null;
     const scenarioId = String(state?.activeScenarioId || "");
     const cityLayerRevision = Number(state?.cityLayerRevision || 0);
+    const strategicValuesRevision = Number(state?.scenarioStrategicValuesRevision || 0);
     const sovereigntyRevision = Number(state?.sovereigntyRevision || 0);
     if (
       cityLayerCache?.baseRef === baseRef
       && cityLayerCache?.scenarioRef === scenarioRef
+      && cityLayerCache?.strategicValuesRef === strategicValuesRef
       && cityLayerCache?.scenarioCountriesRef === scenarioCountriesRef
       && cityLayerCache?.scenarioId === scenarioId
       && cityLayerCache?.cityLayerRevision === cityLayerRevision
+      && cityLayerCache?.strategicValuesRevision === strategicValuesRevision
       && cityLayerCache?.sovereigntyRevision === sovereigntyRevision
     ) {
       return cityLayerCache.merged;
@@ -475,8 +533,9 @@ export function createUrbanCityPolicyOwner({
       const nextFeature = feature?.properties?.__city_is_capital === nextIsCapital
         ? feature
         : cloneCityFeature(feature, { __city_is_capital: nextIsCapital });
-      if (!nextFeature?.properties?.__city_hidden && !shouldHideCityPointForScenarioCountry(nextFeature)) {
-        finalFeatures.push(nextFeature);
+      const strategicFeature = applyStrategicVictoryPointRank(nextFeature);
+      if (!strategicFeature?.properties?.__city_hidden && !shouldHideCityPointForScenarioCountry(strategicFeature)) {
+        finalFeatures.push(strategicFeature);
       }
     });
 
@@ -490,9 +549,11 @@ export function createUrbanCityPolicyOwner({
     if (cityLayerCache && typeof cityLayerCache === "object") {
       cityLayerCache.baseRef = baseRef;
       cityLayerCache.scenarioRef = scenarioRef;
+      cityLayerCache.strategicValuesRef = strategicValuesRef;
       cityLayerCache.scenarioCountriesRef = scenarioCountriesRef;
       cityLayerCache.scenarioId = scenarioId;
       cityLayerCache.cityLayerRevision = cityLayerRevision;
+      cityLayerCache.strategicValuesRevision = strategicValuesRevision;
       cityLayerCache.sovereigntyRevision = sovereigntyRevision;
       cityLayerCache.merged = merged;
     }

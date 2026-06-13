@@ -188,6 +188,9 @@ export function setScenarioRuntimeOptionalLayerState(target, nextState = {}) {
   if (hasOwn.call(nextState, "scenarioReliefOverlaysData")) {
     target.scenarioReliefOverlaysData = nextState.scenarioReliefOverlaysData || null;
   }
+  if (hasOwn.call(nextState, "scenarioStrategicValuesData")) {
+    target.scenarioStrategicValuesData = nextState.scenarioStrategicValuesData || null;
+  }
   return target;
 }
 
@@ -296,8 +299,10 @@ export function commitScenarioActivationRuntimeState(target, nextState = {}) {
     scenarioDistrictGroupsData: nextState.scenarioDistrictGroupsData || null,
     scenarioDistrictGroupByFeatureId: nextState.scenarioDistrictGroupByFeatureId,
     scenarioReliefOverlaysData: nextState.scenarioReliefOverlaysData || null,
+    scenarioStrategicValuesData: nextState.scenarioStrategicValuesData || null,
   });
   target.scenarioReliefOverlayRevision = Number(nextState.scenarioReliefOverlayRevision) || 0;
+  target.scenarioStrategicValuesRevision = Number(nextState.scenarioStrategicValuesRevision) || 0;
   target.releasableCatalog = nextState.releasableCatalog || null;
   target.scenarioReleasableIndex = nextState.scenarioReleasableIndex || null;
   target.scenarioAudit = nextState.scenarioAudit || null;
@@ -422,6 +427,8 @@ export function createDefaultScenarioRuntimeState({
     scenarioLandMaskVersionTag: "",
     scenarioContextLandMaskVersionTag: "",
     scenarioReliefOverlaysData: null,
+    scenarioStrategicValuesData: null,
+    scenarioStrategicValuesRevision: 0,
     scenarioBathymetryTopologyData: null,
     scenarioBathymetryBandsData: null,
     scenarioBathymetryContoursData: null,

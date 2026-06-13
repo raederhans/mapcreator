@@ -147,6 +147,112 @@ function createFeatures(count) {
   }));
 }
 
+function createRenderableScenarioTopology() {
+  return {
+    type: "Topology",
+    objects: {
+      political: {
+        type: "GeometryCollection",
+        geometries: [
+          {
+            type: "Polygon",
+            properties: { id: "POL-A" },
+            arcs: [],
+          },
+        ],
+      },
+    },
+    arcs: [],
+  };
+}
+
+function createApplyPipelineForRuntimeTest(runtimeState, overrides = {}) {
+  return createScenarioApplyPipeline({
+    runtimeState,
+    countryNames: {},
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    scenarioSupportsChunkedRuntime: () => false,
+    scenarioBundleUsesChunkedLayer: () => false,
+    scenarioBundleHasChunkedData: () => false,
+    ensureScenarioDetailTopologyLoaded: async () => true,
+    hasUsablePoliticalTopology: () => true,
+    scenarioNeedsDetailTopology: () => false,
+    getScenarioDisplayName: () => "Sample",
+    getScenarioTargetPaletteId: () => "default",
+    hasActiveScenarioPaletteLoaded: () => true,
+    applyActivePaletteState: () => {},
+    setActivePaletteSource: async () => true,
+    getScenarioDefaultCountryCode: () => "AAA",
+    getScenarioMapSemanticMode: () => "political",
+    buildScenarioReleasableIndex: () => ({}),
+    getScenarioReleasableCountries: () => ({}),
+    normalizeScenarioCoreMap: (value) => value || {},
+    normalizeScenarioDistrictGroupsPayload: () => null,
+    getActiveScenarioMergedChunkLayerPayload: () => undefined,
+    getScenarioDecodedCollection: () => null,
+    getScenarioTopologyFeatureCollection: () => null,
+    getScenarioNameMap: () => ({ AAA: "Alpha" }),
+    getMissingScenarioNameTags: () => [],
+    getScenarioFixedOwnerColors: () => ({ AAA: "#111111" }),
+    buildHoi4FarEastSovietOwnerBackfill: () => ({}),
+    buildScenarioRuntimeVersionTag: () => "sample:sha",
+    mergeReleasableCatalogs: () => null,
+    buildScenarioDistrictGroupByFeatureId: () => new Map(),
+    syncScenarioLocalizationState: () => {},
+    applyBlankScenarioPresentationDefaults: () => {},
+    setScenarioAuditUiState: () => {},
+    getScenarioBaselineHashFromBundle: (bundle) => bundle?.manifest?.baseline_hash || "baseline",
+    markLegacyColorStateDirty: () => {},
+    syncScenarioInspectorSelection: () => {},
+    disableScenarioParentBorders: () => {},
+    applyScenarioPaintMode: () => {},
+    syncScenarioOceanFillForActivation: () => {},
+    applyScenarioPerformanceHints: () => {},
+    scheduleScenarioChunkRefresh: () => {},
+    resetScenarioChunkRuntimeState: () => {},
+    ensureRuntimeChunkLoadState: () => ({}),
+    hasRenderableScenarioPoliticalTopology: () => true,
+    normalizeScenarioFeatureCollection: (value) => value,
+    cloneScenarioStateValue: (value) => value,
+    ...overrides,
+  });
+}
+
+function createRawStrategicValuesPayload() {
+  return {
+    version: 1,
+    scenario_id: "hoi4_test",
+    baseline_hash: "abc123",
+    metrics: {
+      steel: { kind: "additive", min: 0, max: 20, p95: 20 },
+    },
+    buckets: {
+      s1: { state_id: 1, owner_tag: "POL", steel: 20 },
+    },
+    bucket_by_feature: {
+      "POL-A": "s1",
+    },
+    victory_points: [
+      {
+        province_id: 3544,
+        value: 25,
+        state_id: 1,
+        owner_tag: "POL",
+        name: "Warsaw",
+        host_feature_id: "POL-A",
+      },
+    ],
+    resource_points: {
+      type: "FeatureCollection",
+      features: [],
+    },
+    diagnostics: {
+      vp_total: 1,
+      vp_matched: 1,
+    },
+  };
+}
+
 test("scenario apply staging rejects unrenderable political runtime topology before commit", async () => {
   const runtimeState = createBaseState({ activeScenarioId: "previous" });
   const pipeline = createScenarioApplyPipeline({
@@ -214,6 +320,34 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
   );
   assert.equal(runtimeState.activeScenarioId, "previous");
   assert.equal(runtimeState.scenarioRuntimeTopologyData?.id, "scenario-runtime");
+});
+
+test("scenario apply normalizes bundled strategic values before commit", async () => {
+  const runtimeState = createBaseState({
+    activeScenarioId: "",
+    scenarioStrategicValuesData: null,
+    scenarioStrategicValuesRevision: 0,
+  });
+  const pipeline = createApplyPipelineForRuntimeTest(runtimeState);
+  const bundle = {
+    manifest: {
+      scenario_id: "hoi4_test",
+      baseline_hash: "abc123",
+    },
+    countriesPayload: { countries: { AAA: { display_name: "Alpha", color_hex: "#111111" } } },
+    ownersPayload: { owners: { "POL-A": "AAA" } },
+    coresPayload: { cores: { "POL-A": ["AAA"] } },
+    runtimeTopologyPayload: createRenderableScenarioTopology(),
+    strategicValuesPayload: createRawStrategicValuesPayload(),
+  };
+
+  const staged = await pipeline.prepareScenarioApplyState(bundle, { syncPalette: false });
+  pipeline.applyPreparedScenarioState(bundle, staged);
+
+  assert.equal(runtimeState.scenarioStrategicValuesData.bucketByFeature["POL-A"], "s1");
+  assert.equal(runtimeState.scenarioStrategicValuesData.victoryPointsByFeature["POL-A"][0].name, "Warsaw");
+  assert.equal(runtimeState.scenarioStrategicValuesData.resourcePoints.type, "FeatureCollection");
+  assert.equal(runtimeState.scenarioStrategicValuesRevision, 1);
 });
 
 test("blank scenario apply preserves explicit empty runtime topology", async () => {

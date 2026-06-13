@@ -121,6 +121,7 @@ import {
 } from "./interaction_funnel.js";
 import { createUrbanCityPolicyOwner } from "./renderer/urban_city_policy.js";
 import { createCityLabelOwner } from "./renderer/city_label_owner.js";
+import { buildStrategicResourceMarkerEntries } from "./renderer/strategic_resource_markers.js";
 import { createColorResolutionStrategyOwner } from "./renderer/color_resolution_strategy.js";
 import { createStrategicOverlayHelpersOwner } from "./renderer/strategic_overlay_helpers.js";
 import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay_runtime_owner.js";
@@ -555,6 +556,7 @@ const CONTEXT_BREAKDOWN_METRIC_NAMES = new Set([
   "drawPhysicalAtlasLayer",
   "drawPhysicalContourLayer",
   "drawCityPointsLayer",
+  "drawStrategicResourceMarkersLayer",
   "drawAirportsLayer",
   "drawPortsLayer",
   "drawRoadsLayer",
@@ -579,6 +581,16 @@ const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
 const DEFAULT_UNIT_COUNTER_RENDERER = "game";
 const DEFAULT_MILSTD_SIDC = "130310001412110000000000000000";
 const STRATEGIC_LINE_LABEL_FONT = "\"IBM Plex Sans\", \"Segoe UI\", sans-serif";
+const STRATEGIC_RESOURCE_MARKER_COLORS = Object.freeze({
+  steel: "#64748b",
+  oil: "#111827",
+  aluminium: "#94a3b8",
+  rubber: "#166534",
+  tungsten: "#92400e",
+  chromium: "#7c3aed",
+  coal: "#3f3f46",
+});
+const STRATEGIC_RESOURCE_MARKER_STROKE = "#f8fafc";
 const OPERATION_GRAPHIC_STYLE_PRESETS = ["attack", "retreat", "supply", "naval", "encirclement", "theater"];
 const OPERATIONAL_LINE_STYLE_PRESETS = ["frontline", "offensive_line", "spearhead_line", "defensive_line"];
 const STRATEGIC_COUNTER_ATTACHMENT_KIND = "operational-line";
@@ -2055,6 +2067,9 @@ function getVisibleContextFlagSignature() {
     runtimeState.showScenarioSpecialRegions ? "special:on" : "special:off",
     runtimeState.showScenarioReliefOverlays ? "relief:on" : "relief:off",
     runtimeState.showCityPoints ? "cities:on" : "cities:off",
+    runtimeState.showStrategicResourceMarkers ? "strategic-resources:on" : "strategic-resources:off",
+    `strategic-rev:${Number(runtimeState.scenarioStrategicValuesRevision || 0)}`,
+    `strategic-metric:${String(runtimeState.strategicChoroplethMetric || "")}`,
     runtimeState.showTransport ? "transport:on" : "transport:off",
     runtimeState.showRoad ? "road:on" : "road:off",
     runtimeState.showAirports ? "airports:on" : "airports:off",
@@ -3212,12 +3227,14 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.activeScenarioId || "",
       runtimeState.deferContextBasePass ? "context-markers:deferred" : "context-markers:ready",
       runtimeState.showCityPoints ? "cities:on" : "cities:off",
+      runtimeState.showStrategicResourceMarkers ? "strategic-resources:on" : "strategic-resources:off",
       runtimeState.showTransport ? "transport:on" : "transport:off",
       runtimeState.showRoad ? "road:on" : "road:off",
       runtimeState.showAirports ? "airports:on" : "airports:off",
       runtimeState.showPorts ? "ports:on" : "ports:off",
       runtimeState.showRail ? "rail:on" : "rail:off",
       `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
+      `strategic:${Number(runtimeState.scenarioStrategicValuesRevision || 0)}:${String(runtimeState.strategicChoroplethMetric || "")}`,
       `colors:${Number(runtimeState.colorRevision || 0)}`,
       `context:${Number(runtimeState.contextLayerRevision || 0)}`,
       stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
@@ -13288,9 +13305,11 @@ function getCityCapitalScore(feature) {
 function getCitySortWeight(feature) {
   const props = feature?.properties || {};
   const population = Math.max(0, Number(props.__city_population || 0));
+  const victoryPointValue = Math.max(0, Number(props.__city_scenario_victory_points || 0));
   return (
     (props.__city_is_capital ? 2_000_000_000 : 0)
     + (getCityTierWeight(feature) * 250_000_000)
+    + (victoryPointValue * 25_000_000)
     + population
   );
 }
@@ -14870,6 +14889,90 @@ function drawCityPointsLayer(k, { interactive = false } = {}) {
     featureCount: renderState.featureCount,
     visibleFeatureCount: renderState.markerEntries.length,
     labelCount: 0,
+    interactive: !!interactive,
+    skipped: false,
+  });
+}
+
+function getStrategicValuesResourceFeatureCount(payload) {
+  const features = Array.isArray(payload?.resourcePoints?.features)
+    ? payload.resourcePoints.features
+    : (
+      Array.isArray(payload?.resource_points?.features)
+        ? payload.resource_points.features
+        : []
+    );
+  return features.length;
+}
+
+function getStrategicResourceMarkerLayerState(k) {
+  const payload = runtimeState.scenarioStrategicValuesData;
+  const featureCount = getStrategicValuesResourceFeatureCount(payload);
+  if (!runtimeState.showStrategicResourceMarkers) {
+    return { skipped: true, reason: "hidden", featureCount, markerEntries: [] };
+  }
+  if (!payload || typeof payload !== "object") {
+    return { skipped: true, reason: "no-data", featureCount: 0, markerEntries: [] };
+  }
+  if (!projection) {
+    return { skipped: true, reason: "no-projection", featureCount, markerEntries: [] };
+  }
+  if (Array.isArray(payload.diagnostics?.errors) && payload.diagnostics.errors.length > 0) {
+    return { skipped: true, reason: "diagnostic-errors", featureCount, markerEntries: [] };
+  }
+
+  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const scale = Math.max(0.0001, Number(transform?.k || k || 1));
+  const entries = buildStrategicResourceMarkerEntries(payload, {
+    showResourceMarkers: true,
+    zoom: scale,
+  }).map((entry) => {
+    const anchor = projection([entry.lon, entry.lat]);
+    if (!Array.isArray(anchor) || !anchor.every(Number.isFinite)) return null;
+    return { ...entry, anchor };
+  }).filter(Boolean);
+
+  if (!entries.length) {
+    return { skipped: true, reason: "culled", featureCount, markerEntries: [], scale };
+  }
+  return { skipped: false, reason: "", featureCount, markerEntries: entries, scale };
+}
+
+function drawStrategicResourceMarkerSymbol(entry, scale) {
+  const radius = Math.max(1.6 / scale, Number(entry.radiusPx || 4) / scale);
+  const strokeWidth = Math.max(0.75 / scale, 1.35 / scale);
+  const fillColor = STRATEGIC_RESOURCE_MARKER_COLORS[entry.resource] || "#475569";
+  context.beginPath();
+  context.arc(entry.anchor[0], entry.anchor[1], radius, 0, Math.PI * 2);
+  context.fillStyle = fillColor;
+  context.fill();
+  context.lineWidth = strokeWidth;
+  context.strokeStyle = STRATEGIC_RESOURCE_MARKER_STROKE;
+  context.stroke();
+}
+
+function drawStrategicResourceMarkersLayer(k, { interactive = false } = {}) {
+  const startedAt = nowMs();
+  const renderState = getStrategicResourceMarkerLayerState(k);
+  if (renderState.skipped) {
+    collectContextMetric("drawStrategicResourceMarkersLayer", nowMs() - startedAt, {
+      featureCount: renderState.featureCount,
+      visibleFeatureCount: 0,
+      interactive: !!interactive,
+      skipped: true,
+      reason: renderState.reason,
+    });
+    return;
+  }
+
+  context.save();
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = interactive ? 0.82 : 0.9;
+  renderState.markerEntries.forEach((entry) => drawStrategicResourceMarkerSymbol(entry, renderState.scale));
+  context.restore();
+  collectContextMetric("drawStrategicResourceMarkersLayer", nowMs() - startedAt, {
+    featureCount: renderState.featureCount,
+    visibleFeatureCount: renderState.markerEntries.length,
     interactive: !!interactive,
     skipped: false,
   });
@@ -19598,6 +19701,12 @@ function drawContextMarkersPass(k, { interactive = false } = {}) {
         skipped: true,
         reason: "staged-apply",
       });
+      collectContextMetric("drawStrategicResourceMarkersLayer", 0, {
+        featureCount: getStrategicValuesResourceFeatureCount(runtimeState.scenarioStrategicValuesData),
+        interactive: false,
+        skipped: true,
+        reason: "staged-apply",
+      });
       collectContextMetric("drawAirportsLayer", 0, {
         featureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
         interactive: false,
@@ -19628,6 +19737,7 @@ function drawContextMarkersPass(k, { interactive = false } = {}) {
       transportOverviewOwner.drawRailwaysLayer(k, { interactive });
       transportOverviewOwner.drawAirportsLayer(k, { interactive });
       transportOverviewOwner.drawPortsLayer(k, { interactive });
+      drawStrategicResourceMarkersLayer(k, { interactive });
       if (interactive) {
         drawCityPointsLayer(k, { interactive: true });
       }

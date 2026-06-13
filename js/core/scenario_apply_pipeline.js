@@ -4,6 +4,9 @@
 
 import { buildScenarioOwnerColorMapDetails } from "./palette_runtime_bridge.js";
 import { commitScenarioActivationRuntimeState } from "./state/scenario_runtime_state.js";
+import {
+  normalizeScenarioStrategicValuesPayload,
+} from "./scenario/strategic_values.js";
 
 function createScenarioApplyPipeline({
   runtimeState,
@@ -144,6 +147,8 @@ function createScenarioApplyPipeline({
       scenarioSpecialRegionsData: staged.scenarioSpecialRegionsFromTopology || bundle.specialRegionsPayload || null,
       scenarioReliefOverlaysData: staged.scenarioReliefOverlaysPayload || null,
       scenarioReliefOverlayRevision: (Number(runtimeState.scenarioReliefOverlayRevision) || 0) + 1,
+      scenarioStrategicValuesData: staged.scenarioStrategicValuesPayload || null,
+      scenarioStrategicValuesRevision: (Number(runtimeState.scenarioStrategicValuesRevision) || 0) + 1,
       scenarioDistrictGroupsData: staged.districtGroupsPayload,
       scenarioDistrictGroupByFeatureId,
       releasableCatalog,
@@ -172,6 +177,18 @@ function createScenarioApplyPipeline({
       hoveredWaterRegionId: null,
       hoveredSpecialRegionId: null,
     };
+  }
+
+  function normalizeScenarioApplyStrategicValuesPayload(payload, bundle, scenarioId) {
+    if (!payload) {
+      return null;
+    }
+    return normalizeScenarioStrategicValuesPayload(payload, {
+      expected: {
+        scenario_id: scenarioId,
+        baseline_hash: getScenarioBaselineHashFromBundle(bundle) || bundle?.manifest?.baseline_hash || "",
+      },
+    });
   }
 
   function runScenarioActivationPreCommitPhase(bundle, staged) {
@@ -407,6 +424,14 @@ function createScenarioApplyPipeline({
     const mergedAtlantropaPayload = getActiveScenarioMergedChunkLayerPayload("scenario_atlantropa", scenarioId);
     const mergedReliefPayload = getActiveScenarioMergedChunkLayerPayload("relief", scenarioId);
     const mergedCitiesPayload = getActiveScenarioMergedChunkLayerPayload("cities", scenarioId);
+    const mergedStrategicValuesPayload = getActiveScenarioMergedChunkLayerPayload("strategicvalues", scenarioId);
+    const scenarioStrategicValuesPayload = normalizeScenarioApplyStrategicValuesPayload(
+      mergedStrategicValuesPayload !== undefined
+        ? mergedStrategicValuesPayload
+        : (bundle.strategicValuesPayload || null),
+      bundle,
+      scenarioId
+    );
     // 这里用 undefined 区分“runtime 还没接管该 layer”，此时继续回退到 bundle/topology。
     // 只要 runtime 显式给出 null 或 payload，都按 runtime 的结论提交。
     const scenarioWaterRegionsFromTopology =
@@ -503,6 +528,7 @@ function createScenarioApplyPipeline({
       scenarioCityOverridesPayload: mergedCitiesPayload !== undefined
         ? mergedCitiesPayload
         : (bundle.cityOverridesPayload || null),
+      scenarioStrategicValuesPayload,
       scenarioNameMap,
       scenarioColorMap,
       scenarioGeneratedColorTags: scenarioColorDetails.generatedTags,

@@ -103,6 +103,12 @@ export function createAppearanceControlsController({
         void ensureActiveScenarioOptionalLayerLoaded("cities", loadOptions);
       }
     }
+    if (runtimeState.showStrategicResourceMarkers || runtimeState.strategicChoroplethMetric) {
+      void ensureActiveScenarioOptionalLayerLoaded("strategicvalues", {
+        reason: "appearance-preset-apply",
+        renderNow: true,
+      });
+    }
     if (typeof runtimeState.ensureContextLayerDataFn !== "function") return;
     const requests = [];
     if (runtimeState.showUrban) requests.push("urban");

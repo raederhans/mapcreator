@@ -39,6 +39,8 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "scenarioRuntimeTopologyVersionTag",
   "scenarioHydrationHealthGate",
   "scenarioReliefOverlaysData",
+  "scenarioStrategicValuesData",
+  "scenarioStrategicValuesRevision",
   "scenarioDistrictGroupsData",
   "scenarioDistrictGroupByFeatureId",
   "scenarioReliefOverlayRevision",
@@ -97,6 +99,8 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "showWaterRegions",
   "showScenarioSpecialRegions",
   "showScenarioReliefOverlays",
+  "showStrategicResourceMarkers",
+  "strategicChoroplethMetric",
   "activePaletteId",
   "activePaletteMeta",
   "activePalettePack",
@@ -149,6 +153,8 @@ function captureScenarioRuntimeSnapshot() {
     scenarioRuntimeTopologyVersionTag: String(runtimeState.scenarioRuntimeTopologyVersionTag || ""),
     scenarioHydrationHealthGate: cloneScenarioStateValue(runtimeState.scenarioHydrationHealthGate),
     scenarioReliefOverlaysData: cloneScenarioStateValue(runtimeState.scenarioReliefOverlaysData),
+    scenarioStrategicValuesData: cloneScenarioStateValue(runtimeState.scenarioStrategicValuesData),
+    scenarioStrategicValuesRevision: Number(runtimeState.scenarioStrategicValuesRevision) || 0,
     scenarioDistrictGroupsData: cloneScenarioStateValue(runtimeState.scenarioDistrictGroupsData),
     scenarioDistrictGroupByFeatureId: cloneScenarioStateValue(runtimeState.scenarioDistrictGroupByFeatureId),
     scenarioReliefOverlayRevision: Number(runtimeState.scenarioReliefOverlayRevision) || 0,
@@ -198,6 +204,8 @@ function captureScenarioRuntimeSnapshot() {
     showWaterRegions: runtimeState.showWaterRegions !== false,
     showScenarioSpecialRegions: runtimeState.showScenarioSpecialRegions !== false,
     showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
+    showStrategicResourceMarkers: !!runtimeState.showStrategicResourceMarkers,
+    strategicChoroplethMetric: String(runtimeState.strategicChoroplethMetric || ""),
   };
 }
 
@@ -281,6 +289,8 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.scenarioHydrationHealthGate =
     cloneScenarioStateValue(snapshot.scenarioHydrationHealthGate) || createDefaultScenarioHydrationHealthGate();
   runtimeState.scenarioReliefOverlaysData = cloneScenarioStateValue(snapshot.scenarioReliefOverlaysData);
+  runtimeState.scenarioStrategicValuesData = cloneScenarioStateValue(snapshot.scenarioStrategicValuesData);
+  runtimeState.scenarioStrategicValuesRevision = Number(snapshot.scenarioStrategicValuesRevision) || 0;
   runtimeState.scenarioDistrictGroupsData = cloneScenarioStateValue(snapshot.scenarioDistrictGroupsData);
   runtimeState.scenarioDistrictGroupByFeatureId = cloneScenarioStateValue(snapshot.scenarioDistrictGroupByFeatureId) || new Map();
   runtimeState.scenarioReliefOverlayRevision = Number(snapshot.scenarioReliefOverlayRevision) || 0;
@@ -324,6 +334,8 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.showWaterRegions = snapshot.showWaterRegions !== false;
   runtimeState.showScenarioSpecialRegions = snapshot.showScenarioSpecialRegions !== false;
   runtimeState.showScenarioReliefOverlays = snapshot.showScenarioReliefOverlays !== false;
+  runtimeState.showStrategicResourceMarkers = !!snapshot.showStrategicResourceMarkers;
+  runtimeState.strategicChoroplethMetric = String(snapshot.strategicChoroplethMetric || "");
 }
 
 function restoreScenarioPresentationSnapshot(snapshot) {

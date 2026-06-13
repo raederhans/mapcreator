@@ -29,6 +29,8 @@ const BASE_LAYER_VISIBILITY_FIELDS = Object.freeze([
   "showScenarioAtlantropa",
   "showScenarioReliefOverlays",
   "showCityPoints",
+  "showStrategicResourceMarkers",
+  "strategicChoroplethMetric",
   "showUrban",
   "showPhysical",
   "showRivers",
@@ -98,6 +100,9 @@ export function normalizeAppearanceLayerVisibility(layerVisibility = null) {
         ? true
         : !!source.showScenarioReliefOverlays,
     showCityPoints: source.showCityPoints === undefined ? true : !!source.showCityPoints,
+    showStrategicResourceMarkers:
+      source.showStrategicResourceMarkers === undefined ? false : !!source.showStrategicResourceMarkers,
+    strategicChoroplethMetric: String(source.strategicChoroplethMetric || ""),
     showUrban: source.showUrban === undefined ? true : !!source.showUrban,
     showPhysical: source.showPhysical === undefined ? true : !!source.showPhysical,
     showRivers: source.showRivers === undefined ? true : !!source.showRivers,

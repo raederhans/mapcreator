@@ -267,12 +267,12 @@ test("project payload builder returns export schema without triggering download"
     exportWorkbenchUi: {},
   });
 
-  assert.equal(payload.schemaVersion, 21);
+  assert.equal(payload.schemaVersion, 22);
   assert.equal(payload.scenario.id, "tno_1962");
   assert.equal(payload.scenario.version, 3);
   assert.equal(payload.exportHandoff.artifactKind, "project-json");
   assert.equal(payload.exportHandoff.scenario.id, "tno_1962");
-  assert.equal(payload.exportHandoff.project.schemaVersion, 21);
+  assert.equal(payload.exportHandoff.project.schemaVersion, 22);
   assert.equal(payload.exportHandoff.exportUi.target, "composite");
   assert.equal(payload.exportHandoff.files[0].path, "map_project.json");
   assert.equal(Object.hasOwn(payload.exportHandoff.files[0], "byteLength"), false);
@@ -296,6 +296,8 @@ test("project payload builder returns export schema without triggering download"
     height: 181,
     opacity: 0.5,
   });
+  assert.equal(payload.layerVisibility.showStrategicResourceMarkers, false);
+  assert.equal(payload.layerVisibility.strategicChoroplethMetric, "");
 });
 
 test("project payload builder keeps open ocean visible with interaction off by default", () => {
@@ -513,6 +515,29 @@ test("project import restores missing open ocean flags as visible without intera
   assert.equal(result.successes[0].layerVisibility.allowOpenOceanPaint, false);
 });
 
+test("project export and import preserve strategic values view controls", async () => {
+  const payload = await exportProjectPayload({
+    annotationView: {},
+    exportWorkbenchUi: {},
+    styleConfig: {},
+    showStrategicResourceMarkers: true,
+    strategicChoroplethMetric: "steel",
+  });
+
+  assert.equal(payload.layerVisibility.showStrategicResourceMarkers, true);
+  assert.equal(payload.layerVisibility.strategicChoroplethMetric, "steel");
+
+  const restored = await importProjectPayload(payload);
+  assert.equal(restored.successes[0].layerVisibility.showStrategicResourceMarkers, true);
+  assert.equal(restored.successes[0].layerVisibility.strategicChoroplethMetric, "steel");
+
+  delete payload.layerVisibility.showStrategicResourceMarkers;
+  delete payload.layerVisibility.strategicChoroplethMetric;
+  const legacy = await importProjectPayload(payload);
+  assert.equal(legacy.successes[0].layerVisibility.showStrategicResourceMarkers, false);
+  assert.equal(legacy.successes[0].layerVisibility.strategicChoroplethMetric, "");
+});
+
 test("project import restores missing transport overview registry visibility as disabled", async () => {
   const payload = await exportProjectPayload({
     annotationView: {},
@@ -618,7 +643,7 @@ test("project zip download keeps editable project and manifest files", async () 
   const projectPayload = JSON.parse(strFromU8(entries["map_project.json"]));
   const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
 
-  assert.equal(projectPayload.schemaVersion, 21);
+  assert.equal(projectPayload.schemaVersion, 22);
   assert.equal(manifest.artifactKind, "project-zip");
   assert.equal(manifest.packageKind, "editable-project-package");
   assert.equal(manifest.files[0].path, "map_project.json");
@@ -711,7 +736,7 @@ test("project package import prepares editable project and preview", async () =>
   assert.equal(prepared.preview.packageKind, "editable-project-package");
   assert.equal(prepared.preview.scenario.id, "tno_1962");
   assert.equal(prepared.preview.summary.exportTarget, "per-layer");
-  assert.match(await prepared.file.text(), /"schemaVersion": 21/);
+  assert.match(await prepared.file.text(), /"schemaVersion": 22/);
 });
 
 test("project package import rejects manifest identity mismatch", async () => {

@@ -32,8 +32,7 @@ const stateDefaultsDataUrl = `data:text/javascript;charset=utf-8,${encodeURIComp
 const colorStateSource = await readFile(new URL("../js/core/state/color_state.js", import.meta.url), "utf8");
 const patchedColorStateSource = colorStateSource.replace("../state_defaults.js", stateDefaultsDataUrl);
 const colorStateModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(patchedColorStateSource)}`);
-const colorResolverSource = await readFile(new URL("../js/core/color_resolver.js", import.meta.url), "utf8");
-const colorResolverModule = await import(`data:text/javascript;charset=utf-8,${encodeURIComponent(colorResolverSource)}`);
+const colorResolverModule = await import(new URL("../js/core/color_resolver.js", import.meta.url));
 const colorHexUtilsModule = await import(new URL("../js/core/color_hex_utils.js", import.meta.url));
 const colorManagerModule = await import(new URL("../js/core/color_manager.js", import.meta.url));
 const countryCodeAliasesSource = await readFile(new URL("../js/core/country_code_aliases.js", import.meta.url), "utf8");
@@ -559,6 +558,50 @@ test("resolveFeatureColor reports canonical color source before compatibility mi
       source: "sovereignBaseColors",
       featureId: "feature_1",
       ownerCode: "AAA",
+    },
+  );
+});
+
+test("resolveFeatureColor applies strategic choropleth lens when metric data is active", () => {
+  const colorRuntimeState = createDefaultColorState();
+  colorRuntimeState.strategicChoroplethMetric = "steel";
+  colorRuntimeState.scenarioStrategicValuesData = {
+    metrics: {
+      steel: { kind: "additive", min: 0, max: 12, p95: 10 },
+    },
+    bucketByFeature: {
+      feature_1: "s1",
+    },
+    buckets: {
+      s1: { steel: 5 },
+    },
+    diagnostics: {
+      errors: [],
+    },
+  };
+  colorRuntimeState.visualOverrides = { feature_1: "#112233" };
+  colorRuntimeState.sovereignBaseColors = { AAA: "#778899" };
+
+  const resolved = resolveFeatureColor("feature_1", {
+    state: colorRuntimeState,
+    getOwnerCode: () => "AAA",
+  });
+
+  assert.equal(resolved.source, "strategic:steel");
+  assert.equal(resolved.featureId, "feature_1");
+  assert.match(resolved.color, /^#[0-9a-f]{6}$/);
+
+  colorRuntimeState.scenarioStrategicValuesData.diagnostics.errors = [{ code: "baseline_hash_mismatch" }];
+  assert.deepEqual(
+    resolveFeatureColor("feature_1", {
+      state: colorRuntimeState,
+      getOwnerCode: () => "AAA",
+    }),
+    {
+      color: "#112233",
+      source: "visualOverrides",
+      featureId: "feature_1",
+      ownerCode: "",
     },
   );
 });

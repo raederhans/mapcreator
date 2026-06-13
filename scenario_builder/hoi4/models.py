@@ -37,7 +37,10 @@ class StateRecord:
     province_ids: list[int]
     state_category: str
     manpower: int | None = None
-    victory_points: list[int] = field(default_factory=list)
+    victory_points: list[tuple[int, int]] = field(default_factory=list)
+    resources: dict[str, float] = field(default_factory=dict)
+    buildings: dict[str, int] = field(default_factory=dict)
+    province_buildings: dict[int, dict[str, int]] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

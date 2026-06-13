@@ -15,6 +15,7 @@ from .crosswalk import (
     build_iso2_to_mapped_tag,
 )
 from .models import ScenarioCountryRecord
+from .strategic import build_strategic_values_payload
 
 
 CRITICAL_REGION_IDS = [
@@ -1311,6 +1312,7 @@ def compile_scenario_bundle(
     palette_map,
     diagnostics,
     controller_rules: list[object] | None = None,
+    strategic_inputs: dict[str, object] | None = None,
 ) -> dict[str, object]:
     iso2_to_tag = build_iso2_to_mapped_tag(palette_map)
     active_owner_tags = build_active_owner_tags(states_by_id)
@@ -1373,6 +1375,22 @@ def compile_scenario_bundle(
             if feature.feature_id in assignments
         },
     }
+
+    strategic_values_payload: dict[str, object] | None = None
+    if strategic_inputs:
+        strategic_values_payload = build_strategic_values_payload(
+            scenario_id=scenario_id,
+            baseline_hash=baseline_hash,
+            as_of_date=str(strategic_inputs.get("as_of_date") or bookmark.date or ""),
+            states_by_id=states_by_id,
+            runtime_features=runtime_features,
+            assignments=assignments,
+            runtime_topology_payload=strategic_inputs.get("runtime_topology_payload") or {},
+            vp_localisation=strategic_inputs.get("vp_localisation") or {},
+            world_cities_payload=strategic_inputs.get("world_cities_payload"),
+            world_cities_path=strategic_inputs.get("world_cities_path"),
+        )
+        diagnostics["strategic_values"] = strategic_values_payload.get("diagnostics", {})
 
     controllers_only, controller_rule_diagnostics = _build_controller_assignments(
         runtime_features=runtime_features,
@@ -1585,6 +1603,17 @@ def compile_scenario_bundle(
         "manual_reviewed_region_count": len(region_checks),
         "belarus_hybrid_feature_count": int(belarus_topology_summary.get("total_feature_count", 0)),
     }
+    if strategic_values_payload is not None:
+        strategic_diagnostics = strategic_values_payload.get("diagnostics", {})
+        summary.update(
+            {
+                "strategic_vp_total": int(strategic_diagnostics.get("vp_total") or 0),
+                "strategic_vp_matched": int(strategic_diagnostics.get("vp_matched") or 0),
+                "strategic_states_anchored": int(strategic_diagnostics.get("states_anchored") or 0),
+                "strategic_states_pooled": int(strategic_diagnostics.get("states_pooled") or 0),
+                "strategic_resource_point_count": int(strategic_diagnostics.get("resource_point_count") or 0),
+            }
+        )
 
     critical_regions = [
         {
@@ -1646,6 +1675,10 @@ def compile_scenario_bundle(
             }
         },
     }
+    if strategic_values_payload is not None:
+        manifest_payload["strategic_values_url"] = (
+            f"data/scenarios/{scenario_id}/strategic_values.by_feature.json"
+        )
 
     failure_reasons: list[str] = []
     enforce_region_checks = bool(diagnostics.get("enforce_region_checks", scenario_id == "hoi4_1936"))
@@ -1680,4 +1713,5 @@ def compile_scenario_bundle(
         "cores": cores_payload,
         "audit": audit_payload,
         "baseline_hash": baseline_hash,
+        **({"strategic_values": strategic_values_payload} if strategic_values_payload is not None else {}),
     }

@@ -12,6 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from map_builder.contracts import SCENARIO_STRATEGIC_VALUES_FILENAME
 from tools.check_scenario_contracts import collect_duplicate_scenario_dirs, inspect_scenario_contract
 DEFAULT_SCENARIO_DIR = PROJECT_ROOT / "data/scenarios/hoi4_1936"
 DEFAULT_REPORT_DIR = PROJECT_ROOT / ".runtime/reports/generated/scenarios/hoi4_1936"
@@ -278,6 +279,8 @@ def inspect_hoi4_scenario_bundle(
     cores = load_json(scenario_dir / "cores.by_feature.json")
     controllers_path = scenario_dir / "controllers.by_feature.json"
     controllers = load_json(controllers_path) if controllers_path.exists() else {}
+    strategic_values_path = scenario_dir / SCENARIO_STRATEGIC_VALUES_FILENAME
+    strategic_values = load_json(strategic_values_path) if strategic_values_path.exists() else {}
     scenario_id = str(manifest.get("scenario_id") or "").strip()
     expectation = load_json(expectation_file) if expectation_file.exists() else {}
     coverage_report_path = report_dir / "coverage_report.md"
@@ -291,6 +294,11 @@ def inspect_hoi4_scenario_bundle(
     controllers_by_feature_id = (
         controllers.get("controllers", {})
         if isinstance(controllers.get("controllers", {}), dict)
+        else {}
+    )
+    strategic_diagnostics = (
+        strategic_values.get("diagnostics", {})
+        if isinstance(strategic_values.get("diagnostics", {}), dict)
         else {}
     )
 
@@ -316,6 +324,66 @@ def inspect_hoi4_scenario_bundle(
             field_name = str(field).strip()
             if field_name:
                 expect(bool(manifest.get(field_name)), f"manifest.{field_name} must be present.")
+
+    strategic_url = str(manifest.get("strategic_values_url") or "").strip()
+    if strategic_url or (
+        isinstance(manifest_required_fields, list)
+        and "strategic_values_url" in {str(field).strip() for field in manifest_required_fields}
+    ):
+        expected_url = f"data/scenarios/{scenario_dir_name}/{SCENARIO_STRATEGIC_VALUES_FILENAME}"
+        expect(strategic_url == expected_url, f"manifest.strategic_values_url must equal {expected_url}. Found {strategic_url}.")
+        expect(strategic_values_path.exists(), f"{SCENARIO_STRATEGIC_VALUES_FILENAME} must exist when manifest.strategic_values_url is present.")
+    if strategic_values:
+        expect(strategic_values.get("version") == 1, f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.version must equal 1.")
+        expect(
+            strategic_values.get("scenario_id") == scenario_id,
+            f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.scenario_id must match manifest.scenario_id.",
+        )
+        expect(
+            strategic_values.get("baseline_hash") == manifest.get("baseline_hash"),
+            f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.baseline_hash must match manifest.baseline_hash.",
+        )
+        strategic_buckets = strategic_values.get("buckets")
+        strategic_bucket_by_feature = strategic_values.get("bucket_by_feature")
+        strategic_resource_points = strategic_values.get("resource_points")
+        expect(isinstance(strategic_buckets, dict) and bool(strategic_buckets), f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.buckets must be a non-empty object.")
+        if isinstance(strategic_bucket_by_feature, dict):
+            strategic_feature_ids = {
+                str(feature_id).strip()
+                for feature_id in strategic_bucket_by_feature.keys()
+                if str(feature_id).strip()
+            }
+            unknown_ids = sorted(strategic_feature_ids - set(str(feature_id) for feature_id in owners_by_feature_id.keys()))
+            expect(
+                not unknown_ids,
+                f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.bucket_by_feature references unknown owner feature IDs: {unknown_ids[:10]}",
+            )
+            missing_ids = sorted(set(str(feature_id) for feature_id in owners_by_feature_id.keys()) - strategic_feature_ids)
+            expect(
+                not missing_ids,
+                f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.bucket_by_feature is missing owner feature IDs: {missing_ids[:10]}",
+            )
+            if isinstance(strategic_buckets, dict):
+                missing_bucket_ids = sorted(
+                    {
+                        str(bucket_id).strip()
+                        for bucket_id in strategic_bucket_by_feature.values()
+                        if str(bucket_id).strip()
+                    }
+                    - set(strategic_buckets.keys())
+                )
+                expect(
+                    not missing_bucket_ids,
+                    f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.bucket_by_feature references missing buckets: {missing_bucket_ids[:10]}",
+                )
+        else:
+            expect(False, f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.bucket_by_feature must be an object.")
+        expect(
+            isinstance(strategic_resource_points, dict)
+            and strategic_resource_points.get("type") == "FeatureCollection"
+            and isinstance(strategic_resource_points.get("features"), list),
+            f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.resource_points must be a GeoJSON FeatureCollection.",
+        )
 
     featured_tags = [
         str(tag or "").strip().upper()
@@ -420,6 +488,15 @@ def inspect_hoi4_scenario_bundle(
         maximums=expectation.get("summary_max", {}) if isinstance(expectation.get("summary_max"), dict) else {},
         prefix="manifest.summary",
     )
+    if strategic_values:
+        apply_numeric_assertions(
+            errors=errors,
+            payload=strategic_diagnostics,
+            equals=expectation.get("strategic_diagnostics_equals", {}) if isinstance(expectation.get("strategic_diagnostics_equals"), dict) else {},
+            minimums=expectation.get("strategic_diagnostics_min", {}) if isinstance(expectation.get("strategic_diagnostics_min"), dict) else {},
+            maximums=expectation.get("strategic_diagnostics_max", {}) if isinstance(expectation.get("strategic_diagnostics_max"), dict) else {},
+            prefix=f"{SCENARIO_STRATEGIC_VALUES_FILENAME}.diagnostics",
+        )
     diagnostics_equals = expectation.get("diagnostics_equals", {})
     if isinstance(diagnostics_equals, dict):
         for key, expected_value in diagnostics_equals.items():

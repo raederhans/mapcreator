@@ -5,7 +5,8 @@
     "countries_url",
     "owners_url",
     "cores_url",
-    "audit_url"
+    "audit_url",
+    "strategic_values_url"
   ],
   "required_country_fields": [
     "provenance_iso2",
@@ -29,6 +30,16 @@
   },
   "summary_min": {
     "feature_count": 10000,
-    "owner_count": 80
+    "owner_count": 80,
+    "strategic_vp_total": 100,
+    "strategic_vp_matched": 50,
+    "strategic_states_anchored": 50,
+    "strategic_resource_point_count": 50
+  },
+  "strategic_diagnostics_min": {
+    "vp_total": 100,
+    "vp_matched": 50,
+    "states_anchored": 50,
+    "resource_point_count": 50
   }
 }

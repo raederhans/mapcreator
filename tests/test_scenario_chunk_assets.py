@@ -87,7 +87,7 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
 
                 payload_cost = scenario_chunk_assets._summarize_payload_geometry_cost(payload)
                 payload_byte_size = scenario_chunk_assets._minified_json_byte_size(payload)
-                payload_bounds = [scenario_chunk_assets._feature_bounds(feature) for feature in features]
+                payload_bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
 
                 self.assertEqual(coarse_chunk.get("feature_count"), len(features))
                 self.assertEqual(coarse_chunk.get("feature_bounds"), payload_bounds)
@@ -494,7 +494,7 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
                 "political.detail.country.bbb": 1,
             })
 
-    def test_feature_bounds_summary_keeps_positional_alignment(self) -> None:
+    def test_feature_bounds_summary_omits_empty_bounds(self) -> None:
         features = [
             {
                 "type": "Feature",
@@ -516,9 +516,32 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
 
         bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
 
-        self.assertEqual(len(bounds), len(features))
-        self.assertEqual(bounds[0], [0.0, 0.0, 0.0, 0.0])
-        self.assertEqual(bounds[1], [1.0, 1.0, 2.0, 2.0])
+        self.assertEqual(bounds, [[1.0, 1.0, 2.0, 2.0]])
+
+    def test_feature_bounds_summary_reads_geometry_collection_children(self) -> None:
+        features = [
+            {
+                "type": "Feature",
+                "properties": {"id": "collection"},
+                "geometry": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {
+                            "type": "Polygon",
+                            "coordinates": [[[10, 20], [12, 20], [12, 22], [10, 20]]],
+                        },
+                        {
+                            "type": "Point",
+                            "coordinates": [15, 25],
+                        },
+                    ],
+                },
+            },
+        ]
+
+        bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
+
+        self.assertEqual(bounds, [[10.0, 20.0, 15.0, 25.0]])
 
     def test_political_coarse_uses_runtime_topology_when_startup_political_is_unmarked_shell_only(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

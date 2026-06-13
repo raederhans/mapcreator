@@ -48,6 +48,8 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIn("function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {", renderer_content)
         self.assertIn("function drawCityPointsLayer(k, { interactive = false } = {}) {", renderer_content)
         self.assertIn("function drawLabelsPass(k, { interactive = false } = {}) {", renderer_content)
+        self.assertIn("const victoryPointValue = Math.max(0, Number(props.__city_scenario_victory_points || 0));", renderer_content)
+        self.assertIn("+ (victoryPointValue * 25_000_000)", renderer_content)
 
         self.assertIn("export function createUrbanCityPolicyOwner({", policy_content)
         self.assertIn("function getUrbanFeatureIndex() {", policy_content)
@@ -56,6 +58,7 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIn("function getCityScenarioTag(feature) {", policy_content)
         self.assertIn("function doesScenarioCountryHideCityPoints(tag) {", policy_content)
         self.assertIn("function applyScenarioCityOverride(feature, overrideEntry) {", policy_content)
+        self.assertIn("function applyStrategicVictoryPointRank(feature) {", policy_content)
         self.assertIn("function getEffectiveCityCollection() {", policy_content)
 
         self.assertIsNone(re.search(r"function\s+cloneCityFeature\s*\(", renderer_content))
