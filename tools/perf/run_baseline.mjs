@@ -211,6 +211,7 @@ function spawnDevServer() {
   });
 }
 
+// perf gate 默认自管隔离 server；只有显式 PERF_REUSE_ACTIVE_SERVER 才读取外部 active_server，避免旧端口污染当前 gate。
 async function ensureServerBaseUrl() {
   if (shouldReuseActiveServer()) {
     const existingBaseUrl = await resolveExistingServerBaseUrl(ACTIVE_SERVER_PATH);

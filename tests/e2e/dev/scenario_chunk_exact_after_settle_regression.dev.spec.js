@@ -623,6 +623,7 @@ test("tno runtime color coverage includes rendered spatial items", async ({ page
   await ensureScenario(page, "tno_1962", "TNO 1962");
   await waitForStableExactRender(page);
 
+  // 这里锁的是“已经进入可见绘制列表”的颜色合同，覆盖 spatialItems 比只查 landData state 更接近真实画布路径。
   const coverage = await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
     const {

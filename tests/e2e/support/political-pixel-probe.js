@@ -62,6 +62,7 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
       });
     }
 
+    // 像素断言看的是当前显示 owner；shell fallback、blank mode 和 sovereignty override 都可能和几何国家不同。
     function getDisplayOwnerCode(feature, featureId, fallbackCountryCode = "") {
       const props = feature?.properties || {};
       const directOwnerCode = normalizeFeatureCountryCode(state.sovereigntyByFeatureId?.[featureId] || "", {
