@@ -64,6 +64,66 @@ function normalizePresetId(value) {
   return String(value || "").trim();
 }
 
+function normalizeChannelRevision(channel) {
+  return Math.max(0, Math.round(Number(channel?.revision) || 0));
+}
+
+function areGridValuesEqual(leftValues, rightValues) {
+  if (leftValues === rightValues) return true;
+  if (!leftValues || !rightValues || leftValues.length !== rightValues.length) return false;
+  for (let index = 0; index < leftValues.length; index += 1) {
+    if (leftValues[index] !== rightValues[index]) return false;
+  }
+  return true;
+}
+
+function areIntensityPointsEqual(leftPoints = [], rightPoints = []) {
+  const left = Array.isArray(leftPoints) ? leftPoints : [];
+  const right = Array.isArray(rightPoints) ? rightPoints : [];
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    const leftPoint = left[index] || {};
+    const rightPoint = right[index] || {};
+    if (
+      String(leftPoint.id || "") !== String(rightPoint.id || "")
+      || Number(leftPoint.lon) !== Number(rightPoint.lon)
+      || Number(leftPoint.lat) !== Number(rightPoint.lat)
+      || Number(leftPoint.strength) !== Number(rightPoint.strength)
+      || Number(leftPoint.radiusDeg) !== Number(rightPoint.radiusDeg)
+      || String(leftPoint.falloff || "") !== String(rightPoint.falloff || "")
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areIntensityChannelsEqual(leftChannel, rightChannel) {
+  return (
+    !!leftChannel?.enabled === !!rightChannel?.enabled
+    && areIntensityPointsEqual(leftChannel?.points, rightChannel?.points)
+    && areGridValuesEqual(leftChannel?.grid?.base, rightChannel?.grid?.base)
+  );
+}
+
+function restorePresetIntensityFields(currentFields, snapshotFields) {
+  const current = normalizeIntensityFieldsState(currentFields);
+  const next = normalizeIntensityFieldsState(snapshotFields);
+  INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
+    const currentChannel = current.channels?.[channelId];
+    const nextChannel = next.channels?.[channelId];
+    if (!currentChannel || !nextChannel) return;
+    const currentRevision = normalizeChannelRevision(currentChannel);
+    const nextRevision = normalizeChannelRevision(nextChannel);
+    if (!areIntensityChannelsEqual(currentChannel, nextChannel)) {
+      nextChannel.revision = nextRevision <= currentRevision ? currentRevision + 1 : nextRevision;
+    } else {
+      nextChannel.revision = Math.max(currentRevision, nextRevision);
+    }
+  });
+  return next;
+}
+
 function formatTimestamp(value, fallback = DEFAULT_TIMESTAMP) {
   const date = value ? new Date(value) : new Date(fallback);
   if (Number.isFinite(date.getTime())) return date.toISOString();
@@ -304,19 +364,6 @@ export function buildAppearancePresetExportPayload(preset = null) {
   };
 }
 
-function restorePresetIntensityFieldsState(target, rawIntensityFields) {
-  const previousFields = normalizeIntensityFieldsState(target?.intensityFields);
-  const restoredFields = normalizeIntensityFieldsState(rawIntensityFields);
-  INTENSITY_FIELD_CHANNEL_IDS.forEach((channelId) => {
-    const channel = restoredFields.channels[channelId];
-    if (!channel) return;
-    const previousRevision = Math.max(0, Math.round(Number(previousFields.channels[channelId]?.revision) || 0));
-    const restoredRevision = Math.max(0, Math.round(Number(channel.revision) || 0));
-    channel.revision = Math.max(previousRevision, restoredRevision) + 1;
-  });
-  return restoredFields;
-}
-
 export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = null) {
   if (!target || typeof target !== "object") return null;
   const source =
@@ -327,6 +374,6 @@ export function applyAppearancePresetToRuntimeState(target, presetOrSnapshot = n
   // 应用顺序和导入顺序保持一致：先恢复 style/layer，再替换 intensityFields，避免局部状态混用旧 schema。
   restoreImportedStyleConfigState(target, snapshot.styleConfig);
   restoreImportedLayerVisibilityState(target, snapshot.layerVisibility);
-  target.intensityFields = restorePresetIntensityFieldsState(target, snapshot.intensityFields);
+  target.intensityFields = restorePresetIntensityFields(target.intensityFields, snapshot.intensityFields);
   return snapshot;
 }

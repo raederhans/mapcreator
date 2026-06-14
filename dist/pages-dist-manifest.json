@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 257126,
+      "size_bytes": 257532,
       "source_kind": "dist"
     },
     {
@@ -46107,7 +46107,7 @@
     },
     {
       "path": "app/js/core/state/appearance_preset_state.js",
-      "size_bytes": 12852,
+      "size_bytes": 14608,
       "source_kind": "dist"
     },
     {
@@ -46292,7 +46292,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 92853,
+      "size_bytes": 95063,
       "source_kind": "dist"
     },
     {
@@ -46911,5 +46911,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145108634
+  "total_bytes": 1145113006
 }

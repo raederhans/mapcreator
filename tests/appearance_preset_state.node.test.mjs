@@ -109,6 +109,54 @@ test("appearance preset applies a full appearance snapshot to runtime state", ()
   assert.ok(sampleIntensityField(target.intensityFields, "urbanGlow", 139.7, 35.7) > 1.4);
 });
 
+test("appearance preset bumps stale intensity revisions when channel content changes", () => {
+  const targetFields = updateIntensityFieldChannel(
+    createIntensityFieldsState(),
+    "oceanDepth",
+    (channel) => {
+      channel.enabled = true;
+      channel.points = [{ id: "old-depth", lon: 10, lat: 46, strength: 1.7, radiusDeg: 3 }];
+    },
+  );
+  const presetFields = updateIntensityFieldChannel(
+    createIntensityFieldsState(),
+    "oceanDepth",
+    (channel) => {
+      channel.enabled = true;
+      channel.points = [{ id: "new-depth", lon: -35, lat: 28, strength: 1.8, radiusDeg: 4 }];
+    },
+  );
+  const targetRevision = targetFields.channels.oceanDepth.revision;
+  const target = {
+    styleConfig: {},
+    intensityFields: targetFields,
+  };
+  const preset = {
+    snapshot: {
+      styleConfig: {},
+      layerVisibility: {},
+      intensityFields: presetFields,
+    },
+  };
+
+  presetFields.channels.oceanDepth.revision = targetRevision - 1;
+  applyAppearancePresetToRuntimeState(target, preset);
+
+  assert.equal(target.intensityFields.channels.oceanDepth.revision, targetRevision + 1);
+  assert.equal(sampleIntensityField(target.intensityFields, "oceanDepth", 10, 46), 1);
+  assert.ok(sampleIntensityField(target.intensityFields, "oceanDepth", -35, 28) > 1.4);
+
+  const matchingRevisionTarget = {
+    styleConfig: {},
+    intensityFields: targetFields,
+  };
+  presetFields.channels.oceanDepth.revision = targetRevision;
+
+  applyAppearancePresetToRuntimeState(matchingRevisionTarget, preset);
+
+  assert.equal(matchingRevisionTarget.intensityFields.channels.oceanDepth.revision, targetRevision + 1);
+});
+
 test("appearance preset apply bumps intensity revisions beyond the current runtime state", () => {
   const first = createAppearancePresetFromRuntimeState(createRuntimeAppearanceState(), {
     id: "first-glow",

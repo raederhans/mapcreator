@@ -18,12 +18,14 @@ Integrate the data-quality repair and data-chain Phase 2-4 simplification work, 
 - [x] Create worktree registry and integration docs.
 - [x] Integrate `codex/data-quality-repair-2026-06-14` as current-main residual data fixes.
 - [x] Run data-quality gates.
-- [ ] Cherry-pick `codex/data-chain-phases-2-4` commit `d858d276`.
-- [ ] Run Phase 2-4 gates, including `npm run test:node:scenario-chunk-contracts`.
-- [ ] Selectively carry render-chain cleanup pieces that do not duplicate data-chain helpers.
-- [ ] Run render-chain selective gates.
-- [ ] Review `codex/audit-20260612-appearance-transport` for follow-up integration order.
-- [ ] Update registry, archive or keep active docs according to final state.
+- [x] Cherry-pick `codex/data-chain-phases-2-4` commit `d858d276`.
+- [x] Run Phase 2-4 gates, including `npm run test:node:scenario-chunk-contracts`.
+- [x] Selectively carry render-chain cleanup pieces that do not duplicate data-chain helpers.
+- [x] Run render-chain selective gates.
+- [x] Review `codex/audit-20260612-appearance-transport` for follow-up integration order.
+- [x] Merge current `origin/main` and rerun affected gates.
+- [x] Selectively integrate `codex/audit-20260612-appearance-transport` and verify Pages dist.
+- [x] Update registry, archive or keep active docs according to final state.
 - [ ] Run final review/bug-check and QA gate.
 
 ## Validation Commands

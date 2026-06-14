@@ -4,6 +4,23 @@ import test from "node:test";
 
 const readText = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
+function extractFunction(source, functionName) {
+  const startToken = `function ${functionName}`;
+  const start = source.indexOf(startToken);
+  assert.notEqual(start, -1, `${functionName} must exist`);
+  const bodyStart = source.indexOf("{", start);
+  assert.notEqual(bodyStart, -1, `${functionName} must have a body`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") depth += 1;
+    if (char !== "}") continue;
+    depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`${functionName} body must close`);
+}
+
 test("ocean depth intensity channel is registered as a background pass mask", () => {
   const source = readText("js/core/intensity_field.js");
 
@@ -15,8 +32,8 @@ test("ocean depth intensity channel is registered as a background pass mask", ()
 
 test("background render pass composes ocean depth mask after ocean style", () => {
   const source = readText("js/core/map_renderer.js");
-  const drawBackgroundBody = source.match(/function drawBackgroundPass\(\) \{([\s\S]*?)\n\}/)?.[1] || "";
-  const depthLayerBody = source.match(/function drawOceanDepthMaskLayer\(\) \{([\s\S]*?)\n\}\n\nfunction drawBackgroundPass/)?.[1] || "";
+  const drawBackgroundBody = extractFunction(source, "drawBackgroundPass");
+  const depthLayerBody = extractFunction(source, "drawOceanDepthMaskLayer");
 
   assert.match(source, /createIntensityFieldMaskOwner/);
   assert.match(source, /`field:oceanDepth:\$\{Number\(intensityFields\.channels\.oceanDepth\?\.revision \|\| 0\)\}`/);

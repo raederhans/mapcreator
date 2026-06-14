@@ -284,33 +284,33 @@
                     <div class="appearance-control-card-stack">
                       <label class="toggle-label">
                         <input id="oceanDepthFieldEnabled" type="checkbox" class="checkbox-input" />
-                        <span id="lblOceanDepthFieldEnabled">Enable Channel</span>
+                        <span id="lblOceanDepthFieldEnabled" data-i18n="Enable Channel">Enable Channel</span>
                       </label>
                       <div class="flex items-center justify-between gap-2">
-                        <button id="oceanDepthFieldToolToggleBtn" type="button" class="sidebar-action-secondary">Enter Tool</button>
-                        <button id="oceanDepthFieldPaintBtn" type="button" class="sidebar-action-secondary">Paint</button>
-                        <button id="oceanDepthFieldEraseBtn" type="button" class="sidebar-action-secondary">Erase</button>
-                        <button id="oceanDepthFieldPointsBtn" type="button" class="sidebar-action-secondary">Points</button>
+                        <button id="oceanDepthFieldToolToggleBtn" type="button" class="sidebar-action-secondary" data-i18n="Enter Tool">Enter Tool</button>
+                        <button id="oceanDepthFieldPaintBtn" type="button" class="sidebar-action-secondary" data-i18n="Paint">Paint</button>
+                        <button id="oceanDepthFieldEraseBtn" type="button" class="sidebar-action-secondary" data-i18n="Erase">Erase</button>
+                        <button id="oceanDepthFieldPointsBtn" type="button" class="sidebar-action-secondary" data-i18n="Points">Points</button>
                       </div>
                       <div>
                         <div class="range-row">
-                          <label id="lblOceanDepthFieldWeight" class="range-label" for="oceanDepthFieldWeight">Strength</label>
+                          <label id="lblOceanDepthFieldWeight" class="range-label" for="oceanDepthFieldWeight" data-i18n="Strength">Strength</label>
                           <span id="oceanDepthFieldWeightValue" class="range-value">100%</span>
                         </div>
                         <input id="oceanDepthFieldWeight" type="range" min="0" max="200" value="100" class="range-input" />
                       </div>
                       <div>
                         <div class="range-row">
-                          <label id="lblOceanDepthFieldRadius" class="range-label" for="oceanDepthFieldRadius">Radius</label>
+                          <label id="lblOceanDepthFieldRadius" class="range-label" for="oceanDepthFieldRadius" data-i18n="Radius">Radius</label>
                           <span id="oceanDepthFieldRadiusValue" class="range-value">≈ 333 km</span>
                         </div>
                         <input id="oceanDepthFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
                       </div>
                       <div class="flex items-center justify-between gap-2">
-                        <button id="oceanDepthFieldClearBtn" type="button" class="sidebar-action-secondary">Clear Channel</button>
+                        <button id="oceanDepthFieldClearBtn" type="button" class="sidebar-action-secondary" data-i18n="Clear Channel">Clear Channel</button>
                       </div>
                       <div class="range-row">
-                        <span id="lblOceanDepthFieldPointCount" class="range-label">Points</span>
+                        <span id="lblOceanDepthFieldPointCount" class="range-label" data-i18n="Points">Points</span>
                         <span id="oceanDepthFieldPointCount" class="range-value">0</span>
                       </div>
                       <div id="oceanDepthFieldPointList" class="space-y-2"></div>
@@ -831,37 +831,37 @@
                           <input id="urbanMinArea" type="range" min="1" max="80" value="1" class="range-input" />
                         </div>
                         <div class="appearance-prop-group">
-                          <h3 id="lblUrbanIntensityFieldPanel" class="appearance-prop-heading">Glow Field</h3>
+                          <h3 id="lblUrbanIntensityFieldPanel" class="appearance-prop-heading" data-i18n="Glow Field">Glow Field</h3>
                           <div class="space-y-2 mt-2">
                             <label class="toggle-label">
                               <input id="urbanIntensityFieldEnabled" type="checkbox" class="checkbox-input" />
-                              <span id="lblUrbanIntensityFieldEnabled">Enable Glow Field</span>
+                              <span id="lblUrbanIntensityFieldEnabled" data-i18n="Enable Glow Field">Enable Glow Field</span>
                             </label>
                             <div class="flex items-center justify-between gap-2">
-                              <button id="urbanIntensityFieldToolToggleBtn" type="button" class="sidebar-action-secondary">Enter Tool</button>
-                              <button id="urbanIntensityFieldPaintBtn" type="button" class="sidebar-action-secondary">Paint</button>
-                              <button id="urbanIntensityFieldEraseBtn" type="button" class="sidebar-action-secondary">Erase</button>
-                              <button id="urbanIntensityFieldPointsBtn" type="button" class="sidebar-action-secondary">Points</button>
+                              <button id="urbanIntensityFieldToolToggleBtn" type="button" class="sidebar-action-secondary" data-i18n="Enter Tool">Enter Tool</button>
+                              <button id="urbanIntensityFieldPaintBtn" type="button" class="sidebar-action-secondary" data-i18n="Paint">Paint</button>
+                              <button id="urbanIntensityFieldEraseBtn" type="button" class="sidebar-action-secondary" data-i18n="Erase">Erase</button>
+                              <button id="urbanIntensityFieldPointsBtn" type="button" class="sidebar-action-secondary" data-i18n="Points">Points</button>
                             </div>
                             <div>
                               <div class="range-row">
-                                <label id="lblUrbanIntensityFieldWeight" class="range-label" for="urbanIntensityFieldWeight">Strength</label>
+                                <label id="lblUrbanIntensityFieldWeight" class="range-label" for="urbanIntensityFieldWeight" data-i18n="Strength">Strength</label>
                                 <span id="urbanIntensityFieldWeightValue" class="range-value">100%</span>
                               </div>
                               <input id="urbanIntensityFieldWeight" type="range" min="0" max="200" value="100" class="range-input" />
                             </div>
                             <div>
                               <div class="range-row">
-                                <label id="lblUrbanIntensityFieldRadius" class="range-label" for="urbanIntensityFieldRadius">Radius</label>
+                                <label id="lblUrbanIntensityFieldRadius" class="range-label" for="urbanIntensityFieldRadius" data-i18n="Radius">Radius</label>
                                 <span id="urbanIntensityFieldRadiusValue" class="range-value">≈ 333 km</span>
                               </div>
                               <input id="urbanIntensityFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
                             </div>
                             <div class="flex items-center justify-between gap-2">
-                              <button id="urbanIntensityFieldClearBtn" type="button" class="sidebar-action-secondary">Clear Channel</button>
+                              <button id="urbanIntensityFieldClearBtn" type="button" class="sidebar-action-secondary" data-i18n="Clear Channel">Clear Channel</button>
                             </div>
                             <div class="range-row">
-                              <span id="lblUrbanIntensityFieldPointCount" class="range-label">Points</span>
+                              <span id="lblUrbanIntensityFieldPointCount" class="range-label" data-i18n="Points">Points</span>
                               <span id="urbanIntensityFieldPointCount" class="range-value">0</span>
                             </div>
                             <div id="urbanIntensityFieldPointList" class="space-y-2"></div>

@@ -38,4 +38,12 @@
 - Phase 2-4 gate passed in `.runtime/reports/generated/data-chain-integration/post-data-chain-v3/`: py_compile, Python unittest group including `tests.test_scenario_chunk_assets`, Node preview/renderer group, `npm run test:node:scenario-chunk-contracts`, and `npm run verify:pages-dist`.
 - Render selective gate passed in `.runtime/reports/generated/data-chain-integration/render-selective-gate-v4/`: worker task client, startup hydration, preview lifecycle, overview line contract, `verify:test-import-graph`, and `git diff --check`.
 - Final Pages dist sync passed in `.runtime/reports/generated/data-chain-integration/final-pages-dist-sync/`.
-- `codex/audit-20260612-appearance-transport` still has branch-only appearance/i18n changes; direct merge is not yet attempted because the older branch once deleted `dist/pages-dist-manifest.json` and needs selective cherry-pick review.
+- Merged `origin/main` commit `9a5febfe` into the integration branch. Conflict resolution kept the already verified HOI4 1939 chunk metadata and accepted current-main tooling/safe-review test changes. Verified strict HOI4 1936/1939, structural unittest, `npm run test:node:scenario-chunk-contracts`, and `git diff --check`.
+- Selectively integrated `codex/audit-20260612-appearance-transport` by taking only the 9 current diff files: manual UI/i18n catalog, source and dist HTML, appearance preset state source/dist, and the two audit tests. `npm run verify:pages-dist` regenerated `dist/pages-dist-manifest.json`.
+- Audit selective gate passed: `python -m json.tool data/i18n/manual_ui.json`, `node --test tests/appearance_preset_state.node.test.mjs tests/ocean_depth_layer_contracts.test.mjs`, `npm run verify:pages-dist`, and `git diff --check`.
+
+## Final Delivery Notes
+
+- Integration branch currently includes the verified work through current-main merge commit `59ef139a`; audit selective changes are ready for the next commit.
+- Main should receive this work by fast-forward merge after final QA if it remains at `9a5febfe`.
+- The older data-quality, data-chain, render-chain, and audit worktrees should stay as recoverable references until main is pushed and the registry marks them integrated.

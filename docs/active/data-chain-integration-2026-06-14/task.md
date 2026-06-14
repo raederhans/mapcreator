@@ -7,5 +7,7 @@
 - [x] Integrate and verify data-chain Phase 2-4.
 - [x] Selectively carry render-chain cleanup.
 - [x] Review appearance/transport audit branch for next integration.
-- [ ] Update registry with final state and integration recommendation.
+- [x] Merge current `origin/main` and rerun affected contract tests.
+- [x] Selectively integrate appearance/transport audit changes.
+- [x] Update registry with final state and integration recommendation.
 - [ ] Run final review, QA gate, commit, push.
