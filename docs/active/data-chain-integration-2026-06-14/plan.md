@@ -28,7 +28,7 @@ Integrate the data-quality repair and data-chain Phase 2-4 simplification work, 
 - [x] Update registry, archive or keep active docs according to final state.
 - [x] Run final review/bug-check and fix i18n findings.
 - [x] Fast-forward local main from the verified integration branch.
-- [ ] Push final main state.
+- [x] Push final main state.
 
 ## Validation Commands
 

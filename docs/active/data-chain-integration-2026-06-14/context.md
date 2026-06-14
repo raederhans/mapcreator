@@ -47,5 +47,5 @@
 ## Final Delivery Notes
 
 - Integration branch is committed and pushed through `77d18776`.
-- Local main has fast-forwarded to `77d18776`; final remote push is the remaining delivery step.
+- Local main has fast-forwarded to the verified integration branch and has been pushed to `origin/main`.
 - The older data-quality, data-chain, render-chain, and audit worktrees are now recoverable references and can be cleaned in a separate cleanup pass after push confirmation.

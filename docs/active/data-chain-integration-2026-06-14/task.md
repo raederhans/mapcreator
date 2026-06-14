@@ -12,4 +12,4 @@
 - [x] Update registry with final state and integration recommendation.
 - [x] Run final review and fix i18n findings.
 - [x] Run final review, QA gate, and commits.
-- [ ] Push final main state.
+- [x] Push final main state.
