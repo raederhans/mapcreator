@@ -27,7 +27,8 @@ Integrate the data-quality repair and data-chain Phase 2-4 simplification work, 
 - [x] Selectively integrate `codex/audit-20260612-appearance-transport` and verify Pages dist.
 - [x] Update registry, archive or keep active docs according to final state.
 - [x] Run final review/bug-check and fix i18n findings.
-- [ ] Run final push/merge gate.
+- [x] Fast-forward local main from the verified integration branch.
+- [ ] Push final main state.
 
 ## Validation Commands
 

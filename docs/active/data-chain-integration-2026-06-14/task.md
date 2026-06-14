@@ -11,4 +11,5 @@
 - [x] Selectively integrate appearance/transport audit changes.
 - [x] Update registry with final state and integration recommendation.
 - [x] Run final review and fix i18n findings.
-- [ ] Run final review, QA gate, commit, push.
+- [x] Run final review, QA gate, and commits.
+- [ ] Push final main state.

@@ -46,6 +46,6 @@
 
 ## Final Delivery Notes
 
-- Integration branch currently includes the verified work through audit selective commit `c9f1b987`; the post-review i18n fix is ready for the next commit.
-- Main should receive this work by fast-forward merge after final QA if it remains at `9a5febfe`.
-- The older data-quality, data-chain, render-chain, and audit worktrees should stay as recoverable references until main is pushed and the registry marks them integrated.
+- Integration branch is committed and pushed through `77d18776`.
+- Local main has fast-forwarded to `77d18776`; final remote push is the remaining delivery step.
+- The older data-quality, data-chain, render-chain, and audit worktrees are now recoverable references and can be cleaned in a separate cleanup pass after push confirmation.
