@@ -1,3 +1,5 @@
+import { createWorkerTaskClient } from "./worker_task_client.js";
+
 const STARTUP_WORKER_URL = new URL("../workers/startup_boot.worker.js", import.meta.url);
 const STARTUP_WORKER_TIMEOUT_MS = 20_000;
 const STARTUP_WORKER_TIMEOUTS_MS = Object.freeze({
@@ -19,10 +21,20 @@ const MESSAGE_TYPES = Object.freeze({
   ERROR: "ERROR",
 });
 
-let startupWorker = null;
-let startupWorkerLoadPromise = null;
 let taskCounter = 0;
-const pendingTasks = new Map();
+const startupWorkerTaskClient = createWorkerTaskClient({
+  createWorker: () => new Worker(STARTUP_WORKER_URL),
+  createTaskId: (type) => `${type}:${Date.now()}:${++taskCounter}`,
+  resolveTimeoutMs: resolveTaskTimeoutMs,
+  createMessageError: (message) => new Error(message.message || `Startup worker failed during ${message.stage || "unknown"}.`),
+  createTimeoutError: (type) => new Error(`Startup worker timed out for ${type}.`),
+  createRecycleError: (type) => new Error(`Startup worker recycled after timeout for ${type}.`),
+  createWorkerError: (event) => (
+    event?.error instanceof Error
+      ? event.error
+      : new Error(event?.message || "Startup worker crashed.")
+  ),
+});
 
 function getSearchParams(search = null) {
   try {
@@ -50,34 +62,6 @@ export function shouldUseStartupWorker(search = null) {
   return parseToggleParam(params.get("startup_worker"), true) !== false;
 }
 
-function cleanupPendingTask(taskId) {
-  const pending = pendingTasks.get(taskId);
-  if (!pending) return null;
-  if (pending.timeoutId) {
-    globalThis.clearTimeout?.(pending.timeoutId);
-  }
-  pendingTasks.delete(taskId);
-  return pending;
-}
-
-function rejectAllPending(error) {
-  for (const [taskId, pending] of pendingTasks.entries()) {
-    cleanupPendingTask(taskId);
-    pending.reject(error);
-  }
-}
-
-function recycleStartupWorker(error = null) {
-  if (startupWorker) {
-    startupWorker.terminate();
-  }
-  startupWorker = null;
-  startupWorkerLoadPromise = null;
-  if (error) {
-    rejectAllPending(error);
-  }
-}
-
 function resolveTaskTimeoutMs(type, timeoutMs = null) {
   if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
     return timeoutMs;
@@ -97,61 +81,8 @@ function resolveWorkerResourceUrl(url) {
   }
 }
 
-function ensureStartupWorker() {
-  if (startupWorker) {
-    return Promise.resolve(startupWorker);
-  }
-  if (!startupWorkerLoadPromise) {
-    startupWorkerLoadPromise = Promise.resolve().then(() => {
-      const worker = new Worker(STARTUP_WORKER_URL);
-      worker.onmessage = (event) => {
-        const message = event?.data || {};
-        const taskId = String(message?.taskId || "").trim();
-        if (!taskId) return;
-        const pending = cleanupPendingTask(taskId);
-        if (!pending) return;
-        if (message.type === MESSAGE_TYPES.ERROR) {
-          pending.reject(new Error(message.message || `Startup worker failed during ${message.stage || "unknown"}.`));
-          return;
-        }
-        pending.resolve(message);
-      };
-      worker.onerror = (event) => {
-        const error = event?.error instanceof Error
-          ? event.error
-          : new Error(event?.message || "Startup worker crashed.");
-        recycleStartupWorker(error);
-      };
-      startupWorker = worker;
-      return worker;
-    }).catch((error) => {
-      startupWorkerLoadPromise = null;
-      throw error;
-    });
-  }
-  return startupWorkerLoadPromise;
-}
-
 function dispatchTask(type, payload, { timeoutMs = null } = {}) {
-  return ensureStartupWorker().then((worker) => new Promise((resolve, reject) => {
-    const taskId = `${type}:${Date.now()}:${++taskCounter}`;
-    const effectiveTimeoutMs = resolveTaskTimeoutMs(type, timeoutMs);
-    const timeoutId = globalThis.setTimeout?.(() => {
-      cleanupPendingTask(taskId);
-      recycleStartupWorker(new Error(`Startup worker recycled after timeout for ${type}.`));
-      reject(new Error(`Startup worker timed out for ${type}.`));
-    }, effectiveTimeoutMs);
-    pendingTasks.set(taskId, {
-      resolve,
-      reject,
-      timeoutId,
-    });
-    worker.postMessage({
-      type,
-      taskId,
-      ...payload,
-    });
-  }));
+  return startupWorkerTaskClient.dispatchTask(type, payload, { timeoutMs });
 }
 
 export async function loadBaseStartupViaWorker({
@@ -236,5 +167,5 @@ export async function decodeRuntimeChunkViaWorker({
 }
 
 export function terminateStartupWorker() {
-  recycleStartupWorker(new Error("Startup worker terminated."));
+  startupWorkerTaskClient.terminate(new Error("Startup worker terminated."));
 }

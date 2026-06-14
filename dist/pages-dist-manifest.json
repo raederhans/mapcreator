@@ -12,7 +12,7 @@
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 292111,
+      "size_bytes": 292160,
       "source_kind": "generated_ignored"
     },
     {
@@ -37087,12 +37087,12 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8456906,
+      "size_bytes": 8457674,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 47645,
+      "size_bytes": 47837,
       "source_kind": "generated_ignored"
     },
     {
@@ -37237,7 +37237,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 24259,
+      "size_bytes": 24435,
       "source_kind": "generated_ignored"
     },
     {
@@ -38092,7 +38092,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/locales.startup.json",
-      "size_bytes": 2134565,
+      "size_bytes": 2137190,
       "source_kind": "generated_ignored"
     },
     {
@@ -38127,22 +38127,22 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
-      "size_bytes": 9590720,
+      "size_bytes": 9598253,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json.gz",
-      "size_bytes": 1988924,
+      "size_bytes": 1989039,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
-      "size_bytes": 9590720,
+      "size_bytes": 9598253,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json.gz",
-      "size_bytes": 1988925,
+      "size_bytes": 1989039,
       "source_kind": "generated_ignored"
     },
     {
@@ -39792,7 +39792,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
-      "size_bytes": 2134565,
+      "size_bytes": 2137190,
       "source_kind": "generated_ignored"
     },
     {
@@ -39827,22 +39827,22 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
-      "size_bytes": 9585580,
+      "size_bytes": 9593113,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1986588,
+      "size_bytes": 1986698,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json",
-      "size_bytes": 9585580,
+      "size_bytes": 9593113,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1986589,
+      "size_bytes": 1986699,
       "source_kind": "generated_ignored"
     },
     {
@@ -41742,27 +41742,27 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
-      "size_bytes": 18641688,
+      "size_bytes": 18641674,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c0.json",
-      "size_bytes": 2219344,
+      "size_bytes": 2219330,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c1.json",
-      "size_bytes": 2820850,
+      "size_bytes": 2820836,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c2.json",
-      "size_bytes": 7065463,
+      "size_bytes": 7065449,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c3.json",
-      "size_bytes": 10229655,
+      "size_bytes": 10229641,
       "source_kind": "generated_ignored"
     },
     {
@@ -41792,7 +41792,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/city_overrides.json",
-      "size_bytes": 105498,
+      "size_bytes": 76419,
       "source_kind": "generated_ignored"
     },
     {
@@ -41802,7 +41802,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/cores.by_feature.json",
-      "size_bytes": 424106,
+      "size_bytes": 422570,
       "source_kind": "generated_ignored"
     },
     {
@@ -41852,7 +41852,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3805601,
+      "size_bytes": 3806189,
       "source_kind": "generated_ignored"
     },
     {
@@ -41922,22 +41922,22 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json",
-      "size_bytes": 6208016,
+      "size_bytes": 6206480,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.en.json.gz",
-      "size_bytes": 1378922,
+      "size_bytes": 1378902,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json",
-      "size_bytes": 6208016,
+      "size_bytes": 6206480,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/startup.bundle.zh.json.gz",
-      "size_bytes": 1378922,
+      "size_bytes": 1378902,
       "source_kind": "generated_ignored"
     },
     {
@@ -41947,7 +41947,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18641687,
+      "size_bytes": 18641675,
       "source_kind": "generated_ignored"
     },
     {
@@ -42397,12 +42397,12 @@
     },
     {
       "path": "app/data/transport_layers/global_airport/airports.geojson",
-      "size_bytes": 462590,
+      "size_bytes": 464267,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/global_airport/airports.preview.geojson",
-      "size_bytes": 459114,
+      "size_bytes": 460844,
       "source_kind": "generated_ignored"
     },
     {
@@ -42427,12 +42427,12 @@
     },
     {
       "path": "app/data/transport_layers/global_port/ports.geojson",
-      "size_bytes": 495891,
+      "size_bytes": 490486,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/global_port/ports.preview.geojson",
-      "size_bytes": 377397,
+      "size_bytes": 373302,
       "source_kind": "generated_ignored"
     },
     {
@@ -45557,7 +45557,7 @@
     },
     {
       "path": "app/js/core/data_loader.js",
-      "size_bytes": 63815,
+      "size_bytes": 63911,
       "source_kind": "dist"
     },
     {
@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1027366,
+      "size_bytes": 1026768,
       "source_kind": "dist"
     },
     {
@@ -45912,7 +45912,7 @@
     },
     {
       "path": "app/js/core/renderer/transport_overview_render_owner.js",
-      "size_bytes": 53551,
+      "size_bytes": 53614,
       "source_kind": "dist"
     },
     {
@@ -46102,7 +46102,7 @@
     },
     {
       "path": "app/js/core/startup_worker_client.js",
-      "size_bytes": 7663,
+      "size_bytes": 5979,
       "source_kind": "dist"
     },
     {
@@ -46228,6 +46228,11 @@
     {
       "path": "app/js/core/unit_counter_presets.js",
       "size_bytes": 14224,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/worker_task_client.js",
+      "size_bytes": 4323,
       "source_kind": "dist"
     },
     {
@@ -46566,6 +46571,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/transport_workbench_line_preview_helpers.js",
+      "size_bytes": 3412,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
       "size_bytes": 10048,
       "source_kind": "dist"
@@ -46602,12 +46612,12 @@
     },
     {
       "path": "app/js/ui/transport_workbench_rail_preview.js",
-      "size_bytes": 35163,
+      "size_bytes": 33792,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/transport_workbench_road_preview.js",
-      "size_bytes": 28876,
+      "size_bytes": 26425,
       "source_kind": "dist"
     },
     {
@@ -46887,7 +46897,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1448929,
+      "size_bytes": 1449184,
       "source_kind": "dist"
     },
     {
@@ -46906,5 +46916,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145103811
+  "total_bytes": 1145103558
 }

@@ -12,6 +12,12 @@ import {
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
 } from "./transport_workbench_line_runtime_shared.js";
+import {
+  createLinePathD,
+  findClosestDatasetNode,
+  keepFirstPerGridBucket,
+  measureProjectedLineLength,
+} from "./transport_workbench_line_preview_helpers.js";
 
 const MANIFEST_URL = resolveTransportManifestUrl("rail");
 const LINE_CLASS_PRIORITY = {
@@ -133,35 +139,6 @@ function normalizeNumber(value, fallback = 0) {
   return Number.isFinite(next) ? next : fallback;
 }
 
-function createPathD(geometry) {
-  if (!geometry || typeof geometry !== "object") return "";
-  if (geometry.type === "LineString") {
-    const parts = geometry.coordinates || [];
-    if (!parts.length) return "";
-    return parts.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" ");
-  }
-  if (geometry.type === "MultiLineString") {
-    return (geometry.coordinates || [])
-      .map((line) => line.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" "))
-      .join(" ");
-  }
-  return "";
-}
-
-function measureProjectedLength(geometry) {
-  if (!geometry || typeof geometry !== "object") return 0;
-  const lines = geometry.type === "LineString" ? [geometry.coordinates || []] : (geometry.coordinates || []);
-  let length = 0;
-  lines.forEach((line) => {
-    for (let index = 1; index < line.length; index += 1) {
-      const [x0, y0] = line[index - 1];
-      const [x1, y1] = line[index];
-      length += Math.hypot(x1 - x0, y1 - y0);
-    }
-  });
-  return length;
-}
-
 function normalizeLineClass(value) {
   const normalized = String(value || "").trim().toLowerCase();
   return LINE_CLASS_PRIORITY[normalized] ? normalized : "trunk";
@@ -193,8 +170,8 @@ function createRailFeature(rawFeature) {
     source: String(properties.source || "").trim(),
     sourceFlags: normalizeFlags(properties.source_flags),
     lengthMeters: normalizeNumber(properties.length_m, 0),
-    pathD: createPathD(projected.geometry),
-    projectedLength: measureProjectedLength(projected.geometry),
+    pathD: createLinePathD(projected.geometry),
+    projectedLength: measureProjectedLineLength(projected.geometry),
   };
 }
 
@@ -297,8 +274,7 @@ function getStationLabelDensityGridSize(config) {
 
 function buildVisibleStationLabelEntries(visibleStations, config, scale) {
   const gridSize = getStationLabelDensityGridSize(config);
-  const usedBuckets = new Set();
-  return visibleStations
+  const rankedEntries = visibleStations
     .filter((feature) => shouldShowStationLabel(feature, config, scale))
     .map((feature) => ({
       feature,
@@ -309,27 +285,15 @@ function buildVisibleStationLabelEntries(visibleStations, config, scale) {
       const importanceDelta = getImportanceRank(right.feature) - getImportanceRank(left.feature);
       if (importanceDelta !== 0) return importanceDelta;
       return String(left.feature.name || left.feature.id).localeCompare(String(right.feature.name || right.feature.id), "ja");
-    })
-    .filter((entry) => {
-      const bucketKey = `${Math.round(entry.screenPoint.x / gridSize)}:${Math.round(entry.screenPoint.y / gridSize)}`;
-      if (usedBuckets.has(bucketKey)) return false;
-      usedBuckets.add(bucketKey);
-      return true;
     });
-}
-
-function findDatasetNode(startNode, datasetKey, boundaryNode) {
-  let current = startNode instanceof Element ? startNode : startNode?.parentElement;
-  while (current && current !== boundaryNode) {
-    if (current.dataset?.[datasetKey]) return current;
-    current = current.parentElement;
-  }
-  if (boundaryNode?.dataset?.[datasetKey]) return boundaryNode;
-  return null;
+  return keepFirstPerGridBucket(rankedEntries, {
+    gridSize,
+    getScreenPoint: (entry) => entry.screenPoint,
+  });
 }
 
 function handleLineGroupClick(event) {
-  const node = findDatasetNode(event.target, "railLineId", linesGroup);
+  const node = findClosestDatasetNode(event.target, "railLineId", linesGroup);
   const lineId = node?.dataset?.railLineId;
   if (!lineId) return;
   event.stopPropagation();
@@ -339,7 +303,7 @@ function handleLineGroupClick(event) {
 }
 
 function handleStationGroupClick(event) {
-  const node = findDatasetNode(event.target, "railStationId", stationsGroup);
+  const node = findClosestDatasetNode(event.target, "railStationId", stationsGroup);
   const stationId = node?.dataset?.railStationId;
   if (!stationId) return;
   event.stopPropagation();

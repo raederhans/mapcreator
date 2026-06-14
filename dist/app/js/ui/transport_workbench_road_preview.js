@@ -12,6 +12,13 @@ import {
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
 } from "./transport_workbench_line_runtime_shared.js";
+import {
+  buildProjectedLineSegments,
+  createLinePathD,
+  findClosestDatasetNode,
+  keepFirstPerGridBucket,
+  measureProjectedLineLength,
+} from "./transport_workbench_line_preview_helpers.js";
 
 
 const MANIFEST_URL = resolveTransportManifestUrl("road");
@@ -149,73 +156,8 @@ function normalizeNumber(value, fallback = 0) {
   return Number.isFinite(next) ? next : fallback;
 }
 
-function createPathD(geometry) {
-  if (!geometry || typeof geometry !== "object") return "";
-  if (geometry.type === "LineString") {
-    const parts = geometry.coordinates || [];
-    if (!parts.length) return "";
-    return parts.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" ");
-  }
-  if (geometry.type === "MultiLineString") {
-    return (geometry.coordinates || [])
-      .map((line) => line.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" "))
-      .join(" ");
-  }
-  return "";
-}
-
-function createPathDFromLine(line) {
-  if (!Array.isArray(line) || !line.length) return "";
-  return line.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" ");
-}
-
-function measureProjectedLength(geometry) {
-  if (!geometry || typeof geometry !== "object") return 0;
-  const lines = geometry.type === "LineString" ? [geometry.coordinates || []] : (geometry.coordinates || []);
-  let length = 0;
-  lines.forEach((line) => {
-    for (let index = 1; index < line.length; index += 1) {
-      const [x0, y0] = line[index - 1];
-      const [x1, y1] = line[index];
-      length += Math.hypot(x1 - x0, y1 - y0);
-    }
-  });
-  return length;
-}
-
 function buildProjectedLines(geometry) {
-  if (!geometry || typeof geometry !== "object") return [];
-  const rawLines = geometry.type === "LineString"
-    ? [geometry.coordinates || []]
-    : (geometry.coordinates || []);
-  return rawLines
-    .filter((line) => Array.isArray(line) && line.length >= 2)
-    .map((line) => {
-      let length = 0;
-      const segments = [];
-      for (let index = 1; index < line.length; index += 1) {
-        const start = line[index - 1];
-        const end = line[index];
-        const dx = end[0] - start[0];
-        const dy = end[1] - start[1];
-        const segmentLength = Math.hypot(dx, dy);
-        segments.push({
-          start,
-          end,
-          startDistance: length,
-          length: segmentLength,
-          angle: Math.atan2(dy, dx) * (180 / Math.PI),
-        });
-        length += segmentLength;
-      }
-      return {
-        points: line,
-        pathD: createPathDFromLine(line),
-        length,
-        segments,
-      };
-    })
-    .filter((line) => line.length > 0);
+  return buildProjectedLineSegments(geometry);
 }
 
 function createRoadFeature(rawFeature) {
@@ -241,8 +183,8 @@ function createRoadFeature(rawFeature) {
       : null,
     geometry: rawFeature.geometry,
     projectedGeometry: projected.geometry,
-    pathD: createPathD(projected.geometry),
-    projectedLength: measureProjectedLength(projected.geometry),
+    pathD: createLinePathD(projected.geometry),
+    projectedLength: measureProjectedLineLength(projected.geometry),
     projectedLines,
   };
 }
@@ -341,8 +283,7 @@ function getLabelClassGate(feature, config, scale) {
 
 function filterVisibleLabels(labelFeatures, visibleRoadIds, config, scale) {
   const gridSize = LABEL_GRID_BY_DENSITY[config.labelDensityPreset] || LABEL_GRID_BY_DENSITY.balanced;
-  const usedBuckets = new Set();
-  return labelFeatures
+  const rankedLabels = labelFeatures
     .filter((label) => visibleRoadIds.has(label.roadId))
     .filter((label) => getLabelClassGate(label, config, scale))
     .map((label) => ({
@@ -350,27 +291,16 @@ function filterVisibleLabels(labelFeatures, visibleRoadIds, config, scale) {
       screenPoint: projectTransportWorkbenchCarrierScenePoint(label.x, label.y),
     }))
     .filter((label) => label.screenPoint)
-    .sort((left, right) => right.priority - left.priority)
-    .filter((label) => {
-      const bucketKey = `${Math.round(label.screenPoint.x / gridSize)}:${Math.round(label.screenPoint.y / gridSize)}:${label.roadClass}`;
-      if (usedBuckets.has(bucketKey)) return false;
-      usedBuckets.add(bucketKey);
-      return true;
-    });
-}
-
-function findDatasetNode(startNode, datasetKey, boundaryNode) {
-  let current = startNode instanceof Element ? startNode : startNode?.parentElement;
-  while (current && current !== boundaryNode) {
-    if (current.dataset?.[datasetKey]) return current;
-    current = current.parentElement;
-  }
-  if (boundaryNode?.dataset?.[datasetKey]) return boundaryNode;
-  return null;
+    .sort((left, right) => right.priority - left.priority);
+  return keepFirstPerGridBucket(rankedLabels, {
+    gridSize,
+    getScreenPoint: (label) => label.screenPoint,
+    getBucketParts: (label) => [label.roadClass],
+  });
 }
 
 function handleRoadGroupClick(event) {
-  const node = findDatasetNode(event.target, "roadId", roadsGroup);
+  const node = findClosestDatasetNode(event.target, "roadId", roadsGroup);
   const roadId = node?.dataset?.roadId;
   if (!roadId) return;
   event.stopPropagation();
@@ -381,7 +311,7 @@ function handleRoadGroupClick(event) {
 }
 
 function handleLabelGroupClick(event) {
-  const node = findDatasetNode(event.target, "labelId", labelsGroup);
+  const node = findClosestDatasetNode(event.target, "labelId", labelsGroup);
   const labelId = node?.dataset?.labelId;
   if (!labelId) return;
   event.stopPropagation();

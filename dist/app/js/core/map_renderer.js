@@ -26360,34 +26360,10 @@ function setMapData({
   deferInteractionInfrastructure = false,
 } = {}) {
   const startedAt = nowMs();
-  clearPendingDynamicBorderTimer();
-  clearRenderPhaseTimer();
-  cancelPendingIndexUiRefresh();
-  cancelPendingSidebarRefresh();
-  cancelScheduledHoverOverlayRender();
-  setRenderPhase(RENDER_PHASE_IDLE);
-  resetRenderDiagnostics();
-  clearStagedMapDataTasks();
-  cancelExactAfterSettleRefresh();
-  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
-  runtimeState.hitCanvasBuildScheduled = null;
-  cancelDeferredWork(secondarySpatialBuildHandle);
-  secondarySpatialBuildHandle = null;
-  pendingSecondarySpatialBuildReasons.clear();
-  runtimeState.deferContextBasePass = false;
-  runtimeState.deferHitCanvasBuild = false;
-  runtimeState.deferExactAfterSettle = false;
-  layerResolverCache.primaryRef = null;
-  layerResolverCache.detailRef = null;
-  layerResolverCache.bundleMode = null;
-  layerResolverCache.contextRevision = 0;
-  runtimeState.devHoverHit = null;
-  runtimeState.devSelectedHit = null;
-  runtimeState.devSelectionFeatureIds = new Set();
-  runtimeState.devSelectionOrder = [];
-  runtimeState.devClipboardFallbackText = "";
-  runtimeState.devClipboardPreviewFormat = "names_with_ids";
-  resetPhysicalLandClipPathCache();
+  resetRendererRefreshTransactionState({
+    cancelHoverOverlay: true,
+    cancelSecondarySpatialBuild: true,
+  });
   resetExactRefreshOptimizationState();
   resetVisibleInternalBorderMeshSignature();
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
@@ -26503,6 +26479,44 @@ function setMapData({
       inFlight: false,
     });
   }
+}
+
+function resetRendererRefreshTransactionState({
+  cancelHoverOverlay = false,
+  cancelSecondarySpatialBuild = false,
+} = {}) {
+  clearPendingDynamicBorderTimer();
+  clearRenderPhaseTimer();
+  cancelPendingIndexUiRefresh();
+  cancelPendingSidebarRefresh();
+  if (cancelHoverOverlay) {
+    cancelScheduledHoverOverlayRender();
+  }
+  setRenderPhase(RENDER_PHASE_IDLE);
+  resetRenderDiagnostics();
+  clearStagedMapDataTasks();
+  cancelExactAfterSettleRefresh();
+  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
+  runtimeState.hitCanvasBuildScheduled = null;
+  if (cancelSecondarySpatialBuild) {
+    cancelDeferredWork(secondarySpatialBuildHandle);
+    secondarySpatialBuildHandle = null;
+    pendingSecondarySpatialBuildReasons.clear();
+  }
+  runtimeState.deferContextBasePass = false;
+  runtimeState.deferHitCanvasBuild = false;
+  runtimeState.deferExactAfterSettle = false;
+  layerResolverCache.primaryRef = null;
+  layerResolverCache.detailRef = null;
+  layerResolverCache.bundleMode = null;
+  layerResolverCache.contextRevision = 0;
+  runtimeState.devHoverHit = null;
+  runtimeState.devSelectedHit = null;
+  runtimeState.devSelectionFeatureIds = new Set();
+  runtimeState.devSelectionOrder = [];
+  runtimeState.devClipboardFallbackText = "";
+  runtimeState.devClipboardPreviewFormat = "names_with_ids";
+  resetPhysicalLandClipPathCache();
 }
 
 function getScenarioChunkPromotionTargetPasses({
@@ -26992,30 +27006,7 @@ function refreshMapDataForScenarioApply({
     refreshOpeningOwnerBorders: true,
     resetWaterCacheReason: "scenario-switch-complete",
   });
-  clearPendingDynamicBorderTimer();
-  clearRenderPhaseTimer();
-  cancelPendingIndexUiRefresh();
-  cancelPendingSidebarRefresh();
-  setRenderPhase(RENDER_PHASE_IDLE);
-  resetRenderDiagnostics();
-  clearStagedMapDataTasks();
-  cancelExactAfterSettleRefresh();
-  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
-  runtimeState.hitCanvasBuildScheduled = null;
-  runtimeState.deferContextBasePass = false;
-  runtimeState.deferHitCanvasBuild = false;
-  runtimeState.deferExactAfterSettle = false;
-  layerResolverCache.primaryRef = null;
-  layerResolverCache.detailRef = null;
-  layerResolverCache.bundleMode = null;
-  layerResolverCache.contextRevision = 0;
-  runtimeState.devHoverHit = null;
-  runtimeState.devSelectedHit = null;
-  runtimeState.devSelectionFeatureIds = new Set();
-  runtimeState.devSelectionOrder = [];
-  runtimeState.devClipboardFallbackText = "";
-  runtimeState.devClipboardPreviewFormat = "names_with_ids";
-  resetPhysicalLandClipPathCache();
+  resetRendererRefreshTransactionState();
   ensureLayerDataFromTopology();
   rebuildPoliticalLandCollections();
   rebuildRuntimeDerivedState({
