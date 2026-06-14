@@ -41,7 +41,7 @@
 
 ## Integration Notes
 
-- Status: ready-for-integration after final static review and commit.
+- Status: committed on `codex/render-chain-cleanup-phase4-5` and ready-for-integration.
 - Direct overlap: `js/core/map_renderer.js`, `package.json`, `tests/test_scenario_chunk_refresh_contracts.py`.
 - Potential semantic overlap: current integration registry marks data-chain work as the owner branch and old render-chain cleanup as red overlap on renderer/tests.
 - Recommended integration: cherry-pick or port this branch after data-chain integration has settled, then rerun the exact validation commands above plus the integration owner gate.

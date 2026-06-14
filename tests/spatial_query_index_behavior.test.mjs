@@ -116,3 +116,17 @@ test("visible spatial query accepts iterable globals", () => {
   assert.equal(result.stats.globalCandidateCount, 1);
   assert.equal(result.items.some((item) => item.id === "global"), true);
 });
+
+test("visible spatial query reads map globals as values", () => {
+  const snapshot = createGridSnapshot();
+  const global = snapshot.gridMeta.globals[0];
+  snapshot.gridMeta.globals = new Map([[global.id, global]]);
+
+  const result = collectVisibleSpatialItemsWithStats({
+    ...snapshot,
+    viewportBounds: { minX: 0, minY: 0, maxX: 90, maxY: 90 },
+  });
+
+  assert.equal(result.stats.globalCandidateCount, 1);
+  assert.deepEqual(result.items.map((item) => item.id), ["global", "beta", "alpha", "hidden"]);
+});

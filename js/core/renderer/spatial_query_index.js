@@ -6,7 +6,11 @@ function clampNumber(value, min, max) {
 
 function normalizeGlobals(globals) {
   if (Array.isArray(globals)) return globals;
-  if (globals && typeof globals[Symbol.iterator] === "function") return Array.from(globals);
+  if (globals && typeof globals.forEach === "function") {
+    const items = [];
+    globals.forEach((item) => items.push(item));
+    return items;
+  }
   return [];
 }
 

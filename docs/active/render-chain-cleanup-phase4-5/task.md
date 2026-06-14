@@ -22,3 +22,4 @@
 - `python -m unittest tests.test_map_renderer_spatial_index_runtime_owner_boundary_contract tests.test_map_renderer_spatial_index_runtime_orchestration_contract tests.test_spatial_index_state_boundary_contract tests.test_scenario_chunk_refresh_contracts -q` passed.
 - `npm run test:node:scenario-chunk-contracts` still fails only on the known `hoi4_1939 coarse chunk should expose per-feature bounds` data mismatch: actual `23375`, expected `23426`.
 - Static review found one helper boundary issue: iterable `globals` support was narrower than the old renderer loop. Fixed in `spatial_query_index.js` and covered by `visible spatial query accepts iterable globals`.
+- Follow-up review found stale registry commit status and Map-style `globals.forEach` value semantics. Fixed the registry/context and covered Map globals with `visible spatial query reads map globals as values`.
