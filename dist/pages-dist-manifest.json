@@ -46567,7 +46567,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 38113,
+      "size_bytes": 38103,
       "source_kind": "dist"
     },
     {
@@ -46596,8 +46596,13 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/transport_workbench_point_preview_runtime.js",
+      "size_bytes": 14369,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/transport_workbench_point_preview_shared.js",
-      "size_bytes": 43055,
+      "size_bytes": 32313,
       "source_kind": "dist"
     },
     {
@@ -46892,7 +46897,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1449046,
+      "size_bytes": 1449186,
       "source_kind": "dist"
     },
     {
@@ -46911,5 +46916,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145110801
+  "total_bytes": 1145114558
 }

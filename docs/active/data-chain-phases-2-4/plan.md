@@ -65,10 +65,10 @@ Tighten the already integrated Phase 2/3 boundaries without changing external da
 - [x] Phase 2: keep source recipes, source/family filtering, and concrete road/rail wrapper rules in `tools/build_transport_country_real_packs.py`.
 - [x] Phase 2: extend writer/builder contract tests for default variant, carrier extension, main-map bridge fields, counts, bbox, and audit output.
 - [x] Phase 2: run Python compile and targeted transport builder/manifest tests, then commit.
-- [ ] Phase 3: add `js/ui/transport_workbench_point_preview_runtime.js` for pure point preview logic.
-- [ ] Phase 3: keep DOM/SVG, async asset loading, carrier overlay, selection listener, and render loop in `transport_workbench_point_preview_shared.js`.
-- [ ] Phase 3: keep airport/port/energy/logistics/industrial/mineral public export names stable and forward test internals through the runtime helper.
-- [ ] Phase 3: run targeted node tests, import graph verification if needed, Pages dist verification if delivery surface changes, and `git diff --check`.
+- [x] Phase 3: add `js/ui/transport_workbench_point_preview_runtime.js` for pure point preview logic.
+- [x] Phase 3: keep DOM/SVG, async asset loading, carrier overlay, selection listener, and render loop in `transport_workbench_point_preview_shared.js`.
+- [x] Phase 3: keep airport/port/energy/logistics/industrial/mineral public export names stable and forward test internals through the runtime helper.
+- [x] Phase 3: run targeted node tests, import graph verification if needed, Pages dist verification if delivery surface changes, and `git diff --check`.
 - [ ] Review: run static subagent review and first-principles self-check, fix findings.
 - [ ] Integration: update registry delivery package, merge to `main`, push, and clean the temporary worktree after preserving branch/commit recovery trail.
 
@@ -83,3 +83,6 @@ Tighten the already integrated Phase 2/3 boundaries without changing external da
 - 2026-06-14: Created isolated worktree `codex/data-chain-phase2-3-deepening-2026-06-14` from `origin/main` `3d8cd631`; updated registry for this deepening pass.
 - 2026-06-14: Phase 2 moved country pack layer/audit/manifest/default-variant/carrier/main-map bridge output assembly into `write_country_pack(...)`. The real pack builder now prepares source recipes, family rules, carrier registry values, and concrete layers, then delegates output writing to the writer helper.
 - 2026-06-14: Phase 2 validation passed: `python -m py_compile map_builder\transport_country_pack_writer.py map_builder\transport_source_extract_cache.py tools\build_transport_country_real_packs.py`; `python -m unittest tests.test_global_transport_builder_contracts tests.test_transport_country_source_contracts tests.test_transport_manifest_contracts -q` (118 tests).
+- 2026-06-14: Phase 3 added `transport_workbench_point_preview_runtime.js` for pure pack path/cache, single-pack, edit overlay merge, visibility, data row, and snapshot logic. `transport_workbench_point_preview_shared.js` now injects carrier projection and keeps DOM/SVG, async loading, selection, and render loop ownership.
+- 2026-06-14: Phase 3 also fixed `transport_workbench_industrial_zone_preview.js` full-pack path probing by passing `getPackPath(manifest, variantId, mode)`.
+- 2026-06-14: Phase 3 validation passed: `node --check` on changed JS modules; `node --test tests\transport_workbench_preview_lifecycle_owner_behavior.test.mjs tests\transport_workbench_right_deck_owner_behavior.test.mjs tests\transport_workbench_inspector_owner_behavior.test.mjs` (33 tests); `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q` (20 tests); `npm run verify:test-import-graph`; `npm run verify:pages-dist`.

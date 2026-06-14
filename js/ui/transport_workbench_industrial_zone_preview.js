@@ -807,7 +807,7 @@ function shouldUseFullPack(scale) {
 }
 
 function hasPackPath(manifest, variantId, mode) {
-  return !!getPackPath(manifest, mode, PACK_KEY, variantId);
+  return !!getPackPath(manifest, variantId, mode);
 }
 
 function emitSelectionChange() {

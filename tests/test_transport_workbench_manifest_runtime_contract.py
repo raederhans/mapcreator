@@ -9,6 +9,7 @@ VARIANT_HELPER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_manifest_vari
 PORT_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_port_preview.js"
 INDUSTRIAL_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_industrial_zone_preview.js"
 POINT_PREVIEW_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_shared.js"
+POINT_PREVIEW_RUNTIME_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_runtime.js"
 POINT_DENSITY_HELPERS_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_density_helpers.js"
 LINE_RUNTIME_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_line_runtime_shared.js"
 FAMILY_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_family_preview.js"
@@ -218,6 +219,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("const requestedMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;", industrial_content)
         self.assertIn("const targetMode = hasPackPath(manifest, variantId, requestedMode) ? requestedMode : PACK_MODE_PREVIEW;", industrial_content)
         self.assertIn("if (includeFull && hasPackPath(manifest, variantId, PACK_MODE_FULL))", industrial_content)
+        self.assertIn("return !!getPackPath(manifest, variantId, mode);", industrial_content)
         self.assertIn("runtime.rootGroup.appendChild(createIndustrialNode(feature, style, onFeatureSelect));", industrial_content)
         self.assertIn("function getAggregateSelectionFeatureId", industrial_content)
         self.assertIn("node.dataset.featureId = getAggregateSelectionFeatureId(aggregateEntry);", industrial_content)
@@ -225,6 +227,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
 
     def test_point_preview_keeps_view_only_camera_sync_on_the_light_path(self) -> None:
         point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        point_runtime_content = POINT_PREVIEW_RUNTIME_JS.read_text(encoding="utf-8")
         lifecycle_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js").read_text(encoding="utf-8")
 
         self.assertIn("viewOnly", lifecycle_content)
@@ -236,14 +239,15 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("createViewRenderSignature(targetMode, scale)", point_content)
         self.assertIn("const sourcePack = await loadPack(targetMode, config);", point_content)
         self.assertIn("const pack = createEffectivePointPack(sourcePack, config, definition);", point_content)
-        self.assertIn("config?.editOverlay?.deleted", point_content)
-        self.assertIn("config?.editOverlay?.updated", point_content)
-        self.assertIn(".filter((feature) => !deletedIds.has(feature.id))", point_content)
-        self.assertIn("function createUpdatedPointFeature", point_content)
-        self.assertIn("const updatedEntriesById = new Map", point_content)
-        self.assertIn("...sourceProperties", point_content)
-        self.assertIn("...patchProperties", point_content)
-        self.assertIn('edit_overlay_mode: "updated"', point_content)
+        self.assertIn("createTransportWorkbenchEffectivePointPack(sourcePack, config, definition", point_content)
+        self.assertIn("config?.editOverlay?.deleted", point_runtime_content)
+        self.assertIn("config?.editOverlay?.updated", point_runtime_content)
+        self.assertIn(".filter((feature) => !deletedIds.has(feature.id))", point_runtime_content)
+        self.assertIn("function createTransportWorkbenchUpdatedPointFeature", point_runtime_content)
+        self.assertIn("const updatedEntriesById = new Map", point_runtime_content)
+        self.assertIn("...sourceProperties", point_runtime_content)
+        self.assertIn("...patchProperties", point_runtime_content)
+        self.assertIn('edit_overlay_mode: "updated"', point_runtime_content)
         self.assertLess(
             point_content.index("options.viewOnly"),
             point_content.index("const sourcePack = await loadPack")

@@ -11,6 +11,16 @@ import {
 import {
   __transportWorkbenchPointPreviewTestInternals,
 } from "../js/ui/transport_workbench_point_preview_shared.js";
+import {
+  PACK_MODE_FULL,
+  PACK_MODE_PREVIEW,
+  buildTransportWorkbenchPointSnapshot,
+  createTransportWorkbenchEffectivePointPack,
+  getTransportWorkbenchPointPackCacheKey,
+  getTransportWorkbenchPointPackPath,
+  isTransportWorkbenchPointSinglePackPath,
+  shouldUseTransportWorkbenchPointFullPack,
+} from "../js/ui/transport_workbench_point_preview_runtime.js";
 
 async function flushMicrotasks() {
   await Promise.resolve();
@@ -411,4 +421,165 @@ test("point preview effective pack merges update patches and removes deleted sou
   assert.equal(updated.properties.legal_designation, "international_hub");
   assert.equal(updated.properties.manager_type_code, "2");
   assert.equal(updated.properties.edit_overlay_mode, "updated");
+});
+
+test("point preview runtime resolves variant paths and single-pack cache keys", () => {
+  const manifest = {
+    paths: {
+      preview: { airports: "global.preview.geojson" },
+      full: { airports: "global.full.geojson" },
+    },
+  };
+  const definition = {
+    packKey: "airports",
+    getVariantMeta: (_manifest, variantId) => ({
+      id: variantId,
+      paths: {
+        preview: { airports: `${variantId}.shared.geojson` },
+        full: { airports: `${variantId}.shared.geojson` },
+      },
+    }),
+    importanceOrder: { major: 2, all: 1 },
+    fullPackScaleThreshold: 1.5,
+  };
+
+  assert.equal(getTransportWorkbenchPointPackCacheKey(PACK_MODE_PREVIEW), "preview");
+  assert.equal(getTransportWorkbenchPointPackCacheKey(PACK_MODE_FULL, "domestic"), "domestic:full");
+  assert.equal(
+    getTransportWorkbenchPointPackPath(manifest, PACK_MODE_PREVIEW, "airports", definition, "domestic"),
+    "domestic.shared.geojson"
+  );
+  assert.equal(isTransportWorkbenchPointSinglePackPath(manifest, "airports", definition, "domestic"), true);
+  assert.equal(shouldUseTransportWorkbenchPointFullPack({ importanceThreshold: "all" }, definition, 1), true);
+  assert.equal(shouldUseTransportWorkbenchPointFullPack({ importanceThreshold: "major" }, definition, 1.4), false);
+  assert.equal(shouldUseTransportWorkbenchPointFullPack({ importanceThreshold: "major" }, definition, 1.5), true);
+});
+
+test("point preview runtime builds created updated deleted overlay model", () => {
+  const definition = { familyId: "airport", selectionType: "airport" };
+  const sourcePack = {
+    mode: "preview",
+    variantId: "domestic",
+    features: [{
+      id: "a1",
+      name: "Old Airport",
+      label: "Old Airport",
+      lon: 1,
+      lat: 2,
+      x: 10,
+      y: 20,
+      kind: "airport",
+      variant: "domestic",
+      properties: { id: "a1", name: "Old Airport", airport_type: "domestic" },
+    }, {
+      id: "a2",
+      name: "Removed Airport",
+      label: "Removed Airport",
+      lon: 3,
+      lat: 4,
+      x: 30,
+      y: 40,
+      kind: "airport",
+      variant: "domestic",
+      properties: { id: "a2", name: "Removed Airport" },
+    }],
+    featureById: new Map(),
+  };
+  const config = {
+    editOverlay: {
+      updated: [{ id: "a1", name: "Updated Airport", lon: 5, lat: 6 }],
+      deleted: ["a2"],
+      created: [{ id: "a3", name: "New Airport", lon: 7, lat: 8 }],
+    },
+  };
+  const projectFeature = (rawFeature, runtimeDefinition, variantId) => {
+    const [lon, lat] = rawFeature.geometry.coordinates;
+    return {
+      id: rawFeature.id || rawFeature.properties.id,
+      name: rawFeature.properties.name,
+      label: rawFeature.properties.name,
+      lon,
+      lat,
+      x: lon * 10,
+      y: lat * 10,
+      kind: runtimeDefinition.selectionType,
+      variant: variantId,
+      properties: rawFeature.properties,
+      editOverlay: !!rawFeature.properties.edit_overlay,
+    };
+  };
+
+  const pack = createTransportWorkbenchEffectivePointPack(sourcePack, config, definition, { projectFeature });
+
+  assert.deepEqual(pack.features.map((feature) => feature.id), ["a1", "a3"]);
+  assert.equal(pack.featureById.has("a2"), false);
+  assert.equal(pack.featureById.get("a1").name, "Updated Airport");
+  assert.equal(pack.featureById.get("a1").properties.edit_overlay_mode, "updated");
+  assert.equal(pack.featureById.get("a3").properties.source, "user_overlay");
+  assert.equal(pack.featureById.get("a3").properties.airport_type, "other");
+  assert.equal(pack.featureById.get("a3").properties.status_category, "active");
+});
+
+test("point preview runtime snapshot sorts visibility rows and preserves loading status", () => {
+  const runtime = {
+    definition: {
+      familyId: "airport",
+      getHiddenReason: (feature) => feature.id === "hidden" ? "below_threshold" : null,
+      shouldShowLabel: () => true,
+    },
+    activePackMode: PACK_MODE_PREVIEW,
+    activeVariantId: "domestic",
+    activePack: {
+      features: [{
+        id: "hidden",
+        kind: "airport",
+        name: "Hidden",
+        lon: 1,
+        lat: 2,
+        variant: "domestic",
+        properties: { source: "official" },
+      }, {
+        id: "visible",
+        kind: "airport",
+        name: "Visible",
+        lon: 3,
+        lat: 4,
+        variant: "domestic",
+        properties: { source_label: "registry" },
+      }],
+    },
+    projectedPacks: new Map(),
+    loadState: {
+      status: "ready",
+      error: null,
+      manifest: { pack_id: "airport" },
+      audit: { generated_at: "now" },
+      subtypeCatalog: null,
+      singlePack: true,
+      previewStatus: "ready",
+      fullStatus: "idle",
+    },
+    renderStats: {
+      renderMode: "inspect",
+      totalFeatures: 2,
+      visibleFeatures: 1,
+      filteredFeatures: 1,
+      visibleLabels: 1,
+      aggregateUnits: 0,
+    },
+    renderedConfigSignature: "",
+    selectedFeature: { id: "visible" },
+    lastRenderedConfig: {},
+  };
+
+  const snapshot = buildTransportWorkbenchPointSnapshot(runtime, { scale: 1 });
+
+  assert.equal(snapshot.status, "loading");
+  assert.equal(snapshot.dataRowCount, 2);
+  assert.equal(snapshot.dataRows[0].id, "visible");
+  assert.equal(snapshot.dataRows[0].visible, true);
+  assert.equal(snapshot.dataRows[0].selected, true);
+  assert.equal(snapshot.dataRows[1].id, "hidden");
+  assert.equal(snapshot.dataRows[1].hiddenReason, "below_threshold");
+  assert.equal(snapshot.dataRowLimit, 240);
 });
