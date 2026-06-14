@@ -622,7 +622,6 @@ def _capture_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
 def _classify_violation(message: str) -> str:
     risky_markers = (
         "owners/cores feature keysets",
-        "owners/cores feature keysets",
         "runtime_topology is missing feature ids",
         "missing owners.by_feature ownership",
         "missing scenario_shell_owner_hint",
@@ -2475,13 +2474,14 @@ def main() -> int:
         raise SystemExit("No scenario directories found to validate.")
 
     duplicate_scenario_dirs = collect_duplicate_scenario_dirs(discover_scenario_dirs(scenarios_root, []))
+    report_path = Path(args.report_path).resolve() if args.report_path else None
     any_errors = False
     reports: list[dict[str, Any]] = []
     for scenario_dir in scenario_dirs:
         safe_fixes_applied: list[str] = []
         idempotent = True
         if args.write_safe:
-            pre_repair_report = build_scenario_report(scenario_dir, args.strict)
+            pre_repair_report = inspect_scenario_contract(scenario_dir, duplicate_scenario_dirs, strict=args.strict)
             _materialize_violation_report(pre_repair_report)
             if pre_repair_report.get("risky_fixes_required") or pre_repair_report.get("forbidden_violations"):
                 pre_repair_report["errors"].append(
@@ -2498,12 +2498,12 @@ def main() -> int:
             try:
                 safe_fixes_applied = apply_safe_scenario_contract_repairs(
                     scenario_dir,
-                    report_path=Path(args.report_path).resolve() if args.report_path else None,
+                    report_path=report_path,
                 )
                 before_second_pass = _capture_safe_repair_hashes(scenario_dir)
                 second_pass_fixes = apply_safe_scenario_contract_repairs(
                     scenario_dir,
-                    report_path=Path(args.report_path).resolve() if args.report_path else None,
+                    report_path=report_path,
                 )
                 after_second_pass = _capture_safe_repair_hashes(scenario_dir)
                 idempotent = before_second_pass == after_second_pass
@@ -2549,8 +2549,8 @@ def main() -> int:
         for line in repair_track_lines:
             print(f"~ {line}")
 
-    if args.report_path:
-        write_validation_report(Path(args.report_path).resolve(), reports, strict=args.strict)
+    if report_path is not None:
+        write_validation_report(report_path, reports, strict=args.strict)
 
     return 1 if any_errors else 0
 

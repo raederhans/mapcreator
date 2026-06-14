@@ -418,6 +418,11 @@ const cases = [
     ],
   },
   {
+    name: 'browser smoke tooling routes to static contract',
+    changedFiles: ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml'],
+    expectedCommands: ['python -m unittest tests.test_playwright_app_ready_gate_contract -q'],
+  },
+  {
     name: 'playwright fixtures route to observability contract and city runtime specs',
     changedFiles: ['tests/e2e/support/fixtures.js'],
     expectedCommands: [
