@@ -656,6 +656,30 @@ function drawPortPointCollection(metricName, collection, k, { interactive = fals
   });
 }
 
+function selectTransportOverviewLabelEntries(candidates, {
+  gridSize,
+  isVisible,
+  compare,
+  getBucketParts = () => [],
+} = {}) {
+  const usedBuckets = new Set();
+  const visibleLabelEntries = [];
+  candidates
+    .filter((entry) => typeof isVisible === "function" ? isVisible(entry) : true)
+    .sort(compare)
+    .forEach((entry) => {
+      const bucketKey = [
+        Math.round(entry.x / gridSize),
+        Math.round(entry.y / gridSize),
+        ...getBucketParts(entry),
+      ].join(":");
+      if (usedBuckets.has(bucketKey)) return;
+      usedBuckets.add(bucketKey);
+      visibleLabelEntries.push(entry);
+    });
+  return visibleLabelEntries;
+}
+
 function drawRailwaysLayer(k, { interactive = false } = {}) {
   syncRenderTargets();
   const startedAt = nowMs();
@@ -775,22 +799,18 @@ function drawRailwaysLayer(k, { interactive = false } = {}) {
   }
   const labelZoomConfig = getTransportOverviewLabelZoomConfig("rail", railConfig.labelDensity);
   const labelsEnabled = !!railConfig.labelsEnabled && strategy.labelsEnabled;
-  const visibleLabelEntries = [];
+  let visibleLabelEntries = [];
   if (labelsEnabled) {
     const gridSize = getTransportLineLabelGridSize(railConfig.labelDensity);
-    const usedBuckets = new Set();
-    labelCandidates
-      .filter((entry) => entry.lineClass === "mainline" ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
-      .sort((left, right) => {
+    visibleLabelEntries = selectTransportOverviewLabelEntries(labelCandidates, {
+      gridSize,
+      isVisible: (entry) => entry.lineClass === "mainline" ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale,
+      compare: (left, right) => {
         if (left.lineClass !== right.lineClass) return left.lineClass === "mainline" ? -1 : 1;
         return right.projectedLength - left.projectedLength;
-      })
-      .forEach((entry) => {
-        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}:${entry.lineClass}`;
-        if (usedBuckets.has(bucketKey)) return;
-        usedBuckets.add(bucketKey);
-        visibleLabelEntries.push(entry);
-      });
+      },
+      getBucketParts: (entry) => [entry.lineClass],
+    });
   }
   const visibleFeatureCount = featuresByClass.mainline.length + featuresByClass.regional.length + featuresByClass.secondary.length;
   if (!visibleFeatureCount) {
@@ -1010,7 +1030,6 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
   let labelCount = 0;
   if (labelsEnabled) {
     const gridSize = getTransportLineLabelGridSize(roadConfig.labelDensity);
-    const usedBuckets = new Set();
     const labelCandidates = [];
     Object.entries(featuresByClass).forEach(([roadClass, features]) => {
       features.forEach((feature) => {
@@ -1038,19 +1057,14 @@ function drawRoadsLayer(k, { interactive = false } = {}) {
         });
       });
     });
-    const visibleLabelEntries = [];
-    labelCandidates
-      .filter((entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
-      .sort((left, right) => {
+    const visibleLabelEntries = selectTransportOverviewLabelEntries(labelCandidates, {
+      gridSize,
+      isVisible: (entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale,
+      compare: (left, right) => {
         if (left.priority !== right.priority) return right.priority - left.priority;
         return right.projectedLength - left.projectedLength;
-      })
-      .forEach((entry) => {
-        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}`;
-        if (usedBuckets.has(bucketKey)) return;
-        usedBuckets.add(bucketKey);
-        visibleLabelEntries.push(entry);
-      });
+      },
+    });
     if (visibleLabelEntries.length) {
       context.save();
       context.textAlign = "center";
@@ -1318,9 +1332,7 @@ function drawCountryRoadsLayer(k, { interactive = false } = {}) {
   let labelCount = 0;
   if (labelsEnabled && Array.isArray(labelCollection?.features) && labelCollection.features.length) {
     const gridSize = getTransportLineLabelGridSize(roadConfig.labelDensity);
-    const usedBuckets = new Set();
-    const visibleLabelEntries = [];
-    labelCollection.features
+    const labelCandidates = labelCollection.features
       .map((feature) => {
         const properties = feature?.properties || {};
         const coordinates = feature?.geometry?.coordinates;
@@ -1338,14 +1350,11 @@ function drawCountryRoadsLayer(k, { interactive = false } = {}) {
         };
       })
       .filter(Boolean)
-      .filter((entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale)
-      .sort((left, right) => right.priority - left.priority)
-      .forEach((entry) => {
-        const bucketKey = `${Math.round(entry.x / gridSize)}:${Math.round(entry.y / gridSize)}`;
-        if (usedBuckets.has(bucketKey)) return;
-        usedBuckets.add(bucketKey);
-        visibleLabelEntries.push(entry);
-      });
+    const visibleLabelEntries = selectTransportOverviewLabelEntries(labelCandidates, {
+      gridSize,
+      isVisible: (entry) => entry.priority >= 4 ? k >= labelZoomConfig.nationalLabelScale : k >= labelZoomConfig.regionalLabelScale,
+      compare: (left, right) => right.priority - left.priority,
+    });
     if (visibleLabelEntries.length) {
       context.save();
       context.textAlign = "center";

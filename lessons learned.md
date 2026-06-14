@@ -364,3 +364,6 @@
 
 ### HOI4 strategic 局部修复要保护 chunked manifest
 - 只修 `strategic_values.by_feature.json` 时，基础 HOI4 builder 会顺手重写 manifest/audit/startup；保留 strategic 输出后，把 chunked manifest 字段和 startup bundle 交给完整 Pages/contract 验证链同步。
+
+### 渲染刷新 reset 抽 helper 要锁顺序
+- `setMapData` 与 scenario apply 可以共享事务清理，但颜色迁移、canvas size、topology revision、pass cache 这类路径专属步骤要保留原顺序，并用 ordered contract 锁住；抽 helper 后先做 diff 级顺序审查再跑测试。

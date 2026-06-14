@@ -51,6 +51,78 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         self.assertIn("function initMap({", renderer_content)
         self.assertIn("function setMapData({", renderer_content)
         self.assertIn("function refreshMapDataForScenarioApply({", renderer_content)
+        self.assertIn("function resetRendererRefreshTransactionState({", renderer_content)
+        set_map_data_start = renderer_content.index("function setMapData({")
+        refresh_transaction_start = renderer_content.index("function resetRendererRefreshTransactionState({")
+        scenario_apply_start = renderer_content.index("function refreshMapDataForScenarioApply({")
+        set_map_data_body = renderer_content[set_map_data_start:refresh_transaction_start]
+        scenario_apply_body = renderer_content[
+            scenario_apply_start:renderer_content.index("\n// Batch 5 facade note:", scenario_apply_start)
+        ]
+        refresh_transaction_body = renderer_content[
+            refresh_transaction_start:renderer_content.index(
+                "\nfunction getScenarioChunkPromotionTargetPasses(",
+                refresh_transaction_start,
+            )
+        ]
+        self.assertIn("resetRendererRefreshTransactionState({", set_map_data_body)
+        self.assertIn("cancelHoverOverlay: true,", set_map_data_body)
+        self.assertIn("cancelSecondarySpatialBuild: true,", set_map_data_body)
+        self.assertIn('clearLastGoodFrame("set-map-data");', set_map_data_body)
+        self.assertIn('invalidateAllRenderPasses("set-map-data");', set_map_data_body)
+        self.assertRegex(
+            set_map_data_body,
+            re.compile(
+                r"runtimeState\.countryBaseColors = sanitizeCountryColorMap\(runtimeState\.countryBaseColors\);[\s\S]*?"
+                r"runtimeState\.featureOverrides = sanitizeColorMap\(runtimeState\.featureOverrides\);[\s\S]*?"
+                r"runtimeState\.waterRegionOverrides = sanitizeColorMap\(runtimeState\.waterRegionOverrides\);[\s\S]*?"
+                r"runtimeState\.specialRegionOverrides = \{\};[\s\S]*?"
+                r"migrateLegacyColorState\(\);[\s\S]*?"
+                r"setCanvasSize\(\);[\s\S]*?"
+                r"buildRuntimePoliticalMeta\(\);",
+                re.S,
+            ),
+        )
+        self.assertIn("resetRendererRefreshTransactionState();", scenario_apply_body)
+        self.assertIn("if (cancelHoverOverlay) {", refresh_transaction_body)
+        self.assertIn("if (cancelSecondarySpatialBuild) {", refresh_transaction_body)
+        self.assertNotIn("getRenderPassCacheState()", refresh_transaction_body)
+        self.assertNotIn("runtimeState.topologyRevision", refresh_transaction_body)
+        self.assertRegex(
+            refresh_transaction_body,
+            re.compile(
+                r"clearPendingDynamicBorderTimer\(\);[\s\S]*?"
+                r"clearRenderPhaseTimer\(\);[\s\S]*?"
+                r"cancelPendingIndexUiRefresh\(\);[\s\S]*?"
+                r"cancelPendingSidebarRefresh\(\);[\s\S]*?"
+                r"if \(cancelHoverOverlay\) \{[\s\S]*?"
+                r"cancelScheduledHoverOverlayRender\(\);[\s\S]*?"
+                r"setRenderPhase\(RENDER_PHASE_IDLE\);[\s\S]*?"
+                r"resetRenderDiagnostics\(\);[\s\S]*?"
+                r"clearStagedMapDataTasks\(\);[\s\S]*?"
+                r"cancelExactAfterSettleRefresh\(\);[\s\S]*?"
+                r"cancelDeferredWork\(runtimeState\.hitCanvasBuildScheduled\);[\s\S]*?"
+                r"runtimeState\.hitCanvasBuildScheduled = null;[\s\S]*?"
+                r"if \(cancelSecondarySpatialBuild\) \{[\s\S]*?"
+                r"cancelDeferredWork\(secondarySpatialBuildHandle\);[\s\S]*?"
+                r"pendingSecondarySpatialBuildReasons\.clear\(\);[\s\S]*?"
+                r"runtimeState\.deferContextBasePass = false;[\s\S]*?"
+                r"runtimeState\.deferHitCanvasBuild = false;[\s\S]*?"
+                r"runtimeState\.deferExactAfterSettle = false;[\s\S]*?"
+                r"layerResolverCache\.primaryRef = null;[\s\S]*?"
+                r"layerResolverCache\.detailRef = null;[\s\S]*?"
+                r"layerResolverCache\.bundleMode = null;[\s\S]*?"
+                r"layerResolverCache\.contextRevision = 0;[\s\S]*?"
+                r"runtimeState\.devHoverHit = null;[\s\S]*?"
+                r"runtimeState\.devSelectedHit = null;[\s\S]*?"
+                r"runtimeState\.devSelectionFeatureIds = new Set\(\);[\s\S]*?"
+                r"runtimeState\.devSelectionOrder = \[\];[\s\S]*?"
+                r"runtimeState\.devClipboardFallbackText = \"\";[\s\S]*?"
+                r"runtimeState\.devClipboardPreviewFormat = \"names_with_ids\";[\s\S]*?"
+                r"resetPhysicalLandClipPathCache\(\);",
+                re.S,
+            ),
+        )
         self.assertNotIn("function buildIndex({ scheduleUiMode = \"immediate\" } = {}) {", renderer_content)
         self.assertNotIn("function buildSpatialIndex({", renderer_content)
         self.assertNotIn("const buildIndexChunked = (...args) => getSpatialIndexRuntimeOwner().buildIndexChunked(...args);", renderer_content)

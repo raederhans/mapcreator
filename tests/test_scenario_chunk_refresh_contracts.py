@@ -71,6 +71,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 r'\.\.\.\(Array\.isArray\(politicalFeatureIds\) \? politicalFeatureIds : \[\]\),\s*'
                 r'\.\.\.previousFeatureIds,\s*'
                 r'\.\.\.nextFeatureIds,\s*'
+                r'\.\.\.previousPrimaryFeatureIds,\s*'
+                r'\.\.\.nextPrimaryFeatureIds,\s*'
                 r'\]\)\)',
                 re.S,
             ),
