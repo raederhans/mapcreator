@@ -173,9 +173,16 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
 
     def test_post_apply_effects_defers_startup_boot_chunk_prewarm(self):
         content = SCENARIO_POST_APPLY_EFFECTS.read_text(encoding="utf-8")
+        apply_body = content.split("async function runPostScenarioApplyEffects(", 1)[1].split(
+            "function runPostScenarioResetEffects(",
+            1,
+        )[0]
 
         self.assertIn("preloadScenarioCoarseChunks", content)
         self.assertIn("ensureChunkedScenarioFirstFrameReady", content)
+        self.assertIn("async function syncVisibleScenarioOptionalLayersForPostApply({", content)
+        self.assertIn("if (runtimeState.bootBlocking) {", content)
+        self.assertIn("await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })", content)
         self.assertIn("const coarsePayload = await preloadScenarioCoarseChunks(bundle);", content)
         self.assertIn("awaitPrewarm = true", content)
         self.assertIn("awaited: shouldAwaitPrewarm", content)
@@ -190,6 +197,11 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertIn("chunkRefreshScheduledAt: refreshScheduledAt", content)
         self.assertIn("hints.sync_focus_detail_prewarm_default === true", content)
         self.assertIn("await ensureChunkedScenarioFirstFrameReady({", content)
+        self.assertIn("await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });", content)
+        self.assertLess(
+            apply_body.index("await ensureChunkedScenarioFirstFrameReady({"),
+            apply_body.index("await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });"),
+        )
         self.assertNotIn("void ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });", content)
         self.assertIn('reason: "scenario-apply"', content)
 

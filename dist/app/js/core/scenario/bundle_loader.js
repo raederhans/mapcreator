@@ -134,6 +134,57 @@ function getScenarioBaselineHashFromBundle(bundle) {
   return String(bundle?.manifest?.baseline_hash || bundle?.ownersPayload?.baseline_hash || "").trim();
 }
 
+function getScenarioIdFromBundle(bundle) {
+  return sharedNormalizeScenarioId(
+    bundle?.manifest?.scenario_id
+      || bundle?.manifest?.scenarioId
+      || bundle?.scenario_id
+      || bundle?.scenarioId
+      || ""
+  );
+}
+
+function canReusePriorStrategicValuesPayload(priorBundle, manifest) {
+  if (!priorBundle || typeof priorBundle !== "object") {
+    return false;
+  }
+  const priorScenarioId = getScenarioIdFromBundle(priorBundle);
+  const nextScenarioId = sharedNormalizeScenarioId(manifest?.scenario_id || manifest?.scenarioId || "");
+  if (priorScenarioId || nextScenarioId) {
+    return priorScenarioId === nextScenarioId && canReusePriorStrategicValuesPayloadForBaseline(priorBundle, manifest);
+  }
+  return canReusePriorStrategicValuesPayloadForBaseline(priorBundle, manifest);
+}
+
+function canReusePriorStrategicValuesPayloadForBaseline(priorBundle, manifest) {
+  const priorBaselineHash = getScenarioBaselineHashFromBundle(priorBundle);
+  const nextBaselineHash = String(manifest?.baseline_hash || "").trim();
+  if (!(priorBaselineHash || nextBaselineHash)) {
+    return true;
+  }
+  return priorBaselineHash === nextBaselineHash;
+}
+
+function copyPriorOptionalLayerPromises(priorBundle, { preserveStrategicValues = false } = {}) {
+  const nextPromises = {
+    ...(priorBundle?.optionalLayerPromises || {}),
+  };
+  if (!preserveStrategicValues) {
+    delete nextPromises.strategicvalues;
+  }
+  return nextPromises;
+}
+
+function copyPriorOptionalLayerSettledState(priorBundle, { preserveStrategicValues = false } = {}) {
+  const nextSettled = {
+    ...(priorBundle?.optionalLayerSettledByKey || {}),
+  };
+  if (!preserveStrategicValues) {
+    delete nextSettled.strategicvalues;
+  }
+  return nextSettled;
+}
+
 function getScenarioBlockerCount(summary = {}) {
   const flattened = Number(summary.blocker_count);
   if (Number.isFinite(flattened)) {
@@ -445,6 +496,7 @@ function createScenarioBootstrapBundleFromCache({
   geoLocalePatchDescriptor,
   runtimeTopologyUrl,
 } = {}) {
+  const preserveStrategicValues = canReusePriorStrategicValuesPayload(priorBundle, manifest);
   const runtimeShell = normalizeScenarioRuntimeShell(manifest);
   const runtimeTopologyPayload = normalizeScenarioRuntimeTopologyPayload(cachedCorePayload?.runtimeTopologyPayload);
   const runtimePoliticalMeta = normalizeScenarioRuntimePoliticalMeta(cachedCorePayload?.runtimePoliticalMeta || null);
@@ -479,7 +531,7 @@ function createScenarioBootstrapBundleFromCache({
     specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
     reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
     cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
-    strategicValuesPayload: priorBundle?.strategicValuesPayload || null,
+    strategicValuesPayload: preserveStrategicValues ? priorBundle?.strategicValuesPayload || null : null,
     geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(cachedLocalePayload?.geoLocalePatchPayload),
     geoLocalePatchPayloadsByLanguage: {
       ...(priorBundle?.geoLocalePatchPayloadsByLanguage || {}),
@@ -491,12 +543,8 @@ function createScenarioBootstrapBundleFromCache({
     districtGroupsPayload: priorBundle?.districtGroupsPayload || null,
     auditPayload: priorBundle?.auditPayload || null,
     startupApplySeed: null,
-    optionalLayerPromises: {
-      ...(priorBundle?.optionalLayerPromises || {}),
-    },
-    optionalLayerSettledByKey: {
-      ...(priorBundle?.optionalLayerSettledByKey || {}),
-    },
+    optionalLayerPromises: copyPriorOptionalLayerPromises(priorBundle, { preserveStrategicValues }),
+    optionalLayerSettledByKey: copyPriorOptionalLayerSettledState(priorBundle, { preserveStrategicValues }),
     loadDiagnostics: {
       optionalResources: {
         runtime_topology: {
@@ -752,6 +800,7 @@ function createScenarioBundleAssembler({
     runtimeTopologyLevel = requestedBundleLevel,
     geoLocalePatchDescriptor = getScenarioGeoLocalePatchDescriptor(manifest),
   } = {}) {
+    const preserveStrategicValues = canReusePriorStrategicValuesPayload(priorBundle, manifest);
     const [
       countriesResult,
       ownersResult,
@@ -842,7 +891,7 @@ function createScenarioBundleAssembler({
       specialZoneLayersPayload: priorBundle?.specialZoneLayersPayload || null,
       reliefOverlaysPayload: priorBundle?.reliefOverlaysPayload || null,
       cityOverridesPayload: priorBundle?.cityOverridesPayload || null,
-      strategicValuesPayload: priorBundle?.strategicValuesPayload || null,
+      strategicValuesPayload: preserveStrategicValues ? priorBundle?.strategicValuesPayload || null : null,
       geoLocalePatchPayload: normalizeScenarioGeoLocalePatchPayload(geoLocalePatchResult.value),
       geoLocalePatchPayloadsByLanguage: {
         ...(priorBundle?.geoLocalePatchPayloadsByLanguage || {}),
@@ -853,12 +902,8 @@ function createScenarioBundleAssembler({
       releasableCatalog: releasableCatalogResult.value || null,
       districtGroupsPayload: normalizeScenarioDistrictGroupsPayload(districtGroupsResult.value, targetId),
       auditPayload: auditResult.value || null,
-      optionalLayerPromises: {
-        ...(priorBundle?.optionalLayerPromises || {}),
-      },
-      optionalLayerSettledByKey: {
-        ...(priorBundle?.optionalLayerSettledByKey || {}),
-      },
+      optionalLayerPromises: copyPriorOptionalLayerPromises(priorBundle, { preserveStrategicValues }),
+      optionalLayerSettledByKey: copyPriorOptionalLayerSettledState(priorBundle, { preserveStrategicValues }),
       // loadDiagnostics 只负责暴露加载真相给 audit/UI/调试链，
       // runtime 行为仍然依据 bundle payload 本身，而不是倒过来依赖这些描述字段。
       loadDiagnostics: {

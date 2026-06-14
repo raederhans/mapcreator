@@ -72885,6 +72885,628 @@
           "anchor_kind": "vp_city",
           "tier": 1
         }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            96.27512377961212,
+            19.494408895712166
+          ]
+        },
+        "properties": {
+          "resource": "tungsten",
+          "amount": 70.0,
+          "owner_tag": "BRM",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 3,
+          "attribution": "country_pooled",
+          "state_ids": [
+            999
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            96.27512377961212,
+            19.494408895712166
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 4.0,
+          "owner_tag": "BRM",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            999
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -87.66791215606149,
+            47.23162671472308
+          ]
+        },
+        "properties": {
+          "resource": "aluminium",
+          "amount": 11.0,
+          "owner_tag": "CAN",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            466,
+            683
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -71.55342045675783,
+            -34.41475152307752
+          ]
+        },
+        "properties": {
+          "resource": "tungsten",
+          "amount": 42.0,
+          "owner_tag": "CHL",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 2,
+          "attribution": "country_pooled",
+          "state_ids": [
+            506
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -71.55342045675783,
+            -34.41475152307752
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 1.0,
+          "owner_tag": "CHL",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            506
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            16.956502927395356,
+            49.54348986209875
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 7.0,
+          "owner_tag": "CZE",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            72
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            3.8207177315551197,
+            45.337254623260996
+          ]
+        },
+        "properties": {
+          "resource": "rubber",
+          "amount": 33.0,
+          "owner_tag": "FRA",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1066
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            44.71840922776811,
+            33.40729850879534
+          ]
+        },
+        "properties": {
+          "resource": "oil",
+          "amount": 3.0,
+          "owner_tag": "IRQ",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1010
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            105.85924962190107,
+            3.6726005979122185
+          ]
+        },
+        "properties": {
+          "resource": "oil",
+          "amount": 1.0,
+          "owner_tag": "MAL",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1059
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            105.85924962190107,
+            3.6726005979122185
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 2.0,
+          "owner_tag": "MAL",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1059
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            114.5809487906564,
+            42.40043649222496
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 1.0,
+          "owner_tag": "MEN",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1043
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            8.873221245161902,
+            62.866363224663395
+          ]
+        },
+        "properties": {
+          "resource": "aluminium",
+          "amount": 5.0,
+          "owner_tag": "NOR",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            920
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            57.16887281161289,
+            22.67833530709381
+          ]
+        },
+        "properties": {
+          "resource": "oil",
+          "amount": 1.0,
+          "owner_tag": "OMA",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            1013
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            122.60717957559787,
+            12.156675388594774
+          ]
+        },
+        "properties": {
+          "resource": "steel",
+          "amount": 7.0,
+          "owner_tag": "PHI",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            624
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            12.983440518498911,
+            18.318484751075502
+          ]
+        },
+        "properties": {
+          "resource": "rubber",
+          "amount": 1.0,
+          "owner_tag": "POR",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            891
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            81.16098765294306,
+            23.398147508249227
+          ]
+        },
+        "properties": {
+          "resource": "steel",
+          "amount": 25.0,
+          "owner_tag": "RAJ",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            424,
+            426
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            81.16098765294306,
+            23.398147508249227
+          ]
+        },
+        "properties": {
+          "resource": "aluminium",
+          "amount": 1.0,
+          "owner_tag": "RAJ",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            424,
+            426
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            81.16098765294306,
+            23.398147508249227
+          ]
+        },
+        "properties": {
+          "resource": "chromium",
+          "amount": 20.0,
+          "owner_tag": "RAJ",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            424,
+            426
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            81.16098765294306,
+            23.398147508249227
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 3.0,
+          "owner_tag": "RAJ",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            424,
+            426
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            68.28259668270496,
+            55.22650570520019
+          ]
+        },
+        "properties": {
+          "resource": "steel",
+          "amount": 96.0,
+          "owner_tag": "SOV",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 3,
+          "attribution": "country_pooled",
+          "state_ids": [
+            215,
+            262,
+            560,
+            565,
+            567,
+            577,
+            581,
+            652,
+            655,
+            657,
+            881
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            68.28259668270496,
+            55.22650570520019
+          ]
+        },
+        "properties": {
+          "resource": "oil",
+          "amount": 24.0,
+          "owner_tag": "SOV",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            215,
+            262,
+            560,
+            565,
+            567,
+            577,
+            581,
+            652,
+            655,
+            657,
+            881
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            68.28259668270496,
+            55.22650570520019
+          ]
+        },
+        "properties": {
+          "resource": "aluminium",
+          "amount": 53.0,
+          "owner_tag": "SOV",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 3,
+          "attribution": "country_pooled",
+          "state_ids": [
+            215,
+            262,
+            560,
+            565,
+            567,
+            577,
+            581,
+            652,
+            655,
+            657,
+            881
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            68.28259668270496,
+            55.22650570520019
+          ]
+        },
+        "properties": {
+          "resource": "chromium",
+          "amount": 46.0,
+          "owner_tag": "SOV",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 2,
+          "attribution": "country_pooled",
+          "state_ids": [
+            215,
+            262,
+            560,
+            565,
+            567,
+            577,
+            581,
+            652,
+            655,
+            657,
+            881
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            68.28259668270496,
+            55.22650570520019
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 10.0,
+          "owner_tag": "SOV",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            215,
+            262,
+            560,
+            565,
+            567,
+            577,
+            581,
+            652,
+            655,
+            657,
+            881
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            91.09247938784453,
+            30.07621826180045
+          ]
+        },
+        "properties": {
+          "resource": "tungsten",
+          "amount": 2.0,
+          "owner_tag": "TIB",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            322
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.18186504153917,
+            39.29566819501059
+          ]
+        },
+        "properties": {
+          "resource": "chromium",
+          "amount": 32.0,
+          "owner_tag": "TUR",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 2,
+          "attribution": "country_pooled",
+          "state_ids": [
+            348
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -94.04451558113674,
+            36.55849841736871
+          ]
+        },
+        "properties": {
+          "resource": "coal",
+          "amount": 7.0,
+          "owner_tag": "USA",
+          "anchor_kind": "owner_feature_centroid",
+          "tier": 1,
+          "attribution": "country_pooled",
+          "state_ids": [
+            381
+          ]
+        }
       }
     ]
   },
@@ -72894,7 +73516,7 @@
     "states_anchored": 914,
     "states_pooled": 167,
     "feature_centroid_count": 23426,
-    "resource_point_count": 677,
+    "resource_point_count": 704,
     "unmatched_vp_sample": [
       {
         "province_id": 11435,

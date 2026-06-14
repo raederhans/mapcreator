@@ -575,6 +575,10 @@ test("resolveFeatureColor applies strategic choropleth lens when metric data is 
     buckets: {
       s1: { steel: 5 },
     },
+    resourcePoints: {
+      type: "FeatureCollection",
+      features: [],
+    },
     diagnostics: {
       errors: [],
     },

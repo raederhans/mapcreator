@@ -25,6 +25,7 @@ data/scenarios/**/manifest.json text eol=lf
 data/scenarios/**/runtime_topology.topo.json text eol=lf
 data/scenarios/**/owners.by_feature.json text eol=lf
 data/scenarios/**/cores.by_feature.json text eol=lf
+data/scenarios/**/strategic_values.by_feature.json text eol=lf
 data/scenarios/**/countries.json text eol=lf
 data/scenarios/**/city_overrides.json text eol=lf
 data/scenarios/**/capital_hints.json text eol=lf

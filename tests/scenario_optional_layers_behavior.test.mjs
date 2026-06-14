@@ -6,6 +6,7 @@ import {
   ensureActiveScenarioOptionalLayerLoaded,
   ensureActiveScenarioOptionalLayersForVisibility,
 } from "../js/core/scenario_resources.js";
+import { createScenarioBundleAssembler } from "../js/core/scenario/bundle_loader.js";
 import { createLayerFromPreset } from "../js/core/special_zone_layers.js";
 
 test("failed special zone optional layer load clears stale runtime state", async () => {
@@ -185,6 +186,95 @@ function createStrategicValuesFixture() {
     },
   };
 }
+
+test("bundle assembly clears stale strategic values optional layer after baseline changes", async () => {
+  const staleStrategicValuesPromise = Promise.resolve({ stale: true });
+  const assembler = createScenarioBundleAssembler({
+    loadMeasuredRequiredScenarioResource: async (_d3Client, _url, options = {}) => {
+      const resourceLabel = String(options.resourceLabel || "");
+      if (resourceLabel === "countries") {
+        return { payload: { countries: {} }, metrics: null };
+      }
+      if (resourceLabel === "owners") {
+        return { payload: { owners: {} }, metrics: null };
+      }
+      if (resourceLabel === "cores") {
+        return { payload: { cores: {} }, metrics: null };
+      }
+      throw new Error(`Unexpected required scenario resource: ${resourceLabel}`);
+    },
+    loadOptionalScenarioResource: async () => ({
+      ok: false,
+      value: null,
+      metrics: null,
+      reason: "not-requested",
+      errorMessage: "",
+    }),
+  });
+
+  const { bundle } = await assembler({
+    d3Client: { json: async () => null },
+    targetId: "hoi4_optional_test",
+    requestedBundleLevel: "full",
+    manifest: {
+      scenario_id: "hoi4_optional_test",
+      baseline_hash: "baseline-2",
+      countries_url: "countries.json",
+      owners_url: "owners.json",
+      cores_url: "cores.json",
+    },
+    priorBundle: {
+      manifest: {
+        scenario_id: "hoi4_optional_test",
+        baseline_hash: "baseline-1",
+      },
+      strategicValuesPayload: createStrategicValuesFixture(),
+      optionalLayerPromises: {
+        strategicvalues: staleStrategicValuesPromise,
+        waterRegions: Promise.resolve({ freshIndependentLayer: true }),
+      },
+      optionalLayerSettledByKey: {
+        strategicvalues: true,
+        waterRegions: true,
+      },
+    },
+  });
+
+  assert.equal(bundle.strategicValuesPayload, null);
+  assert.equal(bundle.optionalLayerPromises.strategicvalues, undefined);
+  assert.equal(bundle.optionalLayerSettledByKey.strategicvalues, undefined);
+  assert.equal(bundle.optionalLayerSettledByKey.waterRegions, true);
+
+  const { bundle: switchedScenarioBundle } = await assembler({
+    d3Client: { json: async () => null },
+    targetId: "hoi4_optional_next",
+    requestedBundleLevel: "full",
+    manifest: {
+      scenario_id: "hoi4_optional_next",
+      baseline_hash: "baseline-1",
+      countries_url: "countries.json",
+      owners_url: "owners.json",
+      cores_url: "cores.json",
+    },
+    priorBundle: {
+      manifest: {
+        scenario_id: "hoi4_optional_test",
+        baseline_hash: "baseline-1",
+      },
+      strategicValuesPayload: createStrategicValuesFixture(),
+      optionalLayerPromises: {
+        strategicvalues: staleStrategicValuesPromise,
+      },
+      optionalLayerSettledByKey: {
+        strategicvalues: true,
+      },
+    },
+  });
+
+  assert.equal(switchedScenarioBundle.strategicValuesPayload, null);
+  assert.equal(switchedScenarioBundle.optionalLayerPromises.strategicvalues, undefined);
+  assert.equal(switchedScenarioBundle.optionalLayerSettledByKey.strategicvalues, undefined);
+});
 
 test("strategic values optional layer load normalizes runtime payload and bumps revision", async () => {
   const previousActiveScenarioId = state.activeScenarioId;

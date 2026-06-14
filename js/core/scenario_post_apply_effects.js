@@ -300,6 +300,20 @@ function shouldSynchronouslyPrewarmChunkedScenario(bundle) {
   return hints.sync_focus_detail_prewarm_default === true;
 }
 
+async function syncVisibleScenarioOptionalLayersForPostApply({
+  bundle,
+  scenarioId = "",
+  renderNow = false,
+} = {}) {
+  if (runtimeState.bootBlocking) {
+    return;
+  }
+  await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })
+    .catch((error) => {
+      console.warn(`[scenario] Optional layer visibility sync failed for "${scenarioId}".`, error);
+    });
+}
+
 async function runPostScenarioApplyEffects({
   bundle,
   scenarioId = "",
@@ -345,12 +359,8 @@ async function runPostScenarioApplyEffects({
       scenarioId,
       awaitPrewarm: !deferChunkPrewarm,
     });
-  } else if (!runtimeState.bootBlocking) {
-    await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })
-      .catch((error) => {
-        console.warn(`[scenario] Optional layer visibility sync failed for "${scenarioId}".`, error);
-      });
   }
+  await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });
   const shouldExposeScenarioDataHealthSignals =
     !bundle?.loadDiagnostics?.startupBundle
     && !runtimeState.startupReadonly

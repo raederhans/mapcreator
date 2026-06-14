@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37087,12 +37087,12 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8444569,
+      "size_bytes": 8456906,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 47667,
+      "size_bytes": 47645,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -37248,6 +37248,11 @@
     {
       "path": "app/data/scenario-rules/hoi4_1939.manual.json",
       "size_bytes": 17447,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenario-rules/hoi4_country_full_names.json",
+      "size_bytes": 12371,
       "source_kind": "generated_ignored"
     },
     {
@@ -38057,7 +38062,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/countries.json",
-      "size_bytes": 137175,
+      "size_bytes": 151007,
       "source_kind": "generated_ignored"
     },
     {
@@ -38087,7 +38092,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/locales.startup.json",
-      "size_bytes": 2124044,
+      "size_bytes": 2134565,
       "source_kind": "generated_ignored"
     },
     {
@@ -38122,27 +38127,27 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
-      "size_bytes": 9586410,
+      "size_bytes": 9590720,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json.gz",
-      "size_bytes": 1984887,
+      "size_bytes": 1988924,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
-      "size_bytes": 9586410,
+      "size_bytes": 9590720,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json.gz",
-      "size_bytes": 1984888,
+      "size_bytes": 1988925,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/strategic_values.by_feature.json",
-      "size_bytes": 2035071,
+      "size_bytes": 2049351,
       "source_kind": "generated_ignored"
     },
     {
@@ -39757,7 +39762,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/countries.json",
-      "size_bytes": 130962,
+      "size_bytes": 144011,
       "source_kind": "generated_ignored"
     },
     {
@@ -39787,7 +39792,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/locales.startup.json",
-      "size_bytes": 2124044,
+      "size_bytes": 2134565,
       "source_kind": "generated_ignored"
     },
     {
@@ -39822,22 +39827,22 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
-      "size_bytes": 9581941,
+      "size_bytes": 9585580,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1983592,
+      "size_bytes": 1986588,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json",
-      "size_bytes": 9581941,
+      "size_bytes": 9585580,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1983593,
+      "size_bytes": 1986589,
       "source_kind": "generated_ignored"
     },
     {
@@ -39847,7 +39852,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/strategic_values.by_feature.json",
-      "size_bytes": 2033531,
+      "size_bytes": 2047810,
       "source_kind": "generated_ignored"
     },
     {
@@ -45537,7 +45542,7 @@
     },
     {
       "path": "app/js/core/color_resolver.js",
-      "size_bytes": 5076,
+      "size_bytes": 5046,
       "source_kind": "dist"
     },
     {
@@ -45692,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1027196,
+      "size_bytes": 1027366,
       "source_kind": "dist"
     },
     {
@@ -45917,7 +45922,7 @@
     },
     {
       "path": "app/js/core/renderer/urban_city_policy.js",
-      "size_bytes": 23295,
+      "size_bytes": 23467,
       "source_kind": "dist"
     },
     {
@@ -45927,7 +45932,7 @@
     },
     {
       "path": "app/js/core/scenario/bundle_loader.js",
-      "size_bytes": 42640,
+      "size_bytes": 44656,
       "source_kind": "dist"
     },
     {
@@ -45992,7 +45997,7 @@
     },
     {
       "path": "app/js/core/scenario/strategic_values.js",
-      "size_bytes": 10416,
+      "size_bytes": 10659,
       "source_kind": "dist"
     },
     {
@@ -46042,7 +46047,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 15340,
+      "size_bytes": 15556,
       "source_kind": "dist"
     },
     {
@@ -46677,7 +46682,7 @@
     },
     {
       "path": "assets/europe-1936-showcase.svg",
-      "size_bytes": 252208,
+      "size_bytes": 252510,
       "source_kind": "dist"
     },
     {
@@ -46687,7 +46692,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 832,
+      "size_bytes": 818,
       "source_kind": "dist"
     },
     {
@@ -46717,7 +46722,7 @@
     },
     {
       "path": "assets/hero-hoi4-1936.svg",
-      "size_bytes": 102687,
+      "size_bytes": 102810,
       "source_kind": "dist"
     },
     {
@@ -46732,7 +46737,7 @@
     },
     {
       "path": "assets/hero-hoi4-1939.svg",
-      "size_bytes": 104114,
+      "size_bytes": 104241,
       "source_kind": "dist"
     },
     {
@@ -46827,7 +46832,7 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1513,
+      "size_bytes": 1495,
       "source_kind": "dist"
     },
     {
@@ -46882,7 +46887,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1448778,
+      "size_bytes": 1448929,
       "source_kind": "dist"
     },
     {
@@ -46901,5 +46906,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1144969189
+  "total_bytes": 1145103902
 }

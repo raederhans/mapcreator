@@ -73,6 +73,11 @@ function isScenarioStrategicValuesRuntimePayload(payload) {
     && typeof payload.diagnostics === "object";
 }
 
+function isScenarioStrategicValuesUsable(payload) {
+  return isScenarioStrategicValuesRuntimePayload(payload)
+    && !(Array.isArray(payload.diagnostics?.errors) && payload.diagnostics.errors.length > 0);
+}
+
 function normalizeExpectedValue(options, primaryKey, snakeKey, camelKey) {
   return normalizeText(
     options?.[primaryKey]
@@ -346,5 +351,6 @@ function normalizeScenarioStrategicValuesPayload(rawPayload, options = {}) {
 
 export {
   isScenarioStrategicValuesRuntimePayload,
+  isScenarioStrategicValuesUsable,
   normalizeScenarioStrategicValuesPayload,
 };

@@ -2,6 +2,7 @@ import {
   buildStrategicChoroplethColorInput,
   isStrategicChoroplethMetric,
 } from "./renderer/strategic_choropleth.js";
+import { isScenarioStrategicValuesUsable } from "./scenario/strategic_values.js";
 
 // Central color resolver for land features.
 // It keeps canonical visual/owner state precedence in one small, testable place.
@@ -50,10 +51,7 @@ function resolveStrategicChoroplethColor(id, ctx, getSafeColor) {
   const runtimeState = ctx.state && typeof ctx.state === "object" ? ctx.state : {};
   const metricId = String(runtimeState.strategicChoroplethMetric || "").trim().toLowerCase();
   const payload = runtimeState.scenarioStrategicValuesData;
-  if (!metricId || !isStrategicChoroplethMetric(metricId) || !payload || typeof payload !== "object") {
-    return null;
-  }
-  if (Array.isArray(payload.diagnostics?.errors) && payload.diagnostics.errors.length > 0) {
+  if (!metricId || !isStrategicChoroplethMetric(metricId) || !isScenarioStrategicValuesUsable(payload)) {
     return null;
   }
   const input = buildStrategicChoroplethColorInput(payload, ctx.feature || id, metricId);

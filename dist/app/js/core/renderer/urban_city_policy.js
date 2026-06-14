@@ -7,6 +7,8 @@
  * map_renderer.js keeps the facade exports, render transaction orchestration,
  * projection/context helpers, and render-only shared helpers.
  */
+import { isScenarioStrategicValuesUsable } from "../scenario/strategic_values.js";
+
 export function createUrbanCityPolicyOwner({
   state,
   caches = {},
@@ -208,7 +210,9 @@ export function createUrbanCityPolicyOwner({
   }
 
   function getStrategicVictoryPointForCity(feature) {
-    const strategicValues = state?.scenarioStrategicValuesData;
+    const strategicValues = isScenarioStrategicValuesUsable(state?.scenarioStrategicValuesData)
+      ? state.scenarioStrategicValuesData
+      : null;
     const byFeature = strategicValues?.victoryPointsByFeature
       && typeof strategicValues.victoryPointsByFeature === "object"
       ? strategicValues.victoryPointsByFeature

@@ -430,13 +430,20 @@ def _build_resource_points(
         if _as_float(entry.get("lon")) is not None and _as_float(entry.get("lat")) is not None:
             vp_by_state[int(entry["state_id"])].append(entry)
     features_by_bucket: dict[str, list[str]] = defaultdict(list)
+    features_by_owner: dict[str, list[str]] = defaultdict(list)
     for feature_id, bucket_id in bucket_by_feature.items():
         features_by_bucket[bucket_id].append(feature_id)
-    max_by_resource = {
-        resource_key: max((float(state.resources.get(resource_key, 0.0)) for state in states_by_id.values()), default=0.0)
-        for resource_key in RESOURCE_KEYS
-    }
-    features: list[dict[str, Any]] = []
+        owner_tag = ""
+        if bucket_id.startswith("pool:"):
+            owner_tag = bucket_id.split(":", 1)[1]
+        elif bucket_id.startswith("s") and bucket_id[1:].isdigit():
+            state = states_by_id.get(int(bucket_id[1:]))
+            owner_tag = state.owner_tag if state is not None else ""
+        if owner_tag:
+            features_by_owner[owner_tag].append(feature_id)
+    state_resource_entries: list[dict[str, Any]] = []
+    pooled_resources_by_owner: dict[str, dict[str, float]] = defaultdict(lambda: {key: 0.0 for key in RESOURCE_KEYS})
+    pooled_state_ids_by_owner: dict[str, set[int]] = defaultdict(set)
     for state_id, state in sorted(states_by_id.items()):
         best_vp = max(vp_by_state.get(state_id, []), key=lambda entry: int(entry.get("value") or 0), default=None)
         anchor_kind = "vp_city"
@@ -445,6 +452,11 @@ def _build_resource_points(
         if lon is None or lat is None:
             centroid = _feature_centroid_anchor(features_by_bucket.get(f"s{state_id}", []), feature_centroids)
             if centroid is None:
+                for resource_key in RESOURCE_KEYS:
+                    amount = float(state.resources.get(resource_key, 0.0))
+                    if amount > 0:
+                        pooled_resources_by_owner[state.owner_tag][resource_key] += amount
+                        pooled_state_ids_by_owner[state.owner_tag].add(state_id)
                 continue
             lon, lat = centroid
             anchor_kind = "feature_centroid"
@@ -452,20 +464,78 @@ def _build_resource_points(
             amount = float(state.resources.get(resource_key, 0.0))
             if amount <= 0:
                 continue
-            features.append(
+            state_resource_entries.append(
                 {
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                    "properties": {
-                        "resource": resource_key,
-                        "amount": amount,
-                        "state_id": state_id,
-                        "owner_tag": state.owner_tag,
-                        "anchor_kind": anchor_kind,
-                        "tier": _resource_tier(amount, max_by_resource.get(resource_key, 0.0)),
-                    },
+                    "resource": resource_key,
+                    "amount": amount,
+                    "lon": lon,
+                    "lat": lat,
+                    "state_id": state_id,
+                    "owner_tag": state.owner_tag,
+                    "anchor_kind": anchor_kind,
                 }
             )
+    pooled_resource_entries: list[dict[str, Any]] = []
+    for owner_tag, resources in sorted(pooled_resources_by_owner.items()):
+        centroid = _feature_centroid_anchor(
+            sorted(set(features_by_owner.get(owner_tag, []))),
+            feature_centroids,
+        )
+        if centroid is None:
+            continue
+        lon, lat = centroid
+        state_ids = sorted(pooled_state_ids_by_owner.get(owner_tag, set()))
+        for resource_key in RESOURCE_KEYS:
+            amount = float(resources.get(resource_key, 0.0))
+            if amount <= 0:
+                continue
+            pooled_resource_entries.append(
+                {
+                    "resource": resource_key,
+                    "amount": amount,
+                    "lon": lon,
+                    "lat": lat,
+                    "state_ids": state_ids,
+                    "owner_tag": owner_tag,
+                    "anchor_kind": "owner_feature_centroid",
+                    "attribution": "country_pooled",
+                }
+            )
+    max_by_resource = {
+        resource_key: max(
+            (
+                float(entry.get("amount", 0.0))
+                for entry in [*state_resource_entries, *pooled_resource_entries]
+                if entry.get("resource") == resource_key
+            ),
+            default=0.0,
+        )
+        for resource_key in RESOURCE_KEYS
+    }
+    features: list[dict[str, Any]] = []
+    for entry in [*state_resource_entries, *pooled_resource_entries]:
+        resource_key = str(entry["resource"])
+        amount = float(entry["amount"])
+        properties = {
+            "resource": resource_key,
+            "amount": amount,
+        }
+        if entry.get("state_id") is not None:
+            properties["state_id"] = entry["state_id"]
+        properties["owner_tag"] = entry["owner_tag"]
+        properties["anchor_kind"] = entry["anchor_kind"]
+        properties["tier"] = _resource_tier(amount, max_by_resource.get(resource_key, 0.0))
+        if entry.get("attribution") is not None:
+            properties["attribution"] = entry["attribution"]
+        if entry.get("state_ids"):
+            properties["state_ids"] = entry["state_ids"]
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [entry["lon"], entry["lat"]]},
+                "properties": properties,
+            }
+        )
     return {"type": "FeatureCollection", "features": features}
 
 

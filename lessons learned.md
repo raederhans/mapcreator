@@ -361,3 +361,6 @@
 
 ### HOI4 国家显示名要同步全链路指纹
 - 修改 `countries.json` 的显示名时，同步 startup bundle/gzip、`locales.startup.json`、`data/locales.json`、`data/manifest.json`、`build_snapshot.json`、`manifest.snapshot_fingerprint` 和 `audit.snapshot_fingerprint`；只改单文件哈希会被 strict contract 抓到聚合指纹过期。
+
+### HOI4 strategic 局部修复要保护 chunked manifest
+- 只修 `strategic_values.by_feature.json` 时，基础 HOI4 builder 会顺手重写 manifest/audit/startup；保留 strategic 输出后，把 chunked manifest 字段和 startup bundle 交给完整 Pages/contract 验证链同步。

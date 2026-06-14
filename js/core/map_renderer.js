@@ -122,6 +122,7 @@ import {
 import { createUrbanCityPolicyOwner } from "./renderer/urban_city_policy.js";
 import { createCityLabelOwner } from "./renderer/city_label_owner.js";
 import { buildStrategicResourceMarkerEntries } from "./renderer/strategic_resource_markers.js";
+import { isScenarioStrategicValuesUsable } from "./scenario/strategic_values.js";
 import { createColorResolutionStrategyOwner } from "./renderer/color_resolution_strategy.js";
 import { createStrategicOverlayHelpersOwner } from "./renderer/strategic_overlay_helpers.js";
 import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay_runtime_owner.js";
@@ -14920,8 +14921,11 @@ function getStrategicResourceMarkerLayerState(k) {
   if (!projection) {
     return { skipped: true, reason: "no-projection", featureCount, markerEntries: [] };
   }
-  if (Array.isArray(payload.diagnostics?.errors) && payload.diagnostics.errors.length > 0) {
-    return { skipped: true, reason: "diagnostic-errors", featureCount, markerEntries: [] };
+  if (!isScenarioStrategicValuesUsable(payload)) {
+    const reason = Array.isArray(payload?.diagnostics?.errors) && payload.diagnostics.errors.length > 0
+      ? "diagnostic-errors"
+      : "no-data";
+    return { skipped: true, reason, featureCount, markerEntries: [] };
   }
 
   const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;

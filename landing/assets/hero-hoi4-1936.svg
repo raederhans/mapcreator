@@ -336,13 +336,13 @@
       <path class="territory territory--yug territory--focus" data-tag="YUG" fill="#48497e" d="M533.4 512.2 L534.1 512.8 L533.7 513.9 L533.1 513.1 L533.7 513.4 L533.4 512.2 Z" />
   </g>
   <g class="hero-capitals" data-layer="capitals">
-      <g class="capital capital--focus" data-tag="CZE"><title>Prague · Czechoslovakia</title><circle cx="479.7" cy="402.4" r="5.8" /><text class="city-label" x="488.7" y="395.4">Prague</text></g>
-      <g class="capital capital--focus" data-tag="ENG"><title>London · Britain</title><circle cx="342.9" cy="375.8" r="5.8" /><text class="city-label" x="351.9" y="368.8">London</text></g>
-      <g class="capital capital--focus" data-tag="FRA"><title>Paris · France</title><circle cx="361.8" cy="418.3" r="5.8" /><text class="city-label" x="370.8" y="411.3">Paris</text></g>
-      <g class="capital capital--focus" data-tag="GER"><title>Berlin · Germany</title><circle cx="468.3" cy="366.4" r="5.8" /><text class="city-label" x="477.3" y="359.4">Berlin</text></g>
-      <g class="capital capital--focus" data-tag="ITA"><title>Rome · Italy</title><circle cx="465.4" cy="526" r="5.8" /><text class="city-label" x="474.4" y="519">Rome</text></g>
-      <g class="capital capital--focus" data-tag="POL"><title>Warsaw · Poland</title><circle cx="538" cy="363.9" r="5.8" /><text class="city-label" x="547" y="356.9">Warsaw</text></g>
-      <g class="capital capital--focus" data-tag="ROM"><title>Bucharest · Romania</title><circle cx="608.7" cy="469.8" r="5.8" /><text class="city-label" x="617.7" y="462.8">Bucharest</text></g>
-      <g class="capital capital--focus" data-tag="SOV"><title>Moscow · Soviet Union</title><circle cx="663.9" cy="274.2" r="5.8" /><text class="city-label" x="672.9" y="267.2">Moscow</text></g>
+      <g class="capital capital--focus" data-tag="CZE"><title>Prague · Czechoslovak Republic</title><circle cx="479.7" cy="402.4" r="5.8" /><text class="city-label" x="488.7" y="395.4">Prague</text></g>
+      <g class="capital capital--focus" data-tag="ENG"><title>London · United Kingdom of Great Britain and Northern Ireland</title><circle cx="342.9" cy="375.8" r="5.8" /><text class="city-label" x="351.9" y="368.8">London</text></g>
+      <g class="capital capital--focus" data-tag="FRA"><title>Paris · French Republic</title><circle cx="361.8" cy="418.3" r="5.8" /><text class="city-label" x="370.8" y="411.3">Paris</text></g>
+      <g class="capital capital--focus" data-tag="GER"><title>Berlin · German Reich</title><circle cx="468.3" cy="366.4" r="5.8" /><text class="city-label" x="477.3" y="359.4">Berlin</text></g>
+      <g class="capital capital--focus" data-tag="ITA"><title>Rome · Kingdom of Italy</title><circle cx="465.4" cy="526" r="5.8" /><text class="city-label" x="474.4" y="519">Rome</text></g>
+      <g class="capital capital--focus" data-tag="POL"><title>Warsaw · Republic of Poland</title><circle cx="538" cy="363.9" r="5.8" /><text class="city-label" x="547" y="356.9">Warsaw</text></g>
+      <g class="capital capital--focus" data-tag="ROM"><title>Bucharest · Kingdom of Romania</title><circle cx="608.7" cy="469.8" r="5.8" /><text class="city-label" x="617.7" y="462.8">Bucharest</text></g>
+      <g class="capital capital--focus" data-tag="SOV"><title>Moscow · Union of Soviet Socialist Republics</title><circle cx="663.9" cy="274.2" r="5.8" /><text class="city-label" x="672.9" y="267.2">Moscow</text></g>
   </g>
 </svg>

@@ -147,6 +147,29 @@ class Hoi4StrategicValuesTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["states_pooled"], 2)
         resources = payload["resource_points"]["features"]
         self.assertTrue(any(feature["properties"]["resource"] == "steel" for feature in resources))
+        pooled_resources = [
+            feature["properties"]
+            for feature in resources
+            if feature["properties"].get("attribution") == "country_pooled"
+        ]
+        self.assertTrue(
+            any(
+                properties["resource"] == "oil"
+                and properties["owner_tag"] == "POL"
+                and properties["state_ids"] == [11]
+                and properties["anchor_kind"] == "owner_feature_centroid"
+                for properties in pooled_resources
+            )
+        )
+        self.assertTrue(
+            any(
+                properties["resource"] == "steel"
+                and properties["owner_tag"] == "GER"
+                and properties["state_ids"] == [12]
+                and properties["anchor_kind"] == "owner_feature_centroid"
+                for properties in pooled_resources
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -18,6 +18,21 @@ function createCityFeature(id, hostFeatureId, extraProps = {}) {
   };
 }
 
+function createStrategicValuesPayload(victoryPointsByFeature, diagnostics = { errors: [], warnings: [], source: {} }) {
+  return {
+    metrics: {},
+    buckets: {},
+    bucketByFeature: {},
+    victoryPointsByFeature,
+    victoryPointsByState: {},
+    resourcePoints: {
+      type: "FeatureCollection",
+      features: [],
+    },
+    diagnostics,
+  };
+}
+
 function createOwner(state) {
   const helpers = {
     getCityCanonicalId: (feature) => String(feature?.properties?.city_id || feature?.id || "").trim(),
@@ -57,8 +72,7 @@ test("urban city policy copies matching strategic victory points onto city featu
       ],
     },
     scenarioCityOverridesData: null,
-    scenarioStrategicValuesData: {
-      victoryPointsByFeature: {
+    scenarioStrategicValuesData: createStrategicValuesPayload({
         "GER-1": [
           {
             city_id: "berlin",
@@ -69,8 +83,7 @@ test("urban city policy copies matching strategic victory points onto city featu
             match_method: "city_exact",
           },
         ],
-      },
-    },
+      }),
     scenarioStrategicValuesRevision: 1,
     scenarioCountriesByTag: {},
     sovereigntyByFeatureId: {},
@@ -96,14 +109,12 @@ test("urban city policy uses the strongest host victory point when city ids do n
       ],
     },
     scenarioCityOverridesData: null,
-    scenarioStrategicValuesData: {
-      victoryPointsByFeature: {
+    scenarioStrategicValuesData: createStrategicValuesPayload({
         "FRA-1": [
           { city_id: "minor", value: 1, name: "Minor" },
           { city_id: "paris", value: 30, name: "Paris", province_id: 11506 },
         ],
-      },
-    },
+      }),
     scenarioStrategicValuesRevision: 2,
     scenarioCountriesByTag: {},
     sovereigntyByFeatureId: {},
@@ -115,4 +126,44 @@ test("urban city policy uses the strongest host victory point when city ids do n
   assert.equal(collection.features[0].properties.__city_scenario_victory_points, 30);
   assert.equal(collection.features[0].properties.__city_scenario_vp_name, "Paris");
   assert.equal(collection.features[0].properties.__city_scenario_vp_province_id, 11506);
+});
+
+test("urban city policy ignores strategic victory points from diagnostic-error payloads", () => {
+  const state = {
+    activeScenarioId: "hoi4_city_test",
+    worldCitiesData: {
+      type: "FeatureCollection",
+      features: [
+        createCityFeature("berlin", "GER-1"),
+      ],
+    },
+    scenarioCityOverridesData: null,
+    scenarioStrategicValuesData: createStrategicValuesPayload({
+      "GER-1": [
+        {
+          city_id: "berlin",
+          stable_key: "berlin",
+          value: 50,
+          name: "Berlin",
+          province_id: 6521,
+          match_method: "city_exact",
+        },
+      ],
+    }, {
+      errors: [{ code: "baseline_hash_mismatch" }],
+      warnings: [],
+      source: {},
+    }),
+    scenarioStrategicValuesRevision: 3,
+    scenarioCountriesByTag: {},
+    sovereigntyByFeatureId: {},
+    sovereigntyRevision: 0,
+    cityLayerRevision: 0,
+  };
+
+  const collection = createOwner(state).getEffectiveCityCollection();
+  assert.equal(collection.features.length, 1);
+  assert.equal(collection.features[0].properties.__city_scenario_victory_points, undefined);
+  assert.equal(collection.features[0].properties.__city_scenario_vp_name, undefined);
+  assert.equal(collection.features[0].properties.__city_scenario_vp_province_id, undefined);
 });

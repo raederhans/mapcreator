@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   isScenarioStrategicValuesRuntimePayload,
+  isScenarioStrategicValuesUsable,
   normalizeScenarioStrategicValuesPayload,
 } from "../js/core/scenario/strategic_values.js";
 
@@ -118,6 +119,7 @@ test("normalizes valid strategic values payload into stable runtime indexes", ()
   assert.equal(result.victoryPointsByState["12"][0].match_method, "unmatched");
   assert.equal(result.resourcePoints.type, "FeatureCollection");
   assert.equal(result.resourcePoints.features[0].properties.resource, "steel");
+  assert.equal(isScenarioStrategicValuesUsable(result), true);
   assert.deepEqual(result.diagnostics.source, {
     resource_point_count: 1,
     vp_matched: 1,
@@ -157,6 +159,7 @@ test("revalidates already-normalized strategic values runtime payload identity",
   });
 
   assert.equal(isScenarioStrategicValuesRuntimePayload(result), true);
+  assert.equal(isScenarioStrategicValuesUsable(result), false);
   assert.equal(result.scenarioId, "hoi4_test");
   assert.equal(result.baselineHash, "abc123");
   assert.deepEqual(diagnosticCodes(result.diagnostics.errors), [

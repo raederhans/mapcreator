@@ -29,11 +29,16 @@ class MapRendererStrategicValuesRenderContractTest(unittest.TestCase):
             "import { buildStrategicResourceMarkerEntries } from './renderer/strategic_resource_markers.js';",
             imports,
         )
+        self.assertIn(
+            "import { isScenarioStrategicValuesUsable } from './scenario/strategic_values.js';",
+            imports,
+        )
         self.assertIn('"drawStrategicResourceMarkersLayer"', renderer_content)
         self.assertIn("function getStrategicResourceMarkerLayerState(k) {", renderer_content)
         self.assertIn("function drawStrategicResourceMarkersLayer(k, { interactive = false } = {}) {", renderer_content)
         self.assertIn("buildStrategicResourceMarkerEntries(payload, {", renderer_content)
-        self.assertIn('reason: "diagnostic-errors"', renderer_content)
+        self.assertIn("!isScenarioStrategicValuesUsable(payload)", renderer_content)
+        self.assertIn('"diagnostic-errors"', renderer_content)
         self.assertIn("drawStrategicResourceMarkersLayer(k, { interactive });", context_markers_body)
         self.assertIn('collectContextMetric("drawStrategicResourceMarkersLayer", 0, {', context_markers_body)
         self.assertIn(
