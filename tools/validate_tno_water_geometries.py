@@ -344,6 +344,18 @@ def _iter_coordinate_pairs(value):
         yield from _iter_coordinate_pairs(item)
 
 
+def _iter_geometry_coordinate_pairs(geometry):
+    if not isinstance(geometry, dict):
+        return
+    if str(geometry.get("type") or "").strip() == "GeometryCollection":
+        geometries = geometry.get("geometries")
+        if isinstance(geometries, list):
+            for child in geometries:
+                yield from _iter_geometry_coordinate_pairs(child)
+        return
+    yield from _iter_coordinate_pairs(geometry.get("coordinates"))
+
+
 def _collect_feature_metrics(feature_collection: dict, *, label: str) -> dict:
     invalid = []
     empty = []
@@ -361,7 +373,7 @@ def _collect_feature_metrics(feature_collection: dict, *, label: str) -> dict:
             continue
         bad_coordinate_samples = [
             [lon, lat]
-            for lon, lat in _iter_coordinate_pairs(geometry_payload.get("coordinates")) or []
+            for lon, lat in _iter_geometry_coordinate_pairs(geometry_payload) or []
             if lon < -180.0 or lon > 180.0 or lat < -90.0 or lat > 90.0
         ]
         if bad_coordinate_samples:

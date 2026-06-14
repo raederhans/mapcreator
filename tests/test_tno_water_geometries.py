@@ -1798,6 +1798,50 @@ def test_tno_water_validator_report_requires_chunks_when_chunk_gate_is_active():
     )
 
 
+def test_tno_water_validator_checks_geometry_collection_coordinates():
+    water_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "geometry_collection_bad_lon",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "fixture",
+        },
+        "geometry": {
+            "type": "GeometryCollection",
+            "geometries": [
+                {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [180.25, 10.0],
+                        [180.5, 10.0],
+                        [180.5, 10.5],
+                        [180.25, 10.5],
+                        [180.25, 10.0],
+                    ]],
+                }
+            ],
+        },
+    }
+    source_water = {"type": "FeatureCollection", "features": [water_feature]}
+    runtime_political = {"type": "FeatureCollection", "features": []}
+
+    report = build_report_from_collections(
+        scenario_id="fixture",
+        source_water=source_water,
+        runtime_water=source_water,
+        runtime_political=runtime_political,
+        named_water_snapshot=source_water,
+        chunk_feature_collections=[],
+        require_chunks=False,
+    )
+
+    source_metrics = report["checks"]["source"]
+    assert source_metrics["out_of_range_coordinates"][0]["id"] == "geometry_collection_bad_lon"
+    failures = summarize_failures(report, require_chunks=False)
+    assert any("source: out_of_range_coordinates=1" == failure for failure in failures)
+
+
 def test_tno_tracked_inland_water_regions_keep_source_contract():
     feature_map = _feature_map(_load_scenario_water_features())
     feature = feature_map.get("tno_qyzylorda_inland_water")
@@ -2055,3 +2099,6 @@ class TnoWaterRecentRefinementContractTest(unittest.TestCase):
 
     def test_manifest_and_startup_bundles_reflect_current_water_bootstrap(self):
         test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap()
+
+    def test_water_validator_checks_geometry_collection_coordinates(self):
+        test_tno_water_validator_checks_geometry_collection_coordinates()

@@ -370,3 +370,4 @@
 
 ### TNO publish 验证保持只读
 - `validate_*` 路径只返回错误列表；需要补 legacy checkpoint 文件时放在外部 checkpoint hydration/publish 准备阶段，避免 checked-in scenario 目录被验证动作生成临时文件。
+- 在 `unittest` 入口里新增 pytest 风格模块函数时，要同步加 wrapper method；否则 `python -m unittest ...` 会绿灯但跳过新用例。

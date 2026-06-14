@@ -404,6 +404,65 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertEqual(warnings, [])
             self.assertTrue(any("must not check in legacy capital_hints.json" in error for error in errors))
 
+    def test_validate_scenario_contract_rejects_tno_city_overrides_unknown_country_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            previous_project_root = check_scenario_contracts.PROJECT_ROOT
+            check_scenario_contracts.PROJECT_ROOT = tmp_root
+            scenario_dir = _create_scenario_dir(
+                tmp_root,
+                "tno_1962",
+                include_capital_hints_url=False,
+            )
+            _write_json(
+                scenario_dir / "countries.json",
+                {
+                    "version": 1,
+                    "scenario_id": "tno_1962",
+                    "countries": {"AAA": {"tag": "AAA"}},
+                },
+            )
+            _write_json(
+                scenario_dir / "city_overrides.json",
+                {
+                    "version": 1,
+                    "scenario_id": "tno_1962",
+                    "capitals_by_tag": {
+                        "AAA": "CITY::capital",
+                        "ZZZ": "CITY::unknown",
+                    },
+                    "capital_city_hints": {
+                        "QQQ": {"tag": "AAA"},
+                        "AAA": {"tag": "RRR"},
+                    },
+                },
+            )
+
+            try:
+                errors, warnings = validate_scenario_contract(scenario_dir, {})
+            finally:
+                check_scenario_contracts.PROJECT_ROOT = previous_project_root
+
+            self.assertEqual(warnings, [])
+            self.assertTrue(
+                any(
+                    "city_overrides.json capitals_by_tag has tags missing from countries.json" in error
+                    for error in errors
+                )
+            )
+            self.assertTrue(
+                any(
+                    "city_overrides.json capital_city_hints has tags missing from countries.json" in error
+                    for error in errors
+                )
+            )
+            self.assertTrue(
+                any(
+                    "city_overrides.json capital_city_hints entries must tag registered countries" in error
+                    for error in errors
+                )
+            )
+
     def test_validate_scenario_contract_keeps_locale_collisions_as_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)
