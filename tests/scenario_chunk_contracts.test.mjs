@@ -970,6 +970,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const politicalRasterWorkerSource = readRepoFile("js", "workers", "political_raster.worker.js");
   const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
   const chunkManagerSource = readRepoFile("js", "core", "scenario_chunk_manager.js");
+  const spatialQueryIndexSource = readRepoFile("js", "core", "renderer", "spatial_query_index.js");
+  const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
   const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
@@ -1210,10 +1212,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes("HIT_CANVAS_VIEWPORT_OVERSCAN_PX")
       && /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\{[\s\S]*?overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,[\s\S]*?\}\);/.test(rendererSource)
       && rendererSource.includes("visibleItemCount")
-      && rendererSource.includes("cellCandidateCount")
-      && rendererSource.includes("globalCandidateCount")
+      && spatialQueryIndexSource.includes("cellCandidateCount")
+      && spatialQueryIndexSource.includes("globalCandidateCount")
       && rendererSource.includes("globalCount")
-      && rendererSource.includes("cellSpan"),
+      && spatialQueryIndexSource.includes("cellSpan"),
     dirtyHitCanvasUsesPointProbeBeforeDeferredFullBuild:
       /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?collectGridCandidates\(projectedX, projectedY, 0\)[\s\S]*?hitContext\.rect\(px - 1, py - 1, 3, 3\);[\s\S]*?hitContext\.clip\(\);[\s\S]*?recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource)
       && /function getValidatedCanvasHit\(event, strictIds = null, \{ forceBuild = false \} = \{\}\) \{[\s\S]*?if \(isHitCanvasCurrent\(\)\) \{[\s\S]*?getHitResultFromCanvas\(event\)[\s\S]*?\} else \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{ reason: forceBuild \? "dirty-point-probe-click" : "dirty-point-probe-hover" \}\);[\s\S]*?getDirtyHitCanvasPointProbeHit\(event\);/.test(rendererSource),
@@ -1237,7 +1239,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('recordRenderPerfMetric("chunkPromotionDeferredInfraMs"')
       && rendererSource.includes("promotedVisibleFeatureCount")
       && rendererSource.includes("promotedTotalFeatureCount")
-      && /const promotionMetricDetails = \{[\s\S]*?selectedByteCountSum[\s\S]*?selectedEstimatedPathCostSum[\s\S]*?\};[\s\S]*?recordRenderPerfMetric\("scenarioChunkPromotionVisualStage", visualDurationMs, \{[\s\S]*?\.\.\.promotionMetricDetails/.test(rendererSource)
+      && /function buildScenarioChunkPromotionVisualMetricDetails\(\{[\s\S]*?selectedByteCountSum[\s\S]*?selectedEstimatedPathCostSum/.test(chunkPromotionHelperSource)
+      && /const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails\(\{[\s\S]*?recordRenderPerfMetric\("scenarioChunkPromotionVisualStage", visualDurationMs, \{[\s\S]*?\.\.\.promotionMetricDetails/.test(rendererSource)
       && /recordScenarioRenderMetric\("politicalChunkPromotionMs"[\s\S]*?promotedVisibleFeatureCount:[\s\S]*?promotedTotalFeatureCount:[\s\S]*?primaryVisibleFeatureCount:[\s\S]*?primaryTotalFeatureCount:/.test(chunkRuntimeSource)
       && /function buildInitialScenarioChunkVisualPromotionResult[\s\S]*?scenarioPoliticalVisibleFeatureCount[\s\S]*?promotedVisibleFeatureCount: scenarioPoliticalVisibleFeatureCount,[\s\S]*?promotedTotalFeatureCount: scenarioPoliticalChunkFeatureCount/.test(chunkRuntimeSource)
       && /const ready = !!\([\s\S]*?scenarioPoliticalChunkFeatureCount > 0[\s\S]*?landFeatureCount > 0[\s\S]*?colorCount > 0/.test(chunkRuntimeSource)
@@ -1690,6 +1693,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
   const checkScenarioContractsSource = readRepoFile("tools", "check_scenario_contracts.py");
+  const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
   const colorCoverageE2eSource = readRepoFile("tests", "e2e", "dev", "scenario_chunk_exact_after_settle_regression.dev.spec.js");
   const pixelProbeSource = readRepoFile("tests", "e2e", "support", "political-pixel-probe.js");
   const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
@@ -1781,7 +1785,8 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /shouldExcludePoliticalVisualFeature = shouldExcludePoliticalInteractionFeature/.test(spatialOwnerSource)
       && /shouldExcludePoliticalVisualFeature,/.test(spatialOwnerSource),
     hitCanvasStillFiltersNonInteractiveSpatialItems:
-      /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\{[\s\S]*?overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,[\s\S]*?\}\);[\s\S]*?const visibleSpatialItems = visibleSpatialItemsResult\.items;[\s\S]*?visibleSpatialItems\.forEach\(\(item\) => \{[\s\S]*?shouldExcludePoliticalInteractionFeature\(item\.feature, item\.id\)/.test(rendererSource),
+      /const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats\(\{[\s\S]*?overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,[\s\S]*?\}\);[\s\S]*?const visibleSpatialItems = visibleSpatialItemsResult\.items;[\s\S]*?visibleSpatialItems\.forEach\(\(item\) => \{[\s\S]*?shouldExcludePoliticalInteractionFeature\(item\.feature, item\.id\)/.test(rendererSource)
+      && /collectVisibleSpatialItemsWithStats\(\{[\s\S]*?shouldIncludeItem:[\s\S]*?!shouldExcludePoliticalVisualFeature/.test(rendererSource),
     atlantropaScenarioLayerFeedsScenarioWaterPath:
       /function getScenarioAtlantropaRevisionToken\(\) \{[\s\S]*?runtimeState\.scenarioAtlantropaData[\s\S]*?water:\$\{buckets\.water\.length\}/.test(rendererSource)
       && /function getScenarioAtlantropaRevisionToken\(\) \{[\s\S]*?isScenarioAtlantropaVisible\(\) \? "visible:on" : "visible:off"/.test(rendererSource)
@@ -1801,8 +1806,9 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
     macroOceanOverridesRequirePaintMode:
       /function getWaterRegionColor\(id, feature = null\) \{[\s\S]*?const defaultStyleFeature = feature \|\| runtimeState\.waterRegionsById\?\.get\(resolvedId\);[\s\S]*?if \(isMacroOceanWaterRegion\(defaultStyleFeature\) && !isOpenOceanPaintEnabled\(\)\) \{[\s\S]*?return getWaterRegionDefaultStyle\(defaultStyleFeature\)\.fill;[\s\S]*?\}[\s\S]*?getSafeCanvasColor\(runtimeState\.waterRegionOverrides\?\.\[resolvedId\], null\)/.test(rendererSource),
     politicalPromotionTreatsAtlantropaLayerAsWaterChange:
-      /const hasAtlantropaLayerChange = normalizedChangedLayerKeys\.includes\("scenario_atlantropa"\);/.test(rendererSource)
-      && /const effectiveChangedLayerKeys = hasAtlantropaLayerChange[\s\S]*?"water"/.test(rendererSource)
+      /const hasAtlantropaLayerChange = normalizedChangedLayerKeys\.includes\("scenario_atlantropa"\);/.test(chunkPromotionHelperSource)
+      && /const effectiveChangedLayerKeys = hasAtlantropaLayerChange[\s\S]*?"water"/.test(chunkPromotionHelperSource)
+      && /resolveScenarioChunkPromotionChangeSet\(\{[\s\S]*?changedLayerKeys,[\s\S]*?politicalFeatureIds,[\s\S]*?hasPoliticalPayloadChange/.test(rendererSource)
       && /const hasWaterChange = normalizedLayerKeys\.has\("water"\) \|\| normalizedLayerKeys\.has\("scenario_atlantropa"\);/.test(rendererSource)
       && /syncScenarioSecondaryRegionIndexes\(\{[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,/.test(rendererSource)
       && /function refreshMapDataForScenarioApply\([\s\S]*?const atlantropaWaterFeatureCount = getEffectiveAtlantropaFeatures\(\)\.water\.length;[\s\S]*?if \(atlantropaWaterFeatureCount > 0\) \{[\s\S]*?rebuildAuxiliaryRegionIndexes\(\);[\s\S]*?getSpatialIndexRuntimeOwner\(\)\.buildSecondarySpatialIndexes/.test(rendererSource)

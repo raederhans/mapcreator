@@ -7,6 +7,7 @@ MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
 SCENARIO_CHUNK_RUNTIME_PATH = ROOT / "js/core/scenario/chunk_runtime.js"
+SCENARIO_CHUNK_PROMOTION_HELPERS_PATH = ROOT / "js/core/renderer/scenario_chunk_promotion_helpers.js"
 SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.js"
 SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
 MAIN_JS_PATH = ROOT / "js/main.js"
@@ -21,6 +22,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime_source = SCENARIO_CHUNK_RUNTIME_PATH.read_text(encoding="utf-8")
+        cls.scenario_chunk_promotion_helpers_source = SCENARIO_CHUNK_PROMOTION_HELPERS_PATH.read_text(encoding="utf-8")
         cls.scenario_post_apply_effects_source = SCENARIO_POST_APPLY_EFFECTS_PATH.read_text(encoding="utf-8")
         cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
         cls.main_source = MAIN_JS_PATH.read_text(encoding="utf-8")
@@ -142,9 +144,10 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("requiredChunkCount", self.scenario_chunk_runtime_source)
         self.assertIn("activePostReadyTaskKey", self.scenario_chunk_runtime_source)
         self.assertIn("promotionRetryCount", self.scenario_chunk_runtime_source)
-        self.assertIn("selectionVersion:", self.map_renderer_source)
-        self.assertIn("requiredPoliticalChunkCount,", self.map_renderer_source)
-        self.assertIn("queueMs:", self.map_renderer_source)
+        self.assertIn("buildScenarioChunkPromotionVisualMetricDetails({", self.map_renderer_source)
+        self.assertIn("selectionVersion:", self.scenario_chunk_promotion_helpers_source)
+        self.assertIn("requiredPoliticalChunkCount:", self.scenario_chunk_promotion_helpers_source)
+        self.assertIn("queueMs:", self.scenario_chunk_promotion_helpers_source)
 
     def test_interaction_recovery_metrics_cover_chunk_infra_and_continuity_frame(self):
         self.assertIn("CONTINUITY_FRAME_MAX_STALE_AGE_MS", self.map_renderer_source)

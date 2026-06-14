@@ -64,6 +64,8 @@
     "test:node:scenario-lifecycle-runtime-behavior": "node --test tests/scenario_lifecycle_runtime_behavior.test.mjs",
     "test:node:scenario-runtime-state-behavior": "node --test tests/scenario_runtime_state_behavior.test.mjs",
     "test:node:worker-task-client": "node --test tests/worker_task_client_behavior.test.mjs",
+    "test:node:spatial-query-index": "node --test tests/spatial_query_index_behavior.test.mjs",
+    "test:node:scenario-chunk-promotion-helpers": "node --test tests/scenario_chunk_promotion_helpers_behavior.test.mjs",
     "test:node:startup-hydration-behavior": "node --test tests/startup_hydration_behavior.test.mjs",
     "test:node:dev-workspace-selection-ownership": "node --test tests/dev_workspace_selection_ownership_behavior.test.mjs",
     "test:node:hgo-identity-resolver": "node --test tests/hgo_identity_resolver.node.test.mjs",

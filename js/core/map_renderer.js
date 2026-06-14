@@ -146,6 +146,14 @@ import { createBorderDrawOwner } from "./renderer/border_draw_owner.js";
 import { createInteractionBorderSnapshotOwner } from "./renderer/interaction_border_snapshot_owner.js";
 import { createSpatialIndexRuntimeOwner } from "./renderer/spatial_index_runtime_owner.js";
 import { getSpatialBucketKey } from "./renderer/spatial_index_runtime_builders.js";
+import {
+  collectSpatialItemsForProjectedRects,
+  collectVisibleSpatialItemsWithStats,
+} from "./renderer/spatial_query_index.js";
+import {
+  buildScenarioChunkPromotionVisualMetricDetails,
+  resolveScenarioChunkPromotionChangeSet,
+} from "./renderer/scenario_chunk_promotion_helpers.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
@@ -9379,74 +9387,22 @@ function getPoliticalPassViewportOverscanPx() {
   );
 }
 
-function doesSpatialItemIntersectProjectedViewport(item, viewportBounds) {
-  if (!item || !viewportBounds) return false;
-  return !(
-    item.maxX < viewportBounds.minX ||
-    item.maxY < viewportBounds.minY ||
-    item.minX > viewportBounds.maxX ||
-    item.minY > viewportBounds.maxY
-  );
-}
-
 function collectVisibleLandSpatialItemsWithStats({
   overscanPx = undefined,
 } = {}) {
-  const meta = runtimeState.spatialGridMeta;
-  const grid = runtimeState.spatialGrid;
-  if (!meta || !grid || !Array.isArray(runtimeState.spatialItems)) return null;
-  const { cellSize, cols, rows, globals } = meta;
-  if (!cellSize || cols <= 0 || rows <= 0) return null;
   const resolvedOverscanPx = Number.isFinite(Number(overscanPx))
     ? Number(overscanPx)
     : undefined;
   const viewportBounds = getProjectedViewportBounds({ overscanPx: resolvedOverscanPx });
   if (!viewportBounds) return null;
-  const c0 = clamp(Math.floor(viewportBounds.minX / cellSize), 0, cols - 1);
-  const c1 = clamp(Math.floor(viewportBounds.maxX / cellSize), 0, cols - 1);
-  const r0 = clamp(Math.floor(viewportBounds.minY / cellSize), 0, rows - 1);
-  const r1 = clamp(Math.floor(viewportBounds.maxY / cellSize), 0, rows - 1);
-  const visibleItems = [];
-  const seen = new Set();
-  let cellCandidateCount = 0;
-  let visitedCellCount = 0;
-  const globalCandidateCount = Number.isFinite(Number(globals?.length))
-    ? Number(globals.length)
-    : Math.max(0, Number(globals?.size || 0));
-  const maybePush = (item) => {
-    if (!item?.id || seen.has(item.id)) return;
-    seen.add(item.id);
-    if (shouldExcludePoliticalVisualFeature(item.feature, item.id)) return;
-    if (!doesSpatialItemIntersectProjectedViewport(item, viewportBounds)) return;
-    visibleItems.push(item);
-  };
-  for (let row = r0; row <= r1; row += 1) {
-    for (let col = c0; col <= c1; col += 1) {
-      const bucket = grid.get(getSpatialBucketKey(col, row));
-      visitedCellCount += 1;
-      cellCandidateCount += Array.isArray(bucket) ? bucket.length : 0;
-      bucket?.forEach(maybePush);
-    }
-  }
-  globals?.forEach(maybePush);
-  visibleItems.sort((left, right) => (left?.drawOrder ?? 0) - (right?.drawOrder ?? 0));
-  return {
-    items: visibleItems,
-    stats: {
-      cellCandidateCount,
-      globalCandidateCount,
-      visitedCellCount,
-      overscanPx: Number(resolvedOverscanPx || 0),
-      cellSpan: {
-        colStart: c0,
-        colEnd: c1,
-        rowStart: r0,
-        rowEnd: r1,
-        cols: Math.max(0, c1 - c0 + 1),
-        rows: Math.max(0, r1 - r0 + 1),
-      },
-    },
-  };
+  return collectVisibleSpatialItemsWithStats({
+    grid: runtimeState.spatialGrid,
+    gridMeta: runtimeState.spatialGridMeta,
+    items: runtimeState.spatialItems,
+    viewportBounds,
+    overscanPx: resolvedOverscanPx,
+    shouldIncludeItem: (item) => !shouldExcludePoliticalVisualFeature(item.feature, item.id),
+  });
 }
 
 function collectVisibleLandSpatialItems() {
@@ -18305,16 +18261,6 @@ function rectsIntersect(a, b) {
   );
 }
 
-function projectedRectsIntersect(a, b) {
-  if (!a || !b) return false;
-  return !(
-    Number(a.maxX) < Number(b.minX) ||
-    Number(a.maxY) < Number(b.minY) ||
-    Number(a.minX) > Number(b.maxX) ||
-    Number(a.minY) > Number(b.maxY)
-  );
-}
-
 function mergeIntersectingRects(rects = []) {
   const pending = Array.isArray(rects) ? rects.filter(Boolean).map((rect) => ({ ...rect })) : [];
   const merged = [];
@@ -18402,43 +18348,13 @@ function projectedBoundsIntersectScreenRects(projectedBounds, screenRects, {
 }
 
 function collectLandSpatialItemsForProjectedRects(projectedRects = [], { maxCandidates = Infinity } = {}) {
-  const meta = runtimeState.spatialGridMeta;
-  const grid = runtimeState.spatialGrid;
-  if (!meta || !grid || !Array.isArray(runtimeState.spatialItems)) return null;
-  const { cellSize, cols, rows, globals } = meta;
-  if (!cellSize || cols <= 0 || rows <= 0) return null;
-  const normalizedRects = (Array.isArray(projectedRects) ? projectedRects : []).filter(Boolean);
-  if (!normalizedRects.length) return { items: [], overflow: false };
-  const seen = new Set();
-  const candidateItems = [];
-  let overflow = false;
-  const maybePush = (item) => {
-    if (overflow || !item?.id || seen.has(item.id)) return;
-    seen.add(item.id);
-    if (!normalizedRects.some((rect) => projectedRectsIntersect(item, rect))) return;
-    candidateItems.push(item);
-    if (candidateItems.length > maxCandidates) {
-      overflow = true;
-    }
-  };
-  normalizedRects.forEach((rect) => {
-    const c0 = clamp(Math.floor(Number(rect.minX || 0) / cellSize), 0, cols - 1);
-    const c1 = clamp(Math.floor(Number(rect.maxX || 0) / cellSize), 0, cols - 1);
-    const r0 = clamp(Math.floor(Number(rect.minY || 0) / cellSize), 0, rows - 1);
-    const r1 = clamp(Math.floor(Number(rect.maxY || 0) / cellSize), 0, rows - 1);
-    for (let row = r0; row <= r1; row += 1) {
-      for (let col = c0; col <= c1; col += 1) {
-        const bucket = grid.get(getSpatialBucketKey(col, row));
-        bucket?.forEach(maybePush);
-      }
-    }
+  return collectSpatialItemsForProjectedRects({
+    grid: runtimeState.spatialGrid,
+    gridMeta: runtimeState.spatialGridMeta,
+    items: runtimeState.spatialItems,
+    projectedRects,
+    maxCandidates,
   });
-  globals?.forEach(maybePush);
-  candidateItems.sort((left, right) => (left?.drawOrder ?? 0) - (right?.drawOrder ?? 0));
-  return {
-    items: candidateItems,
-    overflow,
-  };
 }
 
 function drawPoliticalBackgroundFills(options = {}) {
@@ -26844,23 +26760,14 @@ function refreshMapDataForScenarioChunkPromotion({
   const pendingVisualPromotion = runtimeChunkLoadState?.pendingVisualPromotion || null;
   const pendingPromotion = runtimeChunkLoadState?.pendingPromotion || null;
   const promotionQueuedAt = Number(pendingVisualPromotion?.queuedAt || pendingPromotion?.queuedAt || 0);
-  const requiredChunkCount = Array.isArray(pendingVisualPromotion?.requiredChunkIds)
-    ? pendingVisualPromotion.requiredChunkIds.length
-    : 0;
-  const requiredPoliticalChunkCount = Math.max(0, Number(pendingPromotion?.requiredPoliticalChunkCount || 0));
-  const normalizedChangedLayerKeys = (Array.isArray(changedLayerKeys) ? changedLayerKeys : [])
-    .map((layerKey) => String(layerKey || "").trim().toLowerCase())
-    .filter(Boolean);
-  const hasAtlantropaLayerChange = normalizedChangedLayerKeys.includes("scenario_atlantropa");
-  const hasPoliticalChange = !!hasPoliticalPayloadChange
-    || hasAtlantropaLayerChange
-    || (Array.isArray(politicalFeatureIds) && politicalFeatureIds.length > 0);
-  const effectiveChangedLayerKeys = hasAtlantropaLayerChange
-    ? Array.from(new Set([
-      ...(Array.isArray(changedLayerKeys) ? changedLayerKeys : []),
-      "water",
-    ]))
-    : changedLayerKeys;
+  const {
+    hasPoliticalChange,
+    effectiveChangedLayerKeys,
+  } = resolveScenarioChunkPromotionChangeSet({
+    changedLayerKeys,
+    politicalFeatureIds,
+    hasPoliticalPayloadChange,
+  });
   if (hasPoliticalChange) {
     // political chunk promotion 首帧必须和 scenario apply 一样，先把 primary derived state 收回一致：
     // landIndex / 主 spatial grid / resolved colors / runtime political meta 都要先于 render 完成，
@@ -26954,33 +26861,23 @@ function refreshMapDataForScenarioChunkPromotion({
       || promotedTotalFeatureCount
       || 0,
   ));
-  const promotionMetricDetails = {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    reason: String(reason || "scenario-chunk-promotion"),
-    selectionVersion: Math.max(0, Number(pendingVisualPromotion?.selectionVersion || pendingPromotion?.selectionVersion || runtimeChunkLoadState?.selectionVersion || 0)),
-    requiredPoliticalChunkCount,
-    requiredChunkCount,
-    queuedAt: promotionQueuedAt,
-    queueMs: promotionQueuedAt > 0 ? Math.max(0, startedAt - promotionQueuedAt) : 0,
-    promotionRetryCount: Math.max(0, Number(runtimeChunkLoadState?.promotionRetryCount || 0)),
-    renderNow: !suppressRender,
-    hasPoliticalGeometryChange: hasPoliticalChange,
-    suppressRender: !!suppressRender,
-    promotedFeatureCount: promotedTotalFeatureCount,
+  const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails({
+    activeScenarioId: runtimeState.activeScenarioId,
+    reason,
+    runtimeChunkLoadState,
+    pendingVisualPromotion,
+    pendingPromotion,
+    promotionQueuedAt,
+    startedAt,
+    suppressRender,
+    hasPoliticalChange,
+    promotedTotalFeatureCount,
     promotedPrimaryFeatureCount,
     promotedVisibleFeatureCount,
-    promotedTotalFeatureCount,
-    selectedVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedVisibleFeatureCountSum || pendingPromotion?.selectedVisibleFeatureCountSum || 0)),
-    selectedPoliticalFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalFeatureCountSum || pendingPromotion?.selectedPoliticalFeatureCountSum || 0)),
-    selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum || 0)),
-    primaryTotalFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryTotalFeatureCount || pendingPromotion?.primaryTotalFeatureCount || promotedTotalFeatureCount || 0)),
-    primaryVisibleFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryVisibleFeatureCount || pendingPromotion?.primaryVisibleFeatureCount || promotedPrimaryFeatureCount || 0)),
-    selectedByteCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedByteCountSum || pendingPromotion?.selectedByteCountSum || 0)),
-    selectedEstimatedPathCostSum: Math.max(0, Number(pendingVisualPromotion?.selectedEstimatedPathCostSum || pendingPromotion?.selectedEstimatedPathCostSum || 0)),
-    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
+    effectiveChangedLayerKeys,
     promotionVersion: scenarioChunkPromotionVersion,
     synchronizedSecondaryRegionIndexes,
-  };
+  });
   recordRenderPerfMetric("scenarioChunkPromotionVisualStage", visualDurationMs, {
     ...promotionMetricDetails,
   });
