@@ -51,12 +51,12 @@
 2. Core files: `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`.
 3. Docs/files: `docs/active/tooling-simplification-phase3/{task,plan,context}.md`, `docs/active/_worktree_registry.md`, `lessons learned.md`; local ignored snapshot at `.omx/context/tooling-simplification-phase3-20260614T230531Z.md`.
 4. Diff summary: the static browser-smoke route domain is now `browser-smoke`; selector uses explicit smoke/perf support file sets; tests assert exact static command, exact owner, empty locks, and empty main-thread queue.
-5. Commit state: pending until final verification and staging.
-6. Main divergence: branch was created from `origin/main` `3d8cd631`; re-check remote before merge.
+5. Commit state: phase3 implementation committed as `e296e660`, pushed to `origin/codex/tooling-simplification-phase3`, fast-forwarded into `main`, and pushed to `origin/main`.
+6. Main divergence: main was verified and pushed after fast-forward merge; local phase3 worktree and local branch were removed.
 7. Conflict risk: file-path overlap is limited to tooling/test docs. Semantic overlap is test-routing only.
 8. Verification: structural unittest, browser smoke static contract, selector schema, direct selector outputs, adaptive dry-run, and diff check passed.
 9. Remaining risk: live browser smoke process and shell helper extraction remain deferred by design.
-10. Recommended next step: commit, push, fast-forward merge to `main`, verify on `main`, push `main`, then remove the phase3 worktree.
+10. Recommended next step: start phase4A from updated `main` when ready, focused on a static profile/schema validator.
 
 ## Deferred Follow-Up
 

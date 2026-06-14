@@ -44,7 +44,7 @@ Order:
 - [x] Implement minimal route split.
 - [x] Run targeted validation.
 - [x] Review and self-check.
-- [ ] Commit, push, merge, verify on main, and clean worktree.
+- [x] Commit, push, merge, verify on main, and clean worktree.
 
 ## Validation Log
 
