@@ -831,6 +831,7 @@ const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set([
   "progressive-political-full-cache-ready",
 ]);
 const DAY_NIGHT_CLOCK_INTERVAL_MS = 15_000;
+const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 / 30;
 export const RENDER_PASS_NAMES = [
   "background",
   "physicalBase",
@@ -1652,7 +1653,9 @@ let facilityInfoCardMoreBtn = null;
 let facilityInfoCardExpanded = false;
 let facilityInfoCardAnchor = null;
 let dayNightClockTimerId = null;
+let dayNightClockFrameHandle = null;
 let lastDayNightClockToken = "";
+let lastDayNightCycleFrameAt = 0;
 let pendingIndexUiRefreshHandle = null;
 let pendingIndexUiRefreshState = null;
 let deferredIndexUiRefreshHandle = null;
@@ -15033,9 +15036,9 @@ function getCurrentUtcMinutes() {
 }
 
 function getCycleUtcMinutes(config = getDayNightStyleConfig(), now = new Date()) {
-  const secondsPerDay = clamp(Math.round(Number(config.cycleSecondsPerDay) || 180), 10, 600);
+  const secondsPerDay = clamp(Number(config.cycleSecondsPerDay) || 120, 10, 600);
   const elapsedSeconds = (now.getTime() / 1000) % secondsPerDay;
-  return clamp(Math.floor((elapsedSeconds / secondsPerDay) * 24 * 60), 0, 24 * 60 - 1);
+  return clamp((elapsedSeconds / secondsPerDay) * 24 * 60, 0, 24 * 60 - 1);
 }
 
 function getDayNightSignatureClockToken(config = getDayNightStyleConfig(), now = new Date()) {
@@ -15044,7 +15047,7 @@ function getDayNightSignatureClockToken(config = getDayNightStyleConfig(), now =
     return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
   }
   if (config.mode === "cycle") {
-    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now)}`;
+    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now).toFixed(2)}`;
   }
   return `${dayKey}|manual:${config.manualUtcMinutes}`;
 }
@@ -15055,7 +15058,7 @@ function getDayNightLiveClockToken(config = getDayNightStyleConfig(), now = new 
     return `${dayKey}|utc:${getCurrentUtcMinutesFromDate(now)}`;
   }
   if (config.mode === "cycle") {
-    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now)}`;
+    return `${dayKey}|cycle:${config.cycleSecondsPerDay}:${getCycleUtcMinutes(config, now).toFixed(2)}`;
   }
   return `${dayKey}|manual-day`;
 }
@@ -15111,11 +15114,11 @@ function getNightLightPalette(styleVariant = "modern") {
     };
   }
   return {
-    texture: "#526a8c",
-    corridor: "#d7e6ff",
-    halo: "#96b5da",
-    core: "#fff1cf",
-    glint: "#f8fbff",
+    texture: "#d7bc76",
+    corridor: "#fff0ba",
+    halo: "#f5d89a",
+    core: "#fff7d5",
+    glint: "#fffdf0",
   };
 }
 
@@ -15408,20 +15411,33 @@ function getModernCityLightsZoomProfile() {
     zoomScale,
     fadeT,
     detailT,
-    textureAlphaScale: 0.82 + (fadeT * 0.28),
-    corridorAlphaScale: 0.88 + (fadeT * 0.32),
-    textureRadiusScale: 1.08 + (detailT * 0.3),
-    corridorRadiusScale: 1.02 + (detailT * 0.24),
+    textureAlphaScale: 1.05 + (fadeT * 0.44),
+    corridorAlphaScale: 1.08 + (fadeT * 0.46),
+    textureRadiusScale: 0.98 + (detailT * 0.22),
+    corridorRadiusScale: 0.96 + (detailT * 0.18),
     textureJitterStrength: 0.2 + (detailT * 0.06),
     corridorJitterStrength: 0.12 + (detailT * 0.04),
-    coreAlphaScale: 0.86 + (fadeT * 0.52),
-    coreRadiusScale: 1 + (detailT * 0.34),
+    coreAlphaScale: 1.02 + (fadeT * 0.62),
+    coreRadiusScale: 0.96 + (detailT * 0.3),
   };
 }
 
+const DEFAULT_MODERN_DAY_NIGHT_CONFIG = normalizeDayNightStyleConfig({});
+
+function getModernDayNightNumber(config, key) {
+  const parsed = Number(config?.[key]);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_MODERN_DAY_NIGHT_CONFIG[key];
+}
+
+function isModernPopulationBoostEnabled(config) {
+  return config?.cityLightsPopulationBoostEnabled === undefined
+    ? DEFAULT_MODERN_DAY_NIGHT_CONFIG.cityLightsPopulationBoostEnabled
+    : !!config.cityLightsPopulationBoostEnabled;
+}
+
 function getModernPopulationBoostStrength(config) {
-  if (!config?.cityLightsPopulationBoostEnabled) return 0;
-  return clamp(Number(config.cityLightsPopulationBoostStrength) || 0, 0, 1.5);
+  if (!isModernPopulationBoostEnabled(config)) return 0;
+  return clamp(getModernDayNightNumber(config, "cityLightsPopulationBoostStrength"), 0, 1.5);
 }
 
 function getModernCityLightsPopulationBoostData() {
@@ -15526,12 +15542,15 @@ function getModernCityLightLatitudeFade(gridY) {
 }
 
 function drawModernCityLightsTexture(config, intensity) {
-  const textureOpacity = clamp(Number(config.cityLightsTextureOpacity) || 0, 0, 1);
+  const textureOpacity = clamp(getModernDayNightNumber(config, "cityLightsTextureOpacity"), 0, 1);
   if (textureOpacity <= 0) return;
   const palette = getNightLightPalette("modern");
   const geometry = getModernCityLightsGeometry();
   const zoomProfile = getModernCityLightsZoomProfile();
   const textureRgb = getLightBlobRgb(palette.texture);
+  const coreSharpness = clamp(getModernDayNightNumber(config, "cityLightsCoreSharpness"), 0, 1);
+  const corridorStrength = clamp(getModernDayNightNumber(config, "cityLightsCorridorStrength"), 0, 1);
+  const populationBoostStrength = getModernPopulationBoostStrength(config);
   const overscan = Math.max(32, Math.min(runtimeState.width, runtimeState.height) * 0.06);
 
   geometry.baseEntries.forEach((entry) => {
@@ -15539,29 +15558,37 @@ function drawModernCityLightsTexture(config, intensity) {
     const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
     const normalized = normalizeModernCityLightsValue(entry.value);
     const lumaWeight = Math.pow(normalized, 0.78);
-    const densityDampen = entry.neighborCount >= 7 ? 0.56
-      : entry.neighborCount >= 5 ? 0.72
-        : entry.neighborCount >= 3 ? 0.88
+    const populationBoostAlpha = 1 + (populationBoostStrength * Math.pow(normalized, 0.68) * 0.28);
+    const textureOpacityScale = 0.18 + (textureOpacity * 0.82);
+    const corridorBandAlpha = 1 + (corridorStrength * clamp(entry.neighborCount / 8, 0, 1) * 0.3);
+    const densityDampen = entry.neighborCount >= 7 ? 0.94
+      : entry.neighborCount >= 5 ? 0.98
+        : entry.neighborCount >= 3 ? 1.02
       : 1.0;
     const isolationAlphaBoost = entry.neighborCount <= 1 ? 0.06 : 0;
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
     const baseAlpha = clamp(
       intensity
-      * (0.24 + (textureOpacity * 0.82))
-      * (0.035 + (lumaWeight * 0.22))
+      * textureOpacityScale
+      * (0.12 + (lumaWeight * 0.5))
       * zoomProfile.textureAlphaScale
       * densityDampen
+      * populationBoostAlpha
+      * corridorBandAlpha
       * latFade,
       0,
-      0.16
+      0.38
     );
-    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.16);
+    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.34);
     if (alpha <= 0.002) return;
     const jitter = getModernGridEntryJitter(entry, zoomProfile.textureJitterStrength);
     const isolationSpread = entry.neighborCount <= 1 ? 1.38
-      : entry.neighborCount <= 3 ? 1.18
+      : entry.neighborCount <= 3 ? 1.08
       : 1.0;
-    const radiusScale = (zoomProfile.textureRadiusScale + (lumaWeight * 0.24)) * isolationSpread;
+    const sharpnessSpread = 1.08 - (coreSharpness * 0.22);
+    const radiusScale = (zoomProfile.textureRadiusScale + (lumaWeight * (0.1 + (corridorStrength * 0.08))))
+      * isolationSpread
+      * sharpnessSpread;
     const blobRx = entry.rx * radiusScale;
     const blobRy = entry.ry * radiusScale;
     drawSoftLightBlob(
@@ -15575,20 +15602,22 @@ function drawModernCityLightsTexture(config, intensity) {
         alpha,
         innerStop: 0.06,
         midStop: 0.7,
-        innerAlphaScale: clamp(0.96 + isolationAlphaBoost, 0, 1.08),
-        midAlphaScale: 0.14,
+        innerAlphaScale: clamp(0.9 + (coreSharpness * 0.18) + isolationAlphaBoost, 0, 1.12),
+        midAlphaScale: 0.18 + ((1 - coreSharpness) * 0.14),
       }
     );
   });
 }
 
 function drawModernCityLightsCorridors(config, intensity) {
-  const corridorStrength = clamp(Number(config.cityLightsCorridorStrength) || 0, 0, 1);
+  const corridorStrength = clamp(getModernDayNightNumber(config, "cityLightsCorridorStrength"), 0, 1);
   if (corridorStrength <= 0) return;
   const palette = getNightLightPalette("modern");
   const geometry = getModernCityLightsGeometry();
   const zoomProfile = getModernCityLightsZoomProfile();
   const corridorRgb = getLightBlobRgb(palette.corridor);
+  const coreSharpness = clamp(getModernDayNightNumber(config, "cityLightsCoreSharpness"), 0, 1);
+  const populationBoostStrength = getModernPopulationBoostStrength(config);
   const overscan = Math.max(40, Math.min(runtimeState.width, runtimeState.height) * 0.08);
 
   geometry.corridorEntries.forEach((entry) => {
@@ -15596,22 +15625,27 @@ function drawModernCityLightsCorridors(config, intensity) {
     const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
     const normalized = normalizeModernCityLightsValue(entry.value);
     const corridorWeight = Math.pow(normalized, 0.82);
+    const populationBoostAlpha = 1 + (populationBoostStrength * Math.pow(normalized, 0.72) * 0.18);
+    const corridorStrengthScale = 0.18 + (corridorStrength * 0.82);
     const latFade = getModernCityLightLatitudeFade(entry.gridY);
     const baseAlpha = clamp(
       intensity
-      * (0.25 + (corridorStrength * 0.75))
-      * (0.03 + (corridorWeight * 0.2))
+      * corridorStrengthScale
+      * (0.1 + (corridorWeight * 0.52))
       * zoomProfile.corridorAlphaScale
+      * populationBoostAlpha
       * latFade,
       0,
-      0.12
+      0.34
     );
-    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.12);
+    const alpha = clamp(baseAlpha * glowMultiplier, 0, 0.32);
     if (alpha <= 0.003) return;
     const jitter = getModernGridEntryJitter(entry, zoomProfile.corridorJitterStrength);
     const baseRadius = Math.max((entry.rx + entry.ry) * 0.5, 0.0001);
+    const sharpnessSpread = 1.05 - (coreSharpness * 0.14);
     const majorRadius = baseRadius
-      * (zoomProfile.corridorRadiusScale + 0.08 + (corridorStrength * 0.34) + (corridorWeight * 0.22));
+      * (zoomProfile.corridorRadiusScale + 0.04 + (corridorStrength * 0.24) + (corridorWeight * 0.16))
+      * sharpnessSpread;
     drawSoftLightBlob(
       entry.x + jitter.dx,
       entry.y + jitter.dy,
@@ -15624,7 +15658,7 @@ function drawModernCityLightsCorridors(config, intensity) {
         innerStop: 0.05,
         midStop: 0.56,
         innerAlphaScale: 0.94,
-        midAlphaScale: 0.16,
+        midAlphaScale: 0.16 + ((1 - coreSharpness) * 0.1),
       }
     );
   });
@@ -15632,8 +15666,9 @@ function drawModernCityLightsCorridors(config, intensity) {
 
 function collectModernUrbanCoreEntries(k, config, intensity) {
   if (!Array.isArray(runtimeState.urbanData?.features) || !runtimeState.urbanData.features.length) return [];
-  const textureOpacity = clamp(Number(config.cityLightsTextureOpacity) || 0, 0, 1);
-  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const textureOpacity = clamp(getModernDayNightNumber(config, "cityLightsTextureOpacity"), 0, 1);
+  const coreSharpness = clamp(getModernDayNightNumber(config, "cityLightsCoreSharpness"), 0, 1);
+  const textureOpacityScale = 0.32 + (textureOpacity * 0.68);
   const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
   const zoomProfile = getModernCityLightsZoomProfile();
   const zoomScale = Math.max(0.0001, Number(transform?.k || 1));
@@ -15694,7 +15729,7 @@ function collectModernUrbanCoreEntries(k, config, intensity) {
       0.32
     );
     const coreAlpha = clamp(
-      intensity * weight * (0.34 + (coreSharpness * 0.48) + (sample * 0.34)) * zoomProfile.coreAlphaScale,
+      intensity * weight * textureOpacityScale * (0.34 + (coreSharpness * 0.48) + (sample * 0.34)) * zoomProfile.coreAlphaScale,
       0,
       0.48
     );
@@ -15721,7 +15756,7 @@ function drawModernCityLightsCores(k, config, _intensity, coreEntries = null) {
   const zoomProfile = getModernCityLightsZoomProfile();
   const haloRgb = getLightBlobRgb(palette.halo);
   const coreRgb = getLightBlobRgb(palette.core);
-  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const coreSharpness = clamp(getModernDayNightNumber(config, "cityLightsCoreSharpness"), 0, 1);
   const haloSpread = 1.35 - (coreSharpness * 0.2);
   const coreSpread = 1.25 - (coreSharpness * 0.22);
   const haloAlphaScale = 1 + ((1 - coreSharpness) * 0.2);
@@ -15768,7 +15803,9 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
   const cityCollection = getEffectiveCityCollection();
   if (!Array.isArray(cityCollection?.features) || !cityCollection.features.length) return;
   const palette = getNightLightPalette("modern");
-  const coreSharpness = clamp(Number(config.cityLightsCoreSharpness) || 0, 0, 1);
+  const coreSharpness = clamp(getModernDayNightNumber(config, "cityLightsCoreSharpness"), 0, 1);
+  const textureOpacity = clamp(getModernDayNightNumber(config, "cityLightsTextureOpacity"), 0, 1);
+  const textureOpacityScale = 0.32 + (textureOpacity * 0.68);
   const zoomProfile = getModernCityLightsZoomProfile();
   const haloRgb = getLightBlobRgb(palette.halo);
   const coreRgb = getLightBlobRgb(palette.core);
@@ -15836,7 +15873,7 @@ function drawModernCityFallbackLights(k, config, intensity, urbanCoreEntries = [
       0.30
     );
     const coreAlpha = clamp(
-      intensity * weight * (0.18 + (coreSharpness * 0.3) + (sample * 0.24)) * zoomProfile.coreAlphaScale,
+      intensity * weight * textureOpacityScale * (0.18 + (coreSharpness * 0.3) + (sample * 0.24)) * zoomProfile.coreAlphaScale,
       0,
       0.48
     );
@@ -15880,6 +15917,10 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
   if (boostStrength <= 0) return;
   const palette = getNightLightPalette("modern");
   const zoomProfile = getModernCityLightsZoomProfile();
+  const textureOpacity = clamp(getModernDayNightNumber(config, "cityLightsTextureOpacity"), 0, 1);
+  const corridorStrength = clamp(getModernDayNightNumber(config, "cityLightsCorridorStrength"), 0, 1);
+  const textureOpacityScale = 0.32 + (textureOpacity * 0.68);
+  const corridorHaloScale = 0.72 + (corridorStrength * 0.28);
   const haloRgb = getLightBlobRgb(palette.corridor);
   const coreRgb = getLightBlobRgb(palette.glint);
   const data = getModernCityLightsPopulationBoostData();
@@ -15922,12 +15963,12 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const areaRadiusBoost = clamp(Math.log10(entry.areaSqKm + 1) * 0.14, 0.06, 0.5);
     const baseRadiusPx = 0.7 + (boostWeight * 0.78) + areaRadiusBoost;
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.13 + (boostWeight * 0.24)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * textureOpacityScale * corridorHaloScale * (0.13 + (boostWeight * 0.24)) * zoomProfile.coreAlphaScale,
       0,
       0.36
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.25 + (boostWeight * 0.38)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * textureOpacityScale * (0.25 + (boostWeight * 0.38)) * zoomProfile.coreAlphaScale,
       0,
       0.60
     );
@@ -15988,12 +16029,12 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
     const boostWeight = clamp(((populationScore * 0.92) + (sampled * 0.16) + capitalBoost) * glowMultiplier, 0.18, 1.24);
     const baseRadiusPx = 0.48 + (boostWeight * 0.58);
     const haloAlpha = clamp(
-      intensity * boostStrength * (0.12 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * textureOpacityScale * corridorHaloScale * (0.12 + (boostWeight * 0.18)) * zoomProfile.coreAlphaScale,
       0,
       0.28
     );
     const coreAlpha = clamp(
-      intensity * boostStrength * (0.22 + (boostWeight * 0.28)) * zoomProfile.coreAlphaScale,
+      intensity * boostStrength * textureOpacityScale * (0.22 + (boostWeight * 0.28)) * zoomProfile.coreAlphaScale,
       0,
       0.46
     );
@@ -16032,12 +16073,12 @@ function drawModernCityLightsPopulationBoostLayer(k, config, intensity) {
 
 function getModernCityLightsStaticConfigSignature(config) {
   return stableJson({
-    intensity: Number(config.cityLightsIntensity || 0).toFixed(3),
-    textureOpacity: Number(config.cityLightsTextureOpacity || 0).toFixed(3),
-    corridorStrength: Number(config.cityLightsCorridorStrength || 0).toFixed(3),
-    coreSharpness: Number(config.cityLightsCoreSharpness || 0).toFixed(3),
-    populationBoostEnabled: !!config.cityLightsPopulationBoostEnabled,
-    populationBoostStrength: Number(config.cityLightsPopulationBoostStrength || 0).toFixed(3),
+    intensity: getModernDayNightNumber(config, "cityLightsIntensity").toFixed(3),
+    textureOpacity: getModernDayNightNumber(config, "cityLightsTextureOpacity").toFixed(3),
+    corridorStrength: getModernDayNightNumber(config, "cityLightsCorridorStrength").toFixed(3),
+    coreSharpness: getModernDayNightNumber(config, "cityLightsCoreSharpness").toFixed(3),
+    populationBoostEnabled: isModernPopulationBoostEnabled(config),
+    populationBoostStrength: getModernDayNightNumber(config, "cityLightsPopulationBoostStrength").toFixed(3),
   });
 }
 
@@ -16120,7 +16161,7 @@ function getModernCityLightsStaticLayerCanvas(k, config, intensity) {
 function drawModernNightLightsLayer(k, config, solarState) {
   const nightHemisphere = buildNightHemisphereFeature(solarState, 90);
   if (!nightHemisphere) return;
-  const intensity = clamp(Number(config.cityLightsIntensity) || 0, 0, 1.8);
+  const intensity = clamp(getModernDayNightNumber(config, "cityLightsIntensity"), 0, 1.8);
   if (intensity <= 0) return;
 
   context.save();
@@ -16410,7 +16451,7 @@ function drawHistoricalNightLightsLayer(k, config, solarState) {
   if (!nightHemisphere) return;
 
   const variant = "historical_1930s";
-  const intensity = clamp(Number(config.cityLightsIntensity) || 0, 0, 1.8);
+  const intensity = clamp(getModernDayNightNumber(config, "cityLightsIntensity"), 0, 1.8);
   if (intensity <= 0) return;
   const density = getHistoricalCityLightsDensity(config);
   const palette = getNightLightPalette(variant);
@@ -16526,9 +16567,81 @@ function drawNightLightsLayer(k, config, solarState) {
 }
 
 function clearDayNightClockTimer() {
-  if (!dayNightClockTimerId) return;
-  globalThis.clearInterval(dayNightClockTimerId);
-  dayNightClockTimerId = null;
+  if (dayNightClockTimerId) {
+    globalThis.clearInterval(dayNightClockTimerId);
+    dayNightClockTimerId = null;
+  }
+  if (dayNightClockFrameHandle) {
+    if (dayNightClockFrameHandle.kind === "raf" && typeof globalThis.cancelAnimationFrame === "function") {
+      globalThis.cancelAnimationFrame(dayNightClockFrameHandle.id);
+    } else {
+      globalThis.clearTimeout(dayNightClockFrameHandle.id);
+    }
+    dayNightClockFrameHandle = null;
+  }
+  lastDayNightCycleFrameAt = 0;
+}
+
+function scheduleDayNightCycleFrame(callback) {
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    return {
+      kind: "raf",
+      id: globalThis.requestAnimationFrame(callback),
+    };
+  }
+  return {
+    kind: "timeout",
+    id: globalThis.setTimeout(() => callback(nowMs()), DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS),
+  };
+}
+
+function requestDayNightClockRender(reason) {
+  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
+    runtimeState.pendingDayNightRefresh = true;
+    return;
+  }
+  invalidateRenderPasses("dayNight", reason);
+  requestRendererRender(reason, {
+    fallback: () => {
+      if (context) {
+        render();
+      }
+    },
+  });
+}
+
+function syncDayNightCycleAnimation(initialConfig) {
+  if (dayNightClockTimerId) {
+    globalThis.clearInterval(dayNightClockTimerId);
+    dayNightClockTimerId = null;
+  }
+  if (dayNightClockFrameHandle) return true;
+  lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
+  const step = (timestamp = nowMs()) => {
+    dayNightClockFrameHandle = null;
+    const config = getDayNightStyleConfig();
+    const mode = String(config.mode || "manual");
+    if (!config.enabled || mode !== "cycle") {
+      clearDayNightClockTimer();
+      return;
+    }
+    const currentTime = Number.isFinite(timestamp) ? timestamp : nowMs();
+    if (lastDayNightCycleFrameAt && currentTime - lastDayNightCycleFrameAt < DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS) {
+      dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
+      return;
+    }
+    lastDayNightCycleFrameAt = currentTime;
+    const nextToken = getDayNightLiveClockToken(config);
+    if (nextToken !== lastDayNightClockToken) {
+      lastDayNightClockToken = nextToken;
+      if (globalThis.document?.visibilityState !== "hidden") {
+        requestDayNightClockRender("day-night-cycle-frame");
+      }
+    }
+    dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
+  };
+  dayNightClockFrameHandle = scheduleDayNightCycleFrame(step);
+  return true;
 }
 
 function syncDayNightClockTimer() {
@@ -16537,6 +16650,12 @@ function syncDayNightClockTimer() {
   if (!initialConfig.enabled || (initialMode !== "utc" && initialMode !== "cycle")) {
     clearDayNightClockTimer();
     return false;
+  }
+  if (initialMode === "cycle") {
+    return syncDayNightCycleAnimation(initialConfig);
+  }
+  if (dayNightClockFrameHandle) {
+    clearDayNightClockTimer();
   }
   if (dayNightClockTimerId) return true;
   lastDayNightClockToken = getDayNightLiveClockToken(initialConfig);
@@ -16554,18 +16673,7 @@ function syncDayNightClockTimer() {
       runtimeState.updateToolbarInputsFn();
     }
     if (!config.enabled) return;
-    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-      runtimeState.pendingDayNightRefresh = true;
-      return;
-    }
-    invalidateRenderPasses("dayNight", "day-night-clock");
-    requestRendererRender("day-night-clock", {
-      fallback: () => {
-        if (context) {
-          render();
-        }
-      },
-    });
+    requestDayNightClockRender("day-night-clock");
   }, DAY_NIGHT_CLOCK_INTERVAL_MS);
   return true;
 }
@@ -19771,9 +19879,7 @@ function drawDayNightPass(k, { interactive = false } = {}) {
   if (!isBootInteractionReady()) return;
   const solarState = getCurrentSolarState(config);
   drawDayNightShadowLayer(k, config, solarState);
-  if (!interactive) {
-    drawNightLightsLayer(k, config, solarState);
-  }
+  drawNightLightsLayer(k, config, solarState);
 }
 
 function drawBordersPass(k, { interactive = false } = {}) {

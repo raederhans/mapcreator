@@ -1,5 +1,5 @@
 import { state as runtimeState } from "../core/state.js";
-import { registerRuntimeHook } from "../core/state/index.js";
+import { callRuntimeHook, registerRuntimeHook } from "../core/state/index.js";
 import {
   clearActiveScenarioCommand,
   applyScenarioByIdCommand,
@@ -20,6 +20,15 @@ import { loadScenarioRegistry } from "../core/scenario_resources.js";
 import { t } from "./i18n.js";
 import { showToast } from "./toast.js";
 const state = runtimeState;
+const HGO_RUNTIME_PREVIEW_OPTION_VALUE = "__hgo_runtime_preview__";
+
+const isHgoRuntimePreviewSelected = (value) => String(value || "").trim() === HGO_RUNTIME_PREVIEW_OPTION_VALUE;
+
+const normalizeScenarioSelectionValue = (value) => (
+  isHgoRuntimePreviewSelected(value) ? HGO_RUNTIME_PREVIEW_OPTION_VALUE : normalizeScenarioId(value)
+);
+
+const isHgoRuntimePreviewActive = () => !!runtimeState.hgoRuntimePreview?.enabled;
 
 export function initScenarioControls() {
   const scenarioSelect = document.getElementById("scenarioSelect");
@@ -41,7 +50,7 @@ export function initScenarioControls() {
 
   const syncScenarioSelectSurface = ({ entries, currentValue, disabled }) => {
     if (!scenarioSelectButton || !scenarioSelectButtonText || !scenarioSelectMenu) return;
-    const normalizedValue = normalizeScenarioId(currentValue);
+    const normalizedValue = normalizeScenarioSelectionValue(currentValue);
     const selectedOption = scenarioSelect?.selectedOptions?.[0] || null;
     scenarioSelectButtonText.textContent = selectedOption?.textContent || t("None", "ui");
     scenarioSelectButton.disabled = !!disabled;
@@ -50,6 +59,7 @@ export function initScenarioControls() {
 
     const optionPayloads = [
       { value: "", label: t("None", "ui") },
+      { value: HGO_RUNTIME_PREVIEW_OPTION_VALUE, label: t("HGO Preview", "ui") },
       ...entries.map((entry) => ({
         value: normalizeScenarioId(entry.scenario_id),
         label: getScenarioDisplayName(entry, entry.scenario_id),
@@ -60,8 +70,8 @@ export function initScenarioControls() {
       optionButton.type = "button";
       optionButton.className = "scenario-select-option";
       optionButton.setAttribute("role", "option");
-      optionButton.setAttribute("aria-selected", normalizeScenarioId(value) === normalizedValue ? "true" : "false");
-      optionButton.classList.toggle("is-selected", normalizeScenarioId(value) === normalizedValue);
+      optionButton.setAttribute("aria-selected", normalizeScenarioSelectionValue(value) === normalizedValue ? "true" : "false");
+      optionButton.classList.toggle("is-selected", normalizeScenarioSelectionValue(value) === normalizedValue);
       optionButton.dataset.value = value;
       optionButton.textContent = label;
       optionButton.addEventListener("click", () => {
@@ -85,13 +95,22 @@ export function initScenarioControls() {
     if (scenarioSelect) {
       const activeValue = normalizeScenarioId(runtimeState.activeScenarioId);
       const hasPendingOption = !!pendingScenarioId
-        && entries.some((entry) => normalizeScenarioId(entry.scenario_id) === pendingScenarioId);
-      const currentValue = (hasPendingOption ? pendingScenarioId : "") || activeValue;
+        && (
+          isHgoRuntimePreviewSelected(pendingScenarioId)
+          || entries.some((entry) => normalizeScenarioId(entry.scenario_id) === pendingScenarioId)
+        );
+      const hgoPreviewActive = isHgoRuntimePreviewActive();
+      const currentValue = (hasPendingOption ? pendingScenarioId : "")
+        || (hgoPreviewActive ? HGO_RUNTIME_PREVIEW_OPTION_VALUE : activeValue);
       scenarioSelect.replaceChildren();
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent = t("None", "ui");
       scenarioSelect.appendChild(emptyOption);
+      const hgoOption = document.createElement("option");
+      hgoOption.value = HGO_RUNTIME_PREVIEW_OPTION_VALUE;
+      hgoOption.textContent = t("HGO Preview", "ui");
+      scenarioSelect.appendChild(hgoOption);
       entries.forEach((entry) => {
         const option = document.createElement("option");
         option.value = normalizeScenarioId(entry.scenario_id);
@@ -101,7 +120,7 @@ export function initScenarioControls() {
       scenarioSelect.value = currentValue || "";
       scenarioSelect.disabled = isApplyInFlight || isBootBlocking || isFatalLocked;
       scenarioSelect.title = isFatalLocked ? fatalMessage : "";
-      pendingScenarioId = normalizeScenarioId(scenarioSelect.value);
+      pendingScenarioId = normalizeScenarioSelectionValue(scenarioSelect.value);
       syncScenarioSelectSurface({
         entries,
         currentValue: scenarioSelect.value,
@@ -119,20 +138,23 @@ export function initScenarioControls() {
     }
     if (resetScenarioBtn) {
       resetScenarioBtn.textContent = t("Reset", "ui");
-      resetScenarioBtn.disabled = !runtimeState.activeScenarioId || isApplyInFlight || isBootBlocking || isFatalLocked;
-      resetScenarioBtn.classList.toggle("hidden", !runtimeState.activeScenarioId);
+      resetScenarioBtn.disabled = !runtimeState.activeScenarioId || isHgoRuntimePreviewActive() || isApplyInFlight || isBootBlocking || isFatalLocked;
+      resetScenarioBtn.classList.toggle("hidden", !runtimeState.activeScenarioId || isHgoRuntimePreviewActive());
       resetScenarioBtn.title = isFatalLocked ? fatalMessage : "";
     }
     if (clearScenarioBtn) {
       clearScenarioBtn.textContent = t("Exit Scenario", "ui");
-      clearScenarioBtn.disabled = !runtimeState.activeScenarioId || isApplyInFlight || isBootBlocking || isFatalLocked;
-      clearScenarioBtn.classList.toggle("hidden", !runtimeState.activeScenarioId);
+      const hasScenarioSurface = !!runtimeState.activeScenarioId || isHgoRuntimePreviewActive();
+      clearScenarioBtn.disabled = !hasScenarioSurface || isApplyInFlight || isBootBlocking || isFatalLocked;
+      clearScenarioBtn.classList.toggle("hidden", !hasScenarioSurface);
       clearScenarioBtn.title = isFatalLocked ? fatalMessage : "";
     }
     if (applyScenarioBtn) {
-      const selectedScenarioId = pendingScenarioId || normalizeScenarioId(scenarioSelect?.value);
+      const selectedScenarioId = pendingScenarioId || normalizeScenarioSelectionValue(scenarioSelect?.value);
       const isSelectedScenarioActive =
-        !!selectedScenarioId && selectedScenarioId === normalizeScenarioId(runtimeState.activeScenarioId);
+        isHgoRuntimePreviewSelected(selectedScenarioId)
+          ? isHgoRuntimePreviewActive()
+          : !!selectedScenarioId && selectedScenarioId === normalizeScenarioId(runtimeState.activeScenarioId);
       applyScenarioBtn.textContent = t("Apply", "ui");
       applyScenarioBtn.disabled = !selectedScenarioId || isSelectedScenarioActive || isApplyInFlight || isBootBlocking || isFatalLocked;
       applyScenarioBtn.classList.toggle("hidden", isSelectedScenarioActive);
@@ -144,7 +166,7 @@ export function initScenarioControls() {
 
   if (scenarioSelect && !scenarioSelect.dataset.bound) {
     scenarioSelect.addEventListener("change", () => {
-      pendingScenarioId = normalizeScenarioId(scenarioSelect.value);
+      pendingScenarioId = normalizeScenarioSelectionValue(scenarioSelect.value);
       renderScenarioControls();
     });
     scenarioSelect.dataset.bound = "true";
@@ -182,9 +204,25 @@ export function initScenarioControls() {
 
   if (applyScenarioBtn && !applyScenarioBtn.dataset.bound) {
     applyScenarioBtn.addEventListener("click", async () => {
-      const scenarioId = pendingScenarioId || normalizeScenarioId(scenarioSelect?.value);
+      const scenarioId = pendingScenarioId || normalizeScenarioSelectionValue(scenarioSelect?.value);
       if (!scenarioId) return;
       try {
+        if (isHgoRuntimePreviewSelected(scenarioId)) {
+          if (runtimeState.activeScenarioId) {
+            clearActiveScenarioCommand({
+              renderMode: "request",
+              markDirtyReason: "",
+              showToastOnComplete: false,
+            });
+          }
+          await callRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", true);
+          pendingScenarioId = HGO_RUNTIME_PREVIEW_OPTION_VALUE;
+          renderScenarioControls();
+          return;
+        }
+        if (isHgoRuntimePreviewActive()) {
+          await callRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", false);
+        }
         await applyScenarioByIdCommand(scenarioId, {
           renderMode: "request",
           markDirtyReason: "scenario-apply",
@@ -222,13 +260,18 @@ export function initScenarioControls() {
   }
 
   if (clearScenarioBtn && !clearScenarioBtn.dataset.bound) {
-    clearScenarioBtn.addEventListener("click", () => {
-      if (!runtimeState.activeScenarioId || runtimeState.scenarioApplyInFlight) return;
-      clearActiveScenarioCommand({
-        renderMode: "request",
-        markDirtyReason: "scenario-clear",
-        showToastOnComplete: true,
-      });
+    clearScenarioBtn.addEventListener("click", async () => {
+      if ((!runtimeState.activeScenarioId && !isHgoRuntimePreviewActive()) || runtimeState.scenarioApplyInFlight) return;
+      if (isHgoRuntimePreviewActive()) {
+        await callRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", false);
+      }
+      if (runtimeState.activeScenarioId) {
+        clearActiveScenarioCommand({
+          renderMode: "request",
+          markDirtyReason: "scenario-clear",
+          showToastOnComplete: true,
+        });
+      }
       pendingScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
       renderScenarioControls();
     });

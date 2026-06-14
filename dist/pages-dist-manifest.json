@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 272282,
+      "size_bytes": 277816,
       "source_kind": "dist"
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8429259,
+      "size_bytes": 8444569,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -38122,22 +38122,22 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json",
-      "size_bytes": 9586453,
+      "size_bytes": 9586410,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.en.json.gz",
-      "size_bytes": 1984897,
+      "size_bytes": 1984887,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json",
-      "size_bytes": 9586453,
+      "size_bytes": 9586410,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1936/startup.bundle.zh.json.gz",
-      "size_bytes": 1984897,
+      "size_bytes": 1984888,
       "source_kind": "generated_ignored"
     },
     {
@@ -39822,22 +39822,22 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json",
-      "size_bytes": 9581984,
+      "size_bytes": 9581941,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.en.json.gz",
-      "size_bytes": 1983598,
+      "size_bytes": 1983592,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json",
-      "size_bytes": 9581984,
+      "size_bytes": 9581941,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/hoi4_1939/startup.bundle.zh.json.gz",
-      "size_bytes": 1983599,
+      "size_bytes": 1983593,
       "source_kind": "generated_ignored"
     },
     {
@@ -45482,7 +45482,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 242375,
+      "size_bytes": 257126,
       "source_kind": "dist"
     },
     {
@@ -45692,7 +45692,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1022234,
+      "size_bytes": 1027196,
       "source_kind": "dist"
     },
     {
@@ -45702,7 +45702,7 @@
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 18995,
+      "size_bytes": 20267,
       "source_kind": "dist"
     },
     {
@@ -46192,7 +46192,7 @@
     },
     {
       "path": "app/js/core/state_defaults.js",
-      "size_bytes": 59330,
+      "size_bytes": 59332,
       "source_kind": "dist"
     },
     {
@@ -46282,12 +46282,12 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 88573,
+      "size_bytes": 92853,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/scenario_controls.js",
-      "size_bytes": 10536,
+      "size_bytes": 12653,
       "source_kind": "dist"
     },
     {
@@ -46302,7 +46302,7 @@
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 52288,
+      "size_bytes": 57985,
       "source_kind": "dist"
     },
     {
@@ -46337,7 +46337,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 269207,
+      "size_bytes": 269209,
       "source_kind": "dist"
     },
     {
@@ -46377,7 +46377,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_presets_owner.js",
-      "size_bytes": 9931,
+      "size_bytes": 10127,
       "source_kind": "dist"
     },
     {
@@ -46392,7 +46392,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 39070,
+      "size_bytes": 39692,
       "source_kind": "dist"
     },
     {
@@ -46412,12 +46412,12 @@
     },
     {
       "path": "app/js/ui/toolbar/hgo_runtime_preview_controller.js",
-      "size_bytes": 5468,
+      "size_bytes": 5061,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/intensity_field_editor_section.js",
-      "size_bytes": 13361,
+      "size_bytes": 13397,
       "source_kind": "dist"
     },
     {
@@ -46432,7 +46432,7 @@
     },
     {
       "path": "app/js/ui/toolbar/scenario_guide_popover.js",
-      "size_bytes": 7412,
+      "size_bytes": 7535,
       "source_kind": "dist"
     },
     {
@@ -46442,7 +46442,7 @@
     },
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
-      "size_bytes": 49438,
+      "size_bytes": 47947,
       "source_kind": "dist"
     },
     {
@@ -46687,7 +46687,7 @@
     },
     {
       "path": "assets/favicon.svg",
-      "size_bytes": 818,
+      "size_bytes": 832,
       "source_kind": "dist"
     },
     {
@@ -46742,17 +46742,17 @@
     },
     {
       "path": "assets/hero-tno-1962.json",
-      "size_bytes": 3491,
+      "size_bytes": 3986,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.svg",
-      "size_bytes": 296143,
+      "size_bytes": 296337,
       "source_kind": "dist"
     },
     {
       "path": "assets/hero-tno-1962.webp",
-      "size_bytes": 59486,
+      "size_bytes": 60362,
       "source_kind": "dist"
     },
     {
@@ -46827,7 +46827,7 @@
     },
     {
       "path": "assets/social-preview.svg",
-      "size_bytes": 1495,
+      "size_bytes": 1513,
       "source_kind": "dist"
     },
     {
@@ -46882,7 +46882,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1448777,
+      "size_bytes": 1448778,
       "source_kind": "dist"
     },
     {
@@ -46901,5 +46901,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1144914911
+  "total_bytes": 1144969189
 }

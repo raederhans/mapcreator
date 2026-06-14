@@ -22,6 +22,7 @@ import {
   setSpecialZoneMembershipBrushModeState,
   setSpecialZonePresetCategoryState,
 } from "../../core/special_zone_layers.js";
+import { callRuntimeHook } from "../../core/state/index.js";
 
 function createButton(label, className = "secondary-btn") {
   const button = document.createElement("button");
@@ -143,7 +144,6 @@ function createSpecialZonesWorkbenchController({
   let propertyNode = null;
   let actionsNode = null;
   let currentTargetActionsNode = null;
-  let diagnosticsNode = null;
   let memberDrawerNode = null;
   let overlayToggleNode = null;
   let memberImportInputNode = null;
@@ -329,9 +329,6 @@ function createSpecialZonesWorkbenchController({
     statusNode.setAttribute("aria-live", "polite");
     statusNode.setAttribute("aria-atomic", "true");
     header.append(title, overlayToggleLabel, statusNode);
-    diagnosticsNode = document.createElement("div");
-    diagnosticsNode.className = "special-zone-workbench-diagnostics";
-
     const layout = document.createElement("div");
     layout.className = "special-zone-workbench-grid";
     layerListNode = document.createElement("div");
@@ -343,7 +340,7 @@ function createSpecialZonesWorkbenchController({
       layout.appendChild(node);
     });
     propertyNode.classList.add("special-zone-style-card");
-    root.append(header, diagnosticsNode, layout);
+    root.append(header, layout);
     container.prepend(root);
     return root;
   };
@@ -818,6 +815,7 @@ function createSpecialZonesWorkbenchController({
     const setOperationRow = document.createElement("div");
     setOperationRow.className = "special-zone-member-set-row";
     const setSourceSelect = document.createElement("select");
+    setSourceSelect.className = "select-input special-zone-member-set-select";
     state.layers.filter((entry) => entry.id !== layer?.id).forEach((entry) => {
       const option = document.createElement("option");
       option.value = entry.id;
@@ -993,39 +991,6 @@ function createSpecialZonesWorkbenchController({
     renderCurrentTargetActions(activeLayer());
   };
 
-  const renderDiagnostics = (state) => {
-    if (!diagnosticsNode) return;
-    diagnosticsNode.replaceChildren();
-    const diagnostics = Array.isArray(state?.diagnostics) ? state.diagnostics : [];
-    if (!diagnostics.length) {
-      diagnosticsNode.hidden = true;
-      return;
-    }
-    diagnosticsNode.hidden = false;
-    const title = document.createElement("strong");
-    title.textContent = translate("Diagnostics");
-    const list = document.createElement("ul");
-    diagnostics.slice(0, 6).forEach((entry) => {
-      const item = document.createElement("li");
-      const code = String(entry?.code || "diagnostic");
-      if (code === "topology_fingerprint_mismatch") {
-        item.textContent = `${code}: expected ${entry.expected || "current"} / got ${entry.actual || "empty"}`;
-      } else if (code === "invalid_feature_id") {
-        item.textContent = `${code}: ${entry.featureId || ""}`.trim();
-      } else if (code === "duplicate_layer_id_dropped") {
-        item.textContent = `${code}: ${entry.layerId || ""}`.trim();
-      } else if (code === SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED) {
-        item.textContent = `${code}: ${entry.scenarioId || runtimeState.activeScenarioId || ""}`.trim();
-      } else if (code === "legacy_special_zone_fields_dropped") {
-        item.textContent = translate("legacy_special_zone_fields_dropped");
-      } else {
-        item.textContent = code;
-      }
-      list.appendChild(item);
-    });
-    diagnosticsNode.append(title, list);
-  };
-
   const renderSpecialZonesWorkbenchUi = () => {
     if (!ensureRoot()) return;
     const state = normalizeState();
@@ -1043,7 +1008,6 @@ function createSpecialZonesWorkbenchController({
       void loadScenarioSpecialZoneLayers();
     }
     renderLayerList(state);
-    renderDiagnostics(state);
     registerSpecialZonesWorkbenchRuntimeHooks(runtimeState, {
       renderWorkbench: renderSpecialZonesWorkbenchUi,
       renderCurrentTarget: renderSpecialZonesWorkbenchCurrentTargetUi,
@@ -1051,6 +1015,7 @@ function createSpecialZonesWorkbenchController({
     renderPresetList(layer);
     renderProperties(layer);
     renderActions(state, layer);
+    callRuntimeHook(runtimeState, "renderScenarioAuditPanelFn");
   };
 
   const bindSpecialZonesWorkbenchEvents = () => {
@@ -1103,7 +1068,7 @@ function createSpecialZonesWorkbenchController({
     const diagnosticsKey = `${scenarioId}:${mismatchDiagnostics.map((entry) => `${entry.expected || ""}/${entry.actual || ""}`).join("|")}`;
     if (mismatchDiagnostics.length && diagnosticsKey !== lastDiagnosticsToastKey) {
       lastDiagnosticsToastKey = diagnosticsKey;
-      showToast?.(translate("Special zone topology fingerprint mismatch is listed in the workbench diagnostics."), {
+      showToast?.(translate("Special zone topology fingerprint mismatch is listed in the right-side project diagnostics."), {
         title: translate("Special zone topology mismatch"),
         tone: "warning",
       });

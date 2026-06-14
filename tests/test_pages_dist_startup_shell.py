@@ -442,12 +442,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     self.assertIn(f"data/scenarios/{scenario_id}/owners.by_feature.json", payload["source_files"])
                     self.assertIn(f"data/scenarios/{scenario_id}/countries.json", payload["source_files"])
                     self.assertFalse(payload["selection_policy"]["blank_canvas"])
-                    self.assertEqual(payload["selection_policy"]["capital_limit"], 8)
+                    expected_capital_limit = 9 if mode == "tno-1962" else 8
+                    self.assertEqual(payload["selection_policy"]["capital_limit"], expected_capital_limit)
                     self.assertEqual(payload["selection_policy"]["territory_path_limit_per_tag"], 48)
                     self.assertGreater(payload["feature_counts"]["territories"], 20)
                     self.assertGreater(payload["feature_counts"]["political_features"], payload["feature_counts"]["territories"])
                     self.assertGreaterEqual(payload["feature_counts"]["capitals"], 6)
-                    self.assertLessEqual(payload["feature_counts"]["capitals"], 8)
+                    self.assertLessEqual(payload["feature_counts"]["capitals"], expected_capital_limit)
                     self.assertEqual(len(re.findall(r'class="city-label"', svg_text)), payload["feature_counts"]["capitals"])
                     self.assertNotIn("territory--scenario-only", svg_text)
                     self.assertNotIn("stroke-dasharray: 5 4", svg_text)
@@ -468,6 +469,26 @@ class PagesDistStartupShellTest(unittest.TestCase):
                         payload["selection_policy"]["base_underlay"],
                         "original Europe land and coastline for small Mediterranean islands",
                     )
+                    self.assertEqual(
+                        payload["selection_policy"]["hero_capital_tags"],
+                        ["ENG", "FRA", "GER", "ITA", "IBR", "RKU", "SOV", "WRS", "BRG"],
+                    )
+                    self.assertEqual(
+                        payload["selection_policy"]["hero_capital_label_overrides"],
+                        {"BRG": "Nanzig", "SOV": "Moskau", "WRS": "Warshau"},
+                    )
+                    self.assertEqual(
+                        payload["selection_policy"]["hero_capital_point_overrides"],
+                        {
+                            "BRG": [6.18496, 48.68439],
+                            "SOV": [37.61781, 55.75204],
+                            "WRS": [21.01178, 52.22977],
+                        },
+                    )
+                    for city_name in ("Madrid", "Kyiv", "Moskau", "Warshau", "Nanzig"):
+                        self.assertIn(f">{city_name}</text>", svg_text)
+                    for replaced_name in ("Zagreb", "Bucharest", "Sofia", "Brussels"):
+                        self.assertNotIn(f">{replaced_name}</text>", svg_text)
                     self.assertEqual(payload["selection_policy"]["base_underlay_path_limit"], 360)
                     self.assertEqual(payload["selection_policy"]["base_underlay_coastline_limit"], 360)
                     self.assertGreater(payload["feature_counts"]["base_land_paths"], 0)

@@ -99,6 +99,16 @@ function createElementNode(tagName = "div") {
       this.children = [];
       this.append(...children);
     },
+    setAttribute(name, value) {
+      this.attributes = this.attributes || {};
+      this.attributes[name] = String(value);
+      if (name === "open") {
+        this.open = true;
+      }
+    },
+    closest() {
+      return null;
+    },
   };
 }
 
@@ -110,6 +120,19 @@ function findNode(root, predicate) {
     if (found) return found;
   }
   return null;
+}
+
+function collectNodes(root, predicate, results = []) {
+  if (!root) return results;
+  if (predicate(root)) results.push(root);
+  for (const child of root.children || []) {
+    collectNodes(child, predicate, results);
+  }
+  return results;
+}
+
+function getNodeText(node) {
+  return [node?.textContent || "", ...(node?.children || []).map(getNodeText)].join(" ");
 }
 
 function createDirtyIndicator() {
@@ -237,6 +260,76 @@ test("project download defaults to save dialog destination", async () => {
   await downloadProjectBtn.listeners.click();
 
   assert.deepEqual(calls, [{ format: "json", destination: "picker", packageContents: "recommended" }]);
+});
+
+test("scenario audit panel renders special zone runtime diagnostics in the right diagnostics area", () => {
+  const previousDocument = globalThis.document;
+  const previousActiveScenarioId = state.activeScenarioId;
+  const previousSpecialZoneLayers = state.specialZoneLayers;
+  const previousScenarioAuditUi = state.scenarioAuditUi;
+  const previousScenarioDiagnosticsUi = state.scenarioDiagnosticsUi;
+  const previousScenarioAudit = state.scenarioAudit;
+  const previousScenarioDiagnostics = state.scenarioDiagnostics;
+  const scenarioAuditSection = createElementNode("section");
+  const diagnosticsDetails = {
+    open: false,
+    setAttribute(name) {
+      if (name === "open") {
+        this.open = true;
+      }
+    },
+  };
+  scenarioAuditSection.closest = (selector) => (selector === "details" ? diagnosticsDetails : null);
+  const controller = createController(createStatusNode(), {
+    elements: {
+      scenarioAuditSection,
+    },
+    helpers: {
+      createEmptyNote: (message) => Object.assign(createElementNode("div"), { textContent: String(message || "") }),
+    },
+  });
+
+  try {
+    globalThis.document = {
+      createElement: createElementNode,
+    };
+    state.activeScenarioId = "hoi4_1936";
+    state.specialZoneLayers = {
+      diagnostics: [
+        {
+          code: "topology_fingerprint_mismatch",
+          expected: "027d74242b91",
+          actual: "8bc3944a1541",
+        },
+      ],
+    };
+    state.scenarioAuditUi = {};
+    state.scenarioDiagnosticsUi = {};
+    state.scenarioAudit = null;
+    state.scenarioDiagnostics = null;
+
+    controller.renderScenarioAuditPanel();
+
+    const diagnostics = findNode(scenarioAuditSection, (node) =>
+      String(node.className || "").includes("special-zone-runtime-diagnostics")
+    );
+    assert.ok(diagnostics);
+    assert.match(getNodeText(diagnostics), /topology_fingerprint_mismatch/);
+    assert.match(getNodeText(diagnostics), /expected 027d74242b91/);
+    assert.match(getNodeText(diagnostics), /got 8bc3944a1541/);
+    assert.equal(diagnosticsDetails.open, true);
+    diagnosticsDetails.open = false;
+    controller.renderScenarioAuditPanel();
+    assert.equal(diagnosticsDetails.open, false);
+  } finally {
+    state.activeScenarioId = previousActiveScenarioId;
+    state.specialZoneLayers = previousSpecialZoneLayers;
+    state.scenarioAuditUi = previousScenarioAuditUi;
+    state.scenarioDiagnosticsUi = previousScenarioDiagnosticsUi;
+    state.scenarioAudit = previousScenarioAudit;
+    state.scenarioDiagnostics = previousScenarioDiagnostics;
+    globalThis.document = previousDocument;
+  }
 });
 
 test("legend generator config changes mark the project dirty", () => {
@@ -373,6 +466,86 @@ test("legend label edits render with current project labels", () => {
   } finally {
     state.colors = previousColors;
     state.legendLabels = previousLegendLabels;
+    globalThis.document = previousDocument;
+  }
+});
+
+test("legend editor paginates sidebar rows at ten items and caps at thirty", () => {
+  const previousDocument = globalThis.document;
+  const legendList = createElementNode("div");
+  const colors = Array.from({ length: 35 }, (_, index) => (
+    `#${String(index + 1).padStart(6, "0")}`
+  ));
+  const controller = createController(createStatusNode(), {
+    elements: {
+      legendList,
+    },
+    helpers: {
+      legendManager: {
+        getConfig: () => ({
+          mode: "weighted-random",
+          continent: "all",
+          useModernMajorOrder: false,
+          maxItems: 15,
+        }),
+        updateConfig: (_state, patch = {}) => ({
+          mode: patch.mode || "weighted-random",
+          continent: patch.continent || "all",
+          useModernMajorOrder: !!patch.useModernMajorOrder,
+          maxItems: 15,
+        }),
+        getContinentOptions: () => [{ id: "all", label: "All" }],
+        getUniqueColors: () => colors,
+        getSpecialZoneLayers: () => [],
+        getSpecialZoneSignature: () => "",
+        getSignature: () => "",
+        getLabel: () => "",
+        getLabels: () => ({}),
+        setLabel: () => {},
+      },
+    },
+  });
+
+  try {
+    globalThis.document = {
+      createElement: createElementNode,
+      getElementById: () => null,
+    };
+
+    controller.refreshLegendEditor();
+
+    const firstPageRows = collectNodes(legendList, (node) => node.className === "legend-row");
+    assert.equal(firstPageRows.length, 10);
+    assert.equal(legendList.dataset.pageCount, "3");
+    assert.equal(legendList.dataset.paged, "true");
+    assert.equal(firstPageRows[0].children[1].placeholder, "Category 1");
+    assert.equal(firstPageRows[9].children[1].placeholder, "Category 10");
+
+    const nextButton = collectNodes(legendList, (node) =>
+      node.className === "legend-editor-page-btn" && node.textContent === "›"
+    )[0];
+    assert.ok(nextButton);
+    nextButton.listeners.click();
+
+    const secondPageRows = collectNodes(legendList, (node) => node.className === "legend-row");
+    assert.equal(secondPageRows.length, 10);
+    assert.equal(secondPageRows[0].children[1].placeholder, "Category 11");
+    assert.equal(secondPageRows[9].children[1].placeholder, "Category 20");
+
+    const secondNextButton = collectNodes(legendList, (node) =>
+      node.className === "legend-editor-page-btn" && node.textContent === "›"
+    )[0];
+    secondNextButton.listeners.click();
+
+    const thirdPageRows = collectNodes(legendList, (node) => node.className === "legend-row");
+    const disabledNextButton = collectNodes(legendList, (node) =>
+      node.className === "legend-editor-page-btn" && node.textContent === "›"
+    )[0];
+    assert.equal(thirdPageRows.length, 10);
+    assert.equal(thirdPageRows[0].children[1].placeholder, "Category 21");
+    assert.equal(thirdPageRows[9].children[1].placeholder, "Category 30");
+    assert.equal(disabledNextButton.disabled, true);
+  } finally {
     globalThis.document = previousDocument;
   }
 });

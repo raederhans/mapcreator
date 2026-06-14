@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
 
-from tools.build_hoi4_scenario import PROJECT_ROOT, resolve_controller_rules, resolve_manual_rules
+from scenario_builder.hoi4.compiler import _apply_country_full_names
+from scenario_builder.hoi4.models import ScenarioCountryRecord
+from tools.build_hoi4_scenario import (
+    DEFAULT_COUNTRY_FULL_NAMES_FILE,
+    PROJECT_ROOT,
+    load_country_full_names,
+    resolve_controller_rules,
+    resolve_manual_rules,
+)
 
 
 class BuildHoi4ScenarioDefaultsTest(unittest.TestCase):
@@ -48,6 +57,83 @@ class BuildHoi4ScenarioDefaultsTest(unittest.TestCase):
 
     def test_resolve_controller_rules_returns_empty_for_owner_only_output(self) -> None:
         self.assertEqual(resolve_controller_rules("", "hoi4_1939"), "")
+
+    def test_default_country_full_names_include_required_major_tags(self) -> None:
+        full_names = load_country_full_names(str(DEFAULT_COUNTRY_FULL_NAMES_FILE))
+        tags = full_names["tags"]
+
+        self.assertEqual(DEFAULT_COUNTRY_FULL_NAMES_FILE.name, "hoi4_country_full_names.json")
+        self.assertEqual(tags["ENG"]["en"], "United Kingdom of Great Britain and Northern Ireland")
+        self.assertEqual(tags["ENG"]["zh"], "大不列颠及北爱尔兰联合王国")
+        self.assertEqual(tags["SOV"]["en"], "Union of Soviet Socialist Republics")
+        self.assertEqual(tags["SOV"]["zh"], "苏维埃社会主义共和国联盟")
+
+    def test_checked_in_scenario_countries_use_full_names(self) -> None:
+        full_names = load_country_full_names(str(DEFAULT_COUNTRY_FULL_NAMES_FILE))
+
+        for scenario_id in ("hoi4_1936", "hoi4_1939"):
+            with self.subTest(scenario_id=scenario_id):
+                countries_path = PROJECT_ROOT / "data" / "scenarios" / scenario_id / "countries.json"
+                countries_payload = json.loads(countries_path.read_text(encoding="utf-8"))
+                countries = countries_payload["countries"]
+                scenario_overrides = full_names.get("scenarios", {}).get(scenario_id, {})
+
+                for tag, country in countries.items():
+                    expected = scenario_overrides.get(tag, full_names["tags"].get(tag))
+                    self.assertIsNotNone(expected, f"{scenario_id} {tag} missing full-name entry")
+                    self.assertEqual(country["display_name"], expected["en"])
+                    self.assertEqual(country["display_name_en"], expected["en"])
+                    self.assertEqual(country["display_name_zh"], expected["zh"])
+
+        scenario_1936 = json.loads(
+            (PROJECT_ROOT / "data" / "scenarios" / "hoi4_1936" / "countries.json").read_text(encoding="utf-8")
+        )["countries"]
+        scenario_1939 = json.loads(
+            (PROJECT_ROOT / "data" / "scenarios" / "hoi4_1939" / "countries.json").read_text(encoding="utf-8")
+        )["countries"]
+        self.assertEqual(scenario_1936["PRC"]["display_name"], "Chinese Soviet Republic")
+        self.assertEqual(scenario_1939["PRC"]["display_name"], "Shaan-Gan-Ning Border Region")
+        self.assertEqual(scenario_1936["SPR"]["display_name"], "Spanish Republic")
+        self.assertEqual(scenario_1939["SPR"]["display_name"], "Spanish State")
+
+    def test_apply_country_full_names_rejects_missing_or_incomplete_entries(self) -> None:
+        countries = {
+            "AAA": ScenarioCountryRecord(
+                tag="AAA",
+                display_name="Alpha",
+                color_hex="#111111",
+                feature_count=1,
+                quality="manual_reviewed",
+                source="unit-test",
+            ),
+            "BBB": ScenarioCountryRecord(
+                tag="BBB",
+                display_name="Beta",
+                color_hex="#222222",
+                feature_count=1,
+                quality="manual_reviewed",
+                source="unit-test",
+            ),
+        }
+
+        with self.assertRaisesRegex(ValueError, "missing tags: BBB"):
+            _apply_country_full_names(
+                countries,
+                scenario_id="unit_test",
+                country_full_names={"tags": {"AAA": {"en": "Alpha Republic", "zh": "阿尔法共和国"}}},
+            )
+
+        with self.assertRaisesRegex(ValueError, "incomplete bilingual entries: BBB"):
+            _apply_country_full_names(
+                countries,
+                scenario_id="unit_test",
+                country_full_names={
+                    "tags": {
+                        "AAA": {"en": "Alpha Republic", "zh": "阿尔法共和国"},
+                        "BBB": {"en": "Beta Republic"},
+                    }
+                },
+            )
 
 
 if __name__ == "__main__":

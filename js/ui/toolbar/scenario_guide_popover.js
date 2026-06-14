@@ -16,14 +16,23 @@ function createScenarioGuidePopoverController({
   t,
 } = {}) {
   let scenarioGuideActiveSection = "quick";
+  const SCENARIO_GUIDE_SECTIONS = Object.freeze([
+    "quick",
+    "prepare",
+    "hgo",
+    "appearance",
+    "editing",
+    "tools",
+    "checks",
+  ]);
 
   const normalizeScenarioGuideSection = (value = "") => {
     const normalizedValue = String(value || "").trim().toLowerCase();
-    return ["quick", "prepare", "tools", "checks"].includes(normalizedValue) ? normalizedValue : "quick";
+    return SCENARIO_GUIDE_SECTIONS.includes(normalizedValue) ? normalizedValue : "quick";
   };
   const hasScenarioGuideSectionValue = (value = "") => {
     const normalizedValue = String(value || "").trim().toLowerCase();
-    return ["quick", "prepare", "tools", "checks"].includes(normalizedValue);
+    return SCENARIO_GUIDE_SECTIONS.includes(normalizedValue);
   };
 
   const renderScenarioGuideSection = (section = "quick", { syncUrl = true } = {}) => {

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "scenario_id": "hoi4_1939",
-  "generated_at": "2026-06-13T20:18:28.229146+00:00",
+  "generated_at": "2026-06-13T22:56:20.686233+00:00",
   "startup_topology_url": "data/scenarios/hoi4_1939/runtime_topology.bootstrap.topo.json",
   "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",
   "political_chunk_count": 121,

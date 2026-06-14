@@ -154,10 +154,10 @@
 ### 局部 UI 类必须有作用域样式
 - 新增 `.secondary-btn`、`.danger-btn` 这类局部按钮类时，要同时在对应工作台作用域内定义完整按钮状态；只创建 class 不补 CSS 会回落成浏览器默认控件。
 
-### 嵌入式 SVG 交互不要抢页面滚动
-- 首页、展示页里的 `<object>` SVG 地图要默认保留页面滚动；缩放按钮可以做主交互，滚轮缩放应绑定明确修饰键，触摸拖拽只在地图已放大时接管。
-- 展示页 SVG 改 layer 或动画节点时，测试要直接 XML parse 生成资产；浏览器 `<object>` 会把 XML 格式错误渲染成粉色错误页。
-- 用 SVGO 压缩可交互 `<object>` SVG 时，要锁住运行时依赖的 group class、active-layer selector、inline style 边界和 SMIL animation 节点；只检查 token 会漏掉“tab 能切但视觉层失效”的回归。
+### 交互 SVG 要同时锁滚动、XML 和压缩合同
+- 首页、展示页里的 `<object>` SVG 地图默认保留页面滚动；缩放按钮做主交互，滚轮缩放绑定明确修饰键，触摸拖拽只在地图已放大时接管。
+- 展示页 SVG 改 layer、动画节点或 `data-*` 属性时，测试直接 XML parse 生成资产，并给缩放、拖拽、复位或 tab 切换补轻量行为覆盖；浏览器 `<object>` 会吞掉部分 XML 结构错误。
+- 用 SVGO 压缩可交互 `<object>` SVG 时，显式保留运行时依赖的 stable id、group class、hidden layers、active-layer selector、inline style 边界和 SMIL animation 节点。
 
 ### 窄侧栏长文本用 scoped grid
 - 右侧栏诊断、审计这类窄面板里，长 id 与状态值不要复用通用 `justify-between` flex 行；用面板专属 grid、固定状态列和 `overflow-wrap:anywhere` 锁住横向宽度。
@@ -168,25 +168,9 @@
 ### 交通工作台数据必须带渲染契约字段
 - 非 Japan 交通 pack 不能只满足 manifest 合同；点状 preview 还需要 `clip_bbox` 投影路径，以及工作台筛选会读取的 `airport_type/status_category`、`legal_designation/manager_type_code`、facility subtype/status 等字段。
 
-### 社区后台要先分清用户视角和管理视角
-- 后台预览页要把游客社区、登录用户中心、管理员治理面板拆成独立状态机；登录框、注册框和治理动作混在同一屏会掩盖权限边界。
-
-### scenario checkpoint 要固定到已验证目录
-- 只改 reviewed exceptions 这类输入会改变默认 checkpoint hash；后续只刷新 geo-locale/support 时，要显式传入已验证 checkpoint 目录，避免从空 checkpoint 误触 countries rebuild。
-
-### HGO runtime seed 要显式组合 mod 与 vanilla 色源
-- HGO state 历史会引用 base-game owner/controller tag；seed builder 要把 HGO palette 和 `hoi4_vanilla.palette.json` 作为有序显式色源，并继续硬失败剩余缺色 tag。
-- 异步 preview 加载要带 generation token；用户关闭或 dispose 后，旧 loader 结果不能回写 READY 状态。
-- HGO preview 的 dev hover/click hit 必须同时写公共 `countryCode` 和 `hgoRuntime.ownerTag`；只把 owner 放进嵌套诊断 payload 会让通用 dev hit 状态丢国家标签。
-
-### HOI4 state ownership 复用已验证 parser
-- 新建 HGO / HOI4 seed builder 时，state 的 owner、controller、core、dated history 必须复用 `scenario_builder.hoi4.parser` 语义；浅层正则会误读 `history`、`remove_core_of` 和 `controller -> owner` fallback。
-
-### water-domain builder 输出要先审查派生产物范围
-- `patch_tno_1962_bundle.py --changed-domain water` 可能同步 geo-locale、startup bundle、manifest 和 audit 等派生产物；source-review-only 任务验证后要检查 diff，避免把无关 locale/chunk churn 混入提交。
-
-### 浮动控件缩放要保持像素锚点
-- 浮动控件的位置如果用比例存储，缩放时先保留当前像素 left/top，再按新尺寸回算比例；直接用旧比例重算会导致控件在缩放时漂移。
+### HOI4/HGO seed 构建复用显式色源和已验证 parser
+- HGO / HOI4 seed builder 要把 HGO palette 和 `hoi4_vanilla.palette.json` 作为有序显式色源，并继续硬失败剩余缺色 tag。
+- state 的 owner、controller、core、dated history 继续复用 `scenario_builder.hoi4.parser` 语义，保持和已验证 builder 一致。
 
 ### progressive 粗粒度可见性要和细节完整性分开
 - chunked/progressive 启动阶段已经提交 coarse prewarm 时，数据健康可以记录 detail 未完整，但用户可见 toast 应表达真实可操作错误；当前视口可用的渐进阶段不应显示成剧本可见性失败。
@@ -221,6 +205,7 @@
 
 ### 大颜色库翻译优先走定向同步
 - HGO 这类 palette 只需要补颜色库可见国名时，使用 palette-only locale 同步；完整 `geo` 同步会扫 7 万级地理项，机器翻译阶段会明显拖慢。
+- Palette source label 如果是 `USA` 这类短全大写 tag，palette-only 同步会按代码过滤；中文显示层应在缺少独立翻译时复用本行已解析的本地化国家名。
 
 ### 大色板分组优先写入导入产物
 - HGO 这类千级色板条目需要在 import 阶段写入可审查的地区 metadata，并把少量异常放进 manual map；浏览器面板只消费稳定字段，避免运行时名称猜测导致分组漂移。
@@ -309,10 +294,6 @@
 ### tracked runtime state 要单独出提交路径
 - `.omx/` 这类已被 ignore 的运行态目录如果历史上仍有 tracked 文件，closeout 时先用 diff 判断是否只有计数和时间戳；这类本地状态用命名 stash 保存，产品提交只保留可复核的项目证据。
 
-### 嵌入式 SVG 交互要同时锁 XML 和行为
-- 通过 `<object type="image/svg+xml">` 嵌入的 SVG 走 XML 解析，自定义 `data-*` 属性必须写成带值形式；展示图缩放、拖拽、复位这类交互要有轻量行为测试覆盖。
-- 默认构图缩放和用户 zoom 状态要分清；`touch-action` 和 pointer drag 应跟可拖拽状态绑定，并同步外层 object 与内层 SVG 两个事件目标。
-
 ### 首页静态预览要公开真实抽样合同
 - 从真实数据生成 landing SVG 时，要同时写 metadata，记录 scope、projection、sources、selection policy 和实际渲染 count；文案只引用已渲染数量。
 - 物理图层源可能在目标视口内没有要素；这种情况应写入 metadata，并让可见文案描述实际存在的图层，避免展示页承诺空层。
@@ -326,9 +307,6 @@
 ### 首页夜景展示层要把灯光绑定到夜幕
 - 静态 SVG 做日夜循环时，夜区遮罩、纹理、灯带和重点光源应共用同一条动画曲线或 clipPath；只移动分界线会让灯光和昼夜状态脱节。
 
-### 交互 SVG 压缩要固定 SVGO 配置
-- `<object>` 引用的交互 SVG 里，隐藏图层也是运行时状态的一部分；跑 SVGO 时要显式保留 hidden elements 和稳定 id，并用结构/行为测试锁住可切换图层。
-
 ### 改 drawCanvas 生命周期要跑 runtime hooks 合同
 - `verify:pages-dist` 只覆盖 Pages 发布合同；移动 `drawCanvas()` 内 HGO、last-good、finalize 的顺序时，要额外跑 `python -m unittest tests.test_runtime_hooks_boundary_contract -q`。
 
@@ -337,9 +315,6 @@
 - 生成器支持自定义输出目录时，默认不要更新全局 scenario registry；只有 checked-in `data/scenarios/{id}` 输出才自动登记。
 - manifest 声明的可发布 JSON 资产要进入 snapshot input sha；发布入口缺失的 controller 产物应删除或接通，避免生成一个运行时不会读取的伪合同。
 - HGO manifest URL、scenario publish scope、system owner 隐藏标记和 strict source hash 要作为同一合同更新；改完用生成器重建 checked-in 场景，再跑 `verify:scenario-contracts:hgo` 与 `verify:pages-dist`。
-
-### Pages manifest 重建要使用干净 worktree
-- `dist/pages-dist-manifest.json` 会记录当前 `dist` 文件大小；同一 worktree 里若混有无关 source/dist 改动，先切到干净 worktree 重建，避免把旁路改动写进发布合同。
 
 ### deferred full cache 要整体避开恢复窗口
 - progressive full cache ready 这类 idle 优化只延后最终 repaint 还不够；slice 构建本身也会挤占 startup/interaction recovery，先等 `isInteractionRecoverySettled()` 再建和发布。
@@ -362,3 +337,27 @@
 ### 新 scenario manifest URL 要接入发布和覆盖合同
 - 新增 scenario JSON 资产时，同步更新 manifest URL、publish scope、snapshot input、bundle checker 和 strict checker；只验证文件存在会漏掉发布包缺资产和 partial feature coverage。
 - `GeometryCollection` 没有顶层 `coordinates`；chunk bounds、contract bounds 和生成器预算统计要递归读取 `geometries`，避免空坐标退化成全球 bbox。
+
+### UI 本地化要先修运行时 catalog 再谈大 locale 快照
+- `js/ui/i18n.js` 会先读 runtime locales，再回退到 `js/ui/i18n_catalog.js`；审查新增 UI 文案时，先补 catalog 和真实 `t(..., "ui")` 动态格式化链路，用户可见面会更快闭环。
+- `tools/translate_manager.py` 扫全量 geo/scenario 时可能长时间静默；这类任务先以可见 UI 入口为 owner 做最小闭环，再把大 locale 快照同步当成后续维护步骤。
+- 动态标签改走 `t(..., "ui")` 或运行时填充值后，行为测试和 HTML 合同测试要同步锁“翻译后的输出”与“初始空占位”，避免继续把英文常量或静态默认值当合同。
+
+### 云端合流后验证前再查远端
+- 合流和冲突解析过程中 `origin/main` 仍可能新增提交；跑最终验证前再查 `HEAD..origin/main`，确保本地验证的是最新远端基线。
+
+### 原生 select 统一样式要避开 background 简写
+- 给原生 select 加统一箭头和 `appearance: none` 后，组件局部样式继续用 `background:` 会清掉箭头层；保留控件底色时改用 `background-color:`，右侧 padding 单独覆盖。
+
+### 昼夜动画要同步时间粒度和灯光缓存
+- 循环模式的 pass 签名要用细粒度时间 token；灯光静态底图继续缓存，但缓存 miss 时必须先生成完整精细底图，再让动画帧复用它做重裁剪和合成。
+
+### 昼夜灯光默认值要同步 UI 回退
+- 提高灯光默认强度时，`index.html` 初始值、state defaults、toolbar 输入非法值回退、e2e 默认合同和 `dist/app` 必须一起更新；否则真实页面会出现“参数看似改了，交互后回到旧弱光”的错觉。
+
+### HOI4 场景重建后要分清 report-dir 和 safe repair
+- `check_hoi4_scenario_bundle.py` 默认 report-dir 指向 `hoi4_1936`；校验 `hoi4_1939` 时显式传 `.runtime/reports/generated/scenarios/hoi4_1939`，避免把 1936 coverage report 拿来对 1939 audit。
+- 大型 HOI4 场景的 `--write-safe` 二次稳定检查可能耗时很长；需要收敛快照时可先单场景调用 safe repair，再用只读 strict checker 和 bundle checker验证。
+
+### HOI4 国家显示名要同步全链路指纹
+- 修改 `countries.json` 的显示名时，同步 startup bundle/gzip、`locales.startup.json`、`data/locales.json`、`data/manifest.json`、`build_snapshot.json`、`manifest.snapshot_fingerprint` 和 `audit.snapshot_fingerprint`；只改单文件哈希会被 strict contract 抓到聚合指纹过期。

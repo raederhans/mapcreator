@@ -12,7 +12,7 @@
       "schema_ref": "schema://topology/political_bundle_v1",
       "simplification": "coarse_publish_v1",
       "target_zoom_range": [
-        0.0,
+        0,
         1.7
       ],
       "type": "topology",
@@ -44,7 +44,7 @@
       "simplification": "detail_publish_legacy_v1",
       "target_zoom_range": [
         1.7,
-        20.0
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -74,7 +74,7 @@
       "simplification": "detail_publish_v2",
       "target_zoom_range": [
         1.7,
-        20.0
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -105,7 +105,7 @@
       "simplification": "runtime_projection_v1",
       "target_zoom_range": [
         1.7,
-        20.0
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -128,8 +128,8 @@
       "schema_ref": "schema://topology/physical_semantics_v1",
       "simplification": "semantic_dissolve_v1",
       "target_zoom_range": [
-        0.0,
-        20.0
+        0,
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -152,8 +152,8 @@
       "schema_ref": "schema://topology/terrain_contours_major_v1",
       "simplification": "contour_major_publish_v1",
       "target_zoom_range": [
-        0.0,
-        20.0
+        0,
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -176,8 +176,8 @@
       "schema_ref": "schema://topology/terrain_contours_minor_v1",
       "simplification": "contour_minor_publish_v1",
       "target_zoom_range": [
-        0.0,
-        20.0
+        0,
+        20
       ],
       "type": "topology",
       "object_names": [
@@ -243,11 +243,11 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8429259,
-      "sha256": "b0a0e25657c54fcfaae6dc5c5a7f39b1a60eb199de43a71dd17db0d4933a1fb6",
+      "size_bytes": 8456906,
+      "sha256": "f92c99d18edc7ab5d183f7fdf61a22f0132fcecf2360451e2f1a6fe9b0a23976",
       "type": "locales",
-      "geo_entry_count": 72641,
-      "ui_entry_count": 1713
+      "geo_entry_count": 73680,
+      "ui_entry_count": 1805
     },
     "country_feature_policies.json": {
       "role": "country_feature_policies",
@@ -586,7 +586,7 @@
         "populationThreshold": 1200000,
         "adminCapitalPopulationThreshold": 400000,
         "calibrationVersion": "balanced-2026-04",
-        "maxWeight": 1.0,
+        "maxWeight": 1,
         "meanWeight": 0.5864
       }
     }

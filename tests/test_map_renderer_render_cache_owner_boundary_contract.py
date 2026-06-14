@@ -113,6 +113,10 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
             r"const staticLayerCanvas = getModernCityLightsStaticLayerCanvas\(k, config, intensity\);[\s\S]*?"
             r"context\.drawImage\(staticLayerCanvas, 0, 0\);",
         )
+        self.assertIn("drawNightLightsLayer(k, config, solarState);", renderer_content)
+        self.assertIn("drawModernNightLightsLayer(k, config, solarState);", renderer_content)
+        self.assertNotIn("allowStaticBuild", renderer_content)
+        self.assertNotIn("allowBuild: allowStaticBuild", renderer_content)
 
     def test_modern_city_lights_advanced_controls_reach_draw_algorithms(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
@@ -123,7 +127,7 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIsNotNone(texture_match)
         texture_body = texture_match.group("body")
-        self.assertIn("config.cityLightsTextureOpacity", texture_body)
+        self.assertIn('getModernDayNightNumber(config, "cityLightsTextureOpacity")', texture_body)
         self.assertIn("textureOpacity <= 0", texture_body)
         self.assertIn("textureOpacity *", texture_body)
 
@@ -133,7 +137,7 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIsNotNone(corridor_match)
         corridor_body = corridor_match.group("body")
-        self.assertIn("config.cityLightsCorridorStrength", corridor_body)
+        self.assertIn('getModernDayNightNumber(config, "cityLightsCorridorStrength")', corridor_body)
         self.assertIn("corridorStrength <= 0", corridor_body)
         self.assertIn("corridorStrength *", corridor_body)
 
@@ -143,7 +147,7 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         )
         self.assertIsNotNone(core_match)
         core_body = core_match.group("body")
-        self.assertIn("config.cityLightsCoreSharpness", core_body)
+        self.assertIn('getModernDayNightNumber(config, "cityLightsCoreSharpness")', core_body)
         self.assertIn("haloSpread", core_body)
         self.assertIn("coreSpread", core_body)
         self.assertIn("coreInnerStop", core_body)

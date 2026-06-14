@@ -1,7 +1,7 @@
 {
   "version": 1,
   "scenario_id": "hoi4_1939",
-  "generated_at": "2026-06-13T20:18:28.229146+00:00",
+  "generated_at": "2026-06-13T22:56:20.686233+00:00",
   "coastline_source": "runtime_topology",
   "mesh_summary": {
     "runtime_topology_url": "data/scenarios/hoi4_1939/runtime_topology.topo.json",

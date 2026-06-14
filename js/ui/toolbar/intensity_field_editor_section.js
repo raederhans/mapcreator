@@ -111,7 +111,7 @@ export function createIntensityFieldEditorSection({
     return fields.channels[getSelectedChannelId()];
   };
 
-  const formatRadiusLabel = (radiusDeg) => `≈ ${Math.round(clamp(radiusDeg, 0.25, 30) * 111)} km`;
+  const formatRadiusLabel = (radiusDeg) => t("≈ {km} km", "ui").replace("{km}", String(Math.round(clamp(radiusDeg, 0.25, 30) * 111)));
 
   const getSelectedPoint = (channel, tool) => (
     Array.isArray(channel?.points)

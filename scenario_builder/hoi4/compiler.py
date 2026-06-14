@@ -1144,6 +1144,84 @@ def _worst_country_quality(qualities: list[str]) -> str:
     return max(qualities, key=lambda value: COUNTRY_QUALITY_RANK.get(value, 99))
 
 
+def _normalize_country_full_name_entry(raw_entry: object) -> dict[str, str]:
+    if not isinstance(raw_entry, dict):
+        return {}
+    en = str(raw_entry.get("en") or raw_entry.get("display_name_en") or "").strip()
+    zh = str(raw_entry.get("zh") or raw_entry.get("display_name_zh") or "").strip()
+    return {key: value for key, value in {"en": en, "zh": zh}.items() if value}
+
+
+def _resolve_country_full_name_entry(
+    country_full_names: dict[str, object],
+    *,
+    scenario_id: str,
+    tag: str,
+) -> dict[str, str]:
+    if not isinstance(country_full_names, dict):
+        return {}
+    normalized_tag = str(tag or "").strip().upper()
+    if not normalized_tag:
+        return {}
+    scenario_entries = country_full_names.get("scenarios", {})
+    if isinstance(scenario_entries, dict):
+        scenario_map = scenario_entries.get(scenario_id, {})
+        if isinstance(scenario_map, dict):
+            scenario_entry = _normalize_country_full_name_entry(scenario_map.get(normalized_tag))
+            if scenario_entry:
+                return scenario_entry
+    tag_entries = country_full_names.get("tags", {})
+    if isinstance(tag_entries, dict):
+        return _normalize_country_full_name_entry(tag_entries.get(normalized_tag))
+    return {}
+
+
+def _apply_country_full_names(
+    countries: dict[str, ScenarioCountryRecord],
+    *,
+    scenario_id: str,
+    country_full_names: dict[str, object],
+) -> None:
+    if not country_full_names:
+        return
+
+    resolved_entries: dict[str, dict[str, str]] = {}
+    missing_tags: list[str] = []
+    incomplete_tags: list[str] = []
+    for tag, record in countries.items():
+        full_name_entry = _resolve_country_full_name_entry(
+            country_full_names,
+            scenario_id=scenario_id,
+            tag=tag,
+        )
+        if not full_name_entry:
+            missing_tags.append(tag)
+            continue
+        if not full_name_entry.get("en") or not full_name_entry.get("zh"):
+            incomplete_tags.append(tag)
+            continue
+        resolved_entries[tag] = full_name_entry
+
+    if missing_tags or incomplete_tags:
+        details: list[str] = []
+        if missing_tags:
+            details.append("missing tags: " + ", ".join(sorted(missing_tags)))
+        if incomplete_tags:
+            details.append("incomplete bilingual entries: " + ", ".join(sorted(incomplete_tags)))
+        raise ValueError(
+            f"Country full-name override table is incomplete for scenario `{scenario_id}`; "
+            + "; ".join(details)
+        )
+
+    for tag, full_name_entry in resolved_entries.items():
+        record = countries[tag]
+        display_name_en = full_name_entry["en"]
+        display_name_zh = full_name_entry["zh"]
+        record.display_name = display_name_en
+        record.display_name_en = display_name_en
+        record.display_name_zh = display_name_zh
+
+
 def _augment_countries_with_controller_data(
     *,
     countries: dict[str, ScenarioCountryRecord],
@@ -1313,6 +1391,7 @@ def compile_scenario_bundle(
     diagnostics,
     controller_rules: list[object] | None = None,
     strategic_inputs: dict[str, object] | None = None,
+    country_full_names: dict[str, object] | None = None,
 ) -> dict[str, object]:
     iso2_to_tag = build_iso2_to_mapped_tag(palette_map)
     active_owner_tags = build_active_owner_tags(states_by_id)
@@ -1416,6 +1495,11 @@ def compile_scenario_bundle(
         country_histories=country_histories,
         palette_pack=palette_pack,
     )
+    _apply_country_full_names(
+        countries,
+        scenario_id=scenario_id,
+        country_full_names=country_full_names or {},
+    )
     filtered_featured_tags, dropped_featured_tags = _filter_featured_tags(bookmark, countries)
     diagnostics["filtered_featured_tags"] = filtered_featured_tags
     if dropped_featured_tags:
@@ -1484,6 +1568,8 @@ def compile_scenario_bundle(
     for tag, record in countries.items():
         owner_stats[tag] = {
             "display_name": record.display_name,
+            "display_name_en": record.display_name_en,
+            "display_name_zh": record.display_name_zh,
             "feature_count": record.feature_count,
             "controller_feature_count": record.controller_feature_count,
             "quality": record.quality,
@@ -1516,6 +1602,8 @@ def compile_scenario_bundle(
             tag: {
                 "tag": record.tag,
                 "display_name": record.display_name,
+                "display_name_en": record.display_name_en,
+                "display_name_zh": record.display_name_zh,
                 "color_hex": record.color_hex,
                 "feature_count": record.feature_count,
                 "controller_feature_count": record.controller_feature_count,

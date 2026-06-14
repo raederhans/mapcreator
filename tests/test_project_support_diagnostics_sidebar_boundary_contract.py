@@ -181,7 +181,7 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('legendList.style.setProperty("--legend-editor-dynamic-max-height"', owner_content)
         self.assertNotIn('markLegacyColorStateDirty();', owner_content)
         self.assertNotIn('mapRenderer.refreshColorState({ renderNow: true });', owner_content)
-        self.assertIn('max-height: min(52vh, var(--legend-editor-dynamic-max-height, 360px));', css_content)
+        self.assertIn('max-height: min(68vh, var(--legend-editor-dynamic-max-height, 360px));', css_content)
 
     def test_interaction_funnel_and_renderer_keep_project_support_callbacks(self):
         interaction_funnel_content = INTERACTION_FUNNEL_JS.read_text(encoding="utf-8")

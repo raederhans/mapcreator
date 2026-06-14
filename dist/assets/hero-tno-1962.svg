@@ -1148,9 +1148,10 @@
       <g class="capital capital--focus" data-tag="FRA"><title>Paris · France</title><circle cx="361.8" cy="418.3" r="5.8" /><text class="city-label" x="370.8" y="411.3">Paris</text></g>
       <g class="capital capital--focus" data-tag="GER"><title>Berlin · Germany</title><circle cx="468.3" cy="366.4" r="5.8" /><text class="city-label" x="477.3" y="359.4">Berlin</text></g>
       <g class="capital capital--focus" data-tag="ITA"><title>Rome · Italy</title><circle cx="465.4" cy="526" r="5.8" /><text class="city-label" x="474.4" y="519">Rome</text></g>
-      <g class="capital capital--focus" data-tag="ROM"><title>Bucharest · Romania</title><circle cx="608.7" cy="469.8" r="5.8" /><text class="city-label" x="617.7" y="462.8">Bucharest</text></g>
-      <g class="capital" data-tag="BRG"><title>Brussels · Ordensstaat Burgund</title><circle cx="383.7" cy="390.1" r="5.8" /><text class="city-label" x="392.7" y="383.1">Brussels</text></g>
-      <g class="capital" data-tag="BUL"><title>Sofia · Bulgaria</title><circle cx="583.8" cy="501.4" r="5.8" /><text class="city-label" x="592.8" y="494.4">Sofia</text></g>
-      <g class="capital" data-tag="CRO"><title>Zagreb · Independent State of Croatia</title><circle cx="499.7" cy="465.2" r="5.8" /><text class="city-label" x="508.7" y="458.2">Zagreb</text></g>
+      <g class="capital" data-tag="IBR"><title>Madrid · Iberian Union</title><circle cx="280.8" cy="534.3" r="5.8" /><text class="city-label" x="289.8" y="527.3">Madrid</text></g>
+      <g class="capital" data-tag="RKU"><title>Kyiv · Reichskommissariat Ukraine</title><circle cx="630.4" cy="370.7" r="5.8" /><text class="city-label" x="639.4" y="363.7">Kyiv</text></g>
+      <g class="capital capital--focus" data-tag="SOV"><title>Moskau · Soviet Union</title><circle cx="663.9" cy="274.2" r="5.8" /><text class="city-label" x="672.9" y="267.2">Moskau</text></g>
+      <g class="capital" data-tag="WRS"><title>Warshau · West Russian Revolutionary Front</title><circle cx="538" cy="363.9" r="5.8" /><text class="city-label" x="547" y="356.9">Warshau</text></g>
+      <g class="capital" data-tag="BRG"><title>Nanzig · Ordensstaat Burgund</title><circle cx="399.4" cy="423.7" r="5.8" /><text class="city-label" x="408.4" y="416.7">Nanzig</text></g>
   </g>
 </svg>

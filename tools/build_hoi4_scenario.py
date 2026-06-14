@@ -70,6 +70,7 @@ DEFAULT_OWNER_RULE_FILES_BY_SCENARIO = {
         "hoi4_1939.manual.json",
     ],
 }
+DEFAULT_COUNTRY_FULL_NAMES_FILE = PROJECT_ROOT / "data" / "scenario-rules" / "hoi4_country_full_names.json"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -121,6 +122,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional comma-separated rule file paths for controller/frontline overlays.",
     )
     parser.add_argument(
+        "--country-full-names",
+        default=str(DEFAULT_COUNTRY_FULL_NAMES_FILE),
+        help="Optional bilingual country full-name override table.",
+    )
+    parser.add_argument(
         "--scenario-output-dir",
         default="",
     )
@@ -147,6 +153,19 @@ def write_json(path: Path, payload: object) -> None:
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_country_full_names(raw_value: str) -> dict[str, object]:
+    value = str(raw_value or "").strip()
+    if not value:
+        return {}
+    path = Path(value)
+    if not path.exists():
+        raise FileNotFoundError(f"Country full-name override table not found: {path}")
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Country full-name override table must be a JSON object: {path}")
+    return payload
 
 
 def to_project_relative_path(path: Path) -> str:
@@ -478,6 +497,7 @@ def main() -> int:
     controller_rule_metadata: list[dict[str, object]] = []
     if controller_rule_paths:
         controller_rules, controller_rule_metadata = load_rules_with_metadata(controller_rule_paths)
+    country_full_names = load_country_full_names(args.country_full_names)
 
     coverage = collect_state_delta_coverage(owner_rule_metadata)
     enable_region_checks = bool(coverage.get("enable_region_checks", args.scenario_id == "hoi4_1936"))
@@ -518,6 +538,7 @@ def main() -> int:
         "enforce_scenario_extensions": enforce_scenario_extensions,
         "owner_rule_paths": [to_project_relative_path(path) for path in owner_rule_paths],
         "controller_rule_paths": [to_project_relative_path(path) for path in controller_rule_paths],
+        "country_full_names_path": to_project_relative_path(Path(args.country_full_names)),
         "state_owner_counts": dict(
             sorted(
                 Counter(record.owner_tag for record in states_by_id.values()).items(),
@@ -553,6 +574,7 @@ def main() -> int:
         palette_pack=palette_pack,
         palette_map=palette_map,
         diagnostics=diagnostics,
+        country_full_names=country_full_names,
         strategic_inputs={
             "as_of_date": as_of_date,
             "runtime_topology_payload": runtime_topology_payload,

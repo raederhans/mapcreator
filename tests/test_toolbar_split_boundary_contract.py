@@ -11,6 +11,8 @@ INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
+SCENARIO_CONTROLS_JS = REPO_ROOT / "js" / "ui" / "scenario_controls.js"
+HGO_RUNTIME_PREVIEW_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "hgo_runtime_preview_controller.js"
 SPECIAL_ZONE_EDITOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zone_editor.js"
 SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
@@ -350,6 +352,23 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("function resolveSpecialZoneTopologyFingerprint(runtimeState = {})", special_zone_layers_content)
         self.assertIn("resolveSpecialZoneTopologyFingerprint(state)", scenario_resources_content)
         self.assertIn("SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED", scenario_resources_content)
+
+    def test_hgo_preview_entry_is_owned_by_scenario_selector(self):
+        scenario_controls = SCENARIO_CONTROLS_JS.read_text(encoding="utf-8")
+        hgo_controller = HGO_RUNTIME_PREVIEW_CONTROLLER_JS.read_text(encoding="utf-8")
+        toolbar = TOOLBAR_JS.read_text(encoding="utf-8")
+
+        self.assertIn('const HGO_RUNTIME_PREVIEW_OPTION_VALUE = "__hgo_runtime_preview__";', scenario_controls)
+        self.assertIn('{ value: HGO_RUNTIME_PREVIEW_OPTION_VALUE, label: t("HGO Preview", "ui") }', scenario_controls)
+        self.assertIn('"setHgoRuntimePreviewEnabledFn"', scenario_controls)
+        self.assertIn("clearActiveScenarioCommand({", scenario_controls)
+        self.assertIn('markDirtyReason: ""', scenario_controls)
+        self.assertIn("createButton = false", hgo_controller)
+        self.assertIn(
+            "const previewButton = button || (createButton ? createPreviewButton(documentRef, anchorButton) : null);",
+            hgo_controller,
+        )
+        self.assertNotIn('id = "hgoRuntimePreviewBtn"', toolbar)
 
     def test_special_zone_workbench_gates_members_and_style_on_active_layer(self):
         owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")

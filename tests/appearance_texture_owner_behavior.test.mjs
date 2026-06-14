@@ -323,7 +323,11 @@ test("day-night renderer supports utc and cycle clock tokens", () => {
 
   assert.match(source, /function getCycleUtcMinutes\(config = getDayNightStyleConfig\(\), now = new Date\(\)\)/);
   assert.match(source, /if \(config\.mode === "cycle"\) \{\s*return `\$\{dayKey\}\|cycle:/);
-  assert.match(source, /mode === "cycle"\s*\?\s*getCycleUtcMinutes\(config, now\)/);
+  assert.match(source, /getCycleUtcMinutes\(config, now\)\.toFixed\(2\)/);
+  assert.match(source, /const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 \/ 30;/);
+  assert.match(source, /function scheduleDayNightCycleFrame\(callback\)/);
+  assert.match(source, /requestAnimationFrame\(callback\)/);
+  assert.match(source, /function syncDayNightCycleAnimation\(initialConfig\)/);
   assert.match(source, /initialMode !== "utc" && initialMode !== "cycle"/);
   assert.match(source, /mode !== "utc" && mode !== "cycle"/);
 });
@@ -358,18 +362,18 @@ test("day-night owner renders modern defaults from normalized state", () => {
   assert.equal(harness.nodes.dayNightCityLightsEnabled.checked, defaults.cityLightsEnabled);
   assert.equal(harness.nodes.dayNightCityLightsStyle.value, defaults.cityLightsStyle);
   assert.equal(harness.nodes.dayNightCityLightsIntensity.value, String(Math.round(defaults.cityLightsIntensity * 100)));
-  assert.equal(harness.nodes.dayNightCityLightsIntensityValue.textContent, "68%");
+  assert.equal(harness.nodes.dayNightCityLightsIntensityValue.textContent, "115%");
   assert.equal(harness.nodes.dayNightCityLightsTextureOpacity.value, String(Math.round(defaults.cityLightsTextureOpacity * 100)));
-  assert.equal(harness.nodes.dayNightCityLightsTextureOpacityValue.textContent, "20%");
+  assert.equal(harness.nodes.dayNightCityLightsTextureOpacityValue.textContent, "74%");
   assert.equal(harness.nodes.dayNightCityLightsCorridorStrength.value, String(Math.round(defaults.cityLightsCorridorStrength * 100)));
-  assert.equal(harness.nodes.dayNightCityLightsCorridorStrengthValue.textContent, "8%");
+  assert.equal(harness.nodes.dayNightCityLightsCorridorStrengthValue.textContent, "42%");
   assert.equal(harness.nodes.dayNightCityLightsCoreSharpness.value, String(Math.round(defaults.cityLightsCoreSharpness * 100)));
-  assert.equal(harness.nodes.dayNightCityLightsCoreSharpnessValue.textContent, "64%");
+  assert.equal(harness.nodes.dayNightCityLightsCoreSharpnessValue.textContent, "62%");
   assert.equal(harness.nodes.dayNightCityLightsPopulationBoostEnabled.checked, defaults.cityLightsPopulationBoostEnabled);
   assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrength.value, String(Math.round(defaults.cityLightsPopulationBoostStrength * 100)));
-  assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrengthValue.textContent, "58%");
+  assert.equal(harness.nodes.dayNightCityLightsPopulationBoostStrengthValue.textContent, "70%");
   assert.equal(harness.nodes.dayNightShadowOpacity.value, String(Math.round(defaults.shadowOpacity * 100)));
-  assert.equal(harness.nodes.dayNightShadowOpacityValue.textContent, "50%");
+  assert.equal(harness.nodes.dayNightShadowOpacityValue.textContent, "38%");
 });
 
 test("day-night modern range fallbacks match normalized defaults", () => {
@@ -432,5 +436,5 @@ test("day-night HTML initial values match normalized defaults", () => {
   );
   assertRangeDefault("dayNightShadowOpacity", Math.round(defaults.shadowOpacity * 100));
   assert.match(html, new RegExp(`<input[^>]*id="dayNightCycleSpeed"[^>]*value="${defaults.cycleSecondsPerDay}"`, "s"));
-  assert.match(html, new RegExp(`<span[^>]*id="dayNightCycleSpeedValue"[^>]*>${defaults.cycleSecondsPerDay}s \\/ day<\\/span>`, "s"));
+  assert.match(html, /<span[^>]*id="dayNightCycleSpeedValue"[^>]*><\/span>/s);
 });

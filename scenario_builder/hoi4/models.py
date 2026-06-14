@@ -118,6 +118,8 @@ class ScenarioCountryRecord:
     feature_count: int
     quality: str
     source: str
+    display_name_en: str = ""
+    display_name_zh: str = ""
     controller_feature_count: int = 0
     base_iso2: str = ""
     lookup_iso2: str = ""

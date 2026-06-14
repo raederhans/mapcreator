@@ -1,0 +1,552 @@
+{
+  "version": 1,
+  "description": "Bilingual full country names for checked-in HOI4 1936 and 1939 scenario country tags.",
+  "tags": {
+    "AEF": {
+      "en": "Federation of French Equatorial Africa",
+      "zh": "法属赤道非洲联邦"
+    },
+    "AFA": {
+      "en": "Sultanate of Aussa",
+      "zh": "奥萨苏丹国"
+    },
+    "AFG": {
+      "en": "Kingdom of Afghanistan",
+      "zh": "阿富汗王国"
+    },
+    "ALB": {
+      "en": "Kingdom of Albania",
+      "zh": "阿尔巴尼亚王国"
+    },
+    "ALG": {
+      "en": "French Algeria",
+      "zh": "法属阿尔及利亚"
+    },
+    "ANG": {
+      "en": "Portuguese Colony of Angola",
+      "zh": "葡属安哥拉殖民地"
+    },
+    "AOF": {
+      "en": "Federation of French West Africa",
+      "zh": "法属西非联邦"
+    },
+    "AOI": {
+      "en": "Italian East Africa",
+      "zh": "意属东非"
+    },
+    "ARG": {
+      "en": "Argentine Republic",
+      "zh": "阿根廷共和国"
+    },
+    "AST": {
+      "en": "Commonwealth of Australia",
+      "zh": "澳大利亚联邦"
+    },
+    "AUS": {
+      "en": "Federal State of Austria",
+      "zh": "奥地利联邦国"
+    },
+    "BEA": {
+      "en": "British East African Territories",
+      "zh": "英属东非领地"
+    },
+    "BEL": {
+      "en": "Kingdom of Belgium",
+      "zh": "比利时王国"
+    },
+    "BHU": {
+      "en": "Kingdom of Bhutan",
+      "zh": "不丹王国"
+    },
+    "BOL": {
+      "en": "Republic of Bolivia",
+      "zh": "玻利维亚共和国"
+    },
+    "BOT": {
+      "en": "Bechuanaland Protectorate",
+      "zh": "贝专纳保护国"
+    },
+    "BRA": {
+      "en": "United States of Brazil",
+      "zh": "巴西合众国"
+    },
+    "BRM": {
+      "en": "British Burma",
+      "zh": "英属缅甸"
+    },
+    "BUL": {
+      "en": "Tsardom of Bulgaria",
+      "zh": "保加利亚沙皇国"
+    },
+    "BWA": {
+      "en": "British West African Colonies",
+      "zh": "英属西非殖民地"
+    },
+    "CAN": {
+      "en": "Dominion of Canada",
+      "zh": "加拿大自治领"
+    },
+    "CEY": {
+      "en": "British Ceylon",
+      "zh": "英属锡兰"
+    },
+    "CHI": {
+      "en": "Republic of China",
+      "zh": "中华民国"
+    },
+    "CHL": {
+      "en": "Republic of Chile",
+      "zh": "智利共和国"
+    },
+    "CHU": {
+      "en": "Sichuan Clique",
+      "zh": "四川军阀"
+    },
+    "COL": {
+      "en": "Republic of Colombia",
+      "zh": "哥伦比亚共和国"
+    },
+    "COS": {
+      "en": "Republic of Costa Rica",
+      "zh": "哥斯达黎加共和国"
+    },
+    "CUB": {
+      "en": "Republic of Cuba",
+      "zh": "古巴共和国"
+    },
+    "CZE": {
+      "en": "Czechoslovak Republic",
+      "zh": "捷克斯洛伐克共和国"
+    },
+    "DEN": {
+      "en": "Kingdom of Denmark",
+      "zh": "丹麦王国"
+    },
+    "DOM": {
+      "en": "Dominican Republic",
+      "zh": "多米尼加共和国"
+    },
+    "ECU": {
+      "en": "Republic of Ecuador",
+      "zh": "厄瓜多尔共和国"
+    },
+    "EGY": {
+      "en": "Kingdom of Egypt",
+      "zh": "埃及王国"
+    },
+    "ELS": {
+      "en": "Republic of El Salvador",
+      "zh": "萨尔瓦多共和国"
+    },
+    "ENG": {
+      "en": "United Kingdom of Great Britain and Northern Ireland",
+      "zh": "大不列颠及北爱尔兰联合王国"
+    },
+    "ERI": {
+      "en": "Colony of Eritrea",
+      "zh": "厄立特里亚殖民地"
+    },
+    "EST": {
+      "en": "Republic of Estonia",
+      "zh": "爱沙尼亚共和国"
+    },
+    "ETH": {
+      "en": "Ethiopian Empire",
+      "zh": "埃塞俄比亚帝国"
+    },
+    "FIN": {
+      "en": "Republic of Finland",
+      "zh": "芬兰共和国"
+    },
+    "FRA": {
+      "en": "French Republic",
+      "zh": "法兰西共和国"
+    },
+    "GER": {
+      "en": "German Reich",
+      "zh": "德意志国"
+    },
+    "GF": {
+      "en": "Colony of French Guiana",
+      "zh": "法属圭亚那殖民地"
+    },
+    "GMA": {
+      "en": "Gansu Ma Clique",
+      "zh": "甘肃马家军"
+    },
+    "GP": {
+      "en": "Colony of Guadeloupe",
+      "zh": "瓜德罗普殖民地"
+    },
+    "GRE": {
+      "en": "Kingdom of Greece",
+      "zh": "希腊王国"
+    },
+    "GRN": {
+      "en": "Colony of Greenland",
+      "zh": "格陵兰殖民地"
+    },
+    "GUA": {
+      "en": "Republic of Guatemala",
+      "zh": "危地马拉共和国"
+    },
+    "GXC": {
+      "en": "New Guangxi Clique",
+      "zh": "新桂系"
+    },
+    "HAI": {
+      "en": "Republic of Haiti",
+      "zh": "海地共和国"
+    },
+    "HOL": {
+      "en": "Kingdom of the Netherlands",
+      "zh": "尼德兰王国"
+    },
+    "HON": {
+      "en": "Republic of Honduras",
+      "zh": "洪都拉斯共和国"
+    },
+    "HUN": {
+      "en": "Kingdom of Hungary",
+      "zh": "匈牙利王国"
+    },
+    "ICE": {
+      "en": "Kingdom of Iceland",
+      "zh": "冰岛王国"
+    },
+    "INS": {
+      "en": "Dutch East Indies",
+      "zh": "荷属东印度"
+    },
+    "IRE": {
+      "en": "Ireland",
+      "zh": "爱尔兰"
+    },
+    "IRQ": {
+      "en": "Kingdom of Iraq",
+      "zh": "伊拉克王国"
+    },
+    "ITA": {
+      "en": "Kingdom of Italy",
+      "zh": "意大利王国"
+    },
+    "JAP": {
+      "en": "Empire of Japan",
+      "zh": "大日本帝国"
+    },
+    "JOR": {
+      "en": "Emirate of Transjordan",
+      "zh": "外约旦酋长国"
+    },
+    "KOR": {
+      "en": "Government-General of Korea",
+      "zh": "朝鲜总督府"
+    },
+    "KUW": {
+      "en": "Sheikhdom of Kuwait",
+      "zh": "科威特酋长国"
+    },
+    "LAT": {
+      "en": "Republic of Latvia",
+      "zh": "拉脱维亚共和国"
+    },
+    "LBA": {
+      "en": "Italian Libya",
+      "zh": "意属利比亚"
+    },
+    "LEB": {
+      "en": "French Mandate for Lebanon",
+      "zh": "法属黎巴嫩托管地"
+    },
+    "LIB": {
+      "en": "Republic of Liberia",
+      "zh": "利比里亚共和国"
+    },
+    "LIT": {
+      "en": "Republic of Lithuania",
+      "zh": "立陶宛共和国"
+    },
+    "LUQ": {
+      "en": "Shandong Clique",
+      "zh": "山东军阀"
+    },
+    "LUX": {
+      "en": "Grand Duchy of Luxembourg",
+      "zh": "卢森堡大公国"
+    },
+    "MAD": {
+      "en": "Colony of Madagascar and Dependencies",
+      "zh": "马达加斯加及附属地殖民地"
+    },
+    "MAL": {
+      "en": "British Malaya",
+      "zh": "英属马来亚"
+    },
+    "MAN": {
+      "en": "Empire of Manchukuo",
+      "zh": "满洲帝国"
+    },
+    "MEN": {
+      "en": "Mongol United Autonomous Government",
+      "zh": "蒙古联合自治政府"
+    },
+    "MEX": {
+      "en": "United Mexican States",
+      "zh": "墨西哥合众国"
+    },
+    "MLD": {
+      "en": "Sultanate of the Maldives",
+      "zh": "马尔代夫苏丹国"
+    },
+    "MON": {
+      "en": "Mongolian People's Republic",
+      "zh": "蒙古人民共和国"
+    },
+    "MOR": {
+      "en": "French Protectorate in Morocco",
+      "zh": "法属摩洛哥保护国"
+    },
+    "MQ": {
+      "en": "Colony of Martinique",
+      "zh": "马提尼克殖民地"
+    },
+    "MZB": {
+      "en": "Portuguese Colony of Mozambique",
+      "zh": "葡属莫桑比克殖民地"
+    },
+    "NEP": {
+      "en": "Kingdom of Nepal",
+      "zh": "尼泊尔王国"
+    },
+    "NIC": {
+      "en": "Republic of Nicaragua",
+      "zh": "尼加拉瓜共和国"
+    },
+    "NOR": {
+      "en": "Kingdom of Norway",
+      "zh": "挪威王国"
+    },
+    "NZL": {
+      "en": "Dominion of New Zealand",
+      "zh": "新西兰自治领"
+    },
+    "OMA": {
+      "en": "Sultanate of Muscat and Oman",
+      "zh": "马斯喀特和阿曼苏丹国"
+    },
+    "PAL": {
+      "en": "Mandatory Palestine",
+      "zh": "巴勒斯坦托管地"
+    },
+    "PAN": {
+      "en": "Republic of Panama",
+      "zh": "巴拿马共和国"
+    },
+    "PAR": {
+      "en": "Republic of Paraguay",
+      "zh": "巴拉圭共和国"
+    },
+    "PER": {
+      "en": "Imperial State of Iran",
+      "zh": "伊朗帝国"
+    },
+    "PHI": {
+      "en": "Commonwealth of the Philippines",
+      "zh": "菲律宾自治领"
+    },
+    "POL": {
+      "en": "Republic of Poland",
+      "zh": "波兰共和国"
+    },
+    "POR": {
+      "en": "Portuguese Republic",
+      "zh": "葡萄牙共和国"
+    },
+    "PRC": {
+      "en": "Chinese Soviet Republic",
+      "zh": "中华苏维埃共和国"
+    },
+    "PRU": {
+      "en": "Republic of Peru",
+      "zh": "秘鲁共和国"
+    },
+    "PUE": {
+      "en": "Territory of Puerto Rico",
+      "zh": "波多黎各领地"
+    },
+    "QMA": {
+      "en": "Qinghai Ma Clique",
+      "zh": "青海马家军"
+    },
+    "RAJ": {
+      "en": "British Indian Empire",
+      "zh": "英属印度帝国"
+    },
+    "RCG": {
+      "en": "Belgian Congo",
+      "zh": "比属刚果"
+    },
+    "RE": {
+      "en": "Colony of Reunion",
+      "zh": "留尼汪殖民地"
+    },
+    "ROM": {
+      "en": "Kingdom of Romania",
+      "zh": "罗马尼亚王国"
+    },
+    "SAF": {
+      "en": "Union of South Africa",
+      "zh": "南非联邦"
+    },
+    "SAU": {
+      "en": "Kingdom of Saudi Arabia",
+      "zh": "沙特阿拉伯王国"
+    },
+    "SGN": {
+      "en": "Spanish Territories of the Gulf of Guinea",
+      "zh": "西属几内亚湾领地"
+    },
+    "SHX": {
+      "en": "Shanxi Clique",
+      "zh": "山西军阀"
+    },
+    "SIA": {
+      "en": "Kingdom of Siam",
+      "zh": "暹罗王国"
+    },
+    "SIC": {
+      "en": "Xikang Clique",
+      "zh": "西康军阀"
+    },
+    "SIK": {
+      "en": "Xinjiang Provincial Government",
+      "zh": "新疆省政府"
+    },
+    "SLO": {
+      "en": "Slovak Republic",
+      "zh": "斯洛伐克共和国"
+    },
+    "SMR": {
+      "en": "Spanish Protectorate in Morocco",
+      "zh": "西属摩洛哥保护国"
+    },
+    "SOM": {
+      "en": "Italian Somaliland",
+      "zh": "意属索马里兰"
+    },
+    "SOV": {
+      "en": "Union of Soviet Socialist Republics",
+      "zh": "苏维埃社会主义共和国联盟"
+    },
+    "SPR": {
+      "en": "Spanish Republic",
+      "zh": "西班牙共和国"
+    },
+    "SSH": {
+      "en": "Spanish Sahara",
+      "zh": "西属撒哈拉"
+    },
+    "SUD": {
+      "en": "Anglo-Egyptian Sudan",
+      "zh": "英埃苏丹"
+    },
+    "SWE": {
+      "en": "Kingdom of Sweden",
+      "zh": "瑞典王国"
+    },
+    "SWI": {
+      "en": "Swiss Confederation",
+      "zh": "瑞士联邦"
+    },
+    "SYR": {
+      "en": "French Mandate for Syria",
+      "zh": "法属叙利亚托管地"
+    },
+    "TAI": {
+      "en": "Government-General of Taiwan",
+      "zh": "台湾总督府"
+    },
+    "TAN": {
+      "en": "Tuvan People's Republic",
+      "zh": "图瓦人民共和国"
+    },
+    "TIB": {
+      "en": "Tibet",
+      "zh": "西藏"
+    },
+    "TUN": {
+      "en": "French Protectorate of Tunisia",
+      "zh": "法属突尼斯保护国"
+    },
+    "TUR": {
+      "en": "Republic of Turkey",
+      "zh": "土耳其共和国"
+    },
+    "URG": {
+      "en": "Oriental Republic of Uruguay",
+      "zh": "乌拉圭东岸共和国"
+    },
+    "USA": {
+      "en": "United States of America",
+      "zh": "美利坚合众国"
+    },
+    "VEN": {
+      "en": "United States of Venezuela",
+      "zh": "委内瑞拉合众国"
+    },
+    "VIN": {
+      "en": "French Indochinese Union",
+      "zh": "法属印度支那联邦"
+    },
+    "XSM": {
+      "en": "Northwestern Ma Clique",
+      "zh": "西北马家军"
+    },
+    "YEM": {
+      "en": "Mutawakkilite Kingdom of Yemen",
+      "zh": "也门穆塔瓦基利亚王国"
+    },
+    "YT": {
+      "en": "Colony of Mayotte",
+      "zh": "马约特殖民地"
+    },
+    "YUE": {
+      "en": "Guangdong Clique",
+      "zh": "广东军阀"
+    },
+    "YUG": {
+      "en": "Kingdom of Yugoslavia",
+      "zh": "南斯拉夫王国"
+    },
+    "YUN": {
+      "en": "Yunnan Clique",
+      "zh": "云南军阀"
+    }
+  },
+  "scenarios": {
+    "hoi4_1936": {
+      "IRE": {
+        "en": "Irish Free State",
+        "zh": "爱尔兰自由邦"
+      },
+      "PRC": {
+        "en": "Chinese Soviet Republic",
+        "zh": "中华苏维埃共和国"
+      },
+      "SPR": {
+        "en": "Spanish Republic",
+        "zh": "西班牙共和国"
+      }
+    },
+    "hoi4_1939": {
+      "PRC": {
+        "en": "Shaan-Gan-Ning Border Region",
+        "zh": "陕甘宁边区"
+      },
+      "SPR": {
+        "en": "Spanish State",
+        "zh": "西班牙国"
+      }
+    }
+  }
+}

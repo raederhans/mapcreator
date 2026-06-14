@@ -122,6 +122,30 @@ function resolvePaletteDisplayName(entry, tag) {
   };
 }
 
+function isPaletteCodeLabel(value) {
+  return /^[A-Z0-9_]{2,5}$/.test(String(value || "").trim());
+}
+
+function resolvePaletteSourceLabel(entry, tag, displayName = {}) {
+  const fileLabel = getPaletteFileLabel(entry, tag);
+  const localizedSourceLabelZh = getGeoLocaleText(fileLabel, "zh");
+  const localizedSourceLabelEn = getGeoLocaleText(fileLabel, "en") || fileLabel;
+  const sourceLabel = runtimeState.currentLanguage === "zh"
+    ? (
+      localizedSourceLabelZh
+      || (isPaletteCodeLabel(fileLabel) ? String(displayName.localizedName || "").trim() : "")
+      || localizedSourceLabelEn
+      || fileLabel
+    )
+    : (localizedSourceLabelEn || fileLabel);
+  return {
+    sourceLabel,
+    sourceLabelEn: localizedSourceLabelEn || fileLabel,
+    sourceLabelZh: localizedSourceLabelZh
+      || (isPaletteCodeLabel(fileLabel) ? String(displayName.localizedNameZh || displayName.localizedName || "").trim() : ""),
+  };
+}
+
 function getPaletteMetaById(paletteId) {
   const targetId = String(paletteId || "").trim();
   const registryEntries = Array.isArray(runtimeState.paletteRegistry?.palettes)
@@ -269,6 +293,7 @@ function buildPaletteColorSuggestionsForCountry(
       if (seenKeys.has(suggestionKey)) return;
       seenKeys.add(suggestionKey);
       const displayName = resolvePaletteDisplayName(entry, tag);
+      const sourceName = resolvePaletteSourceLabel(entry, tag, displayName);
       suggestions.push({
         key: suggestionKey,
         paletteId,
@@ -280,7 +305,9 @@ function buildPaletteColorSuggestionsForCountry(
         label: displayName.localizedName || getPaletteLabel(entry, tag),
         localizedNameEn: displayName.localizedNameEn,
         localizedNameZh: displayName.localizedNameZh,
-        sourceLabel: getPaletteFileLabel(entry, tag),
+        sourceLabel: sourceName.sourceLabel,
+        sourceLabelEn: sourceName.sourceLabelEn,
+        sourceLabelZh: sourceName.sourceLabelZh,
         matchKind: match.matchKind,
         score: match.score,
       });
@@ -360,6 +387,11 @@ function buildPaletteLibraryEntries() {
       localizedNameEn,
       localizedNameZh,
     } = resolvePaletteDisplayName(entry, tag);
+    const {
+      sourceLabel,
+      sourceLabelEn,
+      sourceLabelZh,
+    } = resolvePaletteSourceLabel(entry, tag, { localizedName, localizedNameZh });
     const displayColor = getPaletteDisplayColor(entry);
     const uiColor = getPaletteUiColor(entry);
     const mappingReason = mappedIso2 ? "" : getUnmappedReason(unmappedEntry);
@@ -380,7 +412,9 @@ function buildPaletteLibraryEntries() {
       localizedNameEn,
       localizedNameZh,
       countryFileLabel,
-      sourceLabel: countryFileLabel,
+      sourceLabel,
+      sourceLabelEn,
+      sourceLabelZh,
       mappingStatus: mappedIso2 ? "mapped" : "unmapped",
       mapped: !!mappedIso2,
       mappingReason,

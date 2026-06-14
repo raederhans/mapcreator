@@ -1494,7 +1494,7 @@ function initSidebar({ render } = {}) {
     projectSection.className = "inspector-tool-card project-management-card";
 
     const actions = document.createElement("div");
-    actions.className = "mt-3 flex flex-col gap-2";
+    actions.className = "project-management-actions";
 
     const buildProjectSelect = (id, labelText, options) => {
       const field = document.createElement("label");

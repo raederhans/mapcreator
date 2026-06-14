@@ -58,6 +58,18 @@ SHOWCASE_CANVAS_HEIGHT = 620
 HERO_CANVAS_WIDTH = 980
 HERO_CANVAS_HEIGHT = 680
 HERO_CAPITAL_LIMIT = 8
+TNO_1962_HERO_CAPITAL_TAGS = ("ENG", "FRA", "GER", "ITA", "IBR", "RKU", "SOV", "WRS", "BRG")
+TNO_1962_HERO_CAPITAL_LABELS = {
+    "BRG": "Nanzig",
+    "SOV": "Moskau",
+    "WRS": "Warshau",
+}
+TNO_1962_HERO_CAPITAL_POINTS = {
+    # Nanzig is the TNO-localized Nancy feature (FR_ARR_54003), not Brussels.
+    "BRG": (6.18496, 48.68439),
+    "SOV": (37.61781, 55.75204),
+    "WRS": (21.01178, 52.22977),
+}
 HERO_TERRITORY_PATH_LIMIT_PER_TAG = 48
 HERO_BLANK_LAND_PATH_LIMIT = 8600
 HERO_BLANK_COASTLINE_PATH_LIMIT = 1000
@@ -124,6 +136,9 @@ class HeroScenario:
     manifest_path: Path
     palette_class: str
     capital_defaults_path: Path | None = None
+    hero_capital_tags: tuple[str, ...] = ()
+    hero_capital_labels: dict[str, str] | None = None
+    hero_capital_points: dict[str, tuple[float, float]] | None = None
     blank: bool = False
 
 
@@ -157,6 +172,9 @@ HERO_SCENARIOS = (
         manifest_path=TNO_1962_MANIFEST,
         palette_class="tno-1962",
         capital_defaults_path=REPO_ROOT / "data" / "scenarios" / "tno_1962" / "capital_defaults.partial.json",
+        hero_capital_tags=TNO_1962_HERO_CAPITAL_TAGS,
+        hero_capital_labels=TNO_1962_HERO_CAPITAL_LABELS,
+        hero_capital_points=TNO_1962_HERO_CAPITAL_POINTS,
     ),
 )
 
@@ -568,16 +586,23 @@ def load_scenario_capitals(
     *,
     limit: int = 22,
     clip_bbox: tuple[float, float, float, float] | None = None,
+    preferred_tags: tuple[str, ...] = (),
+    display_names: dict[str, str] | None = None,
+    display_points: dict[str, tuple[float, float]] | None = None,
 ) -> tuple[list[dict], list[Path]]:
     showcase_tags = europe_country_tags(countries)
     entries, source_paths = capital_hint_entries(paths)
     min_lon, min_lat, max_lon, max_lat = clip_bbox or canvas.bbox
+    preferred_index = {tag: index for index, tag in enumerate(preferred_tags)}
     capitals: list[dict] = []
     for entry in entries:
         tag = entry.get("tag")
+        if preferred_tags and tag not in preferred_index:
+            continue
         country = countries.get(tag)
-        lon = entry.get("lon")
-        lat = entry.get("lat")
+        point_override = (display_points or {}).get(tag)
+        lon = point_override[0] if point_override else entry.get("lon")
+        lat = point_override[1] if point_override else entry.get("lat")
         if tag not in showcase_tags or not country or lon is None or lat is None:
             continue
         if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
@@ -586,13 +611,15 @@ def load_scenario_capitals(
         capitals.append(
             {
                 "tag": tag,
-                "name": entry.get("city_name") or entry.get("name_ascii") or tag,
+                "name": (display_names or {}).get(tag) or entry.get("city_name") or entry.get("name_ascii") or tag,
                 "country": country.get("display_name") or tag,
                 "x": x,
                 "y": y,
                 "focus": tag in SHOWCASE_FOCUS_TAGS,
             }
         )
+    if preferred_tags:
+        return sorted(capitals, key=lambda item: preferred_index[item["tag"]])[:limit], source_paths
     return sorted(capitals, key=lambda item: (not item["focus"], item["tag"]))[:limit], source_paths
 
 
@@ -1375,9 +1402,15 @@ def build_hero_metadata(
         "viewport": "Europe hero crop shared by all scenario chips",
         "blank_canvas": scenario.blank,
         "ownership_fill": not scenario.blank,
-        "capital_limit": 0 if scenario.blank else HERO_CAPITAL_LIMIT,
+        "capital_limit": 0 if scenario.blank else (len(scenario.hero_capital_tags) or HERO_CAPITAL_LIMIT),
         "territory_path_limit_per_tag": 0 if scenario.blank else HERO_TERRITORY_PATH_LIMIT_PER_TAG,
     }
+    if scenario.hero_capital_tags:
+        selection_policy["hero_capital_tags"] = list(scenario.hero_capital_tags)
+        selection_policy["hero_capital_label_overrides"] = dict(scenario.hero_capital_labels or {})
+        selection_policy["hero_capital_point_overrides"] = {
+            tag: [lon, lat] for tag, (lon, lat) in (scenario.hero_capital_points or {}).items()
+        }
     if scenario.scenario_id == "tno_1962":
         selection_policy.update(
             {
@@ -1445,6 +1478,16 @@ def build_hero_scenario_maps(output_dir: Path = LANDING_ASSETS) -> None:
                 capital_defaults_path=scenario.capital_defaults_path,
             )
             capitals, capital_source_paths = load_scenario_capitals(canvas, countries, paths, limit=HERO_CAPITAL_LIMIT)
+            if scenario.hero_capital_tags:
+                capitals, capital_source_paths = load_scenario_capitals(
+                    canvas,
+                    countries,
+                    paths,
+                    limit=len(scenario.hero_capital_tags),
+                    preferred_tags=scenario.hero_capital_tags,
+                    display_names=scenario.hero_capital_labels or {},
+                    display_points=scenario.hero_capital_points or {},
+                )
             underlay_source_paths: list[Path] = []
             underlay_counts: dict[str, int | float] = {}
             if scenario.scenario_id == "tno_1962":

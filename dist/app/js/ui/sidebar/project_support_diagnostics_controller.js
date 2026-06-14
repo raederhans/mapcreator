@@ -1,6 +1,7 @@
 import { setScenarioDiagnosticsState } from "../../core/state.js";
 import { markDirty } from "../../core/dirty_state.js";
 import {
+  SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES,
   createSpecialZonePatternPreviewStyle,
 } from "../../core/special_zone_layers.js";
 import {
@@ -89,6 +90,7 @@ export function createProjectSupportDiagnosticsController({
   let latestCloudSaveUserKey = "";
   let latestCommunitySaves = [];
   let backendCloudSessionMode = "hidden";
+  let lastExpandedSpecialZoneDiagnosticsKey = "";
 
   const setBackendCloudStatus = (message) => {
     if (backendCloudStatus) {
@@ -393,6 +395,64 @@ export function createProjectSupportDiagnosticsController({
     return list;
   };
 
+  const formatSpecialZoneRuntimeDiagnostic = (entry = {}) => {
+    const code = String(entry?.code || "diagnostic");
+    if (code === "topology_fingerprint_mismatch") {
+      return `${code}: expected ${entry.expected || "current"} / got ${entry.actual || "empty"}`;
+    }
+    if (code === "invalid_feature_id") {
+      return `${code}: ${entry.featureId || ""}`.trim();
+    }
+    if (code === "duplicate_layer_id_dropped") {
+      return `${code}: ${entry.layerId || ""}`.trim();
+    }
+    if (code === SPECIAL_ZONE_LAYER_DIAGNOSTIC_CODES.LOAD_FAILED) {
+      return `${code}: ${entry.scenarioId || state.activeScenarioId || ""}`.trim();
+    }
+    if (code === "legacy_special_zone_fields_dropped") {
+      return t("legacy_special_zone_fields_dropped", "ui");
+    }
+    return code;
+  };
+
+  const renderSpecialZoneRuntimeDiagnostics = () => {
+    const diagnostics = Array.isArray(state.specialZoneLayers?.diagnostics)
+      ? state.specialZoneLayers.diagnostics
+      : [];
+    if (!diagnostics.length) return null;
+    const diagnosticsKey = diagnostics
+      .map((entry) => `${entry?.code || "diagnostic"}:${entry?.expected || ""}:${entry?.actual || ""}:${entry?.featureId || ""}:${entry?.layerId || ""}:${entry?.scenarioId || ""}`)
+      .join("|");
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "mt-4 flex flex-col gap-2 special-zone-runtime-diagnostics";
+
+    const header = document.createElement("div");
+    header.className = "section-header-block";
+    header.textContent = t("Special zone diagnostics", "ui");
+    wrapper.appendChild(header);
+
+    wrapper.appendChild(createAuditList(diagnostics.slice(0, 6), (entry) => {
+      const row = document.createElement("div");
+      row.className = "scenario-audit-stack-row special-zone-runtime-diagnostic-row";
+      row.appendChild(Object.assign(document.createElement("span"), {
+        className: "inspector-mini-label scenario-audit-label",
+        textContent: String(entry?.code || "diagnostic"),
+      }));
+      row.appendChild(Object.assign(document.createElement("span"), {
+        className: "body-text scenario-audit-note",
+        textContent: formatSpecialZoneRuntimeDiagnostic(entry),
+      }));
+      return row;
+    }));
+
+    if (diagnosticsKey && diagnosticsKey !== lastExpandedSpecialZoneDiagnosticsKey) {
+      lastExpandedSpecialZoneDiagnosticsKey = diagnosticsKey;
+      scenarioAuditSection?.closest?.("details")?.setAttribute?.("open", "");
+    }
+    return wrapper;
+  };
+
   const getVisibleSpecialZoneLegendLayers = () => (
     legendManager.getSpecialZoneLayers(state)
   );
@@ -431,7 +491,7 @@ export function createProjectSupportDiagnosticsController({
     projectPackageContents.setAttribute?.("aria-disabled", String(!isZip));
   };
 
-  const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers()) => {
+  const appendSpecialZoneLegendRows = (layers = getVisibleSpecialZoneLegendLayers(), target = legendList) => {
     if (!layers.length) return false;
     const section = document.createElement("div");
     section.className = "legend-special-zone-section";
@@ -454,7 +514,7 @@ export function createProjectSupportDiagnosticsController({
       row.append(swatch, label);
       section.appendChild(row);
     });
-    legendList.appendChild(section);
+    target.appendChild(section);
     return true;
   };
 
@@ -872,6 +932,10 @@ export function createProjectSupportDiagnosticsController({
     scenarioAuditSection.appendChild(hint);
 
     const appendScenarioDiagnosticsStatus = () => {
+      const specialZoneDiagnostics = renderSpecialZoneRuntimeDiagnostics();
+      if (specialZoneDiagnostics) {
+        scenarioAuditSection.appendChild(specialZoneDiagnostics);
+      }
       if (diagnosticsUi.loading) {
         scenarioAuditSection.appendChild(createEmptyNote(t("Loading diagnostics…", "ui")));
       } else if (diagnosticsUi.errorMessage) {
@@ -994,20 +1058,107 @@ export function createProjectSupportDiagnosticsController({
   };
 
 
+  const LEGEND_EDITOR_PAGE_SIZE = 10;
+  const LEGEND_EDITOR_MAX_ITEMS = 30;
+  let legendEditorPageIndex = 0;
   let lastLegendKey = null;
+
+  const clearLegendList = () => {
+    if (typeof legendList.replaceChildren === "function") {
+      legendList.replaceChildren();
+      return;
+    }
+    legendList.innerHTML = "";
+  };
+
+  const createLegendLabelRow = (color, index, colors) => {
+    const row = document.createElement("div");
+    row.className = "legend-row";
+
+    const swatch = document.createElement("span");
+    swatch.className = "legend-swatch";
+    swatch.style.backgroundColor = color;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "legend-input";
+    input.placeholder = `Category ${index + 1}`;
+    input.value = legendManager.getLabel(color, state);
+    input.addEventListener("input", (event) => {
+      legendManager.setLabel(color, event.target.value, state);
+      markDirty("legend-label");
+      mapRenderer.renderLegend(colors, legendManager.getLabels(state));
+    });
+
+    row.appendChild(swatch);
+    row.appendChild(input);
+    return row;
+  };
+
+  const createLegendPagerControls = (pageIndex, pageCount) => {
+    const pager = document.createElement("div");
+    pager.className = "legend-editor-pager";
+
+    const previousButton = document.createElement("button");
+    previousButton.type = "button";
+    previousButton.className = "legend-editor-page-btn";
+    previousButton.textContent = "‹";
+    previousButton.ariaLabel = t("Previous page", "ui");
+    previousButton.disabled = pageIndex <= 0;
+    previousButton.addEventListener("click", () => {
+      legendEditorPageIndex = Math.max(0, legendEditorPageIndex - 1);
+      lastLegendKey = null;
+      refreshLegendEditor();
+    });
+
+    const pageStatus = document.createElement("span");
+    pageStatus.className = "legend-editor-page-status";
+    pageStatus.textContent = `${pageIndex + 1} / ${pageCount}`;
+
+    const nextButton = document.createElement("button");
+    nextButton.type = "button";
+    nextButton.className = "legend-editor-page-btn";
+    nextButton.textContent = "›";
+    nextButton.ariaLabel = t("Next page", "ui");
+    nextButton.disabled = pageIndex >= pageCount - 1;
+    nextButton.addEventListener("click", () => {
+      legendEditorPageIndex = Math.min(pageCount - 1, legendEditorPageIndex + 1);
+      lastLegendKey = null;
+      refreshLegendEditor();
+    });
+
+    pager.append(previousButton, pageStatus, nextButton);
+    return pager;
+  };
+
   const refreshLegendEditor = () => {
     if (!legendList) return;
     incrementSidebarCounter("legendRenders");
     const colors = legendManager.getUniqueColors(state);
     const specialZoneLegendLayers = getVisibleSpecialZoneLegendLayers();
     const specialZoneLegendKey = legendManager.getSpecialZoneSignature(state);
-    const visibleLegendRows = Math.min(Math.max(colors.length + specialZoneLegendLayers.length, 3), 12);
-    legendList.style.setProperty("--legend-editor-dynamic-max-height", `${Math.min(560, 180 + (visibleLegendRows * 46))}px`);
-    const key = `${colors.join("|")}::${specialZoneLegendKey}::${JSON.stringify(legendManager.getConfig(state))}`;
+    const colorItems = colors.map((color, index) => ({ type: "color", color, index }));
+    const specialZoneItems = specialZoneLegendLayers.map((layer) => ({ type: "special-zone", layer }));
+    const cappedItems = [...colorItems, ...specialZoneItems].slice(0, LEGEND_EDITOR_MAX_ITEMS);
+    const pageCount = Math.max(1, Math.ceil(cappedItems.length / LEGEND_EDITOR_PAGE_SIZE));
+    legendEditorPageIndex = Math.min(Math.max(legendEditorPageIndex, 0), pageCount - 1);
+    const pageStart = legendEditorPageIndex * LEGEND_EDITOR_PAGE_SIZE;
+    const pageItems = cappedItems.slice(pageStart, pageStart + LEGEND_EDITOR_PAGE_SIZE);
+    const visibleLegendRows = Math.min(Math.max(pageItems.length, 1), LEGEND_EDITOR_PAGE_SIZE);
+    const pagerReserve = pageCount > 1 ? 38 : 0;
+    legendList.dataset.pageCount = String(pageCount);
+    legendList.dataset.paged = pageCount > 1 ? "true" : "false";
+    legendList.style.setProperty("--legend-editor-dynamic-max-height", `${Math.min(680, 168 + (visibleLegendRows * 52) + pagerReserve)}px`);
+    const key = [
+      colors.join("|"),
+      specialZoneLegendKey,
+      JSON.stringify(legendManager.getConfig(state)),
+      legendEditorPageIndex,
+    ].join("::");
     if (key === lastLegendKey && legendList.dataset.ready === "true") return;
     lastLegendKey = key;
     legendList.dataset.ready = "true";
-    legendList.innerHTML = "";
+    clearLegendList();
     legendList.appendChild(createLegendGeneratorControls());
 
     if (!colors.length && !specialZoneLegendKey) {
@@ -1018,30 +1169,16 @@ export function createProjectSupportDiagnosticsController({
       return;
     }
 
-    colors.forEach((color, index) => {
-      const row = document.createElement("div");
-      row.className = "legend-row";
-
-      const swatch = document.createElement("span");
-      swatch.className = "legend-swatch";
-      swatch.style.backgroundColor = color;
-
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "legend-input";
-      input.placeholder = `Category ${index + 1}`;
-      input.value = legendManager.getLabel(color, state);
-      input.addEventListener("input", (event) => {
-        legendManager.setLabel(color, event.target.value, state);
-        markDirty("legend-label");
-        mapRenderer.renderLegend(colors, legendManager.getLabels(state));
-      });
-
-      row.appendChild(swatch);
-      row.appendChild(input);
-      legendList.appendChild(row);
+    pageItems.filter((item) => item.type === "color").forEach((item) => {
+      legendList.appendChild(createLegendLabelRow(item.color, item.index, colors));
     });
-    appendSpecialZoneLegendRows(specialZoneLegendLayers);
+    const visibleSpecialZoneLayers = pageItems
+      .filter((item) => item.type === "special-zone")
+      .map((item) => item.layer);
+    appendSpecialZoneLegendRows(visibleSpecialZoneLayers);
+    if (pageCount > 1) {
+      legendList.appendChild(createLegendPagerControls(legendEditorPageIndex, pageCount));
+    }
   };
 
 

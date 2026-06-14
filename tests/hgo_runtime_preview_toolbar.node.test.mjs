@@ -234,7 +234,7 @@ test("toolbar preview controller forwards render options into render and inspect
   assert.equal(renderOptionsCallCount >= 3, true);
 });
 
-test("developer mode sync disables active preview before hiding the control", async () => {
+test("developer mode sync hides the legacy control without disabling active preview", async () => {
   const runtimeState = { ui: { developerMode: true } };
   const button = createButton();
   let restoreCount = 0;
@@ -259,9 +259,9 @@ test("developer mode sync disables active preview before hiding the control", as
   runtimeState.ui.developerMode = false;
   controller.sync();
 
-  assert.equal(runtimeState.hgoRuntimePreview.enabled, false);
-  assert.equal(runtimeState.hgoRuntimePreview.renderSummary, null);
-  assert.equal(restoreCount, 2);
+  assert.equal(runtimeState.hgoRuntimePreview.enabled, true);
+  assert.equal(runtimeState.hgoRuntimePreview.status, "ready");
+  assert.equal(restoreCount, 1);
   assert.equal(button.classList.contains("hidden"), true);
-  assert.equal(button.attributes.get("aria-pressed"), "false");
+  assert.equal(button.attributes.get("aria-pressed"), "true");
 });

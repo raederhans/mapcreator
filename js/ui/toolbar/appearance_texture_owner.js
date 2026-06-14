@@ -52,9 +52,9 @@ function updateValueLabel(element, text) {
   if (element) element.textContent = text;
 }
 
-function formatCycleSecondsPerDay(rawValue) {
+function formatCycleSecondsPerDay(rawValue, t = (value) => value) {
   const seconds = Math.round(Number(rawValue) || 0);
-  return `${seconds}s / day`;
+  return t("{seconds}s / day", "ui").replace("{seconds}", String(seconds));
 }
 
 function collectTextureNodes(documentRef) {
@@ -144,6 +144,7 @@ function collectTextureNodes(documentRef) {
 
 export function createAppearanceTextureOwner({
   runtimeState,
+  t = (value) => value,
   clamp = clampNumber,
   normalizeOceanFillColor = (value) => value,
   renderDirty = () => {},
@@ -152,6 +153,7 @@ export function createAppearanceTextureOwner({
   pushHistoryEntryFn = pushHistoryEntry,
 } = {}) {
   const nodes = collectTextureNodes(documentRef);
+  const defaultDayNight = normalizeDayNightStyleConfig({});
   let textureHistoryBefore = null;
   let textureHistoryKind = "";
 
@@ -285,7 +287,7 @@ export function createAppearanceTextureOwner({
     nodes.dayNightManualControls?.classList.toggle("hidden", dayNight.mode !== "manual");
     nodes.dayNightCycleControls?.classList.toggle("hidden", dayNight.mode !== "cycle");
     if (nodes.dayNightCycleSpeed) nodes.dayNightCycleSpeed.value = String(dayNight.cycleSecondsPerDay);
-    updateValueLabel(nodes.dayNightCycleSpeedValue, formatCycleSecondsPerDay(dayNight.cycleSecondsPerDay));
+    updateValueLabel(nodes.dayNightCycleSpeedValue, formatCycleSecondsPerDay(dayNight.cycleSecondsPerDay, t));
 
     if (nodes.dayNightCityLightsEnabled) nodes.dayNightCityLightsEnabled.checked = !!dayNight.cityLightsEnabled;
     if (nodes.dayNightCityLightsStyle) {
@@ -575,7 +577,11 @@ export function createAppearanceTextureOwner({
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
       dayNight.mode = "cycle";
-      dayNight.cycleSecondsPerDay = clamp(Number.isFinite(value) ? value : 180, 10, 600);
+      dayNight.cycleSecondsPerDay = clamp(
+        Number.isFinite(value) ? value : defaultDayNight.cycleSecondsPerDay,
+        10,
+        600
+      );
     }, "day-night-cycle-speed");
     if (nodes.dayNightSyncComputerUtcBtn && nodes.dayNightSyncComputerUtcBtn.dataset.bound !== "true") {
       nodes.dayNightSyncComputerUtcBtn.addEventListener("click", () => {
@@ -598,22 +604,38 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightCityLightsIntensity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsIntensity = clamp(Number.isFinite(value) ? value / 100 : 0.68, 0, 1.8);
+      dayNight.cityLightsIntensity = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsIntensity,
+        0,
+        1.8
+      );
     }, "day-night-city-lights-intensity");
     bindDayNightInput(nodes.dayNightCityLightsTextureOpacity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsTextureOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.2, 0, 1);
+      dayNight.cityLightsTextureOpacity = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsTextureOpacity,
+        0,
+        1
+      );
     }, "day-night-city-lights-texture-opacity");
     bindDayNightInput(nodes.dayNightCityLightsCorridorStrength, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCorridorStrength = clamp(Number.isFinite(value) ? value / 100 : 0.08, 0, 1);
+      dayNight.cityLightsCorridorStrength = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCorridorStrength,
+        0,
+        1
+      );
     }, "day-night-city-lights-corridor-strength");
     bindDayNightInput(nodes.dayNightCityLightsCoreSharpness, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsCoreSharpness = clamp(Number.isFinite(value) ? value / 100 : 0.64, 0, 1);
+      dayNight.cityLightsCoreSharpness = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsCoreSharpness,
+        0,
+        1
+      );
     }, "day-night-city-lights-core-sharpness");
     bindDayNightChange(nodes.dayNightCityLightsPopulationBoostEnabled, (event) => {
       const dayNight = syncDayNightConfig();
@@ -622,7 +644,11 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightCityLightsPopulationBoostStrength, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.cityLightsPopulationBoostStrength = clamp(Number.isFinite(value) ? value / 100 : 0.58, 0, 1.5);
+      dayNight.cityLightsPopulationBoostStrength = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.cityLightsPopulationBoostStrength,
+        0,
+        1.5
+      );
     }, "day-night-city-lights-population-boost-strength");
     bindDayNightInput(nodes.dayNightHistoricalCityLightsDensity, (event) => {
       const value = Number(event.target.value);
@@ -637,7 +663,11 @@ export function createAppearanceTextureOwner({
     bindDayNightInput(nodes.dayNightShadowOpacity, (event) => {
       const value = Number(event.target.value);
       const dayNight = syncDayNightConfig();
-      dayNight.shadowOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.5, 0, 0.85);
+      dayNight.shadowOpacity = clamp(
+        Number.isFinite(value) ? value / 100 : defaultDayNight.shadowOpacity,
+        0,
+        0.85
+      );
     }, "day-night-shadow-opacity");
     bindDayNightInput(nodes.dayNightTwilightWidth, (event) => {
       const value = Number(event.target.value);

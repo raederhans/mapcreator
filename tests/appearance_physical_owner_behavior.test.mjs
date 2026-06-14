@@ -285,7 +285,7 @@ test("physical owner edits intensity field through history-backed controls", () 
   assert.equal(harness.runtimeState.intensityFieldTool.brushStrength, 1.5);
   assert.equal(harness.runtimeState.intensityFieldTool.brushRadiusDeg, 12.5);
   assert.equal(harness.nodes.physicalIntensityFieldWeightValue.textContent, "150%");
-  assert.equal(harness.nodes.physicalIntensityFieldRadiusValue.textContent, "≈ 1388 km");
+  assert.equal(harness.nodes.physicalIntensityFieldRadiusValue.textContent, "ui:≈ 1388 km");
   assert.equal(harness.historyEntries.length, 1);
   assert.deepEqual(harness.dirtyReasons, ["physical-intensity-field-enabled"]);
 

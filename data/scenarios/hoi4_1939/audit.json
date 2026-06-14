@@ -478,9 +478,9 @@
       "vp_total": 1501
     },
     "strategic_values_inputs": {
-      "runtime_topology": "C:\\Users\\raede\\Desktop\\dev\\mapcreator-hoi4-strategic-values\\data\\europe_topology.runtime_political_v1.json",
+      "runtime_topology": "C:\\Users\\raede\\Desktop\\dev\\mapcreator\\data\\europe_topology.runtime_political_v1.json",
       "victory_points_localisation": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hearts of Iron IV\\localisation\\english\\victory_points_l_english.yml",
-      "world_cities": "C:\\Users\\raede\\Desktop\\dev\\mapcreator-hoi4-strategic-values\\data\\world_cities.geojson"
+      "world_cities": "C:\\Users\\raede\\Desktop\\dev\\mapcreator\\data\\world_cities.geojson"
     },
     "synthetic_fallback_codes": [
       "RE",
@@ -230475,7 +230475,7 @@
       "to_tag": "GER"
     }
   ],
-  "generated_at": "2026-06-13T20:18:28.229146+00:00",
+  "generated_at": "2026-06-13T22:56:20.686233+00:00",
   "owner_bucket_mismatch_count": 0,
   "owner_stats": {
     "AEF": {
@@ -235302,11 +235302,11 @@
   "reverse_coverage_gap_count": 0,
   "scenario_id": "hoi4_1939",
   "scenario_rule_blockers": [],
-  "snapshot_fingerprint": "94e377db0560b1e17449acd69ab90722a07f8c05796dd3f5220790fb34872bcf",
+  "snapshot_fingerprint": "6935cd877e689bbebd22117ca2284fddf0e9c860b18020fea9eac216b826e531",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "03df99f8c5ee366179352a724fdb5354bc372eef4e61611d0be30d4d575bbf1a",
-    "detail_chunk_manifest_sha256": "cad6417659503a78668cf1c1874ddcbf4842a4279f8adfdf1a98142cb34f8d48",
+    "build_snapshot_sha256": "5cb2cfcc41278fb1be8a34a99a6d3e60cb67edbb5fba3151a32b6e2a16f3a565",
+    "detail_chunk_manifest_sha256": "ac5eb03eedf5fbb385591803147e3c4eff07358eac1964ece985282489c842e5",
     "runtime_bootstrap_topology_sha256": "74d6f39ab2280fa524109d9bd35e15149df48681688deb22ecfac60911527115",
     "runtime_topology_sha256": "50cad6f666725fa6518b8aa5f8519a1b520946f3b4c2e46614029234ad8be0c3"
   },

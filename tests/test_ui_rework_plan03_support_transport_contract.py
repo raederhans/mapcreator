@@ -46,6 +46,27 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertNotIn("You can open Guide from the top scenario bar or from Project › Utilities.", content)
         self.assertIn("scenario-guide-tool-accordion", content)
         self.assertIn('class="scenario-guide-tool-panel" open', content)
+        for token in [
+            'id="scenarioGuideTabHgo"',
+            'data-guide-section="hgo"',
+            'id="scenarioGuideSectionHgo"',
+            'data-guide-panel="hgo"',
+            'id="scenarioGuideTabAppearance"',
+            'data-guide-section="appearance"',
+            'id="scenarioGuideSectionAppearance"',
+            'data-guide-panel="appearance"',
+            'id="scenarioGuideTabEditing"',
+            'data-guide-section="editing"',
+            'id="scenarioGuideSectionEditing"',
+            'data-guide-panel="editing"',
+            "HGO preview helps you inspect the HGO source layer beside the active scenario map.",
+            "The Inspector can show HGO names, flag options, and ideology labels for the selected country.",
+            "Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets.",
+            "Transport controls the overview layer for airports, ports, rail, and roads.",
+            "Open Transport Workbench when you need pack preview, layer order, diagnostics, data rows, or apply-to-map controls.",
+            "Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters",
+        ]:
+            self.assertIn(token, content)
         self.assertIn("Use Project tools as a publish checklist: save the project, add strategic context, align references, then export.", content)
         self.assertIn("Contains Download Project, Load Project, selected file status, and import safety checks.", content)
         self.assertIn("Contains derived frontlines, operational lines, operation graphics, and unit counters.", content)
@@ -87,6 +108,43 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         ]:
             self.assertNotIn(removed, css_content)
 
+    def test_scenario_guide_new_sections_are_registered_in_source_dist_and_locales(self):
+        source_index = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        dist_index = (REPO_ROOT / "dist" / "app" / "index.html").read_text(encoding="utf-8")
+        source_controller = (REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js").read_text(encoding="utf-8")
+        dist_controller = (REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar" / "scenario_guide_popover.js").read_text(encoding="utf-8")
+        source_locales = (REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8")
+        dist_locales = (REPO_ROOT / "dist" / "app" / "data" / "locales.json").read_text(encoding="utf-8")
+
+        for section in ['"hgo"', '"appearance"', '"editing"']:
+            self.assertIn(section, source_controller)
+            self.assertIn(section, dist_controller)
+
+        for token in [
+            'id="scenarioGuideTabHgo"',
+            'id="scenarioGuideSectionHgo"',
+            'id="scenarioGuideTabAppearance"',
+            'id="scenarioGuideSectionAppearance"',
+            'id="scenarioGuideTabEditing"',
+            'id="scenarioGuideSectionEditing"',
+            "HGO and identity",
+            "Appearance and transport",
+            "Editing tools",
+        ]:
+            self.assertIn(token, source_index)
+            self.assertIn(token, dist_index)
+
+        for locale_token in [
+            '"HGO and identity"',
+            '"HGO preview helps you inspect the HGO source layer beside the active scenario map. It is best used before ownership, label, or color decisions."',
+            '"Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets. These controls change how the same scenario reads on screen and in export."',
+            '"Transport controls the overview layer for airports, ports, rail, and roads. The visual mode changes whether you read distribution, network shape, or coverage."',
+            '"Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters help you move from single-country edits to a readable campaign map."',
+            '"zh":',
+        ]:
+            self.assertIn(locale_token, source_locales)
+            self.assertIn(locale_token, dist_locales)
+
 
     def test_left_sidebar_typography_and_redundant_copy_contract(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
@@ -122,6 +180,10 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             ".appearance-ocean-grid {",
             ".appearance-day-night-stack {",
             "#appearancePanelLayers .appearance-mini-section .ml-5 {",
+            "#appearancePanelLayers .appearance-mini-section .flex.items-center.justify-between.gap-3 {",
+            "#appearancePanelTransport .transport-family-body .flex.items-center.justify-between.gap-3 {",
+            "grid-template-columns: minmax(0, 1fr) minmax(96px, 1.35fr);",
+            "#appearancePanelLayers .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary) {",
             ".city-points-toggle-card,",
             ".rivers-toggle-card,",
             ".transport-family-body > section,",

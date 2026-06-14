@@ -588,7 +588,7 @@
                             <div>
                               <div class="range-row">
                                 <label id="lblPhysicalIntensityFieldRadius" class="range-label" for="physicalIntensityFieldRadius">Radius</label>
-                                <span id="physicalIntensityFieldRadiusValue" class="range-value">≈ 333 km</span>
+                                <span id="physicalIntensityFieldRadiusValue" class="range-value"></span>
                               </div>
                               <input id="physicalIntensityFieldRadius" type="range" min="25" max="3000" step="25" value="300" class="range-input" />
                             </div>
@@ -1111,7 +1111,7 @@
                   <div id="dayNightCycleControls" class="appearance-day-night-card hidden">
                     <div class="range-row">
                       <label id="lblDayNightCycleSpeed" class="range-label" for="dayNightCycleSpeed">Cycle Speed</label>
-                      <span id="dayNightCycleSpeedValue" class="range-value">180s / day</span>
+                      <span id="dayNightCycleSpeedValue" class="range-value"></span>
                     </div>
                     <input
                       id="dayNightCycleSpeed"
@@ -1119,7 +1119,7 @@
                       min="10"
                       max="600"
                       step="5"
-                      value="180"
+                      value="120"
                       class="range-input"
                     />
                   </div>
@@ -1144,9 +1144,9 @@
                       <div>
                         <div class="range-row">
                           <label id="lblDayNightCityLightsIntensity" class="range-label" for="dayNightCityLightsIntensity">Intensity</label>
-                          <span id="dayNightCityLightsIntensityValue" class="range-value">68%</span>
+                          <span id="dayNightCityLightsIntensityValue" class="range-value">115%</span>
                         </div>
-                        <input id="dayNightCityLightsIntensity" type="range" min="0" max="180" value="68" class="range-input" />
+                        <input id="dayNightCityLightsIntensity" type="range" min="0" max="180" value="115" class="range-input" />
                       </div>
                     </div>
                   </div>
@@ -1163,14 +1163,14 @@
                           >
                             Texture Opacity (Modern only)
                           </label>
-                          <span id="dayNightCityLightsTextureOpacityValue" class="range-value">20%</span>
+                          <span id="dayNightCityLightsTextureOpacityValue" class="range-value">74%</span>
                         </div>
                         <input
                           id="dayNightCityLightsTextureOpacity"
                           type="range"
                           min="0"
                           max="100"
-                          value="20"
+                          value="74"
                           class="range-input"
                         />
                       </div>
@@ -1183,14 +1183,14 @@
                           >
                             Corridor Strength (Modern only)
                           </label>
-                          <span id="dayNightCityLightsCorridorStrengthValue" class="range-value">8%</span>
+                          <span id="dayNightCityLightsCorridorStrengthValue" class="range-value">42%</span>
                         </div>
                         <input
                           id="dayNightCityLightsCorridorStrength"
                           type="range"
                           min="0"
                           max="100"
-                          value="8"
+                          value="42"
                           class="range-input"
                         />
                       </div>
@@ -1203,14 +1203,14 @@
                           >
                             Core Sharpness (Modern only)
                           </label>
-                          <span id="dayNightCityLightsCoreSharpnessValue" class="range-value">64%</span>
+                          <span id="dayNightCityLightsCoreSharpnessValue" class="range-value">62%</span>
                         </div>
                         <input
                           id="dayNightCityLightsCoreSharpness"
                           type="range"
                           min="0"
                           max="100"
-                          value="64"
+                          value="62"
                           class="range-input"
                         />
                       </div>
@@ -1229,14 +1229,14 @@
                           >
                             <span data-i18n="Population Boost Strength (Modern only)">Population Boost Strength (Modern only)</span>
                           </label>
-                          <span id="dayNightCityLightsPopulationBoostStrengthValue" class="range-value">58%</span>
+                          <span id="dayNightCityLightsPopulationBoostStrengthValue" class="range-value">70%</span>
                         </div>
                         <input
                           id="dayNightCityLightsPopulationBoostStrength"
                           type="range"
                           min="0"
                           max="150"
-                          value="58"
+                          value="70"
                           class="range-input"
                         />
                       </div>
@@ -1284,9 +1284,9 @@
                       <div>
                         <div class="range-row">
                           <label id="lblDayNightShadowOpacity" class="range-label" for="dayNightShadowOpacity">Shadow Opacity</label>
-                          <span id="dayNightShadowOpacityValue" class="range-value">50%</span>
+                          <span id="dayNightShadowOpacityValue" class="range-value">38%</span>
                         </div>
-                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="50" class="range-input" />
+                        <input id="dayNightShadowOpacity" type="range" min="0" max="85" value="38" class="range-input" />
                       </div>
                       <div>
                         <div class="range-row">
@@ -1972,8 +1972,8 @@
                         <label id="lblAppearancePresetSelect" class="range-label" for="appearancePresetSelect" data-i18n="Preset">Preset</label>
                         <select id="appearancePresetSelect" class="select-input mt-2"></select>
                       </div>
-                      <p id="appearancePresetSummary" class="panel-hint">0 presets</p>
-                      <p id="appearancePresetList" class="parent-border-empty"></p>
+                      <p id="appearancePresetSummary" class="panel-hint" data-i18n="0 presets">0 presets</p>
+                      <p id="appearancePresetList" class="appearance-preset-list" data-preset-count="0" data-i18n="No appearance presets saved">No appearance presets saved</p>
                       <div class="sidebar-equal-actions">
                         <button id="appearancePresetApplyBtn" type="button" class="btn-secondary" disabled data-i18n="Apply">Apply</button>
                         <button id="appearancePresetDeleteBtn" type="button" class="btn-secondary" disabled data-i18n="Delete">Delete</button>
@@ -3112,6 +3112,9 @@
       <div id="scenarioGuideNav" class="scenario-guide-nav mt-3" role="tablist" aria-label="Guide sections" data-i18n-aria-label="Guide sections">
         <button id="scenarioGuideTabQuick" type="button" class="scenario-guide-nav-btn is-active" data-guide-section="quick" role="tab" aria-selected="true" aria-controls="scenarioGuideSectionQuick" data-i18n="Quick path">Quick path</button>
         <button id="scenarioGuideTabPrepare" type="button" class="scenario-guide-nav-btn" data-guide-section="prepare" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionPrepare" data-i18n="Before you edit">Before you edit</button>
+        <button id="scenarioGuideTabHgo" type="button" class="scenario-guide-nav-btn" data-guide-section="hgo" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionHgo" data-i18n="HGO">HGO</button>
+        <button id="scenarioGuideTabAppearance" type="button" class="scenario-guide-nav-btn" data-guide-section="appearance" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionAppearance" data-i18n="Appearance">Appearance</button>
+        <button id="scenarioGuideTabEditing" type="button" class="scenario-guide-nav-btn" data-guide-section="editing" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionEditing" data-i18n="Edit tools">Edit tools</button>
         <button id="scenarioGuideTabTools" type="button" class="scenario-guide-nav-btn" data-guide-section="tools" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionTools" data-i18n="Project tools">Project tools</button>
         <button id="scenarioGuideTabChecks" type="button" class="scenario-guide-nav-btn" data-guide-section="checks" role="tab" aria-selected="false" aria-controls="scenarioGuideSectionChecks" data-i18n="Checks">Checks</button>
       </div>
@@ -3129,12 +3132,16 @@
               <span class="scenario-guide-step-line" data-i18n="Open the right-side Inspector and confirm that the selected country is the one you actually want to edit.">Open the right-side Inspector and confirm that the selected country is the one you actually want to edit.</span>
             </li>
             <li id="scenarioGuideStepActive" class="scenario-guide-step">
-              <strong data-i18n="3. Set the active owner">3. Set the active owner</strong>
+              <strong data-i18n="3. Confirm HGO identity when needed">3. Confirm HGO identity when needed</strong>
+              <span class="scenario-guide-step-line" data-i18n="When the selected country comes from HGO data, review its HGO names, flag option, and ideology label before changing ownership.">When the selected country comes from HGO data, review its HGO names, flag option, and ideology label before changing ownership.</span>
+            </li>
+            <li id="scenarioGuideStepOwner" class="scenario-guide-step">
+              <strong data-i18n="4. Set the active owner">4. Set the active owner</strong>
               <span class="scenario-guide-step-line" data-i18n="Political actions read the current Active Owner. Check the Active chip in the top bar before you commit any change.">Political actions read the current Active Owner. Check the Active chip in the top bar before you commit any change.</span>
             </li>
             <li id="scenarioGuideStepApplyActions" class="scenario-guide-step">
-              <strong data-i18n="4. Use Activate or Scenario Actions">4. Use Activate or Scenario Actions</strong>
-              <span class="scenario-guide-step-line" data-i18n="Use Activate for focused ownership changes and Scenario Actions for broader rule-driven updates. After each pass, re-check the View and Split chips.">Use Activate for focused ownership changes and Scenario Actions for broader rule-driven updates. After each pass, re-check the View and Split chips.</span>
+              <strong data-i18n="5. Edit, style, then save">5. Edit, style, then save</strong>
+              <span class="scenario-guide-step-line" data-i18n="Use Activate or Scenario Actions for map edits, tune Appearance and Transport for readability, then save a project JSON before export.">Use Activate or Scenario Actions for map edits, tune Appearance and Transport for readability, then save a project JSON before export.</span>
             </li>
           </ol>
         </section>
@@ -3149,6 +3156,111 @@
           </div>
           <div class="scenario-guide-bilingual-copy">
             <p data-i18n="After loading a project, check the Inspector again. Confirm the target country and active owner, then review frontlines, reference image alignment, and export settings. When these match your plan, continue with Activate, Scenario Actions, or Export.">After loading a project, check the Inspector again. Confirm the target country and active owner, then review frontlines, reference image alignment, and export settings. When these match your plan, continue with Activate, Scenario Actions, or Export.</p>
+          </div>
+        </section>
+
+        <section id="scenarioGuideSectionHgo" class="scenario-guide-manual-section hidden" data-guide-panel="hgo" role="tabpanel" aria-labelledby="scenarioGuideTabHgo scenarioGuideHgoTitle" hidden>
+          <h4 id="scenarioGuideHgoTitle" class="scenario-guide-manual-title" data-i18n="HGO and identity">HGO and identity</h4>
+          <p class="scenario-guide-manual-lead" data-i18n="Use this section when the scenario uses HGO source data, HGO flags, or HGO country-name variants.">Use this section when the scenario uses HGO source data, HGO flags, or HGO country-name variants.</p>
+          <div class="scenario-guide-tool-accordion">
+            <details class="scenario-guide-tool-panel" open>
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="HGO runtime preview">HGO runtime preview</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Check the donor geography before editing.">Check the donor geography before editing.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="HGO preview helps you inspect the HGO source layer beside the active scenario map. It is best used before ownership, label, or color decisions.">HGO preview helps you inspect the HGO source layer beside the active scenario map. It is best used before ownership, label, or color decisions.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You need to compare the active map against HGO geography or confirm that the selected feature belongs to the expected source region.">You need to compare the active map against HGO geography or confirm that the selected feature belongs to the expected source region.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Apply the HGO-backed scenario, open the preview, select the target country, then read the Inspector before changing anything.">Apply the HGO-backed scenario, open the preview, select the target country, then read the Inspector before changing anything.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="The selected country, owner tag, and visible boundary should describe the same place before you edit.">The selected country, owner tag, and visible boundary should describe the same place before you edit.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="HGO identity">HGO identity</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Review names, flags, and ideology variants.">Review names, flags, and ideology variants.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="The Inspector can show HGO names, flag options, and ideology labels for the selected country. Treat these as identity choices for display and review.">The Inspector can show HGO names, flag options, and ideology labels for the selected country. Treat these as identity choices for display and review.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="A country needs a specific HGO display name, flag variant, or ideology label before export.">A country needs a specific HGO display name, flag variant, or ideology label before export.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Select the country, enable the HGO identity view in Inspector, pick the intended identity option, then review the map label and flag preview.">Select the country, enable the HGO identity view in Inspector, pick the intended identity option, then review the map label and flag preview.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="The visible name, flag option, ideology label, and active owner should match your scenario notes.">The visible name, flag option, ideology label, and active owner should match your scenario notes.</span></li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="scenarioGuideSectionAppearance" class="scenario-guide-manual-section hidden" data-guide-panel="appearance" role="tabpanel" aria-labelledby="scenarioGuideTabAppearance scenarioGuideAppearanceTitle" hidden>
+          <h4 id="scenarioGuideAppearanceTitle" class="scenario-guide-manual-title" data-i18n="Appearance and transport">Appearance and transport</h4>
+          <p class="scenario-guide-manual-lead" data-i18n="Use Appearance for map readability and Transport for routes, ports, airports, and network context.">Use Appearance for map readability and Transport for routes, ports, airports, and network context.</p>
+          <div class="scenario-guide-tool-accordion">
+            <details class="scenario-guide-tool-panel" open>
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Appearance panel">Appearance panel</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Tune the visual language of the main map.">Tune the visual language of the main map.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets. These controls change how the same scenario reads on screen and in export.">Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets. These controls change how the same scenario reads on screen and in export.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="The map needs clearer borders, softer terrain, visible cities, stronger coastlines, or a reusable visual style.">The map needs clearer borders, softer terrain, visible cities, stronger coastlines, or a reusable visual style.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Set base borders and water first, add physical or day-night layers, then adjust labels, textures, and presets.">Set base borders and water first, add physical or day-night layers, then adjust labels, textures, and presets.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Zoom out and zoom in once; borders, cities, water, and terrain should stay readable at both scales.">Zoom out and zoom in once; borders, cities, water, and terrain should stay readable at both scales.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Transport panel">Transport panel</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Control visible transport context on the main map.">Control visible transport context on the main map.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Transport controls the overview layer for airports, ports, rail, and roads. The visual mode changes whether you read distribution, network shape, or coverage.">Transport controls the overview layer for airports, ports, rail, and roads. The visual mode changes whether you read distribution, network shape, or coverage.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You need routes, hubs, ports, airports, or infrastructure density visible beside political ownership.">You need routes, hubs, ports, airports, or infrastructure density visible beside political ownership.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Turn on Show Transport Overview, choose Distribution, Network, or Coverage, then tune each family visibility, labels, and scope.">Turn on Show Transport Overview, choose Distribution, Network, or Coverage, then tune each family visibility, labels, and scope.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="Open Transport Workbench when you need pack preview, layer order, diagnostics, data rows, or apply-to-map controls.">Open Transport Workbench when you need pack preview, layer order, diagnostics, data rows, or apply-to-map controls.</span></li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="scenarioGuideSectionEditing" class="scenario-guide-manual-section hidden" data-guide-panel="editing" role="tabpanel" aria-labelledby="scenarioGuideTabEditing scenarioGuideEditingTitle" hidden>
+          <h4 id="scenarioGuideEditingTitle" class="scenario-guide-manual-title" data-i18n="Editing tools">Editing tools</h4>
+          <p class="scenario-guide-manual-lead" data-i18n="Use these tools for ownership edits, batch changes, annotations, and source-aligned visual work.">Use these tools for ownership edits, batch changes, annotations, and source-aligned visual work.</p>
+          <div class="scenario-guide-tool-accordion">
+            <details class="scenario-guide-tool-panel" open>
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Inspector and active owner">Inspector and active owner</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Pick the target and the owner before painting.">Pick the target and the owner before painting.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="The Inspector tells you what country or feature is selected. The Active Owner tells paint and ownership actions which country receives the edit.">The Inspector tells you what country or feature is selected. The Active Owner tells paint and ownership actions which country receives the edit.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="You are about to change ownership, controller, cores, labels, or any feature-level state.">You are about to change ownership, controller, cores, labels, or any feature-level state.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Select the map feature, read Inspector, set Active Owner, then use Activate, Fill, Eraser, or Scenario Actions.">Select the map feature, read Inspector, set Active Owner, then use Activate, Fill, Eraser, or Scenario Actions.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="The top chips and Inspector should agree on mode, selected target, active owner, and split status.">The top chips and Inspector should agree on mode, selected target, active owner, and split status.</span></li>
+                </ul>
+              </div>
+            </details>
+            <details class="scenario-guide-tool-panel">
+              <summary class="scenario-guide-tool-summary">
+                <span class="scenario-guide-tool-title" data-i18n="Batch and annotation tools">Batch and annotation tools</span>
+                <span class="scenario-guide-tool-summary-copy" data-i18n="Use broad edits and strategic marks deliberately.">Use broad edits and strategic marks deliberately.</span>
+              </summary>
+              <div class="scenario-guide-tool-body">
+                <p data-i18n="Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters help you move from single-country edits to a readable campaign map.">Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters help you move from single-country edits to a readable campaign map.</p>
+                <ul class="scenario-guide-tool-steps">
+                  <li><strong data-i18n="Use when">Use when</strong><span data-i18n="One click should affect a group, a region, a frontline, or a planned operation.">One click should affect a group, a region, a frontline, or a planned operation.</span></li>
+                  <li><strong data-i18n="Order">Order</strong><span data-i18n="Make a project save, choose the exact scope, run the batch action, then inspect several affected countries.">Make a project save, choose the exact scope, run the batch action, then inspect several affected countries.</span></li>
+                  <li><strong data-i18n="Check">Check</strong><span data-i18n="After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.">After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.</span></li>
+                </ul>
+              </div>
+            </details>
           </div>
         </section>
 

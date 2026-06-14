@@ -461,6 +461,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             '"Country Color": { zh: "国家配色", en: "Country Color" }',
             '"Current country color": { zh: "当前国家颜色", en: "Current country color" }',
             '"Palette color suggestions": { zh: "色板颜色建议", en: "Palette color suggestions" }',
+            'Presets: { zh: "预设", en: "Presets" }',
             'Kaiserreich: { zh: "凯撒帝国", en: "Kaiserreich" }',
         ]:
             self.assertIn(token, i18n_catalog_content)
@@ -509,6 +510,52 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             ".special-zone-member-chip:hover,",
         ]:
             self.assertIn(token, css_content)
+
+    def test_native_selects_share_app_dropdown_chrome(self):
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        special_zones_content = (
+            REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
+        ).read_text(encoding="utf-8")
+
+        for token in [
+            "select.select-input,",
+            ".legend-generator-select,",
+            ".transport-workbench-pack-select,",
+            ".inspector-color-suggestion-select,",
+            ".hgo-identity-variant-select,",
+            ".special-zone-workbench-field select,",
+            ".special-zone-workbench-card select {",
+            "  appearance: none;",
+            "  -webkit-appearance: none;",
+            "  background-image:",
+            "    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),",
+            "    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);",
+            "select:hover:not(:disabled),",
+            "select:focus-visible,",
+            "select:disabled,",
+        ]:
+            self.assertIn(token, css_content)
+
+        for token in [
+            ".legend-generator-select {\n",
+            "  background-color: #fff;",
+            ".transport-workbench-pack-select {\n",
+            "  background-color: rgba(255, 255, 255, 0.62);",
+            "#debug-mode-select.debug-select {\n",
+            "  background-color: #fff8cc;",
+            ".inspector-color-suggestion-select {\n",
+            "  background-color: rgba(255, 255, 255, 0.86);",
+            ".hgo-identity-variant-select {\n",
+            "  background-color: rgba(255, 255, 255, 0.92);",
+            ".special-zone-workbench-field select,\n.special-zone-workbench-card select {\n  padding-right: 32px;",
+        ]:
+            self.assertIn(token, css_content)
+
+        self.assertNotIn("background: #fff8cc;", css_content)
+        self.assertIn(
+            'setSourceSelect.className = "select-input special-zone-member-set-select";',
+            special_zones_content,
+        )
 
 
 if __name__ == "__main__":

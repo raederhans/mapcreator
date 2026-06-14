@@ -65,10 +65,11 @@ function createHgoRuntimePreviewToolbarController({
   loadRaster = null,
   renderOptions = {},
   restorePreviewTarget = null,
+  createButton = false,
   storage = globalThis.localStorage,
   documentRef = globalThis.document,
 } = {}) {
-  const previewButton = button || createPreviewButton(documentRef, anchorButton);
+  const previewButton = button || (createButton ? createPreviewButton(documentRef, anchorButton) : null);
   const loadersConfigured = typeof loadSeed === "function" && typeof loadRaster === "function";
   const previewController = createHgoRuntimePreviewController(runtimeState, {
     canvas,
@@ -80,16 +81,7 @@ function createHgoRuntimePreviewToolbarController({
     useDefaultCanvasTarget: false,
   });
 
-  const disablePreviewWhenDeveloperModeIsOff = () => {
-    if (runtimeState?.ui?.developerMode) return;
-    const previewState = previewController.getState();
-    if (!previewState.enabled && !previewState.renderSummary) return;
-    // 主动关闭 preview 会释放旧 raster 的主 canvas 补画入口，
-    // 保证后续普通渲染重新接管画布。
-    void previewController.setEnabled(false);
-  };
   const sync = () => {
-    disablePreviewWhenDeveloperModeIsOff();
     return syncButton(previewButton, runtimeState, { loadersConfigured });
   };
   const setEnabled = async (nextEnabled) => {

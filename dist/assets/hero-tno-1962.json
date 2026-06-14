@@ -38,7 +38,7 @@
   "feature_counts": {
     "territories": 34,
     "political_features": 3438,
-    "capitals": 8,
+    "capitals": 9,
     "base_land_features_inspected": 23426,
     "base_land_features_candidates": 7263,
     "base_land_features_clipped": 7261,
@@ -59,7 +59,7 @@
   "counts": {
     "territories": 34,
     "political_features": 3438,
-    "capitals": 8,
+    "capitals": 9,
     "base_land_features_inspected": 23426,
     "base_land_features_candidates": 7263,
     "base_land_features_clipped": 7261,
@@ -115,20 +115,51 @@
   ],
   "capital_tags": [
     "BRG",
-    "BUL",
-    "CRO",
     "ENG",
     "FRA",
     "GER",
+    "IBR",
     "ITA",
-    "ROM"
+    "RKU",
+    "SOV",
+    "WRS"
   ],
   "selection_policy": {
     "viewport": "Europe hero crop shared by all scenario chips",
     "blank_canvas": false,
     "ownership_fill": true,
-    "capital_limit": 8,
+    "capital_limit": 9,
     "territory_path_limit_per_tag": 48,
+    "hero_capital_tags": [
+      "ENG",
+      "FRA",
+      "GER",
+      "ITA",
+      "IBR",
+      "RKU",
+      "SOV",
+      "WRS",
+      "BRG"
+    ],
+    "hero_capital_label_overrides": {
+      "BRG": "Nanzig",
+      "SOV": "Moskau",
+      "WRS": "Warshau"
+    },
+    "hero_capital_point_overrides": {
+      "BRG": [
+        6.18496,
+        48.68439
+      ],
+      "SOV": [
+        37.61781,
+        55.75204
+      ],
+      "WRS": [
+        21.01178,
+        52.22977
+      ]
+    },
     "hero_geometry_source": "runtime_topology base sea and political ownership crop",
     "atlantropa_overlay": "disabled_for_landing_hero",
     "base_underlay": "original Europe land and coastline for small Mediterranean islands",

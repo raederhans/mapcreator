@@ -23002,7 +23002,7 @@
     },
     "Dominican Republic": {
       "en": "Dominican Republic",
-      "zh": "多明尼加共和国"
+      "zh": "多米尼加共和国"
     },
     "Domodedovsky District": {
       "en": "Domodedovsky District",
@@ -28386,7 +28386,7 @@
     },
     "Gansu Ma Clique": {
       "en": "Gansu Ma Clique",
-      "zh": "甘肃马派"
+      "zh": "甘肃马家军"
     },
     "Ganxian": {
       "en": "Ganxian",
@@ -72294,7 +72294,7 @@
     },
     "Qinghai Ma Clique": {
       "en": "Qinghai Ma Clique",
-      "zh": "青海马派"
+      "zh": "青海马家军"
     },
     "Qinghemenqu": {
       "en": "Qinghemenqu",
@@ -162494,7 +162494,7 @@
     },
     "Sichuan Clique": {
       "en": "Sichuan Clique",
-      "zh": "川系军阀"
+      "zh": "四川军阀"
     },
     "Sicily": {
       "en": "Sicily",
@@ -179562,7 +179562,7 @@
     },
     "United States of America": {
       "en": "United States of America",
-      "zh": "美国"
+      "zh": "美利坚合众国"
     },
     "Unity": {
       "en": "Unity",
@@ -291634,7 +291634,7 @@
     },
     "Guangdong Clique": {
       "en": "Guangdong Clique",
-      "zh": "广东派"
+      "zh": "广东军阀"
     },
     "Götaland": {
       "en": "Götaland",
@@ -294180,6 +294180,62 @@
       "en": "Zurich",
       "zh": "苏黎世"
     },
+    "Greater German Reich": {
+      "en": "Greater German Reich",
+      "zh": "大德意志国"
+    },
+    "United States": {
+      "en": "United States",
+      "zh": "美国"
+    },
+    "Speer Germany": {
+      "en": "Speer Germany",
+      "zh": "施佩尔德国"
+    },
+    "Manchuria": {
+      "en": "Manchuria",
+      "zh": "满洲"
+    },
+    "Germany - Proper": {
+      "en": "Germany - Proper",
+      "zh": "德国本土"
+    },
+    "Germany - Europe": {
+      "en": "Germany - Europe",
+      "zh": "德控欧洲"
+    },
+    "East Europe - Former RK": {
+      "en": "East Europe - Former RK",
+      "zh": "东欧 - 前帝国专员辖区"
+    },
+    "East Europe - Pakt": {
+      "en": "East Europe - Pakt",
+      "zh": "东欧 - 条约组织"
+    },
+    "West Europe": {
+      "en": "West Europe",
+      "zh": "西欧"
+    },
+    "Middle East - Pakt": {
+      "en": "Middle East - Pakt",
+      "zh": "中东 - 条约组织"
+    },
+    "Middle East - Italy": {
+      "en": "Middle East - Italy",
+      "zh": "中东 - 意大利"
+    },
+    "Latin America": {
+      "en": "Latin America",
+      "zh": "拉丁美洲"
+    },
+    "Latin America - Italy": {
+      "en": "Latin America - Italy",
+      "zh": "拉丁美洲 - 意大利"
+    },
+    "Commonwealth": {
+      "en": "Commonwealth",
+      "zh": "英联邦"
+    },
     "lesotho": {
       "en": "lesotho",
       "zh": "莱索托"
@@ -294215,6 +294271,458 @@
     "Österland": {
       "en": "Österland",
       "zh": "奥斯特兰"
+    },
+    "Federation of French Equatorial Africa": {
+      "en": "Federation of French Equatorial Africa",
+      "zh": "法属赤道非洲联邦"
+    },
+    "Sultanate of Aussa": {
+      "en": "Sultanate of Aussa",
+      "zh": "奥萨苏丹国"
+    },
+    "Kingdom of Afghanistan": {
+      "en": "Kingdom of Afghanistan",
+      "zh": "阿富汗王国"
+    },
+    "Kingdom of Albania": {
+      "en": "Kingdom of Albania",
+      "zh": "阿尔巴尼亚王国"
+    },
+    "Portuguese Colony of Angola": {
+      "en": "Portuguese Colony of Angola",
+      "zh": "葡属安哥拉殖民地"
+    },
+    "Federation of French West Africa": {
+      "en": "Federation of French West Africa",
+      "zh": "法属西非联邦"
+    },
+    "Argentine Republic": {
+      "en": "Argentine Republic",
+      "zh": "阿根廷共和国"
+    },
+    "Commonwealth of Australia": {
+      "en": "Commonwealth of Australia",
+      "zh": "澳大利亚联邦"
+    },
+    "Federal State of Austria": {
+      "en": "Federal State of Austria",
+      "zh": "奥地利联邦国"
+    },
+    "British East African Territories": {
+      "en": "British East African Territories",
+      "zh": "英属东非领地"
+    },
+    "Kingdom of Belgium": {
+      "en": "Kingdom of Belgium",
+      "zh": "比利时王国"
+    },
+    "Kingdom of Bhutan": {
+      "en": "Kingdom of Bhutan",
+      "zh": "不丹王国"
+    },
+    "Republic of Bolivia": {
+      "en": "Republic of Bolivia",
+      "zh": "玻利维亚共和国"
+    },
+    "Bechuanaland Protectorate": {
+      "en": "Bechuanaland Protectorate",
+      "zh": "贝专纳保护国"
+    },
+    "United States of Brazil": {
+      "en": "United States of Brazil",
+      "zh": "巴西合众国"
+    },
+    "British Burma": {
+      "en": "British Burma",
+      "zh": "英属缅甸"
+    },
+    "Tsardom of Bulgaria": {
+      "en": "Tsardom of Bulgaria",
+      "zh": "保加利亚沙皇国"
+    },
+    "British West African Colonies": {
+      "en": "British West African Colonies",
+      "zh": "英属西非殖民地"
+    },
+    "Dominion of Canada": {
+      "en": "Dominion of Canada",
+      "zh": "加拿大自治领"
+    },
+    "British Ceylon": {
+      "en": "British Ceylon",
+      "zh": "英属锡兰"
+    },
+    "Republic of Chile": {
+      "en": "Republic of Chile",
+      "zh": "智利共和国"
+    },
+    "Republic of Colombia": {
+      "en": "Republic of Colombia",
+      "zh": "哥伦比亚共和国"
+    },
+    "Republic of Costa Rica": {
+      "en": "Republic of Costa Rica",
+      "zh": "哥斯达黎加共和国"
+    },
+    "Republic of Cuba": {
+      "en": "Republic of Cuba",
+      "zh": "古巴共和国"
+    },
+    "Czechoslovak Republic": {
+      "en": "Czechoslovak Republic",
+      "zh": "捷克斯洛伐克共和国"
+    },
+    "Kingdom of Denmark": {
+      "en": "Kingdom of Denmark",
+      "zh": "丹麦王国"
+    },
+    "Republic of Ecuador": {
+      "en": "Republic of Ecuador",
+      "zh": "厄瓜多尔共和国"
+    },
+    "Republic of El Salvador": {
+      "en": "Republic of El Salvador",
+      "zh": "萨尔瓦多共和国"
+    },
+    "United Kingdom of Great Britain and Northern Ireland": {
+      "en": "United Kingdom of Great Britain and Northern Ireland",
+      "zh": "大不列颠及北爱尔兰联合王国"
+    },
+    "Colony of Eritrea": {
+      "en": "Colony of Eritrea",
+      "zh": "厄立特里亚殖民地"
+    },
+    "Republic of Estonia": {
+      "en": "Republic of Estonia",
+      "zh": "爱沙尼亚共和国"
+    },
+    "Ethiopian Empire": {
+      "en": "Ethiopian Empire",
+      "zh": "埃塞俄比亚帝国"
+    },
+    "Republic of Finland": {
+      "en": "Republic of Finland",
+      "zh": "芬兰共和国"
+    },
+    "French Republic": {
+      "en": "French Republic",
+      "zh": "法兰西共和国"
+    },
+    "German Reich": {
+      "en": "German Reich",
+      "zh": "德意志国"
+    },
+    "Colony of French Guiana": {
+      "en": "Colony of French Guiana",
+      "zh": "法属圭亚那殖民地"
+    },
+    "Colony of Guadeloupe": {
+      "en": "Colony of Guadeloupe",
+      "zh": "瓜德罗普殖民地"
+    },
+    "Kingdom of Greece": {
+      "en": "Kingdom of Greece",
+      "zh": "希腊王国"
+    },
+    "Colony of Greenland": {
+      "en": "Colony of Greenland",
+      "zh": "格陵兰殖民地"
+    },
+    "Republic of Guatemala": {
+      "en": "Republic of Guatemala",
+      "zh": "危地马拉共和国"
+    },
+    "New Guangxi Clique": {
+      "en": "New Guangxi Clique",
+      "zh": "新桂系"
+    },
+    "Republic of Haiti": {
+      "en": "Republic of Haiti",
+      "zh": "海地共和国"
+    },
+    "Kingdom of the Netherlands": {
+      "en": "Kingdom of the Netherlands",
+      "zh": "尼德兰王国"
+    },
+    "Republic of Honduras": {
+      "en": "Republic of Honduras",
+      "zh": "洪都拉斯共和国"
+    },
+    "Kingdom of Hungary": {
+      "en": "Kingdom of Hungary",
+      "zh": "匈牙利王国"
+    },
+    "Kingdom of Iceland": {
+      "en": "Kingdom of Iceland",
+      "zh": "冰岛王国"
+    },
+    "Kingdom of Iraq": {
+      "en": "Kingdom of Iraq",
+      "zh": "伊拉克王国"
+    },
+    "Kingdom of Italy": {
+      "en": "Kingdom of Italy",
+      "zh": "意大利王国"
+    },
+    "Empire of Japan": {
+      "en": "Empire of Japan",
+      "zh": "大日本帝国"
+    },
+    "Emirate of Transjordan": {
+      "en": "Emirate of Transjordan",
+      "zh": "外约旦酋长国"
+    },
+    "Government-General of Korea": {
+      "en": "Government-General of Korea",
+      "zh": "朝鲜总督府"
+    },
+    "Sheikhdom of Kuwait": {
+      "en": "Sheikhdom of Kuwait",
+      "zh": "科威特酋长国"
+    },
+    "Republic of Latvia": {
+      "en": "Republic of Latvia",
+      "zh": "拉脱维亚共和国"
+    },
+    "Italian Libya": {
+      "en": "Italian Libya",
+      "zh": "意属利比亚"
+    },
+    "Republic of Liberia": {
+      "en": "Republic of Liberia",
+      "zh": "利比里亚共和国"
+    },
+    "Republic of Lithuania": {
+      "en": "Republic of Lithuania",
+      "zh": "立陶宛共和国"
+    },
+    "Shandong Clique": {
+      "en": "Shandong Clique",
+      "zh": "山东军阀"
+    },
+    "Grand Duchy of Luxembourg": {
+      "en": "Grand Duchy of Luxembourg",
+      "zh": "卢森堡大公国"
+    },
+    "Colony of Madagascar and Dependencies": {
+      "en": "Colony of Madagascar and Dependencies",
+      "zh": "马达加斯加及附属地殖民地"
+    },
+    "British Malaya": {
+      "en": "British Malaya",
+      "zh": "英属马来亚"
+    },
+    "Empire of Manchukuo": {
+      "en": "Empire of Manchukuo",
+      "zh": "满洲帝国"
+    },
+    "Mongol United Autonomous Government": {
+      "en": "Mongol United Autonomous Government",
+      "zh": "蒙古联合自治政府"
+    },
+    "United Mexican States": {
+      "en": "United Mexican States",
+      "zh": "墨西哥合众国"
+    },
+    "Sultanate of the Maldives": {
+      "en": "Sultanate of the Maldives",
+      "zh": "马尔代夫苏丹国"
+    },
+    "Mongolian People's Republic": {
+      "en": "Mongolian People's Republic",
+      "zh": "蒙古人民共和国"
+    },
+    "French Protectorate in Morocco": {
+      "en": "French Protectorate in Morocco",
+      "zh": "法属摩洛哥保护国"
+    },
+    "Colony of Martinique": {
+      "en": "Colony of Martinique",
+      "zh": "马提尼克殖民地"
+    },
+    "Portuguese Colony of Mozambique": {
+      "en": "Portuguese Colony of Mozambique",
+      "zh": "葡属莫桑比克殖民地"
+    },
+    "Kingdom of Nepal": {
+      "en": "Kingdom of Nepal",
+      "zh": "尼泊尔王国"
+    },
+    "Republic of Nicaragua": {
+      "en": "Republic of Nicaragua",
+      "zh": "尼加拉瓜共和国"
+    },
+    "Kingdom of Norway": {
+      "en": "Kingdom of Norway",
+      "zh": "挪威王国"
+    },
+    "Dominion of New Zealand": {
+      "en": "Dominion of New Zealand",
+      "zh": "新西兰自治领"
+    },
+    "Sultanate of Muscat and Oman": {
+      "en": "Sultanate of Muscat and Oman",
+      "zh": "马斯喀特和阿曼苏丹国"
+    },
+    "Mandatory Palestine": {
+      "en": "Mandatory Palestine",
+      "zh": "巴勒斯坦托管地"
+    },
+    "Republic of Panama": {
+      "en": "Republic of Panama",
+      "zh": "巴拿马共和国"
+    },
+    "Republic of Paraguay": {
+      "en": "Republic of Paraguay",
+      "zh": "巴拉圭共和国"
+    },
+    "Imperial State of Iran": {
+      "en": "Imperial State of Iran",
+      "zh": "伊朗帝国"
+    },
+    "Commonwealth of the Philippines": {
+      "en": "Commonwealth of the Philippines",
+      "zh": "菲律宾自治领"
+    },
+    "Republic of Poland": {
+      "en": "Republic of Poland",
+      "zh": "波兰共和国"
+    },
+    "Portuguese Republic": {
+      "en": "Portuguese Republic",
+      "zh": "葡萄牙共和国"
+    },
+    "Chinese Soviet Republic": {
+      "en": "Chinese Soviet Republic",
+      "zh": "中华苏维埃共和国"
+    },
+    "Republic of Peru": {
+      "en": "Republic of Peru",
+      "zh": "秘鲁共和国"
+    },
+    "Territory of Puerto Rico": {
+      "en": "Territory of Puerto Rico",
+      "zh": "波多黎各领地"
+    },
+    "British Indian Empire": {
+      "en": "British Indian Empire",
+      "zh": "英属印度帝国"
+    },
+    "Colony of Reunion": {
+      "en": "Colony of Reunion",
+      "zh": "留尼汪殖民地"
+    },
+    "Kingdom of Romania": {
+      "en": "Kingdom of Romania",
+      "zh": "罗马尼亚王国"
+    },
+    "Union of South Africa": {
+      "en": "Union of South Africa",
+      "zh": "南非联邦"
+    },
+    "Kingdom of Saudi Arabia": {
+      "en": "Kingdom of Saudi Arabia",
+      "zh": "沙特阿拉伯王国"
+    },
+    "Spanish Territories of the Gulf of Guinea": {
+      "en": "Spanish Territories of the Gulf of Guinea",
+      "zh": "西属几内亚湾领地"
+    },
+    "Shanxi Clique": {
+      "en": "Shanxi Clique",
+      "zh": "山西军阀"
+    },
+    "Kingdom of Siam": {
+      "en": "Kingdom of Siam",
+      "zh": "暹罗王国"
+    },
+    "Xinjiang Provincial Government": {
+      "en": "Xinjiang Provincial Government",
+      "zh": "新疆省政府"
+    },
+    "Slovak Republic": {
+      "en": "Slovak Republic",
+      "zh": "斯洛伐克共和国"
+    },
+    "Spanish Protectorate in Morocco": {
+      "en": "Spanish Protectorate in Morocco",
+      "zh": "西属摩洛哥保护国"
+    },
+    "Union of Soviet Socialist Republics": {
+      "en": "Union of Soviet Socialist Republics",
+      "zh": "苏维埃社会主义共和国联盟"
+    },
+    "Spanish Republic": {
+      "en": "Spanish Republic",
+      "zh": "西班牙共和国"
+    },
+    "Kingdom of Sweden": {
+      "en": "Kingdom of Sweden",
+      "zh": "瑞典王国"
+    },
+    "Swiss Confederation": {
+      "en": "Swiss Confederation",
+      "zh": "瑞士联邦"
+    },
+    "Government-General of Taiwan": {
+      "en": "Government-General of Taiwan",
+      "zh": "台湾总督府"
+    },
+    "Tuvan People's Republic": {
+      "en": "Tuvan People's Republic",
+      "zh": "图瓦人民共和国"
+    },
+    "French Protectorate of Tunisia": {
+      "en": "French Protectorate of Tunisia",
+      "zh": "法属突尼斯保护国"
+    },
+    "Republic of Turkey": {
+      "en": "Republic of Turkey",
+      "zh": "土耳其共和国"
+    },
+    "Oriental Republic of Uruguay": {
+      "en": "Oriental Republic of Uruguay",
+      "zh": "乌拉圭东岸共和国"
+    },
+    "United States of Venezuela": {
+      "en": "United States of Venezuela",
+      "zh": "委内瑞拉合众国"
+    },
+    "French Indochinese Union": {
+      "en": "French Indochinese Union",
+      "zh": "法属印度支那联邦"
+    },
+    "Northwestern Ma Clique": {
+      "en": "Northwestern Ma Clique",
+      "zh": "西北马家军"
+    },
+    "Mutawakkilite Kingdom of Yemen": {
+      "en": "Mutawakkilite Kingdom of Yemen",
+      "zh": "也门穆塔瓦基利亚王国"
+    },
+    "Colony of Mayotte": {
+      "en": "Colony of Mayotte",
+      "zh": "马约特殖民地"
+    },
+    "Kingdom of Yugoslavia": {
+      "en": "Kingdom of Yugoslavia",
+      "zh": "南斯拉夫王国"
+    },
+    "Yunnan Clique": {
+      "en": "Yunnan Clique",
+      "zh": "云南军阀"
+    },
+    "Irish Free State": {
+      "en": "Irish Free State",
+      "zh": "爱尔兰自由邦"
+    },
+    "Shaan-Gan-Ning Border Region": {
+      "en": "Shaan-Gan-Ning Border Region",
+      "zh": "陕甘宁边区"
+    },
+    "Spanish State": {
+      "en": "Spanish State",
+      "zh": "西班牙国"
     }
   },
   "ui": {
@@ -301245,6 +301753,198 @@
     "Vanguardism": {
       "en": "Vanguardism",
       "zh": "先锋主义"
+    },
+    "HGO": {
+      "en": "HGO",
+      "zh": "HGO"
+    },
+    "Edit tools": {
+      "en": "Edit tools",
+      "zh": "编辑工具"
+    },
+    "3. Confirm HGO identity when needed": {
+      "en": "3. Confirm HGO identity when needed",
+      "zh": "3. 需要时确认 HGO 身份"
+    },
+    "When the selected country comes from HGO data, review its HGO names, flag option, and ideology label before changing ownership.": {
+      "en": "When the selected country comes from HGO data, review its HGO names, flag option, and ideology label before changing ownership.",
+      "zh": "选中的国家来自 HGO 数据时，先检查 HGO 名称、旗帜选项和意识形态标签，再修改归属。"
+    },
+    "4. Set the active owner": {
+      "en": "4. Set the active owner",
+      "zh": "4. 设置当前归属方"
+    },
+    "5. Edit, style, then save": {
+      "en": "5. Edit, style, then save",
+      "zh": "5. 编辑、调外观，然后保存"
+    },
+    "Use Activate or Scenario Actions for map edits, tune Appearance and Transport for readability, then save a project JSON before export.": {
+      "en": "Use Activate or Scenario Actions for map edits, tune Appearance and Transport for readability, then save a project JSON before export.",
+      "zh": "用“激活”或“场景操作”修改地图，用“外观”和“交通”提高可读性，导出前保存项目 JSON。"
+    },
+    "HGO and identity": {
+      "en": "HGO and identity",
+      "zh": "HGO 与身份"
+    },
+    "Use this section when the scenario uses HGO source data, HGO flags, or HGO country-name variants.": {
+      "en": "Use this section when the scenario uses HGO source data, HGO flags, or HGO country-name variants.",
+      "zh": "剧本使用 HGO 源数据、HGO 旗帜或 HGO 国家名称变体时，查看本节。"
+    },
+    "HGO runtime preview": {
+      "en": "HGO runtime preview",
+      "zh": "HGO 运行时预览"
+    },
+    "Check the donor geography before editing.": {
+      "en": "Check the donor geography before editing.",
+      "zh": "编辑前检查来源地理。"
+    },
+    "HGO preview helps you inspect the HGO source layer beside the active scenario map. It is best used before ownership, label, or color decisions.": {
+      "en": "HGO preview helps you inspect the HGO source layer beside the active scenario map. It is best used before ownership, label, or color decisions.",
+      "zh": "HGO 预览可以把 HGO 来源图层放在当前剧本地图旁边检查，适合在决定归属、标签或颜色前使用。"
+    },
+    "You need to compare the active map against HGO geography or confirm that the selected feature belongs to the expected source region.": {
+      "en": "You need to compare the active map against HGO geography or confirm that the selected feature belongs to the expected source region.",
+      "zh": "需要对照当前地图和 HGO 地理，或确认选中要素属于预期来源区域时使用。"
+    },
+    "Apply the HGO-backed scenario, open the preview, select the target country, then read the Inspector before changing anything.": {
+      "en": "Apply the HGO-backed scenario, open the preview, select the target country, then read the Inspector before changing anything.",
+      "zh": "先应用 HGO 支撑的剧本，打开预览，选中目标国家，再阅读检查器内容。"
+    },
+    "The selected country, owner tag, and visible boundary should describe the same place before you edit.": {
+      "en": "The selected country, owner tag, and visible boundary should describe the same place before you edit.",
+      "zh": "编辑前，选中国家、归属标签和可见边界应指向同一个地方。"
+    },
+    "Review names, flags, and ideology variants.": {
+      "en": "Review names, flags, and ideology variants.",
+      "zh": "检查名称、旗帜和意识形态变体。"
+    },
+    "The Inspector can show HGO names, flag options, and ideology labels for the selected country. Treat these as identity choices for display and review.": {
+      "en": "The Inspector can show HGO names, flag options, and ideology labels for the selected country. Treat these as identity choices for display and review.",
+      "zh": "检查器可以显示选中国家的 HGO 名称、旗帜选项和意识形态标签。它们是展示和复核用的身份选项。"
+    },
+    "A country needs a specific HGO display name, flag variant, or ideology label before export.": {
+      "en": "A country needs a specific HGO display name, flag variant, or ideology label before export.",
+      "zh": "导出前，某个国家需要指定 HGO 显示名称、旗帜变体或意识形态标签时使用。"
+    },
+    "Select the country, enable the HGO identity view in Inspector, pick the intended identity option, then review the map label and flag preview.": {
+      "en": "Select the country, enable the HGO identity view in Inspector, pick the intended identity option, then review the map label and flag preview.",
+      "zh": "选中国家，在检查器中启用 HGO 身份视图，选择目标身份选项，然后检查地图标签和旗帜预览。"
+    },
+    "The visible name, flag option, ideology label, and active owner should match your scenario notes.": {
+      "en": "The visible name, flag option, ideology label, and active owner should match your scenario notes.",
+      "zh": "可见名称、旗帜选项、意识形态标签和当前归属方应与你的剧本备注一致。"
+    },
+    "Appearance and transport": {
+      "en": "Appearance and transport",
+      "zh": "外观与交通"
+    },
+    "Use Appearance for map readability and Transport for routes, ports, airports, and network context.": {
+      "en": "Use Appearance for map readability and Transport for routes, ports, airports, and network context.",
+      "zh": "用“外观”提高地图可读性，用“交通”展示道路、港口、机场和网络背景。"
+    },
+    "Appearance panel": {
+      "en": "Appearance panel",
+      "zh": "外观面板"
+    },
+    "Tune the visual language of the main map.": {
+      "en": "Tune the visual language of the main map.",
+      "zh": "调整主地图的视觉语言。"
+    },
+    "Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets. These controls change how the same scenario reads on screen and in export.": {
+      "en": "Appearance covers borders, ocean, rivers, city points, physical regions, day-night lighting, textures, and presets. These controls change how the same scenario reads on screen and in export.",
+      "zh": "外观覆盖边界、海洋、河流、城市点、物理区域、昼夜光照、纹理和预设。这些控制会改变同一个剧本在屏幕和导出图中的读法。"
+    },
+    "The map needs clearer borders, softer terrain, visible cities, stronger coastlines, or a reusable visual style.": {
+      "en": "The map needs clearer borders, softer terrain, visible cities, stronger coastlines, or a reusable visual style.",
+      "zh": "地图需要更清楚的边界、更柔和的地形、可见城市、更强海岸线或可复用视觉风格时使用。"
+    },
+    "Set base borders and water first, add physical or day-night layers, then adjust labels, textures, and presets.": {
+      "en": "Set base borders and water first, add physical or day-night layers, then adjust labels, textures, and presets.",
+      "zh": "先设置基础边界和水域，再加入物理或昼夜图层，最后调整标签、纹理和预设。"
+    },
+    "Zoom out and zoom in once; borders, cities, water, and terrain should stay readable at both scales.": {
+      "en": "Zoom out and zoom in once; borders, cities, water, and terrain should stay readable at both scales.",
+      "zh": "缩小和放大各看一次；边界、城市、水域和地形在两个尺度下都应清楚。"
+    },
+    "Transport panel": {
+      "en": "Transport panel",
+      "zh": "交通面板"
+    },
+    "Control visible transport context on the main map.": {
+      "en": "Control visible transport context on the main map.",
+      "zh": "控制主地图上的交通背景。"
+    },
+    "Transport controls the overview layer for airports, ports, rail, and roads. The visual mode changes whether you read distribution, network shape, or coverage.": {
+      "en": "Transport controls the overview layer for airports, ports, rail, and roads. The visual mode changes whether you read distribution, network shape, or coverage.",
+      "zh": "交通控制机场、港口、铁路和道路的概览图层。视觉模式用于切换分布、网络形态和覆盖阅读方式。"
+    },
+    "You need routes, hubs, ports, airports, or infrastructure density visible beside political ownership.": {
+      "en": "You need routes, hubs, ports, airports, or infrastructure density visible beside political ownership.",
+      "zh": "需要在政治归属旁边显示路线、枢纽、港口、机场或基础设施密度时使用。"
+    },
+    "Turn on Show Transport Overview, choose Distribution, Network, or Coverage, then tune each family visibility, labels, and scope.": {
+      "en": "Turn on Show Transport Overview, choose Distribution, Network, or Coverage, then tune each family visibility, labels, and scope.",
+      "zh": "打开“显示交通概览”，选择分布、网络或覆盖，再调整各类交通的可见性、标签和范围。"
+    },
+    "Open Transport Workbench when you need pack preview, layer order, diagnostics, data rows, or apply-to-map controls.": {
+      "en": "Open Transport Workbench when you need pack preview, layer order, diagnostics, data rows, or apply-to-map controls.",
+      "zh": "需要资源包预览、图层顺序、诊断、数据行或应用到地图控制时，打开交通工作台。"
+    },
+    "Editing tools": {
+      "en": "Editing tools",
+      "zh": "编辑工具"
+    },
+    "Use these tools for ownership edits, batch changes, annotations, and source-aligned visual work.": {
+      "en": "Use these tools for ownership edits, batch changes, annotations, and source-aligned visual work.",
+      "zh": "这些工具用于归属编辑、批量修改、标注，以及对齐来源资料的视觉工作。"
+    },
+    "Inspector and active owner": {
+      "en": "Inspector and active owner",
+      "zh": "检查器与当前归属方"
+    },
+    "Pick the target and the owner before painting.": {
+      "en": "Pick the target and the owner before painting.",
+      "zh": "绘制前先选目标和归属方。"
+    },
+    "The Inspector tells you what country or feature is selected. The Active Owner tells paint and ownership actions which country receives the edit.": {
+      "en": "The Inspector tells you what country or feature is selected. The Active Owner tells paint and ownership actions which country receives the edit.",
+      "zh": "检查器显示当前选中的国家或要素。当前归属方决定绘制和归属操作会写给哪个国家。"
+    },
+    "You are about to change ownership, controller, cores, labels, or any feature-level state.": {
+      "en": "You are about to change ownership, controller, cores, labels, or any feature-level state.",
+      "zh": "准备修改归属、控制方、核心、标签或任意要素级状态时使用。"
+    },
+    "Select the map feature, read Inspector, set Active Owner, then use Activate, Fill, Eraser, or Scenario Actions.": {
+      "en": "Select the map feature, read Inspector, set Active Owner, then use Activate, Fill, Eraser, or Scenario Actions.",
+      "zh": "选中地图要素，阅读检查器，设置当前归属方，然后使用激活、填充、橡皮擦或场景操作。"
+    },
+    "The top chips and Inspector should agree on mode, selected target, active owner, and split status.": {
+      "en": "The top chips and Inspector should agree on mode, selected target, active owner, and split status.",
+      "zh": "顶部状态片和检查器应在模式、选中目标、当前归属方和拆分状态上保持一致。"
+    },
+    "Batch and annotation tools": {
+      "en": "Batch and annotation tools",
+      "zh": "批量与标注工具"
+    },
+    "Use broad edits and strategic marks deliberately.": {
+      "en": "Use broad edits and strategic marks deliberately.",
+      "zh": "谨慎使用大范围编辑和战略标记。"
+    },
+    "Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters help you move from single-country edits to a readable campaign map.": {
+      "en": "Scenario Actions, Quick Fill, special zones, frontlines, operational graphics, and unit counters help you move from single-country edits to a readable campaign map.",
+      "zh": "场景操作、快速填充、特殊区域、前线、行动图形和单位计数器，可以把单国编辑推进成可读的战役地图。"
+    },
+    "One click should affect a group, a region, a frontline, or a planned operation.": {
+      "en": "One click should affect a group, a region, a frontline, or a planned operation.",
+      "zh": "一次点击需要影响一个组、一个区域、一条前线或一项计划行动时使用。"
+    },
+    "Make a project save, choose the exact scope, run the batch action, then inspect several affected countries.": {
+      "en": "Make a project save, choose the exact scope, run the batch action, then inspect several affected countries.",
+      "zh": "先保存项目，选择准确范围，执行批量操作，然后检查几个受影响国家。"
+    },
+    "After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.": {
+      "en": "After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.",
+      "zh": "大范围编辑后，先检查视图、拆分、标签、前线和导出预览，再进行下一次大范围操作。"
     }
   }
 }

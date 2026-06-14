@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { registerRuntimeHook } from "../js/core/state/index.js";
 import { createLayerFromPreset } from "../js/core/special_zone_layers.js";
 import { createSpecialZonesWorkbenchController } from "../js/ui/toolbar/special_zones_workbench_controller.js";
 
@@ -375,7 +376,7 @@ test("overlay toggle enables map overlay and loads scenario layers", async () =>
   }
 });
 
-test("topology mismatch diagnostics render in the workbench", () => {
+test("topology mismatch diagnostics stay out of the workbench chrome", () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();
 
@@ -388,6 +389,10 @@ test("topology mismatch diagnostics render in the workbench", () => {
       activeLayerId: "",
     },
   };
+  let projectDiagnosticsRenderCount = 0;
+  registerRuntimeHook(runtimeState, "renderScenarioAuditPanelFn", () => {
+    projectDiagnosticsRenderCount += 1;
+  });
   const controller = createSpecialZonesWorkbenchController({
     runtimeState,
     container,
@@ -400,10 +405,15 @@ test("topology mismatch diagnostics render in the workbench", () => {
   try {
     controller.renderSpecialZonesWorkbenchUi();
     const diagnostics = container.querySelector(".special-zone-workbench-diagnostics");
-    assert.ok(diagnostics);
-    assert.match(getNodeText(diagnostics), /topology_fingerprint_mismatch/);
-    assert.match(getNodeText(diagnostics), /expected current-fp/);
+    assert.equal(diagnostics, null);
+    assert.ok(runtimeState.specialZoneLayers.diagnostics.some((entry) =>
+      entry.code === "topology_fingerprint_mismatch"
+      && entry.expected === "current-fp"
+      && entry.actual === "old-fp"
+    ));
+    assert.equal(projectDiagnosticsRenderCount, 1);
   } finally {
+    registerRuntimeHook(runtimeState, "renderScenarioAuditPanelFn", null);
     globalThis.document = previousDocument;
   }
 });

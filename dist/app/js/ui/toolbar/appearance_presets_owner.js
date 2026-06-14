@@ -102,7 +102,10 @@ export function createAppearancePresetsOwner({
       const names = presetState.order
         .map((presetId) => presetState.byId[presetId]?.name)
         .filter(Boolean);
-      nodes.list.textContent = names.join(" | ");
+      nodes.list.dataset.presetCount = String(names.length);
+      nodes.list.textContent = names.length > 0
+        ? names.join("\n")
+        : (typeof t === "function" ? t("No appearance presets saved", "ui") : "No appearance presets saved");
     }
     [nodes.applyButton, nodes.deleteButton, nodes.exportButton].forEach((button) => {
       if (button) button.disabled = !selectedPreset;
