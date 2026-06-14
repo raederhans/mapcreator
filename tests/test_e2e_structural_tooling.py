@@ -264,6 +264,21 @@ const dataHealthRoute = routes.find((route) => route.id === 'infra:data-health')
 if (!dataHealthRoute || dataHealthRoute.executionOwner !== 'child-safe' || dataHealthRoute.resourceLocks.length !== 0) {
   throw new Error(`data health route must stay child-safe and lock-free: ${JSON.stringify(dataHealthRoute)}`);
 }
+const browserSmokeRoute = routes.find((route) => route.id === 'infra:browser-smoke-static-contract');
+if (
+  !browserSmokeRoute
+  || browserSmokeRoute.domain !== 'browser-smoke'
+  || browserSmokeRoute.executionOwner !== 'child-safe'
+  || browserSmokeRoute.resourceLocks.length !== 0
+  || browserSmokeRoute.cost !== 'fast'
+) {
+  throw new Error(`browser smoke route must stay static, child-safe, and lock-free: ${JSON.stringify(browserSmokeRoute)}`);
+}
+for (const sourceRef of ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml']) {
+  if (!browserSmokeRoute.sourceRef.includes(sourceRef)) {
+    throw new Error(`browser smoke route must cover ${sourceRef}: ${browserSmokeRoute.sourceRef}`);
+  }
+}
 const transportWorkbenchControllerRoute = routes.find((route) => route.id === 'node:test:node:transport-workbench-controller');
 if (!transportWorkbenchControllerRoute) {
   throw new Error('missing transport workbench aggregate node route');
@@ -419,8 +434,21 @@ const cases = [
   },
   {
     name: 'browser smoke tooling routes to static contract',
-    changedFiles: ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml'],
+    changedFiles: [
+      'ops/browser-mcp/run-smoke-browser-inspection.sh',
+      'ops/browser-mcp/inspection-profile.toml',
+      'ops/browser-mcp/inspection-profile.schema.md',
+    ],
     expectedCommands: ['python -m unittest tests.test_playwright_app_ready_gate_contract -q'],
+    exactCommands: ['python -m unittest tests.test_playwright_app_ready_gate_contract -q'],
+    forbiddenCommands: [
+      'perf:gate',
+      'verify:perf-gate-contract',
+      'python -m unittest tests.test_perf_gate_contract -q',
+    ],
+    exactExecutionOwners: ['child-safe'],
+    exactResourceLocks: [],
+    exactMainThreadCommands: [],
   },
   {
     name: 'playwright fixtures route to observability contract and city runtime specs',
@@ -480,6 +508,13 @@ for (const testCase of cases) {
       throw new Error(`${testCase.name}: saw forbidden ${forbiddenCommand}; got ${commands.join(', ')}`);
     }
   }
+  if (testCase.exactCommands) {
+    const expected = [...testCase.exactCommands].sort();
+    const actual = [...commands].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact commands ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
   for (const expectedOwner of testCase.expectedExecutionOwners || []) {
     if (!report.executionOwners.includes(expectedOwner)) {
       throw new Error(`${testCase.name}: missing owner ${expectedOwner}; got ${report.executionOwners.join(', ')}`);
@@ -488,6 +523,27 @@ for (const testCase of cases) {
   for (const expectedLock of testCase.expectedResourceLocks || []) {
     if (!report.resourceLocks.includes(expectedLock)) {
       throw new Error(`${testCase.name}: missing lock ${expectedLock}; got ${report.resourceLocks.join(', ')}`);
+    }
+  }
+  if (testCase.exactExecutionOwners) {
+    const expected = [...testCase.exactExecutionOwners].sort();
+    const actual = [...report.executionOwners].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact owners ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.exactResourceLocks) {
+    const expected = [...testCase.exactResourceLocks].sort();
+    const actual = [...report.resourceLocks].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact locks ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.exactMainThreadCommands) {
+    const expected = [...testCase.exactMainThreadCommands].sort();
+    const actual = report.mainThreadSerialVerification.map((entry) => entry.commandRef).sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact main-thread commands ${expected.join(', ')}; got ${actual.join(', ')}`);
     }
   }
 }

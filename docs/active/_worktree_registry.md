@@ -31,6 +31,7 @@ Last updated: 2026-06-14
 | `C:\Users\raede\Desktop\dev\mapcreator-audit-20260610-20260610-113750` | `audit/20260610-appearance-transport-20260610-113750` / `cf2a57a1` | `cf2a57a1` | abandoned candidate | Old audit preservation worktree | none vs `origin/main` | no diff vs `origin/main...HEAD` | Green | Mark abandoned/integrated after final check |
 | `C:\Users\raede\Desktop\dev\mapcreator-hoi4-strategic-values` | `codex/hoi4-strategic-values` / `979b20de` | `979b20de` | integrated candidate | HOI4 strategic values branch already in main ancestry | none vs `origin/main` | no diff vs `origin/main...HEAD` | Green | Mark integrated candidate |
 | `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase2` | `codex/tooling-simplification-phase2` / `fba1b710` | `fba1b710` | in-progress elsewhere | Tooling simplification work | dirty `tools/check_scenario_contracts.py`, `tests/test_scenario_contracts.py`, active docs | no committed diff yet | Yellow with data-quality on scenario contract tooling | Do not touch in this integration |
+| `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase3` | `codex/tooling-simplification-phase3` / `3d8cd631` plus local edits | `origin/main` `3d8cd631` | ready-for-integration | Tooling simplification phase3: split browser-smoke static routing from live perf routing | `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`, active docs, `lessons learned.md` | browser-smoke selector golden red-then-green; direct selector JSON confirms single child-safe static route; structural unittest, static smoke contract, selector check, adaptive dry-run, diff check passed | Green by file path vs data/render/scenario worktrees; Yellow semantic relation to test-routing only | Commit, push, merge to main, verify on main, then remove worktree |
 
 ## Overlap Matrix
 
@@ -52,6 +53,7 @@ Last updated: 2026-06-14
 - 2026-06-14: render-chain selective carry is complete for the non-duplicative pieces already present in current main. The standalone `transport_workbench_line_preview_helpers.js` duplicate helper was removed and tests were migrated to `transport_workbench_line_runtime_shared_behavior.test.mjs`.
 - 2026-06-14: merged `origin/main` commit `9a5febfe` into the integration branch. The only conflicts were HOI4 1939 generated metadata hashes; resolution kept the integration branch's verified chunk artifacts and absorbed current-main safe-review tooling tests. Strict HOI4 1936/1939, structural unittest, scenario chunk node gate, and `git diff --check` passed.
 - 2026-06-14: selectively integrated `codex/audit-20260612-appearance-transport` by taking the appearance/i18n source, mirrored dist files, and audit tests. `verify:pages-dist` regenerated `dist/pages-dist-manifest.json`; JSON validation, node tests, Pages dist verification, and `git diff --check` passed.
+- 2026-06-14: started `codex/tooling-simplification-phase3` from `origin/main` `3d8cd631` as an isolated tooling lane. It touches only selector/registry/tests/docs and keeps browser smoke live execution out of scope.
 
 ## Delivery Package - Integration Branch
 

@@ -13,6 +13,14 @@ const BOOTSTRAP_FALLBACK_ROUTE_IDS = new Set([
   "python:tests.test_app_entry_resolver",
   "python:tests.test_startup_shell",
 ]);
+const BROWSER_SMOKE_STATIC_SUPPORT_FILES = new Set([
+  "ops/browser-mcp/run-smoke-browser-inspection.sh",
+  "ops/browser-mcp/inspection-profile.toml",
+  "ops/browser-mcp/inspection-profile.schema.md",
+]);
+const PERF_STATIC_SUPPORT_FILES = new Set([
+  "ops/browser-mcp/editor-performance-benchmark.py",
+]);
 const GUIDANCE_ARRAY_FIELDS = ["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"];
 
 function parseArgs(argv) {
@@ -88,6 +96,13 @@ function routeMatchesImportGraph(route, changedFile, importGraph) {
 }
 
 function routeMatchesChangedFile(route, changedFile, importGraph = null) {
+  if (BROWSER_SMOKE_STATIC_SUPPORT_FILES.has(changedFile)) {
+    return route.id === "infra:browser-smoke-static-contract";
+  }
+  if (PERF_STATIC_SUPPORT_FILES.has(changedFile)) {
+    return route.domain === "perf";
+  }
+
   if (isDirectRouteMatch(route, changedFile)) return true;
   if (routeMatchesImportGraph(route, changedFile, importGraph)) return true;
 
@@ -142,7 +157,7 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   if (changedFile.startsWith("js/") && changedFile.includes("transport")) return route.domain === "transport-workbench";
   if (changedFile.startsWith("data/transport_layers/") || changedFile.includes("transport_workbench")) return route.domain === "transport-workbench";
   if (changedFile.startsWith("data/scenarios/")) return route.domain.includes("scenario") || route.domain === "tno-water";
-  if (changedFile.startsWith("tools/perf/") || changedFile.startsWith("ops/browser-mcp/") || changedFile.includes("perf")) return route.domain === "perf";
+  if (changedFile.startsWith("tools/perf/")) return route.domain === "perf";
   if (changedFile === "index.html" || changedFile.startsWith("css/") || changedFile.startsWith("js/ui/")) {
     return route.ownerHint === "ui-shell" || route.domain === "main-shell";
   }

@@ -375,3 +375,6 @@
 
 ### Scenario chunk 合同失败先区分代码与签入数据
 - `npm run test:node:scenario-chunk-contracts` 可能因 `hoi4_1939` coarse chunk per-feature bounds 数量漂移失败；若本轮未改 scenario 数据，先把它作为签入数据合同问题单独处理，避免把 renderer/helper refactor 和数据重建混在一个 diff。
+
+### 测试路由目录规则要避开同目录异域文件
+- Adaptive selector 处理 `ops/browser-mcp/` 这类混合目录时，static smoke support files 用显式文件集合和具体 route id；perf benchmark 继续走 perf 文件集合，避免静态合同改动误选 live gate。
