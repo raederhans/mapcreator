@@ -69,7 +69,7 @@ Tighten the already integrated Phase 2/3 boundaries without changing external da
 - [x] Phase 3: keep DOM/SVG, async asset loading, carrier overlay, selection listener, and render loop in `transport_workbench_point_preview_shared.js`.
 - [x] Phase 3: keep airport/port/energy/logistics/industrial/mineral public export names stable and forward test internals through the runtime helper.
 - [x] Phase 3: run targeted node tests, import graph verification if needed, Pages dist verification if delivery surface changes, and `git diff --check`.
-- [ ] Review: run static subagent review and first-principles self-check, fix findings.
+- [x] Review: run static subagent review and first-principles self-check, fix findings.
 - [ ] Integration: update registry delivery package, merge to `main`, push, and clean the temporary worktree after preserving branch/commit recovery trail.
 
 ### Live Process Ownership
@@ -86,3 +86,4 @@ Tighten the already integrated Phase 2/3 boundaries without changing external da
 - 2026-06-14: Phase 3 added `transport_workbench_point_preview_runtime.js` for pure pack path/cache, single-pack, edit overlay merge, visibility, data row, and snapshot logic. `transport_workbench_point_preview_shared.js` now injects carrier projection and keeps DOM/SVG, async loading, selection, and render loop ownership.
 - 2026-06-14: Phase 3 also fixed `transport_workbench_industrial_zone_preview.js` full-pack path probing by passing `getPackPath(manifest, variantId, mode)`.
 - 2026-06-14: Phase 3 validation passed: `node --check` on changed JS modules; `node --test tests\transport_workbench_preview_lifecycle_owner_behavior.test.mjs tests\transport_workbench_right_deck_owner_behavior.test.mjs tests\transport_workbench_inspector_owner_behavior.test.mjs` (33 tests); `python -m unittest tests.test_transport_workbench_manifest_runtime_contract -q` (20 tests); `npm run verify:test-import-graph`; `npm run verify:pages-dist`.
+- 2026-06-14: Rebased cleanly onto `origin/main` `3d247f17`; post-rebase targeted gates and Pages dist gate passed. Static review found no blocker/high/medium/low issues.

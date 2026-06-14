@@ -6,7 +6,7 @@ Last updated: 2026-06-14
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14`
 - Integration branch: `codex/data-chain-phase2-3-deepening-2026-06-14`
-- Base: `origin/main` at `3d8cd631763b34948589ea66553d2b329efc40ce`
+- Base: `origin/main` at `3d247f17`
 - Live test/build owner: main Codex agent only
 - Subagents: static review only
 
@@ -24,7 +24,7 @@ Last updated: 2026-06-14
 | Worktree | Branch / HEAD | Base | Status | Goal | Hot files | Tests / evidence | Overlap risk | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / pushed final integration state | `9a5febfe` | integrated-and-pushed | Main checkout | main branch | fast-forwarded from integration branch after final QA, then pushed to `origin/main` | Green | None |
-| `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14` | `codex/data-chain-phase2-3-deepening-2026-06-14` / `3d8cd631` | `origin/main` `3d8cd631` | in-progress | Phase 2 transport pack writer deepening and Phase 3 point preview runtime split | `tools/build_transport_country_real_packs.py`, `map_builder/transport_country_pack_writer.py`, `js/ui/transport_workbench_point_preview_shared.js`, new runtime helper/tests | pending; main thread owns live tests | Yellow with prior data-chain/render-chain helper work, Green vs active tooling WIP by file path | Implement Phase 2, commit, then Phase 3, review, merge to main |
+| `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14` | `codex/data-chain-phase2-3-deepening-2026-06-14` / `506d0b0e` | rebased on `origin/main` `3d247f17` | ready-for-integration | Phase 2 transport pack writer deepening and Phase 3 point preview runtime split | `tools/build_transport_country_real_packs.py`, `map_builder/transport_country_pack_writer.py`, point preview source/dist mirror, `dist/pages-dist-manifest.json`, tests | py_compile; 138 targeted Python tests; 33 targeted node tests; `verify:test-import-graph`; `verify:pages-dist`; `git diff --check` | Yellow with prior data-chain/render-chain helper work; Green vs tooling WIP by file path | Merge to `main` after static review closes |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-integration-2026-06-14` | `codex/data-chain-integration-2026-06-14` / `77d18776` | `fba1b710` plus merged `origin/main` `9a5febfe` | integrated-and-cleaned | Integration owner for data chain continuation | registry, data, renderer, transport, chunk generator, appearance/i18n Pages surface | data-quality, Phase 2-4, render selective, origin/main merge, audit selective, final review fix, and Pages dist gates passed | Resolved | Worktree removed after main push; branch and main history preserve recovery |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-quality-repair-2026-06-14` | `codex/data-quality-repair-2026-06-14` / `b856ceca` | `979b20de` | integrated | Repair scenario/data/catalog/i18n/transport asset contracts | data manifests, scenario assets, `dist/pages-dist-manifest.json`, `js/core/data_loader.js`, `lessons learned.md` | premerge branch gates passed; direct merge was rejected because current main already contains same-theme later commits; residual HOI4/data manifest drift fixed in integration and post-fix gates passed | Resolved | Recoverable reference; cleanup allowed after main push confirmation |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phases-2-4` | `codex/data-chain-phases-2-4` / `d858d276` | `b279558d` | integrated | Consolidate transport builder, line preview helpers, renderer transaction helpers | `js/core/map_renderer.js`, road/rail preview, `dist/pages-dist-manifest.json`, `lessons learned.md`, transport builder helpers | integrated by cherry-pick; Phase 2-4 gate passed after HOI4 1939 chunk repair | Resolved | Recoverable reference; cleanup allowed after main push confirmation |
@@ -60,6 +60,7 @@ Last updated: 2026-06-14
 - 2026-06-14: selectively integrated `codex/audit-20260612-appearance-transport` by taking the appearance/i18n source, mirrored dist files, and audit tests. `verify:pages-dist` regenerated `dist/pages-dist-manifest.json`; JSON validation, node tests, Pages dist verification, and `git diff --check` passed.
 - 2026-06-14: started `codex/tooling-simplification-phase3` from `origin/main` `3d8cd631` as an isolated tooling lane. It touches only selector/registry/tests/docs and keeps browser smoke live execution out of scope.
 - 2026-06-14: `codex/tooling-simplification-phase3` was committed as `e296e660`, pushed to branch and main, verified on main, and the local worktree plus local branch were removed. Remote branch remains as recovery record.
+- 2026-06-14: `codex/data-chain-phase2-3-deepening-2026-06-14` completed Phase 2 and Phase 3 implementation, then rebased cleanly onto `origin/main` `3d247f17`. Post-rebase gates passed: Python compile, 138 targeted Python tests, 33 targeted node tests, `verify:test-import-graph`, `verify:pages-dist`, and `git diff --check`.
 
 ## Delivery Package - Integration Branch
 
@@ -78,3 +79,15 @@ Last updated: 2026-06-14
 - Static review found duplicate top-level `UI_COPY_CATALOG` keys introduced by the appearance audit carry. Fixed by keeping one authoritative entry per key and adding `tests.test_i18n_audit.I18nAuditTest.test_inline_ui_catalog_keys_are_unique`.
 - Static review found missing `data-i18n` attributes on physical intensity field controls. Fixed by wiring the physical Atlas/Contour controls, buttons, labels, clear action, and point count to the existing i18n keys.
 - Post-fix validation passed: top-level catalog uniqueness probe, `python -m unittest tests.test_i18n_audit -q`, `npm run verify:pages-dist`, and `git diff --check`.
+
+## Delivery Package - Phase 2/3 Deepening
+
+1. Changed scope: Phase 2 moved country transport pack output assembly into `map_builder/transport_country_pack_writer.py`; Phase 3 split pure point preview runtime logic into `js/ui/transport_workbench_point_preview_runtime.js`; fixed industrial full-pack path probing.
+2. Core files: `map_builder/transport_country_pack_writer.py`, `tools/build_transport_country_real_packs.py`, `js/ui/transport_workbench_point_preview_runtime.js`, `js/ui/transport_workbench_point_preview_shared.js`, `js/ui/transport_workbench_industrial_zone_preview.js`, and matching `dist/app` mirror files.
+3. Tests/docs: `tests/test_global_transport_builder_contracts.py`, `tests/test_transport_workbench_manifest_runtime_contract.py`, `tests/transport_workbench_preview_lifecycle_owner_behavior.test.mjs`, active plan, registry, and regenerated `dist/pages-dist-manifest.json`.
+4. Commit state: branch committed through `506d0b0e` after clean rebase onto `origin/main` `3d247f17`.
+5. Main divergence: branch is ahead of `origin/main` by 2 commits; main can fast-forward after review.
+6. Conflict risk: direct file overlap with historical data-chain/render-chain reference work is resolved by main ancestry; active tooling WIP has no file overlap.
+7. Verification run: `python -m py_compile map_builder\transport_country_pack_writer.py map_builder\transport_source_extract_cache.py tools\build_transport_country_real_packs.py`; `node --check` on changed JS modules; `python -m unittest tests.test_global_transport_builder_contracts tests.test_transport_country_source_contracts tests.test_transport_manifest_contracts tests.test_transport_workbench_manifest_runtime_contract -q`; `node --test tests\transport_workbench_preview_lifecycle_owner_behavior.test.mjs tests\transport_workbench_right_deck_owner_behavior.test.mjs tests\transport_workbench_inspector_owner_behavior.test.mjs`; `npm run verify:test-import-graph`; `npm run verify:pages-dist`; `git diff --check`.
+8. Remaining risk: final static review is pending; cleanup of older recoverable worktrees remains a separate housekeeping pass.
+9. Recommended next step: fast-forward merge to `main`, push branch/main, then remove the temporary worktree after main verification.
