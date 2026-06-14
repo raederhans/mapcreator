@@ -1,6 +1,6 @@
 {
   "adapter_id": "global_port_natural_earth_v1",
-  "generated_at": "2026-04-30T16:11:01.345937Z",
+  "generated_at": "2026-06-14T00:58:50.128793Z",
   "source_signature": {
     "natural_earth": {
       "filename": ".runtime/source-cache/transport/global/natural_earth/ne_10m_ports.zip",

@@ -19,6 +19,14 @@
       "url": "data/city_aliases.json",
       "role": "city_aliases"
     },
+    "locales": {
+      "url": "data/locales.json",
+      "role": "locales"
+    },
+    "geo_aliases": {
+      "url": "data/geo_aliases.json",
+      "role": "geo_aliases"
+    },
     "ru_city_overrides": {
       "url": "data/ru_city_overrides.geojson",
       "role": "city_overrides"

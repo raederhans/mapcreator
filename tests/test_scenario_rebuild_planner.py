@@ -28,7 +28,7 @@ class ScenarioRebuildPlannerTest(unittest.TestCase):
                 "chunk_assets",
             ),
         )
-        self.assertEqual(plan.publish_scope, "all")
+        self.assertEqual(plan.publish_scope, "polar_runtime")
         self.assertEqual(plan.publish_targets, ())
 
     def test_resolve_tno_rebuild_plan_for_geo_locale_uses_target_publish(self) -> None:

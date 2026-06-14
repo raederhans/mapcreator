@@ -119,8 +119,12 @@ showToast(`Copied ${count} region entries to the clipboard.`);
 <html>
   <body>
     <span>GeoNames</span>
+    <span>Marine Regions</span>
     <span>Natural Earth</span>
+    <span>OpenFlights</span>
+    <span>OurAirports</span>
     <span>OpenStreetMap</span>
+    <span>Wikidata</span>
     <span>geoBoundaries</span>
   </body>
 </html>
@@ -129,7 +133,41 @@ showToast(`Copied ${count} region entries to the clipboard.`);
 
             result = collect_code_strings(repo_root)
 
-            for token in ("GeoNames", "Natural Earth", "OpenStreetMap", "geoBoundaries"):
+            for token in (
+                "GeoNames",
+                "Marine Regions",
+                "Natural Earth",
+                "OpenFlights",
+                "OurAirports",
+                "OpenStreetMap",
+                "Wikidata",
+                "geoBoundaries",
+            ):
+                with self.subTest(token=token):
+                    self.assertIn(token, result["non_translatable_tokens"])
+                    self.assertNotIn(token, result["uncovered_user_visible_literals"])
+
+    def test_treats_simple_numeric_units_as_non_translatable_literals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            self._write_repo_file(
+                repo_root,
+                "index.html",
+                """
+<!doctype html>
+<html>
+  <body>
+    <span>1.5 km</span>
+    <span>20 ms</span>
+    <span>3 km2</span>
+  </body>
+</html>
+                """.strip(),
+            )
+
+            result = collect_code_strings(repo_root)
+
+            for token in ("1.5 km", "20 ms", "3 km2"):
                 with self.subTest(token=token):
                     self.assertIn(token, result["non_translatable_tokens"])
                     self.assertNotIn(token, result["uncovered_user_visible_literals"])
@@ -399,14 +437,41 @@ const config = {
             "fragments",
         }
 
-        for locales_path in [
-            REPO_ROOT / "data" / "locales.json",
-            REPO_ROOT / "dist" / "app" / "data" / "locales.json",
-        ]:
+        locales_paths = [REPO_ROOT / "data" / "locales.json"]
+        dist_locales_path = REPO_ROOT / "dist" / "app" / "data" / "locales.json"
+        if dist_locales_path.exists():
+            locales_paths.append(dist_locales_path)
+
+        for locales_path in locales_paths:
             locales = json.loads(locales_path.read_text(encoding="utf-8"))
             ui = locales.get("ui") or {}
             for key in required_ui_keys:
                 with self.subTest(locales_path=locales_path, key=key):
+                    self.assertIn(key, ui)
+                    self.assertTrue(str((ui.get(key) or {}).get("zh", "")).strip())
+
+    def test_appearance_preset_ui_keys_are_wired_and_localized(self) -> None:
+        required_ui_keys = {
+            "Appearance Presets",
+            "Save Current Appearance",
+            "Preset Library",
+            "Preset Name",
+            "Save Preset",
+            "0 presets",
+            "preset",
+            "presets",
+            "Appearance Preset",
+        }
+
+        index_html = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="appearancePresetSummary" class="panel-hint" data-i18n="0 presets"', index_html)
+
+        locales = json.loads((REPO_ROOT / "data" / "locales.json").read_text(encoding="utf-8"))
+        baseline = json.loads((REPO_ROOT / "data" / "i18n" / "locales_baseline.json").read_text(encoding="utf-8"))
+        for label, payload in (("source", locales), ("baseline", baseline)):
+            ui = payload.get("ui") or {}
+            for key in required_ui_keys:
+                with self.subTest(label=label, key=key):
                     self.assertIn(key, ui)
                     self.assertTrue(str((ui.get(key) or {}).get("zh", "")).strip())
 

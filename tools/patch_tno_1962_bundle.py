@@ -6529,6 +6529,35 @@ def round_geojson_coordinates(payload: object, decimals: int = 6) -> object:
     return payload
 
 
+def clamp_antimeridian_coordinate(value: float, *, epsilon: float = 0.001) -> float:
+    if -180.0 - epsilon <= value < -180.0:
+        return -180.0
+    if 180.0 < value <= 180.0 + epsilon:
+        return 180.0
+    if value < -180.0 or value > 180.0:
+        raise ValueError(f"GeoJSON longitude is outside [-180, 180]: {value}")
+    return value
+
+
+def clamp_geojson_longitudes(payload: object, *, epsilon: float = 0.001) -> object:
+    if isinstance(payload, list):
+        if len(payload) >= 2 and all(isinstance(value, (int, float)) for value in payload[:2]):
+            return [
+                clamp_antimeridian_coordinate(float(payload[0]), epsilon=epsilon),
+                *payload[1:],
+            ]
+        return [clamp_geojson_longitudes(item, epsilon=epsilon) for item in payload]
+    if isinstance(payload, dict):
+        clamped = {}
+        for key, value in payload.items():
+            if key in {"coordinates", "geometries", "features", "geometry"}:
+                clamped[key] = clamp_geojson_longitudes(value, epsilon=epsilon)
+            else:
+                clamped[key] = value
+        return clamped
+    return payload
+
+
 def build_locale_specific_geo_locale_payload(payload: dict, language: str) -> dict:
     normalized_language = "zh" if str(language or "").strip().lower() == "zh" else "en"
     language_geo: dict[str, dict[str, str]] = {}
@@ -6566,6 +6595,32 @@ def ensure_geo_locale_variant_checkpoints(checkpoint_dir: Path) -> None:
 
 def resolve_publish_filenames(scope: str) -> tuple[str, ...]:
     return resolve_scenario_publish_filenames(scope)
+
+
+def ensure_legacy_capital_hints_checkpoint(checkpoint_dir: Path) -> None:
+    capital_hints_path = checkpoint_dir / "capital_hints.json"
+    city_overrides_path = checkpoint_dir / "city_overrides.json"
+    if capital_hints_path.exists() or not city_overrides_path.exists():
+        return
+    shutil.copy2(city_overrides_path, capital_hints_path)
+
+
+def hydrate_publish_checkpoint_from_scenario(
+    scenario_dir: Path,
+    checkpoint_dir: Path,
+    publish_scope: str,
+) -> None:
+    if checkpoint_dir.resolve() == scenario_dir.resolve():
+        return
+    for filename in resolve_publish_filenames(publish_scope):
+        target_path = checkpoint_dir / filename
+        if target_path.exists():
+            continue
+        source_path = scenario_dir / filename
+        if source_path.exists():
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target_path)
+    ensure_legacy_capital_hints_checkpoint(checkpoint_dir)
 
 
 def validate_tno_publish_checkpoint_dir(checkpoint_dir: Path) -> list[str]:
@@ -11593,6 +11648,45 @@ def derive_controller_payload_from_owners(owners_payload: dict) -> dict:
     return {"controllers": dict(owners) if isinstance(owners, dict) else {}}
 
 
+def prune_cores_to_registered_country_tags(
+    cores_payload: dict,
+    countries_payload: dict,
+    owners_payload: dict,
+) -> dict[str, object]:
+    cores = cores_payload.get("cores") if isinstance(cores_payload.get("cores"), dict) else {}
+    countries = countries_payload.get("countries") if isinstance(countries_payload.get("countries"), dict) else {}
+    owners = owners_payload.get("owners") if isinstance(owners_payload.get("owners"), dict) else {}
+    country_tags = {normalize_tag(tag) for tag in countries.keys() if normalize_tag(tag)}
+    pruned_tags: Counter[str] = Counter()
+    owner_replacements = 0
+
+    for feature_id, raw_core_tags in list(cores.items()):
+        normalized_tags = [normalize_tag(tag) for tag in normalize_core_tags(raw_core_tags)]
+        valid_tags = []
+        for tag in normalized_tags:
+            if tag in country_tags and tag not in valid_tags:
+                valid_tags.append(tag)
+            elif tag:
+                pruned_tags[tag] += 1
+        if valid_tags:
+            cores[feature_id] = valid_tags
+            continue
+        owner_tag = normalize_tag(owners.get(feature_id))
+        if owner_tag in country_tags:
+            cores[feature_id] = [owner_tag]
+            owner_replacements += 1
+            continue
+        raise RuntimeError(
+            "cores.by_feature.json cannot be pruned because a feature has no registered owner fallback: "
+            f"{feature_id}"
+        )
+
+    return {
+        "pruned_tag_counts": dict(sorted(pruned_tags.items())),
+        "owner_replacement_count": owner_replacements,
+    }
+
+
 def recalculate_country_feature_counts(
     countries_payload: dict,
     owners_payload: dict,
@@ -12390,13 +12484,17 @@ def build_runtime_topology_state(
     context_land_mask_gdf = water_state["context_land_mask_gdf"]
     relief_overlays_payload = water_state["relief_overlays_payload"]
     bathymetry_payload = water_state.get("bathymetry_payload") or build_empty_bathymetry_payload()
-    named_water_snapshot_payload = water_state.get("named_water_snapshot_payload") or feature_collection_from_features([])
+    named_water_snapshot_payload = clamp_geojson_longitudes(
+        water_state.get("named_water_snapshot_payload") or feature_collection_from_features([])
+    )
     water_regions_provenance_payload = water_state.get("water_regions_provenance_payload") or {}
     stage_metadata = dict(countries_state["stage_metadata"])
     water_stage_metadata = dict(water_state.get("water_stage_metadata") or {})
     stage_metadata.update(water_stage_metadata)
 
-    water_feature_collection = orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    water_feature_collection = clamp_geojson_longitudes(
+        orient_source_water_features_for_d3(gdf_to_feature_collection(water_gdf))
+    )
     water_gdf = geopandas_from_features(water_feature_collection.get("features", []))
     runtime_topology_payload = build_runtime_topology_payload(
         scenario_political_gdf,
@@ -12432,6 +12530,13 @@ def build_runtime_topology_state(
         "diagnostics": [],
     }
     relief_overlays_payload = round_geojson_coordinates(relief_overlays_payload, decimals=6)
+
+    core_prune_summary = prune_cores_to_registered_country_tags(
+        cores_payload,
+        countries_payload,
+        owners_payload,
+    )
+    audit_payload.setdefault("summary", {})["core_prune_summary"] = core_prune_summary
 
     recalculate_country_feature_counts(
         countries_payload,
@@ -13096,6 +13201,7 @@ def write_bundle_stage(
 ) -> None:
     with _scenario_build_session_lock(scenario_dir):
         with _checkpoint_build_lock(checkpoint_dir, stage=STAGE_WRITE_BUNDLE):
+            hydrate_publish_checkpoint_from_scenario(scenario_dir, checkpoint_dir, publish_scope)
             scenario_bundle_publish_service.publish_scenario_build_in_locked_session(
                 scenario_dir,
                 checkpoint_dir,

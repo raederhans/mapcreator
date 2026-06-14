@@ -367,3 +367,6 @@
 
 ### 渲染刷新 reset 抽 helper 要锁顺序
 - `setMapData` 与 scenario apply 可以共享事务清理，但颜色迁移、canvas size、topology revision、pass cache 这类路径专属步骤要保留原顺序，并用 ordered contract 锁住；抽 helper 后先做 diff 级顺序审查再跑测试。
+
+### TNO publish 验证保持只读
+- `validate_*` 路径只返回错误列表；需要补 legacy checkpoint 文件时放在外部 checkpoint hydration/publish 准备阶段，避免 checked-in scenario 目录被验证动作生成临时文件。

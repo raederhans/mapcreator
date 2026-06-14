@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-03T16:28:29.249685+00:00",
+  "generated_at": "2026-06-14T00:58:50.128793Z",
   "counts": {
     "entries": 641,
     "by_role": {
@@ -229,7 +229,7 @@
       "aliases": []
     },
     {
-      "key": "manifest_output:geo_aliases.json",
+      "key": "geo_aliases",
       "url": "data/geo_aliases.json",
       "role": "geo_aliases",
       "format": "json",
@@ -239,7 +239,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "manifest_output:geo_aliases.json"
+      ]
     },
     {
       "key": "bathymetry:global_topology",
@@ -457,7 +459,7 @@
       "aliases": []
     },
     {
-      "key": "manifest_output:locales.json",
+      "key": "locales",
       "url": "data/locales.json",
       "role": "locales",
       "format": "json",
@@ -467,7 +469,9 @@
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",
-      "aliases": []
+      "aliases": [
+        "manifest_output:locales.json"
+      ]
     },
     {
       "key": "build_manifest",

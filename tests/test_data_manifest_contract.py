@@ -112,6 +112,8 @@ class DataManifestContractTest(unittest.TestCase):
         )
         self.assertEqual(source_registry.get("country_feature_policies_key"), "country_feature_policies")
         self.assertEqual(assets.get("world_cities", {}).get("url"), "data/world_cities.geojson")
+        self.assertEqual(assets.get("locales", {}).get("url"), "data/locales.json")
+        self.assertEqual(assets.get("geo_aliases", {}).get("url"), "data/geo_aliases.json")
         self.assertEqual(assets.get("context_layer:physical", {}).get("url"), "data/europe_physical.geojson")
         self.assertEqual(assets.get("transport_catalog:road", {}).get("url"), "data/transport_layers/global_road/catalog.json")
         self.assertEqual(assets.get("hgo_flags_png_manifest", {}).get("url"), "data/hgo_catalogs/hgo_flags.png_manifest.json")
@@ -121,6 +123,8 @@ class DataManifestContractTest(unittest.TestCase):
         self.assertEqual(assets.get("hgo_runtime_provinces_bmp", {}).get("url"), "data/hgo_runtime/provinces.bmp")
         self.assertNotIn("hgo_flags_index", assets)
         self.assertIn('resolveDataAssetUrl("world_cities")', loader_source)
+        self.assertIn('resolveDataAssetUrl("locales")', loader_source)
+        self.assertIn('resolveDataAssetUrl("geo_aliases")', loader_source)
         self.assertIn('resolveDataAssetUrl("context_layer:physical")', loader_source)
         self.assertIn('resolveDataAssetUrl("transport_catalog:road")', loader_source)
         self.assertNotIn("topology:detail:highres", assets)
@@ -132,6 +136,8 @@ class DataManifestContractTest(unittest.TestCase):
         self.assertIn('na_v1: "data/europe_topology.na_v1.json"', loader_source)
         self.assertIn('na_v2: "data/europe_topology.na_v2.json"', loader_source)
         self.assertNotIn('const GLOBAL_ROAD_CATALOG_URL = "data/transport_layers/global_road/catalog.json";', loader_source)
+        self.assertNotIn('localesUrl || "data/locales.json"', loader_source)
+        self.assertNotIn('geoAliasesUrl || "data/geo_aliases.json"', loader_source)
         self.assertNotIn('const PALETTE_REGISTRY_URL = "data/palettes/index.json";', loader_source)
 
         for asset_key, metadata in assets.items():

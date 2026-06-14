@@ -1043,7 +1043,6 @@ class TnoBundleBuilderTest(unittest.TestCase):
 
         for feature_id, point in (
             ("tno_labrador_sea", Point(-52.7329, 53.9977)),
-            ("tno_gulf_of_alaska", Point(-147.3894, 57.3575)),
             ("tno_tasman_sea", Point(160.0, -31.8)),
         ):
             self.assertEqual(tuple(spec_map[feature_id].get("supplement_bboxes") or ()), ())
@@ -1054,6 +1053,8 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 snapshot_geom.contains(point) or snapshot_geom.touches(point),
                 f"{feature_id} snapshot geometry should already cover validator probe {point.wkt}",
             )
+        alaska_supplements = tuple(spec_map["tno_gulf_of_alaska"].get("supplement_bboxes") or ())
+        self.assertEqual(alaska_supplements, ((-163.358, 54.8103, -163.3575, 54.811),))
 
     def test_named_water_base_controls_keep_geometry_subtraction_separate_from_clone_exclusion(self) -> None:
         spec_map = {
@@ -1990,13 +1991,7 @@ class TnoBundleBuilderTest(unittest.TestCase):
             Path("data/palette-maps/tno.audit.json").read_text(encoding="utf-8")
         )["entries"]
 
-        explicit_scenario_color_tags = {
-            "PHI": "#5b83a4",
-            "MAL": "#d39d80",
-            "LAO": "#c7a18d",
-            "ARM": "#b066b4",
-            "BRG": "#1a1a1a",
-        }
+        explicit_scenario_color_tags = {}
         palette_priority_tags = {
             "KAZ": "#aa233c",
             "UZB": "#9b2b40",
@@ -3003,6 +2998,25 @@ class TnoBundleBuilderTest(unittest.TestCase):
                 "audit.json summary must match manifest.summary for derived scenario artifacts.",
             ],
         )
+
+    def test_publish_checkpoint_validation_does_not_create_legacy_capital_hints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            checkpoint_dir = root / "tno-water-checkpoints"
+            checkpoint_dir.mkdir(parents=True)
+            (checkpoint_dir / "city_overrides.json").write_text("{}", encoding="utf-8")
+            validation_dirs: list[Path] = []
+
+            def fake_validate_publish_bundle_dir(target_dir: Path) -> list[str]:
+                validation_dirs.append(target_dir)
+                return []
+
+            with patch.object(tno_bundle, "validate_publish_bundle_dir", side_effect=fake_validate_publish_bundle_dir):
+                errors = tno_bundle.validate_tno_publish_checkpoint_dir(checkpoint_dir)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(len(validation_dirs), 1)
+        self.assertFalse((checkpoint_dir / "capital_hints.json").exists())
 
     def test_prechunk_publish_checkpoint_validation_only_allows_missing_build_snapshot(self) -> None:
         errors = [

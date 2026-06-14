@@ -719,18 +719,21 @@ def build_catalog_markdown(payload: dict[str, Any]) -> str:
             "",
             "## Entries",
             "",
-            "| key | url | role | format | readMode | owner | sourceId |",
-            "| --- | --- | --- | --- | --- | --- | --- |",
+            "| key | url | role | format | readMode | schemaRef | hashRef | cachePolicy | owner | sourceId |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
     for entry in payload.get("entries", []):
         lines.append(
-            "| {key} | {url} | {role} | {format} | {readMode} | {owner} | {sourceId} |".format(
+            "| {key} | {url} | {role} | {format} | {readMode} | {schemaRef} | {hashRef} | {cachePolicy} | {owner} | {sourceId} |".format(
                 key=entry.get("key", ""),
                 url=entry.get("url", ""),
                 role=entry.get("role", ""),
                 format=entry.get("format", ""),
                 readMode=entry.get("readMode", ""),
+                schemaRef=entry.get("schemaRef", ""),
+                hashRef=entry.get("hashRef", ""),
+                cachePolicy=entry.get("cachePolicy", ""),
                 owner=entry.get("owner", ""),
                 sourceId=entry.get("sourceId", ""),
             )

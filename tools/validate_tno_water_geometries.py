@@ -334,9 +334,20 @@ def _is_antimeridian_split_feature(geometry) -> bool:
     return abs(min_x + 180.0) <= ANTIMERIDIAN_EPSILON and abs(max_x - 180.0) <= ANTIMERIDIAN_EPSILON
 
 
+def _iter_coordinate_pairs(value):
+    if not isinstance(value, list):
+        return
+    if len(value) >= 2 and all(isinstance(item, (int, float)) for item in value[:2]):
+        yield float(value[0]), float(value[1])
+        return
+    for item in value:
+        yield from _iter_coordinate_pairs(item)
+
+
 def _collect_feature_metrics(feature_collection: dict, *, label: str) -> dict:
     invalid = []
     empty = []
+    out_of_range_coordinates = []
     oversized_features = []
     oversized_parts = []
     antimeridian_split_features = []
@@ -348,6 +359,16 @@ def _collect_feature_metrics(feature_collection: dict, *, label: str) -> dict:
         if not geometry_payload:
             empty.append(feature_id)
             continue
+        bad_coordinate_samples = [
+            [lon, lat]
+            for lon, lat in _iter_coordinate_pairs(geometry_payload.get("coordinates")) or []
+            if lon < -180.0 or lon > 180.0 or lat < -90.0 or lat > 90.0
+        ]
+        if bad_coordinate_samples:
+            out_of_range_coordinates.append({
+                "id": feature_id,
+                "samples": bad_coordinate_samples[:5],
+            })
         geometry = shape(geometry_payload)
         if geometry.is_empty:
             empty.append(feature_id)
@@ -381,6 +402,7 @@ def _collect_feature_metrics(feature_collection: dict, *, label: str) -> dict:
         "feature_ids": sorted(filter(None, feature_ids)),
         "invalid_feature_ids": sorted(filter(None, invalid)),
         "empty_feature_ids": sorted(filter(None, empty)),
+        "out_of_range_coordinates": out_of_range_coordinates,
         "oversized_feature_bboxes": oversized_features,
         "oversized_part_bboxes": oversized_parts,
         "antimeridian_split_features": antimeridian_split_features,
@@ -412,6 +434,7 @@ def _collect_chunk_metrics_from_feature_collections(chunk_feature_collections: l
     feature_ids = set()
     invalid = []
     empty = []
+    out_of_range_coordinates = []
     oversized_parts = []
     oversized_features = []
     antimeridian_split_features = []
@@ -421,6 +444,7 @@ def _collect_chunk_metrics_from_feature_collections(chunk_feature_collections: l
         feature_ids.update(metric["feature_ids"])
         invalid.extend(metric["invalid_feature_ids"])
         empty.extend(metric["empty_feature_ids"])
+        out_of_range_coordinates.extend(metric["out_of_range_coordinates"])
         oversized_features.extend(metric["oversized_feature_bboxes"])
         oversized_parts.extend(metric["oversized_part_bboxes"])
         antimeridian_split_features.extend(metric["antimeridian_split_features"])
@@ -430,6 +454,7 @@ def _collect_chunk_metrics_from_feature_collections(chunk_feature_collections: l
         "feature_ids": sorted(feature_ids),
         "invalid_feature_ids": sorted(set(filter(None, invalid))),
         "empty_feature_ids": sorted(set(filter(None, empty))),
+        "out_of_range_coordinates": out_of_range_coordinates,
         "oversized_feature_bboxes": oversized_features,
         "oversized_part_bboxes": oversized_parts,
         "antimeridian_split_features": antimeridian_split_features,
@@ -931,6 +956,8 @@ def summarize_failures(report: dict, *, require_chunks: bool = True) -> list[str
             failures.append(f"{section_name}: invalid={len(section['invalid_feature_ids'])}")
         if section["empty_feature_ids"]:
             failures.append(f"{section_name}: empty={len(section['empty_feature_ids'])}")
+        if section.get("out_of_range_coordinates"):
+            failures.append(f"{section_name}: out_of_range_coordinates={len(section['out_of_range_coordinates'])}")
         if section["oversized_part_bboxes"]:
             failures.append(f"{section_name}: oversized_parts={len(section['oversized_part_bboxes'])}")
         if section["oversized_feature_bboxes"]:

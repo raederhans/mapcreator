@@ -154,6 +154,7 @@ class TransportManifestContractsTest(unittest.TestCase):
 
     def test_main_map_point_packs_include_visible_importance_ranks(self) -> None:
         point_layers_by_pack = {
+            "global_airport": "airports",
             "usa_airport": "airports",
             "china_airport": "airports",
             "russia_airport": "airports",
@@ -161,6 +162,7 @@ class TransportManifestContractsTest(unittest.TestCase):
             "germany_airport": "airports",
             "france_airport": "airports",
             "uk_airport": "airports",
+            "global_port": "ports",
             "usa_port": "ports",
             "germany_port": "ports",
             "france_port": "ports",

@@ -301945,6 +301945,42 @@
     "After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.": {
       "en": "After a broad edit, review View, Split, labels, frontlines, and export preview before the next broad action.",
       "zh": "大范围编辑后，先检查视图、拆分、标签、前线和导出预览，再进行下一次大范围操作。"
+    },
+    "Appearance Presets": {
+      "en": "Appearance Presets",
+      "zh": "外观预设"
+    },
+    "Save Current Appearance": {
+      "en": "Save Current Appearance",
+      "zh": "保存当前外观"
+    },
+    "Preset Library": {
+      "en": "Preset Library",
+      "zh": "预设库"
+    },
+    "Preset Name": {
+      "en": "Preset Name",
+      "zh": "预设名称"
+    },
+    "Save Preset": {
+      "en": "Save Preset",
+      "zh": "保存预设"
+    },
+    "0 presets": {
+      "en": "0 presets",
+      "zh": "0 个预设"
+    },
+    "preset": {
+      "en": "preset",
+      "zh": "个预设"
+    },
+    "presets": {
+      "en": "presets",
+      "zh": "个预设"
+    },
+    "Appearance Preset": {
+      "en": "Appearance Preset",
+      "zh": "外观预设"
     }
   }
 }

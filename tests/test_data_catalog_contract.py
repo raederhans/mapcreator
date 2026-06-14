@@ -12,6 +12,7 @@ from tools.build_data_catalog import (
     build_catalog_payload,
     collect_transport_path_contract_errors,
 )
+from tools.check_data_catalog import summarize_empty_hash_refs
 from tools.data_health import SCENARIO_REGISTRY_URL, collect_health
 
 
@@ -35,6 +36,26 @@ class DataCatalogContractTest(unittest.TestCase):
 
         self.assertEqual(checked_in_payload, rebuilt_payload)
         self.assertEqual(checked_in_markdown, rebuilt_markdown)
+
+    def test_catalog_markdown_exposes_governance_columns(self) -> None:
+        checked_in_markdown = CATALOG_MD.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "| key | url | role | format | readMode | schemaRef | hashRef | cachePolicy | owner | sourceId |",
+            checked_in_markdown,
+        )
+
+    def test_empty_hash_ref_warning_summary_groups_by_role(self) -> None:
+        counts = summarize_empty_hash_refs(
+            [
+                {"role": "manifest", "hashRef": ""},
+                {"role": "manifest", "hashRef": "data/manifest.json::outputs::x::sha256"},
+                {"role": "transport_manifest", "hashRef": "  "},
+                {"role": "manifest", "hashRef": ""},
+            ]
+        )
+
+        self.assertEqual(counts, {"manifest": 2, "transport_manifest": 1})
 
     def test_catalog_keeps_current_governance_counts_and_schema_surface(self) -> None:
         payload = self._load_catalog()

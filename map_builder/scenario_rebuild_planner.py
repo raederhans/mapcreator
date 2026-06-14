@@ -74,7 +74,7 @@ def resolve_tno_rebuild_plan(changed_domain: str) -> TnoRebuildPlan:
                 STAGE_WRITE_BUNDLE,
                 STAGE_CHUNK_ASSETS,
             ),
-            publish_scope="all",
+            publish_scope="polar_runtime",
         ),
         CHANGED_DOMAIN_GEO_LOCALE: TnoRebuildPlan(
             changed_domain=normalized,

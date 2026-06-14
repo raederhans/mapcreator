@@ -243,8 +243,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8456906,
-      "sha256": "f92c99d18edc7ab5d183f7fdf61a22f0132fcecf2360451e2f1a6fe9b0a23976",
+      "size_bytes": 8759660,
+      "sha256": "7a12bed87425c7822d0a0a8705bc43eec6850586491eead24f5f5e1a82c1d09b",
       "type": "locales",
       "geo_entry_count": 73680,
       "ui_entry_count": 1805
@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 24259,
-      "sha256": "535b7678da853128e3600b01f7aba8e37c115b58325557f7b67aaad2936078d5"
+      "size_bytes": 24435,
+      "sha256": "563fdd238d50ff53df1166fbd80a05db5923044496826a273b9852f50e0dccfa"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -1121,6 +1121,14 @@
         "url": "data/transport_layers/uk_mineral_resources/manifest.json",
         "role": "transport_manifest",
         "family_id": "uk_mineral_resources"
+      },
+      "locales": {
+        "url": "data/locales.json",
+        "role": "locales"
+      },
+      "geo_aliases": {
+        "url": "data/geo_aliases.json",
+        "role": "geo_aliases"
       }
     },
     "scenario_registry_key": "scenario_registry",

@@ -307,6 +307,18 @@ const PYTHON_FAST_CONTRACTS = [
     ciProfile: "pr-fast",
   },
   {
+    id: "python:tests.test_i18n_audit",
+    commandRef: "python -m unittest tests.test_i18n_audit -q",
+    sourceRef: "tests/test_i18n_audit.py,tools/i18n_audit.py,tools/translate_manager.py,data/locales.json,data/i18n/locales_baseline.json,data/city_aliases.json,data/geo_aliases.json,data/hgo_catalogs/hgo_place_names.json,data/hgo_catalogs/hgo_identity_aliases.json",
+    domain: "i18n-data",
+    ownerHint: "i18n-runtime",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "python:tests.deferred_detail_promotion_contracts",
     commandRef: "python -m unittest tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract -q",
     sourceRef: "js/bootstrap/deferred_detail_promotion.js,tests/test_main_deferred_detail_promotion_boundary_contract.py,tests/test_scenario_chunk_refresh_contracts.py,tests/test_scenario_renderer_bridge_boundary_contract.py",

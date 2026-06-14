@@ -78,6 +78,26 @@ def clean_number(value: object, fallback: float = 0) -> float:
     return number if math.isfinite(number) else fallback
 
 
+def map_airport_type(raw_type: str) -> str:
+    text = clean_text(raw_type).lower()
+    if "major" in text:
+        return "national"
+    if "mid" in text:
+        return "specific_local"
+    if "small" in text or "minor" in text:
+        return "local"
+    return "other"
+
+
+def map_airport_status(raw_status: object = "") -> str:
+    text = clean_text(raw_status).lower()
+    if not text or text in {"operational", "open", "active"}:
+        return "active"
+    if text in {"closed", "abandoned", "inactive"}:
+        return "paused"
+    return "unknown"
+
+
 def download_source(family: str) -> tuple[Path, dict[str, object]]:
     source = SOURCES[family]
     source_path = SOURCE_CACHE_ROOT / source["filename"]
@@ -120,8 +140,8 @@ def normalize_airport_feature(row: Any, index: int) -> dict[str, object] | None:
             "name": name,
             "iata": iata,
             "icao": icao,
-            "airport_type": airport_type or "airport",
-            "status_category": "operational",
+            "airport_type": map_airport_type(airport_type),
+            "status_category": map_airport_status(getattr(row, "status", "")),
             "importance": importance,
             "importance_rank": importance_rank,
             "source": "natural_earth_10m_airports",
@@ -163,7 +183,7 @@ def normalize_port_feature(row: Any, index: int) -> dict[str, object] | None:
             "name": name,
             "legal_designation": legal_designation,
             "legal_designation_label": legal_designation_label,
-            "manager_type_code": "global",
+            "manager_type_code": "5",
             "importance": "national_core" if importance_rank >= 3 else ("regional_core" if importance_rank == 2 else "local_connector"),
             "importance_rank": importance_rank,
             "source": "natural_earth_10m_ports",

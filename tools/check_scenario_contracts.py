@@ -868,6 +868,46 @@ def validate_runtime_capitals(expected_scenario_id: str, manifest: dict, errors:
         errors.append("city_overrides.json capital_city_hints must be an object.")
         return
 
+    country_tags: set[str] = set()
+    countries_url = str(manifest.get("countries_url") or "").strip()
+    countries_path = scenario_relative_url_to_path(countries_url) if countries_url else None
+    if countries_path is not None and countries_path.exists():
+        try:
+            countries_payload = load_json(countries_path)
+            countries = countries_payload.get("countries")
+            if isinstance(countries, dict):
+                country_tags = {
+                    normalize_scenario_contract_tag(tag)
+                    for tag in countries.keys()
+                    if normalize_scenario_contract_tag(tag)
+                }
+        except Exception as exc:
+            errors.append(str(exc))
+
+    if country_tags and expected_scenario_id == "tno_1962":
+        invalid_capital_tags = sorted(
+            tag
+            for tag in capitals_by_tag.keys()
+            if normalize_scenario_contract_tag(tag) not in country_tags
+        )
+        invalid_hint_tags = sorted(
+            tag
+            for tag in capital_city_hints.keys()
+            if normalize_scenario_contract_tag(tag) not in country_tags
+        )
+        invalid_hint_entry_tags = sorted(
+            f"{tag}:{entry.get('tag')}"
+            for tag, entry in capital_city_hints.items()
+            if isinstance(entry, dict)
+            and normalize_scenario_contract_tag(entry.get("tag")) not in country_tags
+        )
+        if invalid_capital_tags:
+            errors.append(f"city_overrides.json capitals_by_tag has tags missing from countries.json: {invalid_capital_tags[:20]}.")
+        if invalid_hint_tags:
+            errors.append(f"city_overrides.json capital_city_hints has tags missing from countries.json: {invalid_hint_tags[:20]}.")
+        if invalid_hint_entry_tags:
+            errors.append(f"city_overrides.json capital_city_hints entries must tag registered countries: {invalid_hint_entry_tags[:20]}.")
+
     featured_tags = normalize_featured_tags(manifest)
     missing_tags = [
         tag
@@ -1978,15 +2018,22 @@ def validate_strict_bundle_contract(
         return
     owners_payload = required_payloads["owners.by_feature.json"]
     cores_payload = required_payloads["cores.by_feature.json"]
+    countries_payload = required_payloads.get("countries.json") or {}
+    if not countries_payload and target_dir.name == "tno_1962":
+        countries_payload = _load_required_local_json(target_dir / "countries.json", errors) or {}
     runtime_payload = required_payloads[SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME]
 
     owners = owners_payload.get("owners")
     cores = cores_payload.get("cores")
+    countries = countries_payload.get("countries") if isinstance(countries_payload.get("countries"), dict) else {}
     if not isinstance(owners, dict):
         errors.append("owners.by_feature.json owners payload must be an object in strict mode.")
         return
     if not isinstance(cores, dict):
         errors.append("cores.by_feature.json cores payload must be an object in strict mode.")
+        return
+    if not isinstance(countries, dict):
+        errors.append("countries.json countries payload must be an object in strict mode.")
         return
 
     non_list_core_ids = [feature_id for feature_id, value in cores.items() if not isinstance(value, list)]
@@ -1995,6 +2042,37 @@ def validate_strict_bundle_contract(
             "cores.by_feature.json must store arrays for every feature in strict mode. "
             f"Sample: {non_list_core_ids[:10]}."
         )
+    if target_dir.name == "tno_1962":
+        country_tags = {
+            normalize_scenario_contract_tag(tag)
+            for tag in countries.keys()
+            if normalize_scenario_contract_tag(tag)
+        }
+        country_tags.update(
+            normalize_scenario_contract_tag(entry.get("tag"))
+            for entry in countries.values()
+            if isinstance(entry, dict) and normalize_scenario_contract_tag(entry.get("tag"))
+        )
+        invalid_core_tags: dict[str, list[str]] = {}
+        for feature_id, core_tags in cores.items():
+            if not isinstance(core_tags, list):
+                continue
+            unknown_tags = sorted(
+                {
+                    normalize_scenario_contract_tag(tag)
+                    for tag in core_tags
+                    if normalize_scenario_contract_tag(tag)
+                    and normalize_scenario_contract_tag(tag) not in country_tags
+                }
+            )
+            if unknown_tags:
+                invalid_core_tags[str(feature_id)] = unknown_tags
+        if invalid_core_tags:
+            sample = [
+                f"{feature_id}:{','.join(tags)}"
+                for feature_id, tags in list(sorted(invalid_core_tags.items()))[:10]
+            ]
+            errors.append(f"cores.by_feature.json must only reference countries.json tags in strict mode. Sample: {sample}.")
 
     owner_ids = {str(feature_id).strip() for feature_id in owners.keys() if str(feature_id).strip()}
     core_ids = {str(feature_id).strip() for feature_id in cores.keys() if str(feature_id).strip()}

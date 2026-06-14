@@ -23,6 +23,20 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def summarize_empty_hash_refs(entries: list[dict]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if "hashRef" not in entry:
+            continue
+        if str(entry.get("hashRef") or "").strip():
+            continue
+        role = str(entry.get("role") or "<missing-role>").strip() or "<missing-role>"
+        counts[role] = counts.get(role, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def main() -> None:
     if not CATALOG_PATH.exists():
         raise SystemExit(f"Missing catalog JSON: {CATALOG_PATH}")
@@ -84,6 +98,11 @@ def main() -> None:
         for failure in failures:
             print(failure, file=sys.stderr)
         raise SystemExit(1)
+
+    empty_hash_ref_counts = summarize_empty_hash_refs(entries)
+    if empty_hash_ref_counts:
+        counts_text = ", ".join(f"{role}={count}" for role, count in empty_hash_ref_counts.items())
+        print(f"[data-catalog] WARNING: empty hashRef coverage by role: {counts_text}")
 
     print(f"[data-catalog] OK: {len(entries)} entries validated.")
 

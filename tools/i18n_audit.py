@@ -97,17 +97,25 @@ MIXED_TERM_LINT_RE = re.compile(r"\b(?:override|fallback|workbench|inspector)\b"
 NON_VISIBLE_HTML_TAGS = {"script", "style"}
 NON_TRANSLATABLE_PATTERNS = (
     re.compile(r"^\d+(?:\.\d+)?(?:px|x|ms|s|%)$", re.IGNORECASE),
+    re.compile(r"^\d+(?:\.\d+)?\s+(?:ft|km|km2|m|mi|mph|kph|ms)$", re.IGNORECASE),
     re.compile(r"^\d{1,2}:\d{2}(?:\s*(?:UTC|AM|PM))?$", re.IGNORECASE),
     re.compile(r"^[+\-]?\d+(?:\.\d+)?$"),
 )
 NON_TRANSLATABLE_EXACT_TOKENS = {
+    "GADM",
     "GeoNames",
     "Geofabrik",
     "MLIT Japan",
+    "Marine Regions",
     "NASA Black Marble",
     "NOAA ETOPO",
     "Natural Earth",
+    "OpenFlights",
+    "OpenInfraMap",
     "OpenStreetMap",
+    "OurAirports",
+    "Wikidata",
+    "World Bank",
     "geoBoundaries",
 }
 PLACEHOLDER_SAMPLE_RE = re.compile(r"^[a-z][a-z0-9_-]{2,}$")

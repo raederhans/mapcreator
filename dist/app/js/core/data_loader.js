@@ -81,6 +81,8 @@ const EXPLICIT_CONTEXT_CATALOG_LAYER_NAMES = new Set(
     .flatMap((familyId) => getTransportOverviewDataLayerKeys(familyId))
     .filter((layerName) => layerName && !Object.prototype.hasOwnProperty.call(CONTEXT_LAYER_PACKS, layerName))
 );
+const LOCALES_URL = resolveDataAssetUrl("locales");
+const GEO_ALIASES_URL = resolveDataAssetUrl("geo_aliases");
 const PALETTE_REGISTRY_URL = resolveDataAssetUrl("palette_registry");
 const RELEASABLE_CATALOG_URL = resolveDataAssetUrl("releasable_catalog");
 const RENDER_PROFILES = new Set(["auto", "balanced", "full"]);
@@ -822,10 +824,10 @@ function resolveLocalizationUrls({
   return {
     localeLevel: normalizedLevel,
     localesUrl: String(
-      localesUrl || "data/locales.json"
+      localesUrl || LOCALES_URL
     ).trim(),
     geoAliasesUrl: String(
-      geoAliasesUrl || "data/geo_aliases.json"
+      geoAliasesUrl || GEO_ALIASES_URL
     ).trim(),
   };
 }
