@@ -8,17 +8,18 @@ import {
   projectTransportWorkbenchCarrierScenePoint,
 } from "./transport_workbench_carrier.js";
 import {
+  buildTransportWorkbenchProjectedLines as buildProjectedLines,
+  createTransportWorkbenchLinePathD as createPathD,
+  createTransportWorkbenchSvgNode as createSvgNode,
   createTransportWorkbenchLinePackRuntime,
+  findTransportWorkbenchDatasetNode as findDatasetNode,
+  keepFirstTransportWorkbenchGridBucket as keepFirstPerGridBucket,
+  measureTransportWorkbenchProjectedLineLength as measureProjectedLength,
+  normalizeTransportWorkbenchNumber as normalizeNumber,
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
+  syncTransportWorkbenchSvgGroupOrder as syncGroupOrder,
 } from "./transport_workbench_line_runtime_shared.js";
-import {
-  buildProjectedLineSegments,
-  createLinePathD,
-  findClosestDatasetNode,
-  keepFirstPerGridBucket,
-  measureProjectedLineLength,
-} from "./transport_workbench_line_preview_helpers.js";
 
 
 const MANIFEST_URL = resolveTransportManifestUrl("road");
@@ -139,25 +140,12 @@ function ensureTopojsonClient() {
   }
 }
 
-function createSvgNode(tagName) {
-  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
-}
-
 function normalizeFlags(flags) {
   if (Array.isArray(flags)) return flags.filter(Boolean).map((value) => String(value));
   if (typeof flags === "string" && flags.trim()) {
     return flags.split("|").map((value) => value.trim()).filter(Boolean);
   }
   return [];
-}
-
-function normalizeNumber(value, fallback = 0) {
-  const next = Number(value);
-  return Number.isFinite(next) ? next : fallback;
-}
-
-function buildProjectedLines(geometry) {
-  return buildProjectedLineSegments(geometry);
 }
 
 function createRoadFeature(rawFeature) {
@@ -183,8 +171,8 @@ function createRoadFeature(rawFeature) {
       : null,
     geometry: rawFeature.geometry,
     projectedGeometry: projected.geometry,
-    pathD: createLinePathD(projected.geometry),
-    projectedLength: measureProjectedLineLength(projected.geometry),
+    pathD: createPathD(projected.geometry),
+    projectedLength: measureProjectedLength(projected.geometry),
     projectedLines,
   };
 }
@@ -300,7 +288,7 @@ function filterVisibleLabels(labelFeatures, visibleRoadIds, config, scale) {
 }
 
 function handleRoadGroupClick(event) {
-  const node = findClosestDatasetNode(event.target, "roadId", roadsGroup);
+  const node = findDatasetNode(event.target, "roadId", roadsGroup);
   const roadId = node?.dataset?.roadId;
   if (!roadId) return;
   event.stopPropagation();
@@ -311,7 +299,7 @@ function handleRoadGroupClick(event) {
 }
 
 function handleLabelGroupClick(event) {
-  const node = findClosestDatasetNode(event.target, "labelId", labelsGroup);
+  const node = findDatasetNode(event.target, "labelId", labelsGroup);
   const labelId = node?.dataset?.labelId;
   if (!labelId) return;
   event.stopPropagation();
@@ -501,25 +489,6 @@ function updateLabelNode(text, label, config) {
   text.dataset.roadClass = label.roadClass;
   text.setAttribute("class", "transport-workbench-road-label");
   text.textContent = label.ref;
-}
-
-function syncGroupOrder(group, orderedNodes) {
-  let previousNode = null;
-  orderedNodes.forEach((node) => {
-    if (!node.parentNode) {
-      group.appendChild(node);
-      previousNode = node;
-      return;
-    }
-    if (!previousNode) {
-      if (group.firstChild !== node) {
-        group.insertBefore(node, group.firstChild);
-      }
-    } else if (previousNode.nextSibling !== node) {
-      group.insertBefore(node, previousNode.nextSibling);
-    }
-    previousNode = node;
-  });
 }
 
 function syncRoadNodes(visibleRoads, config, selectedRoadId) {

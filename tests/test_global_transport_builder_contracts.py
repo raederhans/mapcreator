@@ -27,6 +27,9 @@ ROAD_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_roads.py'
 RAIL_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_rail.py'
 POINT_BUILDER = REPO_ROOT / 'tools' / 'build_global_transport_points.py'
 COMMON_HELPER = REPO_ROOT / 'map_builder' / 'overture_transport_common.py'
+COUNTRY_REAL_PACK_BUILDER = REPO_ROOT / 'tools' / 'build_transport_country_real_packs.py'
+COUNTRY_PACK_WRITER = REPO_ROOT / 'map_builder' / 'transport_country_pack_writer.py'
+SOURCE_EXTRACT_CACHE = REPO_ROOT / 'map_builder' / 'transport_source_extract_cache.py'
 
 
 class GlobalTransportBuilderContractsTest(unittest.TestCase):
@@ -43,8 +46,32 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
             RAIL_BUILDER,
             POINT_BUILDER,
             COMMON_HELPER,
+            COUNTRY_REAL_PACK_BUILDER,
+            COUNTRY_PACK_WRITER,
+            SOURCE_EXTRACT_CACHE,
         ):
             self.assertTrue(path.exists(), path.as_posix())
+
+    def test_country_real_pack_builder_uses_shared_pack_writer_and_extract_cache(self) -> None:
+        builder_content = COUNTRY_REAL_PACK_BUILDER.read_text(encoding='utf-8')
+        writer_content = COUNTRY_PACK_WRITER.read_text(encoding='utf-8')
+        extract_cache_content = SOURCE_EXTRACT_CACHE.read_text(encoding='utf-8')
+
+        self.assertIn('from map_builder.transport_country_pack_writer import (', builder_content)
+        self.assertIn('write_country_pack_layers', builder_content)
+        self.assertIn('country_pack_feature_counts', builder_content)
+        self.assertIn('country_pack_clip_bbox', builder_content)
+        self.assertIn('from map_builder.transport_source_extract_cache import (', builder_content)
+        self.assertIn('marker_matches', builder_content)
+        self.assertIn('source_marker_from_signature', builder_content)
+        self.assertIn('write_marker', builder_content)
+        self.assertNotRegex(builder_content, r'(?m)^def feature_collection\(')
+        self.assertNotRegex(builder_content, r'(?m)^def topology_payload\(')
+        self.assertNotRegex(builder_content, r'(?m)^def file_signature\(')
+        self.assertIn('def write_country_pack_layers(', writer_content)
+        self.assertIn('def country_pack_layer_suffix(', writer_content)
+        self.assertIn('def source_marker_from_signature(', extract_cache_content)
+        self.assertIn('def marker_matches(', extract_cache_content)
 
     def test_global_road_recipe_uses_overture_single_source_policy(self) -> None:
         payload = json.loads(GLOBAL_ROAD_RECIPE.read_text(encoding='utf-8'))

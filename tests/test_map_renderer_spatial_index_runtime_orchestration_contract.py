@@ -57,6 +57,18 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         )
 
     def test_chunk_promotion_visual_stage_reuses_primary_derived_state_rebuild(self):
+        self.assertIn("function rebuildPrimaryPoliticalDerivedState({", self.renderer_content)
+        helper_start = self.renderer_content.index("function rebuildPrimaryPoliticalDerivedState({")
+        helper_end = self.renderer_content.index("function setMapData({", helper_start)
+        helper_body = self.renderer_content[helper_start:helper_end]
+        self.assertRegex(
+            helper_body,
+            re.compile(
+                r'rebuildPrimaryPoliticalCollections\(\);[\s\S]*?'
+                r'rebuildRuntimeDerivedState\(\{\s*includeRuntimePoliticalMeta: true,\s*scheduleUiMode,\s*buildSpatial,\s*includeSecondarySpatial,\s*\}\);',
+                re.S,
+            ),
+        )
         self.assertRegex(
             self.renderer_content,
             re.compile(
@@ -67,8 +79,8 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertRegex(
             self.renderer_content,
             re.compile(
-                r'if \(hasPoliticalChange\) \{\s*ensureLayerDataFromTopology\(\);\s*rebuildPoliticalLandCollections\(\);[\s\S]*?'
-                r'rebuildRuntimeDerivedState\(\{\s*includeRuntimePoliticalMeta: true,\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);',
+                r'if \(hasPoliticalChange\) \{[\s\S]*?'
+                r'rebuildPrimaryPoliticalDerivedState\(\{\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);',
                 re.S,
             ),
         )

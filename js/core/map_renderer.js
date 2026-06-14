@@ -26352,6 +26352,47 @@ function initMap({
   }
 }
 
+function markRendererTopologyChanged({ hitCanvasDirty = false } = {}) {
+  resetExactRefreshOptimizationState();
+  resetVisibleInternalBorderMeshSignature();
+  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+  if (hitCanvasDirty) {
+    runtimeState.hitCanvasDirty = true;
+  }
+  runtimeState.hitCanvasTopologyRevision = 0;
+}
+
+function resetRendererTransactionState({
+  cancelSecondarySpatialBuild = false,
+  cancelHoverOverlayRender = false,
+  hitCanvasDirty = false,
+} = {}) {
+  resetRendererRefreshTransactionState({
+    cancelHoverOverlay: cancelHoverOverlayRender,
+    cancelSecondarySpatialBuild,
+  });
+  markRendererTopologyChanged({ hitCanvasDirty });
+}
+
+function rebuildPrimaryPoliticalCollections() {
+  ensureLayerDataFromTopology();
+  return rebuildPoliticalLandCollections();
+}
+
+function rebuildPrimaryPoliticalDerivedState({
+  scheduleUiMode = "deferred",
+  buildSpatial = true,
+  includeSecondarySpatial = false,
+} = {}) {
+  rebuildPrimaryPoliticalCollections();
+  rebuildRuntimeDerivedState({
+    includeRuntimePoliticalMeta: true,
+    scheduleUiMode,
+    buildSpatial,
+    includeSecondarySpatial,
+  });
+}
+
 function setMapData({
   refitProjection = true,
   resetZoom = true,
@@ -26360,14 +26401,10 @@ function setMapData({
   deferInteractionInfrastructure = false,
 } = {}) {
   const startedAt = nowMs();
-  resetRendererRefreshTransactionState({
-    cancelHoverOverlay: true,
+  resetRendererTransactionState({
+    cancelHoverOverlayRender: true,
     cancelSecondarySpatialBuild: true,
   });
-  resetExactRefreshOptimizationState();
-  resetVisibleInternalBorderMeshSignature();
-  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
-  runtimeState.hitCanvasTopologyRevision = 0;
   const renderPassCache = getRenderPassCacheState();
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
@@ -26379,8 +26416,7 @@ function setMapData({
   invalidateAllRenderPasses("set-map-data");
   markAllOverlaysDirty();
   queueTooltipUpdate({ visible: false });
-  ensureLayerDataFromTopology();
-  const { fullCollection, interactiveCollection } = rebuildPoliticalLandCollections();
+  const { fullCollection, interactiveCollection } = rebuildPrimaryPoliticalCollections();
 
   if (runtimeState.topologyBundleMode === "composite" && Array.isArray(fullCollection?.features)) {
     const coverage = runtimeState.debugCountryCoverage || collectCountryCoverageStats(fullCollection.features);
@@ -26808,24 +26844,17 @@ function refreshMapDataForScenarioChunkPromotion({
     ]))
     : changedLayerKeys;
   if (hasPoliticalChange) {
-    ensureLayerDataFromTopology();
-    rebuildPoliticalLandCollections();
     // political chunk promotion 首帧必须和 scenario apply 一样，先把 primary derived state 收回一致：
     // landIndex / 主 spatial grid / resolved colors / runtime political meta 都要先于 render 完成，
     // deferred infra 再只接 secondary indexes、hit canvas 和重 mesh。
-    rebuildRuntimeDerivedState({
-      includeRuntimePoliticalMeta: true,
+    rebuildPrimaryPoliticalDerivedState({
       scheduleUiMode: "deferred",
       buildSpatial: true,
       includeSecondarySpatial: false,
     });
   }
-  resetExactRefreshOptimizationState();
-  resetVisibleInternalBorderMeshSignature();
   scenarioChunkPromotionVersion = Number(scenarioChunkPromotionVersion || 0) + 1;
-  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
-  runtimeState.hitCanvasDirty = true;
-  runtimeState.hitCanvasTopologyRevision = 0;
+  markRendererTopologyChanged({ hitCanvasDirty: true });
   if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
     runtimeState.runtimeChunkLoadState.pendingVisualPromotion = null;
     runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
@@ -27006,20 +27035,12 @@ function refreshMapDataForScenarioApply({
     refreshOpeningOwnerBorders: true,
     resetWaterCacheReason: "scenario-switch-complete",
   });
-  resetRendererRefreshTransactionState();
-  ensureLayerDataFromTopology();
-  rebuildPoliticalLandCollections();
-  rebuildRuntimeDerivedState({
-    includeRuntimePoliticalMeta: true,
+  resetRendererTransactionState({ hitCanvasDirty: true });
+  rebuildPrimaryPoliticalDerivedState({
     scheduleUiMode: "deferred",
     buildSpatial: true,
     includeSecondarySpatial: false,
   });
-  resetExactRefreshOptimizationState();
-  resetVisibleInternalBorderMeshSignature();
-  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
-  runtimeState.hitCanvasDirty = true;
-  runtimeState.hitCanvasTopologyRevision = 0;
   clearLastGoodFrame("scenario-apply-refresh");
   invalidateInteractionComposite("scenario-apply-refresh");
   resetFirstVisibleFramePainted("scenario-apply-refresh");

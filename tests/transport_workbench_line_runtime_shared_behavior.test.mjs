@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  buildProjectedLineSegments,
-  createLinePathD,
-  findClosestDatasetNode,
-  keepFirstPerGridBucket,
-  measureProjectedLineLength,
-} from "../js/ui/transport_workbench_line_preview_helpers.js";
+  buildTransportWorkbenchProjectedLines,
+  createTransportWorkbenchLinePathD,
+  findTransportWorkbenchDatasetNode,
+  keepFirstTransportWorkbenchGridBucket,
+  measureTransportWorkbenchProjectedLineLength,
+} from "../js/ui/transport_workbench_line_runtime_shared.js";
 
-test("line preview helpers keep path and length output deterministic", () => {
+test("line runtime shared helpers keep path and length output deterministic", () => {
   const geometry = {
     type: "MultiLineString",
     coordinates: [
@@ -18,9 +18,9 @@ test("line preview helpers keep path and length output deterministic", () => {
     ],
   };
 
-  assert.equal(createLinePathD(geometry), "M 0 0 L 3 4 M 10 10 L 13 14 L 13 18");
-  assert.equal(measureProjectedLineLength(geometry), 14);
-  assert.deepEqual(buildProjectedLineSegments(geometry), [
+  assert.equal(createTransportWorkbenchLinePathD(geometry), "M 0 0 L 3 4 M 10 10 L 13 14 L 13 18");
+  assert.equal(measureTransportWorkbenchProjectedLineLength(geometry), 14);
+  assert.deepEqual(buildTransportWorkbenchProjectedLines(geometry), [
     {
       points: [[0, 0], [3, 4]],
       pathD: "M 0 0 L 3 4",
@@ -59,15 +59,15 @@ test("line preview helpers keep path and length output deterministic", () => {
   ]);
 });
 
-test("line preview helpers keep single LineString output deterministic", () => {
+test("line runtime shared helpers keep single LineString output deterministic", () => {
   const geometry = {
     type: "LineString",
     coordinates: [[1, 2], [4, 6], [4, 9]],
   };
 
-  assert.equal(createLinePathD(geometry), "M 1 2 L 4 6 L 4 9");
-  assert.equal(measureProjectedLineLength(geometry), 8);
-  assert.deepEqual(buildProjectedLineSegments(geometry), [
+  assert.equal(createTransportWorkbenchLinePathD(geometry), "M 1 2 L 4 6 L 4 9");
+  assert.equal(measureTransportWorkbenchProjectedLineLength(geometry), 8);
+  assert.deepEqual(buildTransportWorkbenchProjectedLines(geometry), [
     {
       points: [[1, 2], [4, 6], [4, 9]],
       pathD: "M 1 2 L 4 6 L 4 9",
@@ -92,14 +92,14 @@ test("line preview helpers keep single LineString output deterministic", () => {
   ]);
 });
 
-test("line preview helpers treat malformed coordinates as empty geometry", () => {
+test("line runtime shared helpers treat malformed coordinates as empty geometry", () => {
   const malformedLine = { type: "LineString", coordinates: null };
   const malformedMultiLine = { type: "MultiLineString", coordinates: { bad: true } };
 
-  assert.equal(createLinePathD(malformedLine), "");
-  assert.equal(createLinePathD(malformedMultiLine), "");
-  assert.equal(measureProjectedLineLength(malformedLine), 0);
-  assert.deepEqual(buildProjectedLineSegments(malformedMultiLine), []);
+  assert.equal(createTransportWorkbenchLinePathD(malformedLine), "");
+  assert.equal(createTransportWorkbenchLinePathD(malformedMultiLine), "");
+  assert.equal(measureTransportWorkbenchProjectedLineLength(malformedLine), 0);
+  assert.deepEqual(buildTransportWorkbenchProjectedLines(malformedMultiLine), []);
 });
 
 test("grid helper keeps the first ranked entry per bucket", () => {
@@ -111,7 +111,7 @@ test("grid helper keeps the first ranked entry per bucket", () => {
   ];
 
   assert.deepEqual(
-    keepFirstPerGridBucket(entries, {
+    keepFirstTransportWorkbenchGridBucket(entries, {
       gridSize: 100,
       getScreenPoint: (entry) => entry.screenPoint,
       getBucketParts: (entry) => [entry.roadClass],
@@ -139,6 +139,6 @@ test("dataset helper uses closest and stays inside the preview group boundary", 
   child.closest = (selector) => selector === "[data-rail-line-id]" ? line : null;
   outside.closest = () => outside;
 
-  assert.equal(findClosestDatasetNode(child, "railLineId", root), line);
-  assert.equal(findClosestDatasetNode(outside, "railLineId", root), null);
+  assert.equal(findTransportWorkbenchDatasetNode(child, "railLineId", root), line);
+  assert.equal(findTransportWorkbenchDatasetNode(outside, "railLineId", root), null);
 });

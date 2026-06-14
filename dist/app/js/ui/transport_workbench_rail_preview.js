@@ -8,16 +8,17 @@ import {
   projectTransportWorkbenchCarrierScenePoint,
 } from "./transport_workbench_carrier.js";
 import {
+  createTransportWorkbenchLinePathD as createPathD,
+  createTransportWorkbenchSvgNode as createSvgNode,
   createTransportWorkbenchLinePackRuntime,
+  findTransportWorkbenchDatasetNode as findDatasetNode,
+  keepFirstTransportWorkbenchGridBucket as keepFirstPerGridBucket,
+  measureTransportWorkbenchProjectedLineLength as measureProjectedLength,
+  normalizeTransportWorkbenchNumber as normalizeNumber,
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
+  syncTransportWorkbenchSvgGroupOrder as syncGroupOrder,
 } from "./transport_workbench_line_runtime_shared.js";
-import {
-  createLinePathD,
-  findClosestDatasetNode,
-  keepFirstPerGridBucket,
-  measureProjectedLineLength,
-} from "./transport_workbench_line_preview_helpers.js";
 
 const MANIFEST_URL = resolveTransportManifestUrl("rail");
 const LINE_CLASS_PRIORITY = {
@@ -122,21 +123,12 @@ function ensureTopojsonClient() {
   }
 }
 
-function createSvgNode(tagName) {
-  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
-}
-
 function normalizeFlags(flags) {
   if (Array.isArray(flags)) return flags.filter(Boolean).map((value) => String(value));
   if (typeof flags === "string" && flags.trim()) {
     return flags.split("|").map((value) => value.trim()).filter(Boolean);
   }
   return [];
-}
-
-function normalizeNumber(value, fallback = 0) {
-  const next = Number(value);
-  return Number.isFinite(next) ? next : fallback;
 }
 
 function normalizeLineClass(value) {
@@ -170,8 +162,8 @@ function createRailFeature(rawFeature) {
     source: String(properties.source || "").trim(),
     sourceFlags: normalizeFlags(properties.source_flags),
     lengthMeters: normalizeNumber(properties.length_m, 0),
-    pathD: createLinePathD(projected.geometry),
-    projectedLength: measureProjectedLineLength(projected.geometry),
+    pathD: createPathD(projected.geometry),
+    projectedLength: measureProjectedLength(projected.geometry),
   };
 }
 
@@ -293,7 +285,7 @@ function buildVisibleStationLabelEntries(visibleStations, config, scale) {
 }
 
 function handleLineGroupClick(event) {
-  const node = findClosestDatasetNode(event.target, "railLineId", linesGroup);
+  const node = findDatasetNode(event.target, "railLineId", linesGroup);
   const lineId = node?.dataset?.railLineId;
   if (!lineId) return;
   event.stopPropagation();
@@ -303,7 +295,7 @@ function handleLineGroupClick(event) {
 }
 
 function handleStationGroupClick(event) {
-  const node = findClosestDatasetNode(event.target, "railStationId", stationsGroup);
+  const node = findDatasetNode(event.target, "railStationId", stationsGroup);
   const stationId = node?.dataset?.railStationId;
   if (!stationId) return;
   event.stopPropagation();
@@ -528,25 +520,6 @@ function renderSelectedHighlight(selectedLine, selectedStation) {
       selectedStationHighlightNode.style.display = "none";
     }
   }
-}
-
-function syncGroupOrder(group, orderedNodes) {
-  let previousNode = null;
-  orderedNodes.forEach((node) => {
-    if (!node.parentNode) {
-      group.appendChild(node);
-      previousNode = node;
-      return;
-    }
-    if (!previousNode) {
-      if (group.firstChild !== node) {
-        group.insertBefore(node, group.firstChild);
-      }
-    } else if (previousNode.nextSibling !== node) {
-      group.insertBefore(node, previousNode.nextSibling);
-    }
-    previousNode = node;
-  });
 }
 
 function syncLineNodes(visibleLines, config, selectedLineId) {

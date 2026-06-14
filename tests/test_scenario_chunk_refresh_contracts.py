@@ -64,6 +64,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     def test_political_chunk_promotion_refreshes_union_of_previous_and_next_feature_ids(self):
         self.assertIn('const previousFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalChunkData);', self.scenario_chunk_runtime_source)
         self.assertIn('const nextFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPayload);', self.scenario_chunk_runtime_source)
+        self.assertIn('const previousPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalVisibleChunkData);', self.scenario_chunk_runtime_source)
+        self.assertIn('const nextPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPrimaryPayload);', self.scenario_chunk_runtime_source)
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
@@ -696,8 +698,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             promotion_source,
             re.compile(
-                r'if \(hasPoliticalChange\) \{\s*ensureLayerDataFromTopology\(\);\s*rebuildPoliticalLandCollections\(\);[\s\S]*?'
-                r'rebuildRuntimeDerivedState\(\{\s*includeRuntimePoliticalMeta: true,\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);\s*\}'
+                r'if \(hasPoliticalChange\) \{[\s\S]*?'
+                r'rebuildPrimaryPoliticalDerivedState\(\{\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);\s*\}'
                 r'[\s\S]*?if \(hasPoliticalChange\) \{\s*clearDeferredInternalBorderMeshCaches\(\);\s*scheduleDeferredHeavyBorderMeshes\(\);\s*\}',
                 re.S,
             ),

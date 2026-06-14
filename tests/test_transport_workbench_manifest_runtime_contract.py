@@ -34,6 +34,8 @@ STARTUP_LOCALE_FILES = [
     REPO_ROOT / "data" / "scenarios" / "tno_1962" / "locales.startup.json",
 ]
 PACK_RESOLVER_JS = REPO_ROOT / "js" / "core" / "transport_pack_resolver.js"
+ROAD_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_road_preview.js"
+RAIL_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_rail_preview.js"
 
 
 class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
@@ -47,6 +49,37 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertNotIn("distribution_variants", content)
         self.assertNotIn("default_coverage_tier", content)
         self.assertNotIn("default_distribution_variant", content)
+
+    def test_line_preview_shared_runtime_owns_svg_path_and_order_helpers(self) -> None:
+        shared_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
+        road_content = ROAD_PREVIEW_JS.read_text(encoding="utf-8")
+        rail_content = RAIL_PREVIEW_JS.read_text(encoding="utf-8")
+
+        for export_name in (
+            "createTransportWorkbenchSvgNode",
+            "normalizeTransportWorkbenchNumber",
+            "createTransportWorkbenchLinePathD",
+            "measureTransportWorkbenchProjectedLineLength",
+            "buildTransportWorkbenchProjectedLines",
+            "findTransportWorkbenchDatasetNode",
+            "syncTransportWorkbenchSvgGroupOrder",
+        ):
+            self.assertIn(f"export function {export_name}", shared_content)
+        for preview_content in (road_content, rail_content):
+            self.assertIn("transport_workbench_line_runtime_shared.js", preview_content)
+            self.assertIn("createTransportWorkbenchSvgNode as createSvgNode", preview_content)
+            self.assertIn("normalizeTransportWorkbenchNumber as normalizeNumber", preview_content)
+            self.assertIn("createTransportWorkbenchLinePathD as createPathD", preview_content)
+            self.assertIn("measureTransportWorkbenchProjectedLineLength as measureProjectedLength", preview_content)
+            self.assertIn("findTransportWorkbenchDatasetNode as findDatasetNode", preview_content)
+            self.assertIn("syncTransportWorkbenchSvgGroupOrder as syncGroupOrder", preview_content)
+            self.assertNotRegex(preview_content, r"(?m)^function createSvgNode\(")
+            self.assertNotRegex(preview_content, r"(?m)^function normalizeNumber\(")
+            self.assertNotRegex(preview_content, r"(?m)^function createPathD\(")
+            self.assertNotRegex(preview_content, r"(?m)^function measureProjectedLength\(")
+            self.assertNotRegex(preview_content, r"(?m)^function findDatasetNode\(")
+            self.assertNotRegex(preview_content, r"(?m)^function syncGroupOrder\(")
+        self.assertIn("buildTransportWorkbenchProjectedLines as buildProjectedLines", road_content)
 
     def test_port_preview_uses_shared_variant_contract_only(self) -> None:
         content = PORT_PREVIEW_JS.read_text(encoding="utf-8")

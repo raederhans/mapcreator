@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 
 import { createTransportWorkbenchPreviewLifecycleOwner } from "../js/ui/toolbar/transport_workbench_preview_lifecycle_owner.js";
 import {
+  buildTransportWorkbenchProjectedLines,
+  createTransportWorkbenchLinePathD,
+  measureTransportWorkbenchProjectedLineLength,
+  normalizeTransportWorkbenchNumber,
+} from "../js/ui/transport_workbench_line_runtime_shared.js";
+import {
   __transportWorkbenchPointPreviewTestInternals,
 } from "../js/ui/transport_workbench_point_preview_shared.js";
 
@@ -10,6 +16,50 @@ async function flushMicrotasks() {
   await Promise.resolve();
   await Promise.resolve();
 }
+
+test("transport workbench line helpers keep shared path, length, and segment contracts", () => {
+  const geometry = {
+    type: "MultiLineString",
+    coordinates: [
+      [[0, 0], [3, 4]],
+      [[3, 4], [6, 8]],
+    ],
+  };
+
+  assert.equal(createTransportWorkbenchLinePathD(geometry), "M 0 0 L 3 4 M 3 4 L 6 8");
+  assert.equal(measureTransportWorkbenchProjectedLineLength(geometry), 10);
+  assert.equal(normalizeTransportWorkbenchNumber("bad", 7), 7);
+  assert.deepEqual(buildTransportWorkbenchProjectedLines(geometry), [
+    {
+      points: [[0, 0], [3, 4]],
+      pathD: "M 0 0 L 3 4",
+      length: 5,
+      segments: [
+        {
+          start: [0, 0],
+          end: [3, 4],
+          startDistance: 0,
+          length: 5,
+          angle: 53.13010235415598,
+        },
+      ],
+    },
+    {
+      points: [[3, 4], [6, 8]],
+      pathD: "M 3 4 L 6 8",
+      length: 5,
+      segments: [
+        {
+          start: [3, 4],
+          end: [6, 8],
+          startDistance: 0,
+          length: 5,
+          angle: 53.13010235415598,
+        },
+      ],
+    },
+  ]);
+});
 
 test("transport workbench preview lifecycle owner schedules warmup once during runtime hook init", async () => {
   const runtimeState = { transportWorkbenchUi: { open: false, activeFamily: "road" } };

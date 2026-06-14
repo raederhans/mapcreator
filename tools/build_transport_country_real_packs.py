@@ -16,7 +16,6 @@ from typing import Any, Iterable
 import geopandas as gpd
 import pandas as pd
 import pyogrio
-import topojson as tp
 from pyproj import Transformer
 from shapely.geometry import LineString, Point, Polygon, shape
 from shapely.ops import unary_union
@@ -33,10 +32,22 @@ from map_builder.transport_country_real_source_contracts import (  # noqa: E402
     USA_STATE_FIPS_FOR_AREALM,
     build_source_recipe,
     check_country_sources,
+    file_signature,
+)
+from map_builder.transport_country_pack_writer import (  # noqa: E402
+    country_pack_clip_bbox,
+    country_pack_feature_counts,
+    write_country_pack_layers,
+    write_json,
 )
 from map_builder.transport_carrier_registry import (  # noqa: E402
     resolve_pack_carrier_asset_key,
     resolve_pack_carrier_extension,
+)
+from map_builder.transport_source_extract_cache import (  # noqa: E402
+    marker_matches,
+    source_marker_from_signature,
+    write_marker,
 )
 from map_builder.transport_workbench_contracts import finalize_transport_manifest  # noqa: E402
 
@@ -68,29 +79,6 @@ def rel(path: Path) -> str:
         return path.as_posix()
 
 
-def write_json(path: Path, payload: Any, *, compact: bool = False) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False) if compact else json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
-    path.write_text(text + ("" if compact else "\n"), encoding="utf-8")
-
-
-def file_signature(path: Path) -> dict[str, Any]:
-    import hashlib
-
-    digest = hashlib.sha256()
-    size_bytes = 0
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            size_bytes += len(chunk)
-            digest.update(chunk)
-    return {
-        "filename": path.name,
-        "path": rel(path),
-        "size_bytes": size_bytes,
-        "sha256": digest.hexdigest(),
-    }
-
-
 def repo_text_file_signature(path: Path) -> dict[str, Any]:
     import hashlib
 
@@ -102,25 +90,6 @@ def repo_text_file_signature(path: Path) -> dict[str, Any]:
         "size_bytes": len(payload),
         "sha256": hashlib.sha256(payload).hexdigest(),
     }
-
-
-def feature_collection(gdf: gpd.GeoDataFrame) -> dict[str, Any]:
-    if gdf.crs is not None:
-        gdf = gdf.to_crs("EPSG:4326")
-    return json.loads(gdf.to_json(drop_id=True))
-
-
-def topology_payload(gdf: gpd.GeoDataFrame, object_name: str) -> dict[str, Any]:
-    if gdf.empty:
-        return {"type": "Topology", "objects": {object_name: {"type": "GeometryCollection", "geometries": []}}, "arcs": []}
-    if gdf.crs is not None:
-        gdf = gdf.to_crs("EPSG:4326")
-    payload = tp.Topology(gdf, prequantize=False).to_dict()
-    objects = payload.get("objects") or {}
-    if object_name not in objects and len(objects) == 1:
-        only_key = next(iter(objects))
-        payload["objects"] = {object_name: objects[only_key]}
-    return payload
 
 
 def source_recipe_for(pack_id: str, output_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -168,27 +137,9 @@ def write_pack(
     output_dir.mkdir(parents=True, exist_ok=True)
     recipe, _ = source_recipe_for(pack_id, output_dir)
     generated_at = utc_now()
-    paths = {"preview": {}, "full": {}, "build_audit": rel(output_dir / "build_audit.json")}
-    for layer, gdf in preview.items():
-        suffix = ".topo.json" if geometry_kind == "line" and layer in {"roads", "railways"} else ".geojson"
-        path = output_dir / f"{layer}.preview{suffix}"
-        write_json(path, topology_payload(gdf, layer) if suffix == ".topo.json" else feature_collection(gdf), compact=True)
-        paths["preview"][layer] = rel(path)
-    for layer, gdf in full.items():
-        suffix = ".topo.json" if geometry_kind == "line" and layer in {"roads", "railways"} else ".geojson"
-        path = output_dir / f"{layer}{suffix}"
-        write_json(path, topology_payload(gdf, layer) if suffix == ".topo.json" else feature_collection(gdf), compact=True)
-        paths["full"][layer] = rel(path)
-
-    counts = {
-        "preview": {layer: int(len(gdf)) for layer, gdf in preview.items()},
-        "full": {layer: int(len(gdf)) for layer, gdf in full.items()},
-    }
-    all_geoms = [gdf for gdf in list(preview.values()) + list(full.values()) if not gdf.empty and "geometry" in gdf]
-    bbox = None
-    if all_geoms:
-        merged = pd.concat(all_geoms, ignore_index=True)
-        bbox = [round(float(v), 6) for v in gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:4326").total_bounds]
+    paths = write_country_pack_layers(output_dir, geometry_kind, preview, full, rel_path=rel)
+    counts = country_pack_feature_counts(preview, full)
+    bbox = country_pack_clip_bbox(preview, full)
     audit = {
         "generated_at": generated_at,
         "adapter_id": f"{pack_id}_v1",
@@ -740,21 +691,10 @@ def extract_geofabrik_gpkg(zip_path: Path, output_dir: Path, source_id: str) -> 
     signature = file_signature(zip_path)
     target_dir = output_dir / source_id
     marker_path = target_dir / ".extract-complete.json"
-    expected_marker = {
-        "source": {
-            "path": signature["path"],
-            "size_bytes": signature["size_bytes"],
-            "sha256": signature["sha256"],
-        }
-    }
-    if marker_path.exists():
-        try:
-            marker = json.loads(marker_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            marker = {}
-        gpkg_files = sorted(target_dir.glob("*.gpkg"))
-        if marker == expected_marker and gpkg_files and gpkg_files[0].stat().st_size > 0:
-            return gpkg_files[0]
+    expected_marker = source_marker_from_signature(signature, key="source")
+    gpkg_files = sorted(target_dir.glob("*.gpkg"))
+    if marker_matches(marker_path, expected_marker) and gpkg_files and gpkg_files[0].stat().st_size > 0:
+        return gpkg_files[0]
     if target_dir.exists():
         shutil.rmtree(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -764,7 +704,7 @@ def extract_geofabrik_gpkg(zip_path: Path, output_dir: Path, source_id: str) -> 
             raise SystemExit(f"{zip_path.name}: expected one GeoPackage member, found {gpkg_members}")
         z.extract(gpkg_members[0], target_dir)
     gpkg_path = target_dir / gpkg_members[0]
-    marker_path.write_text(json.dumps(expected_marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_marker(marker_path, expected_marker)
     return gpkg_path
 
 
@@ -1650,27 +1590,17 @@ def extract_7z_member_flat(archive_path: Path, output_dir: Path, member_filename
     output_path = output_dir / member_filename
     marker_path = output_path.with_suffix(output_path.suffix + ".extract-complete")
     archive_signature = file_signature(archive_path)
-    expected_marker = {
-        "archive": {
-            "path": archive_signature["path"],
-            "size_bytes": archive_signature["size_bytes"],
-            "sha256": archive_signature["sha256"],
-        },
-        "member_filename": member_filename,
-    }
+    expected_marker = source_marker_from_signature(archive_signature, key="archive")
+    expected_marker["member_filename"] = member_filename
     if marker_path.exists() and output_path.exists() and output_path.stat().st_size > 0:
-        try:
-            marker = json.loads(marker_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            marker = {}
-        if marker == expected_marker:
+        if marker_matches(marker_path, expected_marker):
             return output_path
     if output_path.exists():
         output_path.unlink()
     if marker_path.exists():
         marker_path.unlink()
     if output_path.exists() and output_path.stat().st_size > 0:
-        marker_path.write_text(json.dumps(expected_marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_marker(marker_path, expected_marker)
         return output_path
     output_dir.mkdir(parents=True, exist_ok=True)
     seven_zip = find_7z_executable()
@@ -1688,7 +1618,7 @@ def extract_7z_member_flat(archive_path: Path, output_dir: Path, member_filename
         raise SystemExit(
             f"{archive_path.name}: 7z.exe completed but did not produce {output_path}.\nstdout={result.stdout}\nstderr={result.stderr}"
         )
-    marker_path.write_text(json.dumps(expected_marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_marker(marker_path, expected_marker)
     return output_path
 
 

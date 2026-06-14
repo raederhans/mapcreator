@@ -4,6 +4,140 @@ import { registerMapcreatorSnapshotProvider } from "../core/mapcreator_snapshot.
 export const PACK_MODE_PREVIEW = "preview";
 export const PACK_MODE_FULL = "full";
 
+export function createTransportWorkbenchSvgNode(tagName) {
+  return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+}
+
+export function normalizeTransportWorkbenchNumber(value, fallback = 0) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+export function createTransportWorkbenchLinePathDFromCoordinates(line) {
+  if (!Array.isArray(line) || !line.length) return "";
+  return line.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" ");
+}
+
+export function createTransportWorkbenchLinePathD(geometry) {
+  if (!geometry || typeof geometry !== "object") return "";
+  if (geometry.type === "LineString") {
+    return createTransportWorkbenchLinePathDFromCoordinates(geometry.coordinates || []);
+  }
+  if (geometry.type === "MultiLineString") {
+    return (geometry.coordinates || [])
+      .map((line) => createTransportWorkbenchLinePathDFromCoordinates(line))
+      .join(" ");
+  }
+  return "";
+}
+
+export function measureTransportWorkbenchProjectedLineLength(geometry) {
+  if (!geometry || typeof geometry !== "object") return 0;
+  const lines = geometry.type === "LineString" ? [geometry.coordinates || []] : (geometry.coordinates || []);
+  let length = 0;
+  lines.forEach((line) => {
+    for (let index = 1; index < line.length; index += 1) {
+      const [x0, y0] = line[index - 1];
+      const [x1, y1] = line[index];
+      length += Math.hypot(x1 - x0, y1 - y0);
+    }
+  });
+  return length;
+}
+
+export function buildTransportWorkbenchProjectedLines(geometry) {
+  if (!geometry || typeof geometry !== "object") return [];
+  const rawLines = geometry.type === "LineString"
+    ? [geometry.coordinates || []]
+    : (geometry.coordinates || []);
+  return rawLines
+    .filter((line) => Array.isArray(line) && line.length >= 2)
+    .map((line) => {
+      let length = 0;
+      const segments = [];
+      for (let index = 1; index < line.length; index += 1) {
+        const start = line[index - 1];
+        const end = line[index];
+        const dx = end[0] - start[0];
+        const dy = end[1] - start[1];
+        const segmentLength = Math.hypot(dx, dy);
+        segments.push({
+          start,
+          end,
+          startDistance: length,
+          length: segmentLength,
+          angle: Math.atan2(dy, dx) * (180 / Math.PI),
+        });
+        length += segmentLength;
+      }
+      return {
+        points: line,
+        pathD: createTransportWorkbenchLinePathDFromCoordinates(line),
+        length,
+        segments,
+      };
+    })
+    .filter((line) => line.length > 0);
+}
+
+export function keepFirstTransportWorkbenchGridBucket(entries, {
+  gridSize,
+  getScreenPoint,
+  getBucketParts = () => [],
+} = {}) {
+  const usedBuckets = new Set();
+  return entries.filter((entry) => {
+    const screenPoint = getScreenPoint(entry);
+    if (!screenPoint) return false;
+    const bucketParts = [
+      Math.round(screenPoint.x / gridSize),
+      Math.round(screenPoint.y / gridSize),
+      ...getBucketParts(entry),
+    ];
+    const bucketKey = bucketParts.join(":");
+    if (usedBuckets.has(bucketKey)) return false;
+    usedBuckets.add(bucketKey);
+    return true;
+  });
+}
+
+function datasetKeyToAttributeName(datasetKey) {
+  return String(datasetKey || "").replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+}
+
+export function findTransportWorkbenchDatasetNode(startNode, datasetKey, boundaryNode) {
+  const ElementCtor = boundaryNode?.ownerDocument?.defaultView?.Element || globalThis.Element;
+  const startElement = ElementCtor && startNode instanceof ElementCtor
+    ? startNode
+    : startNode?.parentElement;
+  if (!startElement || typeof startElement.closest !== "function") return null;
+  const datasetAttribute = datasetKeyToAttributeName(datasetKey);
+  const node = startElement.closest(`[data-${datasetAttribute}]`);
+  if (!node) return null;
+  if (!boundaryNode) return node;
+  if (node === boundaryNode) return node;
+  return typeof boundaryNode.contains === "function" && boundaryNode.contains(node) ? node : null;
+}
+
+export function syncTransportWorkbenchSvgGroupOrder(group, orderedNodes) {
+  let previousNode = null;
+  orderedNodes.forEach((node) => {
+    if (!node.parentNode) {
+      group.appendChild(node);
+      previousNode = node;
+      return;
+    }
+    if (!previousNode) {
+      if (group.firstChild !== node) {
+        group.insertBefore(node, group.firstChild);
+      }
+    } else if (previousNode.nextSibling !== node) {
+      group.insertBefore(node, previousNode.nextSibling);
+    }
+    previousNode = node;
+  });
+}
+
 function createInitialLoadState() {
   return {
     status: "idle",
