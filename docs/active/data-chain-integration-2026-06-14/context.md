@@ -48,4 +48,5 @@
 
 - Integration branch is committed and pushed through `77d18776`.
 - Local main has fast-forwarded to the verified integration branch and has been pushed to `origin/main`.
+- The temporary integration worktree `C:\Users\raede\Desktop\dev\mapcreator-data-chain-integration-2026-06-14` was removed after main push; recovery remains available through `codex/data-chain-integration-2026-06-14` and main history.
 - The older data-quality, data-chain, render-chain, and audit worktrees are now recoverable references and can be cleaned in a separate cleanup pass after push confirmation.
