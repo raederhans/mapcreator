@@ -7,7 +7,11 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from tools.build_data_catalog import build_catalog_markdown, build_catalog_payload
+from tools.build_data_catalog import (
+    build_catalog_markdown,
+    build_catalog_payload,
+    collect_transport_path_contract_errors,
+)
 from tools.data_health import SCENARIO_REGISTRY_URL, collect_health
 
 
@@ -390,6 +394,32 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertEqual(primary_topology["schemaRef"], "schema://topology/political_bundle_v1")
         self.assertEqual(china_source["sourceId"], "gb_chn_adm2")
         self.assertEqual(china_source["hashRef"], "data/source_ledger.json::gb_chn_adm2::current_local_sha256")
+
+    def test_transport_topology_payload_must_decode_to_object(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir) / "fixture-repo"
+            transport_root = repo_root / "data" / "transport_layers" / "fixture_corridor"
+            transport_root.mkdir(parents=True)
+            manifest_path = transport_root / "manifest.json"
+            topology_path = transport_root / "roads.topo.json"
+            topology_path.write_text("[]", encoding="utf-8")
+            manifest = {
+                "family": "fixture_corridor",
+                "geometry_kind": "line",
+                "paths": {
+                    "preview": {
+                        "roads": "data/transport_layers/fixture_corridor/roads.topo.json",
+                    },
+                },
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            errors = collect_transport_path_contract_errors(manifest, manifest_path, project_root=repo_root)
+
+            self.assertIn(
+                "data/transport_layers/fixture_corridor/manifest.json: `paths.preview.roads` must decode to a Topology object.",
+                errors,
+            )
 
 
 if __name__ == "__main__":

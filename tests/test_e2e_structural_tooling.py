@@ -386,6 +386,110 @@ for (const filePath of ['map_backend/routes.py', 'js/api/backend_client.js', 'js
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_verification_selector_golden_cases_for_adaptive_routing(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+
+const cases = [
+  {
+    name: 'selector tooling routes to structural contract and selector check',
+    changedFiles: ['tools/select_verification_targets.mjs'],
+    expectedCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/select_verification_targets.mjs --check',
+    ],
+  },
+  {
+    name: 'route registry changes route to structural contract and selector check',
+    changedFiles: ['tools/test_route_registry.mjs'],
+    expectedCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/select_verification_targets.mjs --check',
+    ],
+  },
+  {
+    name: 'package metadata routes to dev e2e scripts and guardrails',
+    changedFiles: ['package.json'],
+    expectedCommands: [
+      'test:e2e:dev:tno-ready-state',
+      'test:e2e:dev:scenario-chunk-runtime',
+      'verify:test-timeout-guardrails',
+      'verify:perf-gate-contract',
+    ],
+  },
+  {
+    name: 'playwright fixtures route to observability contract and city runtime specs',
+    changedFiles: ['tests/e2e/support/fixtures.js'],
+    expectedCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js',
+    ],
+  },
+  {
+    name: 'dev tno ready spec routes to direct dev script',
+    changedFiles: ['tests/e2e/dev/tno_ready_state_contract.dev.spec.js'],
+    expectedCommands: ['test:e2e:dev:tno-ready-state'],
+  },
+  {
+    name: 'startup hydration behavior routes to node behavior test',
+    changedFiles: ['js/core/scenario/startup_hydration.js'],
+    expectedCommands: ['test:node:startup-hydration-behavior'],
+  },
+  {
+    name: 'scenario lifecycle behavior routes to node behavior test',
+    changedFiles: ['js/core/scenario/lifecycle_runtime.js'],
+    expectedCommands: ['test:node:scenario-lifecycle-runtime-behavior'],
+  },
+  {
+    name: 'tno water data routes to serial validator with locks',
+    changedFiles: ['data/scenarios/tno_1962/water_regions.geojson'],
+    expectedCommands: [
+      'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json',
+    ],
+    expectedExecutionOwners: ['main-thread'],
+    expectedResourceLocks: ['heavy-geo', 'scenario-data', '.runtime-output'],
+  },
+  {
+    name: 'backend route changes select node and python cloud support checks',
+    changedFiles: ['map_backend/routes.py'],
+    expectedCommands: ['test:node:backend-cloud-support', 'test:py:backend-cloud-support'],
+  },
+  {
+    name: 'pytest style tno water file routes through pytest',
+    changedFiles: ['tests/test_tno_water_geometries.py'],
+    expectedCommands: ['python -m pytest tests/test_tno_water_geometries.py -q'],
+    forbiddenCommands: ['python -m unittest tests.test_tno_water_geometries -q'],
+  },
+];
+
+for (const testCase of cases) {
+  const report = buildRecommendation(testCase.changedFiles);
+  const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+  for (const expectedCommand of testCase.expectedCommands) {
+    if (!commands.includes(expectedCommand)) {
+      throw new Error(`${testCase.name}: missing ${expectedCommand}; got ${commands.join(', ')}`);
+    }
+  }
+  for (const forbiddenCommand of testCase.forbiddenCommands || []) {
+    if (commands.includes(forbiddenCommand)) {
+      throw new Error(`${testCase.name}: saw forbidden ${forbiddenCommand}; got ${commands.join(', ')}`);
+    }
+  }
+  for (const expectedOwner of testCase.expectedExecutionOwners || []) {
+    if (!report.executionOwners.includes(expectedOwner)) {
+      throw new Error(`${testCase.name}: missing owner ${expectedOwner}; got ${report.executionOwners.join(', ')}`);
+    }
+  }
+  for (const expectedLock of testCase.expectedResourceLocks || []) {
+    if (!report.resourceLocks.includes(expectedLock)) {
+      throw new Error(`${testCase.name}: missing lock ${expectedLock}; got ${report.resourceLocks.join(', ')}`);
+    }
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_verification_selector_routes_tno_water_health_gate(self) -> None:
         script = """
 const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');

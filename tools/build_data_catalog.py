@@ -325,7 +325,7 @@ def collect_transport_path_contract_errors(
             continue
 
         if normalized_path.endswith(".topo.json"):
-            if payload.get("type") != "Topology":
+            if not isinstance(payload, dict) or payload.get("type") != "Topology":
                 errors.append(f"{relative_manifest_path}: `{label}` must decode to a Topology object.")
             if leaf_key in {"roads", "railways"}:
                 topology_objects = payload.get("objects") if isinstance(payload, dict) else None

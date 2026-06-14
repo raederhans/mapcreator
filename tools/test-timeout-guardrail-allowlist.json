@@ -37,6 +37,7 @@
     "tests/e2e/tno_open_ocean_rendering.spec.js",
     "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
     "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+    "tests/e2e/transport_workbench_country_pack_loading.spec.js",
     "tests/e2e/transport_workbench_industrial_variants.spec.js",
     "tests/e2e/transport_workbench_label_rotation.spec.js",
     "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",

@@ -609,6 +609,10 @@ export function buildRouteIndex() {
 export function pythonCommandForTestPath(sourceRef) {
   const absolutePath = path.join(REPO_ROOT, sourceRef);
   const source = fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, "utf8") : "";
+  const hasTopLevelPytestTests = /(?:^|\n)def\s+test_[A-Za-z0-9_]*\s*\(/.test(source);
+  if (hasTopLevelPytestTests) {
+    return `python -m pytest ${sourceRef} -q`;
+  }
   const hasUnittestCase = /\bunittest\.TestCase\b/.test(source);
   const hasPytestStyleTests = /(?:^|\n)\s*def\s+test_[A-Za-z0-9_]*\s*\(/.test(source);
   if (hasPytestStyleTests && !hasUnittestCase) {
