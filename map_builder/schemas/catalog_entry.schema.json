@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://mapcreator/catalog_entry/v1",
+  "type": "object",
+  "required": ["key", "url", "role", "format", "schemaRef", "owner", "cachePolicy", "readMode"],
+  "properties": {
+    "key": { "type": "string", "pattern": "\\S" },
+    "url": { "type": "string", "pattern": "\\S" },
+    "path": { "type": "string" },
+    "role": { "type": "string", "pattern": "\\S" },
+    "format": { "type": "string", "pattern": "\\S" },
+    "schemaRef": { "type": "string", "pattern": "\\S" },
+    "hashRef": { "type": "string" },
+    "owner": { "type": "string", "pattern": "\\S" },
+    "cachePolicy": { "type": "string", "pattern": "\\S" },
+    "sourceId": { "type": "string" },
+    "readMode": { "type": "string", "pattern": "\\S" },
+    "metadata": { "type": "object" },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

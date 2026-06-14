@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://mapcreator/runtime_asset_registry/v1",
+  "type": "object",
+  "required": ["assets", "scenario_registry_key", "transport_manifest_keys"],
+  "properties": {
+    "assets": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "role": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scenario_registry_key": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "transport_manifest_keys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    }
+  },
+  "additionalProperties": true
+}

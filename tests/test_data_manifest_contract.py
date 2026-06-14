@@ -6,6 +6,9 @@ import struct
 import unittest
 from pathlib import Path
 
+from map_builder.runtime_asset_registry import _validate_runtime_asset_registry
+from tools.build_data_catalog import validate_catalog_entry_contract
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_MANIFEST = REPO_ROOT / "data" / "manifest.json"
@@ -141,6 +144,93 @@ class DataManifestContractTest(unittest.TestCase):
                 mismatches.append(f"{asset_key}: target missing at {expected_url}")
 
         self.assertEqual(mismatches, [])
+
+    def test_runtime_asset_registry_schema_rejects_missing_assets(self) -> None:
+        with self.assertRaises(ValueError) as context:
+            _validate_runtime_asset_registry(
+                {
+                    "scenario_registry_key": "scenario_registry",
+                    "transport_manifest_keys": {},
+                }
+            )
+
+        self.assertIn("runtime_asset_registry", str(context.exception))
+        self.assertIn("assets", str(context.exception))
+
+    def test_runtime_asset_registry_schema_rejects_assets_type_error(self) -> None:
+        with self.assertRaises(ValueError) as context:
+            _validate_runtime_asset_registry(
+                {
+                    "assets": [],
+                    "scenario_registry_key": "scenario_registry",
+                    "transport_manifest_keys": {},
+                }
+            )
+
+        self.assertIn("$.assets", str(context.exception))
+
+    def test_runtime_asset_registry_business_rules_keep_cross_field_reference_errors(self) -> None:
+        with self.assertRaises(ValueError) as context:
+            _validate_runtime_asset_registry(
+                {
+                    "assets": {
+                        "scenario_registry": {"url": "data/scenarios/index.json"},
+                    },
+                    "scenario_registry_key": "scenario_registry",
+                    "transport_manifest_keys": {"road": "missing_asset"},
+                }
+            )
+
+        self.assertIn(
+            "runtime_asset_registry.transport_manifest_keys.road must reference an existing asset",
+            str(context.exception),
+        )
+
+    def test_catalog_entry_contract_reports_missing_required_and_type_errors(self) -> None:
+        missing_errors = validate_catalog_entry_contract(
+            {
+                "key": "runtime_asset_registry",
+                "url": "data/runtime_asset_registry.json",
+                "role": "runtime_asset",
+                "format": "json",
+                "owner": "test",
+                "cachePolicy": "default",
+                "readMode": "json",
+            },
+            source_label="catalog entry test",
+        )
+        self.assertTrue(any("schemaRef" in error for error in missing_errors), missing_errors)
+
+        empty_errors = validate_catalog_entry_contract(
+            {
+                "key": "runtime_asset_registry",
+                "url": "data/runtime_asset_registry.json",
+                "role": "runtime_asset",
+                "format": "json",
+                "schemaRef": "",
+                "owner": "test",
+                "cachePolicy": "default",
+                "readMode": "json",
+            },
+            source_label="catalog entry test",
+        )
+        self.assertTrue(any("$.schemaRef" in error for error in empty_errors), empty_errors)
+
+        type_errors = validate_catalog_entry_contract(
+            {
+                "key": "runtime_asset_registry",
+                "url": "data/runtime_asset_registry.json",
+                "role": "runtime_asset",
+                "format": "json",
+                "schemaRef": "schema://json/object/v1",
+                "owner": "test",
+                "cachePolicy": "default",
+                "readMode": "json",
+                "aliases": "runtime_asset_registry",
+            },
+            source_label="catalog entry test",
+        )
+        self.assertTrue(any("$.aliases" in error for error in type_errors), type_errors)
 
     def test_manifest_output_hashes_cover_hgo_runtime_assets(self) -> None:
         manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))

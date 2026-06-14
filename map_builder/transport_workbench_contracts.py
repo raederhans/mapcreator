@@ -3,20 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from map_builder.json_schema_contracts import validate_json_contract
 
-TRANSPORT_SHARED_REQUIRED_FIELDS = (
-    "adapter_id",
-    "family",
-    "geometry_kind",
-    "generated_at",
-    "recipe_version",
-    "feature_counts",
-    "source_policy",
-    "distribution_tier",
-    "paths",
-    "default_variant",
-    "variants",
-)
 
 TRANSPORT_LEGACY_VARIANT_FIELDS = (
     "default_coverage_tier",
@@ -72,18 +60,20 @@ def validate_transport_manifest(
     *,
     source_label: str = "manifest.json",
 ) -> list[str]:
-    errors: list[str] = []
+    errors = validate_json_contract(
+        manifest,
+        schema_name="transport_manifest.schema.json",
+        source_label=source_label,
+    )
+    if not isinstance(manifest, dict):
+        return errors
+
     family = str(manifest.get("family") or "").strip()
     geometry_kind = str(manifest.get("geometry_kind") or "").strip()
     is_carrier_manifest = family == "carrier" and geometry_kind == "carrier"
 
-    for field in TRANSPORT_SHARED_REQUIRED_FIELDS:
-        if field == "feature_counts":
-            if not is_carrier_manifest and not _has_feature_count_value(manifest.get(field)):
-                errors.append(f"{source_label}: `feature_counts` must contain at least one numeric count.")
-            continue
-        if not _has_value(manifest.get(field)):
-            errors.append(f"{source_label}: `{field}` is required.")
+    if not is_carrier_manifest and not _has_feature_count_value(manifest.get("feature_counts")):
+        errors.append(f"{source_label}: `feature_counts` must contain at least one numeric count.")
 
     for legacy_field in TRANSPORT_LEGACY_VARIANT_FIELDS:
         if legacy_field in manifest:
@@ -97,12 +87,8 @@ def validate_transport_manifest(
         errors.append(f"{source_label}: carrier family requires geometry_kind `carrier`.")
 
     paths = manifest.get("paths")
-    if not isinstance(paths, dict):
-        errors.append(f"{source_label}: `paths` must be an object.")
-
     variants = manifest.get("variants")
     if not isinstance(variants, dict):
-        errors.append(f"{source_label}: `variants` must be an object.")
         return errors
 
     default_variant = str(manifest.get("default_variant") or "").strip()

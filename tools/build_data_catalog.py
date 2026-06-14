@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from map_builder.io.writers import write_json_atomic
+from map_builder.json_schema_contracts import validate_json_contract
 from map_builder.runtime_asset_registry import load_runtime_asset_registry
 from map_builder.transport_workbench_contracts import validate_transport_manifest
 
@@ -508,6 +509,10 @@ def _merge_catalog_entry(entries_by_url: dict[str, dict[str, Any]], candidate: d
             if str(alias or "").strip()
         }),
     }
+    contract_errors = validate_catalog_entry_contract(next_entry, source_label=f"catalog entry `{url}`")
+    if contract_errors:
+        raise SystemExit("\n".join(contract_errors))
+
     current = entries_by_url.get(url)
     if not current:
         entries_by_url[url] = next_entry
@@ -556,6 +561,14 @@ def _merge_catalog_entry(entries_by_url: dict[str, dict[str, Any]], candidate: d
     if current["key"] != next_entry["key"]:
         aliases.add(next_entry["key"])
     current["aliases"] = sorted(aliases)
+
+
+def validate_catalog_entry_contract(entry: object, *, source_label: str = "catalog entry") -> list[str]:
+    return validate_json_contract(
+        entry,
+        schema_name="catalog_entry.schema.json",
+        source_label=source_label,
+    )
 
 
 def build_catalog_payload() -> dict[str, Any]:

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://mapcreator/transport_manifest/v1",
+  "type": "object",
+  "required": [
+    "adapter_id",
+    "family",
+    "geometry_kind",
+    "generated_at",
+    "recipe_version",
+    "feature_counts",
+    "source_policy",
+    "distribution_tier",
+    "paths",
+    "default_variant",
+    "variants"
+  ],
+  "properties": {
+    "adapter_id": { "type": "string", "pattern": "\\S" },
+    "family": { "type": "string", "pattern": "\\S" },
+    "geometry_kind": { "type": "string", "pattern": "\\S" },
+    "generated_at": { "type": "string", "pattern": "\\S" },
+    "recipe_version": { "type": "string", "pattern": "\\S" },
+    "feature_counts": { "type": "object" },
+    "source_policy": { "type": "string", "pattern": "\\S" },
+    "distribution_tier": { "type": "string", "pattern": "\\S" },
+    "paths": { "type": "object", "minProperties": 1 },
+    "default_variant": { "type": "string", "pattern": "\\S" },
+    "variants": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "distribution_tier": { "type": "string", "pattern": "\\S" },
+          "paths": { "type": "object" },
+          "feature_counts": { "type": "object" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

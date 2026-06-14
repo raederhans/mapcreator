@@ -1,6 +1,7 @@
 affine
 contourpy
 geopandas
+jsonschema
 matplotlib
 mapclassify
 numpy

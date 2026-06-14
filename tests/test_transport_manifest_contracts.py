@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from map_builder.transport_carrier_registry import (
     CARRIER_EXTENSION_METADATA,
@@ -22,6 +23,29 @@ PORT_BUILDER = PROJECT_ROOT / "tools" / "build_transport_workbench_japan_ports.p
 INDUSTRIAL_BUILDER = PROJECT_ROOT / "tools" / "build_transport_workbench_japan_industrial_zones.py"
 RUNTIME_ASSET_REGISTRY = PROJECT_ROOT / "data" / "runtime_asset_registry.json"
 CATALOG_JSON = PROJECT_ROOT / "data" / "CATALOG.json"
+
+
+def _minimal_transport_manifest() -> dict[str, Any]:
+    return {
+        "adapter_id": "road_v1",
+        "family": "road",
+        "geometry_kind": "line",
+        "generated_at": "2026-05-07T00:00:00Z",
+        "recipe_version": "v1",
+        "feature_counts": {"preview": {"roads": 1}, "full": {"roads": 1}},
+        "source_policy": "local_source_cache_only",
+        "distribution_tier": "single_pack",
+        "paths": {"preview": {"roads": "preview.topo.json"}},
+        "default_variant": "default",
+        "variants": {
+            "default": {
+                "distribution_tier": "single_pack",
+                "paths": {"preview": {"roads": "preview.topo.json"}},
+                "feature_counts": {"preview": {"roads": 1}},
+            }
+        },
+    }
+
 
 PHASE_B_BRIDGE_KEYS_BY_PACK = {
     "japan_road": ["roads", "road_labels"],
@@ -281,6 +305,30 @@ class TransportManifestContractsTest(unittest.TestCase):
         errors = validate_transport_manifest(manifest, source_label="road-manifest")
 
         self.assertTrue(any("feature_counts" in error for error in errors), errors)
+
+    def test_validator_reports_schema_missing_required_field(self) -> None:
+        manifest = _minimal_transport_manifest()
+        del manifest["adapter_id"]
+
+        errors = validate_transport_manifest(manifest, source_label="road-manifest")
+
+        self.assertTrue(any("road-manifest" in error and "adapter_id" in error for error in errors), errors)
+
+    def test_validator_reports_schema_type_error(self) -> None:
+        manifest = _minimal_transport_manifest()
+        manifest["paths"] = "preview.topo.json"
+
+        errors = validate_transport_manifest(manifest, source_label="road-manifest")
+
+        self.assertTrue(any("$.paths" in error for error in errors), errors)
+
+    def test_validator_rejects_empty_paths_object(self) -> None:
+        manifest = _minimal_transport_manifest()
+        manifest["paths"] = {}
+
+        errors = validate_transport_manifest(manifest, source_label="road-manifest")
+
+        self.assertTrue(any("$.paths" in error for error in errors), errors)
 
     def test_validator_rejects_carrier_family_without_carrier_geometry_kind(self) -> None:
         manifest = {
