@@ -41,9 +41,11 @@
 - Merged `origin/main` commit `9a5febfe` into the integration branch. Conflict resolution kept the already verified HOI4 1939 chunk metadata and accepted current-main tooling/safe-review test changes. Verified strict HOI4 1936/1939, structural unittest, `npm run test:node:scenario-chunk-contracts`, and `git diff --check`.
 - Selectively integrated `codex/audit-20260612-appearance-transport` by taking only the 9 current diff files: manual UI/i18n catalog, source and dist HTML, appearance preset state source/dist, and the two audit tests. `npm run verify:pages-dist` regenerated `dist/pages-dist-manifest.json`.
 - Audit selective gate passed: `python -m json.tool data/i18n/manual_ui.json`, `node --test tests/appearance_preset_state.node.test.mjs tests/ocean_depth_layer_contracts.test.mjs`, `npm run verify:pages-dist`, and `git diff --check`.
+- Final static review found two i18n quality issues: duplicate top-level `UI_COPY_CATALOG` keys and missing `data-i18n` wiring for physical intensity field controls. Both are fixed.
+- Post-review fix gate passed: top-level catalog uniqueness probe, `python -m unittest tests.test_i18n_audit -q`, `npm run verify:pages-dist`, and `git diff --check`.
 
 ## Final Delivery Notes
 
-- Integration branch currently includes the verified work through current-main merge commit `59ef139a`; audit selective changes are ready for the next commit.
+- Integration branch currently includes the verified work through audit selective commit `c9f1b987`; the post-review i18n fix is ready for the next commit.
 - Main should receive this work by fast-forward merge after final QA if it remains at `9a5febfe`.
 - The older data-quality, data-chain, render-chain, and audit worktrees should stay as recoverable references until main is pushed and the registry marks them integrated.

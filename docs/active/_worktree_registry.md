@@ -62,5 +62,11 @@ Last updated: 2026-06-14
 5. Main divergence: integration branch includes `origin/main` `9a5febfe`; final main merge should be fast-forward after the audit batch commit if main remains at `9a5febfe`.
 6. Conflict risk: direct file overlap resolved for data-chain/render-chain helpers; audit overlap limited to Pages delivery surface and validated by `verify:pages-dist`.
 7. Verification run so far: data-quality gate, Phase 2-4 gate, render selective gate, current-main merge gate, audit selective gate.
-8. Remaining risk: final combined QA gate still needs to run after the audit commit.
-9. Recommended next step: commit audit selective batch, run final review/QA gate, push integration branch, fast-forward main, then push main.
+8. Remaining risk: final main checkout fast-forward and push still need to run after the QA fix commit.
+9. Recommended next step: commit QA i18n fix, push integration branch, fast-forward main, then push main.
+
+## Review Findings Closed
+
+- Static review found duplicate top-level `UI_COPY_CATALOG` keys introduced by the appearance audit carry. Fixed by keeping one authoritative entry per key and adding `tests.test_i18n_audit.I18nAuditTest.test_inline_ui_catalog_keys_are_unique`.
+- Static review found missing `data-i18n` attributes on physical intensity field controls. Fixed by wiring the physical Atlas/Contour controls, buttons, labels, clear action, and point count to the existing i18n keys.
+- Post-fix validation passed: top-level catalog uniqueness probe, `python -m unittest tests.test_i18n_audit -q`, `npm run verify:pages-dist`, and `git diff --check`.

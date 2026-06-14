@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 257532,
+      "size_bytes": 257760,
       "source_kind": "dist"
     },
     {
@@ -46292,7 +46292,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 95063,
+      "size_bytes": 92630,
       "source_kind": "dist"
     },
     {
@@ -46911,5 +46911,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145113006
+  "total_bytes": 1145110801
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 import json
+import re
 from pathlib import Path
 
 from tools.i18n_audit import collect_code_strings
@@ -300,6 +301,25 @@ export const UI_COPY_CATALOG = Object.freeze({
             self.assertIn("Override", result["inline_ui_keys"])
             self.assertIn("Export preview ready", result["declarative_ui_keys"])
             self.assertIn("Export preview ready", result["covered_default_literals"])
+
+    def test_inline_ui_catalog_keys_are_unique(self) -> None:
+        catalog_source = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+        block_match = re.search(
+            r"export\s+const\s+UI_COPY_CATALOG\s*=\s*Object\.freeze\(\{(?P<body>.*?)\n\}\);",
+            catalog_source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(block_match)
+        key_pattern = re.compile(r'^  (?:(?P<quoted>"(?:\\.|[^"])*")|(?P<identifier>[A-Za-z][A-Za-z0-9_]*))\s*:', re.MULTILINE)
+        seen: set[str] = set()
+        duplicates: list[str] = []
+        for match in key_pattern.finditer(block_match.group("body")):
+            raw_key = match.group("quoted") or match.group("identifier") or ""
+            key = json.loads(raw_key) if raw_key.startswith('"') else raw_key
+            if key in seen:
+                duplicates.append(key)
+            seen.add(key)
+        self.assertEqual([], duplicates)
 
     def test_collects_landing_markup_and_runtime_alt_literals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
