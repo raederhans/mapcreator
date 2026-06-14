@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
+import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -58,9 +59,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         extract_cache_content = SOURCE_EXTRACT_CACHE.read_text(encoding='utf-8')
 
         self.assertIn('from map_builder.transport_country_pack_writer import (', builder_content)
-        self.assertIn('write_country_pack_layers', builder_content)
-        self.assertIn('country_pack_feature_counts', builder_content)
-        self.assertIn('country_pack_clip_bbox', builder_content)
+        self.assertIn('write_country_pack', builder_content)
         self.assertIn('from map_builder.transport_source_extract_cache import (', builder_content)
         self.assertIn('marker_matches', builder_content)
         self.assertIn('source_marker_from_signature', builder_content)
@@ -68,10 +67,86 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertNotRegex(builder_content, r'(?m)^def feature_collection\(')
         self.assertNotRegex(builder_content, r'(?m)^def topology_payload\(')
         self.assertNotRegex(builder_content, r'(?m)^def file_signature\(')
+        self.assertNotRegex(builder_content, r'(?m)^def source_signature\(')
+        self.assertNotIn('"default": {"label": "default"', builder_content)
+        self.assertNotIn('"mainMapEligible": True', builder_content)
+        self.assertNotIn('"apply_bridge_supported": True', builder_content)
+        self.assertNotIn('write_json(output_dir / "manifest.json"', builder_content)
+        self.assertIn('def write_country_pack(', writer_content)
         self.assertIn('def write_country_pack_layers(', writer_content)
         self.assertIn('def country_pack_layer_suffix(', writer_content)
         self.assertIn('def source_marker_from_signature(', extract_cache_content)
         self.assertIn('def marker_matches(', extract_cache_content)
+
+    def test_country_pack_writer_assembles_manifest_audit_and_bridge_contract(self) -> None:
+        from map_builder.transport_country_pack_writer import write_country_pack
+        from map_builder.transport_workbench_contracts import finalize_transport_manifest
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / 'test_pack'
+
+            def rel_path(path: Path) -> str:
+                return path.relative_to(root).as_posix()
+
+            line = gpd.GeoDataFrame(
+                [{'id': 'r1', 'name': 'Test Road', 'geometry': LineString([(1.0, 2.0), (3.0, 4.0)])}],
+                geometry='geometry',
+                crs='EPSG:4326',
+            )
+            labels = gpd.GeoDataFrame(
+                [{'id': 'r1_label', 'name': 'Test Road', 'geometry': LineString([(1.0, 2.0), (3.0, 4.0)])}],
+                geometry='geometry',
+                crs='EPSG:4326',
+            )
+            recipe = {
+                'version': 7,
+                'source_truth': 'real_source_cache_only',
+                'geometry_truth': 'fixture_geometry',
+                'source_signature': {'fixture': {'sha256': 'abc123'}},
+            }
+
+            result = write_country_pack(
+                output_dir,
+                pack_id='test_road',
+                family='road',
+                geometry_kind='line',
+                country='testland',
+                recipe=recipe,
+                preview={'roads': line.head(1), 'road_labels': labels.head(1)},
+                full={'roads': line, 'road_labels': labels},
+                audit_extra={'matched_count': 1},
+                build_command='python tools/build_transport_country_real_packs.py --pack test_road',
+                generated_at='2026-06-14T00:00:00Z',
+                rel_path=rel_path,
+                carrier_asset_key='testland_carrier',
+                carrier_extension={'carrier_asset_key': 'testland_carrier', 'scope': 'country'},
+                finalize_manifest=finalize_transport_manifest,
+                main_map_consumer_keys=('roads', 'road_labels'),
+                main_map_sidecars={'road_labels': {'required': True}},
+            )
+
+            manifest = json.loads((output_dir / 'manifest.json').read_text(encoding='utf-8'))
+            audit = json.loads((output_dir / 'build_audit.json').read_text(encoding='utf-8'))
+
+            self.assertEqual(result['manifest'], manifest)
+            self.assertEqual(result['audit'], audit)
+            self.assertEqual(manifest['default_variant'], 'default')
+            self.assertEqual(manifest['paths'], manifest['variants']['default']['paths'])
+            self.assertEqual(manifest['feature_counts'], manifest['variants']['default']['feature_counts'])
+            self.assertEqual(audit['feature_counts'], manifest['feature_counts'])
+            self.assertEqual(audit['source_signature'], manifest['source_signature'])
+            self.assertEqual(manifest['source_signature'], {'fixture': {'sha256': 'abc123'}})
+            self.assertEqual(manifest['carrier_asset_key'], 'testland_carrier')
+            self.assertEqual(manifest['extensions']['carrier']['carrier_asset_key'], 'testland_carrier')
+            self.assertEqual(manifest['extensions']['road']['carrier_asset_key'], 'testland_carrier')
+            self.assertTrue(manifest['mainMapEligible'])
+            self.assertTrue(manifest['apply_bridge_supported'])
+            self.assertEqual(manifest['main_map_consumer']['supported_keys'], ['roads', 'road_labels'])
+            self.assertEqual(manifest['sidecars'], {'road_labels': {'required': True}})
+            self.assertEqual(manifest['clip_bbox'], [1.0, 2.0, 3.0, 4.0])
+            self.assertEqual(manifest['paths']['preview']['roads'], 'test_pack/roads.preview.topo.json')
+            self.assertEqual(manifest['paths']['preview']['road_labels'], 'test_pack/road_labels.preview.geojson')
 
     def test_global_road_recipe_uses_overture_single_source_policy(self) -> None:
         payload = json.loads(GLOBAL_ROAD_RECIPE.read_text(encoding='utf-8'))

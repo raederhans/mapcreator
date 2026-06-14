@@ -52,3 +52,34 @@ Continue the data-chain cleanup after build-time contract consolidation without 
 - Phase 2 still has deeper country/family line builder table-driving opportunities. This pass only extracted the stable write/signature/marker boundary.
 - Phase 3 still has a larger point preview runtime/renderer split. This pass only moved shared road/rail pure helpers because point preview mixes edit overlay, aggregation, labels, and SVG rendering in one stateful file.
 - Phase 4 still has deeper renderer owner extraction opportunities. This pass kept helpers private inside `map_renderer.js` to avoid expanding renderer public contracts.
+
+## Phase 2/3 Deepening - 2026-06-14
+
+### Goal
+
+Tighten the already integrated Phase 2/3 boundaries without changing external data formats, browser public exports, manifest/schema contracts, or Pages delivery contracts.
+
+### Work Plan
+
+- [x] Phase 2: move country transport pack output assembly into `map_builder/transport_country_pack_writer.py`.
+- [x] Phase 2: keep source recipes, source/family filtering, and concrete road/rail wrapper rules in `tools/build_transport_country_real_packs.py`.
+- [x] Phase 2: extend writer/builder contract tests for default variant, carrier extension, main-map bridge fields, counts, bbox, and audit output.
+- [x] Phase 2: run Python compile and targeted transport builder/manifest tests, then commit.
+- [ ] Phase 3: add `js/ui/transport_workbench_point_preview_runtime.js` for pure point preview logic.
+- [ ] Phase 3: keep DOM/SVG, async asset loading, carrier overlay, selection listener, and render loop in `transport_workbench_point_preview_shared.js`.
+- [ ] Phase 3: keep airport/port/energy/logistics/industrial/mineral public export names stable and forward test internals through the runtime helper.
+- [ ] Phase 3: run targeted node tests, import graph verification if needed, Pages dist verification if delivery surface changes, and `git diff --check`.
+- [ ] Review: run static subagent review and first-principles self-check, fix findings.
+- [ ] Integration: update registry delivery package, merge to `main`, push, and clean the temporary worktree after preserving branch/commit recovery trail.
+
+### Live Process Ownership
+
+- Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14`.
+- Child agents: static analysis and review only.
+- Long tests/builds: main thread only; logs/results summarized back into this plan and registry.
+
+### Progress
+
+- 2026-06-14: Created isolated worktree `codex/data-chain-phase2-3-deepening-2026-06-14` from `origin/main` `3d8cd631`; updated registry for this deepening pass.
+- 2026-06-14: Phase 2 moved country pack layer/audit/manifest/default-variant/carrier/main-map bridge output assembly into `write_country_pack(...)`. The real pack builder now prepares source recipes, family rules, carrier registry values, and concrete layers, then delegates output writing to the writer helper.
+- 2026-06-14: Phase 2 validation passed: `python -m py_compile map_builder\transport_country_pack_writer.py map_builder\transport_source_extract_cache.py tools\build_transport_country_real_packs.py`; `python -m unittest tests.test_global_transport_builder_contracts tests.test_transport_country_source_contracts tests.test_transport_manifest_contracts -q` (118 tests).

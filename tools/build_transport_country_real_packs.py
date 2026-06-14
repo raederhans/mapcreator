@@ -35,9 +35,7 @@ from map_builder.transport_country_real_source_contracts import (  # noqa: E402
     file_signature,
 )
 from map_builder.transport_country_pack_writer import (  # noqa: E402
-    country_pack_clip_bbox,
-    country_pack_feature_counts,
-    write_country_pack_layers,
+    write_country_pack,
     write_json,
 )
 from map_builder.transport_carrier_registry import (  # noqa: E402
@@ -119,10 +117,6 @@ def source_recipe_for(pack_id: str, output_dir: Path) -> tuple[dict[str, Any], d
     return recipe, report
 
 
-def source_signature(recipe: dict[str, Any]) -> dict[str, Any]:
-    return recipe.get("source_signature") or {}
-
-
 def write_pack(
     pack_id: str,
     family: str,
@@ -137,70 +131,29 @@ def write_pack(
     output_dir.mkdir(parents=True, exist_ok=True)
     recipe, _ = source_recipe_for(pack_id, output_dir)
     generated_at = utc_now()
-    paths = write_country_pack_layers(output_dir, geometry_kind, preview, full, rel_path=rel)
-    counts = country_pack_feature_counts(preview, full)
-    bbox = country_pack_clip_bbox(preview, full)
-    audit = {
-        "generated_at": generated_at,
-        "adapter_id": f"{pack_id}_v1",
-        "pack_id": pack_id,
-        "source_policy": "real_source_cache_only",
-        "source_truth": recipe.get("source_truth"),
-        "geometry_truth": recipe.get("geometry_truth"),
-        "source_signature": source_signature(recipe),
-        "feature_counts": counts,
-        **audit_extra,
-    }
-    write_json(output_dir / "build_audit.json", audit)
-    manifest = {
-        "adapter_id": f"{pack_id}_v1",
-        "pack_id": pack_id,
-        "family": family,
-        "geometry_kind": geometry_kind,
-        "country": COUNTRY_SOURCE_SPECS[pack_id].country,
-        "schema_version": 1,
-        "generated_at": generated_at,
-        "recipe_path": rel(output_dir / "source_recipe.manual.json"),
-        "distribution_tier": "single_pack",
-        "paths": paths,
-        "source_signature": source_signature(recipe),
-        "recipe_version": recipe["version"],
-        "feature_counts": counts,
-        "clip_bbox": bbox,
-        "build_command": build_command,
-        "runtime_consumer": f"transport_workbench_{family}_preview",
-        "source_policy": "real_source_cache_only",
-    }
     carrier_asset_key = resolve_pack_carrier_asset_key(pack_id)
     if not carrier_asset_key:
         raise RuntimeError(f"{pack_id}: missing carrier_asset_key registry entry")
-    manifest["carrier_asset_key"] = carrier_asset_key
-    consumer_keys = MAIN_MAP_KEYS_BY_FAMILY.get(family)
-    if consumer_keys:
-        manifest.update(
-            {
-                "mainMapEligible": True,
-                "apply_bridge_supported": True,
-                "coverage_scope": "country",
-                "main_map_consumer": {
-                    "family": family,
-                    "supported_keys": list(consumer_keys),
-                },
-            }
-        )
-        sidecars = MAIN_MAP_SIDECARS_BY_FAMILY.get(family)
-        if sidecars:
-            manifest["sidecars"] = sidecars
-    manifest = finalize_transport_manifest(
-        manifest,
-        default_variant="default",
-        variants={"default": {"label": "default", "distribution_tier": "single_pack", "paths": paths, "feature_counts": counts}},
-        extension=resolve_pack_carrier_extension(pack_id),
+    result = write_country_pack(
+        output_dir,
+        pack_id=pack_id,
+        family=family,
+        geometry_kind=geometry_kind,
+        country=COUNTRY_SOURCE_SPECS[pack_id].country,
+        recipe=recipe,
+        preview=preview,
+        full=full,
+        audit_extra=audit_extra,
+        build_command=build_command,
+        generated_at=generated_at,
+        rel_path=rel,
+        carrier_asset_key=carrier_asset_key,
+        carrier_extension=resolve_pack_carrier_extension(pack_id),
+        finalize_manifest=finalize_transport_manifest,
+        main_map_consumer_keys=MAIN_MAP_KEYS_BY_FAMILY.get(family),
+        main_map_sidecars=MAIN_MAP_SIDECARS_BY_FAMILY.get(family),
     )
-    if carrier_asset_key:
-        manifest.setdefault("extensions", {}).setdefault("carrier", {}).update(resolve_pack_carrier_extension(pack_id))
-    write_json(output_dir / "manifest.json", manifest)
-    print(f"[build] {pack_id}: {counts}")
+    print(f"[build] {pack_id}: {result['feature_counts']}")
 
 
 def normalize_text(value: Any) -> str:
