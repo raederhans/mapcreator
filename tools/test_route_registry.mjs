@@ -108,6 +108,18 @@ const INFRASTRUCTURE_ROUTES = [
     ciProfile: "pr-fast",
   },
   {
+    id: "infra:browser-smoke-static-contract",
+    commandRef: "python -m unittest tests.test_playwright_app_ready_gate_contract -q",
+    sourceRef: "ops/browser-mcp/run-smoke-browser-inspection.sh,ops/browser-mcp/inspection-profile.toml,ops/browser-mcp/inspection-profile.schema.md,tests/test_playwright_app_ready_gate_contract.py",
+    domain: "perf",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "infra:test-timeout-inventory",
     commandRef: "verify:test-timeout-inventory",
     sourceRef: "tools/test_timeout_inventory.mjs,tests/e2e/test-layer-manifest.json,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",

@@ -1175,17 +1175,18 @@ class ScenarioContractTest(unittest.TestCase):
                     with mock.patch.object(check_scenario_contracts, "collect_duplicate_scenario_dirs", return_value={}):
                         with mock.patch.object(
                             check_scenario_contracts,
-                            "build_scenario_report",
+                            "inspect_scenario_contract",
                             return_value=dict(initial_report),
                         ):
                             with mock.patch.object(
                                 check_scenario_contracts,
-                                "_apply_safe_repairs",
-                                side_effect=AssertionError("safe repairs should stay blocked"),
-                            ):
+                                "apply_safe_scenario_contract_repairs",
+                                return_value=[],
+                            ) as repair_mock:
                                 exit_code = check_scenario_contracts.main()
 
             self.assertEqual(exit_code, 1)
+            repair_mock.assert_not_called()
 
     def test_validate_scenario_contract_strict_mode_rejects_unreviewed_geo_locale_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

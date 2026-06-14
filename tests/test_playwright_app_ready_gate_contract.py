@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import tomllib
 import unittest
 
 
@@ -7,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAYWRIGHT_APP_JS = REPO_ROOT / "tests" / "e2e" / "support" / "playwright-app.js"
 SCENARIO_BOUNDARY_SPEC = REPO_ROOT / "tests" / "e2e" / "scenario_boundary_regression.spec.js"
 BROWSER_SMOKE_SCRIPT = REPO_ROOT / "ops" / "browser-mcp" / "run-smoke-browser-inspection.sh"
+BROWSER_SMOKE_PROFILE = REPO_ROOT / "ops" / "browser-mcp" / "inspection-profile.toml"
 SCENARIOS_DIR = REPO_ROOT / "data" / "scenarios"
 
 
@@ -69,6 +71,26 @@ class PlaywrightReadyGateContractTest(unittest.TestCase):
         self.assertIn('run_pwcli requests > "$network_log" || true', content)
         self.assertNotIn("run_pwcli network", content)
         self.assertIn('printf \'%s\\n\' "$pointer_log" > "$src_file"', content)
+
+    def test_browser_smoke_profile_keeps_runtime_output_and_budget_contract(self):
+        profile = tomllib.loads(BROWSER_SMOKE_PROFILE.read_text(encoding="utf-8"))
+
+        self.assertEqual(profile["outputs"]["artifact_dir"], ".runtime/browser/mcp-artifacts")
+        self.assertEqual(
+            profile["outputs"]["report_path"],
+            ".runtime/reports/generated/browser/ai-browser-mcp-smoketest.md",
+        )
+        self.assertLess(
+            profile["budgets"]["quick"]["max_runtime_sec"],
+            profile["budgets"]["full"]["max_runtime_sec"],
+        )
+        routes_by_id = {route["id"]: route for route in profile["routes"]}
+        route_ids = set(routes_by_id)
+        self.assertIn("home", route_ids)
+        self.assertIn("docs", route_ids)
+        self.assertIn("data_readme", route_ids)
+        self.assertIn("quick", routes_by_id["home"]["enabled_modes"])
+        self.assertNotIn("quick", routes_by_id["docs"]["enabled_modes"])
 
 
 if __name__ == "__main__":
