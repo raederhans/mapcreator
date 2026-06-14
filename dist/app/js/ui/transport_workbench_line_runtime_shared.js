@@ -18,24 +18,27 @@ export function createTransportWorkbenchLinePathDFromCoordinates(line) {
   return line.map((point, index) => `${index === 0 ? "M" : "L"} ${point[0]} ${point[1]}`).join(" ");
 }
 
-export function createTransportWorkbenchLinePathD(geometry) {
-  if (!geometry || typeof geometry !== "object") return "";
+function listTransportWorkbenchLineGeometryParts(geometry) {
+  if (!geometry || typeof geometry !== "object") return [];
   if (geometry.type === "LineString") {
-    return createTransportWorkbenchLinePathDFromCoordinates(geometry.coordinates || []);
+    return Array.isArray(geometry.coordinates) ? [geometry.coordinates] : [];
   }
   if (geometry.type === "MultiLineString") {
-    return (geometry.coordinates || [])
-      .map((line) => createTransportWorkbenchLinePathDFromCoordinates(line))
-      .join(" ");
+    return Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
   }
-  return "";
+  return [];
+}
+
+export function createTransportWorkbenchLinePathD(geometry) {
+  return listTransportWorkbenchLineGeometryParts(geometry)
+    .map((line) => createTransportWorkbenchLinePathDFromCoordinates(line))
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function measureTransportWorkbenchProjectedLineLength(geometry) {
-  if (!geometry || typeof geometry !== "object") return 0;
-  const lines = geometry.type === "LineString" ? [geometry.coordinates || []] : (geometry.coordinates || []);
   let length = 0;
-  lines.forEach((line) => {
+  listTransportWorkbenchLineGeometryParts(geometry).forEach((line) => {
     for (let index = 1; index < line.length; index += 1) {
       const [x0, y0] = line[index - 1];
       const [x1, y1] = line[index];
@@ -46,11 +49,7 @@ export function measureTransportWorkbenchProjectedLineLength(geometry) {
 }
 
 export function buildTransportWorkbenchProjectedLines(geometry) {
-  if (!geometry || typeof geometry !== "object") return [];
-  const rawLines = geometry.type === "LineString"
-    ? [geometry.coordinates || []]
-    : (geometry.coordinates || []);
-  return rawLines
+  return listTransportWorkbenchLineGeometryParts(geometry)
     .filter((line) => Array.isArray(line) && line.length >= 2)
     .map((line) => {
       let length = 0;

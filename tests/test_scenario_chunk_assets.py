@@ -87,7 +87,10 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
 
                 payload_cost = scenario_chunk_assets._summarize_payload_geometry_cost(payload)
                 payload_byte_size = scenario_chunk_assets._minified_json_byte_size(payload)
-                payload_bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
+                payload_bounds = scenario_chunk_assets._build_feature_bounds_summary(
+                    features,
+                    include_zero_area=True,
+                )
 
                 self.assertEqual(coarse_chunk.get("feature_count"), len(features))
                 self.assertEqual(coarse_chunk.get("feature_bounds"), payload_bounds)
@@ -517,6 +520,13 @@ class ScenarioChunkAssetsTest(unittest.TestCase):
         bounds = scenario_chunk_assets._build_feature_bounds_summary(features)
 
         self.assertEqual(bounds, [[1.0, 1.0, 2.0, 2.0]])
+
+        aligned_bounds = scenario_chunk_assets._build_feature_bounds_summary(
+            features,
+            include_zero_area=True,
+        )
+
+        self.assertEqual(aligned_bounds, [[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 2.0, 2.0]])
 
     def test_feature_bounds_summary_reads_geometry_collection_children(self) -> None:
         features = [

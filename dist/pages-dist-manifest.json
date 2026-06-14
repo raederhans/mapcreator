@@ -39767,7 +39767,7 @@
     },
     {
       "path": "app/data/scenarios/hoi4_1939/detail_chunks.manifest.json",
-      "size_bytes": 5552551,
+      "size_bytes": 5557438,
       "source_kind": "generated_ignored"
     },
     {
@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1026768,
+      "size_bytes": 1027042,
       "source_kind": "dist"
     },
     {
@@ -46571,13 +46571,8 @@
       "source_kind": "dist"
     },
     {
-      "path": "app/js/ui/transport_workbench_line_preview_helpers.js",
-      "size_bytes": 3412,
-      "source_kind": "dist"
-    },
-    {
       "path": "app/js/ui/transport_workbench_line_runtime_shared.js",
-      "size_bytes": 10048,
+      "size_bytes": 14489,
       "source_kind": "dist"
     },
     {
@@ -46612,12 +46607,12 @@
     },
     {
       "path": "app/js/ui/transport_workbench_rail_preview.js",
-      "size_bytes": 33792,
+      "size_bytes": 33287,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/transport_workbench_road_preview.js",
-      "size_bytes": 26425,
+      "size_bytes": 25863,
       "source_kind": "dist"
     },
     {
@@ -46897,7 +46892,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1449184,
+      "size_bytes": 1449046,
       "source_kind": "dist"
     },
     {
@@ -46916,5 +46911,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145103649
+  "total_bytes": 1145108634
 }

@@ -540,11 +540,15 @@ def _bounds_area(bounds: list[float]) -> float:
     return width * height
 
 
-def _build_feature_bounds_summary(features: list[dict[str, Any]]) -> list[list[float]]:
+def _build_feature_bounds_summary(
+    features: list[dict[str, Any]],
+    *,
+    include_zero_area: bool = False,
+) -> list[list[float]]:
     bounds_summary: list[list[float]] = []
     for feature in features:
         bounds = _feature_bounds(feature)
-        if _bounds_area(bounds) > 0:
+        if include_zero_area or _bounds_area(bounds) > 0:
             bounds_summary.append(bounds)
     return bounds_summary
 
@@ -1027,7 +1031,15 @@ def _build_chunk_payloads_for_feature_collection(
                     or (layer_key == SCENARIO_ATLANTROPA_LAYER_KEY and spec["lod"] == "detail")
                 )
                 feature_bounds_features = payload_features if isinstance(payload_features, list) else selected_features
-                feature_bounds_summary = _build_feature_bounds_summary(feature_bounds_features) if include_feature_bounds else []
+                include_zero_area_feature_bounds = layer_key == "political" and spec["lod"] == "coarse"
+                feature_bounds_summary = (
+                    _build_feature_bounds_summary(
+                        feature_bounds_features,
+                        include_zero_area=include_zero_area_feature_bounds,
+                    )
+                    if include_feature_bounds
+                    else []
+                )
                 manifest_chunks.append({
                     "id": chunk_id,
                     "layer": layer_key,
