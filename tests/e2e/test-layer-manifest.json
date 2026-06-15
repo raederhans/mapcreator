@@ -262,6 +262,13 @@
       "ownerHint": "scenario-tno"
     },
     {
+      "specPath": "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "primaryLayer": "feature",
+      "executionMode": "hybrid",
+      "domain": "transport-workbench",
+      "ownerHint": "transport-workbench"
+    },
+    {
       "specPath": "tests/e2e/transport_workbench_industrial_variants.spec.js",
       "primaryLayer": "feature",
       "executionMode": "hybrid",

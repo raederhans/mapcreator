@@ -77,7 +77,13 @@ test("transport workbench port coverage tiers load the matching variant packs", 
       expectedPackMode,
       zoom = "low",
     }) => {
+      const targetPackId = "japan_port";
       state.transportWorkbenchUi.activeFamily = "port";
+      state.transportWorkbenchUi.activePackIdByFamily = {
+        ...(state.transportWorkbenchUi.activePackIdByFamily || {}),
+        port: targetPackId,
+      };
+      state.transportWorkbenchUi.activePackId = targetPackId;
       const familyConfig = state.transportWorkbenchUi.familyConfigs.port;
       const displayConfig = state.transportWorkbenchUi.displayConfigs.port;
       familyConfig.legalDesignations = [...legalDesignations];
@@ -103,6 +109,8 @@ test("transport workbench port coverage tiers load the matching variant packs", 
           return {
             activeVariant: snapshot.activeVariant,
             packMode: snapshot.packMode,
+            activePackId: state.transportWorkbenchUi.activePackIdByFamily?.port || "",
+            manifestDefaultVariant: String(snapshot.manifest?.default_variant || ""),
             visibleFeatures: Number(snapshot.stats?.visibleFeatures || 0),
             totalFeatures: Number(snapshot.stats?.totalFeatures || 0),
             scale,
@@ -142,6 +150,8 @@ test("transport workbench port coverage tiers load the matching variant packs", 
 
   expect(result.core.activeVariant).toBe("core");
   expect(result.core.packMode).toBe("preview");
+  expect(result.core.activePackId).toBe("japan_port");
+  expect(result.core.manifestDefaultVariant).toBe("core");
   expect(result.core.visibleFeatures).toBe(12);
 
   expect(result.expanded.activeVariant).toBe("expanded");

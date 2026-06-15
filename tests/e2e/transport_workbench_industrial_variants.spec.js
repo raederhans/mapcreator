@@ -77,9 +77,15 @@ test("transport workbench industrial variants load from the shared manifest cont
           && snapshot.activeVariant === variant
           && snapshot.packMode === "preview"
         ) {
+          const manifestFeatureCount = Number(
+            snapshot.manifest?.variants?.[variant]?.feature_counts?.preview?.industrial_zones
+            || snapshot.manifest?.feature_counts?.preview?.industrial_zones
+            || 0
+          );
           return {
             activeVariant: snapshot.activeVariant,
             packMode: snapshot.packMode,
+            manifestFeatureCount,
             totalFeatures: Number(snapshot.stats?.totalFeatures || 0),
             visibleFeatures: Number(snapshot.stats?.visibleFeatures || 0),
             manifestDefaultVariant: String(snapshot.manifest?.default_variant || ""),
@@ -102,11 +108,13 @@ test("transport workbench industrial variants load from the shared manifest cont
   expect(result.internal.manifestDefaultVariant).toBe("internal");
   expect(result.internal.activeVariant).toBe("internal");
   expect(result.internal.packMode).toBe("preview");
-  expect(result.internal.totalFeatures).toBe(3458);
+  expect(result.internal.manifestFeatureCount).toBe(3458);
+  expect(result.internal.totalFeatures).toBe(3449);
   expect(result.internal.visibleFeatures).toBeGreaterThan(0);
 
   expect(result.open.activeVariant).toBe("open");
   expect(result.open.packMode).toBe("preview");
-  expect(result.open.totalFeatures).toBe(31976);
+  expect(result.open.manifestFeatureCount).toBe(31976);
+  expect(result.open.totalFeatures).toBe(31971);
   expect(result.open.visibleFeatures).toBeGreaterThan(result.internal.visibleFeatures);
 });

@@ -36,6 +36,7 @@ tno_named_water_rendering.spec.js
 tno_open_ocean_rendering.spec.js
 tno_startup_visible_context_layers_contract.spec.js
 transport_phase_b_main_map_smoke.spec.js
+transport_workbench_country_pack_loading.spec.js
 transport_workbench_industrial_variants.spec.js
 transport_workbench_label_rotation.spec.js
 transport_workbench_port_coverage_tiers.spec.js

@@ -5,8 +5,8 @@ Last updated: 2026-06-15
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/render-data-chain-split-20260615`
-- Base: `origin/main` at `26ae7677`
+- Integration branch: `codex/e2e-route-contract-repair-20260615`
+- Base: `origin/main` at `f21a227f`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only
 
@@ -20,7 +20,8 @@ Last updated: 2026-06-15
 
 | Worktree | Branch / HEAD | Base | Status | Goal | Hot files | Tests / evidence | Overlap risk | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `b8727d42` pushed to `origin/main` | `26ae7677` | integrated-and-pushed | Main checkout | main branch | fast-forwarded from render-data-chain split after final QA, then pushed to `origin/main`; local `lessons learned.md` user edit remains uncommitted | Green | None |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `f21a227f` pushed to `origin/main` | `26ae7677` | integrated-and-pushed | Main checkout | main branch | render-data-chain split and closeout are pushed to `origin/main`; local `lessons learned.md` user edit remains uncommitted | Green | None |
+| `C:\Users\raede\Desktop\dev\mapcreator-e2e-route-contract-repair-20260615` | `codex/e2e-route-contract-repair-20260615` / `f21a227f` | `origin/main` `f21a227f` | ready-for-integration | Repair E2E layer manifest and transport workbench expectation drift exposed by render/data split validation | `tools/e2e_layering.mjs`, `tests/e2e/test-layer-manifest.json`, `tests/e2e/test-lists/all.txt`, `tests/e2e/test-lists/feature.txt`, transport workbench E2E specs, active docs | E2E layer check, selector check, timeout guardrails/inventory, import graph, transport manifest unittests, selected 4 E2E specs, review fix rerun, and diff check passed | Green by direct file path vs known active worktrees; Yellow semantic relation to test-routing/tooling lanes | Commit, fast-forward merge to main, push, then clean worktree after main verification |
 | `C:\Users\raede\Desktop\dev\mapcreator-render-data-chain-split-20260615` | `codex/render-data-chain-split-20260615` / `b8727d42` | `origin/main` `26ae7677` | integrated | Render-chain split plus data-chain registry/golden closeout | `tools/build_transport_country_real_packs.py`, `map_builder/transport_family_registry.py`, point/industrial preview source and dist mirrors, tests, archived docs | data golden and py_compile OK; preview lifecycle and line contract node gates OK; manifest runtime OK; selector/check manifest OK; Pages dist equivalent commands OK; import graph OK; diff check OK; selected E2E external failures documented; post-merge minimal gates OK | Green after fast-forward integration; active tooling phase2 has no direct file overlap | Cleanup local worktree after registry closeout |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14` | `codex/data-chain-phase2-3-deepening-2026-06-14` / `506d0b0e` | rebased on `origin/main` `3d247f17` | ready-for-integration | Phase 2 transport pack writer deepening and Phase 3 point preview runtime split | `tools/build_transport_country_real_packs.py`, `map_builder/transport_country_pack_writer.py`, point preview source/dist mirror, `dist/pages-dist-manifest.json`, tests | py_compile; 138 targeted Python tests; 33 targeted node tests; `verify:test-import-graph`; `verify:pages-dist`; `git diff --check` | Yellow with prior data-chain/render-chain helper work; Green vs tooling WIP by file path | Merge to `main` after static review closes |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-integration-2026-06-14` | `codex/data-chain-integration-2026-06-14` / `77d18776` | `fba1b710` plus merged `origin/main` `9a5febfe` | integrated-and-cleaned | Integration owner for data chain continuation | registry, data, renderer, transport, chunk generator, appearance/i18n Pages surface | data-quality, Phase 2-4, render selective, origin/main merge, audit selective, final review fix, and Pages dist gates passed | Resolved | Worktree removed after main push; branch and main history preserve recovery |
@@ -48,7 +49,7 @@ Last updated: 2026-06-15
 
 ## Current Execution Notes
 
-- Main checkout is at pushed `b8727d42` and retains an unrelated user edit in `lessons learned.md`. This integration did not touch that file.
+- Main checkout is at pushed `f21a227f` and retains an unrelated user edit in `lessons learned.md`. This task does not touch that file.
 - `codex/data-chain-phase2-3-deepening-2026-06-14` is the only branch allowed to run live validation for this task.
 - Registry must be updated after each successful merge, validation failure, conflict resolution, and final integration.
 - 2026-06-14: created `codex/data-chain-phase2-3-deepening-2026-06-14` from `origin/main` `3d8cd631`. Scope is Phase 2 writer deepening followed by Phase 3 point preview pure runtime helper split. Live tests/builds are owned by the main Codex agent; child agents are static review only.
@@ -68,6 +69,9 @@ Last updated: 2026-06-15
 - 2026-06-15: created `codex/render-data-chain-split-20260615` from `origin/main` `26ae7677`. Scope is China OSM GPKG data-chain golden/registry closeout and preview loader/DOM split closeout. Live tests/builds are owned by the main Codex agent; child agents are static inspection only.
 - 2026-06-15: Workstream B data-chain closeout passed. Added OSM GPKG family registry, migrated road/rail/industrial/logistics registry driver paths, removed dead OSM PBF road/rail builders, and added China byte-stable fixture golden coverage. Passed `py -m unittest tests.test_global_transport_builder_contracts -q` and registry/builder `py_compile`.
 - 2026-06-15: `codex/render-data-chain-split-20260615` committed as `b8727d42`, pushed to branch, fast-forward validated in a clean detached integration worktree, pushed to `origin/main`, and fast-forwarded into the local main checkout while preserving the unrelated `lessons learned.md` user edit. Active task docs moved to `docs/archive/render-data-chain-split-20260615/`.
+- 2026-06-15: created `codex/e2e-route-contract-repair-20260615` from `origin/main` `f21a227f`. Scope is E2E layer manifest count drift plus current transport workbench industrial/port expectation drift. Main Codex agent owns all live E2E runs; subagents are static analysis only.
+- 2026-06-15: `codex/e2e-route-contract-repair-20260615` repaired the 46-spec E2E layer manifest, regenerated feature/all test lists, separated industrial raw manifest counts from runtime accepted counts, and pinned port coverage tiers to `japan_port`. Passed selected E2E specs, route checks, timeout checks, import graph, transport manifest unittests, and diff check; final review is running.
+- 2026-06-15: final review found the industrial runtime count assertion was too broad. Fixed to exact accepted counts (`internal=3449`, `open=31971`) while preserving raw manifest count assertions (`3458`, `31976`), then reran industrial E2E, layer check, selector check, and diff check successfully.
 
 ## Delivery Package - Integration Branch
 
