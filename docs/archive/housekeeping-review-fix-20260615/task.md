@@ -2,7 +2,7 @@
 
 ## Status
 
-in-progress
+integrated-and-cleaned
 
 ## Checklist
 
@@ -11,7 +11,7 @@ in-progress
 - [x] Start read-only review lanes.
 - [x] Repair stale registry state.
 - [x] Run validation.
-- [ ] Commit, merge, push, and clean review-fix worktree.
+- [x] Commit, merge, push, and clean review-fix worktree.
 
 ## Findings Under Review
 
@@ -33,4 +33,16 @@ in-progress
   - a11y: dirty shared UI/i18n/dist/test files preserved.
   - localization-governance: clean at `origin/main`.
   - review-fix: registry and active review-fix docs only.
-- `node tools/select_verification_targets.mjs docs/active/_worktree_registry.md docs/active/housekeeping-review-fix-20260615/plan.md docs/active/housekeeping-review-fix-20260615/context.md docs/active/housekeeping-review-fix-20260615/task.md --json` returned no recommended commands.
+- `node tools/select_verification_targets.mjs docs/active/_worktree_registry.md docs/archive/housekeeping-review-fix-20260615/plan.md docs/archive/housekeeping-review-fix-20260615/context.md docs/archive/housekeeping-review-fix-20260615/task.md --json` returned no recommended commands after archive move.
+
+## Delivery Package
+
+1. Changed scope: repaired active worktree registry accuracy after housekeeping closeout; split current worktrees from recovery records; archived this review-fix task.
+2. Core files: `docs/active/_worktree_registry.md`.
+3. Documentation files: `docs/archive/housekeeping-review-fix-20260615/plan.md`, `docs/archive/housekeeping-review-fix-20260615/context.md`, `docs/archive/housekeeping-review-fix-20260615/task.md`.
+4. Commit state: review-fix branch committed and pushed as `64ae29be`; local review-fix worktree and local branch were removed after fast-forward merge to main.
+5. Main divergence: main has review-fix plus closeout docs pending final commit/push; local `lessons learned.md` remains an unrelated user edit.
+6. Conflict risk: Green vs a11y and localization worktrees by file path; a11y remains Red for future UI/dist work because it owns shared UI files.
+7. Verification run: static review lanes, stale-state `rg`, `git diff --check`, `git worktree list --porcelain`, four worktree status checks, and touched-files route selector.
+8. Remaining risk: localization-governance worktree appeared during validation and is clean; future owner should refresh registry if it starts changing files.
+9. Recommended next step: push final main closeout, then continue with a11y/localization work according to their owners.
