@@ -31,9 +31,10 @@ integrated-and-cleaned
 - `git status --short --branch` evidence:
   - main: only pre-existing `lessons learned.md` user edit.
   - a11y: dirty shared UI/i18n/dist/test files preserved.
-  - localization-governance: clean at `origin/main`.
+  - localization-governance: clean at `origin/main` in the original review snapshot; superseded by the 2026-06-15 audit correction below.
   - review-fix: registry and active review-fix docs only.
 - `node tools/select_verification_targets.mjs docs/active/_worktree_registry.md docs/archive/housekeeping-review-fix-20260615/plan.md docs/archive/housekeeping-review-fix-20260615/context.md docs/archive/housekeeping-review-fix-20260615/task.md --json` returned no recommended commands after archive move.
+- 2026-06-15 audit correction: `df8d8d14` is now pushed to `origin/main`; a11y is clean at pushed `6462e9a0`, while localization-governance is dirty, behind current `main`, and currently shows localization plus dist manifest/mirror churn.
 
 ## Delivery Package
 
@@ -41,8 +42,8 @@ integrated-and-cleaned
 2. Core files: `docs/active/_worktree_registry.md`.
 3. Documentation files: `docs/archive/housekeeping-review-fix-20260615/plan.md`, `docs/archive/housekeeping-review-fix-20260615/context.md`, `docs/archive/housekeeping-review-fix-20260615/task.md`.
 4. Commit state: review-fix branch committed and pushed as `64ae29be`; local review-fix worktree and local branch were removed after fast-forward merge to main.
-5. Main divergence: main has review-fix plus closeout docs pending final commit/push; local `lessons learned.md` remains an unrelated user edit.
-6. Conflict risk: Green vs a11y and localization worktrees by file path; a11y remains Red for future UI/dist work because it owns shared UI files.
+5. Main divergence: main closeout is pushed at `df8d8d14`; local `lessons learned.md` remains an unrelated user edit outside the closeout.
+6. Conflict risk: a11y and localization-governance now have Red direct overlap in i18n data, `tests/test_i18n_audit.py`, `docs/active/_worktree_registry.md`, and delivery-surface manifest/mirror files; source/dist mirrors need one integration owner.
 7. Verification run: static review lanes, stale-state `rg`, `git diff --check`, `git worktree list --porcelain`, four worktree status checks, and touched-files route selector.
-8. Remaining risk: localization-governance worktree appeared during validation and is clean; future owner should refresh registry if it starts changing files.
-9. Recommended next step: push final main closeout, then continue with a11y/localization work according to their owners.
+8. Remaining risk: localization-governance is still dirty and behind current `main`; inspect the locale/dist churn, including `dist/pages-dist-manifest.json`, before rebasing or integrating it.
+9. Recommended next step: land the registry correction, then integrate clean a11y first and dirty localization-governance second after rebase and i18n/test conflict resolution.
