@@ -2,7 +2,7 @@
 
 ## Status
 
-integrated-pending-push
+integrated-and-cleaned
 
 ## Checklist
 
@@ -13,7 +13,7 @@ integrated-pending-push
 - [x] Update registry and task evidence.
 - [x] Run static validation.
 - [x] Commit and merge to main.
-- [ ] Push and clean housekeeping worktree.
+- [x] Push and clean housekeeping worktree.
 
 ## Verification Log
 
@@ -26,3 +26,4 @@ integrated-pending-push
   - `git worktree list`
   - `git status --short --branch`
   - `git diff --check`
+- Main push completed and temporary housekeeping worktree was removed; remote branch remains at `c076d5e5` as a recovery record.
