@@ -12,12 +12,10 @@ Last updated: 2026-06-14
 
 ## Recommended Order
 
-1. `codex/data-quality-repair-2026-06-14`
-2. `codex/data-chain-phases-2-4`
-3. Selective carry from `codex/render-chain-cleanup-phases`
-4. `codex/audit-20260612-appearance-transport`
-5. `codex/data-chain-phase2-3-deepening-2026-06-14`
-6. Mark empty or superseded audit worktrees as integrated/abandoned candidates
+1. `codex/tooling-simplification-phase4a`
+2. Keep `codex/tooling-simplification-phase2` isolated while it remains in-progress elsewhere
+3. Check `codex/data-chain-phase2-3-deepening-2026-06-14` cleanup/closeout state in a separate housekeeping pass
+4. Mark empty or superseded audit worktrees as integrated/abandoned candidates in a separate housekeeping pass
 
 ## Worktrees
 
@@ -34,6 +32,7 @@ Last updated: 2026-06-14
 | `C:\Users\raede\Desktop\dev\mapcreator-hoi4-strategic-values` | `codex/hoi4-strategic-values` / `979b20de` | `979b20de` | integrated candidate | HOI4 strategic values branch already in main ancestry | none vs `origin/main` | no diff vs `origin/main...HEAD` | Green | Mark integrated candidate |
 | `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase2` | `codex/tooling-simplification-phase2` / `fba1b710` | `fba1b710` | in-progress elsewhere | Tooling simplification work | dirty `tools/check_scenario_contracts.py`, `tests/test_scenario_contracts.py`, active docs | no committed diff yet | Yellow with data-quality on scenario contract tooling | Do not touch in this integration |
 | `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase3` | `origin/codex/tooling-simplification-phase3` / `e296e660` | `origin/main` `3d8cd631` | integrated-and-cleaned | Tooling simplification phase3: split browser-smoke static routing from live perf routing | `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`, active docs, `lessons learned.md` | browser-smoke selector golden red-then-green; branch and main pushed; main structural unittest, static smoke contract, selector check, direct selector JSON, adaptive dry-run, diff check passed | Green by file path vs data/render/scenario worktrees; Yellow semantic relation to test-routing only | None |
+| `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase4a` | `codex/tooling-simplification-phase4a` / `43abd4a3` | `origin/main` `b06e2ece` | ready-for-integration | Tooling simplification phase4A: static browser smoke profile validator | `ops/browser-mcp/run-smoke-browser-inspection.sh`, `tests/test_playwright_app_ready_gate_contract.py`, `tools/browser_smoke_profile_contract.py`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `lessons learned.md`, active docs | static unittest, structural unittest, selector check, selector JSON dry-runs, validator CLI, py_compile, adaptive dry-run, LF-normalized shell syntax, and diff check passed; no live browser smoke | Green by file path vs data/render/scenario worktrees; Yellow semantic relation to phase3 test-routing files; Red only if another worktree edits same browser-smoke profile/test files | Push branch, merge to main, verify on main, then clean worktree; keep phase2 untouched |
 
 ## Overlap Matrix
 
@@ -61,6 +60,9 @@ Last updated: 2026-06-14
 - 2026-06-14: started `codex/tooling-simplification-phase3` from `origin/main` `3d8cd631` as an isolated tooling lane. It touches only selector/registry/tests/docs and keeps browser smoke live execution out of scope.
 - 2026-06-14: `codex/tooling-simplification-phase3` was committed as `e296e660`, pushed to branch and main, verified on main, and the local worktree plus local branch were removed. Remote branch remains as recovery record.
 - 2026-06-14: `codex/data-chain-phase2-3-deepening-2026-06-14` completed Phase 2 and Phase 3 implementation, then rebased cleanly onto `origin/main` `3d247f17`. Post-rebase gates passed: Python compile, 138 targeted Python tests, 33 targeted node tests, `verify:test-import-graph`, `verify:pages-dist`, and `git diff --check`.
+- 2026-06-14: started `codex/tooling-simplification-phase4a` from `origin/main` `3d247f17` as an isolated static validator lane. It will not start browser smoke, Playwright, or dev server processes.
+- 2026-06-14: `codex/tooling-simplification-phase4a` passed static validation after reviewer fixes for unknown fields, live preflight, route URL shape, and required gesture type. It is ready for integration.
+- 2026-06-14: rebased `codex/tooling-simplification-phase4a` onto `origin/main` `b06e2ece`; conflict was limited to the registry text and kept both transport-deepening and phase4A notes.
 
 ## Delivery Package - Integration Branch
 

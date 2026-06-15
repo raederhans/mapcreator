@@ -17,6 +17,7 @@ const BROWSER_SMOKE_STATIC_SUPPORT_FILES = new Set([
   "ops/browser-mcp/run-smoke-browser-inspection.sh",
   "ops/browser-mcp/inspection-profile.toml",
   "ops/browser-mcp/inspection-profile.schema.md",
+  "tools/browser_smoke_profile_contract.py",
 ]);
 const PERF_STATIC_SUPPORT_FILES = new Set([
   "ops/browser-mcp/editor-performance-benchmark.py",

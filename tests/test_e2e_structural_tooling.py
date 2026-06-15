@@ -274,7 +274,7 @@ if (
 ) {
   throw new Error(`browser smoke route must stay static, child-safe, and lock-free: ${JSON.stringify(browserSmokeRoute)}`);
 }
-for (const sourceRef of ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml']) {
+for (const sourceRef of ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml', 'ops/browser-mcp/inspection-profile.schema.md', 'tools/browser_smoke_profile_contract.py']) {
   if (!browserSmokeRoute.sourceRef.includes(sourceRef)) {
     throw new Error(`browser smoke route must cover ${sourceRef}: ${browserSmokeRoute.sourceRef}`);
   }
@@ -438,6 +438,7 @@ const cases = [
       'ops/browser-mcp/run-smoke-browser-inspection.sh',
       'ops/browser-mcp/inspection-profile.toml',
       'ops/browser-mcp/inspection-profile.schema.md',
+      'tools/browser_smoke_profile_contract.py',
     ],
     expectedCommands: ['python -m unittest tests.test_playwright_app_ready_gate_contract -q'],
     exactCommands: ['python -m unittest tests.test_playwright_app_ready_gate_contract -q'],

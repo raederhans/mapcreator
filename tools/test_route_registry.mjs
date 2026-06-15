@@ -110,7 +110,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:browser-smoke-static-contract",
     commandRef: "python -m unittest tests.test_playwright_app_ready_gate_contract -q",
-    sourceRef: "ops/browser-mcp/run-smoke-browser-inspection.sh,ops/browser-mcp/inspection-profile.toml,ops/browser-mcp/inspection-profile.schema.md,tests/test_playwright_app_ready_gate_contract.py",
+    sourceRef: "ops/browser-mcp/run-smoke-browser-inspection.sh,ops/browser-mcp/inspection-profile.toml,ops/browser-mcp/inspection-profile.schema.md,tests/test_playwright_app_ready_gate_contract.py,tools/browser_smoke_profile_contract.py",
     domain: "browser-smoke",
     ownerHint: "test-infra",
     layer: "contract",

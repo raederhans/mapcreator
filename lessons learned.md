@@ -381,3 +381,6 @@
 
 ### 测试路由目录规则要避开同目录异域文件
 - Adaptive selector 处理 `ops/browser-mcp/` 这类混合目录时，static smoke support files 用显式文件集合和具体 route id；perf benchmark 继续走 perf 文件集合，避免静态合同改动误选 live gate。
+
+### profile validator 要接入真实入口
+- 配置文件 validator 如果只跑在静态测试里，live 脚本仍可能用默认值吞掉拼写漂移；新增 profile 合同时要把 validator 放到解析入口前，并用 unknown-field 负例锁住隐藏 fallback。

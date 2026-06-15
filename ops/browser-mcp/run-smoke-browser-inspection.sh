@@ -59,6 +59,8 @@ for dep in python3 curl grep sed; do
   fi
 done
 
+python3 tools/browser_smoke_profile_contract.py "$PROFILE_PATH" >/dev/null
+
 if ! command -v powershell.exe >/dev/null 2>&1; then
   echo "[WARN] powershell.exe not found. Windows-local fallback may be unavailable."
 fi
