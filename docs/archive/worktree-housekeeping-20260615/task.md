@@ -2,7 +2,7 @@
 
 ## Status
 
-in-progress
+integrated-pending-push
 
 ## Checklist
 
@@ -12,7 +12,8 @@ in-progress
 - [x] Remove eligible local worktree directories.
 - [x] Update registry and task evidence.
 - [x] Run static validation.
-- [ ] Commit, merge, push, and clean housekeeping worktree.
+- [x] Commit and merge to main.
+- [ ] Push and clean housekeeping worktree.
 
 ## Verification Log
 
@@ -21,3 +22,7 @@ in-progress
 - `git status --short --branch` in a11y worktree - dirty UI files preserved.
 - `git diff --check` - passed.
 - Review fix: updated stale registry rows for main, render-data-chain-split, data-chain-phase2/3, tooling-simplification-phase2, and the housekeeping validation note.
+- Post-merge main validation passed:
+  - `git worktree list`
+  - `git status --short --branch`
+  - `git diff --check`
