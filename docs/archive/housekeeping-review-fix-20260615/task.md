@@ -34,7 +34,7 @@ integrated-and-cleaned
   - localization-governance: clean at `origin/main` in the original review snapshot; superseded by the 2026-06-15 audit correction below.
   - review-fix: registry and active review-fix docs only.
 - `node tools/select_verification_targets.mjs docs/active/_worktree_registry.md docs/archive/housekeeping-review-fix-20260615/plan.md docs/archive/housekeeping-review-fix-20260615/context.md docs/archive/housekeeping-review-fix-20260615/task.md --json` returned no recommended commands after archive move.
-- 2026-06-15 audit correction: registry correction was pushed as `691c933f` and final cleanup moved the audit worktree to recovery records; a11y is clean at pushed `e3dfea57`, while localization-governance is currently rebasing onto observed target `02e39fa9` and stopped on `UU docs/active/_worktree_registry.md` with `REBASE_HEAD` `c2f36b02`.
+- 2026-06-15 audit correction: registry correction was pushed as `691c933f` and final cleanup moved the audit worktree to recovery records; a11y is clean at pushed `e3dfea57`, while localization-governance is clean at local branch `903ea7c7` and diverged from `origin/main` after the registry audit commits.
 
 ## Delivery Package
 
@@ -42,8 +42,8 @@ integrated-and-cleaned
 2. Core files: `docs/active/_worktree_registry.md`.
 3. Documentation files: `docs/archive/housekeeping-review-fix-20260615/plan.md`, `docs/archive/housekeeping-review-fix-20260615/context.md`, `docs/archive/housekeeping-review-fix-20260615/task.md`.
 4. Commit state: review-fix branch committed and pushed as `64ae29be`; local review-fix worktree and local branch were removed after fast-forward merge to main.
-5. Main divergence: registry audit cleanup was pushed as `988118d4`; this follow-up records the live localization rebase conflict state. Local `lessons learned.md` remains an unrelated user edit outside the closeout.
-6. Conflict risk: a11y and localization-governance now have Red direct overlap in i18n data, `tests/test_i18n_audit.py`, `docs/active/_worktree_registry.md`, and delivery-surface manifest/mirror files; localization is currently stopped on the registry conflict.
+5. Main divergence: registry audit cleanup was pushed as `988118d4`; this follow-up records localization-governance at clean local branch `903ea7c7`. Local `lessons learned.md` remains an unrelated user edit outside the closeout.
+6. Conflict risk: a11y and localization-governance now have Red direct overlap in i18n data, `tests/test_i18n_audit.py`, `docs/active/_worktree_registry.md`, and delivery-surface manifest/mirror files.
 7. Verification run: static review lanes, stale-state `rg`, `git diff --check`, `git worktree list --porcelain`, four worktree status checks, and touched-files route selector.
-8. Remaining risk: localization-governance is mid-rebase at detached `HEAD` `02e39fa9` with `UU docs/active/_worktree_registry.md`; inspect the locale/dist churn, including `dist/pages-dist-manifest.json`, before continuing the rebase or integrating it.
-9. Recommended next step: integrate clean a11y first; then recover localization-governance's registry conflict and re-evaluate i18n/test/dist overlaps.
+8. Remaining risk: localization-governance is clean but diverged from current `main`; inspect the locale/dist churn, including `dist/pages-dist-manifest.json`, before rebasing or integrating it.
+9. Recommended next step: integrate clean a11y first; then re-check localization-governance divergence and re-evaluate i18n/test/dist overlaps.
