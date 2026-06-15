@@ -120,7 +120,7 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
                 generated_at='2026-06-14T00:00:00Z',
                 rel_path=rel_path,
                 carrier_asset_key='testland_carrier',
-                carrier_extension={'carrier_asset_key': 'testland_carrier', 'scope': 'country'},
+                carrier_extension={'carrier_asset_key': 'stale_carrier', 'scope': 'country'},
                 finalize_manifest=finalize_transport_manifest,
                 main_map_consumer_keys=('roads', 'road_labels'),
                 main_map_sidecars={'road_labels': {'required': True}},
@@ -140,6 +140,8 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
             self.assertEqual(manifest['carrier_asset_key'], 'testland_carrier')
             self.assertEqual(manifest['extensions']['carrier']['carrier_asset_key'], 'testland_carrier')
             self.assertEqual(manifest['extensions']['road']['carrier_asset_key'], 'testland_carrier')
+            self.assertEqual(manifest['extensions']['carrier']['scope'], 'country')
+            self.assertEqual(manifest['extensions']['road']['scope'], 'country')
             self.assertTrue(manifest['mainMapEligible'])
             self.assertTrue(manifest['apply_bridge_supported'])
             self.assertEqual(manifest['main_map_consumer']['supported_keys'], ['roads', 'road_labels'])

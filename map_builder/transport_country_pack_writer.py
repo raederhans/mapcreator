@@ -119,6 +119,10 @@ def write_country_pack(
     counts = country_pack_feature_counts(preview, full)
     bbox = country_pack_clip_bbox(preview, full)
     recipe_signature = source_signature(recipe)
+    resolved_carrier_extension = {
+        **carrier_extension,
+        "carrier_asset_key": carrier_asset_key,
+    }
 
     audit = {
         "generated_at": generated_at,
@@ -180,8 +184,8 @@ def write_country_pack(
                 "feature_counts": counts,
             }
         },
-        extension=carrier_extension,
+        extension=resolved_carrier_extension,
     )
-    manifest.setdefault("extensions", {}).setdefault("carrier", {}).update(carrier_extension)
+    manifest.setdefault("extensions", {}).setdefault("carrier", {}).update(resolved_carrier_extension)
     write_json(output_dir / "manifest.json", manifest)
     return {"audit": audit, "manifest": manifest, "paths": paths, "feature_counts": counts, "clip_bbox": bbox}
