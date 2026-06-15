@@ -6,7 +6,7 @@ Last updated: 2026-06-15
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
 - Integration branch: `main` closeout
-- Base: `origin/main` at `41878c00` before localization governance integration; main includes localization commit `4711b0dd` before this closeout commit
+- Base: current `origin/main` closeout after localization governance integration; implementation commit `4711b0dd` is the recovery point for product changes
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
@@ -19,7 +19,7 @@ Last updated: 2026-06-15
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / closeout HEAD | `origin/main` `41878c00` before localization integration | active-main | user edit in `lessons learned.md` | Localization governance fast-forward merge reached `4711b0dd`; main validation passed with i18n audit, `tests.test_i18n_audit`, and `git diff --check` | Green; preserve the user edit | Commit and push this registry/archive closeout while leaving the user edit unstaged |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current pushed closeout HEAD | current `origin/main` | active-main | user edit in `lessons learned.md` | Localization governance fast-forward merge reached `4711b0dd`; main validation passed with i18n audit, `tests.test_i18n_audit`, and `git diff --check`; registry/archive closeout was pushed | Green; preserve the user edit | No localization action remains; keep the user edit unstaged |
 | `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / `e3dfea57` | merge-base `9f0ef27a` with `origin/main` | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests relative to the older main | `git status --short --branch` is clean and tracks `origin/codex/a11y-home-app-fix-20260615`; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Red; must rebase across integrated localization i18n/test/dist changes | Rebase onto latest `main`, run UI/i18n/Pages gates, then integrate if green |
 
 ## Current Overlap Matrix
@@ -58,4 +58,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Remote branch remains as recovery record at `64ae29be`.
-- 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, and cleaned from the active worktree list.
+- 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, pushed through the registry closeout, and cleaned from the active worktree list.
