@@ -31282,11 +31282,11 @@
     },
     "Gifu": {
       "en": "Gifu",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "Gifu (JP)": {
       "en": "Gifu (JP)",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "Gila": {
       "en": "Gila",
@@ -161762,11 +161762,11 @@
     },
     "Shiga": {
       "en": "Shiga",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "Shiga (JP)": {
       "en": "Shiga (JP)",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "Shigonsky District": {
       "en": "Shigonsky District",
@@ -217226,7 +217226,7 @@
     },
     "id::JPN-1841": {
       "en": "Gifu",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "id::JPN-1842": {
       "en": "Ishikawa",
@@ -217274,7 +217274,7 @@
     },
     "id::JPN-1853": {
       "en": "Shiga",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "id::JPN-1854": {
       "en": "Wakayama",
@@ -290202,15 +290202,15 @@
     },
     "岐阜県": {
       "en": "岐阜県",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "岐阜県 (JP)": {
       "en": "岐阜県 (JP)",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "岐阜県 [Gifu]": {
       "en": "岐阜県 [Gifu]",
-      "zh": "肝"
+      "zh": "岐阜县"
     },
     "岡山県": {
       "en": "岡山県",
@@ -290346,15 +290346,15 @@
     },
     "滋賀県": {
       "en": "滋賀県",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "滋賀県 (JP)": {
       "en": "滋賀県 (JP)",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "滋賀県 [Shiga]": {
       "en": "滋賀県 [Shiga]",
-      "zh": "进入"
+      "zh": "滋贺县"
     },
     "熊本県": {
       "en": "熊本県",
@@ -294723,6 +294723,18 @@
     "Spanish State": {
       "en": "Spanish State",
       "zh": "西班牙国"
+    },
+    "HGO 1936": {
+      "en": "HGO 1936",
+      "zh": "历史地理重置 1936"
+    },
+    "HGO 1936 Start": {
+      "en": "HGO 1936 Start",
+      "zh": "历史地理重置 1936 开局"
+    },
+    "Historic Geographical Overhaul state-level vector scenario.": {
+      "en": "Historic Geographical Overhaul state-level vector scenario.",
+      "zh": "Historic Geographical Overhaul 州级矢量剧本。"
     }
   },
   "ui": {
@@ -301981,6 +301993,10 @@
     "Appearance Preset": {
       "en": "Appearance Preset",
       "zh": "外观预设"
+    },
+    "Special zone diagnostics": {
+      "en": "Special zone diagnostics",
+      "zh": "特殊区域诊断"
     }
   }
 }

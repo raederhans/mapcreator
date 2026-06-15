@@ -6,30 +6,30 @@ Last updated: 2026-06-15
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
 - Integration branch: `main` closeout
-- Base: `origin/main` at `691c933f` before final registry cleanup closeout
+- Base: `origin/main` at `41878c00` before localization governance integration
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
 1. Review and rebase `codex/a11y-home-app-fix-20260615`; it is clean and pushed, with shared UI, i18n, tests, and `dist/app` changes.
-2. Review `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` after a11y; it is clean at local branch `903ea7c7` and diverged from `origin/main` after the registry audit commits.
+2. Finish rebasing `codex/localization-governance-20260615` onto `origin/main` `41878c00`, keep the completed localization and Pages validation evidence, then integrate it before a11y absorbs the shared i18n/test/dist changes.
 3. Re-check recovery refs before recreating any historical worktree.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current registry closeout HEAD | `origin/main` `691c933f` before final cleanup closeout | active-main | user edit in `lessons learned.md` | `git status --short --branch` shows only the pre-existing `lessons learned.md` edit after final cleanup; use `git rev-parse HEAD` for the exact pushed closeout commit | Green; preserve the user edit | Integration target; stage only owned files while the user edit remains |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `41878c00` | `origin/main` `41878c00` | active-main | user edit in `lessons learned.md` | `git status --short --branch` shows only the pre-existing `lessons learned.md` edit after final cleanup; `origin/main` is `41878c00` before localization integration | Green; preserve the user edit | Integration target; stage only owned files while the user edit remains |
 | `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / `e3dfea57` | merge-base `9f0ef27a` with `origin/main` | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests relative to `origin/main` | `git status --short --branch` is clean and tracks `origin/codex/a11y-home-app-fix-20260615`; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Red; direct registry-file overlap with current `main` and direct UI/dist/i18n overlap with localization | Rebase onto latest `main`, run UI/i18n/Pages gates, then integrate if green |
-| `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `codex/localization-governance-20260615` / `903ea7c7` | observed merge-base `02e39fa9` with `origin/main`; branch is diverged from current main | ready-for-review | localization audit, locale data, TNO locale patch assets, `dist/app/js/ui/i18n_catalog.js`, `dist/pages-dist-manifest.json`, active docs | `git status` reports a clean working tree on `codex/localization-governance-20260615`; `git rev-list --left-right --count` reported ahead 1 / behind 1 before this registry follow-up; changed files against main are localization/dist/docs/test/tool files | Red; direct registry/i18n/test overlap with a11y and delivery-surface manifest/mirror churn | Re-check branch divergence after this registry follow-up, then rebase/merge with one integration owner for source and dist mirrors |
+| `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `codex/localization-governance-20260615` / current branch HEAD | rebased onto `origin/main` `41878c00` | ready-for-integration | localization audit, locale data, TNO locale patch assets, `dist/app/js/ui/i18n_catalog.js`, `dist/pages-dist-manifest.json`, active docs | Final pre-integration verification passed: py_compile, 50 related unittests, i18n audit target gaps zero, 13 TNO targeted tests, TNO/HGO scenario contracts, full `npm run verify:pages-dist`, and `git diff --check` | Red; direct i18n/test overlap with a11y plus delivery-surface manifest/mirror churn | Fast-forward main if still current, then archive docs and clean this worktree |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
 | main -> a11y | Red | Direct overlap in `docs/active/_worktree_registry.md`; keep current registry facts when a11y is rebased. |
-| main -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`; localization is clean but diverged from current main after registry audit commits. |
+| main -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`; localization is clean, verified, and ahead of current `origin/main` by one commit. |
 | a11y -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`, `tests/test_i18n_audit.py`, UI catalog/locales, and delivery-surface manifest/mirror files. TNO scenario locale assets are localization-owned risk unless a later a11y rebase touches them. |
 
 ## Recovery Records
@@ -61,4 +61,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Remote branch remains as recovery record at `64ae29be`.
-- 2026-06-15 audit: previous registry state still described localization-governance with stale head and risk details; `691c933f` is the pushed recovery record for the first registry correction, `988118d4` is the pushed audit-worktree cleanup, and this follow-up records the observed clean-but-diverged localization state at `903ea7c7`.
+- 2026-06-15 audit: previous registry state still described localization-governance with stale head and risk details; `691c933f` is the pushed recovery record for the first registry correction, and `988118d4`, `02e39fa9`, and `41878c00` are registry cleanup commits; localization-governance is clean at current branch HEAD.

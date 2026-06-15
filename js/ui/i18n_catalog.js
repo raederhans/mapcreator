@@ -146,6 +146,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Strategic Values": { zh: "战略数值", en: "Strategic Values" },
   "Show Resource Markers": { zh: "显示资源标记", en: "Show Resource Markers" },
   "Strategic Heat Metric": { zh: "战略热力指标", en: "Strategic Heat Metric" },
+  "Special zone diagnostics": { zh: "特殊区域诊断", en: "Special zone diagnostics" },
   None: { zh: "无", en: "None" },
   Manpower: { zh: "人力", en: "Manpower" },
   Steel: { zh: "钢铁", en: "Steel" },

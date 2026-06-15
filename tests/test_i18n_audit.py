@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-from tools.i18n_audit import collect_code_strings
+from tools.i18n_audit import build_localization_ownership_audit, collect_code_strings
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,6 +16,13 @@ class I18nAuditTest(unittest.TestCase):
         path = repo_root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+
+    def _write_repo_json(self, repo_root: Path, relative_path: str, payload: dict) -> None:
+        self._write_repo_file(
+            repo_root,
+            relative_path,
+            json.dumps(payload, ensure_ascii=False, indent=2),
+        )
 
     def test_collects_legacy_and_declarative_coverage_separately(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -125,6 +132,14 @@ showToast(`Copied ${count} region entries to the clipboard.`);
     <span>OpenFlights</span>
     <span>OurAirports</span>
     <span>OpenStreetMap</span>
+    <span>Camino</span>
+    <span>FRA GIS</span>
+    <span>ITE 3000</span>
+    <span>NaPTAN</span>
+    <span>Network Rail</span>
+    <span>OpenDataNI</span>
+    <span>USGS MRDS</span>
+    <span>data.gouv.fr</span>
     <span>Wikidata</span>
     <span>geoBoundaries</span>
   </body>
@@ -141,12 +156,109 @@ showToast(`Copied ${count} region entries to the clipboard.`);
                 "OpenFlights",
                 "OurAirports",
                 "OpenStreetMap",
+                "Camino",
+                "FRA GIS",
+                "ITE 3000",
+                "NaPTAN",
+                "Network Rail",
+                "OpenDataNI",
+                "USGS MRDS",
+                "data.gouv.fr",
                 "Wikidata",
                 "geoBoundaries",
             ):
                 with self.subTest(token=token):
                     self.assertIn(token, result["non_translatable_tokens"])
                     self.assertNotIn(token, result["uncovered_user_visible_literals"])
+
+    def test_build_localization_ownership_audit_reports_source_and_scenario_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            locales_payload = {
+                "ui": {
+                    "Special zone diagnostics": {
+                        "en": "Special zone diagnostics",
+                        "zh": "特殊区域诊断",
+                    },
+                },
+                "geo": {
+                    "HGO 1936": {
+                        "en": "HGO 1936",
+                        "zh": "历史地理重置 1936",
+                    },
+                },
+            }
+            self._write_repo_json(repo_root, "data/locales.json", locales_payload)
+            self._write_repo_json(repo_root, "data/i18n/manual_ui.json", {"Special zone diagnostics": "特殊区域诊断"})
+            self._write_repo_json(repo_root, "data/i18n/manual_geo_overrides.json", {"HGO 1936": "HGO 1936"})
+            self._write_repo_json(repo_root, "data/i18n/locales_baseline.json", locales_payload)
+            self._write_repo_file(
+                repo_root,
+                "js/ui/i18n_catalog.js",
+                """
+export const UI_COPY_CATALOG = Object.freeze({
+  "Special zone diagnostics": { zh: "特殊区域诊断", en: "Special zone diagnostics" },
+});
+                """.strip(),
+            )
+            self._write_repo_file(repo_root, "js/ui/i18n.js", "export function t(key) { return key; }")
+            self._write_repo_file(
+                repo_root,
+                "index.html",
+                '<button data-i18n="Special zone diagnostics">Special zone diagnostics</button>',
+            )
+            self._write_repo_json(
+                repo_root,
+                "data/scenarios/index.json",
+                {
+                    "version": 1,
+                    "scenarios": [
+                        {
+                            "scenario_id": "hgo_1936",
+                            "display_name": "HGO 1936",
+                            "manifest_url": "data/scenarios/hgo_1936/manifest.json",
+                        }
+                    ],
+                },
+            )
+            self._write_repo_json(
+                repo_root,
+                "data/scenarios/hgo_1936/manifest.json",
+                {
+                    "scenario_id": "hgo_1936",
+                    "display_name": "HGO 1936",
+                    "bookmark_description": "Historic Geographical Overhaul state-level vector scenario.",
+                },
+            )
+            self._write_repo_json(repo_root, "data/scenarios/hgo_1936/geo_locale_patch.zh.json", {})
+            self._write_repo_json(repo_root, "data/scenarios/hgo_1936/locales.startup.json", {})
+            self._write_repo_json(repo_root, "data/scenarios/hgo_1936/startup.bundle.en.json", {})
+            self._write_repo_json(repo_root, "data/scenarios/hgo_1936/startup.bundle.zh.json", {})
+
+            code_strings = collect_code_strings(repo_root)
+            audit = build_localization_ownership_audit(
+                repo_root=repo_root,
+                locales_path=repo_root / "data" / "locales.json",
+                scenarios_root=repo_root / "data" / "scenarios",
+                locales=locales_payload,
+                code_strings=code_strings,
+                scenario_geo_missing=[],
+                scenario_metadata_missing=["Historic Geographical Overhaul state-level vector scenario."],
+            )
+
+            self.assertEqual(audit["summary"]["ui_locale_entries"], 1)
+            self.assertEqual(audit["summary"]["manual_ui_entries"], 1)
+            self.assertEqual(audit["summary"]["catalog_ui_entries"], 1)
+            self.assertEqual(audit["summary"]["scenario_count"], 1)
+            self.assertEqual(audit["summary"]["scenario_startup_ready_count"], 1)
+            self.assertEqual(audit["ui_sources"]["runtime_catalog"]["path"], "js/ui/i18n_catalog.js")
+            scenario_record = audit["scenario_assets"][0]
+            self.assertEqual(scenario_record["scenario_id"], "hgo_1936")
+            self.assertTrue(scenario_record["assets"]["geo_locale_patch_zh"]["exists"])
+            self.assertEqual(
+                scenario_record["metadata_missing"],
+                ["Historic Geographical Overhaul state-level vector scenario."],
+            )
 
     def test_treats_simple_numeric_units_as_non_translatable_literals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -159,6 +271,7 @@ showToast(`Copied ${count} region entries to the clipboard.`);
 <html>
   <body>
     <span>1.5 km</span>
+    <span>≈ 333 km</span>
     <span>20 ms</span>
     <span>3 km2</span>
   </body>
@@ -168,7 +281,7 @@ showToast(`Copied ${count} region entries to the clipboard.`);
 
             result = collect_code_strings(repo_root)
 
-            for token in ("1.5 km", "20 ms", "3 km2"):
+            for token in ("1.5 km", "≈ 333 km", "20 ms", "3 km2"):
                 with self.subTest(token=token):
                     self.assertIn(token, result["non_translatable_tokens"])
                     self.assertNotIn(token, result["uncovered_user_visible_literals"])

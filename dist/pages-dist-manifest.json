@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8457674,
+      "size_bytes": 8458253,
       "source_kind": "generated_ignored"
     },
     {
@@ -41832,12 +41832,12 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.json",
-      "size_bytes": 1767073,
+      "size_bytes": 1767082,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.zh.json",
-      "size_bytes": 1063281,
+      "size_bytes": 1063290,
       "source_kind": "generated_ignored"
     },
     {
@@ -41852,7 +41852,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3806189,
+      "size_bytes": 3818903,
       "source_kind": "generated_ignored"
     },
     {
@@ -46292,7 +46292,7 @@
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 92630,
+      "size_bytes": 92722,
       "source_kind": "dist"
     },
     {
@@ -46567,7 +46567,7 @@
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 30993,
+      "size_bytes": 31001,
       "source_kind": "dist"
     },
     {
@@ -46931,5 +46931,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145119516
+  "total_bytes": 1145132927
 }

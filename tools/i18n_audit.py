@@ -97,25 +97,33 @@ MIXED_TERM_LINT_RE = re.compile(r"\b(?:override|fallback|workbench|inspector)\b"
 NON_VISIBLE_HTML_TAGS = {"script", "style"}
 NON_TRANSLATABLE_PATTERNS = (
     re.compile(r"^\d+(?:\.\d+)?(?:px|x|ms|s|%)$", re.IGNORECASE),
-    re.compile(r"^\d+(?:\.\d+)?\s+(?:ft|km|km2|m|mi|mph|kph|ms)$", re.IGNORECASE),
+    re.compile(r"^(?:≈\s*)?\d+(?:\.\d+)?\s+(?:ft|km|km2|m|mi|mph|kph|ms)$", re.IGNORECASE),
     re.compile(r"^\d{1,2}:\d{2}(?:\s*(?:UTC|AM|PM))?$", re.IGNORECASE),
     re.compile(r"^[+\-]?\d+(?:\.\d+)?$"),
 )
 NON_TRANSLATABLE_EXACT_TOKENS = {
+    "Camino",
+    "FRA GIS",
     "GADM",
     "GeoNames",
     "Geofabrik",
+    "ITE 3000",
     "MLIT Japan",
     "Marine Regions",
     "NASA Black Marble",
+    "NaPTAN",
+    "Network Rail",
     "NOAA ETOPO",
     "Natural Earth",
+    "OpenDataNI",
     "OpenFlights",
     "OpenInfraMap",
     "OpenStreetMap",
     "OurAirports",
+    "USGS MRDS",
     "Wikidata",
     "World Bank",
+    "data.gouv.fr",
     "geoBoundaries",
 }
 PLACEHOLDER_SAMPLE_RE = re.compile(r"^[a-z][a-z0-9_-]{2,}$")
@@ -274,6 +282,195 @@ def parse_markup(markup: str) -> dict:
 def load_locales(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def load_json_object(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        payload = json.load(file)
+    return payload if isinstance(payload, dict) else {}
+
+
+def path_for_report(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def file_audit_entry(path: Path, repo_root: Path) -> dict:
+    entry = {
+        "path": path_for_report(path, repo_root),
+        "exists": path.exists(),
+    }
+    if path.exists() and path.is_file():
+        entry["bytes"] = path.stat().st_size
+    return entry
+
+
+def json_mapping_count(path: Path, section: str | None = None) -> int:
+    payload = load_json_object(path)
+    if section:
+        payload = payload.get(section) if isinstance(payload, dict) else {}
+    return len(payload) if isinstance(payload, dict) else 0
+
+
+def scenario_ids_from_index(scenarios_root: Path) -> list[str]:
+    if not scenarios_root.exists() or not scenarios_root.is_dir():
+        return []
+    index_payload = load_json_object(scenarios_root / "index.json")
+    scenario_ids = []
+    for entry in index_payload.get("scenarios", []) if isinstance(index_payload.get("scenarios"), list) else []:
+        scenario_id = str((entry or {}).get("scenario_id", "")).strip()
+        if scenario_id:
+            scenario_ids.append(scenario_id)
+    if scenario_ids:
+        return sorted(set(scenario_ids))
+    return sorted(path.name for path in scenarios_root.iterdir() if path.is_dir() and (path / "manifest.json").exists())
+
+
+def scenario_metadata_strings(manifest_payload: dict) -> list[str]:
+    values = []
+    for key in ("display_name", "bookmark_name", "bookmark_description", "description"):
+        value = manifest_payload.get(key)
+        if isinstance(value, str) and value.strip():
+            values.append(value.strip())
+    return sorted(set(values))
+
+
+def build_localization_ownership_audit(
+    repo_root: Path,
+    locales_path: Path,
+    scenarios_root: Path,
+    locales: dict,
+    code_strings: dict,
+    scenario_geo_missing: list[str],
+    scenario_metadata_missing: list[str],
+) -> dict:
+    ui_locale = locales.get("ui") or {}
+    geo_locale = locales.get("geo") or {}
+    manual_ui_path = repo_root / "data" / "i18n" / "manual_ui.json"
+    manual_geo_path = repo_root / "data" / "i18n" / "manual_geo_overrides.json"
+    baseline_path = repo_root / "data" / "i18n" / "locales_baseline.json"
+    catalog_path = repo_root / "js" / "ui" / "i18n_catalog.js"
+    runtime_i18n_path = repo_root / "js" / "ui" / "i18n.js"
+    dist_root = repo_root / "dist" / "app"
+
+    scenario_records = []
+    for scenario_id in scenario_ids_from_index(scenarios_root):
+        scenario_dir = scenarios_root / scenario_id
+        manifest_path = scenario_dir / "manifest.json"
+        manifest_payload = load_json_object(manifest_path)
+        metadata_values = scenario_metadata_strings(manifest_payload)
+        metadata_missing = []
+        for value in metadata_values:
+            entry = geo_locale.get(value)
+            zh_value = entry.get("zh", "") if isinstance(entry, dict) else ""
+            en_value = entry.get("en", value) if isinstance(entry, dict) else value
+            if is_missing_like(zh_value, en_value):
+                metadata_missing.append(value)
+        scenario_records.append({
+            "scenario_id": scenario_id,
+            "manifest": file_audit_entry(manifest_path, repo_root),
+            "metadata_strings": metadata_values,
+            "metadata_missing": sorted(metadata_missing),
+            "assets": {
+                "geo_locale_patch": file_audit_entry(scenario_dir / "geo_locale_patch.json", repo_root),
+                "geo_locale_patch_en": file_audit_entry(scenario_dir / "geo_locale_patch.en.json", repo_root),
+                "geo_locale_patch_zh": file_audit_entry(scenario_dir / "geo_locale_patch.zh.json", repo_root),
+                "locales_startup": file_audit_entry(scenario_dir / "locales.startup.json", repo_root),
+                "geo_aliases_startup": file_audit_entry(scenario_dir / "geo_aliases.startup.json", repo_root),
+                "startup_bundle_en": file_audit_entry(scenario_dir / "startup.bundle.en.json", repo_root),
+                "startup_bundle_zh": file_audit_entry(scenario_dir / "startup.bundle.zh.json", repo_root),
+                "startup_bundle_en_gzip": file_audit_entry(scenario_dir / "startup.bundle.en.json.gz", repo_root),
+                "startup_bundle_zh_gzip": file_audit_entry(scenario_dir / "startup.bundle.zh.json.gz", repo_root),
+                "city_overrides": file_audit_entry(scenario_dir / "city_overrides.json", repo_root),
+                "capital_hints": file_audit_entry(scenario_dir / "capital_hints.json", repo_root),
+            },
+        })
+
+    dist_assets = {
+        "root": file_audit_entry(dist_root, repo_root),
+        "index_html": file_audit_entry(dist_root / "index.html", repo_root),
+        "runtime_catalog": file_audit_entry(dist_root / "js" / "ui" / "i18n_catalog.js", repo_root),
+        "runtime_i18n": file_audit_entry(dist_root / "js" / "ui" / "i18n.js", repo_root),
+        "locales": file_audit_entry(dist_root / "data" / "locales.json", repo_root),
+    }
+
+    startup_ready = [
+        record["scenario_id"]
+        for record in scenario_records
+        if record["assets"]["locales_startup"]["exists"]
+        and record["assets"]["startup_bundle_en"]["exists"]
+        and record["assets"]["startup_bundle_zh"]["exists"]
+    ]
+    scenario_metadata_gap_records = [
+        {
+            "scenario_id": record["scenario_id"],
+            "missing": record["metadata_missing"],
+        }
+        for record in scenario_records
+        if record["metadata_missing"]
+    ]
+
+    return {
+        "summary": {
+            "ui_locale_entries": len(ui_locale),
+            "manual_ui_entries": json_mapping_count(manual_ui_path),
+            "catalog_ui_entries": len(code_strings["catalog_ui_keys"]),
+            "geo_locale_entries": len(geo_locale),
+            "manual_geo_entries": json_mapping_count(manual_geo_path),
+            "baseline_ui_entries": json_mapping_count(baseline_path, "ui"),
+            "baseline_geo_entries": json_mapping_count(baseline_path, "geo"),
+            "scenario_count": len(scenario_records),
+            "scenario_startup_ready_count": len(startup_ready),
+            "scenario_geo_missing_count": len(scenario_geo_missing),
+            "scenario_metadata_missing_count": len(scenario_metadata_missing),
+            "dist_root_exists": dist_root.exists(),
+        },
+        "ui_sources": {
+            "locales": {
+                **file_audit_entry(locales_path, repo_root),
+                "entry_count": len(ui_locale),
+            },
+            "manual_ui": {
+                **file_audit_entry(manual_ui_path, repo_root),
+                "entry_count": json_mapping_count(manual_ui_path),
+            },
+            "runtime_catalog": {
+                **file_audit_entry(catalog_path, repo_root),
+                "entry_count": len(code_strings["catalog_ui_keys"]),
+            },
+            "runtime_i18n": file_audit_entry(runtime_i18n_path, repo_root),
+            "code_buckets": {
+                "literal_translated": len(code_strings["literal_translated_ui_keys"]),
+                "declarative": len(code_strings["declarative_ui_keys"]),
+                "legacy_map": len(code_strings["legacy_ui_map_keys"]),
+                "dynamic_config": len(code_strings["dynamic_config_ui_keys"]),
+                "uncovered_visible": len(code_strings["uncovered_user_visible_literals"]),
+                "a11y_literals": len(code_strings["a11y_literals"]),
+            },
+        },
+        "geo_sources": {
+            "locales": {
+                **file_audit_entry(locales_path, repo_root),
+                "entry_count": len(geo_locale),
+            },
+            "manual_geo_overrides": {
+                **file_audit_entry(manual_geo_path, repo_root),
+                "entry_count": json_mapping_count(manual_geo_path),
+            },
+            "baseline_locales": {
+                **file_audit_entry(baseline_path, repo_root),
+                "geo_entry_count": json_mapping_count(baseline_path, "geo"),
+            },
+        },
+        "scenario_assets": scenario_records,
+        "scenario_startup_ready": startup_ready,
+        "scenario_metadata_gaps": scenario_metadata_gap_records,
+        "dist_mirror": dist_assets,
+    }
 
 
 def load_topology_names(topology_path: Path) -> list[str]:
@@ -570,6 +767,34 @@ def render_markdown(report: dict) -> str:
         lines.append(
             f"- {scope_name}: files={stats['file_count']}, "
             f"js={stats['js_file_count']}, html={stats['html_file_count']}"
+        )
+    lines.append("")
+
+    ownership = report["localization_ownership_audit"]
+    lines.append("## Localization Ownership Audit")
+    summary = ownership["summary"]
+    lines.append(f"- UI locale entries: {summary['ui_locale_entries']}")
+    lines.append(f"- Manual UI entries: {summary['manual_ui_entries']}")
+    lines.append(f"- Runtime catalog entries: {summary['catalog_ui_entries']}")
+    lines.append(f"- GEO locale entries: {summary['geo_locale_entries']}")
+    lines.append(f"- Manual GEO override entries: {summary['manual_geo_entries']}")
+    lines.append(f"- Scenario count: {summary['scenario_count']}")
+    lines.append(f"- Startup-ready scenarios: {summary['scenario_startup_ready_count']}")
+    lines.append(f"- Scenario geo missing: {summary['scenario_geo_missing_count']}")
+    lines.append(f"- Scenario metadata missing: {summary['scenario_metadata_missing_count']}")
+    lines.append(f"- Dist root exists: {summary['dist_root_exists']}")
+    lines.append("")
+
+    lines.append("### Scenario Localization Assets")
+    for record in ownership["scenario_assets"]:
+        assets = record["assets"]
+        lines.append(
+            f"- {record['scenario_id']}: "
+            f"patch.zh={assets['geo_locale_patch_zh']['exists']}, "
+            f"startup_locales={assets['locales_startup']['exists']}, "
+            f"bundle.en={assets['startup_bundle_en']['exists']}, "
+            f"bundle.zh={assets['startup_bundle_zh']['exists']}, "
+            f"metadata_missing={len(record['metadata_missing'])}"
         )
     lines.append("")
 
@@ -912,6 +1137,16 @@ def main() -> None:
         if is_missing_like(zh_value, en_value):
             scenario_metadata_missing.append(name)
 
+    localization_ownership_audit = build_localization_ownership_audit(
+        repo_root=repo_root,
+        locales_path=locales_path,
+        scenarios_root=scenarios_root,
+        locales=locales,
+        code_strings=code_strings,
+        scenario_geo_missing=scenario_geo_missing,
+        scenario_metadata_missing=scenario_metadata_missing,
+    )
+
     literal_translated_ui_keys = code_strings["ui_t_keys"]
     geo_todo_count = geo_missing_like_count
 
@@ -984,6 +1219,7 @@ def main() -> None:
         "scenario_metadata_name_count": len(scenario_metadata_names),
         "scenario_metadata_missing_count": len(scenario_metadata_missing),
         "scenario_metadata_missing": scenario_metadata_missing,
+        "localization_ownership_audit": localization_ownership_audit,
     }
 
     markdown_out.parent.mkdir(parents=True, exist_ok=True)
