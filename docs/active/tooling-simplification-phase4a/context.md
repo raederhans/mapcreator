@@ -30,7 +30,7 @@
 
 ## Open Items
 
-- Commit, push, merge to `main`, verify on `main`, and clean worktree.
+- None for phase4A.
 
 ## Implementation Notes
 
@@ -60,8 +60,8 @@
 3. Tests/docs: `tests/test_playwright_app_ready_gate_contract.py`,
    `tests/test_e2e_structural_tooling.py`, active phase4A docs, worktree registry,
    `lessons learned.md`.
-4. Commit state: pending commit.
-5. Main divergence: branch is based on `origin/main` `b06e2ece`.
+4. Commit state: committed as `16360a6f`, pushed to branch and `main`.
+5. Main divergence: resolved; `main` includes phase4A.
 6. Conflict risk: yellow semantic overlap with phase3 routing files; no known
    file overlap with the active phase2 worktree.
 7. Verification: targeted unittest, structural unittest, selector check,
@@ -69,4 +69,10 @@
    LF-normalized shell syntax, and diff check passed.
 8. Remaining risk: direct `bash -n` on this Windows checkout reads CRLF; the
    normalized syntax check passed and Git diff check is clean.
-9. Recommended next step: commit and integrate into `main`.
+9. Recommended next step: continue with the next tooling simplification slice.
+
+## Closeout
+
+- `codex/tooling-simplification-phase4a` was fast-forward merged into `main`.
+- Main verification passed after merge.
+- The phase4A worktree and local branch were removed.

@@ -16,7 +16,7 @@ Live process owner: main Codex agent only
 - [x] Wire the validator into the existing static contract route.
 - [x] Run targeted verification.
 - [x] Do read-only review and first-principles self-check.
-- [ ] Commit, push, merge to `main`, verify on `main`, and clean the worktree.
+- [x] Commit, push, merge to `main`, verify on `main`, and clean the worktree.
 
 ## Validation Commands
 
@@ -68,3 +68,11 @@ Live process owner: main Codex agent only
 - Read-only reviewer requested changes for unknown fields, live smoke preflight,
   route URL shape, and required gesture type.
 - All requested changes were implemented and re-verified.
+
+## Integration Closeout
+
+- Branch commit: `16360a6fdcefa01ff1ea2c7a77f418b66bfa7e6a`.
+- Branch pushed: `origin/codex/tooling-simplification-phase4a`.
+- Main pushed: `origin/main` includes `16360a6f`.
+- Local phase4A worktree removed.
+- Local phase4A branch removed; remote branch remains as recovery record.
