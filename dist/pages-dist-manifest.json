@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 277816,
+      "size_bytes": 277853,
       "source_kind": "dist"
     },
     {
@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8458253,
+      "size_bytes": 8458870,
       "source_kind": "generated_ignored"
     },
     {
@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 257760,
+      "size_bytes": 260016,
       "source_kind": "dist"
     },
     {
@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1027042,
+      "size_bytes": 1027513,
       "source_kind": "dist"
     },
     {
@@ -46307,12 +46307,12 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 50496,
+      "size_bytes": 50589,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/sidebar/project_support_diagnostics_controller.js",
-      "size_bytes": 57985,
+      "size_bytes": 58070,
       "source_kind": "dist"
     },
     {
@@ -46347,7 +46347,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 269209,
+      "size_bytes": 269344,
       "source_kind": "dist"
     },
     {
@@ -46372,7 +46372,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 25753,
+      "size_bytes": 27012,
       "source_kind": "dist"
     },
     {
@@ -46482,7 +46482,7 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_event_owner.js",
-      "size_bytes": 6299,
+      "size_bytes": 7570,
       "source_kind": "dist"
     },
     {
@@ -46512,12 +46512,12 @@
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_right_deck_owner.js",
-      "size_bytes": 46002,
+      "size_bytes": 46108,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/transport_workbench_shell_owner.js",
-      "size_bytes": 8172,
+      "size_bytes": 8254,
       "source_kind": "dist"
     },
     {
@@ -46931,5 +46931,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145132927
+  "total_bytes": 1145139339
 }

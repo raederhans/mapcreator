@@ -524,6 +524,7 @@ const config = {
                 '                  role="tab"\n'
                 '                  aria-selected="false"\n'
                 '                  aria-controls="appearancePanelTransport"\n'
+                '                  tabindex="-1"\n'
                 '                  data-i18n="Transport"',
                 index_html,
             )

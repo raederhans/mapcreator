@@ -4127,6 +4127,22 @@
     "Special zone diagnostics": {
       "en": "Special zone diagnostics",
       "zh": "特殊区域诊断"
+    },
+    "Map workspace": {
+      "en": "Map workspace",
+      "zh": "地图工作区"
+    },
+    "Select a region to start painting, or use Auto-Fill to color all countries": {
+      "en": "Select a region to start painting, or use Auto-Fill to color all countries",
+      "zh": "选择一个区域开始上色，或使用自动填充为所有国家上色"
+    },
+    "Panels toggle left panel": {
+      "en": "Panels toggle left panel",
+      "zh": "面板，切换左侧面板"
+    },
+    "Inspector toggle right panel": {
+      "en": "Inspector toggle right panel",
+      "zh": "检查器，切换右侧面板"
     }
   },
   "geo": {

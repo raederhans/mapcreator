@@ -1563,6 +1563,8 @@ function initSidebar({ render } = {}) {
     fileInput.type = "file";
     fileInput.accept = ".json,.zip,application/json,application/zip,application/x-zip-compressed";
     fileInput.className = "hidden";
+    fileInput.setAttribute("aria-label", t("Load Project", "ui"));
+    fileInput.setAttribute("data-i18n-aria-label", "Load Project");
 
     const fileMeta = document.createElement("div");
     fileMeta.id = "projectFileMeta";

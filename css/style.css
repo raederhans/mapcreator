@@ -8113,8 +8113,10 @@ body.counter-editor-modal-open {
 
 .dock-inline-swatches .color-swatch,
 .dock-recent-swatches .color-swatch {
-  width: 1.12rem;
-  height: 1.12rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 24px;
+  min-height: 24px;
   border-radius: 4px;
 }
 

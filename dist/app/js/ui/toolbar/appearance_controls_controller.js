@@ -250,6 +250,7 @@ export function createAppearanceControlsController({
       const isActive = id === normalizedTabId;
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.setAttribute("tabindex", isActive ? "0" : "-1");
     });
     appearanceTabPanels.forEach((panel) => {
       const id = String(panel.dataset.appearancePanel || "").trim().toLowerCase();
@@ -259,6 +260,21 @@ export function createAppearanceControlsController({
       panel.hidden = !isActive;
     });
     runtimeState.syncFacilityInfoCardVisibilityFn?.();
+  };
+
+  const moveAppearanceTabFocus = (currentButton, direction) => {
+    const buttons = appearanceTabButtons.filter((button) => !button.disabled && !button.hidden);
+    if (!buttons.length) return;
+    const currentIndex = Math.max(0, buttons.indexOf(currentButton));
+    const nextIndex = direction === "first"
+      ? 0
+      : direction === "last"
+        ? buttons.length - 1
+        : (currentIndex + direction + buttons.length) % buttons.length;
+    const nextButton = buttons[nextIndex];
+    if (!nextButton) return;
+    setAppearanceTab(nextButton.dataset.appearanceTab || "ocean");
+    nextButton.focus?.();
   };
 
   const syncUrbanConfig = () => {
@@ -390,6 +406,21 @@ export function createAppearanceControlsController({
       if (button.dataset.bound === "true") return;
       button.addEventListener("click", () => {
         setAppearanceTab(button.dataset.appearanceTab || "ocean");
+      });
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          moveAppearanceTabFocus(button, 1);
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          moveAppearanceTabFocus(button, -1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          moveAppearanceTabFocus(button, "first");
+        } else if (event.key === "End") {
+          event.preventDefault();
+          moveAppearanceTabFocus(button, "last");
+        }
       });
       button.dataset.bound = "true";
     });

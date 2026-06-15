@@ -12,6 +12,8 @@ class TestElement {
     this.dataset = {};
     this.listeners = new Map();
     this.value = "";
+    this.disabled = false;
+    this.hidden = false;
   }
 
   addEventListener(type, handler) {
@@ -34,6 +36,14 @@ class TestElement {
     for (const handler of this.listeners.get(type) || []) {
       await handler(nextEvent);
     }
+  }
+
+  click() {
+    return this.dispatch("click");
+  }
+
+  focus() {
+    this.dataset.focused = "true";
   }
 }
 
@@ -159,6 +169,47 @@ test("transport workbench event owner binds chrome actions once", async () => {
     "info",
     "reset",
     "open:false:none",
+  ]);
+});
+
+test("transport workbench tabs support roving keyboard activation", async () => {
+  const harness = createHarness();
+  const roadTab = new TestElement("button");
+  const railTab = new TestElement("button");
+  const inspectTab = new TestElement("button");
+  const dataTab = new TestElement("button");
+  roadTab.dataset.transportFamily = "road";
+  railTab.dataset.transportFamily = "rail";
+  inspectTab.dataset.transportInspectorTab = "inspect";
+  dataTab.dataset.transportInspectorTab = "data";
+  harness.nodes.familyTabs.splice(0, harness.nodes.familyTabs.length, roadTab, railTab);
+  harness.nodes.inspectorTabButtons.splice(0, harness.nodes.inspectorTabButtons.length, inspectTab, dataTab);
+
+  let preventDefaultCount = 0;
+  harness.owner.bind();
+
+  await roadTab.dispatch("keydown", {
+    key: "ArrowRight",
+    preventDefault() {
+      preventDefaultCount += 1;
+    },
+  });
+  await dataTab.dispatch("keydown", {
+    key: "Home",
+    preventDefault() {
+      preventDefaultCount += 1;
+    },
+  });
+
+  assert.equal(railTab.dataset.focused, "true");
+  assert.equal(inspectTab.dataset.focused, "true");
+  assert.equal(preventDefaultCount, 2);
+  assert.deepEqual(harness.events, [
+    "family:rail",
+    "render-ui",
+    "tab:inspect",
+    "shell:road",
+    "inspector:road:true:false",
   ]);
 });
 

@@ -408,6 +408,8 @@ test("HGO identity detail uses medium artwork before resolver preferred small ar
     const flag = harness.countryInspectorSelected.querySelector(".hgo-identity-detail-flag");
     assert.ok(flag);
     assert.equal(flag.src, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
+    assert.equal(flag.alt, "");
+    assert.equal(flag.getAttribute("aria-hidden"), "true");
   } finally {
     globalThis.document = previousDocument;
   }

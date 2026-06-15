@@ -106,6 +106,9 @@ function createElementNode(tagName = "div") {
         this.open = true;
       }
     },
+    getAttribute(name) {
+      return this.attributes?.[name] || null;
+    },
     closest() {
       return null;
     },
@@ -459,6 +462,7 @@ test("legend label edits render with current project labels", () => {
       node.tagName === "input" && node.className === "legend-input"
     );
     assert.ok(labelInput);
+    assert.equal(labelInput.getAttribute("aria-label"), "Legend 1: #abcdef");
     labelInput.value = "Germany";
     labelInput.listeners.input({ target: labelInput });
 

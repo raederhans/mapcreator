@@ -1024,11 +1024,13 @@ export function createTransportWorkbenchRightDeckOwner({
       const isActive = String(button.dataset.transportInspectorTab || "") === resolvedTab;
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.setAttribute("tabindex", isActive ? "0" : "-1");
     });
     Object.entries(panels).forEach(([tabId, panel]) => {
       if (!panel || !panel.classList) return;
       panel.classList.toggle("hidden", tabId !== resolvedTab);
       panel.classList.toggle("is-active", tabId === resolvedTab);
+      panel.hidden = tabId !== resolvedTab;
     });
     if (Object.prototype.hasOwnProperty.call(TAB_MOUNTS, resolvedTab)) {
       renderTabSections(family, config, compareHeld, resolvedTab, mounts[resolvedTab]);

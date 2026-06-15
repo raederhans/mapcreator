@@ -22621,6 +22621,20 @@ function getLegendControlText(key, count = 0) {
   return catalog[key] || catalog.title;
 }
 
+function setLegendControlButtonIcon(button, icon, label) {
+  if (!button) return;
+  let iconElement = button.querySelector("[data-legend-button-icon]");
+  if (!iconElement) {
+    iconElement = document.createElement("span");
+    iconElement.dataset.legendButtonIcon = "true";
+    iconElement.setAttribute("aria-hidden", "true");
+    button.replaceChildren(iconElement);
+  }
+  iconElement.textContent = icon;
+  button.title = label;
+  button.setAttribute("aria-label", label);
+}
+
 function getLegendControlBounds(element = legendControlElement) {
   const width = Math.max(1, mapContainer?.clientWidth || runtimeState.width || 1);
   const height = Math.max(1, mapContainer?.clientHeight || runtimeState.height || 1);
@@ -22842,14 +22856,17 @@ function ensureLegendControlElement() {
   toggleButton.type = "button";
   toggleButton.className = "map-legend-control-btn";
   toggleButton.dataset.legendAction = "toggle";
+  setLegendControlButtonIcon(toggleButton, "-", getLegendControlText("collapse"));
   toggleButton.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     const next = LegendManager.toggleControlCollapsed(state);
     element.classList.toggle("is-collapsed", next.collapsed);
-    toggleButton.textContent = next.collapsed ? "+" : "-";
-    toggleButton.title = getLegendControlText(next.collapsed ? "expand" : "collapse");
-    toggleButton.setAttribute("aria-label", toggleButton.title);
+    setLegendControlButtonIcon(
+      toggleButton,
+      next.collapsed ? "+" : "-",
+      getLegendControlText(next.collapsed ? "expand" : "collapse"),
+    );
     applyLegendControlPosition(next);
   });
 
@@ -22857,7 +22874,7 @@ function ensureLegendControlElement() {
   closeButton.type = "button";
   closeButton.className = "map-legend-control-btn";
   closeButton.dataset.legendAction = "close";
-  closeButton.textContent = "x";
+  setLegendControlButtonIcon(closeButton, "x", getLegendControlText("close"));
   closeButton.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -22939,13 +22956,14 @@ function setLegendControlHeader(itemCount, collapsed) {
   if (count) count.textContent = getLegendControlText("count", itemCount);
   if (opacityLabel) opacityLabel.textContent = getLegendControlText("opacity");
   if (toggleButton) {
-    toggleButton.textContent = collapsed ? "+" : "-";
-    toggleButton.title = getLegendControlText(collapsed ? "expand" : "collapse");
-    toggleButton.setAttribute("aria-label", toggleButton.title);
+    setLegendControlButtonIcon(
+      toggleButton,
+      collapsed ? "+" : "-",
+      getLegendControlText(collapsed ? "expand" : "collapse"),
+    );
   }
   if (closeButton) {
-    closeButton.title = getLegendControlText("close");
-    closeButton.setAttribute("aria-label", closeButton.title);
+    setLegendControlButtonIcon(closeButton, "x", getLegendControlText("close"));
   }
   legendControlElement.querySelectorAll("[data-legend-resize]").forEach((handle) => {
     const key = handle.dataset.legendResize === "e"

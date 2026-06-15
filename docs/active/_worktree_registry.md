@@ -12,7 +12,7 @@ Last updated: 2026-06-15
 
 ## Recommended Order
 
-1. Review and rebase `codex/a11y-home-app-fix-20260615`; it now needs to absorb the integrated localization governance changes in UI/i18n/tests/dist.
+1. Integrate `codex/a11y-home-app-fix-20260615` after the rebase validation gates pass.
 2. Re-check recovery refs before recreating any historical worktree.
 
 ## Current Worktrees
@@ -20,7 +20,7 @@ Last updated: 2026-06-15
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current pushed closeout HEAD | current `origin/main` | active-main | user edit in `lessons learned.md` | Localization governance fast-forward merge reached `4711b0dd`; main validation passed with i18n audit, `tests.test_i18n_audit`, and `git diff --check`; registry/archive closeout was pushed | Green; preserve the user edit | No localization action remains; keep the user edit unstaged |
-| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / `e3dfea57` | merge-base `9f0ef27a` with `origin/main` | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests relative to the older main | `git status --short --branch` is clean and tracks `origin/codex/a11y-home-app-fix-20260615`; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Red; must rebase across integrated localization i18n/test/dist changes | Rebase onto latest `main`, run UI/i18n/Pages gates, then integrate if green |
+| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / branch HEAD | current `origin/main` after localization governance | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests | Rebased across localization governance conflicts; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Yellow; direct conflicts resolved, validate before merge | Run UI/i18n/Pages gates, then fast-forward into `main` if green |
 
 ## Current Overlap Matrix
 

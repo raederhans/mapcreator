@@ -16,6 +16,17 @@ export function bindTransportWorkbenchEventOnce(node, bind) {
   return true;
 }
 
+function getNextTabButton(buttons, currentButton, key) {
+  const candidates = buttons.filter((button) => button && !button.disabled && !button.hidden);
+  if (!candidates.length) return null;
+  const currentIndex = Math.max(0, candidates.indexOf(currentButton));
+  if (key === "Home") return candidates[0];
+  if (key === "End") return candidates[candidates.length - 1];
+  if (key === "ArrowRight") return candidates[(currentIndex + 1) % candidates.length];
+  if (key === "ArrowLeft") return candidates[(currentIndex - 1 + candidates.length) % candidates.length];
+  return null;
+}
+
 export function createTransportWorkbenchEventOwner({
   documentRef = globalThis.document,
   body = documentRef?.body || null,
@@ -131,9 +142,17 @@ export function createTransportWorkbenchEventOwner({
       bindTransportWorkbenchEventOnce(button, (tabButton) => {
         const setActiveFamily = requireAction(actions, "setActiveFamily");
         const renderUi = requireAction(actions, "renderUi");
-        tabButton.addEventListener("click", () => {
+        const activateFamilyTab = () => {
           setActiveFamily(tabButton.dataset.transportFamily || "road");
           renderUi();
+        };
+        tabButton.addEventListener("click", activateFamilyTab);
+        tabButton.addEventListener("keydown", (event) => {
+          const nextButton = getNextTabButton(familyTabs, tabButton, event.key);
+          if (!nextButton) return;
+          event.preventDefault();
+          nextButton.focus?.();
+          nextButton.click?.();
         });
       });
     });
@@ -144,11 +163,19 @@ export function createTransportWorkbenchEventOwner({
         const getRenderContext = requireAction(actions, "getRenderContext");
         const renderShell = requireAction(actions, "renderShell");
         const renderInspector = requireAction(actions, "renderInspector");
-        tabButton.addEventListener("click", () => {
+        const activateInspectorTab = () => {
           setInspectorTab(tabButton.dataset.transportInspectorTab || "inspect");
           const context = getRenderContext();
           renderShell(context);
           renderInspector(context.family, context.config, context.compareHeld);
+        };
+        tabButton.addEventListener("click", activateInspectorTab);
+        tabButton.addEventListener("keydown", (event) => {
+          const nextButton = getNextTabButton(inspectorTabButtons, tabButton, event.key);
+          if (!nextButton) return;
+          event.preventDefault();
+          nextButton.focus?.();
+          nextButton.click?.();
         });
       });
     });

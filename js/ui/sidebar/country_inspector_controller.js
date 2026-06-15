@@ -217,10 +217,11 @@ export function createCountryInspectorController({
   const updateFlagImage = (image, identity, preferredTier = "small") => {
     if (!image) return;
     const flagUrl = getFlagTierUrl(identity, preferredTier);
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
     image.classList.toggle("hidden", !flagUrl);
     if (flagUrl) {
       image.src = flagUrl;
-      image.alt = "";
     } else {
       image.removeAttribute("src");
     }
@@ -833,6 +834,7 @@ export function createCountryInspectorController({
       flag.className = "hgo-identity-detail-flag";
       flag.src = flagUrl;
       flag.alt = "";
+      flag.setAttribute("aria-hidden", "true");
       flag.loading = "lazy";
       flag.decoding = "async";
       header.appendChild(flag);

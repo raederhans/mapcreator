@@ -126,6 +126,7 @@ export function createTransportWorkbenchShellOwner({
       const isActive = String(button?.dataset?.transportFamily || "") === familyId;
       if (syncClassToggle(button, "is-active", isActive)) updated += 1;
       if (syncAttribute(button, "aria-selected", isActive ? "true" : "false")) updated += 1;
+      if (syncAttribute(button, "tabindex", isActive ? "0" : "-1")) updated += 1;
     });
     return updated;
   };
