@@ -399,6 +399,7 @@ BROWSER_SESSION_READY="0"
 LAST_OPEN_URL=""
 PWCLI_CALLS_TOTAL=0
 PWCLI_DURATION_MS_TOTAL=0
+SMOKE_FAILED=0
 
 CURRENT_MODE=""
 CURRENT_MAX_SECTIONS=0
@@ -517,6 +518,12 @@ register_anomaly() {
   fi
 }
 
+mark_smoke_failure() {
+  local message="$1"
+  SMOKE_FAILED=1
+  echo "[ERROR] $message" | tee -a "$RUN_LOG" >/dev/null
+}
+
 extract_playwright_sources() {
   local pointer_log="$1"
   local out_file="$2"
@@ -572,6 +579,9 @@ collect_network_issues() {
     [[ -z "$src" ]] && continue
     [[ ! -f "$src" ]] && continue
     while IFS= read -r line; do
+      if [[ "$EVIDENCE_NETWORK_INCLUDE_STATIC" != "1" ]] && is_static_network_line "$line"; then
+        continue
+      fi
       echo "[$mode][$context] $line" >> "$NETWORK_ISSUES_FILE"
       had_issue=1
     done < <(extract_matches_n "$pattern" "$src" || true)
@@ -583,6 +593,11 @@ collect_network_issues() {
     register_anomaly "$mode" "$context"
   fi
   return $had_issue
+}
+
+is_static_network_line() {
+  local line="$1"
+  [[ "$line" =~ \.(css|js|mjs|map|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|otf)(\?|[[:space:]]|$) ]]
 }
 
 capture_screenshot() {
@@ -925,7 +940,7 @@ wait_for_app_ready() {
   local mode="$2"
   local ready_log="$LOG_DIR/pw-ready-${rid}-${mode}-$TS.log"
 
-  run_pwcli run-code "async (page) => {
+  if ! run_pwcli run-code "async (page) => {
     const map = page.locator('#mapContainer');
     if (await map.count()) {
       await map.first().waitFor({ state: 'visible', timeout: 45000 });
@@ -934,7 +949,11 @@ wait_for_app_ready() {
     if (await startup.count()) {
       await startup.first().waitFor({ state: 'hidden', timeout: 45000 }).catch(() => {});
     }
-  }" > "$ready_log" 2>&1 || true
+  }" > "$ready_log" 2>&1; then
+    mark_smoke_failure "[$mode][route:${rid}] ready gate failed"
+    return 1
+  fi
+  return 0
 }
 
 run_section() {
@@ -944,10 +963,14 @@ run_section() {
   local expand="$4"
   local scroll="$5"
   local screenshot_policy="$6"
-  local mode="$7"
+  local priority="$7"
+  local mode="$8"
 
   if (( CURRENT_SECTION_COUNT >= CURRENT_MAX_SECTIONS )); then
     echo "[$mode][$page] ${sid}: skipped (section budget reached)" >> "$SKIPPED_SECTIONS_FILE"
+    if [[ "$priority" == "high" ]]; then
+      mark_smoke_failure "[$mode][$page] high-priority section skipped by budget: ${sid}"
+    fi
     return 0
   fi
 
@@ -970,6 +993,9 @@ run_section() {
   }" > "$action_log" 2>&1; then
     echo "[$mode][$page] ${sid}: skipped (selector not found: ${selector})" >> "$SKIPPED_SECTIONS_FILE"
     register_anomaly "$mode" "section:${sid}"
+    if [[ "$priority" == "high" ]]; then
+      mark_smoke_failure "[$mode][$page] high-priority section selector not found: ${sid}"
+    fi
     if [[ "$screenshot_policy" == "on_error" ]]; then
       capture_screenshot "section-${sid}-error-${mode}-$TS" 0 || true
     fi
@@ -1057,13 +1083,14 @@ run_route() {
     if ! run_pwcli goto "$url" > "$goto_log"; then
       echo "[$mode][route:${rid}] navigation failed: $url" >> "$NETWORK_ISSUES_FILE"
       register_anomaly "$mode" "route:${rid}"
+      mark_smoke_failure "[$mode][route:${rid}] navigation failed: $url"
       return 0
     fi
     LAST_OPEN_URL="$url"
     BROWSER_SESSION_READY="1"
   fi
 
-  wait_for_app_ready "$rid" "$mode"
+  wait_for_app_ready "$rid" "$mode" || true
 
   if (( scroll > 0 )); then
     run_pwcli mousewheel 0 "$scroll" > "$LOG_DIR/pw-scroll-${rid}-${mode}-$TS.log" || true
@@ -1071,13 +1098,13 @@ run_route() {
 
   local section_rows=()
   mapfile -t section_rows < "$PARSE_DIR/sections.tsv"
-  local section_row sid page selector expand sscroll screenshot_policy _priority modes_csv
+  local section_row sid page selector expand sscroll screenshot_policy priority modes_csv
   for section_row in "${section_rows[@]}"; do
-    IFS=$'\t' read -r sid page selector expand sscroll screenshot_policy _priority modes_csv <<< "$section_row"
+    IFS=$'\t' read -r sid page selector expand sscroll screenshot_policy priority modes_csv <<< "$section_row"
     [[ -z "$sid" ]] && continue
     [[ "$page" != "$rid" ]] && continue
     mode_enabled "$modes_csv" "$mode" || continue
-    run_section "$sid" "$page" "$selector" "$expand" "$sscroll" "$screenshot_policy" "$mode"
+    run_section "$sid" "$page" "$selector" "$expand" "$sscroll" "$screenshot_policy" "$priority" "$mode"
     [[ "$PHASE_TIMED_OUT" == "1" ]] && break
   done
 
@@ -1302,6 +1329,12 @@ fi
   fi
   echo "- Evidence order follows: console -> network -> screenshots -> repro steps -> patch hint."
 } > "$REPORT_OUT"
+
+if (( SMOKE_FAILED == 1 )); then
+  echo "[ERROR] Smoke completed with required failures. Report: $REPORT_OUT" | tee -a "$RUN_LOG"
+  echo "[ERROR] Screenshots listed in: $SCREENSHOTS_FILE" | tee -a "$RUN_LOG"
+  exit 1
+fi
 
 echo "[OK] Smoke complete. Report: $REPORT_OUT" | tee -a "$RUN_LOG"
 echo "[OK] Screenshots listed in: $SCREENSHOTS_FILE" | tee -a "$RUN_LOG"

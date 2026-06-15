@@ -75,6 +75,14 @@ class PlaywrightReadyGateContractTest(unittest.TestCase):
             content.index('python3 tools/browser_smoke_profile_contract.py "$PROFILE_PATH" >/dev/null'),
             content.index('python3 - "$PROFILE_PATH" "$PARSE_DIR"'),
         )
+        self.assertIn('is_static_network_line() {', content)
+        self.assertIn('if [[ "$EVIDENCE_NETWORK_INCLUDE_STATIC" != "1" ]] && is_static_network_line "$line"; then', content)
+        self.assertIn("SMOKE_FAILED=0", content)
+        self.assertIn("mark_smoke_failure() {", content)
+        self.assertIn('mark_smoke_failure "[$mode][route:${rid}] navigation failed: $url"', content)
+        self.assertIn('mark_smoke_failure "[$mode][route:${rid}] ready gate failed"', content)
+        self.assertIn('mark_smoke_failure "[$mode][$page] high-priority section selector not found: ${sid}"', content)
+        self.assertIn("if (( SMOKE_FAILED == 1 )); then", content)
         self.assertIn('run_pwcli requests > "$network_log" || true', content)
         self.assertNotIn("run_pwcli network", content)
         self.assertIn('printf \'%s\\n\' "$pointer_log" > "$src_file"', content)
@@ -117,7 +125,69 @@ class PlaywrightReadyGateContractTest(unittest.TestCase):
 
         self.assertIn("<test-profile>: routes[home].enabled_modes has invalid mode: slow.", errors)
         self.assertIn("<test-profile>: sections[left_sidebar].page references unknown route: missing.", errors)
-        self.assertIn("<test-profile>: routes[home].url must start with '/', 'http://', or 'https://'.", errors)
+        self.assertIn("<test-profile>: routes[home].url must be app-relative or localhost absolute.", errors)
+
+    def test_browser_smoke_profile_validator_rejects_non_local_navigation(self):
+        profile = _minimal_browser_smoke_profile()
+        profile["defaults"]["base_host"] = "example.com"
+
+        errors = validate_profile_payload(profile, path="<test-profile>")
+
+        self.assertIn("<test-profile>: defaults.base_host must be one of: 127.0.0.1, localhost.", errors)
+
+        for route_url in ("https://example.com/app/", "http://localhost.evil.example/app/", "//evil.example/app/"):
+            with self.subTest(route_url=route_url):
+                profile = _minimal_browser_smoke_profile()
+                profile["routes"][0]["url"] = route_url
+
+                errors = validate_profile_payload(profile, path="<test-profile>")
+
+                self.assertIn("<test-profile>: routes[home].url must be app-relative or localhost absolute.", errors)
+
+        for route_url in ("http://localhost:8000/app/", "http://127.0.0.1:8000/app/"):
+            with self.subTest(route_url=route_url):
+                profile = _minimal_browser_smoke_profile()
+                profile["routes"][0]["url"] = route_url
+
+                errors = validate_profile_payload(profile, path="<test-profile>")
+
+                self.assertNotIn("<test-profile>: routes[home].url must be app-relative or localhost absolute.", errors)
+
+    def test_browser_smoke_profile_validator_rejects_path_unsafe_ids(self):
+        profile = _minimal_browser_smoke_profile()
+        profile["routes"][0]["id"] = "../home"
+        profile["sections"][0]["id"] = "left/sidebar"
+        profile["gestures"][0]["id"] = "map pan"
+
+        errors = validate_profile_payload(profile, path="<test-profile>")
+
+        self.assertIn(
+            "<test-profile>: routes[../home].id must use only letters, numbers, underscores, and hyphens.",
+            errors,
+        )
+        self.assertIn(
+            "<test-profile>: sections[left/sidebar].id must use only letters, numbers, underscores, and hyphens.",
+            errors,
+        )
+        self.assertIn(
+            "<test-profile>: gestures[map pan].id must use only letters, numbers, underscores, and hyphens.",
+            errors,
+        )
+
+    def test_browser_smoke_profile_validator_rejects_invalid_port_bounds(self):
+        profile = _minimal_browser_smoke_profile()
+        profile["defaults"]["port_range_start"] = 70000
+
+        errors = validate_profile_payload(profile, path="<test-profile>")
+
+        self.assertIn("<test-profile>: defaults.port_range_start must be less than or equal to 65535.", errors)
+
+        profile = _minimal_browser_smoke_profile()
+        profile["routes"][0]["url"] = "http://localhost:70000/app/"
+
+        errors = validate_profile_payload(profile, path="<test-profile>")
+
+        self.assertIn("<test-profile>: routes[home].url port must be in range 1..65535.", errors)
 
     def test_browser_smoke_profile_validator_rejects_unknown_fields(self):
         profile = _minimal_browser_smoke_profile()

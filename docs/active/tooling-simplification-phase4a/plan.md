@@ -68,6 +68,12 @@ Live process owner: main Codex agent only
 - Read-only reviewer requested changes for unknown fields, live smoke preflight,
   route URL shape, and required gesture type.
 - All requested changes were implemented and re-verified.
+- Post-merge review requested tighter localhost/profile contracts, TCP port
+  bounds, runtime use of `network_include_static`, and visible failure status
+  for critical smoke failures.
+- Review fixes tightened `base_host`, route URL, id, and port validation; wired
+  `network_include_static` into the network summary filter; and made navigation,
+  ready-gate, and high-priority section failures produce a final non-zero exit.
 
 ## Integration Closeout
 

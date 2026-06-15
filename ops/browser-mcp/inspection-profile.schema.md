@@ -16,8 +16,8 @@ It defines where to navigate, which sections to inspect, when to escalate from q
 - `[[gestures]]`: map/canvas interaction units.
 
 ## `[defaults]`
-- `base_host` (string): host for final browser URL, usually `localhost`.
-- `port_range_start`, `port_range_end` (int): dev server scan range.
+- `base_host` (`localhost|127.0.0.1`): host for final browser URL.
+- `port_range_start`, `port_range_end` (int, `1..65535`): dev server scan range.
 - `server_title_pattern` (string): page marker used to identify the app root.
 - `wsl_windows_fallback` (bool): enable Windows-local fallback server when Edge cannot reach WSL-bound localhost.
 
@@ -28,8 +28,8 @@ It defines where to navigate, which sections to inspect, when to escalate from q
 - `cross_section_threshold` (int): minimum unique areas to trigger cross-section upgrade.
 - `upgrade_on_insufficient_evidence` (bool): upgrade when quick coverage is too small and evidence is weak.
 - `min_sections_for_confidence` (int): minimum inspected sections before quick is considered sufficiently representative.
-- `full_trigger_keywords` (string array): canonical phrases that imply full traversal.
-- `quick_trigger_keywords` (string array): canonical phrases for quick traversal.
+- `full_trigger_keywords` (string array): metadata phrases that imply full traversal for agent/human mode selection.
+- `quick_trigger_keywords` (string array): metadata phrases for quick traversal for agent/human mode selection.
 
 ## `[budgets.quick]` / `[budgets.full]`
 - `max_sections` (int): hard cap for section inspections.
@@ -48,8 +48,8 @@ It defines where to navigate, which sections to inspect, when to escalate from q
 
 ## `[[routes]]`
 Required fields:
-- `id` (string)
-- `url` (string, absolute or app-relative)
+- `id` (safe id: letters, numbers, `_`, `-`)
+- `url` (string, app-relative `/...` or localhost absolute with optional port `1..65535`)
 
 Optional fields:
 - `scroll` (int, default `0`)
@@ -60,7 +60,7 @@ Optional fields:
 
 ## `[[sections]]`
 Required fields:
-- `id` (string)
+- `id` (safe id: letters, numbers, `_`, `-`)
 - `page` (string, route id)
 - `selector` (string, CSS selector)
 
@@ -68,12 +68,12 @@ Optional fields:
 - `expand` (`none|click|toggle`, default `none`)
 - `scroll` (int, default `0`)
 - `screenshot` (`always|on_error|never`, default `on_error`)
-- `priority` (`high|normal|low`, default `normal`)
+- `priority` (`high|normal|low`, default `normal`; high sections are required for a successful smoke)
 - `enabled_modes` (array, default `['quick','full']`)
 
 ## `[[gestures]]`
 Required fields:
-- `id` (string)
+- `id` (safe id: letters, numbers, `_`, `-`)
 - `page` (string, route id)
 - `selector` (string)
 - `type` (`drag_zoom` currently supported)

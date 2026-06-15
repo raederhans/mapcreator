@@ -48,8 +48,14 @@
 - Review fix: unknown fields are rejected so profile typos do not fall through
   to shell defaults.
 - Review fix: live smoke now runs the validator before TOML parsing.
-- Review fix: route URLs must be app-relative from `/` or absolute `http(s)`.
+- Review fix: route URLs must be app-relative from `/` or localhost absolute.
 - Review fix: `gestures[].type` is required to match the checked-in schema.
+- Post-merge review fix: profile `base_host`, route URLs, ids, and port ranges
+  now match their shell usage so static validation catches non-local navigation,
+  path-unsafe ids, and invalid TCP ports before smoke execution.
+- Post-merge review fix: `network_include_static` now participates in network
+  summary filtering, and critical smoke failures set a final non-zero exit while
+  preserving the generated report.
 
 ## Delivery Package
 
@@ -76,3 +82,5 @@
 - `codex/tooling-simplification-phase4a` was fast-forward merged into `main`.
 - Main verification passed after merge.
 - The phase4A worktree and local branch were removed.
+- Post-merge review kept this folder in `docs/active/` because the larger tooling
+  simplification plan is still active.

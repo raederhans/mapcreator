@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 import tomllib
+from urllib.parse import urlparse
 
 
 VALID_MODES = frozenset({"quick", "full"})
@@ -15,6 +16,7 @@ VALID_SCREENSHOT_POLICIES = frozenset({"always", "on_error", "never"})
 VALID_PRIORITIES = frozenset({"high", "normal", "low"})
 VALID_GESTURE_TYPES = frozenset({"drag_zoom"})
 VALID_CONSOLE_LEVELS = frozenset({"debug", "info", "warning", "error"})
+VALID_BASE_HOSTS = frozenset({"localhost", "127.0.0.1"})
 OUTPUT_ROOTS = {
     "artifact_dir": ".runtime/browser/",
     "report_path": ".runtime/reports/generated/browser/",
@@ -39,6 +41,8 @@ ROUTE_FIELDS = frozenset({"id", "url", "scroll", "screenshot", "capture_console"
 SECTION_FIELDS = frozenset({"id", "page", "selector", "expand", "scroll", "screenshot", "priority", "enabled_modes"})
 GESTURE_FIELDS = frozenset({"id", "page", "selector", "type", "from", "to", "wheel", "screenshot", "enabled_modes"})
 INTEGER_REJECTS_BOOL = "must be an integer."
+SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+MAX_PORT = 65535
 
 
 def validate_profile_path(profile_path: str | Path) -> list[str]:
@@ -94,10 +98,14 @@ def validate_profile_payload(payload: Any, path: str = "<profile>") -> list[str]
 
 def _validate_defaults(table: dict[str, Any], path: str, errors: list[str]) -> None:
     _reject_unknown_fields(table, DEFAULT_FIELDS, f"{path}: defaults", errors)
-    for field in ("base_host", "server_title_pattern"):
-        _require_string(table, field, f"{path}: defaults", errors)
+    base_host = _require_string(table, "base_host", f"{path}: defaults", errors)
+    if base_host is not None and base_host.lower() not in VALID_BASE_HOSTS:
+        errors.append(f"{path}: defaults.base_host must be one of: {', '.join(sorted(VALID_BASE_HOSTS))}.")
+    _require_string(table, "server_title_pattern", f"{path}: defaults", errors)
     for field in ("port_range_start", "port_range_end"):
-        _require_int(table, field, f"{path}: defaults", errors, positive=True)
+        value = _require_int(table, field, f"{path}: defaults", errors, positive=True)
+        if value is not None and value > MAX_PORT:
+            errors.append(f"{path}: defaults.{field} must be less than or equal to {MAX_PORT}.")
     _require_bool(table, "wsl_windows_fallback", f"{path}: defaults", errors)
     start = table.get("port_range_start")
     end = table.get("port_range_end")
@@ -165,10 +173,9 @@ def _validate_routes(routes: list[dict[str, Any]] | None, path: str, errors: lis
         route_id = _entry_id(route, index)
         label = f"{path}: routes[{route_id}]"
         _reject_unknown_fields(route, ROUTE_FIELDS, label, errors)
-        rid = _require_string(route, "id", label, errors)
+        rid = _require_identifier(route, "id", label, errors)
         route_url = _require_string(route, "url", label, errors)
-        if route_url is not None and not route_url.startswith(("/", "http://", "https://")):
-            errors.append(f"{label}.url must start with '/', 'http://', or 'https://'.")
+        _validate_route_url(route_url, f"{label}.url", errors)
         _optional_int(route, "scroll", label, errors, minimum=0)
         for field in ("screenshot", "capture_console", "capture_network"):
             _optional_bool(route, field, label, errors)
@@ -201,7 +208,7 @@ def _validate_sections(
         section_id = _entry_id(section, index)
         label = f"{path}: sections[{section_id}]"
         _reject_unknown_fields(section, SECTION_FIELDS, label, errors)
-        sid = _require_string(section, "id", label, errors)
+        sid = _require_identifier(section, "id", label, errors)
         page = _require_string(section, "page", label, errors)
         _require_string(section, "selector", label, errors)
         _optional_enum(section, "expand", VALID_EXPAND_VALUES, label, errors)
@@ -231,7 +238,7 @@ def _validate_gestures(
         gesture_id = _entry_id(gesture, index)
         label = f"{path}: gestures[{gesture_id}]"
         _reject_unknown_fields(gesture, GESTURE_FIELDS, label, errors)
-        gid = _require_string(gesture, "id", label, errors)
+        gid = _require_identifier(gesture, "id", label, errors)
         page = _require_string(gesture, "page", label, errors)
         _require_string(gesture, "selector", label, errors)
         _require_enum(gesture, "type", VALID_GESTURE_TYPES, label, errors)
@@ -300,6 +307,13 @@ def _require_string(payload: dict[str, Any], field: str, label: str, errors: lis
         return value
     errors.append(f"{label}.{field} must be a non-empty string.")
     return None
+
+
+def _require_identifier(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> str | None:
+    value = _require_string(payload, field, label, errors)
+    if value is not None and not SAFE_ID_RE.fullmatch(value):
+        errors.append(f"{label}.{field} must use only letters, numbers, underscores, and hyphens.")
+    return value
 
 
 def _require_bool(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> bool | None:
@@ -392,6 +406,25 @@ def _optional_point(payload: dict[str, Any], field: str, label: str, errors: lis
     value = payload[field]
     if not isinstance(value, list) or len(value) != 2 or any(not _is_int(entry) for entry in value):
         errors.append(f"{label}.{field} must be a two-integer array.")
+
+
+def _validate_route_url(value: str | None, label: str, errors: list[str]) -> None:
+    if value is None:
+        return
+    if value.startswith("/") and not value.startswith("//"):
+        return
+    parsed = urlparse(value)
+    if parsed.scheme.lower() in {"http", "https"} and (parsed.hostname or "").lower() in VALID_BASE_HOSTS:
+        try:
+            port = parsed.port
+        except ValueError:
+            errors.append(f"{label} port must be in range 1..{MAX_PORT}.")
+            return
+        if port is not None and not 1 <= port <= MAX_PORT:
+            errors.append(f"{label} port must be in range 1..{MAX_PORT}.")
+            return
+        return
+    errors.append(f"{label} must be app-relative or localhost absolute.")
 
 
 def _entry_id(entry: dict[str, Any], index: int) -> str:

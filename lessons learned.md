@@ -384,3 +384,4 @@
 
 ### profile validator 要接入真实入口
 - 配置文件 validator 如果只跑在静态测试里，live 脚本仍可能用默认值吞掉拼写漂移；新增 profile 合同时要把 validator 放到解析入口前，并用 unknown-field 负例锁住隐藏 fallback。
+- profile 字段只要会进入 shell 文件名、URL 或退出状态，就要校验语义边界；非空字符串检查不足以保护 localhost-only、路径安全和端口范围。
