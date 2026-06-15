@@ -43,4 +43,4 @@ Centralize localization governance around one auditable source of truth, then fi
 - [x] Add tests and data fixes.
 - [x] Rebuild derived TNO locale assets.
 - [x] Run targeted verification.
-- [ ] Commit, merge, push, and clean the temporary worktree.
+- [x] Commit, merge, push, and clean the temporary worktree.

@@ -91,3 +91,13 @@ Reports:
 - `py tools/check_scenario_contracts.py --strict --scenario-dir data/scenarios/hgo_1936 --report-path .runtime/reports/generated/translation/hgo_1936.localization_contract_report.post_third_rebase.json`: passed.
 - `npm run verify:pages-dist`: passed; 36 Pages startup shell tests and 6 landing showcase node tests passed.
 - `git diff --check`: passed.
+
+## Main Integration Closeout
+
+- `git merge --ff-only codex/localization-governance-20260615`: fast-forwarded main to `4711b0dd`.
+- Main checkout still retains the unrelated user edit in `lessons learned.md`; it was left unstaged.
+- Main validation after merge:
+  - `py tools/i18n_audit.py`: target gaps stayed at zero.
+  - `py -m unittest tests.test_i18n_audit -q`: 19 tests passed.
+  - `git diff --check`: passed.
+- Active docs were moved to `docs/archive/localization-governance-20260615/`.
