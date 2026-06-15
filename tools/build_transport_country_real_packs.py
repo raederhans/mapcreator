@@ -38,6 +38,14 @@ from map_builder.transport_country_pack_writer import (  # noqa: E402
     write_country_pack,
     write_json,
 )
+from map_builder.transport_family_registry import (  # noqa: E402
+    OSM_LOGISTICS_RANK_BY_CLASS,
+    OSM_RAILWAY_FULL_CLASSES,
+    OSM_ROAD_CLASS_RANK,
+    OSM_ROAD_FULL_CLASSES,
+    osm_gpkg_family_for_pack_id,
+    osm_gpkg_family_spec,
+)
 from map_builder.transport_carrier_registry import (  # noqa: E402
     resolve_pack_carrier_asset_key,
     resolve_pack_carrier_extension,
@@ -284,9 +292,9 @@ def normalized_id_number(value: Any) -> str:
     return normalize_text(number)
 
 
-def slug_id(value: Any, fallback: str) -> str:
+def slug_id(value: Any, default_value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", normalize_text(value).casefold()).strip("-")
-    return slug or fallback
+    return slug or default_value
 
 
 def parse_capacity_mw(value: Any) -> float:
@@ -432,214 +440,6 @@ def line_labels(gdf: gpd.GeoDataFrame, name_col: str = "name", *, max_labels: in
     return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
 
 
-OSM_ROAD_CLASS_RANK = {
-    "motorway": 0,
-    "trunk": 1,
-    "primary": 2,
-    "secondary": 3,
-    "tertiary": 4,
-    "motorway_link": 5,
-    "trunk_link": 6,
-    "primary_link": 7,
-    "secondary_link": 8,
-    "tertiary_link": 9,
-}
-OSM_ROAD_FULL_CLASSES = frozenset(OSM_ROAD_CLASS_RANK)
-OSM_ROAD_PREVIEW_CLASSES = frozenset({"motorway", "trunk", "primary", "secondary", "motorway_link", "trunk_link", "primary_link", "secondary_link"})
-OSM_RAILWAY_FULL_CLASSES = frozenset({"rail", "light_rail", "subway", "tram", "narrow_gauge"})
-OSM_RAILWAY_PREVIEW_CLASSES = frozenset({"rail", "light_rail", "subway", "narrow_gauge"})
-OSM_RAIL_SERVICE_CLASSES = frozenset({"yard", "siding", "spur", "crossover"})
-OSM_STATION_CLASSES = frozenset({"station", "halt", "tram_stop"})
-OSM_PBF_LINE_COLUMNS = ["osm_id", "name", "highway", "railway", "other_tags"]
-OSM_PBF_POINT_COLUMNS = ["osm_id", "name", "ref", "other_tags"]
-
-
-def parse_osm_hstore_tags(value: Any) -> dict[str, str]:
-    text = normalize_text(value)
-    if not text:
-        return {}
-    return {match.group(1): match.group(2) for match in re.finditer(r'"([^"]+)"=>"([^"]*)"', text)}
-
-
-def osm_tag(row_data: dict[str, Any], key: str) -> str:
-    direct = normalize_text(row_data.get(key))
-    if direct:
-        return direct
-    return normalize_text(parse_osm_hstore_tags(row_data.get("other_tags")).get(key))
-
-
-def osm_tag_in_where(key: str, values: Iterable[str]) -> str:
-    checks = [f"{key} IN ({','.join(repr(value) for value in values)})"]
-    checks.extend(f"other_tags LIKE '%\"{key}\"=>\"{value}\"%'" for value in values)
-    return "(" + " OR ".join(checks) + ")"
-
-
-def read_osm_pbf_layer(path: Path, *, layer: str, columns: list[str], where: str) -> gpd.GeoDataFrame:
-    try:
-        return pyogrio.read_dataframe(path, layer=layer, columns=columns, where=where)
-    except ValueError:
-        # Some GDAL OSM builds expose important tags only through other_tags.
-        return pyogrio.read_dataframe(path, layer=layer, where=where)
-
-
-def osm_pbf_source_path(pack_id: str) -> Path:
-    return source_path_for(pack_id, "geofabrik_osm_pbf")
-
-
-def build_osm_pbf_road_pack(pack_id: str, country_key: str, *, full_limit: int = 50000, preview_limit: int = 8000) -> None:
-    source_path = osm_pbf_source_path(pack_id)
-    where = osm_tag_in_where("highway", sorted(OSM_ROAD_FULL_CLASSES))
-    source = read_osm_pbf_layer(source_path, layer="lines", columns=OSM_PBF_LINE_COLUMNS, where=where).to_crs("EPSG:4326")
-    rows = []
-    for row in source.itertuples(index=False):
-        row_data = row._asdict()
-        geom = row_data.get("geometry")
-        if geom is None or geom.is_empty:
-            continue
-        road_class = osm_tag(row_data, "highway")
-        if road_class not in OSM_ROAD_FULL_CLASSES:
-            continue
-        osm_id = normalize_text(row_data.get("osm_id")) or str(len(rows))
-        rows.append(
-            {
-                "id": f"{country_key}-osm-road-{osm_id}",
-                "name": osm_tag(row_data, "name") or osm_tag(row_data, "ref") or road_class,
-                "ref": osm_tag(row_data, "ref"),
-                "road_class": road_class,
-                "source_region": country_key.upper(),
-                "source_osm_id": osm_id,
-                "source_highway": road_class,
-                "geometry": geom,
-            }
-        )
-    roads = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
-    if roads.empty:
-        raise SystemExit(f"{pack_id}: OSM PBF road selection is empty.")
-    roads = clip_to_carrier(roads, country_key, label=pack_id)
-    roads = roads.assign(_class_rank=roads["road_class"].map(OSM_ROAD_CLASS_RANK).fillna(99), _named=roads["name"].astype(str).ne(""))
-    roads = roads.sort_values(["_class_rank", "_named", "id"], ascending=[True, False, True]).head(full_limit)
-    roads = roads.drop(columns=["_class_rank", "_named"])
-    roads = simplified_lines(roads, tolerance=0.002)
-    preview = roads[roads["road_class"].isin(OSM_ROAD_PREVIEW_CLASSES)].head(preview_limit).copy()
-    if preview.empty:
-        raise SystemExit(f"{pack_id}: OSM PBF preview road selection is empty.")
-    write_pack(
-        pack_id,
-        "road",
-        "line",
-        {"roads": preview, "road_labels": line_labels(preview, max_labels=800)},
-        {"roads": roads, "road_labels": line_labels(roads, max_labels=2500)},
-        {
-            "source_row_count": {"osm_pbf_lines_filtered": len(source)},
-            "matched_count": len(roads),
-            "preview_rule": f"OSM highway classes motorway/trunk/primary/secondary and links capped at {preview_limit} rows.",
-            "scope_rule": f"Geofabrik extract clipped to transport_carrier:{country_key}.",
-            "filter_rule": "OSM highway class whitelist; service, residential, track, and unknown highway classes are left for later local-detail packs.",
-        },
-        build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
-    )
-
-
-def osm_rail_service(row_data: dict[str, Any]) -> str:
-    return osm_tag(row_data, "service")
-
-
-def build_osm_pbf_rail_pack(pack_id: str, country_key: str, *, full_limit: int = 50000, preview_limit: int = 8000, station_limit: int = 2500) -> None:
-    source_path = osm_pbf_source_path(pack_id)
-    rail_where = osm_tag_in_where("railway", sorted(OSM_RAILWAY_FULL_CLASSES))
-    line_source = read_osm_pbf_layer(source_path, layer="lines", columns=OSM_PBF_LINE_COLUMNS, where=rail_where).to_crs("EPSG:4326")
-    rows = []
-    for row in line_source.itertuples(index=False):
-        row_data = row._asdict()
-        geom = row_data.get("geometry")
-        if geom is None or geom.is_empty:
-            continue
-        railway = osm_tag(row_data, "railway")
-        if railway not in OSM_RAILWAY_FULL_CLASSES:
-            continue
-        service = osm_rail_service(row_data)
-        osm_id = normalize_text(row_data.get("osm_id")) or str(len(rows))
-        rows.append(
-            {
-                "id": f"{country_key}-osm-rail-{osm_id}",
-                "name": osm_tag(row_data, "name") or osm_tag(row_data, "ref") or railway,
-                "railway": railway,
-                "service": service,
-                "usage": osm_tag(row_data, "usage"),
-                "operator": osm_tag(row_data, "operator"),
-                "status": "active",
-                "source_osm_id": osm_id,
-                "geometry": geom,
-            }
-        )
-    railways = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
-    if railways.empty:
-        raise SystemExit(f"{pack_id}: OSM PBF rail selection is empty.")
-    railways = clip_to_carrier(railways, country_key, label=pack_id)
-    railways = railways.assign(_service_rank=railways["service"].isin(OSM_RAIL_SERVICE_CLASSES).astype(int), _named=railways["name"].astype(str).ne(""))
-    railways = railways.sort_values(["_service_rank", "_named", "id"], ascending=[True, False, True]).head(full_limit)
-    railways = railways.drop(columns=["_service_rank", "_named"])
-    railways = simplified_lines(railways, tolerance=0.002)
-    preview_lines = railways[
-        railways["railway"].isin(OSM_RAILWAY_PREVIEW_CLASSES) & ~railways["service"].isin(OSM_RAIL_SERVICE_CLASSES)
-    ].head(preview_limit).copy()
-    if preview_lines.empty:
-        raise SystemExit(f"{pack_id}: OSM PBF preview rail selection is empty.")
-
-    station_where = (
-        "other_tags LIKE '%\"railway\"=>%' OR "
-        "other_tags LIKE '%\"public_transport\"=>%' OR "
-        "other_tags LIKE '%\"building\"=>\"train_station\"%'"
-    )
-    station_source = read_osm_pbf_layer(source_path, layer="points", columns=OSM_PBF_POINT_COLUMNS, where=station_where).to_crs("EPSG:4326")
-    station_rows = []
-    for row in station_source.itertuples(index=False):
-        row_data = row._asdict()
-        geom = row_data.get("geometry")
-        if geom is None or geom.is_empty:
-            continue
-        railway = osm_tag(row_data, "railway")
-        public_transport = osm_tag(row_data, "public_transport")
-        building = osm_tag(row_data, "building")
-        if railway not in OSM_STATION_CLASSES and public_transport not in {"station", "stop_area"} and building != "train_station":
-            continue
-        name = osm_tag(row_data, "name")
-        if not name:
-            continue
-        osm_id = normalize_text(row_data.get("osm_id")) or str(len(station_rows))
-        station_rows.append(
-            {
-                "id": f"{country_key}-osm-rail-station-{osm_id}",
-                "name": name,
-                "station_code": osm_tag(row_data, "ref"),
-                "station_type": railway or public_transport or building,
-                "operator": osm_tag(row_data, "operator"),
-                "source_osm_id": osm_id,
-                "geometry": geom,
-            }
-        )
-    stations = gpd.GeoDataFrame(station_rows, geometry="geometry", crs="EPSG:4326")
-    if stations.empty:
-        raise SystemExit(f"{pack_id}: OSM PBF station sidecar selection is empty.")
-    stations = clip_to_carrier(stations, country_key, label=f"{pack_id}:stations")
-    stations = stations.head(station_limit).copy()
-    write_pack(
-        pack_id,
-        "rail",
-        "line",
-        {"railways": preview_lines, "rail_stations_major": stations.head(min(600, len(stations))).copy()},
-        {"railways": railways, "rail_stations_major": stations},
-        {
-            "source_row_count": {"osm_pbf_lines_filtered": len(line_source), "osm_pbf_points_filtered": len(station_source)},
-            "matched_count": {"railways": len(railways), "rail_stations_major": len(stations)},
-            "preview_rule": f"OSM railway main classes without yard/siding/spur/crossover service rows capped at {preview_limit}; station sidecar capped at 600 preview points.",
-            "scope_rule": f"Geofabrik extract clipped to transport_carrier:{country_key}.",
-            "filter_rule": "OSM railway class whitelist plus service-track separation; station sidecar from railway/public_transport/building tags.",
-        },
-        build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
-    )
-
-
 def extract_geofabrik_gpkg(zip_path: Path, output_dir: Path, source_id: str) -> Path:
     signature = file_signature(zip_path)
     target_dir = output_dir / source_id
@@ -681,21 +481,39 @@ def sql_in_values(column: str, values: Iterable[str]) -> str:
     return f"{column} IN ({','.join(repr(value) for value in values)})"
 
 
+def osm_gpkg_source_region(source_id: str) -> str:
+    return source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
+
+
+def read_osm_gpkg_spec_layer(gpkg_path: Path, layer: Any) -> gpd.GeoDataFrame:
+    return read_geofabrik_gpkg_layer(
+        gpkg_path,
+        layer.source_layer,
+        list(layer.columns),
+        where=sql_in_values(layer.filter_column, sorted(layer.filter_values)),
+    )
+
+
+def osm_gpkg_per_source_limit(total_limit: int, source_count: int, spec: Any, *, minimum: int | None = None) -> int:
+    return max(minimum or spec.per_source_minimum, int(total_limit / max(1, source_count)) * spec.per_source_multiplier)
+
+
+def osm_gpkg_audit_text(spec: Any, key: str, **values: Any) -> str:
+    return (spec.audit_shape or {})[key].format(**values)
+
+
 def build_osm_gpkg_road_pack(pack_id: str, country_key: str, *, full_limit: int = 50000, preview_limit: int = 4000) -> None:
+    spec = osm_gpkg_family_spec("road")
+    roads_layer = spec.layer("roads")
     paths = geofabrik_gpkg_paths(pack_id)
     frames = []
     source_counts: dict[str, int] = {}
-    per_source_limit = max(1000, int(full_limit / max(1, len(paths))) * 3)
+    per_source_limit = osm_gpkg_per_source_limit(full_limit, len(paths), spec)
     for source_id, gpkg_path in paths:
-        frame = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_roads_free",
-            ["osm_id", "fclass", "name", "ref"],
-            where=sql_in_values("fclass", sorted(OSM_ROAD_FULL_CLASSES)),
-        )
+        frame = read_osm_gpkg_spec_layer(gpkg_path, roads_layer)
         source_counts[source_id] = len(frame)
         frame = frame.to_crs("EPSG:4326")
-        frame["source_region"] = source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
+        frame["source_region"] = osm_gpkg_source_region(source_id)
         rows = []
         for row in frame.itertuples(index=False):
             row_data = row._asdict()
@@ -718,68 +536,61 @@ def build_osm_gpkg_road_pack(pack_id: str, country_key: str, *, full_limit: int 
         region_roads = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
         if region_roads.empty:
             continue
-        region_roads = region_roads.drop_duplicates(subset=["source_osm_id", "road_class"]).copy()
+        region_roads = region_roads.drop_duplicates(subset=list(spec.dedup_subset)).copy()
         region_roads = filter_lines_to_carrier_or_empty(region_roads, country_key)
         if region_roads.empty:
             continue
         region_roads = region_roads.assign(_class_rank=region_roads["road_class"].map(OSM_ROAD_CLASS_RANK).fillna(99), _named=region_roads["name"].astype(str).ne(""))
-        region_roads = region_roads.sort_values(["_class_rank", "_named", "id"], ascending=[True, False, True]).head(per_source_limit)
+        region_roads = region_roads.sort_values(list(spec.sort_fields), ascending=list(spec.sort_ascending)).head(per_source_limit)
         frames.append(region_roads.drop(columns=["_class_rank", "_named"]))
     if not frames:
         raise SystemExit(f"{pack_id}: no Geofabrik GeoPackage road sources produced scoped rows.")
     roads = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry="geometry", crs="EPSG:4326")
     if roads.empty:
         raise SystemExit(f"{pack_id}: Geofabrik road selection is empty.")
-    roads = roads.drop_duplicates(subset=["source_osm_id", "road_class"]).copy()
+    roads = roads.drop_duplicates(subset=list(spec.dedup_subset)).copy()
     roads = roads.assign(_class_rank=roads["road_class"].map(OSM_ROAD_CLASS_RANK).fillna(99), _named=roads["name"].astype(str).ne(""))
-    roads = roads.sort_values(["_class_rank", "_named", "id"], ascending=[True, False, True]).head(full_limit)
+    roads = roads.sort_values(list(spec.sort_fields), ascending=list(spec.sort_ascending)).head(full_limit)
     roads = roads.drop(columns=["_class_rank", "_named"])
     roads = simplified_lines(roads, tolerance=0.002)
-    preview = roads[roads["road_class"].isin(OSM_ROAD_PREVIEW_CLASSES)].head(preview_limit).copy()
+    preview = roads[roads[spec.preview_filter_field].isin(spec.preview_filter_values)].head(preview_limit).copy()
     if preview.empty:
         raise SystemExit(f"{pack_id}: Geofabrik preview road selection is empty.")
     write_pack(
         pack_id,
-        "road",
-        "line",
+        spec.family,
+        spec.output_geometry_kind,
         {"roads": preview, "road_labels": line_labels(preview, max_labels=800)},
         {"roads": roads, "road_labels": line_labels(roads, max_labels=2500)},
         {
             "source_row_count": source_counts,
             "matched_count": len(roads),
-            "preview_rule": f"Geofabrik free GeoPackage major OSM road classes capped at {preview_limit} rows.",
+            "preview_rule": osm_gpkg_audit_text(spec, "preview_rule", preview_limit=preview_limit, country_key=country_key),
             "scope_rule": f"Subregion GeoPackages clipped to transport_carrier:{country_key}.",
-            "filter_rule": "OSM fclass whitelist; local/residential/track/service road classes remain future local-detail packs.",
+            "filter_rule": osm_gpkg_audit_text(spec, "filter_rule", preview_limit=preview_limit, country_key=country_key),
         },
         build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
     )
 
 
 def build_osm_gpkg_rail_pack(pack_id: str, country_key: str, *, full_limit: int = 50000, preview_limit: int = 4000, station_limit: int = 2500) -> None:
+    spec = osm_gpkg_family_spec("rail")
+    rail_layer = spec.layer("railways")
+    station_layer = spec.layer("rail_stations_major")
     paths = geofabrik_gpkg_paths(pack_id)
     line_frames = []
     station_frames = []
     source_counts: dict[str, dict[str, int]] = {}
-    per_source_line_limit = max(1000, int(full_limit / max(1, len(paths))) * 3)
-    per_source_station_limit = max(200, int(station_limit / max(1, len(paths))) * 3)
+    per_source_line_limit = osm_gpkg_per_source_limit(full_limit, len(paths), spec)
+    per_source_station_limit = osm_gpkg_per_source_limit(station_limit, len(paths), spec, minimum=200)
     for source_id, gpkg_path in paths:
-        lines = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_railways_free",
-            ["osm_id", "fclass", "name"],
-            where=sql_in_values("fclass", sorted(OSM_RAILWAY_FULL_CLASSES)),
-        )
-        stations = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_transport_free",
-            ["osm_id", "fclass", "name"],
-            where="fclass = 'railway_station'",
-        )
-        source_counts[source_id] = {"railways": len(lines), "transport": len(stations)}
+        lines = read_osm_gpkg_spec_layer(gpkg_path, rail_layer)
+        stations = read_osm_gpkg_spec_layer(gpkg_path, station_layer)
+        source_counts[source_id] = {rail_layer.audit_key: len(lines), station_layer.audit_key: len(stations)}
         lines = lines.to_crs("EPSG:4326")
         stations = stations.to_crs("EPSG:4326")
-        lines["source_region"] = source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
-        stations["source_region"] = source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
+        lines["source_region"] = osm_gpkg_source_region(source_id)
+        stations["source_region"] = osm_gpkg_source_region(source_id)
         rail_rows = []
         for row in lines.itertuples(index=False):
             row_data = row._asdict()
@@ -802,11 +613,11 @@ def build_osm_gpkg_rail_pack(pack_id: str, country_key: str, *, full_limit: int 
             )
         region_railways = gpd.GeoDataFrame(rail_rows, geometry="geometry", crs="EPSG:4326")
         if not region_railways.empty:
-            region_railways = region_railways.drop_duplicates(subset=["source_osm_id", "railway"]).copy()
+            region_railways = region_railways.drop_duplicates(subset=list(spec.dedup_subset)).copy()
             region_railways = filter_lines_to_carrier_or_empty(region_railways, country_key)
             if region_railways.empty:
                 continue
-            region_railways = region_railways.sort_values(["railway", "name", "id"]).head(per_source_line_limit)
+            region_railways = region_railways.sort_values(list(spec.sort_fields)).head(per_source_line_limit)
             line_frames.append(region_railways)
         station_rows = []
         for row in stations.itertuples(index=False):
@@ -840,10 +651,10 @@ def build_osm_gpkg_rail_pack(pack_id: str, country_key: str, *, full_limit: int 
     railways = gpd.GeoDataFrame(pd.concat(line_frames, ignore_index=True), geometry="geometry", crs="EPSG:4326")
     if railways.empty:
         raise SystemExit(f"{pack_id}: Geofabrik rail selection is empty.")
-    railways = railways.drop_duplicates(subset=["source_osm_id", "railway"]).copy()
-    railways = railways.sort_values(["railway", "name", "id"]).head(full_limit)
+    railways = railways.drop_duplicates(subset=list(spec.dedup_subset)).copy()
+    railways = railways.sort_values(list(spec.sort_fields)).head(full_limit)
     railways = simplified_lines(railways, tolerance=0.002)
-    preview_lines = railways[railways["railway"].isin(OSM_RAILWAY_PREVIEW_CLASSES)].head(preview_limit).copy()
+    preview_lines = railways[railways[spec.preview_filter_field].isin(spec.preview_filter_values)].head(preview_limit).copy()
     if preview_lines.empty:
         raise SystemExit(f"{pack_id}: Geofabrik preview rail selection is empty.")
     if not station_frames:
@@ -855,29 +666,25 @@ def build_osm_gpkg_rail_pack(pack_id: str, country_key: str, *, full_limit: int 
     stations = stations.head(station_limit).copy()
     write_pack(
         pack_id,
-        "rail",
-        "line",
-        {"railways": preview_lines, "rail_stations_major": stations.head(min(400, len(stations))).copy()},
+        spec.family,
+        spec.output_geometry_kind,
+        {"railways": preview_lines, "rail_stations_major": stations.head(min(spec.sidecar_preview_limit or 400, len(stations))).copy()},
         {"railways": railways, "rail_stations_major": stations},
         {
             "source_row_count": source_counts,
             "matched_count": {"railways": len(railways), "rail_stations_major": len(stations)},
-            "preview_rule": f"Geofabrik free GeoPackage rail classes capped at {preview_limit}; station sidecar capped at 400 preview points.",
+            "preview_rule": osm_gpkg_audit_text(
+                spec,
+                "preview_rule",
+                preview_limit=preview_limit,
+                sidecar_preview_limit=spec.sidecar_preview_limit or 400,
+                country_key=country_key,
+            ),
             "scope_rule": f"Subregion GeoPackages clipped to transport_carrier:{country_key}.",
-            "filter_rule": "OSM fclass railway whitelist and transport fclass railway_station sidecar.",
+            "filter_rule": osm_gpkg_audit_text(spec, "filter_rule", preview_limit=preview_limit, country_key=country_key),
         },
         build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
     )
-
-
-OSM_INDUSTRIAL_LANDUSE_CLASSES = frozenset({"industrial"})
-OSM_LOGISTICS_TRANSPORT_CLASSES = frozenset({"airport", "ferry_terminal", "port", "railway_station"})
-OSM_LOGISTICS_RANK_BY_CLASS = {
-    "airport": 3,
-    "port": 3,
-    "ferry_terminal": 2,
-    "railway_station": 2,
-}
 
 
 def build_osm_gpkg_industrial_zone_centers_pack(
@@ -887,26 +694,23 @@ def build_osm_gpkg_industrial_zone_centers_pack(
     full_limit: int = 12000,
     preview_limit: int = 500,
 ) -> None:
+    spec = osm_gpkg_family_spec("industrial_zones")
+    industrial_layer = spec.layer("industrial_zones")
     paths = geofabrik_gpkg_paths(pack_id)
     frames = []
     source_counts: dict[str, int] = {}
-    per_source_limit = max(1000, int(full_limit / max(1, len(paths))) * 3)
+    per_source_limit = osm_gpkg_per_source_limit(full_limit, len(paths), spec)
     for source_id, gpkg_path in paths:
-        source = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_landuse_a_free",
-            ["osm_id", "fclass", "name"],
-            where=sql_in_values("fclass", sorted(OSM_INDUSTRIAL_LANDUSE_CLASSES)),
-        )
+        source = read_osm_gpkg_spec_layer(gpkg_path, industrial_layer)
         source_counts[source_id] = len(source)
         source = source.to_crs("EPSG:4326")
-        source_region = source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
+        source_region = osm_gpkg_source_region(source_id)
         rows = []
         for row in source.itertuples(index=False):
             row_data = row._asdict()
             geom = row_data.get("geometry")
             site_class = normalize_text(row_data.get("fclass"))
-            if geom is None or geom.is_empty or site_class not in OSM_INDUSTRIAL_LANDUSE_CLASSES:
+            if geom is None or geom.is_empty or site_class not in industrial_layer.filter_values:
                 continue
             point = representative_point(geom)
             if point is None:
@@ -939,23 +743,23 @@ def build_osm_gpkg_industrial_zone_centers_pack(
     if not frames:
         raise SystemExit(f"{pack_id}: no Geofabrik industrial landuse sources produced scoped rows.")
     gdf = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry="geometry", crs="EPSG:4326")
-    gdf = gdf.drop_duplicates(subset=["source_osm_id", "source_region"]).copy()
+    gdf = gdf.drop_duplicates(subset=list(spec.dedup_subset)).copy()
     gdf["_named"] = gdf["name"].str.startswith("OSM industrial landuse").map(lambda value: 0 if value else 1)
-    gdf = gdf.sort_values(["_named", "source_area_hint", "name"], ascending=[False, False, True]).head(full_limit)
+    gdf = gdf.sort_values(list(spec.sort_fields), ascending=list(spec.sort_ascending)).head(full_limit)
     gdf = gdf.drop(columns=["_named"]).reset_index(drop=True)
     preview = gdf.head(preview_limit).copy()
     write_pack(
         pack_id,
-        "industrial_zones",
-        "point",
+        spec.family,
+        spec.output_geometry_kind,
         {"industrial_zones": preview},
         {"industrial_zones": gdf},
         {
             "source_row_count": source_counts,
             "matched_count": len(gdf),
-            "preview_rule": f"Top {preview_limit} named-first OSM landuse=industrial representative points after {country_key} carrier clip.",
+            "preview_rule": osm_gpkg_audit_text(spec, "preview_rule", preview_limit=preview_limit, country_key=country_key),
             "scope_rule": f"Filtered through transport_carrier:{country_key}; Geofabrik zone extracts are carrier-clipped to the {country_key} workbench scope.",
-            "filter_rule": "Geofabrik gis_osm_landuse_a_free fclass=industrial polygons converted to representative points for a compact first-wave country preview.",
+            "filter_rule": osm_gpkg_audit_text(spec, "filter_rule", preview_limit=preview_limit, country_key=country_key),
         },
         build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
     )
@@ -976,32 +780,24 @@ def build_osm_gpkg_logistics_hub_pack(
     full_limit: int = 5000,
     preview_limit: int = 500,
 ) -> None:
+    spec = osm_gpkg_family_spec("logistics_hubs")
+    point_layer, area_layer = spec.gpkg_layers
     paths = geofabrik_gpkg_paths(pack_id)
     frames = []
     source_counts: dict[str, dict[str, int]] = {}
-    per_source_limit = max(500, int(full_limit / max(1, len(paths))) * 3)
+    per_source_limit = osm_gpkg_per_source_limit(full_limit, len(paths), spec)
     for source_id, gpkg_path in paths:
-        point_source = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_transport_free",
-            ["osm_id", "fclass", "name"],
-            where=sql_in_values("fclass", sorted(OSM_LOGISTICS_TRANSPORT_CLASSES)),
-        ).to_crs("EPSG:4326")
-        area_source = read_geofabrik_gpkg_layer(
-            gpkg_path,
-            "gis_osm_transport_a_free",
-            ["osm_id", "fclass", "name"],
-            where=sql_in_values("fclass", sorted(OSM_LOGISTICS_TRANSPORT_CLASSES)),
-        ).to_crs("EPSG:4326")
-        source_counts[source_id] = {"transport_points": len(point_source), "transport_areas": len(area_source)}
-        source_region = source_id.replace("geofabrik_gpkg_", "").replace("_", "-")
+        point_source = read_osm_gpkg_spec_layer(gpkg_path, point_layer).to_crs("EPSG:4326")
+        area_source = read_osm_gpkg_spec_layer(gpkg_path, area_layer).to_crs("EPSG:4326")
+        source_counts[source_id] = {point_layer.audit_key: len(point_source), area_layer.audit_key: len(area_source)}
+        source_region = osm_gpkg_source_region(source_id)
         rows = []
         for layer_name, source in (("transport_point", point_source), ("transport_area", area_source)):
             for row in source.itertuples(index=False):
                 row_data = row._asdict()
                 geom = row_data.get("geometry")
                 fclass = normalize_text(row_data.get("fclass"))
-                if geom is None or geom.is_empty or fclass not in OSM_LOGISTICS_TRANSPORT_CLASSES:
+                if geom is None or geom.is_empty or fclass not in point_layer.filter_values:
                     continue
                 point = geom if geom.geom_type == "Point" else representative_point(geom)
                 if point is None:
@@ -1032,28 +828,28 @@ def build_osm_gpkg_logistics_hub_pack(
         if region.empty:
             continue
         region["_named"] = region["name"].str.startswith("OSM transport terminal").map(lambda value: 0 if value else 1)
-        region = region.sort_values(["importance_rank", "_named", "name"], ascending=[False, False, True]).head(per_source_limit)
+        region = region.sort_values(list(spec.sort_fields), ascending=list(spec.sort_ascending)).head(per_source_limit)
         frames.append(region.drop(columns=["_named"]))
     if not frames:
         raise SystemExit(f"{pack_id}: no Geofabrik transport terminal sources produced scoped rows.")
     gdf = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry="geometry", crs="EPSG:4326")
-    gdf = gdf.drop_duplicates(subset=["source_osm_id", "source_fclass", "source_region"]).copy()
+    gdf = gdf.drop_duplicates(subset=list(spec.dedup_subset)).copy()
     gdf["_named"] = gdf["name"].str.startswith("OSM transport terminal").map(lambda value: 0 if value else 1)
-    gdf = gdf.sort_values(["importance_rank", "_named", "name"], ascending=[False, False, True]).head(full_limit)
+    gdf = gdf.sort_values(list(spec.sort_fields), ascending=list(spec.sort_ascending)).head(full_limit)
     gdf = gdf.drop(columns=["_named"]).reset_index(drop=True)
     preview = gdf.head(preview_limit).copy()
     write_pack(
         pack_id,
-        "logistics_hubs",
-        "point",
+        spec.family,
+        spec.output_geometry_kind,
         {"logistics_hubs": preview},
         {"logistics_hubs": gdf},
         {
             "source_row_count": source_counts,
             "matched_count": len(gdf),
-            "preview_rule": f"Top {preview_limit} OSM transport terminals by terminal class rank and named status after {country_key} carrier clip.",
+            "preview_rule": osm_gpkg_audit_text(spec, "preview_rule", preview_limit=preview_limit, country_key=country_key),
             "scope_rule": f"Filtered through transport_carrier:{country_key}; Geofabrik zone extracts are carrier-clipped to the {country_key} workbench scope.",
-            "filter_rule": "Geofabrik transport point/area terminal classes airport, port, ferry_terminal, and railway_station mapped to existing logistics hub preview categories.",
+            "filter_rule": osm_gpkg_audit_text(spec, "filter_rule", preview_limit=preview_limit, country_key=country_key),
         },
         build_command=f"python tools/build_transport_country_real_packs.py --pack {pack_id}",
     )
@@ -3437,33 +3233,51 @@ def build_germany_logistics_hubs() -> None:
     )
 
 
+def build_osm_gpkg_registry_pack(pack_id: str, country_key: str) -> None:
+    family = osm_gpkg_family_for_pack_id(pack_id)
+    spec = osm_gpkg_family_spec(family)
+    if family == "road":
+        build_osm_gpkg_road_pack(pack_id, country_key, full_limit=spec.full_limit, preview_limit=spec.preview_limit)
+        return
+    if family == "rail":
+        build_osm_gpkg_rail_pack(pack_id, country_key, full_limit=spec.full_limit, preview_limit=spec.preview_limit)
+        return
+    if family == "industrial_zones":
+        build_osm_gpkg_industrial_zone_centers_pack(pack_id, country_key, full_limit=spec.full_limit, preview_limit=spec.preview_limit)
+        return
+    if family == "logistics_hubs":
+        build_osm_gpkg_logistics_hub_pack(pack_id, country_key, full_limit=spec.full_limit, preview_limit=spec.preview_limit)
+        return
+    raise KeyError(f"{pack_id}: unsupported OSM GPKG family {family}")
+
+
 BUILDERS = {
     "germany_road": build_germany_road,
     "uk_road": build_uk_road,
     "usa_road": build_usa_road,
     "france_road": build_france_road,
-    "china_road": lambda: build_osm_gpkg_road_pack("china_road", "china"),
-    "india_road": lambda: build_osm_gpkg_road_pack("india_road", "india"),
-    "russia_road": lambda: build_osm_gpkg_road_pack("russia_road", "russia"),
+    "china_road": lambda: build_osm_gpkg_registry_pack("china_road", "china"),
+    "india_road": lambda: build_osm_gpkg_registry_pack("india_road", "india"),
+    "russia_road": lambda: build_osm_gpkg_registry_pack("russia_road", "russia"),
     "usa_rail": build_usa_rail,
-    "china_rail": lambda: build_osm_gpkg_rail_pack("china_rail", "china"),
-    "india_rail": lambda: build_osm_gpkg_rail_pack("india_rail", "india"),
-    "russia_rail": lambda: build_osm_gpkg_rail_pack("russia_rail", "russia"),
+    "china_rail": lambda: build_osm_gpkg_registry_pack("china_rail", "china"),
+    "india_rail": lambda: build_osm_gpkg_registry_pack("india_rail", "india"),
+    "russia_rail": lambda: build_osm_gpkg_registry_pack("russia_rail", "russia"),
     "china_energy_facilities": build_china_energy_facilities,
-    "china_industrial_zones": lambda: build_osm_gpkg_industrial_zone_centers_pack("china_industrial_zones", "china"),
-    "china_logistics_hubs": lambda: build_osm_gpkg_logistics_hub_pack("china_logistics_hubs", "china"),
+    "china_industrial_zones": lambda: build_osm_gpkg_registry_pack("china_industrial_zones", "china"),
+    "china_logistics_hubs": lambda: build_osm_gpkg_registry_pack("china_logistics_hubs", "china"),
     "china_mineral_resources": build_china_mineral_resources,
     "usa_energy_facilities": build_usa_energy_facilities,
     "usa_mineral_resources": build_usa_mineral_resources,
     "usa_industrial_zones": build_usa_industrial_zones,
     "usa_logistics_hubs": build_usa_logistics_hubs,
     "india_energy_facilities": build_india_energy_facilities,
-    "india_industrial_zones": lambda: build_osm_gpkg_industrial_zone_centers_pack("india_industrial_zones", "india"),
-    "india_logistics_hubs": lambda: build_osm_gpkg_logistics_hub_pack("india_logistics_hubs", "india"),
+    "india_industrial_zones": lambda: build_osm_gpkg_registry_pack("india_industrial_zones", "india"),
+    "india_logistics_hubs": lambda: build_osm_gpkg_registry_pack("india_logistics_hubs", "india"),
     "india_mineral_resources": build_india_mineral_resources,
     "russia_energy_facilities": build_russia_energy_facilities,
-    "russia_industrial_zones": lambda: build_osm_gpkg_industrial_zone_centers_pack("russia_industrial_zones", "russia"),
-    "russia_logistics_hubs": lambda: build_osm_gpkg_logistics_hub_pack("russia_logistics_hubs", "russia"),
+    "russia_industrial_zones": lambda: build_osm_gpkg_registry_pack("russia_industrial_zones", "russia"),
+    "russia_logistics_hubs": lambda: build_osm_gpkg_registry_pack("russia_logistics_hubs", "russia"),
     "russia_mineral_resources": build_russia_mineral_resources,
     "uk_energy_facilities": build_uk_energy_facilities,
     "uk_industrial_zones": build_uk_industrial_zones,

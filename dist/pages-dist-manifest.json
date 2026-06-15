@@ -46567,7 +46567,12 @@
     },
     {
       "path": "app/js/ui/transport_workbench_industrial_zone_preview.js",
-      "size_bytes": 38103,
+      "size_bytes": 30993,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_industrial_zone_preview_loader.js",
+      "size_bytes": 8812,
       "source_kind": "dist"
     },
     {
@@ -46596,13 +46601,23 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/transport_workbench_point_preview_dom.js",
+      "size_bytes": 8306,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_point_preview_loader.js",
+      "size_bytes": 12944,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/transport_workbench_point_preview_runtime.js",
       "size_bytes": 14369,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/transport_workbench_point_preview_shared.js",
-      "size_bytes": 32313,
+      "size_bytes": 13897,
       "source_kind": "dist"
     },
     {
@@ -46897,7 +46912,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1449186,
+      "size_bytes": 1449608,
       "source_kind": "dist"
     },
     {
@@ -46916,5 +46931,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145114558
+  "total_bytes": 1145119516
 }

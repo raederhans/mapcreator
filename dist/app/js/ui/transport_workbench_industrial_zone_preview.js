@@ -1,6 +1,5 @@
 import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
-  ensureTransportWorkbenchCarrierForManifest,
   getTransportWorkbenchCarrierOverlayRoots,
   getTransportWorkbenchCarrierViewState,
   projectTransportWorkbenchCarrierGeometry,
@@ -20,11 +19,17 @@ import {
   getTransportWorkbenchManifestVariantMeta,
   resolveTransportWorkbenchManifestVariantId,
 } from "./transport_workbench_manifest_variants.js";
-import { getTransportAsset } from "../core/data_service.js";
+import {
+  INDUSTRIAL_PACK_MODE_FULL,
+  INDUSTRIAL_PACK_MODE_PREVIEW,
+  createJapanIndustrialZonePreviewLoader,
+  createJapanIndustrialZonePreviewRuntime,
+  getJapanIndustrialZonePackCacheKey,
+} from "./transport_workbench_industrial_zone_preview_loader.js";
 import { registerMapcreatorSnapshotProvider } from "../core/mapcreator_snapshot.js";
 
-const PACK_MODE_PREVIEW = "preview";
-const PACK_MODE_FULL = "full";
+const PACK_MODE_PREVIEW = INDUSTRIAL_PACK_MODE_PREVIEW;
+const PACK_MODE_FULL = INDUSTRIAL_PACK_MODE_FULL;
 
 const DEFAULT_MANIFEST_URL = resolveTransportManifestUrl("industrial_zones");
 const PACK_KEY = "industrial_zones";
@@ -39,35 +44,13 @@ const INDUSTRIAL_LABEL_GRID_BY_DENSITY = {
   very_dense: 108,
 };
 
-function createInitialLoadState() {
-  return {
-    status: "idle",
-    error: null,
-    manifest: null,
-    audit: null,
-    previewStatus: "idle",
-    fullStatus: "idle",
-  };
-}
-
-function createInitialRenderStats() {
-  return {
-    renderMode: "inspect",
-    totalFeatures: 0,
-    visibleFeatures: 0,
-    filteredFeatures: 0,
-    visibleLabels: 0,
-    aggregateUnits: 0,
-  };
-}
-
 function createSvgNode(tagName) {
   return document.createElementNS("http://www.w3.org/2000/svg", tagName);
 }
 
-function normalizeNumber(value, fallback = 0) {
+function normalizeNumber(value, defaultValue = 0) {
   const next = Number(value);
-  return Number.isFinite(next) ? next : fallback;
+  return Number.isFinite(next) ? next : defaultValue;
 }
 
 function getCurrentScale() {
@@ -609,205 +592,24 @@ function buildSnapshot(runtime) {
   };
 }
 
-const runtime = {
-  manifestPromise: null,
-  auditPromise: null,
-  packPromises: new Map(),
-  projectedPacks: new Map(),
-  loadState: createInitialLoadState(),
-  activePackMode: null,
-  activePackId: "",
-  activeManifestUrl: DEFAULT_MANIFEST_URL,
-  activeVariantId: null,
-  loadGeneration: 0,
-  rootGroup: null,
-  labelsGroup: null,
-  selectedFeature: null,
-  selectionChangeListener: null,
-  renderStats: createInitialRenderStats(),
-  renderedConfigSignature: "",
-  lastRenderedConfig: null,
-};
-
-function isLoadGenerationCurrent(loadGeneration) {
-  return loadGeneration === runtime.loadGeneration;
-}
-
-function resetLoadStateForActivePack() {
-  runtime.loadGeneration += 1;
-  runtime.manifestPromise = null;
-  runtime.auditPromise = null;
-  runtime.packPromises.clear();
-  runtime.projectedPacks.clear();
-  runtime.loadState = createInitialLoadState();
-  runtime.activePackMode = null;
-  runtime.activeVariantId = null;
-  runtime.selectedFeature = null;
-  runtime.renderStats = createInitialRenderStats();
-  runtime.renderedConfigSignature = "";
-  runtime.lastRenderedConfig = null;
-}
-
-async function loadManifest() {
-  if (!runtime.manifestPromise) {
-    const loadGeneration = runtime.loadGeneration;
-    const manifestUrl = runtime.activeManifestUrl || DEFAULT_MANIFEST_URL;
-    const activePackId = runtime.activePackId || "default";
-    runtime.manifestPromise = getTransportAsset(manifestUrl, {
-      cachePolicy: "no-cache",
-      label: `transport-manifest:industrial_zones:${activePackId}`,
-    })
-      .then(async (manifest) => {
-        if (!isLoadGenerationCurrent(loadGeneration)) return null;
-        if (!manifest) {
-          runtime.loadState.status = "pending";
-          runtime.loadState.previewStatus = "pending";
-          runtime.loadState.error = null;
-          runtime.loadState.manifest = null;
-          return null;
-        }
-        runtime.loadState.manifest = manifest;
-        return manifest;
-      })
-      .catch((error) => {
-        if (!isLoadGenerationCurrent(loadGeneration)) return null;
-        if (Number(error?.httpStatus || 0) === 404) {
-          runtime.loadState.status = "pending";
-          runtime.loadState.previewStatus = "pending";
-          runtime.loadState.error = null;
-          runtime.loadState.manifest = null;
-          return null;
-        }
-        runtime.loadState.status = "error";
-        runtime.loadState.previewStatus = "error";
-        runtime.loadState.error = error instanceof Error ? error.message : String(error);
-        throw error;
-      });
-  }
-  return runtime.manifestPromise;
-}
-
-function setActivePack(packId = "", manifestUrl = "") {
-  const normalizedPackId = String(packId || "").trim().toLowerCase();
-  const normalizedManifestUrl = String(manifestUrl || DEFAULT_MANIFEST_URL).trim();
-  if (runtime.activePackId === normalizedPackId && runtime.activeManifestUrl === normalizedManifestUrl) return;
-  runtime.activePackId = normalizedPackId;
-  runtime.activeManifestUrl = normalizedManifestUrl;
-  resetLoadStateForActivePack();
-}
-
-function startAuditLoad(manifest) {
-  if (!manifest?.paths?.build_audit || runtime.loadState.audit || runtime.auditPromise) return runtime.auditPromise;
-  const loadGeneration = runtime.loadGeneration;
-  runtime.auditPromise = getTransportAsset(manifest.paths.build_audit, {
-    cachePolicy: "no-cache",
-    label: "transport-audit:industrial_zones",
-  })
-    .then((audit) => {
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      runtime.loadState.audit = audit;
-      runtime.selectionChangeListener?.(buildSnapshot(runtime));
-      return audit;
-    })
-    .catch((error) => {
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      console.warn("[transport-workbench] Failed to load industrial_zones audit.", error);
-      return null;
-    });
-  return runtime.auditPromise;
-}
-
-function getPackCacheKey(variantId, mode) {
-  return `${variantId}:${mode}`;
-}
-
-async function loadPack(variantId, mode = PACK_MODE_PREVIEW) {
-  const loadGeneration = runtime.loadGeneration;
-  const cacheKey = getPackCacheKey(variantId, mode);
-  if (runtime.projectedPacks.has(cacheKey)) return runtime.projectedPacks.get(cacheKey);
-  if (!runtime.packPromises.has(cacheKey)) {
-    runtime.packPromises.set(cacheKey, (async () => {
-      const isPreview = mode === PACK_MODE_PREVIEW;
-      if (isPreview) {
-        runtime.loadState.status = "loading";
-        runtime.loadState.previewStatus = "loading";
-        runtime.loadState.error = null;
-      } else {
-        runtime.loadState.fullStatus = "loading";
-      }
-      const manifest = await loadManifest();
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      if (!manifest) {
-        if (isPreview) {
-          runtime.loadState.status = "pending";
-          runtime.loadState.previewStatus = "pending";
-        } else {
-          runtime.loadState.fullStatus = "pending";
-        }
-        return null;
-      }
-      startAuditLoad(manifest);
-      await ensureTransportWorkbenchCarrierForManifest(manifest);
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      const packPath = getPackPath(manifest, variantId, mode);
-      if (!packPath) {
-        throw new Error(`Missing industrial_zones pack path for ${variantId}/${mode}.`);
-      }
-      const collection = await getTransportAsset(packPath, {
-        cachePolicy: "no-cache",
-        label: `transport-pack:industrial_zones:${variantId}:${mode}`,
-      });
-      const sourceFeatures = Array.isArray(collection?.features) ? collection.features : [];
-      const features = sourceFeatures
-        .map((feature) => createIndustrialFeature(feature, variantId))
-        .filter(Boolean);
-      if (sourceFeatures.length > 0 && features.length === 0) {
-        throw new Error(`Projected zero industrial_zones features for ${variantId}/${mode}; carrier geometry is not ready.`);
-      }
-      features.sort((left, right) => {
-        const leftArea = normalizeNumber(left.bounds?.width, 0) * normalizeNumber(left.bounds?.height, 0);
-        const rightArea = normalizeNumber(right.bounds?.width, 0) * normalizeNumber(right.bounds?.height, 0);
-        return rightArea - leftArea;
-      });
-      const pack = {
-        mode,
-        variantId,
-        manifest,
-        features,
-        featureById: new Map(features.map((feature) => [feature.id, feature])),
-      };
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      runtime.projectedPacks.set(cacheKey, pack);
-      if (isPreview) {
-        runtime.loadState.status = "ready";
-        runtime.loadState.previewStatus = "ready";
-      } else {
-        runtime.loadState.fullStatus = "ready";
-      }
-      return pack;
-    })().catch((error) => {
-      if (!isLoadGenerationCurrent(loadGeneration)) return null;
-      runtime.packPromises.delete(cacheKey);
-      runtime.projectedPacks.delete(cacheKey);
-      if (mode === PACK_MODE_PREVIEW) {
-        runtime.loadState.status = "error";
-        runtime.loadState.previewStatus = "error";
-        runtime.loadState.error = error instanceof Error ? error.message : String(error);
-      } else {
-        runtime.loadState.fullStatus = "error";
-      }
-      throw error;
-    }));
-  }
-  return runtime.packPromises.get(cacheKey);
-}
+const runtime = createJapanIndustrialZonePreviewRuntime(DEFAULT_MANIFEST_URL);
+const getPackCacheKey = getJapanIndustrialZonePackCacheKey;
+const {
+  hasPackPath,
+  isLoadGenerationCurrent,
+  loadManifest,
+  loadPack,
+  setActivePack,
+} = createJapanIndustrialZonePreviewLoader(runtime, {
+  defaultManifestUrl: DEFAULT_MANIFEST_URL,
+  createIndustrialFeature,
+  emitSelectionChange,
+  getPackPath,
+  normalizeNumber,
+});
 
 function shouldUseFullPack(scale) {
   return scale >= 1.22;
-}
-
-function hasPackPath(manifest, variantId, mode) {
-  return !!getPackPath(manifest, variantId, mode);
 }
 
 function emitSelectionChange() {

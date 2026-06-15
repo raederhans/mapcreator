@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import importlib.util
 import tempfile
@@ -10,7 +11,7 @@ from unittest.mock import patch
 
 import geopandas as gpd
 from shapely import wkb
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, Polygon
 
 from tools.check_transport_workbench_manifests import discover_manifest_paths
 
@@ -31,6 +32,39 @@ COMMON_HELPER = REPO_ROOT / 'map_builder' / 'overture_transport_common.py'
 COUNTRY_REAL_PACK_BUILDER = REPO_ROOT / 'tools' / 'build_transport_country_real_packs.py'
 COUNTRY_PACK_WRITER = REPO_ROOT / 'map_builder' / 'transport_country_pack_writer.py'
 SOURCE_EXTRACT_CACHE = REPO_ROOT / 'map_builder' / 'transport_source_extract_cache.py'
+TRANSPORT_FAMILY_REGISTRY = REPO_ROOT / 'map_builder' / 'transport_family_registry.py'
+
+
+CHINA_OSM_GPKG_GOLDEN_SHA256 = {
+    "china_industrial_zones": {
+        "build_audit.json": "10ca32d28581e4286bcbad1f609a0e3547876c24994c0312f677ece7c3cf3230",
+        "industrial_zones.geojson": "56d798cb2c3ebaa5dea1e0a666e8b354523fb1c77effe6aefc04f6efd0d614ba",
+        "industrial_zones.preview.geojson": "56d798cb2c3ebaa5dea1e0a666e8b354523fb1c77effe6aefc04f6efd0d614ba",
+        "manifest.json": "f6472b42b9c1b04276f387e3b0742f0c5eef0ba0e469933de91c21196c92c4e9",
+    },
+    "china_logistics_hubs": {
+        "build_audit.json": "2625c64ddc4f3b2e4d3f662f4d80c9a580289d994d783148709ecfdda881778b",
+        "logistics_hubs.geojson": "4ff47b1230d18dabec617eecf345ee099f6781c31388bfdb59166679185c987e",
+        "logistics_hubs.preview.geojson": "4ff47b1230d18dabec617eecf345ee099f6781c31388bfdb59166679185c987e",
+        "manifest.json": "6ea42fe8f229a0c65b3ee60adb9a47acfb07db4dba12aa86549d7de30f494391",
+    },
+    "china_rail": {
+        "build_audit.json": "e45463526dde96911d915c3c8ac0e60035bbf942d193c7e4aeacbb082caf1d31",
+        "manifest.json": "465cd2180111b8fe3f5f9b38b620fb6de352584d132db060fe60ad4cb8091263",
+        "rail_stations_major.geojson": "771815dbf268c0b0ed0cbefdcc2170f88c1dd5657390e2776c483a736bae7181",
+        "rail_stations_major.preview.geojson": "771815dbf268c0b0ed0cbefdcc2170f88c1dd5657390e2776c483a736bae7181",
+        "railways.preview.topo.json": "930fc801ce48d72c6f6df335e75f08d85a75515849e02fba0902f4df698986c5",
+        "railways.topo.json": "b2a73e65f0911f824d6fc506b8abc1cae8dc6e8d1dffac283fc9753dc9df08cc",
+    },
+    "china_road": {
+        "build_audit.json": "507791f7719bf0161d76312a16718cae7801ca7fd0fffa159fa92468cca8da13",
+        "manifest.json": "e34ce33fd9242d74850fe339c3ce477dad217007592214d401731f8e5ef26a5b",
+        "road_labels.geojson": "005f1af730534e227432f336d3eea949a5ed95280070c5ae32247b79e1dbe022",
+        "road_labels.preview.geojson": "4d622444e2b7b38a6bc00fc9e526e8e9cdc4c5b0877ccee43603c61a3d193f70",
+        "roads.preview.topo.json": "0ed7eb872c9a244f0272c96cae044643900e31f6a6fe3c632ad298c0c8f0fe3a",
+        "roads.topo.json": "68aae6c81de465eae856e0824f1be286b82d885854c1b28241ee3a94aa840ad6",
+    },
+}
 
 
 class GlobalTransportBuilderContractsTest(unittest.TestCase):
@@ -57,17 +91,23 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         builder_content = COUNTRY_REAL_PACK_BUILDER.read_text(encoding='utf-8')
         writer_content = COUNTRY_PACK_WRITER.read_text(encoding='utf-8')
         extract_cache_content = SOURCE_EXTRACT_CACHE.read_text(encoding='utf-8')
+        registry_content = TRANSPORT_FAMILY_REGISTRY.read_text(encoding='utf-8')
 
         self.assertIn('from map_builder.transport_country_pack_writer import (', builder_content)
         self.assertIn('write_country_pack', builder_content)
+        self.assertIn('from map_builder.transport_family_registry import (', builder_content)
         self.assertIn('from map_builder.transport_source_extract_cache import (', builder_content)
         self.assertIn('marker_matches', builder_content)
         self.assertIn('source_marker_from_signature', builder_content)
         self.assertIn('write_marker', builder_content)
+        self.assertIn('class FamilySpec', registry_content)
+        self.assertIn('class GpkgLayerGroup', registry_content)
         self.assertNotRegex(builder_content, r'(?m)^def feature_collection\(')
         self.assertNotRegex(builder_content, r'(?m)^def topology_payload\(')
         self.assertNotRegex(builder_content, r'(?m)^def file_signature\(')
         self.assertNotRegex(builder_content, r'(?m)^def source_signature\(')
+        self.assertNotIn('def build_osm_pbf_road_pack', builder_content)
+        self.assertNotIn('def build_osm_pbf_rail_pack', builder_content)
         self.assertNotIn('"default": {"label": "default"', builder_content)
         self.assertNotIn('"mainMapEligible": True', builder_content)
         self.assertNotIn('"apply_bridge_supported": True', builder_content)
@@ -77,6 +117,37 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         self.assertIn('def country_pack_layer_suffix(', writer_content)
         self.assertIn('def source_marker_from_signature(', extract_cache_content)
         self.assertIn('def marker_matches(', extract_cache_content)
+
+    def test_osm_gpkg_family_registry_covers_real_country_builders(self) -> None:
+        from map_builder.transport_family_registry import OSM_GPKG_FAMILY_SPECS, osm_gpkg_family_for_pack_id
+
+        expected = {
+            "road": ("line", "line", ("gis_osm_roads_free",)),
+            "rail": ("line", "line", ("gis_osm_railways_free", "gis_osm_transport_free")),
+            "industrial_zones": ("point", "polygon_or_point", ("gis_osm_landuse_a_free",)),
+            "logistics_hubs": ("point", "point", ("gis_osm_transport_free", "gis_osm_transport_a_free")),
+        }
+        for family, (output_kind, capability_kind, layers) in expected.items():
+            with self.subTest(family=family):
+                spec = OSM_GPKG_FAMILY_SPECS[family]
+                self.assertEqual(spec.output_geometry_kind, output_kind)
+                self.assertEqual(spec.capability_geometry_kind, capability_kind)
+                self.assertEqual(tuple(layer.source_layer for layer in spec.gpkg_layers), layers)
+                self.assertTrue(all(layer.row_builder_id for layer in spec.gpkg_layers))
+                self.assertTrue(spec.dedup_subset)
+                self.assertTrue(spec.sort_fields)
+                self.assertTrue(spec.audit_shape)
+
+        for pack_id, family in {
+            "china_road": "road",
+            "china_rail": "rail",
+            "china_industrial_zones": "industrial_zones",
+            "china_logistics_hubs": "logistics_hubs",
+            "india_road": "road",
+            "russia_logistics_hubs": "logistics_hubs",
+        }.items():
+            with self.subTest(pack_id=pack_id):
+                self.assertEqual(osm_gpkg_family_for_pack_id(pack_id), family)
 
     def test_country_pack_writer_assembles_manifest_audit_and_bridge_contract(self) -> None:
         from map_builder.transport_country_pack_writer import write_country_pack
@@ -149,6 +220,104 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
             self.assertEqual(manifest['clip_bbox'], [1.0, 2.0, 3.0, 4.0])
             self.assertEqual(manifest['paths']['preview']['roads'], 'test_pack/roads.preview.topo.json')
             self.assertEqual(manifest['paths']['preview']['road_labels'], 'test_pack/road_labels.preview.geojson')
+
+    def test_china_osm_gpkg_country_builders_keep_byte_stable_golden_outputs(self) -> None:
+        import tools.build_transport_country_real_packs as builder
+
+        fixture_source_id = "geofabrik_gpkg_china_fixture"
+        fixture_path = Path("fixture.gpkg")
+
+        def fixture_frame(layer: str) -> gpd.GeoDataFrame:
+            if layer == "gis_osm_roads_free":
+                return gpd.GeoDataFrame(
+                    [
+                        {"osm_id": "100", "fclass": "motorway", "name": "Alpha Expressway", "ref": "G1", "geometry": LineString([(100, 30), (101, 31)])},
+                        {"osm_id": "101", "fclass": "tertiary", "name": "Local Connector", "ref": "", "geometry": LineString([(101, 30), (102, 30.5)])},
+                    ],
+                    geometry="geometry",
+                    crs="EPSG:4326",
+                )
+            if layer == "gis_osm_railways_free":
+                return gpd.GeoDataFrame(
+                    [
+                        {"osm_id": "200", "fclass": "rail", "name": "North Rail", "geometry": LineString([(100, 32), (101, 33)])},
+                        {"osm_id": "201", "fclass": "tram", "name": "City Tram", "geometry": LineString([(100.2, 32), (100.3, 32.2)])},
+                    ],
+                    geometry="geometry",
+                    crs="EPSG:4326",
+                )
+            if layer == "gis_osm_transport_free":
+                return gpd.GeoDataFrame(
+                    [
+                        {"osm_id": "300", "fclass": "railway_station", "name": "Central Station", "geometry": Point(100.5, 32.5)},
+                        {"osm_id": "301", "fclass": "airport", "name": "Cargo Airport", "geometry": Point(101.5, 31.5)},
+                    ],
+                    geometry="geometry",
+                    crs="EPSG:4326",
+                )
+            if layer == "gis_osm_landuse_a_free":
+                return gpd.GeoDataFrame(
+                    [
+                        {"osm_id": "400", "fclass": "industrial", "name": "River Industrial Park", "geometry": Polygon([(100, 30), (101, 30), (101, 31), (100, 31), (100, 30)])},
+                        {"osm_id": "401", "fclass": "industrial", "name": "", "geometry": Polygon([(102, 30), (103, 30), (103, 31), (102, 31), (102, 30)])},
+                    ],
+                    geometry="geometry",
+                    crs="EPSG:4326",
+                )
+            if layer == "gis_osm_transport_a_free":
+                return gpd.GeoDataFrame(
+                    [
+                        {"osm_id": "500", "fclass": "port", "name": "Dry Port", "geometry": Polygon([(104, 30), (105, 30), (105, 31), (104, 31), (104, 30)])},
+                    ],
+                    geometry="geometry",
+                    crs="EPSG:4326",
+                )
+            raise AssertionError(layer)
+
+        def fake_read_geofabrik_gpkg_layer(path: Path, layer: str, columns: list[str], *, where: str = "") -> gpd.GeoDataFrame:
+            return fixture_frame(layer)
+
+        def fake_source_recipe_for(pack_id: str, output_dir: Path) -> tuple[dict[str, object], dict[str, object]]:
+            recipe = {
+                "version": 1,
+                "source_truth": "fixture_source",
+                "geometry_truth": "fixture_geometry",
+                "source_signature": {"fixture": {"sha256": f"{pack_id}-sha"}},
+            }
+            builder.write_json(output_dir / "source_recipe.manual.json", recipe)
+            return recipe, {"ready": True}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp)
+            def fixed_rel(path: Path) -> str:
+                return path.relative_to(output_root).as_posix()
+
+            with (
+                patch.object(builder, "OUTPUT_ROOT", output_root),
+                patch.object(builder, "rel", fixed_rel),
+                patch.object(builder, "utc_now", lambda: "2026-06-15T00:00:00Z"),
+                patch.object(builder, "geofabrik_gpkg_paths", lambda pack_id: [(fixture_source_id, fixture_path)]),
+                patch.object(builder, "read_geofabrik_gpkg_layer", fake_read_geofabrik_gpkg_layer),
+                patch.object(builder, "source_recipe_for", fake_source_recipe_for),
+                patch.object(builder, "filter_lines_to_carrier_or_empty", lambda gdf, country_key: gdf),
+                patch.object(builder, "clip_to_carrier_or_empty", lambda gdf, country_key, label=None: gdf),
+                patch.object(builder, "clip_to_carrier", lambda gdf, country_key, label=None: gdf),
+                patch.object(builder, "filter_to_carrier", lambda gdf, country_key, label=None: gdf),
+            ):
+                builder.build_osm_gpkg_registry_pack("china_road", "china")
+                builder.build_osm_gpkg_registry_pack("china_rail", "china")
+                builder.build_osm_gpkg_registry_pack("china_industrial_zones", "china")
+                builder.build_osm_gpkg_registry_pack("china_logistics_hubs", "china")
+
+            for pack_id, expected_hashes in CHINA_OSM_GPKG_GOLDEN_SHA256.items():
+                with self.subTest(pack_id=pack_id):
+                    pack_dir = output_root / pack_id
+                    actual_hashes = {
+                        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                        for path in sorted(pack_dir.iterdir())
+                        if path.is_file() and path.name != "source_recipe.manual.json"
+                    }
+                    self.assertEqual(actual_hashes, expected_hashes)
 
     def test_global_road_recipe_uses_overture_single_source_policy(self) -> None:
         payload = json.loads(GLOBAL_ROAD_RECIPE.read_text(encoding='utf-8'))

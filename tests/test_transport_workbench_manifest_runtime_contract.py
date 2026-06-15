@@ -8,7 +8,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 VARIANT_HELPER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_manifest_variants.js"
 PORT_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_port_preview.js"
 INDUSTRIAL_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_industrial_zone_preview.js"
+INDUSTRIAL_PREVIEW_LOADER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_industrial_zone_preview_loader.js"
 POINT_PREVIEW_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_shared.js"
+POINT_PREVIEW_LOADER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_loader.js"
+POINT_PREVIEW_DOM_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_dom.js"
 POINT_PREVIEW_RUNTIME_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_point_preview_runtime.js"
 POINT_DENSITY_HELPERS_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_density_helpers.js"
 LINE_RUNTIME_SHARED_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_line_runtime_shared.js"
@@ -181,8 +184,8 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("return clamp(normalizeNumber(config?.labelSeparation, 1), 0.7, 1.8);", density_helper_content)
 
     def test_preview_pack_loaders_reject_missing_pack_paths_before_fetch(self) -> None:
-        point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
-        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        point_content = POINT_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
+        industrial_content = INDUSTRIAL_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
         line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
 
         self.assertLess(point_content.index("if (!packPath)"), point_content.index("getTransportAsset(packPath"))
@@ -190,8 +193,8 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("Transport workbench manifest is missing ${mode}/${key} pack path.", line_content)
 
     def test_preview_gets_route_through_data_service(self) -> None:
-        point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
-        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        point_content = POINT_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
+        industrial_content = INDUSTRIAL_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
         line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
         manifest_content = MANIFEST_PREVIEW_JS.read_text(encoding="utf-8")
 
@@ -208,18 +211,20 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
 
     def test_industrial_preview_supports_polygon_and_point_runtime_shapes(self) -> None:
         industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        industrial_loader_content = INDUSTRIAL_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
 
         self.assertIn("function createPolygonFeature", industrial_content)
         self.assertIn("function createPointFeature", industrial_content)
         self.assertIn("function createIndustrialFeature", industrial_content)
         self.assertIn("function createPointNode", industrial_content)
         self.assertIn("function createIndustrialNode", industrial_content)
-        self.assertIn("function hasPackPath", industrial_content)
-        self.assertIn(".map((feature) => createIndustrialFeature(feature, variantId))", industrial_content)
+        self.assertIn("createJapanIndustrialZonePreviewLoader(runtime", industrial_content)
+        self.assertIn("function hasPackPath", industrial_loader_content)
+        self.assertIn(".map((feature) => createIndustrialFeature(feature, variantId))", industrial_loader_content)
         self.assertIn("const requestedMode = shouldUseFullPack(scale) ? PACK_MODE_FULL : PACK_MODE_PREVIEW;", industrial_content)
         self.assertIn("const targetMode = hasPackPath(manifest, variantId, requestedMode) ? requestedMode : PACK_MODE_PREVIEW;", industrial_content)
         self.assertIn("if (includeFull && hasPackPath(manifest, variantId, PACK_MODE_FULL))", industrial_content)
-        self.assertIn("return !!getPackPath(manifest, variantId, mode);", industrial_content)
+        self.assertIn("return !!getPackPath(manifest, variantId, mode);", industrial_loader_content)
         self.assertIn("runtime.rootGroup.appendChild(createIndustrialNode(feature, style, onFeatureSelect));", industrial_content)
         self.assertIn("function getAggregateSelectionFeatureId", industrial_content)
         self.assertIn("node.dataset.featureId = getAggregateSelectionFeatureId(aggregateEntry);", industrial_content)
@@ -227,11 +232,25 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
 
     def test_point_preview_keeps_view_only_camera_sync_on_the_light_path(self) -> None:
         point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        point_loader_content = POINT_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
+        point_dom_content = POINT_PREVIEW_DOM_JS.read_text(encoding="utf-8")
         point_runtime_content = POINT_PREVIEW_RUNTIME_JS.read_text(encoding="utf-8")
         lifecycle_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_workbench_preview_lifecycle_owner.js").read_text(encoding="utf-8")
 
         self.assertIn("viewOnly", lifecycle_content)
         self.assertIn("viewOnly: true", lifecycle_content)
+        self.assertIn("createTransportWorkbenchPointPreviewRuntime(definition)", point_content)
+        self.assertIn("createTransportWorkbenchPointPreviewLoader(runtime, definition", point_content)
+        self.assertIn("function resetLoadStateForActivePack", point_loader_content)
+        self.assertIn("function setActivePack", point_loader_content)
+        self.assertIn("async function loadManifest", point_loader_content)
+        self.assertIn("function startAuditLoad", point_loader_content)
+        self.assertIn("function startSubtypeCatalogLoad", point_loader_content)
+        self.assertIn("async function loadPack", point_loader_content)
+        self.assertIn("export function ensureTransportWorkbenchPointRootGroups", point_dom_content)
+        self.assertIn("export function createTransportWorkbenchPointMarkerNode", point_dom_content)
+        self.assertIn("export function createTransportWorkbenchPointLabelNode", point_dom_content)
+        self.assertIn("export function createTransportWorkbenchPointLabelDescriptor", point_dom_content)
         self.assertIn("renderLabelDescriptors(runtime)", point_content)
         self.assertIn("runtime.labelDescriptors", point_content)
         self.assertIn("runtime.renderedConfigSignature === nextConfigSignature", point_content)
@@ -239,7 +258,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("createViewRenderSignature(targetMode, scale)", point_content)
         self.assertIn("const sourcePack = await loadPack(targetMode, config);", point_content)
         self.assertIn("const pack = createEffectivePointPack(sourcePack, config, definition);", point_content)
-        self.assertIn("createTransportWorkbenchEffectivePointPack(sourcePack, config, definition", point_content)
+        self.assertIn("createTransportWorkbenchEffectivePointPack(sourcePack, config, definition", point_loader_content)
         self.assertIn("config?.editOverlay?.deleted", point_runtime_content)
         self.assertIn("config?.editOverlay?.updated", point_runtime_content)
         self.assertIn(".filter((feature) => !deletedIds.has(feature.id))", point_runtime_content)
@@ -256,8 +275,10 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
     def test_transport_carrier_uses_active_pack_runtime_asset_key_through_data_service(self) -> None:
         carrier_content = TRANSPORT_CARRIER_JS.read_text(encoding="utf-8")
         point_content = POINT_PREVIEW_SHARED_JS.read_text(encoding="utf-8")
+        point_loader_content = POINT_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
         line_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
         industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        industrial_loader_content = INDUSTRIAL_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
         data_service_content = DATA_SERVICE_JS.read_text(encoding="utf-8")
 
         self.assertIn("../core/data_service.js", carrier_content)
@@ -276,12 +297,12 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn("await definition.prepareCarrier?.(manifest);", line_content)
         self.assertIn("loadGeneration", line_content)
         self.assertIn("isLoadGenerationCurrent", line_content)
-        self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", point_content)
-        self.assertIn("loadGeneration", point_content)
-        self.assertIn("isLoadGenerationCurrent", point_content)
-        self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", industrial_content)
-        self.assertIn("loadGeneration", industrial_content)
-        self.assertIn("isLoadGenerationCurrent", industrial_content)
+        self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", point_loader_content)
+        self.assertIn("loadGeneration", point_loader_content)
+        self.assertIn("isLoadGenerationCurrent", point_loader_content)
+        self.assertIn("await ensureTransportWorkbenchCarrierForManifest(manifest);", industrial_loader_content)
+        self.assertIn("loadGeneration", industrial_loader_content)
+        self.assertIn("isLoadGenerationCurrent", industrial_loader_content)
         self.assertIn("renderJapanIndustrialZonePreview(config = {}, options = {})", industrial_content)
         self.assertIn('typeof options.isCurrent === "function" && !options.isCurrent()', industrial_content)
         self.assertNotIn("projectManifestClipPoint", point_content)
@@ -290,7 +311,7 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "data_service"', data_service_content)
 
     def test_industrial_preview_resets_load_snapshot_on_active_pack_change(self) -> None:
-        industrial_content = INDUSTRIAL_PREVIEW_JS.read_text(encoding="utf-8")
+        industrial_content = INDUSTRIAL_PREVIEW_LOADER_JS.read_text(encoding="utf-8")
 
         self.assertIn("function createInitialLoadState()", industrial_content)
         self.assertIn("function createInitialRenderStats()", industrial_content)
