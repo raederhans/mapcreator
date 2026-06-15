@@ -5,34 +5,31 @@ Last updated: 2026-06-15
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/audit-registry-closeout-20260615` -> `main`
-- Base: `origin/main` at `df8d8d14` before this registry audit fix
+- Integration branch: `main` closeout
+- Base: `origin/main` at `691c933f` before final registry cleanup closeout
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Land this registry audit fix, then remove `C:\Users\raede\Desktop\dev\mapcreator-audit-20260615-registry-closeout`.
-2. Review and rebase `codex/a11y-home-app-fix-20260615`; it is clean and pushed, but it touches shared UI, i18n, tests, and `dist/app`.
-3. Keep `codex/localization-governance-20260615` in progress until its owner finishes, rebases, and resolves the direct i18n/test overlap with a11y.
-4. Re-check recovery refs before recreating any historical worktree.
+1. Review and rebase `codex/a11y-home-app-fix-20260615`; it is clean and pushed, with shared UI, i18n, tests, and `dist/app` changes.
+2. Review `codex/localization-governance-20260615` after a11y; it is clean and one commit ahead of `origin/main`, with direct i18n/test/dist overlap to resolve during integration.
+3. Re-check recovery refs before recreating any historical worktree.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `df8d8d14` | `origin/main` `df8d8d14` | active-main | user edit in `lessons learned.md` | `git status --short --branch` shows only the pre-existing `lessons learned.md` edit; `HEAD` matches `origin/main` at audit start | Green; preserve the user edit | Do not edit in this audit lane |
-| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / `6462e9a0` | merge-base `9f0ef27a` with `origin/main` | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests relative to `origin/main` | `git status --short --branch` is clean and tracks `origin/codex/a11y-home-app-fix-20260615`; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Red; direct UI/dist/i18n overlap with future integration lanes | Rebase onto latest `main`, run UI/i18n/Pages gates, then integrate if green |
-| `C:\Users\raede\Desktop\dev\mapcreator-audit-20260615-registry-closeout` | `codex/audit-registry-closeout-20260615` / `df8d8d14` | `origin/main` `df8d8d14` | in-progress | registry and archived housekeeping-review task docs | Current audit lane has only `docs/active/_worktree_registry.md` and `docs/archive/housekeeping-review-fix-20260615/task.md` modified | Red against any branch also touching `docs/active/_worktree_registry.md`; Green for product runtime | Commit, merge to `main`, push, then remove this worktree |
-| `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `codex/localization-governance-20260615` / `7211640d` | created from `origin/main` `7211640d`; currently behind `origin/main` by 2 | in-progress | dirty localization audit, locale data, TNO locale patch assets, `dist/app/js/ui/i18n_catalog.js`, `dist/pages-dist-manifest.json`, active docs | `git status --short --branch` shows behind 2 plus tracked localization/dist changes and untracked `docs/active/localization-governance-20260615/` | Red; direct i18n/test overlap with a11y plus delivery-surface manifest/mirror churn | Finish owner work, inspect the locale/dist churn, then rebase after registry/a11y decisions |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current registry closeout HEAD | `origin/main` `691c933f` before final cleanup closeout | active-main | user edit in `lessons learned.md` | `git status --short --branch` shows only the pre-existing `lessons learned.md` edit after final cleanup; use `git rev-parse HEAD` for the exact pushed closeout commit | Green; preserve the user edit | Integration target; stage only owned files while the user edit remains |
+| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / `e3dfea57` | merge-base `9f0ef27a` with `origin/main` | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests relative to `origin/main` | `git status --short --branch` is clean and tracks `origin/codex/a11y-home-app-fix-20260615`; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Red; direct registry-file overlap with current `main` and direct UI/dist/i18n overlap with localization | Rebase onto latest `main`, run UI/i18n/Pages gates, then integrate if green |
+| `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `codex/localization-governance-20260615` / `8a196c1` | merge-base `691c933f` with `origin/main`; branch tracks `origin/main` and is ahead 1 | ready-for-review | localization audit, locale data, TNO locale patch assets, `dist/app/js/ui/i18n_catalog.js`, `dist/pages-dist-manifest.json`, active docs | `git status --short --branch` shows `## codex/localization-governance-20260615...origin/main [ahead 1]`; `git ls-files -u -- docs/active/_worktree_registry.md` is empty; changed files against `origin/main` are localization/dist/docs/test/tool files | Red; direct i18n/test overlap with a11y plus delivery-surface manifest/mirror churn | Review after a11y, then rebase/merge with one integration owner for source and dist mirrors |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| registry audit -> main | Green | The audit fix is registry-only and does not touch the parent checkout's `lessons learned.md` edit. |
-| registry audit -> a11y | Red | Direct overlap in `docs/active/_worktree_registry.md`; keep the latest registry facts when a11y is rebased. |
-| registry audit -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`; localization is also behind current `main`. |
+| main -> a11y | Red | Direct overlap in `docs/active/_worktree_registry.md`; keep current registry facts when a11y is rebased. |
+| main -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`; localization is a clean local branch ahead of `origin/main` and still needs registry reconciliation during integration. |
 | a11y -> localization-governance | Red | Direct overlap in `docs/active/_worktree_registry.md`, `tests/test_i18n_audit.py`, UI catalog/locales, and delivery-surface manifest/mirror files. TNO scenario locale assets are localization-owned risk unless a later a11y rebase touches them. |
 
 ## Recovery Records
@@ -41,6 +38,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\Desktop\dev\mapcreator-audit-20260615-registry-closeout` | `origin/main` | `691c933f` | 2026-06-15 | `docs/archive/housekeeping-review-fix-20260615/` | Inspect `691c933f` when auditing this automation's registry correction. |
 | `C:\Users\raede\Desktop\dev\mapcreator-housekeeping-review-fix-20260615` | `origin/codex/housekeeping-review-fix-20260615` | `64ae29be` | 2026-06-15 | `docs/archive/housekeeping-review-fix-20260615/` | Inspect branch/docs when auditing this registry review fix. |
 | `C:\Users\raede\Desktop\dev\mapcreator-worktree-housekeeping-20260615` | `origin/codex/worktree-housekeeping-20260615` | `c076d5e5` | 2026-06-15 | `docs/archive/worktree-housekeeping-20260615/` | Inspect branch/docs when auditing cleanup history. |
 | `C:\Users\raede\Desktop\dev\mapcreator-e2e-route-contract-repair-20260615` | `origin/codex/e2e-route-contract-repair-20260615` | `f4d16b20` | 2026-06-15 | `docs/archive/e2e-route-contract-repair-20260615/` | Inspect branch/docs when auditing E2E route contract repairs. |
@@ -59,8 +57,8 @@ These rows are branch or commit recovery indexes. They are historical references
 
 ## Active Notes
 
-- Main checkout is at pushed `df8d8d14` and retains an unrelated user edit in `lessons learned.md`.
+- Main checkout is at the current pushed registry closeout HEAD and retains an unrelated user edit in `lessons learned.md`.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Remote branch remains as recovery record at `64ae29be`.
-- 2026-06-15 audit: previous registry state still described localization-governance as clean after it became dirty and behind current `main`; this audit row update is the recovery record for that drift.
+- 2026-06-15 audit: previous registry state still described localization-governance with stale head and risk details; `691c933f` is the pushed recovery record for the first registry correction, and this cleanup records its current clean ahead-1 state.
