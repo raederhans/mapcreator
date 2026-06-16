@@ -2,7 +2,7 @@
 
 ## Current State
 
-- Working branch: `codex/tno-zoom-water-fill-repair`.
+- Former working branch: `codex/tno-zoom-water-fill-repair`; recovery commits `71b91375..417c7b27`.
 - Last repair commit: `71b91375`.
 - Main checkout remains dirty and behind/ahead, so this review stays inside the repair worktree.
 

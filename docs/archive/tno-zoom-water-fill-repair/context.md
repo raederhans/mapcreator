@@ -3,7 +3,7 @@
 ## 2026-05-31 Start
 
 - Worktree: `C:\Users\raede\Desktop\dev\mapcreator-tno-zoom-water-fill-repair`.
-- Branch: `codex/tno-zoom-water-fill-repair`.
+- Former branch: `codex/tno-zoom-water-fill-repair`; recovery commits `71b91375..417c7b27`.
 - Base commit: `b928a6b4 Stabilize editor chrome and scenario color contracts`.
 - Main checkout has unrelated `.omx/metrics.json` dirt and is behind `origin/main`; this work stays isolated.
 - Main thread owns live tests and build processes. Subagents are static-only unless reassigned.
