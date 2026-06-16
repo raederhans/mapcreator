@@ -43,8 +43,8 @@ Current status: complete and ready for cleanup after push confirmation.
 - [x] Run final targeted verification.
 - [x] Update worktree registry and archive task docs.
 - [x] Commit closeout fixes.
-- [ ] Push branch to `origin/main`.
-- [ ] Remove worktree after push confirmation.
+- [x] Push branch to `origin/main`.
+- [x] Remove worktree after push confirmation.
 
 ## Delivery Package
 
@@ -150,4 +150,4 @@ WS3 deliberate negative check:
 
 ### 9. Recommended Next Step
 
-Push the closeout commit stack to `origin/main`, confirm the remote advanced, then remove `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout`.
+Refresh the parent `main` checkout only after explicitly protecting its unrelated localization and dist WIP.
