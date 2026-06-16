@@ -61,5 +61,8 @@
 - [x] Implement Physical owner split.
 - [x] Implement Scenario relief overlay owner split.
 - [x] Run physical contracts and focused physical e2e validation.
-- [ ] Run final Phase 3 review/QA self-check.
-- [ ] Commit and push Phase 3 closeout.
+- [x] Run final Phase 3 review/QA self-check.
+- [x] Commit and push Phase 3 closeout.
+- [x] Fast-forward merge renderer owner branch into clean main integration worktree.
+- [x] Run final main integration validation.
+- [x] Archive active task folder and update worktree registry.

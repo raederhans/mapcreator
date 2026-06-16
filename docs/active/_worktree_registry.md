@@ -21,7 +21,7 @@ Last updated: 2026-06-16
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/renderer-modern-lights-owner` / `702d97c1` plus local Phase 3B/3C diff | `main` `5e3a7aca` | ready-for-integration after commit | touched hot files: `js/core/map_renderer.js`, renderer owners under `js/core/renderer/`, mirrored `dist/app/js/core/map_renderer.js`, mirrored dist owner modules, `dist/pages-dist-manifest.json`, `package.json`, renderer owner tests; shared renderer/perf surface | PUSHED: `98cd1e84` Phase 1, `c4e81cf4` docs cleanup, `3f3b0da0` Phase 2, `702d97c1` Phase 3A; PASS Phase 3B/3C: physical owner, scenario relief owner, physical contracts, scenario chunk contracts, render pipeline boundary, physical runtime contract, physical regression, Pages dist build/startup, landing showcase; FAIL/pre-existing suite shape: full water suite named-water/open-ocean timeouts with river/cache specs passing | Yellow | Commit/push Phase 3B/3C, then rebase or update against current main before final merge |
+| none | `origin/main` after renderer owner integration | `main` `5e3a7aca` -> renderer closeout | integrated | no active renderer implementation worktree remains; integration used temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-main-integration` | PUSHED FEATURE: `98cd1e84`, `c4e81cf4`, `3f3b0da0`, `702d97c1`, `ace6bc34`; MAIN VALIDATION PASS: Pages dist build/startup, landing showcase, renderer owner tests, physical/ocean contracts, scenario chunk contracts, physical runtime/regression e2e | Green | Push main closeout, then remove temporary integration worktree |
 
 ## Current Overlap Matrix
 
@@ -36,6 +36,7 @@ These rows are branch or commit recovery indexes. They are historical references
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `origin/main` after transport closeout push / former branch `refactor/transport-render-data-closeout` | `106c83c2` | 2026-06-16 | `docs/archive/transport-render-data-closeout-20260616/` | Inspect this commit and archive docs when auditing preview splits, dist drift guards, smoke profile schema, or OSM-GPKG builder registry changes. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `origin/main` after renderer owner integration / branch `codex/renderer-modern-lights-owner` | `ace6bc34` | 2026-06-16 | `docs/archive/renderer-modern-lights-owner-20260616/` | Inspect this commit and archive docs when auditing map renderer owner splits for Modern City Lights, Rivers, Ocean, Physical, or Scenario relief overlays. |
 | `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `main` / former branch `codex/localization-governance-20260615` | `4711b0dd` | 2026-06-15 | `docs/archive/localization-governance-20260615/` | Inspect `4711b0dd` and archived docs when auditing localization governance ownership changes. |
 | `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | commit `55f143de` | `55f143de` | 2026-06-15 | `docs/archive/a11y-home-app-fix-20260615/` | Inspect commit/docs when auditing homepage and app-page accessibility fixes. |
 | `C:\Users\raede\Desktop\dev\mapcreator-audit-20260615-registry-closeout` | `origin/main` | `691c933f` | 2026-06-15 | `docs/archive/housekeeping-review-fix-20260615/` | Inspect `691c933f` when auditing this automation's registry correction. |
@@ -59,7 +60,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 ## Active Notes
 
-- Main checkout is aligned with `origin/main` at `f4063d31` and currently has unrelated dirty localization/lessons/dist WIP.
+- Parent main checkout had unrelated local WIP in `docs/archive/data-architecture-hardening-v2/context.md`; renderer integration used a clean temporary worktree to preserve that local file.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Commit `64ae29be` remains as the recovery record.
@@ -73,3 +74,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - 2026-06-16 transport render/data closeout: isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` was used because the parent main checkout had unrelated dirty localization WIP. Main Codex agent owned live builds/tests; subagents stayed in static/review lanes.
 - 2026-06-16 transport render/data closeout: WS3 dist drift guard, WS2 jsonschema smoke profile validator, and WS1 OSM-GPKG family driver were implemented, audited, verified, archived, and pushed to `origin/main` at `106c83c2`.
 - 2026-06-16 pre-renderer-owner note: before switching this checkout to `codex/renderer-modern-lights-owner`, the same path had local `main` dirt and unrelated WIP; preserve that context during integration, but keep Current Worktrees limited to the actual branch checked out at this path.
+- 2026-06-16 renderer owner integration: `codex/renderer-modern-lights-owner` was fast-forward merged in `C:\Users\raede\.codex\worktrees\mapcreator-renderer-main-integration`, validated with Pages dist and renderer targeted gates, archived under `docs/archive/renderer-modern-lights-owner-20260616/`, and prepared for `origin/main` push.

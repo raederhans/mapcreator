@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Status: ready-for-integration
+Status: integrated
 
-Phase 3A Ocean, Phase 3B Physical, and Phase 3C Scenario relief owners are implemented and validated. Phase 3 closeout is ready to commit and push.
+Phase 1 Modern City Lights, Phase 2 Rivers, Phase 3A Ocean, Phase 3B Physical, and Phase 3C Scenario relief owners are implemented, validated, fast-forward merged into main, and archived.
 
 ## Files Expected To Change
 
@@ -116,7 +116,8 @@ Phase 3 current diff files:
 - Other documentation cleanup committed separately as `c4e81cf4`.
 - Phase 2 committed and pushed as `3f3b0da0`.
 - Phase 3A Ocean committed and pushed as `702d97c1`.
-- Phase 3B/3C Physical and Scenario relief changes are not committed yet.
+- Phase 3B/3C Physical and Scenario relief committed and pushed as `ace6bc34`.
+- Main integration closeout archives this task folder and updates the registry.
 
 ### 5. Base Divergence
 
@@ -160,10 +161,10 @@ Phase 3 current diff files:
 
 ### 9. Recommended Next Step
 
-- Run final review/QA self-check.
-- Commit and push Phase 3B/3C closeout.
+- Push the main integration closeout to `origin/main`.
+- Remove the temporary integration worktree after push succeeds.
 
 ### 10. Integration Answer
 
-- Phase 3 can integrate after the Phase 3B/3C closeout commit is pushed.
-- Recommended method: rebase or update this branch against current main before final merge, then run the renderer owner targeted suite and `verify:pages-dist`.
+- This work can integrate through fast-forward main history.
+- The feature branch remains useful as recovery history until main push and cleanup are confirmed.

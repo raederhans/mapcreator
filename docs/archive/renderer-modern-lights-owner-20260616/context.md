@@ -121,3 +121,27 @@ Phase 1 is complete and pushed. Phase 2 is the current delivery unit. Phase 4 is
   - PASS: `py -3 -m unittest tests.test_pages_dist_startup_shell -q`
   - PASS: `npm run test:node:landing-showcase-view`
   - Remaining known gap from Phase 3A: full `npm run test:e2e:water-rendering` still has pre-existing named-water/open-ocean timeouts; the river/cache specs in that suite passed.
+
+## 2026-06-16 Main Integration Closeout
+
+- The parent checkout had unrelated local WIP in `docs/archive/data-architecture-hardening-v2/context.md`; it was preserved with a stash and patch under `.runtime/tmp/`, then integration continued in a clean worktree.
+- Created clean integration worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-main-integration` from `origin/main`.
+- Fast-forward merged `origin/codex/renderer-modern-lights-owner` into the integration worktree.
+- `npm run verify:pages-dist` could not run directly because the Windows shell lacks the short `python` command. Equivalent gate was run with `py -3`.
+- Integration validation:
+  - PASS: `py -3 tools/build_pages_dist.py`
+  - PASS: `py -3 -m unittest tests.test_pages_dist_startup_shell -q`
+  - PASS: `npm run test:node:landing-showcase-view`
+  - PASS: `npm run test:node:modern-city-lights-owner`
+  - PASS: `npm run test:node:river-layer-owner`
+  - PASS: `npm run test:node:ocean-render-owner`
+  - PASS: `npm run test:node:physical-layer-owner`
+  - PASS: `npm run test:node:scenario-relief-overlay-owner`
+  - PASS: `npm run test:node:physical-layer-contracts`
+  - PASS: `npm run test:node:ocean-depth-layer-contracts`
+  - PASS: `npm run test:node:scenario-chunk-contracts`
+  - PASS: `node --check js/core/map_renderer.js` and all new renderer owner modules.
+  - PASS: `npm run test:e2e:physical-layer-runtime-contract`
+  - PASS: `npm run test:e2e:physical-layer-regression`
+- The first physical regression e2e attempt in the integration worktree failed due to shared webServer/process setup while another Playwright run was active; the serial rerun passed.
+- The temporary integration worktree used a local `node_modules` junction to the parent checkout for Playwright e2e execution and is intended for cleanup after `origin/main` push.
