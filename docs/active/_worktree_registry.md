@@ -1,25 +1,26 @@
 # Worktree Registry
 
-Last updated: 2026-06-15
+Last updated: 2026-06-16
 
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
 - Integration branch: `main` closeout
-- Base: current `origin/main` closeout after localization governance integration; implementation commit `4711b0dd` is the recovery point for product changes
+- Base: `main` is aligned with `origin/main` at `4203b56d`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. No active implementation worktree remains after the a11y integration closeout; keep the unrelated main checkout docs and `lessons learned.md` edits unstaged.
+1. No active implementation worktree remains after the a11y integration closeout.
 2. Re-check recovery refs before recreating any historical worktree.
+3. Branch cleanup should be handled as a separate action after classifying merged recovery refs and still-active topic branches.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current integration HEAD | current `origin/main` plus a11y fast-forward | active-main | unrelated docs archive moves and `lessons learned.md` edit remain unstaged | A11y branch was rebased, validated, fast-forwarded into `main`, and active docs were archived | Green; preserve unrelated local edits | Push `main`, then remove the integrated local a11y worktree |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `4203b56d` | aligned with `origin/main` | active-main | clean | `git worktree list --porcelain` lists only main; `git status --short --branch` reports `## main...origin/main` | Green | No worktree integration action remains |
 
 ## Current Overlap Matrix
 
@@ -54,9 +55,10 @@ These rows are branch or commit recovery indexes. They are historical references
 
 ## Active Notes
 
-- Main checkout includes localization governance and retains an unrelated user edit in `lessons learned.md`.
+- Main checkout is clean and aligned with `origin/main`.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Remote branch remains as recovery record at `64ae29be`.
 - 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, pushed through the registry closeout, and cleaned from the active worktree list.
 - 2026-06-15 a11y home/app fix: `55f143de` was rebased onto current main, validated with i18n, behavior, Pages dist, and a11y scan gates, fast-forwarded into main, and archived for cleanup.
+- 2026-06-16 worktree cleanup: removed two unregistered local directory remnants with no `.git`: `C:\Users\raede\Desktop\dev\mapcreator-hgo-review-fix` and `C:\Users\raede\Desktop\dev\mapcreator-ocean-scotia-source-refinement-2026-06-02`. Recovery docs remain under `docs/archive/`.
