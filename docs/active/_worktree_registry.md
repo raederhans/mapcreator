@@ -21,7 +21,7 @@ Last updated: 2026-06-16
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| none | `origin/main` after renderer owner postmerge review fix | `main` `6e818068` -> review fix | integrated | no active renderer review worktree remains after cleanup; review used temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | REVIEW FIX VALIDATION PASS: modern city lights owner, physical owner, physical contracts, render-cache Python contract, Pages dist build/startup, landing showcase, git diff check | Green | Push review fix, then remove temporary review worktree |
+| none | `origin/main` after renderer owner postmerge review fix | `origin/main` `60f13301` | integrated | no active renderer review worktree remains after cleanup; review used temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | REVIEW FIX VALIDATION PASS: modern city lights owner, physical owner, physical contracts, render-cache Python contract, Pages dist build/startup, landing showcase, git diff check | Green | Complete; remote main contains the review fix and the temporary worktree was removed |
 
 ## Current Overlap Matrix
 
@@ -35,7 +35,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | `origin/main` after renderer owner postmerge review fix / former branch `codex/renderer-review-fixes` | pending closeout commit | 2026-06-16 | `docs/archive/renderer-owner-postmerge-review-20260616/` | Inspect this commit/docs when auditing renderer owner intensity channel tolerance or modern city lights render-cache contract location. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | `origin/main` after renderer owner postmerge review fix / former branch `codex/renderer-review-fixes` | `60f13301` | 2026-06-16 | `docs/archive/renderer-owner-postmerge-review-20260616/` | Inspect this commit/docs when auditing renderer owner intensity channel tolerance or modern city lights render-cache contract location. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `origin/main` after transport closeout push / former branch `refactor/transport-render-data-closeout` | `106c83c2` | 2026-06-16 | `docs/archive/transport-render-data-closeout-20260616/` | Inspect this commit and archive docs when auditing preview splits, dist drift guards, smoke profile schema, or OSM-GPKG builder registry changes. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `origin/main` after renderer owner integration / branch `codex/renderer-modern-lights-owner` | `ace6bc34` | 2026-06-16 | `docs/archive/renderer-modern-lights-owner-20260616/` | Inspect this commit and archive docs when auditing map renderer owner splits for Modern City Lights, Rivers, Ocean, Physical, or Scenario relief overlays. |
 | `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `main` / former branch `codex/localization-governance-20260615` | `4711b0dd` | 2026-06-15 | `docs/archive/localization-governance-20260615/` | Inspect `4711b0dd` and archived docs when auditing localization governance ownership changes. |
