@@ -3,9 +3,12 @@ const defaultColorManager = {
   hexToRgb: () => null,
 };
 
-export function createModernCityLightsRenderOwner({ state = {}, constants = {}, getters = {}, helpers = {} } = {}) {
+export function createCityLightsRenderOwner({ state = {}, assets = {}, getters = {}, helpers = {} } = {}) {
   const runtimeState = state;
   const {
+    HISTORICAL_1930_CITY_LIGHTS_ENTRIES = [],
+    HISTORICAL_DERIVED_GLOW_MAX_ENTRIES = 520,
+    HISTORICAL_DERIVED_GLOW_MIN_WEIGHT = 0.62,
     MODERN_CITY_LIGHTS_BASE_THRESHOLD = 0,
     MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD = Number.POSITIVE_INFINITY,
     MODERN_CITY_LIGHTS_GRID = [],
@@ -14,7 +17,7 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
     MODERN_CITY_LIGHTS_STATS = null,
     MODERN_CITY_LIGHTS_STEP_LAT_DEG = 1,
     MODERN_CITY_LIGHTS_STEP_LON_DEG = 1,
-  } = constants;
+  } = assets;
   const {
     getContext = () => null,
     getPathCanvas = () => null,
@@ -34,14 +37,11 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
     getDefaultZoomTransform = () => ({ x: 0, y: 0, k: 1 }),
     getEffectiveCityCollection = () => ({ type: 'FeatureCollection', features: [] }),
     getFeatureGeoCentroid = () => null,
-    getModernCityLightsProjectionKey = () => '',
-    getNightLightPalette = () => ({}),
     getRenderPassLayout = () => null,
     getSafeBlendMode = (preferred, fallback) => preferred || fallback,
     getTransformSignature = () => '',
     getUrbanCityPolicyOwner = () => null,
     getUrbanGlowMultiplierAt = () => 1,
-    getUrbanLightWeight = () => 0,
     normalizeDayNightStyleConfig = (config) => config || {},
     normalizeIntensityFieldsState = (fields) => fields || {},
     normalizeLongitude = (value) => value,
@@ -80,9 +80,75 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
     width: 0,
     height: 0,
   };
+  const historicalCityLightsDerivedGlowCache = {
+    key: '',
+    entries: [],
+  };
+  const historicalCityLightsFallbackCache = {
+    cityCollection: null,
+    cityLayerRevision: -1,
+    scenarioId: '',
+    secondaryRetention: -1,
+    entries: [],
+  };
 
   function getZoomTransform() {
     return runtimeState.zoomTransform || getDefaultZoomTransform();
+  }
+
+  function getNightLightPalette(styleVariant = "modern") {
+    if (styleVariant === "historical_1930s") {
+      return {
+        halo: "#f4c972",
+        core: "#ffd88b",
+        glint: "#fff4c1",
+      };
+    }
+    return {
+      texture: "#d7bc76",
+      corridor: "#fff0ba",
+      halo: "#f5d89a",
+      core: "#fff7d5",
+      glint: "#fffdf0",
+    };
+  }
+
+  function getUrbanLightWeight(feature, styleVariant = "modern") {
+    const props = feature?.properties || {};
+    const areaSqKm = Math.max(0, Number(props.area_sqkm ?? props.AREA_SQKM ?? 0));
+    const scalerank = clamp(
+      Math.round(Number(props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+      1,
+      10
+    );
+    const areaScore = clamp(Math.log10(areaSqKm + 1) / 3.45, 0, 1.1);
+    const rankScore = clamp((9 - scalerank) / 7, 0, 1.12);
+    const metroBoost = areaSqKm >= 1500 ? 0.18 : areaSqKm >= 700 ? 0.08 : 0;
+
+    if (styleVariant === "historical_1930s") {
+      const keep = scalerank <= 5 || areaSqKm >= 220;
+      if (!keep) return 0;
+      return clamp((areaScore * 0.55) + (rankScore * 0.72) + metroBoost, 0.12, 0.92);
+    }
+
+    return clamp((areaScore * 0.62) + (rankScore * 0.78) + metroBoost, 0.08, 1.18);
+  }
+
+  function getModernCityLightsProjectionKey() {
+    const projection = getProjection();
+    if (!projection) return "";
+    const scale = Number(projection.scale?.() || 0).toFixed(4);
+    const translate = projection.translate?.() || [0, 0];
+    const center = projection.center?.() || [0, 0];
+    const rotate = projection.rotate?.() || [0, 0, 0];
+    return [
+      runtimeState.width || 0,
+      runtimeState.height || 0,
+      scale,
+      ...translate.map((value) => Number(value || 0).toFixed(2)),
+      ...center.map((value) => Number(value || 0).toFixed(2)),
+      ...rotate.map((value) => Number(value || 0).toFixed(2)),
+    ].join("|");
   }
 
   function getModernCityLightsGridValue(x, y) {
@@ -1082,6 +1148,360 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
     return canvas;
   }
   
+  function getHistoricalCityLightsDensity(config) {
+    const density = Number(config?.historicalCityLightsDensity);
+    return clamp(Number.isFinite(density) ? density : 1.25, 0.75, 2);
+  }
+
+  function getHistoricalCityLightsSecondaryRetention(config) {
+    const secondaryRetention = Number(config?.historicalCityLightsSecondaryRetention);
+    return clamp(Number.isFinite(secondaryRetention) ? secondaryRetention : 0.55, 0, 1);
+  }
+
+  function interpolateHistoricalThreshold(strictValue, relaxedValue, secondaryRetention) {
+    return strictValue + ((relaxedValue - strictValue) * secondaryRetention);
+  }
+
+  function getHistoricalCityLightCapitalBoost(capitalKind = "") {
+    const normalizedKind = String(capitalKind || "").trim().toLowerCase();
+    if (normalizedKind === "country_capital") return 0.16;
+    if (normalizedKind === "admin_capital") return 0.08;
+    return 0;
+  }
+
+  function sanitizeHistoricalCityLightEntry(rawEntry) {
+    const lon = normalizeLongitude(Number(rawEntry?.lon));
+    const lat = clamp(Number(rawEntry?.lat), -89.999, 89.999);
+    const weight = clamp(Number(rawEntry?.weight), 0, 1.08);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat) || weight <= 0) {
+      return null;
+    }
+    return {
+      lon,
+      lat,
+      weight,
+      capitalKind: String(rawEntry?.capitalKind || rawEntry?.capital_kind || "").trim().toLowerCase(),
+      population: Math.max(0, Number(rawEntry?.population || 0)),
+      nameAscii: String(rawEntry?.nameAscii || rawEntry?.name_ascii || rawEntry?.name || "").trim(),
+    };
+  }
+
+  function shouldRenderHistoricalCityLightEntry(entry, secondaryRetention = 0) {
+    const capitalKind = String(entry?.capitalKind || "").trim().toLowerCase();
+    const population = Math.max(0, Number(entry?.population || 0));
+    const weight = clamp(Number(entry?.weight || 0), 0, 1.08);
+    if (capitalKind === "country_capital") {
+      return true;
+    }
+    const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+    if (capitalKind === "admin_capital") {
+      const adminPopulationThreshold = interpolateHistoricalThreshold(1000000, 700000, normalizedRetention);
+      const adminWeightThreshold = interpolateHistoricalThreshold(0.7, 0.55, normalizedRetention);
+      return population >= adminPopulationThreshold || weight >= adminWeightThreshold;
+    }
+    const cityPopulationThreshold = interpolateHistoricalThreshold(2200000, 1500000, normalizedRetention);
+    const cityWeightThreshold = interpolateHistoricalThreshold(0.8, 0.65, normalizedRetention);
+    return population >= cityPopulationThreshold || weight >= cityWeightThreshold;
+  }
+
+  function getHistoricalProxyAssetEntries(secondaryRetention = 0) {
+    if (!Array.isArray(HISTORICAL_1930_CITY_LIGHTS_ENTRIES) || !HISTORICAL_1930_CITY_LIGHTS_ENTRIES.length) {
+      return [];
+    }
+    return HISTORICAL_1930_CITY_LIGHTS_ENTRIES
+      .map(sanitizeHistoricalCityLightEntry)
+      .filter((entry) => shouldRenderHistoricalCityLightEntry(entry, secondaryRetention))
+      .filter(Boolean);
+  }
+
+  function computeHistoricalFallbackCityLightWeight(feature) {
+    const props = feature?.properties || {};
+    const population = Math.max(
+      0,
+      Number(
+        props.__city_population
+        ?? props.population
+        ?? props.pop_max
+        ?? props.POP_MAX
+        ?? 0
+      )
+    );
+    const isCountryCapital = !!(props.__city_is_country_capital ?? props.is_country_capital);
+    const isAdminCapital = !!(props.__city_is_admin_capital ?? props.is_admin_capital);
+    const baseTier = String(props.__city_base_tier || props.base_tier || "").trim().toLowerCase();
+    const tierBoost = baseTier === "major" ? 0.1 : baseTier === "regional" ? 0.04 : 0;
+    const scalerank = clamp(
+      Math.round(Number(props.__city_scalerank ?? props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+      1,
+      10
+    );
+    const rankBoost = scalerank <= 3 ? 0.06 : 0;
+    const populationScore = clamp(Math.log10(population + 1) / 7.1, 0.16, 1);
+    const capitalBoost = isCountryCapital ? 0.34 : isAdminCapital ? 0.2 : 0;
+    return clamp((populationScore * 0.74) + capitalBoost + tierBoost + rankBoost, 0.18, 1.02);
+  }
+
+  function shouldIncludeHistoricalFallbackCity(feature, secondaryRetention = 0) {
+    const props = feature?.properties || {};
+    const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+    if (!!(props.__city_is_country_capital ?? props.is_country_capital)) return true;
+    const adminPopulation = Math.max(
+      0,
+      Number(
+        props.__city_population
+        ?? props.population
+        ?? props.pop_max
+        ?? props.POP_MAX
+        ?? 0
+      )
+    );
+    if (
+      !!(props.__city_is_admin_capital ?? props.is_admin_capital)
+      && adminPopulation >= interpolateHistoricalThreshold(2000000, 1200000, normalizedRetention)
+    ) {
+      return true;
+    }
+    const scalerank = clamp(
+      Math.round(Number(props.__city_scalerank ?? props.scalerank ?? props.SCALERANK ?? 8)) || 8,
+      1,
+      10
+    );
+    if (scalerank <= 1) return true;
+    const population = Math.max(
+      0,
+      Number(
+        props.__city_population
+        ?? props.population
+        ?? props.pop_max
+        ?? props.POP_MAX
+        ?? 0
+      )
+    );
+    const cityPopulationThreshold = interpolateHistoricalThreshold(4200000, 2400000, normalizedRetention);
+    return population >= cityPopulationThreshold;
+  }
+
+  function getHistoricalProxyFallbackEntries(secondaryRetention = 0) {
+    const cityCollection = getEffectiveCityCollection();
+    const cityLayerRevision = Number(runtimeState.cityLayerRevision || 0);
+    const scenarioId = String(runtimeState.activeScenarioId || "");
+    const normalizedRetention = clamp(Number(secondaryRetention) || 0, 0, 1);
+    if (
+      historicalCityLightsFallbackCache.cityCollection === cityCollection
+      && historicalCityLightsFallbackCache.cityLayerRevision === cityLayerRevision
+      && historicalCityLightsFallbackCache.scenarioId === scenarioId
+      && historicalCityLightsFallbackCache.secondaryRetention === normalizedRetention
+    ) {
+      return historicalCityLightsFallbackCache.entries;
+    }
+
+    const entries = Array.isArray(cityCollection?.features)
+      ? cityCollection.features
+        .filter((feature) => shouldIncludeHistoricalFallbackCity(feature, normalizedRetention))
+        .map((feature) => {
+          const coordinates = getCityGeoCoordinates(feature);
+          if (!coordinates) return null;
+          const props = feature?.properties || {};
+          return sanitizeHistoricalCityLightEntry({
+            lon: coordinates[0],
+            lat: coordinates[1],
+            weight: computeHistoricalFallbackCityLightWeight(feature),
+            capitalKind: props.__city_capital_kind || props.capital_kind || "",
+            population: props.__city_population ?? props.population ?? 0,
+            nameAscii: props.name_ascii || props.__city_name_ascii || props.name_en || props.name || "",
+          });
+        })
+        .filter((entry) => shouldRenderHistoricalCityLightEntry(entry, normalizedRetention))
+        .filter(Boolean)
+        .sort((left, right) => right.weight - left.weight)
+      : [];
+
+    historicalCityLightsFallbackCache.cityCollection = cityCollection;
+    historicalCityLightsFallbackCache.cityLayerRevision = cityLayerRevision;
+    historicalCityLightsFallbackCache.scenarioId = scenarioId;
+    historicalCityLightsFallbackCache.secondaryRetention = normalizedRetention;
+    historicalCityLightsFallbackCache.entries = entries;
+    return entries;
+  }
+
+  function getHistoricalNightLightEntries(config) {
+    const secondaryRetention = getHistoricalCityLightsSecondaryRetention(config);
+    const assetEntries = getHistoricalProxyAssetEntries(secondaryRetention);
+    if (assetEntries.length) {
+      return assetEntries;
+    }
+    return getHistoricalProxyFallbackEntries(secondaryRetention);
+  }
+
+  function getHistoricalDerivedGlowEntries(historicalEntries, config) {
+    if (!Array.isArray(historicalEntries) || !historicalEntries.length) return [];
+    const projection = getProjection();
+    const projectionKey = getModernCityLightsProjectionKey();
+    const retention = getHistoricalCityLightsSecondaryRetention(config).toFixed(3);
+    const first = historicalEntries[0];
+    const last = historicalEntries[historicalEntries.length - 1];
+    const key = [
+      projectionKey,
+      retention,
+      historicalEntries.length,
+      first?.nameAscii || "",
+      first?.weight || 0,
+      last?.nameAscii || "",
+      last?.weight || 0,
+    ].join("|");
+    if (historicalCityLightsDerivedGlowCache.key === key) {
+      return historicalCityLightsDerivedGlowCache.entries;
+    }
+
+    const entries = [];
+    for (const entry of historicalEntries) {
+      if (entries.length >= HISTORICAL_DERIVED_GLOW_MAX_ENTRIES) break;
+      const weight = clamp(Number(entry?.weight || 0), 0, 1.08);
+      if (weight < HISTORICAL_DERIVED_GLOW_MIN_WEIGHT) continue;
+      const projected = projection ? projection([entry.lon, entry.lat]) : null;
+      if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) continue;
+      entries.push({
+        lon: entry.lon,
+        lat: entry.lat,
+        cx: Number(projected[0]),
+        cy: Number(projected[1]),
+        weight,
+        rotation: (stringHash(entry.nameAscii || `${entry.lon}:${entry.lat}:derived`) % 180) * (Math.PI / 180),
+      });
+    }
+    historicalCityLightsDerivedGlowCache.key = key;
+    historicalCityLightsDerivedGlowCache.entries = entries;
+    return entries;
+  }
+
+  function drawHistoricalDerivedGlowLayer(k, historicalEntries, config, intensity, density, palette) {
+    const context = getContext();
+    if (!context) return;
+    const glowEntries = getHistoricalDerivedGlowEntries(historicalEntries, config);
+    if (!glowEntries.length) return;
+    const overscan = Math.max(28, Math.min(runtimeState.width, runtimeState.height) * 0.06);
+    context.fillStyle = palette.halo;
+    glowEntries.forEach((entry) => {
+      const transform = getZoomTransform();
+      const screenX = (entry.cx * transform.k) + transform.x;
+      const screenY = (entry.cy * transform.k) + transform.y;
+      if (
+        screenX < -overscan ||
+        screenX > runtimeState.width + overscan ||
+        screenY < -overscan ||
+        screenY > runtimeState.height + overscan
+      ) {
+        return;
+      }
+      const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
+      const glowRadiusPx = (1.1 + (entry.weight * 1.45 * glowMultiplier)) * density;
+      context.globalAlpha = clamp(intensity * density * entry.weight * glowMultiplier * 0.036, 0, 0.085);
+      drawLightEllipse(
+        entry.cx,
+        entry.cy,
+        (glowRadiusPx * 1.75) / Math.max(0.0001, k),
+        (glowRadiusPx * 0.82) / Math.max(0.0001, k),
+        entry.rotation
+      );
+    });
+  }
+
+  function drawHistoricalNightLightsLayer(k, config, solarState) {
+    const context = getContext();
+    const pathCanvas = getPathCanvas();
+    if (!context || !pathCanvas) return;
+    const historicalEntries = getHistoricalNightLightEntries(config);
+    if (!historicalEntries.length) {
+      return;
+    }
+    const nightHemisphere = buildNightHemisphereFeature(solarState, 90);
+    if (!nightHemisphere) return;
+
+    const variant = "historical_1930s";
+    const intensity = clamp(getModernDayNightNumber(config, "cityLightsIntensity"), 0, 1.8);
+    if (intensity <= 0) return;
+    const density = getHistoricalCityLightsDensity(config);
+    const palette = getNightLightPalette(variant);
+    const projection = getProjection();
+    const overscan = Math.max(24, Math.min(runtimeState.width, runtimeState.height) * 0.05);
+
+    context.save();
+    context.beginPath();
+    pathCanvas(nightHemisphere);
+    context.clip();
+    context.globalCompositeOperation = getSafeBlendMode("screen", "lighter");
+    drawHistoricalDerivedGlowLayer(k, historicalEntries, config, intensity, density, palette);
+
+    historicalEntries.forEach((entry) => {
+      const projected = projection ? projection([entry.lon, entry.lat]) : null;
+      if (!Array.isArray(projected) || !projected.every((value) => Number.isFinite(Number(value)))) return;
+      const weight = clamp(Number(entry.weight || 0), 0, 1.08);
+      if (weight <= 0) return;
+      const glowMultiplier = getUrbanGlowMultiplierAt(entry.lon, entry.lat);
+
+      const cx = Number(projected[0]);
+      const cy = Number(projected[1]);
+
+      const transform = getZoomTransform();
+      const screenX = (cx * transform.k) + transform.x;
+      const screenY = (cy * transform.k) + transform.y;
+      if (
+        screenX < -overscan ||
+        screenX > runtimeState.width + overscan ||
+        screenY < -overscan ||
+        screenY > runtimeState.height + overscan
+      ) {
+        return;
+      }
+
+      const capitalBoost = getHistoricalCityLightCapitalBoost(entry.capitalKind);
+      const baseRadiusPx = (0.52 + (weight * (0.68 + (capitalBoost * 0.28)))) * density;
+      const haloRadiusPx = baseRadiusPx * (1.24 + (capitalBoost * 0.3));
+      const haloAlphaMax = clamp(0.28 * density, 0, 0.48);
+      const coreAlphaMax = clamp(0.52 * density, 0, 0.82);
+      const haloAlpha = clamp(intensity * weight * glowMultiplier * 0.12 * density, 0, haloAlphaMax);
+      const coreAlpha = clamp(intensity * weight * glowMultiplier * 0.22 * density, 0, coreAlphaMax);
+      const orientation = (stringHash(
+        entry.nameAscii ||
+        `${entry.lon}:${entry.lat}`
+      ) % 180) * (Math.PI / 180);
+
+      context.fillStyle = palette.halo;
+      context.globalAlpha = haloAlpha;
+      drawLightEllipse(
+        cx,
+        cy,
+        (haloRadiusPx * 1.04) / Math.max(0.0001, k),
+        (haloRadiusPx * 0.78) / Math.max(0.0001, k),
+        orientation
+      );
+
+      context.fillStyle = palette.core;
+      context.globalAlpha = coreAlpha;
+      drawLightEllipse(
+        cx,
+        cy,
+        baseRadiusPx / Math.max(0.0001, k),
+        (baseRadiusPx * 0.64) / Math.max(0.0001, k),
+        orientation
+      );
+    });
+
+    context.restore();
+  }
+
+  function drawNightLightsLayer(k, config, solarState) {
+    if (!config?.cityLightsEnabled) {
+      return;
+    }
+    const variant = String(config.cityLightsStyle || "modern").trim().toLowerCase();
+    if (variant === "modern") {
+      drawModernNightLightsLayer(k, config, solarState);
+      return;
+    }
+    drawHistoricalNightLightsLayer(k, config, solarState);
+  }
+
   function drawModernNightLightsLayer(k, config, solarState) {
     const context = getContext();
     const pathCanvas = getPathCanvas();
@@ -1110,16 +1530,25 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
   return {
     collectModernUrbanCoreEntries,
     drawLightEllipse,
+    drawHistoricalNightLightsLayer,
     drawModernNightLightsLayer,
+    drawNightLightsLayer,
+    getHistoricalCityLightsDensity,
+    getHistoricalCityLightsSecondaryRetention,
+    getHistoricalDerivedGlowEntries,
+    getHistoricalNightLightEntries,
     getLightBlobRgb,
     getModernCityLightsGeometry,
     getModernCityLightsPopulationBoostData,
     getModernCityLightsStaticLayerKey,
     getModernCityLightsZoomProfile,
     getModernDayNightNumber,
+    getNightLightPalette,
     getSignedHashUnit,
     normalizeModernCityLightsValue,
+    sanitizeHistoricalCityLightEntry,
     shouldCullModernLightEntry,
+    shouldRenderHistoricalCityLightEntry,
     toRgbaString,
   };
 }

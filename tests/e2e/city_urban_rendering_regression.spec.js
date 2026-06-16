@@ -221,6 +221,9 @@ test("city and urban rendering regression smoke ignores legacy radius live tweak
   await flushPendingRender(page);
   await waitForStableExactRender(page);
   await waitForCityLayerVisibility(page, true);
+  await setCheckbox(page, "dayNightEnabled", false);
+  await flushPendingRender(page);
+  await waitForStableExactRender(page);
 
   await applyCityStyleConfig(page, {
     radius: 2.4,

@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 URBAN_CITY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "urban_city_policy.js"
+CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_lights_render_owner.js"
 
 
 class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
@@ -41,8 +42,6 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+getCityUrbanRuntimeInfo\s*=", renderer_content))
         self.assertIsNone(re.search(r"(?m)^\s*function\s+getCityUrbanRuntimeInfo\s*\(", renderer_content))
         self.assertEqual(renderer_content.count("getUrbanCityPolicyOwner().getCityScenarioTag(feature)"), 2)
-        self.assertEqual(renderer_content.count("getUrbanCityPolicyOwner().getUrbanFeatureIndex()"), 2)
-        self.assertEqual(renderer_content.count("getUrbanCityPolicyOwner().getCityUrbanRuntimeInfo(feature, urbanIndex)"), 2)
         self.assertIn("const urbanFeatureIndexCache = {", renderer_content)
         self.assertIn("function getUrbanFeatureStableId(feature) {", renderer_content)
         self.assertIn("function getCityLayerRenderState(k, { interactive = false, cacheHoverEntries = false } = {}) {", renderer_content)
@@ -69,6 +68,7 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
 
     def test_urban_glow_intensity_field_invalidates_and_modulates_urban_light_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        city_lights_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         intensity_content = (REPO_ROOT / "js" / "core" / "intensity_field.js").read_text(encoding="utf-8")
         context_base_body = renderer_content.split('if (passName === "contextBase") {', 1)[1].split(
             '\n  }',
@@ -82,7 +82,7 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
             "\nfunction recordDeferredRiversLayerMetric",
             1,
         )[0]
-        modern_static_key_body = renderer_content.split("function getModernCityLightsStaticLayerKey(config) {", 1)[1].split(
+        modern_static_key_body = city_lights_content.split("function getModernCityLightsStaticLayerKey(config) {", 1)[1].split(
             "\n}",
             1,
         )[0]
@@ -96,8 +96,13 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIn("const glowMultiplier = getUrbanGlowFeatureMultiplier(feature);", urban_layer_body)
         self.assertIn("Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier", urban_layer_body)
         self.assertIn("Math.min(strokeOpacity, 0.18) : strokeOpacity) * glowMultiplier", urban_layer_body)
-        self.assertGreaterEqual(renderer_content.count("getUrbanGlowMultiplierAt("), 8)
-        self.assertIn('`field:urbanGlow:${Number(normalizeIntensityFieldsState(runtimeState.intensityFields).channels.urbanGlow?.revision || 0)}`', modern_static_key_body)
+        self.assertGreaterEqual(
+            renderer_content.count("getUrbanGlowMultiplierAt(")
+            + city_lights_content.count("getUrbanGlowMultiplierAt("),
+            8,
+        )
+        self.assertIn("const urbanGlowRevision = Number(intensityFields?.channels?.urbanGlow?.revision || 0);", modern_static_key_body)
+        self.assertIn('`field:urbanGlow:${urbanGlowRevision}`', modern_static_key_body)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createModernCityLightsRenderOwner } from "../js/core/renderer/modern_city_lights_render_owner.js";
+import { createCityLightsRenderOwner } from "../js/core/renderer/city_lights_render_owner.js";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -31,11 +31,21 @@ function createCanvasContext(width = 1600, height = 1200) {
 
 function createOwner(overrides = {}) {
   const urbanFeature = { properties: { id: "urban-1", area_sqkm: 10 } };
-  const cityCollection = {
+  const cityCollection = overrides.cityCollection || {
     type: "FeatureCollection",
     features: [
-      { properties: { id: "matched", __city_population: 500000, capitalScore: 0 } },
-      { properties: { id: "capital", __city_population: 90000, capitalScore: 2 } },
+      { properties: { id: "matched", __city_population: 500000, capitalScore: 0, lon: 10, lat: 20 } },
+      {
+        properties: {
+          id: "capital",
+          __city_population: 90000,
+          __city_is_country_capital: true,
+          capitalScore: 2,
+          lon: 30,
+          lat: 40,
+          name_ascii: "Fallback Capital",
+        },
+      },
     ],
   };
   const state = overrides.state || {};
@@ -58,9 +68,17 @@ function createOwner(overrides = {}) {
         : { hasUrbanMatch: false }
     ),
   };
-  return createModernCityLightsRenderOwner({
+  const projection = ([lon, lat]) => [lon + 180, 90 - lat];
+  projection.scale = () => 1;
+  projection.translate = () => [2, 3];
+  projection.center = () => [4, 5];
+  projection.rotate = () => [6, 7, 8];
+  return createCityLightsRenderOwner({
     state,
-    constants: {
+    assets: {
+      HISTORICAL_1930_CITY_LIGHTS_ENTRIES: overrides.historicalEntries || [],
+      HISTORICAL_DERIVED_GLOW_MAX_ENTRIES: 2,
+      HISTORICAL_DERIVED_GLOW_MIN_WEIGHT: 0.62,
       MODERN_CITY_LIGHTS_BASE_THRESHOLD: 10,
       MODERN_CITY_LIGHTS_CORRIDOR_THRESHOLD: 14,
       MODERN_CITY_LIGHTS_GRID: [0, 12, 15, 20],
@@ -73,7 +91,7 @@ function createOwner(overrides = {}) {
     getters: {
       getContext: () => context,
       getPathCanvas: () => {},
-      getProjection: () => ([lon, lat]) => [lon + 180, 90 - lat],
+      getProjection: () => projection,
     },
     helpers: {
       clamp,
@@ -89,9 +107,9 @@ function createOwner(overrides = {}) {
         targetContext?.canvas?.ownerDocument?.createElement?.("canvas") || createCanvasContext(width, height).canvas
       ),
       getCityCapitalScore: (feature) => Number(feature?.properties?.capitalScore || 0),
+      getCityGeoCoordinates: (feature) => [feature.properties.lon, feature.properties.lat],
       getDefaultZoomTransform: () => ({ x: 0, y: 0, k: 1 }),
       getEffectiveCityCollection: () => cityCollection,
-      getModernCityLightsProjectionKey: () => "projection-a",
       getTransformSignature: (transform) => `${transform.x}:${transform.y}:${transform.k}`,
       getUrbanCityPolicyOwner: () => policyOwner,
       normalizeDayNightStyleConfig: (config = {}) => ({
@@ -176,7 +194,7 @@ test("modern city lights owner static layer key includes render invalidation inp
 
   assert.ok(key.includes("1600::1200::2.000"));
   assert.match(key, /10:20:2/);
-  assert.match(key, /projection-a/);
+  assert.match(key, /800\|600\|1\.0000\|2\.00\|3\.00\|4\.00\|5\.00\|6\.00\|7\.00\|8\.00/);
   assert.match(key, /scenario-a/);
   assert.match(key, /field:urbanGlow:7/);
   assert.match(key, /"intensity":"1\.100"/);
@@ -209,4 +227,78 @@ test("modern city lights owner static layer key tolerates missing intensity chan
   const owner = createOwner({ state });
 
   assert.match(owner.getModernCityLightsStaticLayerKey({ cityLightsIntensity: 1.1 }), /field:urbanGlow:0/);
+});
+
+test("city lights owner normalizes historical density and retention controls", () => {
+  const owner = createOwner();
+
+  assert.equal(owner.getHistoricalCityLightsDensity({ historicalCityLightsDensity: 1.4 }), 1.4);
+  assert.equal(owner.getHistoricalCityLightsDensity({ historicalCityLightsDensity: 9 }), 2);
+  assert.equal(owner.getHistoricalCityLightsDensity({ historicalCityLightsDensity: "bad" }), 1.25);
+  assert.equal(owner.getHistoricalCityLightsSecondaryRetention({ historicalCityLightsSecondaryRetention: 0.8 }), 0.8);
+  assert.equal(owner.getHistoricalCityLightsSecondaryRetention({ historicalCityLightsSecondaryRetention: -1 }), 0);
+  assert.equal(owner.getHistoricalCityLightsSecondaryRetention({ historicalCityLightsSecondaryRetention: "bad" }), 0.55);
+});
+
+test("city lights owner prefers historical asset entries before fallback cities", () => {
+  const owner = createOwner({
+    historicalEntries: [
+      {
+        lon: 12,
+        lat: 34,
+        weight: 0.9,
+        capitalKind: "country_capital",
+        population: 1000,
+        nameAscii: "Asset Capital",
+      },
+    ],
+  });
+
+  const entries = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 0 });
+
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].nameAscii, "Asset Capital");
+});
+
+test("city lights owner invalidates historical fallback entries by renderer state", () => {
+  const state = { cityLayerRevision: 1, activeScenarioId: "scenario-a" };
+  const owner = createOwner({ state });
+
+  const first = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 0.2 });
+  const second = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 0.2 });
+  assert.equal(first, second);
+  assert.equal(first.length, 1);
+  assert.equal(first[0].nameAscii, "Fallback Capital");
+
+  state.cityLayerRevision = 2;
+  const afterRevisionChange = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 0.2 });
+  assert.notEqual(afterRevisionChange, first);
+
+  state.activeScenarioId = "scenario-b";
+  const afterScenarioChange = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 0.2 });
+  assert.notEqual(afterScenarioChange, afterRevisionChange);
+
+  const afterRetentionChange = owner.getHistoricalNightLightEntries({ historicalCityLightsSecondaryRetention: 1 });
+  assert.notEqual(afterRetentionChange, afterScenarioChange);
+});
+
+test("city lights owner invalidates historical derived glow entries by projection and retention", () => {
+  const state = { width: 800, height: 600 };
+  const owner = createOwner({ state });
+  const entries = [
+    { lon: 10, lat: 20, weight: 0.9, nameAscii: "Glow A" },
+    { lon: 30, lat: 40, weight: 0.7, nameAscii: "Glow B" },
+  ];
+
+  const first = owner.getHistoricalDerivedGlowEntries(entries, { historicalCityLightsSecondaryRetention: 0.1 });
+  const second = owner.getHistoricalDerivedGlowEntries(entries, { historicalCityLightsSecondaryRetention: 0.1 });
+  assert.equal(first, second);
+  assert.equal(first.length, 2);
+
+  const afterRetentionChange = owner.getHistoricalDerivedGlowEntries(entries, { historicalCityLightsSecondaryRetention: 0.9 });
+  assert.notEqual(afterRetentionChange, first);
+
+  state.width = 900;
+  const afterProjectionKeyChange = owner.getHistoricalDerivedGlowEntries(entries, { historicalCityLightsSecondaryRetention: 0.9 });
+  assert.notEqual(afterProjectionKeyChange, afterRetentionChange);
 });

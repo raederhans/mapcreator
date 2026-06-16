@@ -6,7 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_CACHE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_cache_owner.js"
-MODERN_CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "modern_city_lights_render_owner.js"
+CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_lights_render_owner.js"
 
 
 class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
@@ -76,7 +76,7 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
 
     def test_modern_city_lights_static_cache_excludes_clock_fields(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        owner_content = MODERN_CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        owner_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         signature_match = re.search(
             r"function getModernCityLightsStaticConfigSignature\(config\) \{(?P<body>[\s\S]*?)\n  \}",
             owner_content,
@@ -117,13 +117,16 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
             r"context\.drawImage\(staticLayerCanvas, 0, 0\);",
         )
         self.assertIn("drawNightLightsLayer(k, config, solarState);", renderer_content)
-        self.assertIn("drawModernNightLightsLayer(k, config, solarState);", renderer_content)
+        self.assertIn("return getCityLightsRenderOwner().drawNightLightsLayer(k, config, solarState);", renderer_content)
+        self.assertIn("function drawHistoricalNightLightsLayer(k, config, solarState) {", owner_content)
+        self.assertNotIn("const historicalCityLightsFallbackCache = {", renderer_content)
+        self.assertNotIn("function getHistoricalCityLightsDensity(config) {", renderer_content)
         self.assertNotIn("allowStaticBuild", renderer_content)
         self.assertNotIn("allowBuild: allowStaticBuild", renderer_content)
 
     def test_modern_city_lights_advanced_controls_reach_draw_algorithms(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        owner_content = MODERN_CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        owner_content = CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
 
         texture_match = re.search(
             r"function drawModernCityLightsTexture\(config, intensity\) \{(?P<body>[\s\S]*?)\n  \}",

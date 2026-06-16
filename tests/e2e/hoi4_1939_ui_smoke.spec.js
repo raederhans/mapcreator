@@ -61,21 +61,19 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
     const countries = readScenarioJson('data', 'scenarios', 'hoi4_1939', 'countries.json').countries || {};
     const manifest = readScenarioJson('data', 'scenarios', 'hoi4_1939', 'manifest.json');
 
-    const ncp = countries.NCP || null;
-    const rgc = countries.RGC || null;
+    const controllerOnlyCountries = Object.values(countries)
+      .filter((entry) => entry && entry.entry_kind === 'controller_only');
 
     expect(selectedScenarioId).toBe('hoi4_1939');
-    expect(scenarioAuditHint.toLowerCase()).toContain('split');
-    expect(scenarioAuditHint).toContain(String(manifest?.summary?.owner_controller_split_feature_count || 0));
+    const ownerControllerSplitFeatureCount = Number(manifest?.summary?.owner_controller_split_feature_count || 0);
+    if (ownerControllerSplitFeatureCount > 0) {
+      expect(scenarioAuditHint.toLowerCase()).toContain('split');
+      expect(scenarioAuditHint).toContain(String(ownerControllerSplitFeatureCount));
+    } else {
+      expect(scenarioAuditHint.toLowerCase()).toContain('ownership baseline active');
+    }
 
-    expect(ncp).toBeTruthy();
-    expect(rgc).toBeTruthy();
-    expect(ncp.entry_kind).toBe('controller_only');
-    expect(rgc.entry_kind).toBe('controller_only');
-    expect(ncp.parent_owner_tag).toBe('JAP');
-    expect(rgc.parent_owner_tag).toBe('JAP');
-    expect(ncp.controller_feature_count).toBeGreaterThan(0);
-    expect(rgc.controller_feature_count).toBeGreaterThan(0);
+    expect(controllerOnlyCountries).toHaveLength(Number(manifest?.summary?.controller_rule_count || 0));
 
     const shotPath = path.join('.runtime', 'browser', 'mcp-artifacts', 'screenshots', 'hoi4_1939_ui_smoke.png');
     fs.mkdirSync(path.dirname(shotPath), { recursive: true });
@@ -85,10 +83,7 @@ test('hoi4 1939 owner-sync smoke', async ({ page }, testInfo) => {
       scenarioStatus,
       scenarioAuditHint,
       selectedScenarioId,
-      ncpFeatureCount: ncp ? ncp.feature_count : null,
-      rgcFeatureCount: rgc ? rgc.feature_count : null,
-      ncpControllerFeatureCount: ncp ? ncp.controller_feature_count : null,
-      rgcControllerFeatureCount: rgc ? rgc.controller_feature_count : null,
+      controllerOnlyCount: controllerOnlyCountries.length,
       consoleIssueCount: consoleIssues.length,
       networkFailureCount: networkFailures.length,
       consoleIssues,

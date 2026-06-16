@@ -163,6 +163,17 @@ test('tno 1962 releasable catalog smoke', async ({ page }, testInfo) => {
     expect(geoLocalePatchRequests.some((url) => url.includes('/geo_locale_patch.zh.json'))).toBeFalsy();
     expect(bathymetryRequests).toEqual([]);
 
+    await page.evaluate(async () => {
+      const { state } = await import('/js/core/state.js');
+      state.toggleRightPanelFn?.(true);
+      document.querySelector('#inspectorSidebarTabInspector')?.click();
+      const countryInspectorSection = document.querySelector('#countryInspectorSection');
+      if (countryInspectorSection instanceof HTMLDetailsElement) {
+        countryInspectorSection.open = true;
+      }
+    });
+    await expect(page.locator('body')).toHaveClass(/right-drawer-open/);
+    await expect(page.locator('#inspectorSidebarTabInspector')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#countrySearch')).toBeVisible();
 
     const shotPath = path.join('.runtime', 'browser', 'mcp-artifacts', 'screenshots', 'tno_1962_ui_smoke.png');

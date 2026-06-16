@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 958164,
+      "size_bytes": 942613,
       "source_kind": "dist"
     },
     {
@@ -45781,6 +45781,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/city_lights_render_owner.js",
+      "size_bytes": 62413,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
       "size_bytes": 2555,
       "source_kind": "dist"
@@ -45803,11 +45808,6 @@
     {
       "path": "app/js/core/renderer/interaction_border_snapshot_owner.js",
       "size_bytes": 5511,
-      "source_kind": "dist"
-    },
-    {
-      "path": "app/js/core/renderer/modern_city_lights_render_owner.js",
-      "size_bytes": 45533,
       "source_kind": "dist"
     },
     {
@@ -46962,7 +46962,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1450972,
+      "size_bytes": 1450965,
       "source_kind": "dist"
     },
     {
@@ -46981,5 +46981,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145174162
+  "total_bytes": 1145175484
 }

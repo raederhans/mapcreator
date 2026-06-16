@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test:node:city-lights-assets": "node --test tests/city_lights_asset_contract.test.mjs",
-    "test:node:modern-city-lights-owner": "node --test tests/modern_city_lights_render_owner_behavior.test.mjs",
+    "test:node:city-lights-render-owner": "node --test tests/city_lights_render_owner_behavior.test.mjs",
+    "test:node:modern-city-lights-owner": "npm run test:node:city-lights-render-owner",
     "test:node:data-service-runtime": "node --test tests/data_service_runtime_behavior.test.mjs",
     "test:node:intensity-field": "node --test tests/intensity_field.node.test.mjs",
     "test:node:intensity-field-mask": "node --test tests/intensity_field_mask_owner.node.test.mjs",

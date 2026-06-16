@@ -9,6 +9,7 @@ test.setTimeout(120_000);
 const APP_URL = getAppUrl();
 const VIEW_SETTINGS_STORAGE_KEY = "map_view_settings_v1";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
+const BACKEND_AUTH_PROBE_401_TEXT = "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
 
 function countChangedPixels(left, right, threshold = 14) {
   const limit = Math.min(left.length, right.length);
@@ -103,6 +104,26 @@ async function setCheckbox(page, id, checked) {
     input.checked = !!targetChecked;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }, { targetId: id, targetChecked: checked });
+}
+
+function isAnonymousBackendProbeFailure(entry) {
+  if (entry?.status !== 401) return false;
+  try {
+    return new URL(entry.url).pathname === "/api/backend/auth/me";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function filterExpectedBackendProbeConsoleIssues(consoleIssues, networkFailures) {
+  const filtered = [...consoleIssues];
+  const expectedProbeCount = networkFailures.filter(isAnonymousBackendProbeFailure).length;
+  for (let index = 0; index < expectedProbeCount; index += 1) {
+    const matchIndex = filtered.findIndex((entry) => entry?.text === BACKEND_AUTH_PROBE_401_TEXT);
+    if (matchIndex === -1) break;
+    filtered.splice(matchIndex, 1);
+  }
+  return filtered;
 }
 
 async function captureCapitalPatch(page, cityId) {
@@ -343,6 +364,6 @@ test("city reveal plan keeps capital coverage across synthetic pans and overlay 
   fs.mkdirSync(path.dirname(shotPath), { recursive: true });
   await page.screenshot({ path: shotPath, fullPage: true });
 
-  expect(consoleIssues).toEqual([]);
-  expect(networkFailures).toEqual([]);
+  expect(filterExpectedBackendProbeConsoleIssues(consoleIssues, networkFailures)).toEqual([]);
+  expect(networkFailures.filter((entry) => !isAnonymousBackendProbeFailure(entry))).toEqual([]);
 });
