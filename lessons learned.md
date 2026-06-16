@@ -113,6 +113,7 @@
 - active 目录只保留当前仍在推进的主线。
 - 任务已完成、验证已补齐、后续故事转入别的 active 目录时，原目录立刻归档。
 - archive 里保留可复用的计划、上下文、任务闭环；空目录和纯残留目录直接清理。
+- 删除已合并的远端 recovery branch 时，同步把注册表恢复线索改成 commit hash，避免后续审计依赖已不存在的 branch 名。
 - 根目录文档如果声称已有 canonical archive 副本，先验证 archive 目标真实存在。
 - 多 worktree 审计中，所有补丁和留档写入都要用目标 worktree 的绝对路径复核一次，避免把执行文档或修复误写到父 checkout。
 - 由真实拓扑生成首页静态 SVG 前，先对裁剪目标执行 `make_valid` 这类确定性几何修复；invalid polygon 会让展示资产生成在 intersection 阶段失败。
