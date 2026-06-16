@@ -4,6 +4,8 @@
 This profile drives section traversal for browser inspection runs.
 It defines where to navigate, which sections to inspect, when to escalate from quick to full mode, and how to enforce runtime budgets.
 
+Structural validation is defined by `PROFILE_SCHEMA` in `tools/browser_smoke_profile_contract.py`; this document is the human-readable companion.
+
 ## Top-level fields
 - `version` (int): profile format version.
 - `[defaults]`: environment and server discovery defaults.

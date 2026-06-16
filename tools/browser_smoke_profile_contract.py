@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 import tomllib
 from urllib.parse import urlparse
+
+import jsonschema
 
 
 VALID_MODES = frozenset({"quick", "full"})
@@ -21,28 +24,204 @@ OUTPUT_ROOTS = {
     "artifact_dir": ".runtime/browser/",
     "report_path": ".runtime/reports/generated/browser/",
 }
-TOP_LEVEL_FIELDS = frozenset({"version", "defaults", "decision", "budgets", "evidence", "outputs", "routes", "sections", "gestures"})
-DEFAULT_FIELDS = frozenset({"base_host", "port_range_start", "port_range_end", "server_title_pattern", "wsl_windows_fallback"})
-DECISION_FIELDS = frozenset({
-    "default_mode",
-    "auto_start_mode",
-    "upgrade_on_cross_section_anomaly",
-    "cross_section_threshold",
-    "upgrade_on_insufficient_evidence",
-    "min_sections_for_confidence",
-    "full_trigger_keywords",
-    "quick_trigger_keywords",
-})
-BUDGET_FIELDS = frozenset({"quick", "full"})
-BUDGET_MODE_FIELDS = frozenset({"max_sections", "max_screenshots", "max_runtime_sec", "max_network_entries"})
-EVIDENCE_FIELDS = frozenset({"console_min_level", "network_include_static", "network_failed_only"})
-OUTPUT_FIELDS = frozenset(OUTPUT_ROOTS)
-ROUTE_FIELDS = frozenset({"id", "url", "scroll", "screenshot", "capture_console", "capture_network", "enabled_modes"})
-SECTION_FIELDS = frozenset({"id", "page", "selector", "expand", "scroll", "screenshot", "priority", "enabled_modes"})
-GESTURE_FIELDS = frozenset({"id", "page", "selector", "type", "from", "to", "wheel", "screenshot", "enabled_modes"})
-INTEGER_REJECTS_BOOL = "must be an integer."
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 MAX_PORT = 65535
+
+
+def _string_array_schema() -> dict[str, Any]:
+    return {
+        "type": "array",
+        "items": {"type": "string", "minLength": 1},
+    }
+
+
+def _mode_array_schema() -> dict[str, Any]:
+    return {
+        "type": "array",
+        "minItems": 1,
+        "items": {"type": "string", "enum": sorted(VALID_MODES)},
+    }
+
+
+def _point_schema() -> dict[str, Any]:
+    return {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {"type": "integer"},
+    }
+
+
+PROFILE_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "version",
+        "defaults",
+        "decision",
+        "budgets",
+        "evidence",
+        "outputs",
+        "routes",
+        "sections",
+        "gestures",
+    ],
+    "additionalProperties": False,
+    "properties": {
+        "version": {"type": "integer", "const": 1},
+        "defaults": {
+            "type": "object",
+            "required": [
+                "base_host",
+                "port_range_start",
+                "port_range_end",
+                "server_title_pattern",
+                "wsl_windows_fallback",
+            ],
+            "additionalProperties": False,
+            "properties": {
+                "base_host": {"type": "string", "enum": sorted(VALID_BASE_HOSTS)},
+                "port_range_start": {"type": "integer", "minimum": 1, "maximum": MAX_PORT},
+                "port_range_end": {"type": "integer", "minimum": 1, "maximum": MAX_PORT},
+                "server_title_pattern": {"type": "string", "minLength": 1},
+                "wsl_windows_fallback": {"type": "boolean"},
+            },
+        },
+        "decision": {
+            "type": "object",
+            "required": [
+                "default_mode",
+                "auto_start_mode",
+                "upgrade_on_cross_section_anomaly",
+                "cross_section_threshold",
+                "upgrade_on_insufficient_evidence",
+                "min_sections_for_confidence",
+                "full_trigger_keywords",
+                "quick_trigger_keywords",
+            ],
+            "additionalProperties": False,
+            "properties": {
+                "default_mode": {"type": "string", "enum": sorted(VALID_DEFAULT_MODES)},
+                "auto_start_mode": {"type": "string", "enum": sorted(VALID_MODES)},
+                "upgrade_on_cross_section_anomaly": {"type": "boolean"},
+                "cross_section_threshold": {"type": "integer", "minimum": 1},
+                "upgrade_on_insufficient_evidence": {"type": "boolean"},
+                "min_sections_for_confidence": {"type": "integer", "minimum": 1},
+                "full_trigger_keywords": _string_array_schema(),
+                "quick_trigger_keywords": _string_array_schema(),
+            },
+        },
+        "budgets": {
+            "type": "object",
+            "required": ["quick", "full"],
+            "additionalProperties": False,
+            "properties": {
+                "quick": {
+                    "type": "object",
+                    "required": ["max_sections", "max_screenshots", "max_runtime_sec", "max_network_entries"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "max_sections": {"type": "integer", "minimum": 1},
+                        "max_screenshots": {"type": "integer", "minimum": 1},
+                        "max_runtime_sec": {"type": "integer", "minimum": 1},
+                        "max_network_entries": {"type": "integer", "minimum": 1},
+                    },
+                },
+                "full": {
+                    "type": "object",
+                    "required": ["max_sections", "max_screenshots", "max_runtime_sec", "max_network_entries"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "max_sections": {"type": "integer", "minimum": 1},
+                        "max_screenshots": {"type": "integer", "minimum": 1},
+                        "max_runtime_sec": {"type": "integer", "minimum": 1},
+                        "max_network_entries": {"type": "integer", "minimum": 1},
+                    },
+                },
+            },
+        },
+        "evidence": {
+            "type": "object",
+            "required": ["console_min_level", "network_include_static", "network_failed_only"],
+            "additionalProperties": False,
+            "properties": {
+                "console_min_level": {"type": "string", "enum": sorted(VALID_CONSOLE_LEVELS)},
+                "network_include_static": {"type": "boolean"},
+                "network_failed_only": {"type": "boolean"},
+            },
+        },
+        "outputs": {
+            "type": "object",
+            "required": sorted(OUTPUT_ROOTS),
+            "additionalProperties": False,
+            "properties": {
+                "artifact_dir": {"type": "string", "minLength": 1},
+                "report_path": {"type": "string", "minLength": 1},
+            },
+        },
+        "routes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["id", "url"],
+                "additionalProperties": False,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "url": {"type": "string", "minLength": 1},
+                    "scroll": {"type": "integer", "minimum": 0},
+                    "screenshot": {"type": "boolean"},
+                    "capture_console": {"type": "boolean"},
+                    "capture_network": {"type": "boolean"},
+                    "enabled_modes": _mode_array_schema(),
+                },
+            },
+        },
+        "sections": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": ["id", "page", "selector"],
+                "additionalProperties": False,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "page": {"type": "string", "minLength": 1},
+                    "selector": {"type": "string", "minLength": 1},
+                    "expand": {"type": "string", "enum": sorted(VALID_EXPAND_VALUES)},
+                    "scroll": {"type": "integer", "minimum": 0},
+                    "screenshot": {"type": "string", "enum": sorted(VALID_SCREENSHOT_POLICIES)},
+                    "priority": {"type": "string", "enum": sorted(VALID_PRIORITIES)},
+                    "enabled_modes": _mode_array_schema(),
+                },
+            },
+        },
+        "gestures": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["id", "page", "selector", "type"],
+                "additionalProperties": False,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "page": {"type": "string", "minLength": 1},
+                    "selector": {"type": "string", "minLength": 1},
+                    "type": {"type": "string", "enum": sorted(VALID_GESTURE_TYPES)},
+                    "from": _point_schema(),
+                    "to": _point_schema(),
+                    "wheel": {"type": "integer"},
+                    "screenshot": {"type": "boolean"},
+                    "enabled_modes": _mode_array_schema(),
+                },
+            },
+        },
+    },
+}
+
+
+@lru_cache(maxsize=1)
+def _profile_validator() -> jsonschema.Draft202012Validator:
+    return jsonschema.Draft202012Validator(PROFILE_SCHEMA)
 
 
 def validate_profile_path(profile_path: str | Path) -> list[str]:
@@ -57,359 +236,247 @@ def validate_profile_path(profile_path: str | Path) -> list[str]:
 
 
 def validate_profile_payload(payload: Any, path: str = "<profile>") -> list[str]:
-    errors: list[str] = []
     if not isinstance(payload, dict):
         return [f"{path}: profile must be a table."]
 
-    _reject_unknown_fields(payload, TOP_LEVEL_FIELDS, path, errors)
-    version = payload.get("version")
-    if not _is_int(version):
-        errors.append(f"{path}: version must be an integer.")
-    elif version != 1:
-        errors.append(f"{path}: version must be 1.")
+    errors = [
+        _format_schema_error(error, payload, path)
+        for error in sorted(
+            _profile_validator().iter_errors(payload),
+            key=lambda item: (list(item.absolute_path), item.validator, str(item.message)),
+        )
+    ]
 
-    defaults = _require_table(payload, "defaults", path, errors)
-    decision = _require_table(payload, "decision", path, errors)
-    budgets = _require_table(payload, "budgets", path, errors)
-    evidence = _require_table(payload, "evidence", path, errors)
-    outputs = _require_table(payload, "outputs", path, errors)
-    routes = _require_table_array(payload, "routes", path, errors)
-    sections = _require_table_array(payload, "sections", path, errors)
-    gestures = _require_table_array(payload, "gestures", path, errors)
+    defaults = payload.get("defaults")
+    outputs = payload.get("outputs")
+    routes = payload.get("routes")
+    sections = payload.get("sections")
+    gestures = payload.get("gestures")
 
-    if defaults is not None:
-        _validate_defaults(defaults, path, errors)
-    if decision is not None:
-        _validate_decision(decision, path, errors)
-    budget_values: dict[str, dict[str, int]] = {}
-    if budgets is not None:
-        budget_values = _validate_budgets(budgets, path, errors)
-    if evidence is not None:
-        _validate_evidence(evidence, path, errors)
-    if outputs is not None:
-        _validate_outputs(outputs, path, errors)
-
-    route_modes = _validate_routes(routes, path, errors)
-    _validate_sections(sections, route_modes, path, errors)
-    _validate_gestures(gestures, route_modes, path, errors)
-    _validate_budget_relationships(budget_values, path, errors)
+    _validate_port_relationship(defaults, path, errors)
+    _validate_output_path_containment(outputs, path, errors)
+    _validate_route_urls(routes, path, errors)
+    _validate_safe_ids(routes, "routes", path, errors)
+    _validate_safe_ids(sections, "sections", path, errors)
+    _validate_safe_ids(gestures, "gestures", path, errors)
+    route_modes = _route_mode_index(routes, path, errors)
+    _validate_mode_coverage(route_modes, path, errors)
+    _validate_page_references(sections, "sections", route_modes, path, errors)
+    _validate_page_references(gestures, "gestures", route_modes, path, errors)
+    _validate_budget_relationships(payload.get("budgets"), path, errors)
     return errors
 
 
-def _validate_defaults(table: dict[str, Any], path: str, errors: list[str]) -> None:
-    _reject_unknown_fields(table, DEFAULT_FIELDS, f"{path}: defaults", errors)
-    base_host = _require_string(table, "base_host", f"{path}: defaults", errors)
-    if base_host is not None and base_host.lower() not in VALID_BASE_HOSTS:
-        errors.append(f"{path}: defaults.base_host must be one of: {', '.join(sorted(VALID_BASE_HOSTS))}.")
-    _require_string(table, "server_title_pattern", f"{path}: defaults", errors)
-    for field in ("port_range_start", "port_range_end"):
-        value = _require_int(table, field, f"{path}: defaults", errors, positive=True)
-        if value is not None and value > MAX_PORT:
-            errors.append(f"{path}: defaults.{field} must be less than or equal to {MAX_PORT}.")
-    _require_bool(table, "wsl_windows_fallback", f"{path}: defaults", errors)
-    start = table.get("port_range_start")
-    end = table.get("port_range_end")
+def _format_schema_error(error: jsonschema.ValidationError, payload: dict[str, Any], path: str) -> str:
+    parts = list(error.absolute_path)
+    if error.validator == "additionalProperties":
+        unknown = _unexpected_property(error)
+        return f"{_entry_label(payload, parts, path)} has unknown field: {unknown}."
+    if error.validator == "const" and parts == ["version"]:
+        return f"{path}: version must be 1."
+    if error.validator == "required":
+        missing = _missing_required_property(error)
+        return _format_missing_required(payload, parts, missing, path)
+    if error.validator == "enum":
+        return _format_enum_error(payload, parts, error.validator_value, path)
+    if error.validator == "type":
+        return _format_type_error(payload, parts, error.validator_value, path)
+    if error.validator == "minLength":
+        return f"{_field_label(payload, parts, path)} must be a non-empty string."
+    if error.validator == "minItems":
+        return _format_min_items_error(payload, parts, path)
+    if error.validator == "maxItems":
+        return f"{_field_label(payload, parts, path)} must be a two-integer array."
+    if error.validator == "minimum":
+        label = _field_label(payload, parts, path)
+        if error.validator_value == 0:
+            return f"{label} must be greater than or equal to 0."
+        return f"{label} must be greater than 0."
+    if error.validator == "maximum":
+        return f"{_field_label(payload, parts, path)} must be less than or equal to {error.validator_value}."
+    return f"{path}: {error.message}"
+
+
+def _format_missing_required(payload: dict[str, Any], parts: list[Any], field: str, path: str) -> str:
+    label = _entry_label(payload, parts, path)
+    if not parts:
+        if field == "version":
+            return f"{path}: version must be an integer."
+        if field in {"routes", "sections", "gestures"}:
+            return f"{path}: {field} must be an array of tables."
+        return f"{path}: {field} must be a table."
+    if field == "type" and parts and parts[0] == "gestures":
+        return f"{label}.type must be one of: {', '.join(sorted(VALID_GESTURE_TYPES))}."
+    if field == "enabled_modes":
+        return f"{label}.enabled_modes must be a non-empty array."
+    if field in {"id", "url", "page", "selector", "base_host", "server_title_pattern", "artifact_dir", "report_path"}:
+        return f"{label}.{field} must be a non-empty string."
+    if field in {"screenshot", "capture_console", "capture_network", "wsl_windows_fallback"}:
+        return f"{label}.{field} must be a boolean."
+    if field.startswith("max_") or field.startswith("port_") or field in {"scroll", "wheel"}:
+        return f"{label}.{field} must be an integer."
+    return f"{label}.{field} is required."
+
+
+def _format_enum_error(payload: dict[str, Any], parts: list[Any], allowed: Any, path: str) -> str:
+    allowed_values = ", ".join(sorted(str(value) for value in allowed))
+    if len(parts) >= 3 and parts[-2] == "enabled_modes":
+        return f"{_field_label(payload, parts[:-1], path)} has invalid mode: {_value_at_path(payload, parts)}."
+    return f"{_field_label(payload, parts, path)} must be one of: {allowed_values}."
+
+
+def _format_type_error(payload: dict[str, Any], parts: list[Any], expected: Any, path: str) -> str:
+    if not parts:
+        return f"{path}: profile must be a table."
+    field = parts[-1]
+    label = _field_label(payload, parts, path)
+    expected_values = set(expected if isinstance(expected, list) else [expected])
+    if parts == ["version"]:
+        return f"{path}: version must be an integer."
+    if "object" in expected_values:
+        return f"{_parent_label(payload, parts, path)}: {field} must be a table."
+    if "array" in expected_values:
+        if parts == ["routes"] or parts == ["sections"] or parts == ["gestures"]:
+            return f"{path}: {field} must be an array of tables."
+        if field in {"from", "to"}:
+            return f"{label} must be a two-integer array."
+        if field in {"full_trigger_keywords", "quick_trigger_keywords"}:
+            return f"{label} must be an array of non-empty strings."
+        return f"{label} must be a non-empty array."
+    if "integer" in expected_values:
+        return f"{label} must be an integer."
+    if "boolean" in expected_values:
+        return f"{label} must be a boolean."
+    if "string" in expected_values:
+        return f"{label} must be a non-empty string."
+    return f"{path}: expected {expected} at {'.'.join(str(part) for part in parts)}."
+
+
+def _format_min_items_error(payload: dict[str, Any], parts: list[Any], path: str) -> str:
+    if parts == ["routes"]:
+        return f"{path}: routes must contain at least one route."
+    if parts == ["sections"]:
+        return f"{path}: sections must contain at least one section."
+    if parts and parts[-1] in {"from", "to"}:
+        return f"{_field_label(payload, parts, path)} must be a two-integer array."
+    return f"{_field_label(payload, parts, path)} must be a non-empty array."
+
+
+def _validate_port_relationship(defaults: Any, path: str, errors: list[str]) -> None:
+    if not isinstance(defaults, dict):
+        return
+    start = defaults.get("port_range_start")
+    end = defaults.get("port_range_end")
     if _is_int(start) and _is_int(end) and start > end:
         errors.append(f"{path}: defaults.port_range_start must be less than or equal to defaults.port_range_end.")
 
 
-def _validate_decision(table: dict[str, Any], path: str, errors: list[str]) -> None:
-    _reject_unknown_fields(table, DECISION_FIELDS, f"{path}: decision", errors)
-    _require_enum(table, "default_mode", VALID_DEFAULT_MODES, f"{path}: decision", errors)
-    _require_enum(table, "auto_start_mode", VALID_MODES, f"{path}: decision", errors)
-    for field in ("upgrade_on_cross_section_anomaly", "upgrade_on_insufficient_evidence"):
-        _require_bool(table, field, f"{path}: decision", errors)
-    for field in ("cross_section_threshold", "min_sections_for_confidence"):
-        _require_int(table, field, f"{path}: decision", errors, positive=True)
-    for field in ("full_trigger_keywords", "quick_trigger_keywords"):
-        _require_string_array(table, field, f"{path}: decision", errors)
-
-
-def _validate_budgets(table: dict[str, Any], path: str, errors: list[str]) -> dict[str, dict[str, int]]:
-    _reject_unknown_fields(table, BUDGET_FIELDS, f"{path}: budgets", errors)
-    budget_values: dict[str, dict[str, int]] = {}
-    for mode in ("quick", "full"):
-        mode_table = _require_table(table, mode, f"{path}: budgets", errors)
-        if mode_table is None:
-            continue
-        _reject_unknown_fields(mode_table, BUDGET_MODE_FIELDS, f"{path}: budgets.{mode}", errors)
-        budget_values[mode] = {}
-        for field in ("max_sections", "max_screenshots", "max_runtime_sec", "max_network_entries"):
-            value = _require_int(mode_table, field, f"{path}: budgets.{mode}", errors, positive=True)
-            if value is not None:
-                budget_values[mode][field] = value
-    return budget_values
-
-
-def _validate_evidence(table: dict[str, Any], path: str, errors: list[str]) -> None:
-    _reject_unknown_fields(table, EVIDENCE_FIELDS, f"{path}: evidence", errors)
-    _require_enum(table, "console_min_level", VALID_CONSOLE_LEVELS, f"{path}: evidence", errors)
-    for field in ("network_include_static", "network_failed_only"):
-        _require_bool(table, field, f"{path}: evidence", errors)
-
-
-def _validate_outputs(table: dict[str, Any], path: str, errors: list[str]) -> None:
-    _reject_unknown_fields(table, OUTPUT_FIELDS, f"{path}: outputs", errors)
+def _validate_output_path_containment(outputs: Any, path: str, errors: list[str]) -> None:
+    if not isinstance(outputs, dict):
+        return
     for field, required_root in OUTPUT_ROOTS.items():
-        value = _require_string(table, field, f"{path}: outputs", errors)
-        if value is None:
+        value = outputs.get(field)
+        if not isinstance(value, str):
             continue
         normalized = _normalize_repo_relative_path(value)
         if normalized is None or not normalized.startswith(required_root):
             errors.append(f"{path}: outputs.{field} must stay under {required_root}.")
 
 
-def _validate_routes(routes: list[dict[str, Any]] | None, path: str, errors: list[str]) -> dict[str, set[str]]:
-    if routes is None:
-        return {}
-    if not routes:
-        errors.append(f"{path}: routes must contain at least one route.")
-        return {}
-
-    route_modes: dict[str, set[str]] = {}
-    ids: set[str] = set()
-    modes_seen: set[str] = set()
+def _validate_route_urls(routes: Any, path: str, errors: list[str]) -> None:
+    if not isinstance(routes, list):
+        return
     for index, route in enumerate(routes):
-        route_id = _entry_id(route, index)
-        label = f"{path}: routes[{route_id}]"
-        _reject_unknown_fields(route, ROUTE_FIELDS, label, errors)
-        rid = _require_identifier(route, "id", label, errors)
-        route_url = _require_string(route, "url", label, errors)
-        _validate_route_url(route_url, f"{label}.url", errors)
-        _optional_int(route, "scroll", label, errors, minimum=0)
-        for field in ("screenshot", "capture_console", "capture_network"):
-            _optional_bool(route, field, label, errors)
-        modes = _validate_modes(route.get("enabled_modes", ["quick", "full"]), f"{label}.enabled_modes", errors)
-        modes_seen.update(modes)
-        if rid:
-            if rid in ids:
-                errors.append(f"{path}: routes has duplicate id: {rid}.")
-            ids.add(rid)
-            route_modes[rid] = modes
-    for mode in VALID_MODES:
-        if mode not in modes_seen:
-            errors.append(f"{path}: routes must include at least one {mode} route.")
+        if not isinstance(route, dict):
+            continue
+        label = f"{path}: routes[{_entry_id(route, index)}].url"
+        _validate_route_url(route.get("url"), label, errors)
+
+
+def _validate_safe_ids(entries: Any, collection: str, path: str, errors: list[str]) -> None:
+    if not isinstance(entries, list):
+        return
+    seen: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        entry_id = _entry_id(entry, index)
+        value = entry.get("id")
+        if isinstance(value, str) and value.strip() and not SAFE_ID_RE.fullmatch(value):
+            errors.append(
+                f"{path}: {collection}[{entry_id}].id must use only letters, numbers, underscores, and hyphens."
+            )
+        if isinstance(value, str) and value.strip():
+            if value in seen:
+                errors.append(f"{path}: {collection} has duplicate id: {value}.")
+            seen.add(value)
+
+
+def _route_mode_index(routes: Any, path: str, errors: list[str]) -> dict[str, set[str]]:
+    if not isinstance(routes, list):
+        return {}
+    route_modes: dict[str, set[str]] = {}
+    for index, route in enumerate(routes):
+        if not isinstance(route, dict):
+            continue
+        rid = route.get("id")
+        if not isinstance(rid, str) or not rid.strip():
+            continue
+        modes = _valid_modes_from(route.get("enabled_modes", ["quick", "full"]))
+        route_modes[rid] = modes
     return route_modes
 
 
-def _validate_sections(
-    sections: list[dict[str, Any]] | None,
+def _validate_mode_coverage(route_modes: dict[str, set[str]], path: str, errors: list[str]) -> None:
+    if not route_modes:
+        return
+    modes_seen = set().union(*route_modes.values()) if route_modes else set()
+    for mode in VALID_MODES:
+        if mode not in modes_seen:
+            errors.append(f"{path}: routes must include at least one {mode} route.")
+
+
+def _validate_page_references(
+    entries: Any,
+    collection: str,
     route_modes: dict[str, set[str]],
     path: str,
     errors: list[str],
 ) -> None:
-    if sections is None:
+    if not isinstance(entries, list):
         return
-    if not sections:
-        errors.append(f"{path}: sections must contain at least one section.")
-        return
-    ids: set[str] = set()
-    for index, section in enumerate(sections):
-        section_id = _entry_id(section, index)
-        label = f"{path}: sections[{section_id}]"
-        _reject_unknown_fields(section, SECTION_FIELDS, label, errors)
-        sid = _require_identifier(section, "id", label, errors)
-        page = _require_string(section, "page", label, errors)
-        _require_string(section, "selector", label, errors)
-        _optional_enum(section, "expand", VALID_EXPAND_VALUES, label, errors)
-        _optional_int(section, "scroll", label, errors, minimum=0)
-        _optional_enum(section, "screenshot", VALID_SCREENSHOT_POLICIES, label, errors)
-        _optional_enum(section, "priority", VALID_PRIORITIES, label, errors)
-        modes = _validate_modes(section.get("enabled_modes", ["quick", "full"]), f"{label}.enabled_modes", errors)
-        _validate_page_reference(page, modes, route_modes, f"{label}.page", errors)
-        if sid:
-            if sid in ids:
-                errors.append(f"{path}: sections has duplicate id: {sid}.")
-            ids.add(sid)
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        page = entry.get("page")
+        if not isinstance(page, str) or not page.strip():
+            continue
+        modes = _valid_modes_from(entry.get("enabled_modes", ["quick", "full"]))
+        label = f"{path}: {collection}[{_entry_id(entry, index)}].page"
+        if page not in route_modes:
+            errors.append(f"{label} references unknown route: {page}.")
+            continue
+        missing_modes = sorted(modes - route_modes[page])
+        if missing_modes:
+            errors.append(f"{label} enables modes not available on route {page}: {', '.join(missing_modes)}.")
 
 
-def _validate_gestures(
-    gestures: list[dict[str, Any]] | None,
-    route_modes: dict[str, set[str]],
-    path: str,
-    errors: list[str],
-) -> None:
-    if gestures is None:
+def _validate_budget_relationships(budgets: Any, path: str, errors: list[str]) -> None:
+    if not isinstance(budgets, dict):
         return
-    if not gestures:
+    quick = budgets.get("quick")
+    full = budgets.get("full")
+    if not isinstance(quick, dict) or not isinstance(full, dict):
         return
-    ids: set[str] = set()
-    for index, gesture in enumerate(gestures):
-        gesture_id = _entry_id(gesture, index)
-        label = f"{path}: gestures[{gesture_id}]"
-        _reject_unknown_fields(gesture, GESTURE_FIELDS, label, errors)
-        gid = _require_identifier(gesture, "id", label, errors)
-        page = _require_string(gesture, "page", label, errors)
-        _require_string(gesture, "selector", label, errors)
-        _require_enum(gesture, "type", VALID_GESTURE_TYPES, label, errors)
-        _optional_point(gesture, "from", label, errors)
-        _optional_point(gesture, "to", label, errors)
-        _optional_int(gesture, "wheel", label, errors)
-        _optional_bool(gesture, "screenshot", label, errors)
-        modes = _validate_modes(gesture.get("enabled_modes", ["quick", "full"]), f"{label}.enabled_modes", errors)
-        _validate_page_reference(page, modes, route_modes, f"{label}.page", errors)
-        if gid:
-            if gid in ids:
-                errors.append(f"{path}: gestures has duplicate id: {gid}.")
-            ids.add(gid)
-
-
-def _validate_page_reference(
-    page: str | None,
-    modes: set[str],
-    route_modes: dict[str, set[str]],
-    label: str,
-    errors: list[str],
-) -> None:
-    if page is None:
-        return
-    if page not in route_modes:
-        errors.append(f"{label} references unknown route: {page}.")
-        return
-    missing_modes = sorted(modes - route_modes[page])
-    if missing_modes:
-        errors.append(f"{label} enables modes not available on route {page}: {', '.join(missing_modes)}.")
-
-
-def _validate_budget_relationships(budget_values: dict[str, dict[str, int]], path: str, errors: list[str]) -> None:
-    quick = budget_values.get("quick", {})
-    full = budget_values.get("full", {})
     for field in ("max_sections", "max_screenshots", "max_runtime_sec", "max_network_entries"):
-        if field in quick and field in full and quick[field] > full[field]:
+        quick_value = quick.get(field)
+        full_value = full.get(field)
+        if _is_int(quick_value) and _is_int(full_value) and quick_value > full_value:
             errors.append(f"{path}: budgets.quick.{field} must be less than or equal to budgets.full.{field}.")
 
 
-def _reject_unknown_fields(payload: dict[str, Any], allowed_fields: frozenset[str], label: str, errors: list[str]) -> None:
-    for field in sorted(payload):
-        if field not in allowed_fields:
-            errors.append(f"{label} has unknown field: {field}.")
-
-
-def _require_table(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> dict[str, Any] | None:
-    value = payload.get(field)
-    if isinstance(value, dict):
-        return value
-    errors.append(f"{label}: {field} must be a table.")
-    return None
-
-
-def _require_table_array(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> list[dict[str, Any]] | None:
-    value = payload.get(field)
-    if not isinstance(value, list) or any(not isinstance(entry, dict) for entry in value):
-        errors.append(f"{label}: {field} must be an array of tables.")
-        return None
-    return value
-
-
-def _require_string(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> str | None:
-    value = payload.get(field)
-    if isinstance(value, str) and value.strip():
-        return value
-    errors.append(f"{label}.{field} must be a non-empty string.")
-    return None
-
-
-def _require_identifier(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> str | None:
-    value = _require_string(payload, field, label, errors)
-    if value is not None and not SAFE_ID_RE.fullmatch(value):
-        errors.append(f"{label}.{field} must use only letters, numbers, underscores, and hyphens.")
-    return value
-
-
-def _require_bool(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> bool | None:
-    value = payload.get(field)
-    if isinstance(value, bool):
-        return value
-    errors.append(f"{label}.{field} must be a boolean.")
-    return None
-
-
-def _require_int(
-    payload: dict[str, Any],
-    field: str,
-    label: str,
-    errors: list[str],
-    *,
-    positive: bool = False,
-) -> int | None:
-    value = payload.get(field)
-    if not _is_int(value):
-        errors.append(f"{label}.{field} {INTEGER_REJECTS_BOOL}")
-        return None
-    if positive and value <= 0:
-        errors.append(f"{label}.{field} must be greater than 0.")
-        return None
-    return value
-
-
-def _optional_int(
-    payload: dict[str, Any],
-    field: str,
-    label: str,
-    errors: list[str],
-    *,
-    minimum: int | None = None,
-) -> int | None:
-    if field not in payload:
-        return None
-    value = payload[field]
-    if not _is_int(value):
-        errors.append(f"{label}.{field} {INTEGER_REJECTS_BOOL}")
-        return None
-    if minimum is not None and value < minimum:
-        errors.append(f"{label}.{field} must be greater than or equal to {minimum}.")
-        return None
-    return value
-
-
-def _optional_bool(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> None:
-    if field in payload and not isinstance(payload[field], bool):
-        errors.append(f"{label}.{field} must be a boolean.")
-
-
-def _require_enum(payload: dict[str, Any], field: str, allowed: frozenset[str], label: str, errors: list[str]) -> None:
-    value = payload.get(field)
-    if value not in allowed:
-        errors.append(f"{label}.{field} must be one of: {', '.join(sorted(allowed))}.")
-
-
-def _optional_enum(payload: dict[str, Any], field: str, allowed: frozenset[str], label: str, errors: list[str]) -> None:
-    if field in payload and payload[field] not in allowed:
-        errors.append(f"{label}.{field} must be one of: {', '.join(sorted(allowed))}.")
-
-
-def _require_string_array(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> None:
-    value = payload.get(field)
-    if not isinstance(value, list) or any(not isinstance(entry, str) or not entry.strip() for entry in value):
-        errors.append(f"{label}.{field} must be an array of non-empty strings.")
-
-
-def _validate_modes(value: Any, label: str, errors: list[str]) -> set[str]:
-    if not isinstance(value, list) or not value:
-        errors.append(f"{label} must be a non-empty array.")
-        return set()
-    modes: set[str] = set()
-    for entry in value:
-        if not isinstance(entry, str):
-            errors.append(f"{label} entries must be strings.")
-            continue
-        if entry not in VALID_MODES:
-            errors.append(f"{label} has invalid mode: {entry}.")
-            continue
-        modes.add(entry)
-    return modes
-
-
-def _optional_point(payload: dict[str, Any], field: str, label: str, errors: list[str]) -> None:
-    if field not in payload:
-        return
-    value = payload[field]
-    if not isinstance(value, list) or len(value) != 2 or any(not _is_int(entry) for entry in value):
-        errors.append(f"{label}.{field} must be a two-integer array.")
-
-
-def _validate_route_url(value: str | None, label: str, errors: list[str]) -> None:
-    if value is None:
+def _validate_route_url(value: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(value, str):
         return
     if value.startswith("/") and not value.startswith("//"):
         return
@@ -427,11 +494,67 @@ def _validate_route_url(value: str | None, label: str, errors: list[str]) -> Non
     errors.append(f"{label} must be app-relative or localhost absolute.")
 
 
+def _entry_label(payload: dict[str, Any], parts: list[Any], path: str) -> str:
+    if len(parts) >= 2 and parts[0] in {"routes", "sections", "gestures"} and isinstance(parts[1], int):
+        collection = str(parts[0])
+        index = int(parts[1])
+        entries = payload.get(collection)
+        entry = entries[index] if isinstance(entries, list) and index < len(entries) and isinstance(entries[index], dict) else {}
+        return f"{path}: {collection}[{_entry_id(entry, index)}]"
+    if parts:
+        return f"{path}: {'.'.join(str(part) for part in parts)}"
+    return path
+
+
+def _field_label(payload: dict[str, Any], parts: list[Any], path: str) -> str:
+    if not parts:
+        return path
+    if len(parts) >= 3 and parts[0] in {"routes", "sections", "gestures"} and isinstance(parts[1], int):
+        return f"{_entry_label(payload, parts[:2], path)}.{parts[2]}"
+    return f"{path}: {'.'.join(str(part) for part in parts)}"
+
+
+def _parent_label(payload: dict[str, Any], parts: list[Any], path: str) -> str:
+    if len(parts) <= 1:
+        return path
+    return _field_label(payload, parts[:-1], path)
+
+
 def _entry_id(entry: dict[str, Any], index: int) -> str:
     value = entry.get("id")
     if isinstance(value, str) and value.strip():
         return value
     return f"#{index}"
+
+
+def _valid_modes_from(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {entry for entry in value if isinstance(entry, str) and entry in VALID_MODES}
+
+
+def _value_at_path(payload: dict[str, Any], parts: list[Any]) -> Any:
+    value: Any = payload
+    for part in parts:
+        if isinstance(value, dict):
+            value = value.get(part)
+        elif isinstance(value, list) and isinstance(part, int) and 0 <= part < len(value):
+            value = value[part]
+        else:
+            return None
+    return value
+
+
+def _unexpected_property(error: jsonschema.ValidationError) -> str:
+    match = re.search(r"'([^']+)'", str(error.message))
+    return match.group(1) if match else "<unknown>"
+
+
+def _missing_required_property(error: jsonschema.ValidationError) -> str:
+    match = re.search(r"'([^']+)' is a required property", str(error.message))
+    if match:
+        return match.group(1)
+    return str(next(iter(set(error.validator_value) - set(error.instance)), ""))
 
 
 def _normalize_repo_relative_path(value: str) -> str | None:

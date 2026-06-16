@@ -30,3 +30,14 @@
 - `python tools/build_pages_dist.py` failed only because `python` was not found; the same build passed with bundled Python.
 - Rebuild output included the expected road/rail preview dist sync plus older tracked dist drift in `dist/app/js/core/map_renderer.js` and new renderer helper mirror files under `dist/app/js/core/renderer/`.
 - The correct guard target remains `dist/app/js`, `dist/app/css`, `dist/app/vendor`, and `dist/pages-dist-manifest.json`, which catches the full tracked mirror rather than only the road/rail subset.
+
+## WS2 Findings
+
+- Baseline `py -3 -m unittest tests.test_playwright_app_ready_gate_contract -q` passed before editing.
+- `jsonschema` was already present in `requirements.txt`, `requirements.lock.txt`, and `requirements-dev.lock.txt`; no dependency file change was needed.
+- Validator structural checks now run through Draft 2020-12 `PROFILE_SCHEMA`.
+- Security and relationship checks remain explicit Python code: output containment, route URL locality and port parsing, safe ids, duplicate ids, route mode coverage, page references, mode subsets, port ordering, and quick/full budget ordering.
+- Verification passed:
+  - `py -3 -m unittest tests.test_playwright_app_ready_gate_contract -q`
+  - `py -3 tools/browser_smoke_profile_contract.py ops/browser-mcp/inspection-profile.toml`
+  - `py -3 -m py_compile tools/browser_smoke_profile_contract.py`

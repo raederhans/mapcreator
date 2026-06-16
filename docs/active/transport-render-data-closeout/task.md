@@ -19,13 +19,13 @@ Current status: in-progress
 
 ### WS2: Jsonschema Smoke Profile Validator
 
-- [ ] Run baseline `python -m unittest tests.test_playwright_app_ready_gate_contract -q`.
-- [ ] Locate dependency files and add `jsonschema>=4.0`.
-- [ ] Confirm `jsonschema` import.
-- [ ] Replace structural checks with Draft 2020-12 schema.
-- [ ] Preserve localhost, output containment, safe ID, port, budget, mode subset, and route reference checks.
-- [ ] Run contract test and real profile validation.
-- [ ] Update schema doc if needed.
+- [x] Run baseline `python -m unittest tests.test_playwright_app_ready_gate_contract -q`.
+- [x] Locate dependency files and add `jsonschema>=4.0` if missing.
+- [x] Confirm `jsonschema` import.
+- [x] Replace structural checks with Draft 2020-12 schema.
+- [x] Preserve localhost, output containment, safe ID, port, budget, mode subset, and route reference checks.
+- [x] Run contract test and real profile validation.
+- [x] Update schema doc if needed.
 - [ ] Commit WS2.
 
 ### WS1: Single OSM-GPKG Family Driver
