@@ -135,6 +135,7 @@ import {
   shouldBlockUnderlyingMapSelectionForFacility,
 } from "./renderer/facility_surface.js";
 import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
+import { createOceanRenderOwner } from "./renderer/ocean_render_owner.js";
 import { createModernCityLightsRenderOwner } from "./renderer/modern_city_lights_render_owner.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
@@ -1046,6 +1047,7 @@ let contextLayerResolverOwner = null;
 let rendererAssetUrlPolicyOwner = null;
 let facilitySurfaceOwner = null;
 let riverLayerRenderOwner = null;
+let oceanRenderOwner = null;
 let modernCityLightsRenderOwner = null;
 let transportOverviewRenderOwner = null;
 let borderMeshOwner = null;
@@ -1315,6 +1317,64 @@ function getRiverLayerRenderOwner() {
     },
   });
   return riverLayerRenderOwner;
+}
+
+function getOceanRenderOwner() {
+  if (oceanRenderOwner) {
+    return oceanRenderOwner;
+  }
+  oceanRenderOwner = createOceanRenderOwner({
+    state,
+    constants: {
+      COASTLINE_ACCENT_DENSITY_ALPHA_LOW,
+      COASTLINE_ACCENT_DENSITY_ALPHA_MID,
+      COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW,
+      COASTLINE_ACCENT_DENSITY_THRESHOLD_MID,
+      COASTLINE_ACCENT_DENSITY_WIDTH_SCALE,
+      COASTLINE_LOD_LOW_ZOOM_MAX,
+      COASTLINE_LOD_MID_ZOOM_MAX,
+      OCEAN_MASK_MODE_BATHYMETRY,
+      OCEAN_MASK_MODE_TOPOLOGY,
+      TNO_COASTAL_ACCENT_COLOR,
+    },
+    getters: {
+      getContext: () => context,
+      getPathCanvas: () => pathCanvas,
+    },
+    helpers: {
+      applyBathymetryCoverageExclusionMask,
+      applyOceanClipMask,
+      clamp,
+      clipOutAtlantropaAccentRegions,
+      doesOceanStyleRequireBathymetry,
+      ensureBathymetryDataAvailability,
+      getBathymetryBandFillStyle,
+      getBathymetryBandVisibilityConfig,
+      getBathymetryCollectionBySource,
+      getBathymetryContourStrokeStyle,
+      getBathymetryContourVisibilityConfig,
+      getBathymetryFeatureCollections,
+      getBathymetryFeatureDepthMax,
+      getBathymetryPresetProfile,
+      getCoastlineCollectionForZoom,
+      getOceanStyleConfig,
+      getProjectedLineDensityStats,
+      getSafeCanvasColor,
+      getScenarioCoastalAccentLineWidth,
+      getScenarioCoastalAccentOverlayFeatures,
+      getScenarioCoastalAccentOverlayVisualConfig,
+      getViewportAwareCoastlineCollection: (collection, k) => (
+        getBorderDrawOwner().getViewportAwareCoastlineCollection(collection, k)
+      ),
+      isScenarioCoastalAccentEnabled,
+      isUsableMesh,
+      pathBoundsInScreen,
+      resolveCoastlineTopologySource,
+      resolveOceanMask,
+      sortBathymetryFeaturesForFill,
+    },
+  });
+  return oceanRenderOwner;
 }
 
 function getModernCityLightsRenderOwner() {
@@ -11414,31 +11474,11 @@ function getBathymetryBandVisibilityConfig(feature, k) {
 }
 
 function drawBathymetryBands(collection, oceanStyle) {
-  const zoomK = Number(runtimeState.zoomTransform?.k) || 1;
-  const features = sortBathymetryFeaturesForFill(collection);
-  features.forEach((feature) => {
-    const visibilityConfig = getBathymetryBandVisibilityConfig(feature, zoomK);
-    if (visibilityConfig.alpha <= 0) return;
-    context.save();
-    context.globalAlpha *= visibilityConfig.alpha;
-    context.beginPath();
-    pathCanvas(feature);
-    context.fillStyle = getBathymetryBandFillStyle(feature, oceanStyle);
-    context.fill();
-    context.restore();
-  });
+  return getOceanRenderOwner().drawBathymetryBands(collection, oceanStyle);
 }
 
 function buildVisibleBathymetryContourDepthSet(collection, oceanStyle) {
-  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
-  if (!profile?.skipAlternateContourDepths || !Array.isArray(collection?.features)) {
-    return null;
-  }
-  const uniqueDepths = [...new Set(collection.features.map((feature) => getBathymetryFeatureDepthMax(feature)))]
-    .filter((depth) => depth > 0)
-    .sort((a, b) => a - b);
-  if (!uniqueDepths.length) return null;
-  return new Set(uniqueDepths.filter((_, index) => index % 2 === 0));
+  return getOceanRenderOwner().buildVisibleBathymetryContourDepthSet(collection, oceanStyle);
 }
 
 function getBathymetryContourVisibilityConfig(feature, k) {
@@ -11470,27 +11510,7 @@ function getBathymetryContourVisibilityConfig(feature, k) {
 }
 
 function drawBathymetryContours(collection, oceanStyle) {
-  if (!Array.isArray(collection?.features) || !collection.features.length) return;
-  const zoomK = Number(runtimeState.zoomTransform?.k) || 1;
-  const profile = oceanStyle.bathymetryProfile || getBathymetryPresetProfile(oceanStyle.preset);
-  const lineWidthBase = (profile?.contourLineWidthBase ?? 0.45)
-    + oceanStyle.contourStrength * (profile?.contourLineWidthScale ?? 0.75);
-  const visibleDepths = buildVisibleBathymetryContourDepthSet(collection, oceanStyle);
-  collection.features.forEach((feature) => {
-    if (visibleDepths && !visibleDepths.has(getBathymetryFeatureDepthMax(feature))) {
-      return;
-    }
-    const visibilityConfig = getBathymetryContourVisibilityConfig(feature, zoomK);
-    if (visibilityConfig.alpha <= 0) return;
-    context.save();
-    context.globalAlpha *= visibilityConfig.alpha;
-    context.beginPath();
-    pathCanvas(feature);
-    context.strokeStyle = getBathymetryContourStrokeStyle(feature, oceanStyle);
-    context.lineWidth = lineWidthBase;
-    context.stroke();
-    context.restore();
-  });
+  return getOceanRenderOwner().drawBathymetryContours(collection, oceanStyle);
 }
 
 function getBathymetryCollectionBySource(collection, source) {
@@ -11544,57 +11564,11 @@ function getFeatureProjectedDensity(feature) {
 }
 
 function buildCoastalAccentStrokeBuckets(entries) {
-  const buckets = new Map();
-  entries.forEach((entry) => {
-    if (!entry?.geometry) return;
-    const alpha = clamp(Number(entry.alpha) || 0, 0, 1);
-    const lineWidth = Math.max(0, Number(entry.lineWidth) || 0);
-    if (!(alpha > 0) || !(lineWidth > 0)) return;
-    const key = `${alpha.toFixed(4)}|${lineWidth.toFixed(4)}`;
-    const bucket = buckets.get(key) || {
-      alpha,
-      lineWidth,
-      geometries: [],
-    };
-    bucket.geometries.push(entry.geometry);
-    buckets.set(key, bucket);
-  });
-  return [...buckets.values()];
+  return getOceanRenderOwner().buildCoastalAccentStrokeBuckets(entries);
 }
 
 function drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa = false } = {}) {
-  if (!context || !Array.isArray(entries) || !entries.length) return;
-  const buckets = buildCoastalAccentStrokeBuckets(entries);
-  if (!buckets.length) return;
-  const coastStyle = runtimeState.styleConfig?.coastlines || {};
-  const coastAccentColor = getSafeCanvasColor(coastStyle.color, TNO_COASTAL_ACCENT_COLOR);
-  const coastAccentOpacity = clamp(
-    Number.isFinite(Number(coastStyle.opacity)) ? Number(coastStyle.opacity) : 0.8,
-    0,
-    1
-  );
-  const coastAccentWidthScale = clamp(
-    (Number.isFinite(Number(coastStyle.width)) ? Number(coastStyle.width) : 1.2) / 1.2,
-    0.1,
-    3
-  );
-  buckets.forEach((bucket) => {
-    context.save();
-    if (clipAtlantropa) {
-      clipOutAtlantropaAccentRegions();
-    }
-    context.strokeStyle = coastAccentColor;
-    context.globalAlpha = bucket.alpha * coastAccentOpacity;
-    context.lineWidth = bucket.lineWidth * coastAccentWidthScale;
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    context.beginPath();
-    bucket.geometries.forEach((geometry) => {
-      pathCanvas(geometry);
-    });
-    context.stroke();
-    context.restore();
-  });
+  return getOceanRenderOwner().drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa });
 }
 
 function getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive = false } = {}) {
@@ -11643,58 +11617,11 @@ function clipOutAtlantropaAccentRegions() {
 }
 
 function drawScenarioCoastalAccentOverlays(k, { interactive = false } = {}) {
-  const shorelineFeatures = getScenarioCoastalAccentOverlayFeatures();
-  if (!shorelineFeatures.length) return;
-  const entries = [];
-  shorelineFeatures.forEach((feature) => {
-    if (!pathBoundsInScreen(feature)) return;
-    const visualConfig = getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive });
-    entries.push({
-      geometry: feature,
-      alpha: visualConfig.alpha,
-      lineWidth: visualConfig.lineWidth,
-    });
-  });
-  drawCoastalAccentStrokeBuckets(entries);
+  return getOceanRenderOwner().drawScenarioCoastalAccentOverlays(k, { interactive });
 }
 
 function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {
-  if (!context || !isScenarioCoastalAccentEnabled()) return;
-  const coastlineDecision = resolveCoastlineTopologySource();
-  const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";
-  const coastlineCollection = interactive
-    ? getCoastlineCollectionForZoom(k)
-    : getBorderDrawOwner().getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
-  const coastlineWidth = getScenarioCoastalAccentLineWidth(k, { interactive });
-  const densityThreshold = k < COASTLINE_LOD_LOW_ZOOM_MAX
-    ? COASTLINE_ACCENT_DENSITY_THRESHOLD_LOW
-    : k < COASTLINE_LOD_MID_ZOOM_MAX
-      ? COASTLINE_ACCENT_DENSITY_THRESHOLD_MID
-      : Infinity;
-  const entries = [];
-  coastlineCollection.forEach((mesh) => {
-    if (!isUsableMesh(mesh)) return;
-    mesh.coordinates.forEach((line) => {
-      const densityStats = interactive
-        ? { density: 0 }
-        : getProjectedLineDensityStats(line);
-      const densityScale = densityStats.density > densityThreshold
-        ? (k < COASTLINE_LOD_LOW_ZOOM_MAX ? COASTLINE_ACCENT_DENSITY_ALPHA_LOW : COASTLINE_ACCENT_DENSITY_ALPHA_MID)
-        : 1;
-      entries.push({
-        geometry: {
-        type: "LineString",
-        coordinates: line,
-        },
-        alpha: (interactive ? 0.28 : 0.4) * densityScale,
-        lineWidth: coastlineWidth * (densityScale < 1 ? COASTLINE_ACCENT_DENSITY_WIDTH_SCALE : 1),
-      });
-    });
-  });
-  drawCoastalAccentStrokeBuckets(entries, { clipAtlantropa: !usesScenarioCoastlineSource });
-  if (!usesScenarioCoastlineSource) {
-    drawScenarioCoastalAccentOverlays(k, { interactive });
-  }
+  return getOceanRenderOwner().drawScenarioCoastalAccentLayer(k, { interactive });
 }
 
 function resolveOceanMask() {
@@ -11798,62 +11725,7 @@ function applyBathymetryCoverageExclusionMask(coverageCollection) {
 }
 
 function drawOceanStyle() {
-  if (!context || !pathCanvas) return;
-  const oceanStyle = getOceanStyleConfig();
-  const bathymetryRequired = doesOceanStyleRequireBathymetry(oceanStyle);
-  ensureBathymetryDataAvailability({
-    required: bathymetryRequired,
-  });
-  if (!oceanStyle.experimentalAdvancedStyles) {
-    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
-    runtimeState.oceanMaskQuality = 0;
-    return;
-  }
-  if (oceanStyle.preset === "flat") {
-    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
-    runtimeState.oceanMaskQuality = 0;
-    return;
-  }
-  const bathymetryData = getBathymetryFeatureCollections();
-  const hasBands = Array.isArray(bathymetryData.bands?.features) && bathymetryData.bands.features.length > 0;
-  const hasContours =
-    Array.isArray(bathymetryData.contours?.features) && bathymetryData.contours.features.length > 0;
-  if (!hasBands && !hasContours) {
-    runtimeState.oceanMaskMode = OCEAN_MASK_MODE_TOPOLOGY;
-    runtimeState.oceanMaskQuality = 0;
-    return;
-  }
-
-  const { mode: clipMaskMode } = resolveOceanMask();
-  const globalBands = getBathymetryCollectionBySource(bathymetryData.bands, "global");
-  const scenarioBands = getBathymetryCollectionBySource(bathymetryData.bands, "scenario");
-  const globalContours = getBathymetryCollectionBySource(bathymetryData.contours, "global");
-  const scenarioContours = getBathymetryCollectionBySource(bathymetryData.contours, "scenario");
-  const scenarioCoverage = bathymetryData.scenarioCoverage;
-
-  context.save();
-  applyOceanClipMask(clipMaskMode);
-  if (Array.isArray(globalBands?.features) && globalBands.features.length) {
-    context.save();
-    applyBathymetryCoverageExclusionMask(scenarioCoverage);
-    drawBathymetryBands(globalBands, oceanStyle);
-    context.restore();
-  }
-  if (Array.isArray(scenarioBands?.features) && scenarioBands.features.length) {
-    drawBathymetryBands(scenarioBands, oceanStyle);
-  }
-  if (Array.isArray(globalContours?.features) && globalContours.features.length) {
-    context.save();
-    applyBathymetryCoverageExclusionMask(scenarioCoverage);
-    drawBathymetryContours(globalContours, oceanStyle);
-    context.restore();
-  }
-  if (Array.isArray(scenarioContours?.features) && scenarioContours.features.length) {
-    drawBathymetryContours(scenarioContours, oceanStyle);
-  }
-  context.restore();
-  runtimeState.oceanMaskMode = OCEAN_MASK_MODE_BATHYMETRY;
-  runtimeState.oceanMaskQuality = 1;
+  return getOceanRenderOwner().drawOceanStyle();
 }
 
 const VALID_BLEND_MODES = new Set([

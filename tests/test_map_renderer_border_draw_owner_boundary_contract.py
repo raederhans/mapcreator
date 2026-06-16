@@ -5,12 +5,14 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 BORDER_DRAW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "border_draw_owner.js"
+OCEAN_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "ocean_render_owner.js"
 
 
 class MapRendererBorderDrawOwnerBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_border_pass_owner_while_draw_helpers_move_to_owner(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = BORDER_DRAW_OWNER_JS.read_text(encoding="utf-8")
+        ocean_owner_content = OCEAN_RENDER_OWNER_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
 
         self.assertIn(
@@ -31,7 +33,8 @@ class MapRendererBorderDrawOwnerBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("const buildRenderableBoundaryMesh = (...args) => getBorderDrawOwner().buildRenderableBoundaryMesh(...args);", renderer_content)
         self.assertNotIn("getBorderDrawOwner().getViewportAwareCoastlineCollection(...args);", renderer_content)
         self.assertNotIn("const getBoundaryMeshTransform = (...args) => getBorderDrawOwner().getBoundaryMeshTransform(...args);", renderer_content)
-        self.assertIn("getBorderDrawOwner().getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);", renderer_content)
+        self.assertIn("getViewportAwareCoastlineCollection: (collection, k) => (", renderer_content)
+        self.assertIn("getBorderDrawOwner().getViewportAwareCoastlineCollection(collection, k)", renderer_content)
         self.assertIn("return getBorderDrawOwner().drawHierarchicalBorders(k, { interactive });", renderer_content)
         self.assertIn("function drawHierarchicalBorders(k, { interactive = false } = {}) {", renderer_content)
         self.assertIn("function drawBordersPass(k, { interactive = false } = {}) {", renderer_content)
@@ -54,10 +57,14 @@ class MapRendererBorderDrawOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("context.globalAlpha = coastOpacity * 0.78;", owner_content)
         self.assertIn("const countryAlpha = countryOpacity;", owner_content)
         self.assertIn("const coastAlpha = coastOpacity * clamp(", owner_content)
-        self.assertIn("const coastStyle = runtimeState.styleConfig?.coastlines || {};", renderer_content)
-        self.assertIn("const coastAccentColor = getSafeCanvasColor(coastStyle.color, TNO_COASTAL_ACCENT_COLOR);", renderer_content)
-        self.assertIn("context.globalAlpha = bucket.alpha * coastAccentOpacity;", renderer_content)
-        self.assertIn("context.lineWidth = bucket.lineWidth * coastAccentWidthScale;", renderer_content)
+        self.assertIn("function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {", renderer_content)
+        self.assertIn("return getOceanRenderOwner().drawScenarioCoastalAccentLayer(k, { interactive });", renderer_content)
+        self.assertIn("export function createOceanRenderOwner({", ocean_owner_content)
+        self.assertIn("getViewportAwareCoastlineCollection(baseCoastlineCollection, k);", ocean_owner_content)
+        self.assertIn("const coastStyle = runtimeState.styleConfig?.coastlines || {};", ocean_owner_content)
+        self.assertIn("const coastAccentColor = getSafeCanvasColor(coastStyle.color, TNO_COASTAL_ACCENT_COLOR);", ocean_owner_content)
+        self.assertIn("context.globalAlpha = bucket.alpha * coastAccentOpacity;", ocean_owner_content)
+        self.assertIn("context.lineWidth = bucket.lineWidth * coastAccentWidthScale;", ocean_owner_content)
 
 
 if __name__ == "__main__":

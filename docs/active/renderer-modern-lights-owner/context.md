@@ -65,3 +65,30 @@ Phase 1 is complete and pushed. Phase 2 is the current delivery unit. Phase 4 is
   - `npm run test:node:appearance-rivers-owner`
   - `node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js --workers=1 --retries=0`
 - Full `npm run test:e2e:water-rendering` remains red outside the river owner slice: named water inspector waits timed out, open-ocean scenario idle waits timed out, while water cache specs passed. Evidence log: `.runtime/tests/renderer-rivers-phase2/water-rendering.log`.
+
+## 2026-06-16 Phase 3A Ocean Owner
+
+- User requested continuing Phase 3.
+- Static subagent review confirmed the safe Ocean boundary:
+  - Keep `invalidateOcean*VisualState`, `drawBackgroundPass`, `drawOceanDepthMaskLayer`, public bathymetry facade, data loading, and mask helpers in `map_renderer.js`.
+  - Move bathymetry band/contour drawing, coastal accent drawing, and `drawOceanStyle` orchestration into an owner.
+- Added `js/core/renderer/ocean_render_owner.js`.
+- Kept `map_renderer.js` wrappers for `drawBathymetryBands`, `buildVisibleBathymetryContourDepthSet`, `drawBathymetryContours`, `buildCoastalAccentStrokeBuckets`, `drawCoastalAccentStrokeBuckets`, `drawScenarioCoastalAccentOverlays`, `drawScenarioCoastalAccentLayer`, and `drawOceanStyle`.
+- Added `tests/ocean_render_owner_behavior.test.mjs` and `npm run test:node:ocean-render-owner`.
+- Updated `tests/ocean_depth_layer_contracts.test.mjs` so the background pass order and thin Ocean wrapper are both locked.
+- Updated `tests/test_map_renderer_border_draw_owner_boundary_contract.py` so border/coastal style assertions follow the new owner boundary.
+- Pages dist was rebuilt with `py -3 tools/build_pages_dist.py`, adding `dist/app/js/core/renderer/ocean_render_owner.js`.
+- Phase 3A validation:
+  - PASS: `node --check js/core/map_renderer.js`
+  - PASS: `node --check js/core/renderer/ocean_render_owner.js`
+  - PASS: `npm run test:node:ocean-render-owner`
+  - PASS: `npm run test:node:ocean-depth-layer-contracts`
+  - PASS: `py -3 -m unittest tests.test_map_renderer_border_draw_owner_boundary_contract tests.test_renderer_runtime_state_boundary_contract -q`
+  - PASS: `node --input-type=module -e "import('./js/core/map_renderer.js').then(() => console.log('map_renderer import ok'))"`
+  - PASS: `py -3 tools/build_pages_dist.py`
+  - PASS: `py -3 -m unittest tests.test_pages_dist_startup_shell -q`
+  - PASS: `npm run test:node:landing-showcase-view`
+  - FAIL, pre-existing suite shape: `npm run test:e2e:water-rendering` still has 6 named-water/open-ocean timeouts, while 6 specs pass including river and water cache coverage. Evidence log: `.runtime/tests/renderer-ocean-phase3/water-rendering.log`.
+- Physical subagent review recommends two boundaries for the remaining Phase 3 work:
+  - `physical_layer_render_owner` for `physicalBase` and `contextBase` physical atlas/intensity/contour drawing.
+  - A separate scenario relief owner later for `contextScenario` relief overlays, because its cache lifecycle differs.

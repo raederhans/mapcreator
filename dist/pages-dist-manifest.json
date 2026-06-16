@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 984210,
+      "size_bytes": 978545,
       "source_kind": "dist"
     },
     {
@@ -45808,6 +45808,11 @@
     {
       "path": "app/js/core/renderer/modern_city_lights_render_owner.js",
       "size_bytes": 45437,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/ocean_render_owner.js",
+      "size_bytes": 12254,
       "source_kind": "dist"
     },
     {
@@ -46947,7 +46952,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1450562,
+      "size_bytes": 1450690,
       "source_kind": "dist"
     },
     {
@@ -46966,5 +46971,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145157175
+  "total_bytes": 1145163892
 }

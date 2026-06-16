@@ -2,11 +2,13 @@
 
 ## Scope
 
-- Current task slice: Phase 1 and Phase 2 from the supplied renderer split plan.
+- Current task slice: Phase 3 from the supplied renderer split plan.
 - Primary goal: keep large draw-layer logic behind focused renderer owners while preserving `map_renderer.js` as the stable facade.
 - Phase 1: move Modern City Lights rendering details into `js/core/renderer/modern_city_lights_render_owner.js`.
 - Phase 2: close out Rivers ownership in `js/core/renderer/river_layer_render_owner.js`.
-- Non-goals for this slice: Ocean, Physical, toolbar/sidebar, vendored libraries, and broad clone utility migration.
+- Phase 3A: move Ocean / Bathymetry / Coastal rendering details into `js/core/renderer/ocean_render_owner.js`.
+- Phase 3B: move Physical base / contour rendering details into a focused physical owner while keeping pass signatures and cache lifecycle in `map_renderer.js`.
+- Non-goals for this slice: toolbar/sidebar, vendored libraries, and broad clone utility migration.
 
 ## Evidence
 
@@ -14,6 +16,8 @@
 - Base commit: `5e3a7acaaef93b51e4766b0ee199ce40a2d95d66`.
 - Work branch: `codex/renderer-modern-lights-owner`.
 - Existing pattern: `js/core/renderer/river_layer_render_owner.js` keeps rendering details in an owner and leaves a thin wrapper in `map_renderer.js`.
+- Ocean evidence: `drawBackgroundPass` still composes base ocean fill, `drawOceanStyle()`, then `drawOceanDepthMaskLayer()`; ocean invalidators and depth mask stay in `map_renderer.js`.
+- Physical evidence: `physicalBase`, `contextBase` contours, and `contextScenario` relief have separate pass lifecycles, so Phase 3B should avoid one broad owner that binds those caches together.
 - Live test owner: main Codex agent only.
 - Baseline log: `.runtime/tests/renderer-modern-lights-owner/baseline.log`.
 
@@ -25,6 +29,9 @@
 - Targeted node behavior test covers owner cache key, population boost sorting, culling, color conversion, and wrapper contract.
 - Verification commands pass or any gap is recorded with exact reason.
 - Rivers owner keeps `drawRiversLayer` logic outside `map_renderer.js`, has direct behavior coverage, and focused river e2e passes.
+- Ocean owner keeps bathymetry bands/contours, coastal accent buckets, and `drawOceanStyle` logic outside `map_renderer.js`, with direct behavior coverage.
+- `drawOceanStyle()` remains before `drawOceanDepthMaskLayer()` in `drawBackgroundPass`.
+- Pages dist includes any new renderer owner modules.
 
 ## Task List
 
@@ -41,5 +48,14 @@
 - [x] Confirm Phase 2 Rivers implementation already lives in `river_layer_render_owner.js`.
 - [x] Add direct `river_layer_render_owner` behavior coverage.
 - [x] Run river contract, appearance river owner, and focused river e2e validation.
-- [ ] Run final review/QA self-check for Phase 2.
-- [ ] Commit and push Phase 2 closeout.
+- [x] Run final review/QA self-check for Phase 2.
+- [x] Commit and push Phase 2 closeout.
+- [x] Gather Phase 3 Ocean and Physical evidence with static subagent review.
+- [x] Add `ocean_render_owner.js` and thin Ocean wrappers.
+- [x] Add direct Ocean owner behavior coverage and update boundary contracts.
+- [x] Rebuild Pages dist for the new owner module.
+- [x] Run Ocean targeted validation and record full water e2e residual failures.
+- [ ] Implement Physical owner split.
+- [ ] Run physical contracts and focused physical e2e validation.
+- [ ] Run final Phase 3 review/QA self-check.
+- [ ] Commit and push Phase 3 closeout.

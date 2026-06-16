@@ -32,9 +32,18 @@ test("ocean depth intensity channel is registered as a background pass mask", ()
 
 test("background render pass composes ocean depth mask after ocean style", () => {
   const source = readText("js/core/map_renderer.js");
+  const oceanOwnerSource = readText("js/core/renderer/ocean_render_owner.js");
   const drawBackgroundBody = extractFunction(source, "drawBackgroundPass");
   const depthLayerBody = extractFunction(source, "drawOceanDepthMaskLayer");
+  const drawOceanStyleBody = extractFunction(source, "drawOceanStyle");
 
+  assert.match(source, /import \{ createOceanRenderOwner \} from "\.\/renderer\/ocean_render_owner\.js";/);
+  assert.match(source, /function getOceanRenderOwner\(\)/);
+  assert.match(drawOceanStyleBody, /return getOceanRenderOwner\(\)\.drawOceanStyle\(\);/);
+  assert.doesNotMatch(drawOceanStyleBody, /getBathymetryFeatureCollections\(\)/);
+  assert.match(oceanOwnerSource, /export function createOceanRenderOwner/);
+  assert.match(oceanOwnerSource, /function drawOceanStyle\(\)/);
+  assert.match(oceanOwnerSource, /runtimeState\.oceanMaskMode = OCEAN_MASK_MODE_BATHYMETRY/);
   assert.match(source, /createIntensityFieldMaskOwner/);
   assert.match(source, /`field:oceanDepth:\$\{Number\(intensityFields\.channels\.oceanDepth\?\.revision \|\| 0\)\}`/);
   assert.ok(drawBackgroundBody.indexOf("drawOceanStyle();") < drawBackgroundBody.indexOf("drawOceanDepthMaskLayer();"));
