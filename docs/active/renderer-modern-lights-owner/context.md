@@ -15,7 +15,7 @@
 
 ## Current Decision
 
-Phase 1 is the current delivery unit. Phase 4 is tracked as evidence-only until Phase 1 is green, because clone migration touches wider state/startup code and has different risk.
+Phase 1 is complete and pushed. Phase 2 is the current delivery unit. Phase 4 is tracked as evidence-only until renderer owner phases are green, because clone migration touches wider state/startup code and has different risk.
 
 ## 2026-06-16 Baseline Result
 
@@ -47,3 +47,21 @@ Phase 1 is the current delivery unit. Phase 4 is tracked as evidence-only until 
 - Injected `createCanvas` and `getDefaultZoomTransform` from `map_renderer.js` into the Modern City Lights owner so canvas/document/zoom defaults stay at the renderer boundary.
 - Extended owner behavior tests to assert population boost invalidation and static layer key invalidation across renderer state changes.
 - Final validation after review fixes: `test:node:modern-city-lights-owner`, `test:node:city-lights-assets`, focused city lights e2e, Pages dist startup unittest, landing showcase view, and `git diff --check` all pass.
+
+## 2026-06-16 Phase 2 Rivers Closeout
+
+- User requested pushing Phase 1 plus other work as separate commits, then continuing Phase 2 to completion.
+- Created and pushed:
+  - `98cd1e84` `Separate modern city lights rendering ownership`
+  - `c4e81cf4` `Trim stale archive notes from active history`
+- Static evidence and child-agent review both confirmed `drawRiversLayer` is already a thin wrapper in `map_renderer.js`, with the draw body in `js/core/renderer/river_layer_render_owner.js`.
+- Added `tests/river_layer_render_owner_behavior.test.mjs` and `npm run test:node:river-layer-owner` to directly cover skip metrics, zoom/class visibility rules, offscreen culling, dash scaling, and line width drawing.
+- Adjusted `tests/e2e/river_layer_regression.spec.js` to assert invisible low-zoom mid-tier rivers through render metrics; direct owner drawing behavior is covered by the new Node test. Whole-canvas low-zoom pixel diffs are noisy for lake/intermittent/canal subsets even when `visibleFeatureCount` is zero.
+- Phase 2 green evidence:
+  - `node --check js/core/map_renderer.js`
+  - `node --check js/core/renderer/river_layer_render_owner.js`
+  - `npm run test:node:river-layer-owner`
+  - `npm run test:node:river-layer-contracts`
+  - `npm run test:node:appearance-rivers-owner`
+  - `node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js --workers=1 --retries=0`
+- Full `npm run test:e2e:water-rendering` remains red outside the river owner slice: named water inspector waits timed out, open-ocean scenario idle waits timed out, while water cache specs passed. Evidence log: `.runtime/tests/renderer-rivers-phase2/water-rendering.log`.

@@ -93,6 +93,7 @@
     "test:node:scenario-chunk-contracts": "node --test tests/scenario_chunk_contracts.test.mjs",
     "test:node:physical-layer-contracts": "node --test tests/physical_layer_contracts.test.mjs",
     "test:node:river-layer-contracts": "node --test tests/river_layer_contracts.test.mjs",
+    "test:node:river-layer-owner": "node --test tests/river_layer_render_owner_behavior.test.mjs",
     "test:e2e:scenario-apply-concurrency": "node node_modules/@playwright/test/cli.js test tests/e2e/scenario_apply_concurrency.spec.js --workers=1 --retries=0",
     "test:e2e:startup-bundle-recovery-contract": "node node_modules/@playwright/test/cli.js test tests/e2e/startup_bundle_recovery_contract.spec.js --workers=1 --retries=0",
     "test:e2e:scenario-shell-overlay-contract": "node node_modules/@playwright/test/cli.js test tests/e2e/scenario_shell_overlay_contract.spec.js --workers=1 --retries=0",

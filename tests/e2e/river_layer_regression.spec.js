@@ -539,9 +539,9 @@ test('river layer major and mid-tier zoom gating regression', async ({ page }) =
   expect(riverMajorHigh.renderMetric.outlineAlphaFactor).toBeCloseTo(0.45, 4);
 
   expect(riverMidTierLow.renderMetric.visibleFeatureCount).toBe(0);
+  expect(riverMidTierLow.renderMetric.featureCount).toBeGreaterThan(0);
   expect(riverMidTierMid.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
   expect(riverMidTierHigh.renderMetric.visibleFeatureCount).toBeGreaterThan(0);
-  expect(riverMidTierLow.changedPixels).toBeLessThan(12);
   expect(riverMidTierMid.changedPixels).toBeGreaterThan(20);
   expect(riverMidTierHigh.changedPixels).toBeGreaterThan(10);
 

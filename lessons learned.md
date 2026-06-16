@@ -364,3 +364,6 @@
 
 ### 大块抽取脚本要用函数锚点
 - 机械拆 owner 时，正则替换必须限定到具体函数名或唯一锚点；用宽泛 `constants -> getters` 这类结构锚点会污染相邻 owner getter，抽取后要用 import 级 smoke 和浏览器 trace 查 pageError。
+
+### 图层不可见断言优先用 owner 证据
+- 整张 canvas 像素差会被其他 pass、重绘时机和背景层污染；验证某个子图层在某 zoom 不绘制时，用 owner 行为测试锁 path/stroke 调用，用 render metric 锁 `visibleFeatureCount`。
