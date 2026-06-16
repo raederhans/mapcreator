@@ -31,8 +31,12 @@ MAX_PORT = 65535
 def _string_array_schema() -> dict[str, Any]:
     return {
         "type": "array",
-        "items": {"type": "string", "minLength": 1},
+        "items": _non_blank_string_schema(),
     }
+
+
+def _non_blank_string_schema() -> dict[str, Any]:
+    return {"type": "string", "minLength": 1, "pattern": r"\S"}
 
 
 def _mode_array_schema() -> dict[str, Any]:
@@ -83,7 +87,7 @@ PROFILE_SCHEMA: dict[str, Any] = {
                 "base_host": {"type": "string", "enum": sorted(VALID_BASE_HOSTS)},
                 "port_range_start": {"type": "integer", "minimum": 1, "maximum": MAX_PORT},
                 "port_range_end": {"type": "integer", "minimum": 1, "maximum": MAX_PORT},
-                "server_title_pattern": {"type": "string", "minLength": 1},
+                "server_title_pattern": _non_blank_string_schema(),
                 "wsl_windows_fallback": {"type": "boolean"},
             },
         },
@@ -155,8 +159,8 @@ PROFILE_SCHEMA: dict[str, Any] = {
             "required": sorted(OUTPUT_ROOTS),
             "additionalProperties": False,
             "properties": {
-                "artifact_dir": {"type": "string", "minLength": 1},
-                "report_path": {"type": "string", "minLength": 1},
+                "artifact_dir": _non_blank_string_schema(),
+                "report_path": _non_blank_string_schema(),
             },
         },
         "routes": {
@@ -167,8 +171,8 @@ PROFILE_SCHEMA: dict[str, Any] = {
                 "required": ["id", "url"],
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"type": "string", "minLength": 1},
-                    "url": {"type": "string", "minLength": 1},
+                    "id": _non_blank_string_schema(),
+                    "url": _non_blank_string_schema(),
                     "scroll": {"type": "integer", "minimum": 0},
                     "screenshot": {"type": "boolean"},
                     "capture_console": {"type": "boolean"},
@@ -185,9 +189,9 @@ PROFILE_SCHEMA: dict[str, Any] = {
                 "required": ["id", "page", "selector"],
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"type": "string", "minLength": 1},
-                    "page": {"type": "string", "minLength": 1},
-                    "selector": {"type": "string", "minLength": 1},
+                    "id": _non_blank_string_schema(),
+                    "page": _non_blank_string_schema(),
+                    "selector": _non_blank_string_schema(),
                     "expand": {"type": "string", "enum": sorted(VALID_EXPAND_VALUES)},
                     "scroll": {"type": "integer", "minimum": 0},
                     "screenshot": {"type": "string", "enum": sorted(VALID_SCREENSHOT_POLICIES)},
@@ -203,9 +207,9 @@ PROFILE_SCHEMA: dict[str, Any] = {
                 "required": ["id", "page", "selector", "type"],
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"type": "string", "minLength": 1},
-                    "page": {"type": "string", "minLength": 1},
-                    "selector": {"type": "string", "minLength": 1},
+                    "id": _non_blank_string_schema(),
+                    "page": _non_blank_string_schema(),
+                    "selector": _non_blank_string_schema(),
                     "type": {"type": "string", "enum": sorted(VALID_GESTURE_TYPES)},
                     "from": _point_schema(),
                     "to": _point_schema(),
@@ -281,7 +285,7 @@ def _format_schema_error(error: jsonschema.ValidationError, payload: dict[str, A
         return _format_enum_error(payload, parts, error.validator_value, path)
     if error.validator == "type":
         return _format_type_error(payload, parts, error.validator_value, path)
-    if error.validator == "minLength":
+    if error.validator in {"minLength", "pattern"}:
         return f"{_field_label(payload, parts, path)} must be a non-empty string."
     if error.validator == "minItems":
         return _format_min_items_error(payload, parts, path)

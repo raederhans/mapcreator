@@ -12,22 +12,24 @@ Last updated: 2026-06-16
 
 ## Recommended Order
 
-1. No active implementation worktree remains after the remaining-local-branch integration closeout.
-2. Re-check recovery commit hashes before recreating any historical worktree.
-3. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this local-branch cleanup pass.
+1. Push `refactor/transport-render-data-closeout` to `origin/main` after final verification and commit.
+2. Preserve the parent `main` checkout's unrelated localization and dist WIP when refreshing local state.
+3. After push confirmation, remove the transport closeout worktree and record its final commit as the recovery pointer.
+4. Re-check recovery commit hashes before recreating any historical worktree.
+5. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this local-branch cleanup pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `f4063d31` | aligned with `origin/main` | active-main | dirty unrelated i18n/lessons/dist WIP on 2026-06-16 | `git status --short --branch` showed manual locale and dist mirror changes; not part of transport closeout | Yellow | Preserve as parent checkout; do not edit for this task |
-| `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `refactor/transport-render-data-closeout` / `HEAD` | `f4063d31` | ready-for-integration | hot files touched: `.github/workflows/verify-shared.yml`, `package.json`, `dist/app/**`, `dist/pages-dist-manifest.json`, `tools/browser_smoke_profile_contract.py`, `map_builder/transport_family_registry.py`, `tools/build_transport_country_real_packs.py`, `tests/test_global_transport_builder_contracts.py`, active docs | task docs: `docs/active/transport-render-data-closeout/`; commits `5f87f5b0`, `5b0bbc5f`, `825595b2`, `839fad6e`; verification passed `verify:dist-drift`, 117 Python contract tests, profile validator, import graph, `git diff --check` | Yellow | Integration owner should merge from clean `main`, preserve unrelated parent checkout WIP, rerun targeted gates, then push and clean worktree after merge confirmation |
+| `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `refactor/transport-render-data-closeout` / closeout branch HEAD | `f4063d31` | ready-to-push | hot files touched: `.github/workflows/verify-shared.yml`, `package.json`, `dist/app/**`, `dist/pages-dist-manifest.json`, `tools/browser_smoke_profile_contract.py`, `map_builder/transport_family_registry.py`, `tools/build_transport_country_real_packs.py`, `tests/test_global_transport_builder_contracts.py`, archived docs | archived task docs: `docs/archive/transport-render-data-closeout-20260616/`; verification passed Python contracts, profile validator, import graph, named Node runtime suite, `verify:dist-drift`, `git diff --check` | Yellow | Commit final closeout fixes, push to `origin/main`, then remove worktree after remote confirmation |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| main checkout vs transport closeout worktree | Yellow | Current main has unrelated i18n and lessons WIP; closeout branch will touch dist and task docs, so integration must preserve parent checkout WIP and inspect generated-file overlap. |
+| main checkout vs transport closeout archive | Yellow | Current main has unrelated i18n and lessons WIP; the completed closeout touched dist and task docs, so refreshing the parent checkout should preserve local WIP explicitly. |
 
 ## Recovery Records
 
@@ -69,5 +71,5 @@ These rows are branch or commit recovery indexes. They are historical references
 - 2026-06-16 residual branch cleanup: deleted stale residual branches, backup branches, and open-PR head branches requested for cleanup. GitHub API close attempts for PRs #45, #73, #85, and #86 returned 401, then deleting the head branches removed them from the open PR list.
 - 2026-06-16 remaining local branch pass: `codex/tooling-simplification-phase1` was covered by current main; `codex/render-chain-cleanup-phase4-5` contributed only the missing spatial query and scenario chunk promotion helper work; `codex/render-chain-cleanup-phases` was its covered ancestor.
 - 2026-06-16 remaining local branch pass: `codex/data-chain-phases-2-4`, `codex/data-quality-repair-2026-06-14`, and `codex/audit-20260612-appearance-transport` were classified as covered or stale after direct helper/test checks; their branch refs can be recreated from the commit hashes above.
-- 2026-06-16 transport render/data closeout: created isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` for branch `refactor/transport-render-data-closeout` because the parent main checkout has unrelated dirty localization WIP. Main Codex agent owns live builds/tests; subagents are static/review lanes unless given a disjoint edit scope.
-- 2026-06-16 transport render/data closeout: WS3 dist drift guard, WS2 jsonschema smoke profile validator, and WS1 OSM-GPKG family driver are implemented and verified. The worktree is ready for integration after the final docs-only closeout commit.
+- 2026-06-16 transport render/data closeout: isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` was used because the parent main checkout had unrelated dirty localization WIP. Main Codex agent owned live builds/tests; subagents stayed in static/review lanes.
+- 2026-06-16 transport render/data closeout: WS3 dist drift guard, WS2 jsonschema smoke profile validator, and WS1 OSM-GPKG family driver were implemented, audited, verified, archived, and are ready for final commit/push to `origin/main`.

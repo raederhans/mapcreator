@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import unittest
 import gzip
 import hashlib
@@ -84,6 +85,45 @@ class PagesDistStartupShellTest(unittest.TestCase):
             DIST_MANIFEST.exists(),
             "dist/pages-dist-manifest.json is a checked-in Pages dist contract",
         )
+
+    def test_pages_dist_drift_guard_covers_tracked_dist_outputs(self) -> None:
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", "dist"],
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+            raise unittest.SkipTest(f"git tracked dist list unavailable: {exc}") from exc
+
+        pathspecs = (
+            "dist/.nojekyll",
+            "dist/app.js",
+            "dist/index.html",
+            "dist/styles.css",
+            "dist/assets",
+            "dist/app/index.html",
+            "dist/app/js",
+            "dist/app/css",
+            "dist/app/vendor",
+            "dist/pages-dist-manifest.json",
+        )
+        tracked_paths = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        uncovered = [
+            path
+            for path in tracked_paths
+            if not any(path == spec or path.startswith(f"{spec}/") for spec in pathspecs)
+        ]
+        self.assertEqual([], uncovered)
+
+        package_text = (REPO_ROOT / "package.json").read_text(encoding="utf-8")
+        workflow_text = VERIFY_SHARED_WORKFLOW.read_text(encoding="utf-8")
+        for spec in pathspecs:
+            with self.subTest(spec=spec):
+                self.assertIn(spec, package_text)
+                self.assertIn(spec, workflow_text)
 
     def test_landing_generated_cartography_assets_exist(self) -> None:
         source_svg_assets = (

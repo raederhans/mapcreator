@@ -174,6 +174,22 @@ class PlaywrightReadyGateContractTest(unittest.TestCase):
             errors,
         )
 
+    def test_browser_smoke_profile_validator_rejects_blank_strings(self):
+        profile = _minimal_browser_smoke_profile()
+        profile["routes"][0]["id"] = "   "
+        profile["routes"][0]["url"] = "\t"
+        profile["sections"][0]["page"] = " "
+        profile["sections"][0]["selector"] = "\n"
+        profile["gestures"][0]["selector"] = "   "
+
+        errors = validate_profile_payload(profile, path="<test-profile>")
+
+        self.assertIn("<test-profile>: routes[#0].id must be a non-empty string.", errors)
+        self.assertIn("<test-profile>: routes[#0].url must be a non-empty string.", errors)
+        self.assertIn("<test-profile>: sections[left_sidebar].page must be a non-empty string.", errors)
+        self.assertIn("<test-profile>: sections[left_sidebar].selector must be a non-empty string.", errors)
+        self.assertIn("<test-profile>: gestures[map_pan_zoom].selector must be a non-empty string.", errors)
+
     def test_browser_smoke_profile_validator_rejects_invalid_port_bounds(self):
         profile = _minimal_browser_smoke_profile()
         profile["defaults"]["port_range_start"] = 70000
