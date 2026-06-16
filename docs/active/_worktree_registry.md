@@ -20,13 +20,14 @@ Last updated: 2026-06-16
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current HEAD | aligned with `origin/main` | active-main | clean after closeout | remaining-local-branch cleanup merged only missing render helper work; covered/stale branches cleaned by commit hash | Green | No worktree integration action remains |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `f4063d31` | aligned with `origin/main` | active-main | dirty unrelated i18n/lessons/dist WIP on 2026-06-16 | `git status --short --branch` showed manual locale and dist mirror changes; not part of transport closeout | Yellow | Preserve as parent checkout; do not edit for this task |
+| `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `refactor/transport-render-data-closeout` / `db470af8` | `f4063d31` | in-progress | planned hot files: `.github/workflows/verify-shared.yml`, `package.json`, `dist/app/**`, `dist/pages-dist-manifest.json`, `tools/browser_smoke_profile_contract.py`, `requirements*.txt`, `map_builder/transport_family_registry.py`, `tools/build_transport_country_real_packs.py`, transport builder tests | task docs: `docs/active/transport-render-data-closeout/`; starting branch contains road/rail split commits `7f99ae47` and `db470af8` | Yellow | Execute WS3 -> WS2 -> WS1, then review/QA and prepare for integration |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| none | Green | Only `main` remains active after the a11y integration closeout. |
+| main checkout vs transport closeout worktree | Yellow | Current main has unrelated i18n and lessons WIP; closeout branch will touch dist and task docs, so integration must preserve parent checkout WIP and inspect generated-file overlap. |
 
 ## Recovery Records
 
@@ -57,7 +58,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 ## Active Notes
 
-- Main checkout is clean and aligned with `origin/main`.
+- Main checkout is aligned with `origin/main` at `f4063d31` and currently has unrelated dirty localization/lessons/dist WIP.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Commit `64ae29be` remains as the recovery record.
@@ -68,3 +69,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - 2026-06-16 residual branch cleanup: deleted stale residual branches, backup branches, and open-PR head branches requested for cleanup. GitHub API close attempts for PRs #45, #73, #85, and #86 returned 401, then deleting the head branches removed them from the open PR list.
 - 2026-06-16 remaining local branch pass: `codex/tooling-simplification-phase1` was covered by current main; `codex/render-chain-cleanup-phase4-5` contributed only the missing spatial query and scenario chunk promotion helper work; `codex/render-chain-cleanup-phases` was its covered ancestor.
 - 2026-06-16 remaining local branch pass: `codex/data-chain-phases-2-4`, `codex/data-quality-repair-2026-06-14`, and `codex/audit-20260612-appearance-transport` were classified as covered or stale after direct helper/test checks; their branch refs can be recreated from the commit hashes above.
+- 2026-06-16 transport render/data closeout: created isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` for branch `refactor/transport-render-data-closeout` because the parent main checkout has unrelated dirty localization WIP. Main Codex agent owns live builds/tests; subagents are static/review lanes unless given a disjoint edit scope.

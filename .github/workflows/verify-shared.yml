@@ -128,6 +128,12 @@ jobs:
         if: inputs.profile == 'deploy-minimal'
         run: python tools/build_pages_dist.py
 
+      - name: Fail if tracked dist drifted from source
+        if: inputs.profile == 'deploy-minimal'
+        run: |
+          git diff --exit-code -- dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json \
+            || { echo "::error::dist/app is out of sync with source. Run 'python tools/build_pages_dist.py' and commit the result."; exit 1; }
+
       - name: Verify Pages dist startup shell
         if: inputs.profile == 'deploy-minimal'
         run: python -m unittest tests.test_pages_dist_startup_shell -q
