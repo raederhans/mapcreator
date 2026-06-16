@@ -92,3 +92,32 @@ Phase 1 is complete and pushed. Phase 2 is the current delivery unit. Phase 4 is
 - Physical subagent review recommends two boundaries for the remaining Phase 3 work:
   - `physical_layer_render_owner` for `physicalBase` and `contextBase` physical atlas/intensity/contour drawing.
   - A separate scenario relief owner later for `contextScenario` relief overlays, because its cache lifecycle differs.
+
+## 2026-06-16 Phase 3B/3C Physical And Scenario Relief Owners
+
+- Phase 3A Ocean was committed and pushed as `702d97c1`.
+- Implemented `js/core/renderer/physical_layer_render_owner.js`.
+- `map_renderer.js` now uses `getPhysicalLayerRenderOwner()` wrappers for `drawPhysicalAtlasCollectionLayer`, `drawPhysicalIntensityFieldLayer`, `drawPhysicalReliefOverlayLayer`, `drawPhysicalBasePass`, `drawPhysicalAtlasLayer`, `drawContourCollection`, and `drawPhysicalContourLayer`.
+- Kept physical pass signatures, physical land clip mask cache, exact-refresh decisions, and context-base pass lifecycle in `map_renderer.js`.
+- Added `tests/physical_layer_render_owner_behavior.test.mjs` and `npm run test:node:physical-layer-owner`.
+- Updated `tests/physical_layer_contracts.test.mjs` to assert the physical owner boundary.
+- Implemented `js/core/renderer/scenario_relief_overlay_render_owner.js` for the original Phase 3 `drawScenarioRelief*` scope.
+- `map_renderer.js` keeps `renderScenarioReliefOverlaysLayerToCache()` and `drawScenarioReliefOverlaysPass()` so `contextScenario` relief reuse, signatures, and cache entries remain in the existing scenario pass lifecycle.
+- Added `tests/scenario_relief_overlay_render_owner_behavior.test.mjs` and `npm run test:node:scenario-relief-overlay-owner`.
+- Rebuilt Pages dist with both new owner modules.
+- Phase 3B/3C validation:
+  - PASS: `node --check js/core/map_renderer.js`
+  - PASS: `node --check js/core/renderer/physical_layer_render_owner.js`
+  - PASS: `node --check js/core/renderer/scenario_relief_overlay_render_owner.js`
+  - PASS: `npm run test:node:physical-layer-owner`
+  - PASS: `npm run test:node:scenario-relief-overlay-owner`
+  - PASS: `npm run test:node:physical-layer-contracts`
+  - PASS: `npm run test:node:scenario-chunk-contracts`
+  - PASS: `node --input-type=module -e "import('./js/core/map_renderer.js').then(() => console.log('map_renderer import ok'))"`
+  - PASS: `py -3 -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract -q`
+  - PASS: `npm run test:e2e:physical-layer-runtime-contract`
+  - PASS: `npm run test:e2e:physical-layer-regression`
+  - PASS: `py -3 tools/build_pages_dist.py`
+  - PASS: `py -3 -m unittest tests.test_pages_dist_startup_shell -q`
+  - PASS: `npm run test:node:landing-showcase-view`
+  - Remaining known gap from Phase 3A: full `npm run test:e2e:water-rendering` still has pre-existing named-water/open-ocean timeouts; the river/cache specs in that suite passed.

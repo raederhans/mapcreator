@@ -136,6 +136,8 @@ import {
 } from "./renderer/facility_surface.js";
 import { createRiverLayerRenderOwner } from "./renderer/river_layer_render_owner.js";
 import { createOceanRenderOwner } from "./renderer/ocean_render_owner.js";
+import { createPhysicalLayerRenderOwner } from "./renderer/physical_layer_render_owner.js";
+import { createScenarioReliefOverlayRenderOwner } from "./renderer/scenario_relief_overlay_render_owner.js";
 import { createModernCityLightsRenderOwner } from "./renderer/modern_city_lights_render_owner.js";
 import { createTransportOverviewRenderOwner } from "./renderer/transport_overview_render_owner.js";
 import { createBorderMeshOwner } from "./renderer/border_mesh_owner.js";
@@ -1048,6 +1050,8 @@ let rendererAssetUrlPolicyOwner = null;
 let facilitySurfaceOwner = null;
 let riverLayerRenderOwner = null;
 let oceanRenderOwner = null;
+let physicalLayerRenderOwner = null;
+let scenarioReliefOverlayRenderOwner = null;
 let modernCityLightsRenderOwner = null;
 let transportOverviewRenderOwner = null;
 let borderMeshOwner = null;
@@ -1375,6 +1379,92 @@ function getOceanRenderOwner() {
     },
   });
   return oceanRenderOwner;
+}
+
+function getPhysicalLayerRenderOwner() {
+  if (physicalLayerRenderOwner) {
+    return physicalLayerRenderOwner;
+  }
+  physicalLayerRenderOwner = createPhysicalLayerRenderOwner({
+    state,
+    constants: {
+      PHYSICAL_ATLAS_PALETTE,
+    },
+    getters: {
+      getContext: () => context,
+      getPathCanvas: () => pathCanvas,
+      getProjection: () => projection,
+    },
+    helpers: {
+      applyPhysicalLandClipMask,
+      clamp,
+      collectContextMetric,
+      getAdaptiveContourStrokeColor,
+      getAtlasFeatureAlphaMultiplier,
+      getContourVisibleFeatures,
+      getContourZoomStyleProfile,
+      getFeatureCollectionFeatureCount,
+      getFieldFeatureMultiplier,
+      getPhysicalAtlasClass,
+      getPhysicalAtlasLayer,
+      getPhysicalLandMaskInfo,
+      getPhysicalPresetRenderProfile,
+      getPhysicalReliefOverlayBlendMode,
+      getProjectedDegreeRadiusPx,
+      getResolvedPhysicalAtlasCollection,
+      getSafeBlendMode,
+      getSafeCanvasColor,
+      normalizeIntensityFieldsState,
+      normalizePhysicalStyleConfig,
+      nowMs,
+      pathBoundsInScreen,
+      shouldReportDeferredContextLayerGap,
+      warnMissingPhysicalContextOnce,
+    },
+  });
+  return physicalLayerRenderOwner;
+}
+
+function getScenarioReliefOverlayRenderOwner() {
+  if (scenarioReliefOverlayRenderOwner) {
+    return scenarioReliefOverlayRenderOwner;
+  }
+  scenarioReliefOverlayRenderOwner = createScenarioReliefOverlayRenderOwner({
+    state,
+    constants: {
+      RELIEF_ATLANTROPA_CONTOUR_COLOR,
+      RELIEF_ATLANTROPA_SALT_FILL_COLOR,
+      RELIEF_ATLANTROPA_SALT_STROKE_COLOR,
+      RELIEF_ATLANTROPA_SHORELINE_COLOR,
+      RELIEF_CONTOUR_COLOR,
+      RELIEF_DAM_APPROACH_COLOR,
+      RELIEF_LAKE_SHORELINE_COLOR,
+      RELIEF_SALT_FILL_COLOR,
+      RELIEF_SALT_STROKE_COLOR,
+      RELIEF_SHORELINE_COLOR,
+      RELIEF_SWAMP_FILL_COLOR,
+      RELIEF_SWAMP_STROKE_COLOR,
+      RENDER_PHASE_INTERACTING,
+      RENDER_PHASE_SETTLING,
+    },
+    getters: {
+      getContext: () => context,
+      getPathCanvas: () => pathCanvas,
+    },
+    helpers: {
+      collectContextMetric,
+      getEffectiveScenarioReliefOverlayFeatures,
+      getPathBounds,
+      getReliefOverlayKind,
+      getScenarioReliefVisualRevisionToken,
+      isAtlantropaReliefOverlayFeature,
+      isReliefOverlayEnabled,
+      isScenarioCoastalAccentEnabled,
+      nowMs,
+      pathBoundsInScreen,
+    },
+  });
+  return scenarioReliefOverlayRenderOwner;
 }
 
 function getModernCityLightsRenderOwner() {
@@ -3922,245 +4012,14 @@ function getAtlantropaAccentSuppressionFeatures() {
     : [];
 }
 
-function getReliefOverlayStyle(feature) {
-  const kind = getReliefOverlayKind(feature);
-  const isAtlantropaRelief = isAtlantropaReliefOverlayFeature(feature);
-  switch (kind) {
-    case "salt_flat_texture":
-      if (isAtlantropaRelief) {
-        return {
-          fill: RELIEF_ATLANTROPA_SALT_FILL_COLOR,
-          stroke: RELIEF_ATLANTROPA_SALT_STROKE_COLOR,
-          lineWidth: 0.55,
-          fillAlpha: 1,
-        };
-      }
-      return {
-        fill: RELIEF_SALT_FILL_COLOR,
-        stroke: RELIEF_SALT_STROKE_COLOR,
-        lineWidth: 0.7,
-        fillAlpha: 1,
-      };
-    case "new_shoreline":
-      return {
-        fill: null,
-        stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_SHORELINE_COLOR : RELIEF_SHORELINE_COLOR,
-        lineWidth: isAtlantropaRelief ? 1.1 : 1.35,
-      };
-    case "drained_basin_contour":
-      return {
-        fill: null,
-        stroke: isAtlantropaRelief ? RELIEF_ATLANTROPA_CONTOUR_COLOR : RELIEF_CONTOUR_COLOR,
-        lineWidth: isAtlantropaRelief ? 0.8 : 1,
-      };
-    case "swamp_margin":
-      return {
-        fill: RELIEF_SWAMP_FILL_COLOR,
-        stroke: RELIEF_SWAMP_STROKE_COLOR,
-        lineWidth: 0.8,
-        fillAlpha: 1,
-      };
-    case "lake_shoreline":
-      return {
-        fill: null,
-        stroke: RELIEF_LAKE_SHORELINE_COLOR,
-        lineWidth: 1.4,
-      };
-    case "dam_approach":
-      return {
-        fill: null,
-        stroke: RELIEF_DAM_APPROACH_COLOR,
-        lineWidth: 1.1,
-      };
-    default:
-      return {
-        fill: null,
-        stroke: RELIEF_SALT_STROKE_COLOR,
-        lineWidth: 1,
-      };
-  }
-}
-
-function drawPolygonLinePattern(bounds, {
-  color = RELIEF_SALT_STROKE_COLOR,
-  spacing = 10,
-  angleDeg = -18,
-  lineWidth = 0.6,
-  alpha = 0.45,
-} = {}) {
-  if (!bounds) return;
-  const width = bounds.maxX - bounds.minX;
-  const height = bounds.maxY - bounds.minY;
-  if (!(width > 0 && height > 0)) return;
-  const diagonal = Math.sqrt(width * width + height * height);
-  const radians = angleDeg * (Math.PI / 180);
-  const dx = Math.cos(radians);
-  const dy = Math.sin(radians);
-  const nx = -dy;
-  const ny = dx;
-  const centerX = (bounds.minX + bounds.maxX) * 0.5;
-  const centerY = (bounds.minY + bounds.maxY) * 0.5;
-  const extent = diagonal * 0.9;
-  context.save();
-  context.globalAlpha = alpha;
-  context.strokeStyle = color;
-  context.lineWidth = lineWidth;
-  for (let offset = -extent; offset <= extent; offset += Math.max(4, spacing)) {
-    const startX = centerX + nx * offset - dx * diagonal;
-    const startY = centerY + ny * offset - dy * diagonal;
-    const endX = centerX + nx * offset + dx * diagonal;
-    const endY = centerY + ny * offset + dy * diagonal;
-    context.beginPath();
-    context.moveTo(startX, startY);
-    context.lineTo(endX, endY);
-    context.stroke();
-  }
-  context.restore();
-}
-
 function drawScenarioReliefOverlaysLayer(k, {
   reliefFeatures = null,
   cacheMode = "direct",
 } = {}) {
-  const startedAt = nowMs();
-  const overlays = Array.isArray(reliefFeatures)
-    ? reliefFeatures
-    : getEffectiveScenarioReliefOverlayFeatures();
-  if (!overlays.length) {
-    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      renderedCount: 0,
-      skipped: true,
-      reason: "no-overlays",
-    });
-    collectContextMetric("contextScenarioLayerRelief", 0, {
-      featureCount: 0,
-      renderedCount: 0,
-      skipped: true,
-      reason: "no-overlays",
-      cacheMode,
-      signature: getScenarioReliefVisualRevisionToken(),
-    });
-    return 0;
-  }
-  if (!runtimeState.showScenarioReliefOverlays) {
-    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
-      featureCount: overlays.length,
-      renderedCount: 0,
-      skipped: true,
-      reason: "disabled",
-    });
-    collectContextMetric("contextScenarioLayerRelief", 0, {
-      featureCount: overlays.length,
-      renderedCount: 0,
-      skipped: true,
-      reason: "disabled",
-      cacheMode,
-      signature: getScenarioReliefVisualRevisionToken(),
-    });
-    return 0;
-  }
-  if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING || runtimeState.renderPhase === RENDER_PHASE_SETTLING) {
-    collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
-      featureCount: overlays.length,
-      renderedCount: 0,
-      skipped: true,
-      reason: runtimeState.renderPhase,
-    });
-    collectContextMetric("contextScenarioLayerRelief", 0, {
-      featureCount: overlays.length,
-      renderedCount: 0,
-      skipped: true,
-      reason: runtimeState.renderPhase,
-      cacheMode,
-      signature: getScenarioReliefVisualRevisionToken(),
-    });
-    return 0;
-  }
-  let renderedCount = 0;
-  overlays.forEach((feature) => {
-    if (!isReliefOverlayEnabled(feature)) return;
-    if (!pathBoundsInScreen(feature)) return;
-    const style = getReliefOverlayStyle(feature);
-    const kind = getReliefOverlayKind(feature);
-    if (
-      (kind === "new_shoreline" || kind === "lake_shoreline")
-      && isScenarioCoastalAccentEnabled()
-    ) {
-      return;
-    }
-    const bounds = getPathBounds(feature);
-    if (!bounds) return;
-    const geometryType = String(feature?.geometry?.type || "").trim();
-    if ((geometryType === "Polygon" || geometryType === "MultiPolygon") && style.fill) {
-      context.beginPath();
-      pathCanvas(feature);
-      context.save();
-      context.globalAlpha = style.fillAlpha ?? 1;
-      context.fillStyle = style.fill;
-      context.fill();
-      context.clip();
-      if (kind === "salt_flat_texture") {
-        drawPolygonLinePattern(bounds, {
-          color: style.stroke,
-          spacing: 11 / Math.max(0.3, Math.min(4, k)),
-          angleDeg: -16,
-          lineWidth: (style.lineWidth || 0.7) / Math.max(0.0001, k),
-          alpha: 0.55,
-        });
-        drawPolygonLinePattern(bounds, {
-          color: style.stroke,
-          spacing: 19 / Math.max(0.3, Math.min(4, k)),
-          angleDeg: 12,
-          lineWidth: 0.45 / Math.max(0.0001, k),
-          alpha: 0.25,
-        });
-      } else if (kind === "swamp_margin") {
-        drawPolygonLinePattern(bounds, {
-          color: style.stroke,
-          spacing: 8 / Math.max(0.3, Math.min(4, k)),
-          angleDeg: 82,
-          lineWidth: 0.5 / Math.max(0.0001, k),
-          alpha: 0.4,
-        });
-        drawPolygonLinePattern(bounds, {
-          color: "rgba(90, 140, 180, 0.8)",
-          spacing: 14 / Math.max(0.3, Math.min(4, k)),
-          angleDeg: 0,
-          lineWidth: 0.35 / Math.max(0.0001, k),
-          alpha: 0.22,
-        });
-      }
-      context.restore();
-    }
-    context.beginPath();
-    pathCanvas(feature);
-    context.save();
-    if (kind === "dam_approach") {
-      context.setLineDash([3 / Math.max(0.0001, k), 2 / Math.max(0.0001, k)]);
-    }
-    context.strokeStyle = style.stroke;
-    context.lineWidth = (style.lineWidth || 1) / Math.max(0.0001, k);
-    context.lineJoin = "round";
-    context.lineCap = "round";
-    context.stroke();
-    context.restore();
-    renderedCount += 1;
-  });
-  collectContextMetric("drawScenarioReliefOverlaysLayer", nowMs() - startedAt, {
-    featureCount: overlays.length,
-    renderedCount,
-    skipped: false,
-    phase: runtimeState.renderPhase,
-  });
-  collectContextMetric("contextScenarioLayerRelief", 0, {
-    featureCount: overlays.length,
-    renderedCount,
-    skipped: false,
+  return getScenarioReliefOverlayRenderOwner().drawScenarioReliefOverlaysLayer(k, {
+    reliefFeatures,
     cacheMode,
-    signature: getScenarioReliefVisualRevisionToken(),
   });
-  return renderedCount;
 }
 
 function renderScenarioReliefOverlaysLayerToCache(currentTransform, reliefFeatures) {
@@ -12173,35 +12032,11 @@ function drawPhysicalAtlasCollectionLayer(
     clipAlreadyApplied = false,
   } = {}
 ) {
-  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
-    return 0;
-  }
-  let renderedCount = 0;
-  context.save();
-  if (!clipAlreadyApplied) {
-    applyPhysicalLandClipMask();
-  }
-  context.globalCompositeOperation = blendMode;
-  atlasCollection.features.forEach((feature) => {
-    const atlasClass = getPhysicalAtlasClass(feature);
-    if (!atlasClass || cfg.atlasClassVisibility?.[atlasClass] === false) return;
-    if (getPhysicalAtlasLayer(feature) !== layerName) return;
-    if (!pathBoundsInScreen(feature)) return;
-    const fillColor = getSafeCanvasColor(PHYSICAL_ATLAS_PALETTE[atlasClass], null);
-    if (!fillColor) return;
-    context.globalAlpha = clamp(
-      baseOpacity * getAtlasFeatureAlphaMultiplier(atlasClass, cfg) * getFieldFeatureMultiplier("physicalAtlas", feature),
-      0,
-      1
-    );
-    context.fillStyle = fillColor;
-    context.beginPath();
-    pathCanvas(feature);
-    context.fill();
-    renderedCount += 1;
+  return getPhysicalLayerRenderOwner().drawPhysicalAtlasCollectionLayer(atlasCollection, layerName, cfg, {
+    baseOpacity,
+    blendMode,
+    clipAlreadyApplied,
   });
-  context.restore();
-  return renderedCount;
 }
 
 function getFieldFeatureMultiplier(channelId, feature) {
@@ -12236,40 +12071,7 @@ function getProjectedDegreeRadiusPx(lon, lat, radiusDeg) {
 }
 
 function drawPhysicalIntensityFieldLayer({ clipAlreadyApplied = false } = {}) {
-  runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
-  const fieldState = runtimeState.intensityFields.channels.physicalAtlas;
-  if (!fieldState?.enabled || !fieldState.points.length || !projection || !context) return 0;
-  let renderedCount = 0;
-  context.save();
-  if (!clipAlreadyApplied) {
-    applyPhysicalLandClipMask();
-  }
-  context.globalCompositeOperation = "soft-light";
-  fieldState.points.forEach((point) => {
-    const projected = projection([point.lon, point.lat]);
-    if (!Array.isArray(projected) || projected.length < 2) return;
-    const radiusPx = getProjectedDegreeRadiusPx(point.lon, point.lat, point.radiusDeg);
-    if (radiusPx <= 0) return;
-    const strengthDelta = clamp(Math.abs(Number(point.strength || 1) - 1), 0, 1);
-    const gradient = context.createRadialGradient(projected[0], projected[1], 0, projected[0], projected[1], radiusPx);
-    const alpha = clamp(0.08 + strengthDelta * 0.26, 0.08, 0.34);
-    const coreColor = Number(point.strength || 1) < 1
-      ? `rgba(84, 46, 20, ${alpha})`
-      : `rgba(216, 236, 255, ${alpha})`;
-    const edgeColor = Number(point.strength || 1) < 1
-      ? "rgba(84, 46, 20, 0)"
-      : "rgba(216, 236, 255, 0)";
-    gradient.addColorStop(0, coreColor);
-    gradient.addColorStop(point.falloff === "linear" ? 0.65 : 0.45, coreColor);
-    gradient.addColorStop(1, edgeColor);
-    context.fillStyle = gradient;
-    context.beginPath();
-    context.arc(projected[0], projected[1], radiusPx, 0, Math.PI * 2);
-    context.fill();
-    renderedCount += 1;
-  });
-  context.restore();
-  return renderedCount;
+  return getPhysicalLayerRenderOwner().drawPhysicalIntensityFieldLayer({ clipAlreadyApplied });
 }
 
 function getPhysicalReliefOverlayBlendMode(cfg, presetProfile) {
@@ -12281,180 +12083,15 @@ function getPhysicalReliefOverlayBlendMode(cfg, presetProfile) {
 }
 
 function drawPhysicalReliefOverlayLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
-  const startedAt = nowMs();
-  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
-  const presetProfile = getPhysicalPresetRenderProfile(cfg);
-  const maskInfo = getPhysicalLandMaskInfo();
-  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
-    collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      renderedCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return 0;
-  }
-
-  const atlasCollection = getResolvedPhysicalAtlasCollection();
-  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
-    collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      renderedCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "no-data",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return 0;
-  }
-
-  const baseReliefOpacity = clamp(
-    cfg.opacity
-      * cfg.atlasOpacity
-      * (interactive ? 0.7 : 1)
-      * cfg.atlasIntensity
-      * presetProfile.reliefOpacityMultiplier,
-    0,
-    1
-  );
-  const overlayOpacity = clamp(
-    baseReliefOpacity * Number(presetProfile.reliefOverlayOpacityRatio || 0),
-    0,
-    Number(presetProfile.reliefOverlayOpacityCap ?? 1)
-  );
-  const renderedCount = drawPhysicalAtlasCollectionLayer(atlasCollection, "relief_base", cfg, {
-    baseOpacity: overlayOpacity,
-    blendMode: getPhysicalReliefOverlayBlendMode(cfg, presetProfile),
-    clipAlreadyApplied,
-  });
-  collectContextMetric("drawPhysicalReliefOverlayLayer", nowMs() - startedAt, {
-    featureCount: atlasCollection.features.length,
-    renderedCount,
-    interactive: !!interactive,
-    skipped: renderedCount === 0,
-    reason: renderedCount === 0 ? "no-relief-overlay" : "",
-    maskSource: maskInfo.maskSource,
-    maskFeatureCount: maskInfo.maskFeatureCount,
-    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-  });
-  return renderedCount;
+  return getPhysicalLayerRenderOwner().drawPhysicalReliefOverlayLayer(k, { interactive, clipAlreadyApplied });
 }
 
 function drawPhysicalBasePass(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
-  const maskInfo = getPhysicalLandMaskInfo();
-  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
-    collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
-      featureCount: 0,
-      renderedCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return;
-  }
-
-  const atlasCollection = getResolvedPhysicalAtlasCollection();
-  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
-    collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
-      featureCount: 0,
-      renderedCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: "no-data",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return;
-  }
-
-  const semanticRenderedCount = drawPhysicalAtlasLayer(k, { interactive });
-  const intensityRenderedCount = drawPhysicalIntensityFieldLayer();
-  const reliefRenderedCount = drawPhysicalReliefOverlayLayer(k, { interactive });
-  const renderedCount = semanticRenderedCount + intensityRenderedCount + reliefRenderedCount;
-  collectContextMetric("drawPhysicalBasePass", nowMs() - startedAt, {
-    featureCount: atlasCollection.features.length,
-    renderedCount,
-    semanticRenderedCount,
-    intensityRenderedCount,
-    reliefRenderedCount,
-    interactive: !!interactive,
-    skipped: renderedCount === 0,
-    reason: renderedCount === 0 ? "no-physical-underlay" : "",
-    maskSource: maskInfo.maskSource,
-    maskFeatureCount: maskInfo.maskFeatureCount,
-    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-  });
+  return getPhysicalLayerRenderOwner().drawPhysicalBasePass(k, { interactive });
 }
 
 function drawPhysicalAtlasLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
-  const startedAt = nowMs();
-  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
-  const presetProfile = getPhysicalPresetRenderProfile(cfg);
-  const maskInfo = getPhysicalLandMaskInfo();
-  if (!runtimeState.showPhysical || cfg.mode === "contours_only") {
-    collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !runtimeState.showPhysical ? "hidden" : "contours-only",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return 0;
-  }
-
-  const atlasCollection = getResolvedPhysicalAtlasCollection();
-  if (!Array.isArray(atlasCollection?.features) || atlasCollection.features.length === 0) {
-    if (shouldReportDeferredContextLayerGap("physical_semantics")) {
-      warnMissingPhysicalContextOnce(
-        "physical-atlas-missing",
-        "[physical] Atlas semantics unavailable; skipping physical atlas fill."
-      );
-    }
-    collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: shouldReportDeferredContextLayerGap("physical_semantics") ? "no-data" : "pending-deferred-context",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return 0;
-  }
-  const renderedCount = drawPhysicalAtlasCollectionLayer(atlasCollection, "semantic_overlay", cfg, {
-    baseOpacity: clamp(
-      cfg.opacity * cfg.atlasOpacity * (interactive ? 0.7 : 1) * cfg.atlasIntensity * presetProfile.semanticOpacityMultiplier,
-      0,
-      1
-    ),
-    blendMode: getSafeBlendMode(cfg.blendMode, presetProfile.semanticBlendMode),
-    clipAlreadyApplied,
-  });
-  collectContextMetric("drawPhysicalAtlasLayer", nowMs() - startedAt, {
-    featureCount: atlasCollection.features.length,
-    renderedCount,
-    interactive: !!interactive,
-    skipped: renderedCount === 0,
-    reason: renderedCount === 0 ? "no-semantic-overlay" : "",
-    maskSource: maskInfo.maskSource,
-    maskFeatureCount: maskInfo.maskFeatureCount,
-    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-  });
-  return renderedCount;
+  return getPhysicalLayerRenderOwner().drawPhysicalAtlasLayer(k, { interactive, clipAlreadyApplied });
 }
 
 function drawContourCollection(
@@ -12475,202 +12112,25 @@ function drawContourCollection(
     opacityMultiplierResolver = null,
   } = {}
 ) {
-  if (!Array.isArray(collection?.features) || collection.features.length === 0) {
-    return { drewAny: false, renderedCount: 0, selectedCount: 0 };
-  }
-  const visibleFeatures = getContourVisibleFeatures(collection, {
+  return getPhysicalLayerRenderOwner().drawContourCollection(collection, {
     cacheSlot,
+    color,
+    colorResolver,
+    opacity,
+    width,
     k,
+    interactive,
     lowReliefCutoff,
     intervalM,
     excludeIntervalM,
     minScreenSpanPx,
     maxFeatures,
+    opacityMultiplierResolver,
   });
-  if (!visibleFeatures.length) return { drewAny: false, renderedCount: 0, selectedCount: 0 };
-  const scale = Math.max(0.0001, k);
-  context.globalAlpha = interactive ? Math.min(opacity, 0.22) : opacity;
-  context.strokeStyle = color;
-  context.lineWidth = width / scale;
-  context.lineJoin = "round";
-  context.lineCap = "round";
-
-  const strokeBatches = new Map();
-  visibleFeatures.forEach((feature) => {
-    const strokeColor = typeof colorResolver === "function"
-      ? getSafeCanvasColor(colorResolver(feature), color)
-      : color;
-    if (!strokeColor) return;
-    const rawMultiplier = typeof opacityMultiplierResolver === "function"
-      ? opacityMultiplierResolver(feature)
-      : 1;
-    const multiplier = clamp(Math.round((Number(rawMultiplier) || 1) / 0.05) * 0.05, 0, 2);
-    const batchKey = `${strokeColor}|${multiplier.toFixed(2)}`;
-    if (!strokeBatches.has(batchKey)) {
-      strokeBatches.set(batchKey, {
-        strokeColor,
-        multiplier,
-        features: [],
-      });
-    }
-    strokeBatches.get(batchKey).features.push(feature);
-  });
-
-  let drewAny = false;
-  let renderedCount = 0;
-  strokeBatches.forEach(({ features, strokeColor, multiplier }) => {
-    if (!Array.isArray(features) || !features.length) return;
-    context.strokeStyle = strokeColor;
-    context.globalAlpha = clamp((interactive ? Math.min(opacity, 0.22) : opacity) * multiplier, 0, 1);
-    context.beginPath();
-    features.forEach((feature) => {
-      pathCanvas(feature);
-    });
-    context.stroke();
-    drewAny = true;
-    renderedCount += features.length;
-  });
-  return {
-    drewAny,
-    renderedCount,
-    selectedCount: visibleFeatures.length,
-  };
 }
 
 function drawPhysicalContourLayer(k, { interactive = false, clipAlreadyApplied = false } = {}) {
-  const startedAt = nowMs();
-  const cfg = normalizePhysicalStyleConfig(runtimeState.styleConfig?.physical);
-  const presetProfile = getPhysicalPresetRenderProfile(cfg);
-  const zoomProfile = getContourZoomStyleProfile(k);
-  const maskInfo = getPhysicalLandMaskInfo();
-  if (!runtimeState.showPhysical || cfg.mode === "atlas_only") {
-    collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: !runtimeState.showPhysical ? "hidden" : "atlas-only",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return;
-  }
-
-  if (!Array.isArray(runtimeState.physicalContourMajorData?.features) || runtimeState.physicalContourMajorData.features.length === 0) {
-    if (shouldReportDeferredContextLayerGap("physical_contours_major")) {
-      warnMissingPhysicalContextOnce(
-        "physical-contours-major-missing",
-        "[physical] global_contours.major.topo.json unavailable or deferred; skipping terrain contours."
-      );
-    }
-    collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
-      featureCount: 0,
-      majorFeatureCount: 0,
-      minorFeatureCount: 0,
-      interactive: !!interactive,
-      skipped: true,
-      reason: shouldReportDeferredContextLayerGap("physical_contours_major") ? "no-data" : "pending-deferred-context",
-      maskSource: maskInfo.maskSource,
-      maskFeatureCount: maskInfo.maskFeatureCount,
-      maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-    });
-    return;
-  }
-
-  const contourColor = getSafeCanvasColor(cfg.contourColor, "#6b5947");
-  const majorLowReliefCutoff = clamp(Number(cfg.contourMajorLowReliefCutoffM) || 0, 0, 2000);
-  const minorLowReliefCutoff = clamp(Number(cfg.contourMinorLowReliefCutoffM) || 0, 0, 2000);
-  const majorOpacity = clamp(
-    cfg.opacity * cfg.contourOpacity * presetProfile.majorContourOpacityMultiplier * zoomProfile.majorOpacityMultiplier,
-    0,
-    1
-  );
-  const minorOpacity = clamp(
-    majorOpacity * presetProfile.minorContourOpacityRatio * zoomProfile.minorOpacityMultiplier,
-    0,
-    1
-  );
-  const resolveContourColor = (feature) => getAdaptiveContourStrokeColor(feature, contourColor);
-  const resolveContourIntensity = (feature) => getFieldFeatureMultiplier("physicalContour", feature);
-  const majorInterval = clamp(
-    (clamp(Number(cfg.contourMajorIntervalM) || 500, 500, 2000) * zoomProfile.majorIntervalMultiplier),
-    500,
-    6000,
-  );
-  const minorInterval = clamp(
-    (clamp(Number(cfg.contourMinorIntervalM) || 100, 100, 1000) * zoomProfile.minorIntervalMultiplier),
-    100,
-    3000,
-  );
-
-  context.save();
-  if (!clipAlreadyApplied) {
-    applyPhysicalLandClipMask();
-  }
-  context.globalCompositeOperation = "source-over";
-
-  const majorDrawResult = drawContourCollection(runtimeState.physicalContourMajorData, {
-    cacheSlot: "major",
-    color: contourColor,
-    colorResolver: resolveContourColor,
-    opacity: majorOpacity,
-    width: clamp((Number(cfg.contourMajorWidth) || 0.8) * zoomProfile.majorWidthMultiplier, 0.2, 3),
-    k,
-    interactive,
-    lowReliefCutoff: majorLowReliefCutoff,
-    intervalM: majorInterval,
-    minScreenSpanPx: zoomProfile.majorMinScreenSpanPx,
-    opacityMultiplierResolver: resolveContourIntensity,
-  });
-
-  if (cfg.contourMinorVisible && zoomProfile.minorVisible && k >= presetProfile.minorContourMinZoom) {
-    if (Array.isArray(runtimeState.physicalContourMinorData?.features) && runtimeState.physicalContourMinorData.features.length > 0) {
-      const dynamicMinorMaxFeatures = clamp(
-        Math.round(
-          Number(zoomProfile.minorMaxFeaturesBase || 0)
-          + Number(majorDrawResult?.selectedCount || 0) * Number(zoomProfile.minorMaxFeaturesPerMajor || 0)
-        ),
-        0,
-        Number(zoomProfile.minorMaxFeaturesHardCap || 0) || 100000
-      );
-      drawContourCollection(runtimeState.physicalContourMinorData, {
-        cacheSlot: "minor",
-        color: contourColor,
-        colorResolver: resolveContourColor,
-        opacity: minorOpacity,
-        width: clamp((Number(cfg.contourMinorWidth) || 0.45) * zoomProfile.minorWidthMultiplier, 0.1, 2),
-        k,
-        interactive,
-        lowReliefCutoff: minorLowReliefCutoff,
-        intervalM: minorInterval,
-        excludeIntervalM: majorInterval,
-        minScreenSpanPx: zoomProfile.minorMinScreenSpanPx,
-        maxFeatures: dynamicMinorMaxFeatures,
-        opacityMultiplierResolver: resolveContourIntensity,
-      });
-    } else {
-      if (shouldReportDeferredContextLayerGap("physical_contours_minor")) {
-        warnMissingPhysicalContextOnce(
-          "physical-contours-minor-missing",
-          "[physical] global_contours.minor.topo.json unavailable or deferred; skipping minor contours."
-        );
-      }
-    }
-  }
-
-  context.restore();
-  collectContextMetric("drawPhysicalContourLayer", nowMs() - startedAt, {
-    featureCount:
-      getFeatureCollectionFeatureCount(runtimeState.physicalContourMajorData)
-      + getFeatureCollectionFeatureCount(runtimeState.physicalContourMinorData),
-    majorFeatureCount: getFeatureCollectionFeatureCount(runtimeState.physicalContourMajorData),
-    minorFeatureCount: getFeatureCollectionFeatureCount(runtimeState.physicalContourMinorData),
-    interactive: !!interactive,
-    skipped: false,
-    maskSource: maskInfo.maskSource,
-    maskFeatureCount: maskInfo.maskFeatureCount,
-    maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-  });
+  return getPhysicalLayerRenderOwner().drawPhysicalContourLayer(k, { interactive, clipAlreadyApplied });
 }
 
 function shouldForceExactContextBaseRefresh(reuseDecision = null) {

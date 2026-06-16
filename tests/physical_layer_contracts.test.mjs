@@ -11,6 +11,8 @@ function readRepoFile(...relativeParts) {
 
 test("physical layer source contracts stay wired to the expected renderer and startup boundaries", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const physicalLayerOwnerSource = readRepoFile("js", "core", "renderer", "physical_layer_render_owner.js");
+  const scenarioReliefOverlayOwnerSource = readRepoFile("js", "core", "renderer", "scenario_relief_overlay_render_owner.js");
   const mainSource = readRepoFile("js", "main.js");
   const startupDataPipelineSource = readRepoFile("js", "bootstrap", "startup_data_pipeline.js");
   const appearanceControllerSource = readRepoFile("js", "ui", "toolbar", "appearance_controls_controller.js");
@@ -18,13 +20,13 @@ test("physical layer source contracts stay wired to the expected renderer and st
   const interactionFunnelSource = readRepoFile("js", "core", "interaction_funnel.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
 
-  const physicalBaseStart = rendererSource.indexOf("function drawPhysicalBasePass");
-  const physicalBaseEnd = rendererSource.indexOf("function drawPhysicalAtlasLayer");
+  const physicalBaseStart = physicalLayerOwnerSource.indexOf("function drawPhysicalBasePass");
+  const physicalBaseEnd = physicalLayerOwnerSource.indexOf("function drawPhysicalAtlasLayer");
   const contextBaseStart = rendererSource.indexOf("function drawContextBasePass");
   const contextBaseEnd = rendererSource.indexOf("function drawContextMarkersPass");
   const physicalBaseSource =
     physicalBaseStart >= 0 && physicalBaseEnd > physicalBaseStart
-      ? rendererSource.slice(physicalBaseStart, physicalBaseEnd)
+      ? physicalLayerOwnerSource.slice(physicalBaseStart, physicalBaseEnd)
       : "";
   const contextBaseSource =
     contextBaseStart >= 0 && contextBaseEnd > contextBaseStart
@@ -56,15 +58,37 @@ test("physical layer source contracts stay wired to the expected renderer and st
     hasPhysicalBasePass:
       /\["physicalBase", \(k\) => drawPhysicalBasePass\(k\)\]/.test(renderPipelinePassesSource)
       && /drawPhysicalBasePass,/.test(rendererSource),
+    hasPhysicalLayerOwner:
+      /import \{ createPhysicalLayerRenderOwner \} from "\.\/renderer\/physical_layer_render_owner\.js";/.test(rendererSource)
+      && /function getPhysicalLayerRenderOwner\(\)/.test(rendererSource)
+      && /export function createPhysicalLayerRenderOwner/.test(physicalLayerOwnerSource),
+    hasScenarioReliefOverlayOwner:
+      /import \{ createScenarioReliefOverlayRenderOwner \} from "\.\/renderer\/scenario_relief_overlay_render_owner\.js";/.test(rendererSource)
+      && /function getScenarioReliefOverlayRenderOwner\(\)/.test(rendererSource)
+      && /export function createScenarioReliefOverlayRenderOwner/.test(scenarioReliefOverlayOwnerSource),
+    scenarioReliefDrawingMovedToOwner:
+      /function drawPolygonLinePattern/.test(scenarioReliefOverlayOwnerSource)
+      && /function drawScenarioReliefOverlaysLayer\(k, \{[\s\S]*?return getScenarioReliefOverlayRenderOwner\(\)\.drawScenarioReliefOverlaysLayer\(k, \{/.test(rendererSource)
+      && !/function drawPolygonLinePattern/.test(rendererSource),
+    scenarioReliefCacheLifecycleStaysInRenderer:
+      /function renderScenarioReliefOverlaysLayerToCache\(currentTransform, reliefFeatures\) \{[\s\S]*?getContextScenarioLayerCacheEntry\("relief"\)/.test(rendererSource)
+      && /function drawScenarioReliefOverlaysPass\(k\) \{[\s\S]*?drawCachedContextScenarioLayer\("relief", currentTransform\)/.test(rendererSource)
+      && !/getContextScenarioLayerCacheEntry/.test(scenarioReliefOverlayOwnerSource)
+      && !/drawCachedContextScenarioLayer/.test(scenarioReliefOverlayOwnerSource),
+    scenarioReliefOwnerKeepsPhaseAndCoastalAccentSkips:
+      /runtimeState\.renderPhase === RENDER_PHASE_INTERACTING \|\| runtimeState\.renderPhase === RENDER_PHASE_SETTLING/.test(scenarioReliefOverlayOwnerSource)
+      && /kind === "new_shoreline" \|\| kind === "lake_shoreline"[\s\S]*?isScenarioCoastalAccentEnabled\(\)/.test(scenarioReliefOverlayOwnerSource),
     physicalBaseDrawsBeforePolitical:
       renderPipelinePassesSource.indexOf('["physicalBase", (k) => drawPhysicalBasePass(k)]')
         < renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
       && renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
         < renderPipelinePassesSource.indexOf('["contextBase", (k) => drawContextBasePass(k)]'),
     hasPhysicalReliefOverlayHelper:
-      /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
+      /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(physicalLayerOwnerSource)
+      && /return getPhysicalLayerRenderOwner\(\)\.drawPhysicalReliefOverlayLayer\(k, \{ interactive, clipAlreadyApplied \}\);/.test(rendererSource),
     hasPhysicalIntensityFieldHelper:
-      /function drawPhysicalIntensityFieldLayer\(\{ clipAlreadyApplied = false \} = \{\}\)/.test(rendererSource),
+      /function drawPhysicalIntensityFieldLayer\(\{ clipAlreadyApplied = false \} = \{\}\)/.test(physicalLayerOwnerSource)
+      && /return getPhysicalLayerRenderOwner\(\)\.drawPhysicalIntensityFieldLayer\(\{ clipAlreadyApplied \}\);/.test(rendererSource),
     physicalBaseSignatureTracksIntensityRevision:
       /if \(passName === "physicalBase"\) \{[\s\S]*?`field:\$\{Number\(intensityFields\.channels\.physicalAtlas\?\.revision \|\| 0\)\}`/.test(rendererSource),
     reliefOverlayBlendClamp:
@@ -88,31 +112,31 @@ test("physical layer source contracts stay wired to the expected renderer and st
       /if \((?:runtimeState|state)\.deferContextBasePass && !interactive\) \{/.test(contextBaseSource)
       && !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive: false });"),
     contourUsesSourceOver:
-      /drawPhysicalContourLayer[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(rendererSource),
+      /drawPhysicalContourLayer[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(physicalLayerOwnerSource),
     hasContourZoomProfiles:
       /const CONTOUR_ZOOM_STYLE_PROFILES = Object\.freeze\(\{/.test(rendererSource),
     hasAdaptiveContourColor:
       /function getAdaptiveContourStrokeColor\(feature, baseColor\)/.test(rendererSource),
     contourKeepsInverseScaleWidth:
-      /function drawContourCollection[\s\S]*?const scale = Math\.max\(0\.0001, k\);[\s\S]*?context\.lineWidth = width \/ scale;/.test(rendererSource),
+      /function drawContourCollection[\s\S]*?const scale = Math\.max\(0\.0001, k\);[\s\S]*?context\.lineWidth = width \/ scale;/.test(physicalLayerOwnerSource),
     contourUsesAdaptiveColor:
-      /drawContourCollection[\s\S]*?colorResolver = null/.test(rendererSource)
-      && /drawPhysicalContourLayer[\s\S]*?colorResolver: resolveContourColor/.test(rendererSource),
+      /drawContourCollection[\s\S]*?colorResolver = null/.test(physicalLayerOwnerSource)
+      && /drawPhysicalContourLayer[\s\S]*?colorResolver: resolveContourColor/.test(physicalLayerOwnerSource),
     contourUsesVisibleSetCache:
       /function getContourVisibleFeatures\(/.test(rendererSource)
       && /contourVisibleSetCache\[cacheSlot\] = \{[\s\S]*?collectionRef: collection,[\s\S]*?features: visibleFeatures,/.test(rendererSource),
     contourMergesBoundsAndFilter:
       /function getContourVisibleFeatures[\s\S]*?const screenBounds = getFeatureScreenBounds\(feature, \{ allowCompute: false \}\) \|\| getFeatureScreenBounds\(feature\);/.test(rendererSource)
       && /function getContourVisibleFeatures[\s\S]*?rectsIntersect\(screenBounds, viewportBounds\)/.test(rendererSource)
-      && /function drawContourCollection[\s\S]*?const visibleFeatures = getContourVisibleFeatures\(collection, \{/.test(rendererSource),
+      && /function drawContourCollection[\s\S]*?const visibleFeatures = getContourVisibleFeatures\(collection, \{/.test(physicalLayerOwnerSource),
     contourUsesStrokeBatching:
-      /function drawContourCollection[\s\S]*?const strokeBatches = new Map\(\);/.test(rendererSource)
-      && /const batchKey = `\$\{strokeColor\}\|\$\{multiplier\.toFixed\(2\)\}`;/.test(rendererSource)
-      && /strokeBatches\.forEach\(\(\{ features, strokeColor, multiplier \}\) => \{[\s\S]*?context\.globalAlpha = clamp\(\(interactive \? Math\.min\(opacity, 0\.22\) : opacity\) \* multiplier, 0, 1\);[\s\S]*?features\.forEach\(\(feature\) => \{[\s\S]*?pathCanvas\(feature\);/.test(rendererSource),
+      /function drawContourCollection[\s\S]*?const strokeBatches = new Map\(\);/.test(physicalLayerOwnerSource)
+      && /const batchKey = `\$\{strokeColor\}\|\$\{multiplier\.toFixed\(2\)\}`;/.test(physicalLayerOwnerSource)
+      && /strokeBatches\.forEach\(\(\{ features, strokeColor, multiplier \}\) => \{[\s\S]*?context\.globalAlpha = clamp\(\(interactive \? Math\.min\(opacity, 0\.22\) : opacity\) \* multiplier, 0, 1\);[\s\S]*?features\.forEach\(\(feature\) => \{[\s\S]*?pathCanvas\(feature\);/.test(physicalLayerOwnerSource),
     physicalIntensityFieldsModulateAtlasAndContours:
-      /baseOpacity \* getAtlasFeatureAlphaMultiplier\(atlasClass, cfg\) \* getFieldFeatureMultiplier\("physicalAtlas", feature\)/.test(rendererSource)
-      && /const resolveContourIntensity = \(feature\) => getFieldFeatureMultiplier\("physicalContour", feature\);/.test(rendererSource)
-      && /opacityMultiplierResolver: resolveContourIntensity,/.test(rendererSource),
+      /baseOpacity \* getAtlasFeatureAlphaMultiplier\(atlasClass, cfg\) \* getFieldFeatureMultiplier\("physicalAtlas", feature\)/.test(physicalLayerOwnerSource)
+      && /const resolveContourIntensity = \(feature\) => getFieldFeatureMultiplier\("physicalContour", feature\);/.test(physicalLayerOwnerSource)
+      && /opacityMultiplierResolver: resolveContourIntensity,/.test(physicalLayerOwnerSource),
     physicalIntensityToolHookRegistered:
       /registerRuntimeHook\(runtimeState, "setIntensityFieldToolFn", setIntensityFieldTool\);/.test(rendererSource),
     physicalIntensityPointCommitRebakesComposite:

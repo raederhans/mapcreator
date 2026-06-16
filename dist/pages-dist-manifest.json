@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 978545,
+      "size_bytes": 958164,
       "source_kind": "dist"
     },
     {
@@ -45816,6 +45816,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/physical_layer_render_owner.js",
+      "size_bytes": 21009,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/political_collection_owner.js",
       "size_bytes": 21033,
       "source_kind": "dist"
@@ -45838,6 +45843,11 @@
     {
       "path": "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
       "size_bytes": 3900,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/scenario_relief_overlay_render_owner.js",
+      "size_bytes": 9139,
       "source_kind": "dist"
     },
     {
@@ -46952,7 +46962,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1450690,
+      "size_bytes": 1450972,
       "source_kind": "dist"
     },
     {
@@ -46971,5 +46981,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145163892
+  "total_bytes": 1145173941
 }

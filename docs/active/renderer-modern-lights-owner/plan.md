@@ -8,6 +8,7 @@
 - Phase 2: close out Rivers ownership in `js/core/renderer/river_layer_render_owner.js`.
 - Phase 3A: move Ocean / Bathymetry / Coastal rendering details into `js/core/renderer/ocean_render_owner.js`.
 - Phase 3B: move Physical base / contour rendering details into a focused physical owner while keeping pass signatures and cache lifecycle in `map_renderer.js`.
+- Phase 3C: move `contextScenario` relief overlay drawing details into `js/core/renderer/scenario_relief_overlay_render_owner.js` while keeping the relief cache/pass lifecycle in `map_renderer.js`.
 - Non-goals for this slice: toolbar/sidebar, vendored libraries, and broad clone utility migration.
 
 ## Evidence
@@ -31,6 +32,8 @@
 - Rivers owner keeps `drawRiversLayer` logic outside `map_renderer.js`, has direct behavior coverage, and focused river e2e passes.
 - Ocean owner keeps bathymetry bands/contours, coastal accent buckets, and `drawOceanStyle` logic outside `map_renderer.js`, with direct behavior coverage.
 - `drawOceanStyle()` remains before `drawOceanDepthMaskLayer()` in `drawBackgroundPass`.
+- Physical owner keeps atlas, intensity field, relief base, and contour drawing details outside `map_renderer.js`, with direct behavior coverage.
+- Scenario relief owner keeps overlay style, texture line pattern, and per-feature drawing details outside `map_renderer.js`, while relief cache reuse stays in `map_renderer.js`.
 - Pages dist includes any new renderer owner modules.
 
 ## Task List
@@ -55,7 +58,8 @@
 - [x] Add direct Ocean owner behavior coverage and update boundary contracts.
 - [x] Rebuild Pages dist for the new owner module.
 - [x] Run Ocean targeted validation and record full water e2e residual failures.
-- [ ] Implement Physical owner split.
-- [ ] Run physical contracts and focused physical e2e validation.
+- [x] Implement Physical owner split.
+- [x] Implement Scenario relief overlay owner split.
+- [x] Run physical contracts and focused physical e2e validation.
 - [ ] Run final Phase 3 review/QA self-check.
 - [ ] Commit and push Phase 3 closeout.

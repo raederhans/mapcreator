@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Status: in-progress
+Status: ready-for-integration
 
-Phase 3A Ocean owner is implemented and validated. Phase 3B Physical owner remains pending.
+Phase 3A Ocean, Phase 3B Physical, and Phase 3C Scenario relief owners are implemented and validated. Phase 3 closeout is ready to commit and push.
 
 ## Files Expected To Change
 
@@ -13,15 +13,22 @@ Phase 3A Ocean owner is implemented and validated. Phase 3B Physical owner remai
   - `js/core/renderer/modern_city_lights_render_owner.js`
   - `js/core/renderer/river_layer_render_owner.js`
   - `js/core/renderer/ocean_render_owner.js`
+  - `js/core/renderer/physical_layer_render_owner.js`
+  - `js/core/renderer/scenario_relief_overlay_render_owner.js`
   - `dist/app/js/core/map_renderer.js`
   - `dist/app/js/core/renderer/modern_city_lights_render_owner.js`
   - `dist/app/js/core/renderer/ocean_render_owner.js`
+  - `dist/app/js/core/renderer/physical_layer_render_owner.js`
+  - `dist/app/js/core/renderer/scenario_relief_overlay_render_owner.js`
   - `dist/pages-dist-manifest.json`
 - Tests:
   - `tests/modern_city_lights_render_owner_behavior.test.mjs`
   - `tests/river_layer_render_owner_behavior.test.mjs`
   - `tests/ocean_render_owner_behavior.test.mjs`
+  - `tests/physical_layer_render_owner_behavior.test.mjs`
+  - `tests/scenario_relief_overlay_render_owner_behavior.test.mjs`
   - `tests/ocean_depth_layer_contracts.test.mjs`
+  - `tests/physical_layer_contracts.test.mjs`
   - `tests/e2e/river_layer_regression.spec.js`
   - `tests/test_map_renderer_border_draw_owner_boundary_contract.py`
   - `package.json`
@@ -43,6 +50,13 @@ Phase 3A Ocean owner is implemented and validated. Phase 3B Physical owner remai
   - `.runtime/tests/renderer-ocean-phase3/ocean-render-owner.log`
   - `.runtime/tests/renderer-ocean-phase3/ocean-depth-layer-contracts.log`
   - `.runtime/tests/renderer-ocean-phase3/water-rendering.log`
+- Phase 3B/3C logs:
+  - `.runtime/tests/renderer-physical-phase3/render-pipeline-passes-boundary.log`
+  - `.runtime/tests/renderer-physical-phase3/physical-layer-runtime-contract.log`
+  - `.runtime/tests/renderer-physical-phase3/physical-layer-regression-rerun.log`
+  - `.runtime/tests/renderer-physical-phase3/build-pages-dist.log`
+  - `.runtime/tests/renderer-physical-phase3/pages-dist-startup-shell.log`
+  - `.runtime/tests/renderer-physical-phase3/landing-showcase-view.log`
 
 ## Delivery Package
 
@@ -53,20 +67,29 @@ Phase 3A Ocean owner is implemented and validated. Phase 3B Physical owner remai
 - Extracted Ocean / Bathymetry / Coastal drawing details into `createOceanRenderOwner`.
 - Kept Ocean invalidators, background pass composition, depth mask, bathymetry data loading, and public facades in `map_renderer.js`.
 - Added direct Ocean owner behavior coverage and updated boundary contracts for Ocean and border/coastal interaction.
+- Extracted Physical atlas, intensity, relief base, and contour drawing details into `createPhysicalLayerRenderOwner`.
+- Extracted Scenario relief overlay style/texture/per-feature drawing details into `createScenarioReliefOverlayRenderOwner`.
 
 ### 2. Changed Files
 
-Phase 3A current diff files:
+Phase 3 current diff files:
 
 - Core:
   - `js/core/map_renderer.js`
   - `js/core/renderer/ocean_render_owner.js`
+  - `js/core/renderer/physical_layer_render_owner.js`
+  - `js/core/renderer/scenario_relief_overlay_render_owner.js`
   - `dist/app/js/core/map_renderer.js`
   - `dist/app/js/core/renderer/ocean_render_owner.js`
+  - `dist/app/js/core/renderer/physical_layer_render_owner.js`
+  - `dist/app/js/core/renderer/scenario_relief_overlay_render_owner.js`
   - `dist/pages-dist-manifest.json`
 - Tests:
   - `tests/ocean_render_owner_behavior.test.mjs`
+  - `tests/physical_layer_render_owner_behavior.test.mjs`
+  - `tests/scenario_relief_overlay_render_owner_behavior.test.mjs`
   - `tests/ocean_depth_layer_contracts.test.mjs`
+  - `tests/physical_layer_contracts.test.mjs`
   - `tests/test_map_renderer_border_draw_owner_boundary_contract.py`
   - `package.json`
 - Docs:
@@ -80,6 +103,11 @@ Phase 3A current diff files:
 - `map_renderer.js` keeps thin Ocean wrapper functions and a lazy `getOceanRenderOwner()` factory.
 - `ocean_render_owner.js` owns bathymetry band/contour drawing, coastal accent buckets, scenario coastal overlays, and `drawOceanStyle`.
 - Ocean data loading, invalidation, mask resolution, and depth mask drawing remain in `map_renderer.js`.
+- `map_renderer.js` keeps thin Physical wrapper functions and a lazy `getPhysicalLayerRenderOwner()` factory.
+- `physical_layer_render_owner.js` owns atlas layer fills, intensity field painting, relief base underlay, and contour batch drawing.
+- `map_renderer.js` keeps a thin Scenario relief wrapper and a lazy `getScenarioReliefOverlayRenderOwner()` factory.
+- `scenario_relief_overlay_render_owner.js` owns relief overlay style resolution, texture line pattern drawing, and per-feature drawing.
+- Scenario relief cache entries, transform reuse, and `contextScenario` pass orchestration remain in `map_renderer.js`.
 - Pages dist mirrors the source split and updates the manifest.
 
 ### 4. Commit State
@@ -87,7 +115,8 @@ Phase 3A current diff files:
 - Phase 1 committed as `98cd1e84`.
 - Other documentation cleanup committed separately as `c4e81cf4`.
 - Phase 2 committed and pushed as `3f3b0da0`.
-- Phase 3A Ocean changes are not committed yet.
+- Phase 3A Ocean committed and pushed as `702d97c1`.
+- Phase 3B/3C Physical and Scenario relief changes are not committed yet.
 
 ### 5. Base Divergence
 
@@ -97,9 +126,9 @@ Phase 3A current diff files:
 
 ### 6. Potential Conflicts
 
-- Direct path overlap: any parallel renderer owner extraction touching `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, or `package.json`.
-- Semantic overlap: Phase 3B Physical owner, render pass cache signatures, and Pages dist rebuilds.
-- Physical overlap: Phase 3B will still touch `map_renderer.js`, docs, tests, and likely Pages dist.
+- Direct path overlap: any parallel renderer owner extraction touching `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`, or `package.json`.
+- Semantic overlap: future renderer owner phases that share render pass cache signatures, context pass reuse, or Pages dist rebuilds.
+- Current checkout has one worktree only; file-overlap risk is internal to this branch closeout.
 
 ### 7. Verification Run
 
@@ -112,19 +141,29 @@ Phase 3A current diff files:
 - PASS: `py -3 tools/build_pages_dist.py`
 - PASS: `py -3 -m unittest tests.test_pages_dist_startup_shell -q`
 - PASS: `npm run test:node:landing-showcase-view`
+- PASS: `node --check js/core/renderer/physical_layer_render_owner.js`
+- PASS: `node --check js/core/renderer/scenario_relief_overlay_render_owner.js`
+- PASS: `npm run test:node:physical-layer-owner`
+- PASS: `npm run test:node:scenario-relief-overlay-owner`
+- PASS: `npm run test:node:physical-layer-contracts`
+- PASS: `npm run test:node:scenario-chunk-contracts`
+- PASS: `py -3 -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract -q`
+- PASS: `npm run test:e2e:physical-layer-runtime-contract`
+- PASS: `npm run test:e2e:physical-layer-regression`
 - FAIL, pre-existing suite shape: `npm run test:e2e:water-rendering` still failed 6 named-water/open-ocean timeout specs; 6 specs passed including river and water cache coverage.
 
 ### 8. Remaining Risks
 
 - Full water-rendering suite still has named-water/open-ocean timeouts, so Phase 3A closure relies on owner behavior, ocean depth contracts, border runtime boundary contracts, Pages dist startup, and the passing river/cache parts of the water suite.
-- Phase 3B physical extraction is still pending.
+- Phase 3B/3C physical and scenario relief focused validations are green.
+- Broad risk remains any future renderer owner phase that also changes `map_renderer.js` factory ordering or render pass cache signatures.
 
 ### 9. Recommended Next Step
 
-- Commit and push Phase 3A Ocean owner after final diff check.
-- Continue Phase 3B Physical owner split after the Ocean commit.
+- Run final review/QA self-check.
+- Commit and push Phase 3B/3C closeout.
 
 ### 10. Integration Answer
 
-- Phase 3A can integrate as an intermediate owner extraction commit, but the branch remains in progress until Phase 3B is done.
-- Recommended method: keep Ocean and Physical as separate commits on the same branch, then rebase after main refresh before final merge.
+- Phase 3 can integrate after the Phase 3B/3C closeout commit is pushed.
+- Recommended method: rebase or update this branch against current main before final merge, then run the renderer owner targeted suite and `verify:pages-dist`.
