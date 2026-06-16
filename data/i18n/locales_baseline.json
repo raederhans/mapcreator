@@ -4143,6 +4143,14 @@
     "Inspector toggle right panel": {
       "en": "Inspector toggle right panel",
       "zh": "检查器，切换右侧面板"
+    },
+    "Interactive map color layer.": {
+      "en": "Interactive map color layer.",
+      "zh": "交互式地图颜色图层。"
+    },
+    "Interactive map line layer.": {
+      "en": "Interactive map line layer.",
+      "zh": "交互式地图线条图层。"
     }
   },
   "geo": {

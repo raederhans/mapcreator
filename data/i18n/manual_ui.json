@@ -559,5 +559,7 @@
   "Enable Glow Field": "启用辉光场",
   "Glow Field": "辉光场",
   "Presets": "预设",
-  "Special zone diagnostics": "特殊区域诊断"
+  "Special zone diagnostics": "特殊区域诊断",
+  "Interactive map color layer.": "交互式地图颜色图层。",
+  "Interactive map line layer.": "交互式地图线条图层。"
 }

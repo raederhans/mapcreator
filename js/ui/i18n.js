@@ -836,7 +836,7 @@ function updateUIText() {
   const onboardingHint = document.getElementById("mapOnboardingHint");
   if (onboardingHint) {
     onboardingHint.textContent = t(
-      "Click a region to start painting, or use Auto-Fill to color all countries",
+      "Select a region to start painting, or use Auto-Fill to color all countries",
       "ui"
     );
   }

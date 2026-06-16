@@ -81,6 +81,31 @@ const uiMap = [
             self.assertIn("Manual", result["covered_default_literals"])
             self.assertNotIn("Manual", result["uncovered_user_visible_literals"])
 
+    def test_counts_canvas_fallback_text_with_data_i18n_as_covered_literal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            self._write_repo_file(
+                repo_root,
+                "index.html",
+                """
+<!doctype html>
+<html>
+  <body>
+    <canvas data-i18n="Interactive map color layer.">Interactive map color layer.</canvas>
+    <canvas data-i18n="Interactive map line layer.">Interactive map line layer.</canvas>
+  </body>
+</html>
+                """.strip(),
+            )
+
+            result = collect_code_strings(repo_root)
+
+            for token in ("Interactive map color layer.", "Interactive map line layer."):
+                with self.subTest(token=token):
+                    self.assertIn(token, result["declarative_ui_keys"])
+                    self.assertIn(token, result["covered_default_literals"])
+                    self.assertNotIn(token, result["uncovered_user_visible_literals"])
+
     def test_splits_uncovered_a11y_and_non_translatable_literals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)

@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8458870,
+      "size_bytes": 8459136,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 260016,
+      "size_bytes": 260097,
       "source_kind": "dist"
     },
     {
@@ -46297,7 +46297,7 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47023,
+      "size_bytes": 47024,
       "source_kind": "dist"
     },
     {
@@ -46961,5 +46961,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145148967
+  "total_bytes": 1145149192
 }

@@ -92,6 +92,7 @@
 - routine i18n sweep 先 audit 再同步翻译；补 key 优先定点 patch。
 - source-of-truth、baseline、runtime locale 一起同步。
 - Cloud Saves / community 这类 JS 动态面板新增 copy 时，要同轮补 `data/locales.json` 和 `dist/app/data/locales.json`；数据源品牌名如 `OpenStreetMap`、`Natural Earth` 这类固定来源词要进 audit 的 non-translatable 规则，避免把来源标签误报成 UI 漏翻。
+- `canvas` 的回退文本也会进入可见文案审计；给它们加 `data-i18n` 时，同轮补 locale key 和 focused audit test，避免无障碍/降级文本长期漏翻。
 
 ## 测试、审计与留档
 
