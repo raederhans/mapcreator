@@ -12,15 +12,15 @@ Last updated: 2026-06-16
 
 ## Recommended Order
 
-1. No active implementation worktree remains after the a11y integration closeout.
-2. Re-check recovery refs before recreating any historical worktree.
-3. Branch cleanup should be handled as a separate action after classifying merged recovery refs and still-active topic branches.
+1. No active implementation worktree remains after the remaining-local-branch integration closeout.
+2. Re-check recovery commit hashes before recreating any historical worktree.
+3. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this local-branch cleanup pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current HEAD | aligned with `origin/main` | active-main | clean | `git worktree list --porcelain` lists only main; `git status --short --branch` reports `## main...origin/main` | Green | No worktree integration action remains |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current HEAD | aligned with `origin/main` | active-main | clean after closeout | remaining-local-branch cleanup merged only missing render helper work; covered/stale branches cleaned by commit hash | Green | No worktree integration action remains |
 
 ## Current Overlap Matrix
 
@@ -43,10 +43,12 @@ These rows are branch or commit recovery indexes. They are historical references
 | `C:\Users\raede\Desktop\dev\mapcreator-render-data-chain-split-20260615` | commit `b8727d42` | `b8727d42` | 2026-06-15 | `docs/archive/render-data-chain-split-20260615/` | Inspect commit/docs when auditing render/data split work. |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phase2-3-deepening-2026-06-14` | commit `b1db07b1` | `b1db07b1` | earlier cleanup | prior active/docs history | Inspect commit when recovering phase 2/3 transport deepening details. |
 | `C:\Users\raede\Desktop\dev\mapcreator-data-chain-integration-2026-06-14` | commit `77d18776` | `77d18776` | earlier cleanup | prior active/docs history | Inspect commit when recovering data-chain integration decisions. |
-| `C:\Users\raede\Desktop\dev\mapcreator-data-quality-repair-2026-06-14` | `origin/codex/data-quality-repair-2026-06-14` | `b856ceca` | 2026-06-15 | prior active/docs history | Inspect branch when recovering scenario/data/catalog repair details. |
-| `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phases-2-4` | `origin/codex/data-chain-phases-2-4` | `d858d276` | 2026-06-15 | prior active/docs history | Inspect branch when recovering phase 2-4 helper consolidation details. |
-| `C:\Users\raede\Desktop\dev\mapcreator-render-chain-cleanup` | `origin/codex/render-chain-cleanup-phase4-5` | `8e89262e` | 2026-06-15 | prior active/docs history | Inspect branch when recovering render-chain cleanup details. |
-| `C:\Users\raede\Desktop\dev\mapcreator-audit-20260612-appearance-transport` | `origin/codex/audit-20260612-appearance-transport` | `01811500` | 2026-06-15 | prior active/docs history | Inspect branch when recovering appearance/transport audit details. |
+| `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase1` | commit `d7125716` | `d7125716` | 2026-06-16 | `docs/archive/tooling-simplification-phase1/` | Main already covered this branch during cherry-pick; inspect commit/docs only when recovering old tooling validation details. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-chain-cleanup-phases` | commit `85621443` | `85621443` | 2026-06-16 | prior active/docs history | Covered by later render-chain phase 4/5 and current main runtime helpers; inspect commit only for old line preview helper history. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-chain-cleanup` | commit `8e89262e` | `8e89262e` | 2026-06-16 | `docs/archive/render-chain-cleanup-phase4-5/` | Missing spatial/chunk helper work was integrated; inspect commit/docs when auditing render helper extraction. |
+| `C:\Users\raede\Desktop\dev\mapcreator-data-quality-repair-2026-06-14` | commit `b856ceca` | `b856ceca` | 2026-06-16 | `docs/archive/data-quality-repair-2026-06-14/` | Main already contains the nested water geometry coordinate guard; inspect commit/docs only for old data repair context. |
+| `C:\Users\raede\Desktop\dev\mapcreator-data-chain-phases-2-4` | commit `d858d276` | `d858d276` | 2026-06-16 | `docs/archive/data-chain-phases-2-4/` | Main already contains the helper boundaries with newer runtime updates; inspect commit/docs only for old phase 2-4 context. |
+| `C:\Users\raede\Desktop\dev\mapcreator-audit-20260612-appearance-transport` | commit `01811500` | `01811500` | 2026-06-16 | prior active/docs history | Main already contains the appearance preset intensity revision repair; inspect commit only for old audit context. |
 | `C:\Users\raede\Desktop\dev\mapcreator-audit-20260610-20260610-113750` | commit `cf2a57a1` | `cf2a57a1` | 2026-06-15 | prior active/docs history | Inspect commit when recovering old audit preservation details. |
 | `C:\Users\raede\Desktop\dev\mapcreator-hoi4-strategic-values` | commit `979b20de` | `979b20de` | 2026-06-15 | prior active/docs history | Inspect commit when recovering HOI4 strategic values details. |
 | `C:\Users\raede\Desktop\dev\mapcreator-tooling-simplification-phase2` | commit `9a5febfe` | `9a5febfe` | earlier cleanup | prior active/docs history | Inspect commit when recovering tooling phase 2 details. |
@@ -64,3 +66,5 @@ These rows are branch or commit recovery indexes. They are historical references
 - 2026-06-16 worktree cleanup: removed two unregistered local directory remnants with no `.git`: `C:\Users\raede\Desktop\dev\mapcreator-hgo-review-fix` and `C:\Users\raede\Desktop\dev\mapcreator-ocean-scotia-source-refinement-2026-06-02`. Recovery docs remain under `docs/archive/`.
 - 2026-06-16 branch cleanup: deleted all local branches merged into `main` and all remote `origin/codex`, `origin/audit`, and `origin/backup` branches merged into `main`; recovery rows now use commit hashes for deleted branch refs.
 - 2026-06-16 residual branch cleanup: deleted stale residual branches, backup branches, and open-PR head branches requested for cleanup. GitHub API close attempts for PRs #45, #73, #85, and #86 returned 401, then deleting the head branches removed them from the open PR list.
+- 2026-06-16 remaining local branch pass: `codex/tooling-simplification-phase1` was covered by current main; `codex/render-chain-cleanup-phase4-5` contributed only the missing spatial query and scenario chunk promotion helper work; `codex/render-chain-cleanup-phases` was its covered ancestor.
+- 2026-06-16 remaining local branch pass: `codex/data-chain-phases-2-4`, `codex/data-quality-repair-2026-06-14`, and `codex/audit-20260612-appearance-transport` were classified as covered or stale after direct helper/test checks; their branch refs can be recreated from the commit hashes above.
