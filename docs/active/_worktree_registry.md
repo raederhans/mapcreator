@@ -6,7 +6,7 @@ Last updated: 2026-06-16
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
 - Integration branch: `main` closeout
-- Base: `main` is aligned with `origin/main` at `4203b56d`
+- Base: `main` is aligned with `origin/main`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-16
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / `4203b56d` | aligned with `origin/main` | active-main | clean | `git worktree list --porcelain` lists only main; `git status --short --branch` reports `## main...origin/main` | Green | No worktree integration action remains |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current HEAD | aligned with `origin/main` | active-main | clean | `git worktree list --porcelain` lists only main; `git status --short --branch` reports `## main...origin/main` | Green | No worktree integration action remains |
 
 ## Current Overlap Matrix
 
