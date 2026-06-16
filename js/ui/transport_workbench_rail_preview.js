@@ -1,78 +1,45 @@
 import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
-  getTransportWorkbenchCarrierOverlayRoots,
-  getTransportWorkbenchCarrierViewState,
   ensureTransportWorkbenchCarrierForManifest,
+  getTransportWorkbenchCarrierViewState,
   projectTransportWorkbenchCarrierGeometry,
   projectTransportWorkbenchCarrierPoint,
-  projectTransportWorkbenchCarrierScenePoint,
 } from "./transport_workbench_carrier.js";
 import {
   createTransportWorkbenchLinePathD as createPathD,
-  createTransportWorkbenchSvgNode as createSvgNode,
   createTransportWorkbenchLinePackRuntime,
   findTransportWorkbenchDatasetNode as findDatasetNode,
-  keepFirstTransportWorkbenchGridBucket as keepFirstPerGridBucket,
   measureTransportWorkbenchProjectedLineLength as measureProjectedLength,
   normalizeTransportWorkbenchNumber as normalizeNumber,
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
-  syncTransportWorkbenchSvgGroupOrder as syncGroupOrder,
 } from "./transport_workbench_line_runtime_shared.js";
+import {
+  DATA_ROW_LIMIT,
+  LINE_CLASS_PRIORITY,
+  formatLineVisibilityReason,
+  getLineVisibilityReason,
+  normalizeRailImportance,
+  normalizeRailLineClass,
+  normalizeRailLineStatus,
+  normalizeRailSourceFlags,
+  shouldShowStation,
+} from "./transport_workbench_rail_preview_runtime.js";
+import {
+  buildVisibleRailStationLabelEntries,
+  clearRailGroups,
+  createRailPreviewGroups,
+  destroyRailGroups,
+  ensureRailGroups,
+  renderRailSelectedHighlight,
+  syncRailLineNodes,
+  syncRailStationNodes,
+} from "./transport_workbench_rail_preview_dom.js";
 
 const MANIFEST_URL = resolveTransportManifestUrl("rail");
-const LINE_CLASS_PRIORITY = {
-  service: 1,
-  branch: 2,
-  trunk: 3,
-  high_speed: 4,
-};
-const LINE_CLASS_STYLE = {
-  high_speed: { stroke: "#0f766e", width: 3.2, opacityMultiplier: 1.0 },
-  trunk: { stroke: "#1f2937", width: 2.35, opacityMultiplier: 0.96 },
-  branch: { stroke: "#85644a", width: 1.45, opacityMultiplier: 0.82 },
-  service: { stroke: "#94a3b8", width: 1.05, opacityMultiplier: 0.62 },
-};
-const STATION_STYLE = {
-  dot_ring: { radius: 4.2, fill: "#f8fafc", stroke: "#1f2937", strokeWidth: 1.2 },
-  solid_dot: { radius: 4.6, fill: "#1f2937", stroke: "#f8fafc", strokeWidth: 1.0 },
-  quiet_square: { radius: 4.0, fill: "#e5e7eb", stroke: "#4b5563", strokeWidth: 1.0, square: true },
-};
-const IMPORTANCE_ORDER = {
-  broad_major: 1,
-  regional_core: 2,
-  capital_core: 3,
-};
-const STATION_IMPORTANCE_STYLE = {
-  broad_major: { sizeMultiplier: 0.92, labelScale: 0.95, minLabelScale: 1.22 },
-  regional_core: { sizeMultiplier: 1.0, labelScale: 1.0, minLabelScale: 1.14 },
-  capital_core: { sizeMultiplier: 1.22, labelScale: 1.12, minLabelScale: 1.06 },
-};
-const STATION_LABEL_GRID_BY_DENSITY = {
-  very_sparse: 208,
-  sparse: 176,
-  balanced: 144,
-  dense: 118,
-  very_dense: 94,
-};
-const INACTIVE_STATUS = new Set(["disused", "abandoned", "construction"]);
-const SELECTED_LINE_STROKE = "#0f172a";
-const SELECTED_STATION_STROKE = "#0f172a";
-const DATA_ROW_LIMIT = 240;
 
-let rootGroup = null;
-let labelRootGroup = null;
-let linesGroup = null;
-let lineLabelsGroup = null;
-let stationsGroup = null;
-let stationLabelsGroup = null;
-let selectedGroup = null;
-let selectedLineHighlightNode = null;
-let selectedStationHighlightNode = null;
-let lineNodeById = new Map();
-let lineLabelNodeById = new Map();
-let stationNodeById = new Map();
-let stationLabelNodeById = new Map();
+const groups = createRailPreviewGroups();
+
 const lineRuntime = createTransportWorkbenchLinePackRuntime({
   familyId: "rail",
   familyLabel: "Japan rail",
@@ -123,29 +90,6 @@ function ensureTopojsonClient() {
   }
 }
 
-function normalizeFlags(flags) {
-  if (Array.isArray(flags)) return flags.filter(Boolean).map((value) => String(value));
-  if (typeof flags === "string" && flags.trim()) {
-    return flags.split("|").map((value) => value.trim()).filter(Boolean);
-  }
-  return [];
-}
-
-function normalizeLineClass(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return LINE_CLASS_PRIORITY[normalized] ? normalized : "trunk";
-}
-
-function normalizeLineStatus(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return normalized || "active";
-}
-
-function normalizeImportance(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  return IMPORTANCE_ORDER[normalized] ? normalized : "broad_major";
-}
-
 function createRailFeature(rawFeature) {
   const properties = rawFeature?.properties || {};
   const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry);
@@ -157,10 +101,10 @@ function createRailFeature(rawFeature) {
     operator: String(properties.operator || properties.company || "").trim(),
     railTypeCode: String(properties.rail_type_code || "").trim(),
     operatorTypeCode: String(properties.operator_type_code || "").trim(),
-    status: normalizeLineStatus(properties.status),
-    lineClass: normalizeLineClass(properties.class || properties.line_class),
+    status: normalizeRailLineStatus(properties.status),
+    lineClass: normalizeRailLineClass(properties.class || properties.line_class),
     source: String(properties.source || "").trim(),
-    sourceFlags: normalizeFlags(properties.source_flags),
+    sourceFlags: normalizeRailSourceFlags(properties.source_flags),
     lengthMeters: normalizeNumber(properties.length_m, 0),
     pathD: createPathD(projected.geometry),
     projectedLength: measureProjectedLength(projected.geometry),
@@ -179,9 +123,9 @@ function createStationFeature(rawFeature) {
     cityKey: String(properties.city_key || "").trim(),
     stationCode: String(properties.station_code || "").trim(),
     groupCode: String(properties.group_code || "").trim(),
-    importance: normalizeImportance(properties.importance),
+    importance: normalizeRailImportance(properties.importance),
     source: String(properties.source || "").trim(),
-    linkedLineClasses: normalizeFlags(properties.linked_line_classes).map((value) => normalizeLineClass(value)),
+    linkedLineClasses: normalizeRailSourceFlags(properties.linked_line_classes).map((value) => normalizeRailLineClass(value)),
     x: projected.x,
     y: projected.y,
   };
@@ -202,197 +146,28 @@ function getCurrentScale() {
   return normalizeNumber(getTransportWorkbenchCarrierViewState()?.scale, 1);
 }
 
-function getLineVisibilityReason(feature, config, scale) {
-  if (!config.status?.includes(feature.status)) return "status_filtered";
-  if (!config.class?.includes(feature.lineClass)) return "class_filtered";
-  if (feature.lineClass === "branch" && !config.showBranchAtCurrentZoom) return "branch_hidden";
-  if (feature.lineClass === "branch" && scale < 1.06) return "zoom_gate";
-  if (feature.lineClass === "service" && !config.showServiceLines) return "service_hidden";
-  if (feature.lineClass === "service" && config.showServiceAtHighZoomOnly && scale < 1.45) return "zoom_gate";
-  if (INACTIVE_STATUS.has(feature.status) && scale < 1.3) return "zoom_gate";
-  return null;
-}
-
-function getImportanceRank(feature) {
-  return IMPORTANCE_ORDER[feature?.importance] || 1;
-}
-
-function getImportanceThreshold(config) {
-  return IMPORTANCE_ORDER[config?.importanceThreshold] || 1;
-}
-
-function getLineOpacity(feature, config) {
-  const baseOpacity = normalizeNumber(config.lineOpacity, 92) / 100;
-  const classMultiplier = (LINE_CLASS_STYLE[feature.lineClass] || LINE_CLASS_STYLE.trunk).opacityMultiplier || 1;
-  if (!INACTIVE_STATUS.has(feature.status)) return Math.max(0.2, baseOpacity * classMultiplier);
-  const fadeStrength = normalizeNumber(config.inactiveFadeStrength, 72) / 100;
-  return Math.max(0.1, baseOpacity * classMultiplier * (1 - fadeStrength));
-}
-
-function getLineStyle(feature, config, selectedLineId) {
-  const base = LINE_CLASS_STYLE[feature.lineClass] || LINE_CLASS_STYLE.trunk;
-  const isSelected = selectedLineId && selectedLineId === feature.id;
-  let stroke = base.stroke;
-  if (config.statusEncoding === "line_style_plus_hue" && feature.status === "construction") {
-    stroke = "#b45309";
-  } else if (config.statusEncoding === "line_style_plus_hue" && feature.status === "abandoned") {
-    stroke = "#7c3aed";
-  }
-  return {
-    stroke,
-    width: isSelected ? base.width + 1.1 : base.width,
-    opacity: getLineOpacity(feature, config),
-  };
-}
-
-function getStationImportanceStyle(feature) {
-  return STATION_IMPORTANCE_STYLE[feature?.importance] || STATION_IMPORTANCE_STYLE.broad_major;
-}
-
-function shouldShowStation(feature, config, scale) {
-  if (!config.showMajorStations) return false;
-  if (getImportanceRank(feature) < getImportanceThreshold(config)) return false;
-  return scale >= 0.98;
-}
-
-function shouldShowStationLabel(feature, config, scale) {
-  if (!config.showStationLabels) return false;
-  return shouldShowStation(feature, config, scale) && scale >= getStationImportanceStyle(feature).minLabelScale;
-}
-
-function getStationLabelDensityGridSize(config) {
-  return STATION_LABEL_GRID_BY_DENSITY[String(config?.labelDensityPreset || "").trim()] || STATION_LABEL_GRID_BY_DENSITY.balanced;
-}
-
-function buildVisibleStationLabelEntries(visibleStations, config, scale) {
-  const gridSize = getStationLabelDensityGridSize(config);
-  const rankedEntries = visibleStations
-    .filter((feature) => shouldShowStationLabel(feature, config, scale))
-    .map((feature) => ({
-      feature,
-      screenPoint: projectTransportWorkbenchCarrierScenePoint(feature.x, feature.y),
-    }))
-    .filter((entry) => entry.screenPoint)
-    .sort((left, right) => {
-      const importanceDelta = getImportanceRank(right.feature) - getImportanceRank(left.feature);
-      if (importanceDelta !== 0) return importanceDelta;
-      return String(left.feature.name || left.feature.id).localeCompare(String(right.feature.name || right.feature.id), "ja");
-    });
-  return keepFirstPerGridBucket(rankedEntries, {
-    gridSize,
-    getScreenPoint: (entry) => entry.screenPoint,
-  });
-}
-
 function handleLineGroupClick(event) {
-  const node = findDatasetNode(event.target, "railLineId", linesGroup);
+  const node = findDatasetNode(event.target, "railLineId", groups.linesGroup);
   const lineId = node?.dataset?.railLineId;
   if (!lineId) return;
   event.stopPropagation();
   runtime.selectedFeature = { type: "line", id: lineId };
-  renderSelectedHighlight(runtime.activePack?.lineFeatureById?.get(lineId) || null, null);
+  renderRailSelectedHighlight(groups, runtime.activePack?.lineFeatureById?.get(lineId) || null, null, runtime.lastRenderedConfig);
   emitSelectionChange();
 }
 
 function handleStationGroupClick(event) {
-  const node = findDatasetNode(event.target, "railStationId", stationsGroup);
+  const node = findDatasetNode(event.target, "railStationId", groups.stationsGroup);
   const stationId = node?.dataset?.railStationId;
   if (!stationId) return;
   event.stopPropagation();
   runtime.selectedFeature = { type: "station", id: stationId };
-  renderSelectedHighlight(null, runtime.activePack?.stationFeatureById?.get(stationId) || null);
+  renderRailSelectedHighlight(groups, null, runtime.activePack?.stationFeatureById?.get(stationId) || null, runtime.lastRenderedConfig);
   emitSelectionChange();
-}
-
-function ensureGroups() {
-  const landRoot = getTransportWorkbenchCarrierOverlayRoots()?.land?.main;
-  const labelRoot = getTransportWorkbenchCarrierOverlayRoots()?.labels?.main;
-  if (!landRoot || !labelRoot) return null;
-  if (rootGroup && rootGroup.parentNode === landRoot && labelRootGroup && labelRootGroup.parentNode === labelRoot) {
-    return rootGroup;
-  }
-  rootGroup?.remove();
-  labelRootGroup?.remove();
-  lineNodeById = new Map();
-  lineLabelNodeById = new Map();
-  stationNodeById = new Map();
-  stationLabelNodeById = new Map();
-
-  rootGroup = createSvgNode("g");
-  rootGroup.classList.add("transport-workbench-rail-preview-root");
-  linesGroup = createSvgNode("g");
-  linesGroup.classList.add("transport-workbench-rail-preview-lines");
-  linesGroup.addEventListener("click", handleLineGroupClick);
-  stationsGroup = createSvgNode("g");
-  stationsGroup.classList.add("transport-workbench-rail-preview-stations");
-  stationsGroup.addEventListener("click", handleStationGroupClick);
-  selectedGroup = createSvgNode("g");
-  selectedGroup.classList.add("transport-workbench-rail-preview-selected");
-
-  selectedLineHighlightNode = createSvgNode("path");
-  selectedLineHighlightNode.setAttribute("fill", "none");
-  selectedLineHighlightNode.setAttribute("stroke", SELECTED_LINE_STROKE);
-  selectedLineHighlightNode.setAttribute("stroke-width", "2.5");
-  selectedLineHighlightNode.setAttribute("opacity", "0.88");
-  selectedLineHighlightNode.setAttribute("stroke-linecap", "round");
-  selectedLineHighlightNode.setAttribute("stroke-linejoin", "round");
-  selectedLineHighlightNode.setAttribute("vector-effect", "non-scaling-stroke");
-  selectedLineHighlightNode.style.display = "none";
-
-  selectedStationHighlightNode = createSvgNode("circle");
-  selectedStationHighlightNode.setAttribute("fill", "none");
-  selectedStationHighlightNode.setAttribute("stroke", SELECTED_STATION_STROKE);
-  selectedStationHighlightNode.setAttribute("stroke-width", "2");
-  selectedStationHighlightNode.setAttribute("opacity", "0.88");
-  selectedStationHighlightNode.style.display = "none";
-
-  selectedGroup.append(selectedLineHighlightNode, selectedStationHighlightNode);
-  rootGroup.append(linesGroup, stationsGroup, selectedGroup);
-
-  labelRootGroup = createSvgNode("g");
-  labelRootGroup.classList.add("transport-workbench-rail-preview-label-root");
-  lineLabelsGroup = createSvgNode("g");
-  lineLabelsGroup.classList.add("transport-workbench-rail-preview-line-labels");
-  stationLabelsGroup = createSvgNode("g");
-  stationLabelsGroup.classList.add("transport-workbench-rail-preview-station-labels");
-  labelRootGroup.append(lineLabelsGroup, stationLabelsGroup);
-
-  landRoot.appendChild(rootGroup);
-  labelRoot.appendChild(labelRootGroup);
-  return rootGroup;
-}
-
-function clearGroups() {
-  lineNodeById.forEach((node) => node.remove());
-  lineLabelNodeById.forEach((node) => node.remove());
-  stationNodeById.forEach((node) => node.remove());
-  stationLabelNodeById.forEach((node) => node.remove());
-  lineNodeById.clear();
-  lineLabelNodeById.clear();
-  stationNodeById.clear();
-  stationLabelNodeById.clear();
-  if (selectedLineHighlightNode) {
-    selectedLineHighlightNode.removeAttribute("d");
-    selectedLineHighlightNode.style.display = "none";
-  }
-  if (selectedStationHighlightNode) {
-    selectedStationHighlightNode.style.display = "none";
-  }
 }
 
 function emitSelectionChange() {
   lineRuntime.emitSelectionChange(buildSelectedSnapshot);
-}
-
-function formatLineVisibilityReason(reason) {
-  const map = {
-    status_filtered: "Filtered by status",
-    class_filtered: "Filtered by class",
-    branch_hidden: "Branch hidden",
-    service_hidden: "Service hidden",
-    zoom_gate: "Hidden by zoom gate",
-  };
-  return map[String(reason || "").trim()] || "Visible";
 }
 
 function buildSelectedSnapshot(config) {
@@ -498,156 +273,13 @@ function buildDataRows(config = runtime.lastRenderedConfig) {
     .slice(0, DATA_ROW_LIMIT);
 }
 
-function renderSelectedHighlight(selectedLine, selectedStation) {
-  if (selectedLineHighlightNode) {
-    if (selectedLine) {
-      selectedLineHighlightNode.setAttribute("d", selectedLine.pathD);
-      selectedLineHighlightNode.style.display = "";
-    } else {
-      selectedLineHighlightNode.removeAttribute("d");
-      selectedLineHighlightNode.style.display = "none";
-    }
-  }
-  if (selectedStationHighlightNode) {
-    if (selectedStation) {
-      const selectedPreset = STATION_STYLE[runtime.lastRenderedConfig?.stationSymbolPreset] || STATION_STYLE.dot_ring;
-      const selectedRadius = selectedPreset.radius * getStationImportanceStyle(selectedStation).sizeMultiplier;
-      selectedStationHighlightNode.setAttribute("cx", String(selectedStation.x));
-      selectedStationHighlightNode.setAttribute("cy", String(selectedStation.y));
-      selectedStationHighlightNode.setAttribute("r", String(selectedRadius + 3));
-      selectedStationHighlightNode.style.display = "";
-    } else {
-      selectedStationHighlightNode.style.display = "none";
-    }
-  }
-}
-
-function syncLineNodes(visibleLines, config, selectedLineId) {
-  const visibleIds = new Set();
-  const orderedNodes = [];
-  visibleLines.forEach((feature) => {
-    let path = lineNodeById.get(feature.id);
-    if (!path) {
-      path = createSvgNode("path");
-      lineNodeById.set(feature.id, path);
-    }
-    const style = getLineStyle(feature, config, selectedLineId);
-    path.setAttribute("d", feature.pathD);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", style.stroke);
-    path.setAttribute("stroke-width", String(style.width));
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    path.setAttribute("vector-effect", "non-scaling-stroke");
-    path.setAttribute("opacity", String(style.opacity));
-    path.dataset.railLineId = feature.id;
-    path.setAttribute("class", `transport-workbench-rail-line rail-class-${feature.lineClass}`);
-    orderedNodes.push(path);
-    visibleIds.add(feature.id);
-  });
-  syncGroupOrder(linesGroup, orderedNodes);
-  Array.from(lineNodeById.entries()).forEach(([lineId, node]) => {
-    if (visibleIds.has(lineId)) return;
-    node.remove();
-    lineNodeById.delete(lineId);
-  });
-}
-
-function updateStationNode(node, feature, config, isSelected) {
-  const preset = STATION_STYLE[config.stationSymbolPreset] || STATION_STYLE.dot_ring;
-  const importanceStyle = getStationImportanceStyle(feature);
-  const baseRadius = preset.radius * importanceStyle.sizeMultiplier;
-  const radius = isSelected ? baseRadius + 1.35 : baseRadius;
-  if (preset.square) {
-    node.setAttribute("x", String(feature.x - radius));
-    node.setAttribute("y", String(feature.y - radius));
-    node.setAttribute("width", String(radius * 2));
-    node.setAttribute("height", String(radius * 2));
-    node.setAttribute("rx", "1.2");
-    node.setAttribute("ry", "1.2");
-  } else {
-    node.setAttribute("cx", String(feature.x));
-    node.setAttribute("cy", String(feature.y));
-    node.setAttribute("r", String(radius));
-  }
-  node.setAttribute("fill", preset.fill);
-  node.setAttribute("stroke", preset.stroke);
-  node.setAttribute("stroke-width", String(preset.strokeWidth));
-  node.setAttribute("opacity", String(normalizeNumber(config.stationOpacity, 86) / 100));
-  node.dataset.railStationId = feature.id;
-  node.setAttribute("class", `transport-workbench-rail-station importance-${feature.importance}`);
-}
-
-function syncStationNodes(visibleStations, visibleStationLabelEntries, config, selectedStationId) {
-  const visibleIds = new Set();
-  const visibleLabelIds = new Set(visibleStationLabelEntries.map((entry) => entry.feature.id));
-  const stationLabelEntryById = new Map(visibleStationLabelEntries.map((entry) => [entry.feature.id, entry]));
-  const orderedNodes = [];
-  const orderedLabels = [];
-  visibleStations.forEach((feature) => {
-    const preset = STATION_STYLE[config.stationSymbolPreset] || STATION_STYLE.dot_ring;
-    let node = stationNodeById.get(feature.id);
-    const expectedTagName = preset.square ? "rect" : "circle";
-    if (node && node.tagName.toLowerCase() !== expectedTagName) {
-      node.remove();
-      stationNodeById.delete(feature.id);
-      node = null;
-    }
-    if (!node) {
-      node = createSvgNode(expectedTagName);
-      stationNodeById.set(feature.id, node);
-    }
-    updateStationNode(node, feature, config, selectedStationId === feature.id);
-    orderedNodes.push(node);
-    visibleIds.add(feature.id);
-
-    const labelEntry = stationLabelEntryById.get(feature.id);
-    if (labelEntry) {
-      const importanceStyle = getStationImportanceStyle(feature);
-      const fontSize = 10 * importanceStyle.labelScale;
-      const textOffsetX = 7 + Math.max(0, fontSize - 10);
-      const textOffsetY = 6 + Math.max(0, fontSize - 10) * 0.35;
-      let text = stationLabelNodeById.get(feature.id);
-      if (!text) {
-        text = createSvgNode("text");
-        stationLabelNodeById.set(feature.id, text);
-      }
-      text.textContent = feature.name || "";
-      text.setAttribute("x", String(labelEntry.screenPoint.x + textOffsetX));
-      text.setAttribute("y", String(labelEntry.screenPoint.y - textOffsetY));
-      text.setAttribute("font-size", String(fontSize));
-      text.setAttribute("font-weight", feature.importance === "capital_core" ? "700" : "600");
-      text.setAttribute("fill", feature.importance === "capital_core" ? "#111827" : "#1f2937");
-      text.setAttribute("stroke", "rgba(248, 250, 252, 0.96)");
-      text.setAttribute("stroke-width", String(feature.importance === "capital_core" ? 2.6 : 2.2));
-      text.setAttribute("paint-order", "stroke");
-      text.setAttribute("opacity", String(normalizeNumber(config.stationOpacity, 86) / 100));
-      text.dataset.railStationId = feature.id;
-      text.setAttribute("class", "transport-workbench-rail-station-label");
-      orderedLabels.push(text);
-    }
-  });
-  syncGroupOrder(stationsGroup, orderedNodes);
-  syncGroupOrder(stationLabelsGroup, orderedLabels);
-  Array.from(stationNodeById.entries()).forEach(([stationId, node]) => {
-    if (visibleIds.has(stationId)) return;
-    node.remove();
-    stationNodeById.delete(stationId);
-  });
-  Array.from(stationLabelNodeById.entries()).forEach(([stationId, node]) => {
-    if (visibleLabelIds.has(stationId)) return;
-    node.remove();
-    stationLabelNodeById.delete(stationId);
-  });
-}
-
 function pickActivePack() {
   return lineRuntime.pickActivePack();
 }
 
 function renderRail(config) {
   const pack = pickActivePack();
-  if (!pack || !ensureGroups()) {
+  if (!pack || !ensureRailGroups(groups, { onLineClick: handleLineGroupClick, onStationClick: handleStationGroupClick })) {
     runtime.activePack = null;
     runtime.activePackMode = null;
     runtime.lastRenderedConfig = config;
@@ -665,11 +297,11 @@ function renderRail(config) {
       return left.projectedLength - right.projectedLength;
     });
   const visibleStations = pack.stationFeatures.filter((feature) => shouldShowStation(feature, config, scale));
-  const visibleStationLabelEntries = buildVisibleStationLabelEntries(visibleStations, config, scale);
+  const visibleStationLabelEntries = buildVisibleRailStationLabelEntries(visibleStations, config, scale);
   const selectedLineId = runtime.selectedFeature?.type === "line" ? runtime.selectedFeature.id : null;
   const selectedStationId = runtime.selectedFeature?.type === "station" ? runtime.selectedFeature.id : null;
-  syncLineNodes(visibleLines, config, selectedLineId);
-  syncStationNodes(visibleStations, visibleStationLabelEntries, config, selectedStationId);
+  syncRailLineNodes(groups, visibleLines, config, selectedLineId);
+  syncRailStationNodes(groups, visibleStations, visibleStationLabelEntries, config, selectedStationId);
   runtime.renderStats = {
     visibleLines: visibleLines.length,
     visibleStations: visibleStations.length,
@@ -679,9 +311,11 @@ function renderRail(config) {
     totalStations: pack.stationFeatures.length,
     filteredLines: pack.lineFeatures.length - visibleLines.length,
   };
-  renderSelectedHighlight(
+  renderRailSelectedHighlight(
+    groups,
     selectedLineId ? pack.lineFeatureById.get(selectedLineId) || null : null,
     selectedStationId ? pack.stationFeatureById.get(selectedStationId) || null : null,
+    config,
   );
   return getJapanRailPreviewSnapshot(config);
 }
@@ -696,7 +330,7 @@ function startBackgroundFullPackLoad(options = {}) {
     },
     onHydrated(pack) {
       if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
-      if (!pack || !runtime.lastRenderedConfig || !rootGroup) return;
+      if (!pack || !runtime.lastRenderedConfig || !groups.rootGroup) return;
       renderRail(runtime.lastRenderedConfig);
       emitSelectionChange();
     },
@@ -716,14 +350,14 @@ export function selectJapanRailPreviewFeature(selection) {
     const station = pack?.stationFeatureById?.get(featureId) || null;
     if (!station) return false;
     runtime.selectedFeature = { type: "station", id: station.id };
-    renderSelectedHighlight(null, station);
+    renderRailSelectedHighlight(groups, null, station, runtime.lastRenderedConfig);
     emitSelectionChange();
     return true;
   }
   const line = pack?.lineFeatureById?.get(featureId) || null;
   if (!line) return false;
   runtime.selectedFeature = { type: "line", id: line.id };
-  renderSelectedHighlight(line, null);
+  renderRailSelectedHighlight(groups, line, null, runtime.lastRenderedConfig);
   emitSelectionChange();
   return true;
 }
@@ -754,7 +388,7 @@ export async function warmJapanRailPreviewPack({ includeFull = false } = {}) {
       }
     },
     onHydrated(pack) {
-      if (!pack || !runtime.lastRenderedConfig || !rootGroup) return;
+      if (!pack || !runtime.lastRenderedConfig || !groups.rootGroup) return;
       renderRail(runtime.lastRenderedConfig);
       emitSelectionChange();
     },
@@ -768,7 +402,7 @@ export function clearJapanRailPreview() {
   runtime.lastRenderedConfig = null;
   runtime.activePack = null;
   runtime.activePackMode = null;
-  clearGroups();
+  clearRailGroups(groups);
   runtime.renderStats = {
     visibleLines: 0,
     visibleStations: 0,
@@ -796,21 +430,7 @@ export function destroyJapanRailPreview() {
     totalStations,
     filteredLines: 0,
   };
-  rootGroup?.remove();
-  labelRootGroup?.remove();
-  rootGroup = null;
-  labelRootGroup = null;
-  linesGroup = null;
-  lineLabelsGroup = null;
-  stationsGroup = null;
-  stationLabelsGroup = null;
-  selectedGroup = null;
-  selectedLineHighlightNode = null;
-  selectedStationHighlightNode = null;
-  lineNodeById.clear();
-  lineLabelNodeById.clear();
-  stationNodeById.clear();
-  stationLabelNodeById.clear();
+  destroyRailGroups(groups);
 }
 
 export function getJapanRailPreviewSnapshot(config = runtime.lastRenderedConfig) {
