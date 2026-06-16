@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 1027513,
+      "size_bytes": 1021804,
       "source_kind": "dist"
     },
     {
@@ -45826,6 +45826,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
+      "size_bytes": 3900,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/spatial_index_runtime_builders.js",
       "size_bytes": 7104,
       "source_kind": "dist"
@@ -45843,6 +45848,11 @@
     {
       "path": "app/js/core/renderer/spatial_index_runtime_state_ops.js",
       "size_bytes": 3779,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/spatial_query_index.js",
+      "size_bytes": 4678,
       "source_kind": "dist"
     },
     {
@@ -46627,12 +46637,32 @@
     },
     {
       "path": "app/js/ui/transport_workbench_rail_preview.js",
-      "size_bytes": 33287,
+      "size_bytes": 17434,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_rail_preview_dom.js",
+      "size_bytes": 14098,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_rail_preview_runtime.js",
+      "size_bytes": 5071,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/transport_workbench_road_preview.js",
-      "size_bytes": 25863,
+      "size_bytes": 15640,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_road_preview_dom.js",
+      "size_bytes": 8474,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/transport_workbench_road_preview_runtime.js",
+      "size_bytes": 4378,
       "source_kind": "dist"
     },
     {
@@ -46912,7 +46942,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1449608,
+      "size_bytes": 1450422,
       "source_kind": "dist"
     },
     {
@@ -46931,5 +46961,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145139339
+  "total_bytes": 1145148967
 }
