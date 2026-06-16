@@ -1,94 +1,42 @@
 import { resolveTransportManifestUrl } from "../core/data_loader.js";
 import {
-  getTransportWorkbenchCarrierOverlayRoots,
-  getTransportWorkbenchCarrierViewState,
   ensureTransportWorkbenchCarrierForManifest,
+  getTransportWorkbenchCarrierViewState,
   projectTransportWorkbenchCarrierGeometry,
   projectTransportWorkbenchCarrierPoint,
-  projectTransportWorkbenchCarrierScenePoint,
 } from "./transport_workbench_carrier.js";
 import {
   buildTransportWorkbenchProjectedLines as buildProjectedLines,
   createTransportWorkbenchLinePathD as createPathD,
-  createTransportWorkbenchSvgNode as createSvgNode,
   createTransportWorkbenchLinePackRuntime,
   findTransportWorkbenchDatasetNode as findDatasetNode,
-  keepFirstTransportWorkbenchGridBucket as keepFirstPerGridBucket,
   measureTransportWorkbenchProjectedLineLength as measureProjectedLength,
   normalizeTransportWorkbenchNumber as normalizeNumber,
   PACK_MODE_FULL,
   PACK_MODE_PREVIEW,
-  syncTransportWorkbenchSvgGroupOrder as syncGroupOrder,
 } from "./transport_workbench_line_runtime_shared.js";
+import {
+  DATA_ROW_LIMIT,
+  ROAD_RENDER_PRIORITY,
+  getRoadVisibilityReason,
+  normalizeRoadSourceFlags,
+} from "./transport_workbench_road_preview_runtime.js";
+import {
+  clearRoadGroups,
+  createRoadPreviewGroups,
+  destroyRoadGroups,
+  ensureRoadGroups,
+  filterVisibleRoadLabels,
+  renderRoadSelectedHighlight,
+  syncRoadLabelNodes,
+  syncRoadNodes,
+} from "./transport_workbench_road_preview_dom.js";
 
 
 const MANIFEST_URL = resolveTransportManifestUrl("road");
-const ROAD_STYLE_PRESETS = {
-  corridor: {
-    motorway: { stroke: "#cf5d35", width: 2.8 },
-    trunk: { stroke: "#dd854d", width: 2.0 },
-    primary: { stroke: "#be9762", width: 1.35 },
-  },
-  review: {
-    motorway: { stroke: "#bf4f32", width: 3.0 },
-    trunk: { stroke: "#cf7746", width: 2.15 },
-    primary: { stroke: "#ab8348", width: 1.45 },
-  },
-  quiet: {
-    motorway: { stroke: "#ae6a56", width: 2.5 },
-    trunk: { stroke: "#bc8b68", width: 1.8 },
-    primary: { stroke: "#9a8367", width: 1.25 },
-  },
-};
-const LABEL_GRID_BY_DENSITY = {
-  very_sparse: 208,
-  sparse: 176,
-  balanced: 144,
-  dense: 116,
-  very_dense: 92,
-};
-const PRIMARY_REVEAL_SCALE = {
-  strict: 1.65,
-  balanced: 1.38,
-  loose: 1.18,
-};
-const PRIMARY_LABEL_REVEAL_SCALE = {
-  strict: 1.34,
-  balanced: 1.16,
-  loose: 1.04,
-};
-const TRUNK_REVEAL_SCALE = {
-  strict: 1.08,
-  balanced: 1.0,
-  loose: 1.0,
-};
-const TRUNK_LABEL_REVEAL_SCALE = {
-  strict: 1.0,
-  balanced: 0.96,
-  loose: 0.92,
-};
-const METRO_GUARD_BONUS = {
-  light: 0,
-  balanced: 4,
-  strict: 8,
-};
-const SELECTED_STROKE = "#12202d";
-const CONFLICT_STROKE = "#a22f2a";
-const DATA_ROW_LIMIT = 240;
-const ROAD_RENDER_PRIORITY = {
-  primary: 1,
-  trunk: 2,
-  motorway: 3,
-};
 
-let rootGroup = null;
-let labelRootGroup = null;
-let roadsGroup = null;
-let labelsGroup = null;
-let selectedGroup = null;
-let selectedHighlightNode = null;
-let roadNodeById = new Map();
-let labelNodeById = new Map();
+const groups = createRoadPreviewGroups();
+
 const lineRuntime = createTransportWorkbenchLinePackRuntime({
   familyId: "road",
   familyLabel: "Japan road",
@@ -140,14 +88,6 @@ function ensureTopojsonClient() {
   }
 }
 
-function normalizeFlags(flags) {
-  if (Array.isArray(flags)) return flags.filter(Boolean).map((value) => String(value));
-  if (typeof flags === "string" && flags.trim()) {
-    return flags.split("|").map((value) => value.trim()).filter(Boolean);
-  }
-  return [];
-}
-
 function createRoadFeature(rawFeature) {
   const properties = rawFeature?.properties || {};
   const projected = projectTransportWorkbenchCarrierGeometry(rawFeature.geometry);
@@ -164,7 +104,7 @@ function createRoadFeature(rawFeature) {
     denseMetro: !!properties.dense_metro,
     priority: normalizeNumber(properties.priority, 0),
     source: String(properties.source || "").trim(),
-    sourceFlags: normalizeFlags(properties.source_flags),
+    sourceFlags: normalizeRoadSourceFlags(properties.source_flags),
     lengthMeters: normalizeNumber(properties.length_m, 0),
     n06MatchDistanceMeters: Number.isFinite(Number(properties.n06_match_distance_m))
       ? Number(properties.n06_match_distance_m)
@@ -213,93 +153,19 @@ function getCurrentScale() {
   return normalizeNumber(getTransportWorkbenchCarrierViewState()?.scale, 1);
 }
 
-function getRoadVisibilityReason(feature, config, scale) {
-  if (!config.roadClass?.includes(feature.roadClass)) return "class_filtered";
-  if (config.excludeLinks && feature.isLink) return "link_filtered";
-  if (feature.projectedLength < normalizeNumber(config.minProjectedSegmentPx, 6)) return "short_projected_segment";
-  if (
-    feature.roadClass === "primary"
-    && config.suppressShortPrimarySegments
-    && feature.lengthMeters < 6_500
-  ) {
-    return "short_primary";
-  }
-  if (
-    feature.denseMetro
-    && feature.roadClass === "primary"
-    && feature.projectedLength < normalizeNumber(config.minProjectedSegmentPx, 6) + (METRO_GUARD_BONUS[config.denseMetroGuard] || 0)
-  ) {
-    return "dense_metro_guard";
-  }
-  if (feature.roadClass === "trunk" && scale < (TRUNK_REVEAL_SCALE[config.zoomGate] || 1)) {
-    return "zoom_gate";
-  }
-  if (feature.roadClass === "primary" && scale < (PRIMARY_REVEAL_SCALE[config.zoomGate] || 1.38)) {
-    return "zoom_gate";
-  }
-  return null;
-}
-
-function getRoadStyle(feature, config, selectedRoadId) {
-  const preset = ROAD_STYLE_PRESETS[config.strokePreset] || ROAD_STYLE_PRESETS.corridor;
-  const base = preset[feature.roadClass] || preset.primary;
-  const configuredWidth = feature.roadClass === "motorway"
-    ? normalizeNumber(config.motorwayWidth, base.width)
-    : feature.roadClass === "trunk"
-      ? normalizeNumber(config.trunkWidth, base.width)
-      : normalizeNumber(config.primaryWidth, base.width);
-  const isSelected = selectedRoadId && selectedRoadId === feature.id;
-  const hasConflict = config.showSourceConflicts && feature.sourceFlags.includes("name_conflict");
-  return {
-    stroke: hasConflict ? CONFLICT_STROKE : base.stroke,
-    width: isSelected ? configuredWidth + 1.1 : configuredWidth,
-    opacity: isSelected && config.selectedEmphasis === "mute_others"
-      ? 1
-      : normalizeNumber(config.baseOpacity, 88) / 100,
-  };
-}
-
-function getLabelClassGate(feature, config, scale) {
-  if (!config.showRefs) return false;
-  if (!config.refClasses?.includes(feature.roadClass)) return false;
-  if (feature.roadClass === "primary" && !config.allowPrimaryRefsAtHighZoom) return false;
-  if (!feature.ref || feature.projectedRoadLength < Math.max(28, String(feature.ref || "").length * 7)) return false;
-  if (feature.roadClass === "primary" && scale < (PRIMARY_LABEL_REVEAL_SCALE[config.zoomGate] || 1.16)) return false;
-  if (feature.roadClass === "trunk" && scale < (TRUNK_LABEL_REVEAL_SCALE[config.zoomGate] || 0.96)) return false;
-  return true;
-}
-
-function filterVisibleLabels(labelFeatures, visibleRoadIds, config, scale) {
-  const gridSize = LABEL_GRID_BY_DENSITY[config.labelDensityPreset] || LABEL_GRID_BY_DENSITY.balanced;
-  const rankedLabels = labelFeatures
-    .filter((label) => visibleRoadIds.has(label.roadId))
-    .filter((label) => getLabelClassGate(label, config, scale))
-    .map((label) => ({
-      ...label,
-      screenPoint: projectTransportWorkbenchCarrierScenePoint(label.x, label.y),
-    }))
-    .filter((label) => label.screenPoint)
-    .sort((left, right) => right.priority - left.priority);
-  return keepFirstPerGridBucket(rankedLabels, {
-    gridSize,
-    getScreenPoint: (label) => label.screenPoint,
-    getBucketParts: (label) => [label.roadClass],
-  });
-}
-
 function handleRoadGroupClick(event) {
-  const node = findDatasetNode(event.target, "roadId", roadsGroup);
+  const node = findDatasetNode(event.target, "roadId", groups.roadsGroup);
   const roadId = node?.dataset?.roadId;
   if (!roadId) return;
   event.stopPropagation();
   runtime.selectedFeature = { type: "road", id: roadId };
   const selectedRoad = runtime.activePack?.roadFeatureById?.get(roadId) || null;
-  renderSelectedHighlight(selectedRoad);
+  renderRoadSelectedHighlight(groups, selectedRoad);
   emitSelectionChange();
 }
 
 function handleLabelGroupClick(event) {
-  const node = findDatasetNode(event.target, "labelId", labelsGroup);
+  const node = findDatasetNode(event.target, "labelId", groups.labelsGroup);
   const labelId = node?.dataset?.labelId;
   if (!labelId) return;
   event.stopPropagation();
@@ -307,58 +173,8 @@ function handleLabelGroupClick(event) {
   if (!label) return;
   runtime.selectedFeature = { type: "label", id: label.id, roadId: label.roadId };
   const linkedRoad = runtime.activePack?.roadFeatureById?.get(label.roadId) || null;
-  renderSelectedHighlight(linkedRoad);
+  renderRoadSelectedHighlight(groups, linkedRoad);
   emitSelectionChange();
-}
-
-function ensureGroups() {
-  const landRoot = getTransportWorkbenchCarrierOverlayRoots()?.land?.main;
-  const labelRoot = getTransportWorkbenchCarrierOverlayRoots()?.labels?.main;
-  if (!landRoot || !labelRoot) return null;
-  if (rootGroup && rootGroup.parentNode === landRoot && labelRootGroup && labelRootGroup.parentNode === labelRoot) return rootGroup;
-  rootGroup?.remove();
-  labelRootGroup?.remove();
-  roadNodeById = new Map();
-  labelNodeById = new Map();
-  rootGroup = createSvgNode("g");
-  rootGroup.classList.add("transport-workbench-road-preview-root");
-  labelRootGroup = createSvgNode("g");
-  labelRootGroup.classList.add("transport-workbench-road-preview-label-root");
-  roadsGroup = createSvgNode("g");
-  roadsGroup.classList.add("transport-workbench-road-preview-roads");
-  roadsGroup.addEventListener("click", handleRoadGroupClick);
-  labelsGroup = createSvgNode("g");
-  labelsGroup.classList.add("transport-workbench-road-preview-labels");
-  labelsGroup.addEventListener("click", handleLabelGroupClick);
-  selectedGroup = createSvgNode("g");
-  selectedGroup.classList.add("transport-workbench-road-preview-selected");
-  selectedHighlightNode = createSvgNode("path");
-  selectedHighlightNode.setAttribute("fill", "none");
-  selectedHighlightNode.setAttribute("stroke", SELECTED_STROKE);
-  selectedHighlightNode.setAttribute("stroke-width", "2.2");
-  selectedHighlightNode.setAttribute("opacity", "0.9");
-  selectedHighlightNode.setAttribute("stroke-linecap", "round");
-  selectedHighlightNode.setAttribute("stroke-linejoin", "round");
-  selectedHighlightNode.setAttribute("vector-effect", "non-scaling-stroke");
-  selectedHighlightNode.classList.add("transport-workbench-road-selected-highlight");
-  selectedHighlightNode.style.display = "none";
-  selectedGroup.appendChild(selectedHighlightNode);
-  rootGroup.append(roadsGroup, selectedGroup);
-  labelRootGroup.append(labelsGroup);
-  landRoot.appendChild(rootGroup);
-  labelRoot.appendChild(labelRootGroup);
-  return rootGroup;
-}
-
-function clearGroups() {
-  roadNodeById.forEach((node) => node.remove());
-  labelNodeById.forEach((node) => node.remove());
-  roadNodeById.clear();
-  labelNodeById.clear();
-  if (selectedHighlightNode) {
-    selectedHighlightNode.removeAttribute("d");
-    selectedHighlightNode.style.display = "none";
-  }
 }
 
 function emitSelectionChange() {
@@ -447,99 +263,15 @@ function buildDataRows(config = runtime.lastRenderedConfig) {
     .slice(0, DATA_ROW_LIMIT);
 }
 
-function renderSelectedHighlight(selectedRoad) {
-  if (!selectedHighlightNode) return;
-  if (!selectedRoad) {
-    selectedHighlightNode.removeAttribute("d");
-    selectedHighlightNode.style.display = "none";
-    return;
-  }
-  selectedHighlightNode.setAttribute("d", selectedRoad.pathD);
-  selectedHighlightNode.style.display = "";
-}
-
-function updateRoadNode(path, feature, style) {
-  path.setAttribute("d", feature.pathD);
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke", style.stroke);
-  path.setAttribute("stroke-width", String(style.width));
-  path.setAttribute("stroke-linecap", "round");
-  path.setAttribute("stroke-linejoin", "round");
-  path.setAttribute("vector-effect", "non-scaling-stroke");
-  path.setAttribute("opacity", String(style.opacity));
-  path.dataset.roadId = feature.id;
-  path.setAttribute("class", `transport-workbench-road-path road-class-${feature.roadClass}`);
-}
-
-function updateLabelNode(text, label, config) {
-  const fontSize = label.roadClass === "motorway" ? 11 : 10;
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("dominant-baseline", "middle");
-  text.setAttribute("x", String(label.screenPoint.x));
-  text.setAttribute("y", String(label.screenPoint.y - 1.5));
-  text.setAttribute("font-size", String(fontSize));
-  text.setAttribute("font-weight", label.roadClass === "motorway" ? "700" : "600");
-  text.setAttribute("fill", "#233141");
-  text.setAttribute("stroke", "#f8f5f0");
-  text.setAttribute("stroke-width", "2");
-  text.setAttribute("paint-order", "stroke");
-  text.setAttribute("opacity", String(normalizeNumber(config.refOpacity, 82) / 100));
-  text.dataset.labelId = label.id;
-  text.dataset.roadId = label.roadId;
-  text.dataset.roadClass = label.roadClass;
-  text.setAttribute("class", "transport-workbench-road-label");
-  text.textContent = label.ref;
-}
-
-function syncRoadNodes(visibleRoads, config, selectedRoadId) {
-  const visibleIds = new Set();
-  const orderedNodes = [];
-  visibleRoads.forEach((feature) => {
-    let path = roadNodeById.get(feature.id);
-    if (!path) {
-      path = createSvgNode("path");
-      roadNodeById.set(feature.id, path);
-    }
-    updateRoadNode(path, feature, getRoadStyle(feature, config, selectedRoadId));
-    orderedNodes.push(path);
-    visibleIds.add(feature.id);
-  });
-  syncGroupOrder(roadsGroup, orderedNodes);
-  Array.from(roadNodeById.entries()).forEach(([roadId, node]) => {
-    if (visibleIds.has(roadId)) return;
-    node.remove();
-    roadNodeById.delete(roadId);
-  });
-}
-
-function syncLabelNodes(visibleLabels, config) {
-  const visibleIds = new Set();
-  const orderedTextNodes = [];
-  visibleLabels.forEach((label) => {
-    let text = labelNodeById.get(label.id);
-    if (!text) {
-      text = createSvgNode("text");
-      labelNodeById.set(label.id, text);
-    }
-    updateLabelNode(text, label, config);
-    orderedTextNodes.push(text);
-    visibleIds.add(label.id);
-  });
-  syncGroupOrder(labelsGroup, orderedTextNodes);
-  Array.from(labelNodeById.entries()).forEach(([labelId, node]) => {
-    if (visibleIds.has(labelId)) return;
-    node.remove();
-    labelNodeById.delete(labelId);
-  });
-}
-
 function pickActivePack() {
   return lineRuntime.pickActivePack();
 }
 
 function renderRoads(config) {
   const pack = pickActivePack();
-  if (!pack || !ensureGroups()) return getJapanRoadPreviewSnapshot(config);
+  if (!pack || !ensureRoadGroups(groups, { onRoadClick: handleRoadGroupClick, onLabelClick: handleLabelGroupClick })) {
+    return getJapanRoadPreviewSnapshot(config);
+  }
   runtime.activePack = pack;
   runtime.activePackMode = pack.mode;
   runtime.lastRenderedConfig = config;
@@ -552,12 +284,12 @@ function renderRoads(config) {
       return left.priority - right.priority;
     });
   const visibleRoadIds = new Set(visibleRoads.map((feature) => feature.id));
-  const visibleLabels = filterVisibleLabels(pack.labelFeatures, visibleRoadIds, config, scale);
+  const visibleLabels = filterVisibleRoadLabels(pack.labelFeatures, visibleRoadIds, config, scale);
   const selectedRoadId = runtime.selectedFeature?.type === "road"
     ? runtime.selectedFeature.id
     : (runtime.selectedFeature?.type === "label" ? runtime.selectedFeature.roadId : null);
-  syncRoadNodes(visibleRoads, config, selectedRoadId);
-  syncLabelNodes(visibleLabels, config);
+  syncRoadNodes(groups, visibleRoads, config, selectedRoadId);
+  syncRoadLabelNodes(groups, visibleLabels, config);
   runtime.renderStats = {
     visibleRoads: visibleRoads.length,
     visibleLabels: visibleLabels.length,
@@ -568,7 +300,7 @@ function renderRoads(config) {
   const selectedRoad = selectedRoadId
     ? pack.roadFeatureById.get(selectedRoadId) || null
     : null;
-  renderSelectedHighlight(selectedRoad);
+  renderRoadSelectedHighlight(groups, selectedRoad);
   return getJapanRoadPreviewSnapshot(config);
 }
 
@@ -582,7 +314,7 @@ function startBackgroundFullPackLoad(options = {}) {
     },
     onHydrated() {
       if (typeof options.isCurrent === "function" && !options.isCurrent()) return;
-      if (!runtime.lastRenderedConfig || !rootGroup) return;
+      if (!runtime.lastRenderedConfig || !groups.rootGroup) return;
       renderRoads(runtime.lastRenderedConfig);
       emitSelectionChange();
     },
@@ -600,7 +332,7 @@ export function selectJapanRoadPreviewFeature(selection) {
   const road = pack?.roadFeatureById?.get(roadId) || null;
   if (!road) return false;
   runtime.selectedFeature = { type: "road", id: road.id };
-  renderSelectedHighlight(road);
+  renderRoadSelectedHighlight(groups, road);
   emitSelectionChange();
   return true;
 }
@@ -629,7 +361,7 @@ export async function warmJapanRoadPreviewPack({ includeFull = false } = {}) {
       }
     },
     onHydrated() {
-      if (!runtime.lastRenderedConfig || !rootGroup) return;
+      if (!runtime.lastRenderedConfig || !groups.rootGroup) return;
       renderRoads(runtime.lastRenderedConfig);
       emitSelectionChange();
     },
@@ -643,7 +375,7 @@ export function clearJapanRoadPreview() {
   runtime.lastRenderedConfig = null;
   runtime.activePack = null;
   runtime.activePackMode = null;
-  clearGroups();
+  clearRoadGroups(groups);
   runtime.renderStats = {
     visibleRoads: 0,
     visibleLabels: 0,
@@ -667,16 +399,7 @@ export function destroyJapanRoadPreview() {
     totalLabels,
     filteredRoads: 0,
   };
-  rootGroup?.remove();
-  labelRootGroup?.remove();
-  rootGroup = null;
-  labelRootGroup = null;
-  roadsGroup = null;
-  labelsGroup = null;
-  selectedGroup = null;
-  selectedHighlightNode = null;
-  roadNodeById.clear();
-  labelNodeById.clear();
+  destroyRoadGroups(groups);
 }
 
 export function getJapanRoadPreviewSnapshot(config = runtime.lastRenderedConfig) {
