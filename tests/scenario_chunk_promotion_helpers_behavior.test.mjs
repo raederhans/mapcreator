@@ -18,7 +18,6 @@ test("scenario chunk promotion change set treats atlantropa as water and politic
   assert.equal(result.hasPoliticalChange, true);
   assert.deepEqual(result.effectiveChangedLayerKeys, ["scenario_atlantropa", "water"]);
 });
-
 test("scenario chunk promotion visual metrics preserve feature and backlog counts", () => {
   const result = buildScenarioChunkPromotionVisualMetricDetails({
     activeScenarioId: "demo",
@@ -65,4 +64,3 @@ test("scenario chunk promotion visual metrics preserve feature and backlog count
   assert.equal(result.promotionVersion, 14);
   assert.equal(result.synchronizedSecondaryRegionIndexes, true);
 });
-

@@ -23,7 +23,6 @@ export function resolveScenarioChunkPromotionChangeSet({
     effectiveChangedLayerKeys,
   };
 }
-
 export function buildScenarioChunkPromotionVisualMetricDetails({
   activeScenarioId = "",
   reason = "scenario-chunk-promotion",
@@ -71,4 +70,3 @@ export function buildScenarioChunkPromotionVisualMetricDetails({
     synchronizedSecondaryRegionIndexes,
   };
 }
-
