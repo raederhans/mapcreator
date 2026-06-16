@@ -183,17 +183,15 @@
 ### 渐进恢复要同时移出背景缓存和细节绘制
 - 大场景启动恢复里，只把 full-pass Path2D cache 延后还会留下细粒度 feature fill loop 成本；progressive 模式要把粗 underlay、细节 loop 跳过、idle full cache 三件事一起设计，并让 `refresh-colors` 继续走精确反馈路径。
 
-### perf measure 会写 baseline 文件
-- `tools/perf/run_baseline.mjs --mode measure --write-markdown false` 仍会写 `docs/perf/baseline_2026-04-20.json`；只用 `.runtime` 原始样本做实验时，跑完要恢复 docs baseline，避免把测量副作用混进性能改动。
-
 ### 失败的性能实验也要锁合同
 - 渲染链路里被测试并拒绝的 cache 签名收窄、entry 复用等实验，要用合同测试钉住当前边界；只在文档里记录原因，后续容易被同类优化重新引入。
 
 ### 投影缓存签名要覆盖反投影输入
 - 依赖 `projection.invert()` 或 `transform.invert()` 的 raster/cache key，除了尺寸、DPR、projection 参数和 zoom `k/x/y`，还要记录自定义 transform identity 或明确不可变合同；只记录数值字段会让不同 inverse 映射复用旧 buffer。
 
-### render benchmark 优化先看采样窗口
+### perf gate 先看采样上下文
 - post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
+- full hit canvas 从 startup/recovery 同步路径移到 idle 后，`buildHitCanvasMs` 仍可能在 perf gate 里出现；判断是否还压启动热路径时，先看 `mode`、`reason` 和 `hitCanvasViewportProfile.profile`。
 - scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。
 - Pages dist manifest 必须在最终换行形态之后写入；如果构建后再规整 LF，`size_bytes` 会和 checked-in 文件失配。
 
@@ -277,9 +275,6 @@
 ### 隐藏开发工具入口前先释放入口拥有状态
 - 开发者模式会隐藏 toolbar 入口时，入口 controller 要先关闭自己拥有的 preview/overlay 并触发 renderer restore，再同步按钮可见性，保证画布状态随入口一起恢复。
 
-### hit canvas 指标要先看 mode/reason
-- full hit canvas 从 startup/recovery 同步路径移到 idle 后，`buildHitCanvasMs` 仍可能在 perf gate 里出现；判断是否还压启动热路径时，先看 `mode`、`reason` 和 `hitCanvasViewportProfile.profile`。
-
 ### manifest 几何字段要来自最终 payload
 - 构建器对 chunk payload 做简化、裁剪、rounding 或格式转换后，`feature_bounds`、count 和成本诊断必须从最终写盘 payload 计算；从 source feature 计算会让 contract 与运行时 viewport 选择漂移。
 
@@ -346,18 +341,8 @@
 ### 云端合流后验证前再查远端
 - 合流和冲突解析过程中 `origin/main` 仍可能新增提交；跑最终验证前再查 `HEAD..origin/main`，确保本地验证的是最新远端基线。
 
-### 原生 select 统一样式要避开 background 简写
-- 给原生 select 加统一箭头和 `appearance: none` 后，组件局部样式继续用 `background:` 会清掉箭头层；保留控件底色时改用 `background-color:`，右侧 padding 单独覆盖。
-
 ### 昼夜动画要同步时间粒度和灯光缓存
 - 循环模式的 pass 签名要用细粒度时间 token；灯光静态底图继续缓存，但缓存 miss 时必须先生成完整精细底图，再让动画帧复用它做重裁剪和合成。
-
-### 昼夜灯光默认值要同步 UI 回退
-- 提高灯光默认强度时，`index.html` 初始值、state defaults、toolbar 输入非法值回退、e2e 默认合同和 `dist/app` 必须一起更新；否则真实页面会出现“参数看似改了，交互后回到旧弱光”的错觉。
-
-### HOI4 场景重建后要分清 report-dir 和 safe repair
-- `check_hoi4_scenario_bundle.py` 默认 report-dir 指向 `hoi4_1936`；校验 `hoi4_1939` 时显式传 `.runtime/reports/generated/scenarios/hoi4_1939`，避免把 1936 coverage report 拿来对 1939 audit。
-- 大型 HOI4 场景的 `--write-safe` 二次稳定检查可能耗时很长；需要收敛快照时可先单场景调用 safe repair，再用只读 strict checker 和 bundle checker验证。
 
 ### HOI4 国家显示名要同步全链路指纹
 - 修改 `countries.json` 的显示名时，同步 startup bundle/gzip、`locales.startup.json`、`data/locales.json`、`data/manifest.json`、`build_snapshot.json`、`manifest.snapshot_fingerprint` 和 `audit.snapshot_fingerprint`；只改单文件哈希会被 strict contract 抓到聚合指纹过期。
@@ -385,3 +370,7 @@
 ### profile validator 要接入真实入口
 - 配置文件 validator 如果只跑在静态测试里，live 脚本仍可能用默认值吞掉拼写漂移；新增 profile 合同时要把 validator 放到解析入口前，并用 unknown-field 负例锁住隐藏 fallback。
 - profile 字段只要会进入 shell 文件名、URL 或退出状态，就要校验语义边界；非空字符串检查不足以保护 localhost-only、路径安全和端口范围。
+
+### Windows OMX hook 报 code 1 先查命令解析和 TOML 编码
+- hook exited with code 1 成片出现时，先用绝对路径复跑 hook shim，再检查 Codex 会话 PATH；Windows 上 powershell.exe、node.exe、codex.exe 解析失败会让 hooks 看起来集体失效。
+- 修改 config.toml 后用 OMX 使用的 @iarna/toml 解析器复验；PowerShell Set-Content -Encoding UTF8 可能写入 BOM，让 OMX doctor 报 invalid TOML。
