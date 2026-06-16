@@ -12,21 +12,20 @@ Last updated: 2026-06-15
 
 ## Recommended Order
 
-1. Integrate `codex/a11y-home-app-fix-20260615` after the rebase validation gates pass.
+1. No active implementation worktree remains after the a11y integration closeout; keep the unrelated main checkout docs and `lessons learned.md` edits unstaged.
 2. Re-check recovery refs before recreating any historical worktree.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current pushed closeout HEAD | current `origin/main` | active-main | user edit in `lessons learned.md` | Localization governance fast-forward merge reached `4711b0dd`; main validation passed with i18n audit, `tests.test_i18n_audit`, and `git diff --check`; registry/archive closeout was pushed | Green; preserve the user edit | No localization action remains; keep the user edit unstaged |
-| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `codex/a11y-home-app-fix-20260615` / branch HEAD | current `origin/main` after localization governance | ready-for-integration | shared UI, i18n, `dist/app`, and focused behavior tests | Rebased across localization governance conflicts; changed files include `index.html`, `css/style.css`, sidebar/toolbar JS, locale data, `dist/app`, and behavior tests | Yellow; direct conflicts resolved, validate before merge | Run UI/i18n/Pages gates, then fast-forward into `main` if green |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` / current integration HEAD | current `origin/main` plus a11y fast-forward | active-main | unrelated docs archive moves and `lessons learned.md` edit remain unstaged | A11y branch was rebased, validated, fast-forwarded into `main`, and active docs were archived | Green; preserve unrelated local edits | Push `main`, then remove the integrated local a11y worktree |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| main -> a11y | Red | Direct overlap in `docs/active/_worktree_registry.md`, UI catalog/locales, `tests/test_i18n_audit.py`, and delivery-surface manifest/mirror files now that localization is integrated. |
+| none | Green | Only `main` remains active after the a11y integration closeout. |
 
 ## Recovery Records
 
@@ -35,6 +34,7 @@ These rows are branch or commit recovery indexes. They are historical references
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator-localization-governance-20260615` | `main` / former branch `codex/localization-governance-20260615` | `4711b0dd` | 2026-06-15 | `docs/archive/localization-governance-20260615/` | Inspect `4711b0dd` and archived docs when auditing localization governance ownership changes. |
+| `C:\Users\raede\Desktop\dev\mapcreator-a11y-home-app-fix-20260615` | `origin/codex/a11y-home-app-fix-20260615` | `55f143de` | 2026-06-15 | `docs/archive/a11y-home-app-fix-20260615/` | Inspect branch/docs when auditing homepage and app-page accessibility fixes. |
 | `C:\Users\raede\Desktop\dev\mapcreator-audit-20260615-registry-closeout` | `origin/main` | `691c933f` | 2026-06-15 | `docs/archive/housekeeping-review-fix-20260615/` | Inspect `691c933f` when auditing this automation's registry correction. |
 | `C:\Users\raede\Desktop\dev\mapcreator-housekeeping-review-fix-20260615` | `origin/codex/housekeeping-review-fix-20260615` | `64ae29be` | 2026-06-15 | `docs/archive/housekeeping-review-fix-20260615/` | Inspect branch/docs when auditing this registry review fix. |
 | `C:\Users\raede\Desktop\dev\mapcreator-worktree-housekeeping-20260615` | `origin/codex/worktree-housekeeping-20260615` | `c076d5e5` | 2026-06-15 | `docs/archive/worktree-housekeeping-20260615/` | Inspect branch/docs when auditing cleanup history. |
@@ -59,3 +59,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Remote branch remains as recovery record at `64ae29be`.
 - 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, pushed through the registry closeout, and cleaned from the active worktree list.
+- 2026-06-15 a11y home/app fix: `55f143de` was rebased onto current main, validated with i18n, behavior, Pages dist, and a11y scan gates, fast-forwarded into main, and archived for cleanup.
