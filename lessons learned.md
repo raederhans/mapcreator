@@ -367,3 +367,6 @@
 
 ### 图层不可见断言优先用 owner 证据
 - 整张 canvas 像素差会被其他 pass、重绘时机和背景层污染；验证某个子图层在某 zoom 不绘制时，用 owner 行为测试锁 path/stroke 调用，用 render metric 锁 `visibleFeatureCount`。
+
+### 行尾过滤噪音卡住 main 同步时先判定语义差异
+- 归档文件的旧 CRLF blob 与当前 `eol=lf` attributes 可能让 `restore` 后仍显示脏；先用 `git diff --ignore-cr-at-eol` 和 `git hash-object --no-filters` 判定是否只有行尾差异，再用临时提交 + rebase skip 让远端清理生效。
