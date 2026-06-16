@@ -41,3 +41,20 @@
   - `py -3 -m unittest tests.test_playwright_app_ready_gate_contract -q`
   - `py -3 tools/browser_smoke_profile_contract.py ops/browser-mcp/inspection-profile.toml`
   - `py -3 -m py_compile tools/browser_smoke_profile_contract.py`
+
+## WS1 Findings
+
+- Existing `tests.test_global_transport_builder_contracts.GlobalTransportBuilderContractsTest.test_china_osm_gpkg_country_builders_keep_byte_stable_golden_outputs` already provided the required byte-stable golden net for China OSM-GPKG road, rail, industrial, and logistics packs.
+- Baseline golden test passed before refactor.
+- Added `FamilyOutput` so output-specific rules live in the registry:
+  - rail line and station sidecar now carry separate limits, dedup keys, scope strategy, preview strategy, and source layers;
+  - logistics combines point and area source layers inside one output config;
+  - compatibility properties on `FamilySpec` keep older tests and wrappers readable while new code uses `spec.outputs`.
+- Replaced the branchy registry dispatcher with `build_osm_gpkg_family_pack` and `_write_osm_gpkg_family_pack`.
+- Kept `build_osm_gpkg_road_pack`, `build_osm_gpkg_rail_pack`, `build_osm_gpkg_industrial_zone_centers_pack`, and `build_osm_gpkg_logistics_hub_pack` as thin compatibility wrappers because existing tests and scripts import them directly.
+- Restored `parse_osm_hstore_tags` after the refactor exposed that it is still part of the source-contract import surface.
+- Added Python-to-JS geometry-kind contract coverage for OSM-GPKG families against `js/core/transport_capability_registry.js`.
+- Verification passed:
+  - `py -3 -m py_compile tools/build_transport_country_real_packs.py map_builder/transport_family_registry.py tests/test_global_transport_builder_contracts.py`
+  - `py -3 -m unittest tests.test_global_transport_builder_contracts -q`
+  - `py -3 -m unittest tests.test_transport_country_source_contracts -q`

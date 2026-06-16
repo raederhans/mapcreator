@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import importlib.util
+import re
 import tempfile
 import unittest
 from collections import Counter
@@ -33,6 +34,7 @@ COUNTRY_REAL_PACK_BUILDER = REPO_ROOT / 'tools' / 'build_transport_country_real_
 COUNTRY_PACK_WRITER = REPO_ROOT / 'map_builder' / 'transport_country_pack_writer.py'
 SOURCE_EXTRACT_CACHE = REPO_ROOT / 'map_builder' / 'transport_source_extract_cache.py'
 TRANSPORT_FAMILY_REGISTRY = REPO_ROOT / 'map_builder' / 'transport_family_registry.py'
+TRANSPORT_CAPABILITY_REGISTRY = REPO_ROOT / 'js' / 'core' / 'transport_capability_registry.js'
 
 
 CHINA_OSM_GPKG_GOLDEN_SHA256 = {
@@ -122,20 +124,23 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         from map_builder.transport_family_registry import OSM_GPKG_FAMILY_SPECS, osm_gpkg_family_for_pack_id
 
         expected = {
-            "road": ("line", "line", ("gis_osm_roads_free",)),
-            "rail": ("line", "line", ("gis_osm_railways_free", "gis_osm_transport_free")),
-            "industrial_zones": ("point", "polygon_or_point", ("gis_osm_landuse_a_free",)),
-            "logistics_hubs": ("point", "point", ("gis_osm_transport_free", "gis_osm_transport_a_free")),
+            "road": ("line", "line", {"roads": ("gis_osm_roads_free",)}),
+            "rail": ("line", "line", {"railways": ("gis_osm_railways_free",), "rail_stations_major": ("gis_osm_transport_free",)}),
+            "industrial_zones": ("point", "polygon_or_point", {"industrial_zones": ("gis_osm_landuse_a_free",)}),
+            "logistics_hubs": ("point", "point", {"logistics_hubs": ("gis_osm_transport_free", "gis_osm_transport_a_free")}),
         }
-        for family, (output_kind, capability_kind, layers) in expected.items():
+        for family, (output_kind, capability_kind, outputs) in expected.items():
             with self.subTest(family=family):
                 spec = OSM_GPKG_FAMILY_SPECS[family]
                 self.assertEqual(spec.output_geometry_kind, output_kind)
                 self.assertEqual(spec.capability_geometry_kind, capability_kind)
-                self.assertEqual(tuple(layer.source_layer for layer in spec.gpkg_layers), layers)
+                self.assertEqual(
+                    {output.output_layer: tuple(layer.source_layer for layer in output.source_layers) for output in spec.outputs},
+                    outputs,
+                )
                 self.assertTrue(all(layer.row_builder_id for layer in spec.gpkg_layers))
-                self.assertTrue(spec.dedup_subset)
-                self.assertTrue(spec.sort_fields)
+                self.assertTrue(all(output.dedup_subset for output in spec.outputs))
+                self.assertTrue(all(output.scope_strategy in {"line", "carrier"} for output in spec.outputs))
                 self.assertTrue(spec.audit_shape)
 
         for pack_id, family in {
@@ -148,6 +153,22 @@ class GlobalTransportBuilderContractsTest(unittest.TestCase):
         }.items():
             with self.subTest(pack_id=pack_id):
                 self.assertEqual(osm_gpkg_family_for_pack_id(pack_id), family)
+
+    def test_osm_gpkg_family_geometry_matches_frontend_capability_registry(self) -> None:
+        from map_builder.transport_family_registry import OSM_GPKG_FAMILY_SPECS
+
+        registry_text = TRANSPORT_CAPABILITY_REGISTRY.read_text(encoding="utf-8")
+        frontend_geometry = {
+            match.group("family"): match.group("geometry")
+            for match in re.finditer(
+                r"(?P<family>[a-z_]+): createTransportCapabilityFamily\(\{.*?geometryKind: \"(?P<geometry>[a-z_]+)\"",
+                registry_text,
+                re.S,
+            )
+        }
+        for family, spec in OSM_GPKG_FAMILY_SPECS.items():
+            with self.subTest(family=family):
+                self.assertEqual(frontend_geometry[family], spec.capability_geometry_kind)
 
     def test_country_pack_writer_assembles_manifest_audit_and_bridge_contract(self) -> None:
         from map_builder.transport_country_pack_writer import write_country_pack

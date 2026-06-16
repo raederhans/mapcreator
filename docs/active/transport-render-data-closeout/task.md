@@ -15,7 +15,7 @@ Current status: in-progress
 - [x] Add `package.json` script `verify:dist-drift`.
 - [x] Verify passing guard.
 - [x] Verify deliberate drift failure and revert.
-- [ ] Commit WS3.
+- [x] Commit WS3.
 
 ### WS2: Jsonschema Smoke Profile Validator
 
@@ -26,20 +26,20 @@ Current status: in-progress
 - [x] Preserve localhost, output containment, safe ID, port, budget, mode subset, and route reference checks.
 - [x] Run contract test and real profile validation.
 - [x] Update schema doc if needed.
-- [ ] Commit WS2.
+- [x] Commit WS2.
 
 ### WS1: Single OSM-GPKG Family Driver
 
-- [ ] Discover clock/output/stub points and live pack IDs.
-- [ ] Add golden fixture test and snapshots against current builders.
-- [ ] Run golden test against current code.
-- [ ] Commit pre-refactor golden net.
-- [ ] Add `FamilyOutput` and per-output registry config.
-- [ ] Add row-builder dispatch and generic driver.
-- [ ] Repoint builder registry and remove old four functions.
-- [ ] Run golden test with zero diffs.
-- [ ] Add Python-JS geometry contract test.
-- [ ] Run builder contract tests.
+- [x] Discover clock/output/stub points and live pack IDs.
+- [x] Reuse existing golden fixture and snapshots against current builders.
+- [x] Run golden test against current code.
+- [x] Confirm separate pre-refactor commit is unnecessary because existing golden net already covers the refactor.
+- [x] Add `FamilyOutput` and per-output registry config.
+- [x] Add row-builder dispatch and generic driver.
+- [x] Repoint builder registry through the generic driver while keeping thin compatibility wrappers for existing tests/scripts.
+- [x] Run golden test with zero diffs.
+- [x] Add Python-JS geometry contract test.
+- [x] Run builder contract tests.
 - [ ] Commit WS1.
 
 ### Final Closeout
