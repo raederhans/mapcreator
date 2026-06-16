@@ -1006,6 +1006,8 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
     const context = getContext();
     const canvasWidth = Number(context?.canvas?.width || 0);
     const canvasHeight = Number(context?.canvas?.height || 0);
+    const intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
+    const urbanGlowRevision = Number(intensityFields?.channels?.urbanGlow?.revision || 0);
     return [
       canvasWidth,
       canvasHeight,
@@ -1016,7 +1018,7 @@ export function createModernCityLightsRenderOwner({ state = {}, constants = {}, 
       runtimeState.topologyRevision || 0,
       runtimeState.contextLayerRevision || 0,
       runtimeState.cityLayerRevision || 0,
-      `field:urbanGlow:${Number(normalizeIntensityFieldsState(runtimeState.intensityFields).channels.urbanGlow?.revision || 0)}`,
+      `field:urbanGlow:${urbanGlowRevision}`,
       getModernCityLightsStaticConfigSignature(config),
     ].join("::");
   }

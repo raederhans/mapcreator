@@ -89,7 +89,7 @@ export function createPhysicalLayerRenderOwner({
 
   function drawPhysicalIntensityFieldLayer({ clipAlreadyApplied = false } = {}) {
     runtimeState.intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
-    const fieldState = runtimeState.intensityFields.channels.physicalAtlas;
+    const fieldState = runtimeState.intensityFields?.channels?.physicalAtlas;
     const projection = getProjection();
     const context = getContext();
     if (!fieldState?.enabled || !fieldState.points.length || !projection || !context) return 0;

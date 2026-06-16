@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_CACHE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_cache_owner.js"
+MODERN_CITY_LIGHTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "modern_city_lights_render_owner.js"
 
 
 class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
@@ -75,9 +76,10 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
 
     def test_modern_city_lights_static_cache_excludes_clock_fields(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = MODERN_CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         signature_match = re.search(
-            r"function getModernCityLightsStaticConfigSignature\(config\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
+            r"function getModernCityLightsStaticConfigSignature\(config\) \{(?P<body>[\s\S]*?)\n  \}",
+            owner_content,
         )
         self.assertIsNotNone(signature_match)
         signature_body = signature_match.group("body")
@@ -92,15 +94,16 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("twilightWidthDeg", signature_body)
 
         key_match = re.search(
-            r"function getModernCityLightsStaticLayerKey\(config\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
+            r"function getModernCityLightsStaticLayerKey\(config\) \{(?P<body>[\s\S]*?)\n  \}",
+            owner_content,
         )
         self.assertIsNotNone(key_match)
         key_body = key_match.group("body")
         self.assertIn("getModernCityLightsStaticConfigSignature(config)", key_body)
-        self.assertIn("getTransformSignature(runtimeState.zoomTransform", key_body)
+        self.assertIn("getTransformSignature(getZoomTransform())", key_body)
         self.assertIn("runtimeState.contextLayerRevision", key_body)
         self.assertIn("runtimeState.cityLayerRevision", key_body)
+        self.assertIn("intensityFields?.channels?.urbanGlow?.revision", key_body)
         self.assertNotIn("manualUtcMinutes", key_body)
         self.assertNotIn("getDayNightSignatureClockToken", key_body)
         self.assertNotIn("shadowOpacity", key_body)
@@ -108,7 +111,7 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("solarState", key_body)
 
         self.assertRegex(
-            renderer_content,
+            owner_content,
             r"function drawModernNightLightsLayer\(k, config, solarState\) \{[\s\S]*?"
             r"const staticLayerCanvas = getModernCityLightsStaticLayerCanvas\(k, config, intensity\);[\s\S]*?"
             r"context\.drawImage\(staticLayerCanvas, 0, 0\);",
@@ -120,10 +123,11 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
 
     def test_modern_city_lights_advanced_controls_reach_draw_algorithms(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = MODERN_CITY_LIGHTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
 
         texture_match = re.search(
-            r"function drawModernCityLightsTexture\(config, intensity\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
+            r"function drawModernCityLightsTexture\(config, intensity\) \{(?P<body>[\s\S]*?)\n  \}",
+            owner_content,
         )
         self.assertIsNotNone(texture_match)
         texture_body = texture_match.group("body")
@@ -132,8 +136,8 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("textureOpacity *", texture_body)
 
         corridor_match = re.search(
-            r"function drawModernCityLightsCorridors\(config, intensity\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
+            r"function drawModernCityLightsCorridors\(config, intensity\) \{(?P<body>[\s\S]*?)\n  \}",
+            owner_content,
         )
         self.assertIsNotNone(corridor_match)
         corridor_body = corridor_match.group("body")
@@ -142,8 +146,8 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("corridorStrength *", corridor_body)
 
         core_match = re.search(
-            r"function drawModernCityLightsCores\(k, config, _intensity, coreEntries = null\) \{(?P<body>[\s\S]*?)\n\}",
-            renderer_content,
+            r"function drawModernCityLightsCores\(k, config, _intensity, coreEntries = null\) \{(?P<body>[\s\S]*?)\n  \}",
+            owner_content,
         )
         self.assertIsNotNone(core_match)
         core_body = core_match.group("body")

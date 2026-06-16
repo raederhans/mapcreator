@@ -198,3 +198,15 @@ test("modern city lights owner static layer key includes render invalidation inp
 
   assert.notEqual(owner.getModernCityLightsStaticLayerKey({ cityLightsIntensity: 1.2 }), key);
 });
+
+test("modern city lights owner static layer key tolerates missing intensity channels", () => {
+  const state = {
+    cityLayerRevision: 4,
+    contextLayerRevision: 3,
+    intensityFields: {},
+    topologyRevision: 2,
+  };
+  const owner = createOwner({ state });
+
+  assert.match(owner.getModernCityLightsStaticLayerKey({ cityLightsIntensity: 1.1 }), /field:urbanGlow:0/);
+});

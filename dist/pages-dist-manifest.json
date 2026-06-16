@@ -45807,7 +45807,7 @@
     },
     {
       "path": "app/js/core/renderer/modern_city_lights_render_owner.js",
-      "size_bytes": 45437,
+      "size_bytes": 45533,
       "source_kind": "dist"
     },
     {
@@ -45817,7 +45817,7 @@
     },
     {
       "path": "app/js/core/renderer/physical_layer_render_owner.js",
-      "size_bytes": 21009,
+      "size_bytes": 21011,
       "source_kind": "dist"
     },
     {
@@ -46981,5 +46981,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145174064
+  "total_bytes": 1145174162
 }

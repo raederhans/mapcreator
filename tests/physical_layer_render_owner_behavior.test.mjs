@@ -221,6 +221,17 @@ test("physical base pass draws semantic, intensity, and relief counts in order",
   assert.equal(harness.metrics.at(-1).details.reliefRenderedCount, 1);
 });
 
+test("physical intensity layer tolerates missing intensity channels", () => {
+  const harness = createOwner({
+    state: {
+      intensityFields: {},
+    },
+  });
+
+  assert.equal(harness.owner.drawPhysicalIntensityFieldLayer(), 0);
+  assert.equal(harness.context.calls.length, 0);
+});
+
 test("physical owner respects pre-applied clip masks", () => {
   const semantic = createAtlasFeature("forest", "semantic_overlay", "semantic");
   const relief = createAtlasFeature("mountain", "relief_base", "relief");
