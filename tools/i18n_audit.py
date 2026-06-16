@@ -334,7 +334,7 @@ def scenario_metadata_strings(manifest_payload: dict) -> list[str]:
     values = []
     for key in ("display_name", "bookmark_name", "bookmark_description", "description"):
         value = manifest_payload.get(key)
-        if isinstance(value, str) and value.strip():
+        if isinstance(value, str) and is_user_visible_candidate(value.strip()):
             values.append(value.strip())
     return sorted(set(values))
 

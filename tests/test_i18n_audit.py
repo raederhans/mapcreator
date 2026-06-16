@@ -190,7 +190,7 @@ showToast(`Copied ${count} region entries to the clipboard.`);
             }
             self._write_repo_json(repo_root, "data/locales.json", locales_payload)
             self._write_repo_json(repo_root, "data/i18n/manual_ui.json", {"Special zone diagnostics": "特殊区域诊断"})
-            self._write_repo_json(repo_root, "data/i18n/manual_geo_overrides.json", {"HGO 1936": "HGO 1936"})
+            self._write_repo_json(repo_root, "data/i18n/manual_geo_overrides.json", {"HGO 1936": "历史地理重置 1936"})
             self._write_repo_json(repo_root, "data/i18n/locales_baseline.json", locales_payload)
             self._write_repo_file(
                 repo_root,
@@ -227,6 +227,7 @@ export const UI_COPY_CATALOG = Object.freeze({
                 {
                     "scenario_id": "hgo_1936",
                     "display_name": "HGO 1936",
+                    "bookmark_name": "HGO_1936_INTERNAL_NAME",
                     "bookmark_description": "Historic Geographical Overhaul state-level vector scenario.",
                 },
             )
@@ -259,6 +260,7 @@ export const UI_COPY_CATALOG = Object.freeze({
                 scenario_record["metadata_missing"],
                 ["Historic Geographical Overhaul state-level vector scenario."],
             )
+            self.assertNotIn("HGO_1936_INTERNAL_NAME", scenario_record["metadata_strings"])
 
     def test_treats_simple_numeric_units_as_non_translatable_literals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
