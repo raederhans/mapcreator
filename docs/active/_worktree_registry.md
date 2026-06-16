@@ -12,22 +12,25 @@ Last updated: 2026-06-16
 
 ## Recommended Order
 
-1. No active implementation worktree remains after the City Lights owner extraction closeout.
-2. Preserve the parent `main` checkout's unrelated archive WIP when refreshing local state.
-3. Re-check recovery commit hashes before recreating any historical worktree.
-4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this local-branch cleanup pass.
+1. `codex/renderer-modern-lights-owner` is already covered by `origin/main` through the renderer owner integration and postmerge review commits.
+2. `codex/render-chain-cleanup-city-lights` is the only render branch still ahead of `origin/main`; integrate it from the clean temporary worktree and push after validation.
+3. Preserve the parent `main` checkout's unrelated archive WIP when refreshing local state.
+4. Re-check recovery commit hashes before recreating any historical worktree.
+5. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this local-branch cleanup pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| none | `codex/render-chain-cleanup-city-lights` ready for final commit/push | `origin/main` `bb40fe02` | ready-for-integration | no active worktree should remain after push cleanup; parent checkout still has unrelated `docs/archive/data-architecture-hardening-v2/context.md` WIP | CITY LIGHTS PASS: node checks, owner behavior, render-cache and urban policy contracts, city e2e 8/8, layer smoke 4/4, Pages dist build/startup, landing showcase, diff check. PERF CAVEAT: historical perf gate failed for current branch and same-machine `origin/main`. | Yellow | Commit/push City Lights branch; clean temp and baseline worktrees after remote recovery refs exist |
+| none | both render branches covered by main closeout | `origin/main` `bb40fe02` | integrated | no active render worktree should remain after push cleanup; parent checkout still has unrelated `docs/archive/data-architecture-hardening-v2/context.md` WIP | CITY LIGHTS FINAL PASS: node checks, owner behavior 9/9, render-cache and urban policy contracts 6/6, city e2e 8/8, layer smoke 4/4, Pages dist build/startup/landing showcase, diff check. PERF CAVEAT: historical perf gate failed for current branch and same-machine `origin/main`. | Green | Push closeout to `main`, then remove temporary integration worktree |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| main checkout vs transport closeout archive | Yellow | Current main has unrelated i18n and lessons WIP; the completed closeout touched dist and task docs, so refreshing the parent checkout should preserve local WIP explicitly. |
+| `codex/renderer-modern-lights-owner` vs `origin/main` | Green | `origin/main` already contains `ace6bc34` and its postmerge review fixes; `git diff --name-status origin/main...codex/renderer-modern-lights-owner` is empty. |
+| `codex/render-chain-cleanup-city-lights` vs current `origin/main` | Yellow | The branch touches shared renderer files, `dist/app`, `package.json`, and e2e smoke tests; it fast-forwards cleanly because it starts from current `origin/main`. |
+| parent main checkout vs render integration worktree | Yellow | Parent checkout has unrelated archive WIP; integration stays in the clean temporary worktree and pushes by ref. |
 
 ## Recovery Records
 
@@ -35,7 +38,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-cleanup-city-lights` | branch `codex/render-chain-cleanup-city-lights` | this closeout commit | cleanup after push | `docs/archive/render-chain-cleanup-city-lights-20260616/` | Inspect this branch/docs when auditing City Lights owner extraction, historical 1930 night lights, or layer smoke stale-contract repairs. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-cleanup-city-lights` | branch `codex/render-chain-cleanup-city-lights`; main closeout branch `codex/render-main-integration-20260616` | `31c7be26` plus registry closeout commit | cleanup after main push | `docs/archive/render-chain-cleanup-city-lights-20260616/` | Inspect this branch/docs when auditing City Lights owner extraction, historical 1930 night lights, or layer smoke stale-contract repairs. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-city-lights-baseline` | detached `origin/main@bb40fe02` | `bb40fe02` | cleanup after push | none; comparison-only worktree | Used only for same-machine perf/layer-smoke baseline checks; remove after final closeout. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | `origin/main` after renderer owner postmerge review fix / former branch `codex/renderer-review-fixes` | `60f13301` | 2026-06-16 | `docs/archive/renderer-owner-postmerge-review-20260616/` | Inspect this commit/docs when auditing renderer owner intensity channel tolerance or modern city lights render-cache contract location. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-transport-render-data-closeout` | `origin/main` after transport closeout push / former branch `refactor/transport-render-data-closeout` | `106c83c2` | 2026-06-16 | `docs/archive/transport-render-data-closeout-20260616/` | Inspect this commit and archive docs when auditing preview splits, dist drift guards, smoke profile schema, or OSM-GPKG builder registry changes. |
@@ -79,3 +82,4 @@ These rows are branch or commit recovery indexes. They are historical references
 - 2026-06-16 pre-renderer-owner note: before switching this checkout to `codex/renderer-modern-lights-owner`, the same path had local `main` dirt and unrelated WIP; preserve that context during integration, but keep Current Worktrees limited to the actual branch checked out at this path.
 - 2026-06-16 renderer owner integration: `codex/renderer-modern-lights-owner` was fast-forward merged in `C:\Users\raede\.codex\worktrees\mapcreator-renderer-main-integration`, validated with Pages dist and renderer targeted gates, archived under `docs/archive/renderer-modern-lights-owner-20260616/`, and prepared for `origin/main` push.
 - 2026-06-16 renderer owner postmerge review: `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` reviewed `origin/main@6e818068`, fixed missing intensity channel tolerance in modern city lights and physical owners, refreshed `dist/app`, repointed the render-cache contract to the owner module, and archived under `docs/archive/renderer-owner-postmerge-review-20260616/`.
+- 2026-06-16 render branch sync: `codex/renderer-modern-lights-owner` is already covered by `origin/main`; `codex/render-chain-cleanup-city-lights` was fast-forwarded into `codex/render-main-integration-20260616`, validated, and prepared for `main` push.
