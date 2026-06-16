@@ -75,6 +75,9 @@
 ### 性能验证基于真实 idle
 - benchmark idle 包含 runtime chunk work、post-commit replay、post-ready 基础设施任务。
 - perf gate 变红时先在同机同环境重跑 HEAD，区分补丁回归和环境漂移。
+- post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
+- full hit canvas 从 startup/recovery 同步路径移到 idle 后，先结合 `mode`、`reason` 和 `hitCanvasViewportProfile.profile` 判断它是否还压在启动热路径上。
+- editor performance benchmark 默认使用当前 worktree 的 runtime root；显式复用 server 时同步校验 `active_server.json` 里的 `pid` 和 `cwd`，避免命中别的 worktree 服务。
 - 黑帧、长任务、wheel idle、最终 sharpness、真正首屏完成时间分别记录。
 - editor performance benchmark 必须显式绑定当前 worktree 的 active server URL；默认端口可能命中旧服务，导致报告 git head 看似正确但运行页来源漂移。
 
@@ -191,12 +194,6 @@
 ### 投影缓存签名要覆盖反投影输入
 - 依赖 `projection.invert()` 或 `transform.invert()` 的 raster/cache key，除了尺寸、DPR、projection 参数和 zoom `k/x/y`，还要记录自定义 transform identity 或明确不可变合同；只记录数值字段会让不同 inverse 映射复用旧 buffer。
 
-### perf gate 先看采样上下文
-- post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
-- full hit canvas 从 startup/recovery 同步路径移到 idle 后，`buildHitCanvasMs` 仍可能在 perf gate 里出现；判断是否还压启动热路径时，先看 `mode`、`reason` 和 `hitCanvasViewportProfile.profile`。
-- scenario political background full-pass Path2D cache 构建很贵，但 HOI4 直接 grouped replay 更贵；优化应降低 cache build 成本或复用时机，不能直接关闭 full-pass cache。
-- Pages dist manifest 必须在最终换行形态之后写入；如果构建后再规整 LF，`size_bytes` 会和 checked-in 文件失配。
-
 ### open-ocean 可见性和交互开关要分离
 - `showOpenOceanRegions` 只表达视觉可见；`allowOpenOceanSelect` / `allowOpenOceanPaint` 才表达命中与编辑能力。测试或迁移逻辑把 show 当作交互开关时，会让默认场景暴露 open-ocean 列表和点击命中。
 
@@ -284,9 +281,7 @@
 - HGO raster 画到主 canvas 时，必须接入普通 `drawCanvas()` 后补画，并让 hover/click 先走同一套 raster inspect；toolbar 内部单次 render 会被主渲染和 app hit pipeline 覆盖。
 - HGO raster 源图和当前 canvas 尺寸可能不同；绘制和 inspect 必须共享 canvas-to-source 映射，避免预览位置和点击命中错位。
 - HGO 投影预览要由 renderer 提供当前 projection / zoom / DPR 快照；重采样结果可以缓存，但每次主 canvas 重绘后仍要重新贴回预览像素。
-
-### funnel 行为测试要恢复 runtime hook 和 state
-- 通过真实 import funnel 写行为测试时，保存并在 `finally` 恢复旧 runtime hook、`document`、`FileReader` 和被导入路径改写的 state 字段，避免测试顺序污染。
+- 改 `drawCanvas()` 内 HGO、last-good、finalize 这类顺序时，同轮跑 runtime hooks 合同；Pages 发布合同只覆盖发布产物，不覆盖主渲染时序。
 
 ### tracked runtime state 要单独出提交路径
 - `.omx/` 这类已被 ignore 的运行态目录如果历史上仍有 tracked 文件，closeout 时先用 diff 判断是否只有计数和时间戳；这类本地状态用命名 stash 保存，产品提交只保留可复核的项目证据。
@@ -304,9 +299,6 @@
 ### 首页夜景展示层要把灯光绑定到夜幕
 - 静态 SVG 做日夜循环时，夜区遮罩、纹理、灯带和重点光源应共用同一条动画曲线或 clipPath；只移动分界线会让灯光和昼夜状态脱节。
 
-### 改 drawCanvas 生命周期要跑 runtime hooks 合同
-- `verify:pages-dist` 只覆盖 Pages 发布合同；移动 `drawCanvas()` 内 HGO、last-good、finalize 的顺序时，要额外跑 `python -m unittest tests.test_runtime_hooks_boundary_contract -q`。
-
 ### HGO 场景发布要分清显式 tag 和派生 id
 - 数字开头的 HGO owner tag 只应从显式 `country_code` / owner 数据链路进入；从 `NUTS_ID` 或 feature id 派生国家码时继续按字母前缀解析，避免 `DE1` 变成国家码。
 - 生成器支持自定义输出目录时，默认不要更新全局 scenario registry；只有 checked-in `data/scenarios/{id}` 输出才自动登记。
@@ -318,9 +310,6 @@
 
 ### 渲染 pass 回归要采样 owning canvas
 - 多 pass 合成后，最终 canvas 可能被后续政治填色等层压低局部差异；锁单个图层强度时优先采样该 pass 的 owning canvas，再用端到端截图确认可见链路。
-
-### perf gate 复用 server 要校验身份
-- `.runtime/dev/active_server.json` 可能残留死 pid；只按 URL 探通会让隔离 worktree 测到另一个 worktree 的 server。perf gate 默认应使用自己的 runtime root，显式复用时再校验 `pid` 存活且 `cwd` 等于当前 repo。
 
 ### full visual collection 要覆盖 resolved colors
 - 渐进渲染场景里 `landDataFull` 可能比 interactive `landData` 更接近最终可见集合；resolved color 表和 owner 刷新要覆盖 full visual collection，空间索引继续服务交互集合。
@@ -373,6 +362,5 @@
 - 配置文件 validator 如果只跑在静态测试里，live 脚本仍可能用默认值吞掉拼写漂移；新增 profile 合同时要把 validator 放到解析入口前，并用 unknown-field 负例锁住隐藏 fallback。
 - profile 字段只要会进入 shell 文件名、URL 或退出状态，就要校验语义边界；非空字符串检查不足以保护 localhost-only、路径安全和端口范围。
 
-### Windows OMX hook 报 code 1 先查命令解析和 TOML 编码
-- hook exited with code 1 成片出现时，先用绝对路径复跑 hook shim，再检查 Codex 会话 PATH；Windows 上 powershell.exe、node.exe、codex.exe 解析失败会让 hooks 看起来集体失效。
-- 修改 config.toml 后用 OMX 使用的 @iarna/toml 解析器复验；PowerShell Set-Content -Encoding UTF8 可能写入 BOM，让 OMX doctor 报 invalid TOML。
+### 大块抽取脚本要用函数锚点
+- 机械拆 owner 时，正则替换必须限定到具体函数名或唯一锚点；用宽泛 `constants -> getters` 这类结构锚点会污染相邻 owner getter，抽取后要用 import 级 smoke 和浏览器 trace 查 pageError。
