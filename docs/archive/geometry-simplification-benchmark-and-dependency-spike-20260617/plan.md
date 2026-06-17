@@ -29,4 +29,4 @@ Build local benchmark fixtures and contracts for the extracted polyline simplifi
 - [x] Run local benchmark report for current helpers.
 - [x] Install/extract `simplify-js` only under `.runtime` and run candidate comparison.
 - [x] Record decision, review findings, and validation evidence.
-- [ ] Archive task docs, merge to `main`, push, and clean the feature branch.
+- [x] Archive task docs, merge to `main`, push, and clean the feature branch.

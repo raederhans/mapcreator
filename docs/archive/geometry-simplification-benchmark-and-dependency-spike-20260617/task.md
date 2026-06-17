@@ -57,11 +57,11 @@ Runtime-only artifacts:
 
 ### Commit State
 
-Not committed yet. Final commit will be made after docs archive and review/validation pass.
+Committed as `97626a26` and fast-forward merged into `main`. Closeout registry/doc commit pending.
 
 ### Base and Main Divergence
 
-Base: `main@b984a59e`. Current `main` is still `b984a59e`; feature branch has not diverged from a newer local main.
+Base: `main@b984a59e`. The feature branch was fast-forward merged into `main` at `97626a26`; no divergent merge commit was needed.
 
 ### Potential Overlap
 
@@ -77,6 +77,9 @@ Overlap risk is green. This branch touches benchmark tooling, tests, docs, and `
 - `node tools/perf/polyline_simplification_benchmark.mjs --iterations 200 --candidate-name simplify-js-1.2.4 --candidate-module .runtime/tmp/simplify-js-spike/package/simplify.js --out .runtime/reports/generated/geometry-simplification-simplify-js-comparison-200.json` passed.
 - `rg -n '"simplify-js"|"rbush"|"flatbush"|"@turf/turf"' package.json package-lock.json` returned no matches.
 - `git diff --check` passed.
+- Independent code-reviewer lane returned `APPROVE`.
+- Independent architect lane returned `CLEAR`.
+- Post-merge focused validation passed on `main`: helper + benchmark tests, benchmark script, syntax checks, and forbidden dependency scan.
 - `verify:pages-dist` was not run because this branch does not change app source, dist delivery files, or Pages manifests.
 
 ### Unverified Risks
@@ -87,4 +90,4 @@ Overlap risk is green. This branch touches benchmark tooling, tests, docs, and `
 
 ### Recommended Next Step
 
-Merge after final code-review lane returns clean and post-archive validation passes. Recommended integration path: fast-forward merge into `main`, run focused post-merge checks, push, then delete the merged local feature branch.
+Push `main`, then delete the merged local feature branch after the push succeeds.
