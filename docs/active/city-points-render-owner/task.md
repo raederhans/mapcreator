@@ -16,7 +16,10 @@ Last updated: 2026-06-17
 - [x] Run targeted node/Python checks.
 - [x] Run city e2e, layer smoke, and Pages dist verification.
 - [x] Run final review/QA self-check.
-- [ ] Commit, merge to `main`, push, and close out registry.
+- [x] Commit implementation.
+- [x] Fast-forward merge to `main`.
+- [x] Run post-merge short validation.
+- [ ] Push `main`.
 
 ## Delivery Package Draft
 
@@ -42,8 +45,8 @@ Changed files are expected in:
 
 ## Current Status
 
-Implementation, long validation, review follow-up fixes, and final validation reruns are complete. Commit and main integration are next.
+Implementation, long validation, review follow-up fixes, and post-merge short validation are complete. The branch has been fast-forward merged into local `main`; pushing `main` is the final transport step.
 
 ## Next Step
 
-Run diff hygiene, then commit and integrate.
+Push `main` to `origin/main`.

@@ -90,3 +90,10 @@ New owner owns city point render orchestration. Existing city policy and city la
   - `npm run test:e2e:city-rendering` passed, 8/8. Logs: `.runtime/tests/city-points-render-owner/city-rendering.final.*.log`.
   - `npm run test:e2e:layer:smoke` passed, 4/4. Logs: `.runtime/tests/city-points-render-owner/layer-smoke.final.*.log`.
   - `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed.
+- Integration closeout:
+  - Commit `6b50e479` created on `codex/city-points-render-owner`.
+  - `main` fast-forward merged from `38d7835a` to `6b50e479`.
+  - Post-merge `npm run test:node:city-points-render-owner` passed, 4/4.
+  - Post-merge hermes Python boundary tests passed, 3/3.
+  - Post-merge `git diff --check` passed.
+  - `main` is ready to push to `origin/main`.

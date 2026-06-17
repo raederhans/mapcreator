@@ -22,7 +22,7 @@ Last updated: 2026-06-17
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/city-points-render-owner` at pending commit | `origin/main` `38d7835a` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city boundary tests, `package.json`, `dist/app`, Pages dist manifest | Active docs under `docs/active/city-points-render-owner/`; node owner tests, boundary tests, city e2e, layer smoke, Pages dist, and review follow-ups passed. | Red | Commit, fast-forward merge to main if origin/main is still aligned, push, then mark integrated |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at `6b50e479` plus closeout docs pending | `origin/main` `38d7835a` | integrated | hot files: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city boundary tests, `package.json`, `dist/app`, Pages dist manifest | Commit `6b50e479`; node owner tests, boundary tests, city e2e, layer smoke, Pages dist, review follow-ups, and post-merge short validation passed. | Green after integration | Push `main` to `origin/main`; keep recovery commit `6b50e479` for audit |
 
 ## Current Overlap Matrix
 
@@ -68,7 +68,7 @@ These rows are branch or commit recovery indexes. They are historical references
 - Parent main checkout had unrelated local WIP in `docs/archive/data-architecture-hardening-v2/context.md`; renderer integration used a clean temporary worktree to preserve that local file.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
-- 2026-06-17 city points render owner: current checkout is on `codex/city-points-render-owner` from clean `origin/main@38d7835a`; main Codex agent owns all live validation, while child agents stay in static inspection/review lanes. Implementation and full validation are complete; next action is commit, merge to main, push, and registry closeout.
+- 2026-06-17 city points render owner: branch `codex/city-points-render-owner` was created from clean `origin/main@38d7835a`; main Codex agent owned all live validation, while child agents stayed in static inspection/review lanes. Commit `6b50e479` was fast-forward merged into local `main`; post-merge short validation passed and `main` is ready to push.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Commit `64ae29be` remains as the recovery record.
 - 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, pushed through the registry closeout, and cleaned from the active worktree list.
 - 2026-06-15 a11y home/app fix: `55f143de` was rebased onto current main, validated with i18n, behavior, Pages dist, and a11y scan gates, fast-forwarded into main, and archived for cleanup.
