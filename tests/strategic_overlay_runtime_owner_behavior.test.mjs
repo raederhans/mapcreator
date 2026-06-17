@@ -203,6 +203,59 @@ test("operation graphic runtime owner rejects invalid vertex drag transactions",
   assert.deepEqual(dirtyReasons, []);
 });
 
+test("operation graphic runtime owner commits midpoint insertion", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  const renderForces = [];
+  let uiRefreshCount = 0;
+  const runtimeState = {
+    operationGraphics: [{
+      id: "opg_1",
+      kind: "offensive",
+      points: [[0, 0], [2, 0]],
+    }],
+    operationGraphicsDirty: false,
+    operationGraphicsEditor: {
+      active: false,
+      mode: "edit",
+      points: [[0, 0], [2, 0]],
+      selectedId: "opg_1",
+      selectedVertexIndex: -1,
+    },
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: (payload) => ({
+        snapshot: payload,
+        operationGraphics: JSON.parse(JSON.stringify(runtimeState.operationGraphics || [])),
+      }),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      ensureOperationGraphicsEditorState: () => {},
+      getOperationGraphicById: (id) => runtimeState.operationGraphics.find((entry) => entry.id === id) || null,
+      markDirty: (reason) => dirtyReasons.push(reason),
+      renderOperationGraphicsIfNeeded: (payload) => renderForces.push(payload),
+      updateStrategicOverlayUi: () => {
+        uiRefreshCount += 1;
+      },
+    },
+  });
+
+  assert.equal(owner.insertOperationGraphicVertex(1, [1, 0]), true);
+  assert.deepEqual(runtimeState.operationGraphics[0].points, [[0, 0], [1, 0], [2, 0]]);
+  assert.equal(runtimeState.operationGraphicsEditor.selectedVertexIndex, 1);
+  assert.deepEqual(runtimeState.operationGraphicsEditor.points, runtimeState.operationGraphics[0].points);
+  assert.equal(runtimeState.operationGraphicsDirty, true);
+  assert.equal(historyEntries[0].kind, "insert-operation-graphic-vertex");
+  assert.deepEqual(dirtyReasons, ["insert-operation-graphic-vertex"]);
+  assert.deepEqual(renderForces, [{ force: true }]);
+  assert.equal(uiRefreshCount, 1);
+
+  assert.equal(owner.insertOperationGraphicVertex(-1, [3, 0]), false);
+  assert.equal(historyEntries.length, 1);
+});
+
 test("special zone runtime owner retires legacy manual feature creation", () => {
   let uiRefreshCount = 0;
   let renderCount = 0;
@@ -240,6 +293,97 @@ test("special zone runtime owner retires legacy manual feature creation", () => 
   assert.equal(runtimeState.specialZoneEditor.active, false);
   assert.equal(uiRefreshCount, 2);
   assert.equal(renderCount, 2);
+});
+
+test("special zone membership runtime owner commits click and drag transactions", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  const membershipCalls = [];
+  const renderForces = [];
+  let workbenchRefreshCount = 0;
+  const runtimeState = {
+    specialZoneLayers: {
+      activeLayerId: "layer_1",
+      layers: [{ id: "layer_1", featureIds: [] }],
+    },
+    specialZonesOverlayDirty: false,
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: (payload) => ({
+        snapshot: payload,
+        specialZoneLayers: JSON.parse(JSON.stringify(runtimeState.specialZoneLayers || {})),
+      }),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      markDirty: (reason) => dirtyReasons.push(reason),
+      normalizeSpecialZoneLayersState: (layers) => ({
+        activeLayerId: String(layers?.activeLayerId || ""),
+        layers: Array.isArray(layers?.layers) ? layers.layers : [],
+      }),
+      refreshSpecialZonesWorkbenchUi: () => {
+        workbenchRefreshCount += 1;
+      },
+      renderSpecialZonesIfNeeded: (payload) => renderForces.push(payload),
+      updateSpecialZoneLayerMembership: (layers, layerId, featureIds, mode) => {
+        membershipCalls.push({ layerId, featureIds, mode });
+        return {
+          ...layers,
+          lastMembershipUpdate: { layerId, featureIds: [...featureIds], mode },
+        };
+      },
+    },
+  });
+
+  assert.equal(owner.commitSpecialZoneMembershipClick({
+    featureId: "feature_a",
+    membershipTool: "multi",
+    brushMode: "add",
+  }), true);
+  assert.equal(historyEntries[0].kind, "special-zone-membership-toggle");
+  assert.deepEqual(membershipCalls[0], {
+    layerId: "layer_1",
+    featureIds: ["feature_a"],
+    mode: "toggle",
+  });
+
+  assert.equal(owner.beginSpecialZoneMembershipDrag({
+    membershipTool: "brush",
+    brushMode: "remove",
+  }), true);
+  assert.equal(owner.applySpecialZoneMembershipDragFeature("feature_b"), true);
+  assert.equal(owner.applySpecialZoneMembershipDragFeature("feature_b"), false);
+  assert.deepEqual(owner.finishSpecialZoneMembershipDrag(), { active: true, changed: true });
+
+  assert.equal(owner.beginSpecialZoneMembershipDrag({
+    membershipTool: "multi",
+    brushMode: "remove",
+    altKey: false,
+  }), true);
+  assert.equal(owner.applySpecialZoneMembershipDragFeature("feature_c"), true);
+  assert.deepEqual(owner.finishSpecialZoneMembershipDrag(), { active: true, changed: true });
+
+  assert.equal(historyEntries[1].kind, "special-zone-membership-drag-remove");
+  assert.deepEqual(membershipCalls[1], {
+    layerId: "layer_1",
+    featureIds: ["feature_b"],
+    mode: "remove",
+  });
+  assert.equal(historyEntries[2].kind, "special-zone-membership-drag-add");
+  assert.deepEqual(membershipCalls[2], {
+    layerId: "layer_1",
+    featureIds: ["feature_c"],
+    mode: "add",
+  });
+  assert.deepEqual(dirtyReasons, [
+    "special-zone-membership-toggle",
+    "special-zone-membership-remove",
+    "special-zone-membership-add",
+  ]);
+  assert.deepEqual(renderForces, [{ force: true }, { force: true }, { force: true }]);
+  assert.equal(workbenchRefreshCount, 3);
+  assert.equal(runtimeState.specialZonesOverlayDirty, true);
 });
 
 test("operational line runtime owner commits history and updates modal selection on finish", () => {

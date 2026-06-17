@@ -246,6 +246,33 @@ export function createOperationGraphicsRuntimeDomain({
     return true;
   }
 
+  function insertOperationGraphicVertex(insertIndex = -1, coord = null) {
+    ensureOperationGraphicsEditorState();
+    const selectedId = String(state.operationGraphicsEditor.selectedId || "").trim();
+    const graphic = getOperationGraphicById(selectedId);
+    const normalizedIndex = Number(insertIndex);
+    if (!graphic || !Number.isInteger(normalizedIndex) || normalizedIndex < 0) return false;
+    if (!Array.isArray(graphic.points) || normalizedIndex > graphic.points.length) return false;
+    if (!Array.isArray(coord) || coord.length < 2) return false;
+    const lon = Number(coord[0]);
+    const lat = Number(coord[1]);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return false;
+    const before = captureHistoryState({ strategicOverlay: true });
+    graphic.points.splice(normalizedIndex, 0, [lon, lat]);
+    state.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
+    state.operationGraphicsEditor.selectedVertexIndex = normalizedIndex;
+    state.operationGraphicsDirty = true;
+    commitHistoryEntry({
+      kind: "insert-operation-graphic-vertex",
+      before,
+      after: captureHistoryState({ strategicOverlay: true }),
+    });
+    markDirty("insert-operation-graphic-vertex");
+    updateStrategicOverlayUi();
+    renderOperationGraphicsIfNeeded({ force: true });
+    return true;
+  }
+
   function beginOperationGraphicVertexDrag(vertexIndex = -1) {
     const target = getSelectedOperationGraphicForVertex(vertexIndex);
     if (!target) {
@@ -313,6 +340,7 @@ export function createOperationGraphicsRuntimeDomain({
     deleteSelectedOperationGraphicVertex,
     finishOperationGraphicDraw,
     finishOperationGraphicVertexDrag,
+    insertOperationGraphicVertex,
     moveOperationGraphicVertexDrag,
     selectOperationGraphicById,
     startOperationGraphicDraw,

@@ -69,20 +69,26 @@ export function createStrategicOverlayRuntimeOwner({
     normalizeOperationGraphicWidth = (value) => Number(value) || 0,
     normalizeOperationalLineStylePreset = (value, fallback = defaultOperationalLineKind) =>
       String(value || fallback).trim().toLowerCase(),
+    normalizeSpecialZoneLayersState = (value) => value,
     normalizeUnitCounterBaseFillColor = (value) => String(value || "").trim(),
     normalizeUnitCounterNationSource = (value, fallback = "display") => String(value || fallback).trim().toLowerCase(),
     normalizeUnitCounterSizeToken = (value) => String(value || "medium").trim().toLowerCase(),
     normalizeUnitCounterStatPercent = (value, fallback = defaultUnitCounterOrganizationPct) => Number(value) || fallback,
     normalizeUnitCounterStatsPresetId = (value, fallback = "regular") => String(value || fallback).trim().toLowerCase(),
+    refreshSpecialZonesWorkbenchUi = () => {},
     renderNow = () => {},
     renderOperationGraphicsIfNeeded = () => {},
+    renderSpecialZonesIfNeeded = () => {},
     renderSpecialZoneEditorOverlay = () => {},
     resetUnitCounterEditorState = () => {},
     showToast = () => {},
     t = (key) => String(key || ""),
     updateSpecialZoneEditorUI = () => {},
+    updateSpecialZoneLayerMembership = (layers) => layers,
     updateStrategicOverlayUi = () => {},
   } = helpers;
+
+  let specialZoneMembershipDragSession = null;
 
   const specialZonesDomain = createSpecialZonesRuntimeDomain({
     state,
@@ -387,6 +393,121 @@ export function createStrategicOverlayRuntimeOwner({
     return true;
   }
 
+  function getActiveSpecialZoneMembershipLayerId() {
+    state.specialZoneLayers = normalizeSpecialZoneLayersState(state.specialZoneLayers);
+    return String(state.specialZoneLayers?.activeLayerId || "").trim();
+  }
+
+  function resolveSpecialZoneMembershipClickMode({
+    membershipTool = "multi",
+    brushMode = "add",
+  } = {}) {
+    const normalizedTool = String(membershipTool || "multi").trim().toLowerCase();
+    if (normalizedTool === "single") return "replace";
+    if (normalizedTool === "brush") return String(brushMode || "add").trim().toLowerCase() === "remove" ? "remove" : "add";
+    return "toggle";
+  }
+
+  function resolveSpecialZoneMembershipDragMode({
+    membershipTool = "multi",
+    brushMode = "add",
+    altKey = false,
+  } = {}) {
+    const normalizedTool = String(membershipTool || "multi").trim().toLowerCase();
+    if (normalizedTool === "brush") return String(brushMode || "add").trim().toLowerCase() === "remove" ? "remove" : "add";
+    return altKey ? "remove" : "add";
+  }
+
+  function applySpecialZoneMembershipFeature(featureId = "", mode = "toggle", layerId = "") {
+    const normalizedFeatureId = String(featureId || "").trim();
+    const normalizedLayerId = String(layerId || "").trim();
+    const normalizedMode = String(mode || "toggle").trim().toLowerCase();
+    if (!normalizedFeatureId || !normalizedLayerId) return false;
+    state.specialZoneLayers = normalizeSpecialZoneLayersState(state.specialZoneLayers);
+    state.specialZoneLayers = updateSpecialZoneLayerMembership(
+      state.specialZoneLayers,
+      normalizedLayerId,
+      [normalizedFeatureId],
+      normalizedMode,
+    );
+    state.specialZonesOverlayDirty = true;
+    markDirty(`special-zone-membership-${normalizedMode}`);
+    return true;
+  }
+
+  function commitSpecialZoneMembershipClick({
+    featureId = "",
+    membershipTool = "multi",
+    brushMode = "add",
+  } = {}) {
+    const layerId = getActiveSpecialZoneMembershipLayerId();
+    if (!layerId) return false;
+    const mode = resolveSpecialZoneMembershipClickMode({ membershipTool, brushMode });
+    const before = captureHistoryState({ strategicOverlay: true });
+    if (!applySpecialZoneMembershipFeature(featureId, mode, layerId)) return false;
+    commitHistoryEntry({
+      kind: `special-zone-membership-${mode}`,
+      before,
+      after: captureHistoryState({ strategicOverlay: true }),
+    });
+    renderSpecialZonesIfNeeded({ force: true });
+    refreshSpecialZonesWorkbenchUi();
+    return true;
+  }
+
+  function beginSpecialZoneMembershipDrag({
+    membershipTool = "multi",
+    brushMode = "add",
+    altKey = false,
+  } = {}) {
+    const layerId = getActiveSpecialZoneMembershipLayerId();
+    if (!layerId) {
+      specialZoneMembershipDragSession = null;
+      return false;
+    }
+    specialZoneMembershipDragSession = {
+      before: captureHistoryState({ strategicOverlay: true }),
+      changed: false,
+      layerId,
+      mode: resolveSpecialZoneMembershipDragMode({ membershipTool, brushMode, altKey }),
+      visited: new Set(),
+    };
+    return true;
+  }
+
+  function applySpecialZoneMembershipDragFeature(featureId = "") {
+    if (!specialZoneMembershipDragSession) return false;
+    const normalizedFeatureId = String(featureId || "").trim();
+    if (!normalizedFeatureId || specialZoneMembershipDragSession.visited.has(normalizedFeatureId)) return false;
+    specialZoneMembershipDragSession.visited.add(normalizedFeatureId);
+    const changed = applySpecialZoneMembershipFeature(
+      normalizedFeatureId,
+      specialZoneMembershipDragSession.mode,
+      specialZoneMembershipDragSession.layerId,
+    );
+    specialZoneMembershipDragSession.changed = specialZoneMembershipDragSession.changed || changed;
+    return changed;
+  }
+
+  function hasSpecialZoneMembershipDragSession() {
+    return !!specialZoneMembershipDragSession;
+  }
+
+  function finishSpecialZoneMembershipDrag() {
+    const current = specialZoneMembershipDragSession;
+    specialZoneMembershipDragSession = null;
+    if (!current) return { active: false, changed: false };
+    if (!current.changed) return { active: true, changed: false };
+    commitHistoryEntry({
+      kind: `special-zone-membership-drag-${current.mode}`,
+      before: current.before,
+      after: captureHistoryState({ strategicOverlay: true }),
+    });
+    renderSpecialZonesIfNeeded({ force: true });
+    refreshSpecialZonesWorkbenchUi();
+    return { active: true, changed: true };
+  }
+
   function cancelActiveStrategicInteractionModes() {
     let cancelled = false;
     if (state.unitCounterEditor?.active) {
@@ -408,12 +529,17 @@ export function createStrategicOverlayRuntimeOwner({
     ...specialZonesDomain,
     ...operationGraphicsDomain,
     appendOperationalLineVertexFromEvent,
+    applySpecialZoneMembershipDragFeature,
+    beginSpecialZoneMembershipDrag,
     cancelActiveStrategicInteractionModes,
     cancelOperationalLineDraw,
+    commitSpecialZoneMembershipClick,
     ...unitCounterHelpers,
     ...unitCounterDomain,
     deleteSelectedOperationalLine,
     finishOperationalLineDraw,
+    finishSpecialZoneMembershipDrag,
+    hasSpecialZoneMembershipDragSession,
     selectOperationalLineById,
     startOperationalLineDraw,
     undoOperationalLineVertex,

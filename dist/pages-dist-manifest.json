@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 923230,
+      "size_bytes": 919720,
       "source_kind": "dist"
     },
     {
@@ -45902,7 +45902,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js",
-      "size_bytes": 13752,
+      "size_bytes": 15138,
       "source_kind": "dist"
     },
     {
@@ -45922,7 +45922,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime_owner.js",
-      "size_bytes": 16753,
+      "size_bytes": 21629,
       "source_kind": "dist"
     },
     {
@@ -46991,5 +46991,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145188287
+  "total_bytes": 1145191039
 }

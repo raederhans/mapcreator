@@ -315,7 +315,6 @@ let legendDragSession = null;
 let legendResizeSession = null;
 let lastLegendKey = null;
 let brushSession = null;
-let specialZoneMembershipDragSession = null;
 let suppressNextClickAfterBrush = false;
 let lastDetailToastToken = "";
 let lastDetailToastAt = 0;
@@ -2034,20 +2033,24 @@ function getStrategicOverlayRuntimeOwner() {
       normalizeOperationGraphicStylePreset,
       normalizeOperationGraphicWidth,
       normalizeOperationalLineStylePreset,
+      normalizeSpecialZoneLayersState,
       normalizeUnitCounterBaseFillColor,
       normalizeUnitCounterNationSource,
       normalizeUnitCounterSizeToken,
       normalizeUnitCounterStatPercent,
       normalizeUnitCounterStatsPresetId,
+      refreshSpecialZonesWorkbenchUi,
       renderNow: () => {
         if (context) render();
       },
       renderOperationGraphicsIfNeeded,
+      renderSpecialZonesIfNeeded,
       renderSpecialZoneEditorOverlay,
       resetUnitCounterEditorState,
       showToast,
       t,
       updateSpecialZoneEditorUI,
+      updateSpecialZoneLayerMembership,
       updateStrategicOverlayUi,
     },
   });
@@ -19531,21 +19534,7 @@ function renderOperationGraphicsEditorOverlay() {
       this.dataset.skipMidpointClick = "true";
       event.stopPropagation();
       event.preventDefault?.();
-      const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
-      if (!graphic) return;
-      const before = captureHistoryState({ strategicOverlay: true });
-      graphic.points.splice(datum.insertIndex, 0, datum.coord);
-      runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
-      runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.insertIndex;
-      runtimeState.operationGraphicsDirty = true;
-      pushHistoryEntry({
-        kind: "insert-operation-graphic-vertex",
-        before,
-        after: captureHistoryState({ strategicOverlay: true }),
-      });
-      markDirty("insert-operation-graphic-vertex");
-      updateStrategicOverlayUi();
-      renderOperationGraphicsIfNeeded({ force: true });
+      getStrategicOverlayRuntimeOwner().insertOperationGraphicVertex(datum.insertIndex, datum.coord);
     })
     .on("click", function onClick(event, datum) {
       if (this.dataset.skipMidpointClick === "true") {
@@ -19553,21 +19542,7 @@ function renderOperationGraphicsEditorOverlay() {
         return;
       }
       event.stopPropagation();
-      const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
-      if (!graphic) return;
-      const before = captureHistoryState({ strategicOverlay: true });
-      graphic.points.splice(datum.insertIndex, 0, datum.coord);
-      runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
-      runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.insertIndex;
-      runtimeState.operationGraphicsDirty = true;
-      pushHistoryEntry({
-        kind: "insert-operation-graphic-vertex",
-        before,
-        after: captureHistoryState({ strategicOverlay: true }),
-      });
-      markDirty("insert-operation-graphic-vertex");
-      updateStrategicOverlayUi();
-      renderOperationGraphicsIfNeeded({ force: true });
+      getStrategicOverlayRuntimeOwner().insertOperationGraphicVertex(datum.insertIndex, datum.coord);
     });
 
   const midpointVisualSelection = operationGraphicsEditorGroup
@@ -21300,39 +21275,11 @@ function handleSpecialZoneMembershipClick(hit, event) {
   if (runtimeState.currentTool !== "special-zone-membership") return false;
   const featureId = hit?.targetType === "land" ? String(hit.id || "").trim() : "";
   if (!featureId || !runtimeState.landIndex?.has(featureId)) return true;
-  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
-  const activeLayerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
-  if (!activeLayerId) return true;
-  const membershipTool = getSpecialZoneMembershipTool();
-  const mode = membershipTool === "single"
-    ? "replace"
-    : (membershipTool === "brush" ? getSpecialZoneMembershipBrushMode() : "toggle");
-  const historyBefore = captureHistoryState({ strategicOverlay: true });
-  applySpecialZoneMembershipFeature(featureId, mode, activeLayerId);
-  commitHistoryEntry({
-    kind: `special-zone-membership-${mode}`,
-    before: historyBefore,
-    after: captureHistoryState({ strategicOverlay: true }),
+  getStrategicOverlayRuntimeOwner().commitSpecialZoneMembershipClick({
+    featureId,
+    membershipTool: getSpecialZoneMembershipTool(),
+    brushMode: getSpecialZoneMembershipBrushMode(),
   });
-  renderSpecialZonesIfNeeded({ force: true });
-  refreshSpecialZonesWorkbenchUi();
-  return true;
-}
-
-function applySpecialZoneMembershipFeature(featureId, mode, layerId = "") {
-  const normalizedFeatureId = String(featureId || "").trim();
-  if (!normalizedFeatureId || !runtimeState.landIndex?.has(normalizedFeatureId)) return false;
-  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
-  const activeLayerId = String(layerId || runtimeState.specialZoneLayers.activeLayerId || "").trim();
-  if (!activeLayerId) return false;
-  runtimeState.specialZoneLayers = updateSpecialZoneLayerMembership(
-    runtimeState.specialZoneLayers,
-    activeLayerId,
-    [normalizedFeatureId],
-    mode,
-  );
-  runtimeState.specialZonesOverlayDirty = true;
-  markDirty(`special-zone-membership-${mode}`);
   return true;
 }
 
@@ -22479,37 +22426,19 @@ function flushBrushSession() {
 }
 
 function applySpecialZoneMembershipDragHit(event) {
-  if (!specialZoneMembershipDragSession) return false;
   const hit = getHitFromEvent(event, {
     enableSnap: false,
     snapPx: 0,
     eventType: "special-zone-membership-drag",
   });
   const featureId = hit?.targetType === "land" ? String(hit.id || "").trim() : "";
-  if (!featureId || specialZoneMembershipDragSession.visited.has(featureId)) return false;
-  specialZoneMembershipDragSession.visited.add(featureId);
-  const changed = applySpecialZoneMembershipFeature(
-    featureId,
-    specialZoneMembershipDragSession.mode,
-    specialZoneMembershipDragSession.layerId,
-  );
-  specialZoneMembershipDragSession.changed = specialZoneMembershipDragSession.changed || changed;
-  return changed;
+  if (!featureId || !runtimeState.landIndex?.has(featureId)) return false;
+  return getStrategicOverlayRuntimeOwner().applySpecialZoneMembershipDragFeature(featureId);
 }
 
 function flushSpecialZoneMembershipDragSession() {
-  const current = specialZoneMembershipDragSession;
-  specialZoneMembershipDragSession = null;
-  if (!current) return;
-  suppressNextClickAfterBrush = true;
-  if (!current.changed) return;
-  commitHistoryEntry({
-    kind: `special-zone-membership-drag-${current.mode}`,
-    before: current.before,
-    after: captureHistoryState({ strategicOverlay: true }),
-  });
-  renderSpecialZonesIfNeeded({ force: true });
-  refreshSpecialZonesWorkbenchUi();
+  const result = getStrategicOverlayRuntimeOwner().finishSpecialZoneMembershipDrag();
+  if (result?.active) suppressNextClickAfterBrush = true;
 }
 
 function handleSpecialZoneMembershipPointerDown(event) {
@@ -22517,17 +22446,13 @@ function handleSpecialZoneMembershipPointerDown(event) {
   const membershipTool = getSpecialZoneMembershipTool();
   if (membershipTool !== "brush" && !event?.shiftKey && !event?.altKey) return false;
   if ((event.buttons & 1) !== 1) return true;
-  runtimeState.specialZoneLayers = normalizeSpecialZoneLayersState(runtimeState.specialZoneLayers);
-  const layerId = String(runtimeState.specialZoneLayers.activeLayerId || "").trim();
-  if (!layerId) return true;
+  const started = getStrategicOverlayRuntimeOwner().beginSpecialZoneMembershipDrag({
+    membershipTool,
+    brushMode: getSpecialZoneMembershipBrushMode(),
+    altKey: !!event?.altKey,
+  });
+  if (!started) return true;
   if (event?.preventDefault) event.preventDefault();
-  specialZoneMembershipDragSession = {
-    mode: membershipTool === "brush" ? getSpecialZoneMembershipBrushMode() : (event.altKey ? "remove" : "add"),
-    layerId,
-    before: captureHistoryState({ strategicOverlay: true }),
-    visited: new Set(),
-    changed: false,
-  };
   applySpecialZoneMembershipDragHit(event);
   return true;
 }
@@ -22552,7 +22477,7 @@ function handleBrushPointerMove(event) {
     return;
   }
   if (handlePhysicalIntensityPointerMove(event)) return;
-  if (specialZoneMembershipDragSession) {
+  if (getStrategicOverlayRuntimeOwner().hasSpecialZoneMembershipDragSession()) {
     if ((event.buttons & 1) !== 1) {
       flushSpecialZoneMembershipDragSession();
       return;

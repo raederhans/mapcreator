@@ -377,3 +377,6 @@
 
 ### City e2e zoom settle 要继承外层预算
 - `prepareSharedCityRuntimeState` 已拿到长 timeout 时，内部 `resetSharedCityZoom` / `setSharedCityZoomPercent` 要保留足够 settling 预算；失败快照显示 render idle 但 helper 超时时，先查局部 timeout clamp。
+
+### 编辑事务下沉要区分 click 和 drag 语义
+- 同一工具的 click 与 drag 可能复用 membership mode 名称但语义不同；Special Zone click 的 multi 是 `toggle`，非 brush drag 的 Shift 是 `add`、Alt 是 `remove`，抽 runtime owner 时要分别建 mode resolver 并补行为测试。
