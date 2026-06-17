@@ -119,4 +119,5 @@ New owner owns city point render orchestration. Existing city policy and city la
   - Post-merge `npm run test:node:city-points-render-owner` passed, 5/5.
   - Post-merge hermes Python boundary tests passed, 3/3.
   - Post-merge `git diff --check` passed.
-  - `main` is ready for closeout docs commit and push.
+  - Closeout docs were archived under `docs/archive/city-points-render-owner-20260617/`.
+  - `main` was pushed to `origin/main`.
