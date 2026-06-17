@@ -380,3 +380,6 @@
 
 ### 编辑事务下沉要区分 click 和 drag 语义
 - 同一工具的 click 与 drag 可能复用 membership mode 名称但语义不同；Special Zone click 的 multi 是 `toggle`，非 brush drag 的 Shift 是 `add`、Alt 是 `remove`，抽 runtime owner 时要分别建 mode resolver 并补行为测试。
+
+### Ownerless 场景要同时清数据和推断链
+- 空归属地图清掉 `cntr_code` 仍可能被 tooltip、locale 或 owner helper 从 feature id 前缀推回国家；恢复 blank/ownerless 场景时要同步锁 feature properties、owner map、hover country context 和渲染色源。

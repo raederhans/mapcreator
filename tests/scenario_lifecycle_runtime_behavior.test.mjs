@@ -350,7 +350,7 @@ test("scenario apply normalizes bundled strategic values before commit", async (
   assert.equal(runtimeState.scenarioStrategicValuesRevision, 1);
 });
 
-test("blank scenario apply preserves explicit empty runtime topology", async () => {
+test("blank scenario apply preserves ownerless editable runtime topology", async () => {
   const defaultTopology = { objects: { political: { default: true } } };
   const runtimeState = createBaseState({
     activeScenarioId: "",
@@ -358,9 +358,20 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     runtimePoliticalTopology: defaultTopology,
   });
   const phaseEvents = [];
-  const emptyBlankTopology = {
+  const ownerlessBlankTopology = {
     type: "Topology",
-    objects: { political: { type: "GeometryCollection", geometries: [] } },
+    objects: {
+      political: {
+        type: "GeometryCollection",
+        geometries: [
+          {
+            type: "Polygon",
+            arcs: [[[0]]],
+            properties: { id: "BLANK-1", name: "Blank Parcel" },
+          },
+        ],
+      },
+    },
     arcs: [],
   };
   const pipeline = createScenarioApplyPipeline({
@@ -407,7 +418,7 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     scheduleScenarioChunkRefresh: () => {},
     resetScenarioChunkRuntimeState: () => phaseEvents.push(`post:chunks:${runtimeState.activeScenarioId}`),
     ensureRuntimeChunkLoadState: () => ({}),
-    hasRenderableScenarioPoliticalTopology: () => false,
+    hasRenderableScenarioPoliticalTopology: () => true,
     normalizeScenarioFeatureCollection: (value) => value,
     cloneScenarioStateValue: (value) => value,
   });
@@ -417,12 +428,14 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
     countriesPayload: { countries: {} },
     ownersPayload: { owners: {} },
     coresPayload: { cores: {} },
-    runtimeTopologyPayload: emptyBlankTopology,
+    runtimeTopologyPayload: ownerlessBlankTopology,
   }, { syncPalette: false });
   pipeline.applyPreparedScenarioState({ manifest: { scenario_id: "blank_base", map_mode: "blank" } }, staged);
 
   assert.equal(runtimeState.activeScenarioId, "blank_base");
-  assert.equal(runtimeState.runtimePoliticalTopology, emptyBlankTopology);
+  assert.equal(runtimeState.runtimePoliticalTopology, ownerlessBlankTopology);
+  assert.equal(runtimeState.activeSovereignCode, "");
+  assert.deepEqual(runtimeState.sovereigntyByFeatureId, {});
   assert.deepEqual(phaseEvents, [
     "pre:localization:",
     "pre:blank:",
@@ -437,10 +450,16 @@ test("blank scenario apply preserves explicit empty runtime topology", async () 
   ]);
 });
 
-test("scenario ocean style restore captures the pre-activation baseline after apply commit", () => {
+test("scenario style defaults restore captures the pre-activation baseline after apply commit", () => {
   const runtimeState = createBaseState({
     activeScenarioManifest: {
       style_defaults: {
+        coastlines: {
+          width: 0.8,
+        },
+        empireBorders: {
+          opacity: 0.4,
+        },
         ocean: {
           fillColor: "#2d4769",
           preset: "flat",
@@ -451,6 +470,16 @@ test("scenario ocean style restore captures the pre-activation baseline after ap
     scenarioOceanFillBeforeActivate: "#123456",
     scenarioOceanStyleBeforeActivate: null,
     styleConfig: {
+      coastlines: {
+        color: "#333333",
+        opacity: 0.8,
+        width: 1.2,
+      },
+      empireBorders: {
+        color: "#666666",
+        opacity: 0.9,
+        width: 1,
+      },
       ocean: {
         fillColor: "#123456",
         preset: "bathymetry_soft",
@@ -471,6 +500,33 @@ test("scenario ocean style restore captures the pre-activation baseline after ap
     preset: "bathymetry_soft",
     experimentalAdvancedStyles: true,
   });
+  assert.deepEqual(runtimeState.scenarioPresentationStyleBeforeActivate, {
+    coastlines: {
+      color: "#333333",
+      opacity: 0.8,
+      width: 1.2,
+    },
+    empireBorders: {
+      color: "#666666",
+      opacity: 0.9,
+      width: 1,
+    },
+    ocean: {
+      fillColor: "#123456",
+      preset: "bathymetry_soft",
+      experimentalAdvancedStyles: true,
+    },
+  });
+  assert.deepEqual(runtimeState.styleConfig.coastlines, {
+    color: "#333333",
+    opacity: 0.8,
+    width: 0.8,
+  });
+  assert.deepEqual(runtimeState.styleConfig.empireBorders, {
+    color: "#666666",
+    opacity: 0.4,
+    width: 1,
+  });
   assert.deepEqual(runtimeState.styleConfig.ocean, {
     fillColor: "#2d4769",
     preset: "flat",
@@ -479,6 +535,16 @@ test("scenario ocean style restore captures the pre-activation baseline after ap
 
   runtime.restoreScenarioOceanFillAfterExit();
 
+  assert.deepEqual(runtimeState.styleConfig.coastlines, {
+    color: "#333333",
+    opacity: 0.8,
+    width: 1.2,
+  });
+  assert.deepEqual(runtimeState.styleConfig.empireBorders, {
+    color: "#666666",
+    opacity: 0.9,
+    width: 1,
+  });
   assert.deepEqual(runtimeState.styleConfig.ocean, {
     fillColor: "#123456",
     preset: "bathymetry_soft",
@@ -486,9 +552,10 @@ test("scenario ocean style restore captures the pre-activation baseline after ap
   });
   assert.equal(runtimeState.scenarioOceanFillBeforeActivate, null);
   assert.equal(runtimeState.scenarioOceanStyleBeforeActivate, null);
+  assert.equal(runtimeState.scenarioPresentationStyleBeforeActivate, null);
   assert.deepEqual(invalidationReasons, [
-    "scenario-ocean-fill-activate",
-    "scenario-ocean-fill-clear",
+    "scenario-style-defaults-activate",
+    "scenario-style-defaults-clear",
   ]);
 });
 

@@ -3513,6 +3513,17 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       stableJson(normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {})),
     ].join("::");
   }
+  if (passName === "labels") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.showBlankFeatureLabels ? "blank-feature-labels:on" : "blank-feature-labels:off",
+      runtimeState.showCityPoints ? "cities:on" : "cities:off",
+      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
+      `colors:${Number(runtimeState.colorRevision || 0)}`,
+    ].join("::");
+  }
   if (passName === "contextScenario") {
     return [
       transformSignature,
@@ -17196,7 +17207,50 @@ function drawBordersPass(k, { interactive = false } = {}) {
   drawHierarchicalBorders(k, { interactive });
 }
 
+function getBlankFeatureLabel(feature, id) {
+  const props = feature?.properties || {};
+  return String(props.name || props.label || id || "").trim();
+}
+
+function drawBlankFeatureLabelsPass(k, { interactive = false } = {}) {
+  if (interactive) return;
+  if (normalizeMapSemanticMode(runtimeState.mapSemanticMode) !== "blank") return;
+  if (String(runtimeState.activeScenarioId || "") !== "blank_base") return;
+  if (!runtimeState.showBlankFeatureLabels) return;
+  if (!runtimeState.landData?.features?.length || !context || typeof pathCanvas?.centroid !== "function") return;
+  const visibleItems = collectVisibleLandSpatialItems();
+  const items = Array.isArray(visibleItems) && visibleItems.length
+    ? visibleItems
+    : runtimeState.landData.features.map((feature, index) => ({
+      feature,
+      id: getFeatureId(feature) || `feature-${index}`,
+    }));
+  const maxLabels = Math.max(24, Math.min(140, Math.round(44 * Math.max(1, Number(k) || 1))));
+  const step = Math.max(1, Math.ceil(items.length / maxLabels));
+  const fontSize = Math.max(7, Math.min(12, 11 / Math.max(0.75, Number(k) || 1)));
+  context.save();
+  context.font = `${fontSize}px system-ui, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineWidth = Math.max(1.8 / Math.max(0.75, Number(k) || 1), 0.7);
+  context.strokeStyle = "rgba(248, 250, 252, 0.82)";
+  context.fillStyle = "rgba(31, 41, 55, 0.86)";
+  for (let index = 0; index < items.length; index += step) {
+    const item = items[index];
+    const feature = item?.feature || item;
+    const id = item?.id || getFeatureId(feature) || "";
+    const label = getBlankFeatureLabel(feature, id);
+    if (!label) continue;
+    const centroid = pathCanvas.centroid(feature);
+    if (!centroid || !Number.isFinite(centroid[0]) || !Number.isFinite(centroid[1])) continue;
+    context.strokeText(label, centroid[0], centroid[1]);
+    context.fillText(label, centroid[0], centroid[1]);
+  }
+  context.restore();
+}
+
 function drawLabelsPass(k, { interactive = false } = {}) {
+  drawBlankFeatureLabelsPass(k, { interactive });
   return getCityPointsRenderOwner().drawLabelsPass(k, { interactive });
 }
 

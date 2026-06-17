@@ -275,6 +275,47 @@ class ScenarioContractTest(unittest.TestCase):
                 self.assertIsNone(report["repair_tracks"]["owners_cores_keyset"])
                 self.assertIsNone(report["repair_tracks"]["runtime_topology_extra_ids"])
 
+    def test_checked_in_blank_base_is_ownerless_editable_topology(self) -> None:
+        scenario_dir = Path(__file__).resolve().parents[1] / "data" / "scenarios" / "blank_base"
+        runtime_topology = json.loads((scenario_dir / "runtime_topology.topo.json").read_text(encoding="utf-8"))
+        manifest = json.loads((scenario_dir / "manifest.json").read_text(encoding="utf-8"))
+        owners = json.loads((scenario_dir / "owners.by_feature.json").read_text(encoding="utf-8"))
+        cores = json.loads((scenario_dir / "cores.by_feature.json").read_text(encoding="utf-8"))
+        countries = json.loads((scenario_dir / "countries.json").read_text(encoding="utf-8"))
+
+        geometries = runtime_topology["objects"]["political"]["geometries"]
+        self.assertGreater(len(geometries), 0)
+        self.assertEqual(manifest["summary"]["feature_count"], len(geometries))
+        self.assertEqual(manifest["summary"]["owner_count"], 0)
+        self.assertEqual(manifest["style_defaults"]["empireBorders"]["opacity"], 0.4)
+        self.assertEqual(manifest["style_defaults"]["coastlines"]["width"], 0.8)
+        self.assertEqual(owners.get("owners"), {})
+        self.assertEqual(cores.get("cores"), {})
+
+        forbidden_property_names = {
+            "cntr_code",
+            "country_code",
+            "owner",
+            "controller",
+            "core",
+            "cores",
+            "scenario_owner",
+            "scenario_controller",
+            "color",
+            "color_hex",
+            "admin1_group",
+            "legacy_name",
+            "anchor_county_name",
+        }
+        for index, geometry in enumerate(geometries[:200]):
+            props = geometry.get("properties") or {}
+            self.assertTrue(str(props.get("id") or "").strip(), index)
+            self.assertFalse(forbidden_property_names & set(props), props)
+
+        for tag, entry in countries.get("countries", {}).items():
+            self.assertEqual(entry.get("feature_count"), 0, tag)
+            self.assertEqual(entry.get("controller_feature_count"), 0, tag)
+
     def test_validate_scenario_contract_rejects_manifest_scenario_id_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)

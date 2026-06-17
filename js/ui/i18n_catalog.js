@@ -679,6 +679,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   counters: { zh: "个计数器", en: "counters" },
   "Export as Strategic annotations": { zh: "作为战略标注导出", en: "Export as Strategic annotations" },
   "Map labels": { zh: "地图标签", en: "Map labels" },
+  "Parcel Names": { zh: "地块名", en: "Parcel Names" },
   "Special zone notes": { zh: "特殊区备注", en: "Special zone notes" },
   "Strategic annotations": { zh: "战略标注", en: "Strategic annotations" },
   Frontlines: { zh: "前线", en: "Frontlines" },

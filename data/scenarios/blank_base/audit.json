@@ -1,50 +1,51 @@
 {
   "artifact_counts": {
     "chunk_count": 0,
-    "feature_count": 0,
+    "feature_count": 11294,
     "water_count": 0
   },
   "diagnostics": {
     "baseline_hash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea",
     "canonical_country_count": 174,
-    "detail_topology_feature_count": 0,
-    "note": "Editable blank map canvas with no pre-assigned ownership, controllers, or cores.",
+    "detail_topology_feature_count": 11294,
+    "note": "Editable ownerless map canvas with full province geometry and no pre-assigned ownership, controllers, or cores.",
     "palette_id": "hoi4_vanilla",
     "primary_country_count": 209,
-    "source": "generated_blank_canvas"
+    "source": "ownerless_editable_topology"
   },
-  "generated_at": "2026-03-09T14:09:29.123Z",
+  "generated_at": "2026-06-17T00:00:00.000Z",
   "owner_bucket_mismatch_count": 0,
   "profile": "lightweight_base",
   "reverse_coverage_gap_count": 0,
   "scenario_id": "blank_base",
-  "snapshot_fingerprint": "315bdf6eb0f39124b1dbfc9d387a802a796bae8629e452dbf0c299ad5a136266",
+  "snapshot_fingerprint": "aaa3ee5611b9a22106a58612b8e87bd2337b8770fa6c0702252636bb08aa732b",
   "source": {
     "base_topology_sha256": "f2d1c49bacc9b2eb9fa21c54fdc1dd6aaa8751fc1b37ab49b5bbc1da29da39c0",
-    "build_snapshot_sha256": "af13821bb82810a5f5c09499e91e7d16e79dadc88d03d5807dfcd7ce2797b03e",
-    "runtime_topology_sha256": "6e21d41f63d7bfaeb9ffbcc737ba13e8c089d1a9c4160db4ca660838a156c27c"
+    "build_snapshot_sha256": "1872d8b7728292a63b74f4f6ea811c84971347e9158789e9cc443302ee0f6f17",
+    "ownerless_topology_source": "data/scenarios/modern_world/runtime_topology.topo.json",
+    "runtime_topology_sha256": "ffe47c9e06585ca4ce7167358024584899d59914d7ac711e0d1dfb3d8ad8cd1e"
   },
   "summary": {
     "approximate_count": 0,
     "blocker_count": 0,
-    "changed_feature_count": 11724,
+    "changed_feature_count": 11294,
     "controller_count": 0,
     "controller_rule_count": 0,
     "critical_region_check_count": 0,
     "critical_unresolved_count": 0,
     "failed_region_check_count": 0,
-    "feature_count": 0,
+    "feature_count": 11294,
     "geometry_blocker_count": 0,
     "manual_reviewed_feature_count": 0,
     "manual_reviewed_region_count": 0,
     "owner_controller_split_feature_count": 0,
     "owner_count": 0,
     "quality_counts": {
-      "blank_canvas": 0
+      "ownerless_editable_topology": 11294
     },
     "scenario_rule_blocker_count": 0,
     "source_counts": {
-      "blank_canvas": 0
+      "ownerless_editable_topology": 11294
     },
     "synthetic_count": 0,
     "synthetic_owner_feature_count": 0,

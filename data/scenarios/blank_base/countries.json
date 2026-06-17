@@ -1,14 +1,14 @@
 {
   "version": 1,
   "scenario_id": "blank_base",
-  "generated_at": "2026-03-09T14:09:29.123Z",
+  "generated_at": "2026-06-17T00:00:00.000Z",
   "default_country": "US",
   "countries": {
     "AD": {
       "tag": "AD",
       "display_name": "Andorra",
       "color_hex": "#5d7cba",
-      "feature_count": 7,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AD",
@@ -36,13 +36,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AE": {
       "tag": "AE",
       "display_name": "United Arab Emirates",
       "color_hex": "#666600",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AE",
@@ -70,13 +71,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AF": {
       "tag": "AF",
       "display_name": "Afghanistan",
       "color_hex": "#40a0a7",
-      "feature_count": 34,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AF",
@@ -104,13 +106,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AL": {
       "tag": "AL",
       "display_name": "Albania",
       "color_hex": "#952d66",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AL",
@@ -138,13 +141,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AM": {
       "tag": "AM",
       "display_name": "Armenia",
       "color_hex": "#b066b4",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AM",
@@ -172,13 +176,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AO": {
       "tag": "AO",
       "display_name": "Angola",
       "color_hex": "#258c3d",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AO",
@@ -206,13 +211,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AR": {
       "tag": "AR",
       "display_name": "Argentina",
       "color_hex": "#919dec",
-      "feature_count": 24,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AR",
@@ -240,13 +246,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AT": {
       "tag": "AT",
       "display_name": "Austria",
       "color_hex": "#c2c6d7",
-      "feature_count": 35,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AT",
@@ -274,13 +281,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AU": {
       "tag": "AU",
       "display_name": "Australia",
       "color_hex": "#398f61",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AU",
@@ -308,13 +316,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "AZ": {
       "tag": "AZ",
       "display_name": "Azerbaijan",
       "color_hex": "#459731",
-      "feature_count": 76,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "AZ",
@@ -342,13 +351,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BA": {
       "tag": "BA",
       "display_name": "Bosnia and Herzegovina",
       "color_hex": "#1a5276",
-      "feature_count": 3,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BA",
@@ -376,13 +386,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BD": {
       "tag": "BD",
       "display_name": "Bangladesh",
       "color_hex": "#cccc00",
-      "feature_count": 7,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BD",
@@ -410,13 +421,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BE": {
       "tag": "BE",
       "display_name": "Belgium",
       "color_hex": "#c1ab08",
-      "feature_count": 44,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BE",
@@ -444,13 +456,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BF": {
       "tag": "BF",
       "display_name": "Burkina Faso",
       "color_hex": "#5d7cba",
-      "feature_count": 13,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BF",
@@ -478,13 +491,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BG": {
       "tag": "BG",
       "display_name": "Bulgaria",
       "color_hex": "#339b00",
-      "feature_count": 28,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BG",
@@ -512,13 +526,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BH": {
       "tag": "BH",
       "display_name": "Bahrain",
       "color_hex": "#e60000",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BH",
@@ -546,13 +561,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BI": {
       "tag": "BI",
       "display_name": "Burundi",
       "color_hex": "#cc9900",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BI",
@@ -580,13 +596,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BJ": {
       "tag": "BJ",
       "display_name": "Benin",
       "color_hex": "#0033cc",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BJ",
@@ -614,13 +631,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BN": {
       "tag": "BN",
       "display_name": "Brunei",
       "color_hex": "#e6e600",
-      "feature_count": 4,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BN",
@@ -648,13 +666,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BO": {
       "tag": "BO",
       "display_name": "Bolivia",
       "color_hex": "#cca66c",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BO",
@@ -682,13 +701,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BR": {
       "tag": "BR",
       "display_name": "Brazil",
       "color_hex": "#4c913f",
-      "feature_count": 27,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BR",
@@ -716,13 +736,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BT": {
       "tag": "BT",
       "display_name": "Bhutan",
       "color_hex": "#ac7a58",
-      "feature_count": 20,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BT",
@@ -750,13 +771,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BW": {
       "tag": "BW",
       "display_name": "Botswana",
       "color_hex": "#0b8470",
-      "feature_count": 15,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BW",
@@ -784,13 +806,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BY": {
       "tag": "BY",
       "display_name": "Belarus",
       "color_hex": "#b4dcbe",
-      "feature_count": 35,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BY",
@@ -818,13 +841,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "BZ": {
       "tag": "BZ",
       "display_name": "Belize",
       "color_hex": "#00cccc",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "BZ",
@@ -852,13 +876,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CA": {
       "tag": "CA",
       "display_name": "Canada",
       "color_hex": "#e93b3b",
-      "feature_count": 343,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CA",
@@ -886,13 +911,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CD": {
       "tag": "CD",
       "display_name": "Democratic Republic of the Congo",
       "color_hex": "#5d7cba",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CD",
@@ -920,13 +946,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CF": {
       "tag": "CF",
       "display_name": "Central African Republic",
       "color_hex": "#990000",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CF",
@@ -954,13 +981,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CG": {
       "tag": "CG",
       "display_name": "Republic of the Congo",
       "color_hex": "#66ccff",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CG",
@@ -988,13 +1016,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CH": {
       "tag": "CH",
       "display_name": "Switzerland",
       "color_hex": "#e00505",
-      "feature_count": 26,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CH",
@@ -1022,13 +1051,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CI": {
       "tag": "CI",
       "display_name": "Ivory Coast",
       "color_hex": "#ffffcc",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CI",
@@ -1056,13 +1086,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CL": {
       "tag": "CL",
       "display_name": "Chile",
       "color_hex": "#9b656b",
-      "feature_count": 16,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CL",
@@ -1090,13 +1121,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CM": {
       "tag": "CM",
       "display_name": "Cameroon",
       "color_hex": "#ff3300",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CM",
@@ -1124,13 +1156,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CN": {
       "tag": "CN",
       "display_name": "China",
       "color_hex": "#28288c",
-      "feature_count": 2391,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CN",
@@ -1158,13 +1191,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CO": {
       "tag": "CO",
       "display_name": "Colombia",
       "color_hex": "#debb5b",
-      "feature_count": 34,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CO",
@@ -1192,13 +1226,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CR": {
       "tag": "CR",
       "display_name": "Costa Rica",
       "color_hex": "#98802b",
-      "feature_count": 7,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CR",
@@ -1226,13 +1261,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CV": {
       "tag": "CV",
       "display_name": "Cabo Verde",
       "color_hex": "#0066cc",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CV",
@@ -1260,13 +1296,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CY": {
       "tag": "CY",
       "display_name": "Cyprus",
       "color_hex": "#ffcc00",
-      "feature_count": 1,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CY",
@@ -1294,13 +1331,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "CZ": {
       "tag": "CZ",
       "display_name": "Czechia",
       "color_hex": "#3498db",
-      "feature_count": 77,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "CZ",
@@ -1328,13 +1366,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "DE": {
       "tag": "DE",
       "display_name": "Germany",
       "color_hex": "#3c3c3c",
-      "feature_count": 401,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "DE",
@@ -1362,13 +1401,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "DJ": {
       "tag": "DJ",
       "display_name": "Djibouti",
       "color_hex": "#006699",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "DJ",
@@ -1396,13 +1436,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "DK": {
       "tag": "DK",
       "display_name": "Denmark",
       "color_hex": "#99745d",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "DK",
@@ -1430,13 +1471,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "DO": {
       "tag": "DO",
       "display_name": "Dominican Republic",
       "color_hex": "#9882bf",
-      "feature_count": 32,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "DO",
@@ -1464,13 +1506,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "DZ": {
       "tag": "DZ",
       "display_name": "Algeria",
       "color_hex": "#996633",
-      "feature_count": 48,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "DZ",
@@ -1498,13 +1541,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "EC": {
       "tag": "EC",
       "display_name": "Ecuador",
       "color_hex": "#f99262",
-      "feature_count": 24,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "EC",
@@ -1532,13 +1576,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "EE": {
       "tag": "EE",
       "display_name": "Estonia",
       "color_hex": "#3287af",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "EE",
@@ -1566,13 +1611,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "EG": {
       "tag": "EG",
       "display_name": "Egypt",
       "color_hex": "#e6e646",
-      "feature_count": 26,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "EG",
@@ -1600,13 +1646,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "EH": {
       "tag": "EH",
       "display_name": "Western Sahara",
       "color_hex": "#ffb266",
-      "feature_count": 1,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "EH",
@@ -1634,13 +1681,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ER": {
       "tag": "ER",
       "display_name": "Eritrea",
       "color_hex": "#993300",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ER",
@@ -1668,13 +1716,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ES": {
       "tag": "ES",
       "display_name": "Spain",
       "color_hex": "#f2cd5e",
-      "feature_count": 52,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ES",
@@ -1702,13 +1751,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ET": {
       "tag": "ET",
       "display_name": "Ethiopia",
       "color_hex": "#9882bf",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ET",
@@ -1736,13 +1786,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "FI": {
       "tag": "FI",
       "display_name": "Finland",
       "color_hex": "#cdd4e4",
-      "feature_count": 19,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "FI",
@@ -1770,13 +1821,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "FR": {
       "tag": "FR",
       "display_name": "France",
       "color_hex": "#3971e4",
-      "feature_count": 320,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "FR",
@@ -1804,13 +1856,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GA": {
       "tag": "GA",
       "display_name": "Gabon",
       "color_hex": "#33cccc",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GA",
@@ -1838,13 +1891,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GB": {
       "tag": "GB",
       "display_name": "United Kingdom",
       "color_hex": "#c9385d",
-      "feature_count": 191,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GB",
@@ -1872,13 +1926,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GE": {
       "tag": "GE",
       "display_name": "Georgia",
       "color_hex": "#ff9696",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GE",
@@ -1906,13 +1961,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GH": {
       "tag": "GH",
       "display_name": "Ghana",
       "color_hex": "#666633",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GH",
@@ -1940,13 +1996,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GM": {
       "tag": "GM",
       "display_name": "Gambia",
       "color_hex": "#990000",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GM",
@@ -1974,13 +2031,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GN": {
       "tag": "GN",
       "display_name": "Guinea",
       "color_hex": "#6699ff",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GN",
@@ -2008,13 +2066,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GQ": {
       "tag": "GQ",
       "display_name": "Equatorial Guinea",
       "color_hex": "#ffcc00",
-      "feature_count": 7,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GQ",
@@ -2042,13 +2101,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GR": {
       "tag": "GR",
       "display_name": "Greece",
       "color_hex": "#5db5e3",
-      "feature_count": 66,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GR",
@@ -2076,13 +2136,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GT": {
       "tag": "GT",
       "display_name": "Guatemala",
       "color_hex": "#483170",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GT",
@@ -2110,13 +2171,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GW": {
       "tag": "GW",
       "display_name": "Guinea-Bissau",
       "color_hex": "#996600",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GW",
@@ -2144,13 +2206,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "GY": {
       "tag": "GY",
       "display_name": "Guyana",
       "color_hex": "#ffcc99",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "GY",
@@ -2178,13 +2241,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "HK": {
       "tag": "HK",
       "display_name": "Hong Kong S.A.R.",
       "color_hex": "#5d7cba",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "HK",
@@ -2212,13 +2276,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "HN": {
       "tag": "HN",
       "display_name": "Honduras",
       "color_hex": "#809141",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "HN",
@@ -2246,13 +2311,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "HR": {
       "tag": "HR",
       "display_name": "Croatia",
       "color_hex": "#e646b4",
-      "feature_count": 21,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "HR",
@@ -2280,13 +2346,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "HT": {
       "tag": "HT",
       "display_name": "Haiti",
       "color_hex": "#ae7171",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "HT",
@@ -2314,13 +2381,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "HU": {
       "tag": "HU",
       "display_name": "Hungary",
       "color_hex": "#f97e62",
-      "feature_count": 20,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "HU",
@@ -2348,13 +2416,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ID": {
       "tag": "ID",
       "display_name": "Indonesia",
       "color_hex": "#283278",
-      "feature_count": 34,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ID",
@@ -2382,13 +2451,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IE": {
       "tag": "IE",
       "display_name": "Ireland",
       "color_hex": "#509f5a",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IE",
@@ -2416,13 +2486,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IL": {
       "tag": "IL",
       "display_name": "Israel",
       "color_hex": "#9882bf",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IL",
@@ -2450,13 +2521,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IN": {
       "tag": "IN",
       "display_name": "India",
       "color_hex": "#d62828",
-      "feature_count": 718,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IN",
@@ -2484,13 +2556,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IQ": {
       "tag": "IQ",
       "display_name": "Iraq",
       "color_hex": "#b27263",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IQ",
@@ -2518,13 +2591,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IR": {
       "tag": "IR",
       "display_name": "Iran",
       "color_hex": "#477161",
-      "feature_count": 31,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IR",
@@ -2552,13 +2626,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IS": {
       "tag": "IS",
       "display_name": "Iceland",
       "color_hex": "#647daf",
-      "feature_count": 2,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IS",
@@ -2586,13 +2661,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "IT": {
       "tag": "IT",
       "display_name": "Italy",
       "color_hex": "#437f3f",
-      "feature_count": 107,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "IT",
@@ -2620,13 +2696,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "JO": {
       "tag": "JO",
       "display_name": "Jordan",
       "color_hex": "#6f374e",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "JO",
@@ -2654,13 +2731,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "JP": {
       "tag": "JP",
       "display_name": "Japan",
       "color_hex": "#ffc9b2",
-      "feature_count": 47,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "JP",
@@ -2688,13 +2766,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KE": {
       "tag": "KE",
       "display_name": "Kenya",
       "color_hex": "#91670e",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KE",
@@ -2722,13 +2801,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KG": {
       "tag": "KG",
       "display_name": "Kyrgyzstan",
       "color_hex": "#994c00",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KG",
@@ -2756,13 +2836,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KH": {
       "tag": "KH",
       "display_name": "Cambodia",
       "color_hex": "#644796",
-      "feature_count": 24,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KH",
@@ -2790,13 +2871,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KM": {
       "tag": "KM",
       "display_name": "Comoros",
       "color_hex": "#5d7cba",
-      "feature_count": 3,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KM",
@@ -2824,13 +2906,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KP": {
       "tag": "KP",
       "display_name": "North Korea",
       "color_hex": "#7f1d1d",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KP",
@@ -2858,13 +2941,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KR": {
       "tag": "KR",
       "display_name": "South Korea",
       "color_hex": "#2563eb",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KR",
@@ -2892,13 +2976,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KW": {
       "tag": "KW",
       "display_name": "Kuwait",
       "color_hex": "#994c00",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KW",
@@ -2926,13 +3011,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "KZ": {
       "tag": "KZ",
       "display_name": "Kazakhstan",
       "color_hex": "#4bb8cb",
-      "feature_count": 16,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "KZ",
@@ -2960,13 +3046,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LA": {
       "tag": "LA",
       "display_name": "Laos",
       "color_hex": "#b06688",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LA",
@@ -2994,13 +3081,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LB": {
       "tag": "LB",
       "display_name": "Lebanon",
       "color_hex": "#82963c",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LB",
@@ -3028,13 +3116,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LI": {
       "tag": "LI",
       "display_name": "Liechtenstein",
       "color_hex": "#45b39d",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LI",
@@ -3062,13 +3151,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LK": {
       "tag": "LK",
       "display_name": "Sri Lanka",
       "color_hex": "#cc0066",
-      "feature_count": 25,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LK",
@@ -3096,13 +3186,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LR": {
       "tag": "LR",
       "display_name": "Liberia",
       "color_hex": "#9882bf",
-      "feature_count": 15,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LR",
@@ -3130,13 +3221,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LS": {
       "tag": "LS",
       "display_name": "Lesotho",
       "color_hex": "#5d7cba",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LS",
@@ -3164,13 +3256,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LT": {
       "tag": "LT",
       "display_name": "Lithuania",
       "color_hex": "#dbdb77",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LT",
@@ -3198,13 +3291,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LU": {
       "tag": "LU",
       "display_name": "Luxembourg",
       "color_hex": "#41afb3",
-      "feature_count": 3,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LU",
@@ -3232,13 +3326,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LV": {
       "tag": "LV",
       "display_name": "Latvia",
       "color_hex": "#4b4dba",
-      "feature_count": 6,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LV",
@@ -3266,13 +3361,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "LY": {
       "tag": "LY",
       "display_name": "Libya",
       "color_hex": "#c8b45a",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "LY",
@@ -3300,13 +3396,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MA": {
       "tag": "MA",
       "display_name": "Morocco",
       "color_hex": "#663300",
-      "feature_count": 16,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MA",
@@ -3334,13 +3431,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MC": {
       "tag": "MC",
       "display_name": "Monaco",
       "color_hex": "#5d7cba",
-      "feature_count": 1,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MC",
@@ -3368,13 +3466,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MD": {
       "tag": "MD",
       "display_name": "Moldova",
       "color_hex": "#ffcccc",
-      "feature_count": 40,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MD",
@@ -3402,13 +3501,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ME": {
       "tag": "ME",
       "display_name": "Montenegro",
       "color_hex": "#4d5a69",
-      "feature_count": 21,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ME",
@@ -3436,13 +3536,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MG": {
       "tag": "MG",
       "display_name": "Madagascar",
       "color_hex": "#ffff99",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MG",
@@ -3470,13 +3571,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MK": {
       "tag": "MK",
       "display_name": "North Macedonia",
       "color_hex": "#7d3c98",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MK",
@@ -3504,13 +3606,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ML": {
       "tag": "ML",
       "display_name": "Mali",
       "color_hex": "#ccccff",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ML",
@@ -3538,13 +3641,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MM": {
       "tag": "MM",
       "display_name": "Myanmar",
       "color_hex": "#4c9900",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MM",
@@ -3572,13 +3676,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MN": {
       "tag": "MN",
       "display_name": "Mongolia",
       "color_hex": "#666057",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MN",
@@ -3606,13 +3711,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MO": {
       "tag": "MO",
       "display_name": "Macao S.A.R",
       "color_hex": "#5d7cba",
-      "feature_count": 1,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MO",
@@ -3640,13 +3746,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MR": {
       "tag": "MR",
       "display_name": "Mauritania",
       "color_hex": "#ff9999",
-      "feature_count": 13,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MR",
@@ -3674,13 +3781,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MT": {
       "tag": "MT",
       "display_name": "Malta",
       "color_hex": "#ffff99",
-      "feature_count": 2,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MT",
@@ -3708,13 +3816,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MW": {
       "tag": "MW",
       "display_name": "Malawi",
       "color_hex": "#99cc00",
-      "feature_count": 3,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MW",
@@ -3742,13 +3851,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MX": {
       "tag": "MX",
       "display_name": "Mexico",
       "color_hex": "#689853",
-      "feature_count": 300,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MX",
@@ -3776,13 +3886,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MY": {
       "tag": "MY",
       "display_name": "Malaysia",
       "color_hex": "#c56064",
-      "feature_count": 16,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MY",
@@ -3810,13 +3921,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "MZ": {
       "tag": "MZ",
       "display_name": "Mozambique",
       "color_hex": "#703e5a",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "MZ",
@@ -3844,13 +3956,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NA": {
       "tag": "NA",
       "display_name": "Namibia",
       "color_hex": "#e5ccff",
-      "feature_count": 13,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NA",
@@ -3878,13 +3991,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NE": {
       "tag": "NE",
       "display_name": "Niger",
       "color_hex": "#ff9966",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NE",
@@ -3912,13 +4026,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NG": {
       "tag": "NG",
       "display_name": "Nigeria",
       "color_hex": "#ffcc66",
-      "feature_count": 37,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NG",
@@ -3946,13 +4061,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NI": {
       "tag": "NI",
       "display_name": "Nicaragua",
       "color_hex": "#92b3bf",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NI",
@@ -3980,13 +4096,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NL": {
       "tag": "NL",
       "display_name": "Netherlands",
       "color_hex": "#cb8a4a",
-      "feature_count": 40,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NL",
@@ -4014,13 +4131,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NO": {
       "tag": "NO",
       "display_name": "Norway",
       "color_hex": "#6f4747",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NO",
@@ -4048,13 +4166,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NP": {
       "tag": "NP",
       "display_name": "Nepal",
       "color_hex": "#9882bf",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NP",
@@ -4082,13 +4201,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "NZ": {
       "tag": "NZ",
       "display_name": "New Zealand",
       "color_hex": "#9882bf",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "NZ",
@@ -4116,13 +4236,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "OM": {
       "tag": "OM",
       "display_name": "Oman",
       "color_hex": "#9b656b",
-      "feature_count": 11,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "OM",
@@ -4150,13 +4271,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PA": {
       "tag": "PA",
       "display_name": "Panama",
       "color_hex": "#9882bf",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PA",
@@ -4184,13 +4306,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PE": {
       "tag": "PE",
       "display_name": "Peru",
       "color_hex": "#c4bdcc",
-      "feature_count": 26,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PE",
@@ -4218,13 +4341,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PG": {
       "tag": "PG",
       "display_name": "Papua New Guinea",
       "color_hex": "#99004c",
-      "feature_count": 20,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PG",
@@ -4252,13 +4376,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PH": {
       "tag": "PH",
       "display_name": "Philippines",
       "color_hex": "#0028c3",
-      "feature_count": 117,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PH",
@@ -4286,13 +4411,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PK": {
       "tag": "PK",
       "display_name": "Pakistan",
       "color_hex": "#006600",
-      "feature_count": 8,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PK",
@@ -4320,13 +4446,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PL": {
       "tag": "PL",
       "display_name": "Poland",
       "color_hex": "#d6668b",
-      "feature_count": 380,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PL",
@@ -4354,13 +4481,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PS": {
       "tag": "PS",
       "display_name": "Palestine",
       "color_hex": "#aa7d50",
-      "feature_count": 2,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PS",
@@ -4388,13 +4516,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PT": {
       "tag": "PT",
       "display_name": "Portugal",
       "color_hex": "#277446",
-      "feature_count": 23,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PT",
@@ -4422,13 +4551,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "PY": {
       "tag": "PY",
       "display_name": "Paraguay",
       "color_hex": "#3971e4",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "PY",
@@ -4456,13 +4586,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "QA": {
       "tag": "QA",
       "display_name": "Qatar",
       "color_hex": "#800000",
-      "feature_count": 7,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "QA",
@@ -4490,13 +4621,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "RO": {
       "tag": "RO",
       "display_name": "Romania",
       "color_hex": "#d7c448",
-      "feature_count": 42,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "RO",
@@ -4524,13 +4656,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "RS": {
       "tag": "RS",
       "display_name": "Republic of Serbia",
       "color_hex": "#6c3483",
-      "feature_count": 25,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "RS",
@@ -4558,13 +4691,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "RU": {
       "tag": "RU",
       "display_name": "Russia",
       "color_hex": "#4a4e69",
-      "feature_count": 2176,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "RU",
@@ -4592,13 +4726,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "RW": {
       "tag": "RW",
       "display_name": "Rwanda",
       "color_hex": "#ffff66",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "RW",
@@ -4626,13 +4761,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SA": {
       "tag": "SA",
       "display_name": "Saudi Arabia",
       "color_hex": "#abbe98",
-      "feature_count": 13,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SA",
@@ -4660,13 +4796,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SD": {
       "tag": "SD",
       "display_name": "Sudan",
       "color_hex": "#cc6600",
-      "feature_count": 17,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SD",
@@ -4694,13 +4831,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SE": {
       "tag": "SE",
       "display_name": "Sweden",
       "color_hex": "#2484f7",
-      "feature_count": 21,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SE",
@@ -4728,13 +4866,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SG": {
       "tag": "SG",
       "display_name": "Singapore",
       "color_hex": "#cc0000",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SG",
@@ -4762,13 +4901,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SI": {
       "tag": "SI",
       "display_name": "Slovenia",
       "color_hex": "#66b2ff",
-      "feature_count": 12,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SI",
@@ -4796,13 +4936,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SK": {
       "tag": "SK",
       "display_name": "Slovakia",
       "color_hex": "#9ea1bc",
-      "feature_count": 79,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SK",
@@ -4830,13 +4971,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SL": {
       "tag": "SL",
       "display_name": "Sierra Leone",
       "color_hex": "#cc66ff",
-      "feature_count": 4,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SL",
@@ -4864,13 +5006,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SM": {
       "tag": "SM",
       "display_name": "San Marino",
       "color_hex": "#5d7cba",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SM",
@@ -4898,13 +5041,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SN": {
       "tag": "SN",
       "display_name": "Senegal",
       "color_hex": "#cc3300",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SN",
@@ -4932,13 +5076,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SO": {
       "tag": "SO",
       "display_name": "Somalia",
       "color_hex": "#336600",
-      "feature_count": 18,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SO",
@@ -4966,13 +5111,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SR": {
       "tag": "SR",
       "display_name": "Suriname",
       "color_hex": "#ffb266",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SR",
@@ -5000,13 +5146,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SS": {
       "tag": "SS",
       "display_name": "South Sudan",
       "color_hex": "#5d7cba",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SS",
@@ -5034,13 +5181,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ST": {
       "tag": "ST",
       "display_name": "São Tomé and Principe",
       "color_hex": "#5d7cba",
-      "feature_count": 2,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ST",
@@ -5068,13 +5216,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SV": {
       "tag": "SV",
       "display_name": "El Salvador",
       "color_hex": "#9882bf",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SV",
@@ -5102,13 +5251,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SY": {
       "tag": "SY",
       "display_name": "Syria",
       "color_hex": "#646496",
-      "feature_count": 15,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SY",
@@ -5136,13 +5286,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "SZ": {
       "tag": "SZ",
       "display_name": "eSwatini",
       "color_hex": "#5d7cba",
-      "feature_count": 4,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "SZ",
@@ -5170,13 +5321,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TD": {
       "tag": "TD",
       "display_name": "Chad",
       "color_hex": "#ccffcc",
-      "feature_count": 22,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TD",
@@ -5204,13 +5356,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TG": {
       "tag": "TG",
       "display_name": "Togo",
       "color_hex": "#006600",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TG",
@@ -5238,13 +5391,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TH": {
       "tag": "TH",
       "display_name": "Thailand",
       "color_hex": "#abbe98",
-      "feature_count": 77,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TH",
@@ -5272,13 +5426,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TJ": {
       "tag": "TJ",
       "display_name": "Tajikistan",
       "color_hex": "#336600",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TJ",
@@ -5306,13 +5461,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TL": {
       "tag": "TL",
       "display_name": "East Timor",
       "color_hex": "#5d7cba",
-      "feature_count": 13,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TL",
@@ -5340,13 +5496,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TM": {
       "tag": "TM",
       "display_name": "Turkmenistan",
       "color_hex": "#004c99",
-      "feature_count": 5,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TM",
@@ -5374,13 +5531,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TN": {
       "tag": "TN",
       "display_name": "Tunisia",
       "color_hex": "#999966",
-      "feature_count": 23,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TN",
@@ -5408,13 +5566,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TR": {
       "tag": "TR",
       "display_name": "Turkey",
       "color_hex": "#abbe98",
-      "feature_count": 81,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TR",
@@ -5442,13 +5601,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TW": {
       "tag": "TW",
       "display_name": "Taiwan",
       "color_hex": "#f59e0b",
-      "feature_count": 21,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TW",
@@ -5476,13 +5636,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "TZ": {
       "tag": "TZ",
       "display_name": "United Republic of Tanzania",
       "color_hex": "#5d7cba",
-      "feature_count": 30,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "TZ",
@@ -5510,13 +5671,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "UA": {
       "tag": "UA",
       "display_name": "Ukraine",
       "color_hex": "#0050e6",
-      "feature_count": 495,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "UA",
@@ -5544,13 +5706,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "UG": {
       "tag": "UG",
       "display_name": "Uganda",
       "color_hex": "#ff5050",
-      "feature_count": 4,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "UG",
@@ -5578,13 +5741,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "US": {
       "tag": "US",
       "display_name": "United States of America",
       "color_hex": "#1485ed",
-      "feature_count": 900,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "US",
@@ -5612,13 +5776,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "UY": {
       "tag": "UY",
       "display_name": "Uruguay",
       "color_hex": "#abbe98",
-      "feature_count": 19,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "UY",
@@ -5646,13 +5811,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "UZ": {
       "tag": "UZ",
       "display_name": "Uzbekistan",
       "color_hex": "#006666",
-      "feature_count": 14,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "UZ",
@@ -5680,13 +5846,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "VE": {
       "tag": "VE",
       "display_name": "Venezuela",
       "color_hex": "#abbe98",
-      "feature_count": 26,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "VE",
@@ -5714,13 +5881,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "VN": {
       "tag": "VN",
       "display_name": "Vietnam",
       "color_hex": "#5d7cba",
-      "feature_count": 63,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "VN",
@@ -5748,13 +5916,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "XK": {
       "tag": "XK",
       "display_name": "Kosovo",
       "color_hex": "#d0a650",
-      "feature_count": 30,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "XK",
@@ -5782,13 +5951,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "YE": {
       "tag": "YE",
       "display_name": "Yemen",
       "color_hex": "#9b656b",
-      "feature_count": 21,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "YE",
@@ -5816,13 +5986,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ZA": {
       "tag": "ZA",
       "display_name": "South Africa",
       "color_hex": "#c36ba0",
-      "feature_count": 9,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ZA",
@@ -5850,13 +6021,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ZM": {
       "tag": "ZM",
       "display_name": "Zambia",
       "color_hex": "#6666ff",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ZM",
@@ -5884,13 +6056,14 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     },
     "ZW": {
       "tag": "ZW",
       "display_name": "Zimbabwe",
       "color_hex": "#0707ef",
-      "feature_count": 10,
+      "feature_count": 0,
       "quality": "direct_country_copy",
       "source": "canonical_baseline",
       "base_iso2": "ZW",
@@ -5918,7 +6091,8 @@
       "parent_owner_tag": "",
       "parent_owner_tags": [],
       "subject_kind": "",
-      "entry_kind": ""
+      "entry_kind": "",
+      "controller_feature_count": 0
     }
   }
 }

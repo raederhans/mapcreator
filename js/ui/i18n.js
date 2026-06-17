@@ -947,6 +947,12 @@ function normalizeTooltipComparisonValue(value) {
 }
 
 function getTooltipCountryContext(feature) {
+  if (runtimeState.mapSemanticMode === "blank") {
+    return {
+      countryCode: "",
+      countryDisplayName: "",
+    };
+  }
   const featureId = getTooltipFeatureId(feature);
   const scenarioBaselineCode = runtimeState.activeScenarioId
     ? normalizeTooltipCountryCode(runtimeState.scenarioBaselineOwnersByFeatureId?.[featureId] || "")

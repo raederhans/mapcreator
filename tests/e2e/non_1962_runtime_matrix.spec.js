@@ -7,7 +7,7 @@ const {
 } = require("./support/playwright-app");
 
 const SCENARIOS = [
-  { id: "blank_base", label: "Blank Map", paletteId: "hoi4_vanilla", expectedColors: { AU: "#398f61", BR: "#4c913f" } },
+  { id: "blank_base", label: "Blank Map", paletteId: "hoi4_vanilla", expectedColors: {}, ownerless: true },
   { id: "hoi4_1936", label: "HOI4 1936", paletteId: "hoi4_vanilla", expectedColors: { USA: "#1485ed", ENG: "#c9385d" } },
   { id: "hoi4_1939", label: "HOI4 1939", paletteId: "hoi4_vanilla", expectedColors: { USA: "#1485ed", ENG: "#c9385d" } },
   { id: "modern_world", label: "Modern World", paletteId: "hoi4_vanilla", expectedColors: { AU: "#398f61", BR: "#4c913f" } },
@@ -127,8 +127,12 @@ test.describe("non-1962 scenario runtime matrix", () => {
       expect(runtimeState.activePaletteId).toBe(scenario.paletteId);
       expect(runtimeState.scenarioGeneratedColorTags).toEqual([]);
       expect(runtimeState.health?.generatedColorTags || []).toEqual([]);
+      expect(runtimeState.runtimeFeatureCount).toBeGreaterThan(0);
       for (const [tag, color] of Object.entries(scenario.expectedColors || {})) {
         expect(runtimeState.scenarioFixedOwnerColors[tag]).toBe(color);
+      }
+      if (scenario.ownerless) {
+        expect(Object.keys(runtimeState.scenarioFixedOwnerColors || {}).length).toBeGreaterThan(0);
       }
       expect(runtimeState.scenarioStatusText).not.toContain("coarse mode");
       expect(runtimeState.scenarioAuditHintText).not.toContain("coarse mode");
