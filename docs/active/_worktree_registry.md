@@ -5,14 +5,14 @@ Last updated: 2026-06-17
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/strategic-overlay-render-owner`
+- Integration branch: `main`
 - Base: `origin/main@0095aed6`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Complete `codex/strategic-overlay-render-owner` in two windows: Unit Counter drag runtime domain first, render owner second.
+1. `codex/strategic-overlay-render-owner` fast-forward merged into `main`, archived, and pushed with closeout state.
 2. Preserve historical recovery rows below; they are references only.
 3. Re-check recovery commit hashes before recreating any historical worktree.
 4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer-owner pass.
@@ -21,7 +21,7 @@ Last updated: 2026-06-17
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/strategic-overlay-render-owner` | `origin/main@0095aed6` | ready-for-integration | hot files expected: `js/core/map_renderer.js`, strategic overlay runtime/render owner files, strategic overlay tests, `package.json`, `dist/app`, Pages dist manifest | Runtime/render owner node tests, Python boundary contracts, renderer split suite, Pages dist verification, `git diff --check`, architecture review, and code review passed after fixing drag session snapshot pollution | Yellow | Final self-check, commit, fast-forward merge to `main`, post-merge validate, push |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` | `origin/main@0095aed6` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, strategic overlay runtime/render owner files, strategic overlay tests, `package.json`, `dist/app`, Pages dist manifest | Commit `e2473cbb`; runtime/render owner node tests, Python boundary contracts, renderer split suite, Pages dist verification, `git diff --check`, architecture review, and code review passed after fixing drag session snapshot pollution; post-merge validation passed on `main` | Green | No active integration action |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` | `origin/main` closeout | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city owner behavior test, urban/city boundary test, city e2e support fixture, `dist/app`, Pages dist manifest | Commit `79dfc678`; explicit d3 helper injection, node syntax, owner behavior, boundary, appearance city-points, Pages dist, city e2e 8/8, layer smoke 4/4, post-merge short validation, archive closeout, and main push passed. Review fixed a shared city zoom settle timeout clamp. | Green | No active integration action |
 
 ## Current Overlap Matrix
@@ -69,6 +69,7 @@ These rows are branch or commit recovery indexes. They are historical references
 - Parent main checkout had unrelated local WIP in `docs/archive/data-architecture-hardening-v2/context.md`; renderer integration used a clean temporary worktree to preserve that local file.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
+- 2026-06-17 strategic overlay render owner: branch `codex/strategic-overlay-render-owner` was created from clean `origin/main@0095aed6`, fast-forward merged into `main` at `e2473cbb`, validated with runtime/render owner node tests, Python boundary contracts, renderer split suite, and Pages dist. Docs archived under `docs/archive/strategic-overlay-render-owner-20260617/`; main push includes the closeout state.
 - 2026-06-17 city points render owner: branch `codex/city-points-render-owner` was created from clean `origin/main@38d7835a`; main Codex agent owned all live validation, while child agents stayed in static inspection/review lanes. Commit `6b50e479` was fast-forward merged into `main`; post-merge short validation passed and `main` was pushed.
 - 2026-06-17 city points explicit d3 injection: branch `codex/city-points-explicit-d3-injection` was created from clean `origin/main@a37a934d`; main Codex agent owned live validation. Commit `79dfc678` removes direct `globalThis.d3` reads from `city_points_render_owner.js`, fixes the shared city e2e zoom settle timeout clamp found during audit, and was fast-forward merged into `main`; docs are archived under `docs/archive/city-points-render-owner-20260617/`; `main` was pushed.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Commit `64ae29be` remains as the recovery record.

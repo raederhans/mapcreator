@@ -22,11 +22,11 @@ Last updated: 2026-06-17
 - [x] Fix review finding: keep Unit Counter drag session state out of model/history snapshots.
 - [x] Run ai-slop-cleaner on changed files.
 - [x] Run review/bug/first-principles self-check.
-- [ ] Commit implementation with lore protocol.
-- [ ] Merge back to `main`.
-- [ ] Run post-merge validation.
-- [ ] Push `main`.
-- [ ] Archive docs after full closeout.
+- [x] Commit implementation with lore protocol.
+- [x] Merge back to `main`.
+- [x] Run post-merge validation.
+- [x] Push `main`.
+- [x] Archive docs after full closeout.
 
 ## Delivery Package Draft
 
@@ -44,9 +44,9 @@ Changed files:
   - `tests/test_map_renderer_strategic_overlay_render_owner_boundary_contract.py`
   - `package.json`
 - Docs:
-  - `docs/active/strategic-overlay-render-owner/plan.md`
-  - `docs/active/strategic-overlay-render-owner/context.md`
-  - `docs/active/strategic-overlay-render-owner/task.md`
+  - `docs/archive/strategic-overlay-render-owner-20260617/plan.md`
+  - `docs/archive/strategic-overlay-render-owner-20260617/context.md`
+  - `docs/archive/strategic-overlay-render-owner-20260617/task.md`
   - `docs/active/_worktree_registry.md`
 - Dist after verification:
   - `dist/app/js/core/map_renderer.js`
@@ -56,7 +56,7 @@ Changed files:
 
 ## Current Status
 
-Branch validation is complete and ready for final self-check, commit, merge, post-merge validation, push, and archive closeout.
+Implementation was committed and fast-forward merged into `main`; post-merge validation passed. The closeout commit carries this archive move and registry update, and `main` is pushed with the closeout state.
 
 Implemented:
 
@@ -75,15 +75,16 @@ Diff summary:
 
 Commit state:
 
-- Pending implementation commit at this document snapshot.
+- Implementation commit: `e2473cbb`.
+- Closeout commit: pending at this document snapshot.
 
 Base divergence:
 
-- Base is `origin/main@0095aed6`; this branch has diverged by local working-tree changes only until commit.
+- Base was `origin/main@0095aed6`; `main` fast-forwarded to `e2473cbb`.
 
 Conflict scan:
 
-- No parallel local worktree exists. Main overlap risk is `js/core/map_renderer.js` and `dist/app` if a newer remote main changed after branch start.
+- No parallel local worktree exists. Remote `origin/main` stayed at `0095aed6` before merge, so this was a clean fast-forward.
 
 Verification:
 
@@ -95,6 +96,9 @@ Verification:
 - `py -3 -m unittest tests.test_map_renderer_strategic_overlay_helpers_boundary_contract tests.test_map_renderer_strategic_overlay_runtime_owner_boundary_contract tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q` passed, 6/6.
 - `npm run test:node:renderer-splits` passed, 41/41.
 - `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed: Pages dist build, 37 startup shell tests, 6 landing showcase tests.
+- Post-merge `npm run test:node:renderer-splits` passed, 41/41.
+- Post-merge `py -3 -m unittest tests.test_map_renderer_strategic_overlay_helpers_boundary_contract tests.test_map_renderer_strategic_overlay_runtime_owner_boundary_contract tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q` passed, 6/6.
+- Post-merge `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed: Pages dist build, 37 startup shell tests, 6 landing showcase tests.
 - `git diff --check` passed.
 
 Unverified risks:
@@ -104,7 +108,7 @@ Unverified risks:
 
 ## Next Step
 
-Commit implementation, then fast-forward merge to `main`.
+No remaining integration work.
 
 ## Final Self-Check
 
