@@ -96,4 +96,4 @@ New owner owns city point render orchestration. Existing city policy and city la
   - Post-merge `npm run test:node:city-points-render-owner` passed, 4/4.
   - Post-merge hermes Python boundary tests passed, 3/3.
   - Post-merge `git diff --check` passed.
-  - `main` is ready to push to `origin/main`.
+  - `main` was pushed to `origin/main`.
