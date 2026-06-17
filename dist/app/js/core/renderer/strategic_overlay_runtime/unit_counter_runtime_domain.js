@@ -46,6 +46,18 @@ export function createUnitCounterRuntimeDomain({
     updateStrategicOverlayUi = () => {},
   } = helpers;
 
+  const unitCounterDragSession = {
+    before: null,
+    counterId: "",
+    moved: false,
+  };
+
+  function resetUnitCounterDragSession() {
+    unitCounterDragSession.before = null;
+    unitCounterDragSession.counterId = "";
+    unitCounterDragSession.moved = false;
+  }
+
   function syncOperationalLineAttachedCounterIds() {
     const attachedByLineId = new Map();
     (state.unitCounters || []).forEach((counter) => {
@@ -332,10 +344,99 @@ export function createUnitCounterRuntimeDomain({
     return true;
   }
 
+  function beginUnitCounterDrag(counter = null) {
+    if (!counter || typeof counter !== "object") return false;
+    ensureUnitCounterEditorState();
+    const counterId = String(counter.id || "");
+    unitCounterDragSession.before = captureHistoryState({ strategicOverlay: true });
+    unitCounterDragSession.counterId = counterId;
+    unitCounterDragSession.moved = false;
+    state.unitCounterEditor.selectedId = counterId;
+    updateStrategicOverlayUi();
+    return true;
+  }
+
+  function moveUnitCounterDrag(counter = null, coord = null) {
+    if (!counter || typeof counter !== "object" || !Array.isArray(coord) || coord.length < 2) return false;
+    const lon = Number(coord[0]);
+    const lat = Number(coord[1]);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return false;
+    const counterId = String(counter.id || "");
+    if (unitCounterDragSession.counterId !== counterId) {
+      unitCounterDragSession.before = captureHistoryState({ strategicOverlay: true });
+      unitCounterDragSession.counterId = counterId;
+      unitCounterDragSession.moved = false;
+    }
+    if (!unitCounterDragSession.moved) {
+      unitCounterDragSession.moved = true;
+      counter.attachment = null;
+      counter.layoutAnchor = {
+        ...(counter.layoutAnchor || {}),
+        kind: "feature",
+        key: String(counter.anchor?.featureId || ""),
+        slotIndex: null,
+      };
+    }
+    counter.anchor = {
+      ...(counter.anchor || {}),
+      lon,
+      lat,
+    };
+    state.unitCountersDirty = true;
+    return true;
+  }
+
+  function finishUnitCounterDrag(counter = null, { featureId = "" } = {}) {
+    if (!counter || typeof counter !== "object") return false;
+    const counterId = String(counter.id || "");
+    const moved = unitCounterDragSession.counterId === counterId && unitCounterDragSession.moved;
+    if (moved) {
+      const before = unitCounterDragSession.before;
+      counter.anchor = {
+        ...(counter.anchor || {}),
+        featureId: String(featureId || ""),
+      };
+      counter.layoutAnchor = {
+        ...(counter.layoutAnchor || {}),
+        kind: "feature",
+        key: String(counter.anchor?.featureId || ""),
+        slotIndex: null,
+      };
+      syncOperationalLineAttachedCounterIds();
+      state.operationalLinesDirty = true;
+      state.unitCountersDirty = true;
+      commitHistoryEntry({
+        kind: "move-unit-counter",
+        before,
+        after: captureHistoryState({ strategicOverlay: true }),
+      });
+      markDirty("move-unit-counter");
+    }
+    resetUnitCounterDragSession();
+    updateStrategicOverlayUi();
+    renderNow();
+    return moved;
+  }
+
+  function selectUnitCounterFromRender(counter = null) {
+    if (!counter || typeof counter !== "object") return false;
+    ensureUnitCounterEditorState();
+    state.unitCounterEditor.selectedId = String(counter.id || "");
+    assignUnitCounterEditorFromCounter(counter);
+    state.unitCountersDirty = true;
+    updateStrategicOverlayUi();
+    renderNow();
+    return true;
+  }
+
   return {
+    beginUnitCounterDrag,
     cancelUnitCounterPlacement,
     deleteSelectedUnitCounter,
+    finishUnitCounterDrag,
+    moveUnitCounterDrag,
     placeUnitCounterFromEvent,
+    selectUnitCounterFromRender,
     selectUnitCounterById,
     startUnitCounterPlacement,
     syncOperationalLineAttachedCounterIds,

@@ -5,14 +5,14 @@ Last updated: 2026-06-17
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `main` closeout after `codex/city-points-explicit-d3-injection`
-- Base: `main` is aligned with `origin/main` after closeout push
+- Integration branch: `codex/strategic-overlay-render-owner`
+- Base: `origin/main@0095aed6`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. No active city-points integration action remains.
+1. Complete `codex/strategic-overlay-render-owner` in two windows: Unit Counter drag runtime domain first, render owner second.
 2. Preserve historical recovery rows below; they are references only.
 3. Re-check recovery commit hashes before recreating any historical worktree.
 4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer-owner pass.
@@ -21,12 +21,14 @@ Last updated: 2026-06-17
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/strategic-overlay-render-owner` | `origin/main@0095aed6` | ready-for-integration | hot files expected: `js/core/map_renderer.js`, strategic overlay runtime/render owner files, strategic overlay tests, `package.json`, `dist/app`, Pages dist manifest | Runtime/render owner node tests, Python boundary contracts, renderer split suite, Pages dist verification, `git diff --check`, architecture review, and code review passed after fixing drag session snapshot pollution | Yellow | Final self-check, commit, fast-forward merge to `main`, post-merge validate, push |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` | `origin/main` closeout | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city owner behavior test, urban/city boundary test, city e2e support fixture, `dist/app`, Pages dist manifest | Commit `79dfc678`; explicit d3 helper injection, node syntax, owner behavior, boundary, appearance city-points, Pages dist, city e2e 8/8, layer smoke 4/4, post-merge short validation, archive closeout, and main push passed. Review fixed a shared city zoom settle timeout clamp. | Green | No active integration action |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
+| Strategic overlay render owner vs current main | Yellow | Touches `map_renderer.js`, strategic overlay runtime/helpers boundary contracts, and Pages dist mirrors; no parallel local worktree exists. |
 | City points explicit d3 injection vs renderer owner history | Green | Fast-forward merged on current `main`; no active parallel worktree remains. |
 | City points explicit d3 injection vs future renderer splits | Yellow | The merged commit touched `js/core/map_renderer.js`, `dist/app`, and render boundary tests, so future renderer splits should start from the pushed main. |
 

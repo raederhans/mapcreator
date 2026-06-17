@@ -319,6 +319,18 @@ const PYTHON_FAST_CONTRACTS = [
     ciProfile: "pr-fast",
   },
   {
+    id: "python:tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract",
+    commandRef: "python -m unittest tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q",
+    sourceRef: "tests/test_map_renderer_strategic_overlay_render_owner_boundary_contract.py,js/core/map_renderer.js,js/core/renderer/strategic_overlay_render_owner.js,js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_domain.js",
+    domain: "renderer-runtime",
+    ownerHint: "strategic-overlay-render-owner",
+    layer: "contract",
+    cost: "contract",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "python:tests.test_i18n_audit",
     commandRef: "python -m unittest tests.test_i18n_audit -q",
     sourceRef: "tests/test_i18n_audit.py,tools/i18n_audit.py,tools/translate_manager.py,data/locales.json,data/i18n/locales_baseline.json,data/city_aliases.json,data/geo_aliases.json,data/hgo_catalogs/hgo_place_names.json,data/hgo_catalogs/hgo_identity_aliases.json",

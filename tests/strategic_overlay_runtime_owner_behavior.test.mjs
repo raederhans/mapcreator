@@ -372,6 +372,107 @@ test("unit counter runtime owner detach clears line attachments", () => {
   assert.deepEqual(dirtyReasons, ["update-unit-counter"]);
 });
 
+test("unit counter runtime owner commits drag moves and detaches line attachments", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  let uiRefreshCount = 0;
+  let renderCount = 0;
+  const runtimeState = {
+    operationalLines: [{
+      id: "opl_1",
+      attachedCounterIds: ["unit_1"],
+    }],
+    operationalLinesDirty: false,
+    unitCounters: [{
+      id: "unit_1",
+      anchor: { lon: 12, lat: 48, featureId: "GER" },
+      attachment: { kind: "operational-line", lineId: "opl_1" },
+      layoutAnchor: { kind: "attachment", key: "opl_1", slotIndex: 0 },
+    }],
+    unitCounterEditor: {},
+    unitCountersDirty: false,
+  };
+  const counter = runtimeState.unitCounters[0];
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: (payload) => ({
+        snapshot: payload,
+        unitCounters: JSON.parse(JSON.stringify(runtimeState.unitCounters || [])),
+      }),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      ensureUnitCounterEditorState: () => {},
+      markDirty: (reason) => dirtyReasons.push(reason),
+      renderNow: () => {
+        renderCount += 1;
+      },
+      updateStrategicOverlayUi: () => {
+        uiRefreshCount += 1;
+      },
+    },
+  });
+
+  assert.equal(owner.beginUnitCounterDrag(counter), true);
+  assert.equal(runtimeState.unitCounterEditor.selectedId, "unit_1");
+  assert.equal(owner.moveUnitCounterDrag(counter, [14.5, 49.25]), true);
+  assert.equal(counter.attachment, null);
+  assert.equal(counter.layoutAnchor.kind, "feature");
+  assert.equal(counter.anchor.lon, 14.5);
+  assert.equal(counter.anchor.lat, 49.25);
+  assert.equal(runtimeState.unitCountersDirty, true);
+
+  assert.equal(owner.finishUnitCounterDrag(counter, { featureId: "POL" }), true);
+  assert.equal(counter.anchor.featureId, "POL");
+  assert.equal(counter.layoutAnchor.key, "POL");
+  assert.deepEqual(runtimeState.operationalLines[0].attachedCounterIds, []);
+  assert.equal(runtimeState.operationalLinesDirty, true);
+  assert.equal(historyEntries[0].kind, "move-unit-counter");
+  assert.equal("__historyBefore" in counter, false);
+  assert.equal("__dragMoved" in counter, false);
+  assert.equal("__historyBefore" in historyEntries[0].after.unitCounters[0], false);
+  assert.equal("__dragMoved" in historyEntries[0].after.unitCounters[0], false);
+  assert.deepEqual(dirtyReasons, ["move-unit-counter"]);
+  assert.equal(uiRefreshCount, 2);
+  assert.equal(renderCount, 1);
+});
+
+test("unit counter runtime owner selects render entries through runtime facade", () => {
+  let uiRefreshCount = 0;
+  let renderCount = 0;
+  const runtimeState = {
+    unitCounterEditor: {},
+    unitCountersDirty: false,
+  };
+  const counter = {
+    id: "unit_2",
+    label: "2nd Corps",
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      assignUnitCounterEditorFromCounter: (nextCounter) => {
+        runtimeState.unitCounterEditor.label = String(nextCounter.label || "");
+      },
+      ensureUnitCounterEditorState: () => {},
+      renderNow: () => {
+        renderCount += 1;
+      },
+      updateStrategicOverlayUi: () => {
+        uiRefreshCount += 1;
+      },
+    },
+  });
+
+  assert.equal(owner.selectUnitCounterFromRender(counter), true);
+  assert.equal(runtimeState.unitCounterEditor.selectedId, "unit_2");
+  assert.equal(runtimeState.unitCounterEditor.label, "2nd Corps");
+  assert.equal(runtimeState.unitCountersDirty, true);
+  assert.equal(uiRefreshCount, 1);
+  assert.equal(renderCount, 1);
+});
+
 test("unit counter preview seeds editor defaults before reading preview data", () => {
   let ensureCount = 0;
   const runtimeState = {};

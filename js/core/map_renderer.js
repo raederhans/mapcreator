@@ -126,6 +126,7 @@ import { buildStrategicResourceMarkerEntries } from "./renderer/strategic_resour
 import { isScenarioStrategicValuesUsable } from "./scenario/strategic_values.js";
 import { createColorResolutionStrategyOwner } from "./renderer/color_resolution_strategy.js";
 import { createStrategicOverlayHelpersOwner } from "./renderer/strategic_overlay_helpers.js";
+import { createStrategicOverlayRenderOwner } from "./renderer/strategic_overlay_render_owner.js";
 import { createStrategicOverlayRuntimeOwner } from "./renderer/strategic_overlay_runtime_owner.js";
 import { createPoliticalCollectionOwner } from "./renderer/political_collection_owner.js";
 import { createContextLayerResolverOwner } from "./renderer/context_layer_resolver.js";
@@ -318,11 +319,6 @@ let specialZoneMembershipDragSession = null;
 let suppressNextClickAfterBrush = false;
 let lastDetailToastToken = "";
 let lastDetailToastAt = 0;
-let lastSpecialZonesOverlaySignature = "";
-let lastFrontlineOverlaySignature = "";
-let lastOperationalLinesOverlaySignature = "";
-let lastOperationGraphicsOverlaySignature = "";
-let lastUnitCountersOverlaySignature = "";
 let lastInspectorOverlaySignature = "";
 let lastHoverOverlaySignature = "";
 let lastDevSelectionOverlaySignature = "";
@@ -1050,6 +1046,7 @@ let physicalLayerRenderOwner = null;
 let scenarioReliefOverlayRenderOwner = null;
 let cityLightsRenderOwner = null;
 let transportOverviewRenderOwner = null;
+let strategicOverlayRenderOwner = null;
 let borderMeshOwner = null;
 let specialZoneLayersRenderOwner = null;
 let borderDrawOwner = null;
@@ -1103,6 +1100,31 @@ function getStrategicOverlayHelpersOwner() {
     },
   });
   return strategicOverlayHelpersOwner;
+}
+
+function getStrategicOverlayRenderOwner() {
+  if (strategicOverlayRenderOwner) {
+    return strategicOverlayRenderOwner;
+  }
+  strategicOverlayRenderOwner = createStrategicOverlayRenderOwner({
+    state,
+    constants: {
+      defaultUnitCounterRenderer: DEFAULT_UNIT_COUNTER_RENDERER,
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+    },
+    helpers: {
+      getProjectionRenderSignature,
+    },
+    renderers: {
+      renderFrontlineOverlay,
+      renderOperationGraphicsOverlay: () => getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay(),
+      renderOperationalLinesOverlay: () => getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay(),
+      renderSpecialZones: () => getStrategicOverlayHelpersOwner().renderSpecialZones(),
+      renderUnitCountersOverlay,
+      syncUnitCounterScalesDuringZoom: () => getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom(),
+    },
+  });
+  return strategicOverlayRenderOwner;
 }
 
 function getSpecialZoneLayersRenderOwner() {
@@ -6455,112 +6477,25 @@ function markOverlaysDirty({
   inspector = false,
   hover = false,
 } = {}) {
-  if (frontline) {
-    runtimeState.frontlineOverlayDirty = true;
-  }
-  if (operationalLines) {
-    runtimeState.operationalLinesDirty = true;
-  }
-  if (operationGraphics) {
-    runtimeState.operationGraphicsDirty = true;
-  }
-  if (unitCounters) {
-    runtimeState.unitCountersDirty = true;
-  }
-  if (specialZones) {
-    runtimeState.specialZonesOverlayDirty = true;
-  }
-  if (inspector) {
-    runtimeState.inspectorOverlayDirty = true;
-  }
-  if (hover) {
-    runtimeState.hoverOverlayDirty = true;
-  }
-}
-
-function markAllOverlaysDirty() {
-  markOverlaysDirty({
-    frontline: true,
-    operationalLines: true,
-    operationGraphics: true,
-    unitCounters: true,
-    specialZones: true,
-    inspector: true,
-    hover: true,
+  getStrategicOverlayRenderOwner().markOverlaysDirty({
+    frontline,
+    operationalLines,
+    operationGraphics,
+    unitCounters,
+    specialZones,
+    inspector,
+    hover,
   });
 }
 
-function getOperationalLinesOverlaySignature() {
-  return [
-    getOverlayProjectionSignature(),
-    Number(runtimeState.dirtyRevision || 0),
-    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
-    Array.isArray(runtimeState.operationalLines) ? runtimeState.operationalLines.length : 0,
-    !!runtimeState.operationalLineEditor?.active ? "1" : "0",
-    Array.isArray(runtimeState.operationalLineEditor?.points) ? runtimeState.operationalLineEditor.points.length : 0,
-    String(runtimeState.operationalLineEditor?.selectedId || ""),
-  ].join("::");
+function markAllOverlaysDirty() {
+  getStrategicOverlayRenderOwner().markAllOverlaysDirty();
 }
 
 function getOverlayProjectionSignature() {
   return [
     Number(runtimeState.topologyRevision || 0),
     getProjectionRenderSignature(),
-  ].join("::");
-}
-
-function getSpecialZonesOverlaySignature() {
-  return [
-    getOverlayProjectionSignature(),
-    Number(runtimeState.dirtyRevision || 0),
-    runtimeState.showSpecialZones ? "1" : "0",
-    Array.isArray(runtimeState.scenarioSpecialRegionsData?.features) ? runtimeState.scenarioSpecialRegionsData.features.length : 0,
-    Array.isArray(runtimeState.manualSpecialZones?.features) ? runtimeState.manualSpecialZones.features.length : 0,
-    !!runtimeState.specialZoneEditor?.active ? "1" : "0",
-    String(runtimeState.specialZoneEditor?.selectedId || ""),
-    String(runtimeState.specialZoneEditor?.zoneType || ""),
-    String(runtimeState.specialZoneEditor?.label || ""),
-    Array.isArray(runtimeState.specialZoneEditor?.vertices) ? runtimeState.specialZoneEditor.vertices.length : 0,
-  ].join("::");
-}
-
-function getFrontlineOverlaySignature() {
-  return [
-    getOverlayProjectionSignature(),
-    String(runtimeState.activeScenarioId || ""),
-    0,
-    Number(runtimeState.scenarioShellOverlayRevision || 0),
-    Number(runtimeState.sovereigntyRevision || 0),
-    runtimeState.annotationView?.frontlineEnabled ? "1" : "0",
-    String(runtimeState.annotationView?.frontlineStyle || "clean"),
-    runtimeState.annotationView?.showFrontlineLabels ? "1" : "0",
-    String(runtimeState.annotationView?.labelPlacementMode || "midpoint"),
-    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
-  ].join("::");
-}
-
-function getOperationGraphicsOverlaySignature() {
-  return [
-    getOverlayProjectionSignature(),
-    Number(runtimeState.dirtyRevision || 0),
-    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
-    Array.isArray(runtimeState.operationGraphics) ? runtimeState.operationGraphics.length : 0,
-    !!runtimeState.operationGraphicsEditor?.active ? "1" : "0",
-    Array.isArray(runtimeState.operationGraphicsEditor?.points) ? runtimeState.operationGraphicsEditor.points.length : 0,
-    String(runtimeState.operationGraphicsEditor?.selectedId || ""),
-  ].join("::");
-}
-
-function getUnitCountersOverlaySignature() {
-  return [
-    getOverlayProjectionSignature(),
-    Number(runtimeState.dirtyRevision || 0),
-    Number(runtimeState.zoomTransform?.k || 1).toFixed(3),
-    Array.isArray(runtimeState.unitCounters) ? runtimeState.unitCounters.length : 0,
-    String(runtimeState.annotationView?.unitRendererDefault || DEFAULT_UNIT_COUNTER_RENDERER),
-    runtimeState.annotationView?.showUnitLabels ? "1" : "0",
-    !!runtimeState.unitCounterEditor?.active ? "1" : "0",
-    String(runtimeState.unitCounterEditor?.selectedId || ""),
   ].join("::");
 }
 
@@ -6604,65 +6539,23 @@ function getDevSelectionOverlaySignature() {
 }
 
 function renderSpecialZonesIfNeeded({ force = false } = {}) {
-  const nextSignature = getSpecialZonesOverlaySignature();
-  if (!force && !runtimeState.specialZonesOverlayDirty && nextSignature === lastSpecialZonesOverlaySignature) {
-    return;
-  }
-  getStrategicOverlayHelpersOwner().renderSpecialZones();
-  runtimeState.specialZonesOverlayDirty = false;
-  lastSpecialZonesOverlaySignature = nextSignature;
+  getStrategicOverlayRenderOwner().renderSpecialZonesIfNeeded({ force });
 }
 
 function renderFrontlineOverlayIfNeeded({ force = false } = {}) {
-  if (!force && !runtimeState.frontlineOverlayDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    return;
-  }
-  const nextSignature = getFrontlineOverlaySignature();
-  if (!force && !runtimeState.frontlineOverlayDirty && nextSignature === lastFrontlineOverlaySignature) {
-    return;
-  }
-  renderFrontlineOverlay();
-  runtimeState.frontlineOverlayDirty = false;
-  lastFrontlineOverlaySignature = nextSignature;
+  getStrategicOverlayRenderOwner().renderFrontlineOverlayIfNeeded({ force });
 }
 
 function renderOperationGraphicsIfNeeded({ force = false } = {}) {
-  if (!force && !runtimeState.operationGraphicsDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    return;
-  }
-  const nextSignature = getOperationGraphicsOverlaySignature();
-  if (!force && !runtimeState.operationGraphicsDirty && nextSignature === lastOperationGraphicsOverlaySignature) {
-    return;
-  }
-  getStrategicOverlayHelpersOwner().renderOperationGraphicsOverlay();
-  runtimeState.operationGraphicsDirty = false;
-  lastOperationGraphicsOverlaySignature = nextSignature;
+  getStrategicOverlayRenderOwner().renderOperationGraphicsIfNeeded({ force });
 }
 
 function renderOperationalLinesIfNeeded({ force = false } = {}) {
-  if (!force && !runtimeState.operationalLinesDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    return;
-  }
-  const nextSignature = getOperationalLinesOverlaySignature();
-  if (!force && !runtimeState.operationalLinesDirty && nextSignature === lastOperationalLinesOverlaySignature) {
-    return;
-  }
-  getStrategicOverlayHelpersOwner().renderOperationalLinesOverlay();
-  runtimeState.operationalLinesDirty = false;
-  lastOperationalLinesOverlaySignature = nextSignature;
+  getStrategicOverlayRenderOwner().renderOperationalLinesIfNeeded({ force });
 }
 
 function renderUnitCountersIfNeeded({ force = false } = {}) {
-  if (!force && !runtimeState.unitCountersDirty && runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    return;
-  }
-  const nextSignature = getUnitCountersOverlaySignature();
-  if (!force && !runtimeState.unitCountersDirty && nextSignature === lastUnitCountersOverlaySignature) {
-    return;
-  }
-  renderUnitCountersOverlay();
-  runtimeState.unitCountersDirty = false;
-  lastUnitCountersOverlaySignature = nextSignature;
+  getStrategicOverlayRenderOwner().renderUnitCountersIfNeeded({ force });
 }
 
 function renderInspectorHighlightOverlayIfNeeded({ force = false } = {}) {
@@ -19946,33 +19839,14 @@ function bindUnitCounterOverlayInteractions() {
     if (!bindUnitCounterOverlayInteractions.dragBehavior) {
       bindUnitCounterOverlayInteractions.dragBehavior = globalThis.d3.drag()
         .on("start", function onStart(event, datum) {
-          ensureUnitCounterEditorState();
-          datum.__historyBefore = captureHistoryState({ strategicOverlay: true });
-          runtimeState.unitCounterEditor.selectedId = datum.counter.id;
-          datum.__dragMoved = false;
-          updateStrategicOverlayUi();
+          getStrategicOverlayRuntimeOwner().beginUnitCounterDrag(datum.counter);
           globalThis.d3.select(this).style("cursor", "grabbing");
         })
         .on("drag", function onDrag(event, datum) {
           const sourceEvent = event?.sourceEvent || event;
           const coord = getMapLonLatFromEvent(sourceEvent);
           if (!coord) return;
-          if (!datum.__dragMoved) {
-            datum.__dragMoved = true;
-            datum.counter.attachment = null;
-            datum.counter.layoutAnchor = {
-              ...(datum.counter.layoutAnchor || {}),
-              kind: "feature",
-              key: String(datum.counter.anchor?.featureId || ""),
-              slotIndex: null,
-            };
-          }
-          datum.counter.anchor = {
-            ...(datum.counter.anchor || {}),
-            lon: coord[0],
-            lat: coord[1],
-          };
-          runtimeState.unitCountersDirty = true;
+          if (!getStrategicOverlayRuntimeOwner().moveUnitCounterDrag(datum.counter, coord)) return;
           const projected = getProjectedPoint(coord);
           if (projected) {
             datum.projected = projected;
@@ -19981,43 +19855,15 @@ function bindUnitCounterOverlayInteractions() {
         })
         .on("end", function onEnd(event, datum) {
           globalThis.d3.select(this).style("cursor", "grab");
-          if (datum.__dragMoved) {
-            datum.counter.anchor = {
-              ...(datum.counter.anchor || {}),
-              featureId: getLandFeatureIdFromEvent(event?.sourceEvent || event, "unit-counter-drag-end"),
-            };
-            datum.counter.layoutAnchor = {
-              ...(datum.counter.layoutAnchor || {}),
-              kind: "feature",
-              key: String(datum.counter.anchor?.featureId || ""),
-              slotIndex: null,
-            };
-            syncOperationalLineAttachedCounterIds();
-            runtimeState.operationalLinesDirty = true;
-            runtimeState.unitCountersDirty = true;
-            pushHistoryEntry({
-              kind: "move-unit-counter",
-              before: datum.__historyBefore,
-              after: captureHistoryState({ strategicOverlay: true }),
-            });
-            markDirty("move-unit-counter");
-          }
-          datum.__historyBefore = null;
-          datum.__dragMoved = false;
-          updateStrategicOverlayUi();
-          renderUnitCountersIfNeeded({ force: true });
+          const featureId = getLandFeatureIdFromEvent(event?.sourceEvent || event, "unit-counter-drag-end");
+          getStrategicOverlayRuntimeOwner().finishUnitCounterDrag(datum.counter, { featureId });
         });
     }
     merged.call(bindUnitCounterOverlayInteractions.dragBehavior);
   }
 
   merged.on("click", (_event, datum) => {
-    ensureUnitCounterEditorState();
-    runtimeState.unitCounterEditor.selectedId = datum.counter.id;
-    assignUnitCounterEditorFromCounter(datum.counter);
-    runtimeState.unitCountersDirty = true;
-    updateStrategicOverlayUi();
-    renderUnitCountersIfNeeded({ force: true });
+    getStrategicOverlayRuntimeOwner().selectUnitCounterFromRender(datum.counter);
   });
 }
 
@@ -23335,7 +23181,7 @@ function updateMap(transform) {
     viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
   }
   renderPhysicalIntensityBrushPreview();
-  getStrategicOverlayHelpersOwner().syncUnitCounterScalesDuringZoom();
+  getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();
   syncSpecialZonePatternTransformDuringZoom();
   drawCanvas();
 }

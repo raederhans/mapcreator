@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 930211,
+      "size_bytes": 924010,
       "source_kind": "dist"
     },
     {
@@ -45896,6 +45896,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/strategic_overlay_render_owner.js",
+      "size_bytes": 7616,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js",
       "size_bytes": 10368,
       "source_kind": "dist"
@@ -45907,7 +45912,7 @@
     },
     {
       "path": "app/js/core/renderer/strategic_overlay_runtime/unit_counter_runtime_domain.js",
-      "size_bytes": 16057,
+      "size_bytes": 19435,
       "source_kind": "dist"
     },
     {
@@ -46967,7 +46972,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1451099,
+      "size_bytes": 1451238,
       "source_kind": "dist"
     },
     {
@@ -46986,5 +46991,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145180937
+  "total_bytes": 1145185869
 }

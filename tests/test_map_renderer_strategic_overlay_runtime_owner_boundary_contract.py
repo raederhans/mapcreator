@@ -7,6 +7,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 FACADE_OVERLAY_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_overlay_runtime.js"
 RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_runtime_owner.js"
 HELPERS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_helpers.js"
+RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_render_owner.js"
 SPECIAL_ZONES_DOMAIN_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_runtime" / "special_zones_runtime_domain.js"
 OPERATION_GRAPHICS_DOMAIN_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_runtime" / "operation_graphics_runtime_domain.js"
 UNIT_COUNTER_DOMAIN_JS = REPO_ROOT / "js" / "core" / "renderer" / "strategic_overlay_runtime" / "unit_counter_runtime_domain.js"
@@ -25,13 +26,20 @@ class MapRendererStrategicOverlayRuntimeOwnerBoundaryContractTest(unittest.TestC
         renderer_imports = renderer_content.replace('"', "'")
 
         self.assertIn("import { createStrategicOverlayRuntimeOwner } from './renderer/strategic_overlay_runtime_owner.js';", renderer_imports)
+        self.assertIn("import { createStrategicOverlayRenderOwner } from './renderer/strategic_overlay_render_owner.js';", renderer_imports)
         self.assertIn("from './map_renderer/facade_overlay_runtime.js';", renderer_imports)
         self.assertIn("let strategicOverlayRuntimeOwner = null;", renderer_content)
+        self.assertIn("let strategicOverlayRenderOwner = null;", renderer_content)
         self.assertIn("function getStrategicOverlayRuntimeOwner() {", renderer_content)
+        self.assertIn("function getStrategicOverlayRenderOwner() {", renderer_content)
         self.assertIn("function renderSpecialZonesIfNeeded({ force = false } = {}) {", renderer_content)
         self.assertIn("function renderOperationGraphicsIfNeeded({ force = false } = {}) {", renderer_content)
         self.assertIn("function renderOperationalLinesIfNeeded({ force = false } = {}) {", renderer_content)
         self.assertIn("function renderUnitCountersIfNeeded({ force = false } = {}) {", renderer_content)
+        self.assertIn("getStrategicOverlayRenderOwner().renderSpecialZonesIfNeeded({ force });", renderer_content)
+        self.assertIn("getStrategicOverlayRenderOwner().renderOperationGraphicsIfNeeded({ force });", renderer_content)
+        self.assertIn("getStrategicOverlayRenderOwner().renderOperationalLinesIfNeeded({ force });", renderer_content)
+        self.assertIn("getStrategicOverlayRenderOwner().renderUnitCountersIfNeeded({ force });", renderer_content)
         self.assertNotIn("function resolveUnitCounterNationForPlacement(featureId = \"\", manualTag = \"\", preferredSource = \"display\") {", renderer_content)
         self.assertNotIn("function getUnitCounterPreviewData(partialCounter = {}) {", renderer_content)
         self.assertNotIn("function startSpecialZoneDraw({ zoneType = DEFAULT_SPECIAL_ZONE_TYPE, label = \"\" } = {}) {", renderer_content)
@@ -95,11 +103,16 @@ class MapRendererStrategicOverlayRuntimeOwnerBoundaryContractTest(unittest.TestC
     def test_runtime_owner_stays_separate_from_draw_helpers_owner(self):
         owner_content = RUNTIME_OWNER_JS.read_text(encoding="utf-8")
         helpers_content = HELPERS_OWNER_JS.read_text(encoding="utf-8")
+        render_owner_content = RENDER_OWNER_JS.read_text(encoding="utf-8")
         unit_counter_domain_content = UNIT_COUNTER_DOMAIN_JS.read_text(encoding="utf-8")
         unit_counter_helpers_content = UNIT_COUNTER_HELPERS_JS.read_text(encoding="utf-8")
 
         self.assertNotIn("./strategic_overlay_helpers.js", owner_content)
+        self.assertNotIn("./strategic_overlay_render_owner.js", owner_content)
         self.assertNotIn("./strategic_overlay_runtime_owner.js", helpers_content)
+        self.assertNotIn("./strategic_overlay_render_owner.js", helpers_content)
+        self.assertNotIn("./strategic_overlay_runtime_owner.js", render_owner_content)
+        self.assertNotIn("./strategic_overlay_helpers.js", render_owner_content)
         self.assertNotIn("./strategic_overlay_helpers.js", unit_counter_domain_content)
         self.assertNotIn("./strategic_overlay_helpers.js", unit_counter_helpers_content)
         self.assertNotIn("./strategic_overlay_runtime_owner.js", unit_counter_domain_content)
