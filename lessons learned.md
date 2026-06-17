@@ -370,3 +370,6 @@
 
 ### 行尾过滤噪音卡住 main 同步时先判定语义差异
 - 归档文件的旧 CRLF blob 与当前 `eol=lf` attributes 可能让 `restore` 后仍显示脏；先用 `git diff --ignore-cr-at-eol` 和 `git hash-object --no-filters` 判定是否只有行尾差异，再用临时提交 + rebase skip 让远端清理生效。
+
+### Pages dist 失败先确认 npm 实际 Python
+- Windows 上 `verify:pages-dist` 可能由 npm 解析到 hermes venv 的 Python；遇到 `shapely` 缺失或 `python` 解析漂移时，先确认实际 `python.exe` 和 venv 依赖，再用显式 `PATH` 复跑，避免误判为 builder 代码问题。
