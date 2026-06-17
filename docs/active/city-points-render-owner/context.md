@@ -64,7 +64,7 @@ New owner owns city point render orchestration. Existing city policy and city la
 ## Open Risks
 
 - `npm run verify:pages-dist` needs the hermes venv `Scripts` directory first in `PATH` in this shell; the script passes with that explicit PATH.
-- `city_points_render_owner.js` still uses `globalThis.d3` for pointer/zoom identity parity with the old renderer path. Future cleanup can inject those d3 helpers explicitly.
+- The explicit d3 injection follow-up removes direct `globalThis.d3` reads from `city_points_render_owner.js`; `map_renderer.js` now adapts d3 pointer/zoom helpers at owner construction.
 - The Pages dist manifest includes stale-size corrections for two generated-ignored data files; HEAD blob sizes match the refreshed values.
 
 ## Validation Log
@@ -97,3 +97,20 @@ New owner owns city point render orchestration. Existing city policy and city la
   - Post-merge hermes Python boundary tests passed, 3/3.
   - Post-merge `git diff --check` passed.
   - `main` was pushed to `origin/main`.
+- Explicit d3 injection follow-up:
+  - Branch `codex/city-points-explicit-d3-injection` created from clean `origin/main@a37a934d`.
+  - `city_points_render_owner.js` now receives `getPointer` and `getZoomIdentity` helpers and has no direct `globalThis.d3` reads.
+  - `tests/city_points_render_owner_behavior.test.mjs` now injects pointer/zoom helpers instead of mutating `globalThis.d3`.
+  - `tests.test_map_renderer_urban_city_policy_boundary_contract` locks the no-global-d3 owner boundary.
+  - `node --check js/core/renderer/city_points_render_owner.js` passed.
+  - `node --check js/core/map_renderer.js` passed.
+  - `npm run test:node:city-points-render-owner` passed, 5/5.
+  - `C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe -m unittest tests.test_map_renderer_urban_city_policy_boundary_contract tests.test_map_renderer_city_label_owner_boundary_contract -q` passed, 3/3.
+  - `npm run test:node:appearance-city-points-owner` passed, 6/6.
+  - `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed.
+  - Review audit found the first follow-up `npm run test:e2e:city-rendering` run failed 7/8 in `city_label_i18n_redraw.spec.js`: `prepareSharedCityRuntimeState` passed a 120s outer timeout, while `resetSharedCityZoom` / `setSharedCityZoomPercent` were locally clamped to 30s. The failing snapshot already showed render idle state, so the helper timeout was widened to a 60s settle budget inside the existing outer timeout.
+  - Standalone `npx playwright test tests/e2e/city_label_i18n_redraw.spec.js --reporter=line` passed, 1/1, before the helper patch; full rerun after the patch passed.
+  - `node --check tests/e2e/support/fixtures.js` passed.
+  - `rg -n "globalThis\.d3" js/core/renderer/city_points_render_owner.js dist/app/js/core/renderer/city_points_render_owner.js` returned no matches.
+  - `npm run test:e2e:city-rendering` passed after the helper patch, 8/8, about 4.0 minutes. Logs: `.runtime/tests/city-points-render-owner/city-rendering.explicit-d3-fixed.*.log`.
+  - `npm run test:e2e:layer:smoke` passed, 4/4, about 35.8 seconds. Logs: `.runtime/tests/city-points-render-owner/layer-smoke.explicit-d3.*.log`.

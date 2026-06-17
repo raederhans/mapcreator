@@ -78,7 +78,12 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIn("function drawLabelsPass(k, { interactive = false } = {}) {", city_points_owner_content)
         self.assertIn("function getHoveredCityEntryFromEvent(event) {", city_points_owner_content)
         self.assertIn("getHoverEntryHitPriority = () => 0,", city_points_owner_content)
+        self.assertIn("getPointer = () => null,", city_points_owner_content)
+        self.assertIn("getZoomIdentity = () => DEFAULT_ZOOM_IDENTITY,", city_points_owner_content)
+        self.assertIn("getPointer: (event, target) => (", renderer_content)
+        self.assertIn("getZoomIdentity: () => globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 },", renderer_content)
         self.assertNotIn("getFacilityEntryHitPriority", city_points_owner_content)
+        self.assertNotIn("globalThis.d3", city_points_owner_content)
         self.assertIn("let bestPriority = -1;", city_points_owner_content)
 
         self.assertIsNone(re.search(r"function\s+cloneCityFeature\s*\(", renderer_content))

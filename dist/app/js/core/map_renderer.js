@@ -1224,6 +1224,10 @@ function getCityPointsRenderOwner() {
       getCityVisualCapitalState,
       getEffectiveCityCollection: (...args) => getEffectiveCityCollection(...args),
       getHoverEntryHitPriority: getFacilityEntryHitPriority,
+      getPointer: (event, target) => (
+        typeof globalThis.d3?.pointer === "function" ? globalThis.d3.pointer(event, target) : null
+      ),
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 },
       getFeatureCollectionFeatureCount,
       isCityEntryEligibleForLandHit,
       normalizeCityLayerStyleConfig,

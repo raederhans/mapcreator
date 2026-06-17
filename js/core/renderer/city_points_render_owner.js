@@ -1,3 +1,5 @@
+const DEFAULT_ZOOM_IDENTITY = Object.freeze({ x: 0, y: 0, k: 1 });
+
 export function createCityPointsRenderOwner({
   state = {},
   constants = {},
@@ -21,6 +23,8 @@ export function createCityPointsRenderOwner({
     getCityVisualCapitalState = (entry) => !!entry?.isCapital,
     getEffectiveCityCollection = () => null,
     getHoverEntryHitPriority = () => 0,
+    getPointer = () => null,
+    getZoomIdentity = () => DEFAULT_ZOOM_IDENTITY,
     getFeatureCollectionFeatureCount = (collection) => (
       Array.isArray(collection?.features) ? collection.features.length : 0
     ),
@@ -260,7 +264,7 @@ export function createCityPointsRenderOwner({
     }
 
     const config = normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {});
-    const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+    const transform = runtimeState.zoomTransform || getZoomIdentity();
     const scale = Math.max(0.0001, Number(transform?.k || k || 1));
     const opacity = clamp(Number(config.opacity) || 0.92, 0, 1);
     const plan = config.revealProfile === cityRevealProfileHybrid
@@ -419,7 +423,7 @@ export function createCityPointsRenderOwner({
     syncRenderTargets();
     const startedAt = nowMs();
     const eventType = String(event?.type || "hover").toLowerCase() === "mousemove" ? "hover" : String(event?.type || "unknown").toLowerCase();
-    if (!visibleCityHoverEntries.length || !mapSvg || !globalThis.d3?.pointer) {
+    if (!visibleCityHoverEntries.length || !mapSvg) {
       recordInteractionDurationMetric("interactionHoverCityProbeDuration", nowMs() - startedAt, {
         eventType,
         entryCount: visibleCityHoverEntries.length,
@@ -428,7 +432,8 @@ export function createCityPointsRenderOwner({
       });
       return null;
     }
-    const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+    const pointer = getPointer(event, mapSvg);
+    const [sx, sy] = Array.isArray(pointer) ? pointer : [];
     if (![sx, sy].every(Number.isFinite)) {
       recordInteractionDurationMetric("interactionHoverCityProbeDuration", nowMs() - startedAt, {
         eventType,

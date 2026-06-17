@@ -20,6 +20,12 @@ Last updated: 2026-06-17
 - [x] Fast-forward merge to `main`.
 - [x] Run post-merge short validation.
 - [x] Push `main`.
+- [x] Follow-up: inject d3 pointer/zoom helpers explicitly into `city_points_render_owner.js`.
+- [x] Follow-up: remove owner test dependency on global `d3`.
+- [x] Follow-up: refresh Pages dist.
+- [x] Follow-up: audit diff and fix city e2e shared zoom settle timeout.
+- [x] Follow-up: rerun city e2e and layer smoke.
+- [ ] Follow-up: commit, merge to `main`, push, and close out registry.
 
 ## Delivery Package Draft
 
@@ -32,6 +38,7 @@ Changed files are expected in:
   - `tests/city_points_render_owner_behavior.test.mjs`
   - `tests/test_map_renderer_urban_city_policy_boundary_contract.py`
   - `tests/test_map_renderer_city_label_owner_boundary_contract.py`
+  - `tests/e2e/support/fixtures.js`
   - `package.json`
 - Docs:
   - `docs/active/city-points-render-owner/plan.md`
@@ -45,8 +52,8 @@ Changed files are expected in:
 
 ## Current Status
 
-Implementation, long validation, review follow-up fixes, post-merge short validation, main merge, and main push are complete.
+The original city-points owner split is integrated and pushed. The explicit d3 injection follow-up is implemented on `codex/city-points-explicit-d3-injection`; targeted validation, Pages dist refresh, full city e2e rerun, and layer smoke have passed. Review found one test helper timeout clamp in the shared city zoom setup, now fixed in `tests/e2e/support/fixtures.js`.
 
 ## Next Step
 
-No execution work remains for this phase.
+Run final diff hygiene, then commit, merge to `main`, push, and close out registry.

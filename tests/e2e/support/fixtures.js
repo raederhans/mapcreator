@@ -250,15 +250,16 @@ async function prepareSharedCityRuntimeState(page, {
       timeout: Math.min(timeout, 30_000),
     });
   }
+  const zoomSettleTimeout = Math.min(timeout, 60_000);
   await ensureSharedCityScenario(page, scenarioId, { timeout });
-  await resetSharedCityZoom(page, { timeout: Math.min(timeout, 30_000) });
+  await resetSharedCityZoom(page, { timeout: zoomSettleTimeout });
   if (loadBaseCityDataReason) {
     await ensureSharedCityBaseDataLoaded(page, loadBaseCityDataReason, { timeout });
   } else {
     await waitForSharedCityExactRender(page, { scenarioId, timeout });
   }
   if (Number.isFinite(Number(zoomPercent))) {
-    await setSharedCityZoomPercent(page, Number(zoomPercent), { timeout: Math.min(timeout, 30_000) });
+    await setSharedCityZoomPercent(page, Number(zoomPercent), { timeout: zoomSettleTimeout });
   }
   await captureSharedCityRuntimeSnapshot(page);
 }

@@ -62,22 +62,6 @@ function installCanvasFactory() {
   };
 }
 
-function installD3Pointer(pointer) {
-  const previousD3 = globalThis.d3;
-  globalThis.d3 = {
-    ...(previousD3 || {}),
-    pointer,
-    zoomIdentity: { x: 0, y: 0, k: 1 },
-  };
-  return () => {
-    if (previousD3 === undefined) {
-      delete globalThis.d3;
-    } else {
-      globalThis.d3 = previousD3;
-    }
-  };
-}
-
 function createRecordingContext(events = []) {
   const calls = [];
   return {
@@ -96,11 +80,14 @@ function createRecordingContext(events = []) {
 }
 
 function createCityPointsHarness({
+  buildCityRevealPlan = null,
   markerEntries = [],
   labelEntries = [],
   projection = () => [0, 0],
+  pointer = () => [20, 20],
   showCityPoints = true,
   styleConfig = {},
+  zoomIdentity = { x: 0, y: 0, k: 1 },
 } = {}) {
   const events = [];
   const context = createRecordingContext(events);
@@ -126,6 +113,7 @@ function createCityPointsHarness({
     type: "FeatureCollection",
     features: markerEntries.map((entry) => entry.feature || { type: "Feature", properties: {} }),
   };
+  const revealPlanBuilder = buildCityRevealPlan || (() => ({ markerEntries, labelEntries }));
   const owner = createCityPointsRenderOwner({
     state,
     constants: {
@@ -139,7 +127,7 @@ function createCityPointsHarness({
       getProjection: () => projection,
     },
     helpers: {
-      buildCityRevealPlan: () => ({ markerEntries, labelEntries }),
+      buildCityRevealPlan: revealPlanBuilder,
       clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
       collectContextMetric: (name, _duration, detail) => metrics.push({ name, detail }),
       drawCityLabelsFromEntries: (entries, options) => {
@@ -156,6 +144,8 @@ function createCityPointsHarness({
       getCityVisualCapitalState: (entry, config) => !!entry?.isCapital && config?.showCapitalOverlay !== false,
       getEffectiveCityCollection: () => collection,
       getHoverEntryHitPriority: (entry) => String(entry?.packId || "global") === "global" ? 0 : 1,
+      getPointer: pointer,
+      getZoomIdentity: () => zoomIdentity,
       getFeatureCollectionFeatureCount: (candidate) => Array.isArray(candidate?.features) ? candidate.features.length : 0,
       isCityEntryEligibleForLandHit: (entry, hit) => (
         !!entry
@@ -186,39 +176,34 @@ function createCityPointsHarness({
 }
 
 test("city points owner records hidden skip metrics and clears hover entries", () => {
-  const restoreD3 = installD3Pointer(() => [20, 20]);
-  try {
-    const entry = {
-      id: "hidden-city",
-      anchor: [10, 10],
-      screenPoint: [20, 20],
-      feature: { type: "Feature", properties: { __city_host_feature_id: "LAND1" } },
-    };
-    const harness = createCityPointsHarness({ markerEntries: [entry], showCityPoints: true });
-    harness.owner.getCityLayerRenderState(1, { interactive: true, cacheHoverEntries: true });
-    assert.equal(
-      harness.owner.getHoveredCityTooltipEntry({ type: "mousemove" }, { targetType: "land", id: "LAND1" })?.id,
-      "hidden-city"
-    );
+  const entry = {
+    id: "hidden-city",
+    anchor: [10, 10],
+    screenPoint: [20, 20],
+    feature: { type: "Feature", properties: { __city_host_feature_id: "LAND1" } },
+  };
+  const harness = createCityPointsHarness({ markerEntries: [entry], showCityPoints: true });
+  harness.owner.getCityLayerRenderState(1, { interactive: true, cacheHoverEntries: true });
+  assert.equal(
+    harness.owner.getHoveredCityTooltipEntry({ type: "mousemove" }, { targetType: "land", id: "LAND1" })?.id,
+    "hidden-city"
+  );
 
-    harness.state.showCityPoints = false;
-    harness.owner.drawCityPointsLayer(1, { interactive: true });
+  harness.state.showCityPoints = false;
+  harness.owner.drawCityPointsLayer(1, { interactive: true });
 
-    assert.deepEqual(harness.metrics.at(-1), {
-      name: "drawCityPointsLayer",
-      detail: {
-        featureCount: 1,
-        visibleFeatureCount: 0,
-        labelCount: 0,
-        interactive: true,
-        skipped: true,
-        reason: "hidden",
-      },
-    });
-    assert.equal(harness.owner.getHoveredCityTooltipEntry({ type: "mousemove" }, { targetType: "land", id: "LAND1" }), null);
-  } finally {
-    restoreD3();
-  }
+  assert.deepEqual(harness.metrics.at(-1), {
+    name: "drawCityPointsLayer",
+    detail: {
+      featureCount: 1,
+      visibleFeatureCount: 0,
+      labelCount: 0,
+      interactive: true,
+      skipped: true,
+      reason: "hidden",
+    },
+  });
+  assert.equal(harness.owner.getHoveredCityTooltipEntry({ type: "mousemove" }, { targetType: "land", id: "LAND1" }), null);
 });
 
 test("city labels pass draws markers before delegating labels", () => {
@@ -261,49 +246,72 @@ test("city labels pass draws markers before delegating labels", () => {
 });
 
 test("city hover prefers higher-priority scenario entries without bestPriority errors", () => {
-  const restoreD3 = installD3Pointer(() => [50, 50]);
-  try {
-    const globalEntry = {
-      id: "global-city",
-      anchor: [20, 20],
-      cityTier: "major",
-      feature: { type: "Feature", properties: { __city_host_feature_id: "LAND1" } },
-      markerSizePx: 14,
-      packId: "global",
-      screenPoint: [50, 50],
-    };
-    const scenarioEntry = {
-      id: "scenario-city",
-      anchor: [21, 20],
-      cityTier: "major",
-      feature: { type: "Feature", properties: { __city_host_feature_id: "LAND2" } },
-      markerSizePx: 14,
-      packId: "scenario",
-      screenPoint: [51, 50],
-    };
-    const harness = createCityPointsHarness({
-      markerEntries: [globalEntry, scenarioEntry],
-    });
-    harness.owner.getCityLayerRenderState(2, { interactive: true, cacheHoverEntries: true });
+  const globalEntry = {
+    id: "global-city",
+    anchor: [20, 20],
+    cityTier: "major",
+    feature: { type: "Feature", properties: { __city_host_feature_id: "LAND1" } },
+    markerSizePx: 14,
+    packId: "global",
+    screenPoint: [50, 50],
+  };
+  const scenarioEntry = {
+    id: "scenario-city",
+    anchor: [21, 20],
+    cityTier: "major",
+    feature: { type: "Feature", properties: { __city_host_feature_id: "LAND2" } },
+    markerSizePx: 14,
+    packId: "scenario",
+    screenPoint: [51, 50],
+  };
+  const harness = createCityPointsHarness({
+    markerEntries: [globalEntry, scenarioEntry],
+    pointer: () => [50, 50],
+  });
+  harness.owner.getCityLayerRenderState(2, { interactive: true, cacheHoverEntries: true });
 
-    const hovered = harness.owner.getHoveredCityTooltipEntry(
-      { type: "mousemove" },
-      { targetType: "land", id: "LAND2" }
-    );
+  const hovered = harness.owner.getHoveredCityTooltipEntry(
+    { type: "mousemove" },
+    { targetType: "land", id: "LAND2" }
+  );
 
-    assert.equal(hovered?.id, "scenario-city");
-    assert.equal(hovered?.tooltipText, "tooltip:scenario-city");
-    assert.deepEqual(harness.interactionMetrics.at(-1), {
-      name: "interactionHoverCityProbeDuration",
-      detail: {
-        eventType: "hover",
-        entryCount: 2,
-        hit: true,
-      },
-    });
-  } finally {
-    restoreD3();
-  }
+  assert.equal(hovered?.id, "scenario-city");
+  assert.equal(hovered?.tooltipText, "tooltip:scenario-city");
+  assert.deepEqual(harness.interactionMetrics.at(-1), {
+    name: "interactionHoverCityProbeDuration",
+    detail: {
+      eventType: "hover",
+      entryCount: 2,
+      hit: true,
+    },
+  });
+});
+
+test("city layer render state uses injected zoom identity when runtime transform is absent", () => {
+  const injectedIdentity = { x: 7, y: 8, k: 3 };
+  const captured = [];
+  const entry = {
+    id: "zoom-city",
+    anchor: [10, 10],
+    feature: { type: "Feature", properties: { __city_host_feature_id: "LAND1" } },
+    markerSizePx: 12,
+    screenPoint: [20, 20],
+  };
+  const harness = createCityPointsHarness({
+    buildCityRevealPlan: (_collection, scale, transform) => {
+      captured.push({ scale, transform });
+      return { markerEntries: [entry], labelEntries: [] };
+    },
+    markerEntries: [entry],
+    zoomIdentity: injectedIdentity,
+  });
+  harness.state.zoomTransform = null;
+
+  const renderState = harness.owner.getCityLayerRenderState(1, { interactive: true });
+
+  assert.equal(captured[0]?.scale, 3);
+  assert.equal(captured[0]?.transform, injectedIdentity);
+  assert.equal(renderState.scale, 3);
 });
 
 test("city marker sprite cache follows color revision", () => {

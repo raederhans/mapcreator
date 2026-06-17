@@ -373,3 +373,6 @@
 
 ### Pages dist 失败先确认 npm 实际 Python
 - Windows 上 `verify:pages-dist` 可能由 npm 解析到 hermes venv 的 Python；遇到 `shapely` 缺失或 `python` 解析漂移时，先确认实际 `python.exe` 和 venv 依赖，再用显式 `PATH` 复跑，避免误判为 builder 代码问题。
+
+### City e2e zoom settle 要继承外层预算
+- `prepareSharedCityRuntimeState` 已拿到长 timeout 时，内部 `resetSharedCityZoom` / `setSharedCityZoomPercent` 要保留足够 settling 预算；失败快照显示 render idle 但 helper 超时时，先查局部 timeout clamp。
