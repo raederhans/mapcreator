@@ -7,6 +7,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 FACADE_BORDER_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_border_runtime.js"
 BORDER_MESH_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "border_mesh_owner.js"
 BORDER_MESH_DYNAMIC_RUNTIME_JS = REPO_ROOT / "js" / "core" / "renderer" / "border_mesh_dynamic_runtime.js"
+BORDER_MESH_HELPERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "polyline_simplification_helpers.js"
 BORDER_MESH_SOURCE_SELECTION_JS = REPO_ROOT / "js" / "core" / "renderer" / "border_mesh_source_selection.js"
 BORDER_MESH_DIAGNOSTICS_JS = REPO_ROOT / "js" / "core" / "renderer" / "border_mesh_diagnostics.js"
 
@@ -101,6 +102,33 @@ class MapRendererBorderMeshOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("!!runtimeRef?.objects?.political && hasBaselineOwners", source_selection_content)
         self.assertIn("function getCoastlineTopologyMetrics({", diagnostics_content)
         self.assertIn("function evaluateCoastlineTopologySource({", diagnostics_content)
+
+    def test_map_renderer_imports_polyline_simplification_helpers(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        owner_content = BORDER_MESH_OWNER_JS.read_text(encoding="utf-8")
+        helper_content = BORDER_MESH_HELPERS_JS.read_text(encoding="utf-8")
+
+        self.assertIn("from './renderer/polyline_simplification_helpers.js';", renderer_content.replace('"', "'"))
+        for helper_name in [
+            "getSqPointToSegmentDistance",
+            "simplifyPolylineRDP",
+            "sanitizePolyline",
+            "getPolylineMeanAbsLatitude",
+            "getLatitudeAdjustedSimplifyEpsilon",
+            "getTriangleArea",
+            "pushMinHeap",
+            "popMinHeap",
+            "simplifyPolylineEffectiveArea",
+        ]:
+            self.assertNotIn(f"function {helper_name}(", renderer_content)
+            self.assertIn(f"export function {helper_name}(", helper_content)
+
+        runtime_call_start = owner_content.index("simplifyCoastlineMeshRuntime({")
+        runtime_call_end = owner_content.index("});", runtime_call_start)
+        runtime_call_source = owner_content[runtime_call_start:runtime_call_end]
+        self.assertIn("sanitizePolyline,", runtime_call_source)
+        self.assertIn("getLatitudeAdjustedSimplifyEpsilon,", runtime_call_source)
+        self.assertIn("simplifyPolylineEffectiveArea,", runtime_call_source)
 
     def test_static_mesh_rebuild_keeps_viewport_internal_border_meshes_deferred(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

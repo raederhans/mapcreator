@@ -5,22 +5,23 @@ Last updated: 2026-06-17
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/strategic-overlay-editor-followups`
-- Base: `main@ee42ba98`
+- Integration branch: `codex/geometry-simplification-helper-contracts`
+- Base: `main@06604075`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Complete `codex/strategic-overlay-editor-followups`: Operation Graphic midpoint runtime transaction, then Special Zone membership runtime transaction, then dependency Spike report.
+1. Complete `codex/geometry-simplification-helper-contracts`: red-first helper behavior tests, helper extraction, targeted validation, Pages dist sync, review/QA, then merge/push.
 2. Preserve historical recovery rows below; they are references only.
 3. Re-check recovery commit hashes before recreating any historical worktree.
-4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer-owner pass.
+4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer helper pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/geometry-simplification-helper-contracts` / pending commit | `main@06604075` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/renderer/polyline_simplification_helpers.js`, border mesh boundary tests, `dist/app`, Pages dist manifest, archived task docs | Helper behavior tests, border mesh boundary contract, node syntax checks, owner behavior, renderer splits, Pages dist verification, diff check, dependency scan, source/dist helper byte compare, architect CLEAR, code-review APPROVE, and QA code/runtime checks passed. Delivery package archived under `docs/archive/geometry-simplification-helper-contracts-20260617/`. | Yellow: touches `map_renderer.js` and Pages dist surfaces that often overlap renderer work; no active parallel local worktree exists | Fast-forward merge into `main`, push `origin/main`, then mark integrated and clean branch |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/strategic-overlay-editor-followups` | `main@ee42ba98` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/strategic_overlay_runtime_owner.js`, `js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js`, strategic overlay tests, `dist/app`, Pages dist manifest, dependency Spike docs | Commit `5780fa16`; runtime/render owner tests, Python boundary contracts, renderer split suite, Pages dist verification, `node --check`, `git diff --check`, residual transaction scan, post-merge short validation, and main push passed. Docs archived under `docs/archive/strategic-overlay-editor-followups-20260617/`. | Green | No active integration action |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/strategic-overlay-cleanup-followups` | `origin/main@07e98d17` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/strategic_overlay_render_owner.js`, `js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js`, strategic overlay tests, `dist/app`, Pages dist manifest | Commit `0a8b351e`; runtime/render owner node tests, Python boundary contracts, renderer split suite, Pages dist verification, `git diff --check`, ai-slop-cleaner scan, independent review, and post-merge validation passed. Docs archived under `docs/archive/strategic-overlay-cleanup-followups-20260617/`. | Green | No active integration action |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` | `origin/main@0095aed6` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, strategic overlay runtime/render owner files, strategic overlay tests, `package.json`, `dist/app`, Pages dist manifest | Commit `e2473cbb`; runtime/render owner node tests, Python boundary contracts, renderer split suite, Pages dist verification, `git diff --check`, architecture review, and code review passed after fixing drag session snapshot pollution; post-merge validation passed on `main` | Green | No active integration action |

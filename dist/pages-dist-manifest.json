@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 919720,
+      "size_bytes": 913567,
       "source_kind": "dist"
     },
     {
@@ -45828,6 +45828,11 @@
     {
       "path": "app/js/core/renderer/political_collection_owner.js",
       "size_bytes": 21033,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/polyline_simplification_helpers.js",
+      "size_bytes": 6455,
       "source_kind": "dist"
     },
     {
@@ -46972,7 +46977,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1451238,
+      "size_bytes": 1451378,
       "source_kind": "dist"
     },
     {
@@ -46991,5 +46996,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145191039
+  "total_bytes": 1145191481
 }
