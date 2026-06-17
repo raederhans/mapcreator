@@ -82,3 +82,12 @@ Last updated: 2026-06-17
 - Behavior path is smaller than the pre-cleanup path: vertex drag uses begin/move/finish runtime APIs with one private session object.
 - Boundary is stable: `map_renderer.js` keeps UI/event glue, `operation_graphics_runtime_domain.js` keeps transaction state, and `strategic_overlay_render_owner.js` keeps strategic dirty scheduling.
 - No new dependency, fallback layer, generic scheduler, or hardcoded recovery path was introduced.
+
+## Integration Closeout
+
+- Commit `0a8b351e` was fast-forward merged into `main`.
+- Post-merge validation passed:
+  - `node --test tests/strategic_overlay_runtime_owner_behavior.test.mjs tests/strategic_overlay_render_owner_behavior.test.mjs` passed, 17/17.
+  - `py -3 -m unittest tests.test_map_renderer_strategic_overlay_runtime_owner_boundary_contract tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q` passed, 4/4.
+  - `npm run test:node:renderer-splits` passed, 44/44.
+  - `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed: Pages dist build, 37 startup shell tests, 6 landing showcase tests.

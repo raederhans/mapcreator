@@ -19,7 +19,7 @@ Last updated: 2026-06-17
 - [x] Run review/bug/first-principles self-check.
 - [x] Run ai-slop-cleaner on changed files.
 - [x] Run independent code review.
-- [ ] Commit, merge to `main`, post-merge validate, push, archive.
+- [x] Commit, merge to `main`, post-merge validate, push, archive.
 
 ## Delivery Package Draft
 
@@ -44,7 +44,7 @@ Changed files:
 
 ## Current Status
 
-Implementation, validation, independent code review, and final self-check are complete. The branch is ready for integration.
+Implementation, validation, independent code review, final self-check, and post-merge validation are complete.
 
 Implemented:
 
@@ -63,6 +63,12 @@ Verification:
 - `node --check` passed for changed JS modules.
 - `git diff --check` passed.
 - Independent review returned CLEAR: no blocking bug, behavior regression, or owner-boundary violation found.
+- Branch commit `0a8b351e` was fast-forward merged to `main`.
+- Post-merge validation passed:
+  - `node --test tests/strategic_overlay_runtime_owner_behavior.test.mjs tests/strategic_overlay_render_owner_behavior.test.mjs` passed, 17/17.
+  - `py -3 -m unittest tests.test_map_renderer_strategic_overlay_runtime_owner_boundary_contract tests.test_map_renderer_strategic_overlay_render_owner_boundary_contract -q` passed, 4/4.
+  - `npm run test:node:renderer-splits` passed, 44/44.
+  - `cmd /c "set PATH=C:\Users\raede\AppData\Local\hermes\hermes-agent\venv\Scripts;%PATH%&& npm run verify:pages-dist"` passed: Pages dist build, 37 startup shell tests, 6 landing showcase tests.
 
 Self-check:
 
@@ -72,4 +78,4 @@ Self-check:
 
 ## Next Step
 
-Commit this branch, fast-forward merge to `main`, rerun post-merge validation, archive the task docs, push, and clean the local feature branch.
+Push `main` and delete the local feature branch after the archive closeout commit.
