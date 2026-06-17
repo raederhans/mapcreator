@@ -6483,13 +6483,15 @@ function markOverlaysDirty({
     operationGraphics,
     unitCounters,
     specialZones,
-    inspector,
-    hover,
   });
+  if (inspector) runtimeState.inspectorOverlayDirty = true;
+  if (hover) runtimeState.hoverOverlayDirty = true;
 }
 
 function markAllOverlaysDirty() {
   getStrategicOverlayRenderOwner().markAllOverlaysDirty();
+  runtimeState.inspectorOverlayDirty = true;
+  runtimeState.hoverOverlayDirty = true;
 }
 
 function getOverlayProjectionSignature() {
@@ -19478,34 +19480,16 @@ function renderOperationGraphicsEditorOverlay() {
       renderOperationGraphicsEditorOverlay.pointDragBehavior = globalThis.d3.drag()
         .on("start", function onStart(event, datum) {
           event?.sourceEvent?.stopPropagation?.();
-          datum.__historyBefore = captureHistoryState({ strategicOverlay: true });
-          runtimeState.operationGraphicsEditor.selectedVertexIndex = datum.index;
-          runtimeState.operationGraphicsDirty = true;
+          getStrategicOverlayRuntimeOwner().beginOperationGraphicVertexDrag(datum.index);
           globalThis.d3.select(this).style("cursor", "grabbing");
-          renderOperationGraphicsIfNeeded({ force: true });
-          updateStrategicOverlayUi();
         })
         .on("drag", function onDrag(event, datum) {
-          const graphic = getOperationGraphicById(runtimeState.operationGraphicsEditor.selectedId);
           const coord = getMapLonLatFromEvent(event?.sourceEvent || event);
-          if (!graphic || !coord || !Array.isArray(graphic.points?.[datum.index])) return;
-          graphic.points[datum.index] = coord;
-          runtimeState.operationGraphicsEditor.points = Array.isArray(graphic.points) ? graphic.points : [];
-          runtimeState.operationGraphicsDirty = true;
-          renderOperationGraphicsIfNeeded({ force: true });
+          getStrategicOverlayRuntimeOwner().moveOperationGraphicVertexDrag(datum.index, coord);
         })
         .on("end", function onEnd(_event, datum) {
           globalThis.d3.select(this).style("cursor", "grab");
-          pushHistoryEntry({
-            kind: "move-operation-graphic-vertex",
-            before: datum.__historyBefore,
-            after: captureHistoryState({ strategicOverlay: true }),
-          });
-          datum.__historyBefore = null;
-          markDirty("move-operation-graphic-vertex");
-          runtimeState.operationGraphicsDirty = true;
-          updateStrategicOverlayUi();
-          renderOperationGraphicsIfNeeded({ force: true });
+          getStrategicOverlayRuntimeOwner().finishOperationGraphicVertexDrag(datum.index);
         });
     }
     pointEnter.merge(pointSelection)

@@ -105,6 +105,104 @@ test("operation graphic runtime owner keeps warning path for invalid closed-styl
   assert.equal(toasts[0].options.title, "More points required");
 });
 
+test("operation graphic runtime owner keeps drag session state out of model snapshots", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  const renderForces = [];
+  let uiRefreshCount = 0;
+  const runtimeState = {
+    operationGraphics: [{
+      id: "opg_1",
+      kind: "offensive",
+      label: "Push",
+      opacity: 0.8,
+      points: [[1, 2], [3, 4]],
+      stroke: "#123456",
+      stylePreset: "offensive",
+      width: 2,
+    }],
+    operationGraphicsDirty: false,
+    operationGraphicsEditor: {
+      active: false,
+      mode: "edit",
+      points: [[1, 2], [3, 4]],
+      selectedId: "opg_1",
+      selectedVertexIndex: -1,
+    },
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: (payload) => ({
+        snapshot: payload,
+        operationGraphics: JSON.parse(JSON.stringify(runtimeState.operationGraphics || [])),
+      }),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      ensureOperationGraphicsEditorState: () => {},
+      getOperationGraphicById: (id) => runtimeState.operationGraphics.find((entry) => entry.id === id) || null,
+      getOperationGraphicMinPoints: () => 2,
+      markDirty: (reason) => dirtyReasons.push(reason),
+      renderOperationGraphicsIfNeeded: (payload) => renderForces.push(payload),
+      updateStrategicOverlayUi: () => {
+        uiRefreshCount += 1;
+      },
+    },
+  });
+
+  assert.equal(owner.beginOperationGraphicVertexDrag(1), true);
+  assert.equal(runtimeState.operationGraphicsEditor.selectedVertexIndex, 1);
+  assert.equal(owner.moveOperationGraphicVertexDrag(1, [5, 6]), true);
+  assert.deepEqual(runtimeState.operationGraphics[0].points[1], [5, 6]);
+  assert.equal(owner.finishOperationGraphicVertexDrag(1), true);
+  assert.equal(historyEntries[0].kind, "move-operation-graphic-vertex");
+  assert.equal("__historyBefore" in runtimeState.operationGraphics[0], false);
+  assert.equal("__dragMoved" in runtimeState.operationGraphics[0], false);
+  assert.equal("__historyBefore" in historyEntries[0].after.operationGraphics[0], false);
+  assert.equal("__dragMoved" in historyEntries[0].after.operationGraphics[0], false);
+  assert.deepEqual(dirtyReasons, ["move-operation-graphic-vertex"]);
+  assert.equal(uiRefreshCount, 2);
+  assert.deepEqual(renderForces, [{ force: true }, { force: true }, { force: true }]);
+});
+
+test("operation graphic runtime owner rejects invalid vertex drag transactions", () => {
+  const historyEntries = [];
+  const dirtyReasons = [];
+  const runtimeState = {
+    operationGraphics: [{
+      id: "opg_1",
+      points: [[1, 2], [3, 4]],
+    }],
+    operationGraphicsDirty: false,
+    operationGraphicsEditor: {
+      active: false,
+      mode: "edit",
+      points: [[1, 2], [3, 4]],
+      selectedId: "opg_1",
+      selectedVertexIndex: -1,
+    },
+  };
+
+  const owner = createStrategicOverlayRuntimeOwner({
+    state: runtimeState,
+    helpers: {
+      captureHistoryState: () => ({}),
+      commitHistoryEntry: (entry) => historyEntries.push(entry),
+      ensureOperationGraphicsEditorState: () => {},
+      getOperationGraphicById: (id) => runtimeState.operationGraphics.find((entry) => entry.id === id) || null,
+      markDirty: (reason) => dirtyReasons.push(reason),
+    },
+  });
+
+  assert.equal(owner.beginOperationGraphicVertexDrag(5), false);
+  assert.equal(owner.moveOperationGraphicVertexDrag(0, null), false);
+  assert.equal(owner.finishOperationGraphicVertexDrag(0), false);
+  runtimeState.operationGraphicsEditor.selectedId = "";
+  assert.equal(owner.beginOperationGraphicVertexDrag(0), false);
+  assert.deepEqual(historyEntries, []);
+  assert.deepEqual(dirtyReasons, []);
+});
+
 test("special zone runtime owner retires legacy manual feature creation", () => {
   let uiRefreshCount = 0;
   let renderCount = 0;

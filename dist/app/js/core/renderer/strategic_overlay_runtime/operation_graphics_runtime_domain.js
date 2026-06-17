@@ -20,6 +20,30 @@ export function createOperationGraphicsRuntimeDomain({
   t,
   updateStrategicOverlayUi,
 }) {
+  const vertexDragSession = {
+    before: null,
+    selectedId: "",
+    vertexIndex: -1,
+    moved: false,
+  };
+
+  function resetVertexDragSession() {
+    vertexDragSession.before = null;
+    vertexDragSession.selectedId = "";
+    vertexDragSession.vertexIndex = -1;
+    vertexDragSession.moved = false;
+  }
+
+  function getSelectedOperationGraphicForVertex(vertexIndex = -1) {
+    ensureOperationGraphicsEditorState();
+    const selectedId = String(state.operationGraphicsEditor.selectedId || "").trim();
+    const graphic = getOperationGraphicById(selectedId);
+    const normalizedIndex = Number(vertexIndex);
+    if (!graphic || !Number.isInteger(normalizedIndex) || normalizedIndex < 0) return null;
+    if (!Array.isArray(graphic.points) || !Array.isArray(graphic.points[normalizedIndex])) return null;
+    return { graphic, normalizedIndex, selectedId };
+  }
+
   function appendOperationGraphicVertexFromEvent(event) {
     ensureOperationGraphicsEditorState();
     const coord = getMapLonLatFromEvent(event);
@@ -222,12 +246,74 @@ export function createOperationGraphicsRuntimeDomain({
     return true;
   }
 
+  function beginOperationGraphicVertexDrag(vertexIndex = -1) {
+    const target = getSelectedOperationGraphicForVertex(vertexIndex);
+    if (!target) {
+      resetVertexDragSession();
+      return false;
+    }
+    vertexDragSession.before = captureHistoryState({ strategicOverlay: true });
+    vertexDragSession.selectedId = target.selectedId;
+    vertexDragSession.vertexIndex = target.normalizedIndex;
+    vertexDragSession.moved = false;
+    state.operationGraphicsEditor.selectedVertexIndex = target.normalizedIndex;
+    state.operationGraphicsDirty = true;
+    updateStrategicOverlayUi();
+    renderOperationGraphicsIfNeeded({ force: true });
+    return true;
+  }
+
+  function moveOperationGraphicVertexDrag(vertexIndex = -1, coord = null) {
+    const target = getSelectedOperationGraphicForVertex(vertexIndex);
+    if (!target || !Array.isArray(coord) || coord.length < 2) return false;
+    const lon = Number(coord[0]);
+    const lat = Number(coord[1]);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return false;
+    if (
+      vertexDragSession.selectedId !== target.selectedId
+      || vertexDragSession.vertexIndex !== target.normalizedIndex
+    ) {
+      return false;
+    }
+    target.graphic.points[target.normalizedIndex] = [lon, lat];
+    state.operationGraphicsEditor.points = Array.isArray(target.graphic.points) ? target.graphic.points : [];
+    state.operationGraphicsEditor.selectedVertexIndex = target.normalizedIndex;
+    state.operationGraphicsDirty = true;
+    vertexDragSession.moved = true;
+    renderOperationGraphicsIfNeeded({ force: true });
+    return true;
+  }
+
+  function finishOperationGraphicVertexDrag(vertexIndex = -1) {
+    const target = getSelectedOperationGraphicForVertex(vertexIndex);
+    const isActiveSession = !!target
+      && vertexDragSession.selectedId === target.selectedId
+      && vertexDragSession.vertexIndex === target.normalizedIndex;
+    const moved = isActiveSession && vertexDragSession.moved;
+    if (moved) {
+      commitHistoryEntry({
+        kind: "move-operation-graphic-vertex",
+        before: vertexDragSession.before,
+        after: captureHistoryState({ strategicOverlay: true }),
+      });
+      markDirty("move-operation-graphic-vertex");
+      state.operationGraphicsDirty = true;
+    }
+    resetVertexDragSession();
+    updateStrategicOverlayUi();
+    renderOperationGraphicsIfNeeded({ force: true });
+    return moved;
+  }
+
   return {
     appendOperationGraphicVertexFromEvent,
+    beginOperationGraphicVertexDrag,
     cancelOperationGraphicDraw,
     deleteSelectedOperationGraphic,
     deleteSelectedOperationGraphicVertex,
     finishOperationGraphicDraw,
+    finishOperationGraphicVertexDrag,
+    moveOperationGraphicVertexDrag,
     selectOperationGraphicById,
     startOperationGraphicDraw,
     undoOperationGraphicVertex,

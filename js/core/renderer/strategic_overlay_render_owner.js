@@ -33,16 +33,12 @@ export function createStrategicOverlayRenderOwner({
     operationGraphics = false,
     unitCounters = false,
     specialZones = false,
-    inspector = false,
-    hover = false,
   } = {}) {
     if (frontline) state.frontlineOverlayDirty = true;
     if (operationalLines) state.operationalLinesDirty = true;
     if (operationGraphics) state.operationGraphicsDirty = true;
     if (unitCounters) state.unitCountersDirty = true;
     if (specialZones) state.specialZonesOverlayDirty = true;
-    if (inspector) state.inspectorOverlayDirty = true;
-    if (hover) state.hoverOverlayDirty = true;
   }
 
   function markAllOverlaysDirty() {
@@ -52,8 +48,6 @@ export function createStrategicOverlayRenderOwner({
       operationGraphics: true,
       unitCounters: true,
       specialZones: true,
-      inspector: true,
-      hover: true,
     });
   }
 

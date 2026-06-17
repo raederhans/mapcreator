@@ -99,3 +99,34 @@ test("strategic overlay render owner force renders and skips non-idle dynamic ov
   owner.syncUnitCounterScalesDuringZoom();
   assert.deepEqual(calls, ["unitCounters", "sync"]);
 });
+
+test("strategic overlay render owner dirty API stays strategic-only", () => {
+  const state = {
+    frontlineOverlayDirty: false,
+    hoverOverlayDirty: false,
+    inspectorOverlayDirty: false,
+    operationGraphicsDirty: false,
+    operationalLinesDirty: false,
+    specialZonesOverlayDirty: false,
+    unitCountersDirty: false,
+  };
+  const owner = createStrategicOverlayRenderOwner({ state });
+
+  owner.markOverlaysDirty({
+    frontline: true,
+    hover: true,
+    inspector: true,
+    operationGraphics: true,
+    operationalLines: true,
+    specialZones: true,
+    unitCounters: true,
+  });
+
+  assert.equal(state.frontlineOverlayDirty, true);
+  assert.equal(state.operationalLinesDirty, true);
+  assert.equal(state.operationGraphicsDirty, true);
+  assert.equal(state.unitCountersDirty, true);
+  assert.equal(state.specialZonesOverlayDirty, true);
+  assert.equal(state.inspectorOverlayDirty, false);
+  assert.equal(state.hoverOverlayDirty, false);
+});

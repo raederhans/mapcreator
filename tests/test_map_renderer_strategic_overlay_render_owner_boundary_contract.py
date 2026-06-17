@@ -44,6 +44,12 @@ class MapRendererStrategicOverlayRenderOwnerBoundaryContractTest(unittest.TestCa
 
         self.assertIn("getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();", renderer_content)
         self.assertIn("syncUnitCounterScalesDuringZoom,", render_owner_content)
+        self.assertIn("if (inspector) runtimeState.inspectorOverlayDirty = true;", renderer_content)
+        self.assertIn("if (hover) runtimeState.hoverOverlayDirty = true;", renderer_content)
+        self.assertNotIn("inspector =", render_owner_content)
+        self.assertNotIn("hover =", render_owner_content)
+        self.assertNotIn("state.inspectorOverlayDirty", render_owner_content)
+        self.assertNotIn("state.hoverOverlayDirty", render_owner_content)
 
     def test_render_owner_does_not_import_runtime_or_leaf_draw_owners(self):
         render_owner_content = RENDER_OWNER_JS.read_text(encoding="utf-8")
