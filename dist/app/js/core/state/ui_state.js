@@ -341,6 +341,7 @@ export function createDefaultUiState() {
     showScenarioAtlantropa: true,
     showScenarioReliefOverlays: true,
     showCityPoints: true,
+    showBlankFeatureLabels: false,
     showStrategicResourceMarkers: false,
     strategicChoroplethMetric: "",
     showUrban: true,
@@ -475,6 +476,8 @@ export function restoreImportedLayerVisibilityState(target, layerVisibility = nu
         : !!layerVisibility.showScenarioReliefOverlays,
     showCityPoints:
       layerVisibility.showCityPoints === undefined ? true : !!layerVisibility.showCityPoints,
+    showBlankFeatureLabels:
+      layerVisibility.showBlankFeatureLabels === undefined ? false : !!layerVisibility.showBlankFeatureLabels,
     showStrategicResourceMarkers:
       layerVisibility.showStrategicResourceMarkers === undefined
         ? false

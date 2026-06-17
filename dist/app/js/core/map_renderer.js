@@ -3513,6 +3513,17 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       stableJson(normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {})),
     ].join("::");
   }
+  if (passName === "labels") {
+    return [
+      transformSignature,
+      runtimeState.topologyRevision || 0,
+      runtimeState.activeScenarioId || "",
+      runtimeState.showBlankFeatureLabels ? "blank-feature-labels:on" : "blank-feature-labels:off",
+      runtimeState.showCityPoints ? "cities:on" : "cities:off",
+      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
+      `colors:${Number(runtimeState.colorRevision || 0)}`,
+    ].join("::");
+  }
   if (passName === "contextScenario") {
     return [
       transformSignature,
@@ -5923,18 +5934,58 @@ function isPoliticalShellUnderlayFeature(feature, featureId = null) {
   return isRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId);
 }
 
+function isPoliticalPrimaryUnderlayFeature(feature, _featureId = null) {
+  return String(feature?.properties?.__source || "").trim().toLowerCase() === "primary";
+}
+
+function isPoliticalUnderlayFeature(feature, featureId = null) {
+  return isPoliticalShellUnderlayFeature(feature, featureId)
+    || isPoliticalPrimaryUnderlayFeature(feature, featureId);
+}
+
+function hasPoliticalForegroundColorOverride(featureId) {
+  const id = String(featureId || "").trim();
+  if (!id) return false;
+  return !!(
+    getSafeCanvasColor(runtimeState.visualOverrides?.[id], null)
+    || getSafeCanvasColor(runtimeState.featureOverrides?.[id], null)
+  );
+}
+
+function isPendingPoliticalColorEditFeature(feature, featureId = null) {
+  const id = String(
+    featureId
+    || feature?.properties?.id
+    || feature?.id
+    || ""
+  ).trim();
+  if (!id || !hasPendingPoliticalColorEdit()) return false;
+  const pendingIds = getRenderPassCacheState().pendingPoliticalColorEditIds;
+  return pendingIds instanceof Set && pendingIds.has(id);
+}
+
+function isPoliticalForegroundFeature(feature, featureId = null) {
+  const id = String(featureId || getFeatureId(feature) || "").trim();
+  return hasPoliticalForegroundColorOverride(id)
+    || isPendingPoliticalColorEditFeature(feature, id);
+}
+
 function orderPoliticalShellUnderlayFirst(entries = []) {
-  const shellEntries = [];
+  const underlayEntries = [];
   const detailEntries = [];
+  const foregroundEntries = [];
   entries.forEach((entry) => {
     const feature = entry?.feature || entry;
     const featureId = entry?.id || getFeatureId(feature);
-    const target = isPoliticalShellUnderlayFeature(feature, featureId)
-      ? shellEntries
-      : detailEntries;
+    let target = detailEntries;
+    if (isPoliticalForegroundFeature(feature, featureId)) {
+      target = foregroundEntries;
+    } else if (isPoliticalUnderlayFeature(feature, featureId)) {
+      target = underlayEntries;
+    }
     target.push(entry);
   });
-  return shellEntries.length ? [...shellEntries, ...detailEntries] : detailEntries;
+  return [...underlayEntries, ...detailEntries, ...foregroundEntries];
 }
 
 function shouldExcludeRuntimeOnlyShellFallbackPoliticalFeature(feature, featureId = null) {
@@ -6801,6 +6852,7 @@ function flushPendingScenarioChunkRefreshAfterExact(reason = "exact-after-settle
 
 function rebuildResolvedColors() {
   const startedAt = nowMs();
+  const previousColorRevision = Number(runtimeState.colorRevision || 0);
   migrateLegacyColorState();
   ensureSovereigntyState();
   normalizeColorStateForRender(state, {
@@ -6833,6 +6885,7 @@ function rebuildResolvedColors() {
 
   replaceResolvedColorsState(state, nextColors);
   bumpColorRevision(state);
+  retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColorRevision);
   invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
   recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
     featureCount: Object.keys(nextColors).length,
@@ -6922,14 +6975,99 @@ function shouldRefreshContextBaseForColorChanges() {
     || shouldRefreshContextBaseUrbanForColorChanges();
 }
 
+function normalizePoliticalColorEditIds(featureIds) {
+  const values = featureIds instanceof Set
+    ? Array.from(featureIds)
+    : (Array.isArray(featureIds) ? featureIds : []);
+  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+}
+
+function markPendingPoliticalColorEdit(featureIds, { reason = "refresh-colors" } = {}) {
+  const ids = normalizePoliticalColorEditIds(featureIds);
+  if (!ids.length) return false;
+  const cache = getRenderPassCacheState();
+  cache.pendingPoliticalColorEditIds = new Set(ids);
+  cache.pendingPoliticalColorEditRevision = Number(runtimeState.colorRevision || 0);
+  cache.pendingPoliticalColorEditScenarioId = String(runtimeState.activeScenarioId || "");
+  cache.pendingPoliticalColorEditReason = String(reason || "refresh-colors");
+  return true;
+}
+
+function hasPendingPoliticalColorEdit() {
+  const cache = getRenderPassCacheState();
+  const pendingIds = cache.pendingPoliticalColorEditIds;
+  const pendingScenarioId = String(cache.pendingPoliticalColorEditScenarioId || "");
+  const activeScenarioId = String(runtimeState.activeScenarioId || "");
+  return pendingIds instanceof Set
+    && pendingIds.size > 0
+    && (!pendingScenarioId || pendingScenarioId === activeScenarioId)
+    && Number(cache.pendingPoliticalColorEditRevision ?? -1) === Number(runtimeState.colorRevision || 0);
+}
+
+function clearPendingPoliticalColorEdit({ renderedCount = 0, renderedIds = null, force = false } = {}) {
+  const cache = getRenderPassCacheState();
+  const reset = () => {
+    if (cache.pendingPoliticalColorEditIds instanceof Set) {
+      cache.pendingPoliticalColorEditIds.clear();
+    } else {
+      cache.pendingPoliticalColorEditIds = new Set();
+    }
+    cache.pendingPoliticalColorEditRevision = -1;
+    cache.pendingPoliticalColorEditScenarioId = "";
+    cache.pendingPoliticalColorEditReason = "";
+    return true;
+  };
+  if (force) return reset();
+  if (!hasPendingPoliticalColorEdit()) return false;
+  const hasRenderedIdScope = renderedIds !== null && renderedIds !== undefined;
+  if (hasRenderedIdScope) {
+    const renderedIdList = normalizePoliticalColorEditIds(renderedIds);
+    if (!renderedIdList.length) return false;
+    const pendingIds = cache.pendingPoliticalColorEditIds;
+    if (!(pendingIds instanceof Set) || !pendingIds.size) return reset();
+    renderedIdList.forEach((id) => pendingIds.delete(id));
+    if (pendingIds.size > 0) return false;
+    return reset();
+  }
+  if (Number(renderedCount || 0) <= 0) return false;
+  return reset();
+}
+
+function retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColorRevision) {
+  const cache = getRenderPassCacheState();
+  const pendingIds = cache.pendingPoliticalColorEditIds;
+  if (!(pendingIds instanceof Set) || !pendingIds.size) return false;
+  const pendingScenarioId = String(cache.pendingPoliticalColorEditScenarioId || "");
+  const activeScenarioId = String(runtimeState.activeScenarioId || "");
+  if (pendingScenarioId && pendingScenarioId !== activeScenarioId) {
+    clearPendingPoliticalColorEdit({ force: true });
+    return false;
+  }
+  const previousRevision = Number(previousColorRevision ?? -1);
+  const pendingRevision = Number(cache.pendingPoliticalColorEditRevision ?? -1);
+  const currentRevision = Number(runtimeState.colorRevision || 0);
+  if (pendingRevision >= 0 && pendingRevision <= Math.max(previousRevision, currentRevision)) {
+    cache.pendingPoliticalColorEditRevision = currentRevision;
+    cache.pendingPoliticalColorEditScenarioId = activeScenarioId;
+    return true;
+  }
+  return false;
+}
+
 function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}) {
   migrateLegacyColorState();
   ensureSovereigntyState();
   const cache = getRenderPassCacheState();
+  const pendingRenderIds = new Set();
+  if (hasPendingPoliticalColorEdit()) {
+    normalizePoliticalColorEditIds(cache.pendingPoliticalColorEditIds).forEach((pendingId) => {
+      if (findResolvedColorFeatureById(pendingId)) {
+        pendingRenderIds.add(pendingId);
+      }
+    });
+  }
 
-  const ids = Array.isArray(featureIds)
-    ? Array.from(new Set(featureIds.map((value) => String(value || "").trim()).filter(Boolean)))
-    : [];
+  const ids = normalizePoliticalColorEditIds(featureIds);
   ids.forEach((id) => {
     const feature = findResolvedColorFeatureById(id);
     if (!feature) {
@@ -6939,9 +7077,13 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}
     const resolved = getResolvedFeatureColor(feature, id);
     setResolvedColorForFeature(state, id, resolved);
     cache.partialPoliticalDirtyIds.add(id);
+    pendingRenderIds.add(id);
   });
 
   bumpColorRevision(state);
+  if (!markPendingPoliticalColorEdit(Array.from(pendingRenderIds))) {
+    clearPendingPoliticalColorEdit({ force: true });
+  }
   invalidateRenderPasses("political", "refresh-colors");
   invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");
   if (shouldRefreshContextBaseForColorChanges()) {
@@ -15349,10 +15491,12 @@ function drawScenarioPoliticalBackgroundFills({
     : entries;
   const canUseFullPassCache = Array.isArray(visibleItems);
   const politicalDirtyReason = String(getRenderPassCacheState().reasons?.political || "");
+  const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();
   const useProgressiveRecovery = (
     canUseFullPassCache
     && politicalRecoveryQuality === POLITICAL_RECOVERY_QUALITY_PROGRESSIVE
     && politicalDirtyReason !== "refresh-colors"
+    && !pendingPoliticalColorEdit
     && visibleEntries.length > POLITICAL_PROGRESSIVE_BACKGROUND_EXACT_ENTRY_LIMIT
   );
   if (useProgressiveRecovery) {
@@ -15921,6 +16065,9 @@ function drawPoliticalFeature(
   }
   if (metricsCollector) {
     metricsCollector.renderedCount = Number(metricsCollector.renderedCount || 0) + 1;
+    if (metricsCollector.renderedIds instanceof Set) {
+      metricsCollector.renderedIds.add(id);
+    }
   }
   return true;
 }
@@ -16150,6 +16297,10 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
 
   const startedAt = nowMs();
   let backgroundGroupCount = 0;
+  const partialFeatureMetrics = {
+    renderedCount: 0,
+    renderedIds: new Set(),
+  };
   passContext.save();
   passContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
   passContext.beginPath();
@@ -16171,6 +16322,7 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
         skipScreenCheck: true,
         path,
         transform,
+        metricsCollector: partialFeatureMetrics,
       });
     });
   });
@@ -16179,6 +16331,10 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
   cache.signatures.political = nextSignature;
   cache.dirty.political = false;
   cache.partialPoliticalDirtyIds.clear();
+  clearPendingPoliticalColorEdit({
+    renderedCount: Number(partialFeatureMetrics.renderedCount || 0),
+    renderedIds: partialFeatureMetrics.renderedIds,
+  });
   cache.reasons.political = "partial-repaint";
   setPassReferenceTransform("political", transform);
   incrementPerfCounter("politicalPartialRepaints");
@@ -16189,7 +16345,7 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
     dirtyRectCount: mergedDirtyRects.length,
     viewportCoverage: Number(viewportCoverage.toFixed(4)),
       candidateCount,
-      affectedFeatureCount: redrawEntries.length,
+      affectedFeatureCount: Number(partialFeatureMetrics.renderedCount || 0),
       backgroundGroupCount,
       pathCacheMisses,
       pathCacheMissRatio: Number(pathCacheMissRatio.toFixed(4)),
@@ -16335,10 +16491,12 @@ function drawPoliticalPass(k) {
     coarseUnderlay: String(backgroundSummary?.coarseUnderlay || ""),
   });
   if (!runtimeState.landData?.features?.length) return;
+  const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();
   const skipFineFeatureLoopForProgressiveRecovery = (
     !!backgroundSummary?.progressive
     && !backgroundSummary?.deferredFullCacheReady
     && String(backgroundSummary?.coarseUnderlay || "") === "admin0"
+    && !pendingPoliticalColorEdit
   );
   if (skipFineFeatureLoopForProgressiveRecovery) {
     recordRenderPerfMetric("drawPoliticalFeatureFillLoop", 0, {
@@ -16362,6 +16520,7 @@ function drawPoliticalPass(k) {
     fillMs: 0,
     strokeMs: 0,
     renderedCount: 0,
+    renderedIds: new Set(),
   };
   if (Array.isArray(visibleItems)) {
     orderPoliticalShellUnderlayFirst(visibleItems).forEach((item) => {
@@ -16406,6 +16565,10 @@ function drawPoliticalPass(k) {
   recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop", Number(featureMetrics.strokeMs || 0), {
     renderedCount: Number(featureMetrics.renderedCount || 0),
     visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
+  });
+  clearPendingPoliticalColorEdit({
+    renderedCount: Number(featureMetrics.renderedCount || 0),
+    renderedIds: featureMetrics.renderedIds,
   });
 }
 
@@ -17196,7 +17359,50 @@ function drawBordersPass(k, { interactive = false } = {}) {
   drawHierarchicalBorders(k, { interactive });
 }
 
+function getBlankFeatureLabel(feature, id) {
+  const props = feature?.properties || {};
+  return String(props.name || props.label || id || "").trim();
+}
+
+function drawBlankFeatureLabelsPass(k, { interactive = false } = {}) {
+  if (interactive) return;
+  if (normalizeMapSemanticMode(runtimeState.mapSemanticMode) !== "blank") return;
+  if (String(runtimeState.activeScenarioId || "") !== "blank_base") return;
+  if (!runtimeState.showBlankFeatureLabels) return;
+  if (!runtimeState.landData?.features?.length || !context || typeof pathCanvas?.centroid !== "function") return;
+  const visibleItems = collectVisibleLandSpatialItems();
+  const items = Array.isArray(visibleItems) && visibleItems.length
+    ? visibleItems
+    : runtimeState.landData.features.map((feature, index) => ({
+      feature,
+      id: getFeatureId(feature) || `feature-${index}`,
+    }));
+  const maxLabels = Math.max(24, Math.min(140, Math.round(44 * Math.max(1, Number(k) || 1))));
+  const step = Math.max(1, Math.ceil(items.length / maxLabels));
+  const fontSize = Math.max(7, Math.min(12, 11 / Math.max(0.75, Number(k) || 1)));
+  context.save();
+  context.font = `${fontSize}px system-ui, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineWidth = Math.max(1.8 / Math.max(0.75, Number(k) || 1), 0.7);
+  context.strokeStyle = "rgba(248, 250, 252, 0.82)";
+  context.fillStyle = "rgba(31, 41, 55, 0.86)";
+  for (let index = 0; index < items.length; index += step) {
+    const item = items[index];
+    const feature = item?.feature || item;
+    const id = item?.id || getFeatureId(feature) || "";
+    const label = getBlankFeatureLabel(feature, id);
+    if (!label) continue;
+    const centroid = pathCanvas.centroid(feature);
+    if (!centroid || !Number.isFinite(centroid[0]) || !Number.isFinite(centroid[1])) continue;
+    context.strokeText(label, centroid[0], centroid[1]);
+    context.fillText(label, centroid[0], centroid[1]);
+  }
+  context.restore();
+}
+
 function drawLabelsPass(k, { interactive = false } = {}) {
+  drawBlankFeatureLabelsPass(k, { interactive });
   return getCityPointsRenderOwner().drawLabelsPass(k, { interactive });
 }
 
@@ -23404,6 +23610,7 @@ function initMap({
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
   runtimeState.hitCanvasTopologyRevision = 0;
   const renderPassCache = getRenderPassCacheState();
+  clearPendingPoliticalColorEdit({ force: true });
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
   renderPassCache.fullReferenceTransforms = {};
@@ -23536,6 +23743,7 @@ function setMapData({
     cancelSecondarySpatialBuild: true,
   });
   const renderPassCache = getRenderPassCacheState();
+  clearPendingPoliticalColorEdit({ force: true });
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
   renderPassCache.fullReferenceTransforms = {};
@@ -24299,6 +24507,7 @@ export {
   requestInteractionRender,
   setDebugMode,
   getZoomPercent,
+  projectGeoToScreen,
   resetZoomToFit,
   setZoomPercent,
   zoomByStep,

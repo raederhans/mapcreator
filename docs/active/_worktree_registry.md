@@ -5,22 +5,26 @@ Last updated: 2026-06-17
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/geometry-simplification-benchmark-spike`
-- Base: `main@b984a59e`
+- Integration branch: `codex/tno-political-color-recovery-integration`
+- Base: `main@a4957713`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Complete `codex/geometry-simplification-benchmark-spike`: local benchmark fixtures, benchmark contracts, dev-only `simplify-js` comparison under `.runtime`, decision docs, review/QA, then merge/push.
-2. Preserve historical recovery rows below; they are references only.
-3. Re-check recovery commit hashes before recreating any historical worktree.
-4. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer helper pass.
+1. Complete and commit `codex/tno-political-color-recovery-integration` from the clean isolated worktree.
+2. Keep the original `codex/tno-political-color-recovery` checkout as mixed WIP until the renderer commit is integrated or the landing WIP is separated.
+3. Re-run `verify:pages-dist` with a Python environment that has `shapely`, then merge/push if validation passes.
+4. Preserve historical recovery rows below; they are references only.
+5. Re-check recovery commit hashes before recreating any historical worktree.
+6. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-color-recovery-integration` | `codex/tno-political-color-recovery-integration` | `main@a4957713` | ready-for-integration | hot files: `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, renderer runtime state, scenario chunk contracts, runtime state test, targeted E2E route, pixel probe, `package.json`, active docs | Scoped clean branch carrying only the TNO political renderer fix plus Pages dist sync from current main source. Verification: JS syntax checks pass; runtime state behavior 9/9 pass; color-resolution Python boundary pass; shell fallback behavior 1/1 pass; political progressive E2E 3/3 pass; scenario chunk contracts 43/44 with known unrelated `hoverFacilityAndCityProbeMetricsRemainNamed`; `verify:pages-dist` pass with local shapely venv; `git diff --check` pass with CRLF warnings. Read-only reviewer APPROVE. | Yellow: shared renderer hot files; isolated from landing WIP. | Commit this clean branch, then merge/push from the clean integration path. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/tno-political-color-recovery` | `main@a4957713` | mixed-wip | hot files: renderer fix files plus unrelated landing/dist WIP and `lessons learned.md` | Source branch where bug investigation and first implementation happened. Verification before isolation: runtime state 9/9 pass; color-resolution Python boundary pass; political progressive E2E 3/3 pass; scenario chunk contracts 43/44 with unrelated `hoverFacilityAndCityProbeMetricsRemainNamed`; `verify:pages-dist` blocked on missing `shapely`; landing node check 7/8 with unrelated landing work-card TNO map asset failure. | Red: renderer fix, landing WIP, and dist changes share one checkout. | Do not stage wholesale; keep as recovery/source WIP until clean integration branch lands. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/geometry-simplification-benchmark-spike` | `main@b984a59e` | integrated | hot files resolved: `tools/perf/polyline_simplification_benchmark.mjs`, `tests/fixtures/polyline_simplification_benchmark_fixtures.mjs`, `tests/polyline_simplification_benchmark_contract.test.mjs`, `package.json` scripts, archived task docs | Commit `97626a26`; red-first contract failed before implementation with `ERR_MODULE_NOT_FOUND`; helper + benchmark tests passed; benchmark script and syntax checks passed; dev-only `simplify-js@1.2.4` comparison ran from `.runtime`; forbidden dependency scan found no package/package-lock matches; independent code-reviewer APPROVE and architect CLEAR; post-merge focused validation passed; `verify:pages-dist` skipped because app source, dist files, and Pages manifests were untouched. Delivery package archived under `docs/archive/geometry-simplification-benchmark-and-dependency-spike-20260617/`. | Green | Push `origin/main`, then delete merged local feature branch |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/geometry-simplification-helper-contracts` | `main@06604075` | integrated | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/polyline_simplification_helpers.js`, border mesh boundary tests, `dist/app`, Pages dist manifest, archived task docs | Commit `b59fb749`; helper behavior tests, border mesh boundary contract, node syntax checks, owner behavior, renderer splits, Pages dist verification, diff check, dependency scan, source/dist helper byte compare, architect CLEAR, code-review APPROVE, closeout QA PASS, and post-merge short validation passed. Delivery package archived under `docs/archive/geometry-simplification-helper-contracts-20260617/`. | Green | Push `origin/main`, then delete merged local feature branch |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/strategic-overlay-editor-followups` | `main@ee42ba98` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/strategic_overlay_runtime_owner.js`, `js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js`, strategic overlay tests, `dist/app`, Pages dist manifest, dependency Spike docs | Commit `5780fa16`; runtime/render owner tests, Python boundary contracts, renderer split suite, Pages dist verification, `node --check`, `git diff --check`, residual transaction scan, post-merge short validation, and main push passed. Docs archived under `docs/archive/strategic-overlay-editor-followups-20260617/`. | Green | No active integration action |

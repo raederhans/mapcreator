@@ -1,5 +1,7 @@
 import { resolveFeatureColor } from "../color_resolver.js";
 
+const BLANK_OWNERLESS_FEATURE_FILL_COLOR = "#d7d3c7";
+
 /**
  * Owns political fill color strategy:
  * - display owner/controller precedence
@@ -51,7 +53,7 @@ export function createColorResolutionStrategyOwner({
 
   // 颜色优先级继续由 color_resolver.js 统一裁决；这里仅注入 renderer runtime 上下文。
   function getResolvedFeatureColor(feature, id) {
-    return resolveFeatureColor(id, {
+    const resolved = resolveFeatureColor(id, {
       state,
       feature,
       getSafeColor: getSafeCanvasColor,
@@ -59,7 +61,11 @@ export function createColorResolutionStrategyOwner({
       getAtlantropaRuleColor,
       getOceanBaseFillColor,
       getOwnerCode: getDisplayOwnerCode,
-    }).color;
+    });
+    if (!resolved.color && normalizeMapSemanticMode(state.mapSemanticMode) === "blank") {
+      return BLANK_OWNERLESS_FEATURE_FILL_COLOR;
+    }
+    return resolved.color;
   }
 
   return {

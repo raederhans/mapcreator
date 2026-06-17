@@ -38,6 +38,8 @@ export function initScenarioControls() {
   const applyScenarioBtn = document.getElementById("applyScenarioBtn");
   const resetScenarioBtn = document.getElementById("resetScenarioBtn");
   const clearScenarioBtn = document.getElementById("clearScenarioBtn");
+  const blankFeatureLabelsToggleRow = document.getElementById("blankFeatureLabelsToggleRow");
+  const toggleBlankFeatureLabels = document.getElementById("toggleBlankFeatureLabels");
   const scenarioStatus = document.getElementById("scenarioStatus");
   const scenarioAuditHint = document.getElementById("scenarioAuditHint");
   let pendingScenarioId = "";
@@ -160,6 +162,14 @@ export function initScenarioControls() {
       applyScenarioBtn.classList.toggle("hidden", isSelectedScenarioActive);
       applyScenarioBtn.title = isFatalLocked ? fatalMessage : "";
     }
+    if (blankFeatureLabelsToggleRow) {
+      const isBlankScenarioActive = normalizeScenarioId(runtimeState.activeScenarioId) === "blank_base";
+      blankFeatureLabelsToggleRow.classList.toggle("hidden", !isBlankScenarioActive);
+    }
+    if (toggleBlankFeatureLabels) {
+      toggleBlankFeatureLabels.checked = !!runtimeState.showBlankFeatureLabels;
+      toggleBlankFeatureLabels.disabled = normalizeScenarioId(runtimeState.activeScenarioId) !== "blank_base";
+    }
   };
 
   registerRuntimeHook(state, "updateScenarioUIFn", renderScenarioControls);
@@ -276,6 +286,15 @@ export function initScenarioControls() {
       renderScenarioControls();
     });
     clearScenarioBtn.dataset.bound = "true";
+  }
+
+  if (toggleBlankFeatureLabels && !toggleBlankFeatureLabels.dataset.bound) {
+    toggleBlankFeatureLabels.addEventListener("change", () => {
+      runtimeState.showBlankFeatureLabels = !!toggleBlankFeatureLabels.checked;
+      callRuntimeHook(state, "renderNowFn", "blank-feature-labels-toggle");
+      renderScenarioControls();
+    });
+    toggleBlankFeatureLabels.dataset.bound = "true";
   }
 
   loadScenarioRegistry()

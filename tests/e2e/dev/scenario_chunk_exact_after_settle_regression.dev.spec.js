@@ -617,6 +617,130 @@ test("tno zoom-end keeps Great Lakes Congo political detail fill stable", async 
   }
 });
 
+test("tno post-edit keeps political detail fill before progressive recovery skip", async ({ page }) => {
+  const candidateProbes = [
+    { id: "france-core", lon: 2.35, lat: 46.7 },
+    { id: "iberia-core", lon: -3.7, lat: 40.4 },
+    { id: "turkey-west", lon: 30.0, lat: 39.0 },
+    { id: "west-kivu-drc", lon: 28.85, lat: -1.65 },
+  ];
+  const editColor = "#ff00aa";
+
+  await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await ensureScenario(page, "tno_1962", "TNO 1962");
+  await waitForStableExactRender(page);
+
+  const editResult = await page.evaluate(async ({ probes, color }) => {
+    const { state } = await import("/js/core/state.js");
+    const {
+      refreshMapDataForScenarioChunkPromotion,
+      refreshResolvedColorsForFeatures,
+    } = await import("/js/core/map_renderer.js");
+    const d3 = globalThis.d3;
+    const features = Array.isArray(state.landData?.features) ? state.landData.features : [];
+    const getFeatureId = (feature) => {
+      const props = feature?.properties || {};
+      return String(props.id || props.NUTS_ID || feature?.id || "").trim();
+    };
+    let selected = null;
+    for (const probe of probes) {
+      for (const feature of features) {
+        try {
+          if (feature?.geometry && d3.geoContains(feature, [probe.lon, probe.lat])) {
+            const featureId = getFeatureId(feature);
+            if (featureId && state.colors?.[featureId]) {
+              selected = { ...probe, featureId };
+              break;
+            }
+          }
+        } catch (_error) {
+          // Keep candidate selection focused on stable land probes.
+        }
+      }
+      if (selected) break;
+    }
+    if (!selected) {
+      return { error: "no-edit-probe" };
+    }
+
+    state.visualOverrides = state.visualOverrides || {};
+    state.featureOverrides = state.featureOverrides || {};
+    state.visualOverrides[selected.featureId] = color;
+    state.featureOverrides[selected.featureId] = color;
+    refreshResolvedColorsForFeatures([selected.featureId], { renderNow: false });
+    const pendingAfterRefresh = {
+      size: Number(state.renderPassCache?.pendingPoliticalColorEditIds?.size || 0),
+      revision: Number(state.renderPassCache?.pendingPoliticalColorEditRevision ?? -1),
+      colorRevision: Number(state.colorRevision || 0),
+      reason: String(state.renderPassCache?.pendingPoliticalColorEditReason || ""),
+    };
+
+    if (state.renderPerfMetrics && typeof state.renderPerfMetrics === "object") {
+      delete state.renderPerfMetrics.drawPoliticalFeatureFillLoop;
+      delete state.renderPerfMetrics.drawPoliticalFeatureStrokeLoop;
+      delete state.renderPerfMetrics.drawPoliticalBackgroundFillsPass;
+    }
+    if (globalThis.__renderPerfMetrics && typeof globalThis.__renderPerfMetrics === "object") {
+      delete globalThis.__renderPerfMetrics.drawPoliticalFeatureFillLoop;
+      delete globalThis.__renderPerfMetrics.drawPoliticalFeatureStrokeLoop;
+      delete globalThis.__renderPerfMetrics.drawPoliticalBackgroundFillsPass;
+    }
+
+    refreshMapDataForScenarioChunkPromotion({
+      reason: "scenario-chunk-promotion",
+      changedLayerKeys: ["political"],
+      politicalFeatureIds: [selected.featureId],
+      hasPoliticalPayloadChange: true,
+      suppressRender: false,
+    });
+
+    const metrics = state.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+      ? state.renderPerfMetrics
+      : (globalThis.__renderPerfMetrics || {});
+    const fillMetric = metrics.drawPoliticalFeatureFillLoop || null;
+    const strokeMetric = metrics.drawPoliticalFeatureStrokeLoop || null;
+    const backgroundMetric = metrics.drawPoliticalBackgroundFillsPass || null;
+    return {
+      activeScenarioId: String(state.activeScenarioId || ""),
+      selected,
+      resolvedColor: String(state.colors?.[selected.featureId] || ""),
+      renderPhase: String(state.renderPhase || ""),
+      pendingAfterRefresh,
+      pendingAfterPromotion: {
+        size: Number(state.renderPassCache?.pendingPoliticalColorEditIds?.size || 0),
+        revision: Number(state.renderPassCache?.pendingPoliticalColorEditRevision ?? -1),
+        colorRevision: Number(state.colorRevision || 0),
+      },
+      dirtyReason: String(state.renderPassCache?.reasons?.political || ""),
+      fillMetric,
+      strokeMetric,
+      backgroundMetric,
+    };
+  }, {
+    probes: candidateProbes,
+    color: editColor,
+  });
+
+  expect(editResult.error, JSON.stringify(editResult)).toBeFalsy();
+  expect(editResult.activeScenarioId).toBe("tno_1962");
+  expect(editResult.selected?.featureId, JSON.stringify(editResult)).toBeTruthy();
+  expect(editResult.resolvedColor.toLowerCase()).toBe(editColor);
+  expect(editResult.pendingAfterRefresh.size).toBeGreaterThan(0);
+  expect(editResult.pendingAfterRefresh.revision).toBe(editResult.pendingAfterRefresh.colorRevision);
+  expect(editResult.pendingAfterRefresh.reason).toBe("refresh-colors");
+  expect(editResult.pendingAfterPromotion.size).toBe(0);
+  expect(editResult.pendingAfterPromotion.revision).toBe(-1);
+  expect(editResult.fillMetric?.reason || "").not.toBe("progressive-coarse-underlay");
+  expect(Number(editResult.fillMetric?.renderedCount || 0), JSON.stringify(editResult)).toBeGreaterThan(0);
+  expect(editResult.strokeMetric?.reason || "").not.toBe("progressive-coarse-underlay");
+
+  const pixelSamples = await samplePoliticalFeaturePixels(page, [editResult.selected], { radius: 7 });
+  expect(pixelSamples[0].error, `pixel probe failed after edit: ${JSON.stringify(pixelSamples[0])}`).toBeFalsy();
+  expect(pixelSamples[0].bestResolvedDistance, `edited color not visible after promotion: ${JSON.stringify(pixelSamples[0])}`)
+    .toBeLessThan(55);
+});
+
 test("tno runtime color coverage includes rendered spatial items", async ({ page }) => {
   await gotoApp(page, FAST_STARTUP_PATH, { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);

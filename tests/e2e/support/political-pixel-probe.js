@@ -20,6 +20,12 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
     const context = canvas instanceof HTMLCanvasElement
       ? canvas.getContext("2d", { willReadFrequently: true })
       : null;
+    let projectGeoToScreen = null;
+    try {
+      ({ projectGeoToScreen } = await import("/js/core/map_renderer.js"));
+    } catch (_error) {
+      projectGeoToScreen = null;
+    }
     const d3 = globalThis.d3;
     if (!canvas || !context || !d3 || !state.landData) {
       return sampleProbes.map((probe) => ({
@@ -121,7 +127,10 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
         || state.countryBaseColors?.[displayOwnerCode]
         || ""
       );
-      const projected = projection([Number(probe.lon), Number(probe.lat)]);
+      const rendererScreenPoint = typeof projectGeoToScreen === "function"
+        ? projectGeoToScreen(Number(probe.lon), Number(probe.lat))
+        : null;
+      const projected = rendererScreenPoint || projection([Number(probe.lon), Number(probe.lat)]);
       if (!featureId || !Array.isArray(projected) || !projected.every(Number.isFinite)) {
         return {
           ...probe,
@@ -134,8 +143,12 @@ async function samplePoliticalFeaturePixels(page, probes, { radius = 5 } = {}) {
         };
       }
 
-      const cx = ((projected[0] * transform.k) + transform.x) * dpr;
-      const cy = ((projected[1] * transform.k) + transform.y) * dpr;
+      const cx = rendererScreenPoint
+        ? projected[0] * dpr
+        : ((projected[0] * transform.k) + transform.x) * dpr;
+      const cy = rendererScreenPoint
+        ? projected[1] * dpr
+        : ((projected[1] * transform.k) + transform.y) * dpr;
       const radiusPx = Math.max(2, Number(sampleRadius || 5) * dpr);
       const minX = Math.max(0, Math.floor(cx - radiusPx));
       const minY = Math.max(0, Math.floor(cy - radiusPx));

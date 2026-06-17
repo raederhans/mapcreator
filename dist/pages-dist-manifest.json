@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -37287,7 +37287,7 @@
     },
     {
       "path": "app/data/scenarios/blank_base/build_snapshot.json",
-      "size_bytes": 1045,
+      "size_bytes": 1143,
       "source_kind": "generated_ignored"
     },
     {
@@ -37302,27 +37302,27 @@
     },
     {
       "path": "app/data/scenarios/blank_base/cores.by_feature.json",
-      "size_bytes": 18,
+      "size_bytes": 64,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/blank_base/countries.json",
-      "size_bytes": 170193,
+      "size_bytes": 176492,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/blank_base/manifest.json",
-      "size_bytes": 2455,
+      "size_bytes": 2716,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/blank_base/owners.by_feature.json",
-      "size_bytes": 19,
+      "size_bytes": 65,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/scenarios/blank_base/runtime_topology.topo.json",
-      "size_bytes": 139,
+      "size_bytes": 7457994,
       "source_kind": "generated_ignored"
     },
     {
@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 260097,
+      "size_bytes": 260397,
       "source_kind": "dist"
     },
     {
@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 913567,
+      "size_bytes": 922484,
       "source_kind": "dist"
     },
     {
@@ -45792,7 +45792,7 @@
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 2555,
+      "size_bytes": 2786,
       "source_kind": "dist"
     },
     {
@@ -46012,7 +46012,7 @@
     },
     {
       "path": "app/js/core/scenario/presentation_ocean_fill_restore.js",
-      "size_bytes": 4941,
+      "size_bytes": 8898,
       "source_kind": "dist"
     },
     {
@@ -46207,7 +46207,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 16246,
+      "size_bytes": 17208,
       "source_kind": "dist"
     },
     {
@@ -46227,7 +46227,7 @@
     },
     {
       "path": "app/js/core/state/ui_state.js",
-      "size_bytes": 27294,
+      "size_bytes": 27468,
       "source_kind": "dist"
     },
     {
@@ -46332,17 +46332,17 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47024,
+      "size_bytes": 47151,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 92722,
+      "size_bytes": 92781,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/scenario_controls.js",
-      "size_bytes": 12653,
+      "size_bytes": 13699,
       "source_kind": "dist"
     },
     {
@@ -46977,7 +46977,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1451378,
+      "size_bytes": 1451382,
       "source_kind": "dist"
     },
     {
@@ -46996,5 +46996,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1145191481
+  "total_bytes": 1152671986
 }

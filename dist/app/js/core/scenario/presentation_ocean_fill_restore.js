@@ -10,6 +10,38 @@ function emitScenarioToolbarInputUpdate() {
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_TOOLBAR_INPUTS);
 }
 
+function clampNumber(value, fallback, min = 0, max = 1) {
+  const numeric = Number(value);
+  const resolved = Number.isFinite(numeric) ? numeric : fallback;
+  return Math.min(max, Math.max(min, resolved));
+}
+
+function normalizeScenarioBorderStyleOverride(rawDefaults, groupKey) {
+  if (!rawDefaults || typeof rawDefaults !== "object") {
+    return null;
+  }
+  const override = {};
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "color")) {
+    const color = String(rawDefaults.color || "").trim();
+    if (color) {
+      override.color = color;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "colorMode") && groupKey === "internalBorders") {
+    const colorMode = String(rawDefaults.colorMode || "").trim().toLowerCase();
+    if (colorMode) {
+      override.colorMode = colorMode;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "opacity")) {
+    override.opacity = clampNumber(rawDefaults.opacity, 1, 0, 1);
+  }
+  if (Object.prototype.hasOwnProperty.call(rawDefaults, "width")) {
+    override.width = clampNumber(rawDefaults.width, 1, 0, 12);
+  }
+  return Object.keys(override).length ? override : null;
+}
+
 function createScenarioOceanFillRestoreRuntime({
   state,
   invalidateOceanBackgroundVisualState = null,
@@ -37,6 +69,75 @@ function createScenarioOceanFillRestoreRuntime({
       override.experimentalAdvancedStyles = oceanDefaults.experimentalAdvancedStyles === true;
     }
     return Object.keys(override).length ? override : null;
+  }
+
+  function getScenarioStyleDefaultsOverride(manifest) {
+    const styleDefaults = manifest?.style_defaults;
+    if (!styleDefaults || typeof styleDefaults !== "object") {
+      return null;
+    }
+    const override = {};
+    const oceanOverride = getScenarioOceanStyleOverride(manifest);
+    if (oceanOverride) {
+      override.ocean = oceanOverride;
+    }
+    ["internalBorders", "empireBorders", "coastlines"].forEach((groupKey) => {
+      const groupOverride = normalizeScenarioBorderStyleOverride(styleDefaults[groupKey], groupKey);
+      if (groupOverride) {
+        override[groupKey] = groupOverride;
+      }
+    });
+    return Object.keys(override).length ? override : null;
+  }
+
+  function cloneScenarioStyleDefaultsSnapshot(styleOverride) {
+    const snapshot = {};
+    Object.keys(styleOverride || {}).forEach((groupKey) => {
+      snapshot[groupKey] = {
+        ...(state.styleConfig?.[groupKey] || {}),
+      };
+    });
+    return snapshot;
+  }
+
+  function ensureStyleConfigGroup(groupKey) {
+    if (!state.styleConfig || typeof state.styleConfig !== "object") {
+      state.styleConfig = {};
+    }
+    if (!state.styleConfig[groupKey] || typeof state.styleConfig[groupKey] !== "object") {
+      state.styleConfig[groupKey] = {};
+    }
+    return state.styleConfig[groupKey];
+  }
+
+  function getStyleDefaultsSignature(styleOverride) {
+    const payload = {};
+    Object.keys(styleOverride || {}).sort().forEach((groupKey) => {
+      payload[groupKey] = {
+        ...(state.styleConfig?.[groupKey] || {}),
+      };
+    });
+    return JSON.stringify(payload);
+  }
+
+  function updateScenarioStyleDefaults(styleOverride, reason) {
+    if (!styleOverride || typeof styleOverride !== "object") {
+      return false;
+    }
+    const previous = getStyleDefaultsSignature(styleOverride);
+    Object.entries(styleOverride).forEach(([groupKey, groupOverride]) => {
+      if (!groupOverride || typeof groupOverride !== "object") return;
+      const target = ensureStyleConfigGroup(groupKey);
+      Object.entries(groupOverride).forEach(([key, value]) => {
+        target[key] = value;
+      });
+    });
+    const next = getStyleDefaultsSignature(styleOverride);
+    const changed = previous !== next;
+    if (changed && styleOverride.ocean && typeof invalidateOceanBackgroundVisualState === "function") {
+      invalidateOceanBackgroundVisualState(reason);
+    }
+    return changed;
   }
 
   function updateScenarioOceanFill(fillColor, reason) {
@@ -87,9 +188,11 @@ function createScenarioOceanFillRestoreRuntime({
   }
 
   function syncScenarioOceanFillForActivation(manifest) {
-    const nextOverride = getScenarioOceanStyleOverride(manifest);
-    const previousOverride = getScenarioOceanStyleOverride(state.activeScenarioManifest);
-    if (!state.scenarioOceanStyleBeforeActivate) {
+    const nextOverride = getScenarioStyleDefaultsOverride(manifest);
+    const previousOverride = getScenarioStyleDefaultsOverride(state.activeScenarioManifest);
+    const effectiveOverride = nextOverride || previousOverride;
+    if (effectiveOverride && !state.scenarioPresentationStyleBeforeActivate) {
+      state.scenarioPresentationStyleBeforeActivate = cloneScenarioStyleDefaultsSnapshot(effectiveOverride);
       state.scenarioOceanStyleBeforeActivate = {
         ...(state.styleConfig?.ocean || {}),
       };
@@ -98,26 +201,27 @@ function createScenarioOceanFillRestoreRuntime({
       state.scenarioOceanFillBeforeActivate = normalizeScenarioOceanFillColor(state.styleConfig?.ocean?.fillColor);
     }
     if (nextOverride) {
-      updateScenarioOceanStyle(nextOverride, "scenario-ocean-fill-activate");
+      updateScenarioStyleDefaults(nextOverride, "scenario-style-defaults-activate");
     } else if (previousOverride && state.scenarioOceanFillBeforeActivate !== null) {
-      updateScenarioOceanStyle(
-        state.scenarioOceanStyleBeforeActivate || { fillColor: state.scenarioOceanFillBeforeActivate },
-        "scenario-ocean-fill-restore-baseline"
+      updateScenarioStyleDefaults(
+        state.scenarioPresentationStyleBeforeActivate || { ocean: { fillColor: state.scenarioOceanFillBeforeActivate } },
+        "scenario-style-defaults-restore-baseline"
       );
     }
     emitScenarioToolbarInputUpdate();
   }
 
   function restoreScenarioOceanFillAfterExit() {
-    if (state.scenarioOceanFillBeforeActivate === null) {
+    if (state.scenarioOceanFillBeforeActivate === null && !state.scenarioPresentationStyleBeforeActivate) {
       return;
     }
-    updateScenarioOceanStyle(
-      state.scenarioOceanStyleBeforeActivate || { fillColor: state.scenarioOceanFillBeforeActivate },
-      "scenario-ocean-fill-clear"
+    updateScenarioStyleDefaults(
+      state.scenarioPresentationStyleBeforeActivate || { ocean: state.scenarioOceanStyleBeforeActivate || { fillColor: state.scenarioOceanFillBeforeActivate } },
+      "scenario-style-defaults-clear"
     );
     state.scenarioOceanFillBeforeActivate = null;
     state.scenarioOceanStyleBeforeActivate = null;
+    state.scenarioPresentationStyleBeforeActivate = null;
     emitScenarioToolbarInputUpdate();
   }
 

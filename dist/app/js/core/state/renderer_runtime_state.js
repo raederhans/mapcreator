@@ -142,6 +142,10 @@ export function createDefaultRenderPassCacheState() {
       transformBucket: "",
     },
     partialPoliticalDirtyIds: new Set(),
+    pendingPoliticalColorEditIds: new Set(),
+    pendingPoliticalColorEditRevision: -1,
+    pendingPoliticalColorEditScenarioId: "",
+    pendingPoliticalColorEditReason: "",
     politicalPathCache: new Map(),
     politicalPathCacheSignature: "",
     politicalPathCacheTransform: null,
@@ -356,6 +360,18 @@ export function ensureRenderPassCacheState(
   cache.partialPoliticalDirtyIds = cache.partialPoliticalDirtyIds instanceof Set
     ? cache.partialPoliticalDirtyIds
     : defaults.partialPoliticalDirtyIds;
+  cache.pendingPoliticalColorEditIds = cache.pendingPoliticalColorEditIds instanceof Set
+    ? cache.pendingPoliticalColorEditIds
+    : defaults.pendingPoliticalColorEditIds;
+  cache.pendingPoliticalColorEditRevision = Number.isFinite(Number(cache.pendingPoliticalColorEditRevision))
+    ? Number(cache.pendingPoliticalColorEditRevision)
+    : defaults.pendingPoliticalColorEditRevision;
+  cache.pendingPoliticalColorEditScenarioId = typeof cache.pendingPoliticalColorEditScenarioId === "string"
+    ? cache.pendingPoliticalColorEditScenarioId
+    : defaults.pendingPoliticalColorEditScenarioId;
+  cache.pendingPoliticalColorEditReason = typeof cache.pendingPoliticalColorEditReason === "string"
+    ? cache.pendingPoliticalColorEditReason
+    : defaults.pendingPoliticalColorEditReason;
   cache.politicalPathCache = cache.politicalPathCache instanceof Map
     ? cache.politicalPathCache
     : defaults.politicalPathCache;
