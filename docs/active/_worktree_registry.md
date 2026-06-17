@@ -5,14 +5,14 @@ Last updated: 2026-06-17
 ## Integration Owner
 
 - Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/city-points-explicit-d3-injection` then `main` closeout
+- Integration branch: `main` closeout after `codex/city-points-explicit-d3-injection`
 - Base: `main` is aligned with `origin/main` at `a37a934d`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Finish `codex/city-points-explicit-d3-injection` in the current checkout, then validate targeted owner/boundary checks and Pages dist before main closeout.
+1. Push the `main` closeout for `codex/city-points-explicit-d3-injection`, then mark the pushed closeout.
 2. Keep main Codex agent as the only live test/build owner.
 3. Preserve historical recovery rows below; they are references only.
 4. Re-check recovery commit hashes before recreating any historical worktree.
@@ -22,14 +22,14 @@ Last updated: 2026-06-17
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/city-points-explicit-d3-injection` | `origin/main` `a37a934d` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city owner behavior test, urban/city boundary test, city e2e support fixture, `dist/app`, Pages dist manifest | Explicit d3 helper injection implemented; node syntax, owner behavior, boundary, appearance city-points, Pages dist, city e2e 8/8, and layer smoke 4/4 checks passed. Review fixed a shared city zoom settle timeout clamp. | Red until merged | Commit, fast-forward merge to `main`, push, then mark integrated |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` | `origin/main` `a37a934d` | integrated, push pending | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/city_points_render_owner.js`, city owner behavior test, urban/city boundary test, city e2e support fixture, `dist/app`, Pages dist manifest | Commit `79dfc678`; explicit d3 helper injection, node syntax, owner behavior, boundary, appearance city-points, Pages dist, city e2e 8/8, layer smoke 4/4, and post-merge short validation passed. Review fixed a shared city zoom settle timeout clamp. | Green after fast-forward merge | Push `main`, then mark pushed |
 
 ## Current Overlap Matrix
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| `codex/city-points-explicit-d3-injection` vs renderer owner history | Yellow | Semantically adjacent to recent City Lights/Render Cache owner work, but starts from current `origin/main`. |
-| `codex/city-points-explicit-d3-injection` vs future renderer splits | Red | Directly touches `js/core/map_renderer.js`, `dist/app`, and render boundary tests. Serialize with any future renderer owner extraction. |
+| City points explicit d3 injection vs renderer owner history | Green | Fast-forward merged on current `main`; no active parallel worktree remains. |
+| City points explicit d3 injection vs future renderer splits | Yellow | The merged commit touched `js/core/map_renderer.js`, `dist/app`, and render boundary tests, so future renderer splits should start from the pushed main. |
 
 ## Recovery Records
 
@@ -69,7 +69,7 @@ These rows are branch or commit recovery indexes. They are historical references
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
 - 2026-06-17 city points render owner: branch `codex/city-points-render-owner` was created from clean `origin/main@38d7835a`; main Codex agent owned all live validation, while child agents stayed in static inspection/review lanes. Commit `6b50e479` was fast-forward merged into `main`; post-merge short validation passed and `main` was pushed.
-- 2026-06-17 city points explicit d3 injection: branch `codex/city-points-explicit-d3-injection` was created from clean `origin/main@a37a934d`; main Codex agent owns live validation. The follow-up removes direct `globalThis.d3` reads from `city_points_render_owner.js`, fixes the shared city e2e zoom settle timeout clamp found during audit, and is ready for commit/integration.
+- 2026-06-17 city points explicit d3 injection: branch `codex/city-points-explicit-d3-injection` was created from clean `origin/main@a37a934d`; main Codex agent owned live validation. Commit `79dfc678` removes direct `globalThis.d3` reads from `city_points_render_owner.js`, fixes the shared city e2e zoom settle timeout clamp found during audit, and was fast-forward merged into `main`; docs are archived under `docs/archive/city-points-render-owner-20260617/`; push is pending.
 - 2026-06-15: `codex/housekeeping-review-fix-20260615` was merged, archived, and cleaned locally. Commit `64ae29be` remains as the recovery record.
 - 2026-06-15 localization governance: `4711b0dd` was fast-forward merged into main, validated on main, archived, pushed through the registry closeout, and cleaned from the active worktree list.
 - 2026-06-15 a11y home/app fix: `55f143de` was rebased onto current main, validated with i18n, behavior, Pages dist, and a11y scan gates, fast-forwarded into main, and archived for cleanup.

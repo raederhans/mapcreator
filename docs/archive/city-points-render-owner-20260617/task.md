@@ -25,7 +25,9 @@ Last updated: 2026-06-17
 - [x] Follow-up: refresh Pages dist.
 - [x] Follow-up: audit diff and fix city e2e shared zoom settle timeout.
 - [x] Follow-up: rerun city e2e and layer smoke.
-- [ ] Follow-up: commit, merge to `main`, push, and close out registry.
+- [x] Follow-up: commit and fast-forward merge to `main`.
+- [x] Follow-up: run post-merge short validation.
+- [ ] Follow-up: push `main` and mark closeout pushed.
 
 ## Delivery Package Draft
 
@@ -52,8 +54,8 @@ Changed files are expected in:
 
 ## Current Status
 
-The original city-points owner split is integrated and pushed. The explicit d3 injection follow-up is implemented on `codex/city-points-explicit-d3-injection`; targeted validation, Pages dist refresh, full city e2e rerun, and layer smoke have passed. Review found one test helper timeout clamp in the shared city zoom setup, now fixed in `tests/e2e/support/fixtures.js`.
+The original city-points owner split is integrated and pushed. The explicit d3 injection follow-up is committed as `79dfc678` and fast-forward merged to `main`; targeted validation, Pages dist refresh, full city e2e rerun, layer smoke, and post-merge short validation have passed. Review found one test helper timeout clamp in the shared city zoom setup, now fixed in `tests/e2e/support/fixtures.js`.
 
 ## Next Step
 
-Run final diff hygiene, then commit, merge to `main`, push, and close out registry.
+Commit closeout docs, push `main`, then mark the pushed closeout.

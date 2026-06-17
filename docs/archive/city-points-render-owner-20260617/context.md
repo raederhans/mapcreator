@@ -114,3 +114,9 @@ New owner owns city point render orchestration. Existing city policy and city la
   - `rg -n "globalThis\.d3" js/core/renderer/city_points_render_owner.js dist/app/js/core/renderer/city_points_render_owner.js` returned no matches.
   - `npm run test:e2e:city-rendering` passed after the helper patch, 8/8, about 4.0 minutes. Logs: `.runtime/tests/city-points-render-owner/city-rendering.explicit-d3-fixed.*.log`.
   - `npm run test:e2e:layer:smoke` passed, 4/4, about 35.8 seconds. Logs: `.runtime/tests/city-points-render-owner/layer-smoke.explicit-d3.*.log`.
+  - Commit `79dfc678` was created on `codex/city-points-explicit-d3-injection`.
+  - `main` fast-forward merged from `a37a934d` to `79dfc678`.
+  - Post-merge `npm run test:node:city-points-render-owner` passed, 5/5.
+  - Post-merge hermes Python boundary tests passed, 3/3.
+  - Post-merge `git diff --check` passed.
+  - `main` is ready for closeout docs commit and push.
