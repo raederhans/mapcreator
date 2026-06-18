@@ -211,7 +211,7 @@ const translations = {
             repo_root = Path(tmp_dir)
             self._write_repo_file(
                 repo_root,
-                "js/ui/i18n_catalog.js",
+                "js/core/i18n_catalog.js",
                 """
 export const UI_COPY_CATALOG = Object.freeze({
   "Atlas Ink": { zh: "\\u56fe\\u96c6\\u58a8\\u84dd", en: "Atlas Ink" },

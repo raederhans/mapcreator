@@ -10,8 +10,10 @@ INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 STYLE_CSS = REPO_ROOT / "css" / "style.css"
-I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
-I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
+CORE_I18N_JS = REPO_ROOT / "js" / "core" / "i18n.js"
+CORE_I18N_CATALOG_JS = REPO_ROOT / "js" / "core" / "i18n_catalog.js"
+UI_I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
+UI_I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
 PROJECT_PACKAGE_IO_JS = REPO_ROOT / "js" / "core" / "project_package_io.js"
 
@@ -89,8 +91,10 @@ class ProjectSupportDiagnosticsSidebarBoundaryContractTest(unittest.TestCase):
                 PROJECT_SUPPORT_DIAGNOSTICS_CONTROLLER_JS,
                 REPO_ROOT / "dist" / "app" / "js" / "ui" / "sidebar" / "project_support_diagnostics_controller.js",
             ),
-            (I18N_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n.js"),
-            (I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n_catalog.js"),
+            (CORE_I18N_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "i18n.js"),
+            (CORE_I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "i18n_catalog.js"),
+            (UI_I18N_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n.js"),
+            (UI_I18N_CATALOG_JS, REPO_ROOT / "dist" / "app" / "js" / "ui" / "i18n_catalog.js"),
             (FILE_MANAGER_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "file_manager.js"),
             (PROJECT_PACKAGE_IO_JS, REPO_ROOT / "dist" / "app" / "js" / "core" / "project_package_io.js"),
         ]

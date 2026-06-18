@@ -11,6 +11,7 @@ import { createDeferredDetailPromotionOwner } from "./bootstrap/deferred_detail_
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   createRenderDispatcher,
+  configureStartupSupportKeyUsageAudit,
   getBootLanguage,
   hydrateLanguage,
   initLongAnimationFrameObserver,
@@ -34,9 +35,10 @@ import { initPresetState } from "./core/preset_state.js";
 import { runPostScenarioUiReplay } from "./core/scenario_post_apply_effects.js";
 import { registerMapcreatorSnapshotProvider } from "./core/mapcreator_snapshot.js";
 import { initTranslations } from "./ui/i18n.js";
-import { initToast } from "./ui/toast.js";
+import { initToast, showToast } from "./ui/toast.js";
 import { bindBeforeUnload } from "./core/dirty_state.js";
 const state = runtimeState;
+configureStartupSupportKeyUsageAudit();
 
 function cloneSnapshotValue(value, fallback = null) {
   if (value === undefined) return fallback;
@@ -1125,6 +1127,7 @@ async function bootstrap() {
       }));
 
     initToast();
+    registerRuntimeHook(state, "showToastFn", showToast);
     setBootPreviewVisible(false);
     initPresetState();
     void loadDeferredMilsymbol();

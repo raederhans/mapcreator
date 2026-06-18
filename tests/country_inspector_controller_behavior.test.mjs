@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createCountryInspectorController } from "../js/ui/sidebar/country_inspector_controller.js";
-import { UI_COPY_CATALOG } from "../js/ui/i18n_catalog.js";
+import { UI_COPY_CATALOG } from "../js/core/i18n_catalog.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

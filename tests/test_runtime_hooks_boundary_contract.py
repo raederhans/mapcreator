@@ -32,6 +32,11 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
 
         self.assertIn('registerRuntimeHook(state, "setStartupReadonlyStateFn", setStartupReadonlyState);', main_content)
         self.assertIn('registerRuntimeHook(state, "ensureFullLocalizationDataReadyFn", ensureFullLocalizationDataReady);', main_content)
+        self.assertIn('registerRuntimeHook(state, "showToastFn", showToast);', main_content)
+        self.assertLess(
+            main_content.index("initToast();"),
+            main_content.index('registerRuntimeHook(state, "showToastFn", showToast);'),
+        )
         self.assertIn('registerRuntimeHook(state, "syncDeveloperModeUiFn", syncDeveloperModeUi);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "updateWorkspaceStatusFn", refreshWorkspaceStatus);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "openTransportWorkbenchFn", (trigger = null) => openTransportWorkbench(trigger));', toolbar_content)

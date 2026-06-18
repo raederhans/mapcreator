@@ -277,7 +277,7 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js").read_text(encoding="utf-8")
         summary_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_transport_summary.js").read_text(encoding="utf-8")
         registry_content = (REPO_ROOT / "js" / "core" / "transport_capability_registry.js").read_text(encoding="utf-8")
-        i18n_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+        i18n_content = (REPO_ROOT / "js" / "core" / "i18n_catalog.js").read_text(encoding="utf-8")
 
         for token in [
             'id="roadLabelsEnabled"',

@@ -353,8 +353,8 @@ def build_localization_ownership_audit(
     manual_ui_path = repo_root / "data" / "i18n" / "manual_ui.json"
     manual_geo_path = repo_root / "data" / "i18n" / "manual_geo_overrides.json"
     baseline_path = repo_root / "data" / "i18n" / "locales_baseline.json"
-    catalog_path = repo_root / "js" / "ui" / "i18n_catalog.js"
-    runtime_i18n_path = repo_root / "js" / "ui" / "i18n.js"
+    catalog_path = repo_root / "js" / "core" / "i18n_catalog.js"
+    runtime_i18n_path = repo_root / "js" / "core" / "i18n.js"
     dist_root = repo_root / "dist" / "app"
 
     scenario_records = []
@@ -393,8 +393,8 @@ def build_localization_ownership_audit(
     dist_assets = {
         "root": file_audit_entry(dist_root, repo_root),
         "index_html": file_audit_entry(dist_root / "index.html", repo_root),
-        "runtime_catalog": file_audit_entry(dist_root / "js" / "ui" / "i18n_catalog.js", repo_root),
-        "runtime_i18n": file_audit_entry(dist_root / "js" / "ui" / "i18n.js", repo_root),
+        "runtime_catalog": file_audit_entry(dist_root / "js" / "core" / "i18n_catalog.js", repo_root),
+        "runtime_i18n": file_audit_entry(dist_root / "js" / "core" / "i18n.js", repo_root),
         "locales": file_audit_entry(dist_root / "data" / "locales.json", repo_root),
     }
 

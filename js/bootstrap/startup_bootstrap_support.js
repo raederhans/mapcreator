@@ -10,7 +10,10 @@ import {
   normalizeScenarioLocaleLanguage,
 } from "../core/scenario/locale_asset_contract.js";
 import { normalizeCountryCodeAlias } from "../core/country_code_aliases.js";
-import { consumeStartupSupportKeyUsageAuditReport } from "../ui/i18n.js";
+import {
+  consumeStartupSupportKeyUsageAuditReport,
+  setStartupSupportKeyUsageAuditEnabled,
+} from "../core/i18n.js";
 const state = runtimeState;
 
 const VALID_BATCH_FILL_SCOPES = new Set(["parent", "country"]);
@@ -47,6 +50,10 @@ export function isStartupSupportAuditEnabled() {
   } catch (_error) {
     return false;
   }
+}
+
+export function configureStartupSupportKeyUsageAudit() {
+  setStartupSupportKeyUsageAuditEnabled(isStartupSupportAuditEnabled());
 }
 
 export function shouldDeferStartupSupportAuditPost() {

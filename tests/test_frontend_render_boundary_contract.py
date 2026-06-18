@@ -46,6 +46,35 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         self.assertIn('recordRenderPerfMetric("renderBoundaryReasons", 0, getRenderBoundaryDebugState())', renderer)
         self.assertIn("markRenderBoundaryFlushed();", main_js)
 
+    def test_core_modules_keep_ui_runtime_dependencies_behind_hooks(self):
+        offenders = []
+        forbidden_imports = [
+            '../ui/i18n.js',
+            '../ui/toast.js',
+        ]
+        for path in sorted((REPO_ROOT / "js" / "core").rglob("*.js")):
+            content = path.read_text(encoding="utf-8")
+            for forbidden in forbidden_imports:
+                if forbidden in content:
+                    offenders.append(f"{path.relative_to(REPO_ROOT).as_posix()} imports {forbidden}")
+
+        self.assertEqual(offenders, [])
+
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        core_i18n_content = (REPO_ROOT / "js" / "core" / "i18n.js").read_text(encoding="utf-8")
+        main_content = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        ui_i18n_content = (REPO_ROOT / "js" / "ui" / "i18n.js").read_text(encoding="utf-8")
+        ui_catalog_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+
+        self.assertIn('from "./i18n.js"', renderer_content)
+        self.assertIn('callRuntimeHook(runtimeState, "showToastFn", message, options);', renderer_content)
+        self.assertNotIn("globalThis.location", core_i18n_content)
+        self.assertNotIn("localStorage", core_i18n_content)
+        self.assertIn('registerRuntimeHook(state, "showToastFn", showToast);', main_content)
+        self.assertIn("configureStartupSupportKeyUsageAudit();", main_content)
+        self.assertIn('} from "../core/i18n.js";', ui_i18n_content)
+        self.assertIn('export { UI_COPY_CATALOG } from "../core/i18n_catalog.js";', ui_catalog_content)
+
     def test_map_container_resize_observer_keeps_stage_resize_centered(self):
         for renderer_path in (
             REPO_ROOT / "js" / "core" / "map_renderer.js",

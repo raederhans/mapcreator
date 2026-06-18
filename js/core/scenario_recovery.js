@@ -1,8 +1,12 @@
 import { normalizeMapSemanticMode, state as runtimeState } from "./state.js";
-import { t } from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+import { t } from "./i18n.js";
+import { callRuntimeHook } from "./state/index.js";
 import { getScenarioEffectiveOwnerCodeByFeatureId } from "./scenario_runtime_queries.js";
 const state = runtimeState;
+
+function showToast(message, options = {}) {
+  callRuntimeHook(null, "showToastFn", message, options);
+}
 
 function getScenarioTestHooks() {
   return globalThis.__scenarioTestHooks && typeof globalThis.__scenarioTestHooks === "object"

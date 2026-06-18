@@ -45,7 +45,7 @@ UI_SURFACE_URL_STATE_JS = REPO_ROOT / "js" / "ui" / "ui_surface_url_state.js"
 FILE_MANAGER_JS = REPO_ROOT / "js" / "core" / "file_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
-I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
+I18N_CATALOG_JS = REPO_ROOT / "js" / "core" / "i18n_catalog.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 
 

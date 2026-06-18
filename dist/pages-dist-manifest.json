@@ -45507,7 +45507,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 14226,
+      "size_bytes": 14405,
       "source_kind": "dist"
     },
     {
@@ -45587,7 +45587,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 46294,
+      "size_bytes": 46404,
       "source_kind": "dist"
     },
     {
@@ -45628,6 +45628,16 @@
     {
       "path": "app/js/core/history_manager.js",
       "size_bytes": 14036,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/i18n.js",
+      "size_bytes": 14656,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/i18n_catalog.js",
+      "size_bytes": 92781,
       "source_kind": "dist"
     },
     {
@@ -45697,7 +45707,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 924382,
+      "size_bytes": 924447,
       "source_kind": "dist"
     },
     {
@@ -46062,7 +46072,7 @@
     },
     {
       "path": "app/js/core/scenario_data_health.js",
-      "size_bytes": 4923,
+      "size_bytes": 5032,
       "source_kind": "dist"
     },
     {
@@ -46082,7 +46092,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 32182,
+      "size_bytes": 32291,
       "source_kind": "dist"
     },
     {
@@ -46097,12 +46107,12 @@
     },
     {
       "path": "app/js/core/scenario_recovery.js",
-      "size_bytes": 6096,
+      "size_bytes": 6205,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 41308,
+      "size_bytes": 41418,
       "source_kind": "dist"
     },
     {
@@ -46282,7 +46292,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 47041,
+      "size_bytes": 47190,
       "source_kind": "dist"
     },
     {
@@ -46332,12 +46342,12 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 47151,
+      "size_bytes": 33104,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/i18n_catalog.js",
-      "size_bytes": 92781,
+      "size_bytes": 59,
       "source_kind": "dist"
     },
     {
@@ -47022,7 +47032,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1452474,
+      "size_bytes": 1452689,
       "source_kind": "dist"
     },
     {
@@ -47041,5 +47051,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153034363
+  "total_bytes": 1153036186
 }

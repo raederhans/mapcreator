@@ -219,7 +219,7 @@ showToast(`Copied ${count} region entries to the clipboard.`);
             self._write_repo_json(repo_root, "data/i18n/locales_baseline.json", locales_payload)
             self._write_repo_file(
                 repo_root,
-                "js/ui/i18n_catalog.js",
+                "js/core/i18n_catalog.js",
                 """
 export const UI_COPY_CATALOG = Object.freeze({
   "Special zone diagnostics": { zh: "特殊区域诊断", en: "Special zone diagnostics" },
@@ -277,7 +277,7 @@ export const UI_COPY_CATALOG = Object.freeze({
             self.assertEqual(audit["summary"]["catalog_ui_entries"], 1)
             self.assertEqual(audit["summary"]["scenario_count"], 1)
             self.assertEqual(audit["summary"]["scenario_startup_ready_count"], 1)
-            self.assertEqual(audit["ui_sources"]["runtime_catalog"]["path"], "js/ui/i18n_catalog.js")
+            self.assertEqual(audit["ui_sources"]["runtime_catalog"]["path"], "js/core/i18n_catalog.js")
             scenario_record = audit["scenario_assets"][0]
             self.assertEqual(scenario_record["scenario_id"], "hgo_1936")
             self.assertTrue(scenario_record["assets"]["geo_locale_patch_zh"]["exists"])
@@ -414,7 +414,7 @@ gear.textContent = "\u2699";
             repo_root = Path(tmp_dir)
             self._write_repo_file(
                 repo_root,
-                "js/ui/i18n_catalog.js",
+                "js/core/i18n_catalog.js",
                 """
 export const UI_COPY_CATALOG = Object.freeze({
   "Export preview ready": { zh: "导出预览已就绪", en: "Export preview ready" },
@@ -443,7 +443,7 @@ export const UI_COPY_CATALOG = Object.freeze({
             self.assertIn("Export preview ready", result["covered_default_literals"])
 
     def test_inline_ui_catalog_keys_are_unique(self) -> None:
-        catalog_source = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+        catalog_source = (REPO_ROOT / "js" / "core" / "i18n_catalog.js").read_text(encoding="utf-8")
         block_match = re.search(
             r"export\s+const\s+UI_COPY_CATALOG\s*=\s*Object\.freeze\(\{(?P<body>.*?)\n\}\);",
             catalog_source,

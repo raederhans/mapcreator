@@ -102,12 +102,16 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('normalizeIndexedTagAssignmentPayload', scenario_bundle_loader_js)
         self.assertIn('normalizeIndexedCoreAssignmentPayload', scenario_bundle_loader_js)
         self.assertIn('consumeStartupSupportKeyUsageAuditReport', startup_bootstrap_support_js)
+        self.assertIn('from "../core/i18n.js"', startup_bootstrap_support_js)
         self.assertIn('/__dev/startup-support/key-usage-report', startup_bootstrap_support_js)
         self.assertIn('STARTUP_SUPPORT_AUDIT_PARAM', startup_bootstrap_support_js)
         self.assertIn('STARTUP_SUPPORT_AUDIT_LABEL_PARAM', startup_bootstrap_support_js)
         self.assertIn('sampleLabel', startup_bootstrap_support_js)
         self.assertIn('consumeStartupSupportKeyUsageAuditReport', (REPO_ROOT / "js" / "ui" / "i18n.js").read_text(encoding="utf-8"))
-        self.assertIn('startup_support_audit', (REPO_ROOT / "js" / "ui" / "i18n.js").read_text(encoding="utf-8"))
+        core_i18n_js = (REPO_ROOT / "js" / "core" / "i18n.js").read_text(encoding="utf-8")
+        self.assertIn('setStartupSupportKeyUsageAuditEnabled', startup_bootstrap_support_js)
+        self.assertNotIn('startup_support_audit', core_i18n_js)
+        self.assertNotIn('globalThis.location', core_i18n_js)
         self.assertNotIn(
             "state.countryNames = {\n      ...countryNames,\n      ...staged.scenarioNameMap,\n    };",
             scenario_manager_js,

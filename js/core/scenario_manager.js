@@ -110,9 +110,13 @@ import {
   getScenarioBlockerCount,
   getScenarioDefaultCountryCode as getBundleLoaderDefaultCountryCode,
 } from "./scenario/bundle_loader.js";
-import { t } from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+import { t } from "./i18n.js";
+import { callRuntimeHook } from "./state/index.js";
 const state = runtimeState;
+
+function showToast(message, options = {}) {
+  callRuntimeHook(null, "showToastFn", message, options);
+}
 
 const SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;

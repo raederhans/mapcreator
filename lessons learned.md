@@ -394,3 +394,6 @@
 
 ### Pages dist manifest 字节数要绑定行尾合同
 - 进入 `dist/pages-dist-manifest.json` 的根 `dist/assets/*.json` 资产，要同时扩展 `.gitattributes` 和 `tools/build_pages_dist.py` 的 LF 归一化名单；Windows CRLF 工作区会让 manifest size 与 Git blob size 脱节。
+
+### i18n 拆分按纯逻辑和 DOM 行为分界
+- 迁移 `i18n` owner 时，catalog、`t()`、tooltip model 适合进 `js/core`，DOM sweep、language toggle、`localStorage` 和 UI runtime hook 调用留在 `js/ui/i18n.js`；工具和测试以 core catalog 为真相源，UI catalog 只做兼容 re-export。

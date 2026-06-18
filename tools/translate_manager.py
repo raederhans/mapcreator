@@ -993,7 +993,7 @@ def collect_ui_keys(repo_root: Path) -> list[str]:
 
 
 def load_ui_copy_catalog_translations(repo_root: Path) -> dict[str, str]:
-    catalog_path = repo_root / "js" / "ui" / "i18n_catalog.js"
+    catalog_path = repo_root / "js" / "core" / "i18n_catalog.js"
     if not catalog_path.exists():
         return {}
     try:

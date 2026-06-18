@@ -79,8 +79,7 @@ import {
   getTooltipText,
   renderTooltipText,
   t,
-} from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+} from "./i18n.js";
 import { markDirty } from "./dirty_state.js";
 import { perfIsEnabled, recordRenderSample } from "./perf_probe.js";
 import { getScenarioCountryDisplayName } from "./scenario_country_display.js";
@@ -253,6 +252,10 @@ import {
   updateSelectedUnitCounter,
 } from "./map_renderer/facade_overlay_runtime.js";
 const state = runtimeState;
+
+function showToast(message, options = {}) {
+  callRuntimeHook(runtimeState, "showToastFn", message, options);
+}
 
 const DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT = 78;
 const DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT = 74;

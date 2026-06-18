@@ -3,9 +3,13 @@ import {
   createDefaultScenarioDataHealth,
   setScenarioDataHealthState,
 } from "./state/scenario_runtime_state.js";
-import { t } from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+import { t } from "./i18n.js";
+import { callRuntimeHook } from "./state/index.js";
 const state = runtimeState;
+
+function showToast(message, options = {}) {
+  callRuntimeHook(null, "showToastFn", message, options);
+}
 
 const DETAIL_POLITICAL_MIN_FEATURES = 1000;
 const SCENARIO_DETAIL_MIN_RATIO_STRICT = 0.7;

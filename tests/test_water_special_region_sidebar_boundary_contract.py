@@ -12,7 +12,8 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 HISTORY_MANAGER_JS = REPO_ROOT / "js" / "core" / "history_manager.js"
 INTERACTION_FUNNEL_JS = REPO_ROOT / "js" / "core" / "interaction_funnel.js"
 INTERACTION_FUNNEL_UI_SYNC_JS = REPO_ROOT / "js" / "core" / "interaction_funnel" / "ui_sync.js"
-I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
+CORE_I18N_JS = REPO_ROOT / "js" / "core" / "i18n.js"
+UI_I18N_JS = REPO_ROOT / "js" / "ui" / "i18n.js"
 
 
 def iter_features(value):
@@ -167,7 +168,7 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
     def test_special_region_sidebar_is_read_only_after_override_retirement(self):
         owner_content = WATER_SPECIAL_REGION_CONTROLLER_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
-        i18n_content = I18N_JS.read_text(encoding="utf-8")
+        i18n_content = UI_I18N_JS.read_text(encoding="utf-8")
 
         self.assertNotIn("specialRegionLegendList", owner_content)
         self.assertNotIn("renderSpecialRegionLegend", owner_content)
@@ -199,7 +200,7 @@ class WaterSpecialRegionSidebarBoundaryContractTest(unittest.TestCase):
         self.assertIn('emitStateBusEvent(STATE_BUS_EVENTS.RENDER_SPECIAL_REGION_LIST);', interaction_funnel_ui_sync_content)
 
     def test_water_and_special_tooltips_do_not_fabricate_country_codes_from_feature_ids(self):
-        content = I18N_JS.read_text(encoding="utf-8")
+        content = CORE_I18N_JS.read_text(encoding="utf-8")
 
         self.assertIn("function getTooltipFeatureCountryCode(feature, { useIdFallback = false } = {}) {", content)
         self.assertIn("return normalizeTooltipCountryCode(getSharedFeatureCountryCode(feature, { useIdFallback }));", content)

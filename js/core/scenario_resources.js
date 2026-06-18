@@ -129,13 +129,18 @@ import {
   normalizeScenarioStrategicValuesPayload,
 } from "./scenario/strategic_values.js";
 import { consumeScenarioTestHook } from "./scenario_recovery.js";
-import { t } from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+import { t } from "./i18n.js";
+import { callRuntimeHook } from "./state/index.js";
 
 // scenario_resources.js 现在是 scenario runtime 的聚合门面：
 // bundle loader、chunk runtime、startup hydration、optional layer、audit facade 都从这里汇合；
 // 真正的重事务已拆到子 controller，本文件主要负责 wiring、共享约束和对外 facade。
 const state = runtimeState;
+
+function showToast(message, options = {}) {
+  callRuntimeHook(null, "showToastFn", message, options);
+}
+
 const SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "highres"];
 const SCENARIO_FATAL_RECOVERY_CODE = "SCENARIO_FATAL_RECOVERY";
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;

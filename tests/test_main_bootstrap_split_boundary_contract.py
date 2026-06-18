@@ -79,6 +79,8 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
         owner_content = STARTUP_BOOTSTRAP_SUPPORT_JS.read_text(encoding="utf-8")
 
         self.assertIn('const STARTUP_SUPPORT_AUDIT_REPORT_URL = "/__dev/startup-support/key-usage-report";', owner_content)
+        self.assertIn("export function configureStartupSupportKeyUsageAudit()", owner_content)
+        self.assertIn("setStartupSupportKeyUsageAuditEnabled(isStartupSupportAuditEnabled());", owner_content)
         self.assertIn("consumeStartupSupportKeyUsageAuditReport()", owner_content)
         self.assertIn("hydrateHierarchyState(state, data, {", owner_content)
         self.assertIn("setCurrentLanguage(state, storedLang);", owner_content)

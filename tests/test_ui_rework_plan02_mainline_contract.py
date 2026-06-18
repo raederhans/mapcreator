@@ -456,7 +456,7 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn('"Country Color": {\n      "en": "Country Color",\n      "zh": "国家配色"', locales_content)
         self.assertIn('"Palette color suggestions": {', locales_content)
         self.assertIn('"Current country color": {', locales_content)
-        i18n_catalog_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
+        i18n_catalog_content = (REPO_ROOT / "js" / "core" / "i18n_catalog.js").read_text(encoding="utf-8")
         for token in [
             '"Country Color": { zh: "国家配色", en: "Country Color" }',
             '"Current country color": { zh: "当前国家颜色", en: "Current country color" }',

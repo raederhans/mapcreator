@@ -22,8 +22,8 @@ import {
   serializeIntensityFieldsState,
   updateIntensityFieldChannel,
 } from "./state.js";
-import { t } from "../ui/i18n.js";
-import { showToast } from "../ui/toast.js";
+import { t } from "./i18n.js";
+import { callRuntimeHook } from "./state/index.js";
 import { migrateImportedProjectData } from "./sovereignty_manager.js";
 import { getTargetMainMapPackMeta } from "./transport_pack_resolver.js";
 import {
@@ -58,6 +58,11 @@ const DEFAULT_OPERATION_GRAPHIC_KIND = "attack";
 const DEFAULT_OPERATIONAL_LINE_KIND = "frontline";
 const CLOSED_OPERATION_GRAPHIC_KINDS = new Set(["encirclement", "theater"]);
 const UNIT_COUNTER_STATS_SOURCES = new Set(["preset", "random", "manual"]);
+
+function showToast(message, options = {}) {
+  callRuntimeHook(null, "showToastFn", message, options);
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }

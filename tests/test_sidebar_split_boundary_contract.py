@@ -7,7 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SIDEBAR_JS = REPO_ROOT / "js" / "ui" / "sidebar.js"
 COUNTRY_INSPECTOR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "sidebar" / "country_inspector_controller.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
-I18N_CATALOG_JS = REPO_ROOT / "js" / "ui" / "i18n_catalog.js"
+I18N_CATALOG_JS = REPO_ROOT / "js" / "core" / "i18n_catalog.js"
 
 
 class SidebarSplitBoundaryContractTest(unittest.TestCase):
