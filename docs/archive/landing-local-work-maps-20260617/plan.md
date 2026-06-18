@@ -23,4 +23,4 @@ Execution checklist:
 - [x] Update worktree registry delivery package.
 
 Completion note:
-- Implementation is being integrated from clean branch `codex/landing-work-maps-integration`; the mixed parent checkout remains a recovery/source tree for unrelated renderer work.
+- Implementation was integrated from clean branch `codex/landing-work-maps-integration`, fast-forward merged into `main` at `a48eec68`, and pushed to `origin/main`; the mixed parent checkout remains a recovery/source tree for unrelated renderer work.

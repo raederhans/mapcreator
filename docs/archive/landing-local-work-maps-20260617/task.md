@@ -31,7 +31,7 @@ Out of scope:
 - Dist files: `dist/index.html`, `dist/app.js`, `dist/assets/work-alt-history-med.*`, `dist/assets/work-scenario-switch-europe.*`, `dist/assets/work-atlas-japan-corridor.*`, `dist/pages-dist-manifest.json`.
 - Test files: `tests/landing_showcase_view_behavior.test.mjs`.
 - Test files: `tests/test_pages_dist_startup_shell.py`.
-- Docs: `docs/active/landing-local-work-maps/plan.md`, `docs/active/landing-local-work-maps/context.md`, `docs/active/landing-local-work-maps/task.md`, `docs/active/_worktree_registry.md`, `.omx/context/landing-local-work-maps-20260617T182853Z.md`.
+- Docs: `docs/archive/landing-local-work-maps-20260617/plan.md`, `docs/archive/landing-local-work-maps-20260617/context.md`, `docs/archive/landing-local-work-maps-20260617/task.md`, `docs/active/_worktree_registry.md`, `.omx/context/landing-local-work-maps-20260617T182853Z.md`.
 
 3. Diff summary:
 - Adds a new source-backed map builder that clips real scenario/resource data by fixed local bboxes and emits metadata with source paths, feature counts, bbox, and selection policy.
@@ -43,6 +43,7 @@ Out of scope:
 
 4. Commit state:
 - Clean integration branch `codex/landing-work-maps-integration` was created from `origin/main@6874731f` so the landing asset work can be committed independently from the parent checkout's renderer WIP.
+- Commit `a48eec68` was fast-forward merged into `main` and pushed to `origin/main`.
 
 5. Base divergence:
 - Original source checkout at task start: branch `codex/tno-political-color-recovery`, HEAD `a4957713`.
@@ -74,4 +75,4 @@ Out of scope:
 - Commit the clean integration branch, fast-forward merge it into `main`, and push `origin/main`.
 
 10. Integration status:
-- Ready for clean branch commit and fast-forward merge.
+- Integrated and pushed; this archive folder is the recovery record.
