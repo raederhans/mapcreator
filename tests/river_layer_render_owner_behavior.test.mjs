@@ -52,12 +52,22 @@ function createCanvasContext() {
 function createOwner({
   context = createCanvasContext(),
   features = [],
+  hgoVectorScene = false,
   pathBoundsInScreen = () => true,
   showRivers = true,
 } = {}) {
   const metrics = [];
   const pathCalls = [];
   const state = {
+    activeScenarioId: hgoVectorScene ? "hgo_1936" : "",
+    activeScenarioManifest: hgoVectorScene
+      ? {
+        scenario_contract_profile: "hgo_vector",
+        performance_hints: {
+          hgo_vector_scene_default: true,
+        },
+      }
+      : null,
     riversData: { type: "FeatureCollection", features },
     showRivers,
     styleConfig: {
@@ -183,6 +193,25 @@ test("river layer owner records deferred metrics without drawing", () => {
     featureCount: 1,
     interactive: true,
     reason: "staged-apply",
+    skipped: true,
+  });
+});
+
+test("river layer owner suppresses base rivers for HGO vector scenes", () => {
+  const harness = createOwner({
+    features: [createFeature("River", 1)],
+    hgoVectorScene: true,
+  });
+
+  harness.owner.drawRiversLayer(1);
+
+  assert.equal(harness.context.calls.length, 0);
+  assert.equal(harness.pathCalls.length, 0);
+  assert.equal(harness.metrics.at(-1).name, "drawRiversLayer");
+  assert.deepEqual(harness.metrics.at(-1).details, {
+    featureCount: 1,
+    interactive: false,
+    reason: "hgo-vector-scene",
     skipped: true,
   });
 });

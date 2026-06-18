@@ -52,6 +52,16 @@ export function createOceanRenderOwner({
     sortBathymetryFeaturesForFill = (collection) => Array.isArray(collection?.features) ? collection.features : [],
   } = helpers;
 
+  function isHgoVectorSceneActive() {
+    const manifest = runtimeState?.activeScenarioManifest || {};
+    const profile = String(manifest.scenario_contract_profile || "").trim();
+    if (profile === "hgo_vector") return true;
+    const performanceHints = manifest.performance_hints && typeof manifest.performance_hints === "object"
+      ? manifest.performance_hints
+      : {};
+    return performanceHints.hgo_vector_scene_default === true;
+  }
+
   function drawBathymetryBands(collection, oceanStyle) {
     const context = getContext();
     const pathCanvas = getPathCanvas();
@@ -183,6 +193,7 @@ export function createOceanRenderOwner({
 
   function drawScenarioCoastalAccentLayer(k, { interactive = false } = {}) {
     const context = getContext();
+    if (isHgoVectorSceneActive()) return;
     if (!context || !isScenarioCoastalAccentEnabled()) return;
     const coastlineDecision = resolveCoastlineTopologySource();
     const usesScenarioCoastlineSource = coastlineDecision?.source === "scenario";

@@ -32,10 +32,19 @@ function createContextRecorder() {
   };
 }
 
-function createOwner({ interactive = false } = {}) {
+function createOwner({ hgoVectorScene = false, interactive = false } = {}) {
   const context = createContextRecorder();
+  const coastalAccentCalls = [];
   const state = {
     activeScenarioId: "",
+    activeScenarioManifest: hgoVectorScene
+      ? {
+        scenario_contract_profile: "hgo_vector",
+        performance_hints: {
+          hgo_vector_scene_default: true,
+        },
+      }
+      : null,
     scenarioBorderMode: "canonical",
     cachedCountryBorders: [mesh],
     cachedCoastlines: [mesh],
@@ -83,7 +92,7 @@ function createOwner({ interactive = false } = {}) {
     },
     helpers: {
       clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
-      drawScenarioCoastalAccentLayer: () => {},
+      drawScenarioCoastalAccentLayer: (...args) => coastalAccentCalls.push(args),
       getCoastlineCollectionForZoom: () => (interactive ? state.cachedCoastlinesLow : state.cachedCoastlines),
       getInternalBorderStrokeColor: (_countryCode, fallbackColor) => fallbackColor,
       getSafeCanvasColor: (value, fallbackColor) => value || fallbackColor,
@@ -93,7 +102,7 @@ function createOwner({ interactive = false } = {}) {
       sanitizePolyline: (line) => (Array.isArray(line) ? line : []),
     },
   });
-  return { owner, context };
+  return { owner, context, coastalAccentCalls };
 }
 
 test("drawHierarchicalBorders applies border opacity and width styles to normal pass", () => {
@@ -124,4 +133,27 @@ test("drawHierarchicalBorders applies border opacity and width styles to interac
   nearlyEqual(coastStroke.alpha, 0.39);
   nearlyEqual(countryStroke.lineWidth, 0.95);
   nearlyEqual(coastStroke.lineWidth, 0.792);
+});
+
+test("drawHierarchicalBorders suppresses canonical coastlines for HGO vector normal pass", () => {
+  const { owner, context, coastalAccentCalls } = createOwner({ hgoVectorScene: true });
+
+  owner.drawHierarchicalBorders(2, { interactive: false });
+
+  const countryStroke = context.strokes.find((stroke) => stroke.strokeStyle === "#222222");
+  const coastStroke = context.strokes.find((stroke) => stroke.strokeStyle === "#333333");
+  assert.ok(countryStroke);
+  assert.equal(coastStroke, undefined);
+  assert.equal(coastalAccentCalls.length, 0);
+});
+
+test("drawHierarchicalBorders suppresses canonical coastlines for HGO vector interactive pass", () => {
+  const { owner, context } = createOwner({ hgoVectorScene: true, interactive: true });
+
+  owner.drawHierarchicalBorders(2, { interactive: true });
+
+  const countryStroke = context.strokes.find((stroke) => stroke.strokeStyle === "#222222");
+  const coastStroke = context.strokes.find((stroke) => stroke.strokeStyle === "#333333");
+  assert.ok(countryStroke);
+  assert.equal(coastStroke, undefined);
 });

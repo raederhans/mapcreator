@@ -240,3 +240,22 @@ test("ocean owner skips Atlantropa clipping and overlay redraw for scenario coas
   assert.equal(harness.pathCalls.includes(overlayFeature), false);
   assert.equal(harness.context.calls.filter((call) => call.type === "stroke").length, 2);
 });
+
+test("ocean owner suppresses coastal accents for HGO vector scenes", () => {
+  const harness = createOwner({
+    state: {
+      activeScenarioManifest: {
+        scenario_contract_profile: "hgo_vector",
+        performance_hints: {
+          hgo_vector_scene_default: true,
+        },
+      },
+    },
+  });
+
+  harness.owner.drawScenarioCoastalAccentLayer(1, { interactive: false });
+
+  assert.equal(harness.helperCalls.some((call) => call.type === "clip-atlantropa"), false);
+  assert.equal(harness.pathCalls.length, 0);
+  assert.equal(harness.context.calls.filter((call) => call.type === "stroke").length, 0);
+});

@@ -67,6 +67,20 @@ export function createBorderDrawOwner({
     syncStaticMeshSnapshot = () => {},
   } = helpers;
 
+  function isHgoVectorSceneActive() {
+    const manifest = state?.activeScenarioManifest || {};
+    const profile = String(manifest.scenario_contract_profile || "").trim();
+    if (profile === "hgo_vector") return true;
+    const performanceHints = manifest.performance_hints && typeof manifest.performance_hints === "object"
+      ? manifest.performance_hints
+      : {};
+    return performanceHints.hgo_vector_scene_default === true;
+  }
+
+  function shouldDrawCanonicalCoastlines() {
+    return !isHgoVectorSceneActive();
+  }
+
   function getScreenSpaceTurnAngleDeg(previousPoint, currentPoint, nextPoint) {
     if (!previousPoint || !currentPoint || !nextPoint) return 180;
     const ax = currentPoint[0] - previousPoint[0];
@@ -406,15 +420,22 @@ export function createBorderDrawOwner({
     if (interactive) {
       const countryWidth = (empireWidthBase * 0.95) / kDenom;
       const coastWidth = (coastWidthBase * 0.88) / kDenom;
-      const coastlineLow = state.cachedCoastlinesLow?.length
-        ? state.cachedCoastlinesLow
-        : (state.cachedCoastlines?.length ? state.cachedCoastlines : state.cachedCoastlinesHigh);
+      const drawCanonicalCoastlines = shouldDrawCanonicalCoastlines();
+      const coastlineLow = drawCanonicalCoastlines
+        ? (
+          state.cachedCoastlinesLow?.length
+            ? state.cachedCoastlinesLow
+            : (state.cachedCoastlines?.length ? state.cachedCoastlines : state.cachedCoastlinesHigh)
+        )
+        : null;
 
       context.globalAlpha = countryOpacity * 0.88;
       drawMeshCollection(empireMeshes, empireColor, countryWidth, { transformMesh: empireMeshTransform });
 
-      context.globalAlpha = coastOpacity * 0.78;
-      drawMeshCollection(coastlineLow, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
+      if (drawCanonicalCoastlines) {
+        context.globalAlpha = coastOpacity * 0.78;
+        drawMeshCollection(coastlineLow, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
+      }
 
       context.globalAlpha = 1.0;
       return;
@@ -478,7 +499,10 @@ export function createBorderDrawOwner({
       detailAdmBorderMinWidth,
       internalWidthBase * 0.42 * (0.72 + 0.40 * t) * lowZoomWidthScale
     ) * detailAdmBorderWidthScale / kDenom;
-    const coastlineCollection = getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k);
+    const drawCanonicalCoastlines = shouldDrawCanonicalCoastlines();
+    const coastlineCollection = drawCanonicalCoastlines
+      ? getViewportAwareCoastlineCollection(getCoastlineCollectionForZoom(k), k)
+      : null;
     const visibleCountryCodes = getVisibleCountryCodesForBorderMeshes();
     if (visibleCountryCodes.size > 0) {
       const includeProvinceMeshes = k >= provinceBordersTransitionEndZoom;
@@ -586,9 +610,11 @@ export function createBorderDrawOwner({
     context.globalAlpha = countryAlpha;
     drawMeshCollection(empireMeshes, empireColor, countryWidth, { transformMesh: empireMeshTransform });
 
-    context.globalAlpha = coastAlpha;
-    drawMeshCollection(coastlineCollection, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
-    drawScenarioCoastalAccentLayer(k, { interactive });
+    if (drawCanonicalCoastlines) {
+      context.globalAlpha = coastAlpha;
+      drawMeshCollection(coastlineCollection, coastColor, coastWidth, { transformMesh: coastlineMeshTransform });
+      drawScenarioCoastalAccentLayer(k, { interactive });
+    }
 
     context.globalAlpha = 1.0;
   }
