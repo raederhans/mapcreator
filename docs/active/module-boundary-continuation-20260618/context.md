@@ -91,3 +91,17 @@
 
 - Node still prints the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for browser ESM `.js` modules during tests. Existing backend and state tests already show the same warning pattern, so Phase C did not broaden package module semantics.
 - The parent main checkout currently has duplicate HGO runtime preview WIP. Before Phase C merge, preserve or clear that duplicate set so backend-only integration stays isolated.
+
+## Phase C Integration Closeout
+
+- Phase C commit: `8964266868f1f675d0076d93f55172a4ec9910fa`.
+- Feature branch `codex/module-boundary-phase-c-backend-shell` was pushed for recovery before integration.
+- Parent main duplicate HGO WIP was preserved before merge:
+  - Stash: `preserve-main-hgo-runtime-preview-duplicate-wip-before-phase-c-integration-20260618T182321`.
+  - Patch backup: `.runtime/cleanup-backups/phase-c-main-hgo-duplicate-preserve-20260618T182321/`.
+- Fast-forward merge into `main` completed at `8964266868f1f675d0076d93f55172a4ec9910fa`.
+- Post-merge verification on clean main:
+  - `npm run verify:backend-preview`: passed; Python backend service/routes 25 tests, Node backend client/helper 13 tests, and syntax checks passed.
+  - `npm run test:node:backend-cloud-support`: passed, 36 tests.
+  - `git diff --check`: passed.
+- Phase C worktree `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-c-backend-shell` was clean and removed after post-merge verification.

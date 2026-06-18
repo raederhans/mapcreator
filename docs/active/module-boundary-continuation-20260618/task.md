@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Phase A is integrated and pushed. Phase C is in progress because Phase B overlaps the active HGO runtime preview worktree.
+Phase A and Phase C are integrated and verified on main. Phase B remains deferred because it overlaps the active HGO runtime preview worktree.
 
 ## Phase A Delivery Package
 
@@ -66,9 +66,9 @@ Docs:
 
 ## Recommended Next Step
 
-Finish Phase C review, commit and integrate it from `main@5fc3dc3d`, then return to Phase B after the HGO overlap is resolved or explicitly sequenced.
+Return to Phase B after the HGO overlap is resolved, abandoned, rebased, or explicitly sequenced. Phase D guardrails stay after the remaining implementation phases.
 
-## Phase C Delivery Package Draft
+## Phase C Delivery Package
 
 1. Moved backend console static text, locale translation, document metadata helpers, sample project payload creation, date formatting, and HTML escaping into `backend/backend_console_helpers.js`.
 2. Kept DOM rendering, state, backend API calls, dialogs, downloads, refresh orchestration, and event binding in `backend/app.js`.
@@ -104,13 +104,14 @@ Temporary files:
 
 - Base commit: `main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`.
 - Current branch: `codex/module-boundary-phase-c-backend-shell`.
+- Functional commit: `8964266868f1f675d0076d93f55172a4ec9910fa`.
 - `backend/app.js` is slimmer by removing pure text/helper logic and importing a pure helper module.
 - `backend/backend_console_helpers.js` owns backend console i18n data, key-list access, locale resolution, metadata text, sample payload shape, date formatting, and escaping.
 - `tests/backend_console_helpers.test.mjs` covers key parity, page key coverage, locale resolution, unknown-key interpolation, metadata text, sample payload schema, date tolerance, and escaping.
 - `package.json` adds a named helper test, a Python wrapper script, and extended backend verification scripts.
-- Current commit state: not committed yet; awaiting review responses and final staging.
-- Base/main divergence: branch is based on current `origin/main@5fc3dc3d`; no upstream divergence detected.
-- Potential conflicts: green vs active HGO runtime preview files by path; red vs parent checkout staging because duplicate HGO WIP is currently dirty in the main worktree.
+- Current commit state: committed, pushed as a recovery branch, fast-forward merged into main, and post-merge verified.
+- Base/main divergence: Phase C was based on `origin/main@5fc3dc3d` and merged cleanly.
+- Potential conflicts: green vs active HGO runtime preview files by path; HGO worktree remains based on `9139c073` and needs rebase or explicit sequencing before Phase B.
 
 ## Phase C Verification
 
@@ -121,10 +122,13 @@ Temporary files:
 - Passed: `npm run test:node:backend-cloud-support` (36 tests).
 - Passed: `git diff --check`.
 - Passed: ai-slop diff scan for risky added-line patterns.
+- Post-merge passed: `npm run verify:backend-preview` (Python 25 tests, Node 13 tests, syntax checks).
+- Post-merge passed: `npm run test:node:backend-cloud-support` (36 tests).
+- Post-merge passed: `git diff --check`.
 
-## Phase C Open Items
+## Phase C Review Gates
 
 - Ptolemy boundary review: clear after replacing Windows-only `py -3` scripts, using shared title translation, and narrowing test key access.
 - Helmholtz coverage review: static page i18n key coverage added, and untracked files will be staged explicitly.
-- Preserve or clear duplicate HGO WIP from the parent main checkout before fast-forwarding Phase C.
-- After merge, re-run `npm run verify:backend-preview`, `npm run test:node:backend-cloud-support`, and `git diff --check` from clean main.
+- Duplicate HGO WIP from the parent main checkout was preserved in stash `preserve-main-hgo-runtime-preview-duplicate-wip-before-phase-c-integration-20260618T182321` and patch backup `.runtime/cleanup-backups/phase-c-main-hgo-duplicate-preserve-20260618T182321/`.
+- Phase C worktree was removed after merge and verification.

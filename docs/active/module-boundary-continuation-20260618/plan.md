@@ -14,7 +14,7 @@ Finish the remaining module-boundary slimming work in staged worktrees, starting
 - [x] Run Phase A review gates.
 - [x] Commit, integrate Phase A into main, push, and checkpoint.
 - [ ] Phase B: split sidebar/toolbar UI shell. Deferred while the active HGO runtime preview worktree overlaps toolbar/sidebar files.
-- [ ] Phase C: split backend preview app shell. In progress from `main@5fc3dc3d`.
+- [x] Phase C: split backend preview app shell, integrate into main, verify, and clean worktree.
 - [ ] Phase D: add boundary and module budget guardrails.
 - [ ] Final UltraQA, independent review, worktree cleanup, and archive.
 
