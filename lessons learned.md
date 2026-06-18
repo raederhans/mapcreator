@@ -219,6 +219,9 @@
 ### no-bundler 依赖要同步 vendor 和 Pages manifest
 - 给浏览器端新增 npm 依赖时，要把可直接 import 的 ESM 文件 vendored 到 `vendor/`，再跑 `verify:pages-dist` 确认 `dist/app/vendor` 和 `pages-dist-manifest.json` 同步。
 
+### HGO vector 场景要整体退出基础线层
+- 正式 HGO1936 这类 `hgo_vector` 场景有自己的投影和矢量表达；默认 coastline、coastal accent、rivers 等基础线层 owner 要一起识别场景合同并退出，残留线排查优先用 canvas `strokeStyle` trace 区分来源。
+
 ### 项目 ZIP 导入要同时锁完整性和预算
 - 可编辑项目包的 `manifest.json` 要作为严格合同校验，至少锁所选项目文件路径和 checksum。
 - ZIP 导入要同时限制压缩包体积、entry 数和解压后总字节，避免坏包绕过预览路径拖垮浏览器。
