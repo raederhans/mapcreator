@@ -5,16 +5,16 @@ Last updated: 2026-06-18
 ## Integration Owner
 
 - Owner: no active integration owner after TNO recovery closeout.
-- Last integration branch: `codex/tno-political-recovery-integration@fcd63a32`
+- Last integration branch: `codex/tno-political-recovery-integration@fcd63a32`; main closeout `da94091d`
 - Base: `origin/main@e1f4eb2030d7afba0a679e84fab65d398afc90e4`
 - Live test/build owner: no active live process after closeout.
 - Subagents: final static reviews complete; architect CLEAR and code-reviewer PASS.
 
 ## Recommended Order
 
-1. TNO recovery docs-only closeout is fast-forwarded into `main` at `fcd63a32`.
-2. Push `main` with this registry closeout and keep branch `origin/codex/tno-political-recovery-integration` as the recovery ref.
-3. Clean only `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-recovery-integration` after main push.
+1. TNO recovery docs-only closeout is integrated into `main`; `da94091d` records the registry handoff.
+2. Branch `origin/codex/tno-political-recovery-integration@fcd63a32` remains as the recovery ref.
+3. Temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-recovery-integration` has been cleaned after main push.
 4. Keep the parent checkout dirty files as recovery evidence only; do not stage parent `js/`, `dist/`, `tests/`, `package.json`, or generated asset residue wholesale.
 5. Treat landing work maps as covered by `origin/main` and module-boundary active docs as covered by `docs/archive/module-boundary-slimming-20260618/`.
 
@@ -54,7 +54,7 @@ These rows are branch or commit recovery indexes. They are historical references
 
 | Former worktree | Recovery ref | HEAD commit | Removed at | Archived docs | Reopen condition |
 | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-recovery-integration` | branch `codex/tno-political-recovery-integration@fcd63a32`; main registry closeout commit follows | `fcd63a32` plus registry closeout commit | cleanup after main push | `docs/archive/tno-political-edit-progressive-recovery-20260618/` | Inspect this branch/docs when auditing the covered TNO political color recovery, parent dirty checkout boundaries, or the 2026-06-18 validation evidence. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-recovery-integration` | branch `codex/tno-political-recovery-integration@fcd63a32`; main registry closeout `da94091d` | `fcd63a32` plus `da94091d` | 2026-06-18 after main push | `docs/archive/tno-political-edit-progressive-recovery-20260618/` | Inspect this branch/docs when auditing the covered TNO political color recovery, parent dirty checkout boundaries, or the 2026-06-18 validation evidence. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-cleanup-city-lights` | branch `codex/render-chain-cleanup-city-lights`; main closeout branch `codex/render-main-integration-20260616` | `31c7be26` plus registry closeout commit | cleanup after main push | `docs/archive/render-chain-cleanup-city-lights-20260616/` | Inspect this branch/docs when auditing City Lights owner extraction, historical 1930 night lights, or layer smoke stale-contract repairs. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-city-lights-baseline` | detached `origin/main@bb40fe02` | `bb40fe02` | cleanup after push | none; comparison-only worktree | Used only for same-machine perf/layer-smoke baseline checks; remove after final closeout. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-renderer-review-fixes` | `origin/main` after renderer owner postmerge review fix / former branch `codex/renderer-review-fixes` | `60f13301` | 2026-06-16 | `docs/archive/renderer-owner-postmerge-review-20260616/` | Inspect this commit/docs when auditing renderer owner intensity channel tolerance or modern city lights render-cache contract location. |
