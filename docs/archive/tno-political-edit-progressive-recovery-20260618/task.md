@@ -17,6 +17,57 @@
 - [x] Run review / bug self-check and fix findings.
 - [x] Update lessons learned only if a durable new lesson appears.
 - [x] Prepare delivery package and integration status.
+- [x] 2026-06-18 re-audit after module-boundary main integration.
+- [x] Confirm current `origin/main@e1f4eb20` already contains the effective TNO recovery code and tests.
+- [x] Archive this active task folder after coverage closeout.
+
+## 2026-06-18 Coverage Closeout
+
+1. Changed behavior:
+   - No production code was moved in this closeout.
+   - `origin/main@e1f4eb20` already contains the TNO pending political color edit behavior and module-boundary split.
+   - Parent checkout dirty renderer files are retained only as recovery evidence.
+   - Landing work-map dirty assets are covered by main.
+   - Active TNO docs are archived under `docs/archive/tno-political-edit-progressive-recovery-20260618/`.
+
+2. Files:
+   - Docs: `docs/active/_worktree_registry.md`, this archived task/context/plan folder.
+   - Core/test/dist: unchanged by this closeout.
+
+3. Diff summary:
+   - Registry now records TNO recovery as covered by main and marks the parent checkout as recovery-only dirty state.
+   - Active docs moved to archive.
+
+4. Commit status:
+   - Closeout commit is ready on `codex/tno-political-recovery-integration`.
+
+5. Base status:
+   - Branch base: `origin/main@e1f4eb2030d7afba0a679e84fab65d398afc90e4`.
+   - Parent checkout HEAD: `a4957713cb73fdfb02aa0c4d1c265377b5ceaff5`.
+   - `a4957713` is an ancestor of `origin/main`.
+
+6. Potential conflicts:
+   - Red if any parent dirty `js/`, `dist/`, `tests/`, or `package.json` file is staged wholesale.
+   - Green for this closeout diff because it is docs-only.
+
+7. Verification:
+   - 2026-06-18 final evidence logs live under `.runtime/tests/tno-political-recovery/`.
+   - `validation-summary.json` records the first batch run, including the initial TNO E2E dependency-resolution failure in the clean worktree.
+   - `node --check` targeted JS checks: pass.
+   - `npm run test:node:renderer-runtime-state-behavior`: pass.
+   - `npm run test:e2e:dev:political-progressive-recovery`: pass, 3/3 in `tno-political-progressive-e2e-junction.log` after adding the temporary ignored `node_modules` junction for dependency resolution.
+   - `npm run test:node:scenario-chunk-contracts`: 43/44 in `scenario-chunk-contracts-rerun.log`, with the registered `hoverFacilityAndCityProbeMetricsRemainNamed` failure.
+   - `npm run verify:test-import-graph`: pass.
+   - `py -3 tools/build_pages_dist.py`: pass.
+   - `py -3 -m unittest tests.test_pages_dist_startup_shell -q`: pass, 37 tests.
+   - `npm run test:node:landing-showcase-view`: pass, 8/8.
+   - `git diff --check`: pass with line-ending warnings only.
+
+8. Remaining risks:
+   - Parent checkout still has dirty recovery files and should stay untouched unless a later explicit cleanup task chooses restore/reset boundaries.
+
+9. Recommended next action:
+   - Merge the docs-only closeout branch into main after final read-only review pass.
 
 ## Delivery Package
 

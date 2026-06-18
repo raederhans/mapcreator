@@ -75,3 +75,16 @@
 - `npm run test:node:scenario-chunk-contracts`: 43/44 pass; the single failure remains the known unrelated `hoverFacilityAndCityProbeMetricsRemainNamed` assertion.
 - `npm run test:e2e:dev:political-progressive-recovery`: pass, 3/3.
 - `npm run verify:pages-dist` with the local shapely venv on PATH: pass; Python startup shell unittest 37 tests OK with 6 skipped, landing showcase view 6/6 pass.
+
+## 2026-06-18 Coverage Closeout After Module Boundary
+
+- Parent checkout remained on `codex/tno-political-color-recovery` with dirty mixed WIP.
+- `git worktree list`, `git status --short`, `git diff --name-only`, and `git diff --stat` were run before edits.
+- `git merge-base HEAD origin/main` in the parent checkout equals `a4957713cb73fdfb02aa0c4d1c265377b5ceaff5`, proving the parent branch HEAD is already contained by current `origin/main@e1f4eb2030d7afba0a679e84fab65d398afc90e4`.
+- `origin/main` already contains `pendingPoliticalColorEdit*`, `isPoliticalForegroundFeature`, progressive recovery pending guards, runtime-state tests, E2E checks, and scenario-chunk contract assertions.
+- The remaining parent renderer diff would undo module-boundary extraction of `scenario_refresh_plans.js` and `interaction_hit_candidates.js`, so no code was migrated from the parent checkout.
+- Parent landing work-map assets and builder match `origin/main`; module-boundary active docs are covered by `docs/archive/module-boundary-slimming-20260618/`.
+- Clean worktree `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-recovery-integration` was created from `e1f4eb20` for this docs-only closeout.
+- Validation completed from the clean worktree: targeted JS syntax checks, renderer runtime-state behavior, import graph, Pages dist builder, Pages startup shell 37 tests, landing showcase 8/8, and `git diff --check` passed.
+- The first batch `validation-summary.json` still records the initial TNO E2E dependency-resolution failure; the final TNO political progressive E2E evidence is `tno-political-progressive-e2e-junction.log`, which passed 3/3 after a temporary ignored `node_modules` junction let the clean worktree resolve the already-installed Playwright dependency.
+- `npm run test:node:scenario-chunk-contracts` remains 43/44 in `scenario-chunk-contracts-rerun.log` with the registered `hoverFacilityAndCityProbeMetricsRemainNamed` failure at `tests/scenario_chunk_contracts.test.mjs:999`.
