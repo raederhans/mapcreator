@@ -53,3 +53,41 @@
 - Phase A worktree and detached post-merge verification worktree were clean and removed after push.
 - Clean post-merge verification ran from detached worktree `C:\Users\raede\.codex\worktrees\mapcreator-phase-a-postmerge-verify`: exact-after-settle 5 tests, scenario refresh 4 tests, interaction hit candidates 5 tests, physical layer 2 tests, renderer boundary 5 tests, import graph, `verify:pages-dist`, and diff check all passed.
 - Main checkout received concurrent HGO runtime preview WIP while Phase A was integrating. It was preserved through named stashes and patch backups under `.runtime/cleanup-backups/phase-a-main-dirty-preserve-*`. Active source of that work is `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix`.
+
+## Phase C Setup
+
+- Phase B was deferred because active HGO runtime preview work edits `js/ui/scenario_controls.js`, `tests/test_toolbar_split_boundary_contract.py`, renderer files, and checked-in Pages dist mirrors.
+- Phase C worktree: `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-c-backend-shell`.
+- Branch: `codex/module-boundary-phase-c-backend-shell`.
+- Base: `main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`, matching `origin/main`.
+- Main validation/live process owner: main Codex agent.
+- Read-only sidecar: Kierkegaard reviewed backend split candidates and recommended pure helper extraction while keeping DOM/state/API orchestration in `backend/app.js`.
+
+## Phase C Findings
+
+- `backend/app.js` was still carrying static backend console messages, locale translation, sample project payload creation, date formatting, and HTML attribute/text escaping.
+- These helpers are pure and can be tested without DOM or API clients.
+- Rendering, event binding, `state`, backend API calls, dialog operations, downloads, and refresh orchestration stay in `backend/app.js`.
+- Existing `verify:backend-preview` used `python`, which is unavailable in this Windows shell; Phase C adds `tools/run_python.mjs` so npm scripts can find Python on Windows and common POSIX shells.
+
+## Phase C Implementation Notes
+
+- New pure owner: `backend/backend_console_helpers.js`.
+- `backend/app.js` imports helper functions and keeps a local `t(key, vars)` wrapper that reads `state.locale`.
+- New behavior tests: `tests/backend_console_helpers.test.mjs`.
+- `package.json` now includes a cross-platform `python` wrapper script, `test:node:backend-console-helpers`, helper tests in `test:node:backend-cloud-support`, and extended `verify:backend-preview` syntax checks for the new helper module and wrapper.
+
+## Phase C Verification Log
+
+- `node --check tools/run_python.mjs`, `backend/app.js`, `backend/backend_console_helpers.js`, and `tests/backend_console_helpers.test.mjs`: passed.
+- `npm run python -- --version`: passed, Python 3.12.10.
+- `npm run test:node:backend-console-helpers`: passed, 6 tests.
+- `npm run verify:backend-preview`: passed; Python backend service/routes 25 tests, Node backend client/helper 13 tests, and syntax checks passed.
+- `npm run test:node:backend-cloud-support`: passed, 36 tests.
+- `git diff --check`: passed.
+- Ai-slop diff scan: no added production/test lines matched `fallback`, `recover`, `retry`, `degrade`, `try/catch`, `mock`, temporary workaround, `TODO`, or `FIXME`.
+
+## Phase C Known Notes
+
+- Node still prints the existing `MODULE_TYPELESS_PACKAGE_JSON` warning for browser ESM `.js` modules during tests. Existing backend and state tests already show the same warning pattern, so Phase C did not broaden package module semantics.
+- The parent main checkout currently has duplicate HGO runtime preview WIP. Before Phase C merge, preserve or clear that duplicate set so backend-only integration stays isolated.

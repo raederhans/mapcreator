@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Phase A is integrated and pushed. Phase B is next.
+Phase A is integrated and pushed. Phase C is in progress because Phase B overlaps the active HGO runtime preview worktree.
 
 ## Phase A Delivery Package
 
@@ -66,4 +66,65 @@ Docs:
 
 ## Recommended Next Step
 
-Start Phase B from updated `origin/main@9139c073`, after accounting for the active HGO runtime preview worktree overlap.
+Finish Phase C review, commit and integrate it from `main@5fc3dc3d`, then return to Phase B after the HGO overlap is resolved or explicitly sequenced.
+
+## Phase C Delivery Package Draft
+
+1. Moved backend console static text, locale translation, document metadata helpers, sample project payload creation, date formatting, and HTML escaping into `backend/backend_console_helpers.js`.
+2. Kept DOM rendering, state, backend API calls, dialogs, downloads, refresh orchestration, and event binding in `backend/app.js`.
+3. Added focused helper behavior tests and connected them to backend npm verification entries.
+4. Added a small `tools/run_python.mjs` wrapper so backend preview npm entries can find Python on Windows and common POSIX shells.
+5. Recorded HGO overlap risk so Phase B waits behind the active HGO worktree.
+
+## Phase C Files
+
+Core files:
+- `backend/app.js`
+- `backend/backend_console_helpers.js`
+
+Test files:
+- `tests/backend_console_helpers.test.mjs`
+
+Config files:
+- `package.json`
+
+Tooling files:
+- `tools/run_python.mjs`
+
+Docs:
+- `docs/active/module-boundary-continuation-20260618/plan.md`
+- `docs/active/module-boundary-continuation-20260618/context.md`
+- `docs/active/module-boundary-continuation-20260618/task.md`
+- `docs/active/_worktree_registry.md`
+
+Temporary files:
+- `.runtime/tmp/extract_backend_i18n.mjs` was used for one mechanical extraction attempt and removed before validation.
+
+## Phase C Diff Summary
+
+- Base commit: `main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`.
+- Current branch: `codex/module-boundary-phase-c-backend-shell`.
+- `backend/app.js` is slimmer by removing pure text/helper logic and importing a pure helper module.
+- `backend/backend_console_helpers.js` owns backend console i18n data, key-list access, locale resolution, metadata text, sample payload shape, date formatting, and escaping.
+- `tests/backend_console_helpers.test.mjs` covers key parity, page key coverage, locale resolution, unknown-key interpolation, metadata text, sample payload schema, date tolerance, and escaping.
+- `package.json` adds a named helper test, a Python wrapper script, and extended backend verification scripts.
+- Current commit state: not committed yet; awaiting review responses and final staging.
+- Base/main divergence: branch is based on current `origin/main@5fc3dc3d`; no upstream divergence detected.
+- Potential conflicts: green vs active HGO runtime preview files by path; red vs parent checkout staging because duplicate HGO WIP is currently dirty in the main worktree.
+
+## Phase C Verification
+
+- Passed: `node --check tools/run_python.mjs`, `backend/app.js`, `backend/backend_console_helpers.js`, and `tests/backend_console_helpers.test.mjs`.
+- Passed: `npm run python -- --version` (Python 3.12.10).
+- Passed: `npm run test:node:backend-console-helpers` (6 tests).
+- Passed: `npm run verify:backend-preview` (Python 25 tests, Node 13 tests, syntax checks).
+- Passed: `npm run test:node:backend-cloud-support` (36 tests).
+- Passed: `git diff --check`.
+- Passed: ai-slop diff scan for risky added-line patterns.
+
+## Phase C Open Items
+
+- Ptolemy boundary review: clear after replacing Windows-only `py -3` scripts, using shared title translation, and narrowing test key access.
+- Helmholtz coverage review: static page i18n key coverage added, and untracked files will be staged explicitly.
+- Preserve or clear duplicate HGO WIP from the parent main checkout before fast-forwarding Phase C.
+- After merge, re-run `npm run verify:backend-preview`, `npm run test:node:backend-cloud-support`, and `git diff --check` from clean main.

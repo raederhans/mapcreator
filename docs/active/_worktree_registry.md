@@ -5,17 +5,17 @@ Last updated: 2026-06-18
 ## Integration Owner
 
 - Owner: module-boundary continuation integration owner.
-- Current base: `main@9139c0737461650e79177ded24fdecf2867c4028`.
-- Base: `origin/main@9139c0737461650e79177ded24fdecf2867c4028`.
-- Live test/build owner: no active live process after Phase A closeout.
-- Subagents: Harvey, Goodall, and Confucius completed read-only Phase A architecture, ponytail, and behavior reviews; no child agent owned live tests.
+- Current base: `main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`.
+- Base: `origin/main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`.
+- Live test/build owner: main Codex agent owns Phase C backend validation.
+- Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews. No child agent owns live tests.
 
 ## Recommended Order
 
 1. Treat Phase A renderer exact-after-settle plan extraction as integrated and pushed.
-2. Account for active HGO runtime preview overlap before starting Phase B UI shell work.
-3. Start Phase B UI shell work from updated `origin/main@9139c073`.
-4. Start Phase C backend app modularization from updated main.
+2. Integrate Phase C backend app modularization first because it has green path overlap with active HGO work.
+3. Account for active HGO runtime preview overlap before starting Phase B UI shell work.
+4. Start Phase B UI shell work only after HGO overlap is resolved, abandoned, or explicitly sequenced.
 5. Add Phase D guardrails after implementation phases are integrated.
 
 ## Current Worktrees
@@ -24,8 +24,9 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@9139c073` | `origin/main@9139c073` | clean integration owner checkout after stashing duplicate HGO WIP | none | Phase A fast-forwarded and pushed; clean detached post-merge verification passed; duplicate HGO WIP from the parent checkout was preserved in named stashes plus `.runtime/cleanup-backups/phase-a-main-dirty-preserve-*` patches. | Yellow vs active HGO runtime preview worktree because both lines touch renderer/test hot files. | Start Phase B from updated main only after checking active HGO overlap. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix` | `codex/hgo-runtime-preview-fix@9139c073` | `main@9139c073` | in-progress | hot files: `js/core/map_renderer.js`, `js/ui/scenario_controls.js`, HGO runtime preview tests, renderer and toolbar boundary tests | `git status --short` shows six dirty HGO runtime preview files. No Phase A tests were delegated to this worktree. | Red vs future renderer/UI Phase B because it touches `map_renderer.js`, `scenario_controls.js`, and boundary tests. | Finish or register this worktree before starting Phase B edits that touch sidebar/toolbar or renderer shell files. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@5fc3dc3d` | `origin/main@5fc3dc3d` | dirty integration owner checkout with duplicate HGO runtime preview WIP | hot files currently dirty in parent: `js/core/map_renderer.js`, `js/ui/scenario_controls.js`, dist mirrors, HGO runtime preview tests, renderer/toolbar/Pages startup boundary tests | Phase A closeout commit `5fc3dc3d` pushed. Duplicate HGO WIP must be preserved or cleared before Phase C merge. | Green vs Phase C by path; red for staging because parent dirty files are unrelated to backend Phase C. | Preserve/clear duplicate HGO WIP, then fast-forward Phase C into clean main and run backend gates. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix` | `codex/hgo-runtime-preview-fix@9139c073` | `main@9139c073` | in-progress | hot files: `docs/active/_worktree_registry.md`, `js/core/map_renderer.js`, `js/ui/scenario_controls.js`, HGO runtime preview tests, renderer and toolbar boundary tests | `git status --short` shows active HGO runtime preview files. No Phase C tests are delegated to this worktree. | Red vs future renderer/UI Phase B because it touches `map_renderer.js`, `scenario_controls.js`, and boundary tests; green vs Phase C backend files. | Finish, rebase, or explicitly sequence this worktree before Phase B edits that touch sidebar/toolbar or renderer shell files. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-c-backend-shell` | `codex/module-boundary-phase-c-backend-shell@5fc3dc3d` | `main@5fc3dc3d` | ready-for-integration after final diff check | hot files: `backend/app.js`, `backend/backend_console_helpers.js`, `tests/backend_console_helpers.test.mjs`, `tools/run_python.mjs`, `package.json`, active docs, registry | New backend console helper owner and Python wrapper added; helper tests and backend verification entries updated. Passed wrapper version check, helper node 6 tests, backend preview Python 25 + Node 13 + syntax checks, backend cloud-support Node 36 tests, diff check, ai-slop scan, Ptolemy boundary review, and Helmholtz coverage review. | Green vs active HGO by path; yellow vs future package-script work because `package.json` is shared. | Commit branch, preserve/clear parent duplicate HGO WIP, fast-forward merge into main, rerun backend gates, push, then remove worktree. |
 
 ## Recent Integrated Branches
 
@@ -49,6 +50,7 @@ These rows are historical integration summaries retained for recovery and sequen
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
+| Phase C backend shell vs active HGO runtime preview fix | Green | Phase C touches `backend/app.js`, `backend/backend_console_helpers.js`, backend helper tests, package scripts, and active docs; HGO touches renderer, scenario controls, toolbar/runtime preview tests, and dist mirrors. |
 | Active HGO runtime preview fix vs Phase B UI shell | Red | Active HGO worktree currently edits `js/core/map_renderer.js`, `js/ui/scenario_controls.js`, `tests/test_map_renderer_render_pipeline_passes_boundary_contract.py`, and `tests/test_toolbar_split_boundary_contract.py`; Phase B sidebar/toolbar work should start only after this overlap is integrated, abandoned, or rebased. |
 | Phase A exact-after-settle extraction vs active HGO runtime preview fix | Yellow | Phase A is already on main and kept exact-after-settle policy pure; HGO worktree touches adjacent renderer pass/signature logic and boundary tests, so rebase it onto `origin/main@9139c073` before review. |
 | Parent TNO dirty checkout vs current main | Green for behavior coverage; red for staging | `origin/main` already contains TNO recovery behavior and module-boundary owners; staging parent renderer/dist/test files would revert those owners. |
