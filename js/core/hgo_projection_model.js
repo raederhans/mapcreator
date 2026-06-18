@@ -5,6 +5,8 @@ const HGO_LON_MAX = 180;
 const HGO_LAT_MIN = -90;
 const HGO_LAT_MAX = 90;
 const HGO_GEO_EPSILON = 1e-6;
+// Tolerance is in projection logical pixels, after canvas DPR and zoom transform are removed.
+const HGO_PROJECTION_ROUND_TRIP_TOLERANCE_PX = 0.25;
 
 function normalizePositiveInteger(value, label) {
   const number = Number(value);
@@ -76,6 +78,19 @@ function normalizeLonLat(value) {
   ];
 }
 
+function isProjectionRoundTripInDomain(projection, lonLat, projectionPoint) {
+  if (!Array.isArray(lonLat) || !Array.isArray(projectionPoint)) return false;
+  const projected = projection(lonLat);
+  if (!Array.isArray(projected) || projected.length < 2) return false;
+  const x = Number(projected[0]);
+  const y = Number(projected[1]);
+  const targetX = Number(projectionPoint[0]);
+  const targetY = Number(projectionPoint[1]);
+  if (![x, y, targetX, targetY].every(Number.isFinite)) return false;
+  return Math.abs(x - targetX) <= HGO_PROJECTION_ROUND_TRIP_TOLERANCE_PX
+    && Math.abs(y - targetY) <= HGO_PROJECTION_ROUND_TRIP_TOLERANCE_PX;
+}
+
 function mapHgoLonLatToSourcePoint(lonLat, { sourceWidth, sourceHeight } = {}) {
   const width = normalizePositiveInteger(sourceWidth, "source width");
   const height = normalizePositiveInteger(sourceHeight, "source height");
@@ -138,6 +153,7 @@ function createHgoProjectionModel({
     const projectionPoint = invertProjectionTransform(projectionTransform, logicalPoint);
     if (!projectionPoint) return null;
     const lonLat = normalizeLonLat(normalizedProjection.invert(projectionPoint));
+    if (!lonLat || !isProjectionRoundTripInDomain(normalizedProjection, lonLat, projectionPoint)) return null;
     const sourcePoint = mapHgoLonLatToSourcePoint(lonLat, {
       sourceWidth: normalizedSourceWidth,
       sourceHeight: normalizedSourceHeight,

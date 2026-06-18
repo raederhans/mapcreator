@@ -90,13 +90,18 @@ function createScenarioApplyPipeline({
   function buildScenarioActivationCommitState(bundle, staged) {
     // staged 负责把 bundle/loader 结果整理成一次性 runtimeState 提交包。
     // 真正写入 runtimeState 时只认这份对象，避免 apply 流程在多个阶段分散写字段。
+    const hasRenderableRuntimeTopology = staged.mapSemanticMode === "blank"
+      || hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload);
     const runtimePoliticalTopology = staged.mapSemanticMode === "blank"
       ? (staged.runtimeTopologyPayload || null)
       : (
-        hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload)
+        hasRenderableRuntimeTopology
           ? staged.runtimeTopologyPayload
-          : (runtimeState.defaultRuntimePoliticalTopology || runtimeState.runtimePoliticalTopology || null)
+          : (runtimeState.defaultRuntimePoliticalTopology || null)
       );
+    const scenarioRuntimeTopologyData = hasRenderableRuntimeTopology
+      ? (staged.runtimeTopologyPayload || null)
+      : null;
     const scenarioPoliticalChunkData = scenarioSupportsChunkedRuntime(bundle)
       ? null
       : (
@@ -131,7 +136,7 @@ function createScenarioApplyPipeline({
       mapSemanticMode: staged.mapSemanticMode,
       scenarioCountriesByTag: staged.countryMap,
       activeScenarioMeshPack: bundle.meshPackPayload || null,
-      scenarioRuntimeTopologyData: staged.runtimeTopologyPayload,
+      scenarioRuntimeTopologyData,
       runtimePoliticalTopology,
       scenarioPoliticalChunkData,
       runtimePoliticalMetaSeed: bundle.runtimePoliticalMeta || null,
@@ -140,7 +145,7 @@ function createScenarioApplyPipeline({
       scenarioContextLandMaskData,
       scenarioWaterRegionsData,
       scenarioAtlantropaData,
-      scenarioRuntimeTopologyVersionTag: runtimeVersionTag,
+      scenarioRuntimeTopologyVersionTag: scenarioRuntimeTopologyData ? runtimeVersionTag : "",
       scenarioLandMaskVersionTag: scenarioLandMaskData ? runtimeVersionTag : "",
       scenarioContextLandMaskVersionTag: scenarioContextLandMaskData ? runtimeVersionTag : "",
       scenarioWaterOverlayVersionTag: scenarioWaterRegionsData ? runtimeVersionTag : "",

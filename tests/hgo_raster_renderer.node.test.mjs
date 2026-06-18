@@ -105,10 +105,22 @@ function createProjectedRenderer() {
 }
 
 function createLinearProjection() {
-  const projection = (lonLat) => lonLat;
+  const projection = ([lon, lat]) => [
+    (lon + 180) / 90,
+    (90 - lat) / 90,
+  ];
   projection.invert = ([x, y]) => [
     -180 + x * 90,
     90 - y * 90,
+  ];
+  return projection;
+}
+
+function createSouthPoleClampingProjection() {
+  const projection = createLinearProjection();
+  projection.invert = ([x, y]) => [
+    -180 + x * 90,
+    y > 2 ? -90 : 90 - y * 90,
   ];
   return projection;
 }
@@ -121,7 +133,10 @@ function createNullProjection() {
 
 function createCountingLinearProjection() {
   let invertCount = 0;
-  const projection = (lonLat) => lonLat;
+  const projection = ([lon, lat]) => [
+    (lon + 180) / 90,
+    (90 - lat) / 90,
+  ];
   projection.invert = ([x, y]) => {
     invertCount += 1;
     return [
@@ -432,6 +447,24 @@ test("unprojectable HGO pixels render as unknown and inspect as empty", () => {
   assert.equal(rendered.unresolvedPixelCount, 2);
   assert.deepEqual(Array.from(rendered.data), [0, 0, 0, 0, 0, 0, 0, 0]);
   assert.equal(renderer.inspectProjectedCanvasPoint(0, 0, { width: 2, height: 1 }, { projection }), null);
+});
+
+test("projected HGO pixels outside the forward round-trip domain stay transparent", () => {
+  const renderer = createProjectedRenderer();
+  const projection = createSouthPoleClampingProjection();
+  const rendered = renderer.renderProjectedToBuffer({
+    projection,
+    targetWidth: 5,
+    targetHeight: 5,
+  });
+  const validHit = renderer.inspectProjectedCanvasPoint(2, 1, { width: 5, height: 5 }, { projection });
+
+  assert.equal(rendered.projectedPixelCount, 8);
+  assert.equal(rendered.unprojectedPixelCount, 17);
+  assert.deepEqual(Array.from(rendered.data.slice((3 * 5 + 2) * 4, ((3 * 5 + 2) * 4) + 4)), [0, 0, 0, 0]);
+  assert.deepEqual(Array.from(rendered.data.slice((1 * 5 + 2) * 4, ((1 * 5 + 2) * 4) + 4)), [4, 5, 6, 255]);
+  assert.equal(renderer.inspectProjectedCanvasPoint(2, 3, { width: 5, height: 5 }, { projection }), null);
+  assert.equal(validHit.resolved.provinceId, 2);
 });
 
 test("writes projected pixels directly into the target canvas", () => {

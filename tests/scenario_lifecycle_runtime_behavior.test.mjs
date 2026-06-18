@@ -322,6 +322,61 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
   assert.equal(runtimeState.scenarioRuntimeTopologyData?.id, "scenario-runtime");
 });
 
+test("scenario apply commit state does not reuse stale live topology for bad non blank runtime topology", () => {
+  const staleTopology = { objects: { political: { stale: true } } };
+  const unrenderableTopology = {
+    type: "Topology",
+    objects: { political: { type: "GeometryCollection", geometries: [] } },
+    arcs: [],
+  };
+  const runtimeState = createBaseState({
+    activeScenarioId: "previous",
+    defaultRuntimePoliticalTopology: null,
+    runtimePoliticalTopology: staleTopology,
+    scenarioRuntimeTopologyData: { id: "previous-scenario-runtime" },
+  });
+  const pipeline = createApplyPipelineForRuntimeTest(runtimeState, {
+    hasRenderableScenarioPoliticalTopology: () => false,
+  });
+
+  pipeline.applyPreparedScenarioState({
+    manifest: { scenario_id: "sample" },
+  }, {
+    scenarioId: "sample",
+    defaultCountryCode: "AAA",
+    baseCountryMap: {},
+    mapSemanticMode: "political",
+    countryMap: { AAA: { tag: "AAA" } },
+    runtimeTopologyPayload: unrenderableTopology,
+    runtimeVersionTag: "sample:bad-topology",
+    districtGroupsPayload: null,
+    scenarioWaterRegionsFromTopology: null,
+    scenarioSpecialRegionsFromTopology: null,
+    scenarioAtlantropaFromTopology: null,
+    scenarioContextLandMaskFromTopology: null,
+    scenarioLandMaskFromTopology: null,
+    scenarioReliefOverlaysPayload: null,
+    scenarioCityOverridesPayload: null,
+    scenarioStrategicValuesPayload: null,
+    scenarioNameMap: { AAA: "Alpha" },
+    scenarioColorMap: { AAA: "#111111" },
+    scenarioGeneratedColorTags: [],
+    coarseColorMap: null,
+    scenarioOwnerBackfill: {},
+    resolvedOwners: { "POL-A": "AAA" },
+    cores: { "POL-A": ["AAA"] },
+    releasableIndex: {},
+    scenarioParentBorderEnabledBeforeActivate: null,
+    scenarioDisplaySettingsBeforeActivate: null,
+    scenarioOceanFillBeforeActivate: null,
+    scenarioManifest: { scenario_id: "sample" },
+  });
+
+  assert.equal(runtimeState.activeScenarioId, "sample");
+  assert.equal(runtimeState.runtimePoliticalTopology, null);
+  assert.equal(runtimeState.scenarioRuntimeTopologyData, null);
+});
+
 test("scenario apply normalizes bundled strategic values before commit", async () => {
   const runtimeState = createBaseState({
     activeScenarioId: "",

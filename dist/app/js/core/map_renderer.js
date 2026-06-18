@@ -3426,6 +3426,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
   if (passName === "political") {
     return [
       runtimeState.colorRevision || 0,
+      getHgoRuntimePreviewVisibilitySignature(),
       getPoliticalPassStaticSignature(transform),
     ].join("::");
   }
@@ -3464,6 +3465,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
     const baseSignatureParts = [
       runtimeState.topologyRevision || 0,
       runtimeState.activeScenarioId || "",
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.deferContextBasePass ? "context-base:deferred" : "context-base:ready",
       `bucket:${zoomBucket}`,
       runtimeState.showPhysical ? "physical:on" : "physical:off",
@@ -3497,6 +3499,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       transformSignature,
       runtimeState.topologyRevision || 0,
       runtimeState.activeScenarioId || "",
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.deferContextBasePass ? "context-markers:deferred" : "context-markers:ready",
       runtimeState.showCityPoints ? "cities:on" : "cities:off",
       runtimeState.showStrategicResourceMarkers ? "strategic-resources:on" : "strategic-resources:off",
@@ -3518,6 +3521,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       transformSignature,
       runtimeState.topologyRevision || 0,
       runtimeState.activeScenarioId || "",
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.showBlankFeatureLabels ? "blank-feature-labels:on" : "blank-feature-labels:off",
       runtimeState.showCityPoints ? "cities:on" : "cities:off",
       `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
@@ -3529,6 +3533,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       transformSignature,
       runtimeState.topologyRevision || 0,
       runtimeState.activeScenarioId || "",
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.scenarioReliefOverlayRevision || 0,
       `scenario-topology:${getScenarioRuntimeTopologySignatureToken()}`,
       `scenario-overlays:${getScenarioOverlaySignatureToken()}`,
@@ -3544,6 +3549,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
   if (passName === "textureLabels") {
     return [
       transformSignature,
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.topologyRevision || 0,
       stableJson(normalizeTextureStyleConfig(runtimeState.styleConfig?.texture || {})),
     ].join("::");
@@ -3572,6 +3578,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
   if (passName === "borders") {
     return [
       transformSignature,
+      getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.topologyRevision || 0,
       runtimeState.colorRevision || 0,
       runtimeState.cachedDynamicBordersHash || "",
@@ -8712,6 +8719,10 @@ function createHitResult(overrides = {}) {
 function isHgoRuntimePreviewReady() {
   const preview = runtimeState.hgoRuntimePreview;
   return !!preview?.enabled && preview.status === "ready";
+}
+
+function getHgoRuntimePreviewVisibilitySignature() {
+  return isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off";
 }
 
 function getHgoRuntimePreviewProjectionOptions(overrides = {}) {
@@ -16404,6 +16415,13 @@ function recordPoliticalRasterWorkerSnapshot() {
 }
 
 function drawPoliticalPass(k) {
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawPoliticalPass", 0, {
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
   const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
   const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
@@ -17196,6 +17214,13 @@ function drawLineEffectsPass(k, { interactive = false } = {}) {
 }
 
 function drawTextureLabelEffectsPass(k) {
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawTextureLabelEffectsPass", 0, {
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   const texture = getTextureStyleConfig();
   const mode = String(texture.mode || "none").trim().toLowerCase();
   if (!isBootInteractionReady()) return;
@@ -17206,6 +17231,14 @@ function drawTextureLabelEffectsPass(k) {
 
 function drawContextBasePass(k, { interactive = false } = {}) {
   const startedAt = nowMs();
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawContextBasePass", nowMs() - startedAt, {
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   let deferred = false;
   beginContextMetricSession();
   try {
@@ -17270,6 +17303,14 @@ function drawContextBasePass(k, { interactive = false } = {}) {
 
 function drawContextMarkersPass(k, { interactive = false } = {}) {
   const startedAt = nowMs();
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawContextMarkersPass", nowMs() - startedAt, {
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   let deferred = false;
   beginContextMetricSession();
   try {
@@ -17333,6 +17374,14 @@ function drawContextMarkersPass(k, { interactive = false } = {}) {
 
 function drawContextScenarioPass(k, { interactive = false } = {}) {
   const startedAt = nowMs();
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawContextScenarioPass", nowMs() - startedAt, {
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   beginContextMetricSession();
   try {
     drawScenarioRegionOverlaysPass(k);
@@ -17355,6 +17404,14 @@ function drawDayNightPass(k, { interactive = false } = {}) {
 }
 
 function drawBordersPass(k, { interactive = false } = {}) {
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawBordersPass", 0, {
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   if (!runtimeState.landData?.features?.length) return;
   drawHierarchicalBorders(k, { interactive });
 }
@@ -17402,6 +17459,14 @@ function drawBlankFeatureLabelsPass(k, { interactive = false } = {}) {
 }
 
 function drawLabelsPass(k, { interactive = false } = {}) {
+  if (isHgoRuntimePreviewReady()) {
+    recordRenderPerfMetric("drawLabelsPass", 0, {
+      interactive: !!interactive,
+      skipped: true,
+      reason: "hgo-runtime-preview",
+    });
+    return;
+  }
   drawBlankFeatureLabelsPass(k, { interactive });
   return getCityPointsRenderOwner().drawLabelsPass(k, { interactive });
 }

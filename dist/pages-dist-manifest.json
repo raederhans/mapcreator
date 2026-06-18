@@ -45602,7 +45602,7 @@
     },
     {
       "path": "app/js/core/hgo_projection_model.js",
-      "size_bytes": 7087,
+      "size_bytes": 7992,
       "source_kind": "dist"
     },
     {
@@ -45697,7 +45697,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 922484,
+      "size_bytes": 924382,
       "source_kind": "dist"
     },
     {
@@ -45842,7 +45842,7 @@
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
-      "size_bytes": 7554,
+      "size_bytes": 8393,
       "source_kind": "dist"
     },
     {
@@ -46047,7 +46047,7 @@
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 25932,
+      "size_bytes": 26141,
       "source_kind": "dist"
     },
     {
@@ -47041,5 +47041,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153030512
+  "total_bytes": 1153034363
 }

@@ -53,6 +53,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings", owner_content)
         self.assertIn('recordRenderPerfMetric("contextScenarioSignatureChanged"', owner_content)
         self.assertIn('recordRenderPerfMetric("contextScenarioReuseSkipped"', owner_content)
+        self.assertIn("function didHgoPreviewVisibilityTokenChange(previousSignature, nextSignature)", owner_content)
+        self.assertIn('cache.reasons[passName] = "hgo-runtime-preview";', owner_content)
         self.assertIn('tryPartialPoliticalPassRepaint(transform, nextSignature, timings)', owner_content)
         self.assertIn("function ensureIdleRenderPasses(timings) {", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
@@ -75,6 +77,73 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn('.attr("stroke-linejoin", "round")', hover_overlay_body)
         self.assertIn('.attr("stroke-linecap", "round")', hover_overlay_body)
         self.assertIn('runtimeState.hoveredWaterRegionId ? 1.25 : 1.45', hover_overlay_body)
+
+    def test_hgo_preview_ready_replaces_normal_overlay_passes(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        signature_body = renderer_content.split("function getRenderPassSignature(passName", 1)[1].split(
+            "\nfunction resolveHitMode",
+            1,
+        )[0]
+
+        self.assertIn("function getHgoRuntimePreviewVisibilitySignature() {", renderer_content)
+        hgo_signature_body = signature_body.split('if (passName === "hgoPreview")', 1)[1].split(
+            "\n  if (passName === ",
+            1,
+        )[0]
+        self.assertIn('isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off"', hgo_signature_body)
+        self.assertIn('String(preview.status || "")', hgo_signature_body)
+        self.assertIn('projection ? getTransformSignature({ x: 0, y: 0, k: 1 }) : "projection:none"', hgo_signature_body)
+        hgo_preview_pass_body = renderer_content.split("function drawHgoPreviewPass()", 1)[1].split(
+            "\n\nfunction drawEffectsPass",
+            1,
+        )[0]
+        self.assertLess(
+            hgo_preview_pass_body.index("resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);"),
+            hgo_preview_pass_body.index("if (!isHgoRuntimePreviewReady()) return;"),
+        )
+        self.assertEqual(signature_body.count("getHgoRuntimePreviewVisibilitySignature()"), 7)
+        political_body = signature_body.split('if (passName === "political")', 1)[1].split(
+            "\n  if (passName === ",
+            1,
+        )[0]
+        self.assertLess(
+            political_body.index("runtimeState.colorRevision || 0"),
+            political_body.index("getHgoRuntimePreviewVisibilitySignature()"),
+        )
+        for pass_name in (
+            "political",
+            "contextBase",
+            "contextMarkers",
+            "labels",
+            "contextScenario",
+            "textureLabels",
+            "borders",
+        ):
+            pass_body = signature_body.split(f'if (passName === "{pass_name}")', 1)[1].split(
+                "\n  if (passName === ",
+                1,
+            )[0]
+            self.assertIn("getHgoRuntimePreviewVisibilitySignature()", pass_body)
+
+        for function_name in (
+            "drawPoliticalPass",
+            "drawContextBasePass",
+            "drawContextMarkersPass",
+            "drawContextScenarioPass",
+            "drawTextureLabelEffectsPass",
+            "drawBordersPass",
+            "drawLabelsPass",
+        ):
+            pass_body = renderer_content.split(f"function {function_name}(", 1)[1].split("\nfunction ", 1)[0]
+            self.assertRegex(
+                pass_body,
+                re.compile(
+                    r"if \(isHgoRuntimePreviewReady\(\)\) \{[\s\S]*?"
+                    r'reason: "hgo-runtime-preview"[\s\S]*?'
+                    r"return;",
+                    re.S,
+                ),
+            )
 
     def test_empty_click_clears_water_and_special_selection(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

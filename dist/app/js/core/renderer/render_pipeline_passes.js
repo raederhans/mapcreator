@@ -60,6 +60,18 @@ export function createRenderPipelinePassesOwner({
     ];
   }
 
+  function getHgoPreviewVisibilityTokenFromSignature(signature) {
+    return String(signature || "")
+      .split("::")
+      .find((part) => part === "hgo:on" || part === "hgo:off") || "";
+  }
+
+  function didHgoPreviewVisibilityTokenChange(previousSignature, nextSignature) {
+    const previousToken = getHgoPreviewVisibilityTokenFromSignature(previousSignature);
+    const nextToken = getHgoPreviewVisibilityTokenFromSignature(nextSignature);
+    return !!previousToken && !!nextToken && previousToken !== nextToken;
+  }
+
   function shouldDeferExactAfterSettlePassForCriticalPaint(passName, cache = getRenderPassCacheState()) {
     if (!exactAfterSettleDeferredPassNames.has(passName)) return false;
     const controller = getExactAfterSettleControllerState();
@@ -72,16 +84,22 @@ export function createRenderPipelinePassesOwner({
   // idle pass 准备阶段只决定“要不要重画”和“记录原因”，真正绘制仍走 renderPassToCache。
   function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache = getRenderPassCacheState()) {
     const nextSignature = getRenderPassSignature(passName, transform);
-    if (cache.signatures[passName] !== nextSignature) {
+    const previousSignature = String(cache.signatures[passName] || "");
+    const hgoPreviewVisibilityChanged = passName === "contextScenario"
+      && didHgoPreviewVisibilityTokenChange(previousSignature, nextSignature);
+    if (previousSignature !== nextSignature) {
       cache.dirty[passName] = true;
-      if (!cache.reasons[passName] || cache.reasons[passName] === "init") {
+      if (hgoPreviewVisibilityChanged) {
+        cache.reasons[passName] = "hgo-runtime-preview";
+      } else if (!cache.reasons[passName] || cache.reasons[passName] === "init") {
         cache.reasons[passName] = "signature";
       }
       if (passName === "contextScenario") {
         recordRenderPerfMetric("contextScenarioSignatureChanged", 0, {
           activeScenarioId: String(state.activeScenarioId || ""),
-          previousSignature: String(cache.signatures[passName] || ""),
+          previousSignature,
           nextSignature,
+          hgoPreviewVisibilityChanged,
         });
       }
     }

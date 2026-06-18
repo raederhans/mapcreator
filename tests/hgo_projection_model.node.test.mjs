@@ -8,10 +8,22 @@ import {
 } from "../js/core/hgo_projection_model.js";
 
 function createLinearProjection() {
-  const projection = (lonLat) => lonLat;
+  const projection = ([lon, lat]) => [
+    (lon + 180) / 90,
+    (90 - lat) / 90,
+  ];
   projection.invert = ([x, y]) => [
     -180 + x * 90,
     90 - y * 90,
+  ];
+  return projection;
+}
+
+function createSouthPoleClampingProjection() {
+  const projection = createLinearProjection();
+  projection.invert = ([x, y]) => [
+    -180 + x * 90,
+    y > 2 ? -90 : 90 - y * 90,
   ];
   return projection;
 }
@@ -144,6 +156,21 @@ test("returns null for unprojectable canvas points", () => {
   assert.equal(model.mapCanvasPointToSource(1, 0), null);
   assert.equal(model.mapCanvasPointToSource(Number.NaN, 0), null);
   assert.equal(model.mapCanvasPointToSource(4, 0), null);
+});
+
+test("rejects inverted lon lat that does not forward round-trip to the projected point", () => {
+  const model = createHgoProjectionModel({
+    projection: createSouthPoleClampingProjection(),
+    sourceWidth: 4,
+    sourceHeight: 2,
+    targetWidth: 5,
+    targetHeight: 5,
+  });
+
+  const validHit = model.mapCanvasPointToSource(2, 1);
+  assert.equal(validHit.sourceX, 2);
+  assert.equal(validHit.sourceY, 1);
+  assert.equal(model.mapCanvasPointToSource(2, 3), null);
 });
 
 test("rejects missing projection invert support", () => {

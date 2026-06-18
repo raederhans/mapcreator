@@ -600,6 +600,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('def write_text_lf(path: Path, text: str) -> None:', source)
         self.assertIn('def normalize_dist_text_files_lf() -> None:', source)
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
+        self.assertIn("LF_NORMALIZED_ROOT_ASSET_SUFFIXES", source)
         self.assertIn('".css"', source)
         self.assertIn('".svg"', source)
         self.assertIn('".md"', source)
@@ -634,6 +635,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     root_dist_path.write_bytes(b"line 1\r\nline 2\r\n")
                     build_pages_dist.normalize_dist_text_file_lf(root_dist_path)
                     self.assertEqual(root_dist_path.read_bytes(), b"line 1\nline 2\n")
+                root_asset_path = Path(tmpdir) / "assets" / "work-alt-history-med.json"
+                root_asset_path.parent.mkdir(parents=True, exist_ok=True)
+                root_asset_path.write_bytes(b"{\r\n  \"ok\": true\r\n}\r\n")
+                build_pages_dist.normalize_dist_text_file_lf(root_asset_path)
+                self.assertEqual(root_asset_path.read_bytes(), b'{\n  "ok": true\n}\n')
                 for relative_path in (
                     Path("app") / "css" / "style.css",
                     Path("app") / "index.html",

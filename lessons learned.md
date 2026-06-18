@@ -391,3 +391,6 @@
 ### 政治填色回归要检查同 pass 覆盖链
 - 目标 feature 被绘制过仍可能被同一 pass 后续 feature 覆盖；诊断时记录目标像素在 fill/stroke 前后的变化，比只看 renderedCount 更接近真实根因。
 - 用户显式填色和 pending 编辑应拥有最终绘制优先级；underlay、普通 detail、foreground edit 的三段排序比单纯阻止 progressive skip 更稳。
+
+### Pages dist manifest 字节数要绑定行尾合同
+- 进入 `dist/pages-dist-manifest.json` 的根 `dist/assets/*.json` 资产，要同时扩展 `.gitattributes` 和 `tools/build_pages_dist.py` 的 LF 归一化名单；Windows CRLF 工作区会让 manifest size 与 Git blob size 脱节。
