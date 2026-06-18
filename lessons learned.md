@@ -384,6 +384,10 @@
 ### Ownerless 场景要同时清数据和推断链
 - 空归属地图清掉 `cntr_code` 仍可能被 tooltip、locale 或 owner helper 从 feature id 前缀推回国家；恢复 blank/ownerless 场景时要同步锁 feature properties、owner map、hover country context 和渲染色源。
 
+### Landing 资产 metadata 只记录真实渲染输入
+- 静态 showcase 图如果从多个候选源试算，metadata 的 `sources` 只能写最终参与渲染的文件；把未使用的 runtime topology 写进去会让以后审计误判数据来源。
+- 资源合同除了检查文件存在，还要检查 semantic counts 和 SVG layer class；这样能锁住 TNO dissolved owner、HOI4 split-map、Japan corridor 这类语义资产。
+
 ### 政治填色回归要检查同 pass 覆盖链
 - 目标 feature 被绘制过仍可能被同一 pass 后续 feature 覆盖；诊断时记录目标像素在 fill/stroke 前后的变化，比只看 renderedCount 更接近真实根因。
 - 用户显式填色和 pending 编辑应拥有最终绘制优先级；underlay、普通 detail、foreground edit 的三段排序比单纯阻止 progressive skip 更稳。

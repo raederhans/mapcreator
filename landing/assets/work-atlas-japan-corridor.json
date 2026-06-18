@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "asset_type": "landing_work_card_map",
+  "asset_id": "work_atlas_japan_corridor",
+  "title": "Japan Tokaido Corridor Atlas Output",
+  "scope": {
+    "bbox": [
+      134.1,
+      33.2,
+      141.5,
+      36.8
+    ],
+    "projection": "local_equirectangular"
+  },
+  "sources": [
+    "data/transport_layers/japan_road/roads.preview.topo.json",
+    "data/transport_layers/japan_rail/railways.preview.topo.json",
+    "data/transport_layers/japan_rail/rail_stations_major.preview.geojson",
+    "data/global_contours.major.topo.json",
+    "data/global_rivers.geojson",
+    "data/world_cities.geojson"
+  ],
+  "counts": {
+    "road_lines": 95,
+    "rail_lines": 70,
+    "major_stations": 18,
+    "city_light_points": 18,
+    "city_points": 24,
+    "terrain_lines": 20,
+    "river_lines": 1
+  },
+  "selection_policy": {
+    "note": "Tokaido corridor bbox combining transport workbench resources with terrain and city light context.",
+    "ranking": "intersect bbox, clip, sort by area or length, keep top visible features"
+  }
+}

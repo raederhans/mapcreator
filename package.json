@@ -130,6 +130,7 @@
     "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
     "verify:test-timing-summary": "node tools/test_timing_summary.mjs",
     "build:landing-showcase": "python tools/build_landing_europe_1936_showcase.py",
+    "build:landing-work-maps": "python tools/build_landing_work_maps.py",
     "test:node:landing-showcase-view": "node --test tests/landing_showcase_view_behavior.test.mjs",
     "verify:pages-dist": "python tools/build_pages_dist.py && python -m unittest tests.test_pages_dist_startup_shell -q && npm run test:node:landing-showcase-view",
     "verify:dist-drift": "python tools/build_pages_dist.py && git diff --exit-code -- dist/.nojekyll dist/app.js dist/index.html dist/styles.css dist/assets dist/app/index.html dist/app/js dist/app/css dist/app/vendor dist/pages-dist-manifest.json",

@@ -46757,7 +46757,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 68558,
+      "size_bytes": 68605,
       "source_kind": "dist"
     },
     {
@@ -46966,18 +46966,63 @@
       "source_kind": "dist"
     },
     {
+      "path": "assets/work-alt-history-med.json",
+      "size_bytes": 3660,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-alt-history-med.svg",
+      "size_bytes": 106271,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-alt-history-med.webp",
+      "size_bytes": 46012,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-atlas-japan-corridor.json",
+      "size_bytes": 1046,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-atlas-japan-corridor.svg",
+      "size_bytes": 47830,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-atlas-japan-corridor.webp",
+      "size_bytes": 50374,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-scenario-switch-europe.json",
+      "size_bytes": 942,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-scenario-switch-europe.svg",
+      "size_bytes": 40532,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/work-scenario-switch-europe.webp",
+      "size_bytes": 60694,
+      "source_kind": "dist"
+    },
+    {
       "path": "assets/workspace-overview.webp",
       "size_bytes": 79108,
       "source_kind": "dist"
     },
     {
       "path": "index.html",
-      "size_bytes": 49652,
+      "size_bytes": 49678,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1451382,
+      "size_bytes": 1452474,
       "source_kind": "dist"
     },
     {
@@ -46996,5 +47041,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1152671986
+  "total_bytes": 1153030512
 }

@@ -235,6 +235,63 @@ test("landing local asset references exist", () => {
   }
 });
 
+test("landing work-card maps expose source-backed metadata", () => {
+  const metadataFiles = [
+    "work-alt-history-med.json",
+    "work-scenario-switch-europe.json",
+    "work-atlas-japan-corridor.json",
+  ];
+
+  for (const assetRoot of ["landing", "dist"]) {
+    for (const fileName of metadataFiles) {
+      const metadataUrl = new URL(`../${assetRoot}/assets/${fileName}`, import.meta.url);
+      assert.ok(existsSync(metadataUrl), `missing ${assetRoot} work-card metadata: ${fileName}`);
+      const metadata = JSON.parse(readFileSync(metadataUrl, "utf8"));
+      assert.equal(metadata.schema_version, 1);
+      assert.equal(metadata.asset_type, "landing_work_card_map");
+      assert.ok(metadata.asset_id, `missing asset id for ${assetRoot}/${fileName}`);
+      assert.ok(metadata.title, `missing title for ${assetRoot}/${fileName}`);
+      assert.equal(metadata.scope?.projection, "local_equirectangular");
+      assert.equal(metadata.scope?.bbox?.length, 4);
+      assert.ok(Array.isArray(metadata.sources), `missing sources for ${assetRoot}/${fileName}`);
+      assert.ok(metadata.sources.length >= 3, `expected source list for ${assetRoot}/${fileName}`);
+      assert.ok(metadata.selection_policy?.note, `missing selection policy for ${assetRoot}/${fileName}`);
+
+      for (const sourcePath of metadata.sources) {
+        const sourceUrl = new URL(`../${sourcePath}`, import.meta.url);
+        assert.ok(existsSync(sourceUrl), `missing metadata source for ${assetRoot}/${fileName}: ${sourcePath}`);
+      }
+
+      const counts = Object.values(metadata.counts || {});
+      assert.ok(counts.length > 0, `missing counts for ${assetRoot}/${fileName}`);
+      assert.ok(counts.some((value) => Number(value) > 0), `expected positive rendered count for ${assetRoot}/${fileName}`);
+    }
+  }
+});
+
+test("TNO work-card map uses dissolved detail sources without visible topology blocks", () => {
+  for (const assetRoot of ["landing", "dist"]) {
+    const svg = readFileSync(new URL(`../${assetRoot}/assets/work-alt-history-med.svg`, import.meta.url), "utf8");
+    const metadata = JSON.parse(
+      readFileSync(new URL(`../${assetRoot}/assets/work-alt-history-med.json`, import.meta.url), "utf8"),
+    );
+
+    assert.ok(svg.includes('class="political-countries"'), `missing dissolved country layer for ${assetRoot}`);
+    assert.ok(!svg.includes('class="scenario-water"'), `TNO work map must not render blocky scenario water for ${assetRoot}`);
+    assert.ok(
+      metadata.sources.every((sourcePath) => sourcePath !== "data/scenarios/tno_1962/runtime_topology.topo.json"),
+      `TNO work map should not claim runtime topology as a rendered source for ${assetRoot}`,
+    );
+    assert.equal(
+      metadata.counts?.rendered_atlantropa_features,
+      metadata.counts?.source_atlantropa_features,
+      `TNO Atlantropa work map must render all clipped Atlantropa features for ${assetRoot}`,
+    );
+    assert.ok(Number(metadata.counts?.political_detail_chunks) > 0, `missing TNO political detail chunk count for ${assetRoot}`);
+    assert.ok(Number(metadata.counts?.dissolved_country_owners) > 0, `missing dissolved owner count for ${assetRoot}`);
+  }
+});
+
 test("landing showcase SVG keeps interactive layer groups after optimization", () => {
   const svg = readFileSync(new URL("../landing/assets/europe-1936-showcase.svg", import.meta.url), "utf8");
   const decodedSvg = svg

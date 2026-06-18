@@ -4,27 +4,27 @@ Last updated: 2026-06-17
 
 ## Integration Owner
 
-- Owner: main Codex agent in `C:\Users\raede\Desktop\dev\mapcreator`
-- Integration branch: `codex/tno-political-color-recovery-integration`
-- Base: `main@a4957713`
+- Owner: main Codex agent in `C:\Users\raede\.codex\worktrees\mapcreator-landing-work-maps-integration`
+- Integration branch: `codex/landing-work-maps-integration`
+- Base: `origin/main@6874731f`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Complete and commit `codex/tno-political-color-recovery-integration` from the clean isolated worktree.
-2. Keep the original `codex/tno-political-color-recovery` checkout as mixed WIP until the renderer commit is integrated or the landing WIP is separated.
-3. Re-run `verify:pages-dist` with a Python environment that has `shapely`, then merge/push if validation passes.
+1. Commit `codex/landing-work-maps-integration` from the clean isolated worktree after regenerating landing/dist assets.
+2. Fast-forward merge the branch into `main`, then push `origin/main`.
+3. Keep the original `codex/tno-political-color-recovery` checkout as mixed renderer WIP; this integration branch carries only landing work-map changes.
 4. Preserve historical recovery rows below; they are references only.
 5. Re-check recovery commit hashes before recreating any historical worktree.
-6. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this renderer pass.
+6. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this landing pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-tno-political-color-recovery-integration` | `codex/tno-political-color-recovery-integration` | `main@a4957713` | ready-for-integration | hot files: `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, renderer runtime state, scenario chunk contracts, runtime state test, targeted E2E route, pixel probe, `package.json`, active docs | Scoped clean branch carrying only the TNO political renderer fix plus Pages dist sync from current main source. Verification: JS syntax checks pass; runtime state behavior 9/9 pass; color-resolution Python boundary pass; shell fallback behavior 1/1 pass; political progressive E2E 3/3 pass; scenario chunk contracts 43/44 with known unrelated `hoverFacilityAndCityProbeMetricsRemainNamed`; `verify:pages-dist` pass with local shapely venv; `git diff --check` pass with CRLF warnings. Read-only reviewer APPROVE. | Yellow: shared renderer hot files; isolated from landing WIP. | Commit this clean branch, then merge/push from the clean integration path. |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/tno-political-color-recovery` | `main@a4957713` | mixed-wip | hot files: renderer fix files plus unrelated landing/dist WIP and `lessons learned.md` | Source branch where bug investigation and first implementation happened. Verification before isolation: runtime state 9/9 pass; color-resolution Python boundary pass; political progressive E2E 3/3 pass; scenario chunk contracts 43/44 with unrelated `hoverFacilityAndCityProbeMetricsRemainNamed`; `verify:pages-dist` blocked on missing `shapely`; landing node check 7/8 with unrelated landing work-card TNO map asset failure. | Red: renderer fix, landing WIP, and dist changes share one checkout. | Do not stage wholesale; keep as recovery/source WIP until clean integration branch lands. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-landing-work-maps-integration` | `codex/landing-work-maps-integration` | `origin/main@6874731f` | in-progress | hot files: `landing/index.html`, `landing/app.js`, `landing/assets/work-*.{svg,webp,json}`, `dist/index.html`, `dist/assets/work-*.{svg,webp,json}`, `tools/build_landing_work_maps.py`, `tools/rasterize_landing_assets.py`, `tests/landing_showcase_view_behavior.test.mjs`, `package.json`, active docs | Clean integration branch carrying only the homepage work-card map asset replacement. Verification to run before merge: work-map builder, rasterizer, Pages dist builder, startup shell unittest, landing node behavior test, diff check, browser card smoke. | Green vs renderer WIP: landing/static asset files only; `package.json` script addition overlaps by file with parent WIP but this branch keeps only the landing script. | Commit from this worktree, fast-forward merge to `main`, then push. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/tno-political-color-recovery` | `origin/main@6874731f` for landing extraction; branch HEAD `a4957713` | mixed-wip | dirty renderer/runtime files plus landing source WIP and generated landing/dist assets | Source checkout where the landing work-card assets were first implemented and visually corrected. This path is preserved as WIP and is not staged wholesale. | Red inside parent checkout: renderer fix and landing assets share one dirty tree. | Keep as recovery/source WIP after clean landing branch lands; handle renderer WIP through its own integration path. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/geometry-simplification-benchmark-spike` | `main@b984a59e` | integrated | hot files resolved: `tools/perf/polyline_simplification_benchmark.mjs`, `tests/fixtures/polyline_simplification_benchmark_fixtures.mjs`, `tests/polyline_simplification_benchmark_contract.test.mjs`, `package.json` scripts, archived task docs | Commit `97626a26`; red-first contract failed before implementation with `ERR_MODULE_NOT_FOUND`; helper + benchmark tests passed; benchmark script and syntax checks passed; dev-only `simplify-js@1.2.4` comparison ran from `.runtime`; forbidden dependency scan found no package/package-lock matches; independent code-reviewer APPROVE and architect CLEAR; post-merge focused validation passed; `verify:pages-dist` skipped because app source, dist files, and Pages manifests were untouched. Delivery package archived under `docs/archive/geometry-simplification-benchmark-and-dependency-spike-20260617/`. | Green | Push `origin/main`, then delete merged local feature branch |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/geometry-simplification-helper-contracts` | `main@06604075` | integrated | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/polyline_simplification_helpers.js`, border mesh boundary tests, `dist/app`, Pages dist manifest, archived task docs | Commit `b59fb749`; helper behavior tests, border mesh boundary contract, node syntax checks, owner behavior, renderer splits, Pages dist verification, diff check, dependency scan, source/dist helper byte compare, architect CLEAR, code-review APPROVE, closeout QA PASS, and post-merge short validation passed. Delivery package archived under `docs/archive/geometry-simplification-helper-contracts-20260617/`. | Green | Push `origin/main`, then delete merged local feature branch |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/strategic-overlay-editor-followups` | `main@ee42ba98` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/strategic_overlay_runtime_owner.js`, `js/core/renderer/strategic_overlay_runtime/operation_graphics_runtime_domain.js`, strategic overlay tests, `dist/app`, Pages dist manifest, dependency Spike docs | Commit `5780fa16`; runtime/render owner tests, Python boundary contracts, renderer split suite, Pages dist verification, `node --check`, `git diff --check`, residual transaction scan, post-merge short validation, and main push passed. Docs archived under `docs/archive/strategic-overlay-editor-followups-20260617/`. | Green | No active integration action |
@@ -36,10 +36,9 @@ Last updated: 2026-06-17
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
-| Strategic overlay cleanup followups vs current main | Yellow | Touches the same strategic overlay render/runtime boundaries and `map_renderer.js`; no parallel local worktree exists. |
-| Strategic overlay render owner vs current main | Yellow | Touches `map_renderer.js`, strategic overlay runtime/helpers boundary contracts, and Pages dist mirrors; no parallel local worktree exists. |
-| City points explicit d3 injection vs renderer owner history | Green | Fast-forward merged on current `main`; no active parallel worktree remains. |
-| City points explicit d3 injection vs future renderer splits | Yellow | The merged commit touched `js/core/map_renderer.js`, `dist/app`, and render boundary tests, so future renderer splits should start from the pushed main. |
+| Landing work maps vs parent renderer WIP | Green | Clean branch touches homepage/static asset generation and landing behavior tests; parent renderer WIP touches app renderer/runtime files. The only filename overlap is `package.json`, and this branch carries only the landing build script. |
+| Landing work maps vs future Pages dist work | Yellow | This branch regenerates `dist/index.html`, `dist/assets/work-*`, and `dist/pages-dist-manifest.json`; future Pages dist branches should start from the pushed main. |
+| Historical integrated worktrees vs current main | Green | Rows below are recovery records; no active local integration action remains for them. |
 
 ## Recovery Records
 

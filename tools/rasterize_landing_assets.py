@@ -25,6 +25,9 @@ RASTER_TARGETS = (
     ("template-hoi4.svg", "template-hoi4.webp", 1120, 720, 76),
     ("template-tno.svg", "template-tno.webp", 1120, 720, 76),
     ("showcase-final-map.svg", "showcase-final-map.webp", 1120, 720, 76),
+    ("work-alt-history-med.svg", "work-alt-history-med.webp", 1120, 720, 78),
+    ("work-scenario-switch-europe.svg", "work-scenario-switch-europe.webp", 1360, 880, 78),
+    ("work-atlas-japan-corridor.svg", "work-atlas-japan-corridor.webp", 1360, 880, 78),
 )
 
 
@@ -42,8 +45,13 @@ def optimize_svg_file(target: Path) -> None:
 
 
 def run_svgo() -> None:
-    target = ASSETS_DIR / "europe-1936-showcase.svg"
-    optimize_svg_file(target)
+    for name in (
+        "europe-1936-showcase.svg",
+        "work-alt-history-med.svg",
+        "work-scenario-switch-europe.svg",
+        "work-atlas-japan-corridor.svg",
+    ):
+        optimize_svg_file(ASSETS_DIR / name)
 
 
 def build_playwright_script(targets: list[dict[str, str | int]]) -> str:
