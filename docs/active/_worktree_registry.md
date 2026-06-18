@@ -1,28 +1,29 @@
 # Worktree Registry
 
-Last updated: 2026-06-17
+Last updated: 2026-06-18
 
 ## Integration Owner
 
-- Owner: main Codex agent in `C:\Users\raede\.codex\worktrees\mapcreator-landing-work-maps-integration`
-- Integration branch: `codex/landing-work-maps-integration`
-- Base: `origin/main@6874731f`
+- Owner: main Codex agent in `C:\Users\raede\.codex\worktrees\mapcreator-tno-hgo-integration`
+- Integration branch: `codex/tno-hgo-integration`
+- Base: `origin/main@1206eb43`
 - Live test/build owner: main Codex agent only
 - Subagents: static inspection/review only; no live tests, dev server, or browser processes delegated
 
 ## Recommended Order
 
-1. Landing work maps are integrated and pushed; functional commit `a48eec68`, final main closeout `0538481a`.
-2. Keep the original `codex/tno-political-color-recovery` checkout as mixed renderer WIP; the landing work is now covered by `main`.
-3. Future Pages dist branches should start from pushed `origin/main@0538481a`.
+1. Integrate the scoped TNO political color recovery fix first from the dirty parent checkout.
+2. Cherry-pick HGO commit `7a95e26c` second and preserve its preview/cache invalidation contracts.
+3. Keep unrelated landing/main drift out of this branch; current `origin/main@1206eb43` already carries the landing work maps.
 4. Preserve historical recovery rows below; they are references only.
 5. Re-check recovery commit hashes before recreating any historical worktree.
-6. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this landing pass.
+6. Treat `origin/codex/tno-toponym-zh-audit` as a separate remote-only branch review, outside this integration pass.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-tno-hgo-integration` | `codex/tno-hgo-integration@1206eb43` | `origin/main@1206eb43` | in-progress | planned hot files: `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, render pipeline, HGO projection, scenario apply pipeline, targeted tests, Pages manifest | Worktree created clean from current `origin/main`; static review and direct grep confirm the TNO recovery fix is already in the base; live tests not yet run in this worktree. | Red vs HGO in `map_renderer.js`; yellow across render pass cache/state tests. | Commit integration scaffolding, cherry-pick HGO, then run combined TNO/HGO verification. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-landing-work-maps-integration` | `main@0538481a`; former branch `codex/landing-work-maps-integration` at `a48eec68` | `origin/main@6874731f` | integrated and pushed | hot files resolved: `landing/index.html`, `landing/app.js`, `landing/assets/work-*.{svg,webp,json}`, `dist/index.html`, `dist/assets/work-*.{svg,webp,json}`, `tools/build_landing_work_maps.py`, `tools/rasterize_landing_assets.py`, landing and Pages dist tests, archived task docs | Commit `a48eec68`; work-map builder, rasterizer, Pages dist builder, startup shell unittest 37/37, landing node behavior 8/8, diff check, browser card smoke, and independent reviewer APPROVE passed. Closeout commit `0538481a` archived docs under `docs/archive/landing-local-work-maps-20260617/` and updated this registry. | Green vs renderer WIP: landing/static asset files only; parent renderer checkout preserved as separate WIP. | Clean up this integrated worktree after final status confirmation. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `codex/tno-political-color-recovery` | `origin/main@6874731f` for landing extraction; branch HEAD `a4957713` | mixed-wip | dirty renderer/runtime files plus landing source WIP and generated landing/dist assets | Source checkout where the landing work-card assets were first implemented and visually corrected. This path is preserved as WIP and is not staged wholesale. | Red inside parent checkout: renderer fix and landing assets share one dirty tree. | Keep as recovery/source WIP after clean landing branch lands; handle renderer WIP through its own integration path. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` / former `codex/geometry-simplification-benchmark-spike` | `main@b984a59e` | integrated | hot files resolved: `tools/perf/polyline_simplification_benchmark.mjs`, `tests/fixtures/polyline_simplification_benchmark_fixtures.mjs`, `tests/polyline_simplification_benchmark_contract.test.mjs`, `package.json` scripts, archived task docs | Commit `97626a26`; red-first contract failed before implementation with `ERR_MODULE_NOT_FOUND`; helper + benchmark tests passed; benchmark script and syntax checks passed; dev-only `simplify-js@1.2.4` comparison ran from `.runtime`; forbidden dependency scan found no package/package-lock matches; independent code-reviewer APPROVE and architect CLEAR; post-merge focused validation passed; `verify:pages-dist` skipped because app source, dist files, and Pages manifests were untouched. Delivery package archived under `docs/archive/geometry-simplification-benchmark-and-dependency-spike-20260617/`. | Green | Push `origin/main`, then delete merged local feature branch |
@@ -36,6 +37,8 @@ Last updated: 2026-06-17
 
 | Pair | Risk | Reason |
 | --- | --- | --- |
+| TNO scoped recovery vs HGO preview fix | Red | Both touch `js/core/map_renderer.js` and `dist/app/js/core/map_renderer.js`; conflict resolution must keep HGO preview early returns and signatures plus TNO pending political edit tracking. |
+| TNO scoped recovery vs current `origin/main` landing work maps | Green | Scoped TNO files are renderer/runtime/test files; landing work-map files already live on `origin/main` and are not imported from the dirty parent checkout. |
 | Landing work maps vs parent renderer WIP | Green | Clean branch touches homepage/static asset generation and landing behavior tests; parent renderer WIP touches app renderer/runtime files. The only filename overlap is `package.json`, and this branch carries only the landing build script. |
 | Landing work maps vs future Pages dist work | Yellow | This branch regenerates `dist/index.html`, `dist/assets/work-*`, and `dist/pages-dist-manifest.json`; future Pages dist branches should start from the pushed main. |
 | Historical integrated worktrees vs current main | Green | Rows below are recovery records; no active local integration action remains for them. |
