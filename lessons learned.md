@@ -400,3 +400,4 @@
 
 ### Worktree 注册表当前段只列真实路径
 - `Current Worktrees` 只放 `git worktree list` 当前存在的路径；已整合或已清理的分支放到历史整合或恢复记录段，避免后续 integration owner 误以为还有活跃 worktree。
+- 并行 worktree 的 WIP 误落入 main 时，先用命名 stash 和 `.runtime/cleanup-backups/` patch 保留，再用 clean detached worktree 验证目标提交，避免把外部 WIP 当成本轮回归。

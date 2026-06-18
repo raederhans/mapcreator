@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Phase A is ready for integration.
+Phase A is integrated and pushed. Phase B is next.
 
-## Phase A Delivery Package Draft
+## Phase A Delivery Package
 
 1. Changed exact-after-settle pure plan policy ownership.
 2. Added focused behavior tests and a named npm script.
@@ -41,9 +41,9 @@ Docs:
 - Tracked files before staging: renderer and dist mirrors each slim by moving exact-after-settle pass policy into a pure module; contracts update string anchors to the new owner; `package.json` adds one named Node test entry.
 - New files before staging: exact-after-settle plan module, matching Pages dist module, behavior test, and active continuation docs.
 - Base commit: `main@4ea5252ed68f80773c0ca5f390ac218656edceb2`.
-- Current main divergence: Phase A branch starts from the current fetched main; re-check main before merge.
-- Commit status: committed on `codex/module-boundary-phase-a-renderer-shell`; next action is main integration.
-- Conflict risk: yellow. `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `package.json`, and Pages manifest are shared hot files. Integrate before starting Phase B.
+- Main integration: fast-forwarded to `9139c0737461650e79177ded24fdecf2867c4028` and pushed to `origin/main`.
+- Feature branch: `codex/module-boundary-phase-a-renderer-shell` pushed for recovery.
+- Conflict risk after integration: yellow against active `codex/hgo-runtime-preview-fix`, which also touches `js/core/map_renderer.js` and renderer boundary tests.
 
 ## Verification
 
@@ -55,6 +55,7 @@ Docs:
 - Passed: `npm run verify:test-import-graph`.
 - Passed: `npm run verify:pages-dist` after the review cleanup.
 - Passed: `git diff --check`.
+- Post-merge clean worktree gate passed from `C:\Users\raede\.codex\worktrees\mapcreator-phase-a-postmerge-verify` before cleanup: exact-after-settle 5 tests, scenario refresh 4 tests, hit candidates 5 tests, physical layer 2 tests, renderer boundary 5 tests, import graph, Pages dist startup shell 37 tests, landing showcase 8 tests, and diff check.
 - Known existing failure: `tests/scenario_chunk_contracts.test.mjs` remains 43/44 because `hoverFacilityAndCityProbeMetricsRemainNamed` fails in the existing large contract block.
 
 ## Review Gates
@@ -65,4 +66,4 @@ Docs:
 
 ## Recommended Next Step
 
-Commit this worktree, merge it into clean main, run post-merge verification, push, then start Phase B from updated main.
+Start Phase B from updated `origin/main@9139c073`, after accounting for the active HGO runtime preview worktree overlap.

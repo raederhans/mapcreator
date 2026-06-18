@@ -12,7 +12,7 @@ Finish the remaining module-boundary slimming work in staged worktrees, starting
 - [x] Add a named Node behavior entry for the new exact-after-settle plan module.
 - [x] Rebuild Pages dist for the new browser module.
 - [x] Run Phase A review gates.
-- [ ] Commit, integrate Phase A into main, push, and checkpoint.
+- [x] Commit, integrate Phase A into main, push, and checkpoint.
 - [ ] Phase B: split sidebar/toolbar UI shell.
 - [ ] Phase C: split backend preview app shell.
 - [ ] Phase D: add boundary and module budget guardrails.

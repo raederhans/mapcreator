@@ -44,3 +44,12 @@
 ## Known Gaps
 
 - `node --test --test-name-pattern "exact-after-settle keeps scenario overlays" tests/scenario_chunk_contracts.test.mjs` still hits the existing `hoverFacilityAndCityProbeMetricsRemainNamed` assertion because that assertion lives in the same test block. Full `scenario_chunk_contracts` remains 43/44 with the same registry-recorded failure.
+
+## Phase A Integration Closeout
+
+- Phase A commit: `9139c0737461650e79177ded24fdecf2867c4028`.
+- Fast-forward merge into `main` completed and `origin/main` was pushed.
+- Feature branch `codex/module-boundary-phase-a-renderer-shell` was pushed for recovery.
+- Phase A worktree and detached post-merge verification worktree were clean and removed after push.
+- Clean post-merge verification ran from detached worktree `C:\Users\raede\.codex\worktrees\mapcreator-phase-a-postmerge-verify`: exact-after-settle 5 tests, scenario refresh 4 tests, interaction hit candidates 5 tests, physical layer 2 tests, renderer boundary 5 tests, import graph, `verify:pages-dist`, and diff check all passed.
+- Main checkout received concurrent HGO runtime preview WIP while Phase A was integrating. It was preserved through named stashes and patch backups under `.runtime/cleanup-backups/phase-a-main-dirty-preserve-*`. Active source of that work is `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix`.
