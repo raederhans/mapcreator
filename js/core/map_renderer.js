@@ -164,6 +164,18 @@ import {
   buildScenarioChunkPromotionVisualMetricDetails,
   resolveScenarioChunkPromotionChangeSet,
 } from "./renderer/scenario_chunk_promotion_helpers.js";
+import {
+  getScenarioChunkPromotionTargetPasses,
+  normalizeRendererRefreshPlan,
+} from "./map_renderer/scenario_refresh_plans.js";
+import {
+  collectSpatialGridCandidates,
+  createHitResult,
+  findFirstContainingCandidate as findFirstContainingHitCandidate,
+  rankCandidates as rankHitCandidates,
+  shouldPreferWaterHit as shouldPreferWaterHitCandidate,
+  toHitResult as toCandidateHitResult,
+} from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
@@ -8703,22 +8715,6 @@ function invalidateBorderCache() {
   });
 }
 
-function createHitResult(overrides = {}) {
-  return {
-    id: null,
-    countryCode: null,
-    runtimeCountryCode: null,
-    targetType: null,
-    feature: null,
-    hitSource: "none",
-    bboxArea: Infinity,
-    viaSnap: false,
-    strict: false,
-    distancePx: Infinity,
-    ...overrides,
-  };
-}
-
 function isHgoRuntimePreviewReady() {
   const preview = runtimeState.hgoRuntimePreview;
   return !!preview?.enabled && preview.status === "ready";
@@ -9145,62 +9141,16 @@ function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } =
   return createHitResult();
 }
 
-function getBBoxDistanceToPoint(item, px, py) {
-  const dx = px < item.minX ? item.minX - px : px > item.maxX ? px - item.maxX : 0;
-  const dy = py < item.minY ? item.minY - py : py > item.maxY ? py - item.maxY : 0;
-  return Math.hypot(dx, dy);
-}
-
 function collectGridCandidates(px, py, radiusProj = 0) {
-  const meta = runtimeState.spatialGridMeta;
-  if (!meta || !runtimeState.spatialGrid) return [];
-  const { cellSize, cols, rows, globals } = meta;
-  if (!cellSize || cols <= 0 || rows <= 0) return [];
-
-  const radius = Math.max(0, radiusProj || 0);
-  const minX = px - radius;
-  const maxX = px + radius;
-  const minY = py - radius;
-  const maxY = py + radius;
-  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
-  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
-  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
-  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
-
-  const buckets = [];
-  for (let row = r0; row <= r1; row += 1) {
-    for (let col = c0; col <= c1; col += 1) {
-      const key = getSpatialBucketKey(col, row);
-      const bucket = runtimeState.spatialGrid.get(key);
-      if (bucket?.length) {
-        buckets.push(bucket);
-      }
-    }
-  }
-
-  const seen = new Set();
-  const candidates = [];
-  const strict = radius <= 0;
-
-  const maybePush = (item) => {
-    if (!item?.id || seen.has(item.id)) return;
-    if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
-    seen.add(item.id);
-    const distanceProj = getBBoxDistanceToPoint(item, px, py);
-    if (strict) {
-      if (distanceProj > 0) return;
-    } else if (distanceProj > radius) {
-      return;
-    }
-    candidates.push({ item, distanceProj });
-  };
-
-  buckets.forEach((bucket) => {
-    bucket.forEach(maybePush);
+  return collectSpatialGridCandidates({
+    grid: runtimeState.spatialGrid,
+    gridMeta: runtimeState.spatialGridMeta,
+    px,
+    py,
+    radiusProj,
+    getSpatialBucketKey,
+    shouldIncludeItem: (item) => !shouldExcludePoliticalInteractionFeature(item.feature, item.id),
   });
-  globals?.forEach(maybePush);
-
-  return candidates;
 }
 
 function getProjectedViewportBounds({
@@ -9263,217 +9213,47 @@ function collectVisibleLandSpatialItems() {
 }
 
 function collectWaterGridCandidates(px, py, radiusProj = 0) {
-  const meta = runtimeState.waterSpatialGridMeta;
-  const grid = runtimeState.waterSpatialGrid;
-  if (!meta || !grid) return [];
-  const { cellSize, cols, rows, globals } = meta;
-  if (!cellSize || cols <= 0 || rows <= 0) return [];
-
-  const radius = Math.max(0, radiusProj || 0);
-  const minX = px - radius;
-  const maxX = px + radius;
-  const minY = py - radius;
-  const maxY = py + radius;
-  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
-  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
-  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
-  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
-
-  const buckets = [];
-  for (let row = r0; row <= r1; row += 1) {
-    for (let col = c0; col <= c1; col += 1) {
-      const key = getSpatialBucketKey(col, row);
-      const bucket = grid.get(key);
-      if (bucket?.length) {
-        buckets.push(bucket);
-      }
-    }
-  }
-
-  const seen = new Set();
-  const candidates = [];
-  const strict = radius <= 0;
-
-  const maybePush = (item) => {
-    if (!item?.id || seen.has(item.id)) return;
-    if (!isWaterRegionEnabled(item.feature)) return;
-    seen.add(item.id);
-    const distanceProj = getBBoxDistanceToPoint(item, px, py);
-    if (strict) {
-      if (distanceProj > 0) return;
-    } else if (distanceProj > radius) {
-      return;
-    }
-    candidates.push({ item, distanceProj });
-  };
-
-  buckets.forEach((bucket) => {
-    bucket.forEach(maybePush);
+  return collectSpatialGridCandidates({
+    grid: runtimeState.waterSpatialGrid,
+    gridMeta: runtimeState.waterSpatialGridMeta,
+    px,
+    py,
+    radiusProj,
+    getSpatialBucketKey,
+    shouldIncludeItem: (item) => isWaterRegionEnabled(item.feature),
   });
-  globals?.forEach(maybePush);
-
-  return candidates;
 }
 
 function collectSpecialGridCandidates(px, py, radiusProj = 0) {
-  const meta = runtimeState.specialSpatialGridMeta;
-  const grid = runtimeState.specialSpatialGrid;
-  if (!meta || !grid) return [];
-  const { cellSize, cols, rows, globals } = meta;
-  if (!cellSize || cols <= 0 || rows <= 0) return [];
-
-  const radius = Math.max(0, radiusProj || 0);
-  const minX = px - radius;
-  const maxX = px + radius;
-  const minY = py - radius;
-  const maxY = py + radius;
-  const c0 = clamp(Math.floor(minX / cellSize), 0, cols - 1);
-  const c1 = clamp(Math.floor(maxX / cellSize), 0, cols - 1);
-  const r0 = clamp(Math.floor(minY / cellSize), 0, rows - 1);
-  const r1 = clamp(Math.floor(maxY / cellSize), 0, rows - 1);
-
-  const buckets = [];
-  for (let row = r0; row <= r1; row += 1) {
-    for (let col = c0; col <= c1; col += 1) {
-      const key = getSpatialBucketKey(col, row);
-      const bucket = grid.get(key);
-      if (bucket?.length) {
-        buckets.push(bucket);
-      }
-    }
-  }
-
-  const seen = new Set();
-  const candidates = [];
-  const strict = radius <= 0;
-
-  const maybePush = (item) => {
-    if (!item?.id || seen.has(item.id) || !isSpecialRegionEnabled(item.feature)) return;
-    seen.add(item.id);
-    const distanceProj = getBBoxDistanceToPoint(item, px, py);
-    if (strict) {
-      if (distanceProj > 0) return;
-    } else if (distanceProj > radius) {
-      return;
-    }
-    candidates.push({ item, distanceProj });
-  };
-
-  buckets.forEach((bucket) => {
-    bucket.forEach(maybePush);
+  return collectSpatialGridCandidates({
+    grid: runtimeState.specialSpatialGrid,
+    gridMeta: runtimeState.specialSpatialGridMeta,
+    px,
+    py,
+    radiusProj,
+    getSpatialBucketKey,
+    shouldIncludeItem: (item) => isSpecialRegionEnabled(item.feature),
   });
-  globals?.forEach(maybePush);
-
-  return candidates;
 }
 
 function rankCandidates(candidates, lonLat, { eventType = "unknown", targetType = "unknown" } = {}) {
-  if (!Array.isArray(candidates) || !candidates.length) return [];
-
-  const startedAt = nowMs();
-  let geoContainsCount = 0;
-  const ranked = candidates.map((candidate) => {
-    const feature = candidate.item?.feature;
-    const hitGeometry = candidate.item?.hitGeometry || feature;
-    let containsGeo = false;
-    if (hitGeometry && lonLat && globalThis.d3?.geoContains) {
-      geoContainsCount += 1;
-      try {
-        containsGeo = !!globalThis.d3.geoContains(hitGeometry, lonLat);
-      } catch (error) {
-        containsGeo = false;
-      }
-    }
-    const source = String(candidate.item?.source || feature?.properties?.__source || "primary");
-    const sourceRank = source === "detail" ? 0 : 1;
-    const bboxArea = Number.isFinite(candidate.item?.bboxArea)
-      ? candidate.item.bboxArea
-      : Math.max(0, (candidate.item.maxX - candidate.item.minX) * (candidate.item.maxY - candidate.item.minY));
-    return {
-      ...candidate,
-      containsGeo,
-      sourceRank,
-      bboxArea,
-    };
+  return rankHitCandidates(candidates, lonLat, {
+    eventType,
+    targetType,
+    geoContains: globalThis.d3?.geoContains,
+    nowMs,
+    recordInteractionDurationMetric,
   });
-
-  ranked.sort((a, b) => {
-    if (a.containsGeo !== b.containsGeo) return a.containsGeo ? -1 : 1;
-    if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
-    if (a.bboxArea !== b.bboxArea) return a.bboxArea - b.bboxArea;
-    if (a.distanceProj !== b.distanceProj) return a.distanceProj - b.distanceProj;
-    return String(a.item?.id || "").localeCompare(String(b.item?.id || ""));
-  });
-
-  if (eventType !== "unknown" || targetType !== "unknown") {
-    recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
-      candidateCount: candidates.length,
-      geoContainsCount,
-      containsGeoCount: ranked.filter((candidate) => candidate.containsGeo).length,
-      eventType,
-      targetType,
-    });
-  }
-
-  return ranked;
 }
 
 function findFirstContainingCandidate(candidates, lonLat, { eventType = "hover", targetType = "unknown" } = {}) {
-  if (!Array.isArray(candidates) || !candidates.length) return null;
-  const startedAt = nowMs();
-  let geoContainsCount = 0;
-  const ordered = candidates
-    .map((candidate) => {
-      const feature = candidate.item?.feature;
-      const source = String(candidate.item?.source || feature?.properties?.__source || "primary");
-      const bboxArea = Number.isFinite(candidate.item?.bboxArea)
-        ? candidate.item.bboxArea
-        : Math.max(0, (candidate.item.maxX - candidate.item.minX) * (candidate.item.maxY - candidate.item.minY));
-      return {
-        ...candidate,
-        sourceRank: source === "detail" ? 0 : 1,
-        bboxArea,
-      };
-    })
-    .sort((a, b) => {
-      if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
-      if (a.bboxArea !== b.bboxArea) return a.bboxArea - b.bboxArea;
-      if (a.distanceProj !== b.distanceProj) return a.distanceProj - b.distanceProj;
-      return String(a.item?.id || "").localeCompare(String(b.item?.id || ""));
-    });
-  for (const candidate of ordered) {
-    const feature = candidate.item?.feature;
-    const hitGeometry = candidate.item?.hitGeometry || feature;
-    if (!hitGeometry || !lonLat || !globalThis.d3?.geoContains) continue;
-    geoContainsCount += 1;
-    try {
-      if (globalThis.d3.geoContains(hitGeometry, lonLat)) {
-        recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
-          candidateCount: candidates.length,
-          geoContainsCount,
-          containsGeoCount: 1,
-          eventType,
-          targetType,
-          fastPath: "hover-first-containing",
-        });
-        return {
-          ...candidate,
-          containsGeo: true,
-        };
-      }
-    } catch (_error) {
-      // Ignore malformed geometry and continue with the next candidate.
-    }
-  }
-  recordInteractionDurationMetric("interactionHitRankDuration", nowMs() - startedAt, {
-    candidateCount: candidates.length,
-    geoContainsCount,
-    containsGeoCount: 0,
+  return findFirstContainingHitCandidate(candidates, lonLat, {
     eventType,
     targetType,
-    fastPath: "hover-first-containing",
+    geoContains: globalThis.d3?.geoContains,
+    nowMs,
+    recordInteractionDurationMetric,
   });
-  return null;
 }
 
 function getPointerProjectionPosition(event) {
@@ -9495,47 +9275,23 @@ function getPointerProjectionPosition(event) {
 }
 
 function toHitResult(candidate, { viaSnap = false, strict = false, zoomK = 1, targetType = "land" } = {}) {
-  const resolvedId = String(candidate?.item?.featureId || candidate?.item?.id || "").trim();
-  if (!resolvedId) return createHitResult();
-  const feature = candidate.item.feature || null;
-  const runtimeCountryCode = canonicalCountryCode(
-    candidate.item.countryCode
-    || getFeatureCountryCodeNormalized(feature)
-    || ""
-  );
-  const interactionCountryCode = feature
-    ? getFeatureInteractionCountryCodeNormalized(feature, resolvedId)
-    : canonicalCountryCode(candidate.item.interactionCountryCode || candidate.item.borderMeshCountryCode || runtimeCountryCode || "");
-  return createHitResult({
-    id: resolvedId,
-    countryCode: interactionCountryCode || runtimeCountryCode,
-    runtimeCountryCode,
-    targetType,
-    feature,
-    hitSource: "spatial",
-    bboxArea: Number(candidate.bboxArea || candidate.item.bboxArea || Infinity),
+  return toCandidateHitResult(candidate, {
     viaSnap,
     strict,
-    distancePx: candidate.distanceProj * zoomK,
+    zoomK,
+    targetType,
+    canonicalCountryCode,
+    getFeatureCountryCodeNormalized,
+    getFeatureInteractionCountryCodeNormalized,
   });
 }
 
 function shouldPreferWaterHit(landHit, waterHit, { eventType = "unknown" } = {}) {
-  if (!waterHit?.id) return false;
-  if (eventType === "hover" && isMacroOceanWaterRegion(waterHit.feature)) {
-    return false;
-  }
-  if (!landHit?.id) return true;
-  const waterType = getWaterRegionType(waterHit.feature);
-  if (["lake", "inland_sea", "strait", "chokepoint"].includes(waterType)) {
-    return true;
-  }
-  const landArea = Number(landHit.bboxArea || Infinity);
-  const waterArea = Number(waterHit.bboxArea || Infinity);
-  if (waterHit.strict && Number.isFinite(waterArea) && Number.isFinite(landArea) && waterArea < landArea * 0.2) {
-    return true;
-  }
-  return false;
+  return shouldPreferWaterHitCandidate(landHit, waterHit, {
+    eventType,
+    isMacroOceanWaterRegion,
+    getWaterRegionType,
+  });
 }
 
 function collectInteractionHitMetricDetails(
@@ -23959,55 +23715,6 @@ function resetRendererRefreshTransactionState({
   runtimeState.devClipboardFallbackText = "";
   runtimeState.devClipboardPreviewFormat = "names_with_ids";
   resetPhysicalLandClipPathCache();
-}
-
-function getScenarioChunkPromotionTargetPasses({
-  changedLayerKeys = [],
-  hasPoliticalChange = false,
-} = {}) {
-  const targetPasses = new Set();
-  if (hasPoliticalChange) {
-    ["political", "contextBase", "contextMarkers", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
-  }
-  (Array.isArray(changedLayerKeys) ? changedLayerKeys : []).forEach((layerKey) => {
-    const normalized = String(layerKey || "").trim().toLowerCase();
-    if (normalized === "cities") {
-      ["contextBase", "labels", "dayNight"].forEach((passName) => targetPasses.add(passName));
-      return;
-    }
-    if (normalized === "water" || normalized === "special" || normalized === "relief") {
-      targetPasses.add("contextScenario");
-      return;
-    }
-    if (normalized === "scenario_atlantropa") {
-      ["political", "contextScenario", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
-    }
-  });
-  return Array.from(targetPasses);
-}
-
-function normalizeRendererRefreshPlan(refreshPlan, defaults = {}) {
-  const plan = refreshPlan && typeof refreshPlan === "object" ? refreshPlan : {};
-  const defaultTargetPasses = Array.isArray(defaults.targetPasses) ? defaults.targetPasses : [];
-  const targetPasses = Array.isArray(plan.targetPasses) && plan.targetPasses.length
-    ? plan.targetPasses
-    : defaultTargetPasses;
-  // refresh plan 是 scenario apply / chunk promotion / transport appearance 共用的窄合同。
-  // 调用方只声明“这次想刷新哪些 pass、是否顺手刷新 opening borders”，具体失效策略统一在 renderer 里收口。
-  return {
-    source: String(plan.source || defaults.source || "renderer-refresh"),
-    targetPasses: Array.from(
-      new Set(
-        (Array.isArray(targetPasses) ? targetPasses : [])
-          .map((passName) => String(passName || "").trim())
-          .filter(Boolean)
-      )
-    ),
-    refreshOpeningOwnerBorders: plan.refreshOpeningOwnerBorders !== undefined
-      ? plan.refreshOpeningOwnerBorders !== false
-      : defaults.refreshOpeningOwnerBorders !== false,
-    resetWaterCacheReason: String(plan.resetWaterCacheReason || defaults.resetWaterCacheReason || ""),
-  };
 }
 
 function cancelDeferredScenarioChunkPromotionInfraRefresh() {

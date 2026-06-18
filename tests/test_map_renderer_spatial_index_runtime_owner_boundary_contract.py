@@ -61,12 +61,12 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         ]
         refresh_transaction_body = renderer_content[
             refresh_transaction_start:renderer_content.index(
-                "\nfunction getScenarioChunkPromotionTargetPasses(",
+                "\nfunction cancelDeferredScenarioChunkPromotionInfraRefresh(",
                 refresh_transaction_start,
             )
         ]
-        self.assertIn("resetRendererRefreshTransactionState({", set_map_data_body)
-        self.assertIn("cancelHoverOverlay: true,", set_map_data_body)
+        self.assertIn("resetRendererTransactionState({", set_map_data_body)
+        self.assertIn("cancelHoverOverlayRender: true,", set_map_data_body)
         self.assertIn("cancelSecondarySpatialBuild: true,", set_map_data_body)
         self.assertIn('clearLastGoodFrame("set-map-data");', set_map_data_body)
         self.assertIn('invalidateAllRenderPasses("set-map-data");', set_map_data_body)
@@ -83,7 +83,7 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
                 re.S,
             ),
         )
-        self.assertIn("resetRendererRefreshTransactionState();", scenario_apply_body)
+        self.assertIn("resetRendererTransactionState({ hitCanvasDirty: true });", scenario_apply_body)
         self.assertIn("if (cancelHoverOverlay) {", refresh_transaction_body)
         self.assertIn("if (cancelSecondarySpatialBuild) {", refresh_transaction_body)
         self.assertNotIn("getRenderPassCacheState()", refresh_transaction_body)

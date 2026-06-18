@@ -1009,6 +1009,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const chunkManagerSource = readRepoFile("js", "core", "scenario_chunk_manager.js");
   const spatialQueryIndexSource = readRepoFile("js", "core", "renderer", "spatial_query_index.js");
   const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
+  const scenarioRefreshPlansSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_plans.js");
+  const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
   const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
@@ -1036,7 +1038,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /function getScenarioSpecialVisualRevisionToken\(\) \{[\s\S]*?special-ref:\$\{getObjectIdentityToken\(runtimeState\.scenarioSpecialRegionsData, "scenario-special"\)\}[\s\S]*?special-count:\$\{getFeatureCollectionFeatureCount\(runtimeState\.scenarioSpecialRegionsData\)\}[\s\S]*?runtimeState\.showScenarioSpecialRegions \? "scenario-special:on" : "scenario-special:off"/.test(rendererSource),
     interactionMetricsKeepDirectActionAndHitRankDurations:
       rendererSource.includes('recordInteractionDurationMetric("interactionActionDuration"')
-      && /function rankCandidates\(candidates, lonLat, \{ eventType = "unknown", targetType = "unknown" \} = \{\}\) \{[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration"[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,/.test(rendererSource),
+      && /function rankCandidates\([\s\S]*?candidates,[\s\S]*?lonLat,[\s\S]*?eventType = "unknown",[\s\S]*?targetType = "unknown",[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration"[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,/.test(interactionHitCandidateSource)
+      && /function rankCandidates\(candidates, lonLat,[\s\S]*?rankHitCandidates\(candidates, lonLat,[\s\S]*?recordInteractionDurationMetric,/.test(rendererSource),
     hoverMetricsUseSamplingAndSlowSampleThreshold:
       rendererSource.includes("const HOVER_INTERACTION_METRIC_SAMPLE_RATE = 10;")
       && rendererSource.includes("const HOVER_INTERACTION_SLOW_SAMPLE_MS = 8;")
@@ -1126,7 +1129,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /const taskKey = "secondary-spatial-index";[\s\S]*?recordInteractionRecoveryTaskMetric\(taskKey,/.test(rendererSource)
       && /const taskKey = "deferred-heavy-border-meshes";[\s\S]*?recordInteractionRecoveryTaskMetric\(taskKey,/.test(rendererSource),
     hoverStrictHitUsesFirstContainingFastPath:
-      /function findFirstContainingCandidate\(candidates, lonLat, \{ eventType = "hover", targetType = "unknown" \} = \{\}\) \{[\s\S]*?fastPath: "hover-first-containing"/.test(rendererSource)
+      /function findFirstContainingCandidate\([\s\S]*?eventType = "hover",[\s\S]*?targetType = "unknown",[\s\S]*?fastPath: "hover-first-containing"/.test(interactionHitCandidateSource)
+      && /function findFirstContainingCandidate\(candidates, lonLat,[\s\S]*?findFirstContainingHitCandidate\(candidates, lonLat,[\s\S]*?recordInteractionDurationMetric,/.test(rendererSource)
       && /eventType === "hover" && !enableSnap[\s\S]*?findFirstContainingCandidate\(strictCandidates, pointer\.lonLat, \{ eventType, targetType: "land" \}\)/.test(rendererSource),
     exactAfterSettleRefreshLeavesContextScenarioOutsidePhysicalRefreshPasses:
       /function getPhysicalExactRefreshPasses\(\) \{[\s\S]*?\["physicalBase", "political", "contextBase", "borders"\][\s\S]*?\["political", "contextBase", "borders"\][\s\S]*?return passes;[\s\S]*?\}/.test(rendererSource)
@@ -1609,6 +1613,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
   const startupHydrationSource = readRepoFile("js", "core", "scenario", "startup_hydration.js");
   const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
+  const scenarioRefreshPlansSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_plans.js");
 
   const checks = {
     scenarioWaterExclusiveModeComesFromManifestWithLegacyAtlantropaDefault:
@@ -1621,7 +1626,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
       && /function isWaterRegionEnabled\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
       && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) return;/.test(rendererSource)
-      && /function collectWaterGridCandidates\(px, py, radiusProj = 0\) \{[\s\S]*?if \(!isWaterRegionEnabled\(item\.feature\)\) return;/.test(rendererSource)
+      && /function collectWaterGridCandidates\(px, py, radiusProj = 0\) \{[\s\S]*?shouldIncludeItem: \(item\) => isWaterRegionEnabled\(item\.feature\),/.test(rendererSource)
       && /function rebuildAuxiliaryRegionIndexes\(\) \{[\s\S]*?if \(!isWaterRegionEnabled\(selectedFeature\)\) \{[\s\S]*?runtimeState\.selectedWaterRegionId = "";/.test(rendererSource)
       && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?if \(!isWaterRegionEnabled\(feature\)\) return;/.test(rendererSource),
     waterSphericalDiagnosticsBacksSanitization:
@@ -1679,7 +1684,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "await buildSpatialIndexChunked({",
         "includeSecondary: false",
         "keepReady: true",
-      ].every((snippet) => rendererSource.includes(snippet)),
+      ].every((snippet) => `${rendererSource}\n${scenarioRefreshPlansSource}`.includes(snippet)),
     rebuildPoliticalLandCollectionsBreakdownExposesSyncSubsteps:
       /function rebuildPoliticalLandCollections\(\) \{[\s\S]*?let runtimeCollectionMs = 0;[\s\S]*?let composeMs = 0;[\s\S]*?let atlantropaMs = 0;[\s\S]*?let interactiveMs = 0;[\s\S]*?let coverageMs = 0;[\s\S]*?recordRenderPerfMetric\("rebuildPoliticalLandCollectionsBreakdown"[\s\S]*?scenarioChunkFeatureCount:[\s\S]*?scenarioChunkVisibleFeatureCount:[\s\S]*?runtimeCollectionMs:[\s\S]*?composeMs:[\s\S]*?atlantropaMs:[\s\S]*?interactiveMs:[\s\S]*?coverageMs:/.test(rendererSource),
     politicalChunkPromotionBreakdownExposesVisualStageSubsteps:
@@ -1744,19 +1749,21 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
   const checkScenarioContractsSource = readRepoFile("tools", "check_scenario_contracts.py");
   const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
+  const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const colorCoverageE2eSource = readRepoFile("tests", "e2e", "dev", "scenario_chunk_exact_after_settle_regression.dev.spec.js");
   const pixelProbeSource = readRepoFile("tests", "e2e", "support", "political-pixel-probe.js");
   const visualRenderableBody = rendererSource.match(/function isPoliticalVisualRenderableFeature\(feature, featureId = null\) \{[\s\S]*?\n\}/)?.[0] || "";
 
   const checks = {
     hitResultShapeCarriesRuntimeCountry:
-      /function createHitResult\(overrides = \{\}\) \{[\s\S]*?countryCode: null,[\s\S]*?runtimeCountryCode: null,/.test(rendererSource),
+      /function createHitResult\(overrides = \{\}\) \{[\s\S]*?countryCode: null,[\s\S]*?runtimeCountryCode: null,/.test(interactionHitCandidateSource),
     interactionCountryCodeFallsBackFromDisplayOwnerToRuntimeCountry:
       /function getFeatureInteractionCountryCodeNormalized\(feature, featureId = null\) \{[\s\S]*?getDisplayOwnerCode\(feature, resolvedId\)[\s\S]*?getFeatureCountryCodeNormalized\(feature\)/.test(rendererSource),
     canvasHitPreservesRuntimeCountryAndReturnsInteractionCountry:
       /function getHitResultFromCanvas\(event\) \{[\s\S]*?countryCode: getFeatureInteractionCountryCodeNormalized\(feature, id\),[\s\S]*?runtimeCountryCode: getFeatureCountryCodeNormalized\(feature\),/.test(rendererSource),
     spatialHitPreservesRuntimeCountryAndReturnsInteractionCountry:
-      /function toHitResult\(candidate[\s\S]*?const runtimeCountryCode = canonicalCountryCode\([\s\S]*?candidate\.item\.countryCode[\s\S]*?const interactionCountryCode = feature[\s\S]*?getFeatureInteractionCountryCodeNormalized\(feature, resolvedId\)[\s\S]*?countryCode: interactionCountryCode \|\| runtimeCountryCode,[\s\S]*?runtimeCountryCode,/.test(rendererSource),
+      /function toHitResult\([\s\S]*?const runtimeCountryCode = canonicalCountryCode\([\s\S]*?candidate\.item\.countryCode[\s\S]*?const interactionCountryCode = feature[\s\S]*?getFeatureInteractionCountryCodeNormalized\(feature, resolvedId\)[\s\S]*?countryCode: interactionCountryCode \|\| runtimeCountryCode,[\s\S]*?runtimeCountryCode,/.test(interactionHitCandidateSource)
+      && /function toHitResult\(candidate,[\s\S]*?toCandidateHitResult\(candidate,[\s\S]*?getFeatureInteractionCountryCodeNormalized,/.test(rendererSource),
     targetResolutionUsesOwnerAwareFeatureIds:
       /function getInteractionCountryFeatureIds\(feature, featureId\) \{[\s\S]*?getScenarioOwnerFeatureIds\(interactionCountryCode\)[\s\S]*?getCountryFeatureIds\(runtimeCountryCode\)/.test(rendererSource)
       && /function resolveInteractionTargetIds\(feature, id\) \{[\s\S]*?getFeatureInteractionCountryCodeNormalized\(feature, id\)[\s\S]*?getInteractionCountryFeatureIds\(feature, id\)/.test(rendererSource)

@@ -5,12 +5,16 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+REFRESH_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_plans.js"
+HIT_CANDIDATES_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "interaction_hit_candidates.js"
 
 
 class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        cls.refresh_plan_content = REFRESH_PLANS_JS.read_text(encoding="utf-8")
+        cls.hit_candidate_content = HIT_CANDIDATES_JS.read_text(encoding="utf-8")
 
     def assert_secondary_spatial_rebuild_order(self, body, *, allow_work_between_rebuild_and_reset=False):
         gap = r'[\s\S]*?' if allow_work_between_rebuild_and_reset else r'\s*'
@@ -70,7 +74,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             ),
         )
         self.assertRegex(
-            self.renderer_content,
+            self.refresh_plan_content,
             re.compile(
                 r'function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{\s*\["political", "contextBase", "contextMarkers", "borders", "labels"\]',
                 re.S,
@@ -155,9 +159,17 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
 
     def test_hit_rank_metric_carries_candidate_and_target_shape(self):
         self.assertRegex(
+            self.hit_candidate_content,
+            re.compile(
+                r'function rankCandidates\([\s\S]*?candidates,[\s\S]*?lonLat,[\s\S]*?eventType = "unknown",[\s\S]*?targetType = "unknown",[\s\S]*?let geoContainsCount = 0;[\s\S]*?geoContainsCount \+= 1;[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration", nowMs\(\) - startedAt, \{[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,',
+                re.S,
+            ),
+        )
+        self.assertIn("rankCandidates as rankHitCandidates,", self.renderer_content)
+        self.assertRegex(
             self.renderer_content,
             re.compile(
-                r'function rankCandidates\(candidates, lonLat, \{ eventType = "unknown", targetType = "unknown" \} = \{\}\) \{[\s\S]*?let geoContainsCount = 0;[\s\S]*?geoContainsCount \+= 1;[\s\S]*?recordInteractionDurationMetric\("interactionHitRankDuration", nowMs\(\) - startedAt, \{[\s\S]*?candidateCount: candidates\.length,[\s\S]*?geoContainsCount,[\s\S]*?containsGeoCount:[\s\S]*?eventType,[\s\S]*?targetType,',
+                r'function rankCandidates\(candidates, lonLat,[\s\S]*?return rankHitCandidates\(candidates, lonLat,[\s\S]*?geoContains: globalThis\.d3\?\.geoContains,[\s\S]*?recordInteractionDurationMetric,',
                 re.S,
             ),
         )

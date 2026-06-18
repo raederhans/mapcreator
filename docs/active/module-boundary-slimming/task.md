@@ -89,3 +89,94 @@ Docs:
 ## Recommended Next Step
 
 Integrate this Phase 1 branch after sequencing against the current TNO renderer WIP. Use rebase or cherry-pick only after comparing `map_renderer.js`, the matching dist file, and `dist/pages-dist-manifest.json`.
+
+## Delivery Package: Phase 2-3
+
+1. Moved scenario refresh plan creation and chunk-promotion target-pass policy into `js/core/map_renderer/scenario_refresh_plans.js`.
+2. Kept `scenario_renderer_bridge.js` as a thin wrapper that imports plan creators and forwards renderer refresh calls.
+3. Moved pure hit result/candidate collection/ranking/first-containing/water preference logic into `js/core/map_renderer/interaction_hit_candidates.js`.
+4. Kept paint/edit transactions in `map_renderer.js` because they still own history, dirty state, sidebar refresh, render request, and border recompute side effects.
+5. Added named Node behavior tests and refreshed `dist/app` output.
+
+## Changed Files: Phase 2-3
+
+Core files:
+- `js/core/map_renderer.js`
+- `js/core/scenario/scenario_renderer_bridge.js`
+- `js/core/map_renderer/scenario_refresh_plans.js`
+- `js/core/map_renderer/interaction_hit_candidates.js`
+
+Tests and tooling:
+- `package.json`
+- `tests/scenario_refresh_plans_behavior.test.mjs`
+- `tests/interaction_hit_candidates_behavior.test.mjs`
+- `tests/scenario_chunk_contracts.test.mjs`
+- `tests/test_scenario_renderer_bridge_boundary_contract.py`
+- `tests/test_map_renderer_spatial_index_runtime_owner_boundary_contract.py`
+- `tests/test_map_renderer_spatial_index_runtime_orchestration_contract.py`
+
+Dist:
+- `dist/app/js/core/map_renderer.js`
+- `dist/app/js/core/scenario/scenario_renderer_bridge.js`
+- `dist/app/js/core/map_renderer/scenario_refresh_plans.js`
+- `dist/app/js/core/map_renderer/interaction_hit_candidates.js`
+- `dist/pages-dist-manifest.json`
+
+Docs:
+- `docs/active/module-boundary-slimming/plan.md`
+- `docs/active/module-boundary-slimming/context.md`
+- `docs/active/module-boundary-slimming/task.md`
+- `docs/active/_worktree_registry.md`
+
+## Diff Summary: Phase 2-3
+
+- Reduced `map_renderer.js` by moving pure refresh and interaction-hit policy code into internal map renderer owner modules.
+- Removed refresh-plan creator logic from `scenario_renderer_bridge.js`.
+- Replaced repeated land/water/special grid candidate loops with one pure grid candidate helper.
+- Added behavior tests for both pure modules and updated existing static contracts to check the new ownership boundary.
+- Rebuilt Pages dist so source and checked-in release output stay aligned.
+
+## Commit State: Phase 2-3
+
+- Current worktree is not committed yet; final review is complete and integration validation is pending.
+- Recommended state: commit on `codex/module-boundary-slimming`, then integrate through a clean main worktree.
+
+## Base / Main Divergence: Phase 2-3
+
+- Current branch base remains `origin/main@5494431c8fb721f7492be5ca84e7b5dab57abdf9`.
+- Branch includes Phase 1 commit `c415033026af6041bbce5d984bbf30eb19c34314` plus uncommitted Phase 2-3 changes.
+- Local `main` and `origin/main` were still `5494431c8fb721f7492be5ca84e7b5dab57abdf9` when Phase 2-3 started.
+
+## Conflict Risk: Phase 2-3
+
+- Red overlap with active parent WIP remains: `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`.
+- Yellow semantic overlap with future renderer interaction/refactor work: `js/core/map_renderer/interaction_hit_candidates.js`, `js/core/map_renderer/scenario_refresh_plans.js`, `scenario_renderer_bridge.js`.
+- Green for unrelated landing-only and data-only work.
+
+## Verification: Phase 2-3
+
+- `npm run test:node:scenario-refresh-plans`: 4/4 passed.
+- `npm run test:node:interaction-hit-candidates`: 5/5 passed.
+- Targeted Python bridge/refresh/spatial owner suite: 40 tests passed.
+- Targeted Python interaction/render/public/import/runtime-hook suites: 42 tests passed.
+- `npm run test:node:scenario-chunk-promotion-helpers`: 2/2 passed.
+- `npm run test:node:dev-workspace-selection-ownership`: 2/2 passed.
+- `npm run test:node:renderer-runtime-state-behavior`: 9/9 passed.
+- `npm run verify:test-import-graph`: passed.
+- `npm run test:node:scenario-chunk-contracts`: 43/44 passed with the existing `hoverFacilityAndCityProbeMetricsRemainNamed` failure.
+- `py -3 tools/build_pages_dist.py`: passed.
+- `py -3 -m unittest tests.test_pages_dist_startup_shell -q`: 37 tests passed.
+- `npm run test:node:landing-showcase-view`: 8 tests passed.
+- ai-slop-cleaner changed-scope scan: passed; no new masking fallback, temporary workaround, retry/degrade layer, or dependency.
+- Code-reviewer lane: found one stale `hover-first-containing` contract assertion in `tests/scenario_chunk_contracts.test.mjs`; fixed by checking `interaction_hit_candidates.js` for fast-path metric ownership and renderer for wrapper forwarding.
+- Architecture lane: CLEAR; new owner modules remain pure and paint/edit transactions correctly stay in `map_renderer.js`.
+- `npm run test:node:scenario-chunk-contracts` after the review fix: 43/44 passed with the same existing `hoverFacilityAndCityProbeMetricsRemainNamed` failure.
+
+## Remaining Risk: Phase 2-3
+
+- The pre-existing `scenario-chunk-contracts` hover metric failure remains outside this Phase 2-3 change.
+- Main integration still needs clean-worktree sequencing because the parent checkout carries overlapping renderer WIP.
+
+## Recommended Next Step: Phase 2-3
+
+Run final review gates, commit the branch, merge through a clean main worktree, rerun the focused post-merge validation, push feature branch and main, then update this package to integrated.

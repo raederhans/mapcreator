@@ -4,6 +4,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_JS = REPO_ROOT / "js" / "core" / "scenario" / "scenario_renderer_bridge.js"
+REFRESH_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_plans.js"
 SCENARIO_MANAGER_JS = REPO_ROOT / "js" / "core" / "scenario_manager.js"
 SCENARIO_RESOURCES_JS = REPO_ROOT / "js" / "core" / "scenario_resources.js"
 SCENARIO_POST_APPLY_EFFECTS_JS = REPO_ROOT / "js" / "core" / "scenario_post_apply_effects.js"
@@ -14,8 +15,10 @@ DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail
 class ScenarioRendererBridgeBoundaryContractTest(unittest.TestCase):
     def test_bridge_reexports_scenario_refresh_surface_from_map_renderer(self):
         content = BRIDGE_JS.read_text(encoding="utf-8")
+        refresh_plan_content = REFRESH_PLANS_JS.read_text(encoding="utf-8")
 
         self.assertIn('} from "../map_renderer.js";', content)
+        self.assertIn('} from "../map_renderer/scenario_refresh_plans.js";', content)
         self.assertIn("runRendererScenarioApplyRefresh,", content)
         self.assertIn("runRendererScenarioChunkPromotionRefresh,", content)
         self.assertIn("refreshMapDataForScenarioApply,", content)
@@ -28,11 +31,29 @@ class ScenarioRendererBridgeBoundaryContractTest(unittest.TestCase):
         self.assertIn("invalidateOceanWaterInteractionVisualState,", content)
         self.assertIn("invalidateContextLayerVisualStateBatch,", content)
         self.assertIn("setMapData,", content)
-        self.assertIn("function createScenarioApplyRefreshPlan(", content)
-        self.assertIn("function createScenarioChunkPromotionRefreshPlan(", content)
-        self.assertIn("function createStartupHydrationRefreshPlan(", content)
-        self.assertIn('kind: "ScenarioRefreshPlan"', content)
-        self.assertIn('kind: "RendererRefreshPlan"', content)
+        self.assertIn("createScenarioApplyRefreshPlan,", content)
+        self.assertIn("createScenarioChunkPromotionRefreshPlan,", content)
+        self.assertIn("createStartupHydrationRefreshPlan,", content)
+        self.assertIn("getRendererRefreshPlan,", content)
+        self.assertIn("function createScenarioApplyRefreshPlan(", refresh_plan_content)
+        self.assertIn("function createScenarioChunkPromotionRefreshPlan(", refresh_plan_content)
+        self.assertIn("function createStartupHydrationRefreshPlan(", refresh_plan_content)
+        self.assertIn('kind: "ScenarioRefreshPlan"', refresh_plan_content)
+        self.assertIn('kind: "RendererRefreshPlan"', refresh_plan_content)
+
+    def test_refresh_plan_owner_stays_pure_and_renderer_consumes_it(self):
+        bridge_content = BRIDGE_JS.read_text(encoding="utf-8")
+        refresh_plan_content = REFRESH_PLANS_JS.read_text(encoding="utf-8")
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("../map_renderer.js", refresh_plan_content)
+        self.assertNotIn("runtimeState", refresh_plan_content)
+        self.assertNotIn("render()", refresh_plan_content)
+        self.assertIn("getScenarioChunkPromotionTargetPasses,", renderer_content)
+        self.assertIn("normalizeRendererRefreshPlan,", renderer_content)
+        self.assertIn("from \"./map_renderer/scenario_refresh_plans.js\";", renderer_content)
+        self.assertNotIn("function createScenarioApplyRefreshPlan(", bridge_content)
+        self.assertNotIn("function createScenarioChunkPromotionRefreshPlan(", bridge_content)
 
     def test_bridge_wrappers_attach_renderer_refresh_plans(self):
         content = BRIDGE_JS.read_text(encoding="utf-8")
