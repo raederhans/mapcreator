@@ -4,19 +4,18 @@ Last updated: 2026-06-18
 
 ## Integration Owner
 
-- Owner: parent checkout cleanup docs-only closeout.
-- Current cleanup base: `main@8f2896060e5f3d9f461db56bdf30a0f5e1915def`; prior TNO recovery branch `codex/tno-political-recovery-integration@fcd63a32`
-- Base: `origin/main@8f2896060e5f3d9f461db56bdf30a0f5e1915def`
-- Live test/build owner: no active live process after closeout.
-- Subagents: parent cleanup verifier PASS; code-reviewer and architect findings addressed in this docs-only closeout.
+- Owner: module-boundary continuation integration owner.
+- Current base: `main@4ea5252ed68f80773c0ca5f390ac218656edceb2`.
+- Base: `origin/main@4ea5252ed68f80773c0ca5f390ac218656edceb2`.
+- Live test/build owner: main Codex agent owns all Phase A verification and Pages dist commands.
+- Subagents: Harvey, Goodall, and Confucius completed read-only Phase A architecture, ponytail, and behavior reviews; no child agent owned live tests.
 
 ## Recommended Order
 
-1. Parent checkout is clean on `main@8f289606` after the covered dirty WIP was backed up and stashed.
-2. Branch `origin/codex/tno-political-recovery-integration@fcd63a32` remains as the recovery ref.
-3. Stash `3a251933f031959dbe303700ed0cebd6e77486d3` and backup folder `.runtime/cleanup-backups/parent-dirty-cleanup-20260618T194327Z/` preserve the former parent dirty checkout.
-4. Continue future integration from clean `main`.
-5. Treat the parent stash and backup as forensic recovery material for old TNO, landing, module-boundary, generated dist, and docs residue.
+1. Integrate Phase A renderer exact-after-settle plan extraction in `codex/module-boundary-phase-a-renderer-shell`.
+2. Start Phase B UI shell work from updated main.
+3. Start Phase C backend app modularization from updated main.
+4. Add Phase D guardrails after implementation phases are integrated.
 
 ## Current Worktrees
 
@@ -24,7 +23,8 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@8f289606`; former branch `codex/tno-political-color-recovery@a4957713` | `origin/main@8f289606` | main checkout restored; docs-only closeout record | registry/archive docs in this closeout; no code, app dist, package, tests, or landing changes | Former dirty checkout was audited against `origin/main`, archived to `.runtime/cleanup-backups/parent-dirty-cleanup-20260618T194327Z/`, stashed as `3a251933f031959dbe303700ed0cebd6e77486d3`, and switched to `main`; `git status --short` was clean before this docs-only registry/archive update and returns clean after this closeout commit. | Green for new work from `main`; red for applying the old stash wholesale because it would restore stale renderer/dist/package/test/docs residue. | After this closeout commit and push, no active integration action remains. Use stash or backup only for targeted forensic recovery. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@4ea5252e` | `origin/main@4ea5252e` | clean integration owner checkout | none | `git status --short` clean after fetch; `git worktree list` shows this checkout plus Phase A worktree. | Green as integration base; keep clean until Phase A merge. | Wait for Phase A delivery package, then merge/verify/push. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-a-renderer-shell` | `codex/module-boundary-phase-a-renderer-shell` committed from `4ea5252e` | `main@4ea5252e` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/map_renderer/exact_after_settle_refresh_plans.js`, `dist/app/js/core/map_renderer.js`, exact-after-settle tests/contracts, `package.json`, active docs | New exact-after-settle plan owner added; Pages dist rebuilt; syntax, exact-after-settle 5 tests, scenario refresh 4 tests, hit candidates 5 tests, render pipeline Python contract 5 tests, physical layer 2 tests, import graph, Pages startup shell 37 tests, landing showcase 8 tests, diff check, ai-slop scan, ponytail CLEAR, and behavior review PASS completed. Post-review gate passed exact-after-settle 5 tests, physical layer 2 tests, render pipeline Python contract 5 tests, `verify:pages-dist`, and diff check. `scenario_chunk_contracts` remains 43/44 with existing `hoverFacilityAndCityProbeMetricsRemainNamed` failure. | Yellow: renderer shell and package scripts touch shared surfaces; no parallel code work should edit `map_renderer.js`. | Merge after main remains clean. |
 
 ## Recent Integrated Branches
 

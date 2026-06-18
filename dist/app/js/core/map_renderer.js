@@ -169,6 +169,13 @@ import {
   normalizeRendererRefreshPlan,
 } from "./map_renderer/scenario_refresh_plans.js";
 import {
+  createExactAfterSettleRefreshPlan,
+  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+  getExactAfterSettleDprRestorePasses,
+  resolveDeferredExactContextTargetPasses,
+  resolveExactAfterSettleTargetPasses,
+} from "./map_renderer/exact_after_settle_refresh_plans.js";
+import {
   collectSpatialGridCandidates,
   createHitResult,
   findFirstContainingCandidate as findFirstContainingHitCandidate,
@@ -915,13 +922,6 @@ const TRANSFORMED_FRAME_PASS_NAMES = [
   "textureLabels",
   "labels",
 ];
-const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([
-  "contextBase",
-  "contextScenario",
-  "contextMarkers",
-  "textureLabels",
-  "labels",
-]);
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
 const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;
@@ -17834,25 +17834,20 @@ function buildExactAfterSettleRefreshPlan({ profile, scheduleStartedAt, callback
   const resolvedProfile = profile || getAdaptiveSettleProfile();
   const reuseDecision = getContextBaseReuseDecision();
   const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh(reuseDecision);
-  const exactRefreshApplied = forceExactContextBaseRefresh || !!reuseDecision.shouldExactRefresh;
-  return {
-    resolvedProfile,
-    reuseDecision,
-    forceExactContextBaseRefresh,
-    exactRefreshApplied,
-    exactTargetPasses: [],
+  return createExactAfterSettleRefreshPlan({
+    profile: resolvedProfile,
     scheduleStartedAt,
     callbackStartedAt,
-    startedAt: callbackStartedAt,
+    reuseDecision,
+    forceExactContextBaseRefresh,
     metricSequenceStartedAt: Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0)),
-    settleWindowElapsedMs: Math.max(0, callbackStartedAt - scheduleStartedAt),
-  };
+  });
 }
 
 function applyExactAfterSettleRefreshPlan(plan) {
   const reuseDecision = plan.reuseDecision || {};
   updateDprStage("idle", { force: true });
-  const exactAfterSettleDprPasses = RENDER_PASS_NAMES.filter((passName) => passName !== "political");
+  const exactAfterSettleDprPasses = getExactAfterSettleDprRestorePasses(RENDER_PASS_NAMES);
   setCanvasSize({
     reason: "exact-after-settle-dpr-restore",
     targetPassesOnDprChange: exactAfterSettleDprPasses,
@@ -17897,21 +17892,18 @@ function applyExactAfterSettleRefreshPlan(plan) {
   );
   plan.deferContextBaseEnhancements = deferContextBaseEnhancements;
   const cache = getRenderPassCacheState();
-  const targetPassNames = new Set(["political", "borders", "labels", "textureLabels"]);
-  if (plan.forceExactContextBaseRefresh || plan.exactRefreshApplied) {
-    getPhysicalExactRefreshPasses().forEach((passName) => targetPassNames.add(passName));
-  }
-  RENDER_PASS_NAMES.forEach((passName) => {
-    if (cache.dirty[passName]) {
-      targetPassNames.add(passName);
-    }
+  const idleRenderPassNames = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
+    .map(([passName]) => passName);
+  const targetPassPlan = resolveExactAfterSettleTargetPasses({
+    renderPassNames: RENDER_PASS_NAMES,
+    idleRenderPassNames,
+    dirtyPassNames: RENDER_PASS_NAMES.filter((passName) => cache.dirty[passName]),
+    physicalExactRefreshPasses: getPhysicalExactRefreshPasses(),
+    forceExactContextBaseRefresh: plan.forceExactContextBaseRefresh,
+    exactRefreshApplied: plan.exactRefreshApplied,
   });
-  plan.deferredExactTargetPasses = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-    .map(([passName]) => passName)
-    .filter((passName) => targetPassNames.has(passName) && EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
-  plan.exactTargetPasses = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-    .map(([passName]) => passName)
-    .filter((passName) => targetPassNames.has(passName) && !EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.has(passName));
+  plan.deferredExactTargetPasses = targetPassPlan.deferredExactTargetPasses;
+  plan.exactTargetPasses = targetPassPlan.exactTargetPasses;
 }
 
 function readRenderPerfMetricDuration(metricName, minSequence = 0) {
@@ -18027,13 +18019,12 @@ function cancelDeferredExactContextRefresh() {
 
 function getDeferredExactContextTargetPasses(plan = {}) {
   const cache = getRenderPassCacheState();
-  const targetPasses = new Set(Array.isArray(plan.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : []);
-  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.forEach((passName) => {
-    if (cache.dirty?.[passName]) targetPasses.add(passName);
+  return resolveDeferredExactContextTargetPasses({
+    plan,
+    dirtyPassNames: RENDER_PASS_NAMES.filter((passName) => cache.dirty?.[passName]),
+    idleRenderPassNames: getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
+      .map(([passName]) => passName),
   });
-  return getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-    .map(([passName]) => passName)
-    .filter((passName) => targetPasses.has(passName));
 }
 
 function isDeferredExactContextRefreshCurrent(refreshVersion, plan = {}) {

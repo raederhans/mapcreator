@@ -6,12 +6,14 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
+EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 
 
 class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_pass_orchestration_shell_while_idle_pass_owner_moves_to_module(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
+        exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
 
         # 这个静态合同锁的是“map_renderer 只保留编排壳，idle pass 细节归 owner”。
@@ -23,6 +25,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("let renderPipelinePassesOwner = null;", renderer_content)
         self.assertIn("function getRenderPipelinePassesOwner() {", renderer_content)
         self.assertIn("exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,", renderer_content)
+        self.assertIn("resolveExactAfterSettleTargetPasses", renderer_content)
         self.assertIn("drawContextScenarioPass,", renderer_content)
         self.assertIn("drawHgoPreviewPass,", renderer_content)
         self.assertIn("drawTextureLabelEffectsPass,", renderer_content)
@@ -34,7 +37,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"(?m)^\s*function\s+getIdleRenderPassDefinitions\s*\(", renderer_content))
         self.assertIsNone(re.search(r"(?m)^\s*function\s+prepareIdleRenderPassDefinition\s*\(", renderer_content))
         self.assertIsNone(re.search(r"(?m)^\s*function\s+ensureIdleRenderPasses\s*\(", renderer_content))
-        self.assertEqual(renderer_content.count("getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()"), 5)
+        self.assertEqual(renderer_content.count("getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()"), 4)
         self.assertEqual(
             renderer_content.count(
                 "getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);"
@@ -58,6 +61,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn('tryPartialPoliticalPassRepaint(transform, nextSignature, timings)', owner_content)
         self.assertIn("function ensureIdleRenderPasses(timings) {", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
+        self.assertIn("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_plan_content)
+        self.assertIn("function resolveExactAfterSettleTargetPasses({", exact_plan_content)
 
     def test_water_hover_uses_svg_overlay_while_selected_water_invalidates_canvas_layer(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

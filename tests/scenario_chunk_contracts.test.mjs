@@ -1002,6 +1002,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const contextScenarioSignatureBranch = extractRendererPassSignatureBranch(rendererSource, "contextScenario");
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
+  const exactAfterSettlePlansSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_refresh_plans.js");
   const scenarioOwnershipEditorSource = readRepoFile("js", "core", "scenario_ownership_editor.js");
   const politicalRasterWorkerClientSource = readRepoFile("js", "core", "political_raster_worker_client.js");
   const politicalRasterWorkerSource = readRepoFile("js", "workers", "political_raster.worker.js");
@@ -1105,7 +1106,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     exactAfterSettleSuccessInvalidatesPoliticalPass:
       /function invalidateExactAfterSettlePoliticalPass\(plan\) \{[\s\S]*?invalidateRenderPasses\("political", "exact-after-settle-political"\);[\s\S]*?plan\.politicalInvalidationReason = "exact-after-settle-political";[\s\S]*?plan\.politicalInvalidatedAt = politicalInvalidatedAt;/.test(rendererSource)
       && /function prepareExactAfterSettlePassesInSlices\(generation, plan\) \{[\s\S]*?if \(runtimeState\.renderPhase !== RENDER_PHASE_IDLE\) \{[\s\S]*?resetExactAfterSettleController\(`\$\{passName\}-phase-interrupted`, generation\);[\s\S]*?return;[\s\S]*?if \(!isExactAfterSettleIdentityCurrent\(activeController\)\) \{[\s\S]*?resetExactAfterSettleController\(`\$\{passName\}-identity-mismatch`, generation\);[\s\S]*?return;[\s\S]*?if \(passName === "political"\) \{[\s\S]*?invalidateExactAfterSettlePoliticalPass\(plan\);[\s\S]*?getRenderPipelinePassesOwner\(\)\.prepareIdleRenderPassDefinition\(passName, drawFn, transform, timings, cache\);/.test(rendererSource)
-      && /function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?const exactAfterSettleDprPasses = RENDER_PASS_NAMES\.filter\(\(passName\) => passName !== "political"\);[\s\S]*?reason: "exact-after-settle-dpr-restore",[\s\S]*?targetPassesOnDprChange: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnResize: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnCanvasResize: exactAfterSettleDprPasses,[\s\S]*?const targetPassNames = new Set\(\["political", "borders", "labels", "textureLabels"\]\);/.test(rendererSource)
+      && /function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?const exactAfterSettleDprPasses = getExactAfterSettleDprRestorePasses\(RENDER_PASS_NAMES\);[\s\S]*?reason: "exact-after-settle-dpr-restore",[\s\S]*?targetPassesOnDprChange: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnResize: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnCanvasResize: exactAfterSettleDprPasses,[\s\S]*?resolveExactAfterSettleTargetPasses/.test(rendererSource)
       && !/function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?exact-after-settle-dpr-restore[\s\S]*?targetPassesOnDprChange: \["political", "contextBase", "borders"\]/.test(rendererSource)
       && !/function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?invalidateRenderPasses\("political", "exact-after-settle-political"\);[\s\S]*?const targetPassNames = new Set\(\["political", "borders", "labels", "textureLabels"\]\);/.test(rendererSource)
       && /recordRenderPerfMetric\("settleExactRefreshPasses"[\s\S]*?politicalInvalidationReason: String\(plan\.politicalInvalidationReason \|\| ""\),[\s\S]*?politicalInvalidatedAt: Number\(plan\.politicalInvalidatedAt \|\| 0\),/.test(rendererSource),
@@ -1219,17 +1220,17 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !rendererSource.includes('flushInteractionRender("click-erase")')
       && !rendererSource.includes('flushInteractionRender(kind);'),
     exactAfterSettleDefersContextPassesAfterCriticalPaint:
-      rendererSource.includes("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set")
+      exactAfterSettlePlansSource.includes("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set")
       && rendererSource.includes("const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;")
       && rendererSource.includes('"contextBase",')
       && rendererSource.includes('"contextScenario",')
       && (() => {
-        const deferredPassSet = rendererSource.match(/const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
+        const deferredPassSet = exactAfterSettlePlansSource.match(/const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
         return !deferredPassSet.includes('"background"') && !deferredPassSet.includes('"physicalBase"');
       })()
       && /function shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache = getRenderPassCacheState\(\)\) \{[\s\S]*?String\(controller\.phase \|\| ""\) !== "awaiting-paint"[\s\S]*?getPassReferenceTransform\(passName\)/.test(renderPipelinePassesSource)
       && /function prepareIdleRenderPassDefinition[\s\S]*?shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshDeferredPass"/.test(renderPipelinePassesSource)
-      && /function applyExactAfterSettleRefreshPlan[\s\S]*?plan\.deferredExactTargetPasses[\s\S]*?EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES\.has\(passName\)[\s\S]*?plan\.exactTargetPasses[\s\S]*?!EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES\.has\(passName\)/.test(rendererSource)
+      && /function applyExactAfterSettleRefreshPlan[\s\S]*?resolveExactAfterSettleTargetPasses[\s\S]*?plan\.deferredExactTargetPasses = targetPassPlan\.deferredExactTargetPasses[\s\S]*?plan\.exactTargetPasses = targetPassPlan\.exactTargetPasses/.test(rendererSource)
       && /function scheduleDeferredExactContextRefresh\(plan = \{\}\)[\s\S]*?prepareDeferredExactContextPassesInSlices[\s\S]*?recordRenderPerfMetric\("deferredExactContextRefreshScheduled"/.test(rendererSource)
       && rendererSource.includes("let deferredExactContextRefreshVersion = 0;")
       && rendererSource.includes("const deferredExactContextRefreshTaskHandles = new Set();")
