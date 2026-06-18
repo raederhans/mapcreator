@@ -397,3 +397,6 @@
 
 ### i18n 拆分按纯逻辑和 DOM 行为分界
 - 迁移 `i18n` owner 时，catalog、`t()`、tooltip model 适合进 `js/core`，DOM sweep、language toggle、`localStorage` 和 UI runtime hook 调用留在 `js/ui/i18n.js`；工具和测试以 core catalog 为真相源，UI catalog 只做兼容 re-export。
+
+### Worktree 注册表当前段只列真实路径
+- `Current Worktrees` 只放 `git worktree list` 当前存在的路径；已整合或已清理的分支放到历史整合或恢复记录段，避免后续 integration owner 误以为还有活跃 worktree。
