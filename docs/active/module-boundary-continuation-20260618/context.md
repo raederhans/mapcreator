@@ -105,3 +105,55 @@
   - `npm run test:node:backend-cloud-support`: passed, 36 tests.
   - `git diff --check`: passed.
 - Phase C worktree `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-c-backend-shell` was clean and removed after post-merge verification.
+
+## HGO Runtime Preview Integration Closeout
+
+- HGO branch: `codex/hgo-runtime-preview-fix`.
+- HGO functional commit merged into main: `db2e40d1`.
+- Former worktree: `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix`.
+- Integration reason: Phase B UI shell work needed the HGO `scenario_controls.js`, toolbar preview, renderer lifecycle, and Pages dist changes on main before making new sidebar/toolbar edits.
+- Implementation result:
+  - HGO projected preview now runs through the renderer lifecycle with current projection and zoom options.
+  - HGO preview reset/fit behavior is handled from `js/ui/scenario_controls.js`.
+  - HGO runtime preview tests and renderer/toolbar/Pages boundary contracts were updated.
+  - Existing Python npm scripts now route through `tools/run_python.mjs`.
+- Branch verification before integration:
+  - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+  - `py -3 -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract tests.test_toolbar_split_boundary_contract tests.test_pages_dist_startup_shell -q`: passed, 92 tests.
+  - `npm run verify:scenario-contracts:hgo`: passed.
+  - `npm run verify:test-import-graph`: passed.
+  - `npm run verify:pages-dist`: passed.
+  - `git diff --check`: passed.
+- Post-merge verification on main:
+  - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+  - `npm run verify:scenario-contracts:hgo`: passed.
+  - `npm run verify:test-import-graph`: passed.
+  - `npm run verify:pages-dist`: passed and refreshed checked-in Pages manifest data.
+  - `npm run python -- -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract tests.test_toolbar_split_boundary_contract tests.test_pages_dist_startup_shell -q`: passed, 92 tests after manifest refresh.
+  - `node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"`: passed.
+  - `git diff --check`: passed.
+- Cleanup:
+  - Git worktree registration was removed.
+  - Windows left locked zero-byte `.runtime/dev/hgo-fix-server.err.log` and `.runtime/dev/hgo-fix-server.out.log` files under the old worktree directory.
+  - Border/ocean/river follow-up edits found during cleanup were preserved in stash `preserve-hgo-worktree-followups-before-cleanup-20260618T1935` and patch backup `.runtime/cleanup-backups/hgo-worktree-followups-before-cleanup-20260618T1935/`.
+  - A duplicate parent-checkout copy of the same follow-up shape was preserved in stash `preserve-main-border-ocean-river-followup-before-phase-b-20260618T191148` and patch backup `.runtime/cleanup-backups/main-border-ocean-river-followup-before-phase-b-20260618T191148/`.
+- Phase B may now start from current main; the preserved border/ocean/river stashes are recovery backups after the follow-up commit below.
+
+## HGO Vector Scene Terrain Follow-up
+
+- Follow-up commit: `deba20346b4d90cc9649136bbf9374095511c8ce`.
+- Branch: `codex/hgo-vector-scene-terrain-suppression`.
+- Reason: the Pages dist gate found border/ocean/river HGO vector scene changes in the mirror path; the matching source and tests were already present as the preserved follow-up shape.
+- Implementation result:
+  - `border_draw_owner` suppresses canonical coastline strokes and scenario coastal accents for HGO vector scenes.
+  - `ocean_render_owner` suppresses coastal accents for HGO vector scenes.
+  - `river_layer_render_owner` suppresses base river strokes for HGO vector scenes and records a named skip reason.
+  - Source, dist mirrors, and Pages manifest are aligned.
+- Verification:
+  - `node --test tests/border_draw_owner_behavior.test.mjs tests/ocean_render_owner_behavior.test.mjs tests/river_layer_render_owner_behavior.test.mjs`: passed, 18 tests.
+  - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+  - `npm run verify:scenario-contracts:hgo`: passed.
+  - `npm run verify:pages-dist`: passed; Pages startup shell 37 tests and landing showcase 8 tests passed.
+  - `npm run verify:test-import-graph`: passed.
+  - `git diff --check`: passed.
+- Remaining recovery stashes remain useful as historical backups, but this follow-up is now represented by a normal commit.

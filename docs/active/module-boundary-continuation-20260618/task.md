@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Phase A and Phase C are integrated and verified on main. Phase B remains deferred because it overlaps the active HGO runtime preview worktree.
+Phase A, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase B is the next active implementation phase after this closeout docs commit is pushed.
 
 ## Phase A Delivery Package
 
@@ -66,7 +66,7 @@ Docs:
 
 ## Recommended Next Step
 
-Return to Phase B after the HGO overlap is resolved, abandoned, rebased, or explicitly sequenced. Phase D guardrails stay after the remaining implementation phases.
+Start Phase B from current main in a new worktree, then run the sidebar/toolbar boundary checks and Pages dist gate before integrating. Phase D guardrails stay after the remaining implementation phases.
 
 ## Phase C Delivery Package
 
@@ -132,3 +132,73 @@ Temporary files:
 - Helmholtz coverage review: static page i18n key coverage added, and untracked files will be staged explicitly.
 - Duplicate HGO WIP from the parent main checkout was preserved in stash `preserve-main-hgo-runtime-preview-duplicate-wip-before-phase-c-integration-20260618T182321` and patch backup `.runtime/cleanup-backups/phase-c-main-hgo-duplicate-preserve-20260618T182321/`.
 - Phase C worktree was removed after merge and verification.
+
+## HGO Integration Delivery Package
+
+1. Integrated `codex/hgo-runtime-preview-fix` into main at `db2e40d1`.
+2. Preserved HGO projected preview rendering through the renderer lifecycle, current projection, and zoom state.
+3. Updated HGO preview restore/reset behavior from `scenario_controls.js`.
+4. Kept Python npm scripts on the cross-platform `tools/run_python.mjs` wrapper.
+5. Landed the border/ocean/river HGO vector scene follow-up as commit `deba2034`, with earlier stashes retained as recovery backups.
+
+## HGO Files
+
+Core files:
+- `js/core/map_renderer.js`
+- `js/ui/scenario_controls.js`
+- `js/ui/toolbar/hgo_runtime_preview_controller.js`
+- `tools/run_python.mjs`
+
+Test files:
+- `tests/hgo_runtime_preview_behavior.test.mjs`
+- `tests/test_map_renderer_render_pipeline_passes_boundary_contract.py`
+- `tests/test_toolbar_split_boundary_contract.py`
+- `tests/test_pages_dist_startup_shell.py`
+
+Config and dist files:
+- `package.json`
+- `dist/app/js/core/map_renderer.js`
+- `dist/app/js/ui/scenario_controls.js`
+- `dist/app/js/ui/toolbar/hgo_runtime_preview_controller.js`
+- `dist/pages-dist-manifest.json`
+
+Docs:
+- `docs/active/module-boundary-continuation-20260618/plan.md`
+- `docs/active/module-boundary-continuation-20260618/context.md`
+- `docs/active/module-boundary-continuation-20260618/task.md`
+- `docs/active/_worktree_registry.md`
+
+Temporary and recovery files:
+- Old HGO worktree path still has locked zero-byte `.runtime/dev/hgo-fix-server.err.log` and `.runtime/dev/hgo-fix-server.out.log` files after Git worktree removal.
+- Follow-up stash: `preserve-hgo-worktree-followups-before-cleanup-20260618T1935`.
+- Duplicate parent follow-up stash: `preserve-main-border-ocean-river-followup-before-phase-b-20260618T191148`.
+- Patch backups: `.runtime/cleanup-backups/hgo-worktree-followups-before-cleanup-20260618T1935/` and `.runtime/cleanup-backups/main-border-ocean-river-followup-before-phase-b-20260618T191148/`.
+- Follow-up commit replacing the active work: `deba20346b4d90cc9649136bbf9374095511c8ce`.
+
+## HGO Diff Summary
+
+- Base commit: `main@ea9fd52a0842f675dc61e14cbb40e7e2d675dafb`.
+- Integrated commit: `db2e40d1`.
+- Feature branch: `codex/hgo-runtime-preview-fix`, pushed for recovery.
+- Current commit state: HGO runtime preview and HGO vector terrain suppression are integrated into main; closeout docs are pending commit.
+- Base/main divergence: HGO was fast-forwarded into main after Phase C.
+- Conflict risk: Phase B is yellow by semantics because it will touch UI shell files that now contain HGO preview wiring; vector terrain suppression is renderer-owner work and should stay separate from Phase B UI extraction.
+
+## HGO Verification
+
+- Passed: `npm run test:node:hgo-runtime-preview` (19 tests).
+- Passed: `npm run verify:scenario-contracts:hgo`.
+- Passed: `npm run verify:test-import-graph`.
+- Passed: `npm run verify:pages-dist`.
+- Passed: `npm run python -- -m unittest tests.test_map_renderer_render_pipeline_passes_boundary_contract tests.test_toolbar_split_boundary_contract tests.test_pages_dist_startup_shell -q` (92 tests after Pages manifest refresh).
+- Passed: `node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"`.
+- Passed: `git diff --check`.
+- Passed for vector terrain suppression: `node --test tests/border_draw_owner_behavior.test.mjs tests/ocean_render_owner_behavior.test.mjs tests/river_layer_render_owner_behavior.test.mjs` (18 tests).
+- Passed after vector terrain suppression: `npm run verify:pages-dist` (Pages startup shell 37 tests, landing showcase 8 tests).
+- Passed after vector terrain suppression: `npm run verify:test-import-graph`.
+
+## HGO Review Gates
+
+- Integration planning completed before merge: HGO was sequenced ahead of Phase B because it owned `scenario_controls.js`, renderer lifecycle hooks, HGO runtime preview tests, toolbar boundary tests, and Pages dist mirrors.
+- Worktree cleanup completed at the Git registration level; locked zero-byte runtime logs remain on disk.
+- Border/ocean/river follow-up edits were committed as `deba2034`; the old stashes and patch backups are recovery references.
