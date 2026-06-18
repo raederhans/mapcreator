@@ -15,9 +15,9 @@
 Integration scaffolding:
 
 - `docs/active/_worktree_registry.md`
-- `docs/active/tno-hgo-integration/plan.md`
-- `docs/active/tno-hgo-integration/context.md`
-- `docs/active/tno-hgo-integration/task.md`
+- `docs/archive/tno-hgo-integration-20260618/plan.md`
+- `docs/archive/tno-hgo-integration-20260618/context.md`
+- `docs/archive/tno-hgo-integration-20260618/task.md`
 - `.omx/context/tno-hgo-integration-20260618T032909Z.md`
 
 TNO scoped code files are already present in `origin/main@1206eb43`; no parent dirty patch is imported.

@@ -4,7 +4,7 @@ Last updated: 2026-06-18
 
 ## Summary
 
-Status: ready-for-integration; final static re-review approved.
+Status: integrated through `codex/tno-hgo-integration`; final static re-review approved.
 
 ## Changed Files
 
@@ -26,9 +26,9 @@ Tooling / metadata:
 - `tools/build_pages_dist.py`
 
 Docs:
-- `docs/active/hgo-preview-projection-base-replace/plan.md`
-- `docs/active/hgo-preview-projection-base-replace/context.md`
-- `docs/active/hgo-preview-projection-base-replace/task.md`
+- `docs/archive/hgo-preview-projection-base-replace-20260618/plan.md`
+- `docs/archive/hgo-preview-projection-base-replace-20260618/context.md`
+- `docs/archive/hgo-preview-projection-base-replace-20260618/task.md`
 - `docs/active/_worktree_registry.md`
 - `lessons learned.md`
 
@@ -89,4 +89,4 @@ Committed on branch `codex/hgo-preview-projection-base-replace`. Final report na
 
 ## Recommended Integration Action
 
-Commit and push this branch as ready-for-integration. Integration owner should compare against `codex/tno-political-color-recovery` before merging to main.
+Integrated through `codex/tno-hgo-integration`; keep source branch commit `7a95e26c` as the recovery ref until source worktree cleanup.
