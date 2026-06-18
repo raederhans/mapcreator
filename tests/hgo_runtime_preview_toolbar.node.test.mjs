@@ -48,7 +48,10 @@ function createStorage(initial = {}) {
 }
 
 function createLinearProjection() {
-  const projection = (lonLat) => lonLat;
+  const projection = ([lon, lat]) => [
+    (lon + 180) / 90,
+    (90 - lat) / 90,
+  ];
   projection.invert = ([x, y]) => [
     -180 + x * 90,
     90 - y * 90,

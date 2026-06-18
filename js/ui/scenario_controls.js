@@ -17,6 +17,7 @@ import {
   getScenarioFatalRecoveryState,
 } from "../core/scenario_recovery.js";
 import { loadScenarioRegistry } from "../core/scenario_resources.js";
+import { resetZoomToFit } from "../core/map_renderer/public.js";
 import { t } from "./i18n.js";
 import { showToast } from "./toast.js";
 const state = runtimeState;
@@ -226,6 +227,11 @@ export function initScenarioControls() {
             });
           }
           await callRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", true);
+          resetZoomToFit({
+            centerContent: true,
+            centerX: true,
+            centerY: true,
+          });
           pendingScenarioId = HGO_RUNTIME_PREVIEW_OPTION_VALUE;
           renderScenarioControls();
           return;

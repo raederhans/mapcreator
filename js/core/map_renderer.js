@@ -881,6 +881,9 @@ export const RENDER_PASS_NAMES = [
   "textureLabels",
   "labels",
 ];
+const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = [
+  "hgoPreview",
+];
 const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
   "background",
   "physicalBase",
@@ -921,6 +924,9 @@ const TRANSFORMED_FRAME_PASS_NAMES = [
   "dayNight",
   "textureLabels",
   "labels",
+];
+const HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES = [
+  "hgoPreview",
 ];
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
@@ -3454,7 +3460,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       Number(runtimeState.dpr || 1).toFixed(2),
       Number(runtimeState.width || 0),
       Number(runtimeState.height || 0),
-      projection ? getTransformSignature({ x: 0, y: 0, k: 1 }) : "projection:none",
+      projection ? transformSignature : "projection:none",
       HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
       HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
       `seed:${Number(summary.provinceCount || summary.province_count || 0)}:${Number(summary.stateCount || summary.state_count || 0)}:${Number(summary.countryCount || summary.country_count || 0)}`,
@@ -8722,6 +8728,14 @@ function isHgoRuntimePreviewReady() {
 
 function getHgoRuntimePreviewVisibilitySignature() {
   return isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off";
+}
+
+function getActiveRenderPassNames() {
+  return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : RENDER_PASS_NAMES;
+}
+
+function getActiveTransformedFramePassNames() {
+  return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : TRANSFORMED_FRAME_PASS_NAMES;
 }
 
 function getHgoRuntimePreviewProjectionOptions(overrides = {}) {
@@ -16938,7 +16952,6 @@ function drawHgoPreviewPass() {
     targetCanvas,
     targetWidth: targetCanvas.width,
     targetHeight: targetCanvas.height,
-    projectionTransform: null,
   });
   recordRenderPerfMetric("drawHgoPreviewPass", nowMs() - startedAt, {
     skipped: !rendered,
@@ -17241,10 +17254,7 @@ function renderPassToCache(passName, drawFn, transform, timings) {
     const k = prepareTargetContext(passContext, transform, layout);
     drawFn(k);
   });
-  const referenceTransform = passName === "hgoPreview"
-    ? { x: 0, y: 0, k: 1 }
-    : transform;
-  setPassReferenceTransform(passName, referenceTransform);
+  setPassReferenceTransform(passName, transform);
   if (passName === "political") {
     setPassFullReferenceTransform(passName, transform);
   }
@@ -17612,20 +17622,43 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
   const currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
   const compositeStart = nowMs();
   const cache = getRenderPassCacheState();
-  const transformedPasses = TRANSFORMED_FRAME_PASS_NAMES.filter((passName) =>
+  const activeTransformedPassNames = getActiveTransformedFramePassNames();
+  const transformedPasses = activeTransformedPassNames.filter((passName) =>
     !INTERACTION_COMPOSITE_PASS_NAMES.includes(passName) && passName !== "labels"
   );
   const allowDirtyFastFrame =
     runtimeState.renderPhase === RENDER_PHASE_SETTLING
     || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
   const dirtyFastFramePassNames = allowDirtyFastFrame
-    ? TRANSFORMED_FRAME_PASS_NAMES.filter((passName) => !!cache.dirty?.[passName])
+    ? activeTransformedPassNames.filter((passName) => !!cache.dirty?.[passName])
     : [];
   // Preflight avoids clearing the visible canvas when a cached pass is missing.
-  if (TRANSFORMED_FRAME_PASS_NAMES.some((passName) => !canDrawTransformedPass(passName, cache, {
+  if (activeTransformedPassNames.some((passName) => !canDrawTransformedPass(passName, cache, {
     allowDirty: allowDirtyFastFrame,
   }))) {
     return false;
+  }
+  if (isHgoRuntimePreviewReady()) {
+    resetMainCanvas();
+    const drewHgoPreviewFrame = activeTransformedPassNames.every((passName) => (
+      drawTransformedPass(passName, currentTransform)
+    ));
+    if (!drewHgoPreviewFrame) {
+      recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
+        phase: String(runtimeState.renderPhase || ""),
+        activeScenarioId: String(runtimeState.activeScenarioId || ""),
+        allowDirtyFastFrame,
+        usedDirtyInteractionPasses: false,
+        reason: "hgo-runtime-preview",
+      });
+      return false;
+    }
+    if (dirtyFastFramePassNames.length) {
+      timings.usedDirtyFastFramePasses = dirtyFastFramePassNames.join(",");
+    }
+    recordPassTiming(timings, "hgoPreviewTransformedFrame", compositeStart);
+    incrementPerfCounter("transformedFrames");
+    return true;
   }
   const compositeReuseDecision = getInteractionCompositeReuseDecision(currentTransform, cache, {
     allowSelectionTopologyContinuity: runtimeState.renderPhase === RENDER_PHASE_INTERACTING,
@@ -17789,7 +17822,7 @@ function drawCanvas() {
   if (!useTransformedFrame || !drewFrame) {
     resetContextBreakdownForExactFrame();
     getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings);
-    drewExactFrame = composeCachedPasses(RENDER_PASS_NAMES);
+    drewExactFrame = composeCachedPasses(getActiveRenderPassNames());
     drewFrame = drewExactFrame;
     if (!drewExactFrame) {
       abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");
@@ -22807,6 +22840,15 @@ function calculatePanExtent() {
     [runtimeState.width + MAP_PAN_PADDING_PX, runtimeState.height + MAP_PAN_PADDING_PX],
   ];
 
+  if (isHgoRuntimePreviewReady()) {
+    const bounds = getProjectedHgoRuntimePreviewBounds();
+    if (!bounds) return fallback;
+    return [
+      [bounds.minX - MAP_PAN_PADDING_PX, bounds.minY - MAP_PAN_PADDING_PX],
+      [bounds.maxX + MAP_PAN_PADDING_PX, bounds.maxY + MAP_PAN_PADDING_PX],
+    ];
+  }
+
   if (!pathSVG || !runtimeState.landData || !runtimeState.landData.features?.length) return fallback;
 
   let minX = Infinity;
@@ -22913,7 +22955,44 @@ function updateMap(transform) {
   drawCanvas();
 }
 
+function getProjectedHgoRuntimePreviewBounds() {
+  if (typeof projection !== "function" || runtimeState.width <= 0 || runtimeState.height <= 0) {
+    return null;
+  }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let lat = -90; lat <= 90; lat += 5) {
+    for (let lon = -180; lon <= 180; lon += 5) {
+      const point = projection([lon, lat]);
+      if (!Array.isArray(point) || point.length < 2) continue;
+      const x = Number(point[0]);
+      const y = Number(point[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    return null;
+  }
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
+}
+
 function getProjectedRenderableContentBounds() {
+  if (isHgoRuntimePreviewReady()) {
+    return getProjectedHgoRuntimePreviewBounds();
+  }
   if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
     return null;
   }
@@ -22967,6 +23046,7 @@ function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {}) {
 
 function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {}) {
   if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
+  updateZoomTranslateExtent();
   const transform = centerContent
     ? (getCenteredFitZoomTransform({ centerX, centerY }) || globalThis.d3.zoomIdentity)
     : globalThis.d3.zoomIdentity;

@@ -363,6 +363,14 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('"setHgoRuntimePreviewEnabledFn"', scenario_controls)
         self.assertIn("clearActiveScenarioCommand({", scenario_controls)
         self.assertIn('markDirtyReason: ""', scenario_controls)
+        self.assertIn('import { resetZoomToFit } from "../core/map_renderer/public.js";', scenario_controls)
+        self.assertIn("centerContent: true", scenario_controls)
+        self.assertIn("centerX: true", scenario_controls)
+        self.assertIn("centerY: true", scenario_controls)
+        self.assertLess(
+            scenario_controls.index('await callRuntimeHook(state, "setHgoRuntimePreviewEnabledFn", true);'),
+            scenario_controls.index("resetZoomToFit({"),
+        )
         self.assertIn("createButton = false", hgo_controller)
         self.assertIn(
             "const previewButton = button || (createButton ? createPreviewButton(documentRef, anchorButton) : null);",
@@ -401,7 +409,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("function getSpecialZoneMembershipTool()", renderer_content)
         self.assertIn('tool === "single" || tool === "multi" || tool === "brush"', renderer_content)
-        self.assertIn('membershipTool === "single"', renderer_content)
+        self.assertIn('membershipTool !== "brush"', renderer_content)
+        self.assertIn("membershipTool,", renderer_content)
         self.assertIn('getSpecialZoneMembershipBrushMode()', renderer_content)
         self.assertIn("refreshSpecialZonesWorkbenchUi();", renderer_content)
         self.assertIn("runtimeState.resolveSpecialZoneParentGroupTargetIdsFn = resolveSpecialZoneParentGroupTargetIds;", renderer_content)
@@ -763,7 +772,10 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("familyTabs: transportWorkbenchFamilyTabs,", owner_content)
         self.assertIn("inspectorTabButtons: transportWorkbenchInspectorTabButtons,", owner_content)
         self.assertIn("handlePopoverEscape: (event) => transportWorkbenchPopoverOwner.handleEscape(event),", owner_content)
-        self.assertIn('tabButton.addEventListener("click", () => {', event_owner_content)
+        self.assertIn("const activateFamilyTab = () => {", event_owner_content)
+        self.assertIn('tabButton.addEventListener("click", activateFamilyTab);', event_owner_content)
+        self.assertIn("const activateInspectorTab = () => {", event_owner_content)
+        self.assertIn('tabButton.addEventListener("click", activateInspectorTab);', event_owner_content)
         self.assertIn('button.addEventListener("click", async () => {', event_owner_content)
         self.assertIn("await applyFamilyToMainMap(context);", event_owner_content)
         self.assertIn("renderShell(getRenderContext());", event_owner_content)

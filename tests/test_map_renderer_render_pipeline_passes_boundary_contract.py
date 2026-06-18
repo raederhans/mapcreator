@@ -97,7 +97,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         )[0]
         self.assertIn('isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off"', hgo_signature_body)
         self.assertIn('String(preview.status || "")', hgo_signature_body)
-        self.assertIn('projection ? getTransformSignature({ x: 0, y: 0, k: 1 }) : "projection:none"', hgo_signature_body)
+        self.assertIn('projection ? transformSignature : "projection:none"', hgo_signature_body)
         hgo_preview_pass_body = renderer_content.split("function drawHgoPreviewPass()", 1)[1].split(
             "\n\nfunction drawEffectsPass",
             1,
@@ -105,6 +105,34 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertLess(
             hgo_preview_pass_body.index("resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);"),
             hgo_preview_pass_body.index("if (!isHgoRuntimePreviewReady()) return;"),
+        )
+        self.assertNotIn("projectionTransform: null", hgo_preview_pass_body)
+        self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = [\n  "hgoPreview",\n];', renderer_content)
+        self.assertIn('const HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES = [\n  "hgoPreview",\n];', renderer_content)
+        self.assertIn(
+            "return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : RENDER_PASS_NAMES;",
+            renderer_content,
+        )
+        self.assertIn(
+            "return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : TRANSFORMED_FRAME_PASS_NAMES;",
+            renderer_content,
+        )
+        self.assertIn("drewExactFrame = composeCachedPasses(getActiveRenderPassNames());", renderer_content)
+        self.assertIn("function getProjectedHgoRuntimePreviewBounds() {", renderer_content)
+        self.assertIn("if (isHgoRuntimePreviewReady()) {\n    return getProjectedHgoRuntimePreviewBounds();\n  }", renderer_content)
+        pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(
+            "\n\nfunction updateZoomTranslateExtent",
+            1,
+        )[0]
+        self.assertIn("if (isHgoRuntimePreviewReady()) {", pan_extent_body)
+        self.assertIn("const bounds = getProjectedHgoRuntimePreviewBounds();", pan_extent_body)
+        reset_zoom_body = renderer_content.split("function resetZoomToFit(", 1)[1].split(
+            "\n\nfunction zoomByStep",
+            1,
+        )[0]
+        self.assertLess(
+            reset_zoom_body.index("updateZoomTranslateExtent();"),
+            reset_zoom_body.index("const transform = centerContent"),
         )
         self.assertEqual(signature_body.count("getHgoRuntimePreviewVisibilitySignature()"), 7)
         political_body = signature_body.split('if (passName === "political")', 1)[1].split(

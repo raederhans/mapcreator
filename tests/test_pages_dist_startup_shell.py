@@ -964,7 +964,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas")', body)
         self.assertIn('renderHgoRuntimePreviewIfReady("hgo-preview-pass", {', pass_body)
         self.assertIn("targetCanvas,", pass_body)
-        self.assertIn("projectionTransform: null,", pass_body)
+        self.assertNotIn("projectionTransform: null,", pass_body)
+        self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = [\n  "hgoPreview",\n];', source)
+        self.assertIn(
+            "return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : RENDER_PASS_NAMES;",
+            source,
+        )
+        self.assertIn("drewExactFrame = composeCachedPasses(getActiveRenderPassNames());", source)
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
