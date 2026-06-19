@@ -7,6 +7,7 @@ import {
   createHgoRuntimePreviewController,
   ensureHgoRuntimePreviewState,
 } from "../js/core/hgo_runtime_preview.js";
+import { createHgoRuntimePreviewFrameCommitter } from "../js/core/map_renderer/hgo_runtime_preview_frame_commit.js";
 import { createHgoRuntimePreviewRenderOwner } from "../js/core/map_renderer/hgo_runtime_preview_render_owner.js";
 
 const seed = {
@@ -449,14 +450,74 @@ test("preview can render projected buffers without a canvas", async () => {
   await harness.controller.setEnabled(true);
   const rendered = harness.controller.renderPreview({ reason: "headless-projection" });
   const hit = harness.controller.inspectPoint(0, 0);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "headless-projection");
+
+  const stagedCanvas = createCanvas();
+  stagedCanvas.width = 3;
+  stagedCanvas.height = 2;
+  const stagedRendered = harness.controller.renderPreview({
+    reason: "staged-projection",
+    targetCanvas: stagedCanvas,
+    targetWidth: 3,
+    targetHeight: 2,
+    commitToTargetCanvas: false,
+  });
 
   assert.equal(rendered.projectionName, "equalEarth");
   assert.equal(rendered.projectedPixelCount, 6);
-  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "headless-projection");
+  assert.equal(stagedRendered.width, 3);
+  assert.equal(stagedRendered.height, 2);
+  assert.equal(stagedCanvas.getPutCount(), 0);
+  assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.reason, "staged-projection");
   assert.equal(harness.runtimeState.hgoRuntimePreview.renderSummary.projectedPixelCount, 6);
   assert.equal(hit.pixelIndex, 1);
   assert.equal(hit.resolved.provinceId, 2);
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.projectionName, "equalEarth");
+});
+
+test("preview frame committer allows low-ratio first frame then protects committed frames", () => {
+  const calls = [];
+  const targetCanvas = {
+    width: 2,
+    height: 1,
+    getContext: () => ({
+      createImageData: (width, height) => ({
+        width,
+        height,
+        data: new Uint8ClampedArray(width * height * 4),
+      }),
+      putImageData: (...args) => calls.push(["putImageData", ...args.slice(1)]),
+      setTransform: (...args) => calls.push(["setTransform", ...args]),
+      clearRect: (...args) => calls.push(["clearRect", ...args]),
+    }),
+  };
+  const rendered = {
+    width: 2,
+    height: 1,
+    data: new Uint8ClampedArray(8),
+    projectedPixelCount: 2,
+    unprojectedPixelCount: 0,
+    resolvedPixelCount: 1,
+    unresolvedPixelCount: 1,
+  };
+  const committer = createHgoRuntimePreviewFrameCommitter({
+    isReady: () => true,
+    getTargetCanvas: () => targetCanvas,
+    resetCanvasContext: (targetContext, width, height) => {
+      targetContext.setTransform(1, 0, 0, 1, 0, 0);
+      targetContext.clearRect(0, 0, width, height);
+    },
+    renderFrame: () => rendered,
+    recordRenderPerfMetric: (name, _durationMs, details) => calls.push(["metric", name, details]),
+    nowMs: () => 100,
+    getStatsContext: () => ({ active: true, projectionPixelRatio: 1 }),
+  });
+
+  assert.deepEqual(committer.drawPreviewPass(), { committed: true, reason: "committed" });
+  assert.equal(calls.some((call) => call[0] === "putImageData"), true);
+  calls.length = 0;
+  assert.deepEqual(committer.drawPreviewPass(), { committed: false, reason: "low-resolved-pixel-ratio" });
+  assert.equal(calls.some((call) => call[0] === "putImageData"), false);
 });
 
 test("renderer-side HGO preview owner owns active pass selection, draw, inspect, and bounds", () => {
@@ -480,24 +541,40 @@ test("renderer-side HGO preview owner owns active pass selection, draw, inspect,
     getContext: () => ({
       setTransform: (...args) => contextCalls.push(["setTransform", ...args]),
       clearRect: (...args) => contextCalls.push(["clearRect", ...args]),
+      createImageData: (width, height) => ({
+        width,
+        height,
+        data: new Uint8ClampedArray(width * height * 4),
+      }),
+      putImageData: (...args) => contextCalls.push(["putImageData", ...args.slice(1)]),
     }),
   };
   const renderCalls = [];
+  let targetLookupCount = 0;
+  let renderStats = {
+    projectedPixelCount: 6,
+    unprojectedPixelCount: 1,
+    resolvedPixelCount: 6,
+    unresolvedPixelCount: 0,
+  };
   const owner = createHgoRuntimePreviewRenderOwner({
     runtimeState,
     renderPassNames,
     transformedFramePassNames,
     getProjection: () => projection,
     getMapSvg: () => ({ nodeName: "svg" }),
-    getTargetCanvas: () => targetCanvas,
+    getTargetCanvas: () => {
+      targetLookupCount += 1;
+      return targetCanvas;
+    },
     callRuntimeHook: (_state, hookName, ...args) => {
       if (hookName === "renderHgoRuntimePreviewFn") {
         renderCalls.push(args[0]);
         return {
-          projectedPixelCount: 6,
-          unprojectedPixelCount: 1,
-          resolvedPixelCount: 5,
-          unresolvedPixelCount: 1,
+          width: 16,
+          height: 12,
+          data: new Uint8ClampedArray(16 * 12 * 4),
+          ...renderStats,
         };
       }
       if (hookName === "inspectHgoRuntimePreviewPointFn") {
@@ -541,13 +618,17 @@ test("renderer-side HGO preview owner owns active pass selection, draw, inspect,
     reason: "test",
   });
 
-  owner.drawPreviewPass();
+  const committed = owner.drawPreviewPass();
+  assert.deepEqual(committed, { committed: true, reason: "committed" });
   assert.deepEqual(contextCalls[0], ["setTransform", 1, 0, 0, 1, 0, 0]);
   assert.deepEqual(contextCalls[1], ["clearRect", 0, 0, 16, 12]);
+  assert.deepEqual(contextCalls[2], ["putImageData", 0, 0]);
   assert.equal(renderCalls[0].reason, "hgo-preview-pass");
   assert.equal(renderCalls[0].targetCanvas, targetCanvas);
   assert.equal(renderCalls[0].targetWidth, 16);
   assert.equal(renderCalls[0].targetHeight, 12);
+  assert.equal(renderCalls[0].commitToTargetCanvas, false);
+  assert.equal(targetLookupCount, 1);
 
   const inspected = owner.inspectFromEvent({ type: "pointermove" }, { eventType: "hover" });
   assert.equal(inspected.active, true);
@@ -568,6 +649,49 @@ test("renderer-side HGO preview owner owns active pass selection, draw, inspect,
   runtimeState.hgoRuntimePreview.status = HGO_RUNTIME_PREVIEW_STATUS.IDLE;
   assert.equal(owner.isReady(), false);
   assert.equal(owner.getVisibilitySignature(), "hgo:off");
-  assert.equal(owner.getActiveRenderPassNames(), renderPassNames);
-  assert.equal(owner.getActiveTransformedFramePassNames(), transformedFramePassNames);
+  assert.deepEqual(owner.getActiveRenderPassNames(), ["background"]);
+  assert.deepEqual(owner.getActiveTransformedFramePassNames(), ["background", "labels"]);
+  contextCalls.length = 0;
+  renderCalls.length = 0;
+  targetLookupCount = 0;
+  assert.deepEqual(owner.drawPreviewPass(), {
+    committed: false,
+    reason: "hgo-runtime-preview-not-ready",
+  });
+  assert.deepEqual(contextCalls, [
+    ["metric", "drawHgoPreviewPass", {
+      active: false,
+      committed: false,
+      minResolvedPixelRatio: 0.85,
+      projectedPixelCount: 0,
+      projectionPixelRatio: 2,
+      reason: "hgo-runtime-preview-not-ready",
+      resolvedPixelCount: 0,
+      resolvedPixelRatio: 0,
+      skipped: true,
+      unprojectedPixelCount: 0,
+      unresolvedPixelCount: 0,
+    }],
+  ]);
+  assert.deepEqual(renderCalls, []);
+  assert.equal(targetLookupCount, 0);
+
+  runtimeState.hgoRuntimePreview.status = HGO_RUNTIME_PREVIEW_STATUS.READY;
+  contextCalls.length = 0;
+  renderCalls.length = 0;
+  targetLookupCount = 0;
+  renderStats = {
+    projectedPixelCount: 6,
+    unprojectedPixelCount: 0,
+    resolvedPixelCount: 1,
+    unresolvedPixelCount: 5,
+  };
+  assert.deepEqual(owner.drawPreviewPass(), {
+    committed: false,
+    reason: "low-resolved-pixel-ratio",
+  });
+  assert.equal(targetLookupCount, 1);
+  assert.equal(renderCalls.length, 1);
+  assert.equal(contextCalls.some((call) => call[0] === "clearRect"), false);
+  assert.equal(contextCalls.some((call) => call[0] === "putImageData"), false);
 });

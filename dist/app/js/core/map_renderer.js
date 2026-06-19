@@ -880,7 +880,6 @@ const INTERACTION_COMPOSITE_PASS_NAMES = [
   "background",
   "physicalBase",
   "political",
-  "hgoPreview",
   "contextBase",
   "contextScenario",
   "effects",
@@ -2307,6 +2306,13 @@ function getTransformSignature(transform = runtimeState.zoomTransform || globalT
     Number(runtimeState.height || 0),
     Number(runtimeState.dpr || 1).toFixed(2),
   ].join("|");
+}
+
+function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+  const k = Math.round(Number(transform?.k || 1) * 100);
+  const x = Math.round(Number(transform?.x || 0) / 64);
+  const y = Math.round(Number(transform?.y || 0) / 64);
+  return `${k}:${x}:${y}`;
 }
 
 function noteRenderAction(label, startedAt = null) {
@@ -16653,7 +16659,7 @@ function drawScenarioRegionOverlaysPass(k) {
 }
 
 function drawHgoPreviewPass() {
-  getHgoRuntimePreviewRenderOwner().drawPreviewPass();
+  return getHgoRuntimePreviewRenderOwner().drawPreviewPass();
 }
 
 
@@ -16942,10 +16948,20 @@ function renderPassToCache(passName, drawFn, transform, timings) {
   if (!passContext) return;
   const passStart = nowMs();
   const layout = getRenderPassLayout(passName);
+  let drawResult = null;
   withRenderTarget(passContext, () => {
-    const k = prepareTargetContext(passContext, transform, layout);
-    drawFn(k);
+    const k = passName === "hgoPreview"
+      ? Math.max(0.0001, Number(transform?.k || 1))
+      : prepareTargetContext(passContext, transform, layout);
+    drawResult = drawFn(k);
   });
+  if (drawResult && typeof drawResult === "object" && drawResult.committed === false) {
+    recordRenderPerfMetric("renderPassCommitSkipped", nowMs() - passStart, {
+      passName,
+      reason: String(drawResult.reason || "draw-declined-commit"),
+    });
+    return;
+  }
   setPassReferenceTransform(passName, transform);
   if (passName === "political") {
     setPassFullReferenceTransform(passName, transform);

@@ -2707,6 +2707,7 @@ test("political raster renderer request identity includes viewport and pass sign
     ? rendererSource.slice(drawStart, drawEnd)
     : "";
 
+  assert.ok(rendererSource.includes("function getTransformBucketSignature("));
   assert.ok(drawSource.includes("const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();"));
   assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?selectionVersion: Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: Number\(runtimeState\.topologyRevision \|\| 0\),[\s\S]*?colorRevision: Number\(runtimeState\.colorRevision \|\| 0\),[\s\S]*?transformBucket: getTransformBucketSignature\(transform\),[\s\S]*?dpr: Number\(runtimeState\.dpr \|\| 1\),/.test(drawSource));
   assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(drawSource));

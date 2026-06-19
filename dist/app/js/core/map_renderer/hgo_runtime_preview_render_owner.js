@@ -3,6 +3,9 @@ import {
   HGO_DEFAULT_TARGET_PROJECTION,
   HGO_SOURCE_PROJECTION,
 } from "../hgo_projection_model.js";
+import {
+  createHgoRuntimePreviewFrameCommitter,
+} from "./hgo_runtime_preview_frame_commit.js";
 
 const HGO_RUNTIME_PREVIEW_PROJECTION_NAME = HGO_DEFAULT_TARGET_PROJECTION;
 const HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION = HGO_SOURCE_PROJECTION;
@@ -12,6 +15,11 @@ const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = Object.freeze([
 const HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES = Object.freeze([
   "hgoPreview",
 ]);
+
+function filterHgoPreviewPassNames(passNames = []) {
+  return (Array.isArray(passNames) ? passNames : [])
+    .filter((passName) => passName !== "hgoPreview");
+}
 
 function createHgoRuntimePreviewRenderOwner({
   runtimeState,
@@ -30,6 +38,8 @@ function createHgoRuntimePreviewRenderOwner({
   if (!runtimeState || typeof runtimeState !== "object") {
     throw new TypeError("HGO runtime preview render owner requires runtimeState.");
   }
+  const vectorRenderPassNames = Object.freeze(filterHgoPreviewPassNames(renderPassNames));
+  const vectorTransformedFramePassNames = Object.freeze(filterHgoPreviewPassNames(transformedFramePassNames));
 
   function isReady() {
     const preview = runtimeState.hgoRuntimePreview;
@@ -41,11 +51,11 @@ function createHgoRuntimePreviewRenderOwner({
   }
 
   function getActiveRenderPassNames() {
-    return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : renderPassNames;
+    return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : vectorRenderPassNames;
   }
 
   function getActiveTransformedFramePassNames() {
-    return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : transformedFramePassNames;
+    return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : vectorTransformedFramePassNames;
   }
 
   function getProjectionOptions(overrides = {}) {
@@ -127,27 +137,26 @@ function createHgoRuntimePreviewRenderOwner({
     };
   }
 
-  function drawPreviewPass() {
-    const targetCanvas = getTargetCanvas();
-    const targetContext = targetCanvas?.getContext?.("2d") || null;
-    if (!targetCanvas || !targetContext) return;
-    resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);
-    if (!isReady()) return;
-    const startedAt = nowMs();
-    const rendered = renderIfReady("hgo-preview-pass", {
+  const frameCommitter = createHgoRuntimePreviewFrameCommitter({
+    isReady,
+    getTargetCanvas,
+    resetCanvasContext,
+    recordRenderPerfMetric,
+    nowMs,
+    getStatsContext: () => ({
+      projectionPixelRatio: Number(runtimeState.dpr || 1),
+      active: isReady(),
+    }),
+    renderFrame: (targetCanvas) => renderIfReady("hgo-preview-pass", {
       targetCanvas,
       targetWidth: targetCanvas.width,
       targetHeight: targetCanvas.height,
-    });
-    recordRenderPerfMetric("drawHgoPreviewPass", nowMs() - startedAt, {
-      skipped: !rendered,
-      projectedPixelCount: Number(rendered?.projectedPixelCount || 0),
-      unprojectedPixelCount: Number(rendered?.unprojectedPixelCount || 0),
-      resolvedPixelCount: Number(rendered?.resolvedPixelCount || 0),
-      unresolvedPixelCount: Number(rendered?.unresolvedPixelCount || 0),
-      projectionPixelRatio: Number(runtimeState.dpr || 1),
-      active: isReady(),
-    });
+      commitToTargetCanvas: false,
+    }),
+  });
+
+  function drawPreviewPass() {
+    return frameCommitter.drawPreviewPass();
   }
 
   function normalizeHitPayload(payload = null) {

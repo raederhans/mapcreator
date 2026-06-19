@@ -178,13 +178,24 @@ function createHgoRuntimePreviewController(runtimeState, {
       : HGO_RUNTIME_PREVIEW_DEFAULT_RENDER_REASON;
     const effectiveRenderOptions = resolvePreviewRenderOptions(renderOptions, options);
     const targetCanvas = effectiveRenderOptions.targetCanvas || (useDefaultCanvasTarget ? canvas : null);
-    const rendered = targetCanvas && effectiveRenderOptions.projection
+    const shouldCommitToTargetCanvas = targetCanvas && effectiveRenderOptions.commitToTargetCanvas !== false;
+    const targetWidth = effectiveRenderOptions.targetWidth || targetCanvas?.width;
+    const targetHeight = effectiveRenderOptions.targetHeight || targetCanvas?.height;
+    const rendered = shouldCommitToTargetCanvas && effectiveRenderOptions.projection
       ? renderer.renderProjectedToCanvas(targetCanvas, effectiveRenderOptions)
       : effectiveRenderOptions.projection
-        ? renderer.renderProjectedToBuffer(effectiveRenderOptions)
-        : targetCanvas
+        ? renderer.renderProjectedToBuffer({
+          ...effectiveRenderOptions,
+          targetWidth,
+          targetHeight,
+        })
+        : shouldCommitToTargetCanvas
         ? renderer.renderToCanvas(targetCanvas, effectiveRenderOptions)
-        : renderer.renderToBuffer(effectiveRenderOptions);
+        : renderer.renderToBuffer({
+          ...effectiveRenderOptions,
+          targetWidth,
+          targetHeight,
+        });
     renderCount += 1;
     previewState.renderSummary = buildRenderSummary(rendered, { reason, renderCount });
     return rendered;

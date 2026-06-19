@@ -9,6 +9,7 @@ RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pip
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
+HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
 
 
 class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
@@ -97,6 +98,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
     def test_hgo_preview_ready_replaces_normal_overlay_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        hgo_preview_commit_content = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
         signature_body = renderer_content.split("function getRenderPassSignature(passName", 1)[1].split(
             "\nfunction resolveHitMode",
             1,
@@ -114,11 +116,21 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "\n\n  function normalizeHitPayload",
             1,
         )[0]
+        hgo_preview_commit_body = hgo_preview_commit_content.split("function drawPreviewPass()", 1)[1].split(
+            "\n\n  return Object.freeze",
+            1,
+        )[0]
+        self.assertIn("return frameCommitter.drawPreviewPass();", hgo_preview_pass_body)
+        self.assertIn('renderFrame: (targetCanvas) => renderIfReady("hgo-preview-pass", {', hgo_preview_owner_content)
         self.assertLess(
-            hgo_preview_pass_body.index("resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);"),
-            hgo_preview_pass_body.index("if (!isReady()) return;"),
+            hgo_preview_commit_body.index("if (!isReady())"),
+            hgo_preview_commit_body.index("const targetCanvas = getTargetCanvas();"),
         )
-        self.assertNotIn("projectionTransform: null", hgo_preview_pass_body)
+        self.assertLess(
+            hgo_preview_commit_body.index("getFrameRejectionReason(rendered, stats)"),
+            hgo_preview_commit_body.index("resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);"),
+        )
+        self.assertNotIn("projectionTransform: null", hgo_preview_owner_content)
         self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = Object.freeze([\n  "hgoPreview",\n]);', hgo_preview_owner_content)
         self.assertIn(
             'const HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES = Object.freeze([\n  "hgoPreview",\n]);',
@@ -126,19 +138,33 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("return getHgoRuntimePreviewRenderOwner().getActiveRenderPassNames();", renderer_content)
         self.assertIn(
-            "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : renderPassNames;",
+            "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : vectorRenderPassNames;",
             hgo_preview_owner_content,
         )
         self.assertIn("return getHgoRuntimePreviewRenderOwner().getActiveTransformedFramePassNames();", renderer_content)
         self.assertIn(
-            "return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : transformedFramePassNames;",
+            "return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : vectorTransformedFramePassNames;",
             hgo_preview_owner_content,
         )
+        interaction_composite_body = renderer_content.split("const INTERACTION_COMPOSITE_PASS_NAMES = [", 1)[1].split(
+            "];",
+            1,
+        )[0]
+        self.assertNotIn('"hgoPreview"', interaction_composite_body)
         self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", renderer_content)
         self.assertIn("getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);", renderer_content)
         self.assertIn("drewExactFrame = composeCachedPasses(activeRenderPassNames);", renderer_content)
         self.assertIn("function getProjectedHgoRuntimePreviewBounds() {", renderer_content)
         self.assertIn("function getProjectedBounds() {", hgo_preview_owner_content)
+        render_pass_to_cache_body = renderer_content.split("function renderPassToCache(passName, drawFn, transform, timings) {", 1)[1].split(
+            "\n\nfunction resetCanvasContext",
+            1,
+        )[0]
+        self.assertLess(
+            render_pass_to_cache_body.index("drawResult.committed === false"),
+            render_pass_to_cache_body.index("setPassReferenceTransform(passName, transform);"),
+        )
+        self.assertIn('recordRenderPerfMetric("renderPassCommitSkipped"', render_pass_to_cache_body)
         self.assertIn("if (isHgoRuntimePreviewReady()) {\n    return getProjectedHgoRuntimePreviewBounds();\n  }", renderer_content)
         pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(
             "\n\nfunction updateZoomTranslateExtent",

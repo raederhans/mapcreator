@@ -72,7 +72,10 @@ function resolveExactAfterSettleTargetPasses({
     normalizeStringList(physicalExactRefreshPasses).forEach((passName) => targetPassNames.add(passName));
   }
   normalizeStringList(dirtyPassNames).forEach((passName) => {
-    if (!validRenderPasses.size || validRenderPasses.has(passName)) {
+    if (
+      (!validRenderPasses.size || validRenderPasses.has(passName))
+      && orderedIdlePassNames.includes(passName)
+    ) {
       targetPassNames.add(passName);
     }
   });

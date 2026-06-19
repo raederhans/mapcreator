@@ -21,6 +21,7 @@ LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
+HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
@@ -954,6 +955,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
     def test_hgo_runtime_preview_renders_through_dedicated_pass(self) -> None:
         source = MAP_RENDERER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_source = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        hgo_preview_commit_source = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
         start = source.index("function drawCanvas(")
         end = source.index("function readRenderPerfMetricDuration", start)
         body = source[start:end]
@@ -964,13 +966,17 @@ class PagesDistStartupShellTest(unittest.TestCase):
         # Pages 构建会复制源码 drawCanvas；这里把 HGO preview pass 合同纳入 Pages shell 验证。
         self.assertNotIn("preferLastGoodFrameForHgoPreview", body)
         self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas")', body)
-        self.assertIn('renderIfReady("hgo-preview-pass", {', pass_body)
-        self.assertIn("targetCanvas,", pass_body)
+        self.assertIn("return frameCommitter.drawPreviewPass();", pass_body)
+        self.assertIn('renderFrame: (targetCanvas) => renderIfReady("hgo-preview-pass", {', hgo_preview_owner_source)
+        self.assertIn("const rendered = renderFrame(targetCanvas);", hgo_preview_commit_source)
+        self.assertIn("low-resolved-pixel-ratio", hgo_preview_commit_source)
+        self.assertIn("resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);", hgo_preview_commit_source)
+        self.assertIn("targetContext.putImageData(imageData, 0, 0);", hgo_preview_commit_source)
         self.assertNotIn("projectionTransform: null,", pass_body)
         self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = Object.freeze([\n  "hgoPreview",\n]);', hgo_preview_owner_source)
         self.assertIn("return getHgoRuntimePreviewRenderOwner().getActiveRenderPassNames();", source)
         self.assertIn(
-            "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : renderPassNames;",
+            "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : vectorRenderPassNames;",
             hgo_preview_owner_source,
         )
         self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", source)

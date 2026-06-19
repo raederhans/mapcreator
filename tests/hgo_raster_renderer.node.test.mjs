@@ -449,6 +449,29 @@ test("unprojectable HGO pixels render as unknown and inspect as empty", () => {
   assert.equal(renderer.inspectProjectedCanvasPoint(0, 0, { width: 2, height: 1 }, { projection }), null);
 });
 
+test("projected but unresolved HGO pixels keep explicit unresolved counts", () => {
+  const renderer = createHgoRasterRenderer({
+    seed,
+    width: 2,
+    height: 1,
+    pixelFormat: "rgb",
+    pixels: [
+      255, 255, 255,
+      254, 254, 254,
+    ],
+  });
+  const rendered = renderer.renderProjectedToBuffer({
+    projection: createLinearProjection(),
+    targetWidth: 2,
+    targetHeight: 1,
+  });
+
+  assert.equal(rendered.projectedPixelCount, 2);
+  assert.equal(rendered.unprojectedPixelCount, 0);
+  assert.equal(rendered.resolvedPixelCount, 0);
+  assert.equal(rendered.unresolvedPixelCount, 2);
+});
+
 test("projected HGO pixels outside the forward round-trip domain stay transparent", () => {
   const renderer = createProjectedRenderer();
   const projection = createSouthPoleClampingProjection();
