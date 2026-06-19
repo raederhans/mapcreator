@@ -258,3 +258,4 @@
 - `git worktree list` showed only the main checkout after cleanup.
 - Direct review found the smallest stable final shape: owner extractions where behavior moved, and a guardrail inside an existing boundary test.
 - Final archive target: `docs/archive/module-boundary-continuation-20260618/`.
+- Final archive commit `ebb2a7b00e5a1d40101b3abd2bf2420c091d2d82` was pushed to `origin/main` after this docs-only archive move.

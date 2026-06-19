@@ -1,11 +1,11 @@
 # Worktree Registry
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## Integration Owner
 
 - Owner: module-boundary continuation integration owner.
-- Current base: `main@bebde118` after Phase D closeout push.
+- Current base: `main@ebb2a7b0` after final archive push.
 - Phase D base: `main@e4b04c66`.
 - Live test/build owner: no active live process after final UltraQA verification.
 - Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews; Hypatia completed Phase B split-candidate review; Curie and Archimedes completed Phase B code/docs review; Pasteur completed Phase D guardrail scout. Turing Phase D review could not complete because the Codex subagent quota was exhausted. No child agent owns live tests.
@@ -25,7 +25,7 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@bebde118` plus final archive update | `origin/main@bebde118` before final archive push | clean integration owner checkout | active docs archived to `docs/archive/module-boundary-continuation-20260618/` | All Phase A-D commits are merged and pushed; final UltraQA passed exact-after-settle 5, scenario context 6, toolbar boundary 51, backend preview 25+13, HGO preview 19, import graph 48 specs, Pages dist 37+8, and diff check. | Green for final push. | Commit archive move and push main. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@ebb2a7b0` | `origin/main@ebb2a7b0` | clean integration owner checkout | none | All Phase A-D commits are merged and pushed; task docs are archived under `docs/archive/module-boundary-continuation-20260618/`; final UltraQA passed exact-after-settle 5, scenario context 6, toolbar boundary 51, backend preview 25+13, HGO preview 19, import graph 48 specs, Pages dist 37+8, and diff check. | Green; no active module-boundary continuation worktree remains. | No active integration action. |
 
 ## Recent Integrated Branches
 
