@@ -14,7 +14,7 @@
 - [x] Run ai-slop cleanup review on changed files.
 - [x] Run independent code review and architect review.
 - [x] Run final QA gates.
-- [ ] Merge into main, push, and clean worktree.
+- [ ] Push main and clean worktree.
 
 ## Delivery Package Notes
 
@@ -48,7 +48,17 @@
 9. Recommended next step:
    - Commit, fast-forward or merge into a clean updated `main`, rerun focused post-merge validation, push, update registry to integrated, archive this task folder, then remove the worktree.
 10. Integration recommendation:
-   - Ready for integration after the delivery commit. Prefer fast-forward merge if `main` remains at the verified base; otherwise rebase this single branch and rerun the same focused gates before merge.
+   - Integrated into `main` by fast-forward merge at `a1c0d6e2`. Post-merge validation passed; push and cleanup remain.
+
+## Post-Merge Validation
+
+- Merged `codex/module-boundary-continuation-v2@a1c0d6e2` into `main` with `git merge --ff-only`.
+- Passed on `main`: `npm run verify:architecture-boundaries`.
+- Passed on `main`: `npm run test:node:scenario-chunk-contracts` 44/44.
+- Passed on `main`: `npm run verify:test-import-graph`.
+- Passed on `main`: `npm run verify:pages-dist`, including startup shell 37/37 and landing showcase 8/8.
+- Passed on `main`: `git diff --check`.
+- Post-merge Pages builder refreshed only `dist/pages-dist-manifest.json` byte counts for generated ignored assets.
 
 ## Review Results
 
