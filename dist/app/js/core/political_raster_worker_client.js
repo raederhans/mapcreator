@@ -1,18 +1,20 @@
 // Default-off political raster worker protocol client.
-// Protocol v2 makes request identity and result metrics measurable while the
-// renderer keeps the existing main-thread political pass as the stable path.
+// Protocol v3 keeps the metadata path and adds an explicit bitmap trial mode.
 
-export const POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 2;
+export const POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 3;
 export const POLITICAL_RASTER_WORKER_METRIC_NAMES = Object.freeze({
   roundTripMs: "politicalRasterWorker.roundTripMs",
   rasterMs: "politicalRasterWorker.rasterMs",
   encodeMs: "politicalRasterWorker.encodeMs",
   decodeMs: "politicalRasterWorker.decodeMs",
   blitMs: "politicalRasterWorker.blitMs",
+  packetBuildMs: "politicalRasterWorker.packetBuildMs",
   timeoutCount: "politicalRasterWorker.timeoutCount",
   recycleCount: "politicalRasterWorker.recycleCount",
   staleResponseCount: "politicalRasterWorker.staleResponseCount",
   acceptedCount: "politicalRasterWorker.acceptedCount",
+  bitmapAcceptedCount: "politicalRasterWorker.bitmapAcceptedCount",
+  bitmapRejectedCount: "politicalRasterWorker.bitmapRejectedCount",
   rejectedStaleCount: "politicalRasterWorker.rejectedStaleCount",
   fallbackCount: "politicalRasterWorker.fallbackCount",
 });
@@ -21,6 +23,10 @@ const POLITICAL_RASTER_WORKER_FLAG_QUERY_KEYS = Object.freeze([
   "political_raster_worker",
   "ENABLE_POLITICAL_RASTER_WORKER",
 ]);
+const POLITICAL_RASTER_WORKER_BITMAP_FLAG_QUERY_KEYS = Object.freeze([
+  "political_raster_worker_bitmap",
+  "ENABLE_POLITICAL_RASTER_WORKER_BITMAP",
+]);
 const POLITICAL_RASTER_WORKER_FLAG_TRUE_VALUES = Object.freeze(["1", "true", "yes", "on"]);
 const POLITICAL_RASTER_WORKER_TIMEOUT_MS = 1800;
 const POLITICAL_RASTER_WORKER_URL = new URL("../workers/political_raster.worker.js", import.meta.url);
@@ -28,6 +34,7 @@ const POLITICAL_RASTER_WORKER_URL = new URL("../workers/political_raster.worker.
 const politicalRasterWorkerFlagCache = {
   initialized: false,
   enabled: false,
+  bitmapEnabled: false,
   search: "",
 };
 
@@ -35,19 +42,28 @@ let workerInstance = null;
 let taskSequence = 0;
 let pendingTask = null;
 let latestIdentity = null;
+let latestBitmapResult = null;
 
 function nowMs() {
   return globalThis.performance?.now ? globalThis.performance.now() : Date.now();
 }
 
-function readPoliticalRasterWorkerFlagFromSearch(search = globalThis.location?.search || "") {
+function readToggleFlagFromSearch(search = globalThis.location?.search || "", keys = []) {
   const normalizedSearch = String(search || "");
   const params = new URLSearchParams(normalizedSearch);
-  const values = POLITICAL_RASTER_WORKER_FLAG_QUERY_KEYS
+  const values = keys
     .map((key) => params.get(key))
     .filter((value) => value !== null);
   const raw = values.find((value) => value.trim() !== "") || values[0] || "";
   return POLITICAL_RASTER_WORKER_FLAG_TRUE_VALUES.includes(raw.trim().toLowerCase());
+}
+
+function readPoliticalRasterWorkerFlagFromSearch(search = globalThis.location?.search || "") {
+  return readToggleFlagFromSearch(search, POLITICAL_RASTER_WORKER_FLAG_QUERY_KEYS);
+}
+
+function readPoliticalRasterWorkerBitmapFlagFromSearch(search = globalThis.location?.search || "") {
+  return readToggleFlagFromSearch(search, POLITICAL_RASTER_WORKER_BITMAP_FLAG_QUERY_KEYS);
 }
 
 function ensurePoliticalRasterWorkerFlagCache(search = globalThis.location?.search || "") {
@@ -56,6 +72,8 @@ function ensurePoliticalRasterWorkerFlagCache(search = globalThis.location?.sear
     return politicalRasterWorkerFlagCache.enabled;
   }
   politicalRasterWorkerFlagCache.enabled = readPoliticalRasterWorkerFlagFromSearch(normalizedSearch);
+  politicalRasterWorkerFlagCache.bitmapEnabled = politicalRasterWorkerFlagCache.enabled
+    && readPoliticalRasterWorkerBitmapFlagFromSearch(normalizedSearch);
   politicalRasterWorkerFlagCache.search = normalizedSearch;
   politicalRasterWorkerFlagCache.initialized = true;
   return politicalRasterWorkerFlagCache.enabled;
@@ -70,6 +88,11 @@ export function refreshPoliticalRasterWorkerFlag(search = globalThis.location?.s
 
 export function isPoliticalRasterWorkerEnabled(search = globalThis.location?.search || "") {
   return ensurePoliticalRasterWorkerFlagCache(search);
+}
+
+export function isPoliticalRasterWorkerBitmapEnabled(search = globalThis.location?.search || "") {
+  ensurePoliticalRasterWorkerFlagCache(search);
+  return !!politicalRasterWorkerFlagCache.bitmapEnabled;
 }
 
 export function createPoliticalRasterWorkerIdentity({
@@ -138,16 +161,20 @@ export function ensurePoliticalRasterWorkerMetrics(root = globalThis) {
     target.__mc_politicalRasterWorkerMetrics = {
       protocolVersion: POLITICAL_RASTER_WORKER_PROTOCOL_VERSION,
       enabled: false,
+      bitmapEnabled: false,
       ready: false,
       roundTripMs: 0,
       rasterMs: 0,
       encodeMs: 0,
       decodeMs: 0,
       blitMs: 0,
+      packetBuildMs: 0,
       timeoutCount: 0,
       recycleCount: 0,
       staleResponseCount: 0,
       acceptedCount: 0,
+      bitmapAcceptedCount: 0,
+      bitmapRejectedCount: 0,
       rejectedStaleCount: 0,
       fallbackCount: 0,
       lastReason: "",
@@ -158,13 +185,14 @@ export function ensurePoliticalRasterWorkerMetrics(root = globalThis) {
   return target.__mc_politicalRasterWorkerMetrics;
 }
 
-function updateWorkerTimingMetrics(payload = {}, startedAt = 0) {
+function updateWorkerTimingMetrics(payload = {}, startedAt = 0, task = null) {
   const metrics = ensurePoliticalRasterWorkerMetrics();
   metrics.roundTripMs = Math.max(0, nowMs() - Number(startedAt || nowMs()));
   metrics.rasterMs = Math.max(0, Number(payload.rasterMs || 0));
   metrics.encodeMs = Math.max(0, Number(payload.encodeMs || 0));
   metrics.decodeMs = Math.max(0, Number(payload.decodeMs || 0));
   metrics.blitMs = Math.max(0, Number(payload.blitMs || 0));
+  metrics.packetBuildMs = Math.max(0, Number(payload.packetBuildMs || task?.packetBuildMs || 0));
 }
 
 function clearPendingTask(taskId = "") {
@@ -174,6 +202,21 @@ function clearPendingTask(taskId = "") {
     globalThis.clearTimeout(pendingTask.timeoutId);
   }
   pendingTask = null;
+}
+
+function closeBitmap(bitmap) {
+  if (bitmap && typeof bitmap.close === "function") {
+    try {
+      bitmap.close();
+    } catch (_error) {
+      // ImageBitmap close is best-effort cleanup.
+    }
+  }
+}
+
+function replaceLatestBitmapResult(payload = null) {
+  closeBitmap(latestBitmapResult?.bitmap);
+  latestBitmapResult = payload;
 }
 
 function noteWorkerFallback(reason, taskId = "") {
@@ -194,22 +237,54 @@ function handleWorkerMessage(event) {
   }
   const taskId = String(payload.taskId || "");
   const task = pendingTask && pendingTask.taskId === taskId ? pendingTask : null;
-  updateWorkerTimingMetrics(payload, task?.startedAt || nowMs());
+  updateWorkerTimingMetrics(payload, task?.startedAt || nowMs(), task);
   metrics.lastTaskId = taskId;
   if (payload.type === "RASTER_RESULT") {
+    if (payload.accepted === false) {
+      if (payload.bitmap) {
+        metrics.bitmapRejectedCount += 1;
+        closeBitmap(payload.bitmap);
+      }
+      noteWorkerFallback(payload.reason || "worker-rejected-result", taskId);
+      clearPendingTask(taskId);
+      return;
+    }
+    if (payload.bitmap && !task) {
+      metrics.staleResponseCount += 1;
+      metrics.rejectedStaleCount += 1;
+      metrics.bitmapRejectedCount += 1;
+      closeBitmap(payload.bitmap);
+      metrics.lastReason = "late-bitmap-response";
+      return;
+    }
     const current = latestIdentity || task?.identity || null;
     const request = payload.identity || task?.identity || null;
     if (!isPoliticalRasterWorkerResultCurrent(request, current)) {
       metrics.staleResponseCount += 1;
       metrics.rejectedStaleCount += 1;
+      if (payload.bitmap) {
+        metrics.bitmapRejectedCount += 1;
+        closeBitmap(payload.bitmap);
+      }
       metrics.lastReason = "stale-response";
       clearPendingTask(taskId);
       return;
     }
     metrics.ready = true;
     metrics.acceptedCount += 1;
+    if (payload.bitmap) {
+      metrics.bitmapAcceptedCount += 1;
+      replaceLatestBitmapResult({
+        ...payload,
+        identity: request,
+        acceptedAtMs: nowMs(),
+      });
+    }
     metrics.lastReason = String(payload.reason || "accepted");
     clearPendingTask(taskId);
+    if (payload.bitmap && typeof task?.onAcceptedBitmapResult === "function") {
+      task.onAcceptedBitmapResult(payload);
+    }
     return;
   }
   if (payload.type === "ERROR") {
@@ -243,9 +318,13 @@ function ensureWorker() {
 export function requestPoliticalRasterWorkerPass({
   identity = createPoliticalRasterWorkerIdentity(),
   renderHint = {},
+  rasterPacket = null,
+  packetBuildMs = 0,
+  onAcceptedBitmapResult = null,
 } = {}) {
   const metrics = ensurePoliticalRasterWorkerMetrics();
   metrics.enabled = ensurePoliticalRasterWorkerFlagCache();
+  metrics.bitmapEnabled = !!politicalRasterWorkerFlagCache.bitmapEnabled;
   latestIdentity = identity;
   if (!metrics.enabled) {
     metrics.lastReason = "flag-disabled";
@@ -279,6 +358,8 @@ export function requestPoliticalRasterWorkerPass({
     identitySignature,
     startedAt,
     timeoutId,
+    packetBuildMs: Math.max(0, Number(packetBuildMs || 0)),
+    onAcceptedBitmapResult,
   };
   metrics.lastTaskId = taskId;
   metrics.lastReason = "queued";
@@ -288,13 +369,32 @@ export function requestPoliticalRasterWorkerPass({
     taskId,
     createdAtMs: startedAt,
     identity,
+    packetBuildMs: Math.max(0, Number(packetBuildMs || 0)),
     renderHint: {
       pass: "political",
       surface: "main",
+      bitmapMode: !!politicalRasterWorkerFlagCache.bitmapEnabled,
       ...renderHint,
     },
+    rasterPacket: politicalRasterWorkerFlagCache.bitmapEnabled ? rasterPacket : null,
   });
   return { ok: true, reason: "queued", taskId };
+}
+
+export function consumePoliticalRasterWorkerBitmapResult(currentIdentity = latestIdentity) {
+  const payload = latestBitmapResult;
+  if (!payload) return null;
+  if (!isPoliticalRasterWorkerResultCurrent(payload.identity, currentIdentity)) {
+    const metrics = ensurePoliticalRasterWorkerMetrics();
+    metrics.staleResponseCount += 1;
+    metrics.bitmapRejectedCount += 1;
+    metrics.rejectedStaleCount += 1;
+    replaceLatestBitmapResult(null);
+    metrics.lastReason = "stale-bitmap-consume";
+    return null;
+  }
+  latestBitmapResult = null;
+  return payload;
 }
 
 export function terminatePoliticalRasterWorker() {
@@ -304,6 +404,7 @@ export function terminatePoliticalRasterWorker() {
     workerInstance.terminate();
   }
   workerInstance = null;
+  replaceLatestBitmapResult(null);
   metrics.ready = false;
   metrics.recycleCount += 1;
 }

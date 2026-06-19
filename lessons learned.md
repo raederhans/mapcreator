@@ -405,3 +405,6 @@
 - `Current Worktrees` 只放 `git worktree list` 当前存在的路径；已整合或已清理的分支放到历史整合或恢复记录段，避免后续 integration owner 误以为还有活跃 worktree。
 - 并行 worktree 的 WIP 误落入 main 时，先用命名 stash 和 `.runtime/cleanup-backups/` patch 保留，再用 clean detached worktree 验证目标提交，避免把外部 WIP 当成本轮回归。
 - 在 Codex App 里对非当前 checkout 使用 `apply_patch` 前，先确认补丁目标路径；补丁若误落入 main，先把自己的 diff 转移到目标 worktree，再恢复 main，最后重新在目标 worktree 跑验证。
+
+### Worker 试验指标要锁失败和迟到路径
+- 默认关闭的 worker bitmap 试验要同时测成功、ERROR fallback、迟到 bitmap 拒绝和几何覆盖；只测 happy path 会让不可用环境或超时结果被指标误判为成功。

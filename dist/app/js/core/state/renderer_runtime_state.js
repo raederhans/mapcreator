@@ -148,6 +148,9 @@ export function createDefaultRenderPassCacheState() {
     pendingPoliticalColorEditReason: "",
     pendingPoliticalColorEditStartedAt: 0,
     pendingPoliticalColorEditInputLabel: "",
+    pendingPoliticalColorEditFirstPixelRecorded: false,
+    pendingPoliticalColorEditFirstPixelPaintSource: "",
+    pendingPoliticalPatchOverlayTransformSignature: "",
     politicalPathCache: new Map(),
     politicalPathCacheSignature: "",
     politicalPathCacheTransform: null,
@@ -381,6 +384,15 @@ export function ensureRenderPassCacheState(
   cache.pendingPoliticalColorEditInputLabel = typeof cache.pendingPoliticalColorEditInputLabel === "string"
     ? cache.pendingPoliticalColorEditInputLabel
     : defaults.pendingPoliticalColorEditInputLabel;
+  cache.pendingPoliticalColorEditFirstPixelRecorded = typeof cache.pendingPoliticalColorEditFirstPixelRecorded === "boolean"
+    ? cache.pendingPoliticalColorEditFirstPixelRecorded
+    : defaults.pendingPoliticalColorEditFirstPixelRecorded;
+  cache.pendingPoliticalColorEditFirstPixelPaintSource = typeof cache.pendingPoliticalColorEditFirstPixelPaintSource === "string"
+    ? cache.pendingPoliticalColorEditFirstPixelPaintSource
+    : defaults.pendingPoliticalColorEditFirstPixelPaintSource;
+  cache.pendingPoliticalPatchOverlayTransformSignature = typeof cache.pendingPoliticalPatchOverlayTransformSignature === "string"
+    ? cache.pendingPoliticalPatchOverlayTransformSignature
+    : defaults.pendingPoliticalPatchOverlayTransformSignature;
   cache.politicalPathCache = cache.politicalPathCache instanceof Map
     ? cache.politicalPathCache
     : defaults.politicalPathCache;

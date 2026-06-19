@@ -45681,6 +45681,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/canvas_layer_manager.js",
+      "size_bytes": 3889,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/exact_after_settle_refresh_plans.js",
       "size_bytes": 3893,
       "source_kind": "dist"
@@ -45726,6 +45731,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/political_raster_worker_packet.js",
+      "size_bytes": 1342,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/public.js",
       "size_bytes": 2212,
       "source_kind": "dist"
@@ -45742,7 +45752,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 878329,
+      "size_bytes": 890204,
       "source_kind": "dist"
     },
     {
@@ -45767,7 +45777,7 @@
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
-      "size_bytes": 11372,
+      "size_bytes": 15001,
       "source_kind": "dist"
     },
     {
@@ -46252,7 +46262,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 17756,
+      "size_bytes": 18669,
       "source_kind": "dist"
     },
     {
@@ -46762,7 +46772,7 @@
     },
     {
       "path": "app/js/workers/political_raster.worker.js",
-      "size_bytes": 2593,
+      "size_bytes": 6864,
       "source_kind": "dist"
     },
     {
@@ -47072,7 +47082,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1453815,
+      "size_bytes": 1454091,
       "source_kind": "dist"
     },
     {
@@ -47091,5 +47101,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153074139
+  "total_bytes": 1153100334
 }

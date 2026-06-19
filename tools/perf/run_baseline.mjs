@@ -57,6 +57,7 @@ function parseArgs(argv) {
     baselineJson: DEFAULT_BASELINE_JSON,
     baselineMd: DEFAULT_BASELINE_MD,
     rawDir: DEFAULT_RAW_DIR,
+    urlQuery: { ...PERF_URL_QUERY },
     writeMarkdown: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -86,12 +87,45 @@ function parseArgs(argv) {
     } else if (token === "--raw-dir" && next) {
       options.rawDir = path.resolve(REPO_ROOT, next);
       index += 1;
+    } else if (token === "--url-query" && next) {
+      options.urlQuery = parseUrlQueryOverrides(next, options.urlQuery);
+      index += 1;
     } else if (token === "--write-markdown" && next) {
       options.writeMarkdown = ["1", "true", "yes"].includes(String(next).trim().toLowerCase());
       index += 1;
     }
   }
   return options;
+}
+
+function parseUrlQueryOverrides(rawValue, baseQuery = PERF_URL_QUERY) {
+  const query = { ...(baseQuery || {}) };
+  const text = String(rawValue || "").trim();
+  if (!text) {
+    return query;
+  }
+  const normalizedText = text.startsWith("?") ? text.slice(1) : text;
+  const entries = normalizedText.includes("&")
+    ? Array.from(new URLSearchParams(normalizedText).entries())
+    : normalizedText
+      .split(",")
+      .map((entry) => {
+        const [key, ...valueParts] = String(entry || "").split("=");
+        return [key, valueParts.join("=")];
+      });
+  entries.forEach(([rawKey, rawEntryValue]) => {
+    const key = String(rawKey || "").trim();
+    if (!key) {
+      return;
+    }
+    const value = String(rawEntryValue ?? "").trim();
+    if (value.toLowerCase() === "unset" || value.toLowerCase() === "delete") {
+      delete query[key];
+      return;
+    }
+    query[key] = value;
+  });
+  return query;
 }
 
 async function ensureDir(dirPath) {
@@ -252,9 +286,9 @@ async function stopServer(serverOwner) {
   await Promise.allSettled([serverOwner.outHandle.close(), serverOwner.errHandle.close()]);
 }
 
-function buildScenarioUrl(baseUrl, scenarioId) {
+function buildScenarioUrl(baseUrl, scenarioId, urlQuery = PERF_URL_QUERY) {
   const url = new URL("/app/", baseUrl);
-  for (const [key, value] of Object.entries(PERF_URL_QUERY)) {
+  for (const [key, value] of Object.entries(urlQuery || PERF_URL_QUERY)) {
     url.searchParams.set(key, String(value));
   }
   url.searchParams.set("default_scenario", scenarioId);
@@ -498,7 +532,7 @@ function buildScenarioWorkloadIdentity(manifestIdentity, options, baseUrl) {
     baseUrl,
     runs: options.runs,
     warmups: options.warmups,
-    urlQuery: PERF_URL_QUERY,
+    urlQuery: options.urlQuery,
   };
 }
 
@@ -512,7 +546,7 @@ function buildReportWorkloadIdentity(options, measurement) {
     runs: options.runs,
     warmups: options.warmups,
     threshold: options.threshold,
-    urlQuery: PERF_URL_QUERY,
+    urlQuery: options.urlQuery,
     baseUrl: measurement.baseUrl,
     scenarios,
   };
@@ -539,11 +573,11 @@ async function readScenarioManifestIdentity(scenarioId) {
   };
 }
 
-async function measureOneRun(browser, baseUrl, scenarioId) {
+async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   try {
-    const targetUrl = buildScenarioUrl(baseUrl, scenarioId);
+    const targetUrl = buildScenarioUrl(baseUrl, scenarioId, options.urlQuery);
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
     await waitForPerfSnapshotReady(page, { timeoutMs: 120_000 });
     await page.waitForTimeout(300);
@@ -625,12 +659,12 @@ async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
   await ensureDir(scenarioDir);
   const warmups = [];
   for (let index = 0; index < options.warmups; index += 1) {
-    const run = await measureOneRun(browser, baseUrl, scenarioId);
+    const run = await measureOneRun(browser, baseUrl, scenarioId, options);
     warmups.push(run.summary);
   }
   const runs = [];
   for (let index = 0; index < options.runs; index += 1) {
-    const run = await measureOneRun(browser, baseUrl, scenarioId);
+    const run = await measureOneRun(browser, baseUrl, scenarioId, options);
     const filePath = path.join(scenarioDir, `run-${String(index + 1).padStart(2, "0")}.json`);
     await writeJson(filePath, run);
     runs.push({
@@ -963,7 +997,7 @@ async function main() {
       runs: options.runs,
       warmups: options.warmups,
       threshold: options.threshold,
-      urlQuery: PERF_URL_QUERY,
+      urlQuery: options.urlQuery,
     },
     environment: collectEnvironment(),
     workloadIdentity: buildReportWorkloadIdentity(options, measurement),

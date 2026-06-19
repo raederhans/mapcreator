@@ -1361,17 +1361,25 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?runtimeState\.renderPhase === RENDER_PHASE_SETTLING[\s\S]*?runtimeState\.deferExactAfterSettle[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(rendererSource)
       && /function drawCanvas[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(rendererSource),
     politicalRasterWorkerProtocolDefaultsOff:
-      politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 2")
+      politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 3")
       && politicalRasterWorkerClientSource.includes("political_raster_worker")
+      && politicalRasterWorkerClientSource.includes("political_raster_worker_bitmap")
+      && politicalRasterWorkerClientSource.includes("isPoliticalRasterWorkerBitmapEnabled")
+      && politicalRasterWorkerClientSource.includes("consumePoliticalRasterWorkerBitmapResult")
       && politicalRasterWorkerClientSource.includes('return { ok: false, reason: "flag-disabled" };')
       && politicalRasterWorkerClientSource.includes('type: "RASTER_POLITICAL_PASS"')
       && politicalRasterWorkerClientSource.includes("isPoliticalRasterWorkerResultCurrent(request, current)")
       && politicalRasterWorkerClientSource.includes("acceptedCount")
+      && politicalRasterWorkerClientSource.includes("bitmapAcceptedCount")
+      && politicalRasterWorkerClientSource.includes("bitmapRejectedCount")
+      && politicalRasterWorkerClientSource.includes("packetBuildMs")
       && politicalRasterWorkerClientSource.includes("rejectedStaleCount")
       && politicalRasterWorkerClientSource.includes("fallbackCount")
       && politicalRasterWorkerClientSource.includes("passSignature")
       && politicalRasterWorkerSource.includes('type: "RASTER_RESULT"')
       && politicalRasterWorkerSource.includes('reason: "metadata-only"')
+      && politicalRasterWorkerSource.includes('reason: "bitmap"')
+      && politicalRasterWorkerSource.includes("transferToImageBitmap")
       && politicalRasterWorkerSource.includes('type: "ERROR"')
       && politicalRasterWorkerSource.includes("taskId"),
     exactComposeUsesCompositeBuffer:
@@ -2718,12 +2726,41 @@ test("political raster renderer request identity includes viewport and pass sign
   assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?selectionVersion: Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: Number\(runtimeState\.topologyRevision \|\| 0\),[\s\S]*?colorRevision: Number\(runtimeState\.colorRevision \|\| 0\),[\s\S]*?transformBucket: getTransformBucketSignature\(transform\),[\s\S]*?dpr: Number\(runtimeState\.dpr \|\| 1\),/.test(drawSource));
   assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(drawSource));
   assert.ok(drawSource.includes('passSignature: getRenderPassSignature("political", transform),'));
-  assert.ok(/requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: workerIdentity,[\s\S]*?canvasPxWidth: Math\.max\(0, Math\.round\(canvasWidth \* Number\(runtimeState\.dpr \|\| 1\)\)\),[\s\S]*?canvasPxHeight: Math\.max\(0, Math\.round\(canvasHeight \* Number\(runtimeState\.dpr \|\| 1\)\)\),/.test(drawSource));
+  assert.ok(drawSource.includes("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);"));
+  assert.ok(drawSource.includes("buildPoliticalRasterWorkerPacket({"));
+  assert.ok(/requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: workerIdentity,[\s\S]*?rasterPacket: workerPacketState\.packet,[\s\S]*?packetBuildMs: workerPacketState\.packetBuildMs/.test(drawSource));
+  assert.ok(drawSource.includes("canvasPxWidth: workerPacketState.packet?.canvasPxWidth"));
+  assert.ok(drawSource.includes("canvasPxHeight: workerPacketState.packet?.canvasPxHeight"));
+  assert.ok(drawSource.includes('invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");'));
   assert.ok(/function normalizeViewportIdentity\(viewport = null\)[\s\S]*?\["x", "y", "width", "height", "left", "top", "right", "bottom"\]/.test(workerClientSource));
   assert.ok(/String\(request\.passSignature \|\| ""\) === String\(current\.passSignature \|\| ""\)/.test(workerClientSource));
   assert.ok(/normalizeViewportIdentity\(request\.viewport\) === normalizeViewportIdentity\(current\.viewport\)/.test(workerClientSource));
   assert.ok(workerSource.includes("passSignature: String(identity.passSignature || \"\")"));
   assert.ok(workerSource.includes("viewport: identity.viewport || null"));
+});
+
+test("political patch overlay and first-pixel source are explicit layer contracts", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const layerManagerSource = readRepoFile("js", "core", "map_renderer", "canvas_layer_manager.js");
+  const packetSource = readRepoFile("js", "core", "map_renderer", "political_raster_worker_packet.js");
+  const runtimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
+
+  assert.ok(layerManagerSource.includes('id: "map-political-patch-canvas"'));
+  assert.ok(layerManagerSource.includes('id: "map-interaction-overlay-canvas"'));
+  assert.ok(rendererSource.includes("function paintPoliticalPatchOverlayForIds"));
+  assert.ok(rendererSource.includes("function clearPoliticalPatchOverlayIfStale"));
+  assert.ok(rendererSource.includes("pendingPoliticalPatchOverlayTransformSignature"));
+  assert.ok(rendererSource.includes('clearPoliticalPatchOverlayIfStale("drawCanvas-stale-overlay")'));
+  assert.ok(layerManagerSource.includes("function shouldClearStaleCanvasOverlay"));
+  assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayPaint"'));
+  assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayClear"'));
+  assert.ok(rendererSource.includes('paintSource: "political-patch-overlay"'));
+  assert.ok(rendererSource.includes("buildWorkerPixelRingsForGeometry("));
+  assert.ok(packetSource.includes("function collectRasterPolygonalGeometryParts"));
+  assert.ok(packetSource.includes('geometryType === "GeometryCollection"'));
+  assert.ok(runtimeStateSource.includes("pendingPoliticalColorEditFirstPixelRecorded: false"));
+  assert.ok(runtimeStateSource.includes('pendingPoliticalColorEditFirstPixelPaintSource: ""'));
+  assert.ok(runtimeStateSource.includes('pendingPoliticalPatchOverlayTransformSignature: ""'));
 });
 
 test("startup render samples expose hot-path details", () => {
@@ -3028,8 +3065,10 @@ test("political raster worker flag-on metadata path records accepted and stale c
     const queuedA = workerClient.requestPoliticalRasterWorkerPass({ identity: baseIdentity });
     assert.equal(queuedA.ok, true);
     assert.equal(postedMessages[0].type, "RASTER_POLITICAL_PASS");
-    assert.equal(postedMessages[0].protocolVersion, 2);
+    assert.equal(postedMessages[0].protocolVersion, 3);
     assert.equal(postedMessages[0].identity.passSignature, "political-a");
+    assert.equal(postedMessages[0].renderHint.bitmapMode, false);
+    assert.equal(postedMessages[0].rasterPacket, null);
 
     const freshIdentity = workerClient.createPoliticalRasterWorkerIdentity({
       ...baseIdentity,
@@ -3045,7 +3084,7 @@ test("political raster worker flag-on metadata path records accepted and stale c
 
     FakeWorker.instance.onmessage({
       data: {
-        protocolVersion: 2,
+        protocolVersion: 3,
         type: "RASTER_RESULT",
         taskId: queuedB.taskId,
         accepted: true,
@@ -3087,7 +3126,249 @@ test("political raster worker flag parser accepts both explicit keys", async () 
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=1"), true);
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?ENABLE_POLITICAL_RASTER_WORKER=yes"), true);
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=0"), false);
+  assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker_bitmap=1"), false);
+  assert.equal(workerClient.isPoliticalRasterWorkerBitmapEnabled("?political_raster_worker_bitmap=1"), false);
+  assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=1&political_raster_worker_bitmap=1"), true);
+  assert.equal(workerClient.isPoliticalRasterWorkerBitmapEnabled("?political_raster_worker=1&political_raster_worker_bitmap=1"), true);
+  assert.equal(workerClient.refreshPoliticalRasterWorkerFlag("?ENABLE_POLITICAL_RASTER_WORKER=yes&ENABLE_POLITICAL_RASTER_WORKER_BITMAP=on"), true);
+  assert.equal(workerClient.isPoliticalRasterWorkerBitmapEnabled("?ENABLE_POLITICAL_RASTER_WORKER=yes&ENABLE_POLITICAL_RASTER_WORKER_BITMAP=on"), true);
   assert.equal(workerClient.refreshPoliticalRasterWorkerFlag(""), false);
+});
+
+test("political raster worker bitmap path sends packet and consumes current result", async () => {
+  const workerClient = await import("../js/core/political_raster_worker_client.js");
+  const originalWorker = globalThis.Worker;
+  const originalLocation = globalThis.location;
+  const originalMetrics = globalThis.__mc_politicalRasterWorkerMetrics;
+  const postedMessages = [];
+  let bitmapAcceptedCallbacks = 0;
+  let bitmapClosed = false;
+  class FakeWorker {
+    constructor() {
+      FakeWorker.instance = this;
+      this.onmessage = null;
+      this.onerror = null;
+    }
+    postMessage(message) {
+      postedMessages.push(message);
+      this.lastMessage = message;
+    }
+    terminate() {
+      this.terminated = true;
+    }
+  }
+  try {
+    workerClient.terminatePoliticalRasterWorker();
+    delete globalThis.__mc_politicalRasterWorkerMetrics;
+    Object.defineProperty(globalThis, "Worker", {
+      configurable: true,
+      value: FakeWorker,
+    });
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: { search: "?political_raster_worker=1&political_raster_worker_bitmap=1" },
+    });
+    workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=1&political_raster_worker_bitmap=1");
+    const identity = workerClient.createPoliticalRasterWorkerIdentity({
+      scenarioId: "tno_1962",
+      selectionVersion: 1,
+      topologyRevision: 2,
+      colorRevision: 3,
+      transformBucket: "100:0:0",
+      dpr: 2,
+      viewport: { x: 0, y: 0, width: 800, height: 600, right: 800, bottom: 600 },
+      passSignature: "political-bitmap",
+    });
+    const rasterPacket = {
+      canvasPxWidth: 1600,
+      canvasPxHeight: 1200,
+      entries: [
+        {
+          id: "DE",
+          fillColor: "#123456",
+          strokeColor: "#123456",
+          strokeWidthPx: 0.5,
+          rings: [[[0, 0], [10, 0], [10, 10], [0, 0]]],
+        },
+      ],
+    };
+    const queued = workerClient.requestPoliticalRasterWorkerPass({
+      identity,
+      rasterPacket,
+      packetBuildMs: 4.5,
+      renderHint: { packetFeatureCount: 1 },
+      onAcceptedBitmapResult: () => {
+        bitmapAcceptedCallbacks += 1;
+      },
+    });
+
+    assert.equal(queued.ok, true);
+    assert.equal(postedMessages[0].protocolVersion, 3);
+    assert.equal(postedMessages[0].renderHint.bitmapMode, true);
+    assert.equal(postedMessages[0].renderHint.packetFeatureCount, 1);
+    assert.equal(postedMessages[0].packetBuildMs, 4.5);
+    assert.deepEqual(postedMessages[0].rasterPacket, rasterPacket);
+
+    const bitmap = { close: () => { bitmapClosed = true; } };
+    FakeWorker.instance.onmessage({
+      data: {
+        protocolVersion: 3,
+        type: "RASTER_RESULT",
+        taskId: queued.taskId,
+        accepted: true,
+        identity,
+        reason: "bitmap",
+        bitmap,
+        canvasPxWidth: 1600,
+        canvasPxHeight: 1200,
+        rasterMs: 3,
+        encodeMs: 1,
+        decodeMs: 0,
+        blitMs: 0,
+      },
+    });
+
+    const metrics = workerClient.ensurePoliticalRasterWorkerMetrics(globalThis);
+    assert.equal(metrics.acceptedCount, 1);
+    assert.equal(metrics.bitmapAcceptedCount, 1);
+    assert.equal(metrics.packetBuildMs, 4.5);
+    assert.equal(metrics.lastReason, "bitmap");
+    assert.equal(bitmapAcceptedCallbacks, 1);
+
+    const consumed = workerClient.consumePoliticalRasterWorkerBitmapResult(identity);
+    assert.equal(consumed.bitmap, bitmap);
+    assert.equal(consumed.reason, "bitmap");
+    assert.equal(workerClient.consumePoliticalRasterWorkerBitmapResult(identity), null);
+    assert.equal(bitmapClosed, false);
+  } finally {
+    workerClient.terminatePoliticalRasterWorker();
+    if (originalWorker === undefined) {
+      delete globalThis.Worker;
+    } else {
+      Object.defineProperty(globalThis, "Worker", { configurable: true, value: originalWorker });
+    }
+    if (originalLocation === undefined) {
+      delete globalThis.location;
+    } else {
+      Object.defineProperty(globalThis, "location", { configurable: true, value: originalLocation });
+    }
+    if (originalMetrics === undefined) {
+      delete globalThis.__mc_politicalRasterWorkerMetrics;
+    } else {
+      globalThis.__mc_politicalRasterWorkerMetrics = originalMetrics;
+    }
+    workerClient.refreshPoliticalRasterWorkerFlag("");
+  }
+});
+
+test("political raster worker bitmap rejects failure and late bitmap responses", async () => {
+  const workerClient = await import("../js/core/political_raster_worker_client.js");
+  const originalWorker = globalThis.Worker;
+  const originalLocation = globalThis.location;
+  const originalMetrics = globalThis.__mc_politicalRasterWorkerMetrics;
+  let closedLateBitmap = false;
+  const postedMessages = [];
+  class FakeWorker {
+    constructor() {
+      FakeWorker.instance = this;
+      this.onmessage = null;
+      this.onerror = null;
+    }
+    postMessage(message) {
+      postedMessages.push(message);
+      this.lastMessage = message;
+    }
+    terminate() {
+      this.terminated = true;
+    }
+  }
+  try {
+    workerClient.terminatePoliticalRasterWorker();
+    delete globalThis.__mc_politicalRasterWorkerMetrics;
+    Object.defineProperty(globalThis, "Worker", {
+      configurable: true,
+      value: FakeWorker,
+    });
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: { search: "?political_raster_worker=1&political_raster_worker_bitmap=1" },
+    });
+    workerClient.refreshPoliticalRasterWorkerFlag("?political_raster_worker=1&political_raster_worker_bitmap=1");
+    const identity = workerClient.createPoliticalRasterWorkerIdentity({
+      scenarioId: "tno_1962",
+      selectionVersion: 1,
+      topologyRevision: 2,
+      colorRevision: 3,
+      transformBucket: "100:0:0",
+      dpr: 1,
+      viewport: { x: 0, y: 0, width: 800, height: 600 },
+      passSignature: "political-bitmap-failure",
+    });
+
+    const rejected = workerClient.requestPoliticalRasterWorkerPass({
+      identity,
+      rasterPacket: { canvasPxWidth: 800, canvasPxHeight: 600, entries: [] },
+      packetBuildMs: 1,
+    });
+    assert.equal(rejected.ok, true);
+    FakeWorker.instance.onmessage({
+      data: {
+        protocolVersion: 3,
+        type: "ERROR",
+        taskId: rejected.taskId,
+        errorCode: "empty-raster-packet",
+        packetBuildMs: 1,
+      },
+    });
+    let metrics = workerClient.ensurePoliticalRasterWorkerMetrics(globalThis);
+    assert.equal(metrics.acceptedCount, 0);
+    assert.equal(metrics.fallbackCount, 1);
+    assert.equal(metrics.lastReason, "empty-raster-packet");
+    assert.equal(workerClient.consumePoliticalRasterWorkerBitmapResult(identity), null);
+
+    const pending = workerClient.requestPoliticalRasterWorkerPass({
+      identity,
+      rasterPacket: { canvasPxWidth: 800, canvasPxHeight: 600, entries: [{ id: "DE", rings: [[[0, 0], [1, 0], [0, 1]]] }] },
+      packetBuildMs: 2,
+    });
+    assert.equal(pending.ok, true);
+    FakeWorker.instance.onmessage({
+      data: {
+        protocolVersion: 3,
+        type: "RASTER_RESULT",
+        taskId: "political-raster-expired",
+        accepted: true,
+        identity,
+        reason: "bitmap",
+        bitmap: { close: () => { closedLateBitmap = true; } },
+      },
+    });
+    metrics = workerClient.ensurePoliticalRasterWorkerMetrics(globalThis);
+    assert.equal(metrics.acceptedCount, 0);
+    assert.equal(metrics.bitmapRejectedCount, 1);
+    assert.equal(metrics.rejectedStaleCount, 1);
+    assert.equal(metrics.lastReason, "late-bitmap-response");
+    assert.equal(closedLateBitmap, true);
+    assert.equal(workerClient.consumePoliticalRasterWorkerBitmapResult(identity), null);
+  } finally {
+    workerClient.terminatePoliticalRasterWorker();
+    if (originalWorker === undefined) {
+      delete globalThis.Worker;
+    } else {
+      Object.defineProperty(globalThis, "Worker", { configurable: true, value: originalWorker });
+    }
+    if (originalLocation === undefined) {
+      delete globalThis.location;
+    } else {
+      Object.defineProperty(globalThis, "location", { configurable: true, value: originalLocation });
+    }
+    if (originalMetrics === undefined) {
+      delete globalThis.__mc_politicalRasterWorkerMetrics;
+    } else {
+      globalThis.__mc_politicalRasterWorkerMetrics = originalMetrics;
+    }
+    workerClient.refreshPoliticalRasterWorkerFlag("");
+  }
 });
 
 test("interaction composite continuity only tolerates selection and topology drift", () => {
