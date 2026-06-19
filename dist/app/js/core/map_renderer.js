@@ -16320,6 +16320,11 @@ function drawPoliticalPass(k) {
     };
     publishRenderDiagnostics();
   }
+  const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);
+  if (consumedBitmapResult && drawPoliticalWorkerBitmapResult(consumedBitmapResult, workerIdentity)) {
+    recordPoliticalRasterWorkerSnapshot();
+    return;
+  }
   const backgroundStartedAt = nowMs();
   const backgroundSummary = drawPoliticalBackgroundFills({
     transform,
@@ -16340,11 +16345,6 @@ function drawPoliticalPass(k) {
     deferredFullCacheScheduled: !!backgroundSummary?.deferredFullCacheScheduled,
     coarseUnderlay: String(backgroundSummary?.coarseUnderlay || ""),
   });
-  const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);
-  if (consumedBitmapResult && drawPoliticalWorkerBitmapResult(consumedBitmapResult, workerIdentity)) {
-    recordPoliticalRasterWorkerSnapshot();
-    return;
-  }
   if (!runtimeState.landData?.features?.length) return;
   const workerPacketState = isPoliticalRasterWorkerBitmapEnabled()
     ? buildPoliticalRasterWorkerPacket({

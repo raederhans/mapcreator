@@ -2727,6 +2727,10 @@ test("political raster renderer request identity includes viewport and pass sign
   assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(drawSource));
   assert.ok(drawSource.includes('passSignature: getRenderPassSignature("political", transform),'));
   assert.ok(drawSource.includes("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);"));
+  assert.ok(
+    drawSource.indexOf("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);")
+      < drawSource.indexOf("const backgroundStartedAt = nowMs();"),
+  );
   assert.ok(drawSource.includes("buildPoliticalRasterWorkerPacket({"));
   assert.ok(/requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: workerIdentity,[\s\S]*?rasterPacket: workerPacketState\.packet,[\s\S]*?packetBuildMs: workerPacketState\.packetBuildMs/.test(drawSource));
   assert.ok(drawSource.includes("canvasPxWidth: workerPacketState.packet?.canvasPxWidth"));
