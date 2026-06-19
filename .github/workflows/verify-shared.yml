@@ -81,6 +81,7 @@ jobs:
           npm run verify:test-import-graph
           node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json
           node tools/select_verification_targets.mjs --check
+          npm run verify:architecture-boundaries
           node tools/select_verification_targets.mjs --changed-files-list "$changed_files" --json-out .runtime/reports/generated/verification-selector-explain.json --md-out .runtime/reports/generated/verification-selector-explain.md
           npm run verify:test-timeout-inventory
 

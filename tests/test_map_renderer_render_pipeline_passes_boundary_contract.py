@@ -69,7 +69,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("function didHgoPreviewVisibilityTokenChange(previousSignature, nextSignature)", owner_content)
         self.assertIn('cache.reasons[passName] = "hgo-runtime-preview";', owner_content)
         self.assertIn('tryPartialPoliticalPassRepaint(transform, nextSignature, timings)', owner_content)
-        self.assertIn("function ensureIdleRenderPasses(timings) {", owner_content)
+        self.assertIn("function ensureIdleRenderPasses(timings, passNames = null) {", owner_content)
+        self.assertIn("const requestedPassNames = Array.isArray(passNames) ? new Set(passNames.filter(Boolean)) : null;", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
         self.assertIn("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_plan_content)
         self.assertIn("function resolveExactAfterSettleTargetPasses({", exact_plan_content)
@@ -133,7 +134,9 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : transformedFramePassNames;",
             hgo_preview_owner_content,
         )
-        self.assertIn("drewExactFrame = composeCachedPasses(getActiveRenderPassNames());", renderer_content)
+        self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", renderer_content)
+        self.assertIn("getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);", renderer_content)
+        self.assertIn("drewExactFrame = composeCachedPasses(activeRenderPassNames);", renderer_content)
         self.assertIn("function getProjectedHgoRuntimePreviewBounds() {", renderer_content)
         self.assertIn("function getProjectedBounds() {", hgo_preview_owner_content)
         self.assertIn("if (isHgoRuntimePreviewReady()) {\n    return getProjectedHgoRuntimePreviewBounds();\n  }", renderer_content)

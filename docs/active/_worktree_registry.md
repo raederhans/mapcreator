@@ -5,7 +5,7 @@ Last updated: 2026-06-19
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@c664efd5` matched `origin/main@c664efd5` before final archive cleanup commit.
+- Current base: `main@502b76a9` matched `origin/main@502b76a9` before the 2026-06-19 audit repair.
 - Execution branch `codex/module-boundary-continuation-v2` was merged at `a1c0d6e2` and the local branch/worktree were removed after push.
 - Live test/build owner: main Codex agent owned all live tests, Pages dist, build, merge, push, and cleanup commands.
 - Subagents: v2 child agents were read-only static review lanes; no child agent owned live tests.
@@ -22,7 +22,7 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c664efd5` plus final archive cleanup changes | `origin/main@c664efd5` before final archive cleanup push | clean integration owner checkout with archive cleanup changes pending | registry and archive move only | `git worktree list` now shows only this main worktree. Module-boundary continuation v2 was pushed to `origin/main`, then worktree and local feature branch were removed. | Green; integration owner only. | Commit final archive cleanup and push main. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@502b76a9` plus audit repair changes | `origin/main@502b76a9` before the audit repair | clean main checkout used by the current automation audit | hot files touched: HGO exact-frame pass scoping in `js/core/renderer/render_pipeline_passes.js` and `js/core/map_renderer.js`, scenario context owner refresh order, matching `dist/app` mirrors, architecture-boundary selector/workflow tests, and this registry | `git worktree list` shows only this main worktree. The audit found no unmerged worktrees and repaired bounded issues from the recent module-boundary/HGO/toolbar commits. | Green; no parallel worktree overlap. | Commit and push the audit repair from main; no worktree cleanup needed. |
 
 ## Recent Integrated Branches
 

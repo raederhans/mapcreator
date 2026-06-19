@@ -45737,7 +45737,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 870605,
+      "size_bytes": 870685,
       "source_kind": "dist"
     },
     {
@@ -45882,7 +45882,7 @@
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
-      "size_bytes": 8393,
+      "size_bytes": 8610,
       "source_kind": "dist"
     },
     {
@@ -46527,7 +46527,7 @@
     },
     {
       "path": "app/js/ui/toolbar/scenario_context_bar_controller.js",
-      "size_bytes": 7906,
+      "size_bytes": 7870,
       "source_kind": "dist"
     },
     {
@@ -47086,5 +47086,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153059571
+  "total_bytes": 1153059832
 }

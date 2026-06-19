@@ -17513,8 +17513,9 @@ function drawCanvas() {
 
   if (!useTransformedFrame || !drewFrame) {
     resetContextBreakdownForExactFrame();
-    getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings);
-    drewExactFrame = composeCachedPasses(getActiveRenderPassNames());
+    const activeRenderPassNames = getActiveRenderPassNames();
+    getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);
+    drewExactFrame = composeCachedPasses(activeRenderPassNames);
     drewFrame = drewExactFrame;
     if (!drewExactFrame) {
       abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");

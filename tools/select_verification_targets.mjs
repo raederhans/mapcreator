@@ -114,6 +114,7 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
       || route.id === "infra:verification-selector"
       || route.id === "infra:playwright-observability"
       || route.id === "infra:test-import-graph"
+      || route.id === "infra:architecture-boundaries"
       || route.id === "infra:test-timeout-inventory"
       || route.id === "infra:test-console-allowlist"
       || route.id === "infra:test-timeout-guardrails"

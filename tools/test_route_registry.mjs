@@ -84,6 +84,18 @@ const INFRASTRUCTURE_ROUTES = [
     ciProfile: "pr-fast",
   },
   {
+    id: "infra:architecture-boundaries",
+    commandRef: "verify:architecture-boundaries",
+    sourceRef: "tools/check_architecture_boundaries.mjs,js/core/map_renderer.js,js/core/renderer/render_pipeline_passes.js,js/core/map_renderer/scenario_refresh_runtime.js,js/core/map_renderer/exact_after_settle_scheduler.js,js/core/map_renderer/hgo_runtime_preview_render_owner.js,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml,package.json",
+    domain: "architecture-boundaries",
+    ownerHint: "architecture",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "infra:playwright-observability",
     commandRef: "python -m unittest tests.test_e2e_structural_tooling -q",
     sourceRef: "playwright.config.cjs,tests/e2e/support/fixtures.js,tests/e2e/support/playwright-app.js,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",

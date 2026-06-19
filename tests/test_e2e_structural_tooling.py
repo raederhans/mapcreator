@@ -686,6 +686,7 @@ const page = {
         workflow_commands = [entry["commandRef"] for entry in workflow_payload["recommendedCommands"]]
         self.assertIn("node tools/select_verification_targets.mjs --check", workflow_commands)
         self.assertIn("verify:test-import-graph", workflow_commands)
+        self.assertIn("verify:architecture-boundaries", workflow_commands)
 
         dev_ready_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/dev/tno_ready_state_contract.dev.spec.js", "--json")
         self.assert_command_ok(dev_ready_result)
@@ -701,27 +702,31 @@ const page = {
         self.assertNotEqual(unknown_result.returncode, 0)
         self.assertIn("No route found", f"{unknown_result.stdout}\n{unknown_result.stderr}")
 
-    def test_verification_selector_routes_package_json_to_dev_scripts_and_guardrails(self) -> None:
-        package_result = run_command("node", "tools/select_verification_targets.mjs", "package.json", "--json")
-        self.assert_command_ok(package_result)
-        package_payload = json.loads(package_result.stdout)
-        package_commands = [entry["commandRef"] for entry in package_payload["recommendedCommands"]]
-        self.assertIn("test:e2e:dev:tno-ready-state", package_commands)
-        self.assertIn("test:e2e:dev:scenario-chunk-runtime", package_commands)
-        self.assertIn("verify:test-timeout-inventory", package_commands)
-        self.assertIn("verify:test-console-allowlist", package_commands)
-        self.assertIn("verify:test-timeout-guardrails", package_commands)
-        self.assertIn("verify:perf-gate-contract", package_commands)
+    def test_verification_selector_routes_package_metadata_to_dev_scripts_and_guardrails(self) -> None:
+        for package_path in ("package.json", "package-lock.json"):
+            package_result = run_command("node", "tools/select_verification_targets.mjs", package_path, "--json")
+            self.assert_command_ok(package_result)
+            package_payload = json.loads(package_result.stdout)
+            package_commands = [entry["commandRef"] for entry in package_payload["recommendedCommands"]]
+            self.assertIn("test:e2e:dev:tno-ready-state", package_commands)
+            self.assertIn("test:e2e:dev:scenario-chunk-runtime", package_commands)
+            self.assertIn("verify:test-timeout-inventory", package_commands)
+            self.assertIn("verify:test-console-allowlist", package_commands)
+            self.assertIn("verify:test-timeout-guardrails", package_commands)
+            self.assertIn("verify:architecture-boundaries", package_commands)
+            self.assertIn("verify:perf-gate-contract", package_commands)
 
     def test_verify_shared_checks_checked_in_import_graph_before_building_artifact_copy(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
         verify_index = workflow.index("npm run verify:test-import-graph")
         build_index = workflow.index("node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json")
         selector_check_index = workflow.index("node tools/select_verification_targets.mjs --check")
+        architecture_index = workflow.index("npm run verify:architecture-boundaries")
         selector_explain_index = workflow.index("node tools/select_verification_targets.mjs --changed-files-list")
         self.assertLess(verify_index, build_index)
         self.assertLess(build_index, selector_check_index)
-        self.assertLess(selector_check_index, selector_explain_index)
+        self.assertLess(selector_check_index, architecture_index)
+        self.assertLess(architecture_index, selector_explain_index)
         self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
         self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
 

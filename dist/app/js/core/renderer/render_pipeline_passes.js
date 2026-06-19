@@ -177,15 +177,18 @@ export function createRenderPipelinePassesOwner({
     renderPassToCache(passName, drawFn, transform, timings);
   }
 
-  function ensureIdleRenderPasses(timings) {
+  function ensureIdleRenderPasses(timings, passNames = null) {
     const transform = state.zoomTransform || globalThis.d3.zoomIdentity;
     const cache = getRenderPassCacheState();
+    const requestedPassNames = Array.isArray(passNames) ? new Set(passNames.filter(Boolean)) : null;
     if (state.legacyColorStateDirty) {
       rebuildResolvedColors();
     }
-    getIdleRenderPassDefinitions().forEach(([passName, drawFn]) => {
-      prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
-    });
+    getIdleRenderPassDefinitions()
+      .filter(([passName]) => !requestedPassNames || requestedPassNames.has(passName))
+      .forEach(([passName, drawFn]) => {
+        prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
+      });
     if (Number.isFinite(timings.contextBase) || Number.isFinite(timings.contextScenario)) {
       timings.context =
         Math.max(0, Number(timings.contextBase || 0))

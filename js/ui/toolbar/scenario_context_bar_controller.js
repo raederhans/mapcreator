@@ -132,7 +132,6 @@ function createScenarioContextBarController({
         ? translateUi("Close transport workbench")
         : translateUi("Open transport workbench"));
     }
-    refreshScenarioSelectionChip();
     refreshWorkspaceStatus();
     applyScenarioOverlaySafeLayout();
   };

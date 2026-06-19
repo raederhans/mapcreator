@@ -973,7 +973,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : renderPassNames;",
             hgo_preview_owner_source,
         )
-        self.assertIn("drewExactFrame = composeCachedPasses(getActiveRenderPassNames());", source)
+        self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", source)
+        self.assertIn(
+            "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
+            source,
+        )
+        self.assertIn("drewExactFrame = composeCachedPasses(activeRenderPassNames);", source)
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")
