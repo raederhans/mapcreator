@@ -2,7 +2,7 @@
 
 ## Delivery Package Draft
 
-Status: ready-for-integration
+Status: integrated, pushed, archived, and ready for local worktree cleanup
 
 ## Change Groups
 
@@ -19,7 +19,7 @@ Status: ready-for-integration
   - `tests/scenario_chunk_promotion_helpers_behavior.test.mjs`
   - `tests/test_perf_gate_contract.py`
   - `tests/test_scenario_chunk_refresh_contracts.py`
-- Docs files: `docs/active/render-visible-frame-transaction-metrics/{plan,context,task}.md`, `docs/active/_worktree_registry.md`.
+- Docs files: `docs/archive/render-visible-frame-transaction-metrics-20260619/{plan,context,task}.md`, `docs/active/_worktree_registry.md`.
 - Temporary/runtime files: `.omx/ultragoal/*` and local `node_modules` junction are untracked/ignored runtime state.
 
 ## Diff Summary
@@ -60,17 +60,19 @@ Status: ready-for-integration
 
 ## Recommended Integration
 
-Recommended path after review approval: commit this branch, archive task docs, push the feature branch, fast-forward integrate into a clean main worktree or push the branch head to `origin/main` after confirming `origin/main` still matches the base, then clean the isolated worktree. Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains dirty and should not be used for staging this branch.
+Completed path: feature commit `15008502` was pushed to `origin/codex/render-fluidity-p1-p3`, fast-forwarded through clean integration branch `codex/render-fluidity-main-integration`, validated again, and pushed to `origin/main`. Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains dirty and was not used for staging this branch.
 
 ## Integration Planning
 
 - Current worktrees:
   - `C:\Users\raede\Desktop\dev\mapcreator`: `main@bf76965d`, dirty with unrelated docs/archive deletions and `lessons learned.md`.
-  - `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-p1-p3`: `codex/render-fluidity-p1-p3@d1faea1f`, dirty with this P1-P3 implementation.
+  - `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-p1-p3`: `codex/render-fluidity-p1-p3@15008502`, clean after commit and push.
+  - `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-integration`: `codex/render-fluidity-main-integration@15008502`, used for clean main integration and closeout.
 - Base commit: `origin/main@d1faea1f`.
-- Current branch HEAD before commit: `d1faea1f`.
+- Functional commit: `15008502`.
 - Parent checkout overlap by file path: none against this P1-P3 changed-file set.
 - Risk rating:
   - Parent checkout: yellow because it is dirty and behind origin.
-  - P1-P3 worktree: yellow because it touches `js/core/map_renderer.js`, perf gates, scenario chunk contracts, and Pages dist mirrors.
-- Recommended order: commit this isolated branch first, then integrate through a clean main worktree or direct fast-forward path after `origin/main` freshness check. Do not stage from the dirty parent checkout.
+  - P1-P3 feature worktree: green after fast-forward integration; yellow only for future renderer/perf metric work.
+  - Integration worktree: green after closeout commit and push.
+- Cleanup plan: remove `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-p1-p3` and `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-integration` after closeout push. Keep the dirty parent checkout untouched.

@@ -45,3 +45,17 @@
   - Base visible fallback wrote both a `missing` and `committed` `visibleFrameTransaction` for one base-fill frame.
 - Both LOW findings were fixed. Count rows now use `formatCountRow`, and base visible fallback records only the legacy `missingVisibleFrameCount` plus one committed `visibleFrameTransaction`.
 - After the fixes, validation passed again: map renderer and perf baseline syntax checks, 49 focused Node tests, 57 Python contract tests, perf gate contract 22 tests, Pages dist build + 37 startup shell + 8 landing showcase, and `git diff --check`.
+
+## 2026-06-19 Integration Closeout
+
+- Functional commit: `15008502` (`Expose render fluidity transaction evidence`).
+- Feature branch `codex/render-fluidity-p1-p3` was pushed to origin and fast-forwarded through clean integration worktree `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-integration`.
+- Post-merge validation in the integration worktree passed:
+  - `node --check js/core/map_renderer.js`.
+  - `node --check tools/perf/run_baseline.mjs`.
+  - `node --test tests/perf_probe_snapshot_behavior.test.mjs tests/scenario_chunk_promotion_helpers_behavior.test.mjs tests/scenario_chunk_contracts.test.mjs` passed 52/52.
+  - `npm run python -- -m unittest tests.test_perf_gate_contract tests.test_scenario_chunk_refresh_contracts -q` passed 57 tests.
+  - `git diff --check` passed.
+- `origin/main` was fast-forwarded from `d1faea1f` to `15008502`.
+- Task docs moved to `docs/archive/render-visible-frame-transaction-metrics-20260619/`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` stayed untouched with its unrelated local docs/archive changes.

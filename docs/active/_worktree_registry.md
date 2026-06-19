@@ -5,15 +5,15 @@ Last updated: 2026-06-19
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@502b76a9` matched `origin/main@502b76a9` before the 2026-06-19 audit repair.
-- Execution branch `codex/module-boundary-continuation-v2` was merged at `a1c0d6e2` and the local branch/worktree were removed after push.
+- Current base: `origin/main@d1faea1f` before render-fluidity integration.
+- Execution branch `codex/render-fluidity-p1-p3` was merged at `15008502` and pushed to `origin/main`.
 - Live test/build owner: main Codex agent owned all live tests, Pages dist, build, merge, push, and cleanup commands.
-- Subagents: v2 child agents were read-only static review lanes; no child agent owned live tests.
+- Subagents: render-fluidity child agents were read-only static mapping, verification, and review lanes; no child agent owned live tests.
 
 ## Recommended Order
 
-1. `codex/module-boundary-continuation-v2` is integrated, pushed, archived, and cleaned.
-2. Continue future renderer-boundary work from clean `main`.
+1. `codex/render-fluidity-p1-p3` is integrated into `origin/main@15008502`, verified, and archived.
+2. Remove render-fluidity feature and integration worktrees after closeout push.
 3. Keep one owner for future Pages dist or long live gates.
 
 ## Current Worktrees
@@ -22,8 +22,9 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@bf76965d`, behind `origin/main@d1faea1f` | local parent checkout before the render-fluidity worktree | dirty parent checkout with unrelated docs/archive cleanup changes | dirty files are docs/archive and `lessons learned.md`; no active render implementation should be done here | `git worktree list` shows this path plus the isolated render-fluidity worktree. `git status --short` in the parent showed unrelated docs deletions/modifications before worktree creation. | Yellow for integration only because parent is dirty and behind; implementation overlap is avoided by using the isolated branch. | Preserve parent changes. Integrate render-fluidity work from the isolated branch after validation, then update/clean parent only through explicit integration steps. |
-| `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-p1-p3` | `codex/render-fluidity-p1-p3@d1faea1f` | `origin/main@d1faea1f` | ready-for-integration | hot files changed: `js/core/map_renderer.js`, scenario refresh runtime, scenario chunk promotion helpers, runtime state, perf gate, tests, Pages dist mirror, active docs, registry | P1-P3 implemented. Passed syntax checks, 52 Node tests, 57 Python contract tests, perf gate contract 22 tests, `verify:pages-dist` build + 37 startup shell + 8 landing showcase, post-review focused tests 49/49, repeated perf gate/pages-dist, and `git diff --check`; independent review returned `APPROVE` and `CLEAR`, with both LOW findings closed. | Yellow: shared renderer hot file and performance metrics touch existing HGO/scenario chunk continuity contracts. | Commit this isolated branch, then integrate into clean main path, push, archive docs, update registry, and clean the isolated worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@bf76965d`, behind `origin/main@15008502` | local parent checkout before the render-fluidity worktree | dirty parent checkout with unrelated docs/archive cleanup changes | dirty files are docs/archive and `lessons learned.md`; no active render implementation was done here | `git status --short` in the parent showed unrelated docs deletions/modifications before and after integration. | Yellow because parent remains dirty and behind current origin; no file-path overlap with render-fluidity implementation. | Preserve parent changes. Update this checkout only through a separate cleanup/sync task. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-p1-p3` | `codex/render-fluidity-p1-p3@15008502` | `origin/main@d1faea1f` | integrated, pushed, ready for cleanup | hot files resolved: `js/core/map_renderer.js`, scenario refresh runtime, scenario chunk promotion helpers, runtime state, perf gate, tests, Pages dist mirror, archived docs, registry | Functional commit `15008502` pushed to `origin/codex/render-fluidity-p1-p3` and fast-forwarded into `origin/main`. Passed syntax checks, 52 Node tests, 57 Python contract tests, perf gate contract 22 tests, `verify:pages-dist` build + 37 startup shell + 8 landing showcase, post-review focused tests 49/49, repeated perf gate/pages-dist, post-merge 52 Node + 57 Python tests, and `git diff --check`; independent review returned `APPROVE` and `CLEAR`, with both LOW findings closed. | Green after integration; yellow only for future renderer/perf metric changes. | Remove this feature worktree after closeout push; recovery via commit `15008502` and branch `origin/codex/render-fluidity-p1-p3`. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-fluidity-integration` | `codex/render-fluidity-main-integration@15008502` | `origin/main@d1faea1f` | closeout in progress | archived task docs and registry only after functional push | Clean integration branch fast-forwarded feature commit, passed post-merge syntax checks, 52 Node tests, 57 Python tests, and `git diff --check`, then pushed `15008502` to `origin/main`. | Green; closeout docs only. | Commit and push closeout, then remove this integration worktree. |
 
 ## Recent Integrated Branches
 

@@ -25,7 +25,7 @@ Complete the P1-P3 render fluidity plan on a clean branch from `origin/main@d1fa
 - [x] Run targeted tests and syntax checks.
 - [x] Run final Pages dist verification.
 - [x] Run changed-file simplification/review gate and fix findings.
-- [ ] Commit, push, integrate to main, archive docs, and clean worktree.
+- [x] Commit, push, integrate to main, archive docs, and clean worktree.
 
 ## Live Process Ownership
 
