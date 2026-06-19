@@ -7,6 +7,16 @@ import {
   resolveScenarioChunkPromotionChangeSet,
 } from "../renderer/scenario_chunk_promotion_helpers.js";
 
+function readFirstNonNegativeCount(...values) {
+  for (const value of values) {
+    const numberValue = Number(value);
+    if (Number.isFinite(numberValue) && numberValue >= 0) {
+      return Math.max(0, numberValue);
+    }
+  }
+  return 0;
+}
+
 function createScenarioRefreshRuntime(deps = {}) {
   const {
     runtimeState,
@@ -366,17 +376,16 @@ function createScenarioRefreshRuntime(deps = {}) {
     const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
       ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
       : promotedTotalFeatureCount;
-    const promotedVisibleFeatureCount = Math.max(0, Number(
-      pendingVisualPromotion?.primaryVisibleFeatureCount
-        || pendingPromotion?.primaryVisibleFeatureCount
-        || pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum
-        || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum
-        || promotedPrimaryFeatureCount
-        || pendingVisualPromotion?.selectedFeatureCountSum
-        || pendingPromotion?.selectedFeatureCountSum
-        || promotedTotalFeatureCount
-        || 0,
-    ));
+    const promotedVisibleFeatureCount = readFirstNonNegativeCount(
+      pendingVisualPromotion?.primaryVisibleFeatureCount,
+      pendingPromotion?.primaryVisibleFeatureCount,
+      pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum,
+      pendingPromotion?.selectedPoliticalVisibleFeatureCountSum,
+      promotedPrimaryFeatureCount,
+      pendingVisualPromotion?.selectedFeatureCountSum,
+      pendingPromotion?.selectedFeatureCountSum,
+      promotedTotalFeatureCount,
+    );
     const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails({
       activeScenarioId: runtimeState.activeScenarioId,
       reason,

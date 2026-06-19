@@ -1075,6 +1075,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?cache\.lastGoodFrame\.stale = true;[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
       && /if \(runtimeState\.renderPhase === RENDER_PHASE_INTERACTING && runtimeState\.firstVisibleFramePainted\) \{[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(rendererSource)
       && rendererSource.includes('recordRenderPerfMetric("continuityFrameStaleAgeMs"')
+      && rendererSource.includes('recordRenderPerfMetric("visibleFrameTransaction"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameCount"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameSkippedDuringInteraction"')
       && /const staleSince = frame\.stale && Number\(frame\.invalidatedAt \|\| 0\) > 0[\s\S]*?Number\(frame\.invalidatedAt \|\| 0\)[\s\S]*?Number\(frame\.capturedAt \|\| 0\);[\s\S]*?const staleAgeMs = Math\.max\(0, Date\.now\(\) - staleSince\);/.test(rendererSource)
@@ -1084,6 +1085,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     firstVisibleScenarioRequiresCurrentPoliticalExactFrame:
       /function getFirstVisiblePoliticalFrameBlockReason\(reason = "visible-frame"\) \{[\s\S]*?base-visible-fallback[\s\S]*?normalizedReason !== "exact-frame"[\s\S]*?dirty-political-pass[\s\S]*?stale-ocean-fill[\s\S]*?stale-political-signature[\s\S]*?stale-political-reference-transform[\s\S]*?stale-political-full-reference-transform/.test(rendererSource)
       && /function noteFirstVisibleFrameBlocked\(reason = "visible-frame", blockReason = "unknown"\) \{[\s\S]*?recordRenderPerfMetric\("firstVisibleFrameBlocked"[\s\S]*?topologyBundleMode:[\s\S]*?oceanFill: getOceanBaseFillColor\(\)/.test(rendererSource)
+      && /function recordVisibleFrameTransactionMetric\(status, details = \{\}\) \{[\s\S]*?visibleFrameTransactionCount[\s\S]*?recordRenderPerfMetric\("visibleFrameTransaction"/.test(rendererSource)
       && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?const blockReason = getFirstVisiblePoliticalFrameBlockReason\(reason\);[\s\S]*?if \(blockReason\) \{[\s\S]*?noteFirstVisibleFrameBlocked\(reason, blockReason\);[\s\S]*?return;/.test(rendererSource)
       && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?runtimeState\.firstVisibleFramePainted = true;[\s\S]*?recordRenderPerfMetric\("firstVisibleFramePainted"[\s\S]*?callRuntimeHook\(runtimeState, "noteFirstVisibleFramePaintedFn"/.test(rendererSource),
     oceanBackgroundInvalidationCoversPoliticalSignatureDependents:
@@ -1144,13 +1146,14 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /function getPhysicalExactRefreshPasses\(\) \{[\s\S]*?\["physicalBase", "political", "contextBase", "borders"\][\s\S]*?\["political", "contextBase", "borders"\][\s\S]*?return passes;[\s\S]*?\}/.test(rendererSource)
       && /function applyExactAfterSettleRefreshPlan[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);[\s\S]*?invalidateRenderPasses\(getPhysicalExactRefreshPasses\(\), reuseDecision\.reason \|\| "context-base-exact"\);/.test(exactSchedulerSource),
     colorRefreshUsesPartialPoliticalInvalidation:
-      /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\)\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
+      /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\), \{[\s\S]*?startedAt: inputStartedAt,[\s\S]*?inputLabel,[\s\S]*?\}\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
       && rendererSource.includes('invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");')
       && rendererSource.includes('invalidateRenderPasses("contextBase", "refresh-colors-context-base");')
       && /function markPendingPoliticalColorEdit\(featureIds,[\s\S]*?cache\.pendingPoliticalColorEditIds = new Set\(ids\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = Number\(runtimeState\.colorRevision \|\| 0\);/.test(rendererSource)
       && rendererSource.includes('cache.pendingPoliticalColorEditScenarioId = String(runtimeState.activeScenarioId || "");')
       && /function hasPendingPoliticalColorEdit\(\) \{[\s\S]*?pendingIds instanceof Set[\s\S]*?Number\(cache\.pendingPoliticalColorEditRevision \?\? -1\) === Number\(runtimeState\.colorRevision \|\| 0\)/.test(rendererSource)
-      && /function clearPendingPoliticalColorEdit\(\{ renderedCount = 0, renderedIds = null, force = false \} = \{\}\) \{[\s\S]*?const hasRenderedIdScope = renderedIds !== null && renderedIds !== undefined;[\s\S]*?renderedIdList\.forEach\(\(id\) => pendingIds\.delete\(id\)\);[\s\S]*?if \(pendingIds\.size > 0\) return false;/.test(rendererSource)
+      && /function clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedCount = 0,[\s\S]*?renderedIds = null,[\s\S]*?force = false,[\s\S]*?paintSource = "political-pass"[\s\S]*?\} = \{\}\) \{[\s\S]*?const hasRenderedIdScope = renderedIds !== null && renderedIds !== undefined;[\s\S]*?renderedIdList\.forEach\(\(id\) => pendingIds\.delete\(id\)\);[\s\S]*?if \(pendingIds\.size > 0\) return false;/.test(rendererSource)
+      && /function recordFillPatchFirstPixelMetric\(\{[\s\S]*?recordRenderPerfMetric\("fillPatchInputToFirstPixelMs"/.test(rendererSource)
       && /function shouldRefreshContextBaseContoursForColorChanges\(\) \{[\s\S]*?runtimeState\.showPhysical[\s\S]*?physicalContourMajorData/.test(rendererSource)
       && /if \(passName === "contextBase"\) \{[\s\S]*?`context-colors:\$\{shouldRefreshContextBaseForColorChanges\(\) \? Number\(runtimeState\.colorRevision \|\| 0\) : 0\}`/.test(rendererSource)
       && !contextScenarioSignatureBranch.includes("`colors:${Number(runtimeState.colorRevision || 0)}`")
@@ -1296,6 +1299,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && scenarioRefreshRuntimeSource.includes('recordRenderPerfMetric("chunkPromotionDeferredInfraMs"')
       && scenarioRefreshRuntimeSource.includes("promotedVisibleFeatureCount")
       && scenarioRefreshRuntimeSource.includes("promotedTotalFeatureCount")
+      && scenarioRefreshRuntimeSource.includes("readFirstNonNegativeCount")
+      && chunkPromotionHelperSource.includes("fullPoliticalPayloadFeatureCount")
+      && chunkPromotionHelperSource.includes("viewportVisibleSubsetFeatureCount")
       && /function buildScenarioChunkPromotionVisualMetricDetails\(\{[\s\S]*?selectedByteCountSum[\s\S]*?selectedEstimatedPathCostSum/.test(chunkPromotionHelperSource)
       && /const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails\(\{[\s\S]*?recordRenderPerfMetric\("scenarioChunkPromotionVisualStage", visualDurationMs, \{[\s\S]*?\.\.\.promotionMetricDetails/.test(scenarioRefreshRuntimeSource)
       && /recordScenarioRenderMetric\("politicalChunkPromotionMs"[\s\S]*?promotedVisibleFeatureCount:[\s\S]*?promotedTotalFeatureCount:[\s\S]*?primaryVisibleFeatureCount:[\s\S]*?primaryTotalFeatureCount:/.test(chunkRuntimeSource)
@@ -1483,7 +1489,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       })()
       && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
       && /function drawPoliticalPass\(k\) \{[\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);/.test(rendererSource)
-      && /function clearPendingPoliticalColorEdit\(\{ renderedCount = 0, renderedIds = null, force = false \} = \{\}\) \{[\s\S]*?cache\.pendingPoliticalColorEditIds\.clear\(\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = -1;/.test(rendererSource)
+      && /function clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedCount = 0,[\s\S]*?renderedIds = null,[\s\S]*?force = false,[\s\S]*?paintSource = "political-pass"[\s\S]*?\} = \{\}\) \{[\s\S]*?cache\.pendingPoliticalColorEditIds\.clear\(\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = -1;/.test(rendererSource)
       && /function drawPoliticalFeature\([\s\S]*?metricsCollector\.renderedIds instanceof Set[\s\S]*?metricsCollector\.renderedIds\.add\(id\);/.test(rendererSource)
       && /const featureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: featureMetrics\.renderedIds,[\s\S]*?\}\);/.test(rendererSource)
       && /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?const partialFeatureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?metricsCollector: partialFeatureMetrics,[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: partialFeatureMetrics\.renderedIds,[\s\S]*?\}\);/.test(rendererSource)

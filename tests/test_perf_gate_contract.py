@@ -28,11 +28,11 @@ class PerfGateContractTest(unittest.TestCase):
         perf_gate_script = package_payload["scripts"]["perf:gate"]
         self.assertEqual(
             package_payload["scripts"].get("verify:perf-gate-contract"),
-            "python -m unittest tests.test_perf_gate_contract -q",
+            "npm run python -- -m unittest tests.test_perf_gate_contract -q",
         )
         self.assertEqual(
             package_payload["scripts"].get("bench:editor-performance"),
-            "python ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf",
+            "npm run python -- ops/browser-mcp/editor-performance-benchmark.py --out .runtime/output/perf/editor-performance-benchmark.json --screenshot-dir .runtime/browser/mcp-artifacts/perf",
         )
         self.assertIn("--warmups 3", perf_baseline_script)
         self.assertIn("--scenarios tno_1962,hoi4_1939", perf_gate_script)
@@ -106,8 +106,13 @@ class PerfGateContractTest(unittest.TestCase):
             "zoomEndToChunkVisibleMs",
             "interactionRecoveryWindowMs",
             "interactionRecoveryTaskMs",
+            "visibleFrameTransactionMs",
+            "visibleFrameTransactionCount",
+            "visibleFrameRejectedCount",
+            "visibleFrameMissingCount",
             "continuityFrameStaleAgeMs",
             "missingVisibleFrameCount",
+            "fillPatchInputToFirstPixelMs",
             "postReadyMaxPendingAgeMs",
             "postReadyMaxRetryCount",
             "startupBundleSource",

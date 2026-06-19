@@ -23,6 +23,15 @@ export function resolveScenarioChunkPromotionChangeSet({
     effectiveChangedLayerKeys,
   };
 }
+
+function toNonNegativeCount(value, defaultValue = 0) {
+  const numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.max(0, numberValue);
+  }
+  return Math.max(0, Number(defaultValue) || 0);
+}
+
 export function buildScenarioChunkPromotionVisualMetricDetails({
   activeScenarioId = "",
   reason = "scenario-chunk-promotion",
@@ -40,6 +49,16 @@ export function buildScenarioChunkPromotionVisualMetricDetails({
   promotionVersion = 0,
   synchronizedSecondaryRegionIndexes = false,
 } = {}) {
+  const primaryTotalFeatureCount = toNonNegativeCount(
+    pendingVisualPromotion?.primaryTotalFeatureCount ?? pendingPromotion?.primaryTotalFeatureCount,
+    promotedTotalFeatureCount,
+  );
+  const primaryVisibleFeatureCount = toNonNegativeCount(
+    pendingVisualPromotion?.primaryVisibleFeatureCount ?? pendingPromotion?.primaryVisibleFeatureCount,
+    promotedPrimaryFeatureCount,
+  );
+  const fullPoliticalPayloadFeatureCount = toNonNegativeCount(promotedTotalFeatureCount);
+  const viewportVisibleSubsetFeatureCount = toNonNegativeCount(primaryVisibleFeatureCount, promotedVisibleFeatureCount);
   return {
     activeScenarioId: String(activeScenarioId || ""),
     reason: String(reason || "scenario-chunk-promotion"),
@@ -61,8 +80,12 @@ export function buildScenarioChunkPromotionVisualMetricDetails({
     selectedVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedVisibleFeatureCountSum || pendingPromotion?.selectedVisibleFeatureCountSum || 0)),
     selectedPoliticalFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalFeatureCountSum || pendingPromotion?.selectedPoliticalFeatureCountSum || 0)),
     selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum || 0)),
-    primaryTotalFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryTotalFeatureCount || pendingPromotion?.primaryTotalFeatureCount || promotedTotalFeatureCount || 0)),
-    primaryVisibleFeatureCount: Math.max(0, Number(pendingVisualPromotion?.primaryVisibleFeatureCount || pendingPromotion?.primaryVisibleFeatureCount || promotedPrimaryFeatureCount || 0)),
+    primaryTotalFeatureCount,
+    primaryVisibleFeatureCount,
+    fullPoliticalPayloadFeatureCount,
+    viewportVisibleSubsetFeatureCount,
+    primaryVisibleIsSubset: primaryTotalFeatureCount > 0 && primaryVisibleFeatureCount < primaryTotalFeatureCount,
+    promotedVisibleIsSubset: fullPoliticalPayloadFeatureCount > 0 && toNonNegativeCount(promotedVisibleFeatureCount) < fullPoliticalPayloadFeatureCount,
     selectedByteCountSum: Math.max(0, Number(pendingVisualPromotion?.selectedByteCountSum || pendingPromotion?.selectedByteCountSum || 0)),
     selectedEstimatedPathCostSum: Math.max(0, Number(pendingVisualPromotion?.selectedEstimatedPathCostSum || pendingPromotion?.selectedEstimatedPathCostSum || 0)),
     changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,

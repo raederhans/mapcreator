@@ -106,6 +106,18 @@ test("snapshot preserves render-chain hot-path metric details as isolated copies
       hitCanvasMs: 23,
       targetPasses: ["political", "borders"],
     },
+    visibleFrameTransaction: {
+      durationMs: 17,
+      status: "reused",
+      paintSource: "last-good-frame",
+      count: 3,
+    },
+    fillPatchInputToFirstPixelMs: {
+      durationMs: 11,
+      inputToFirstPixelMs: 11,
+      paintSource: "political-partial-repaint",
+      pendingFeatureCount: 1,
+    },
   };
 
   try {
@@ -113,6 +125,8 @@ test("snapshot preserves render-chain hot-path metric details as isolated copies
     firstSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses.push("labels");
     firstSnapshot.renderPerfMetrics.buildHitCanvas.visibleItemCount = 999;
     firstSnapshot.renderPerfMetrics.scenarioPoliticalBackgroundDeferredFullCacheBuild.builtPathCount = 1;
+    firstSnapshot.renderPerfMetrics.visibleFrameTransaction.count = 99;
+    firstSnapshot.renderPerfMetrics.fillPatchInputToFirstPixelMs.pendingFeatureCount = 99;
 
     const secondSnapshot = snapshot();
 
@@ -129,6 +143,8 @@ test("snapshot preserves render-chain hot-path metric details as isolated copies
       secondSnapshot.renderPerfMetrics.settleExactRefreshPhaseBreakdown.targetPasses,
       ["political", "borders"],
     );
+    assert.equal(secondSnapshot.renderPerfMetrics.visibleFrameTransaction.count, 3);
+    assert.equal(secondSnapshot.renderPerfMetrics.fillPatchInputToFirstPixelMs.pendingFeatureCount, 1);
   } finally {
     globalThis.__renderPerfMetrics = originalRenderPerfMetrics;
   }

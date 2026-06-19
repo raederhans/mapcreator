@@ -146,6 +146,8 @@ export function createDefaultRenderPassCacheState() {
     pendingPoliticalColorEditRevision: -1,
     pendingPoliticalColorEditScenarioId: "",
     pendingPoliticalColorEditReason: "",
+    pendingPoliticalColorEditStartedAt: 0,
+    pendingPoliticalColorEditInputLabel: "",
     politicalPathCache: new Map(),
     politicalPathCacheSignature: "",
     politicalPathCacheTransform: null,
@@ -207,6 +209,7 @@ export function createDefaultRenderPassCacheState() {
       politicalPartialCandidateCount: 0,
       politicalPartialPathCacheMisses: 0,
       politicalPartialPathBuild: 0,
+      fillPatchFirstPixelCount: 0,
       politicalPathCacheBuild: 0,
       politicalPathWarmupBuild: 0,
       politicalPathWarmupSlices: 0,
@@ -372,6 +375,12 @@ export function ensureRenderPassCacheState(
   cache.pendingPoliticalColorEditReason = typeof cache.pendingPoliticalColorEditReason === "string"
     ? cache.pendingPoliticalColorEditReason
     : defaults.pendingPoliticalColorEditReason;
+  cache.pendingPoliticalColorEditStartedAt = Number.isFinite(Number(cache.pendingPoliticalColorEditStartedAt))
+    ? Number(cache.pendingPoliticalColorEditStartedAt)
+    : defaults.pendingPoliticalColorEditStartedAt;
+  cache.pendingPoliticalColorEditInputLabel = typeof cache.pendingPoliticalColorEditInputLabel === "string"
+    ? cache.pendingPoliticalColorEditInputLabel
+    : defaults.pendingPoliticalColorEditInputLabel;
   cache.politicalPathCache = cache.politicalPathCache instanceof Map
     ? cache.politicalPathCache
     : defaults.politicalPathCache;

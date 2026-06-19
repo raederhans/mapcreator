@@ -29,7 +29,7 @@ test("scenario chunk promotion visual metrics preserve feature and backlog count
       selectedVisibleFeatureCountSum: 3,
       selectedPoliticalFeatureCountSum: 4,
       selectedPoliticalVisibleFeatureCountSum: 5,
-      primaryTotalFeatureCount: 6,
+      primaryTotalFeatureCount: 16,
       primaryVisibleFeatureCount: 7,
       selectedByteCountSum: 8,
       selectedEstimatedPathCostSum: 9,
@@ -58,9 +58,34 @@ test("scenario chunk promotion visual metrics preserve feature and backlog count
   assert.equal(result.promotedTotalFeatureCount, 11);
   assert.equal(result.promotedPrimaryFeatureCount, 12);
   assert.equal(result.promotedVisibleFeatureCount, 13);
+  assert.equal(result.fullPoliticalPayloadFeatureCount, 11);
+  assert.equal(result.primaryTotalFeatureCount, 16);
+  assert.equal(result.viewportVisibleSubsetFeatureCount, 7);
+  assert.equal(result.primaryVisibleIsSubset, true);
+  assert.equal(result.promotedVisibleIsSubset, false);
   assert.equal(result.selectedByteCountSum, 8);
   assert.equal(result.selectedEstimatedPathCostSum, 9);
   assert.equal(result.changedLayerCount, 2);
   assert.equal(result.promotionVersion, 14);
   assert.equal(result.synchronizedSecondaryRegionIndexes, true);
+});
+
+test("scenario chunk promotion visual metrics preserve zero visible subset counts", () => {
+  const result = buildScenarioChunkPromotionVisualMetricDetails({
+    pendingVisualPromotion: {
+      primaryTotalFeatureCount: 12,
+      primaryVisibleFeatureCount: 0,
+      selectedPoliticalVisibleFeatureCountSum: 0,
+    },
+    promotedTotalFeatureCount: 42,
+    promotedPrimaryFeatureCount: 12,
+    promotedVisibleFeatureCount: 0,
+  });
+
+  assert.equal(result.primaryTotalFeatureCount, 12);
+  assert.equal(result.primaryVisibleFeatureCount, 0);
+  assert.equal(result.fullPoliticalPayloadFeatureCount, 42);
+  assert.equal(result.viewportVisibleSubsetFeatureCount, 0);
+  assert.equal(result.primaryVisibleIsSubset, true);
+  assert.equal(result.promotedVisibleIsSubset, true);
 });

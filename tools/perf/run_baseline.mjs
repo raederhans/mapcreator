@@ -356,8 +356,13 @@ function summarizeSnapshot(snapshot) {
     zoomEndToChunkVisibleMs: finiteNumber(renderPerfMetrics.zoomEndToChunkVisibleMs?.durationMs),
     interactionRecoveryWindowMs: finiteNumber(renderPerfMetrics.interactionRecoveryWindowMs?.durationMs),
     interactionRecoveryTaskMs: finiteNumber(renderPerfMetrics.interactionRecoveryTaskMs?.durationMs),
+    visibleFrameTransactionMs: finiteNumber(renderPerfMetrics.visibleFrameTransaction?.durationMs),
+    visibleFrameTransactionCount: finiteNumber(renderPerfMetrics.visibleFrameTransaction?.count),
+    visibleFrameRejectedCount: finiteNumber(renderPerfMetrics.visibleFrameTransaction?.rejectedCount),
+    visibleFrameMissingCount: finiteNumber(renderPerfMetrics.visibleFrameTransaction?.missingCount),
     continuityFrameStaleAgeMs: finiteNumber(renderPerfMetrics.continuityFrameStaleAgeMs?.durationMs),
     missingVisibleFrameCount: finiteNumber(renderPerfMetrics.missingVisibleFrameCount?.count),
+    fillPatchInputToFirstPixelMs: finiteNumber(renderPerfMetrics.fillPatchInputToFirstPixelMs?.durationMs),
     postReadyMaxPendingAgeMs: finiteNumber(renderPerfMetrics.postReadySchedulerState?.maxPendingAgeMs),
     postReadyMaxRetryCount: finiteNumber(renderPerfMetrics.postReadySchedulerState?.maxRetryCount),
     drawContextScenarioPassMs: finiteNumber(renderPerfMetrics.drawContextScenarioPass?.durationMs),
@@ -437,8 +442,13 @@ function aggregateRuns(runs) {
     "zoomEndToChunkVisibleMs",
     "interactionRecoveryWindowMs",
     "interactionRecoveryTaskMs",
+    "visibleFrameTransactionMs",
+    "visibleFrameTransactionCount",
+    "visibleFrameRejectedCount",
+    "visibleFrameMissingCount",
     "continuityFrameStaleAgeMs",
     "missingVisibleFrameCount",
+    "fillPatchInputToFirstPixelMs",
     "postReadyMaxPendingAgeMs",
     "postReadyMaxRetryCount",
     "drawContextScenarioPassMs",
@@ -644,6 +654,10 @@ function formatMetricRow(label, value) {
   return `- ${label}: ${finiteNumber(value).toFixed(1)} ms`;
 }
 
+function formatCountRow(label, value) {
+  return `- ${label}: ${finiteNumber(value).toFixed(0)}`;
+}
+
 function buildMarkdown(report) {
   const gateScenarios = DEFAULT_GATE_SCENARIOS.join(", ");
   const observationScenarios = DEFAULT_SCENARIOS
@@ -691,8 +705,13 @@ function buildMarkdown(report) {
     lines.push(formatMetricRow("zoom end to chunk visible", summary.zoomEndToChunkVisibleMs));
     lines.push(formatMetricRow("interaction recovery window", summary.interactionRecoveryWindowMs));
     lines.push(formatMetricRow("interaction recovery task", summary.interactionRecoveryTaskMs));
+    lines.push(formatMetricRow("visible frame transaction", summary.visibleFrameTransactionMs));
+    lines.push(formatCountRow("visible frame transaction count", summary.visibleFrameTransactionCount));
+    lines.push(formatCountRow("visible frame rejected count", summary.visibleFrameRejectedCount));
+    lines.push(formatCountRow("visible frame missing count", summary.visibleFrameMissingCount));
     lines.push(formatMetricRow("continuity frame stale age", summary.continuityFrameStaleAgeMs));
-    lines.push(formatMetricRow("missing visible frame count", summary.missingVisibleFrameCount));
+    lines.push(formatCountRow("missing visible frame count", summary.missingVisibleFrameCount));
+    lines.push(formatMetricRow("fill patch input to first pixel", summary.fillPatchInputToFirstPixelMs));
     lines.push(formatMetricRow("post-ready max pending age", summary.postReadyMaxPendingAgeMs));
     lines.push(formatMetricRow("post-ready max retry count", summary.postReadyMaxRetryCount));
     lines.push(formatMetricRow("draw context scenario pass", summary.drawContextScenarioPassMs));

@@ -2216,6 +2216,41 @@ function recordInteractionDurationMetric(name, durationMs, details = {}) {
   });
 }
 
+function recordVisibleFrameTransactionMetric(status, details = {}) {
+  const normalizedStatus = String(status || "").trim() || "unknown";
+  const cache = getRenderPassCacheState();
+  incrementPerfCounter("visibleFrameTransactionCount");
+  if (normalizedStatus === "committed") incrementPerfCounter("visibleFrameCommittedCount");
+  if (normalizedStatus === "reused") incrementPerfCounter("visibleFrameReusedCount");
+  if (normalizedStatus === "rejected") incrementPerfCounter("visibleFrameRejectedCount");
+  if (normalizedStatus === "missing") incrementPerfCounter("visibleFrameMissingCount");
+  if (normalizedStatus === "blocked") incrementPerfCounter("visibleFrameBlockedCount");
+  const { transform: metricTransform, durationMs: metricDurationMs, ...publicDetails } = details;
+  const transform = metricTransform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
+  const identity = getVisibleFrameIdentity(transform);
+  return recordRenderPerfMetric("visibleFrameTransaction", Number(metricDurationMs || 0), {
+    ...publicDetails,
+    status: normalizedStatus,
+    reason: String(details.reason || cache.lastAction || "visible-frame"),
+    paintSource: String(details.paintSource || ""),
+    accepted: normalizedStatus === "committed" || normalizedStatus === "reused",
+    blockReason: String(details.blockReason || ""),
+    activeScenarioId: String(details.activeScenarioId || identity.scenarioId || runtimeState.activeScenarioId || ""),
+    topologyRevision: Number(details.topologyRevision ?? identity.topologyRevision ?? runtimeState.topologyRevision ?? 0),
+    colorRevision: Number(details.colorRevision ?? identity.colorRevision ?? runtimeState.colorRevision ?? 0),
+    selectionVersion: Number(details.selectionVersion ?? identity.selectionVersion ?? runtimeState.selectionVersion ?? 0),
+    phase: String(details.phase || runtimeState.renderPhase || ""),
+    count: Number(cache.counters.visibleFrameTransactionCount || 0),
+    committedCount: Number(cache.counters.visibleFrameCommittedCount || 0),
+    reusedCount: Number(cache.counters.visibleFrameReusedCount || 0),
+    rejectedCount: Number(cache.counters.visibleFrameRejectedCount || 0),
+    missingCount: Number(cache.counters.visibleFrameMissingCount || 0),
+    blockedCount: Number(cache.counters.visibleFrameBlockedCount || 0),
+    staleAgeMs: Math.max(0, Number(details.staleAgeMs || 0)),
+    dirtyFeatureCount: Math.max(0, Number(details.dirtyFeatureCount || 0)),
+  });
+}
+
 function recordUiRefreshMetric(name, details = {}) {
   recordRenderPerfMetric(name, 0, {
     recordedAt: Date.now(),
@@ -2669,6 +2704,11 @@ function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTra
   cache.lastGoodFrame.dpr = identity.dpr;
   cache.lastGoodFrame.pixelWidth = identity.pixelWidth;
   cache.lastGoodFrame.pixelHeight = identity.pixelHeight;
+  recordVisibleFrameTransactionMetric("committed", {
+    reason: String(reason || "frame"),
+    paintSource: "last-good-capture",
+    transform,
+  });
   return true;
 }
 
@@ -2681,9 +2721,13 @@ function noteBlackFrame(reason = "unknown") {
     reason: String(reason || "unknown"),
     recordedAt: Date.now(),
   };
+  recordVisibleFrameTransactionMetric("missing", {
+    reason: String(reason || "unknown"),
+    paintSource: "black-frame",
+  });
 }
 
-function noteMissingVisibleFrame(reason = "unknown") {
+function noteMissingVisibleFrame(reason = "unknown", { recordTransaction = true } = {}) {
   incrementPerfCounter("missingVisibleFrameCount");
   const cache = getRenderPassCacheState();
   const count = Number(cache.counters.missingVisibleFrameCount || 0);
@@ -2691,6 +2735,11 @@ function noteMissingVisibleFrame(reason = "unknown") {
     count,
     reason: String(reason || "unknown"),
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
+  });
+  if (!recordTransaction) return;
+  recordVisibleFrameTransactionMetric("missing", {
+    reason: String(reason || "unknown"),
+    paintSource: "missing-visible-frame",
   });
 }
 
@@ -2703,6 +2752,10 @@ function noteMissingVisibleFrameSkippedDuringInteraction(reason = "unknown") {
     reason: String(reason || "unknown"),
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     phase: String(runtimeState.renderPhase || ""),
+  });
+  recordVisibleFrameTransactionMetric("missing", {
+    reason: String(reason || "unknown"),
+    paintSource: "interaction-skip",
   });
 }
 
@@ -2752,6 +2805,11 @@ function noteFirstVisibleFrameBlocked(reason = "visible-frame", blockReason = "u
     topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
     oceanFill: getOceanBaseFillColor(),
   });
+  recordVisibleFrameTransactionMetric("blocked", {
+    reason: String(reason || "visible-frame"),
+    blockReason: String(blockReason || "unknown"),
+    paintSource: "first-visible-frame",
+  });
 }
 
 function markFirstVisibleFramePainted(reason = "visible-frame") {
@@ -2769,6 +2827,10 @@ function markFirstVisibleFramePainted(reason = "visible-frame") {
     colorRevision: Number(runtimeState.colorRevision || 0),
     topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
     oceanFill: getOceanBaseFillColor(),
+  });
+  recordVisibleFrameTransactionMetric("committed", {
+    reason: String(reason || "visible-frame"),
+    paintSource: "first-visible-frame",
   });
   callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", {
     reason: String(reason || "visible-frame"),
@@ -2803,7 +2865,11 @@ function drawBaseVisibleFrameFallback(reason = "base-fill") {
   context.fillStyle = getOceanBaseFillColor();
   context.fillRect(0, 0, context.canvas.width, context.canvas.height);
   context.restore();
-  noteMissingVisibleFrame(reason);
+  noteMissingVisibleFrame(reason, { recordTransaction: false });
+  recordVisibleFrameTransactionMetric("committed", {
+    reason: String(reason || "base-visible-fallback"),
+    paintSource: "base-visible-fallback",
+  });
   return true;
 }
 
@@ -2825,6 +2891,13 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
     recordRenderPerfMetric("continuityFrameRejected", 0, {
       reason: frame.rejectedReason,
       staleAgeMs,
+      activeScenarioId: identity.scenarioId,
+    });
+    recordVisibleFrameTransactionMetric("rejected", {
+      reason: frame.rejectedReason,
+      paintSource: "last-good-frame",
+      staleAgeMs,
+      transform: currentTransform,
       activeScenarioId: identity.scenarioId,
     });
     return false;
@@ -2904,6 +2977,13 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
       activeScenarioId: identity.scenarioId,
     });
   }
+  recordVisibleFrameTransactionMetric("reused", {
+    reason: String(frame.reason || "last-good-frame"),
+    paintSource: "last-good-frame",
+    staleAgeMs,
+    transform: currentTransform,
+    activeScenarioId: identity.scenarioId,
+  });
   return true;
 }
 
@@ -6793,14 +6873,19 @@ function normalizePoliticalColorEditIds(featureIds) {
   return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
 }
 
-function markPendingPoliticalColorEdit(featureIds, { reason = "refresh-colors" } = {}) {
+function markPendingPoliticalColorEdit(featureIds, { reason = "refresh-colors", startedAt = 0, inputLabel = "" } = {}) {
   const ids = normalizePoliticalColorEditIds(featureIds);
   if (!ids.length) return false;
   const cache = getRenderPassCacheState();
+  const normalizedStartedAt = Number(startedAt) > 0
+    ? Number(startedAt)
+    : Number(cache.pendingPoliticalColorEditStartedAt || 0);
   cache.pendingPoliticalColorEditIds = new Set(ids);
   cache.pendingPoliticalColorEditRevision = Number(runtimeState.colorRevision || 0);
   cache.pendingPoliticalColorEditScenarioId = String(runtimeState.activeScenarioId || "");
   cache.pendingPoliticalColorEditReason = String(reason || "refresh-colors");
+  cache.pendingPoliticalColorEditStartedAt = normalizedStartedAt;
+  cache.pendingPoliticalColorEditInputLabel = String(inputLabel || cache.pendingPoliticalColorEditInputLabel || reason || "refresh-colors");
   return true;
 }
 
@@ -6815,7 +6900,39 @@ function hasPendingPoliticalColorEdit() {
     && Number(cache.pendingPoliticalColorEditRevision ?? -1) === Number(runtimeState.colorRevision || 0);
 }
 
-function clearPendingPoliticalColorEdit({ renderedCount = 0, renderedIds = null, force = false } = {}) {
+function getPendingPoliticalColorEditInputToPixelMs(cache = getRenderPassCacheState()) {
+  const startedAt = Number(cache.pendingPoliticalColorEditStartedAt || 0);
+  return startedAt > 0 ? Math.max(0, nowMs() - startedAt) : 0;
+}
+
+function recordFillPatchFirstPixelMetric({ renderedCount = 0, renderedIds = null, paintSource = "political-pass" } = {}) {
+  const cache = getRenderPassCacheState();
+  const inputToFirstPixelMs = getPendingPoliticalColorEditInputToPixelMs(cache);
+  if (Number(cache.pendingPoliticalColorEditStartedAt || 0) <= 0) return null;
+  const renderedIdCount = renderedIds instanceof Set
+    ? renderedIds.size
+    : (Array.isArray(renderedIds) ? renderedIds.length : 0);
+  incrementPerfCounter("fillPatchFirstPixelCount");
+  return recordRenderPerfMetric("fillPatchInputToFirstPixelMs", inputToFirstPixelMs, {
+    inputToFirstPixelMs,
+    paintSource: String(paintSource || "political-pass"),
+    inputLabel: String(cache.pendingPoliticalColorEditInputLabel || cache.pendingPoliticalColorEditReason || "refresh-colors"),
+    pendingReason: String(cache.pendingPoliticalColorEditReason || "refresh-colors"),
+    activeScenarioId: String(runtimeState.activeScenarioId || ""),
+    pendingFeatureCount: cache.pendingPoliticalColorEditIds instanceof Set ? cache.pendingPoliticalColorEditIds.size : 0,
+    renderedCount: Math.max(0, Number(renderedCount || 0)),
+    renderedIdCount,
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    count: Number(cache.counters.fillPatchFirstPixelCount || 0),
+  });
+}
+
+function clearPendingPoliticalColorEdit({
+  renderedCount = 0,
+  renderedIds = null,
+  force = false,
+  paintSource = "political-pass",
+} = {}) {
   const cache = getRenderPassCacheState();
   const reset = () => {
     if (cache.pendingPoliticalColorEditIds instanceof Set) {
@@ -6826,6 +6943,8 @@ function clearPendingPoliticalColorEdit({ renderedCount = 0, renderedIds = null,
     cache.pendingPoliticalColorEditRevision = -1;
     cache.pendingPoliticalColorEditScenarioId = "";
     cache.pendingPoliticalColorEditReason = "";
+    cache.pendingPoliticalColorEditStartedAt = 0;
+    cache.pendingPoliticalColorEditInputLabel = "";
     return true;
   };
   if (force) return reset();
@@ -6838,9 +6957,11 @@ function clearPendingPoliticalColorEdit({ renderedCount = 0, renderedIds = null,
     if (!(pendingIds instanceof Set) || !pendingIds.size) return reset();
     renderedIdList.forEach((id) => pendingIds.delete(id));
     if (pendingIds.size > 0) return false;
+    recordFillPatchFirstPixelMetric({ renderedCount, renderedIds, paintSource });
     return reset();
   }
   if (Number(renderedCount || 0) <= 0) return false;
+  recordFillPatchFirstPixelMetric({ renderedCount, renderedIds, paintSource });
   return reset();
 }
 
@@ -6865,7 +6986,7 @@ function retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColo
   return false;
 }
 
-function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}) {
+function refreshResolvedColorsForFeatures(featureIds, { renderNow = false, inputStartedAt = 0, inputLabel = "" } = {}) {
   migrateLegacyColorState();
   ensureSovereigntyState();
   const cache = getRenderPassCacheState();
@@ -6892,7 +7013,10 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false } = {}
   });
 
   bumpColorRevision(state);
-  if (!markPendingPoliticalColorEdit(Array.from(pendingRenderIds))) {
+  if (!markPendingPoliticalColorEdit(Array.from(pendingRenderIds), {
+    startedAt: inputStartedAt,
+    inputLabel,
+  })) {
     clearPendingPoliticalColorEdit({ force: true });
   }
   invalidateRenderPasses("political", "refresh-colors");
@@ -15835,6 +15959,7 @@ function tryPartialPoliticalPassRepaint(transform, nextSignature, timings) {
   clearPendingPoliticalColorEdit({
     renderedCount: Number(partialFeatureMetrics.renderedCount || 0),
     renderedIds: partialFeatureMetrics.renderedIds,
+    paintSource: "political-partial-repaint",
   });
   cache.reasons.political = "partial-repaint";
   setPassReferenceTransform("political", transform);
@@ -16077,6 +16202,7 @@ function drawPoliticalPass(k) {
   clearPendingPoliticalColorEdit({
     renderedCount: Number(featureMetrics.renderedCount || 0),
     renderedIds: featureMetrics.renderedIds,
+    paintSource: "political-pass",
   });
 }
 
@@ -20976,6 +21102,7 @@ function applyVisualFillToResolvedIds(targetIds, selectedColor, kind, dirtyReaso
 }
 
 function eraseVisualOverridesForIds(targetIds, { kind, dirtyReason } = {}) {
+  const actionStart = nowMs();
   const resolvedIds = Array.from(new Set((Array.isArray(targetIds) ? targetIds : [])
     .map((value) => String(value || "").trim())
     .filter(Boolean)));
@@ -20988,7 +21115,11 @@ function eraseVisualOverridesForIds(targetIds, { kind, dirtyReason } = {}) {
     delete runtimeState.featureOverrides[targetId];
   });
   markLegacyColorStateDirty();
-  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  refreshResolvedColorsForFeatures(resolvedIds, {
+    renderNow: false,
+    inputStartedAt: actionStart,
+    inputLabel: kind || "erase-feature-color",
+  });
   markDirty(dirtyReason || kind || "erase-feature-color");
   commitHistoryEntry({
     kind: kind || "erase-feature-color",
@@ -21372,7 +21503,11 @@ function applyVisualSubdivisionFill(targetIds, selectedColor, { kind = "fill-fea
     runtimeState.featureOverrides[targetId] = color;
   });
   markLegacyColorStateDirty();
-  refreshResolvedColorsForFeatures(resolvedIds, { renderNow: false });
+  refreshResolvedColorsForFeatures(resolvedIds, {
+    renderNow: false,
+    inputStartedAt: actionStart,
+    inputLabel: kind || "fill-feature-color",
+  });
   markDirty(dirtyReason);
   commitHistoryEntry({
     kind,
@@ -21536,7 +21671,10 @@ function applyBrushHit(hit) {
       const changed = resetFeatureOwnerCodes(freshIds);
       if (changed > 0) {
         brushSession.changed = true;
-        refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+        refreshResolvedColorsForFeatures(freshIds, {
+          renderNow: false,
+          inputLabel: "brush-erase-feature-color",
+        });
         scheduleDynamicBorderRecompute("brush-sovereignty-reset", 90);
         return true;
       }
@@ -21564,7 +21702,10 @@ function applyBrushHit(hit) {
       delete runtimeState.featureOverrides[targetId];
     });
     markLegacyColorStateDirty();
-    refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+    refreshResolvedColorsForFeatures(freshIds, {
+      renderNow: false,
+      inputLabel: "brush-erase-feature-color",
+    });
     brushSession.changed = true;
     return true;
   }
@@ -21608,7 +21749,10 @@ function applyBrushHit(hit) {
     runtimeState.featureOverrides[targetId] = selectedColor;
   });
   markLegacyColorStateDirty();
-  refreshResolvedColorsForFeatures(freshIds, { renderNow: false });
+  refreshResolvedColorsForFeatures(freshIds, {
+    renderNow: false,
+    inputLabel: "brush-fill-feature-color",
+  });
   brushSession.changed = true;
   return true;
 }
@@ -22032,7 +22176,11 @@ async function handleClick(event, _interactionContext = null) {
         delete runtimeState.featureOverrides[targetId];
       });
       markLegacyColorStateDirty();
-      refreshResolvedColorsForFeatures(targetIds, { renderNow: false });
+      refreshResolvedColorsForFeatures(targetIds, {
+        renderNow: false,
+        inputStartedAt: actionStart,
+        inputLabel: "erase-feature-color",
+      });
       markDirty("erase-feature-color");
       commitHistoryEntry({
         kind: "erase-feature-color",

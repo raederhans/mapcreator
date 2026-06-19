@@ -198,7 +198,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.map_renderer_source,
             re.compile(
-                r'drewExactFrame = composeCachedPasses\(getActiveRenderPassNames\(\)\);.*?'
+                r'const activeRenderPassNames = getActiveRenderPassNames\(\);.*?'
+                r'drewExactFrame = composeCachedPasses\(activeRenderPassNames\);.*?'
                 r'finalizePendingExactAfterSettleRefreshAfterPaint\(\);',
                 re.S,
             ),
