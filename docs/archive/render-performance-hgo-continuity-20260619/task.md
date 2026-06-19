@@ -15,6 +15,8 @@
 - [x] Complete independent review lane.
 - [x] Commit the isolated worktree changes.
 - [x] Re-check parent `main` integration safety.
+- [x] Fast-forward merge through clean integration worktree.
+- [x] Archive task docs after integration.
 
 ## Delivery Package
 
@@ -34,16 +36,17 @@
 - Dist mirror: `dist/app/js/core/hgo_runtime_preview.js`, `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/exact_after_settle_refresh_plans.js`, `dist/app/js/core/map_renderer/hgo_runtime_preview_render_owner.js`, `dist/app/js/core/map_renderer/hgo_runtime_preview_frame_commit.js`, `dist/pages-dist-manifest.json`
 - Data contract: `data/manifest.json`
 - Tests: `tests/hgo_runtime_preview.node.test.mjs`, `tests/hgo_raster_renderer.node.test.mjs`, `tests/exact_after_settle_refresh_plans_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/test_map_renderer_render_pipeline_passes_boundary_contract.py`, `tests/test_pages_dist_startup_shell.py`
-- Docs/state: `docs/active/render-performance-hgo-continuity/*`, `docs/active/_worktree_registry.md`
+- Docs/state: `docs/archive/render-performance-hgo-continuity-20260619/*`, `docs/active/_worktree_registry.md`
 - Local ignored test helper: `node_modules` junction to the parent checkout, used only so Playwright can resolve existing dependencies in this isolated worktree.
 
 ### Diff Summary
 
-- Current branch: `codex/hgo-render-continuity`
+- Current integration branch: `codex/hgo-render-continuity-main-integration`
+- Feature branch: `codex/hgo-render-continuity`
 - Base commit: `bf76965df72d67211258120c8c9d0f1fc71f959d`
 - Base/main divergence: worktree branch is based on current local `main` at the same base commit.
 - Diff size before commit: source, dist mirror, data manifest, tests, and active docs changed; two new committed files are the source/dist HGO frame committer modules.
-- Commit status: functional commit `123d0b6f` records the runtime, dist, data-contract, and test changes. This document records the ready-for-integration closeout.
+- Commit status: functional commit `123d0b6f` records the runtime, dist, data-contract, and test changes. Feature branch closeout commit `312821df` records the ready-for-integration package.
 
 ### Verification
 
@@ -63,6 +66,8 @@
 - PASS: `node --check` on affected source, dist mirror, and Node test files
 - PASS: `git diff --check`
 - PASS: independent review lane after review fixes; no new blocking issues were reported.
+- PASS: post-merge `npm run test:node:hgo-runtime-preview` (21/21)
+- PASS: post-merge `npm run test:node:scenario-chunk-contracts` (44/44)
 
 ### Integration Risk
 
@@ -73,4 +78,4 @@
 
 ### Integration Recommendation
 
-Commit and push this branch. Merge/rebase through a clean integration path because the parent `main` checkout currently carries unrelated docs/archive and `lessons learned.md` changes.
+The feature branch was fast-forwarded through a clean integration worktree because the parent `main` checkout currently carries unrelated docs/archive and `lessons learned.md` changes. Push the clean integration branch to `origin/main`, then clean the temporary worktrees after final status confirmation.
