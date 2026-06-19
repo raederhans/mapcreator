@@ -10,6 +10,7 @@ TRANSPORT_OVERVIEW_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "transpor
 TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_display_policy.js"
 TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
 FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
+CITY_POINTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_points_render_owner.js"
 
 
 class TransportFacilityInteractionsContractTest(unittest.TestCase):
@@ -46,13 +47,13 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
 
     def test_map_renderer_wires_facility_hover_and_card_logic(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        city_owner_content = CITY_POINTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         owner_content = FACILITY_SURFACE_JS.read_text(encoding="utf-8")
         transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
         facade_content = FACILITY_FACADE_JS.read_text(encoding="utf-8")
         required_tokens = [
             "function getHoveredFacilityEntryFromEvent",
             'recordInteractionDurationMetric("interactionHoverFacilityProbeDuration"',
-            'recordInteractionDurationMetric("interactionHoverCityProbeDuration"',
             "function applyFacilityInfoCardState",
             "function zoomToFacilityEntry",
             "const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;",
@@ -69,6 +70,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         ]
         for token in required_tokens:
             self.assertIn(token, content)
+        self.assertIn('recordInteractionDurationMetric("interactionHoverCityProbeDuration"', city_owner_content)
         self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)
         self.assertIn("setVisibleFacilityHoverEntries(normalizedFamilyId, hoverEntries, {", transport_owner_content)
@@ -158,8 +160,8 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         ]
         owner_required_tokens = [
             'from "./appearance_transport_summary.js";',
-            'getTransportAppearanceConfig().airport.primaryColor = normalizeOceanFillColor(event.target.value || "#1d4ed8");',
-            'getTransportAppearanceConfig().port.primaryColor = normalizeOceanFillColor(event.target.value || "#b45309");',
+            "getTransportAppearanceConfig().airport.primaryColor = normalizeOceanFillColor(event.target.value || airportDefaults.primaryColor);",
+            "getTransportAppearanceConfig().port.primaryColor = normalizeOceanFillColor(event.target.value || portDefaults.primaryColor);",
             "buildTransportFamilySummaryTextForState({",
             "formatTransportPercent,",
             "formatTransportScopeLabel,",
@@ -208,10 +210,13 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
           self.assertIn(token, i18n_content)
 
     def test_toolbar_syncs_facility_card_visibility_when_transport_surface_changes(self):
-        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
         owner_content = TRANSPORT_APPEARANCE_CONTROLLER_JS.read_text(encoding="utf-8")
         self.assertIn("runtimeState.syncFacilityInfoCardVisibilityFn?.();", owner_content)
-        self.assertIn("panel.hidden = !isActive;", toolbar_content)
+        self.assertIn("function syncFacilityInfoCardVisibility()", renderer_content)
+        self.assertIn('document.getElementById("appearancePanelTransport")', renderer_content)
+        self.assertIn("transportPanel.hidden !== true", renderer_content)
+        self.assertIn("applyFacilityInfoCardState(null);", renderer_content)
 
     def test_map_renderer_coalesces_mousemove_hover_overlay_only(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")

@@ -4,20 +4,17 @@ Last updated: 2026-06-19
 
 ## Integration Owner
 
-- Owner: module-boundary continuation integration owner.
-- Current base: `main@ebb2a7b0` after final archive push.
-- Phase D base: `main@e4b04c66`.
-- Live test/build owner: no active live process after final UltraQA verification.
-- Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews; Hypatia completed Phase B split-candidate review; Curie and Archimedes completed Phase B code/docs review; Pasteur completed Phase D guardrail scout. Turing Phase D review could not complete because the Codex subagent quota was exhausted. No child agent owns live tests.
+- Owner: module-boundary continuation v2 integration owner.
+- Current base: `main@0ca9e3df` matched `origin/main@0ca9e3df` before creating the execution worktree.
+- Execution branch: `codex/module-boundary-continuation-v2`.
+- Live test/build owner: main Codex agent owns all live tests, Pages dist, build, merge, push, and cleanup commands.
+- Subagents: current v2 child agents are read-only static review lanes; no child agent owns live tests.
 
 ## Recommended Order
 
-1. Treat Phase A renderer exact-after-settle plan extraction as integrated and pushed.
-2. Treat Phase C backend app modularization as integrated, verified, and cleaned up.
-3. Treat HGO runtime preview overlap as integrated.
-4. Treat HGO vector scene terrain suppression as integrated.
-5. Treat Phase B toolbar scenario context bar owner as integrated, post-merge verified, and cleaned up.
-6. Treat Phase D guardrails as integrated, post-merge verified, and cleaned up.
+1. Complete `codex/module-boundary-continuation-v2` in one execution worktree because scenario, exact-after-settle, and HGO owner work all touch `map_renderer.js`.
+2. Keep architecture-boundary and HGO spike work inside the same branch unless file overlap proves a separate worktree safer.
+3. Merge the execution branch into clean `main` only after targeted verification, review, QA, and delivery package completion.
 
 ## Current Worktrees
 
@@ -25,7 +22,8 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@ebb2a7b0` | `origin/main@ebb2a7b0` | clean integration owner checkout | none | All Phase A-D commits are merged and pushed; task docs are archived under `docs/archive/module-boundary-continuation-20260618/`; final UltraQA passed exact-after-settle 5, scenario context 6, toolbar boundary 51, backend preview 25+13, HGO preview 19, import graph 48 specs, Pages dist 37+8, and diff check. | Green; no active module-boundary continuation worktree remains. | No active integration action. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@0ca9e3df` | `origin/main@0ca9e3df` | clean integration owner checkout | none | `git status -sb` clean and `git worktree list` confirmed before v2 worktree creation. | Green; integration owner only. | Merge/push after v2 worktree is ready. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-continuation-v2` | `codex/module-boundary-continuation-v2@0ca9e3df` | `main@0ca9e3df` | ready-for-review | hot files: `js/core/map_renderer.js`, `js/core/map_renderer/scenario_refresh_runtime.js`, `js/core/map_renderer/exact_after_settle_scheduler.js`, `js/core/map_renderer/hgo_runtime_preview_render_owner.js`, `tools/check_architecture_boundaries.mjs`, `tools/spike_hgo_runtime_lod_assets.mjs`, `package.json`, `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/*_owner.js`, `dist/pages-dist-manifest.json`, renderer/scenario/HGO/physical/Python boundary tests, active docs; `.runtime/reports/generated/hgo_runtime_lod_spike.json` is ignored generated evidence | Stage 1-6 passed syntax, exact/scenario/HGO plan and behavior tests, physical contract, scenario chunk contracts 44/44, Python owner/boundary contracts 77/77, runtime hook/render pipeline contracts, architecture boundary gate, HGO LOD spike generation, import graph, `verify:pages-dist`, and diff check. HGO spike measured 58,449,790 bytes of Pages-published HGO static assets. | Yellow by design: multiple phases share renderer entry and test/package surfaces, so execution stays in one worktree. | Finish read-only reviews and delivery package, then merge into main. |
 
 ## Recent Integrated Branches
 
@@ -115,6 +113,7 @@ These rows are branch or commit recovery indexes. They are historical references
 - Parent main checkout had unrelated local WIP in `docs/archive/data-architecture-hardening-v2/context.md`; renderer integration used a clean temporary worktree to preserve that local file.
 - Main Codex agent owns validation commands; child agents are read-only static reviewers.
 - Historical delivery packages live in their archived task/context docs; active registry keeps current worktree rows and recovery indexes.
+- 2026-06-19 module-boundary continuation v2: Stage 1 extracted scenario refresh runtime state into `js/core/map_renderer/scenario_refresh_runtime.js`; Stage 2 extracted exact-after-settle/deferred exact context scheduling into `js/core/map_renderer/exact_after_settle_scheduler.js`; Stage 3 extracted HGO preview render/inspect/pass/bounds glue into `js/core/map_renderer/hgo_runtime_preview_render_owner.js`; Stage 4 added `verify:architecture-boundaries`; Stage 5 added repeatable HGO runtime LOD spike evidence through `tools/spike_hgo_runtime_lod_assets.mjs`; Stage 6 repaired stale owner source-scan contracts and completed final validation. Main agent owns all live validation. Current evidence: syntax checks passed, scenario refresh 4/4, exact plan tests 5/5, HGO runtime preview 20/20, physical layer contract 2/2, scenario chunk contracts 44/44, Python owner/boundary contracts 77/77, architecture boundary gate passed, import graph passed, `verify:pages-dist` passed with startup shell 37/37 and landing showcase 8/8, diff check passed, and HGO LOD spike report generated at `.runtime/reports/generated/hgo_runtime_lod_spike.json` with 58,449,790 bytes of measured Pages-published HGO static assets.
 - 2026-06-18 TNO+HGO integration: branch `codex/tno-hgo-integration` was created from clean `origin/main@1206eb43`, confirmed the TNO political color recovery fix was already in base, cherry-picked HGO as `9494ca52`, validated combined behavior, and archived docs under `docs/archive/tno-hgo-integration-20260618/`.
 - 2026-06-18 HGO preview projection/base replacement: source branch `codex/hgo-preview-projection-base-replace@7a95e26c` was integrated through `codex/tno-hgo-integration`; docs archived under `docs/archive/hgo-preview-projection-base-replace-20260618/`.
 - 2026-06-17 landing work maps: branch `codex/landing-work-maps-integration` was created from clean `origin/main@6874731f`, functional commit `a48eec68` was fast-forward merged into `main`, closeout commit `0538481a` archived the task docs, and `origin/main` was pushed. The parent `codex/tno-political-color-recovery` checkout remains mixed renderer WIP and was not staged wholesale.

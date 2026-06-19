@@ -19,6 +19,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
   const physicalOwnerSource = readRepoFile("js", "ui", "toolbar", "appearance_physical_owner.js");
   const interactionFunnelSource = readRepoFile("js", "core", "interaction_funnel.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
+  const exactSchedulerSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_scheduler.js");
 
   const physicalBaseStart = physicalLayerOwnerSource.indexOf("function drawPhysicalBasePass");
   const physicalBaseEnd = physicalLayerOwnerSource.indexOf("function drawPhysicalAtlasLayer");
@@ -104,7 +105,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
         < physicalBaseSource.indexOf("drawPhysicalReliefOverlayLayer(k, { interactive });")
       && physicalBaseSource.includes("const renderedCount = semanticRenderedCount + intensityRenderedCount + reliefRenderedCount;"),
     hasPhysicalExactRefresh:
-      /invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(rendererSource),
+      /invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(exactSchedulerSource),
     contextBaseKeepsReliefBelowPolitical:
       !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(")
       && contextBaseSource.includes("drawPhysicalContourLayer(k, { interactive });"),
@@ -145,11 +146,11 @@ test("physical layer source contracts stay wired to the expected renderer and st
       /function shouldPreferImmediateExactContextBaseRefresh\(reuseDecision = null\)/.test(rendererSource) === false
       && /const deferredReuseDecision = state\.deferExactAfterSettle \? getContextBaseReuseDecision\(\) : null;/.test(rendererSource) === false,
     contourZoomBucketRefreshesAfterQuietWindow:
-      /function buildExactAfterSettleRefreshPlan[\s\S]*?const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh\(reuseDecision\);[\s\S]*?createExactAfterSettleRefreshPlan/.test(rendererSource)
-      && /function applyExactAfterSettleRefreshPlan[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(rendererSource),
+      /function buildExactAfterSettleRefreshPlan[\s\S]*?const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh\(reuseDecision\);[\s\S]*?createExactAfterSettleRefreshPlan/.test(exactSchedulerSource)
+      && /function applyExactAfterSettleRefreshPlan[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);/.test(exactSchedulerSource),
     exactAfterSettleKeepsPoliticalRefreshExplicit:
-      /function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?const exactAfterSettleDprPasses = getExactAfterSettleDprRestorePasses\(RENDER_PASS_NAMES\);[\s\S]*?reason: "exact-after-settle-dpr-restore",[\s\S]*?targetPassesOnDprChange: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnResize: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnCanvasResize: exactAfterSettleDprPasses,[\s\S]*?runtimeState\.deferExactAfterSettle = false;[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);[\s\S]*?resolveExactAfterSettleTargetPasses/.test(rendererSource)
-      && /function prepareExactAfterSettlePassesInSlices\(generation, plan\) \{[\s\S]*?if \(runtimeState\.renderPhase !== RENDER_PHASE_IDLE\)[\s\S]*?if \(!isExactAfterSettleIdentityCurrent\(activeController\)\)[\s\S]*?if \(passName === "political"\) \{[\s\S]*?invalidateExactAfterSettlePoliticalPass\(plan\);/.test(rendererSource),
+      /function applyExactAfterSettleRefreshPlan\(plan\) \{[\s\S]*?const exactAfterSettleDprPasses = getExactAfterSettleDprRestorePasses\(renderPassNames\);[\s\S]*?reason: "exact-after-settle-dpr-restore",[\s\S]*?targetPassesOnDprChange: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnResize: exactAfterSettleDprPasses,[\s\S]*?targetPassesOnCanvasResize: exactAfterSettleDprPasses,[\s\S]*?runtimeState\.deferExactAfterSettle = false;[\s\S]*?if \(plan\.forceExactContextBaseRefresh\) \{[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);[\s\S]*?resolveExactAfterSettleTargetPasses/.test(exactSchedulerSource)
+      && /function prepareExactAfterSettlePassesInSlices\(generation, plan\) \{[\s\S]*?if \(runtimeState\.renderPhase !== renderPhaseIdle\)[\s\S]*?if \(!isExactAfterSettleIdentityCurrent\(activeController\)\)[\s\S]*?if \(passName === "political"\) \{[\s\S]*?invalidateExactAfterSettlePoliticalPass\(plan\);/.test(exactSchedulerSource),
     hasMountainMultiplier:
       /if \(normalized === "mountain_high_relief"\) return 1\.18;/.test(rendererSource),
     hasMountainHillsMultiplier:

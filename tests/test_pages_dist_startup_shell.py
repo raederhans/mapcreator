@@ -20,6 +20,7 @@ LANDING_APP_JS = REPO_ROOT / "landing" / "app.js"
 LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
 DIST_APP_JS = REPO_ROOT / "dist" / "app.js"
 DIST_STYLES_CSS = REPO_ROOT / "dist" / "styles.css"
@@ -952,23 +953,25 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
     def test_hgo_runtime_preview_renders_through_dedicated_pass(self) -> None:
         source = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        hgo_preview_owner_source = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         start = source.index("function drawCanvas(")
-        end = source.index("function buildExactAfterSettleRefreshPlan", start)
+        end = source.index("function readRenderPerfMetricDuration", start)
         body = source[start:end]
-        pass_start = source.index("function drawHgoPreviewPass(")
-        pass_end = source.index("function drawEffectsPass(", pass_start)
-        pass_body = source[pass_start:pass_end]
+        pass_start = hgo_preview_owner_source.index("function drawPreviewPass(")
+        pass_end = hgo_preview_owner_source.index("function normalizeHitPayload(", pass_start)
+        pass_body = hgo_preview_owner_source[pass_start:pass_end]
 
         # Pages 构建会复制源码 drawCanvas；这里把 HGO preview pass 合同纳入 Pages shell 验证。
         self.assertNotIn("preferLastGoodFrameForHgoPreview", body)
         self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas")', body)
-        self.assertIn('renderHgoRuntimePreviewIfReady("hgo-preview-pass", {', pass_body)
+        self.assertIn('renderIfReady("hgo-preview-pass", {', pass_body)
         self.assertIn("targetCanvas,", pass_body)
         self.assertNotIn("projectionTransform: null,", pass_body)
-        self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = [\n  "hgoPreview",\n];', source)
+        self.assertIn('const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = Object.freeze([\n  "hgoPreview",\n]);', hgo_preview_owner_source)
+        self.assertIn("return getHgoRuntimePreviewRenderOwner().getActiveRenderPassNames();", source)
         self.assertIn(
-            "return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : RENDER_PASS_NAMES;",
-            source,
+            "return isReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : renderPassNames;",
+            hgo_preview_owner_source,
         )
         self.assertIn("drewExactFrame = composeCachedPasses(getActiveRenderPassNames());", source)
 

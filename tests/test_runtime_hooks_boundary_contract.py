@@ -11,6 +11,7 @@ STATE_INDEX_JS = REPO_ROOT / "js" / "core" / "state" / "index.js"
 STATE_CONFIG_JS = REPO_ROOT / "js" / "core" / "state" / "config.js"
 STATE_BUS_JS = REPO_ROOT / "js" / "core" / "state" / "bus.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 
 
 class RuntimeHooksBoundaryContractTest(unittest.TestCase):
@@ -76,6 +77,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
 
         for hook_name in [
             "setHgoRuntimePreviewEnabledFn",
@@ -91,8 +93,8 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
             'renderOptions: () => callRuntimeHook(state, "getHgoRuntimePreviewProjectionOptionsFn") || {},',
             toolbar_content,
         )
-        self.assertIn('callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn"', renderer_content)
-        self.assertIn('callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn"', renderer_content)
+        self.assertIn('callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn"', hgo_preview_owner_content)
+        self.assertIn('callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn"', hgo_preview_owner_content)
         self.assertIn(
             'hgoRuntimePreviewController?.renderPreview?.(options) || null',
             toolbar_content,
@@ -102,34 +104,34 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
             toolbar_content,
         )
         self.assertIn("function getHgoRuntimePreviewProjectionOptions(overrides = {})", renderer_content)
-        self.assertIn("HGO_DEFAULT_TARGET_PROJECTION", renderer_content)
-        self.assertIn("HGO_SOURCE_PROJECTION", renderer_content)
+        self.assertIn("HGO_DEFAULT_TARGET_PROJECTION", hgo_preview_owner_content)
+        self.assertIn("HGO_SOURCE_PROJECTION", hgo_preview_owner_content)
         self.assertIn(
             'registerRuntimeHook(runtimeState, "getHgoRuntimePreviewProjectionOptionsFn", getHgoRuntimePreviewProjectionOptions);',
             renderer_content,
         )
-        self.assertIn("projectionPixelRatio: runtimeState.dpr,", renderer_content)
-        self.assertIn("projectionTransform: runtimeState.zoomTransform || null,", renderer_content)
+        self.assertIn("projectionPixelRatio: runtimeState.dpr,", hgo_preview_owner_content)
+        self.assertIn("projectionTransform: runtimeState.zoomTransform || null,", hgo_preview_owner_content)
         self.assertIn("function drawHgoPreviewPass()", renderer_content)
-        self.assertIn('renderHgoRuntimePreviewIfReady("hgo-preview-pass"', renderer_content)
-        self.assertIn("targetCanvas,", renderer_content)
-        self.assertIn("...getHgoRuntimePreviewProjectionOptions(options),", renderer_content)
+        self.assertIn('renderIfReady("hgo-preview-pass"', hgo_preview_owner_content)
+        self.assertIn("targetCanvas,", hgo_preview_owner_content)
+        self.assertIn("...getProjectionOptions(options),", hgo_preview_owner_content)
         self.assertIn("function inspectHgoRuntimePreviewFromEvent(", renderer_content)
-        self.assertIn("function normalizeHgoRuntimeHitPayload(", renderer_content)
+        self.assertIn("function normalizeHitPayload(", hgo_preview_owner_content)
         self.assertIn('if (targetType === "hgo") {', renderer_content)
         self.assertIn("normalized.hgoRuntime = hgoRuntime;", renderer_content)
         self.assertIn('requestInteractionRender("hgo-runtime-preview-click");', renderer_content)
 
-        hgo_hit_start = renderer_content.index('id: `hgo:province:${resolved.provinceId}`')
-        hgo_hit_end = renderer_content.index("hgoRuntime: Object.freeze({", hgo_hit_start)
-        hgo_hit_body = renderer_content[hgo_hit_start:hgo_hit_end]
+        hgo_hit_start = hgo_preview_owner_content.index('id: `hgo:province:${resolved.provinceId}`')
+        hgo_hit_end = hgo_preview_owner_content.index("hgoRuntime: Object.freeze({", hgo_hit_start)
+        hgo_hit_body = hgo_preview_owner_content[hgo_hit_start:hgo_hit_end]
         self.assertIn('targetType: "hgo",', hgo_hit_body)
         self.assertIn("countryCode: ownerTag,", hgo_hit_body)
         self.assertIn('hitSource: "hgo-runtime-preview",', hgo_hit_body)
 
         # HGO 预览必须作为 render pass 参与合成；drawCanvas 末尾不能再直写主 canvas。
         draw_start = renderer_content.index("function drawCanvas() {")
-        draw_end = renderer_content.index("function buildExactAfterSettleRefreshPlan(", draw_start)
+        draw_end = renderer_content.index("function readRenderPerfMetricDuration(", draw_start)
         draw_body = renderer_content[draw_start:draw_end]
         self.assertNotIn('renderHgoRuntimePreviewIfReady("draw-canvas");', draw_body)
         self.assertNotIn("preferLastGoodFrameForHgoPreview", draw_body)

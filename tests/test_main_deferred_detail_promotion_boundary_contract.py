@@ -7,6 +7,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+SCENARIO_REFRESH_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_runtime.js"
+SCENARIO_CHUNK_PROMOTION_HELPERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "scenario_chunk_promotion_helpers.js"
 
 
 class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
@@ -137,6 +139,8 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
     def test_active_scenario_detail_promotion_refreshes_political_water_and_atlantropa_targets(self):
         owner_content = DEFERRED_DETAIL_PROMOTION_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        refresh_runtime_content = SCENARIO_REFRESH_RUNTIME_JS.read_text(encoding="utf-8")
+        promotion_helpers_content = SCENARIO_CHUNK_PROMOTION_HELPERS_JS.read_text(encoding="utf-8")
 
         self.assertRegex(
             owner_content,
@@ -148,7 +152,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             ),
         )
         self.assertRegex(
-            renderer_content,
+            refresh_runtime_content,
             re.compile(
                 r"function refreshMapDataForScenarioApply\([\s\S]*?"
                 r'targetPasses: \["background", "physicalBase", "political", "contextBase", "contextScenario", "dayNight", "borders", "labels"\],[\s\S]*?'
@@ -157,7 +161,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             ),
         )
         self.assertRegex(
-            renderer_content,
+            refresh_runtime_content,
             re.compile(
                 r"function refreshMapDataForScenarioApply\([\s\S]*?"
                 r"const atlantropaWaterFeatureCount = getEffectiveAtlantropaFeatures\(\)\.water\.length;[\s\S]*?"
@@ -167,9 +171,17 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             ),
         )
         self.assertRegex(
-            renderer_content,
+            refresh_runtime_content,
             re.compile(
                 r"function refreshMapDataForScenarioChunkPromotion\([\s\S]*?"
+                r"resolveScenarioChunkPromotionChangeSet\(\{[\s\S]*?"
+                r"effectiveChangedLayerKeys",
+                re.S,
+            ),
+        )
+        self.assertRegex(
+            promotion_helpers_content,
+            re.compile(
                 r'const hasAtlantropaLayerChange = normalizedChangedLayerKeys\.includes\("scenario_atlantropa"\);[\s\S]*?'
                 r'"water"',
                 re.S,

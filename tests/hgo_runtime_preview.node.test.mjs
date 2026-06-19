@@ -7,6 +7,7 @@ import {
   createHgoRuntimePreviewController,
   ensureHgoRuntimePreviewState,
 } from "../js/core/hgo_runtime_preview.js";
+import { createHgoRuntimePreviewRenderOwner } from "../js/core/map_renderer/hgo_runtime_preview_render_owner.js";
 
 const seed = {
   provinces: {
@@ -456,4 +457,117 @@ test("preview can render projected buffers without a canvas", async () => {
   assert.equal(hit.pixelIndex, 1);
   assert.equal(hit.resolved.provinceId, 2);
   assert.equal(harness.runtimeState.hgoRuntimePreview.inspectResult.projectionName, "equalEarth");
+});
+
+test("renderer-side HGO preview owner owns active pass selection, draw, inspect, and bounds", () => {
+  const projection = createLinearProjection();
+  const runtimeState = {
+    dpr: 2,
+    width: 8,
+    height: 6,
+    zoomTransform: { x: -1, y: 0, k: 1.5 },
+    hgoRuntimePreview: {
+      enabled: true,
+      status: HGO_RUNTIME_PREVIEW_STATUS.READY,
+    },
+  };
+  const renderPassNames = Object.freeze(["background", "hgoPreview"]);
+  const transformedFramePassNames = Object.freeze(["background", "hgoPreview", "labels"]);
+  const contextCalls = [];
+  const targetCanvas = {
+    width: 16,
+    height: 12,
+    getContext: () => ({
+      setTransform: (...args) => contextCalls.push(["setTransform", ...args]),
+      clearRect: (...args) => contextCalls.push(["clearRect", ...args]),
+    }),
+  };
+  const renderCalls = [];
+  const owner = createHgoRuntimePreviewRenderOwner({
+    runtimeState,
+    renderPassNames,
+    transformedFramePassNames,
+    getProjection: () => projection,
+    getMapSvg: () => ({ nodeName: "svg" }),
+    getTargetCanvas: () => targetCanvas,
+    callRuntimeHook: (_state, hookName, ...args) => {
+      if (hookName === "renderHgoRuntimePreviewFn") {
+        renderCalls.push(args[0]);
+        return {
+          projectedPixelCount: 6,
+          unprojectedPixelCount: 1,
+          resolvedPixelCount: 5,
+          unresolvedPixelCount: 1,
+        };
+      }
+      if (hookName === "inspectHgoRuntimePreviewPointFn") {
+        return {
+          pixelIndex: 7,
+          x: args[0],
+          y: args[1],
+          sourceRgb: [10, 20, 30],
+          resolved: {
+            provinceId: 42,
+            stateId: 3,
+            ownerTag: "aaa",
+            controllerTag: "bbb",
+          },
+        };
+      }
+      return null;
+    },
+    createHitResult: (payload = {}) => ({ ...payload }),
+    resetCanvasContext: (targetContext, width, height) => {
+      targetContext.setTransform(1, 0, 0, 1, 0, 0);
+      targetContext.clearRect(0, 0, width, height);
+    },
+    recordRenderPerfMetric: (name, _durationMs, details) => {
+      contextCalls.push(["metric", name, details]);
+    },
+    nowMs: () => 100,
+    getD3: () => ({
+      pointer: () => [2.5, 3],
+    }),
+  });
+
+  assert.deepEqual(owner.getActiveRenderPassNames(), ["hgoPreview"]);
+  assert.deepEqual(owner.getActiveTransformedFramePassNames(), ["hgoPreview"]);
+  assert.deepEqual(owner.getProjectionOptions({ reason: "test" }), {
+    projection,
+    projectionName: "equalEarth",
+    sourceProjection: "equirectangular",
+    projectionPixelRatio: 2,
+    projectionTransform: { x: -1, y: 0, k: 1.5 },
+    reason: "test",
+  });
+
+  owner.drawPreviewPass();
+  assert.deepEqual(contextCalls[0], ["setTransform", 1, 0, 0, 1, 0, 0]);
+  assert.deepEqual(contextCalls[1], ["clearRect", 0, 0, 16, 12]);
+  assert.equal(renderCalls[0].reason, "hgo-preview-pass");
+  assert.equal(renderCalls[0].targetCanvas, targetCanvas);
+  assert.equal(renderCalls[0].targetWidth, 16);
+  assert.equal(renderCalls[0].targetHeight, 12);
+
+  const inspected = owner.inspectFromEvent({ type: "pointermove" }, { eventType: "hover" });
+  assert.equal(inspected.active, true);
+  assert.equal(inspected.point.x, 5);
+  assert.equal(inspected.point.y, 6);
+  assert.equal(inspected.hit.id, "hgo:province:42");
+  assert.equal(inspected.hit.targetType, "hgo");
+  assert.equal(inspected.hit.countryCode, "AAA");
+  assert.equal(inspected.hit.hitSource, "hgo-runtime-preview");
+  assert.equal(inspected.hit.hgoRuntime.pixelIndex, 7);
+
+  const bounds = owner.getProjectedBounds();
+  assert.equal(bounds.minX, 0);
+  assert.equal(bounds.minY, 0);
+  assert.equal(bounds.maxX, 4);
+  assert.equal(bounds.maxY, 2);
+
+  runtimeState.hgoRuntimePreview.status = HGO_RUNTIME_PREVIEW_STATUS.IDLE;
+  assert.equal(owner.isReady(), false);
+  assert.equal(owner.getVisibilitySignature(), "hgo:off");
+  assert.equal(owner.getActiveRenderPassNames(), renderPassNames);
+  assert.equal(owner.getActiveTransformedFramePassNames(), transformedFramePassNames);
 });

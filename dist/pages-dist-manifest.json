@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -45686,6 +45686,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/exact_after_settle_scheduler.js",
+      "size_bytes": 29298,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/facade_border_runtime.js",
       "size_bytes": 2071,
       "source_kind": "dist"
@@ -45706,6 +45711,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+      "size_bytes": 6856,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/interaction_hit_candidates.js",
       "size_bytes": 8709,
       "source_kind": "dist"
@@ -45721,8 +45731,13 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
+      "size_bytes": 20584,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 915958,
+      "size_bytes": 870605,
       "source_kind": "dist"
     },
     {
@@ -47052,7 +47067,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1453245,
+      "size_bytes": 1453670,
       "source_kind": "dist"
     },
     {
@@ -47071,5 +47086,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153047761
+  "total_bytes": 1153059694
 }

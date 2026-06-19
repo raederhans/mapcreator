@@ -4,6 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
+SCENARIO_REFRESH_RUNTIME_PATH = ROOT / "js/core/map_renderer/scenario_refresh_runtime.js"
+EXACT_AFTER_SETTLE_SCHEDULER_PATH = ROOT / "js/core/map_renderer/exact_after_settle_scheduler.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
 SCENARIO_CHUNK_RUNTIME_PATH = ROOT / "js/core/scenario/chunk_runtime.js"
@@ -19,6 +21,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.map_renderer_source = MAP_RENDERER_PATH.read_text(encoding="utf-8")
+        cls.scenario_refresh_runtime_source = SCENARIO_REFRESH_RUNTIME_PATH.read_text(encoding="utf-8")
+        cls.exact_after_settle_scheduler_source = EXACT_AFTER_SETTLE_SCHEDULER_PATH.read_text(encoding="utf-8")
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
         cls.scenario_chunk_runtime_source = SCENARIO_CHUNK_RUNTIME_PATH.read_text(encoding="utf-8")
@@ -144,7 +148,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("requiredChunkCount", self.scenario_chunk_runtime_source)
         self.assertIn("activePostReadyTaskKey", self.scenario_chunk_runtime_source)
         self.assertIn("promotionRetryCount", self.scenario_chunk_runtime_source)
-        self.assertIn("buildScenarioChunkPromotionVisualMetricDetails({", self.map_renderer_source)
+        self.assertIn("buildScenarioChunkPromotionVisualMetricDetails({", self.scenario_refresh_runtime_source)
         self.assertIn("selectionVersion:", self.scenario_chunk_promotion_helpers_source)
         self.assertIn("requiredPoliticalChunkCount:", self.scenario_chunk_promotion_helpers_source)
         self.assertIn("queueMs:", self.scenario_chunk_promotion_helpers_source)
@@ -159,11 +163,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn('postReadyInteractionInfrastructureTaskMs', self.map_renderer_source)
         self.assertIn("function recordInteractionRecoveryTaskMetric(", self.map_renderer_source)
         self.assertRegex(
-            self.map_renderer_source,
+            self.scenario_refresh_runtime_source,
             re.compile(r'const taskKey = "scenario-chunk-promotion-infra";.*?recordInteractionRecoveryTaskMetric\(taskKey,', re.S),
         )
         self.assertRegex(
-            self.map_renderer_source,
+            self.scenario_refresh_runtime_source,
             re.compile(
                 r'const previousInteractionInfrastructureStage = String\(runtimeState\.interactionInfrastructureStage \|\| ""\);.*?'
                 r'await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);.*?'
@@ -180,13 +184,13 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             re.compile(r'const taskKey = "deferred-heavy-border-meshes";.*?recordInteractionRecoveryTaskMetric\(taskKey,', re.S),
         )
         self.assertRegex(
-            self.map_renderer_source,
+            self.exact_after_settle_scheduler_source,
             re.compile(
                 r'beginExactAfterSettleControllerSchedule\(scheduleStartedAt\);.*?'
                 r'isExactAfterSettleGenerationCurrent\(generation, "scheduled"\).*?'
                 r'if \(!runtimeState\.deferExactAfterSettle\) \{.*?'
                 r'resetExactAfterSettleController\("defer-cleared", generation\);.*?'
-                r'if \(runtimeState\.renderPhase !== RENDER_PHASE_IDLE\) \{.*?'
+                r'if \(runtimeState\.renderPhase !== renderPhaseIdle\) \{.*?'
                 r'scheduleExactAfterSettleRefresh\(resolvedProfile\);.*?return;',
                 re.S,
             ),
@@ -194,14 +198,14 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.map_renderer_source,
             re.compile(
-                r'drewExactFrame = composeCachedPasses\(RENDER_PASS_NAMES\);.*?'
+                r'drewExactFrame = composeCachedPasses\(getActiveRenderPassNames\(\)\);.*?'
                 r'finalizePendingExactAfterSettleRefreshAfterPaint\(\);',
                 re.S,
             ),
         )
-        self.assertIn('recordRenderPerfMetric("settleExactRefreshApply"', self.map_renderer_source)
-        self.assertIn('recordRenderPerfMetric("settleExactRefreshWaitForPaint"', self.map_renderer_source)
-        self.assertIn('recordRenderPerfMetric("settleExactRefreshFinalize"', self.map_renderer_source)
+        self.assertIn('recordRenderPerfMetric("settleExactRefreshApply"', self.exact_after_settle_scheduler_source)
+        self.assertIn('recordRenderPerfMetric("settleExactRefreshWaitForPaint"', self.exact_after_settle_scheduler_source)
+        self.assertIn('recordRenderPerfMetric("settleExactRefreshFinalize"', self.exact_after_settle_scheduler_source)
         interaction_blocker = re.search(
             r"function isInteractionRecoveryBlocked\(\) \{(?P<body>.*?)\n\}",
             self.map_renderer_source,
@@ -213,9 +217,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("activePostReadyTaskKey", interaction_blocker.group("body"))
 
     def test_interaction_recovery_ignores_stale_generation_tasks(self):
-        start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
-        end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
-        infra_source = self.map_renderer_source[start:end]
+        start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
+        end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
+        infra_source = self.scenario_refresh_runtime_source[start:end]
 
         self.assertRegex(
             infra_source,
@@ -669,9 +673,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("syncScenarioLocalizationState({ cityOverridesPayload: entry.value });", restore_slice)
 
     def test_chunk_promotion_infra_does_not_rebuild_static_meshes(self):
-        start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
-        end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
-        promotion_infra_source = self.map_renderer_source[start:end]
+        start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
+        end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
+        promotion_infra_source = self.scenario_refresh_runtime_source[start:end]
         self.assertIn("primaryDerivedStateReady = false,", promotion_infra_source)
         self.assertIn('if (hasPoliticalGeometryChange) {', promotion_infra_source)
         self.assertIn('ensureSovereigntyState();', promotion_infra_source)
@@ -695,9 +699,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("resetDetailAdmMeshBuildState();", helper_source)
         self.assertIn("syncStaticMeshSnapshot();", helper_source)
 
-        promotion_start = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(")
-        promotion_end = self.map_renderer_source.index("function refreshMapDataForScenarioApply(", promotion_start)
-        promotion_source = self.map_renderer_source[promotion_start:promotion_end]
+        promotion_start = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(")
+        promotion_end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioApply(", promotion_start)
+        promotion_source = self.scenario_refresh_runtime_source[promotion_start:promotion_end]
         self.assertRegex(
             promotion_source,
             re.compile(
@@ -710,7 +714,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
 
     def test_scenario_apply_refresh_still_rebuilds_static_meshes(self):
         self.assertRegex(
-            self.map_renderer_source,
+            self.scenario_refresh_runtime_source,
             re.compile(
                 r'function refreshMapDataForScenarioApply\(\{[\s\S]*?markAllOverlaysDirty\(\);\s*rebuildStaticMeshes\(\{\s*refreshOpeningOwnerBorders: rendererRefreshPlan\.refreshOpeningOwnerBorders,\s*\}\);\s*invalidateBorderCache\(\);[\s\S]*?scheduleSecondarySpatialIndexBuild\(\{',
                 re.S,
@@ -730,22 +734,22 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("openingOwnerBordersRefreshedByMapRefresh", apply_source)
 
     def test_chunk_promotion_opening_owner_refresh_has_single_owner(self):
-        start = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(")
-        end = self.map_renderer_source.index("function refreshMapDataForScenarioApply(", start)
-        promotion_source = self.map_renderer_source[start:end]
+        start = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(")
+        end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioApply(", start)
+        promotion_source = self.scenario_refresh_runtime_source[start:end]
         self.assertIn("const shouldRefreshOpeningOwnerBordersInVisual =", promotion_source)
         self.assertIn("refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,", promotion_source)
         self.assertIn("if (shouldRefreshOpeningOwnerBordersInVisual) {", promotion_source)
-        infra_start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
-        infra_end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", infra_start)
-        infra_source = self.map_renderer_source[infra_start:infra_end]
+        infra_start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
+        infra_end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", infra_start)
+        infra_source = self.scenario_refresh_runtime_source[infra_start:infra_end]
         self.assertIn("refreshOpeningOwnerBorders = true,", infra_source)
         self.assertIn("refreshOpeningOwnerBorders,", infra_source)
 
     def test_blocked_chunk_promotion_infra_reschedule_preserves_opening_owner_refresh_policy(self):
-        infra_start = self.map_renderer_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
-        infra_end = self.map_renderer_source.index("function refreshMapDataForScenarioChunkPromotion(", infra_start)
-        infra_source = self.map_renderer_source[infra_start:infra_end]
+        infra_start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
+        infra_end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", infra_start)
+        infra_source = self.scenario_refresh_runtime_source[infra_start:infra_end]
         self.assertRegex(
             infra_source,
             re.compile(

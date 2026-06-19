@@ -5,6 +5,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_JS = REPO_ROOT / "js" / "core" / "scenario" / "scenario_renderer_bridge.js"
 REFRESH_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_plans.js"
+SCENARIO_REFRESH_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_runtime.js"
 SCENARIO_MANAGER_JS = REPO_ROOT / "js" / "core" / "scenario_manager.js"
 SCENARIO_RESOURCES_JS = REPO_ROOT / "js" / "core" / "scenario_resources.js"
 SCENARIO_POST_APPLY_EFFECTS_JS = REPO_ROOT / "js" / "core" / "scenario_post_apply_effects.js"
@@ -44,14 +45,17 @@ class ScenarioRendererBridgeBoundaryContractTest(unittest.TestCase):
     def test_refresh_plan_owner_stays_pure_and_renderer_consumes_it(self):
         bridge_content = BRIDGE_JS.read_text(encoding="utf-8")
         refresh_plan_content = REFRESH_PLANS_JS.read_text(encoding="utf-8")
+        refresh_runtime_content = SCENARIO_REFRESH_RUNTIME_JS.read_text(encoding="utf-8")
         renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
 
         self.assertNotIn("../map_renderer.js", refresh_plan_content)
         self.assertNotIn("runtimeState", refresh_plan_content)
         self.assertNotIn("render()", refresh_plan_content)
-        self.assertIn("getScenarioChunkPromotionTargetPasses,", renderer_content)
-        self.assertIn("normalizeRendererRefreshPlan,", renderer_content)
-        self.assertIn("from \"./map_renderer/scenario_refresh_plans.js\";", renderer_content)
+        self.assertIn("getScenarioChunkPromotionTargetPasses,", refresh_runtime_content)
+        self.assertIn("normalizeRendererRefreshPlan,", refresh_runtime_content)
+        self.assertIn("from \"./scenario_refresh_plans.js\";", refresh_runtime_content)
+        self.assertIn("createScenarioRefreshRuntime", renderer_content)
+        self.assertIn("from \"./map_renderer/scenario_refresh_runtime.js\";", renderer_content)
         self.assertNotIn("function createScenarioApplyRefreshPlan(", bridge_content)
         self.assertNotIn("function createScenarioChunkPromotionRefreshPlan(", bridge_content)
 

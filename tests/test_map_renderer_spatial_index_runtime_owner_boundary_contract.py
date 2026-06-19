@@ -5,6 +5,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+SCENARIO_REFRESH_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_runtime.js"
 FACADE_SPATIAL_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_spatial_runtime.js"
 SPATIAL_INDEX_RUNTIME_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "spatial_index_runtime_owner.js"
 SPATIAL_INDEX_RUNTIME_BUILDERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "spatial_index_runtime_builders.js"
@@ -15,6 +16,7 @@ SPATIAL_INDEX_RUNTIME_DERIVATION_JS = REPO_ROOT / "js" / "core" / "renderer" / "
 class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_interaction_startup_orchestration_while_spatial_runtime_moves_to_facade_and_owner_helpers(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        refresh_runtime_content = SCENARIO_REFRESH_RUNTIME_JS.read_text(encoding="utf-8")
         facade_content = FACADE_SPATIAL_RUNTIME_JS.read_text(encoding="utf-8")
         owner_content = SPATIAL_INDEX_RUNTIME_OWNER_JS.read_text(encoding="utf-8")
         builders_content = SPATIAL_INDEX_RUNTIME_BUILDERS_JS.read_text(encoding="utf-8")
@@ -42,26 +44,29 @@ class MapRendererSpatialIndexRuntimeOwnerBoundaryContractTest(unittest.TestCase)
         self.assertIsNone(re.search(r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(", renderer_content))
         self.assertIsNone(re.search(r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=", renderer_content))
         self.assertIsNone(re.search(r"(?m)^\s*function\s+buildSecondarySpatialIndexes\s*\(", renderer_content))
-        self.assertEqual(renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
-        self.assertEqual(renderer_content.count("preserveCurrent: true"), 3)
-        self.assertEqual(renderer_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
+        combined_runtime_content = f"{renderer_content}\n{refresh_runtime_content}"
+        self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
+        self.assertEqual(combined_runtime_content.count("preserveCurrent: true"), 3)
+        self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
         self.assertIn("function rebuildRuntimeDerivedState({", renderer_content)
         self.assertIn("async function buildBasicInteractionInfrastructureAfterStartup({", renderer_content)
         self.assertIn("async function buildFullInteractionInfrastructureAfterStartup({", renderer_content)
         self.assertIn("function initMap({", renderer_content)
         self.assertIn("function setMapData({", renderer_content)
-        self.assertIn("function refreshMapDataForScenarioApply({", renderer_content)
+        self.assertIn("scenarioRefreshRuntime = createScenarioRefreshRuntime({", renderer_content)
+        self.assertIn("function refreshMapDataForScenarioApply(options = {})", renderer_content)
+        self.assertIn("function refreshMapDataForScenarioApply({", refresh_runtime_content)
         self.assertIn("function resetRendererRefreshTransactionState({", renderer_content)
         set_map_data_start = renderer_content.index("function setMapData({")
         refresh_transaction_start = renderer_content.index("function resetRendererRefreshTransactionState({")
-        scenario_apply_start = renderer_content.index("function refreshMapDataForScenarioApply({")
+        scenario_apply_start = refresh_runtime_content.index("function refreshMapDataForScenarioApply({")
         set_map_data_body = renderer_content[set_map_data_start:refresh_transaction_start]
-        scenario_apply_body = renderer_content[
-            scenario_apply_start:renderer_content.index("\n// Batch 5 facade note:", scenario_apply_start)
+        scenario_apply_body = refresh_runtime_content[
+            scenario_apply_start:refresh_runtime_content.index("\n  return {", scenario_apply_start)
         ]
         refresh_transaction_body = renderer_content[
             refresh_transaction_start:renderer_content.index(
-                "\nfunction cancelDeferredScenarioChunkPromotionInfraRefresh(",
+                "\nscenarioRefreshRuntime = createScenarioRefreshRuntime(",
                 refresh_transaction_start,
             )
         ]

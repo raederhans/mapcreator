@@ -35,15 +35,10 @@ import {
 import {
   createDefaultProjectedBoundsCacheState,
   createDefaultProjectedBoundsDiagnostics,
-  createDefaultExactAfterSettleControllerState,
   createDefaultIntensityFieldToolState,
-  ensureExactAfterSettleControllerState,
   ensureRenderPassCacheState,
   ensureSidebarPerfState,
   ensureSphericalFeatureDiagnosticsCache as ensureSphericalFeatureDiagnosticsCacheState,
-  isExactAfterSettleControllerActiveState,
-  isExactAfterSettleGenerationCurrentState,
-  resetExactAfterSettleControllerState,
   resetProjectedBoundsCacheState as resetProjectedBoundsRuntimeCacheState,
   setInteractionInfrastructureStateFields,
 } from "./state/renderer_runtime_state.js";
@@ -110,10 +105,6 @@ import { enqueueFrameTask, getFrameSchedulerQueueLength } from "./frame_schedule
 import { flushRenderBoundary, getRenderBoundaryDebugState, requestRender } from "./render_boundary.js";
 import { callRuntimeHook, callRuntimeHooks, registerRuntimeHook } from "./state/index.js";
 import {
-  HGO_DEFAULT_TARGET_PROJECTION,
-  HGO_SOURCE_PROJECTION,
-} from "./hgo_projection_model.js";
-import {
   bindInteractionFunnel,
   dispatchMapClick,
   dispatchMapDoubleClick,
@@ -160,20 +151,11 @@ import {
   collectSpatialItemsForProjectedRects,
   collectVisibleSpatialItemsWithStats,
 } from "./renderer/spatial_query_index.js";
+import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_preview_render_owner.js";
+import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
+import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
-  buildScenarioChunkPromotionVisualMetricDetails,
-  resolveScenarioChunkPromotionChangeSet,
-} from "./renderer/scenario_chunk_promotion_helpers.js";
-import {
-  getScenarioChunkPromotionTargetPasses,
-  normalizeRendererRefreshPlan,
-} from "./map_renderer/scenario_refresh_plans.js";
-import {
-  createExactAfterSettleRefreshPlan,
   EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
-  getExactAfterSettleDprRestorePasses,
-  resolveDeferredExactContextTargetPasses,
-  resolveExactAfterSettleTargetPasses,
 } from "./map_renderer/exact_after_settle_refresh_plans.js";
 import {
   collectSpatialGridCandidates,
@@ -279,8 +261,6 @@ function showToast(message, options = {}) {
 const DEFAULT_UNIT_COUNTER_ORGANIZATION_PCT = 78;
 const DEFAULT_UNIT_COUNTER_EQUIPMENT_PCT = 74;
 const DEFAULT_UNIT_COUNTER_BASE_FILL = "#f4f0e6";
-const HGO_RUNTIME_PREVIEW_PROJECTION_NAME = HGO_DEFAULT_TARGET_PROJECTION;
-const HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION = HGO_SOURCE_PROJECTION;
 const UNIT_COUNTER_STATS_PRESETS = Object.freeze({
   elite: Object.freeze({ organizationPct: 94, equipmentPct: 92 }),
   regular: Object.freeze({ organizationPct: 82, equipmentPct: 78 }),
@@ -881,9 +861,6 @@ export const RENDER_PASS_NAMES = [
   "textureLabels",
   "labels",
 ];
-const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES = [
-  "hgoPreview",
-];
 const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
   "background",
   "physicalBase",
@@ -924,9 +901,6 @@ const TRANSFORMED_FRAME_PASS_NAMES = [
   "dayNight",
   "textureLabels",
   "labels",
-];
-const HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES = [
-  "hgoPreview",
 ];
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
@@ -1078,6 +1052,7 @@ let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
 let intensityFieldMaskOwner = null;
+let hgoRuntimePreviewRenderOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
 function getStrategicOverlayHelpersOwner() {
@@ -1873,6 +1848,26 @@ function getIntensityFieldMaskOwner() {
   return intensityFieldMaskOwner;
 }
 
+function getHgoRuntimePreviewRenderOwner() {
+  if (hgoRuntimePreviewRenderOwner) {
+    return hgoRuntimePreviewRenderOwner;
+  }
+  hgoRuntimePreviewRenderOwner = createHgoRuntimePreviewRenderOwner({
+    runtimeState,
+    renderPassNames: RENDER_PASS_NAMES,
+    transformedFramePassNames: TRANSFORMED_FRAME_PASS_NAMES,
+    getProjection: () => projection,
+    getMapSvg: () => mapSvg,
+    getTargetCanvas: () => context?.canvas || null,
+    callRuntimeHook,
+    createHitResult,
+    resetCanvasContext,
+    recordRenderPerfMetric,
+    nowMs,
+  });
+  return hgoRuntimePreviewRenderOwner;
+}
+
 function getRenderPipelinePassesOwner() {
   if (renderPipelinePassesOwner) {
     return renderPipelinePassesOwner;
@@ -1954,11 +1949,8 @@ let pendingSecondarySpatialBuildReasons = new Set();
 let pendingScenarioChunkFlushAfterExactHandle = null;
 let deferredHeavyBorderMeshHandle = null;
 let deferredContextBaseEnhancementHandle = null;
-let deferredExactContextRefreshHandle = null;
-let deferredExactContextRefreshVersion = 0;
-const deferredExactContextRefreshTaskHandles = new Set();
-let deferredScenarioChunkPromotionInfraHandle = null;
-let scenarioChunkPromotionVersion = 0;
+let scenarioRefreshRuntime = null;
+let exactAfterSettleScheduler = null;
 let deferContextBaseEnhancements = false;
 let detailAdmMeshBuildState = {
   signature: "",
@@ -3454,6 +3446,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
   if (passName === "hgoPreview") {
     const preview = runtimeState.hgoRuntimePreview || {};
     const summary = preview.summary || {};
+    const hgoProjectionOptions = getHgoRuntimePreviewProjectionOptions();
     return [
       isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off",
       String(preview.status || ""),
@@ -3461,8 +3454,8 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       Number(runtimeState.width || 0),
       Number(runtimeState.height || 0),
       projection ? transformSignature : "projection:none",
-      HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
-      HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
+      hgoProjectionOptions.projectionName,
+      hgoProjectionOptions.sourceProjection,
       `seed:${Number(summary.provinceCount || summary.province_count || 0)}:${Number(summary.stateCount || summary.state_count || 0)}:${Number(summary.countryCount || summary.country_count || 0)}`,
     ].join("::");
   }
@@ -4806,294 +4799,78 @@ function clearStagedMapDataTasks() {
   cancelDeferredWork(runtimeState.stagedContextBaseHandle);
   cancelDeferredWork(runtimeState.stagedHitCanvasHandle);
   cancelDeferredWork(secondarySpatialBuildHandle);
-  cancelDeferredWork(deferredScenarioChunkPromotionInfraHandle);
   runtimeState.stagedContextBaseHandle = null;
   runtimeState.stagedHitCanvasHandle = null;
   secondarySpatialBuildHandle = null;
   pendingSecondarySpatialBuildReasons.clear();
-  deferredScenarioChunkPromotionInfraHandle = null;
-  scenarioChunkPromotionVersion = 0;
+  scenarioRefreshRuntime?.resetDeferredScenarioChunkPromotionState();
+}
+
+function setDeferContextBaseEnhancements(value) {
+  deferContextBaseEnhancements = !!value;
+}
+
+function getExactAfterSettleScheduler() {
+  if (exactAfterSettleScheduler) {
+    return exactAfterSettleScheduler;
+  }
+  exactAfterSettleScheduler = createExactAfterSettleScheduler({
+    runtimeState,
+    renderPassNames: RENDER_PASS_NAMES,
+    renderPhaseIdle: RENDER_PHASE_IDLE,
+    exactContextRefreshDelayMs: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS,
+    getContext: () => context,
+    getVisibleContextFlagSignature,
+    cloneZoomTransform,
+    getAdaptiveSettleProfile,
+    getContextBaseReuseDecision,
+    shouldForceExactContextBaseRefresh,
+    updateDprStage,
+    setCanvasSize,
+    cancelDeferredContextBaseEnhancement,
+    setDeferContextBaseEnhancements,
+    shouldDeferContextBaseEnhancementsForExactRefresh,
+    scheduleDeferredContextBaseEnhancements,
+    getRenderPassCacheState,
+    getRenderPipelinePassesOwner,
+    getPhysicalExactRefreshPasses,
+    invalidateRenderPasses,
+    rebuildResolvedColors,
+    requestRendererRender,
+    render,
+    recordRenderPerfMetric,
+    readRenderPerfMetricDuration,
+    nowMs,
+    enqueueFrameTask,
+    scheduleDeferredWork,
+    cancelDeferredWork,
+    flushPendingScenarioChunkRefreshAfterExact,
+  });
+  return exactAfterSettleScheduler;
 }
 
 function getExactAfterSettleControllerState() {
-  return ensureExactAfterSettleControllerState(runtimeState);
-}
-
-function getTransformBucketSignature(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  const k = Math.round(Number(transform?.k || 1) * 100);
-  const x = Math.round(Number(transform?.x || 0) / 64);
-  const y = Math.round(Number(transform?.y || 0) / 64);
-  return `${k}:${x}:${y}`;
-}
-
-function getExactAfterSettleIdentity() {
-  const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
-    ? runtimeState.runtimeChunkLoadState
-    : null;
-  return {
-    scenarioId: String(runtimeState.activeScenarioId || ""),
-    selectionVersion: Number(loadState?.selectionVersion || 0),
-    topologyRevision: Number(runtimeState.topologyRevision || 0),
-    dpr: Math.max(1, Number(runtimeState.dpr || 1)),
-    pixelWidth: Math.max(1, Number(context?.canvas?.width || 1)),
-    pixelHeight: Math.max(1, Number(context?.canvas?.height || 1)),
-    colorRevision: Number(runtimeState.colorRevision || 0),
-    contextFlagSignature: getVisibleContextFlagSignature(),
-    zoomToken: Number(runtimeState.zoomGestureEndedAt || 0),
-    transformBucket: getTransformBucketSignature(),
-  };
-}
-
-function assignExactAfterSettleIdentity(controller, identity = getExactAfterSettleIdentity()) {
-  controller.scenarioId = identity.scenarioId;
-  controller.selectionVersion = identity.selectionVersion;
-  controller.topologyRevision = identity.topologyRevision;
-  controller.dpr = identity.dpr;
-  controller.pixelWidth = identity.pixelWidth;
-  controller.pixelHeight = identity.pixelHeight;
-  controller.colorRevision = identity.colorRevision;
-  controller.contextFlagSignature = identity.contextFlagSignature;
-  controller.zoomToken = identity.zoomToken;
-  controller.transformBucket = identity.transformBucket;
-}
-
-function isExactAfterSettleIdentityCurrent(controller) {
-  if (!controller || typeof controller !== "object") return false;
-  const identity = getExactAfterSettleIdentity();
-  return String(controller.scenarioId || "") === identity.scenarioId
-    && Number(controller.selectionVersion || 0) === identity.selectionVersion
-    && Number(controller.topologyRevision || 0) === identity.topologyRevision
-    && Math.abs(Number(controller.dpr || 1) - identity.dpr) <= 0.01
-    && Number(controller.pixelWidth || 0) === identity.pixelWidth
-    && Number(controller.pixelHeight || 0) === identity.pixelHeight
-    && Number(controller.colorRevision || 0) === identity.colorRevision
-    && String(controller.contextFlagSignature || "") === identity.contextFlagSignature
-    && Number(controller.zoomToken || 0) === identity.zoomToken
-    && String(controller.transformBucket || "") === identity.transformBucket;
-}
-
-function resetExactAfterSettleController(reason = "reset", generation = null) {
-  return resetExactAfterSettleControllerState(runtimeState, { reason, generation });
-}
-
-function beginExactAfterSettleControllerSchedule(scheduleStartedAt) {
-  const controller = getExactAfterSettleControllerState();
-  const nextGeneration = Number(controller.generation || 0) + 1;
-  Object.assign(controller, createDefaultExactAfterSettleControllerState(), {
-    generation: nextGeneration,
-    phase: "scheduled",
-    startedAt: scheduleStartedAt,
-    scheduledAt: scheduleStartedAt,
-    reason: "scheduled",
-  });
-  assignExactAfterSettleIdentity(controller);
-  return controller;
-}
-
-function isExactAfterSettleGenerationCurrent(generation, phase = "") {
-  return isExactAfterSettleGenerationCurrentState(runtimeState, generation, phase);
+  return getExactAfterSettleScheduler().getExactAfterSettleControllerState();
 }
 
 function isExactAfterSettleControllerActive() {
-  return isExactAfterSettleControllerActiveState(runtimeState);
-}
-
-function invalidateExactAfterSettlePoliticalPass(plan) {
-  if (!plan || typeof plan !== "object") return false;
-  if (String(plan.politicalInvalidationReason || "") === "exact-after-settle-political") return false;
-  const politicalInvalidatedAt = Date.now();
-  invalidateRenderPasses("political", "exact-after-settle-political");
-  plan.politicalInvalidationReason = "exact-after-settle-political";
-  plan.politicalInvalidatedAt = politicalInvalidatedAt;
-  return true;
-}
-
-function completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt) {
-  if (!isExactAfterSettleGenerationCurrent(generation, "applying")) {
-    return false;
-  }
-  const controller = getExactAfterSettleControllerState();
-  if (!isExactAfterSettleIdentityCurrent(controller)) {
-    resetExactAfterSettleController("pass-complete-identity-mismatch", generation);
-    return false;
-  }
-  const applyFinishedAt = nowMs();
-  Object.assign(controller, {
-    phase: "awaiting-paint",
-    applyFinishedAt,
-    reason: "awaiting-paint",
-  });
-  recordRenderPerfMetric("settleExactRefreshPasses", Math.max(0, applyFinishedAt - passStartedAt), {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    generation,
-    contextBaseRefreshed: !!plan.exactRefreshApplied,
-    targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
-    passCount: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses.length : 0,
-    politicalInvalidationReason: String(plan.politicalInvalidationReason || ""),
-    politicalInvalidatedAt: Number(plan.politicalInvalidatedAt || 0),
-  });
-  return requestRendererRender("exact-after-settle", {
-    flush: true,
-    fallback: () => render(),
-  });
-}
-
-function prepareExactAfterSettlePassesInSlices(generation, plan) {
-  const controller = getExactAfterSettleControllerState();
-  if (!isExactAfterSettleGenerationCurrent(generation, "applying")) {
-    return false;
-  }
-  if (!isExactAfterSettleIdentityCurrent(controller)) {
-    resetExactAfterSettleController("pass-start-identity-mismatch", generation);
-    return false;
-  }
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  const targetPasses = new Set(Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : []);
-  const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-    .filter(([passName]) => !targetPasses.size || targetPasses.has(passName));
-  const timings = {};
-  const cache = getRenderPassCacheState();
-  const passStartedAt = nowMs();
-  if (runtimeState.legacyColorStateDirty) {
-    rebuildResolvedColors();
-  }
-
-  const enqueueNextPass = (index) => {
-    if (index >= definitions.length) {
-      completeScheduledExactAfterSettleRefreshPlan(generation, plan, passStartedAt);
-      return;
-    }
-    const [passName, drawFn] = definitions[index];
-    enqueueFrameTask(() => {
-      const passStart = nowMs();
-      const activeController = getExactAfterSettleControllerState();
-      if (!isExactAfterSettleGenerationCurrent(generation, "applying")) return;
-      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-        resetExactAfterSettleController(`${passName}-phase-interrupted`, generation);
-        return;
-      }
-      if (!isExactAfterSettleIdentityCurrent(activeController)) {
-        resetExactAfterSettleController(`${passName}-identity-mismatch`, generation);
-        return;
-      }
-      if (passName === "political") {
-        invalidateExactAfterSettlePoliticalPass(plan);
-      }
-      getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
-      recordRenderPerfMetric("settleExactRefreshPass", Math.max(0, nowMs() - passStart), {
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        generation,
-        passName,
-        index,
-        targetPasses: Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : [],
-        passCount: definitions.length,
-      });
-      enqueueNextPass(index + 1);
-    }, {
-      priority: "high",
-      label: `exact-after-settle-pass-${passName}`,
-      generation,
-      dedupe: true,
-      // The exact refresh already waits for the settle quiet window; another
-      // continuous-input defer can push final sharpness past the interaction SLA.
-      deferOnContinuousInput: false,
-    });
-  };
-
-  enqueueNextPass(0);
-  return true;
-}
-
-function applyScheduledExactAfterSettleRefreshPlan(generation, plan) {
-  if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) {
-    return false;
-  }
-  const controller = getExactAfterSettleControllerState();
-  const applyStartedAt = nowMs();
-  Object.assign(controller, {
-    phase: "applying",
-    pendingPlan: plan,
-    applyStartedAt,
-    reason: "applying",
-  });
-  assignExactAfterSettleIdentity(controller);
-  plan.controllerGeneration = generation;
-  applyExactAfterSettleRefreshPlan(plan);
-  recordRenderPerfMetric("settleExactRefreshApply", Math.max(0, nowMs() - applyStartedAt), {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    generation,
-    contextBaseRefreshed: !!plan.exactRefreshApplied,
-  });
-  return prepareExactAfterSettlePassesInSlices(generation, plan);
+  return getExactAfterSettleScheduler().isExactAfterSettleControllerActive();
 }
 
 function finalizePendingExactAfterSettleRefreshAfterPaint() {
-  const controller = runtimeState.exactAfterSettleController;
-  if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
-    return false;
-  }
-  const generation = Number(controller.generation || 0);
-  if (!isExactAfterSettleIdentityCurrent(controller)) {
-    resetExactAfterSettleController("identity-mismatch", generation);
-    return false;
-  }
-  const plan = controller.pendingPlan;
-  if (!plan || typeof plan !== "object") {
-    resetExactAfterSettleController("missing-plan", generation);
-    return false;
-  }
-  const finalizeStartedAt = nowMs();
-  controller.phase = "finalizing";
-  controller.reason = "finalizing";
-  recordRenderPerfMetric("settleExactRefreshWaitForPaint", Math.max(0, finalizeStartedAt - Number(controller.applyFinishedAt || controller.applyStartedAt || controller.startedAt || finalizeStartedAt)), {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    generation,
-  });
-  finalizeExactAfterSettleRefreshPlan(plan);
-  recordRenderPerfMetric("settleExactRefreshFinalize", Math.max(0, nowMs() - finalizeStartedAt), {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    generation,
-  });
-  recordSettleExactRefreshPhaseBreakdown(plan, Math.max(0, nowMs() - Number(plan.startedAt || finalizeStartedAt)));
-  resetExactAfterSettleController("finalized", generation);
-  return true;
+  return getExactAfterSettleScheduler().finalizePendingExactAfterSettleRefreshAfterPaint();
 }
 
 function abortPendingExactAfterSettleRefreshAfterPaint(reason = "exact-compose-failed") {
-  const controller = runtimeState.exactAfterSettleController;
-  if (!controller || typeof controller !== "object" || String(controller.phase || "") !== "awaiting-paint") {
-    return false;
-  }
-  const generation = Number(controller.generation || 0);
-  recordRenderPerfMetric("settleExactRefreshAbortAfterPaintFailure", 0, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    generation,
-    reason: String(reason || "exact-compose-failed"),
-    controllerPhase: String(controller.phase || ""),
-    deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
-  });
-  resetExactAfterSettleController(`abort-${reason}`, generation);
-  runtimeState.deferExactAfterSettle = false;
-  runtimeState.pendingExactPoliticalFastFrame = false;
-  invalidateRenderPasses("political", "exact-after-settle-abort");
-  requestRendererRender("exact-after-settle-abort-recover", {
-    flush: false,
-    fallback: () => {
-      if (context) render();
-    },
-  });
-  return true;
+  return getExactAfterSettleScheduler().abortPendingExactAfterSettleRefreshAfterPaint(reason);
 }
 
 function cancelExactAfterSettleRefresh({ clearDefer = true } = {}) {
-  cancelDeferredExactContextRefresh();
-  cancelDeferredWork(runtimeState.exactAfterSettleHandle);
-  runtimeState.exactAfterSettleHandle = null;
-  resetExactAfterSettleController(clearDefer ? "cancel" : "reschedule");
-  if (clearDefer) {
-    runtimeState.deferExactAfterSettle = false;
-    runtimeState.pendingExactPoliticalFastFrame = false;
-  }
+  return getExactAfterSettleScheduler().cancelExactAfterSettleRefresh({ clearDefer });
+}
+
+function scheduleExactAfterSettleRefresh(profile = runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile()) {
+  return getExactAfterSettleScheduler().scheduleExactAfterSettleRefresh(profile);
 }
 
 function isHeavyScenarioStagedApplyCandidate() {
@@ -8722,99 +8499,33 @@ function invalidateBorderCache() {
 }
 
 function isHgoRuntimePreviewReady() {
-  const preview = runtimeState.hgoRuntimePreview;
-  return !!preview?.enabled && preview.status === "ready";
+  return getHgoRuntimePreviewRenderOwner().isReady();
 }
 
 function getHgoRuntimePreviewVisibilitySignature() {
-  return isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off";
+  return getHgoRuntimePreviewRenderOwner().getVisibilitySignature();
 }
 
 function getActiveRenderPassNames() {
-  return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES : RENDER_PASS_NAMES;
+  return getHgoRuntimePreviewRenderOwner().getActiveRenderPassNames();
 }
 
 function getActiveTransformedFramePassNames() {
-  return isHgoRuntimePreviewReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : TRANSFORMED_FRAME_PASS_NAMES;
+  return getHgoRuntimePreviewRenderOwner().getActiveTransformedFramePassNames();
 }
 
 function getHgoRuntimePreviewProjectionOptions(overrides = {}) {
-  return {
-    projection,
-    projectionName: HGO_RUNTIME_PREVIEW_PROJECTION_NAME,
-    sourceProjection: HGO_RUNTIME_PREVIEW_SOURCE_PROJECTION,
-    projectionPixelRatio: runtimeState.dpr,
-    projectionTransform: runtimeState.zoomTransform || null,
-    ...overrides,
-  };
+  return getHgoRuntimePreviewRenderOwner().getProjectionOptions(overrides);
 }
 
 registerRuntimeHook(runtimeState, "getHgoRuntimePreviewProjectionOptionsFn", getHgoRuntimePreviewProjectionOptions);
 
 function renderHgoRuntimePreviewIfReady(reason = "render", options = {}) {
-  if (!isHgoRuntimePreviewReady()) return null;
-  return callRuntimeHook(runtimeState, "renderHgoRuntimePreviewFn", {
-    reason,
-    ...getHgoRuntimePreviewProjectionOptions(options),
-  }) || null;
-}
-
-function getHgoRuntimePreviewCanvasPointFromEvent(event) {
-  if (!mapSvg || !globalThis.d3?.pointer) return null;
-  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
-  if (![sx, sy].every(Number.isFinite)) return null;
-  const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
-    ? Number(runtimeState.dpr)
-    : 1;
-  return {
-    x: Math.round(Number(sx) * dpr),
-    y: Math.round(Number(sy) * dpr),
-    screenX: Number(sx),
-    screenY: Number(sy),
-    dpr,
-  };
+  return getHgoRuntimePreviewRenderOwner().renderIfReady(reason, options);
 }
 
 function inspectHgoRuntimePreviewFromEvent(event, { eventType = "unknown" } = {}) {
-  if (!isHgoRuntimePreviewReady()) {
-    return { active: false, point: null, inspection: null, hit: createHitResult() };
-  }
-  const point = getHgoRuntimePreviewCanvasPointFromEvent(event);
-  const inspection = point
-    ? callRuntimeHook(runtimeState, "inspectHgoRuntimePreviewPointFn", point.x, point.y, {
-      eventType,
-      point,
-      ...getHgoRuntimePreviewProjectionOptions(),
-    }) || null
-    : null;
-  const resolved = inspection?.resolved || null;
-  if (!resolved) {
-    return { active: true, point, inspection, hit: createHitResult() };
-  }
-  const ownerTag = String(resolved.ownerTag || resolved.controllerTag || "").trim().toUpperCase();
-  return {
-    active: true,
-    point,
-    inspection,
-    hit: createHitResult({
-      id: `hgo:province:${resolved.provinceId}`,
-      targetType: "hgo",
-      countryCode: ownerTag,
-      hitSource: "hgo-runtime-preview",
-      strict: true,
-      distancePx: 0,
-      hgoRuntime: Object.freeze({
-        provinceId: resolved.provinceId,
-        stateId: resolved.stateId,
-        ownerTag: resolved.ownerTag,
-        controllerTag: resolved.controllerTag,
-        pixelIndex: inspection.pixelIndex,
-        x: inspection.x,
-        y: inspection.y,
-        sourceRgb: inspection.sourceRgb,
-      }),
-    }),
-  };
+  return getHgoRuntimePreviewRenderOwner().inspectFromEvent(event, { eventType });
 }
 
 function keyToHitColor(key) {
@@ -16942,26 +16653,7 @@ function drawScenarioRegionOverlaysPass(k) {
 }
 
 function drawHgoPreviewPass() {
-  const targetCanvas = context?.canvas || null;
-  const targetContext = targetCanvas?.getContext?.("2d") || null;
-  if (!targetCanvas || !targetContext) return;
-  resetCanvasContext(targetContext, targetCanvas.width, targetCanvas.height);
-  if (!isHgoRuntimePreviewReady()) return;
-  const startedAt = nowMs();
-  const rendered = renderHgoRuntimePreviewIfReady("hgo-preview-pass", {
-    targetCanvas,
-    targetWidth: targetCanvas.width,
-    targetHeight: targetCanvas.height,
-  });
-  recordRenderPerfMetric("drawHgoPreviewPass", nowMs() - startedAt, {
-    skipped: !rendered,
-    projectedPixelCount: Number(rendered?.projectedPixelCount || 0),
-    unprojectedPixelCount: Number(rendered?.unprojectedPixelCount || 0),
-    resolvedPixelCount: Number(rendered?.resolvedPixelCount || 0),
-    unresolvedPixelCount: Number(rendered?.unresolvedPixelCount || 0),
-    projectionPixelRatio: Number(runtimeState.dpr || 1),
-    active: isHgoRuntimePreviewReady(),
-  });
+  getHgoRuntimePreviewRenderOwner().drawPreviewPass();
 }
 
 
@@ -17863,82 +17555,6 @@ function drawCanvas() {
   incrementPerfCounter("frames");
 }
 
-function buildExactAfterSettleRefreshPlan({ profile, scheduleStartedAt, callbackStartedAt }) {
-  const resolvedProfile = profile || getAdaptiveSettleProfile();
-  const reuseDecision = getContextBaseReuseDecision();
-  const forceExactContextBaseRefresh = shouldForceExactContextBaseRefresh(reuseDecision);
-  return createExactAfterSettleRefreshPlan({
-    profile: resolvedProfile,
-    scheduleStartedAt,
-    callbackStartedAt,
-    reuseDecision,
-    forceExactContextBaseRefresh,
-    metricSequenceStartedAt: Math.max(0, Number(runtimeState.renderPerfMetricSequence || 0)),
-  });
-}
-
-function applyExactAfterSettleRefreshPlan(plan) {
-  const reuseDecision = plan.reuseDecision || {};
-  updateDprStage("idle", { force: true });
-  const exactAfterSettleDprPasses = getExactAfterSettleDprRestorePasses(RENDER_PASS_NAMES);
-  setCanvasSize({
-    reason: "exact-after-settle-dpr-restore",
-    targetPassesOnDprChange: exactAfterSettleDprPasses,
-    targetPassesOnResize: exactAfterSettleDprPasses,
-    targetPassesOnCanvasResize: exactAfterSettleDprPasses,
-  });
-  runtimeState.deferExactAfterSettle = false;
-  cancelDeferredContextBaseEnhancement();
-  if (plan.forceExactContextBaseRefresh) {
-    invalidateRenderPasses(["physicalBase", "contextBase"], "physical-visible-exact");
-  } else if (reuseDecision.enabled) {
-    recordRenderPerfMetric("contextBaseReuseScaleRatio", 0, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      scaleRatio: reuseDecision.scaleRatio,
-      zoomBucket: reuseDecision.zoomBucket,
-      referenceZoomBucket: reuseDecision.referenceZoomBucket,
-    });
-    recordRenderPerfMetric("contextBaseReuseDistancePx", 0, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      distancePx: reuseDecision.distancePx,
-      maxDistancePx: reuseDecision.maxDistancePx,
-    });
-    if (reuseDecision.shouldExactRefresh) {
-      invalidateRenderPasses(getPhysicalExactRefreshPasses(), reuseDecision.reason || "context-base-exact");
-    } else {
-      recordRenderPerfMetric("contextBaseReuseSkipped", 0, {
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        reason: reuseDecision.reason,
-        scaleRatio: reuseDecision.scaleRatio,
-        distancePx: reuseDecision.distancePx,
-        maxDistancePx: reuseDecision.maxDistancePx,
-        zoomBucket: reuseDecision.zoomBucket,
-        referenceZoomBucket: reuseDecision.referenceZoomBucket,
-        crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
-        crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
-      });
-    }
-  }
-  deferContextBaseEnhancements = shouldDeferContextBaseEnhancementsForExactRefresh(
-    reuseDecision,
-    plan.forceExactContextBaseRefresh,
-  );
-  plan.deferContextBaseEnhancements = deferContextBaseEnhancements;
-  const cache = getRenderPassCacheState();
-  const idleRenderPassNames = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-    .map(([passName]) => passName);
-  const targetPassPlan = resolveExactAfterSettleTargetPasses({
-    renderPassNames: RENDER_PASS_NAMES,
-    idleRenderPassNames,
-    dirtyPassNames: RENDER_PASS_NAMES.filter((passName) => cache.dirty[passName]),
-    physicalExactRefreshPasses: getPhysicalExactRefreshPasses(),
-    forceExactContextBaseRefresh: plan.forceExactContextBaseRefresh,
-    exactRefreshApplied: plan.exactRefreshApplied,
-  });
-  plan.deferredExactTargetPasses = targetPassPlan.deferredExactTargetPasses;
-  plan.exactTargetPasses = targetPassPlan.exactTargetPasses;
-}
-
 function readRenderPerfMetricDuration(metricName, minSequence = 0) {
   const entry = runtimeState.renderPerfMetrics?.[metricName];
   const requiredMinSequence = Math.max(0, Number(minSequence || 0));
@@ -17973,255 +17589,6 @@ function readRenderPerfMetricBoolean(metricName, fieldName, minSequence = 0) {
     return false;
   }
   return entry?.[fieldName] === true;
-}
-
-function recordSettleExactRefreshPhaseBreakdown(plan, durationMs) {
-  const targetPasses = Array.isArray(plan?.exactTargetPasses) ? plan.exactTargetPasses : [];
-  const deferredTargetPasses = Array.isArray(plan?.deferredExactTargetPasses) ? plan.deferredExactTargetPasses : [];
-  const metricSequenceStartedAt = Math.max(0, Number(plan?.metricSequenceStartedAt || 0));
-  recordRenderPerfMetric("settleExactRefreshPhaseBreakdown", durationMs, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    applyMs: readRenderPerfMetricDuration("settleExactRefreshApply"),
-    passesMs: readRenderPerfMetricDuration("settleExactRefreshPasses"),
-    waitForPaintMs: readRenderPerfMetricDuration("settleExactRefreshWaitForPaint"),
-    finalizeMs: readRenderPerfMetricDuration("settleExactRefreshFinalize"),
-    hitCanvasMs: readRenderPerfMetricDuration("buildHitCanvas", metricSequenceStartedAt),
-    metricSequenceStartedAt,
-    targetPasses,
-    targetPassCount: targetPasses.length,
-    deferredTargetPasses,
-    deferredTargetPassCount: deferredTargetPasses.length,
-    contextBaseRefreshed: !!plan?.exactRefreshApplied,
-  });
-}
-
-function finalizeExactAfterSettleRefreshPlan(plan) {
-  const reuseDecision = plan.reuseDecision || {};
-  const resolvedProfile = plan.resolvedProfile || getAdaptiveSettleProfile();
-  flushPendingScenarioChunkRefreshAfterExact();
-  const finishedAt = nowMs();
-  const durationMs = Math.max(0, finishedAt - plan.startedAt);
-  const finalSharpnessMs = Math.max(0, finishedAt - Number(runtimeState.zoomGestureEndedAt || plan.startedAt));
-  recordRenderPerfMetric("settleExactRefresh", durationMs, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    contextBaseRefreshed: plan.exactRefreshApplied,
-    reason: plan.forceExactContextBaseRefresh ? "physical-visible-exact" : reuseDecision.reason,
-    scaleRatio: reuseDecision.scaleRatio,
-    distancePx: reuseDecision.distancePx,
-    maxDistancePx: reuseDecision.maxDistancePx,
-    zoomBucket: reuseDecision.zoomBucket,
-    referenceZoomBucket: reuseDecision.referenceZoomBucket,
-    crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
-    crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
-    scaleDelta: Number(runtimeState.zoomGestureScaleDelta || resolvedProfile.scaleDelta || 0),
-    settleDurationMs: Number(resolvedProfile.settleDurationMs || 0),
-    exactQuietWindowMs: Number(resolvedProfile.exactQuietWindowMs || 0),
-    settleWindowElapsedMs: Number(plan.settleWindowElapsedMs || 0),
-    finalSharpnessMs: Number(finalSharpnessMs || 0),
-  });
-  if (plan.exactRefreshApplied) {
-    recordRenderPerfMetric("contextBaseExactRefresh", Number(runtimeState.renderPerfMetrics?.drawContextBasePass?.durationMs || durationMs), {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      reason: plan.forceExactContextBaseRefresh ? "physical-visible-exact" : reuseDecision.reason,
-      scaleRatio: reuseDecision.scaleRatio,
-      distancePx: reuseDecision.distancePx,
-      maxDistancePx: reuseDecision.maxDistancePx,
-      zoomBucket: reuseDecision.zoomBucket,
-      referenceZoomBucket: reuseDecision.referenceZoomBucket,
-      crossesZoomBucket: !!reuseDecision.crossesZoomBucket,
-      crossesMinorContourThreshold: !!reuseDecision.crossesMinorContourThreshold,
-    });
-  }
-  if (plan.deferContextBaseEnhancements) {
-    scheduleDeferredContextBaseEnhancements();
-  }
-  scheduleDeferredExactContextRefresh(plan);
-}
-
-function cancelDeferredExactContextRefresh() {
-  deferredExactContextRefreshVersion += 1;
-  cancelDeferredWork(deferredExactContextRefreshHandle);
-  deferredExactContextRefreshHandle = null;
-  deferredExactContextRefreshTaskHandles.forEach((handle) => {
-    if (handle && typeof handle.cancel === "function") {
-      handle.cancel();
-    }
-  });
-  deferredExactContextRefreshTaskHandles.clear();
-}
-
-function getDeferredExactContextTargetPasses(plan = {}) {
-  const cache = getRenderPassCacheState();
-  return resolveDeferredExactContextTargetPasses({
-    plan,
-    dirtyPassNames: RENDER_PASS_NAMES.filter((passName) => cache.dirty?.[passName]),
-    idleRenderPassNames: getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-      .map(([passName]) => passName),
-  });
-}
-
-function isDeferredExactContextRefreshCurrent(refreshVersion, plan = {}) {
-  if (Number(refreshVersion || 0) !== Number(deferredExactContextRefreshVersion || 0)) return false;
-  const identity = plan && typeof plan === "object" ? plan.deferredExactContextIdentity : null;
-  if (identity && typeof identity === "object" && !isExactAfterSettleIdentityCurrent(identity)) return false;
-  return true;
-}
-
-function prepareDeferredExactContextPassesInSlices(passNames, plan = {}, refreshVersion = deferredExactContextRefreshVersion) {
-  const targetPasses = Array.isArray(passNames) ? passNames.filter(Boolean) : [];
-  if (!targetPasses.length) return false;
-  if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return false;
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions().filter(([passName]) => targetPasses.includes(passName));
-  const cache = getRenderPassCacheState();
-  const timings = {};
-  const startedAt = nowMs();
-
-  const enqueueNextPass = (index) => {
-    if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
-    if (index >= definitions.length) {
-      recordRenderPerfMetric("deferredExactContextRefresh", Math.max(0, nowMs() - startedAt), {
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        targetPasses,
-        passCount: targetPasses.length,
-        sourceGeneration: Number(plan.controllerGeneration || 0),
-      });
-      requestRendererRender("deferred-exact-context-refresh", {
-        flush: false,
-        fallback: () => render(),
-      });
-      return;
-    }
-    const [passName, drawFn] = definitions[index];
-    let taskHandle = null;
-    taskHandle = enqueueFrameTask(() => {
-      if (taskHandle) {
-        deferredExactContextRefreshTaskHandles.delete(taskHandle);
-      }
-      const passStart = nowMs();
-      if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
-      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
-        if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
-          scheduleDeferredExactContextRefresh(plan);
-        }
-        return;
-      }
-      getRenderPipelinePassesOwner().prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache);
-      recordRenderPerfMetric("deferredExactContextRefreshPass", Math.max(0, nowMs() - passStart), {
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        passName,
-        index,
-        targetPasses,
-      });
-      enqueueNextPass(index + 1);
-    }, {
-      priority: "high",
-      label: `deferred-exact-context-pass-${passName}`,
-      generation: Number(plan.controllerGeneration || 0),
-      dedupe: true,
-      // This work is already scheduled after settle and guarded by the exact
-      // identity. Letting continuous-input heuristics defer it again can strand
-      // the queue during repeated wheel probes.
-      deferOnContinuousInput: false,
-    });
-    if (taskHandle) {
-      deferredExactContextRefreshTaskHandles.add(taskHandle);
-    }
-  };
-  enqueueNextPass(0);
-  return true;
-}
-
-function scheduleDeferredExactContextRefresh(plan = {}) {
-  const targetPasses = getDeferredExactContextTargetPasses(plan);
-  if (!targetPasses.length) return false;
-  cancelDeferredExactContextRefresh();
-  const refreshVersion = Number(deferredExactContextRefreshVersion || 0);
-  if (!plan.deferredExactContextIdentity) {
-    plan.deferredExactContextIdentity = getExactAfterSettleIdentity();
-  }
-  deferredExactContextRefreshHandle = scheduleDeferredWork(() => {
-    deferredExactContextRefreshHandle = null;
-    if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return;
-    // deferred exact refresh 只允许在真正 idle 时落地。
-    // 如果用户又开始交互，宁可整批重排，也不要让旧 generation 在 settling/interacting 阶段写回精细 pass。
-    if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
-      if (isDeferredExactContextRefreshCurrent(refreshVersion, plan)) {
-        scheduleDeferredExactContextRefresh(plan);
-      }
-      return;
-    }
-    prepareDeferredExactContextPassesInSlices(targetPasses, plan, refreshVersion);
-  }, {
-    timeout: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS,
-  });
-  recordRenderPerfMetric("deferredExactContextRefreshScheduled", 0, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    targetPasses,
-    passCount: targetPasses.length,
-    sourceGeneration: Number(plan.controllerGeneration || 0),
-  });
-  return true;
-}
-
-function enqueueExactAfterSettleSegment(generation, label, task) {
-  return enqueueFrameTask(() => {
-    const startedAt = nowMs();
-    if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
-    if (!runtimeState.deferExactAfterSettle || runtimeState.renderPhase !== RENDER_PHASE_IDLE) return;
-    if (!isExactAfterSettleIdentityCurrent(getExactAfterSettleControllerState())) {
-      resetExactAfterSettleController(`${label}-identity-mismatch`, generation);
-      return;
-    }
-    task();
-    recordRenderPerfMetric(`settleExactRefresh${label}`, Math.max(0, nowMs() - startedAt), {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      generation,
-    });
-  }, {
-    priority: "high",
-    label: `exact-after-settle-${label}`,
-    generation,
-    dedupe: true,
-    // The timeout quiet window already separates exact work from active wheel
-    // input. Running the queued segment promptly avoids repeated probes waiting
-    // on stale continuous-input signals.
-    deferOnContinuousInput: false,
-  });
-}
-
-function scheduleExactAfterSettleRefresh(profile = runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile()) {
-  cancelExactAfterSettleRefresh({ clearDefer: false });
-  const scheduleStartedAt = nowMs();
-  const controller = beginExactAfterSettleControllerSchedule(scheduleStartedAt);
-  const generation = Number(controller.generation || 0);
-  const resolvedProfile = profile || getAdaptiveSettleProfile();
-  runtimeState.exactAfterSettleHandle = {
-    type: "timeout",
-    id: globalThis.setTimeout(() => {
-      runtimeState.exactAfterSettleHandle = null;
-      if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
-      if (!runtimeState.deferExactAfterSettle) {
-        resetExactAfterSettleController("defer-cleared", generation);
-        return;
-      }
-      if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-        scheduleExactAfterSettleRefresh(resolvedProfile);
-        return;
-      }
-      assignExactAfterSettleIdentity(getExactAfterSettleControllerState());
-      enqueueExactAfterSettleSegment(generation, "Prepare", () => {
-        const plan = buildExactAfterSettleRefreshPlan({
-          profile: resolvedProfile,
-          scheduleStartedAt,
-          callbackStartedAt: nowMs(),
-        });
-        enqueueExactAfterSettleSegment(generation, "Apply", () => {
-          applyScheduledExactAfterSettleRefreshPlan(generation, plan);
-        });
-      });
-    }, resolvedProfile.exactQuietWindowMs),
-  };
 }
 
 function scheduleStagedHitCanvasWarmup(startedAt, token) {
@@ -21390,17 +20757,7 @@ function normalizeDevInteractionHit(hit = null) {
 }
 
 function normalizeHgoRuntimeHitPayload(payload = null) {
-  if (!payload || typeof payload !== "object") return null;
-  return Object.freeze({
-    provinceId: payload.provinceId,
-    stateId: payload.stateId,
-    ownerTag: payload.ownerTag,
-    controllerTag: payload.controllerTag,
-    pixelIndex: payload.pixelIndex,
-    x: payload.x,
-    y: payload.y,
-    sourceRgb: payload.sourceRgb,
-  });
+  return getHgoRuntimePreviewRenderOwner().normalizeHitPayload(payload);
 }
 
 function getDevInteractionHitSignature(hit = null) {
@@ -22956,37 +22313,7 @@ function updateMap(transform) {
 }
 
 function getProjectedHgoRuntimePreviewBounds() {
-  if (typeof projection !== "function" || runtimeState.width <= 0 || runtimeState.height <= 0) {
-    return null;
-  }
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (let lat = -90; lat <= 90; lat += 5) {
-    for (let lon = -180; lon <= 180; lon += 5) {
-      const point = projection([lon, lat]);
-      if (!Array.isArray(point) || point.length < 2) continue;
-      const x = Number(point[0]);
-      const y = Number(point[1]);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-  }
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
-    return null;
-  }
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-  };
+  return getHgoRuntimePreviewRenderOwner().getProjectedBounds();
 }
 
 function getProjectedRenderableContentBounds() {
@@ -23788,382 +23115,67 @@ function resetRendererRefreshTransactionState({
   resetPhysicalLandClipPathCache();
 }
 
+scenarioRefreshRuntime = createScenarioRefreshRuntime({
+  runtimeState,
+  buildIndex,
+  buildSpatialIndexChunked,
+  rebuildPoliticalLandCollections,
+  rebuildRuntimeDerivedState,
+  rebuildPrimaryPoliticalDerivedState,
+  setInteractionInfrastructureState,
+  scheduleSecondarySpatialIndexBuild,
+  scheduleHitCanvasBuildIfNeeded,
+  ensureSovereigntyState,
+  refreshScenarioOpeningOwnerBorders,
+  invalidateBorderCache,
+  updateDynamicBorderStatusUI,
+  updateSpecialZonesPaths,
+  renderSpecialZoneEditorOverlay,
+  render,
+  recordRenderPerfMetric,
+  recordInteractionRecoveryTaskMetric,
+  beginInteractionRecoveryTask,
+  endInteractionRecoveryTask,
+  isInteractionRecoverySettled,
+  scheduleDeferredWork,
+  cancelDeferredWork,
+  yieldToMain,
+  nowMs,
+  markRendererTopologyChanged,
+  clearDeferredInternalBorderMeshCaches,
+  scheduleDeferredHeavyBorderMeshes,
+  resetScenarioWaterCacheAdaptiveState,
+  syncScenarioSecondaryRegionIndexes,
+  invalidateRenderPasses,
+  markAllOverlaysDirty,
+  updateZoomTranslateExtent,
+  isUsableMesh,
+  resetRendererTransactionState,
+  clearLastGoodFrame,
+  invalidateInteractionComposite,
+  resetFirstVisibleFramePainted,
+  clearRenderPassReferenceTransforms,
+  rebuildStaticMeshes,
+  getEffectiveAtlantropaFeatures,
+  rebuildAuxiliaryRegionIndexes,
+  getSpatialIndexRuntimeOwner,
+  queueIndexUiRefresh,
+});
+
 function cancelDeferredScenarioChunkPromotionInfraRefresh() {
-  cancelDeferredWork(deferredScenarioChunkPromotionInfraHandle);
-  deferredScenarioChunkPromotionInfraHandle = null;
+  return scenarioRefreshRuntime.cancelDeferredScenarioChunkPromotionInfraRefresh();
 }
 
-function scheduleDeferredScenarioChunkPromotionInfraRefresh({
-  reason = "scenario-chunk-promotion",
-  suppressRender = false,
-  promotionVersion = scenarioChunkPromotionVersion,
-  hasPoliticalGeometryChange = false,
-  primaryDerivedStateReady = false,
-  refreshOpeningOwnerBorders = true,
-} = {}) {
-  cancelDeferredScenarioChunkPromotionInfraRefresh();
-  deferredScenarioChunkPromotionInfraHandle = scheduleDeferredWork(() => {
-    deferredScenarioChunkPromotionInfraHandle = null;
-    void runDeferredScenarioChunkPromotionInfraRefresh({
-      reason,
-      suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange,
-      primaryDerivedStateReady,
-      refreshOpeningOwnerBorders,
-    });
-  }, {
-    timeout: 120,
-  });
+function scheduleDeferredScenarioChunkPromotionInfraRefresh(options = {}) {
+  return scenarioRefreshRuntime.scheduleDeferredScenarioChunkPromotionInfraRefresh(options);
 }
 
-async function runDeferredScenarioChunkPromotionInfraRefresh({
-  reason = "scenario-chunk-promotion",
-  suppressRender = false,
-  promotionVersion = scenarioChunkPromotionVersion,
-  hasPoliticalGeometryChange = false,
-  primaryDerivedStateReady = false,
-  refreshOpeningOwnerBorders = true,
-} = {}) {
-  // chunk promotion 先让政治/可见数据切换完成，再等交互恢复空闲后补建 index / spatial infra。
-  // 这样可以避免放大缩小时的旧命中状态和新 topology rebuild 互相踩踏。
-  if (promotionVersion !== scenarioChunkPromotionVersion) {
-    return false;
-  }
-  if (!isInteractionRecoverySettled({ quietMs: 600 })) {
-    scheduleDeferredScenarioChunkPromotionInfraRefresh({
-      reason,
-      suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange,
-      primaryDerivedStateReady,
-      refreshOpeningOwnerBorders,
-    });
-    return false;
-  }
-  const taskKey = "scenario-chunk-promotion-infra";
-  if (!beginInteractionRecoveryTask(taskKey)) {
-    scheduleDeferredScenarioChunkPromotionInfraRefresh({
-      reason,
-      suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange,
-      primaryDerivedStateReady,
-      refreshOpeningOwnerBorders,
-    });
-    return false;
-  }
-  const startedAt = nowMs();
-  const previousInteractionInfrastructureStage = String(runtimeState.interactionInfrastructureStage || "");
-  let restoredInteractionInfrastructureState = false;
-  let yieldCount = 0;
-  let fullPoliticalRestoreMs = 0;
-  let restoredFullPoliticalChunkData = false;
-  try {
-    if (!primaryDerivedStateReady) {
-      buildIndex();
-      await yieldToMain();
-      yieldCount += 1;
-      if (promotionVersion !== scenarioChunkPromotionVersion) {
-        return false;
-      }
-      await buildSpatialIndexChunked({
-        includeSecondary: false,
-        keepReady: true,
-      });
-    }
-    if (hasPoliticalGeometryChange && Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)) {
-      const fullRestoreStartedAt = nowMs();
-      runtimeState.scenarioPoliticalVisibleChunkData = null;
-      const completePoliticalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-        ? runtimeState.scenarioPoliticalChunkData.features.length
-        : 0;
-      const renderedLandFeatureCount = Array.isArray(runtimeState.landData?.features)
-        ? runtimeState.landData.features.length
-        : 0;
-      const shouldRestoreFullPoliticalDerivedState = (
-        !primaryDerivedStateReady
-        && completePoliticalFeatureCount > 0
-        && renderedLandFeatureCount < completePoliticalFeatureCount
-      );
-      if (shouldRestoreFullPoliticalDerivedState) {
-        rebuildPoliticalLandCollections();
-        rebuildRuntimeDerivedState({
-          includeRuntimePoliticalMeta: true,
-          scheduleUiMode: "deferred",
-          buildSpatial: true,
-          includeSecondarySpatial: false,
-        });
-        runtimeState.hitCanvasDirty = true;
-        runtimeState.hitCanvasTopologyRevision = 0;
-        await yieldToMain();
-        yieldCount += 1;
-      }
-      fullPoliticalRestoreMs = nowMs() - fullRestoreStartedAt;
-      restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;
-      if (promotionVersion !== scenarioChunkPromotionVersion) {
-        return false;
-      }
-    }
-    setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
-      ready: true,
-      inFlight: false,
-    });
-    restoredInteractionInfrastructureState = true;
-    if (promotionVersion !== scenarioChunkPromotionVersion) {
-      return false;
-    }
-    scheduleSecondarySpatialIndexBuild({
-      reason: `${reason}-secondary-spatial`,
-    });
-    if (runtimeState.hitCanvasDirty) {
-      scheduleHitCanvasBuildIfNeeded({
-        reason: `${reason}-hit-canvas`,
-      });
-    }
-    if (hasPoliticalGeometryChange) {
-      ensureSovereigntyState();
-      if (refreshOpeningOwnerBorders !== false) {
-        refreshScenarioOpeningOwnerBorders({
-          renderNow: false,
-          reason: `${reason}-opening`,
-        });
-      }
-      invalidateBorderCache();
-      updateDynamicBorderStatusUI();
-      updateSpecialZonesPaths();
-      renderSpecialZoneEditorOverlay();
-    }
-    if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
-    }
-    if (!suppressRender) {
-      render();
-    }
-    const infraDurationMs = nowMs() - startedAt;
-    recordRenderPerfMetric("scenarioChunkPromotionInfraStage", infraDurationMs, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      suppressRender: !!suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
-      primaryDerivedStateReady: !!primaryDerivedStateReady,
-      restoredFullPoliticalChunkData,
-      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
-    });
-    recordRenderPerfMetric("chunkPromotionInfraMs", infraDurationMs, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      suppressRender: !!suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
-      primaryDerivedStateReady: !!primaryDerivedStateReady,
-      restoredFullPoliticalChunkData,
-      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
-    });
-    recordRenderPerfMetric("chunkPromotionDeferredInfraMs", infraDurationMs, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      suppressRender: !!suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
-      primaryDerivedStateReady: !!primaryDerivedStateReady,
-      restoredFullPoliticalChunkData,
-      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
-    });
-    recordInteractionRecoveryTaskMetric(taskKey, infraDurationMs, {
-      reason: String(reason || "scenario-chunk-promotion"),
-      suppressRender: !!suppressRender,
-      promotionVersion,
-      hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
-      primaryDerivedStateReady: !!primaryDerivedStateReady,
-      refreshOpeningOwnerBorders: refreshOpeningOwnerBorders !== false,
-      restoredFullPoliticalChunkData,
-      fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
-      yieldCount,
-    });
-    return true;
-  } finally {
-    if (!restoredInteractionInfrastructureState) {
-      setInteractionInfrastructureState(previousInteractionInfrastructureStage || "basic-ready", {
-        ready: true,
-        inFlight: false,
-      });
-    }
-    endInteractionRecoveryTask(taskKey);
-  }
+async function runDeferredScenarioChunkPromotionInfraRefresh(options = {}) {
+  return scenarioRefreshRuntime.runDeferredScenarioChunkPromotionInfraRefresh(options);
 }
 
-function refreshMapDataForScenarioChunkPromotion({
-  suppressRender = false,
-  reason = "scenario-chunk-promotion",
-  changedLayerKeys = [],
-  politicalFeatureIds = [],
-  hasPoliticalPayloadChange = false,
-  refreshPlan = null,
-} = {}) {
-  // chunk promotion 刻意分成两段：
-  // 1. 先把用户能立刻看到的 topology / color / render pass 刷出来；
-  // 2. 再把 hit canvas、border mesh、interaction infra 这些重活延后。
-  // 这样可以缩短交互停顿，同时保留后续 infra refresh 的确定性。
-  const startedAt = nowMs();
-  const runtimeChunkLoadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
-    ? runtimeState.runtimeChunkLoadState
-    : null;
-  const pendingVisualPromotion = runtimeChunkLoadState?.pendingVisualPromotion || null;
-  const pendingPromotion = runtimeChunkLoadState?.pendingPromotion || null;
-  const promotionQueuedAt = Number(pendingVisualPromotion?.queuedAt || pendingPromotion?.queuedAt || 0);
-  const {
-    hasPoliticalChange,
-    effectiveChangedLayerKeys,
-  } = resolveScenarioChunkPromotionChangeSet({
-    changedLayerKeys,
-    politicalFeatureIds,
-    hasPoliticalPayloadChange,
-  });
-  if (hasPoliticalChange) {
-    // political chunk promotion 首帧必须和 scenario apply 一样，先把 primary derived state 收回一致：
-    // landIndex / 主 spatial grid / resolved colors / runtime political meta 都要先于 render 完成，
-    // deferred infra 再只接 secondary indexes、hit canvas 和重 mesh。
-    rebuildPrimaryPoliticalDerivedState({
-      scheduleUiMode: "deferred",
-      buildSpatial: true,
-      includeSecondarySpatial: false,
-    });
-  }
-  scenarioChunkPromotionVersion = Number(scenarioChunkPromotionVersion || 0) + 1;
-  markRendererTopologyChanged({ hitCanvasDirty: true });
-  if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-    runtimeState.runtimeChunkLoadState.pendingVisualPromotion = null;
-    runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
-      reason: String(reason || "scenario-chunk-promotion"),
-      selectionVersion: Math.max(0, Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0)),
-      promotionVersion: scenarioChunkPromotionVersion,
-      hasPoliticalGeometryChange: hasPoliticalChange,
-      primaryDerivedStateReady: hasPoliticalChange,
-    };
-  }
-  if (hasPoliticalChange) {
-    clearDeferredInternalBorderMeshCaches();
-    scheduleDeferredHeavyBorderMeshes();
-  }
-  if ((Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys : []).some((layerKey) => String(layerKey || "").trim().toLowerCase() === "water")) {
-    resetScenarioWaterCacheAdaptiveState("scenario-water-regions-data-replaced");
-  }
-  const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes({
-    changedLayerKeys: effectiveChangedLayerKeys,
-    reason: `${reason}-secondary-sync`,
-  });
-  const shouldSkipDeferredInfraRefresh = synchronizedSecondaryRegionIndexes && !hasPoliticalChange;
-  if (shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
-    runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
-  }
-  const defaultTargetPasses = getScenarioChunkPromotionTargetPasses({
-    changedLayerKeys: effectiveChangedLayerKeys,
-    hasPoliticalChange,
-  });
-  const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
-    source: "scenario-chunk-promotion",
-    targetPasses: defaultTargetPasses,
-    refreshOpeningOwnerBorders: hasPoliticalChange,
-  });
-  invalidateRenderPasses(
-    rendererRefreshPlan.targetPasses.length ? rendererRefreshPlan.targetPasses : ["political", "borders", "labels"],
-    reason,
-  );
-  markAllOverlaysDirty();
-  updateZoomTranslateExtent();
-  if (!suppressRender) {
-    render();
-  }
-  const shouldRefreshOpeningOwnerBordersInVisual =
-    hasPoliticalChange
-    && rendererRefreshPlan.refreshOpeningOwnerBorders !== false
-    && isUsableMesh(runtimeState.activeScenarioMeshPack?.meshes?.opening_owner_borders);
-  if (shouldSkipDeferredInfraRefresh) {
-    if (runtimeState.hitCanvasDirty) {
-      scheduleHitCanvasBuildIfNeeded({
-        reason: `${reason}-secondary-hit-canvas`,
-      });
-    }
-  } else {
-    scheduleDeferredScenarioChunkPromotionInfraRefresh({
-      reason,
-      suppressRender,
-      promotionVersion: scenarioChunkPromotionVersion,
-      hasPoliticalGeometryChange: hasPoliticalChange,
-      primaryDerivedStateReady: hasPoliticalChange,
-      refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,
-    });
-  }
-  const visualDurationMs = nowMs() - startedAt;
-  const promotedTotalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-    ? runtimeState.scenarioPoliticalChunkData.features.length
-    : 0;
-  const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
-    ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
-    : promotedTotalFeatureCount;
-  const promotedVisibleFeatureCount = Math.max(0, Number(
-    pendingVisualPromotion?.primaryVisibleFeatureCount
-      || pendingPromotion?.primaryVisibleFeatureCount
-      || pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum
-      || pendingPromotion?.selectedPoliticalVisibleFeatureCountSum
-      || promotedPrimaryFeatureCount
-      || pendingVisualPromotion?.selectedFeatureCountSum
-      || pendingPromotion?.selectedFeatureCountSum
-      || promotedTotalFeatureCount
-      || 0,
-  ));
-  const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails({
-    activeScenarioId: runtimeState.activeScenarioId,
-    reason,
-    runtimeChunkLoadState,
-    pendingVisualPromotion,
-    pendingPromotion,
-    promotionQueuedAt,
-    startedAt,
-    suppressRender,
-    hasPoliticalChange,
-    promotedTotalFeatureCount,
-    promotedPrimaryFeatureCount,
-    promotedVisibleFeatureCount,
-    effectiveChangedLayerKeys,
-    promotionVersion: scenarioChunkPromotionVersion,
-    synchronizedSecondaryRegionIndexes,
-  });
-  recordRenderPerfMetric("scenarioChunkPromotionVisualStage", visualDurationMs, {
-    ...promotionMetricDetails,
-  });
-  recordRenderPerfMetric("chunkPromotionPrimaryRefreshMs", visualDurationMs, {
-    ...promotionMetricDetails,
-  });
-  recordRenderPerfMetric("chunkPromotionVisualMs", visualDurationMs, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    suppressRender: !!suppressRender,
-    promotedFeatureCount: promotedTotalFeatureCount,
-    promotedPrimaryFeatureCount,
-    promotedVisibleFeatureCount,
-    promotedTotalFeatureCount,
-    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
-    promotionVersion: scenarioChunkPromotionVersion,
-    hasPoliticalGeometryChange: hasPoliticalChange,
-    synchronizedSecondaryRegionIndexes,
-  });
-  recordRenderPerfMetric("scenarioChunkPoliticalPromotion", visualDurationMs, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    suppressRender: !!suppressRender,
-    promotedFeatureCount: promotedTotalFeatureCount,
-    promotedPrimaryFeatureCount,
-    promotedVisibleFeatureCount,
-    promotedTotalFeatureCount,
-    changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
-    promotionVersion: scenarioChunkPromotionVersion,
-    synchronizedSecondaryRegionIndexes,
-    stage: "visual",
-  });
-  if (shouldRefreshOpeningOwnerBordersInVisual) {
-    refreshScenarioOpeningOwnerBorders({
-      renderNow: false,
-      reason: `${reason}-opening-sync`,
-    });
-  }
+function refreshMapDataForScenarioChunkPromotion(options = {}) {
+  return scenarioRefreshRuntime.refreshMapDataForScenarioChunkPromotion(options);
 }
 
 function reconcileDetailPromotionPoliticalPass(reason = "detail-promotion-political-reconcile") {
@@ -24187,77 +23199,8 @@ function reconcileDetailPromotionPoliticalPass(reason = "detail-promotion-politi
   return requested;
 }
 
-function refreshMapDataForScenarioApply({
-  suppressRender = false,
-  refreshPlan = null,
-} = {}) {
-  const startedAt = nowMs();
-  // scenario apply 走的是“重建基线”路径：先清掉上一场景遗留的 render/interaction 状态，
-  // 再按完整 pass 集重建 topology、derived state 和 mesh；这和 chunk promotion 的增量刷新语义不同。
-  const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
-    source: "scenario-apply",
-    targetPasses: ["background", "physicalBase", "political", "contextBase", "contextScenario", "dayNight", "borders", "labels"],
-    refreshOpeningOwnerBorders: true,
-    resetWaterCacheReason: "scenario-switch-complete",
-  });
-  resetRendererTransactionState({ hitCanvasDirty: true });
-  rebuildPrimaryPoliticalDerivedState({
-    scheduleUiMode: "deferred",
-    buildSpatial: true,
-    includeSecondarySpatial: false,
-  });
-  clearLastGoodFrame("scenario-apply-refresh");
-  invalidateInteractionComposite("scenario-apply-refresh");
-  resetFirstVisibleFramePainted("scenario-apply-refresh");
-  const targetPasses = rendererRefreshPlan.targetPasses;
-  invalidateRenderPasses(targetPasses, "scenario-apply-refresh");
-  clearRenderPassReferenceTransforms(targetPasses);
-  markAllOverlaysDirty();
-  rebuildStaticMeshes({
-    refreshOpeningOwnerBorders: rendererRefreshPlan.refreshOpeningOwnerBorders,
-  });
-  invalidateBorderCache();
-  updateDynamicBorderStatusUI();
-  updateSpecialZonesPaths();
-  renderSpecialZoneEditorOverlay();
-  updateZoomTranslateExtent();
-  const atlantropaWaterFeatureCount = getEffectiveAtlantropaFeatures().water.length;
-  resetScenarioWaterCacheAdaptiveState(rendererRefreshPlan.resetWaterCacheReason || "scenario-switch-complete");
-  let atlantropaWaterIndexCount = 0;
-  let atlantropaWaterSpatialCount = 0;
-  if (atlantropaWaterFeatureCount > 0) {
-    rebuildAuxiliaryRegionIndexes();
-    atlantropaWaterIndexCount = Array.from(runtimeState.waterRegionsById?.keys?.() || [])
-      .filter((featureId) => String(featureId || "").startsWith("ATLSEA_")).length;
-    getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({
-      preserveCurrent: true,
-      reason: "scenario-apply-atlantropa-water",
-    });
-    getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({
-      allowComputeMissingBounds: true,
-    });
-    atlantropaWaterSpatialCount = (Array.isArray(runtimeState.waterSpatialItems) ? runtimeState.waterSpatialItems : [])
-      .filter((item) => String(item?.featureId || item?.id || "").startsWith("ATLSEA_")).length;
-    queueIndexUiRefresh({
-      renderWaterRegionList: true,
-      renderSpecialRegionList: true,
-    });
-  } else {
-    scheduleSecondarySpatialIndexBuild({
-      reason: "scenario-apply-secondary-spatial",
-    });
-  }
-  if (!suppressRender) {
-    render();
-  }
-  recordRenderPerfMetric("scenarioApplyMapRefresh", nowMs() - startedAt, {
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    suppressRender: !!suppressRender,
-    landCount: Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
-    atlantropaWaterFeatureCount,
-    atlantropaWaterIndexCount,
-    atlantropaWaterSpatialCount,
-  });
+function refreshMapDataForScenarioApply(options = {}) {
+  return scenarioRefreshRuntime.refreshMapDataForScenarioApply(options);
 }
 
 // Batch 5 facade note:

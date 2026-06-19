@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 REFRESH_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_plans.js"
+SCENARIO_REFRESH_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_runtime.js"
 HIT_CANDIDATES_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "interaction_hit_candidates.js"
 
 
@@ -14,6 +15,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
     def setUpClass(cls):
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         cls.refresh_plan_content = REFRESH_PLANS_JS.read_text(encoding="utf-8")
+        cls.refresh_runtime_content = SCENARIO_REFRESH_RUNTIME_JS.read_text(encoding="utf-8")
         cls.hit_candidate_content = HIT_CANDIDATES_JS.read_text(encoding="utf-8")
 
     def assert_secondary_spatial_rebuild_order(self, body, *, allow_work_between_rebuild_and_reset=False):
@@ -49,8 +51,9 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+resetSecondarySpatialIndexState\s*\(")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*(?:const|let|var)\s+buildSecondarySpatialIndexes\s*=")
         self.assertNotRegex(self.renderer_content, r"(?m)^\s*function\s+buildSecondarySpatialIndexes\s*\(")
-        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
-        self.assertEqual(self.renderer_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
+        combined_runtime_content = f"{self.renderer_content}\n{self.refresh_runtime_content}"
+        self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().resetSecondarySpatialIndexState({"), 3)
+        self.assertEqual(combined_runtime_content.count("getSpatialIndexRuntimeOwner().buildSecondarySpatialIndexes({"), 3)
         self.assertIn(
             "buildIndexChunked,\n  buildSpatialIndex,\n  buildSpatialIndexChunked,\n  configureSpatialRuntimeFacade,\n} from \"./map_renderer/facade_spatial_runtime.js\";",
             self.renderer_content,
@@ -81,7 +84,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             ),
         )
         self.assertRegex(
-            self.renderer_content,
+            self.refresh_runtime_content,
             re.compile(
                 r'if \(hasPoliticalChange\) \{[\s\S]*?'
                 r'rebuildPrimaryPoliticalDerivedState\(\{\s*scheduleUiMode: "deferred",\s*buildSpatial: true,\s*includeSecondarySpatial: false,\s*\}\);',
@@ -91,7 +94,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
 
     def test_chunk_promotion_infra_skips_primary_rebuild_when_visual_stage_is_ready(self):
         self.assertRegex(
-            self.renderer_content,
+            self.refresh_runtime_content,
             re.compile(
                 r'async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?'
                 r'if \(!primaryDerivedStateReady\) \{\s*buildIndex\(\);\s*await yieldToMain\(\);[\s\S]*?await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);\s*\}[\s\S]*?'
@@ -112,7 +115,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertIn("renderWaterRegionList: hasWaterChange,", sync_body)
         self.assertIn("hasWaterChange,", sync_body)
         self.assertRegex(
-            self.renderer_content,
+            self.refresh_runtime_content,
             re.compile(
                 r'const synchronizedSecondaryRegionIndexes = syncScenarioSecondaryRegionIndexes\(\{\s*'
                 r'changedLayerKeys: effectiveChangedLayerKeys,\s*'
@@ -131,13 +134,14 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         end = self.renderer_content.index("function rebuildRuntimeDerivedState({", start)
         self.assert_secondary_spatial_rebuild_order(self.renderer_content[start:end])
 
-        start = self.renderer_content.index("function refreshMapDataForScenarioApply({")
-        end = self.renderer_content.index("// Batch 5 facade note:", start)
+        start = self.refresh_runtime_content.index("function refreshMapDataForScenarioApply({")
+        end = self.refresh_runtime_content.index("\n  return {", start)
         self.assert_secondary_spatial_rebuild_order(
-            self.renderer_content[start:end],
+            self.refresh_runtime_content[start:end],
             allow_work_between_rebuild_and_reset=True,
         )
-        self.assertEqual(self.renderer_content.count("preserveCurrent: true"), 3)
+        combined_runtime_content = f"{self.renderer_content}\n{self.refresh_runtime_content}"
+        self.assertEqual(combined_runtime_content.count("preserveCurrent: true"), 3)
 
     def test_secondary_spatial_demand_metric_only_records_new_pending_build(self):
         self.assertRegex(
