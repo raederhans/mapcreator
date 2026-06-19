@@ -15,7 +15,7 @@ Finish the remaining module-boundary slimming work in staged worktrees, starting
 - [x] Commit, integrate Phase A into main, push, and checkpoint.
 - [x] Resolve and integrate the HGO runtime preview overlap before Phase B.
 - [x] Integrate the HGO vector scene terrain-suppression follow-up before Phase B.
-- [ ] Phase B: split sidebar/toolbar UI shell from current main. Implementation and first verification are complete in `codex/module-boundary-phase-b-ui-shell`; commit, integration, post-merge verification, and cleanup remain.
+- [x] Phase B: split toolbar scenario context bar shell from current main, integrate into main, verify after merge, push recovery branch, and clean worktree.
 - [x] Phase C: split backend preview app shell, integrate into main, verify, and clean worktree.
 - [ ] Phase D: add boundary and module budget guardrails.
 - [ ] Final UltraQA, independent review, worktree cleanup, and archive.

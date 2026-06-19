@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Phase A, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase B implementation and first verification are complete in `codex/module-boundary-phase-b-ui-shell`; commit, integration into main, post-merge verification, branch push, and worktree cleanup remain.
+Phase A, Phase B, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase D guardrails are the next active phase.
 
 ## Phase B Delivery Package
 
@@ -39,7 +39,8 @@ Docs:
 
 - Base commit: `main@84b9ef5b`.
 - Current branch: `codex/module-boundary-phase-b-ui-shell`.
-- Commit state: not committed yet; final rerun and commit are pending.
+- Functional commit: `838b08fa16ca363ae4ed721c8fade6e42fc863fa`.
+- Current commit state: committed, pushed as a recovery branch, fast-forward merged into main, post-merge verified, and worktree removed.
 - `toolbar.js` is slimmer by removing the scenario context bar implementation while preserving hook names and shell orchestration.
 - The new owner has no renderer, HGO preview, scenario apply, or transport-workbench side effects.
 - Potential conflicts: yellow by semantics with future `scenario_controls.js` selector-shell work; direct file overlap is limited to toolbar, tests, package script, docs, and Pages dist manifest.
@@ -47,7 +48,7 @@ Docs:
 ## Phase B Verification
 
 - Passed: `node --check js/ui/toolbar.js js/ui/toolbar/scenario_context_bar_controller.js tests/scenario_context_bar_controller_behavior.test.mjs`.
-- Passed: `npm run test:node:scenario-context-bar-controller` (5 tests).
+- Passed: `npm run test:node:scenario-context-bar-controller` (6 tests).
 - Passed: `npm run verify:toolbar-split-boundary` (50 tests).
 - Passed: `npm run python -- -m unittest tests.test_ui_rework_plan01_foundation_contract -q` (6 tests).
 - Passed: `npm run test:node:hgo-runtime-preview` (19 tests).
@@ -58,7 +59,10 @@ Docs:
 ## Phase B Review Gates
 
 - Hypatia read-only candidate review recommended a future `scenario_controls.js` selector-shell split. Phase B stayed with toolbar scenario context bar extraction to match the active toolbar shell scope.
-- Final ai-slop scan, independent review, post-merge verification, and cleanup are still pending.
+- Curie code review found one low-risk missing default-state edge; the controller constructor now handles empty dependencies and the behavior suite covers that construction path.
+- Archimedes documentation review found stale Phase B/HGO wording; the active plan, context, task, and registry were corrected before commit.
+- Post-merge verification passed on main: scenario context controller 6 tests, toolbar split boundary 50 tests, HGO runtime preview 19 tests, import graph, Pages dist startup shell 37 tests, landing showcase 8 tests, and diff check.
+- The post-merge Pages dist run refreshed `dist/pages-dist-manifest.json` for the current main checkout's generated data byte counts.
 
 ## Phase A Delivery Package
 
@@ -122,7 +126,7 @@ Docs:
 
 ## Current Recommended Next Step
 
-Final rerun Phase B targeted checks, commit the worktree, push the recovery branch, fast-forward merge into clean main, run post-merge verification, then remove the worktree. Phase D guardrails follow after Phase B lands.
+Start Phase D guardrails from clean current main. Recommended first guardrail: add a source module budget assertion to `tests/test_toolbar_split_boundary_contract.py`, then expand import-graph or Pages dist budgets only if the source budget proves stable.
 
 ## Phase C Delivery Package
 

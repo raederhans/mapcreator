@@ -184,7 +184,7 @@
 ## Phase B Verification Log
 
 - `node --check js/ui/toolbar.js js/ui/toolbar/scenario_context_bar_controller.js tests/scenario_context_bar_controller_behavior.test.mjs`: passed.
-- `npm run test:node:scenario-context-bar-controller`: passed, 5 tests.
+- `npm run test:node:scenario-context-bar-controller`: passed, 6 tests.
 - `npm run verify:toolbar-split-boundary`: passed, 50 tests.
 - `npm run python -- -m unittest tests.test_ui_rework_plan01_foundation_contract -q`: passed, 6 tests.
 - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
@@ -192,7 +192,24 @@
 - `npm run verify:pages-dist`: passed after rebuilding `dist/app`; Pages startup shell 37 tests and landing showcase 8 tests passed.
 - `git diff --check`: passed.
 
-## Phase B Remaining Work
+## Phase B Integration Closeout
 
-- Re-run the targeted checks after the final source rename and documentation updates.
-- Commit the Phase B worktree, push the recovery branch, fast-forward merge into clean main, run post-merge verification, then remove the worktree.
+- Functional commit: `838b08fa16ca363ae4ed721c8fade6e42fc863fa`.
+- Feature branch `codex/module-boundary-phase-b-ui-shell` was pushed for recovery.
+- Fast-forward merge into `main` completed at `838b08fa16ca363ae4ed721c8fade6e42fc863fa`.
+- Post-merge verification on clean main:
+  - `npm run test:node:scenario-context-bar-controller`: passed, 6 tests.
+  - `npm run verify:toolbar-split-boundary`: passed, 50 tests.
+  - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+  - `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
+  - `npm run verify:pages-dist`: passed; Pages startup shell 37 tests and landing showcase 8 tests passed.
+  - `git diff --check`: passed.
+- The post-merge Pages dist run refreshed `dist/pages-dist-manifest.json` for the current main checkout's generated data byte counts.
+- Phase B worktree `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-b-ui-shell` was clean and removed after post-merge verification.
+- Curie, Archimedes, and Pasteur completed Phase B review/scout lanes; no child agent owned live tests.
+
+## Phase D Setup
+
+- Start from `main@838b08fa` plus the Phase B closeout docs/manifest refresh.
+- Phase D should begin with a narrow module budget guard in `tests/test_toolbar_split_boundary_contract.py`.
+- The next useful budget is the toolbar source line budget, because Phase B reduced `toolbar.js` and created a clear owner boundary.
