@@ -243,3 +243,18 @@
   - `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
   - `git diff --check`: passed.
 - Phase D worktree `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails` was clean and removed after post-merge verification.
+
+## Final UltraQA Closeout
+
+- Final verification from `main@bebde118`:
+  - `npm run test:node:exact-after-settle-refresh-plans`: passed, 5 tests.
+  - `npm run test:node:scenario-context-bar-controller`: passed, 6 tests.
+  - `npm run verify:toolbar-split-boundary`: passed, 51 tests.
+  - `npm run verify:backend-preview`: passed; Python backend 25 tests, Node backend 13 tests, and syntax checks passed.
+  - `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+  - `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
+  - `npm run verify:pages-dist`: passed; Pages startup shell 37 tests and landing showcase 8 tests passed.
+  - `git diff --check`: passed.
+- `git worktree list` showed only the main checkout after cleanup.
+- Direct review found the smallest stable final shape: owner extractions where behavior moved, and a guardrail inside an existing boundary test.
+- Final archive target: `docs/archive/module-boundary-continuation-20260618/`.

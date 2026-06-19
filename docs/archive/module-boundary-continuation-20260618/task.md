@@ -2,7 +2,27 @@
 
 ## Current Status
 
-Phase A, Phase B, Phase C, Phase D, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Final UltraQA, independent review, and archive are the remaining work.
+Phase A, Phase B, Phase C, Phase D, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Final UltraQA passed; archive closeout is in progress.
+
+## Final UltraQA Verification
+
+- Passed: `npm run test:node:exact-after-settle-refresh-plans` (5 tests).
+- Passed: `npm run test:node:scenario-context-bar-controller` (6 tests).
+- Passed: `npm run verify:toolbar-split-boundary` (51 tests).
+- Passed: `npm run verify:backend-preview` (Python backend 25 tests, Node backend 13 tests, syntax checks).
+- Passed: `npm run test:node:hgo-runtime-preview` (19 tests).
+- Passed: `npm run verify:test-import-graph` (48 specs).
+- Passed: `npm run verify:pages-dist` (Pages startup shell 37 tests, landing showcase 8 tests).
+- Passed: `git diff --check`.
+- Current worktree list contains only `C:\Users\raede\Desktop\dev\mapcreator`.
+- Known existing failure remains historical: `tests/scenario_chunk_contracts.test.mjs` had the registered `hoverFacilityAndCityProbeMetricsRemainNamed` failure earlier in this task, and this final gate did not touch scenario chunk data.
+- Turing final/Phase D sidecar review could not run because the Codex subagent quota was exhausted. The final review was completed by direct first-principles audit plus the existing Phase B/Phase D sidecar evidence.
+
+## Final Review Notes
+
+- First-principles check: the new runtime code was introduced only where behavior ownership moved out of oversized shells; Phase D adds only a test-budget guard, so no runtime fallback layer or new dependency was needed.
+- Simpler implementation check: the guardrail stays in the existing toolbar split contract and avoids a new import-boundary framework.
+- Integration check: all phase worktrees are removed, recovery branches are pushed, and `main` contains the integrated commits.
 
 ## Phase D Delivery Package
 
@@ -277,7 +297,7 @@ Temporary and recovery files:
 - Base commit: `main@ea9fd52a0842f675dc61e14cbb40e7e2d675dafb`.
 - Integrated commit: `db2e40d1`.
 - Feature branch: `codex/hgo-runtime-preview-fix`, pushed for recovery.
-- Current commit state: HGO runtime preview and HGO vector terrain suppression are integrated into main; closeout docs are pending commit.
+- Current commit state: HGO runtime preview and HGO vector terrain suppression are integrated into main; closeout docs are committed.
 - Base/main divergence: HGO was fast-forwarded into main after Phase C.
 - Conflict risk: Phase B is yellow by semantics because it will touch UI shell files that now contain HGO preview wiring; vector terrain suppression is renderer-owner work and should stay separate from Phase B UI extraction.
 

@@ -18,7 +18,7 @@ Finish the remaining module-boundary slimming work in staged worktrees, starting
 - [x] Phase B: split toolbar scenario context bar shell from current main, integrate into main, verify after merge, push recovery branch, and clean worktree.
 - [x] Phase C: split backend preview app shell, integrate into main, verify, and clean worktree.
 - [x] Phase D: add boundary and module budget guardrails.
-- [ ] Final UltraQA, independent review, worktree cleanup, and archive.
+- [x] Final UltraQA, review, worktree cleanup, and archive.
 
 ## Acceptance Criteria
 
