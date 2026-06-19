@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Phase A, Phase B, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase D guardrail implementation is in progress in `codex/module-boundary-phase-d-guardrails`.
+Phase A, Phase B, Phase C, Phase D, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Final UltraQA, independent review, and archive are the remaining work.
 
 ## Phase D Delivery Package
 
@@ -26,7 +26,8 @@ Docs:
 
 - Base commit: `main@e4b04c66`.
 - Current branch: `codex/module-boundary-phase-d-guardrails`.
-- Commit state: not committed yet; first verification is complete; commit, integration, post-merge verification, and cleanup are pending.
+- Functional commit: `23a6c645c5363d089b29b80edaf30ae8a82789ce`.
+- Current commit state: committed, pushed as a recovery branch, fast-forward merged into main, post-merge verified, and worktree removed.
 - Direct file overlap is limited to the toolbar boundary test and active docs.
 - Overlap risk: green for production behavior because no source runtime or dist file changes are made.
 
@@ -36,6 +37,9 @@ Docs:
 - Passed: `npm run verify:test-import-graph` (48 specs).
 - Passed: `git diff --check`.
 - Passed: ai-slop diff scan for risky added-line patterns.
+- Post-merge passed: `npm run verify:toolbar-split-boundary` (51 tests).
+- Post-merge passed: `npm run verify:test-import-graph` (48 specs).
+- Post-merge passed: `git diff --check`.
 
 ## Phase B Delivery Package
 

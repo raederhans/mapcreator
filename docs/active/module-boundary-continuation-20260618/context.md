@@ -232,3 +232,14 @@
 - `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
 - `git diff --check`: passed.
 - Ai-slop diff scan: clear for added-line risk patterns.
+
+## Phase D Integration Closeout
+
+- Functional commit: `23a6c645c5363d089b29b80edaf30ae8a82789ce`.
+- Feature branch `codex/module-boundary-phase-d-guardrails` was pushed for recovery.
+- Fast-forward merge into `main` completed at `23a6c645c5363d089b29b80edaf30ae8a82789ce`.
+- Post-merge verification on clean main:
+  - `npm run verify:toolbar-split-boundary`: passed, 51 tests.
+  - `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
+  - `git diff --check`: passed.
+- Phase D worktree `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails` was clean and removed after post-merge verification.

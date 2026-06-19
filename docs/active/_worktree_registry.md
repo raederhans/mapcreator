@@ -5,9 +5,9 @@ Last updated: 2026-06-18
 ## Integration Owner
 
 - Owner: module-boundary continuation integration owner.
-- Current base: `main@e4b04c66` after Phase B closeout push.
+- Current base: `main@23a6c645` after Phase D guardrail merge.
 - Phase D base: `main@e4b04c66`.
-- Live test/build owner: no active live process after Phase D first verification.
+- Live test/build owner: no active live process after Phase D post-merge verification.
 - Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews; Hypatia completed Phase B split-candidate review; Curie and Archimedes completed Phase B code/docs review; Pasteur completed Phase D guardrail scout. Turing Phase D review could not complete because the Codex subagent quota was exhausted. No child agent owns live tests.
 
 ## Recommended Order
@@ -17,7 +17,7 @@ Last updated: 2026-06-18
 3. Treat HGO runtime preview overlap as integrated.
 4. Treat HGO vector scene terrain suppression as integrated.
 5. Treat Phase B toolbar scenario context bar owner as integrated, post-merge verified, and cleaned up.
-6. Integrate Phase D guardrails from current main.
+6. Treat Phase D guardrails as integrated, post-merge verified, and cleaned up.
 
 ## Current Worktrees
 
@@ -25,8 +25,7 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@e4b04c66` | `origin/main@e4b04c66` | clean integration owner checkout | none | Phase B functional commit and closeout are pushed; Phase D starts in a separate worktree. | Green as the Phase D integration target after branch verification. | After Phase D commit and branch push, fast-forward merge Phase D into this checkout and run post-merge verification. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails` | `codex/module-boundary-phase-d-guardrails@e4b04c66` with in-progress guardrail | `main@e4b04c66` | first verification complete; commit pending | hot files: `tests/test_toolbar_split_boundary_contract.py`, active docs, registry | Adds toolbar shell and scenario context owner source-line budgets to the existing toolbar split boundary contract. Passed toolbar boundary 51 tests, import graph 48 specs, diff check, and ai-slop diff scan. | Green for production runtime; yellow only for future toolbar shell growth because the budget is intentionally strict. | Commit, push branch, merge into main, verify after merge, then remove worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@23a6c645` plus this closeout docs update | `origin/main@e4b04c66` before push | clean integration owner checkout after closeout commit | none after closeout commit | Phase D guardrail commit is merged; recovery branch is pushed; post-merge toolbar boundary, import graph, and diff checks passed. | Green for final UltraQA and archive. | Commit and push Phase D closeout docs, then run final UltraQA. |
 
 ## Recent Integrated Branches
 
@@ -34,6 +33,7 @@ These rows are historical integration summaries retained for recovery and sequen
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails` | `codex/module-boundary-phase-d-guardrails@23a6c645`, fast-forwarded into main | `main@e4b04c66` | integrated, pushed, verified, and worktree removed | hot files resolved: `tests/test_toolbar_split_boundary_contract.py`, active docs, registry | Adds toolbar shell and scenario context owner source-line budgets to the existing toolbar split boundary contract. Passed pre-merge toolbar boundary 51 tests, import graph 48 specs, diff check, and ai-slop scan. Post-merge main passed toolbar boundary 51 tests, import graph 48 specs, and diff check. | Green for final QA; yellow only for future toolbar shell growth because the budget is intentionally strict. | No active integration action; use branch `codex/module-boundary-phase-d-guardrails` for recovery. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-b-ui-shell` | `codex/module-boundary-phase-b-ui-shell@838b08fa`, fast-forwarded into main | `main@84b9ef5b` | integrated, pushed, verified, and worktree removed | hot files resolved: `js/ui/toolbar.js`, `js/ui/toolbar/scenario_context_bar_controller.js`, matching dist mirror, controller behavior test, toolbar/UI boundary tests, `package.json`, Pages manifest, active docs | New scenario context bar controller owns labels, selection chip, safe-width layout, collapse binding, resize refresh, and guide highlight timer. Pre-merge passed syntax, controller behavior 6 tests, toolbar boundary 50 tests, UI foundation 6 tests, HGO preview 19 tests, import graph, Pages dist startup shell 37 tests, landing showcase 8 tests, ai-slop scan, Curie code review, Archimedes docs review, and diff check. Post-merge main passed controller 6 tests, toolbar boundary 50 tests, HGO preview 19 tests, import graph, Pages dist, and diff check. | Yellow only for future `scenario_controls.js` selector-shell work; green for Phase D guardrails. | No active integration action; use branch `codex/module-boundary-phase-b-ui-shell` for recovery. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `codex/hgo-vector-scene-terrain-suppression@deba2034`, fast-forwarded into `main@deba2034` | `main@db2e40d1` | integrated and pushed | hot files resolved: `js/core/renderer/border_draw_owner.js`, `js/core/renderer/ocean_render_owner.js`, `js/core/renderer/river_layer_render_owner.js`, matching dist mirrors, owner behavior tests, Pages manifest | HGO vector scene terrain suppression skips canonical coastline/accent/base-river strokes for HGO vector scenes. Passed owner behavior 18 tests, HGO preview 19 tests, HGO strict contract, `verify:pages-dist`, import graph, and diff check. | Green for future UI files; yellow only for future renderer-owner work. | No active integration action. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-hgo-runtime-preview-fix` | `codex/hgo-runtime-preview-fix@db2e40d1` | `main@ea9fd52a` | integrated, pushed, Git worktree removed; locked `.runtime/dev` residue remains | hot files resolved: `js/core/map_renderer.js`, `js/ui/scenario_controls.js`, matching dist mirrors, HGO preview tests, renderer/toolbar/Pages contracts, `package.json`, Pages manifest | Functional commit `db2e40d1` keeps HGO projected preview inside the renderer lifecycle, carries current projection/zoom options through render and inspect, updates toolbar restore/reset behavior, and moves npm Python scripts to `tools/run_python.mjs`. Passed HGO node 19 tests, HGO strict scenario contract, import graph, `verify:pages-dist`, Python renderer/toolbar/Pages contracts 92 tests after manifest refresh, package JSON parse, and diff check. Feature branch pushed. | Green for Phase B after merge; red only if the preserved border/ocean follow-up stash is later replayed over Pages manifest or renderer owner files. | No active integration action. Recovery follow-ups are stashed as `preserve-hgo-worktree-followups-before-cleanup-20260618T1935` with patch backup `.runtime/cleanup-backups/hgo-worktree-followups-before-cleanup-20260618T1935/`. |
