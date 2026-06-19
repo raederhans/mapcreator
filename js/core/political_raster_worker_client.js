@@ -96,6 +96,8 @@ export function isPoliticalRasterWorkerBitmapEnabled(search = globalThis.locatio
 }
 
 export function createPoliticalRasterWorkerIdentity({
+  sceneGeneration = 0,
+  scenarioDataGeneration = 0,
   scenarioId = "",
   selectionVersion = 0,
   topologyRevision = 0,
@@ -107,6 +109,8 @@ export function createPoliticalRasterWorkerIdentity({
 } = {}) {
   return {
     protocolVersion: POLITICAL_RASTER_WORKER_PROTOCOL_VERSION,
+    sceneGeneration: Number(sceneGeneration || 0),
+    scenarioDataGeneration: Number(scenarioDataGeneration || 0),
     scenarioId: String(scenarioId || ""),
     selectionVersion: Number(selectionVersion || 0),
     topologyRevision: Number(topologyRevision || 0),
@@ -132,6 +136,8 @@ function getIdentitySignature(identity = null) {
   if (!identity || typeof identity !== "object") return "";
   return [
     String(identity.scenarioId || ""),
+    Number(identity.sceneGeneration || 0),
+    Number(identity.scenarioDataGeneration || 0),
     Number(identity.selectionVersion || 0),
     Number(identity.topologyRevision || 0),
     Number(identity.colorRevision || 0),
@@ -146,6 +152,8 @@ export function isPoliticalRasterWorkerResultCurrent(requestIdentity, currentIde
   const request = requestIdentity || {};
   const current = currentIdentity || {};
   return String(request.scenarioId || "") === String(current.scenarioId || "")
+    && Number(request.sceneGeneration || 0) === Number(current.sceneGeneration || 0)
+    && Number(request.scenarioDataGeneration || 0) === Number(current.scenarioDataGeneration || 0)
     && Number(request.selectionVersion || 0) === Number(current.selectionVersion || 0)
     && Number(request.topologyRevision || 0) === Number(current.topologyRevision || 0)
     && Number(request.colorRevision || 0) === Number(current.colorRevision || 0)

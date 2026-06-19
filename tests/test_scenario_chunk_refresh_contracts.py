@@ -72,6 +72,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn('const nextFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPayload);', self.scenario_chunk_runtime_source)
         self.assertIn('const previousPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(runtimeState.scenarioPoliticalVisibleChunkData);', self.scenario_chunk_runtime_source)
         self.assertIn('const nextPrimaryFeatureIds = getScenarioFeatureCollectionIdentityList(normalizedPrimaryPayload);', self.scenario_chunk_runtime_source)
+        self.assertIn('bumpScenarioDataGenerationState(runtimeState, String(reason || "political-chunk-payload"));', self.scenario_chunk_runtime_source)
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(

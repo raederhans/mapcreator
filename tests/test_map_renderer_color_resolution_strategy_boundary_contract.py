@@ -54,6 +54,22 @@ class MapRendererColorResolutionStrategyBoundaryContractTest(unittest.TestCase):
         derived_body = renderer_content[derived_start:derived_end]
         self.assertIn("const nextColors = rebuildResolvedColors();", derived_body)
         self.assertNotIn("collectResolvedColor", derived_body)
+        self.assertIn("function applyFeatureVisualOverrideTransaction(", renderer_content)
+        override_transaction_body = renderer_content.split(
+            "function applyFeatureVisualOverrideTransaction(",
+            1,
+        )[1].split("function refreshResolvedColorsForOwners(", 1)[0]
+        self.assertIn("delete runtimeState.visualOverrides[targetId];", override_transaction_body)
+        self.assertIn("delete runtimeState.featureOverrides[targetId];", override_transaction_body)
+        self.assertIn("runtimeState.visualOverrides[targetId] = color;", override_transaction_body)
+        self.assertIn("runtimeState.featureOverrides[targetId] = color;", override_transaction_body)
+        self.assertEqual(renderer_content.count("runtimeState.visualOverrides[targetId] ="), 1)
+        self.assertEqual(renderer_content.count("runtimeState.featureOverrides[targetId] ="), 1)
+        self.assertEqual(renderer_content.count("delete runtimeState.visualOverrides[targetId];"), 1)
+        self.assertEqual(renderer_content.count("delete runtimeState.featureOverrides[targetId];"), 1)
+        self.assertIn("applyFeatureVisualOverrideTransaction(resolvedIds, color,", renderer_content)
+        self.assertIn("applyFeatureVisualOverrideTransaction(freshIds, selectedColor,", renderer_content)
+        self.assertIn("applyFeatureVisualOverrideTransaction(targetIds, null,", renderer_content)
 
         self.assertIn('import { resolveFeatureColor } from "../color_resolver.js";', owner_content)
         self.assertIn("export function createColorResolutionStrategyOwner({", owner_content)

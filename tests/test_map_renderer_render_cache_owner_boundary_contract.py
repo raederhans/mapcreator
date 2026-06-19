@@ -61,6 +61,8 @@ class MapRendererRenderCacheOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("function hasPassFullReferenceTransform(passName) {", owner_content)
         self.assertIn("function clearPassFullReferenceTransforms(passNames = null) {", owner_content)
         self.assertIn("function getInteractionCompositeMismatchReasons(composite, currentTransform, cache = getRenderPassCacheState()) {", owner_content)
+        self.assertIn('mismatchReasons.push("scene-generation-mismatch");', owner_content)
+        self.assertIn('mismatchReasons.push("scenario-data-generation-mismatch");', owner_content)
         self.assertIn("function getInteractionCompositeReuseDecision(", owner_content)
         self.assertIn('new Set(["selection-version-mismatch", "topology-revision-mismatch"])', owner_content)
         self.assertIn("allowSelectionTopologyContinuity", owner_content)

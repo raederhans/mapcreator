@@ -70,6 +70,28 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("function didHgoPreviewVisibilityTokenChange(previousSignature, nextSignature)", owner_content)
         self.assertIn('cache.reasons[passName] = "hgo-runtime-preview";', owner_content)
         self.assertIn('tryPartialPoliticalPassRepaint(transform, nextSignature, timings)', owner_content)
+        self.assertIn("function getPoliticalPassFineBaselineMismatch(", renderer_content)
+        self.assertIn("const politicalPassCurrent = !!(", renderer_content)
+        self.assertIn('return "coarse-baseline";', renderer_content)
+        self.assertIn('return "scene-snapshot-mismatch";', renderer_content)
+        self.assertIn('return "scenario-data-generation-mismatch";', renderer_content)
+        partial_repaint_body = renderer_content.split("function tryPartialPoliticalPassRepaint(", 1)[1].split(
+            "\nfunction drawPoliticalPass",
+            1,
+        )[0]
+        self.assertIn("const fineBaselineMismatch = getPoliticalPassFineBaselineMismatch(transform);", partial_repaint_body)
+        self.assertIn("return fallback(fineBaselineMismatch);", partial_repaint_body)
+        political_draw_body = renderer_content.split("function drawPoliticalPass(", 1)[1].split(
+            "\nfunction getContextScenarioLayerCacheEntry",
+            1,
+        )[0]
+        self.assertIn('politicalDataStage: "coarse"', political_draw_body)
+        self.assertIn('politicalDataStage: "fine"', political_draw_body)
+        self.assertIn('finePoliticalCacheReady: true', political_draw_body)
+        self.assertIn("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(", renderer_content)
+        self.assertIn('cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");', renderer_content)
+        self.assertIn("sceneGeneration: identity.sceneGeneration,", renderer_content)
+        self.assertIn("scenarioDataGeneration: identity.scenarioDataGeneration,", renderer_content)
         self.assertIn("function ensureIdleRenderPasses(timings, passNames = null) {", owner_content)
         self.assertIn("const requestedPassNames = Array.isArray(passNames) ? new Set(passNames.filter(Boolean)) : null;", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
@@ -165,6 +187,14 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             render_pass_to_cache_body.index("setPassReferenceTransform(passName, transform);"),
         )
         self.assertIn('recordRenderPerfMetric("renderPassCommitSkipped"', render_pass_to_cache_body)
+        self.assertIn("cache.politicalPassDataStage = politicalDataStage;", render_pass_to_cache_body)
+        self.assertIn("cache.politicalPassFineCacheReady = politicalFineCacheReady;", render_pass_to_cache_body)
+        self.assertIn("if (politicalFineCacheReady) {", render_pass_to_cache_body)
+        self.assertIn("clearPassFullReferenceTransforms([passName]);", render_pass_to_cache_body)
+        self.assertLess(
+            render_pass_to_cache_body.index("if (politicalFineCacheReady) {"),
+            render_pass_to_cache_body.index("cache.partialPoliticalDirtyIds.clear();"),
+        )
         self.assertIn("if (isHgoRuntimePreviewReady()) {\n    return getProjectedHgoRuntimePreviewBounds();\n  }", renderer_content)
         pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(
             "\n\nfunction updateZoomTranslateExtent",

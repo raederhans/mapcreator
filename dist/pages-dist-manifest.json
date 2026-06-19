@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -45752,7 +45752,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 890204,
+      "size_bytes": 900316,
       "source_kind": "dist"
     },
     {
@@ -45777,7 +45777,7 @@
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
-      "size_bytes": 15001,
+      "size_bytes": 15447,
       "source_kind": "dist"
     },
     {
@@ -45892,7 +45892,7 @@
     },
     {
       "path": "app/js/core/renderer/render_cache_owner.js",
-      "size_bytes": 10484,
+      "size_bytes": 10816,
       "source_kind": "dist"
     },
     {
@@ -46042,7 +46042,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 115661,
+      "size_bytes": 115843,
       "source_kind": "dist"
     },
     {
@@ -46162,7 +46162,7 @@
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 25174,
+      "size_bytes": 26289,
       "source_kind": "dist"
     },
     {
@@ -46262,7 +46262,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 18669,
+      "size_bytes": 21640,
       "source_kind": "dist"
     },
     {
@@ -47101,5 +47101,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153100334
+  "total_bytes": 1153115369
 }

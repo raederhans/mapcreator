@@ -5,16 +5,16 @@ Last updated: 2026-06-19
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main@d1faea1f` before render-fluidity integration.
-- Execution branch `codex/render-fluidity-p1-p3` was merged at `15008502` and pushed to `origin/main`.
-- Live test/build owner: main Codex agent owned all live tests, Pages dist, build, merge, push, and cleanup commands.
-- Subagents: render-fluidity child agents were read-only static mapping, verification, and review lanes; no child agent owned live tests.
+- Current base: `origin/main@8c13c395b9704cb8c380d4aa8c0f05e302326074` before render scene snapshot stability.
+- Execution branch `codex/render-scene-snapshot-stability` is active in `C:\Users\raede\Desktop\dev\mapcreator`.
+- Live test/build owner: main Codex agent owns all live tests, Pages dist, build, merge, push, and cleanup commands.
+- Subagents: static/review lanes only; no child agent owns live tests.
 
 ## Recommended Order
 
-1. `codex/render-fluidity-p1-p3` is integrated into `origin/main@15008502`, verified, and archived.
-2. Remove render-fluidity feature and integration worktrees after closeout push.
-3. Keep one owner for future Pages dist or long live gates.
+1. Commit `codex/render-scene-snapshot-stability` after final self-check.
+2. Push the feature branch, fast-forward merge into `main`, and push `main`.
+3. Archive task docs after main integration and keep one owner for future Pages dist or long live gates.
 
 ## Current Worktrees
 
@@ -22,7 +22,7 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@bf76965d`, behind current `origin/main` | local parent checkout before render-fluidity integrations | dirty parent checkout with unrelated docs/archive cleanup changes | dirty files are docs/archive and `lessons learned.md`; no active render implementation was done here | `git status --short` in the parent still shows unrelated docs deletions/modifications after render-fluidity integration and post-audit setup. | Yellow because parent remains dirty and behind current origin; no file-path overlap with render-fluidity implementation. | Preserve parent changes. Update this checkout only through a separate cleanup/sync task. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `codex/render-scene-snapshot-stability`, local diff from `8c13c395` | `origin/main@8c13c395b9704cb8c380d4aa8c0f05e302326074` | ready-for-integration | hot files changed: `js/core/map_renderer.js`, `js/core/state/renderer_runtime_state.js`, `js/core/political_raster_worker_client.js`, `js/core/renderer/render_cache_owner.js`, `js/core/scenario/chunk_runtime.js`, `js/core/scenario_rollback.js`, matching `dist/app` mirrors, renderer/runtime/scenario/rollback tests, active docs | Scene snapshot generations now gate visible frame identity, last-good frame, interaction composites, worker bitmap currentness, render pass cache metadata, deferred full-cache state, partial political repaint, and rollback restore. Validation passed: JS syntax checks, Node behavior/contract suite 87/87, focused Python boundary contracts 70/70, `npm run test:node:scenario-chunk-contracts` 47/47, `npm run verify:pages-dist` with startup shell 37/37 and landing showcase 8/8 after a transient topojson memory retry, and `git diff --check` with CRLF warnings only. | Yellow: renderer, worker, rollback, color, and scenario chunk shared hot paths are semantically related to recent render-fluidity work. Green for direct worktree overlap because this is the only current worktree. | Commit and push feature branch, then fast-forward merge into `main`, push, and archive task docs. |
 
 ## Recent Integrated Branches
 

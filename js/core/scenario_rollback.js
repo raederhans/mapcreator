@@ -8,6 +8,11 @@ import {
   createDefaultScenarioHydrationHealthGate,
   createDefaultRuntimeChunkLoadState,
 } from "./state/scenario_runtime_state.js";
+import {
+  bumpScenarioDataGenerationState,
+  bumpSceneGenerationState,
+  ensureSceneSnapshotState,
+} from "./state/renderer_runtime_state.js";
 import { ensureScenarioAuditUiState, setScenarioAuditUiState } from "./scenario_ui_sync.js";
 import {
   awaitInitialScenarioChunkVisualPromotion,
@@ -89,6 +94,7 @@ const ROLLBACK_REQUIRED_KEYS = Object.freeze([
   "scenarioDisplaySettingsBeforeActivate",
   "activeScenarioPerformanceHints",
   "scenarioPoliticalChunkData",
+  "scenarioPoliticalVisibleChunkData",
   "activeScenarioChunks",
   "runtimeChunkLoadState",
   "scheduleScenarioChunkRefreshEnabled",
@@ -182,6 +188,7 @@ function captureScenarioRuntimeSnapshot() {
     countryBaseColors: cloneScenarioStateValue(runtimeState.countryBaseColors),
     activeScenarioPerformanceHints: cloneScenarioStateValue(runtimeState.activeScenarioPerformanceHints),
     scenarioPoliticalChunkData: cloneScenarioStateValue(runtimeState.scenarioPoliticalChunkData),
+    scenarioPoliticalVisibleChunkData: cloneScenarioStateValue(runtimeState.scenarioPoliticalVisibleChunkData),
     activeScenarioChunks: cloneScenarioStateValue(runtimeState.activeScenarioChunks),
     // 定时器和 in-flight commit 不能直接带入快照；回滚只恢复“是否需要重新挂钩”的稳定语义。
     runtimeChunkLoadState: cloneScenarioStateValue({
@@ -319,6 +326,7 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   markLegacyColorStateDirty();
   runtimeState.activeScenarioPerformanceHints = cloneScenarioStateValue(snapshot.activeScenarioPerformanceHints);
   runtimeState.scenarioPoliticalChunkData = cloneScenarioStateValue(snapshot.scenarioPoliticalChunkData);
+  runtimeState.scenarioPoliticalVisibleChunkData = cloneScenarioStateValue(snapshot.scenarioPoliticalVisibleChunkData);
   runtimeState.activeScenarioChunks =
     cloneScenarioStateValue(snapshot.activeScenarioChunks) || createDefaultActiveScenarioChunksState();
   runtimeState.runtimeChunkLoadState =
@@ -336,6 +344,19 @@ function restoreScenarioRuntimeSnapshot(snapshot) {
   runtimeState.showScenarioReliefOverlays = snapshot.showScenarioReliefOverlays !== false;
   runtimeState.showStrategicResourceMarkers = !!snapshot.showStrategicResourceMarkers;
   runtimeState.strategicChoroplethMetric = String(snapshot.strategicChoroplethMetric || "");
+}
+
+function markScenarioRollbackSceneSnapshotRestored(previousScenarioId = "") {
+  const restoredScenarioId = String(runtimeState.activeScenarioId || "");
+  const sceneSnapshot = ensureSceneSnapshotState(runtimeState);
+  if (
+    String(sceneSnapshot.sceneScenarioId || "") !== restoredScenarioId
+    || String(previousScenarioId || "") !== restoredScenarioId
+  ) {
+    bumpSceneGenerationState(runtimeState, "scenario-rollback");
+    sceneSnapshot.sceneScenarioId = restoredScenarioId;
+  }
+  bumpScenarioDataGenerationState(runtimeState, "scenario-rollback");
 }
 
 function restoreScenarioPresentationSnapshot(snapshot) {
@@ -408,9 +429,11 @@ export function restoreScenarioApplyRollbackSnapshot(
   }
   callRuntimeHook(runtimeState, "cancelScenarioChunkPromotionCommitFn", "rolled-back");
 
+  const previousScenarioId = String(runtimeState.activeScenarioId || "");
   restoreScenarioRuntimeSnapshot(snapshot);
   restoreScenarioPresentationSnapshot(snapshot);
   restoreScenarioPaletteSnapshot(snapshot);
   syncResolvedDefaultCountryPalette({ overwriteCountryPalette: false });
+  markScenarioRollbackSceneSnapshotRestored(previousScenarioId);
   return true;
 }

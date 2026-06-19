@@ -408,3 +408,6 @@
 
 ### Worker 试验指标要锁失败和迟到路径
 - 默认关闭的 worker bitmap 试验要同时测成功、ERROR fallback、迟到 bitmap 拒绝和几何覆盖；只测 happy path 会让不可用环境或超时结果被指标误判为成功。
+
+### 渐进政治缓存要绑定场景代际
+- progressive coarse underlay、deferred full cache、worker bitmap、last-good frame 和 partial repaint 共用同一画布时，cache key 里要带 `sceneGeneration` 与 `scenarioDataGeneration`；只看 transform/color/pass signature 会让旧场景结果在新场景恢复期被重新提交。

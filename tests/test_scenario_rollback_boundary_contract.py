@@ -22,9 +22,11 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
         self.assertIn('"activeScenarioMeshPack"', content)
         self.assertIn('"scheduleScenarioChunkRefreshEnabled"', content)
         self.assertIn('"awaitInitialScenarioChunkVisualPromotionEnabled"', content)
+        self.assertIn('"scenarioPoliticalVisibleChunkData"', content)
         self.assertIn('"legendLabels"', content)
         self.assertIn('"legendConfig"', content)
         self.assertIn("activeScenarioMeshPack: cloneScenarioStateValue(runtimeState.activeScenarioMeshPack)", content)
+        self.assertIn("scenarioPoliticalVisibleChunkData: cloneScenarioStateValue(runtimeState.scenarioPoliticalVisibleChunkData)", content)
         self.assertIn("legendLabels: cloneScenarioStateValue(runtimeState.legendLabels)", content)
         self.assertIn("legendConfig: cloneScenarioStateValue(runtimeState.legendConfig)", content)
         self.assertIn(
@@ -36,6 +38,7 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             content,
         )
         self.assertIn("runtimeState.activeScenarioMeshPack = cloneScenarioStateValue(snapshot.activeScenarioMeshPack);", content)
+        self.assertIn("runtimeState.scenarioPoliticalVisibleChunkData = cloneScenarioStateValue(snapshot.scenarioPoliticalVisibleChunkData);", content)
         self.assertIn("runtimeState.legendLabels = cloneScenarioStateValue(snapshot.legendLabels) || {};", content)
         self.assertIn("runtimeState.legendConfig = cloneScenarioStateValue(snapshot.legendConfig) || {};", content)
         self.assertIn(
@@ -47,6 +50,9 @@ class ScenarioRollbackBoundaryContractTest(unittest.TestCase):
             content,
         )
         self.assertIn("Invalid rollback snapshot: missing required keys:", content)
+        self.assertIn("function markScenarioRollbackSceneSnapshotRestored(previousScenarioId = \"\")", content)
+        self.assertIn('bumpSceneGenerationState(runtimeState, "scenario-rollback");', content)
+        self.assertIn('bumpScenarioDataGenerationState(runtimeState, "scenario-rollback");', content)
         self.assertNotIn('from "./scenario_recovery.js"', content)
         self.assertNotIn("setMapData(", content)
         self.assertNotIn("rebuildPresetState(", content)

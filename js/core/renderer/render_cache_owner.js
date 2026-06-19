@@ -205,6 +205,12 @@ export function createRenderCacheOwner({
     }
     const identity = getVisibleFrameIdentity(currentTransform);
     if (String(composite.scenarioId || "") !== identity.scenarioId) mismatchReasons.push("scenario-mismatch");
+    if (Number(composite.sceneGeneration || 0) !== Number(identity.sceneGeneration || 0)) {
+      mismatchReasons.push("scene-generation-mismatch");
+    }
+    if (Number(composite.scenarioDataGeneration || 0) !== Number(identity.scenarioDataGeneration || 0)) {
+      mismatchReasons.push("scenario-data-generation-mismatch");
+    }
     if (Number(composite.selectionVersion || 0) !== identity.selectionVersion) mismatchReasons.push("selection-version-mismatch");
     if (String(composite.contextFlagSignature || "") !== identity.contextFlagSignature) mismatchReasons.push("context-flag-mismatch");
     if (Number(composite.topologyRevision || 0) !== identity.topologyRevision) mismatchReasons.push("topology-revision-mismatch");

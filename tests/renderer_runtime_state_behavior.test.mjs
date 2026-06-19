@@ -6,8 +6,11 @@ import {
   createDefaultRenderPassCacheState,
   createDefaultRendererTransientRuntimeState,
   createDefaultSidebarPerfState,
+  bumpScenarioDataGenerationState,
+  bumpSceneGenerationState,
   ensureExactAfterSettleControllerState,
   ensureRenderPassCacheState,
+  ensureSceneSnapshotState,
   ensureSidebarPerfState,
   isExactAfterSettleControllerActiveState,
   isExactAfterSettleGenerationCurrentState,
@@ -80,17 +83,33 @@ test("renderer supporting factories keep cache shapes aligned", () => {
   const spatialIndex = createDefaultSpatialIndexState();
 
   assert.equal(renderPass.lastGoodFrame.valid, false);
+  assert.equal(renderPass.lastGoodFrame.sceneGeneration, 0);
+  assert.equal(renderPass.lastGoodFrame.scenarioDataGeneration, 0);
+  assert.equal(renderPass.lastGoodFrame.politicalDataStage, "unknown");
   assert.deepEqual(renderPass.fullReferenceTransforms, {});
   assert.equal(renderPass.compositeBuffer.canvas, null);
   assert.equal(renderPass.interactionComposite.scenarioId, "");
+  assert.equal(renderPass.interactionComposite.sceneGeneration, 0);
+  assert.equal(renderPass.interactionComposite.scenarioDataGeneration, 0);
+  assert.equal(renderPass.interactionComposite.politicalDataStage, "unknown");
   assert.equal(renderPass.interactionComposite.topologyRevision, 0);
   assert.equal(renderPass.interactionComposite.pixelWidth, 0);
+  assert.equal(renderPass.politicalPassSceneGeneration, 0);
+  assert.equal(renderPass.politicalPassScenarioDataGeneration, 0);
+  assert.equal(renderPass.politicalPassDataStage, "unknown");
+  assert.equal(renderPass.politicalPassFullReady, false);
+  assert.equal(renderPass.politicalPassFineCacheReady, false);
   assert.equal(renderPass.counters.missingVisibleFrameSkippedDuringInteraction, 0);
   const transient = createDefaultRendererTransientRuntimeState();
   assert.equal(transient.firstVisibleFramePainted, false);
   assert.equal(transient.exactAfterSettleController.phase, "idle");
   assert.equal(transient.exactAfterSettleController.generation, 0);
   assert.equal(transient.exactAfterSettleController.pendingPlan, null);
+  assert.equal(transient.sceneGeneration, 0);
+  assert.equal(transient.scenarioDataGeneration, 0);
+  assert.equal(transient.sceneScenarioId, "");
+  assert.equal(transient.sceneGenerationReason, "init");
+  assert.equal(transient.scenarioDataGenerationReason, "init");
   assert.equal(sidebarPerf.counters.fullListRenders, 0);
   assert.equal(projectedBounds.projectedBoundsById.size, 0);
   assert.equal(borderCache.cachedFrontlineMeshHash, "");
@@ -147,6 +166,27 @@ test("open ocean defaults keep visibility separate from interaction", () => {
   }
 });
 
+
+test("scene snapshot helpers normalize and bump explicit generations", () => {
+  const state = {
+    sceneGeneration: "2",
+    scenarioDataGeneration: "5",
+    sceneScenarioId: "tno_1962",
+  };
+
+  const normalized = ensureSceneSnapshotState(state);
+  assert.equal(normalized, state);
+  assert.equal(state.sceneGeneration, 2);
+  assert.equal(state.scenarioDataGeneration, 5);
+  assert.equal(state.sceneScenarioId, "tno_1962");
+  assert.equal(state.sceneGenerationReason, "init");
+  assert.equal(state.scenarioDataGenerationReason, "init");
+
+  assert.equal(bumpSceneGenerationState(state, "scenario-switch"), 3);
+  assert.equal(state.sceneGenerationReason, "scenario-switch");
+  assert.equal(bumpScenarioDataGenerationState(state, "political-chunk-payload"), 6);
+  assert.equal(state.scenarioDataGenerationReason, "political-chunk-payload");
+});
 
 test("exact-after-settle controller ignores stale generations", () => {
   const state = createDefaultRendererTransientRuntimeState();

@@ -7,6 +7,7 @@ import {
   createDefaultRuntimeChunkLoadState,
 } from "../state/scenario_runtime_state.js";
 import { registerRuntimeHook } from "../state/index.js";
+import { bumpScenarioDataGenerationState } from "../state/renderer_runtime_state.js";
 
 const FOCUS_COUNTRY_OVERRIDE_TTL_MS = 5000;
 const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;
@@ -1014,6 +1015,7 @@ function createScenarioChunkRuntimeController({
     }
     runtimeState.scenarioPoliticalChunkData = normalizedPayload || null;
     runtimeState.scenarioPoliticalVisibleChunkData = nextPrimaryPoliticalChunkData || null;
+    bumpScenarioDataGenerationState(runtimeState, String(reason || "political-chunk-payload"));
     const resolvedPoliticalFeatureIds = Array.from(new Set([
       ...(Array.isArray(politicalFeatureIds) ? politicalFeatureIds : []),
       ...previousFeatureIds,

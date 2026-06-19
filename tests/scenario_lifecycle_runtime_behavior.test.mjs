@@ -5,6 +5,14 @@ import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_ru
 import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
 import { createScenarioOceanFillRestoreRuntime } from "../js/core/scenario/presentation_ocean_fill_restore.js";
 import { evaluateScenarioDataHealth } from "../js/core/scenario_data_health.js";
+import {
+  captureScenarioApplyRollbackSnapshot,
+  restoreScenarioApplyRollbackSnapshot,
+} from "../js/core/scenario_rollback.js";
+import {
+  createPoliticalRasterWorkerIdentity,
+  isPoliticalRasterWorkerResultCurrent,
+} from "../js/core/political_raster_worker_client.js";
 import { state as appState } from "../js/core/state.js";
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
@@ -134,6 +142,22 @@ function withAppStatePatch(patch, callback) {
   } finally {
     Object.keys(previousValues).forEach((key) => {
       appState[key] = previousValues[key];
+    });
+  }
+}
+
+function withAppStateRestored(callback) {
+  const previousValues = { ...appState };
+  try {
+    return callback();
+  } finally {
+    Object.keys(appState).forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(previousValues, key)) {
+        delete appState[key];
+      }
+    });
+    Object.entries(previousValues).forEach(([key, value]) => {
+      appState[key] = value;
     });
   }
 }
@@ -698,6 +722,72 @@ test("scenario data health uses chunked political payload as the expected featur
   assert.equal(health.warning, "");
   assert.equal(health.severity, "");
 });
+
+test("scenario rollback restores visible political data and advances scene data identity", () => withAppStateRestored(() => {
+  const oldFullData = { type: "FeatureCollection", features: [{ id: "old-full", properties: {}, geometry: null }] };
+  const oldVisibleData = { type: "FeatureCollection", features: [{ id: "old-visible", properties: {}, geometry: null }] };
+  const failedFullData = { type: "FeatureCollection", features: [{ id: "failed-full", properties: {}, geometry: null }] };
+  const failedVisibleData = { type: "FeatureCollection", features: [{ id: "failed-visible", properties: {}, geometry: null }] };
+
+  appState.activeScenarioId = "old_scenario";
+  appState.sceneScenarioId = "old_scenario";
+  appState.sceneGeneration = 4;
+  appState.scenarioDataGeneration = 10;
+  appState.scenarioPoliticalChunkData = oldFullData;
+  appState.scenarioPoliticalVisibleChunkData = oldVisibleData;
+  appState.runtimeChunkLoadState = {
+    refreshTimerId: null,
+    promotionTimerId: null,
+    promotionScheduled: false,
+    promotionCommitInFlight: false,
+  };
+
+  const rollbackSnapshot = captureScenarioApplyRollbackSnapshot();
+
+  appState.activeScenarioId = "failed_scenario";
+  appState.sceneScenarioId = "failed_scenario";
+  appState.sceneGeneration = 5;
+  appState.scenarioDataGeneration = 11;
+  appState.scenarioPoliticalChunkData = failedFullData;
+  appState.scenarioPoliticalVisibleChunkData = failedVisibleData;
+  const failedIdentity = createPoliticalRasterWorkerIdentity({
+    sceneGeneration: appState.sceneGeneration,
+    scenarioDataGeneration: appState.scenarioDataGeneration,
+    scenarioId: appState.activeScenarioId,
+    selectionVersion: 1,
+    topologyRevision: 1,
+    colorRevision: 1,
+    transformBucket: "1:0:0",
+    dpr: 1,
+    viewport: { x: 0, y: 0, width: 10, height: 10, right: 10, bottom: 10 },
+    passSignature: "political-failed",
+  });
+
+  restoreScenarioApplyRollbackSnapshot(rollbackSnapshot);
+
+  assert.equal(appState.activeScenarioId, "old_scenario");
+  assert.deepEqual(appState.scenarioPoliticalChunkData.features.map((feature) => feature.id), ["old-full"]);
+  assert.deepEqual(appState.scenarioPoliticalVisibleChunkData.features.map((feature) => feature.id), ["old-visible"]);
+  assert.equal(appState.scenarioDataGeneration, 12);
+  assert.equal(appState.scenarioDataGenerationReason, "scenario-rollback");
+  assert.equal(appState.sceneGeneration, 6);
+  assert.equal(appState.sceneGenerationReason, "scenario-rollback");
+  assert.equal(appState.sceneScenarioId, "old_scenario");
+
+  const restoredIdentity = createPoliticalRasterWorkerIdentity({
+    sceneGeneration: appState.sceneGeneration,
+    scenarioDataGeneration: appState.scenarioDataGeneration,
+    scenarioId: appState.activeScenarioId,
+    selectionVersion: 1,
+    topologyRevision: 1,
+    colorRevision: 1,
+    transformBucket: "1:0:0",
+    dpr: 1,
+    viewport: { x: 0, y: 0, width: 10, height: 10, right: 10, bottom: 10 },
+    passSignature: "political-failed",
+  });
+  assert.equal(isPoliticalRasterWorkerResultCurrent(failedIdentity, restoredIdentity), false);
+}));
 
 test("scenario data health accepts current coarse collections before chunk payload promotion", () => {
   const health = withAppStatePatch({

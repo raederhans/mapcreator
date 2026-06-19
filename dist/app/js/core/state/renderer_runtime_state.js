@@ -86,6 +86,38 @@ export function isExactAfterSettleControllerActiveState(target) {
   return ["scheduled", "applying", "awaiting-paint", "finalizing"].includes(phase);
 }
 
+export function ensureSceneSnapshotState(target) {
+  if (!target || typeof target !== "object") {
+    return {
+      sceneGeneration: 0,
+      scenarioDataGeneration: 0,
+      sceneScenarioId: "",
+      sceneGenerationReason: "init",
+      scenarioDataGenerationReason: "init",
+    };
+  }
+  target.sceneGeneration = Math.max(0, Number(target.sceneGeneration || 0));
+  target.scenarioDataGeneration = Math.max(0, Number(target.scenarioDataGeneration || 0));
+  target.sceneScenarioId = String(target.sceneScenarioId || "");
+  target.sceneGenerationReason = String(target.sceneGenerationReason || "init");
+  target.scenarioDataGenerationReason = String(target.scenarioDataGenerationReason || "init");
+  return target;
+}
+
+export function bumpSceneGenerationState(target, reason = "scene-update") {
+  const state = ensureSceneSnapshotState(target);
+  state.sceneGeneration = Math.max(0, Number(state.sceneGeneration || 0)) + 1;
+  state.sceneGenerationReason = String(reason || "scene-update");
+  return state.sceneGeneration;
+}
+
+export function bumpScenarioDataGenerationState(target, reason = "scenario-data-update") {
+  const state = ensureSceneSnapshotState(target);
+  state.scenarioDataGeneration = Math.max(0, Number(state.scenarioDataGeneration || 0)) + 1;
+  state.scenarioDataGenerationReason = String(reason || "scenario-data-update");
+  return state.scenarioDataGeneration;
+}
+
 export function createDefaultRenderPassCacheState() {
   return {
     referenceTransform: null,
@@ -122,6 +154,11 @@ export function createDefaultRenderPassCacheState() {
       dpr: 1,
       pixelWidth: 0,
       pixelHeight: 0,
+      sceneGeneration: 0,
+      scenarioDataGeneration: 0,
+      politicalDataStage: "unknown",
+      fullPoliticalReady: false,
+      finePoliticalCacheReady: false,
     },
     interactionComposite: {
       canvas: null,
@@ -140,6 +177,11 @@ export function createDefaultRenderPassCacheState() {
       pixelHeight: 0,
       colorRevision: 0,
       transformBucket: "",
+      sceneGeneration: 0,
+      scenarioDataGeneration: 0,
+      politicalDataStage: "unknown",
+      fullPoliticalReady: false,
+      finePoliticalCacheReady: false,
     },
     partialPoliticalDirtyIds: new Set(),
     pendingPoliticalColorEditIds: new Set(),
@@ -151,6 +193,11 @@ export function createDefaultRenderPassCacheState() {
     pendingPoliticalColorEditFirstPixelRecorded: false,
     pendingPoliticalColorEditFirstPixelPaintSource: "",
     pendingPoliticalPatchOverlayTransformSignature: "",
+    politicalPassSceneGeneration: 0,
+    politicalPassScenarioDataGeneration: 0,
+    politicalPassDataStage: "unknown",
+    politicalPassFullReady: false,
+    politicalPassFineCacheReady: false,
     politicalPathCache: new Map(),
     politicalPathCacheSignature: "",
     politicalPathCacheTransform: null,
@@ -303,6 +350,11 @@ export function createDefaultRendererTransientRuntimeState() {
     pendingDayNightRefresh: false,
     colorRevision: 0,
     topologyRevision: 0,
+    sceneGeneration: 0,
+    scenarioDataGeneration: 0,
+    sceneScenarioId: "",
+    sceneGenerationReason: "init",
+    scenarioDataGenerationReason: "init",
     renderPassCache: createDefaultRenderPassCacheState(),
     sidebarPerf: createDefaultSidebarPerfState(),
     ...createDefaultProjectedBoundsCacheState(),
@@ -393,6 +445,21 @@ export function ensureRenderPassCacheState(
   cache.pendingPoliticalPatchOverlayTransformSignature = typeof cache.pendingPoliticalPatchOverlayTransformSignature === "string"
     ? cache.pendingPoliticalPatchOverlayTransformSignature
     : defaults.pendingPoliticalPatchOverlayTransformSignature;
+  cache.politicalPassSceneGeneration = Number.isFinite(Number(cache.politicalPassSceneGeneration))
+    ? Number(cache.politicalPassSceneGeneration)
+    : defaults.politicalPassSceneGeneration;
+  cache.politicalPassScenarioDataGeneration = Number.isFinite(Number(cache.politicalPassScenarioDataGeneration))
+    ? Number(cache.politicalPassScenarioDataGeneration)
+    : defaults.politicalPassScenarioDataGeneration;
+  cache.politicalPassDataStage = typeof cache.politicalPassDataStage === "string"
+    ? cache.politicalPassDataStage
+    : defaults.politicalPassDataStage;
+  cache.politicalPassFullReady = typeof cache.politicalPassFullReady === "boolean"
+    ? cache.politicalPassFullReady
+    : defaults.politicalPassFullReady;
+  cache.politicalPassFineCacheReady = typeof cache.politicalPassFineCacheReady === "boolean"
+    ? cache.politicalPassFineCacheReady
+    : defaults.politicalPassFineCacheReady;
   cache.politicalPathCache = cache.politicalPathCache instanceof Map
     ? cache.politicalPathCache
     : defaults.politicalPathCache;

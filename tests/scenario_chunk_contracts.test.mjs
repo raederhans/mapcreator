@@ -1482,6 +1482,8 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       && rendererSource.includes('"progressive-political-full-cache-ready"')
       && rendererSource.includes("function isScenarioPoliticalBackgroundFullPassCacheKeyReady")
       && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
+      && rendererSource.includes("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent")
+      && /function getScenarioPoliticalBackgroundFullPassIdentity\([\s\S]*?const sceneIdentity = getVisibleFrameIdentity\(transform\);[\s\S]*?sceneIdentity\.sceneGeneration[\s\S]*?sceneIdentity\.scenarioDataGeneration/.test(rendererSource)
       && /function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\) \{[\s\S]*?state\.repaintDeferredRecorded = true;[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"/.test(rendererSource)
       && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
       && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)
@@ -1490,6 +1492,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
         return body.includes("runtimeState.deferExactAfterSettle")
           && body.includes("isExactAfterSettleControllerActive()")
           && body.includes("cache.dirty?.political")
+          && body.includes('cancelScenarioPoliticalBackgroundDeferredFullCache("scene-snapshot-mismatch");')
           && body.includes("scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork")
           && body.includes("const recoverySettled = isInteractionRecoverySettled({ quietMs: 600 });")
           && /!recoverySettled[\s\S]*?state\.index >= normalizedEntries\.length[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?const startedAt = nowMs\(\)[\s\S]*?getPoliticalFeaturePathEntry\([\s\S]*?allowBuild: true/.test(body)
@@ -1854,7 +1857,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /const displayOwnerCode = getDisplayOwnerCode\(matchedFeature, featureId, countryCode\);/.test(pixelProbeSource)
       && /state\.sovereignBaseColors\?\.\[displayOwnerCode\][\s\S]*?state\.countryBaseColors\?\.\[displayOwnerCode\]/.test(pixelProbeSource),
     scenarioBackgroundMergeUsesVisualLandCollection:
-      /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landData \|\| runtimeState\.landDataFull;[\s\S]*?\}/.test(rendererSource)
+      /function getScenarioPoliticalBackgroundLandCollection\(\) \{[\s\S]*?return runtimeState\.landDataFull \|\| runtimeState\.landData;[\s\S]*?\}/.test(rendererSource)
       && /function shouldUseScenarioPoliticalBackgroundMerge\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?runtimeState\.activeScenarioId[\s\S]*?landCollection\.features\.length/.test(rendererSource)
       && /function buildScenarioPoliticalBackgroundEntries\(\) \{[\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);/.test(rendererSource)
       && /function collectScenarioPoliticalBackgroundSpatialEntries\([\s\S]*?const landCollection = getScenarioPoliticalBackgroundLandCollection\(\);[\s\S]*?if \(landCollection !== runtimeState\.landData\)/.test(rendererSource),
@@ -2641,6 +2644,8 @@ test("coarse prewarm keeps complete political payload for initial promotion", as
   await controller.preloadScenarioCoarseChunks(bundle);
 
   assert.deepEqual(selectedViewportBbox, [-180, -90, 180, 90]);
+  assert.equal(runtimeState.scenarioDataGeneration, 1);
+  assert.equal(runtimeState.scenarioDataGenerationReason, "coarse-prewarm");
   assert.deepEqual(
     runtimeState.scenarioPoliticalChunkData.features.map((feature) => feature.id),
     ["visible-a", "outside-b", "visible-c"],
@@ -2689,6 +2694,8 @@ test("political raster worker result currentness includes viewport", async () =>
     isPoliticalRasterWorkerResultCurrent,
   } = await import("../js/core/political_raster_worker_client.js");
   const base = {
+    sceneGeneration: 3,
+    scenarioDataGeneration: 5,
     scenarioId: "tno_1962",
     selectionVersion: 7,
     topologyRevision: 11,
@@ -2701,6 +2708,20 @@ test("political raster worker result currentness includes viewport", async () =>
   assert.equal(
     isPoliticalRasterWorkerResultCurrent(requestIdentity, createPoliticalRasterWorkerIdentity(base)),
     true,
+  );
+  assert.equal(
+    isPoliticalRasterWorkerResultCurrent(
+      requestIdentity,
+      createPoliticalRasterWorkerIdentity({ ...base, sceneGeneration: 4 }),
+    ),
+    false,
+  );
+  assert.equal(
+    isPoliticalRasterWorkerResultCurrent(
+      requestIdentity,
+      createPoliticalRasterWorkerIdentity({ ...base, scenarioDataGeneration: 6 }),
+    ),
+    false,
   );
   assert.equal(
     isPoliticalRasterWorkerResultCurrent(
@@ -2723,7 +2744,7 @@ test("political raster renderer request identity includes viewport and pass sign
 
   assert.ok(rendererSource.includes("function getTransformBucketSignature("));
   assert.ok(drawSource.includes("const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();"));
-  assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?selectionVersion: Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: Number\(runtimeState\.topologyRevision \|\| 0\),[\s\S]*?colorRevision: Number\(runtimeState\.colorRevision \|\| 0\),[\s\S]*?transformBucket: getTransformBucketSignature\(transform\),[\s\S]*?dpr: Number\(runtimeState\.dpr \|\| 1\),/.test(drawSource));
+  assert.ok(/createPoliticalRasterWorkerIdentity\(\{[\s\S]*?sceneGeneration: sceneIdentity\.sceneGeneration,[\s\S]*?scenarioDataGeneration: sceneIdentity\.scenarioDataGeneration,[\s\S]*?selectionVersion: sceneIdentity\.selectionVersion \|\| Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?topologyRevision: sceneIdentity\.topologyRevision,[\s\S]*?colorRevision: sceneIdentity\.colorRevision,[\s\S]*?transformBucket: sceneIdentity\.transformBucket,[\s\S]*?dpr: sceneIdentity\.dpr,/.test(drawSource));
   assert.ok(/viewport: \{[\s\S]*?width: canvasWidth,[\s\S]*?height: canvasHeight,[\s\S]*?right: canvasWidth,[\s\S]*?bottom: canvasHeight,[\s\S]*?\}/.test(drawSource));
   assert.ok(drawSource.includes('passSignature: getRenderPassSignature("political", transform),'));
   assert.ok(drawSource.includes("const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);"));
@@ -2737,6 +2758,8 @@ test("political raster renderer request identity includes viewport and pass sign
   assert.ok(drawSource.includes("canvasPxHeight: workerPacketState.packet?.canvasPxHeight"));
   assert.ok(drawSource.includes('invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");'));
   assert.ok(/function normalizeViewportIdentity\(viewport = null\)[\s\S]*?\["x", "y", "width", "height", "left", "top", "right", "bottom"\]/.test(workerClientSource));
+  assert.ok(/Number\(request\.sceneGeneration \|\| 0\) === Number\(current\.sceneGeneration \|\| 0\)/.test(workerClientSource));
+  assert.ok(/Number\(request\.scenarioDataGeneration \|\| 0\) === Number\(current\.scenarioDataGeneration \|\| 0\)/.test(workerClientSource));
   assert.ok(/String\(request\.passSignature \|\| ""\) === String\(current\.passSignature \|\| ""\)/.test(workerClientSource));
   assert.ok(/normalizeViewportIdentity\(request\.viewport\) === normalizeViewportIdentity\(current\.viewport\)/.test(workerClientSource));
   assert.ok(workerSource.includes("passSignature: String(identity.passSignature || \"\")"));
