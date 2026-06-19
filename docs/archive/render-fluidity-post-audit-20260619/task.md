@@ -17,8 +17,8 @@
 
 ## Integration State
 
-- Commit: pending final review.
+- Commit: `a2577335`.
 - Base commit: `da191163`.
 - Current main divergence: parent checkout is behind and dirty; audit branch starts at latest `origin/main`.
 - Overlap risk: yellow for future renderer/perf work because this touches `map_renderer.js`.
-- Recommended action: commit, fast-forward/push `origin/main`, archive this task directory, then remove the audit worktree after final review passes.
+- Recommended action: push closeout registry update, then remove the audit worktree. Recovery is available through commit `a2577335` and branch `origin/codex/render-fluidity-post-audit`.

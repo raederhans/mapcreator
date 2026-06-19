@@ -10,8 +10,8 @@ Audit the integrated P4/P5 render-fluidity changes, fix concrete regressions, ve
 - [x] Review recent renderer, worker, packet, layer, perf, test, and dist changes.
 - [x] Fix the bitmap-ready render path so accepted worker bitmaps bypass the main-thread political background fill.
 - [x] Run targeted syntax, node, contract, import graph, Pages dist, and diff checks.
-- [ ] Run final code-review pass.
-- [ ] Commit, push, fast-forward `origin/main`, update recovery notes, and clean the temporary audit worktree.
+- [x] Run final code-review pass.
+- [x] Commit, push, fast-forward `origin/main`, update recovery notes, and clean the temporary audit worktree.
 
 ## Live Process Ownership
 
