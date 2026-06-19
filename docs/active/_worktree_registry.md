@@ -5,10 +5,10 @@ Last updated: 2026-06-18
 ## Integration Owner
 
 - Owner: module-boundary continuation integration owner.
-- Current base: Phase B functional merge `main@838b08fa`; Phase D starts after this closeout commit.
-- Phase B base: `main@84b9ef5b`.
-- Live test/build owner: no active live process after Phase B post-merge verification.
-- Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews; Hypatia completed Phase B split-candidate review; Curie and Archimedes completed Phase B code/docs review; Pasteur completed Phase D guardrail scout. No child agent owns live tests.
+- Current base: `main@e4b04c66` after Phase B closeout push.
+- Phase D base: `main@e4b04c66`.
+- Live test/build owner: no active live process after Phase D first verification.
+- Subagents: Harvey, Goodall, and Confucius completed Phase A reviews; Kierkegaard completed Phase C split-candidate review; Ptolemy and Helmholtz completed Phase C read-only reviews; Hypatia completed Phase B split-candidate review; Curie and Archimedes completed Phase B code/docs review; Pasteur completed Phase D guardrail scout. Turing Phase D review could not complete because the Codex subagent quota was exhausted. No child agent owns live tests.
 
 ## Recommended Order
 
@@ -17,7 +17,7 @@ Last updated: 2026-06-18
 3. Treat HGO runtime preview overlap as integrated.
 4. Treat HGO vector scene terrain suppression as integrated.
 5. Treat Phase B toolbar scenario context bar owner as integrated, post-merge verified, and cleaned up.
-6. Add Phase D guardrails from current main.
+6. Integrate Phase D guardrails from current main.
 
 ## Current Worktrees
 
@@ -25,7 +25,8 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@838b08fa` plus this closeout docs/manifest refresh | `origin/main@84b9ef5b` before push | clean integration owner checkout after closeout commit | none after closeout commit | Phase B functional commit is merged; recovery branch is pushed; post-merge scenario-context, toolbar boundary, HGO preview, import graph, Pages dist, and diff checks passed. | Green for Phase D guardrail worktree creation after this closeout commit. | Push main after closeout commit, then create Phase D worktree from updated main. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@e4b04c66` | `origin/main@e4b04c66` | clean integration owner checkout | none | Phase B functional commit and closeout are pushed; Phase D starts in a separate worktree. | Green as the Phase D integration target after branch verification. | After Phase D commit and branch push, fast-forward merge Phase D into this checkout and run post-merge verification. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails` | `codex/module-boundary-phase-d-guardrails@e4b04c66` with in-progress guardrail | `main@e4b04c66` | first verification complete; commit pending | hot files: `tests/test_toolbar_split_boundary_contract.py`, active docs, registry | Adds toolbar shell and scenario context owner source-line budgets to the existing toolbar split boundary contract. Passed toolbar boundary 51 tests, import graph 48 specs, diff check, and ai-slop diff scan. | Green for production runtime; yellow only for future toolbar shell growth because the budget is intentionally strict. | Commit, push branch, merge into main, verify after merge, then remove worktree. |
 
 ## Recent Integrated Branches
 

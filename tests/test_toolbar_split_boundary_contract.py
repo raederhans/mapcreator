@@ -49,6 +49,9 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 I18N_CATALOG_JS = REPO_ROOT / "js" / "core" / "i18n_catalog.js"
 LOCALES_JSON = REPO_ROOT / "data" / "locales.json"
 
+TOOLBAR_SHELL_MAX_LINES = 3100
+SCENARIO_CONTEXT_BAR_CONTROLLER_MAX_LINES = 240
+
 
 class ToolbarSplitBoundaryContractTest(unittest.TestCase):
     def _controller_call_body(self, content: str, factory_name: str) -> str:
@@ -87,6 +90,21 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertNotIn('registerRuntimeHook(state, "updateScenarioContextBarFn"', early_registration_region)
         self.assertNotIn('registerRuntimeHook(state, "updateActiveSovereignUIFn"', early_registration_region)
         self.assertNotIn('registerRuntimeHook(state, "updatePaintModeUIFn"', early_registration_region)
+
+    def test_toolbar_shell_and_scenario_context_owner_stay_inside_module_budget(self):
+        toolbar_lines = TOOLBAR_JS.read_text(encoding="utf-8").splitlines()
+        scenario_context_owner_lines = SCENARIO_CONTEXT_BAR_CONTROLLER_JS.read_text(encoding="utf-8").splitlines()
+
+        self.assertLessEqual(
+            len(toolbar_lines),
+            TOOLBAR_SHELL_MAX_LINES,
+            "toolbar.js should stay a composition shell; move growing UI behavior into focused owners",
+        )
+        self.assertLessEqual(
+            len(scenario_context_owner_lines),
+            SCENARIO_CONTEXT_BAR_CONTROLLER_MAX_LINES,
+            "scenario context bar owner should stay focused on workspace chrome",
+        )
 
     def test_toolbar_imports_new_split_modules(self):
         content = TOOLBAR_JS.read_text(encoding="utf-8")

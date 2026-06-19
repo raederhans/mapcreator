@@ -213,3 +213,22 @@
 - Start from `main@838b08fa` plus the Phase B closeout docs/manifest refresh.
 - Phase D should begin with a narrow module budget guard in `tests/test_toolbar_split_boundary_contract.py`.
 - The next useful budget is the toolbar source line budget, because Phase B reduced `toolbar.js` and created a clear owner boundary.
+
+## Phase D Implementation Notes
+
+- Phase D worktree: `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-d-guardrails`.
+- Branch: `codex/module-boundary-phase-d-guardrails`.
+- Base: `main@e4b04c663c7063bd28c5c3abe265aae0a63ddf1a`, matching `origin/main` after Phase B closeout push.
+- Live process owner: main Codex agent.
+- Added source-line budgets to `tests/test_toolbar_split_boundary_contract.py`:
+  - `js/ui/toolbar.js` must stay at or below 3100 lines; current count before the guard was 2970.
+  - `js/ui/toolbar/scenario_context_bar_controller.js` must stay at or below 240 lines; current count before the guard was 186.
+- This phase intentionally uses the existing toolbar split boundary entry so the budget is reached by `npm run verify:toolbar-split-boundary`.
+- Turing static review subagent could not complete because the Codex subagent quota was exhausted; Pasteur's earlier read-only guardrail scout remains the supporting sidecar evidence.
+
+## Phase D Verification Log
+
+- `npm run verify:toolbar-split-boundary`: passed, 51 tests.
+- `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
+- `git diff --check`: passed.
+- Ai-slop diff scan: clear for added-line risk patterns.

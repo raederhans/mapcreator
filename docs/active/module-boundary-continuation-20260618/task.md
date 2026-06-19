@@ -2,7 +2,40 @@
 
 ## Current Status
 
-Phase A, Phase B, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase D guardrails are the next active phase.
+Phase A, Phase B, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase D guardrail implementation is in progress in `codex/module-boundary-phase-d-guardrails`.
+
+## Phase D Delivery Package
+
+1. Added a module budget contract for `js/ui/toolbar.js` so the shell stays below 3100 source lines.
+2. Added a focused-owner budget for `js/ui/toolbar/scenario_context_bar_controller.js` so the Phase B owner stays below 240 source lines.
+3. Kept the guardrail inside the existing `tests/test_toolbar_split_boundary_contract.py` entry instead of adding a new test system.
+4. Left `package.json`, `dist/app`, and Pages manifest unchanged because this phase only changes a Python boundary contract.
+
+## Phase D Files
+
+Test files:
+- `tests/test_toolbar_split_boundary_contract.py`
+
+Docs:
+- `docs/active/module-boundary-continuation-20260618/plan.md`
+- `docs/active/module-boundary-continuation-20260618/context.md`
+- `docs/active/module-boundary-continuation-20260618/task.md`
+- `docs/active/_worktree_registry.md`
+
+## Phase D Diff Summary
+
+- Base commit: `main@e4b04c66`.
+- Current branch: `codex/module-boundary-phase-d-guardrails`.
+- Commit state: not committed yet; first verification is complete; commit, integration, post-merge verification, and cleanup are pending.
+- Direct file overlap is limited to the toolbar boundary test and active docs.
+- Overlap risk: green for production behavior because no source runtime or dist file changes are made.
+
+## Phase D Verification
+
+- Passed: `npm run verify:toolbar-split-boundary` (51 tests).
+- Passed: `npm run verify:test-import-graph` (48 specs).
+- Passed: `git diff --check`.
+- Passed: ai-slop diff scan for risky added-line patterns.
 
 ## Phase B Delivery Package
 
