@@ -2879,9 +2879,11 @@ function getFirstVisiblePoliticalFrameBlockReason(reason = "visible-frame") {
   if (!referenceTransform || !areZoomTransformsEquivalent(referenceTransform, transform)) {
     return "stale-political-reference-transform";
   }
-  const fullReferenceTransform = getPassFullReferenceTransform("political");
-  if (!fullReferenceTransform || !areZoomTransformsEquivalent(fullReferenceTransform, transform)) {
-    return "stale-political-full-reference-transform";
+  if (String(cache.politicalPassDataStage || "") === "fine" && cache.politicalPassFineCacheReady) {
+    const fullReferenceTransform = getPassFullReferenceTransform("political");
+    if (!fullReferenceTransform || !areZoomTransformsEquivalent(fullReferenceTransform, transform)) {
+      return "stale-political-full-reference-transform";
+    }
   }
   return "";
 }

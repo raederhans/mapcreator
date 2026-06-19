@@ -187,6 +187,63 @@ function createRendererShellPolicyHarness(rendererSource) {
   return context.__shellPolicyHarness;
 }
 
+function createFirstVisibleFrameGateHarness(rendererSource) {
+  const source = `
+    const runtimeState = {
+      activeScenarioId: "startup-scenario",
+      zoomTransform: { x: 0, y: 0, k: 1 },
+    };
+    const referenceTransform = { x: 0, y: 0, k: 1 };
+    let fullReferenceTransform = null;
+    const cache = {
+      dirty: { political: false },
+      signatures: { political: "political::ocean-fill:#101820" },
+      politicalPassDataStage: "coarse",
+      politicalPassFineCacheReady: false,
+    };
+    function getRenderPassCacheState() {
+      return cache;
+    }
+    function getRenderPassSignature() {
+      return "political::ocean-fill:#101820";
+    }
+    function getCachedPoliticalPassStaticSignature(signature) {
+      return String(signature || "");
+    }
+    function getOceanBaseFillColor() {
+      return "#101820";
+    }
+    function getPassReferenceTransform() {
+      return referenceTransform;
+    }
+    function getPassFullReferenceTransform() {
+      return fullReferenceTransform;
+    }
+    function areZoomTransformsEquivalent(first, second) {
+      return !!first && !!second
+        && Number(first.x || 0) === Number(second.x || 0)
+        && Number(first.y || 0) === Number(second.y || 0)
+        && Number(first.k || 1) === Number(second.k || 1);
+    }
+    ${extractRendererFunction(rendererSource, "getFirstVisiblePoliticalFrameBlockReason")}
+    globalThis.__firstVisibleFrameGateHarness = {
+      blockReason: getFirstVisiblePoliticalFrameBlockReason,
+      setPoliticalStage: (stage, fineReady) => {
+        cache.politicalPassDataStage = stage;
+        cache.politicalPassFineCacheReady = !!fineReady;
+      },
+      setFullReferenceTransform: (transform) => {
+        fullReferenceTransform = transform;
+      },
+    };
+  `;
+  const context = { globalThis: {}, d3: { zoomIdentity: { x: 0, y: 0, k: 1 } } };
+  context.globalThis = context;
+  vm.createContext(context);
+  vm.runInContext(source, context);
+  return context.__firstVisibleFrameGateHarness;
+}
+
 function getPolygonCoordinateSets(geometry) {
   if (!geometry || typeof geometry !== "object") return [];
   if (geometry.type === "Polygon") {
@@ -1083,7 +1140,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('return reject("stale-age-limit")')
       && rendererSource.includes('continuityFrameRelaxedReuse'),
     firstVisibleScenarioRequiresCurrentPoliticalExactFrame:
-      /function getFirstVisiblePoliticalFrameBlockReason\(reason = "visible-frame"\) \{[\s\S]*?base-visible-fallback[\s\S]*?normalizedReason !== "exact-frame"[\s\S]*?dirty-political-pass[\s\S]*?stale-ocean-fill[\s\S]*?stale-political-signature[\s\S]*?stale-political-reference-transform[\s\S]*?stale-political-full-reference-transform/.test(rendererSource)
+      /function getFirstVisiblePoliticalFrameBlockReason\(reason = "visible-frame"\) \{[\s\S]*?base-visible-fallback[\s\S]*?normalizedReason !== "exact-frame"[\s\S]*?dirty-political-pass[\s\S]*?stale-ocean-fill[\s\S]*?stale-political-signature[\s\S]*?stale-political-reference-transform[\s\S]*?politicalPassDataStage[\s\S]*?politicalPassFineCacheReady[\s\S]*?stale-political-full-reference-transform/.test(rendererSource)
       && /function noteFirstVisibleFrameBlocked\(reason = "visible-frame", blockReason = "unknown"\) \{[\s\S]*?recordRenderPerfMetric\("firstVisibleFrameBlocked"[\s\S]*?topologyBundleMode:[\s\S]*?oceanFill: getOceanBaseFillColor\(\)/.test(rendererSource)
       && /function recordVisibleFrameTransactionMetric\(status, details = \{\}\) \{[\s\S]*?visibleFrameTransactionCount[\s\S]*?recordRenderPerfMetric\("visibleFrameTransaction"/.test(rendererSource)
       && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?const blockReason = getFirstVisiblePoliticalFrameBlockReason\(reason\);[\s\S]*?if \(blockReason\) \{[\s\S]*?noteFirstVisibleFrameBlocked\(reason, blockReason\);[\s\S]*?return;/.test(rendererSource)
@@ -1441,6 +1498,29 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   Object.entries(contract).forEach(([label, ok]) => {
     assert.equal(ok, true, label);
   });
+});
+
+test("first visible political frame accepts coarse startup pass without full reference", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const harness = createFirstVisibleFrameGateHarness(rendererSource);
+
+  harness.setPoliticalStage("coarse", false);
+  harness.setFullReferenceTransform(null);
+  assert.equal(harness.blockReason("exact-frame"), "");
+
+  harness.setPoliticalStage("data-ready", false);
+  harness.setFullReferenceTransform({ x: 999, y: 0, k: 1 });
+  assert.equal(harness.blockReason("exact-frame"), "");
+
+  harness.setPoliticalStage("fine", true);
+  harness.setFullReferenceTransform(null);
+  assert.equal(harness.blockReason("exact-frame"), "stale-political-full-reference-transform");
+
+  harness.setFullReferenceTransform({ x: 1, y: 0, k: 1 });
+  assert.equal(harness.blockReason("exact-frame"), "stale-political-full-reference-transform");
+
+  harness.setFullReferenceTransform({ x: 0, y: 0, k: 1 });
+  assert.equal(harness.blockReason("exact-frame"), "");
 });
 
 test("perf contracts keep coarse first frame and benchmark app-path fallback boundaries", () => {
