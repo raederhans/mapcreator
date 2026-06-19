@@ -14,7 +14,7 @@
 - [x] Run ai-slop cleanup review on changed files.
 - [x] Run independent code review and architect review.
 - [x] Run final QA gates.
-- [ ] Push main and clean worktree.
+- [x] Push main and clean worktree.
 
 ## Delivery Package Notes
 
@@ -48,7 +48,7 @@
 9. Recommended next step:
    - Commit, fast-forward or merge into a clean updated `main`, rerun focused post-merge validation, push, update registry to integrated, archive this task folder, then remove the worktree.
 10. Integration recommendation:
-   - Integrated into `main` by fast-forward merge at `a1c0d6e2`. Post-merge validation passed; push and cleanup remain.
+   - Integrated into `main` by fast-forward merge at `a1c0d6e2`, post-merge closeout pushed at `c664efd5`, and the execution worktree plus local feature branch were removed.
 
 ## Post-Merge Validation
 
