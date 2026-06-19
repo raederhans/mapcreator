@@ -36,5 +36,5 @@
 - [x] Update this context with delivery summary.
 - [x] Update worktree registry if additional worktrees become active.
 - [x] Update `lessons learned.md` only if a durable new project lesson emerges.
-- [ ] Commit with Lore trailers.
-- [ ] Push branch and, after integration, merge to `main` and push.
+- [x] Commit with Lore trailers.
+- [x] Push branch and, after integration, merge to `main` and push.

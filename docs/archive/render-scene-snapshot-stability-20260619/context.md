@@ -74,6 +74,8 @@
 - First post-rollback `verify:pages-dist` attempt hit a transient Python/topojson memory allocation error in one landing showcase asset test. The failing test passed alone, and the full `npm run verify:pages-dist` rerun passed afterward.
 - `git diff --check` passed with existing Windows CRLF working-copy warnings only.
 - Code-review subagent re-check reported CLEAR after the rollback fix, with zero remaining P0/P1/P2 findings.
+- Post-merge main validation passed: `node --test tests/scenario_lifecycle_runtime_behavior.test.mjs tests/renderer_runtime_state_behavior.test.mjs` passed 22/22, and `py -3 -m unittest tests.test_scenario_rollback_boundary_contract tests.test_map_renderer_render_pipeline_passes_boundary_contract -q` passed 7/7.
+- Functional commit `0c13e8e0` was fast-forwarded into `main`; this archive records the integration closeout.
 
 ### Open Risks
 
