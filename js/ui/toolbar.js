@@ -69,6 +69,7 @@ import {
 } from "./toolbar/export_workbench_controller.js";
 import { createPaletteLibraryPanelController } from "./toolbar/palette_library_panel.js";
 import { createAppearanceControlsController } from "./toolbar/appearance_controls_controller.js";
+import { createScenarioContextBarController } from "./toolbar/scenario_context_bar_controller.js";
 import { createScenarioGuidePopoverController } from "./toolbar/scenario_guide_popover.js";
 import { createSpecialZoneEditorController } from "./toolbar/special_zone_editor.js";
 import { createSpecialZonesWorkbenchController } from "./toolbar/special_zones_workbench_controller.js";
@@ -216,9 +217,6 @@ function initToolbar({ render } = {}) {
   const mapOnboardingHint = document.getElementById("mapOnboardingHint");
   const scenarioContextBar = document.getElementById("scenarioContextBar");
   const scenarioContextCollapseBtn = document.getElementById("scenarioContextCollapseBtn");
-  const scenarioContextScenarioItem = document.getElementById("scenarioContextScenarioItem");
-  const scenarioContextModeItem = document.getElementById("scenarioContextModeItem");
-  const scenarioContextActiveItem = document.getElementById("scenarioContextActiveItem");
   const scenarioContextSelectionItem = document.getElementById("scenarioContextSelectionItem");
   const scenarioContextScenarioText = document.getElementById("scenarioContextScenarioText");
   const scenarioContextModeText = document.getElementById("scenarioContextModeText");
@@ -365,18 +363,9 @@ function initToolbar({ render } = {}) {
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const DEVELOPER_MODE_STORAGE_KEY = "map_creator_developer_mode";
   let toolHudTimerId = null;
-  let scenarioGuideTimerId = null;
-  let dockPopoverCloseBound = false;
   const overlayFocusReturnTargets = createFocusReturnRegistry();
   const MOBILE_WORKSPACE_MAX_WIDTH = 767;
   const TABLET_WORKSPACE_MAX_WIDTH = 1023;
-  const SCENARIO_BAR_LEFT_OFFSET = 18;
-  const SCENARIO_BAR_MOBILE_LEFT_OFFSET = 12;
-  const SCENARIO_BAR_SAFE_GAP = 16;
-  const SCENARIO_BAR_MIN_WIDTH = 172;
-  const SCENARIO_BAR_BASE_MAX_WIDTH = 560;
-  const SCENARIO_BAR_NARROW_WIDTH = 360;
-  const SCENARIO_BAR_COMPACT_WIDTH = 420;
   const SCENARIO_GUIDE_MAX_WIDTH = 360;
   const SCENARIO_GUIDE_VERTICAL_GAP = 10;
   if (!runtimeState.ui || typeof runtimeState.ui !== "object") {
@@ -854,23 +843,39 @@ function initToolbar({ render } = {}) {
     return t("No selection", "ui");
   };
 
-  const refreshScenarioSelectionChip = () => {
-    const selectionLabel = getWorkspaceSelectionLabel();
-    const hasSelection = selectionLabel !== t("No selection", "ui");
-    if (scenarioContextSelectionItem) {
-      scenarioContextSelectionItem.classList.toggle("hidden", !hasSelection);
-    }
-    if (scenarioContextSelectionText) {
-      scenarioContextSelectionText.textContent = selectionLabel;
-      scenarioContextSelectionText.setAttribute("title", `${t("Selection", "ui")}: ${selectionLabel}`);
-    }
-  };
-
-  const refreshWorkspaceStatus = () => {
-    updateLanguageToggleUi();
-    refreshScenarioSelectionChip();
-    renderOceanCoastalAccentUi();
-  };
+  let renderOceanCoastalAccentUiForWorkspace = () => {};
+  let handlePaletteLibraryResizeForWorkspace = () => {};
+  const scenarioContextBarController = createScenarioContextBarController({
+    runtimeState,
+    scenarioContextBar,
+    scenarioContextCollapseBtn,
+    scenarioContextScenarioText,
+    scenarioContextModeText,
+    scenarioContextActiveText,
+    scenarioContextSelectionItem,
+    scenarioContextSelectionText,
+    scenarioTransportWorkbenchBtn,
+    scenarioGuidePopover,
+    mapContainer,
+    zoomControls,
+    getPaintModeLabel,
+    getWorkspaceSelectionLabel,
+    syncScenarioGuideTriggerButtons,
+    updateLanguageToggleUi,
+    renderOceanCoastalAccentUi: () => renderOceanCoastalAccentUiForWorkspace(),
+    applyResponsiveChromeDefaults,
+    updateDockCollapsedUi: () => updateDockCollapsedUi(),
+    handlePaletteLibraryResize: () => handlePaletteLibraryResizeForWorkspace(),
+    translate: t,
+  });
+  const {
+    bindResponsiveChromeLayout,
+    bindScenarioContextBarEvents,
+    refreshScenarioContextBar,
+    refreshWorkspaceStatus,
+    triggerScenarioGuide,
+  } = scenarioContextBarController;
+  registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);
 
   const getActiveQuickFillPolicy = () => {
     const selectedCode = normalizeCountryCode(
@@ -1054,100 +1059,6 @@ function initToolbar({ render } = {}) {
     specialZonesWorkbenchController?.focusSpecialZonesWorkbench?.();
   };
 
-  const getScenarioOverlayLeftInset = () => (
-    globalThis.innerWidth <= 767 ? SCENARIO_BAR_MOBILE_LEFT_OFFSET : SCENARIO_BAR_LEFT_OFFSET
-  );
-
-  const applyScenarioOverlaySafeLayout = () => {
-    if (!scenarioContextBar || !zoomControls) return;
-    const overlayRect =
-      scenarioContextBar.offsetParent?.getBoundingClientRect()
-      || mapContainer?.closest(".map-stage")?.getBoundingClientRect()
-      || mapContainer?.getBoundingClientRect()
-      || { left: 0, right: globalThis.innerWidth || 0 };
-    const zoomRect = zoomControls.getBoundingClientRect();
-    const leftInset = getScenarioOverlayLeftInset();
-    const fallbackWidth = Math.round((overlayRect.right - overlayRect.left) - (leftInset * 2));
-    const rawAvailableWidth = Math.round(
-      zoomRect.left - overlayRect.left - leftInset - SCENARIO_BAR_SAFE_GAP
-    );
-    const availableWidth = Math.max(
-      SCENARIO_BAR_MIN_WIDTH,
-      Math.min(fallbackWidth, rawAvailableWidth > 0 ? rawAvailableWidth : fallbackWidth)
-    );
-    scenarioContextBar.style.setProperty("--scenario-bar-safe-max-width", `${availableWidth}px`);
-    scenarioContextBar.classList.toggle("is-overlay-constrained", availableWidth < SCENARIO_BAR_BASE_MAX_WIDTH);
-    scenarioContextBar.classList.toggle("is-narrow", availableWidth < SCENARIO_BAR_NARROW_WIDTH);
-    scenarioContextBar.classList.toggle("is-auto-compact", availableWidth < SCENARIO_BAR_COMPACT_WIDTH);
-  };
-
-  const refreshScenarioContextBar = () => {
-    if (!scenarioContextBar) return;
-    const activeScenario = String(runtimeState.activeScenarioManifest?.display_name || runtimeState.activeScenarioId || "").trim();
-    const activeCode = String(runtimeState.activeSovereignCode || "").trim().toUpperCase();
-    const splitCount = Number(runtimeState.scenarioOwnerControllerDiffCount || 0);
-    const activeLabel = activeCode
-      ? (t(runtimeState.countryNames?.[activeCode] || activeCode, "geo") || runtimeState.countryNames?.[activeCode] || activeCode)
-      : t("None", "ui");
-    const modeLabel = getPaintModeLabel();
-    const scenarioViewLabel = String(runtimeState.scenarioViewMode || "ownership") === "frontline"
-      ? t("Frontline", "ui")
-      : t("Ownership", "ui");
-    const showScenarioState = !!activeScenario;
-    const activeValue = activeCode ? `${activeLabel} (${activeCode})` : t("None", "ui");
-    scenarioContextBar.classList.toggle("is-scenario", !!activeScenario);
-    scenarioContextBar.classList.toggle("is-collapsed", !!runtimeState.ui.scenarioBarCollapsed);
-    if (scenarioContextScenarioText) {
-      const scenarioValue = activeScenario || t("None", "ui");
-      scenarioContextScenarioText.textContent = scenarioValue;
-      scenarioContextScenarioText.setAttribute("title", `${t("Scenario", "ui")}: ${scenarioValue}`);
-    }
-    if (scenarioContextModeText) {
-      scenarioContextModeText.textContent = modeLabel;
-      scenarioContextModeText.setAttribute(
-        "title",
-        showScenarioState
-          ? `${t("Mode", "ui")}: ${modeLabel} · ${t("View", "ui")}: ${scenarioViewLabel}`
-          : `${t("Mode", "ui")}: ${modeLabel}`
-      );
-    }
-    if (scenarioContextActiveText) {
-      scenarioContextActiveText.textContent = activeValue;
-      scenarioContextActiveText.setAttribute("title", `${t("Active", "ui")}: ${activeValue}`);
-    }
-    if (scenarioContextCollapseBtn) {
-      scenarioContextCollapseBtn.textContent = runtimeState.ui.scenarioBarCollapsed ? "+" : "-";
-      scenarioContextCollapseBtn.setAttribute("aria-label", runtimeState.ui.scenarioBarCollapsed
-        ? t("Expand", "ui")
-        : t("Collapse", "ui"));
-    }
-    syncScenarioGuideTriggerButtons({
-      isOpen: !!(scenarioGuidePopover && !scenarioGuidePopover.classList.contains("hidden")),
-      tutorialEntryVisible: !!runtimeState.ui.tutorialEntryVisible,
-    });
-    if (scenarioTransportWorkbenchBtn) {
-      const transportEntryLabel = scenarioTransportWorkbenchBtn.dataset.transportEntryLabel || "Transport";
-      scenarioTransportWorkbenchBtn.textContent = t(transportEntryLabel, "ui");
-      scenarioTransportWorkbenchBtn.setAttribute("title", runtimeState.transportWorkbenchUi?.open
-        ? t("Close transport workbench", "ui")
-        : t("Open transport workbench", "ui"));
-    }
-    refreshScenarioSelectionChip();
-    refreshWorkspaceStatus();
-    applyScenarioOverlaySafeLayout();
-  };
-
-  const triggerScenarioGuide = () => {
-    if (!scenarioContextBar) return;
-    scenarioContextBar.classList.add("is-highlight");
-    if (scenarioGuideTimerId) {
-      globalThis.clearTimeout(scenarioGuideTimerId);
-    }
-    scenarioGuideTimerId = globalThis.setTimeout(() => {
-      scenarioContextBar.classList.remove("is-highlight");
-    }, 3000);
-  };
-  registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);
   let onboardingAutoTimer = 0;
   const dismissOnboardingHint = () => {
     if (onboardingAutoTimer) { clearTimeout(onboardingAutoTimer); onboardingAutoTimer = 0; }
@@ -1591,6 +1502,7 @@ function initToolbar({ render } = {}) {
     syncPaletteSourceControls,
     syncPanelVisibility: syncPaletteLibraryPanelVisibility,
   } = paletteLibraryPanelController;
+  handlePaletteLibraryResizeForWorkspace = handlePaletteLibraryResize;
   registerRuntimeHook(state, "updatePaletteSourceUIFn", syncPaletteSourceControls);
   registerRuntimeHook(state, "renderPaletteFn", renderPalette);
 
@@ -1737,6 +1649,7 @@ function initToolbar({ render } = {}) {
     renderOceanCoastalAccentUi,
     renderOceanLakeControlsUi,
   } = oceanLakeControlsController;
+  renderOceanCoastalAccentUiForWorkspace = renderOceanCoastalAccentUi;
   renderOceanLakeControlsUi();
   registerRuntimeHook(state, "updateWorkspaceStatusFn", refreshWorkspaceStatus);
   registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);
@@ -2148,13 +2061,7 @@ function initToolbar({ render } = {}) {
     politicalEditingToggleBtn.dataset.bound = "true";
   }
 
-  if (scenarioContextCollapseBtn && !scenarioContextCollapseBtn.dataset.bound) {
-    scenarioContextCollapseBtn.addEventListener("click", () => {
-      runtimeState.ui.scenarioBarCollapsed = !runtimeState.ui.scenarioBarCollapsed;
-      refreshScenarioContextBar();
-    });
-    scenarioContextCollapseBtn.dataset.bound = "true";
-  }
+  bindScenarioContextBarEvents();
 
   bindScenarioGuideEvents({
     onToggle: (trigger) => {
@@ -2995,17 +2902,7 @@ function initToolbar({ render } = {}) {
   }
   bindPaletteLibraryPanelEvents();
 
-  if (!runtimeState.ui.overlayResizeBound) {
-    const refreshResponsiveChromeLayout = () => {
-      applyResponsiveChromeDefaults();
-      updateDockCollapsedUi();
-      refreshScenarioContextBar();
-      handlePaletteLibraryResize();
-    };
-    globalThis.addEventListener("resize", refreshResponsiveChromeLayout);
-    globalThis.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);
-    runtimeState.ui.overlayResizeBound = true;
-  }
+  bindResponsiveChromeLayout();
 
   syncPaletteLibraryPanelVisibility();
   syncPaletteSourceControls();

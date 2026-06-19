@@ -6,7 +6,7 @@
 - Phase A worktree: `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-a-renderer-shell`.
 - Branch: `codex/module-boundary-phase-a-renderer-shell`.
 - Base: `main@4ea5252ed68f80773c0ca5f390ac218656edceb2`, matching `origin/main` after fetch.
-- Main validation/live process owner: main Codex agent.
+- Phase A live process owner was the main Codex agent.
 - Read-only sidecar: Harvey is checking renderer scheduling and transaction boundary risks.
 
 ## Phase A Findings
@@ -60,7 +60,7 @@
 - Phase C worktree: `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-c-backend-shell`.
 - Branch: `codex/module-boundary-phase-c-backend-shell`.
 - Base: `main@5fc3dc3d0897ee402b086058fb81fd51bd06c743`, matching `origin/main`.
-- Main validation/live process owner: main Codex agent.
+- Phase C live process owner was the main Codex agent.
 - Read-only sidecar: Kierkegaard reviewed backend split candidates and recommended pure helper extraction while keeping DOM/state/API orchestration in `backend/app.js`.
 
 ## Phase C Findings
@@ -157,3 +157,42 @@
   - `npm run verify:test-import-graph`: passed.
   - `git diff --check`: passed.
 - Remaining recovery stashes remain useful as historical backups, but this follow-up is now represented by a normal commit.
+
+## Phase B Setup
+
+- Phase B worktree: `C:\Users\raede\.codex\worktrees\mapcreator-module-boundary-phase-b-ui-shell`.
+- Branch: `codex/module-boundary-phase-b-ui-shell`.
+- Base: `main@84b9ef5b` after HGO closeout docs and terrain-suppression integration.
+- Live process owner: none active after Phase B first verification. Main Codex agent owns any future final rerun, integration, and post-merge validation commands.
+- Read-only sidecar: Hypatia reviewed UI split candidates and recommended a future `scenario_controls.js` selector shell extraction. The active Phase B implementation chose the toolbar scenario context bar because it directly targets the planned toolbar shell boundary and keeps HGO preview wiring untouched.
+
+## Phase B Findings
+
+- `toolbar.js` still owned scenario context bar labels, selection chip updates, safe-width CSS variable calculation, collapse button binding, highlight timer, and responsive chrome resize refresh.
+- That logic is a UI chrome controller boundary: it consumes DOM nodes and small function dependencies, then returns refresh/bind facade methods to the toolbar shell.
+- HGO preview code, `scenario_controls.js`, transport workbench controller, and sidebar identity flows remain out of this Phase B diff.
+- The `scenario_controls.js` selector shell candidate is a good next UI-shell split after Phase B integration, especially if future work revisits scenario selection/HGO option rendering.
+
+## Phase B Implementation Notes
+
+- New owner: `js/ui/toolbar/scenario_context_bar_controller.js`.
+- `toolbar.js` now imports `createScenarioContextBarController`, wires DOM nodes and narrow facade functions, registers the same runtime hooks, and calls `bindScenarioContextBarEvents()` plus `bindResponsiveChromeLayout()`.
+- New behavior tests: `tests/scenario_context_bar_controller_behavior.test.mjs`.
+- Existing toolbar/UI boundary contracts were updated so the CSS width bridge and scenario bar implementation are asserted in the new owner, while toolbar remains the composition shell.
+- `package.json` includes the named `test:node:scenario-context-bar-controller` entry.
+
+## Phase B Verification Log
+
+- `node --check js/ui/toolbar.js js/ui/toolbar/scenario_context_bar_controller.js tests/scenario_context_bar_controller_behavior.test.mjs`: passed.
+- `npm run test:node:scenario-context-bar-controller`: passed, 5 tests.
+- `npm run verify:toolbar-split-boundary`: passed, 50 tests.
+- `npm run python -- -m unittest tests.test_ui_rework_plan01_foundation_contract -q`: passed, 6 tests.
+- `npm run test:node:hgo-runtime-preview`: passed, 19 tests.
+- `npm run verify:test-import-graph`: passed and wrote the import graph for 48 specs.
+- `npm run verify:pages-dist`: passed after rebuilding `dist/app`; Pages startup shell 37 tests and landing showcase 8 tests passed.
+- `git diff --check`: passed.
+
+## Phase B Remaining Work
+
+- Re-run the targeted checks after the final source rename and documentation updates.
+- Commit the Phase B worktree, push the recovery branch, fast-forward merge into clean main, run post-merge verification, then remove the worktree.

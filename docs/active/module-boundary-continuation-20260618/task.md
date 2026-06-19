@@ -2,7 +2,63 @@
 
 ## Current Status
 
-Phase A, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase B is the next active implementation phase after this closeout docs commit is pushed.
+Phase A, Phase C, the HGO runtime preview overlap, and the HGO vector scene terrain follow-up are integrated and verified on main. Phase B implementation and first verification are complete in `codex/module-boundary-phase-b-ui-shell`; commit, integration into main, post-merge verification, branch push, and worktree cleanup remain.
+
+## Phase B Delivery Package
+
+1. Moved toolbar scenario context bar refresh, selection-chip updates, safe-width layout, collapse binding, resize refresh, and guide highlight timer into `js/ui/toolbar/scenario_context_bar_controller.js`.
+2. Kept `toolbar.js` as the composition shell that wires DOM nodes, narrow facade dependencies, and existing runtime hook names.
+3. Added a focused Node behavior suite and a named npm entry for the new controller.
+4. Updated toolbar/UI boundary contracts to assert implementation ownership in the new controller and facade ownership in `toolbar.js`.
+5. Rebuilt Pages dist so source and `dist/app` include the new browser module.
+
+## Phase B Files
+
+Core files:
+- `js/ui/toolbar.js`
+- `js/ui/toolbar/scenario_context_bar_controller.js`
+- `dist/app/js/ui/toolbar.js`
+- `dist/app/js/ui/toolbar/scenario_context_bar_controller.js`
+
+Test files:
+- `tests/scenario_context_bar_controller_behavior.test.mjs`
+- `tests/test_toolbar_split_boundary_contract.py`
+- `tests/test_ui_rework_plan01_foundation_contract.py`
+
+Config and dist files:
+- `package.json`
+- `dist/pages-dist-manifest.json`
+
+Docs:
+- `docs/active/module-boundary-continuation-20260618/plan.md`
+- `docs/active/module-boundary-continuation-20260618/context.md`
+- `docs/active/module-boundary-continuation-20260618/task.md`
+- `docs/active/_worktree_registry.md`
+
+## Phase B Diff Summary
+
+- Base commit: `main@84b9ef5b`.
+- Current branch: `codex/module-boundary-phase-b-ui-shell`.
+- Commit state: not committed yet; final rerun and commit are pending.
+- `toolbar.js` is slimmer by removing the scenario context bar implementation while preserving hook names and shell orchestration.
+- The new owner has no renderer, HGO preview, scenario apply, or transport-workbench side effects.
+- Potential conflicts: yellow by semantics with future `scenario_controls.js` selector-shell work; direct file overlap is limited to toolbar, tests, package script, docs, and Pages dist manifest.
+
+## Phase B Verification
+
+- Passed: `node --check js/ui/toolbar.js js/ui/toolbar/scenario_context_bar_controller.js tests/scenario_context_bar_controller_behavior.test.mjs`.
+- Passed: `npm run test:node:scenario-context-bar-controller` (5 tests).
+- Passed: `npm run verify:toolbar-split-boundary` (50 tests).
+- Passed: `npm run python -- -m unittest tests.test_ui_rework_plan01_foundation_contract -q` (6 tests).
+- Passed: `npm run test:node:hgo-runtime-preview` (19 tests).
+- Passed: `npm run verify:test-import-graph`.
+- Passed: `npm run verify:pages-dist` (Pages startup shell 37 tests and landing showcase 8 tests).
+- Passed: `git diff --check`.
+
+## Phase B Review Gates
+
+- Hypatia read-only candidate review recommended a future `scenario_controls.js` selector-shell split. Phase B stayed with toolbar scenario context bar extraction to match the active toolbar shell scope.
+- Final ai-slop scan, independent review, post-merge verification, and cleanup are still pending.
 
 ## Phase A Delivery Package
 
@@ -64,9 +120,9 @@ Docs:
 - Ponytail review: CLEAR; one duplicate-normalize cleanup applied.
 - Independent behavior review: PASS; 0 blocking findings.
 
-## Recommended Next Step
+## Current Recommended Next Step
 
-Start Phase B from current main in a new worktree, then run the sidebar/toolbar boundary checks and Pages dist gate before integrating. Phase D guardrails stay after the remaining implementation phases.
+Final rerun Phase B targeted checks, commit the worktree, push the recovery branch, fast-forward merge into clean main, run post-merge verification, then remove the worktree. Phase D guardrails follow after Phase B lands.
 
 ## Phase C Delivery Package
 
@@ -111,7 +167,7 @@ Temporary files:
 - `package.json` adds a named helper test, a Python wrapper script, and extended backend verification scripts.
 - Current commit state: committed, pushed as a recovery branch, fast-forward merged into main, and post-merge verified.
 - Base/main divergence: Phase C was based on `origin/main@5fc3dc3d` and merged cleanly.
-- Potential conflicts: green vs active HGO runtime preview files by path; HGO worktree remains based on `9139c073` and needs rebase or explicit sequencing before Phase B.
+- Historical Phase C conflict risk: resolved by integrating HGO runtime preview before Phase B. No active HGO worktree remains for Phase B sequencing.
 
 ## Phase C Verification
 

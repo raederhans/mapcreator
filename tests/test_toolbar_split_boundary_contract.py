@@ -10,6 +10,7 @@ DIST_TOOLBAR_JS = REPO_ROOT / "dist" / "app" / "js" / "ui" / "toolbar.js"
 INDEX_HTML = REPO_ROOT / "index.html"
 EXPORT_FAILURE_HANDLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "export_failure_handler.js"
 PALETTE_LIBRARY_PANEL_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "palette_library_panel.js"
+SCENARIO_CONTEXT_BAR_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_context_bar_controller.js"
 SCENARIO_GUIDE_POPOVER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_guide_popover.js"
 SCENARIO_CONTROLS_JS = REPO_ROOT / "js" / "ui" / "scenario_controls.js"
 HGO_RUNTIME_PREVIEW_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "hgo_runtime_preview_controller.js"
@@ -111,6 +112,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("createAppearanceControlsController", content)
         self.assertIn('./toolbar/ocean_lake_controls_controller.js', content)
         self.assertIn("createOceanLakeControlsController", content)
+        self.assertIn('./toolbar/scenario_context_bar_controller.js', content)
+        self.assertIn("createScenarioContextBarController", content)
 
     def test_export_failure_owner_moves_out_of_toolbar(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -254,16 +257,31 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("toggleScenarioGuidePopover(trigger);", content)
         self.assertIn('closeScenarioGuidePopover({ restoreFocus: true });', content)
 
-    def test_scenario_context_bar_supplies_guide_status_labels(self):
-        content = TOOLBAR_JS.read_text(encoding="utf-8")
-        refresh_start = content.index("const refreshScenarioContextBar = () => {")
-        sync_trigger = content.index("syncScenarioGuideTriggerButtons({", refresh_start)
-        refresh_prefix = content[refresh_start:sync_trigger]
+    def test_scenario_context_bar_owner_moves_to_controller_module(self):
+        toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
+        owner_content = SCENARIO_CONTEXT_BAR_CONTROLLER_JS.read_text(encoding="utf-8")
 
-        self.assertIn("const splitCount = Number(runtimeState.scenarioOwnerControllerDiffCount || 0);", refresh_prefix)
-        self.assertIn('const scenarioViewLabel = String(runtimeState.scenarioViewMode || "ownership") === "frontline"', refresh_prefix)
-        self.assertIn("${scenarioViewLabel}", refresh_prefix)
-        self.assertIn("refreshWorkspaceStatus();", content[sync_trigger:content.index("applyScenarioOverlaySafeLayout();", sync_trigger)])
+        self.assertNotIn("const SCENARIO_BAR_LEFT_OFFSET", toolbar_content)
+        self.assertNotIn("const refreshScenarioSelectionChip = () => {", toolbar_content)
+        self.assertNotIn("const applyScenarioOverlaySafeLayout = () => {", toolbar_content)
+        self.assertNotIn("const refreshScenarioContextBar = () => {", toolbar_content)
+        self.assertNotIn("const triggerScenarioGuide = () => {", toolbar_content)
+        self.assertNotIn('scenarioContextCollapseBtn.addEventListener("click"', toolbar_content)
+        self.assertIn("function createScenarioContextBarController", owner_content)
+        self.assertIn("const refreshScenarioSelectionChip = () => {", owner_content)
+        self.assertIn("const refreshWorkspaceStatus = () => {", owner_content)
+        self.assertIn("const applyScenarioOverlaySafeLayout = () => {", owner_content)
+        self.assertIn("const refreshScenarioContextBar = () => {", owner_content)
+        self.assertIn("const triggerScenarioGuide = () => {", owner_content)
+        self.assertIn("const bindScenarioContextBarEvents = () => {", owner_content)
+        self.assertIn("const bindResponsiveChromeLayout = () => {", owner_content)
+        self.assertIn('const scenarioViewLabel = String(runtimeState.scenarioViewMode || "ownership") === "frontline"', owner_content)
+        self.assertIn("${scenarioViewLabel}", owner_content)
+        self.assertIn("refreshWorkspaceStatus();", owner_content)
+        self.assertIn("bindScenarioContextBarEvents();", toolbar_content)
+        self.assertIn("bindResponsiveChromeLayout();", toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "updateWorkspaceStatusFn", refreshWorkspaceStatus);', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);', toolbar_content)
 
     def test_special_zone_editor_owner_moves_to_controller_module(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
@@ -1307,7 +1325,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("renderOceanCoastalAccentUi,", content)
         self.assertIn("renderOceanLakeControlsUi,", content)
         self.assertIn("applyAutoFillOceanColor,", content)
-        self.assertIn("renderOceanCoastalAccentUi();", content)
+        self.assertIn("renderOceanCoastalAccentUiForWorkspace = renderOceanCoastalAccentUi;", content)
         self.assertIn("renderOceanLakeControlsUi();", content)
         self.assertIn("bindOceanLakeControlEvents();", content)
         self.assertIn("const nextOceanFill = applyAutoFillOceanColor();", content)

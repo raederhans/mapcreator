@@ -110,11 +110,14 @@ class UiReworkPlan01FoundationContractTest(unittest.TestCase):
 
     def test_scenario_bar_uses_css_variable_width_bridge(self):
         toolbar = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+        owner = (REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_context_bar_controller.js").read_text(encoding="utf-8")
         css = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        self.assertIn('scenarioContextBar.style.setProperty("--scenario-bar-safe-max-width"', toolbar)
-        self.assertIn('scenarioContextBar.classList.toggle("is-overlay-constrained"', toolbar)
-        self.assertIn('scenarioContextBar.classList.toggle("is-narrow"', toolbar)
+        self.assertIn("createScenarioContextBarController", toolbar)
+        self.assertIn('scenarioContextBar.style.setProperty("--scenario-bar-safe-max-width"', owner)
+        self.assertIn('scenarioContextBar.classList.toggle("is-overlay-constrained"', owner)
+        self.assertIn('scenarioContextBar.classList.toggle("is-narrow"', owner)
         self.assertNotIn("scenarioContextBar.style.maxWidth", toolbar)
+        self.assertNotIn("scenarioContextBar.style.maxWidth", owner)
         self.assertIn("max-inline-size: min(", css)
         self.assertIn("var(--scenario-bar-safe-max-width)", css)
         self.assertIn(".scenario-context-bar.is-overlay-constrained", css)
