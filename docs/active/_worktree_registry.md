@@ -13,9 +13,9 @@ Last updated: 2026-06-20
 ## Recommended Order
 
 1. Preserve the parent checkout WIP in `C:\Users\raede\Desktop\dev\mapcreator`.
-2. Push `codex/tno-coverage-contract-followup` and fast-forward `origin/main` from the clean retained worktree.
-3. Keep the retained worktree as latest clean checkout until parent WIP is classified.
-4. Keep recovery via `codex/tno-coverage-contract-followup@6bec07d7` and `origin/codex/tno-coverage-chain-audit@e9259ed3`.
+2. Keep the retained worktree as latest clean checkout until parent WIP is classified.
+3. Classify, stash, or commit the parent checkout WIP before syncing that checkout to `origin/main`.
+4. Keep recovery via `origin/codex/tno-coverage-contract-followup@1f0e1b2c` and `origin/codex/tno-coverage-chain-audit@e9259ed3`.
 
 ## Current Worktrees
 
@@ -24,7 +24,7 @@ Only paths expected to remain after the current audit cleanup are listed here.
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@c96af211`; `origin/main@ffab42b8` | `origin/main@ffab42b8` | dirty parent checkout; local fast-forward blocked | unrelated local WIP: multiple `docs/archive/...` deletions and `lessons learned.md` modification | `git pull --ff-only origin main` aborted because local `lessons learned.md` would be overwritten. | Red for local sync because the WIP overlaps a file changed by the TNO commits; green for remote delivery because `origin/main` already contains the TNO work. | Preserve WIP; classify or stash/commit it in a separate cleanup pass before fast-forwarding this checkout. |
-| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-contract-followup@6bec07d7` plus archive closeout | `origin/main@ffab42b8` | ready-for-integration | hot files resolved in commit `6bec07d7`: `tools/check_scenario_contracts.py`, focused TNO contract tests, TNO generated metadata, Pages dist manifest, registry/archive docs, `lessons learned.md` | Geometry-backed basin probe regression added; strict report exposes `polar_spherical_failures`; full source/dist metadata paths locked. Passed py_compile, `tests.test_scenario_contracts` 41 tests, write-safe, `verify:pages-dist`, `verify:tno-coverage-chain`, diff check, and code-reviewer CLEAR. Follow-up docs archived under `docs/archive/tno-coverage-contract-followup-20260620/`. | Yellow: scenario contract tests and TNO generated metadata contracts; red only for local parent sync because parent also has `lessons learned.md` WIP. | Fetch, verify `origin/main` is still ancestor, push feature branch, fast-forward `origin/main`, then retain this worktree until parent WIP is resolved. |
+| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-contract-followup@1f0e1b2c`; `origin/main@1f0e1b2c` | `origin/main@ffab42b8` | integrated, pushed, retained clean checkout | hot files resolved in commit `6bec07d7`: `tools/check_scenario_contracts.py`, focused TNO contract tests, TNO generated metadata, Pages dist manifest, registry/archive docs, `lessons learned.md` | Geometry-backed basin probe regression added; strict report exposes `polar_spherical_failures`; full source/dist metadata paths locked. Passed py_compile, `tests.test_scenario_contracts` 41 tests, write-safe, `verify:pages-dist`, `verify:tno-coverage-chain`, diff check, and code-reviewer CLEAR. Follow-up docs archived under `docs/archive/tno-coverage-contract-followup-20260620/`; post-push proof showed `HEAD == origin/main == 1f0e1b2c` and `0 0` divergence. | Green for remote delivery; red only for local parent sync because parent also has `lessons learned.md` WIP. | No code integration action remains. Retain this worktree until parent WIP is resolved, then clean it after preserving branch/commit recovery. |
 
 ## Recent Integrated Branches
 
