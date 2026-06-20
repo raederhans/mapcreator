@@ -27,6 +27,13 @@
 - Exact path scan for `docs/archive/data-foundation-audit` has no pre-existing dependency.
 - `git diff --check -- "lessons learned.md" docs` passed with line-ending warnings only.
 
+## Closeout
+
+- Functional cleanup commit: `e36f3016`.
+- Closeout scope: move cleanup docs from active to archive and update `docs/active/_worktree_registry.md` for final parent sync.
+- Integration path: push `codex/parent-wip-docs-cleanup`, fast-forward `origin/main`, stash the original covered parent WIP for recovery, pull parent `main`, then remove `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit`.
+- Recovery paths: feature branch `origin/codex/parent-wip-docs-cleanup`, functional commit `e36f3016`, parent patch backup `.runtime/cleanup-backups/parent-wip-classification-20260620T140804Z/parent-wip.patch`.
+
 ## Live Process Ownership
 
 Main Codex agent owns git operations and validation. No live tests are delegated.

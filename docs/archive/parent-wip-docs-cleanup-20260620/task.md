@@ -9,9 +9,11 @@
 - [x] Merge `lessons learned.md` dedupe.
 - [x] Update worktree registry.
 - [x] Run docs validation.
-- [ ] Commit, push branch, and fast-forward `origin/main`.
+- [x] Commit cleanup.
+- [x] Archive task docs.
+- [ ] Push branch and fast-forward `origin/main`.
 - [ ] Sync parent checkout safely.
-- [ ] Archive task docs and clean temporary worktree if safe.
+- [ ] Clean temporary worktree after parent sync.
 
 ## Delivery Package Draft
 
@@ -29,8 +31,13 @@ Docs:
 
 - `lessons learned.md`
 - `docs/active/_worktree_registry.md`
-- `docs/active/parent-wip-docs-cleanup/{plan.md,context.md,task.md}`
+- `docs/archive/parent-wip-docs-cleanup-20260620/{plan.md,context.md,task.md}`
 - 47 deleted files under `docs/archive/*`
+
+### Diff Summary
+
+- Functional cleanup commit `e36f3016`: 52 files changed, 106 insertions, 859 deletions.
+- Closeout commit scope: move cleanup docs from active to archive and update registry state.
 
 ### Verification
 
@@ -41,5 +48,13 @@ Docs:
 
 - Current branch: `codex/parent-wip-docs-cleanup`.
 - Base: `origin/main@73e64166`.
+- Functional cleanup commit: `e36f3016`.
 - Parent WIP backup: `.runtime/cleanup-backups/parent-wip-classification-20260620T140804Z/parent-wip.patch`.
-- Current status: ready for commit and push.
+- Commit status: cleanup committed; closeout docs staged for final commit.
+- Base/main divergence: one cleanup commit ahead before closeout commit; no upstream changes observed at commit time.
+- Conflict check: docs-only changes; shared files are `docs/active/_worktree_registry.md` and `lessons learned.md`.
+- Recommendation: push the feature branch, fast-forward `origin/main`, stash the covered parent WIP for recovery, pull parent `main`, then remove the temporary cleanup worktree.
+
+### Unverified Risk
+
+- Full app/test suite was skipped because this change deletes stale docs and edits lessons/registry only.
