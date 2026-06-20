@@ -414,3 +414,6 @@
 
 ### Pages manifest 冲突用最终树重算
 - rebase 或 merge 时如果 `dist/pages-dist-manifest.json` 和 UI/dist 文件同时变化，先落到最新 main，再跑 `npm run verify:pages-dist` 让生成器按最终 source/dist 树重算发布尺寸。
+
+### 退役渲染合同要显式失败
+- FrameGraph descriptor 退役 pass 字段时，旧字段输入要 fail-fast 并补行为测试；静默忽略会把 stale caller 变成空 fan-out，后续更难定位。
