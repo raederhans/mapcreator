@@ -38,6 +38,13 @@ function includesImport(source, importPath) {
   return normalized.includes(`from '${importPath}';`);
 }
 
+function sliceBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  if (start < 0) return "";
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  return end < 0 ? source.slice(start) : source.slice(start, end);
+}
+
 function collectFailures() {
   const failures = [];
   const renderer = readProjectFile(FILES.renderer);
@@ -115,6 +122,14 @@ function collectFailures() {
   if (scenarioRefreshRuntime.includes("const invalidationTargetPasses = targetPasses.length")) {
     failures.push(`${FILES.scenarioRefreshRuntime} must get invalidationTargetPasses from the FrameGraph execution bridge.`);
   }
+  const chunkPromotionRuntimeSource = sliceBetween(
+    scenarioRefreshRuntime,
+    "function refreshMapDataForScenarioChunkPromotion(",
+    "function refreshMapDataForScenarioApply(",
+  );
+  if (/executionPlan:\s*\{[^}]*\btargetPasses\s*[,}:]/.test(chunkPromotionRuntimeSource)) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must not pass retired targetPasses through the visual invalidation execution plan.`);
+  }
   if (!scenarioRefreshPlans.includes("function resolveFrameGraphInvalidationExecutionPlan(")) {
     failures.push(`${FILES.scenarioRefreshPlans} must own resolveFrameGraphInvalidationExecutionPlan.`);
   }
@@ -128,6 +143,14 @@ function collectFailures() {
   const exportBlock = scenarioRefreshPlans.slice(scenarioRefreshPlans.indexOf("export {"));
   if (exportBlock.includes("getFrameGraphInvalidationTargetPasses,")) {
     failures.push(`${FILES.scenarioRefreshPlans} must keep getFrameGraphInvalidationTargetPasses inside the bridge.`);
+  }
+  const frameGraphExecutionPlanSource = sliceBetween(
+    scenarioRefreshPlans,
+    "function resolveFrameGraphInvalidationExecutionPlan(",
+    "function createScenarioApplyRefreshPlan(",
+  );
+  if (/\btargetPasses\s*[,}:]/.test(frameGraphExecutionPlanSource)) {
+    failures.push(`${FILES.scenarioRefreshPlans} execution plans must expose invalidationTargetPasses instead of targetPasses.`);
   }
 
   const ownershipRules = [

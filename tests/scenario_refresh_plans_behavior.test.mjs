@@ -70,7 +70,7 @@ test("chunk promotion plan normalizes layer keys and carries opening border poli
   ]);
   assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "legacyTargetPasses"), false);
   assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "targetPasses"), false);
-  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses, [
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).invalidationTargetPasses, [
     "political",
     "contextBase",
     "contextMarkers",
@@ -122,7 +122,7 @@ test("frame graph invalidation is resource-first and ignores pass-only fan-out",
   assert.deepEqual(invalidation.targetResources, ["labelBuffer", "politicalBaseBuffer"]);
   assert.equal(Object.hasOwn(invalidation, "legacyTargetPasses"), false);
   assert.equal(Object.hasOwn(invalidation, "targetPasses"), false);
-  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(invalidation).targetPasses, ["labels", "political"]);
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(invalidation).invalidationTargetPasses, ["labels", "political"]);
 
   assert.throws(
     () => createFrameGraphInvalidation({
@@ -146,7 +146,7 @@ test("frame graph invalidation is resource-first and ignores pass-only fan-out",
   assert.deepEqual(emptyResourceInvalidation.targetResources, []);
   assert.equal(Object.hasOwn(emptyResourceInvalidation, "legacyTargetPasses"), false);
   assert.equal(Object.hasOwn(emptyResourceInvalidation, "targetPasses"), false);
-  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(emptyResourceInvalidation).targetPasses, []);
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(emptyResourceInvalidation).invalidationTargetPasses, []);
 });
 
 test("chunk promotion frame graph resources resolve equivalent pass fan-out through bridge", () => {
@@ -168,7 +168,7 @@ test("chunk promotion frame graph resources resolve equivalent pass fan-out thro
     getTargetResourcesForPasses(resolvedTargetPasses),
   );
   assert.deepEqual(
-    resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses,
+    resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).invalidationTargetPasses,
     resolvedTargetPasses,
   );
 });
@@ -235,7 +235,7 @@ test("first-frame resource allowlist keeps startup visual work to the baseline",
     "borderBuffer",
     "interactionOverlay",
   ]);
-  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses, [
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).invalidationTargetPasses, [
     "background",
     "physicalBase",
     "political",
@@ -255,7 +255,7 @@ test("first-frame resource allowlist keeps startup visual work to the baseline",
     "interactionOverlay",
     "hgoPreviewBuffer",
   ]);
-  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(hgoPlan.renderer.frameGraphInvalidation).targetPasses, [
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(hgoPlan.renderer.frameGraphInvalidation).invalidationTargetPasses, [
     "background",
     "physicalBase",
     "political",
@@ -299,7 +299,8 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
   assert.deepEqual(descriptor.rendererRefreshPlan.targetPasses, ["political", "contextMarkers", "labels"]);
   assert.equal(descriptor.frameGraphInvalidation, null);
   assert.deepEqual(descriptor.targetResources, ["politicalBaseBuffer", "hitIndex", "contextMarkersBuffer", "labelBuffer"]);
-  assert.deepEqual(descriptor.targetPasses, ["political", "contextMarkers", "labels"]);
+  assert.equal(Object.hasOwn(descriptor, "targetPasses"), false);
+  assert.deepEqual(descriptor.invalidationTargetPasses, ["political", "contextMarkers", "labels"]);
 
   const explicitDescriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
     refreshPlan: {
@@ -313,7 +314,8 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
   });
 
   assert.deepEqual(explicitDescriptor.targetResources, ["contextScenarioBuffer"]);
-  assert.deepEqual(explicitDescriptor.targetPasses, ["contextScenario"]);
+  assert.equal(Object.hasOwn(explicitDescriptor, "targetPasses"), false);
+  assert.deepEqual(explicitDescriptor.invalidationTargetPasses, ["contextScenario"]);
   assert.equal(explicitDescriptor.hasExplicitTargetResources, true);
 
   const emptyResourceDescriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
@@ -330,7 +332,8 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
 
   assert.equal(emptyResourceDescriptor.hasExplicitTargetResources, true);
   assert.deepEqual(emptyResourceDescriptor.targetResources, []);
-  assert.deepEqual(emptyResourceDescriptor.targetPasses, []);
+  assert.equal(Object.hasOwn(emptyResourceDescriptor, "targetPasses"), false);
+  assert.deepEqual(emptyResourceDescriptor.invalidationTargetPasses, []);
 });
 
 test("frame graph invalidation execution plan resolves pass compatibility at one bridge", () => {
@@ -338,7 +341,6 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
     resolveFrameGraphInvalidationExecutionPlan(null, [" political ", "labels", "political"]),
     {
       targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
-      targetPasses: ["political", "labels"],
       invalidationTargetPasses: ["political", "labels"],
       hasExplicitTargetResources: false,
     },
@@ -352,7 +354,6 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
     resolveFrameGraphInvalidationExecutionPlan(explicitResourceInvalidation, ["political"]),
     {
       targetResources: ["contextScenarioBuffer"],
-      targetPasses: ["contextScenario"],
       invalidationTargetPasses: ["contextScenario"],
       hasExplicitTargetResources: true,
     },
@@ -366,7 +367,6 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
     resolveFrameGraphInvalidationExecutionPlan(explicitEmptyInvalidation, ["political"]),
     {
       targetResources: [],
-      targetPasses: [],
       invalidationTargetPasses: [],
       hasExplicitTargetResources: true,
     },
@@ -459,7 +459,7 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
     ...rendererPlan.frameGraphInvalidation,
     targetResources: rendererPlan.frameGraphInvalidation.targetResources,
   };
-  const { targetPasses } = resolveFrameGraphInvalidationExecutionPlan(
+  const { invalidationTargetPasses } = resolveFrameGraphInvalidationExecutionPlan(
     frameGraphInvalidation,
     rendererPlan.targetPasses,
   );
@@ -481,7 +481,7 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
   ]);
   assert.deepEqual(calls.find(([name]) => name === "clearRenderPassReferenceTransforms"), [
     "clearRenderPassReferenceTransforms",
-    targetPasses,
+    invalidationTargetPasses,
   ]);
   assert.deepEqual(calls.find(([name]) => name === "invalidateInteractionComposite"), [
     "invalidateInteractionComposite",
@@ -494,7 +494,7 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
   )));
   assert.deepEqual(calls.find(([name]) => name === "invalidateRenderPasses"), [
     "invalidateRenderPasses",
-    targetPasses,
+    invalidationTargetPasses,
     "test-chunk-promotion",
   ]);
   assert.ok(calls.some(([name]) => name === "scheduleDeferredWork"));

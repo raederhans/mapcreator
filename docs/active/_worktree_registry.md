@@ -5,22 +5,22 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@2b4be437` after Render Chain Slimming V4 integration.
-- Active implementation worktree: none.
-- Live test/build owner: none.
-- Subagents: none active.
+- Current base: `main@f7501edf` after Render Chain Slimming V4 closeout.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-render-chain-slimming-v5`.
+- Live test/build owner: main Codex agent only.
+- Subagents: static mapping and final review lanes completed; no active subagents remain.
 
 ## Recommended Order
 
-1. Start the next render-chain phase from current `main`.
-2. Keep FrameGraph invalidation descriptor pass fields retired.
-3. Use new active docs and a fresh registry row for the next phase.
+1. Commit V5 bridge/executor pass-language narrowing from `main@f7501edf`.
+2. Fast-forward merge V5 to `main`.
+3. Run post-merge targeted validation, archive docs, push `origin/main`, and clean the V5 worktree.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| _None_ | _None_ | `main@2b4be437` | clean | no active implementation worktree | `git worktree list` shows only main after V4 cleanup | Green | Start a new worktree for the next phase. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-chain-slimming-v5` | `codex/render-chain-slimming-v5@f7501edf` | `main@f7501edf` | ready-for-integration | hot files changed: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, `scenario_visual_invalidation_executor.js`, focused scenario contracts, Pages dist mirrors | Active docs: `docs/active/render-chain-slimming-v5/`; validation passed targeted Node/Python suites, architecture boundaries, import graph, Pages dist, diff check, source/dist mirrors; final review approve/no findings | Yellow: same render refresh bridge and Pages dist surfaces as V4 | Commit the branch, fast-forward merge to `main`, rerun post-merge targeted validation, then archive and clean. |
 
 ## Recent Integrated Branches
 

@@ -26,6 +26,13 @@ function readRepoFile(...relativeParts) {
   return fs.readFileSync(path.join(REPO_ROOT, ...relativeParts), "utf8");
 }
 
+function sliceBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  if (start < 0) return "";
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  return end < 0 ? source.slice(start) : source.slice(start, end);
+}
+
 function loadVendorD3() {
   const context = { window: {}, self: {}, globalThis: null, console };
   context.globalThis = context;
@@ -1092,6 +1099,16 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const scenarioRefreshPlansSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_plans.js");
   const scenarioRefreshRuntimeSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_runtime.js");
   const scenarioVisualInvalidationExecutorSource = readRepoFile("js", "core", "map_renderer", "scenario_visual_invalidation_executor.js");
+  const frameGraphExecutionPlanSource = sliceBetween(
+    scenarioRefreshPlansSource,
+    "function resolveFrameGraphInvalidationExecutionPlan(",
+    "function createScenarioApplyRefreshPlan(",
+  );
+  const chunkPromotionRuntimeSource = sliceBetween(
+    scenarioRefreshRuntimeSource,
+    "function refreshMapDataForScenarioChunkPromotion(",
+    "function refreshMapDataForScenarioApply(",
+  );
   const scenarioRendererBridgeSource = readRepoFile("js", "core", "scenario", "scenario_renderer_bridge.js");
   const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
@@ -1507,18 +1524,21 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !/export\s*\{[\s\S]*getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
       && scenarioRefreshPlansSource.includes("function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = [])")
-      && /function resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const targetPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = targetPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?targetPasses,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(scenarioRefreshPlansSource)
+      && /const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const resolvedInvalidationPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = resolvedInvalidationPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(frameGraphExecutionPlanSource)
+      && !/\btargetPasses\s*[,}:]/.test(frameGraphExecutionPlanSource)
       && /function resolveScenarioChunkPromotionRendererRefreshDescriptor\([\s\S]*?const rendererRefreshPlan = normalizeRendererRefreshPlan[\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?const executionPlan = resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?\.\.\.executionPlan/.test(scenarioRefreshPlansSource)
-      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetPasses,[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(scenarioRefreshRuntimeSource)
-      && scenarioRefreshRuntimeSource.includes("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({")
-      && /executionPlan:\s*\{[\s\S]*?targetResources[\s\S]*?targetPasses[\s\S]*?invalidationTargetPasses[\s\S]*?hasExplicitTargetResources[\s\S]*?\}/.test(scenarioRefreshRuntimeSource)
+      && /const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(chunkPromotionRuntimeSource)
+      && chunkPromotionRuntimeSource.includes("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({")
+      && /executionPlan:\s*\{\s*targetResources,\s*invalidationTargetPasses,\s*hasExplicitTargetResources\s*\}/.test(chunkPromotionRuntimeSource)
+      && !/executionPlan:\s*\{[^}]*\btargetPasses\s*[,}:]/.test(chunkPromotionRuntimeSource)
       && scenarioVisualInvalidationExecutorSource.includes("const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([")
       && scenarioVisualInvalidationExecutorSource.includes("function getRequiredRendererEffect(deps, name)")
       && scenarioVisualInvalidationExecutorSource.includes("function createScenarioVisualInvalidationExecutor(deps = {})")
       && scenarioVisualInvalidationExecutorSource.includes("function executeScenarioVisualInvalidation({")
+      && scenarioVisualInvalidationExecutorSource.includes("assertExecutionPlanHasNoRetiredPassFields(executionPlan);")
       && [
         "clearLastGoodFrame(`${reason}-frame-graph`)",
-        "clearRenderPassReferenceTransforms(resolvedTargetPasses)",
+        "clearRenderPassReferenceTransforms(invalidationTargetPasses)",
         "invalidateInteractionComposite(`${reason}-frame-graph`)",
         "invalidateBorderCache()",
         "resetScenarioWaterCacheAdaptiveState(frameGraphInvalidation.resetWaterCacheReason)",

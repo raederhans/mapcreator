@@ -37,6 +37,12 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.deferred_detail_promotion_source = DEFERRED_DETAIL_PROMOTION_PATH.read_text(encoding="utf-8")
         cls.scenario_runtime_state_source = SCENARIO_RUNTIME_STATE_PATH.read_text(encoding="utf-8")
 
+    def _slice_between(self, source, start_marker, end_marker):
+        start = source.find(start_marker)
+        self.assertGreaterEqual(start, 0)
+        end = source.find(end_marker, start + len(start_marker))
+        return source[start:] if end < 0 else source[start:end]
+
     def test_basic_ready_builds_land_spatial_index_before_unlock(self):
         self.assertIn('await buildSpatialIndexChunked({', self.map_renderer_source)
         self.assertIn('includeSecondary: false,', self.map_renderer_source)
@@ -732,6 +738,11 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             frame_graph_start,
         )
         frame_graph_source = self.scenario_refresh_plans_source[frame_graph_start:frame_graph_end]
+        frame_graph_execution_plan_source = self._slice_between(
+            self.scenario_refresh_plans_source,
+            "function resolveFrameGraphInvalidationExecutionPlan(",
+            "function createScenarioApplyRefreshPlan(",
+        )
         export_source = self.scenario_refresh_plans_source[self.scenario_refresh_plans_source.index("export {"):]
         self.assertNotIn("legacyTargetPasses", frame_graph_source)
         self.assertNotIn("targetPasses", frame_graph_source)
@@ -745,13 +756,14 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             re.compile(
                 r"executionPlan:\s*\{[\s\S]*?"
                 r"targetResources[\s\S]*?"
-                r"targetPasses[\s\S]*?"
                 r"invalidationTargetPasses[\s\S]*?"
                 r"hasExplicitTargetResources[\s\S]*?"
                 r"\}",
                 re.S,
             ),
         )
+        self.assertNotRegex(promotion_source, r"executionPlan:\s*\{[\s\S]*?\btargetPasses\s*[,}:]")
+        self.assertNotRegex(frame_graph_execution_plan_source, r"\btargetPasses\s*[,}:]")
         self.assertNotIn("const invalidationTargetPasses = targetPasses.length", promotion_source)
         self.assertNotIn("legacyTargetPasses:", promotion_source)
         self.assertNotIn("legacyTargetPassCount", promotion_source)

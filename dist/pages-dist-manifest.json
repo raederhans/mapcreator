@@ -45752,17 +45752,17 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_plans.js",
-      "size_bytes": 14380,
+      "size_bytes": 14418,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
-      "size_bytes": 22750,
+      "size_bytes": 22728,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
-      "size_bytes": 3611,
+      "size_bytes": 3691,
       "source_kind": "dist"
     },
     {
@@ -47116,5 +47116,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154178794
+  "total_bytes": 1154178890
 }

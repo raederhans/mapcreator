@@ -32,9 +32,10 @@ function getRequiredRendererEffect(deps, name) {
   return effect;
 }
 
-function resolveExecutionPlanStringList(executionPlan, fieldName, fallbackValues = []) {
-  if (Array.isArray(executionPlan?.[fieldName])) return executionPlan[fieldName];
-  return normalizeStringList(fallbackValues);
+function assertExecutionPlanHasNoRetiredPassFields(executionPlan) {
+  if (executionPlan && typeof executionPlan === "object" && Object.hasOwn(executionPlan, "targetPasses")) {
+    throw new Error("Scenario visual invalidation execution plans use invalidationTargetPasses; remove targetPasses.");
+  }
 }
 
 function createScenarioVisualInvalidationExecutor(deps = {}) {
@@ -61,17 +62,18 @@ function createScenarioVisualInvalidationExecutor(deps = {}) {
     targetPasses = [],
     hasExplicitTargetResources = false,
   } = {}) {
-    const resolvedTargetPasses = resolveExecutionPlanStringList(executionPlan, "targetPasses", targetPasses);
+    assertExecutionPlanHasNoRetiredPassFields(executionPlan);
     const explicitResources = executionPlan?.hasExplicitTargetResources === true || hasExplicitTargetResources === true;
+    const legacyTargetPasses = normalizeStringList(targetPasses);
     const invalidationTargetPasses = Array.isArray(executionPlan?.invalidationTargetPasses)
-      ? executionPlan.invalidationTargetPasses
-      : (resolvedTargetPasses.length ? resolvedTargetPasses : (explicitResources ? [] : DEFAULT_RENDER_INVALIDATION_PASSES));
+      ? normalizeStringList(executionPlan.invalidationTargetPasses)
+      : (legacyTargetPasses.length ? legacyTargetPasses : (explicitResources ? [] : DEFAULT_RENDER_INVALIDATION_PASSES));
 
     if (frameGraphInvalidation?.clearLastGoodFrame) {
       clearLastGoodFrame(`${reason}-frame-graph`);
     }
     if (frameGraphInvalidation?.clearReferenceTransforms) {
-      clearRenderPassReferenceTransforms(resolvedTargetPasses);
+      clearRenderPassReferenceTransforms(invalidationTargetPasses);
     }
     if (frameGraphInvalidation?.clearInteractionComposite) {
       invalidateInteractionComposite(`${reason}-frame-graph`);
@@ -92,7 +94,6 @@ function createScenarioVisualInvalidationExecutor(deps = {}) {
     }
 
     return {
-      targetPasses: resolvedTargetPasses,
       invalidationTargetPasses,
       didInvalidateRenderPasses: invalidationTargetPasses.length > 0,
       didRender: !suppressRender,

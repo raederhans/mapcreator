@@ -300,7 +300,6 @@ function createScenarioRefreshRuntime(deps = {}) {
       rendererRefreshPlan,
       frameGraphInvalidation,
       hasExplicitTargetResources,
-      targetPasses,
       targetResources,
       invalidationTargetPasses,
     } = resolveScenarioChunkPromotionRendererRefreshDescriptor({
@@ -352,7 +351,7 @@ function createScenarioRefreshRuntime(deps = {}) {
         metrics: {
           changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
           targetResourceCount: targetResources.length,
-          targetPassCount: targetPasses.length,
+          targetPassCount: invalidationTargetPasses.length,
           promotionVersion: scenarioChunkPromotionVersion,
           hasPoliticalGeometryChange: hasPoliticalChange,
         },
@@ -370,7 +369,7 @@ function createScenarioRefreshRuntime(deps = {}) {
       reason,
       suppressRender,
       frameGraphInvalidation,
-      executionPlan: { targetResources, targetPasses, invalidationTargetPasses, hasExplicitTargetResources },
+      executionPlan: { targetResources, invalidationTargetPasses, hasExplicitTargetResources },
     });
     const shouldRefreshOpeningOwnerBordersInVisual =
       hasPoliticalChange

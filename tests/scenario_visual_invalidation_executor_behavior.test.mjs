@@ -49,7 +49,6 @@ test("scenario visual invalidation executor preserves frame graph side-effect or
       resetWaterCacheReason: "water-reset",
     },
     executionPlan: {
-      targetPasses: ["political", "labels"],
       invalidationTargetPasses: ["political", "labels"],
       hasExplicitTargetResources: true,
     },
@@ -67,7 +66,6 @@ test("scenario visual invalidation executor preserves frame graph side-effect or
     ["render"],
   ]);
   assert.deepEqual(result, {
-    targetPasses: ["political", "labels"],
     invalidationTargetPasses: ["political", "labels"],
     didInvalidateRenderPasses: true,
     didRender: true,
@@ -84,7 +82,6 @@ test("scenario visual invalidation executor skips pass invalidation for explicit
       clearReferenceTransforms: true,
     },
     executionPlan: {
-      targetPasses: [],
       invalidationTargetPasses: [],
       hasExplicitTargetResources: true,
     },
@@ -98,11 +95,24 @@ test("scenario visual invalidation executor skips pass invalidation for explicit
   assert.equal(calls.some(([name]) => name === "invalidateRenderPasses"), false);
   assert.equal(calls.some(([name]) => name === "render"), false);
   assert.deepEqual(result, {
-    targetPasses: [],
     invalidationTargetPasses: [],
     didInvalidateRenderPasses: false,
     didRender: false,
   });
+});
+
+test("scenario visual invalidation executor rejects retired execution plan targetPasses", () => {
+  const { executor } = createExecutorWithCalls();
+
+  assert.throws(
+    () => executor.executeScenarioVisualInvalidation({
+      executionPlan: {
+        targetPasses: ["political"],
+        invalidationTargetPasses: ["political"],
+      },
+    }),
+    /invalidationTargetPasses; remove targetPasses/,
+  );
 });
 
 test("scenario visual invalidation executor keeps default pass fan-out for legacy callers", () => {

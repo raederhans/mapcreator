@@ -186,16 +186,15 @@ function getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackT
 
 function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = []) {
   const hasExplicitTargetResources = Array.isArray(frameGraphInvalidation?.targetResources);
-  const targetPasses = getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackTargetPasses);
+  const resolvedInvalidationPasses = getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackTargetPasses);
   const targetResources = hasExplicitTargetResources
     ? normalizeStringList(frameGraphInvalidation.targetResources)
-    : getTargetResourcesForPasses(targetPasses);
-  const invalidationTargetPasses = targetPasses.length
-    ? targetPasses
+    : getTargetResourcesForPasses(resolvedInvalidationPasses);
+  const invalidationTargetPasses = resolvedInvalidationPasses.length
+    ? resolvedInvalidationPasses
     : (hasExplicitTargetResources ? [] : ["political", "borders", "labels"]);
   return {
     targetResources,
-    targetPasses,
     invalidationTargetPasses,
     hasExplicitTargetResources,
   };
