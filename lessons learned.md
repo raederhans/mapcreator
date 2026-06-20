@@ -133,7 +133,7 @@
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
-- `dist/pages-dist-manifest.json`、`data/manifest.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash；生成脚本和 `dist/app` 文本产物都要在 `.gitattributes` 固定 LF。
+- `dist/pages-dist-manifest.json`、`data/manifest.json`、根 `dist/assets/*.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash；生成脚本和 `dist/app` 文本产物都要在 `.gitattributes` 固定 LF。
 - 覆盖类合同可以用 bbox 作为候选预筛，最终通过条件必须绑定真实 geometry 命中，并用跨 bbox 但不相交的反例测试锁住。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
 - 只改 water layer 时，优先在现有 `runtime_topology.topo.json` 上替换 `scenario_water`；从 political/land/context 反提再重建会丢失独立的 `scenario_atlantropa` 对象。
@@ -260,9 +260,6 @@
 ### Facility preview 也要算入 Pages 体积
 - 新增点状 facility pack 时，full 可以留在仓库数据包，preview 会进入 Pages dist；先按工作台可读性设 preview cap，再用 `verify:pages-dist` 校验体积，不要等发布门槛失败后再回头缩数据。
 
-### Registry alias 测试要读真实 manifest pack_id
-- `runtime_asset_registry.transport_manifest_keys` 里可能存在 `road -> japan_road` 这类旧别名；resolver 覆盖测试应从 manifest 的真实 `pack_id` 建 expected set，避免别名误报，同时抓住 `france_road` 这类真实漏接。
-
 ### geo locale 生成要分离值变化和格式变化
 - `build_tno_1962_geo_locale_patch.py` 可能改变 checked-in patch 文件的顶层顺序或语言文件结构；地名修正后要保留已提交结构，只回写审定后的 `geo` 值，避免把格式重排混进 localization diff。
 
@@ -378,12 +375,6 @@
 - 归档文件的旧 CRLF blob 与当前 `eol=lf` attributes 可能让 `restore` 后仍显示脏；先用 `git diff --ignore-cr-at-eol` 和 `git hash-object --no-filters` 判定是否只有行尾差异，再用临时提交 + rebase skip 让远端清理生效。
 - 拖拽这类 UI 会话状态进入 runtime domain 后，临时字段应保存在 domain 私有 session 中；history `before/after` 快照只保存业务模型，避免 undo/redo 恢复内部字段。
 
-### Pages dist 失败先确认 npm 实际 Python
-- Windows 上 `verify:pages-dist` 可能由 npm 解析到 hermes venv 的 Python；遇到 `shapely` 缺失或 `python` 解析漂移时，先确认实际 `python.exe` 和 venv 依赖，再用显式 `PATH` 复跑，避免误判为 builder 代码问题。
-
-### City e2e zoom settle 要继承外层预算
-- `prepareSharedCityRuntimeState` 已拿到长 timeout 时，内部 `resetSharedCityZoom` / `setSharedCityZoomPercent` 要保留足够 settling 预算；失败快照显示 render idle 但 helper 超时时，先查局部 timeout clamp。
-
 ### 编辑事务下沉要区分 click 和 drag 语义
 - 同一工具的 click 与 drag 可能复用 membership mode 名称但语义不同；Special Zone click 的 multi 是 `toggle`，非 brush drag 的 Shift 是 `add`、Alt 是 `remove`，抽 runtime owner 时要分别建 mode resolver 并补行为测试。
 
@@ -397,9 +388,6 @@
 ### 政治填色回归要检查同 pass 覆盖链
 - 目标 feature 被绘制过仍可能被同一 pass 后续 feature 覆盖；诊断时记录目标像素在 fill/stroke 前后的变化，比只看 renderedCount 更接近真实根因。
 - 用户显式填色和 pending 编辑应拥有最终绘制优先级；underlay、普通 detail、foreground edit 的三段排序比单纯阻止 progressive skip 更稳。
-
-### Pages dist manifest 字节数要绑定行尾合同
-- 进入 `dist/pages-dist-manifest.json` 的根 `dist/assets/*.json` 资产，要同时扩展 `.gitattributes` 和 `tools/build_pages_dist.py` 的 LF 归一化名单；Windows CRLF 工作区会让 manifest size 与 Git blob size 脱节。
 
 ### i18n 拆分按纯逻辑和 DOM 行为分界
 - 迁移 `i18n` owner 时，catalog、`t()`、tooltip model 适合进 `js/core`，DOM sweep、language toggle、`localStorage` 和 UI runtime hook 调用留在 `js/ui/i18n.js`；工具和测试以 core catalog 为真相源，UI catalog 只做兼容 re-export。

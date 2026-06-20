@@ -5,17 +5,17 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main@ffab42b8` before the TNO coverage-contract follow-up.
+- Current base: `origin/main@73e64166` before parent WIP docs cleanup.
 - Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit`.
-- Live test/build owner: main Codex agent owned all TNO live tests, Pages dist, build, merge, push, and cleanup commands.
+- Live test/build owner: main Codex agent owns docs validation, git merge, push, parent sync, and cleanup commands.
 - Subagents: static/review lanes only; no child agent owns live tests.
 
 ## Recommended Order
 
 1. Preserve the parent checkout WIP in `C:\Users\raede\Desktop\dev\mapcreator`.
-2. Keep the retained worktree as latest clean checkout until parent WIP is classified.
-3. Classify, stash, or commit the parent checkout WIP before syncing that checkout to `origin/main`.
-4. Keep recovery via `origin/codex/tno-coverage-contract-followup` and `origin/codex/tno-coverage-chain-audit@e9259ed3`.
+2. Reapply the verified docs cleanup on `codex/parent-wip-docs-cleanup` from latest `origin/main`.
+3. Push the cleanup branch and fast-forward `origin/main`.
+4. Stash the original parent WIP for recovery, fast-forward the parent checkout, and remove the temporary cleanup worktree when clean.
 
 ## Current Worktrees
 
@@ -23,8 +23,8 @@ Only paths expected to remain after the current audit cleanup are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c96af211`; `origin/main@ffab42b8` | `origin/main@ffab42b8` | dirty parent checkout; local fast-forward blocked | unrelated local WIP: multiple `docs/archive/...` deletions and `lessons learned.md` modification | `git pull --ff-only origin main` aborted because local `lessons learned.md` would be overwritten. | Red for local sync because the WIP overlaps a file changed by the TNO commits; green for remote delivery because `origin/main` already contains the TNO work. | Preserve WIP; classify or stash/commit it in a separate cleanup pass before fast-forwarding this checkout. |
-| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-contract-followup`; tracked on `origin/codex/tno-coverage-contract-followup` and pushed to `origin/main` | `origin/main@ffab42b8` | integrated, pushed, retained clean checkout | hot files resolved in commit `6bec07d7`: `tools/check_scenario_contracts.py`, focused TNO contract tests, TNO generated metadata, Pages dist manifest, registry/archive docs, `lessons learned.md` | Geometry-backed basin probe regression added; strict report exposes `polar_spherical_failures`; full source/dist metadata paths locked. Passed py_compile, `tests.test_scenario_contracts` 41 tests, write-safe, `verify:pages-dist`, `verify:tno-coverage-chain`, diff check, and code-reviewer CLEAR. Follow-up docs archived under `docs/archive/tno-coverage-contract-followup-20260620/`; post-push proof showed `HEAD`, `origin/main`, and `origin/codex/tno-coverage-contract-followup` aligned with `0 0` divergence. | Green for remote delivery; red only for local parent sync because parent also has `lessons learned.md` WIP. | No code integration action remains. Retain this worktree until parent WIP is resolved, then clean it after preserving branch/commit recovery. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c96af211`; `origin/main@73e64166` | `origin/main@73e64166` | dirty parent checkout; local fast-forward blocked | parent WIP: 17 stale `docs/archive/*` directory deletions and `lessons learned.md` dedupe | Parent WIP patch saved under `.runtime/cleanup-backups/parent-wip-classification-20260620T140804Z/`; direct patch replay failed only on `lessons learned.md` because latest main changed adjacent rules. | Red for local sync until parent WIP is stashed or committed; green for replaying cleanup in the clean retained worktree. | Preserve backup, integrate replayed cleanup from `codex/parent-wip-docs-cleanup`, then stash covered parent WIP and fast-forward this checkout. |
+| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/parent-wip-docs-cleanup`; base `origin/main@73e64166` | `origin/main@73e64166` | in-progress docs cleanup | hot files: `docs/archive/*` deletions, `lessons learned.md`, registry, active cleanup docs | 16 archive directory names have zero references; `data-foundation-audit` has no path-level references and only historical worktree-name mentions. Cleanup replayed on latest main. | Green for production code; yellow for docs cleanup because registry and lessons are shared docs files. | Run docs validation, commit, push branch and `origin/main`, archive cleanup docs, then sync parent checkout. |
 
 ## Recent Integrated Branches
 
