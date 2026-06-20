@@ -77,7 +77,7 @@
     "test:node:worker-task-client": "node --test tests/worker_task_client_behavior.test.mjs",
     "test:node:spatial-query-index": "node --test tests/spatial_query_index_behavior.test.mjs",
     "test:node:scenario-chunk-promotion-helpers": "node --test tests/scenario_chunk_promotion_helpers_behavior.test.mjs",
-    "test:node:scenario-refresh-plans": "node --test tests/scenario_refresh_plans_behavior.test.mjs",
+    "test:node:scenario-refresh-plans": "node --test tests/scenario_refresh_plans_behavior.test.mjs tests/scenario_visual_invalidation_executor_behavior.test.mjs",
     "test:node:exact-after-settle-refresh-plans": "node --test tests/exact_after_settle_refresh_plans_behavior.test.mjs",
     "test:node:interaction-hit-candidates": "node --test tests/interaction_hit_candidates_behavior.test.mjs",
     "test:node:startup-hydration-behavior": "node --test tests/startup_hydration_behavior.test.mjs",

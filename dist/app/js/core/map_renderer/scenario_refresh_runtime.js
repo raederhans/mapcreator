@@ -2,72 +2,42 @@ import {
   normalizeRendererRefreshPlan,
   resolveScenarioChunkPromotionRendererRefreshDescriptor,
 } from "./scenario_refresh_plans.js";
+import { createScenarioVisualInvalidationExecutor } from "./scenario_visual_invalidation_executor.js";
 import {
   buildScenarioChunkPromotionVisualMetricDetails,
   createScenarioChunkPromotionDelta,
+  readFirstNonNegativeCount,
   resolveScenarioChunkPromotionChangeSet,
 } from "../renderer/scenario_chunk_promotion_helpers.js";
-
-function readFirstNonNegativeCount(...values) {
-  for (const value of values) {
-    const numberValue = Number(value);
-    if (Number.isFinite(numberValue) && numberValue >= 0) {
-      return Math.max(0, numberValue);
-    }
-  }
-  return 0;
-}
 
 function createScenarioRefreshRuntime(deps = {}) {
   const {
     runtimeState,
-    buildIndex,
-    buildSpatialIndexChunked,
-    rebuildPoliticalLandCollections,
-    rebuildRuntimeDerivedState,
-    rebuildPrimaryPoliticalDerivedState,
-    setInteractionInfrastructureState,
-    scheduleSecondarySpatialIndexBuild,
-    scheduleHitCanvasBuildIfNeeded,
-    ensureSovereigntyState,
-    refreshScenarioOpeningOwnerBorders,
-    invalidateBorderCache,
-    updateDynamicBorderStatusUI,
-    updateSpecialZonesPaths,
-    renderSpecialZoneEditorOverlay,
-    render,
-    recordRenderPerfMetric,
-    recordInteractionRecoveryTaskMetric,
-    beginInteractionRecoveryTask,
-    endInteractionRecoveryTask,
-    isInteractionRecoverySettled,
-    scheduleDeferredWork,
-    cancelDeferredWork,
-    yieldToMain,
-    nowMs,
-    markRendererTopologyChanged,
-    clearDeferredInternalBorderMeshCaches,
-    scheduleDeferredHeavyBorderMeshes,
-    resetScenarioWaterCacheAdaptiveState,
-    syncScenarioSecondaryRegionIndexes,
-    invalidateRenderPasses,
-    markAllOverlaysDirty,
-    updateZoomTranslateExtent,
-    isUsableMesh,
-    resetRendererTransactionState,
-    clearLastGoodFrame,
-    invalidateInteractionComposite,
-    resetFirstVisibleFramePainted,
-    clearRenderPassReferenceTransforms,
-    rebuildStaticMeshes,
-    getEffectiveAtlantropaFeatures,
-    rebuildAuxiliaryRegionIndexes,
-    getSpatialIndexRuntimeOwner,
-    queueIndexUiRefresh,
+    buildIndex, buildSpatialIndexChunked,
+    rebuildPoliticalLandCollections, rebuildRuntimeDerivedState, rebuildPrimaryPoliticalDerivedState,
+    setInteractionInfrastructureState, scheduleSecondarySpatialIndexBuild, scheduleHitCanvasBuildIfNeeded,
+    ensureSovereigntyState, refreshScenarioOpeningOwnerBorders, invalidateBorderCache,
+    updateDynamicBorderStatusUI, updateSpecialZonesPaths, renderSpecialZoneEditorOverlay, render,
+    recordRenderPerfMetric, recordInteractionRecoveryTaskMetric,
+    beginInteractionRecoveryTask, endInteractionRecoveryTask, isInteractionRecoverySettled,
+    scheduleDeferredWork, cancelDeferredWork, yieldToMain, nowMs,
+    markRendererTopologyChanged, clearDeferredInternalBorderMeshCaches,
+    scheduleDeferredHeavyBorderMeshes, resetScenarioWaterCacheAdaptiveState,
+    syncScenarioSecondaryRegionIndexes, invalidateRenderPasses,
+    markAllOverlaysDirty, updateZoomTranslateExtent, isUsableMesh,
+    resetRendererTransactionState, clearLastGoodFrame, invalidateInteractionComposite,
+    resetFirstVisibleFramePainted, clearRenderPassReferenceTransforms,
+    rebuildStaticMeshes, getEffectiveAtlantropaFeatures,
+    rebuildAuxiliaryRegionIndexes, getSpatialIndexRuntimeOwner, queueIndexUiRefresh,
   } = deps;
 
   let deferredScenarioChunkPromotionInfraHandle = null;
   let scenarioChunkPromotionVersion = 0;
+  const scenarioVisualInvalidationExecutor = createScenarioVisualInvalidationExecutor({
+    clearLastGoodFrame, clearRenderPassReferenceTransforms, invalidateInteractionComposite,
+    invalidateBorderCache, resetScenarioWaterCacheAdaptiveState, invalidateRenderPasses,
+    markAllOverlaysDirty, updateZoomTranslateExtent, render,
+  });
 
   function cancelDeferredScenarioChunkPromotionInfraRefresh() {
     cancelDeferredWork(deferredScenarioChunkPromotionInfraHandle);
@@ -332,6 +302,7 @@ function createScenarioRefreshRuntime(deps = {}) {
       hasExplicitTargetResources,
       targetPasses,
       targetResources,
+      invalidationTargetPasses,
     } = resolveScenarioChunkPromotionRendererRefreshDescriptor({
       refreshPlan,
       changedLayerKeys: effectiveChangedLayerKeys,
@@ -396,32 +367,12 @@ function createScenarioRefreshRuntime(deps = {}) {
         promotionDelta,
       };
     }
-    if (frameGraphInvalidation?.clearLastGoodFrame) {
-      clearLastGoodFrame(`${reason}-frame-graph`);
-    }
-    if (frameGraphInvalidation?.clearReferenceTransforms) {
-      clearRenderPassReferenceTransforms(targetPasses);
-    }
-    if (frameGraphInvalidation?.clearInteractionComposite) {
-      invalidateInteractionComposite(`${reason}-frame-graph`);
-    }
-    if (frameGraphInvalidation?.clearOpeningOwnerBorderCache) {
-      invalidateBorderCache();
-    }
-    if (frameGraphInvalidation?.resetWaterCacheReason) {
-      resetScenarioWaterCacheAdaptiveState(frameGraphInvalidation.resetWaterCacheReason);
-    }
-    const invalidationTargetPasses = targetPasses.length
-      ? targetPasses
-      : (hasExplicitTargetResources ? [] : ["political", "borders", "labels"]);
-    if (invalidationTargetPasses.length) {
-      invalidateRenderPasses(invalidationTargetPasses, reason);
-    }
-    markAllOverlaysDirty();
-    updateZoomTranslateExtent();
-    if (!suppressRender) {
-      render();
-    }
+    scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({
+      reason,
+      suppressRender,
+      frameGraphInvalidation,
+      executionPlan: { targetResources, targetPasses, invalidationTargetPasses, hasExplicitTargetResources },
+    });
     const shouldRefreshOpeningOwnerBordersInVisual =
       hasPoliticalChange
       && rendererRefreshPlan.refreshOpeningOwnerBorders !== false

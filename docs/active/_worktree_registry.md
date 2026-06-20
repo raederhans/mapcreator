@@ -5,21 +5,23 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@bbf0e1caa1a4cd4bbfc7d96126c567007e878924` before closeout archival commit.
-- Active implementation worktree: none.
-- Live test/build owner: no active live process; main Codex agent owned the completed validation, dist build, git merge, push preparation, and cleanup.
-- Subagents: static/review lanes only; no child agent owned live tests or builds.
+- Current base: `origin/main@5351c25d2a0dd951fb69da91be4a10263844febd`.
+- Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v2`.
+- Live test/build owner: main Codex agent owns all live tests and builds for Render Chain Slimming V2.
+- Subagents: static analysis, review, and test-suggestion lanes only; no child agent owns live tests or builds.
 
 ## Recommended Order
 
-1. Render resource authority has been fast-forward merged into `main`.
-2. Post-merge gates passed: architecture boundaries, scenario refresh plans, scenario chunk contracts, Pages dist.
-3. Task docs are archived under `docs/archive/render-resource-authority-20260620/`.
-4. Temporary render worktree has been removed; recover through branch `codex/render-resource-authority` and commit `bbf0e1ca`.
+1. Implement Render Chain Slimming V2 in `codex/render-chain-slimming-v2`.
+2. Keep exact-after-settle pass language local while moving scenario visual invalidation execution out of runtime.
+3. Run targeted Node/Python contracts, architecture boundaries, import graph, Pages dist, and diff hygiene before integration.
+4. Integrate this branch after validation; then archive task docs and clean the worktree.
 
 ## Current Worktrees
 
-No active parallel worktrees remain. `git worktree list` shows only `C:\Users\raede\Desktop\dev\mapcreator` on `main`.
+| Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v2` | `codex/render-chain-slimming-v2@pending-commit` | `origin/main@5351c25d2a0dd951fb69da91be4a10263844febd` | ready-for-integration | hot files: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, new visual invalidation executor, exact-after-settle local helpers, render-chain behavior tests, architecture boundary tool, Pages dist mirrors | Active docs under `docs/active/render-chain-slimming-v2/`; passed targeted Node tests, Python contracts, architecture boundaries, import graph, Pages dist, and diff check | Yellow: renderer refresh-chain and Pages dist overlap with recent resource-authority work; no direct active worktree overlap in `git worktree list` | Commit, fast-forward merge into `main`, run post-merge focused checks, archive docs, push, then remove the worktree. |
 
 ## Recent Integrated Branches
 

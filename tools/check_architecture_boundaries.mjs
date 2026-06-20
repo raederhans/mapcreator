@@ -7,13 +7,15 @@ const REPO_ROOT = process.cwd();
 const FILES = Object.freeze({
   renderer: "js/core/map_renderer.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
+  scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
 });
 
 const LINE_BUDGETS = Object.freeze({
   [FILES.renderer]: 24100,
-  [FILES.scenarioRefreshRuntime]: 620,
+  [FILES.scenarioRefreshRuntime]: 540,
+  [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,
 });
@@ -39,11 +41,13 @@ function collectFailures() {
   const failures = [];
   const renderer = readProjectFile(FILES.renderer);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
+  const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
+    [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
   };
@@ -68,6 +72,7 @@ function collectFailures() {
 
   const ownerFiles = [
     FILES.scenarioRefreshRuntime,
+    FILES.scenarioVisualInvalidationExecutor,
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
   ];
@@ -76,6 +81,40 @@ function collectFailures() {
     if (/from\s+["'][^"']*map_renderer\.js["']/.test(source)) {
       failures.push(`${ownerPath} must not import js/core/map_renderer.js.`);
     }
+  }
+
+  for (const forbiddenImport of [
+    "scenario_refresh_runtime.js",
+    "exact_after_settle_scheduler.js",
+  ]) {
+    if (scenarioVisualInvalidationExecutor.includes(forbiddenImport)) {
+      failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not import ${forbiddenImport}.`);
+    }
+  }
+
+  if (!scenarioVisualInvalidationExecutor.includes("function createScenarioVisualInvalidationExecutor(deps = {})")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must own createScenarioVisualInvalidationExecutor.`);
+  }
+  if (!scenarioVisualInvalidationExecutor.includes("function getRequiredRendererEffect(deps, name)")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must fail fast when renderer effects are missing.`);
+  }
+  if (scenarioVisualInvalidationExecutor.includes("function noop()") || scenarioVisualInvalidationExecutor.includes("= noop")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not silently noop renderer side effects.`);
+  }
+  if (!scenarioVisualInvalidationExecutor.includes("function executeScenarioVisualInvalidation({")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must own executeScenarioVisualInvalidation.`);
+  }
+  if (!scenarioRefreshRuntime.includes("createScenarioVisualInvalidationExecutor({")) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must create the scenario visual invalidation executor.`);
+  }
+  if (!scenarioRefreshRuntime.includes("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({")) {
+    failures.push(`${FILES.scenarioRefreshRuntime} chunk promotion visual invalidation must call the executor.`);
+  }
+  if (scenarioRefreshRuntime.includes("const invalidationTargetPasses = targetPasses.length")) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must get invalidationTargetPasses from the FrameGraph execution bridge.`);
+  }
+  if (!readProjectFile("js/core/map_renderer/scenario_refresh_plans.js").includes("function resolveFrameGraphInvalidationExecutionPlan(")) {
+    failures.push("js/core/map_renderer/scenario_refresh_plans.js must own resolveFrameGraphInvalidationExecutionPlan.");
   }
 
   const ownershipRules = [

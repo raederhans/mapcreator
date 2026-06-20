@@ -32,6 +32,14 @@ function toNonNegativeCount(value, defaultValue = 0) {
   return Math.max(0, Number(defaultValue) || 0);
 }
 
+export function readFirstNonNegativeCount(...values) {
+  for (const value of values) {
+    const numberValue = Number(value);
+    if (Number.isFinite(numberValue) && numberValue >= 0) return Math.max(0, numberValue);
+  }
+  return 0;
+}
+
 function normalizeStringSet(values = []) {
   return (Array.isArray(values) ? values : [])
     .map((value) => String(value || "").trim())

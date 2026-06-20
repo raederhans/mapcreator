@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createExactAfterSettleRefreshPlan,
   EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+  filterExactAfterSettleIdleRenderPassDefinitions,
   getExactAfterSettleDprRestorePasses,
   resolveDeferredExactContextTargetPasses,
   resolveExactAfterSettleTargetPasses,
@@ -46,6 +47,20 @@ test("DPR restore pass list keeps political invalidation explicit", () => {
     getExactAfterSettleDprRestorePasses(["political", "contextBase", "political", "labels"]),
     ["contextBase", "labels"],
   );
+});
+
+test("idle pass definition filter keeps scheduler pass selection in plan helpers", () => {
+  const definitions = [
+    ["political", () => "political"],
+    ["contextBase", () => "contextBase"],
+    ["labels", () => "labels"],
+  ];
+
+  assert.deepEqual(
+    filterExactAfterSettleIdleRenderPassDefinitions(definitions, [" labels ", "political"]),
+    [definitions[0], definitions[2]],
+  );
+  assert.deepEqual(filterExactAfterSettleIdleRenderPassDefinitions(definitions, []), definitions);
 });
 
 test("target pass policy splits critical political work from deferred context passes", () => {

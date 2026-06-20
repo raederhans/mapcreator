@@ -1091,6 +1091,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
   const scenarioRefreshPlansSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_plans.js");
   const scenarioRefreshRuntimeSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_runtime.js");
+  const scenarioVisualInvalidationExecutorSource = readRepoFile("js", "core", "map_renderer", "scenario_visual_invalidation_executor.js");
   const scenarioRendererBridgeSource = readRepoFile("js", "core", "scenario", "scenario_renderer_bridge.js");
   const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
@@ -1503,9 +1504,24 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       scenarioRefreshPlansSource.includes("function createFrameGraphInvalidation")
       && scenarioRefreshPlansSource.includes("frameGraphInvalidation")
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
-      && /function resolveScenarioChunkPromotionRendererRefreshDescriptor\([\s\S]*?const rendererRefreshPlan = normalizeRendererRefreshPlan[\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const targetPasses = getFrameGraphInvalidationTargetPasses[\s\S]*?const targetResources = hasExplicitTargetResources/.test(scenarioRefreshPlansSource)
-      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetPasses,[\s\S]*?targetResources,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(scenarioRefreshRuntimeSource)
-      && /clearLastGoodFrame\(`\$\{reason\}-frame-graph`\)[\s\S]*?clearRenderPassReferenceTransforms\(targetPasses\)[\s\S]*?invalidateInteractionComposite\(`\$\{reason\}-frame-graph`\)[\s\S]*?invalidateBorderCache\(\)[\s\S]*?const invalidationTargetPasses = targetPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?if \(invalidationTargetPasses\.length\) \{[\s\S]*?invalidateRenderPasses\(invalidationTargetPasses, reason\);/.test(scenarioRefreshRuntimeSource),
+      && scenarioRefreshPlansSource.includes("function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = [])")
+      && /function resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const targetPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = targetPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?targetPasses,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(scenarioRefreshPlansSource)
+      && /function resolveScenarioChunkPromotionRendererRefreshDescriptor\([\s\S]*?const rendererRefreshPlan = normalizeRendererRefreshPlan[\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?const executionPlan = resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?\.\.\.executionPlan/.test(scenarioRefreshPlansSource)
+      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetPasses,[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(scenarioRefreshRuntimeSource)
+      && scenarioRefreshRuntimeSource.includes("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({")
+      && /executionPlan:\s*\{[\s\S]*?targetResources[\s\S]*?targetPasses[\s\S]*?invalidationTargetPasses[\s\S]*?hasExplicitTargetResources[\s\S]*?\}/.test(scenarioRefreshRuntimeSource)
+      && scenarioVisualInvalidationExecutorSource.includes("const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([")
+      && scenarioVisualInvalidationExecutorSource.includes("function getRequiredRendererEffect(deps, name)")
+      && scenarioVisualInvalidationExecutorSource.includes("function createScenarioVisualInvalidationExecutor(deps = {})")
+      && scenarioVisualInvalidationExecutorSource.includes("function executeScenarioVisualInvalidation({")
+      && [
+        "clearLastGoodFrame(`${reason}-frame-graph`)",
+        "clearRenderPassReferenceTransforms(resolvedTargetPasses)",
+        "invalidateInteractionComposite(`${reason}-frame-graph`)",
+        "invalidateBorderCache()",
+        "resetScenarioWaterCacheAdaptiveState(frameGraphInvalidation.resetWaterCacheReason)",
+        "invalidateRenderPasses(invalidationTargetPasses, reason);",
+      ].every((snippet) => scenarioVisualInvalidationExecutorSource.includes(snippet)),
     startupInitialVisualUsesFirstFrameResourceAllowlist:
       scenarioRefreshPlansSource.includes("const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([")
       && scenarioRefreshPlansSource.includes('"backgroundBuffer"')

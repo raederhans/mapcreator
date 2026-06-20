@@ -5,6 +5,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
 SCENARIO_REFRESH_RUNTIME_PATH = ROOT / "js/core/map_renderer/scenario_refresh_runtime.js"
+SCENARIO_REFRESH_PLANS_PATH = ROOT / "js/core/map_renderer/scenario_refresh_plans.js"
+SCENARIO_VISUAL_INVALIDATION_EXECUTOR_PATH = ROOT / "js/core/map_renderer/scenario_visual_invalidation_executor.js"
 EXACT_AFTER_SETTLE_SCHEDULER_PATH = ROOT / "js/core/map_renderer/exact_after_settle_scheduler.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
@@ -22,6 +24,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
     def setUpClass(cls):
         cls.map_renderer_source = MAP_RENDERER_PATH.read_text(encoding="utf-8")
         cls.scenario_refresh_runtime_source = SCENARIO_REFRESH_RUNTIME_PATH.read_text(encoding="utf-8")
+        cls.scenario_refresh_plans_source = SCENARIO_REFRESH_PLANS_PATH.read_text(encoding="utf-8")
+        cls.scenario_visual_invalidation_executor_source = SCENARIO_VISUAL_INVALIDATION_EXECUTOR_PATH.read_text(encoding="utf-8")
         cls.exact_after_settle_scheduler_source = EXACT_AFTER_SETTLE_SCHEDULER_PATH.read_text(encoding="utf-8")
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
@@ -713,6 +717,37 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 re.S,
             ),
         )
+
+    def test_chunk_promotion_visual_invalidation_uses_executor_and_frame_graph_bridge(self):
+        promotion_start = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(")
+        promotion_end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioApply(", promotion_start)
+        promotion_source = self.scenario_refresh_runtime_source[promotion_start:promotion_end]
+
+        self.assertIn("function resolveFrameGraphInvalidationExecutionPlan(", self.scenario_refresh_plans_source)
+        self.assertIn("const executionPlan = resolveFrameGraphInvalidationExecutionPlan(", self.scenario_refresh_plans_source)
+        self.assertIn("invalidationTargetPasses", self.scenario_refresh_plans_source)
+        self.assertIn("createScenarioVisualInvalidationExecutor({", self.scenario_refresh_runtime_source)
+        self.assertIn("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({", promotion_source)
+        self.assertRegex(
+            promotion_source,
+            re.compile(
+                r"executionPlan:\s*\{[\s\S]*?"
+                r"targetResources[\s\S]*?"
+                r"targetPasses[\s\S]*?"
+                r"invalidationTargetPasses[\s\S]*?"
+                r"hasExplicitTargetResources[\s\S]*?"
+                r"\}",
+                re.S,
+            ),
+        )
+        self.assertNotIn("const invalidationTargetPasses = targetPasses.length", promotion_source)
+        self.assertIn(
+            "function createScenarioVisualInvalidationExecutor(deps = {})",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertNotIn("scenario_refresh_runtime.js", self.scenario_visual_invalidation_executor_source)
+        self.assertNotIn("exact_after_settle_scheduler.js", self.scenario_visual_invalidation_executor_source)
+        self.assertNotIn("map_renderer.js", self.scenario_visual_invalidation_executor_source)
 
     def test_scenario_apply_refresh_still_rebuilds_static_meshes(self):
         self.assertRegex(

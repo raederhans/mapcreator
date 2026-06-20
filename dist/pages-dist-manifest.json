@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -45697,12 +45697,12 @@
     },
     {
       "path": "app/js/core/map_renderer/exact_after_settle_refresh_plans.js",
-      "size_bytes": 3893,
+      "size_bytes": 4270,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/exact_after_settle_scheduler.js",
-      "size_bytes": 29298,
+      "size_bytes": 29284,
       "source_kind": "dist"
     },
     {
@@ -45752,12 +45752,17 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_plans.js",
-      "size_bytes": 14446,
+      "size_bytes": 14934,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
-      "size_bytes": 23388,
+      "size_bytes": 22798,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
+      "size_bytes": 3611,
       "source_kind": "dist"
     },
     {
@@ -45917,7 +45922,7 @@
     },
     {
       "path": "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
-      "size_bytes": 13907,
+      "size_bytes": 14143,
       "source_kind": "dist"
     },
     {
@@ -47092,7 +47097,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454418,
+      "size_bytes": 1454568,
       "source_kind": "dist"
     },
     {
@@ -47111,5 +47116,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154174232
+  "total_bytes": 1154178613
 }

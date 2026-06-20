@@ -186,6 +186,23 @@ function getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackT
   return normalizeStringList(fallbackTargetPasses);
 }
 
+function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = []) {
+  const hasExplicitTargetResources = Array.isArray(frameGraphInvalidation?.targetResources);
+  const targetPasses = getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackTargetPasses);
+  const targetResources = hasExplicitTargetResources
+    ? normalizeStringList(frameGraphInvalidation.targetResources)
+    : getTargetResourcesForPasses(targetPasses);
+  const invalidationTargetPasses = targetPasses.length
+    ? targetPasses
+    : (hasExplicitTargetResources ? [] : ["political", "borders", "labels"]);
+  return {
+    targetResources,
+    targetPasses,
+    invalidationTargetPasses,
+    hasExplicitTargetResources,
+  };
+}
+
 function createScenarioApplyRefreshPlan({
   refreshOpeningOwnerBorders = true,
 } = {}) {
@@ -378,20 +395,14 @@ function resolveScenarioChunkPromotionRendererRefreshDescriptor({
   const frameGraphInvalidation = rendererRefreshPlan.frameGraphInvalidation && typeof rendererRefreshPlan.frameGraphInvalidation === "object"
     ? rendererRefreshPlan.frameGraphInvalidation
     : null;
-  const hasExplicitTargetResources = Array.isArray(frameGraphInvalidation?.targetResources);
-  const targetPasses = getFrameGraphInvalidationTargetPasses(
+  const executionPlan = resolveFrameGraphInvalidationExecutionPlan(
     frameGraphInvalidation,
     rendererRefreshPlan.targetPasses,
   );
-  const targetResources = hasExplicitTargetResources
-    ? normalizeStringList(frameGraphInvalidation.targetResources)
-    : getTargetResourcesForPasses(targetPasses);
   return {
     rendererRefreshPlan,
     frameGraphInvalidation,
-    hasExplicitTargetResources,
-    targetPasses,
-    targetResources,
+    ...executionPlan,
   };
 }
 
@@ -408,6 +419,7 @@ export {
   getScenarioChunkPromotionTargetPasses,
   getScenarioChunkPromotionTargetResources,
   normalizeRendererRefreshPlan,
+  resolveFrameGraphInvalidationExecutionPlan,
   resolveFirstFrameTargetResources,
   resolveScenarioChunkPromotionRendererRefreshDescriptor,
 };

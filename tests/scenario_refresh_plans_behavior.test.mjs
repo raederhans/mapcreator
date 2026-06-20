@@ -15,6 +15,7 @@ import {
   getScenarioChunkPromotionTargetPasses,
   getScenarioChunkPromotionTargetResources,
   normalizeRendererRefreshPlan,
+  resolveFrameGraphInvalidationExecutionPlan,
   resolveFirstFrameTargetResources,
   resolveScenarioChunkPromotionRendererRefreshDescriptor,
 } from "../js/core/map_renderer/scenario_refresh_plans.js";
@@ -320,6 +321,48 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
   assert.equal(emptyResourceDescriptor.hasExplicitTargetResources, true);
   assert.deepEqual(emptyResourceDescriptor.targetResources, []);
   assert.deepEqual(emptyResourceDescriptor.targetPasses, []);
+});
+
+test("frame graph invalidation execution plan resolves pass compatibility at one bridge", () => {
+  assert.deepEqual(
+    resolveFrameGraphInvalidationExecutionPlan(null, [" political ", "labels", "political"]),
+    {
+      targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
+      targetPasses: ["political", "labels"],
+      invalidationTargetPasses: ["political", "labels"],
+      hasExplicitTargetResources: false,
+    },
+  );
+
+  const explicitResourceInvalidation = createFrameGraphInvalidation({
+    reason: "explicit-resource",
+    targetResources: ["contextScenarioBuffer"],
+    targetPasses: ["labels"],
+  });
+  assert.deepEqual(
+    resolveFrameGraphInvalidationExecutionPlan(explicitResourceInvalidation, ["political"]),
+    {
+      targetResources: ["contextScenarioBuffer"],
+      targetPasses: ["contextScenario"],
+      invalidationTargetPasses: ["contextScenario"],
+      hasExplicitTargetResources: true,
+    },
+  );
+
+  const explicitEmptyInvalidation = createFrameGraphInvalidation({
+    reason: "explicit-empty-resource",
+    targetResources: [],
+    targetPasses: ["political", "labels"],
+  });
+  assert.deepEqual(
+    resolveFrameGraphInvalidationExecutionPlan(explicitEmptyInvalidation, ["political"]),
+    {
+      targetResources: [],
+      targetPasses: [],
+      invalidationTargetPasses: [],
+      hasExplicitTargetResources: true,
+    },
+  );
 });
 
 test("chunk promotion runtime executes default frame graph invalidation effects", () => {

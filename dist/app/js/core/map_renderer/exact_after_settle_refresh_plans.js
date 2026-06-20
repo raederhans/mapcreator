@@ -51,6 +51,12 @@ function getExactAfterSettleDprRestorePasses(renderPassNames = []) {
   return normalizeStringList(renderPassNames).filter((passName) => passName !== "political");
 }
 
+function filterExactAfterSettleIdleRenderPassDefinitions(definitions = [], targetPasses = []) {
+  const targetPassSet = new Set(normalizeStringList(targetPasses));
+  return (Array.isArray(definitions) ? definitions : [])
+    .filter(([passName]) => !targetPassSet.size || targetPassSet.has(String(passName || "").trim()));
+}
+
 function resolveExactAfterSettleTargetPasses({
   renderPassNames = [],
   idleRenderPassNames = [],
@@ -107,6 +113,7 @@ function resolveDeferredExactContextTargetPasses({
 export {
   createExactAfterSettleRefreshPlan,
   EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+  filterExactAfterSettleIdleRenderPassDefinitions,
   getExactAfterSettleDprRestorePasses,
   resolveDeferredExactContextTargetPasses,
   resolveExactAfterSettleTargetPasses,

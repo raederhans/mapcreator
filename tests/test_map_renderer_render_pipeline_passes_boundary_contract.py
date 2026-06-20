@@ -97,6 +97,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
         self.assertIn("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_plan_content)
         self.assertIn("function resolveExactAfterSettleTargetPasses({", exact_plan_content)
+        self.assertIn("function filterExactAfterSettleIdleRenderPassDefinitions(", exact_plan_content)
+        self.assertIn("filterExactAfterSettleIdleRenderPassDefinitions(", exact_scheduler_content)
 
     def test_water_hover_uses_svg_overlay_while_selected_water_invalidates_canvas_layer(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

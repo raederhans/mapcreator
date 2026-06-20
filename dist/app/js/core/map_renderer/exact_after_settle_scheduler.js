@@ -7,6 +7,7 @@ import {
 } from "../state/renderer_runtime_state.js";
 import {
   createExactAfterSettleRefreshPlan,
+  filterExactAfterSettleIdleRenderPassDefinitions,
   getExactAfterSettleDprRestorePasses,
   resolveDeferredExactContextTargetPasses,
   resolveExactAfterSettleTargetPasses,
@@ -182,9 +183,10 @@ function createExactAfterSettleScheduler({
       return false;
     }
     const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-    const targetPasses = new Set(Array.isArray(plan.exactTargetPasses) ? plan.exactTargetPasses : []);
-    const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions()
-      .filter(([passName]) => !targetPasses.size || targetPasses.has(passName));
+    const definitions = filterExactAfterSettleIdleRenderPassDefinitions(
+      getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(),
+      plan.exactTargetPasses,
+    );
     const timings = {};
     const cache = getRenderPassCacheState();
     const passStartedAt = nowMs();
@@ -491,7 +493,10 @@ function createExactAfterSettleScheduler({
     if (!targetPasses.length) return false;
     if (!isDeferredExactContextRefreshCurrent(refreshVersion, plan)) return false;
     const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-    const definitions = getRenderPipelinePassesOwner().getIdleRenderPassDefinitions().filter(([passName]) => targetPasses.includes(passName));
+    const definitions = filterExactAfterSettleIdleRenderPassDefinitions(
+      getRenderPipelinePassesOwner().getIdleRenderPassDefinitions(),
+      targetPasses,
+    );
     const cache = getRenderPassCacheState();
     const timings = {};
     const startedAt = nowMs();
