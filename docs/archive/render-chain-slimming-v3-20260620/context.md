@@ -65,10 +65,11 @@
 
 ## Integration State
 
-- Status: ready for integration.
+- Status: integrated, verified, archived, and worktree cleaned.
 - Base: `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75`.
 - Branch: `codex/render-chain-slimming-v3`, rebased on latest main.
 - Overlap risk: yellow for renderer refresh-chain and Pages dist manifest.
-- Recommended integration: fast-forward merge into `main`, run post-merge
-  focused checks, archive this task folder, push, and remove the isolated
-  worktree.
+- Integration result: fast-forwarded into `main`, post-merge focused checks
+  passed, this task folder was archived, and the isolated worktree was
+  removed. At archive time, `main` still needed the closeout commit and push
+  to `origin/main`.

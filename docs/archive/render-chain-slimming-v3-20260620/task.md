@@ -13,6 +13,10 @@
 - [x] Run full validation set.
 - [x] Run final review / bug check / first-principles self-audit.
 - [x] Prepare integration-ready delivery package.
+- [x] Fast-forward merge into main.
+- [x] Run post-merge focused validation.
+- [x] Archive task docs.
+- [x] Remove isolated worktree.
 
 ## Expected Changed Files
 
@@ -29,9 +33,9 @@ Tests and contracts:
 - `tools/check_architecture_boundaries.mjs`
 
 Docs and delivery:
-- `docs/active/render-chain-slimming-v3/plan.md`
-- `docs/active/render-chain-slimming-v3/context.md`
-- `docs/active/render-chain-slimming-v3/task.md`
+- `docs/archive/render-chain-slimming-v3-20260620/plan.md`
+- `docs/archive/render-chain-slimming-v3-20260620/context.md`
+- `docs/archive/render-chain-slimming-v3-20260620/task.md`
 - `docs/active/_worktree_registry.md`
 - `dist/app/js/core/map_renderer/*`
 - `dist/pages-dist-manifest.json`
@@ -55,7 +59,7 @@ Docs and delivery:
      `tests/test_scenario_chunk_refresh_contracts.py`,
      `tools/check_architecture_boundaries.mjs`.
    - Delivery/docs: matching `dist/app/js/core/*` mirrors,
-     `dist/pages-dist-manifest.json`, active V3 docs, and
+     `dist/pages-dist-manifest.json`, archived V3 docs, and
      `docs/active/_worktree_registry.md`.
    - Temporary files: none staged; live validation artifacts stayed under
      `.runtime/`.
@@ -65,13 +69,14 @@ Docs and delivery:
    - Delta payloads drop the retired pass list.
    - Source scans reject retired descriptor fields.
 4. Commit status:
-   - Functional branch exists at `codex/render-chain-slimming-v3`, rebased on
-     latest main and ready for integration.
+   - Functional commits `35f81376` and `3eefa80e` were fast-forwarded into
+     `main`.
 5. Base/main divergence:
    - Rebasing completed on top of `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75`.
-   - Re-check `main...origin/main` before final merge.
+   - At archive time, `main` still needed the closeout commit and push to
+     `origin/main`.
 6. Conflict scan:
-   - Current worktree list showed only main plus this V3 worktree.
+   - Current worktree list shows only the main checkout.
    - Hot files overlap future renderer refresh-chain work and Pages dist.
 7. Validation:
    - Passed all commands listed in `context.md`.
@@ -82,7 +87,6 @@ Docs and delivery:
    - Full legacy pass-field deletion outside FrameGraph invalidation remains a
      later contract-unification task.
 9. Recommended next step:
-   - Fast-forward merge, post-merge focused checks, archive, push, and remove
-     worktree.
+   - Push closeout commit to `origin/main`.
 10. Integration verdict:
-   - Integration-ready.
+   - Integrated and cleaned.

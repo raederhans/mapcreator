@@ -411,3 +411,6 @@
 
 ### coverage ledger 要同步发布和稳定 metadata
 - checked-in runtime metadata 或 build snapshot 引用新的 ledger/report 时，ledger 文件必须进入 Pages dist 或明确保持 repo-only；metadata 只能写固定合同路径，不能写单次 `--report-path` 运行参数。
+
+### Pages manifest 冲突用最终树重算
+- rebase 或 merge 时如果 `dist/pages-dist-manifest.json` 和 UI/dist 文件同时变化，先落到最新 main，再跑 `npm run verify:pages-dist` 让生成器按最终 source/dist 树重算发布尺寸。
