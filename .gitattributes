@@ -17,6 +17,7 @@ data/scenarios/index.json text eol=lf
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
 data/scenarios/**/context_lod.manifest.json text eol=lf
+data/scenarios/**/derived/*.json text eol=lf
 data/scenarios/**/runtime_meta.json text eol=lf
 data/scenarios/**/mesh_pack.json text eol=lf
 data/scenarios/**/build_snapshot.json text eol=lf
