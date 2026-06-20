@@ -726,6 +726,16 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("function resolveFrameGraphInvalidationExecutionPlan(", self.scenario_refresh_plans_source)
         self.assertIn("const executionPlan = resolveFrameGraphInvalidationExecutionPlan(", self.scenario_refresh_plans_source)
         self.assertIn("invalidationTargetPasses", self.scenario_refresh_plans_source)
+        frame_graph_start = self.scenario_refresh_plans_source.index("function createFrameGraphInvalidation(")
+        frame_graph_end = self.scenario_refresh_plans_source.index(
+            "function getFrameGraphInvalidationTargetPasses(",
+            frame_graph_start,
+        )
+        frame_graph_source = self.scenario_refresh_plans_source[frame_graph_start:frame_graph_end]
+        export_source = self.scenario_refresh_plans_source[self.scenario_refresh_plans_source.index("export {"):]
+        self.assertNotIn("legacyTargetPasses", frame_graph_source)
+        self.assertNotRegex(frame_graph_source, r"\btargetPasses:")
+        self.assertNotIn("getFrameGraphInvalidationTargetPasses,", export_source)
         self.assertIn("createScenarioVisualInvalidationExecutor({", self.scenario_refresh_runtime_source)
         self.assertIn("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({", promotion_source)
         self.assertRegex(
@@ -741,6 +751,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             ),
         )
         self.assertNotIn("const invalidationTargetPasses = targetPasses.length", promotion_source)
+        self.assertNotIn("legacyTargetPasses:", promotion_source)
+        self.assertNotIn("legacyTargetPassCount", promotion_source)
+        self.assertIn("targetPassCount", promotion_source)
         self.assertIn(
             "function createScenarioVisualInvalidationExecutor(deps = {})",
             self.scenario_visual_invalidation_executor_source,

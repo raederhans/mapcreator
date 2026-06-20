@@ -7,6 +7,7 @@ const REPO_ROOT = process.cwd();
 const FILES = Object.freeze({
   renderer: "js/core/map_renderer.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
+  scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
@@ -41,6 +42,7 @@ function collectFailures() {
   const failures = [];
   const renderer = readProjectFile(FILES.renderer);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
+  const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
@@ -113,8 +115,19 @@ function collectFailures() {
   if (scenarioRefreshRuntime.includes("const invalidationTargetPasses = targetPasses.length")) {
     failures.push(`${FILES.scenarioRefreshRuntime} must get invalidationTargetPasses from the FrameGraph execution bridge.`);
   }
-  if (!readProjectFile("js/core/map_renderer/scenario_refresh_plans.js").includes("function resolveFrameGraphInvalidationExecutionPlan(")) {
-    failures.push("js/core/map_renderer/scenario_refresh_plans.js must own resolveFrameGraphInvalidationExecutionPlan.");
+  if (!scenarioRefreshPlans.includes("function resolveFrameGraphInvalidationExecutionPlan(")) {
+    failures.push(`${FILES.scenarioRefreshPlans} must own resolveFrameGraphInvalidationExecutionPlan.`);
+  }
+  const frameGraphFactoryStart = scenarioRefreshPlans.indexOf("function createFrameGraphInvalidation(");
+  const frameGraphBridgeStart = scenarioRefreshPlans.indexOf("function getFrameGraphInvalidationTargetPasses(", frameGraphFactoryStart);
+  if (frameGraphFactoryStart < 0 || frameGraphBridgeStart < 0) {
+    failures.push(`${FILES.scenarioRefreshPlans} must keep createFrameGraphInvalidation next to the FrameGraph execution bridge.`);
+  } else if (/legacyTargetPasses|targetPasses:/.test(scenarioRefreshPlans.slice(frameGraphFactoryStart, frameGraphBridgeStart))) {
+    failures.push(`${FILES.scenarioRefreshPlans} FrameGraph invalidation descriptors must not expose legacy pass fields.`);
+  }
+  const exportBlock = scenarioRefreshPlans.slice(scenarioRefreshPlans.indexOf("export {"));
+  if (exportBlock.includes("getFrameGraphInvalidationTargetPasses,")) {
+    failures.push(`${FILES.scenarioRefreshPlans} must keep getFrameGraphInvalidationTargetPasses inside the bridge.`);
   }
 
   const ownershipRules = [

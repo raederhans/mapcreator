@@ -144,7 +144,6 @@ export function createScenarioChunkPromotionDelta({
   changedLayerKeys = [],
   targetResources = [],
   resourceDescriptors = [],
-  legacyTargetPasses = [],
   dataRevisionLayers = changedLayerKeys,
   renderVisibleLayers = changedLayerKeys,
   interactionAuthorityLayers = changedLayerKeys,
@@ -168,7 +167,6 @@ export function createScenarioChunkPromotionDelta({
     resources: {
       targetResources: normalizedTargetResources,
       resourceDescriptors: normalizeResourceDescriptors(normalizedTargetResources, resourceDescriptors, reason),
-      legacyTargetPasses: normalizeStringSet(legacyTargetPasses),
     },
     domainLayers: {
       dataRevisionLayers: normalizeLayerKeySet(dataRevisionLayers),

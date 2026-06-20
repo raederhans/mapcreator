@@ -145,14 +145,10 @@ function createFrameGraphInvalidation({
   clearOpeningOwnerBorderCache = false,
   clearInteractionComposite = false,
 } = {}) {
-  const normalizedTargetPasses = normalizeStringList(targetPasses);
   const hasExplicitTargetResources = Array.isArray(targetResources);
   const normalizedTargetResources = hasExplicitTargetResources
     ? normalizeStringList(targetResources)
-    : getTargetResourcesForPasses(normalizedTargetPasses);
-  const legacyTargetPasses = hasExplicitTargetResources || normalizedTargetResources.length
-    ? getTargetPassesForResources(normalizedTargetResources)
-    : normalizedTargetPasses;
+    : getTargetResourcesForPasses(targetPasses);
   return {
     kind: "FrameGraphInvalidation",
     reason: String(reason || "scenario-refresh"),
@@ -160,8 +156,6 @@ function createFrameGraphInvalidation({
     renderVisibleLayers: normalizeLayerKeyList(renderVisibleLayers),
     interactionAuthorityLayers: normalizeLayerKeyList(interactionAuthorityLayers),
     targetResources: normalizedTargetResources,
-    legacyTargetPasses,
-    targetPasses: legacyTargetPasses,
     clearLastGoodFrame: !!clearLastGoodFrame,
     clearReferenceTransforms: !!clearReferenceTransforms,
     clearPartialPoliticalDirtyIds: !!clearPartialPoliticalDirtyIds,
@@ -176,12 +170,6 @@ function getFrameGraphInvalidationTargetPasses(frameGraphInvalidation, fallbackT
     if (Array.isArray(frameGraphInvalidation.targetResources)) {
       return getTargetPassesForResources(frameGraphInvalidation.targetResources);
     }
-    const resourceTargetPasses = getTargetPassesForResources(frameGraphInvalidation.targetResources);
-    if (resourceTargetPasses.length) return resourceTargetPasses;
-    const legacyTargetPasses = normalizeStringList(frameGraphInvalidation.legacyTargetPasses);
-    if (legacyTargetPasses.length) return legacyTargetPasses;
-    const targetPasses = normalizeStringList(frameGraphInvalidation.targetPasses);
-    if (targetPasses.length) return targetPasses;
   }
   return normalizeStringList(fallbackTargetPasses);
 }
@@ -412,7 +400,6 @@ export {
   createScenarioChunkPromotionRefreshPlan,
   createStartupHydrationRefreshPlan,
   getFirstFrameTargetResources,
-  getFrameGraphInvalidationTargetPasses,
   getTargetPassesForResources,
   getTargetResourcesForPasses,
   getRendererRefreshPlan,

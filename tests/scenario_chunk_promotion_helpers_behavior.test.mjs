@@ -102,7 +102,6 @@ test("scenario chunk promotion delta is a pure value contract", () => {
     runId: 9,
     changedLayerKeys: ["Political", "water", "political"],
     targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
-    legacyTargetPasses: ["political", "labels"],
     politicalPayloadRef: {
       kind: "political",
       id: "full",
@@ -135,7 +134,7 @@ test("scenario chunk promotion delta is a pure value contract", () => {
     runId: 9,
   });
   assert.deepEqual(result.resources.targetResources, ["politicalBaseBuffer", "hitIndex", "labelBuffer"]);
-  assert.deepEqual(result.resources.legacyTargetPasses, ["political", "labels"]);
+  assert.equal(Object.hasOwn(result.resources, "legacyTargetPasses"), false);
   assert.deepEqual(result.domainLayers.dataRevisionLayers, ["political", "water"]);
   assert.equal(result.payloadRefs.politicalPayloadRef.featureCount, 12);
   assert.deepEqual(result.sideEffects.infraTasks, ["scenario-chunk-promotion-infra"]);

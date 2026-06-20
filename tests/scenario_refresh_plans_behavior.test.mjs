@@ -8,7 +8,6 @@ import {
   createScenarioApplyRefreshPlan,
   createScenarioChunkPromotionRefreshPlan,
   getFirstFrameTargetResources,
-  getFrameGraphInvalidationTargetPasses,
   getTargetPassesForResources,
   getTargetResourcesForPasses,
   getRendererRefreshPlan,
@@ -58,15 +57,6 @@ test("chunk promotion plan normalizes layer keys and carries opening border poli
   assert.deepEqual(plan.renderer.targetPasses, []);
   assert.equal(plan.renderer.refreshOpeningOwnerBorders, true);
   assert.equal(plan.renderer.resetWaterCacheReason, "");
-  assert.deepEqual(plan.renderer.frameGraphInvalidation.targetPasses, [
-    "political",
-    "contextBase",
-    "contextMarkers",
-    "borders",
-    "labels",
-    "contextScenario",
-    "dayNight",
-  ]);
   assert.deepEqual(plan.renderer.frameGraphInvalidation.targetResources, [
     "politicalBaseBuffer",
     "hitIndex",
@@ -77,6 +67,17 @@ test("chunk promotion plan normalizes layer keys and carries opening border poli
     "labelBuffer",
     "contextScenarioBuffer",
     "dayNightBuffer",
+  ]);
+  assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "legacyTargetPasses"), false);
+  assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "targetPasses"), false);
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses, [
+    "political",
+    "contextBase",
+    "contextMarkers",
+    "borders",
+    "labels",
+    "contextScenario",
+    "dayNight",
   ]);
   assert.equal(getRendererRefreshPlan(plan), plan.renderer);
 });
@@ -103,8 +104,6 @@ test("frame graph invalidation separates data, visible render, and interaction a
     renderVisibleLayers: ["cities"],
     interactionAuthorityLayers: ["scenario_atlantropa"],
     targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
-    legacyTargetPasses: ["political", "labels"],
-    targetPasses: ["political", "labels"],
     clearLastGoodFrame: true,
     clearReferenceTransforms: true,
     clearPartialPoliticalDirtyIds: true,
@@ -122,9 +121,9 @@ test("frame graph invalidation treats explicit resources as authority over legac
   });
 
   assert.deepEqual(invalidation.targetResources, ["labelBuffer", "politicalBaseBuffer"]);
-  assert.deepEqual(invalidation.legacyTargetPasses, ["labels", "political"]);
-  assert.deepEqual(invalidation.targetPasses, ["labels", "political"]);
-  assert.deepEqual(getFrameGraphInvalidationTargetPasses(invalidation), ["labels", "political"]);
+  assert.equal(Object.hasOwn(invalidation, "legacyTargetPasses"), false);
+  assert.equal(Object.hasOwn(invalidation, "targetPasses"), false);
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(invalidation).targetPasses, ["labels", "political"]);
 
   const emptyResourceInvalidation = createFrameGraphInvalidation({
     reason: "empty-resource-authority",
@@ -132,14 +131,14 @@ test("frame graph invalidation treats explicit resources as authority over legac
     targetPasses: ["political", "labels"],
   });
   assert.deepEqual(emptyResourceInvalidation.targetResources, []);
-  assert.deepEqual(emptyResourceInvalidation.legacyTargetPasses, []);
-  assert.deepEqual(emptyResourceInvalidation.targetPasses, []);
-  assert.deepEqual(getFrameGraphInvalidationTargetPasses(emptyResourceInvalidation), []);
+  assert.equal(Object.hasOwn(emptyResourceInvalidation, "legacyTargetPasses"), false);
+  assert.equal(Object.hasOwn(emptyResourceInvalidation, "targetPasses"), false);
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(emptyResourceInvalidation).targetPasses, []);
 });
 
-test("chunk promotion frame graph target passes stay equivalent to legacy fan-out", () => {
+test("chunk promotion frame graph resources resolve equivalent pass fan-out through bridge", () => {
   const changedLayerKeys = ["strategicvalues", "scenario_atlantropa"];
-  const legacyTargetPasses = getScenarioChunkPromotionTargetPasses({
+  const resolvedTargetPasses = getScenarioChunkPromotionTargetPasses({
     changedLayerKeys,
     hasPoliticalChange: false,
   });
@@ -149,15 +148,15 @@ test("chunk promotion frame graph target passes stay equivalent to legacy fan-ou
   });
 
   assert.deepEqual(plan.renderer.targetPasses, []);
-  assert.deepEqual(plan.renderer.frameGraphInvalidation.targetPasses, legacyTargetPasses);
-  assert.deepEqual(plan.renderer.frameGraphInvalidation.legacyTargetPasses, legacyTargetPasses);
+  assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "legacyTargetPasses"), false);
+  assert.equal(Object.hasOwn(plan.renderer.frameGraphInvalidation, "targetPasses"), false);
   assert.deepEqual(
     plan.renderer.frameGraphInvalidation.targetResources,
-    getTargetResourcesForPasses(legacyTargetPasses),
+    getTargetResourcesForPasses(resolvedTargetPasses),
   );
   assert.deepEqual(
-    getTargetPassesForResources(plan.renderer.frameGraphInvalidation.targetResources),
-    legacyTargetPasses,
+    resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses,
+    resolvedTargetPasses,
   );
 });
 
@@ -223,7 +222,7 @@ test("first-frame resource allowlist keeps startup visual work to the baseline",
     "borderBuffer",
     "interactionOverlay",
   ]);
-  assert.deepEqual(plan.renderer.frameGraphInvalidation.targetPasses, [
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(plan.renderer.frameGraphInvalidation).targetPasses, [
     "background",
     "physicalBase",
     "political",
@@ -243,7 +242,7 @@ test("first-frame resource allowlist keeps startup visual work to the baseline",
     "interactionOverlay",
     "hgoPreviewBuffer",
   ]);
-  assert.deepEqual(hgoPlan.renderer.frameGraphInvalidation.targetPasses, [
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(hgoPlan.renderer.frameGraphInvalidation).targetPasses, [
     "background",
     "physicalBase",
     "political",
@@ -450,10 +449,11 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
   const frameGraphInvalidation = {
     ...rendererPlan.frameGraphInvalidation,
     targetResources: rendererPlan.frameGraphInvalidation.targetResources,
-    legacyTargetPasses: [],
-    targetPasses: [],
   };
-  const targetPasses = getFrameGraphInvalidationTargetPasses(frameGraphInvalidation);
+  const { targetPasses } = resolveFrameGraphInvalidationExecutionPlan(
+    frameGraphInvalidation,
+    rendererPlan.targetPasses,
+  );
 
   runtime.refreshMapDataForScenarioChunkPromotion({
     reason: "test-chunk-promotion",

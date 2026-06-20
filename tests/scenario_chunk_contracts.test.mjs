@@ -1503,6 +1503,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     frameGraphInvalidationReachesScenarioRefreshRuntime:
       scenarioRefreshPlansSource.includes("function createFrameGraphInvalidation")
       && scenarioRefreshPlansSource.includes("frameGraphInvalidation")
+      && !/function createFrameGraphInvalidation\([\s\S]*?(legacyTargetPasses|targetPasses:)[\s\S]*?function getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
+      && !/export\s*\{[\s\S]*getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
       && scenarioRefreshPlansSource.includes("function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = [])")
       && /function resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const targetPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = targetPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?targetPasses,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(scenarioRefreshPlansSource)

@@ -5,21 +5,23 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@0c15bf55` after Render Chain Slimming V2 closeout.
-- Active implementation worktree: none.
-- Live test/build owner: no active live process.
-- Subagents: closed after static analysis, review, and test-suggestion lanes.
+- Current base: `main@d272c09046bd42442bd0af32f834896c6dec559d`.
+- Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v3`.
+- Live test/build owner: main Codex agent owns all live tests and builds for Render Chain Slimming V3.
+- Subagents: read-only code mapping and test-design lanes only; no child agent owns live tests or builds.
 
 ## Recommended Order
 
-1. Render Chain Slimming V2 is integrated.
-2. Keep exact-after-settle pass language local in future follow-ups unless a dedicated contract-unification plan replaces it.
-3. Remove remaining legacy pass fields in a later compatibility-retirement phase.
+1. Implement Render Chain Slimming V3 in `codex/render-chain-slimming-v3`.
+2. Retire only FrameGraph invalidation descriptor pass fields; keep bridge output and normal renderer refresh plan pass fields.
+3. Run targeted Node/Python contracts, architecture boundaries, import graph, Pages dist, and diff hygiene before integration.
+4. Integrate this branch after validation; then archive task docs and clean the worktree.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v3` | `codex/render-chain-slimming-v3@pending-commit` | `main@d272c09046bd42442bd0af32f834896c6dec559d` | ready-for-review | hot files: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, `scenario_chunk_promotion_helpers.js`, behavior/static contracts, architecture boundary tool, Pages dist mirrors | Active docs under `docs/active/render-chain-slimming-v3/`; passed targeted Node tests, Python contracts, architecture boundaries, import graph, Pages dist, and diff check | Yellow: renderer refresh-chain and Pages dist overlap with V2, but no direct active worktree overlap in `git worktree list` | Run final review, commit, fast-forward merge into `main`, run post-merge focused checks, archive docs, push, then remove the worktree. |
 
 ## Recent Integrated Branches
 

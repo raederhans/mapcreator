@@ -334,7 +334,6 @@ function createScenarioRefreshRuntime(deps = {}) {
         changedLayerKeys: effectiveChangedLayerKeys,
         targetResources,
         resourceDescriptors: frameGraphInvalidation?.resourceDescriptors,
-        legacyTargetPasses: targetPasses,
         dataRevisionLayers: frameGraphInvalidation?.dataRevisionLayers || effectiveChangedLayerKeys,
         renderVisibleLayers: frameGraphInvalidation?.renderVisibleLayers || effectiveChangedLayerKeys,
         interactionAuthorityLayers: frameGraphInvalidation?.interactionAuthorityLayers || effectiveChangedLayerKeys,
@@ -353,7 +352,7 @@ function createScenarioRefreshRuntime(deps = {}) {
         metrics: {
           changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
           targetResourceCount: targetResources.length,
-          legacyTargetPassCount: targetPasses.length,
+          targetPassCount: targetPasses.length,
           promotionVersion: scenarioChunkPromotionVersion,
           hasPoliticalGeometryChange: hasPoliticalChange,
         },
