@@ -1969,6 +1969,10 @@ input[type="checkbox"].checkbox-input {
   margin-bottom: 12px;
 }
 
+#leftSidebar .appearance-layer-tab-panel > .section-header {
+  display: none;
+}
+
 #leftSidebar .appearance-tab-panel > .mt-3,
 #leftSidebar .appearance-tab-panel > .space-y-3,
 #leftSidebar .appearance-tab-panel > .appearance-subsection-stack,
@@ -2270,6 +2274,13 @@ details.appearance-subsection > *:not(summary),
 .appearance-layer-tab-panel .appearance-mini-section > summary.section-header,
 #mapContentStack .appearance-mini-section > summary.section-header {
   padding-inline: 0 12px;
+}
+
+.appearance-layer-tab-panel .appearance-mini-section[data-promoted-layer-panel="true"] > summary.section-header {
+  margin-bottom: 14px;
+  padding-inline: 0 12px;
+  font-size: var(--left-panel-font-section);
+  font-weight: 800;
 }
 
 .appearance-layer-tab-panel .appearance-subsection-stack > .appearance-mini-section + .appearance-mini-section {

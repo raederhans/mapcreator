@@ -99,8 +99,10 @@ export function createAppearanceControlsController({
     if (!panel || !targetStack) return;
     panel.hidden = false;
     panel.classList.remove("hidden", "is-active");
+    panel.setAttribute("data-promoted-layer-panel", "true");
     panel.removeAttribute("data-appearance-panel");
     panel.removeAttribute("role");
+    if (panel instanceof HTMLDetailsElement) panel.open = true;
     targetStack.appendChild(panel);
   };
   const moveAppearanceLayerPanels = () => {
