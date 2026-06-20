@@ -11,9 +11,9 @@
 - [x] Fix stale archive task state.
 - [x] Run targeted verification.
 - [x] Run independent review.
-- [ ] Commit, push, archive docs, and update registry.
+- [x] Commit, push, archive docs, and update registry.
 
-## Delivery Package Draft
+## Delivery Package
 
 ### Changed What
 
@@ -47,7 +47,7 @@ Docs:
 
 - `lessons learned.md`
 - `docs/active/_worktree_registry.md`
-- `docs/active/tno-coverage-contract-followup/{plan.md,context.md,task.md}`
+- `docs/archive/tno-coverage-contract-followup-20260620/{plan.md,context.md,task.md}`
 - `docs/archive/tno-coverage-chain-audit-20260620/task.md`
 
 ### Diff Summary
@@ -71,5 +71,6 @@ Docs:
 
 - Current branch: `codex/tno-coverage-contract-followup`.
 - Base: `origin/main@ffab42b8`.
-- Current status: ready for independent review, then commit/push.
+- Functional commit: `6bec07d7`.
+- Current status: committed and archived; ready for final fetch/ancestor check and push to `origin/main`.
 - Parent checkout remains dirty with unrelated WIP, including `lessons learned.md`; keep this retained worktree as the clean delivery surface until parent WIP is classified.
