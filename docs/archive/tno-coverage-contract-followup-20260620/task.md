@@ -72,6 +72,6 @@ Docs:
 - Current branch: `codex/tno-coverage-contract-followup`.
 - Base: `origin/main@ffab42b8`.
 - Functional commit: `6bec07d7`.
-- Closeout commit: `1f0e1b2c`.
-- Current status: integrated, pushed to `origin/main`, archived, and retained as the clean checkout for parent WIP classification.
+- Closeout commits: `1f0e1b2c` plus final registry state.
+- Current status: integrated, pushed to `origin/main`, archived, and retained as the clean checkout for parent WIP classification. Use `git rev-parse origin/main` for the latest pushed SHA.
 - Parent checkout remains dirty with unrelated WIP, including `lessons learned.md`; keep this retained worktree as the clean delivery surface until parent WIP is classified.
