@@ -5,17 +5,17 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main@73e64166`; parent WIP docs cleanup functional commit is `e36f3016`.
-- Active implementation worktree after cleanup: `C:\Users\raede\Desktop\dev\mapcreator`.
-- Live test/build owner: main Codex agent owns docs validation, git push, parent sync, and temporary worktree cleanup.
-- Subagents: static/review lanes only; no child agent owns live tests.
+- Current base: `origin/main@7bbebfb4e9ec12c077aebdeb0ba883df719fe9a5`.
+- Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-resource-authority`.
+- Live test/build owner: main Codex agent owns validation, dist build, git merge, push, and cleanup.
+- Subagents: static/review lanes only; no child agent owns live tests or builds.
 
 ## Recommended Order
 
-1. Preserve the parent checkout WIP in `C:\Users\raede\Desktop\dev\mapcreator`.
-2. Reapply the verified docs cleanup on `codex/parent-wip-docs-cleanup` from latest `origin/main`.
-3. Push the cleanup branch and fast-forward `origin/main`.
-4. Stash the original parent WIP for recovery, fast-forward the parent checkout, and remove the temporary cleanup worktree.
+1. Keep parent checkout clean while integrating the render resource authority branch.
+2. Merge `codex/render-resource-authority` into updated `main`.
+3. Run post-merge short gates: architecture boundaries, scenario refresh plans, scenario chunk contracts, Pages dist.
+4. Push `main`, archive task docs, and remove the temporary render worktree after recovery evidence is committed.
 
 ## Current Worktrees
 
@@ -23,6 +23,7 @@ Only paths expected to remain after the current audit cleanup are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-resource-authority` | `codex/render-resource-authority@7bbebfb4` | `origin/main@7bbebfb4e9ec12c077aebdeb0ba883df719fe9a5` | ready-for-integration | hot files: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, `scenario_chunk_promotion_helpers.js`, `chunk_runtime.js`, `scenario_renderer_bridge.js`, Pages dist mirrors, TNO coverage ledgers, focused tests | Resource authority, pure delta, runtime descriptor, first-frame allowlist, TNO ledger sync complete. Verification passed scenario refresh plans 11/11, promotion helpers 9/9, runtime state 10/10, scenario chunk contracts 54/54, exact plans 7/7, startup hydration 12/12, HGO preview 21/21, canvas layer 4/4, transport preview 27/27, data service 8/8, Python refresh/render contracts 40/40, TNO relief 3/3, strict TNO safe repair, architecture boundaries, import graph, Pages dist startup shell 38/38, landing showcase 8/8, and diff check. | Red for concurrent renderer refresh-chain work; yellow for future HGO/TNO/transport refresh contracts. | Merge into clean updated `main`, run short post-merge gates, push, archive docs, then remove worktree. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main`; target `origin/main` after cleanup push | `origin/main@73e64166` before cleanup | target clean synced checkout | no intended dirty files after recovery stash and fast-forward pull | Parent WIP patch saved under `.runtime/cleanup-backups/parent-wip-classification-20260620T140804Z/`; replayed cleanup committed as `e36f3016`; closeout docs archived under `docs/archive/parent-wip-docs-cleanup-20260620/`. | Green after parent sync; docs-only cleanup touched no runtime code. | Stash original covered WIP for recovery, fast-forward to pushed `origin/main`, then remove the temporary cleanup worktree. |
 
 ## Recent Integrated Branches

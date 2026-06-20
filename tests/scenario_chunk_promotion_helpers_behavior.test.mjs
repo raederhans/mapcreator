@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  assertPromotionDeltaPureValue,
   buildScenarioChunkPromotionVisualMetricDetails,
+  createScenarioChunkPromotionDelta,
   createDrawSubsetIndex,
   isDrawSubsetIndexCurrent,
   resolveScenarioChunkPromotionChangeSet,
@@ -90,6 +92,80 @@ test("scenario chunk promotion visual metrics preserve zero visible subset count
   assert.equal(result.viewportVisibleSubsetFeatureCount, 0);
   assert.equal(result.primaryVisibleIsSubset, true);
   assert.equal(result.promotedVisibleIsSubset, true);
+});
+
+test("scenario chunk promotion delta is a pure value contract", () => {
+  const result = createScenarioChunkPromotionDelta({
+    scenarioId: "tno_1962",
+    selectionVersion: 4,
+    reason: "zoom-end",
+    runId: 9,
+    changedLayerKeys: ["Political", "water", "political"],
+    targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
+    legacyTargetPasses: ["political", "labels"],
+    politicalPayloadRef: {
+      kind: "political",
+      id: "full",
+      featureCount: 12,
+      byteCount: 80,
+      pathCost: 21,
+    },
+    primaryPoliticalPayloadRef: {
+      kind: "primaryPolitical",
+      id: "viewport",
+      featureCount: 5,
+    },
+    optionalLayerPayloadRefs: [
+      { kind: "strategicvalues", id: "sv", featureCount: 3 },
+    ],
+    infraTasks: ["scenario-chunk-promotion-infra"],
+    visualTasks: ["invalidate-render-passes", "render"],
+    metrics: {
+      selectedByteCountSum: 80,
+      primaryVisibleIsSubset: true,
+      note: "contract",
+    },
+  });
+
+  assert.deepEqual(result.identity, {
+    kind: "scenario-chunk-promotion",
+    scenarioId: "tno_1962",
+    selectionVersion: 4,
+    reason: "zoom-end",
+    runId: 9,
+  });
+  assert.deepEqual(result.resources.targetResources, ["politicalBaseBuffer", "hitIndex", "labelBuffer"]);
+  assert.deepEqual(result.resources.legacyTargetPasses, ["political", "labels"]);
+  assert.deepEqual(result.domainLayers.dataRevisionLayers, ["political", "water"]);
+  assert.equal(result.payloadRefs.politicalPayloadRef.featureCount, 12);
+  assert.deepEqual(result.sideEffects.infraTasks, ["scenario-chunk-promotion-infra"]);
+  assert.equal(result.metrics.primaryVisibleIsSubset, true);
+  assert.equal(JSON.parse(JSON.stringify(result)).identity.scenarioId, "tno_1962");
+});
+
+test("scenario chunk promotion delta rejects non-value references", () => {
+  assert.throws(
+    () => assertPromotionDeltaPureValue({ nested: { fn: () => {} } }),
+    /JSON-like value/,
+  );
+  assert.throws(
+    () => assertPromotionDeltaPureValue({ nested: new Map([["a", 1]]) }),
+    /plain objects/,
+  );
+  assert.throws(
+    () => assertPromotionDeltaPureValue({ metric: Number.NaN }),
+    /finite numbers/,
+  );
+  assert.throws(
+    () => createScenarioChunkPromotionDelta({
+      metrics: {
+        canvasContext: {
+          fillRect() {},
+        },
+      },
+    }),
+    /primitive metric/,
+  );
 });
 
 test("draw subset index returns null for empty subset input", () => {

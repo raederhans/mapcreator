@@ -1091,6 +1091,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const chunkPromotionHelperSource = readRepoFile("js", "core", "renderer", "scenario_chunk_promotion_helpers.js");
   const scenarioRefreshPlansSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_plans.js");
   const scenarioRefreshRuntimeSource = readRepoFile("js", "core", "map_renderer", "scenario_refresh_runtime.js");
+  const scenarioRendererBridgeSource = readRepoFile("js", "core", "scenario", "scenario_renderer_bridge.js");
   const interactionHitCandidateSource = readRepoFile("js", "core", "map_renderer", "interaction_hit_candidates.js");
   const bundleRuntimeSource = readRepoFile("js", "core", "scenario", "bundle_runtime.js");
   const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
@@ -1502,7 +1503,25 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       scenarioRefreshPlansSource.includes("function createFrameGraphInvalidation")
       && scenarioRefreshPlansSource.includes("frameGraphInvalidation")
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
-      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?clearLastGoodFrame\(`\$\{reason\}-frame-graph`\)[\s\S]*?clearRenderPassReferenceTransforms\(targetPasses\)[\s\S]*?invalidateInteractionComposite\(`\$\{reason\}-frame-graph`\)[\s\S]*?invalidateBorderCache\(\)[\s\S]*?invalidateRenderPasses\([\s\S]*?targetPasses\.length \? targetPasses/.test(scenarioRefreshRuntimeSource),
+      && /function resolveScenarioChunkPromotionRendererRefreshDescriptor\([\s\S]*?const rendererRefreshPlan = normalizeRendererRefreshPlan[\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const targetPasses = getFrameGraphInvalidationTargetPasses[\s\S]*?const targetResources = hasExplicitTargetResources/.test(scenarioRefreshPlansSource)
+      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetPasses,[\s\S]*?targetResources,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(scenarioRefreshRuntimeSource)
+      && /clearLastGoodFrame\(`\$\{reason\}-frame-graph`\)[\s\S]*?clearRenderPassReferenceTransforms\(targetPasses\)[\s\S]*?invalidateInteractionComposite\(`\$\{reason\}-frame-graph`\)[\s\S]*?invalidateBorderCache\(\)[\s\S]*?const invalidationTargetPasses = targetPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?if \(invalidationTargetPasses\.length\) \{[\s\S]*?invalidateRenderPasses\(invalidationTargetPasses, reason\);/.test(scenarioRefreshRuntimeSource),
+    startupInitialVisualUsesFirstFrameResourceAllowlist:
+      scenarioRefreshPlansSource.includes("const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([")
+      && scenarioRefreshPlansSource.includes('"backgroundBuffer"')
+      && scenarioRefreshPlansSource.includes('"physicalBaseBuffer"')
+      && scenarioRefreshPlansSource.includes('"politicalBaseBuffer"')
+      && scenarioRefreshPlansSource.includes('"hitIndex"')
+      && scenarioRefreshPlansSource.includes('"borderBuffer"')
+      && scenarioRefreshPlansSource.includes('"interactionOverlay"')
+      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"labelBuffer"/.test(scenarioRefreshPlansSource)
+      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextBaseBuffer"/.test(scenarioRefreshPlansSource)
+      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextScenarioBuffer"/.test(scenarioRefreshPlansSource)
+      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"dayNightBuffer"/.test(scenarioRefreshPlansSource)
+      && /createScenarioChunkPromotionRefreshPlan\(\{[\s\S]*?firstFrameOnly = false,[\s\S]*?hgoPreviewDirty = false,[\s\S]*?const targetResources = firstFrameOnly[\s\S]*?resolveFirstFrameTargetResources/.test(scenarioRefreshPlansSource)
+      && /function refreshMapDataForScenarioChunkPromotion\(options = \{\}\) \{[\s\S]*?firstFrameOnly: !!options\.firstFrameOnly,[\s\S]*?hgoPreviewDirty: !!options\.hgoPreviewDirty/.test(scenarioRendererBridgeSource)
+      && /function applyScenarioPoliticalChunkPayload\([\s\S]*?firstFrameOnly = false,[\s\S]*?refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?firstFrameOnly,/.test(chunkRuntimeSource)
+      && /applyScenarioPoliticalChunkPayload\(bundle, mergedLayerPayloads\.political \|\| null, \{[\s\S]*?firstFrameOnly: !!allowStartupInitialVisual/.test(chunkRuntimeSource),
     chunkSelectionCarriesCostFieldsAndSums:
       chunkManagerSource.includes("byteSize")
       && chunkManagerSource.includes("coordCount")

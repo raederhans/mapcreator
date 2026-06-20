@@ -38,6 +38,150 @@ function normalizeStringSet(values = []) {
     .filter(Boolean);
 }
 
+function normalizeLayerKeySet(values = []) {
+  return Array.from(new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean)
+  ));
+}
+
+function normalizeResourceDescriptors(targetResources = [], resourceDescriptors = [], reason = "scenario-chunk-promotion") {
+  if (Array.isArray(resourceDescriptors) && resourceDescriptors.length) {
+    return resourceDescriptors
+      .filter((descriptor) => descriptor && typeof descriptor === "object")
+      .map((descriptor) => ({
+        resource: String(descriptor.resource || descriptor.name || "").trim(),
+        reason: String(descriptor.reason || reason || "scenario-chunk-promotion"),
+      }))
+      .filter((descriptor) => descriptor.resource);
+  }
+  return normalizeStringSet(targetResources).map((resource) => ({
+    resource,
+    reason: String(reason || "scenario-chunk-promotion"),
+  }));
+}
+
+function normalizePayloadRef(payloadRef = null) {
+  if (!payloadRef || typeof payloadRef !== "object") return null;
+  return {
+    kind: String(payloadRef.kind || "payload"),
+    id: String(payloadRef.id || payloadRef.key || ""),
+    featureCount: toNonNegativeCount(payloadRef.featureCount),
+    byteCount: toNonNegativeCount(payloadRef.byteCount),
+    pathCost: toNonNegativeCount(payloadRef.pathCost),
+  };
+}
+
+function normalizePayloadRefs(payloadRefs = []) {
+  return (Array.isArray(payloadRefs) ? payloadRefs : [])
+    .map((payloadRef) => normalizePayloadRef(payloadRef))
+    .filter(Boolean);
+}
+
+function normalizeMetricValue(value, key = "metric") {
+  if (value == null) return 0;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value;
+  if (typeof value !== "number") {
+    throw new TypeError(`promotionDelta.metrics.${key} must be a primitive metric value`);
+  }
+  return toNonNegativeCount(value);
+}
+
+function normalizeMetricObject(metrics = {}) {
+  return Object.fromEntries(Object.entries(metrics && typeof metrics === "object" ? metrics : {})
+    .map(([key, value]) => [String(key || "").trim(), normalizeMetricValue(value, key)])
+    .filter(([key]) => key));
+}
+
+function isPlainPromotionDeltaObject(value) {
+  if (!value || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function assertPromotionDeltaPureValue(value, path = "promotionDelta") {
+  if (value == null) return true;
+  const valueType = typeof value;
+  if (valueType === "string" || valueType === "boolean") return true;
+  if (valueType === "number") {
+    if (!Number.isFinite(value)) {
+      throw new TypeError(`${path} must contain only finite numbers`);
+    }
+    return true;
+  }
+  if (valueType === "function" || valueType === "symbol" || valueType === "bigint" || valueType === "undefined") {
+    throw new TypeError(`${path} must be a JSON-like value`);
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertPromotionDeltaPureValue(entry, `${path}[${index}]`));
+    return true;
+  }
+  if (!isPlainPromotionDeltaObject(value)) {
+    throw new TypeError(`${path} must contain only plain objects, arrays, and primitives`);
+  }
+  Object.entries(value).forEach(([key, entry]) => {
+    assertPromotionDeltaPureValue(entry, `${path}.${key}`);
+  });
+  return true;
+}
+
+export function createScenarioChunkPromotionDelta({
+  kind = "scenario-chunk-promotion",
+  scenarioId = "",
+  selectionVersion = 0,
+  reason = "scenario-chunk-promotion",
+  runId = 0,
+  changedLayerKeys = [],
+  targetResources = [],
+  resourceDescriptors = [],
+  legacyTargetPasses = [],
+  dataRevisionLayers = changedLayerKeys,
+  renderVisibleLayers = changedLayerKeys,
+  interactionAuthorityLayers = changedLayerKeys,
+  politicalPayloadRef = null,
+  primaryPoliticalPayloadRef = null,
+  optionalLayerPayloadRefs = [],
+  infraTasks = [],
+  visualTasks = [],
+  metrics = {},
+} = {}) {
+  const normalizedTargetResources = normalizeStringSet(targetResources);
+  const delta = {
+    kind: String(kind || "scenario-chunk-promotion"),
+    identity: {
+      kind: String(kind || "scenario-chunk-promotion"),
+      scenarioId: String(scenarioId || ""),
+      selectionVersion: toNonNegativeCount(selectionVersion),
+      reason: String(reason || "scenario-chunk-promotion"),
+      runId: toNonNegativeCount(runId),
+    },
+    resources: {
+      targetResources: normalizedTargetResources,
+      resourceDescriptors: normalizeResourceDescriptors(normalizedTargetResources, resourceDescriptors, reason),
+      legacyTargetPasses: normalizeStringSet(legacyTargetPasses),
+    },
+    domainLayers: {
+      dataRevisionLayers: normalizeLayerKeySet(dataRevisionLayers),
+      renderVisibleLayers: normalizeLayerKeySet(renderVisibleLayers),
+      interactionAuthorityLayers: normalizeLayerKeySet(interactionAuthorityLayers),
+    },
+    payloadRefs: {
+      politicalPayloadRef: normalizePayloadRef(politicalPayloadRef),
+      primaryPoliticalPayloadRef: normalizePayloadRef(primaryPoliticalPayloadRef),
+      optionalLayerPayloadRefs: normalizePayloadRefs(optionalLayerPayloadRefs),
+    },
+    sideEffects: {
+      infraTasks: normalizeStringSet(infraTasks),
+      visualTasks: normalizeStringSet(visualTasks),
+    },
+    metrics: normalizeMetricObject(metrics),
+  };
+  assertPromotionDeltaPureValue(delta);
+  return delta;
+}
+
 export function createDrawSubsetIndex({
   scenarioId = "",
   scenarioDataGeneration = 0,
@@ -195,3 +339,7 @@ export function buildScenarioChunkPromotionVisualMetricDetails({
     synchronizedSecondaryRegionIndexes,
   };
 }
+
+export {
+  assertPromotionDeltaPureValue,
+};

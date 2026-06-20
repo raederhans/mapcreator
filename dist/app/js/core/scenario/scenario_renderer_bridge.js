@@ -38,6 +38,8 @@ function refreshMapDataForScenarioChunkPromotion(options = {}) {
   const refreshPlan = options.refreshPlan || createScenarioChunkPromotionRefreshPlan({
     changedLayerKeys: options.changedLayerKeys,
     hasPoliticalChange,
+    firstFrameOnly: !!options.firstFrameOnly,
+    hgoPreviewDirty: !!options.hgoPreviewDirty,
   });
   return runRendererScenarioChunkPromotionRefresh({
     ...options,

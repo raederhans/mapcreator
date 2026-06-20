@@ -45752,12 +45752,12 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_plans.js",
-      "size_bytes": 8867,
+      "size_bytes": 14446,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
-      "size_bytes": 21787,
+      "size_bytes": 23388,
       "source_kind": "dist"
     },
     {
@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
-      "size_bytes": 8505,
+      "size_bytes": 13907,
       "source_kind": "dist"
     },
     {
@@ -46052,7 +46052,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 118984,
+      "size_bytes": 119087,
       "source_kind": "dist"
     },
     {
@@ -46092,7 +46092,7 @@
     },
     {
       "path": "app/js/core/scenario/scenario_renderer_bridge.js",
-      "size_bytes": 1981,
+      "size_bytes": 2075,
       "source_kind": "dist"
     },
     {
@@ -47092,7 +47092,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454416,
+      "size_bytes": 1454418,
       "source_kind": "dist"
     },
     {
@@ -47111,5 +47111,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154161574
+  "total_bytes": 1154174355
 }

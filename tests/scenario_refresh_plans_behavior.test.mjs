@@ -7,10 +7,16 @@ import {
   createFrameGraphInvalidation,
   createScenarioApplyRefreshPlan,
   createScenarioChunkPromotionRefreshPlan,
+  getFirstFrameTargetResources,
+  getFrameGraphInvalidationTargetPasses,
+  getTargetPassesForResources,
   getTargetResourcesForPasses,
   getRendererRefreshPlan,
   getScenarioChunkPromotionTargetPasses,
+  getScenarioChunkPromotionTargetResources,
   normalizeRendererRefreshPlan,
+  resolveFirstFrameTargetResources,
+  resolveScenarioChunkPromotionRendererRefreshDescriptor,
 } from "../js/core/map_renderer/scenario_refresh_plans.js";
 
 test("scenario apply refresh plan declares complete baseline render passes", () => {
@@ -96,6 +102,7 @@ test("frame graph invalidation separates data, visible render, and interaction a
     renderVisibleLayers: ["cities"],
     interactionAuthorityLayers: ["scenario_atlantropa"],
     targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
+    legacyTargetPasses: ["political", "labels"],
     targetPasses: ["political", "labels"],
     clearLastGoodFrame: true,
     clearReferenceTransforms: true,
@@ -104,6 +111,29 @@ test("frame graph invalidation separates data, visible render, and interaction a
     clearOpeningOwnerBorderCache: true,
     clearInteractionComposite: true,
   });
+});
+
+test("frame graph invalidation treats explicit resources as authority over legacy passes", () => {
+  const invalidation = createFrameGraphInvalidation({
+    reason: "resource-authority",
+    targetResources: [" labelBuffer ", "politicalBaseBuffer", "labelBuffer", "", null],
+    targetPasses: ["contextBase"],
+  });
+
+  assert.deepEqual(invalidation.targetResources, ["labelBuffer", "politicalBaseBuffer"]);
+  assert.deepEqual(invalidation.legacyTargetPasses, ["labels", "political"]);
+  assert.deepEqual(invalidation.targetPasses, ["labels", "political"]);
+  assert.deepEqual(getFrameGraphInvalidationTargetPasses(invalidation), ["labels", "political"]);
+
+  const emptyResourceInvalidation = createFrameGraphInvalidation({
+    reason: "empty-resource-authority",
+    targetResources: [],
+    targetPasses: ["political", "labels"],
+  });
+  assert.deepEqual(emptyResourceInvalidation.targetResources, []);
+  assert.deepEqual(emptyResourceInvalidation.legacyTargetPasses, []);
+  assert.deepEqual(emptyResourceInvalidation.targetPasses, []);
+  assert.deepEqual(getFrameGraphInvalidationTargetPasses(emptyResourceInvalidation), []);
 });
 
 test("chunk promotion frame graph target passes stay equivalent to legacy fan-out", () => {
@@ -119,9 +149,14 @@ test("chunk promotion frame graph target passes stay equivalent to legacy fan-ou
 
   assert.deepEqual(plan.renderer.targetPasses, []);
   assert.deepEqual(plan.renderer.frameGraphInvalidation.targetPasses, legacyTargetPasses);
+  assert.deepEqual(plan.renderer.frameGraphInvalidation.legacyTargetPasses, legacyTargetPasses);
   assert.deepEqual(
     plan.renderer.frameGraphInvalidation.targetResources,
     getTargetResourcesForPasses(legacyTargetPasses),
+  );
+  assert.deepEqual(
+    getTargetPassesForResources(plan.renderer.frameGraphInvalidation.targetResources),
+    legacyTargetPasses,
   );
 });
 
@@ -137,12 +172,83 @@ test("chunk promotion target passes stay unique across political and layer chang
 
 test("strategic values chunk promotion refreshes political and marker passes", () => {
   assert.deepEqual(
+    getScenarioChunkPromotionTargetResources({
+      hasPoliticalChange: false,
+      changedLayerKeys: ["strategicvalues"],
+    }),
+    ["politicalBaseBuffer", "hitIndex", "contextMarkersBuffer", "labelBuffer"],
+  );
+  assert.deepEqual(
     getScenarioChunkPromotionTargetPasses({
       hasPoliticalChange: false,
       changedLayerKeys: ["strategicvalues"],
     }),
     ["political", "contextMarkers", "labels"],
   );
+});
+
+test("first-frame resource allowlist keeps startup visual work to the baseline", () => {
+  assert.deepEqual(getFirstFrameTargetResources(), [
+    "backgroundBuffer",
+    "physicalBaseBuffer",
+    "politicalBaseBuffer",
+    "hitIndex",
+    "borderBuffer",
+    "interactionOverlay",
+  ]);
+  assert.deepEqual(getFirstFrameTargetResources({ hgoPreviewDirty: true }), [
+    "backgroundBuffer",
+    "physicalBaseBuffer",
+    "politicalBaseBuffer",
+    "hitIndex",
+    "borderBuffer",
+    "interactionOverlay",
+    "hgoPreviewBuffer",
+  ]);
+  assert.deepEqual(
+    resolveFirstFrameTargetResources(["contextBaseBuffer", "labelBuffer", "politicalBaseBuffer"], { hgoPreviewDirty: false }),
+    ["backgroundBuffer", "physicalBaseBuffer", "politicalBaseBuffer", "hitIndex", "borderBuffer", "interactionOverlay"],
+  );
+  const plan = createScenarioChunkPromotionRefreshPlan({
+    changedLayerKeys: ["cities", "water"],
+    hasPoliticalChange: true,
+    firstFrameOnly: true,
+  });
+  assert.deepEqual(plan.renderer.frameGraphInvalidation.targetResources, [
+    "backgroundBuffer",
+    "physicalBaseBuffer",
+    "politicalBaseBuffer",
+    "hitIndex",
+    "borderBuffer",
+    "interactionOverlay",
+  ]);
+  assert.deepEqual(plan.renderer.frameGraphInvalidation.targetPasses, [
+    "background",
+    "physicalBase",
+    "political",
+    "borders",
+  ]);
+  const hgoPlan = createScenarioChunkPromotionRefreshPlan({
+    hasPoliticalChange: true,
+    firstFrameOnly: true,
+    hgoPreviewDirty: true,
+  });
+  assert.deepEqual(hgoPlan.renderer.frameGraphInvalidation.targetResources, [
+    "backgroundBuffer",
+    "physicalBaseBuffer",
+    "politicalBaseBuffer",
+    "hitIndex",
+    "borderBuffer",
+    "interactionOverlay",
+    "hgoPreviewBuffer",
+  ]);
+  assert.deepEqual(hgoPlan.renderer.frameGraphInvalidation.targetPasses, [
+    "background",
+    "physicalBase",
+    "political",
+    "borders",
+    "hgoPreview",
+  ]);
 });
 
 test("renderer refresh plan normalization applies defaults and trims pass names", () => {
@@ -169,6 +275,51 @@ test("renderer refresh plan normalization applies defaults and trims pass names"
       resetWaterCacheReason: "water-default",
     },
   );
+});
+
+test("chunk promotion descriptor resolves resources before runtime execution", () => {
+  const descriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
+    changedLayerKeys: ["strategicvalues"],
+    hasPoliticalChange: false,
+  });
+
+  assert.deepEqual(descriptor.rendererRefreshPlan.targetPasses, ["political", "contextMarkers", "labels"]);
+  assert.equal(descriptor.frameGraphInvalidation, null);
+  assert.deepEqual(descriptor.targetResources, ["politicalBaseBuffer", "hitIndex", "contextMarkersBuffer", "labelBuffer"]);
+  assert.deepEqual(descriptor.targetPasses, ["political", "contextMarkers", "labels"]);
+
+  const explicitDescriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
+    refreshPlan: {
+      frameGraphInvalidation: createFrameGraphInvalidation({
+        reason: "explicit-resource",
+        targetResources: ["contextScenarioBuffer"],
+        targetPasses: ["labels"],
+      }),
+    },
+    changedLayerKeys: ["strategicvalues"],
+    hasPoliticalChange: false,
+  });
+
+  assert.deepEqual(explicitDescriptor.targetResources, ["contextScenarioBuffer"]);
+  assert.deepEqual(explicitDescriptor.targetPasses, ["contextScenario"]);
+  assert.equal(explicitDescriptor.hasExplicitTargetResources, true);
+
+  const emptyResourceDescriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
+    refreshPlan: {
+      targetPasses: ["political"],
+      frameGraphInvalidation: createFrameGraphInvalidation({
+        reason: "explicit-empty-resource",
+        targetResources: [],
+        targetPasses: ["political"],
+      }),
+    },
+    changedLayerKeys: ["strategicvalues"],
+    hasPoliticalChange: false,
+  });
+
+  assert.equal(emptyResourceDescriptor.hasExplicitTargetResources, true);
+  assert.deepEqual(emptyResourceDescriptor.targetResources, []);
+  assert.deepEqual(emptyResourceDescriptor.targetPasses, []);
 });
 
 test("chunk promotion runtime executes default frame graph invalidation effects", () => {
@@ -252,13 +403,23 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
     changedLayerKeys: ["water"],
     hasPoliticalChange: true,
   });
-  const targetPasses = getRendererRefreshPlan(plan).frameGraphInvalidation.targetPasses;
+  const rendererPlan = getRendererRefreshPlan(plan);
+  const frameGraphInvalidation = {
+    ...rendererPlan.frameGraphInvalidation,
+    targetResources: rendererPlan.frameGraphInvalidation.targetResources,
+    legacyTargetPasses: [],
+    targetPasses: [],
+  };
+  const targetPasses = getFrameGraphInvalidationTargetPasses(frameGraphInvalidation);
 
   runtime.refreshMapDataForScenarioChunkPromotion({
     reason: "test-chunk-promotion",
     changedLayerKeys: ["water"],
     hasPoliticalPayloadChange: true,
-    refreshPlan: getRendererRefreshPlan(plan),
+    refreshPlan: {
+      ...rendererPlan,
+      frameGraphInvalidation,
+    },
     suppressRender: true,
   });
 
@@ -286,4 +447,28 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
   ]);
   assert.ok(calls.some(([name]) => name === "scheduleDeferredWork"));
   assert.equal(calls.some(([name]) => name === "render"), false);
+
+  calls.length = 0;
+  runtime.refreshMapDataForScenarioChunkPromotion({
+    reason: "explicit-empty-resource-plan",
+    changedLayerKeys: [],
+    hasPoliticalPayloadChange: false,
+    refreshPlan: {
+      source: "scenario-chunk-promotion",
+      targetPasses: ["political", "labels"],
+      frameGraphInvalidation: createFrameGraphInvalidation({
+        reason: "explicit-empty-resource-plan",
+        targetResources: [],
+        targetPasses: ["political", "labels"],
+        clearReferenceTransforms: true,
+      }),
+    },
+    suppressRender: true,
+  });
+
+  assert.deepEqual(calls.find(([name]) => name === "clearRenderPassReferenceTransforms"), [
+    "clearRenderPassReferenceTransforms",
+    [],
+  ]);
+  assert.equal(calls.some(([name]) => name === "invalidateRenderPasses"), false);
 });

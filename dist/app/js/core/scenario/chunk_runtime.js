@@ -981,6 +981,7 @@ function createScenarioChunkRuntimeController({
     politicalFeatureIds = [],
     primaryPoliticalPayload = null,
     forceRefresh = false,
+    firstFrameOnly = false,
   } = {}) {
     const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     const normalizeStartedAt = startedAt;
@@ -1041,6 +1042,7 @@ function createScenarioChunkRuntimeController({
       changedLayerKeys,
       politicalFeatureIds: resolvedPoliticalFeatureIds,
       hasPoliticalPayloadChange: true,
+      firstFrameOnly,
     });
     const finishedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     recordScenarioRenderMetric("politicalChunkPromotionBreakdown", finishedAt - startedAt, {
@@ -1293,6 +1295,7 @@ function createScenarioChunkRuntimeController({
         politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
         primaryPoliticalPayload: primaryMergedLayerPayloads.political || null,
         forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
+        firstFrameOnly: !!allowStartupInitialVisual,
       });
       if (!politicalPayloadChanged) {
         deferredOptionalVisibleRefresh = {

@@ -1,9 +1,10 @@
 import {
-  getScenarioChunkPromotionTargetPasses,
   normalizeRendererRefreshPlan,
+  resolveScenarioChunkPromotionRendererRefreshDescriptor,
 } from "./scenario_refresh_plans.js";
 import {
   buildScenarioChunkPromotionVisualMetricDetails,
+  createScenarioChunkPromotionDelta,
   resolveScenarioChunkPromotionChangeSet,
 } from "../renderer/scenario_chunk_promotion_helpers.js";
 
@@ -308,13 +309,7 @@ function createScenarioRefreshRuntime(deps = {}) {
     markRendererTopologyChanged({ hitCanvasDirty: true });
     if (runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
       runtimeState.runtimeChunkLoadState.pendingVisualPromotion = null;
-      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
-        reason: String(reason || "scenario-chunk-promotion"),
-        selectionVersion: Math.max(0, Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0)),
-        promotionVersion: scenarioChunkPromotionVersion,
-        hasPoliticalGeometryChange: hasPoliticalChange,
-        primaryDerivedStateReady: hasPoliticalChange,
-      };
+      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
     }
     if (hasPoliticalChange) {
       clearDeferredInternalBorderMeshCaches();
@@ -331,21 +326,76 @@ function createScenarioRefreshRuntime(deps = {}) {
     if (shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
       runtimeState.runtimeChunkLoadState.pendingInfraPromotion = null;
     }
-    const defaultTargetPasses = getScenarioChunkPromotionTargetPasses({
+    const {
+      rendererRefreshPlan,
+      frameGraphInvalidation,
+      hasExplicitTargetResources,
+      targetPasses,
+      targetResources,
+    } = resolveScenarioChunkPromotionRendererRefreshDescriptor({
+      refreshPlan,
       changedLayerKeys: effectiveChangedLayerKeys,
       hasPoliticalChange,
     });
-    const rendererRefreshPlan = normalizeRendererRefreshPlan(refreshPlan, {
-      source: "scenario-chunk-promotion",
-      targetPasses: defaultTargetPasses,
-      refreshOpeningOwnerBorders: hasPoliticalChange,
-    });
-    const frameGraphInvalidation = rendererRefreshPlan.frameGraphInvalidation && typeof rendererRefreshPlan.frameGraphInvalidation === "object"
-      ? rendererRefreshPlan.frameGraphInvalidation
-      : null;
-    const targetPasses = Array.isArray(frameGraphInvalidation?.targetPasses) && frameGraphInvalidation.targetPasses.length
-      ? frameGraphInvalidation.targetPasses
-      : rendererRefreshPlan.targetPasses;
+    const selectionVersion = Math.max(0, Number(runtimeState.runtimeChunkLoadState?.selectionVersion || 0));
+    const promotedTotalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
+      ? runtimeState.scenarioPoliticalChunkData.features.length
+      : 0;
+    const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
+      ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
+      : promotedTotalFeatureCount;
+    const promotedVisibleFeatureCount = readFirstNonNegativeCount(
+      pendingVisualPromotion?.primaryVisibleFeatureCount,
+      pendingPromotion?.primaryVisibleFeatureCount,
+      pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum,
+      pendingPromotion?.selectedPoliticalVisibleFeatureCountSum,
+      promotedPrimaryFeatureCount,
+      pendingVisualPromotion?.selectedFeatureCountSum,
+      pendingPromotion?.selectedFeatureCountSum,
+      promotedTotalFeatureCount,
+    );
+    if (!shouldSkipDeferredInfraRefresh && runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object") {
+      const promotionDelta = createScenarioChunkPromotionDelta({
+        scenarioId: runtimeState.activeScenarioId,
+        selectionVersion,
+        reason,
+        runId: scenarioChunkPromotionVersion,
+        changedLayerKeys: effectiveChangedLayerKeys,
+        targetResources,
+        resourceDescriptors: frameGraphInvalidation?.resourceDescriptors,
+        legacyTargetPasses: targetPasses,
+        dataRevisionLayers: frameGraphInvalidation?.dataRevisionLayers || effectiveChangedLayerKeys,
+        renderVisibleLayers: frameGraphInvalidation?.renderVisibleLayers || effectiveChangedLayerKeys,
+        interactionAuthorityLayers: frameGraphInvalidation?.interactionAuthorityLayers || effectiveChangedLayerKeys,
+        politicalPayloadRef: {
+          kind: "political",
+          id: "scenarioPoliticalChunkData",
+          featureCount: promotedTotalFeatureCount,
+        },
+        primaryPoliticalPayloadRef: {
+          kind: "primaryPolitical",
+          id: "scenarioPoliticalVisibleChunkData",
+          featureCount: promotedPrimaryFeatureCount,
+        },
+        infraTasks: ["scenario-chunk-promotion-infra"],
+        visualTasks: suppressRender ? ["invalidate-render-passes"] : ["invalidate-render-passes", "render"],
+        metrics: {
+          changedLayerCount: Array.isArray(effectiveChangedLayerKeys) ? effectiveChangedLayerKeys.length : 0,
+          targetResourceCount: targetResources.length,
+          legacyTargetPassCount: targetPasses.length,
+          promotionVersion: scenarioChunkPromotionVersion,
+          hasPoliticalGeometryChange: hasPoliticalChange,
+        },
+      });
+      runtimeState.runtimeChunkLoadState.pendingInfraPromotion = {
+        reason: String(reason || "scenario-chunk-promotion"),
+        selectionVersion,
+        promotionVersion: scenarioChunkPromotionVersion,
+        hasPoliticalGeometryChange: hasPoliticalChange,
+        primaryDerivedStateReady: hasPoliticalChange,
+        promotionDelta,
+      };
+    }
     if (frameGraphInvalidation?.clearLastGoodFrame) {
       clearLastGoodFrame(`${reason}-frame-graph`);
     }
@@ -361,10 +411,12 @@ function createScenarioRefreshRuntime(deps = {}) {
     if (frameGraphInvalidation?.resetWaterCacheReason) {
       resetScenarioWaterCacheAdaptiveState(frameGraphInvalidation.resetWaterCacheReason);
     }
-    invalidateRenderPasses(
-      targetPasses.length ? targetPasses : ["political", "borders", "labels"],
-      reason,
-    );
+    const invalidationTargetPasses = targetPasses.length
+      ? targetPasses
+      : (hasExplicitTargetResources ? [] : ["political", "borders", "labels"]);
+    if (invalidationTargetPasses.length) {
+      invalidateRenderPasses(invalidationTargetPasses, reason);
+    }
     markAllOverlaysDirty();
     updateZoomTranslateExtent();
     if (!suppressRender) {
@@ -391,22 +443,6 @@ function createScenarioRefreshRuntime(deps = {}) {
       });
     }
     const visualDurationMs = nowMs() - startedAt;
-    const promotedTotalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-      ? runtimeState.scenarioPoliticalChunkData.features.length
-      : 0;
-    const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
-      ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
-      : promotedTotalFeatureCount;
-    const promotedVisibleFeatureCount = readFirstNonNegativeCount(
-      pendingVisualPromotion?.primaryVisibleFeatureCount,
-      pendingPromotion?.primaryVisibleFeatureCount,
-      pendingVisualPromotion?.selectedPoliticalVisibleFeatureCountSum,
-      pendingPromotion?.selectedPoliticalVisibleFeatureCountSum,
-      promotedPrimaryFeatureCount,
-      pendingVisualPromotion?.selectedFeatureCountSum,
-      pendingPromotion?.selectedFeatureCountSum,
-      promotedTotalFeatureCount,
-    );
     const promotionMetricDetails = buildScenarioChunkPromotionVisualMetricDetails({
       activeScenarioId: runtimeState.activeScenarioId,
       reason,
