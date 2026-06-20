@@ -1226,9 +1226,28 @@ function createScenarioChunkRuntimeController({
     const mergedLayerSnapshot = captureMergedLayerRuntimeSnapshot(mergedLayerPayloads);
     const previousPoliticalChunkData = runtimeState.scenarioPoliticalChunkData;
     const previousPoliticalVisibleChunkData = runtimeState.scenarioPoliticalVisibleChunkData;
+    const previousScenarioDataGenerationSnapshot = {
+      hasValue: Object.prototype.hasOwnProperty.call(runtimeState, "scenarioDataGeneration"),
+      value: runtimeState.scenarioDataGeneration,
+      hasReason: Object.prototype.hasOwnProperty.call(runtimeState, "scenarioDataGenerationReason"),
+      reason: runtimeState.scenarioDataGenerationReason,
+    };
     runtimeState.scenarioChunkPromotionRenderLocked = true;
     let mergedLayerResult = { changed: false, changedLayerKeys: [] };
     let politicalPayloadChanged = false;
+    let deferredOptionalVisibleRefresh = null;
+    const restoreScenarioDataGenerationSnapshot = () => {
+      if (previousScenarioDataGenerationSnapshot.hasValue) {
+        runtimeState.scenarioDataGeneration = previousScenarioDataGenerationSnapshot.value;
+      } else {
+        delete runtimeState.scenarioDataGeneration;
+      }
+      if (previousScenarioDataGenerationSnapshot.hasReason) {
+        runtimeState.scenarioDataGenerationReason = previousScenarioDataGenerationSnapshot.reason;
+      } else {
+        delete runtimeState.scenarioDataGenerationReason;
+      }
+    };
     try {
       setPromotionCommitStatus(loadState, "applying-infra", { inFlight: true, runId, scenarioId });
       const infraStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
@@ -1246,6 +1265,7 @@ function createScenarioChunkRuntimeController({
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
         if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
           restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);
+          restoreScenarioDataGenerationSnapshot();
         }
         setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
         return false;
@@ -1274,30 +1294,37 @@ function createScenarioChunkRuntimeController({
         forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
       });
       if (!politicalPayloadChanged) {
-        refreshScenarioRenderVisibleOptionalChunkPayloadChange({
+        deferredOptionalVisibleRefresh = {
           renderNow: false,
           reason: pendingPromotion.reason,
           changedLayerKeys: effectiveChangedLayerKeys,
           renderVisibleChangedLayerKeys: mergedLayerResult.renderVisibleChangedLayerKeys,
-        });
+        };
       }
       // Keep the render lock across this frame break so a half-applied visual payload
       // cannot be flushed while a newer promotion run is taking ownership.
       await yieldToFrame();
       if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
         if (canRollbackPendingScenarioChunkPromotion(pendingPromotion, loadState, { scenarioId, runId })) {
-          runtimeState.scenarioPoliticalChunkData = previousPoliticalChunkData;
-          runtimeState.scenarioPoliticalVisibleChunkData = previousPoliticalVisibleChunkData || null;
-          refreshMapDataForScenarioChunkPromotion({
-            suppressRender: true,
-            reason: "scenario-chunk-promotion-stale-rollback",
-            changedLayerKeys: effectiveChangedLayerKeys,
-            politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
-            hasPoliticalPayloadChange: true,
-          });
+          restoreMergedLayerRuntimeSnapshot(mergedLayerSnapshot);
+          restoreScenarioDataGenerationSnapshot();
+          if (politicalPayloadChanged) {
+            runtimeState.scenarioPoliticalChunkData = previousPoliticalChunkData;
+            runtimeState.scenarioPoliticalVisibleChunkData = previousPoliticalVisibleChunkData || null;
+            refreshMapDataForScenarioChunkPromotion({
+              suppressRender: true,
+              reason: "scenario-chunk-promotion-stale-rollback",
+              changedLayerKeys: effectiveChangedLayerKeys,
+              politicalFeatureIds: pendingPromotion.politicalFeatureIds || [],
+              hasPoliticalPayloadChange: true,
+            });
+          }
         }
         setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
         return false;
+      }
+      if (deferredOptionalVisibleRefresh) {
+        refreshScenarioRenderVisibleOptionalChunkPayloadChange(deferredOptionalVisibleRefresh);
       }
       if (resolvedRenderNow !== false) {
         flushRenderBoundary("scenario-chunk-promotion");

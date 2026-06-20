@@ -1,8 +1,8 @@
-/* Default-off political raster worker v3 shell.
+/* Default-off political raster worker v4 shell.
  * Metadata mode stays available by default. Bitmap mode only runs when the
  * main thread sends an explicit raster packet under the bitmap feature flag.
  */
-const PROTOCOL_VERSION = 3;
+const PROTOCOL_VERSION = 4;
 
 function nowMs() {
   return self.performance?.now ? self.performance.now() : Date.now();
@@ -151,11 +151,22 @@ function handleRasterPoliticalPass(message) {
         },
       }, [result.bitmap]);
     }).catch((error) => {
+      const rasterMs = Number((nowMs() - startedAt).toFixed(3));
       reply({
         type: "ERROR",
         taskId,
+        identity,
         errorCode: "raster-failed",
         message: String(error?.message || error || "unknown"),
+        rasterMs,
+        packetBuildMs: Math.max(0, Number(message.packetBuildMs || 0)),
+        renderHint: {
+          pass: String(hint.pass || "political"),
+          surface: String(hint.surface || "main"),
+          bitmapMode: true,
+          canvasPxWidth: Math.max(0, Number(hint.canvasPxWidth || 0)),
+          canvasPxHeight: Math.max(0, Number(hint.canvasPxHeight || 0)),
+        },
       });
     });
     return;

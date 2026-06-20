@@ -1418,7 +1418,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?runtimeState\.renderPhase === RENDER_PHASE_SETTLING[\s\S]*?runtimeState\.deferExactAfterSettle[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(rendererSource)
       && /function drawCanvas[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(rendererSource),
     politicalRasterWorkerProtocolDefaultsOff:
-      politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 3")
+      politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 4")
       && politicalRasterWorkerClientSource.includes("political_raster_worker")
       && politicalRasterWorkerClientSource.includes("political_raster_worker_bitmap")
       && politicalRasterWorkerClientSource.includes("isPoliticalRasterWorkerBitmapEnabled")
@@ -2605,12 +2605,17 @@ async function runOptionalChunkPromotionScenario({
   layerKey,
   stateField,
   revisionField = "",
-  requestedForVisibility = true,
+  visibilityField = "",
+  visibilityState = {},
   reason = "optional-only",
   featureId = "optional-feature",
+  initialPayload = null,
+  initialRevision = 0,
+  staleBeforeVisualCommit = false,
 } = {}) {
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   const chunk = {
     id: `${layerKey}.coarse.world`,
     layer: layerKey,
@@ -2652,13 +2657,39 @@ async function runOptionalChunkPromotionScenario({
     zoomTransform: { k: 1 },
     getViewportGeoBoundsFn: () => [-180, -90, 180, 90],
   };
+  const defaultVisibilityFields = {
+    water: "showWaterRegions",
+    special: "showScenarioSpecialRegions",
+    scenario_atlantropa: "showScenarioAtlantropa",
+    specialzonelayers: "showSpecialZones",
+    relief: "showScenarioReliefOverlays",
+    cities: "showCityPoints",
+    strategicvalues: "showStrategicResourceMarkers",
+  };
+  const resolvedVisibilityField = visibilityField || defaultVisibilityFields[layerKey] || "";
+  Object.assign(runtimeState, visibilityState);
+  if (initialPayload) {
+    runtimeState[stateField] = initialPayload;
+  }
+  if (revisionField && initialRevision) {
+    runtimeState[revisionField] = initialRevision;
+  }
   const refreshCalls = [];
+  let rafCount = 0;
 
   globalThis.setTimeout = (callback) => {
     callback();
     return 1;
   };
   globalThis.clearTimeout = () => {};
+  globalThis.requestAnimationFrame = (callback) => {
+    rafCount += 1;
+    if (staleBeforeVisualCommit && rafCount === 2) {
+      runtimeState.runtimeChunkLoadState.selectionVersion += 1;
+    }
+    callback();
+    return rafCount;
+  };
 
   try {
     const controller = createScenarioChunkRuntimeController({
@@ -2704,10 +2735,20 @@ async function runOptionalChunkPromotionScenario({
           ? {
             stateField,
             revisionField,
+            visibilityField: resolvedVisibilityField,
           }
           : null
       ),
-      isScenarioOptionalLayerRequestedForVisibility: () => requestedForVisibility,
+      isScenarioOptionalLayerRequestedForVisibility: (requestedLayerKey, config) => {
+        const normalizedLayerKey = String(requestedLayerKey || "").trim().toLowerCase();
+        if (normalizedLayerKey === "strategicvalues") {
+          return !!runtimeState.showStrategicResourceMarkers || !!String(runtimeState.strategicChoroplethMetric || "").trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(runtimeState, config.visibilityField)) {
+          return !!runtimeState[config.visibilityField];
+        }
+        return config.visibilityField !== "showSpecialZones" && config.visibilityField !== "showStrategicResourceMarkers";
+      },
       syncScenarioLocalizationState: () => {},
       refreshMapDataForScenarioChunkPromotion: (options) => {
         refreshCalls.push(options);
@@ -2726,6 +2767,11 @@ async function runOptionalChunkPromotionScenario({
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
+    if (originalRequestAnimationFrame === undefined) {
+      delete globalThis.requestAnimationFrame;
+    } else {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
   }
 }
 
@@ -2734,7 +2780,6 @@ test("visible optional chunk promotion advances scenario data generation without
     layerKey: "scenario_atlantropa",
     stateField: "scenarioAtlantropaData",
     revisionField: "scenarioAtlantropaRevision",
-    requestedForVisibility: true,
     reason: "atlantropa-only",
     featureId: "atl-donor",
   });
@@ -2757,7 +2802,7 @@ test("strategic values chunk promotion advances scenario data generation when vi
     layerKey: "strategicvalues",
     stateField: "scenarioStrategicValuesData",
     revisionField: "scenarioStrategicValuesRevision",
-    requestedForVisibility: true,
+    visibilityState: { showStrategicResourceMarkers: true },
     reason: "strategicvalues-only",
     featureId: "strategic-donor",
   });
@@ -2774,12 +2819,32 @@ test("strategic values chunk promotion advances scenario data generation when vi
   assert.ok(refreshCalls[0].changedLayerKeys.includes("strategicvalues"));
 });
 
+test("strategic values chunk promotion stays data-only when markers and choropleth are hidden", async () => {
+  const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+    layerKey: "strategicvalues",
+    stateField: "scenarioStrategicValuesData",
+    revisionField: "scenarioStrategicValuesRevision",
+    visibilityState: { showStrategicResourceMarkers: false, strategicChoroplethMetric: "" },
+    reason: "strategicvalues-hidden",
+    featureId: "strategic-hidden",
+  });
+
+  assert.equal(Number(runtimeState.scenarioDataGeneration || 0), 0);
+  assert.equal(runtimeState.scenarioDataGenerationReason, undefined);
+  assert.equal(runtimeState.scenarioStrategicValuesRevision, 1);
+  assert.deepEqual(
+    runtimeState.scenarioStrategicValuesData.features.map((feature) => feature.id),
+    ["strategic-hidden"],
+  );
+  assert.equal(refreshCalls.length, 0);
+});
+
 test("hidden optional chunk promotion does not advance scenario data generation", async () => {
   const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
     layerKey: "relief",
     stateField: "scenarioReliefOverlaysData",
     revisionField: "scenarioReliefOverlayRevision",
-    requestedForVisibility: false,
+    visibilityState: { showScenarioReliefOverlays: false },
     reason: "hidden-relief-only",
     featureId: "relief-hidden",
   });
@@ -2792,6 +2857,35 @@ test("hidden optional chunk promotion does not advance scenario data generation"
     ["relief-hidden"],
   );
   assert.equal(refreshCalls.length, 0);
+});
+
+test("stale optional-only promotion restores payload and generation snapshot", async () => {
+  const initialPayload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: "atl-old", properties: {}, geometry: null },
+    ],
+  };
+  const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+    layerKey: "scenario_atlantropa",
+    stateField: "scenarioAtlantropaData",
+    revisionField: "scenarioAtlantropaRevision",
+    reason: "atlantropa-stale",
+    featureId: "atl-new",
+    initialPayload,
+    initialRevision: 4,
+    staleBeforeVisualCommit: true,
+  });
+
+  assert.equal(Number(runtimeState.scenarioDataGeneration || 0), 0);
+  assert.equal(runtimeState.scenarioDataGenerationReason, undefined);
+  assert.equal(runtimeState.scenarioAtlantropaRevision, 4);
+  assert.deepEqual(
+    runtimeState.scenarioAtlantropaData.features.map((feature) => feature.id),
+    ["atl-old"],
+  );
+  assert.equal(refreshCalls.length, 0);
+  assert.equal(runtimeState.runtimeChunkLoadState.promotionCommitStatus, "promotion-skipped-stale");
 });
 
 test("coarse prewarm keeps complete political payload for initial promotion", async () => {
@@ -3365,7 +3459,7 @@ test("political raster worker flag-on metadata path records accepted and stale c
     const queuedA = workerClient.requestPoliticalRasterWorkerPass({ identity: baseIdentity });
     assert.equal(queuedA.ok, true);
     assert.equal(postedMessages[0].type, "RASTER_POLITICAL_PASS");
-    assert.equal(postedMessages[0].protocolVersion, 3);
+    assert.equal(postedMessages[0].protocolVersion, 4);
     assert.equal(postedMessages[0].identity.passSignature, "political-a");
     assert.equal(postedMessages[0].renderHint.bitmapMode, false);
     assert.equal(postedMessages[0].rasterPacket, null);
@@ -3384,7 +3478,7 @@ test("political raster worker flag-on metadata path records accepted and stale c
 
     FakeWorker.instance.onmessage({
       data: {
-        protocolVersion: 3,
+        protocolVersion: 4,
         type: "RASTER_RESULT",
         taskId: queuedB.taskId,
         accepted: true,
@@ -3503,7 +3597,7 @@ test("political raster worker bitmap path sends packet and consumes current resu
     });
 
     assert.equal(queued.ok, true);
-    assert.equal(postedMessages[0].protocolVersion, 3);
+    assert.equal(postedMessages[0].protocolVersion, 4);
     assert.equal(postedMessages[0].renderHint.bitmapMode, true);
     assert.equal(postedMessages[0].renderHint.packetFeatureCount, 1);
     assert.equal(postedMessages[0].packetBuildMs, 4.5);
@@ -3512,7 +3606,7 @@ test("political raster worker bitmap path sends packet and consumes current resu
     const bitmap = { close: () => { bitmapClosed = true; } };
     FakeWorker.instance.onmessage({
       data: {
-        protocolVersion: 3,
+        protocolVersion: 4,
         type: "RASTER_RESULT",
         taskId: queued.taskId,
         accepted: true,
@@ -3613,7 +3707,7 @@ test("political raster worker bitmap rejects failure and late bitmap responses",
     assert.equal(rejected.ok, true);
     FakeWorker.instance.onmessage({
       data: {
-        protocolVersion: 3,
+        protocolVersion: 4,
         type: "ERROR",
         taskId: rejected.taskId,
         errorCode: "empty-raster-packet",
@@ -3634,7 +3728,7 @@ test("political raster worker bitmap rejects failure and late bitmap responses",
     assert.equal(pending.ok, true);
     FakeWorker.instance.onmessage({
       data: {
-        protocolVersion: 3,
+        protocolVersion: 4,
         type: "RASTER_RESULT",
         taskId: "political-raster-expired",
         accepted: true,

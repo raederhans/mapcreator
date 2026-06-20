@@ -45777,7 +45777,7 @@
     },
     {
       "path": "app/js/core/political_raster_worker_client.js",
-      "size_bytes": 15447,
+      "size_bytes": 15443,
       "source_kind": "dist"
     },
     {
@@ -46042,7 +46042,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 117174,
+      "size_bytes": 118482,
       "source_kind": "dist"
     },
     {
@@ -46157,7 +46157,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 41467,
+      "size_bytes": 41823,
       "source_kind": "dist"
     },
     {
@@ -46772,7 +46772,7 @@
     },
     {
       "path": "app/js/workers/political_raster.worker.js",
-      "size_bytes": 6998,
+      "size_bytes": 7477,
       "source_kind": "dist"
     },
     {
@@ -47101,5 +47101,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153117281
+  "total_bytes": 1153119420
 }

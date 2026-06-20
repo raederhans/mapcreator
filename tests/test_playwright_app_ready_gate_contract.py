@@ -8,6 +8,7 @@ from tools.browser_smoke_profile_contract import validate_profile_path, validate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLAYWRIGHT_APP_JS = REPO_ROOT / "tests" / "e2e" / "support" / "playwright-app.js"
+PLAYWRIGHT_WEB_SERVER_JS = REPO_ROOT / "tests" / "e2e" / "support" / "playwright-web-server.js"
 SCENARIO_BOUNDARY_SPEC = REPO_ROOT / "tests" / "e2e" / "scenario_boundary_regression.spec.js"
 BROWSER_SMOKE_SCRIPT = REPO_ROOT / "ops" / "browser-mcp" / "run-smoke-browser-inspection.sh"
 BROWSER_SMOKE_PROFILE = REPO_ROOT / "ops" / "browser-mcp" / "inspection-profile.toml"
@@ -58,6 +59,15 @@ class PlaywrightReadyGateContractTest(unittest.TestCase):
 
         self.assertNotIn("runtime_topology_url", predicate_source)
         self.assertNotIn("runtime_meta_url", predicate_source)
+
+    def test_playwright_web_server_reuse_is_explicit_opt_in(self):
+        content = PLAYWRIGHT_WEB_SERVER_JS.read_text(encoding="utf-8")
+
+        self.assertIn("function shouldReuseExistingServer() {", content)
+        self.assertIn('["1", "true", "yes"].includes(normalized)', content)
+        self.assertIn('["0", "false", "no"].includes(normalized)', content)
+        self.assertIn("return false;", content)
+        self.assertNotIn("return !process.env.CI;", content)
 
     def test_scenario_boundary_spec_uses_sync_wait_predicates_for_state_gate(self):
         content = SCENARIO_BOUNDARY_SPEC.read_text(encoding="utf-8")

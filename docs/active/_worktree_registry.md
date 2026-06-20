@@ -5,14 +5,14 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main@d3671ca5e8117e0bbc3f8503444072b8359ea091` before render transaction stability; functional commit `516a64eb`, closeout commit `4dae0a16`.
-- `codex/render-transaction-stability` was fast-forwarded into `main`, pushed to `origin/main`, and archived under `docs/archive/render-transaction-stability-20260620/`.
+- Current base: `origin/main@0961aa1d` after render transaction stability closeout.
+- `codex/render-audit-fix` is the active audit/fix branch for follow-up review findings on render transaction stability.
 - Live test/build owner: main Codex agent owns all live tests, Pages dist, build, merge, push, and cleanup commands.
 - Subagents: static/review lanes only; no child agent owns live tests.
 
 ## Recommended Order
 
-1. No active render transaction integration action remains.
+1. Finish `codex/render-audit-fix`, then fast-forward it into `main` after focused verification.
 2. Keep one owner for future Pages dist or long live gates.
 
 ## Current Worktrees
@@ -21,7 +21,8 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@d3671ca5` | `origin/main@d3671ca5` | local parent checkout, not integration target | dirty unrelated file: `data/locales.json` | Parent checkout preserved as user WIP. | Yellow only because current repair starts from the same main but uses isolated worktree. | Do not stage or edit parent checkout. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@0961aa1d` | `origin/main@0961aa1d` | local parent checkout, not integration target | dirty unrelated file: `data/locales.json` | Parent checkout preserved as user WIP. | Yellow because audit fix uses an isolated worktree from the same main. | Do not stage or edit parent checkout. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-audit-fix` | `codex/render-audit-fix@0961aa1d` plus working diff | `origin/main@0961aa1d` | in-progress, ready for final review after verification | hot files: scenario optional visibility, chunk promotion transaction, political raster worker protocol, Playwright web server reuse, Pages dist mirror/manifest, focused tests | Verification so far: worker packet 4/4, scenario chunk contracts 53/53, Playwright ready gate 16/16, scenario refresh plans 5/5, `verify:pages-dist` including startup shell 37/37 and landing showcase 8/8. | Red versus future scenario chunk/runtime worker work; green versus parent `data/locales.json` WIP by path. | Commit, fast-forward merge to `main`, push, then remove this worktree after clean final status. |
 
 ## Recent Integrated Branches
 

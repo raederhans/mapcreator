@@ -1,7 +1,7 @@
 // Default-off political raster worker protocol client.
-// Protocol v3 keeps the metadata path and adds an explicit bitmap trial mode.
+// Protocol v4 carries scene/data generation identity through every reply.
 
-export const POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 3;
+export const POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 4;
 export const POLITICAL_RASTER_WORKER_METRIC_NAMES = Object.freeze({
   roundTripMs: "politicalRasterWorker.roundTripMs",
   rasterMs: "politicalRasterWorker.rasterMs",

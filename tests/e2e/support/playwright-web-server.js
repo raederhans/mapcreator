@@ -19,7 +19,7 @@ function shouldReuseExistingServer() {
   if (process.env.CODEX_CI) {
     return false;
   }
-  return !process.env.CI;
+  return false;
 }
 
 function getWebServerConfig() {

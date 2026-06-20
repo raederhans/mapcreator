@@ -890,10 +890,16 @@ async function ensureActiveScenarioOptionalLayerLoaded(
 }
 
 function isScenarioOptionalLayerRequestedForVisibility(layerKey, config) {
-  if (layerKey === "strategicvalues") {
+  const normalizedKey = normalizeScenarioOptionalLayerKey(layerKey);
+  if (normalizedKey === "strategicvalues") {
     return !!state.showStrategicResourceMarkers || !!String(state.strategicChoroplethMetric || "").trim();
   }
-  return !!state[config.visibilityField];
+  const visibilityField = String(config?.visibilityField || "").trim();
+  if (!visibilityField) return false;
+  if (Object.prototype.hasOwnProperty.call(state, visibilityField)) {
+    return !!state[visibilityField];
+  }
+  return visibilityField !== "showSpecialZones" && visibilityField !== "showStrategicResourceMarkers";
 }
 
 async function ensureActiveScenarioOptionalLayersForVisibility(

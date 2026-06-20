@@ -412,3 +412,5 @@
 ### 渐进政治缓存要绑定场景代际
 - progressive coarse underlay、deferred full cache、worker bitmap、last-good frame 和 partial repaint 共用同一画布时，cache key 里要带 `sceneGeneration` 与 `scenarioDataGeneration`；只看 transform/color/pass signature 会让旧场景结果在新场景恢复期被重新提交。
 - 可见 optional chunk 的 `scenarioDataGeneration` 判定要复用 `scenario_resources` 的 visibility helper；在 chunk runtime 复制 layer 白名单会漏掉后续新增层，例如 `strategicvalues`。
+- optional chunk 的默认可见语义要和 UI state / chunk selection 保持一致；`undefined` 对 water、special、Atlantropa、relief、cities 是默认可见，对 special zones、strategic markers 是默认隐藏。
+- optional-only promotion 的 generation bump 和 refresh 要放在最终 current 检查之后；stale rollback 同时恢复 optional payload、revision 和 generation snapshot。
