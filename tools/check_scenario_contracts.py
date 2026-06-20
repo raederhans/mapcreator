@@ -10,6 +10,8 @@ from collections import defaultdict
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from shapely.geometry import box, shape
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -221,6 +223,7 @@ def build_scenario_report(scenario_dir: Path, strict: bool) -> dict[str, Any]:
         "coverage_ledger_ok": True,
         "protected_prefix_drop_count": 0,
         "basin_probe_failures": [],
+        "polar_spherical_failures": [],
         "polar_feature_count": 0,
         "polar_gate_ref": "",
         "repair_tracks": create_repair_tracks(),
@@ -328,6 +331,14 @@ def _bbox_intersects(
         or float(left[3]) < float(right[1])
         or float(right[3]) < float(left[1])
     )
+
+
+def _geometry_intersects_bbox(geometry: Any, bbox: list[float] | tuple[float, ...] | None) -> bool:
+    if not isinstance(geometry, dict) or bbox is None or len(bbox) < 4:
+        return False
+    candidate = shape(geometry)
+    probe = box(float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+    return not candidate.is_empty and bool(candidate.intersects(probe))
 
 
 def _ring_planar_area(ring: Any) -> float:
@@ -705,6 +716,7 @@ def _atlantropa_feature_row(
         "bbox": _round_bbox(bbox),
         "planar_area": round(_geometry_planar_area(feature_geometry), 6),
         "drop_reason": "" if detail_chunk_ids or chunk_ids else "missing_scenario_atlantropa_chunk",
+        "_probe_geometry": feature_geometry,
     }
 
 
@@ -712,16 +724,23 @@ def _build_basin_probe_rows(feature_rows: list[dict[str, Any]]) -> list[dict[str
     probe_rows: list[dict[str, Any]] = []
     for probe in TNO_ATLANTROPA_BASIN_PROBES:
         expected_prefixes = set(probe["expected_prefixes"])
-        matches = [
+        bbox_candidates = [
             row
             for row in feature_rows
             if row.get("prefix") in expected_prefixes
             and _bbox_intersects(row.get("bbox"), probe["bbox"])
         ]
+        matches = [
+            row
+            for row in bbox_candidates
+            if _geometry_intersects_bbox(row.get("_probe_geometry"), probe["bbox"])
+        ]
         chunk_missing = sorted(str(row["feature_id"]) for row in matches if not row.get("chunk_present"))
         failure_reasons = []
-        if not matches:
+        if not bbox_candidates:
             failure_reasons.append("no_matching_atlantropa_feature_bbox")
+        elif not matches:
+            failure_reasons.append("no_matching_atlantropa_feature_geometry")
         if chunk_missing:
             failure_reasons.append("matching_features_missing_detail_chunk")
         probe_rows.append(
@@ -732,12 +751,17 @@ def _build_basin_probe_rows(feature_rows: list[dict[str, Any]]) -> list[dict[str
                 "expected_prefixes": sorted(expected_prefixes),
                 "matching_feature_ids": sorted(str(row["feature_id"]) for row in matches)[:50],
                 "match_count": len(matches),
+                "bbox_candidate_count": len(bbox_candidates),
                 "chunk_missing_feature_ids": chunk_missing[:50],
                 "ok": not failure_reasons,
                 "failure_reasons": failure_reasons,
             }
         )
     return probe_rows
+
+
+def _public_atlantropa_feature_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if not key.startswith("_")}
 
 
 def _build_atlantropa_donor_ledger(
@@ -783,7 +807,10 @@ def _build_atlantropa_donor_ledger(
         },
         "basin_probes": basin_probes,
         "missing_chunk_feature_ids": missing_chunk_ids[:100],
-        "features": sorted(feature_rows, key=lambda row: str(row.get("feature_id") or "")),
+        "features": sorted(
+            (_public_atlantropa_feature_row(row) for row in feature_rows),
+            key=lambda row: str(row.get("feature_id") or ""),
+        ),
     }
 
 
@@ -2554,6 +2581,7 @@ def _validate_tno_coverage_ledgers(
     protected_prefix_drop_count = int(drop_summary.get("protected_prefix_drop_count") or 0)
     polar_feature_count = int(drop_summary.get("polar_feature_count") or 0)
     polar_gate_ref = str(drop_audit.get("polar_gate_ref") or "verify:tno-polar-coverage").strip()
+    polar_spherical_failures: list[dict[str, str]] = []
     if missing_chunk_count:
         ledger_failures.append(f"atlantropa donor ledger has {missing_chunk_count} features missing chunks")
     if basin_probe_failures:
@@ -2561,6 +2589,7 @@ def _validate_tno_coverage_ledgers(
     if protected_prefix_drop_count:
         ledger_failures.append(f"geometry_drop_audit has {protected_prefix_drop_count} protected prefix drops")
     if polar_feature_count < 1:
+        polar_spherical_failures.append({"reason": "missing_aq_runtime_feature"})
         ledger_failures.append("geometry_drop_audit must record at least one AQ polar runtime feature")
     runtime_meta = _load_optional_json(target_dir / "runtime_meta.json") or {}
     runtime_hashes = runtime_meta.get("coverage_ledger_hashes") if isinstance(runtime_meta.get("coverage_ledger_hashes"), dict) else {}
@@ -2582,6 +2611,7 @@ def _validate_tno_coverage_ledgers(
             }
             for probe in basin_probe_failures
         ]
+        report["polar_spherical_failures"] = polar_spherical_failures
         report["polar_feature_count"] = polar_feature_count
         report["polar_gate_ref"] = polar_gate_ref
         report.setdefault("artifact_counts", {})["atlantropa_ledger_features"] = int(summary.get("runtime_feature_count") or 0)

@@ -15,7 +15,13 @@
 - [x] Add focused unit tests.
 - [x] Run targeted validation.
 - [x] Run final review/self-audit.
-- [ ] Commit and prepare integration package.
+- [x] Commit and prepare integration package.
+
+## 2026-06-20 Post-review Correction
+
+- The original audit branch was integrated and pushed to `origin/main`.
+- A follow-up branch, `codex/tno-coverage-contract-followup`, now owns the post-review contract hardening for geometry-backed basin probes, strict `polar_spherical_failures`, full runtime metadata path assertions, and stale registry state.
+- The parent checkout later contained unrelated local WIP, so local fast-forward cleanup moved to a separate WIP-classification step. The retained TNO worktree is the clean delivery surface for the follow-up.
 
 ## Delivery Package
 
@@ -65,7 +71,7 @@ Tests and docs:
 - `tools/build_pages_dist.py` publishes only the two checked coverage ledgers from `derived/` and raises the Pages size gate to 1102 MiB for the audited payload.
 - `package.json` exposes four TNO coverage verification scripts.
 - Scenario artifacts were regenerated through the existing strict safe-repair and Pages dist builders.
-- Current worktree is ready for review/integration after final self-audit and commit.
+- Original audit delivery was integrated. The follow-up branch records the remaining review hardening and current delivery state.
 
 ### Verification
 
@@ -90,10 +96,4 @@ Known validation note:
 
 ### Integration Recommendation
 
-Ready for fast-forward integration. Parent checkout is clean and already matches `origin/main@c96af211`, so integrate from the feature worktree and keep the parent as the final clean main checkout. Recommended path:
-
-1. Commit `codex/tno-coverage-chain-audit`.
-2. Fetch and verify `origin/main` is still the base ancestor.
-3. Fast-forward `origin/main` from the feature branch.
-4. Archive task docs and update the registry in a closeout commit.
-5. Push the closeout commit to `origin/main`.
+Original audit integration is complete. Current follow-up work should be integrated from `codex/tno-coverage-contract-followup` after its review and final verification. Preserve the dirty parent checkout until its unrelated WIP is classified.

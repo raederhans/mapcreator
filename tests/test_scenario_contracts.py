@@ -262,6 +262,11 @@ class ScenarioContractTest(unittest.TestCase):
         runtime_meta = json.loads((scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))
         ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
         drop_audit = json.loads(drop_audit_path.read_text(encoding="utf-8"))
+        expected_ledger_paths = {
+            "atlantropa_donor_ledger": "data/scenarios/tno_1962/derived/atlantropa_donor_ledger.json",
+            "geometry_drop_audit": "data/scenarios/tno_1962/derived/geometry_drop_audit.json",
+        }
+        expected_report_paths = dict(check_scenario_contracts.TNO_COVERAGE_REPORT_PATHS)
 
         self.assertEqual(ledger["scenario_id"], "tno_1962")
         self.assertGreater(ledger["summary"]["runtime_feature_count"], 800)
@@ -270,14 +275,8 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertEqual(drop_audit["summary"]["protected_prefix_drop_count"], 0)
         self.assertEqual(drop_audit["summary"]["polar_feature_count"], 1)
         self.assertEqual(drop_audit["polar_gate_ref"], "verify:tno-polar-coverage")
-        self.assertEqual(
-            runtime_meta["coverage_report_paths"]["strict"],
-            ".runtime/reports/generated/tno_1962.strict_contract_report.json",
-        )
-        self.assertEqual(
-            runtime_meta["coverage_report_paths"]["polar"],
-            ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
-        )
+        self.assertEqual(runtime_meta["coverage_ledger_paths"], expected_ledger_paths)
+        self.assertEqual(runtime_meta["coverage_report_paths"], expected_report_paths)
         self.assertEqual(
             runtime_meta["coverage_ledger_hashes"]["atlantropa_donor_ledger"],
             _sha256_path(ledger_path),
@@ -301,8 +300,52 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertTrue(report["coverage_ledger_ok"])
         self.assertEqual(report["protected_prefix_drop_count"], 0)
         self.assertEqual(report["basin_probe_failures"], [])
+        self.assertEqual(report["polar_spherical_failures"], [])
         self.assertEqual(report["polar_feature_count"], 1)
         self.assertEqual(report["polar_gate_ref"], "verify:tno-polar-coverage")
+
+    def test_atlantropa_basin_probes_require_real_geometry_intersection(self) -> None:
+        disjoint_multipolygon_with_crossing_bbox = {
+            "type": "MultiPolygon",
+            "coordinates": [
+                [
+                    [
+                        [18.5, 35.0],
+                        [18.8, 35.0],
+                        [18.8, 35.3],
+                        [18.5, 35.3],
+                        [18.5, 35.0],
+                    ],
+                ],
+                [
+                    [
+                        [22.7, 35.0],
+                        [23.0, 35.0],
+                        [23.0, 35.3],
+                        [22.7, 35.3],
+                        [22.7, 35.0],
+                    ],
+                ],
+            ],
+        }
+        rows = check_scenario_contracts._build_basin_probe_rows(
+            [
+                {
+                    "feature_id": "ATLSEA_TEST_BBOX_ONLY",
+                    "prefix": "ATLSEA_",
+                    "bbox": [18.5, 35.0, 23.0, 35.3],
+                    "chunk_present": True,
+                    "_probe_geometry": disjoint_multipolygon_with_crossing_bbox,
+                }
+            ]
+        )
+        ionian_probe = next(row for row in rows if row["id"] == "ionian_mediterranean")
+
+        self.assertEqual(ionian_probe["bbox_candidate_count"], 1)
+        self.assertEqual(ionian_probe["match_count"], 0)
+        self.assertEqual(ionian_probe["matching_feature_ids"], [])
+        self.assertEqual(ionian_probe["failure_reasons"], ["no_matching_atlantropa_feature_geometry"])
+        self.assertFalse(ionian_probe["ok"])
 
     def test_checked_in_hoi4_scenarios_pass_shared_strict_review(self) -> None:
         scenarios_root = Path(__file__).resolve().parents[1] / "data" / "scenarios"

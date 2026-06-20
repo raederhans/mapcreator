@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import patch
 
-from tools import build_pages_dist
+from tools import build_pages_dist, check_scenario_contracts
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -1471,6 +1471,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "atlantropa_donor_ledger": "derived/atlantropa_donor_ledger.json",
             "geometry_drop_audit": "derived/geometry_drop_audit.json",
         }
+        expected_ledger_paths = {
+            key: f"data/scenarios/tno_1962/{relative_path}"
+            for key, relative_path in ledger_files.items()
+        }
+        expected_report_paths = dict(check_scenario_contracts.TNO_COVERAGE_REPORT_PATHS)
         dist_scenario_dir = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "tno_1962"
         source_scenario_dir = REPO_ROOT / "data" / "scenarios" / "tno_1962"
         runtime_meta = json.loads((dist_scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))
@@ -1488,14 +1493,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(runtime_meta["coverage_ledger_hashes"][ledger_key], expected_hash)
                 self.assertEqual(build_snapshot["output_sha"][ledger_relative_path], expected_hash)
 
-        self.assertEqual(
-            runtime_meta["coverage_report_paths"]["strict"],
-            ".runtime/reports/generated/tno_1962.strict_contract_report.json",
-        )
-        self.assertEqual(
-            runtime_meta["coverage_report_paths"]["polar"],
-            ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
-        )
+        self.assertEqual(runtime_meta["coverage_ledger_paths"], expected_ledger_paths)
+        self.assertEqual(runtime_meta["coverage_report_paths"], expected_report_paths)
 
     def test_dist_hgo_png_manifest_references_only_published_assets(self) -> None:
         if not DIST_MANIFEST.exists():

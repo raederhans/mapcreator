@@ -7,6 +7,7 @@
         22.5,
         40.0
       ],
+      "bbox_candidate_count": 19,
       "chunk_missing_feature_ids": [],
       "expected_prefixes": [
         "ATLSEA_",
@@ -46,6 +47,7 @@
         34.2,
         35.3
       ],
+      "bbox_candidate_count": 87,
       "chunk_missing_feature_ids": [],
       "expected_prefixes": [
         "ATLPRV_",
@@ -117,6 +119,7 @@
         35.0,
         32.5
       ],
+      "bbox_candidate_count": 24,
       "chunk_missing_feature_ids": [],
       "expected_prefixes": [
         "ATLPRV_",
@@ -162,6 +165,7 @@
         15.5,
         36.6
       ],
+      "bbox_candidate_count": 16,
       "chunk_missing_feature_ids": [],
       "expected_prefixes": [
         "ATLISL_",
@@ -171,11 +175,10 @@
       "failure_reasons": [],
       "id": "malta_rebuilt_island",
       "label": "Malta Rebuilt Island",
-      "match_count": 16,
+      "match_count": 15,
       "matching_feature_ids": [
         "ATLISL_sicily_tunis_malta",
         "ATLISL_sicily_tunis_sicily",
-        "ATLSEA_FILL_libya_suez_9",
         "ATLSEA_FILL_sicily_tunis_1",
         "ATLSEA_FILL_sicily_tunis_10",
         "ATLSEA_FILL_sicily_tunis_27",
@@ -199,6 +202,7 @@
         31.0,
         36.9
       ],
+      "bbox_candidate_count": 52,
       "chunk_missing_feature_ids": [],
       "expected_prefixes": [
         "ATLISL_",
