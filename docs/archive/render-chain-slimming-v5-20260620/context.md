@@ -36,3 +36,6 @@
 - Source/dist mirror checks passed for `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, and `scenario_visual_invalidation_executor.js`.
 - Final static review passed: code-reviewer returned approve/no findings after checking the 13 modified diff files, the resource-first bridge contract, no-FrameGraph fallback behavior, explicit empty-resource skip, executor side-effect order, source/dist mirrors, and retired `executionPlan.targetPasses` static locks.
 - First-principles bug check: the simplest stable boundary is to keep renderer pass names at renderer refresh-plan and legacy direct-call boundaries, while the FrameGraph bridge exposes only resource/execution fields. The implementation follows that boundary without adding a new abstraction layer.
+- Functional commit `39092a82` was fast-forward merged to `main`.
+- Post-merge validation on `main` passed: scenario refresh plans 17/17, scenario chunk contracts 54/54, architecture boundaries, test import graph 48 specs, Pages dist startup shell 38/38, landing showcase 8/8, `git diff --check`, and source/dist mirror checks for the three changed map_renderer modules.
+- The post-merge Pages dist gate refreshed `dist/pages-dist-manifest.json` for generated ignored data sizes; no tracked source data or source/dist module mirror drift appeared.
