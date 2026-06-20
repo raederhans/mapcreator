@@ -46,6 +46,11 @@
   `npm run test:node:exact-after-settle-refresh-plans`,
   `npm run test:node:renderer-runtime-state-behavior`,
   `npm run verify:test-import-graph`, and `git diff --check`.
+- 2026-06-20: Rebased the branch onto current `main@7c8b375f`.
+  `dist/pages-dist-manifest.json` conflicted because main advanced through
+  Pages dist-affecting UI changes. The conflict was resolved by rerunning
+  `npm run verify:pages-dist` so the manifest reflects latest main plus V3
+  render-chain changes.
 
 ## Review Notes
 
@@ -60,9 +65,10 @@
 
 ## Integration State
 
-- Status: ready for review, then integration.
-- Base: `main@d272c09046bd42442bd0af32f834896c6dec559d`.
-- Overlap risk: yellow for renderer refresh-chain and Pages dist mirrors.
-- Recommended integration: commit, fast-forward merge into `main`, run
-  post-merge focused checks, archive this task folder, push, and remove the
-  isolated worktree.
+- Status: ready for integration.
+- Base: `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75`.
+- Branch: `codex/render-chain-slimming-v3`, rebased on latest main.
+- Overlap risk: yellow for renderer refresh-chain and Pages dist manifest.
+- Recommended integration: fast-forward merge into `main`, run post-merge
+  focused checks, archive this task folder, push, and remove the isolated
+  worktree.

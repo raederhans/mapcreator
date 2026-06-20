@@ -65,9 +65,10 @@ Docs and delivery:
    - Delta payloads drop the retired pass list.
    - Source scans reject retired descriptor fields.
 4. Commit status:
-   - Ready to commit after final static review.
+   - Functional branch exists at `codex/render-chain-slimming-v3`, rebased on
+     latest main and ready for integration.
 5. Base/main divergence:
-   - Base: `main@d272c09046bd42442bd0af32f834896c6dec559d`.
+   - Rebasing completed on top of `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75`.
    - Re-check `main...origin/main` before final merge.
 6. Conflict scan:
    - Current worktree list showed only main plus this V3 worktree.
@@ -81,7 +82,7 @@ Docs and delivery:
    - Full legacy pass-field deletion outside FrameGraph invalidation remains a
      later contract-unification task.
 9. Recommended next step:
-   - Static review, commit, fast-forward merge, post-merge focused checks,
-     archive, push, and remove worktree.
+   - Fast-forward merge, post-merge focused checks, archive, push, and remove
+     worktree.
 10. Integration verdict:
-   - Integration-ready after final review.
+   - Integration-ready.

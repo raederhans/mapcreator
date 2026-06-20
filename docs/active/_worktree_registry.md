@@ -5,7 +5,7 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@d272c09046bd42442bd0af32f834896c6dec559d`.
+- Current base: `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75`.
 - Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v3`.
 - Live test/build owner: main Codex agent owns all live tests and builds for Render Chain Slimming V3.
 - Subagents: read-only code mapping and test-design lanes only; no child agent owns live tests or builds.
@@ -21,7 +21,7 @@ Last updated: 2026-06-20
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v3` | `codex/render-chain-slimming-v3@pending-commit` | `main@d272c09046bd42442bd0af32f834896c6dec559d` | ready-for-review | hot files: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, `scenario_chunk_promotion_helpers.js`, behavior/static contracts, architecture boundary tool, Pages dist mirrors | Active docs under `docs/active/render-chain-slimming-v3/`; passed targeted Node tests, Python contracts, architecture boundaries, import graph, Pages dist, and diff check | Yellow: renderer refresh-chain and Pages dist overlap with V2, but no direct active worktree overlap in `git worktree list` | Run final review, commit, fast-forward merge into `main`, run post-merge focused checks, archive docs, push, then remove the worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v3` | `codex/render-chain-slimming-v3` rebased on latest main | `main@7c8b375f2dfe0e8a159be00b9e1de626cd8b6c75` | ready-for-integration | hot files: `scenario_refresh_plans.js`, `scenario_refresh_runtime.js`, `scenario_chunk_promotion_helpers.js`, behavior/static contracts, architecture boundary tool, Pages dist mirrors | Active docs under `docs/active/render-chain-slimming-v3/`; passed targeted Node tests, Python contracts, architecture boundaries, import graph, Pages dist, repeated Pages dist after rebase conflicts, and diff check | Yellow: renderer refresh-chain and Pages dist manifest overlap with current main; conflict resolved by regenerating Pages dist from latest main plus V3 changes | Fast-forward merge into `main`, run post-merge focused checks, archive docs, push, then remove the worktree. |
 
 ## Recent Integrated Branches
 
