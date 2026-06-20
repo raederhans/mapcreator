@@ -5,15 +5,15 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main` after render-frame audit and registry closeout.
-- Active integration lane: render-frame audit is pushed and cleaned; `codex/tno-coverage-chain-audit` remains the only non-main active worktree.
+- Current base: `origin/main@4f481de`; parent Appearance / Map Content UI batch is committed locally on top of it.
+- Active integration lane: parent Appearance / Map Content UI batch is ready to push; `codex/tno-coverage-chain-audit` remains the only non-main active worktree.
 - Live test/build owner: main Codex agent owns all live tests, Pages dist, build, merge, push, and cleanup commands.
 - Subagents: static/review lanes only; no child agent owns live tests.
 
 ## Recommended Order
 
-1. Preserve the parent checkout's unrelated UI/localization WIP.
-2. Let the `codex/tno-coverage-chain-audit` owner continue its data/contract work from its own worktree; it must rebase after this audit because the registry moved and its package/test/tool changes are shared integration surfaces.
+1. Push the parent checkout's Appearance / Map Content UI commit after final status checks.
+2. Let the `codex/tno-coverage-chain-audit` owner continue its data/contract work from its own worktree; it must rebase after this UI batch because `dist/pages-dist-manifest.json`, the registry, package/test/tool changes, and Pages dist are shared integration surfaces.
 3. Start future renderer/frame-transaction work in a new isolated worktree because `map_renderer.js`, refresh runtime, and Pages dist remain shared hotspots.
 
 ## Current Worktrees
@@ -22,8 +22,8 @@ Only paths expected to remain after the current audit cleanup are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@27ace561` | current `origin/main` after audit closeout | local parent checkout with unrelated WIP; behind current `origin/main` until its owner rebases or fast-forwards | dirty UI/localization/docs/test/dist files including `css/style.css`, `data/locales.json`, `dist/pages-dist-manifest.json`, `js/ui/toolbar.js`, and active appearance docs | Parent checkout WIP predates this audit lane and remains unstaged. | Red by path if a future integration tries to fast-forward over dirty `dist/pages-dist-manifest.json`; unrelated to the completed audit branch because integration ran from isolated worktrees. | Preserve this WIP; do not stage or clean it from audit automation. |
-| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-chain-audit@27ace561` | `origin/main@27ace561`; behind current `origin/main` | in-progress | dirty TNO scenario data under `data/scenarios/tno_1962/`, derived audit JSON, `package.json`, scenario/e2e/TNO water tests, `tools/check_scenario_contracts.py`, `tools/test_route_registry.mjs`, `tools/validate_tno_water_geometries.py`, `docs/active/_worktree_registry.md`, and `docs/active/tno-coverage-chain-audit/` | Worktree exists in `git worktree list`; it has no commits beyond base yet. | Red direct overlap on this registry; yellow integration risk for package/test/tool validation surfaces; green by path versus the completed renderer audit files. | Rebase after this audit closeout and resolve registry text deliberately before merging TNO coverage work. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at current local UI commit | `origin/main@4f481de` | ready to push | hot files resolved by the UI commit: `index.html`, `css/style.css`, `js/ui/toolbar.js`, `js/ui/toolbar/appearance_controls_controller.js`, `js/ui/i18n.js`, `js/core/i18n_catalog.js`, `data/locales.json`, `dist/app/*`, `dist/pages-dist-manifest.json`, UI contract tests, archived task docs | Appearance / Map Content IA batch verified with targeted UI contract tests, Pages dist rebuild, Pages startup shell, source/dist parity, browser DOM/click/computed-style checks, and diff check. | Red versus TNO audit worktree on `dist/pages-dist-manifest.json` and registry; yellow for shared localization/catalog surfaces. | Push this UI commit; later TNO integration should rebase, resolve registry text deliberately, and rebuild Pages dist. |
+| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-chain-audit@27ace561` | behind current `origin/main` | in-progress | dirty TNO scenario data under `data/scenarios/tno_1962/`, derived audit JSON, `package.json`, scenario/e2e/TNO water tests, `tools/check_scenario_contracts.py`, `tools/test_route_registry.mjs`, `tools/validate_tno_water_geometries.py`, `docs/active/_worktree_registry.md`, and `docs/active/tno-coverage-chain-audit/` | Worktree exists in `git worktree list`; it has no commits beyond base yet. | Red direct overlap on this registry and `dist/pages-dist-manifest.json`; yellow integration risk for package/test/tool validation surfaces; green by path versus UI source files. | Rebase after the parent UI commit lands; rerun its scenario/tooling verification and Pages dist generation before integration. |
 
 ## Recent Integrated Branches
 

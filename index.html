@@ -122,64 +122,52 @@
             <div class="appearance-toolbar mt-3">
               <div class="appearance-tab-row" role="tablist" aria-label="Appearance sections" data-i18n-aria-label="Appearance sections">
                 <button
-                  id="appearanceTabOcean"
-                  type="button"
-                  class="appearance-tab-btn is-active"
-                  data-appearance-tab="ocean"
-                  role="tab"
-                  aria-selected="true"
-                  aria-controls="appearancePanelOcean"
-                  tabindex="0"
-                >
-                  Ocean
-                </button>
-                <button
                   id="appearanceTabBorders"
                   type="button"
-                  class="appearance-tab-btn"
+                  class="appearance-tab-btn is-active"
                   data-appearance-tab="borders"
                   role="tab"
-                  aria-selected="false"
+                  aria-selected="true"
                   aria-controls="appearancePanelBorders"
-                  tabindex="-1"
+                  tabindex="0"
                 >
                   Borders
                 </button>
                 <button
-                  id="appearanceTabLayers"
+                  id="appearanceTabPhysical"
                   type="button"
                   class="appearance-tab-btn"
-                  data-appearance-tab="layers"
+                  data-appearance-tab="physical"
                   role="tab"
                   aria-selected="false"
-                  aria-controls="appearancePanelLayers"
+                  aria-controls="appearancePanelPhysical"
                   tabindex="-1"
                 >
-                  Context Layers
+                  Physical Regions
                 </button>
                 <button
-                  id="appearanceTabDayNight"
+                  id="appearanceTabUrban"
                   type="button"
                   class="appearance-tab-btn"
-                  data-appearance-tab="daynight"
+                  data-appearance-tab="urban"
                   role="tab"
                   aria-selected="false"
-                  aria-controls="appearancePanelDayNight"
+                  aria-controls="appearancePanelUrban"
                   tabindex="-1"
                 >
-                  Day / Night
+                  Urban Areas
                 </button>
                 <button
-                  id="appearanceTabTexture"
+                  id="appearanceTabCityPoints"
                   type="button"
                   class="appearance-tab-btn"
-                  data-appearance-tab="texture"
+                  data-appearance-tab="citypoints"
                   role="tab"
                   aria-selected="false"
-                  aria-controls="appearancePanelTexture"
+                  aria-controls="appearancePanelCityPoints"
                   tabindex="-1"
                 >
-                  Texture
+                  City Points
                 </button>
                 <button
                   id="appearanceTabTransport"
@@ -212,10 +200,8 @@
             <div class="appearance-stack mt-4">
               <section
                 id="appearancePanelOcean"
-                class="card-flat appearance-subsection appearance-tab-panel is-active"
-                data-appearance-panel="ocean"
-                role="tabpanel"
-                aria-labelledby="appearanceTabOcean"
+                class="card-flat appearance-subsection map-content-panel"
+                aria-labelledby="lblOcean"
               >
                 <h2 id="lblOcean" class="section-header">Ocean</h2>
                 <div class="appearance-ocean-grid mt-3">
@@ -389,11 +375,10 @@
 
               <section
                 id="appearancePanelBorders"
-                class="card-flat appearance-subsection appearance-tab-panel"
+                class="card-flat appearance-subsection appearance-tab-panel is-active"
                 data-appearance-panel="borders"
                 role="tabpanel"
                 aria-labelledby="appearanceTabBorders"
-                hidden
               >
                 <h2 id="lblBordersPanel" class="section-header">Borders</h2>
                 <div class="appearance-subsection-stack mt-3">
@@ -516,13 +501,10 @@
 
               <section
                 id="appearancePanelLayers"
-                class="card-flat appearance-subsection appearance-tab-panel"
-                data-appearance-panel="layers"
-                role="tabpanel"
-                aria-labelledby="appearanceTabLayers"
+                class="hidden"
                 hidden
+                aria-hidden="true"
               >
-                <h2 id="lblContextLayers" class="section-header">Context Layers</h2>
                 <div class="appearance-subsection-stack mt-3">
                   <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="physical regions terrain atlas terrain contours">
                     <summary id="lblPhysicalPanel" class="section-header">Physical Regions</summary>
@@ -1003,17 +985,21 @@
                     </div>
                   </details>
 
-                  <details class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="rivers waterways">
+                  <details id="mapContentPanelRivers" class="appearance-mini-section" data-appearance-filter-item data-appearance-filter-label="rivers waterways">
                     <summary id="lblRiversPanel" class="section-header">Rivers</summary>
                     <div class="mt-3 rivers-panel">
-                      <div class="rivers-toggle-card">
-                        <label class="toggle-label">
-                          <input id="toggleRivers" type="checkbox" class="checkbox-input" checked />
-                          <span id="lblRiversLayer">Rivers</span>
-                        </label>
-                      </div>
                       <div class="rivers-panel-body ml-5">
                         <div class="rivers-panel-stack">
+                          <section class="appearance-control-card rivers-visibility-card" aria-labelledby="lblRiversVisibilityGroup">
+                            <h4 id="lblRiversVisibilityGroup" class="appearance-control-card-title" data-i18n="Visibility">Visibility</h4>
+                            <div class="appearance-control-card-stack">
+                              <label class="toggle-label rivers-toggle-card">
+                                <input id="toggleRivers" type="checkbox" class="checkbox-input" checked />
+                                <span id="lblRiversLayer">Rivers</span>
+                              </label>
+                            </div>
+                          </section>
+
                           <section class="appearance-control-card rivers-stroke-card" aria-labelledby="lblRiversStrokeGroup">
                             <h4 id="lblRiversStrokeGroup" class="appearance-control-card-title" data-i18n="River Stroke">River Stroke</h4>
                             <div class="appearance-control-card-stack">
@@ -1074,11 +1060,8 @@
 
               <section
                 id="appearancePanelDayNight"
-                class="card-flat appearance-subsection appearance-tab-panel"
-                data-appearance-panel="daynight"
-                role="tabpanel"
-                aria-labelledby="appearanceTabDayNight"
-                hidden
+                class="card-flat appearance-subsection map-content-panel"
+                aria-labelledby="lblDayNightPanel"
               >
                 <h2 id="lblDayNightPanel" class="section-header">Day / Night</h2>
                 <div class="appearance-day-night-stack mt-3">
@@ -1313,11 +1296,8 @@
 
               <section
                 id="appearancePanelTexture"
-                class="card-flat appearance-subsection appearance-tab-panel"
-                data-appearance-panel="texture"
-                role="tabpanel"
-                aria-labelledby="appearanceTabTexture"
-                hidden
+                class="card-flat appearance-subsection map-content-panel"
+                aria-labelledby="lblTexture"
               >
                 <h2 id="lblTexture" class="section-header">Texture</h2>
                 <div class="space-y-3 mt-3">
@@ -1502,6 +1482,42 @@
                     </div>
                   </div>
                 </div>
+              </section>
+
+              <section
+                id="appearancePanelPhysical"
+                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"
+                data-appearance-panel="physical"
+                role="tabpanel"
+                aria-labelledby="appearanceTabPhysical"
+                hidden
+              >
+                <h2 id="lblPhysicalTabPanel" class="section-header">Physical Regions</h2>
+                <div id="appearancePhysicalStack" class="appearance-subsection-stack mt-3"></div>
+              </section>
+
+              <section
+                id="appearancePanelUrban"
+                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"
+                data-appearance-panel="urban"
+                role="tabpanel"
+                aria-labelledby="appearanceTabUrban"
+                hidden
+              >
+                <h2 id="lblUrbanTabPanel" class="section-header">Urban Areas</h2>
+                <div id="appearanceUrbanStack" class="appearance-subsection-stack mt-3"></div>
+              </section>
+
+              <section
+                id="appearancePanelCityPoints"
+                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"
+                data-appearance-panel="citypoints"
+                role="tabpanel"
+                aria-labelledby="appearanceTabCityPoints"
+                hidden
+              >
+                <h2 id="lblCityPointsTabPanel" class="section-header">City Points</h2>
+                <div id="appearanceCityPointsStack" class="appearance-subsection-stack mt-3"></div>
               </section>
 
               <section
@@ -1999,6 +2015,64 @@
                 </div>
               </section>
             </div>
+          </details>
+
+          <h2 id="mapContentSectionHeading" class="visually-hidden">Map Content</h2>
+          <details class="card appearance-card map-content-card" aria-labelledby="mapContentSectionHeading labelMapContent">
+            <summary id="labelMapContent" class="section-header" data-i18n="Map Content">Map Content</summary>
+            <div class="appearance-toolbar mt-3">
+              <div class="appearance-tab-row map-content-tab-row" role="tablist" aria-label="Map content sections" data-i18n-aria-label="Map content sections">
+                <button
+                  id="mapContentTabOcean"
+                  type="button"
+                  class="appearance-tab-btn is-active"
+                  data-map-content-tab="ocean"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="appearancePanelOcean"
+                  tabindex="0"
+                >
+                  Ocean
+                </button>
+                <button
+                  id="mapContentTabDayNight"
+                  type="button"
+                  class="appearance-tab-btn"
+                  data-map-content-tab="daynight"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="appearancePanelDayNight"
+                  tabindex="-1"
+                >
+                  Day / Night
+                </button>
+                <button
+                  id="mapContentTabTexture"
+                  type="button"
+                  class="appearance-tab-btn"
+                  data-map-content-tab="texture"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="appearancePanelTexture"
+                  tabindex="-1"
+                >
+                  Texture
+                </button>
+                <button
+                  id="mapContentTabRivers"
+                  type="button"
+                  class="appearance-tab-btn"
+                  data-map-content-tab="rivers"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="mapContentPanelRivers"
+                  tabindex="-1"
+                >
+                  Rivers
+                </button>
+              </div>
+            </div>
+            <div id="mapContentStack" class="appearance-stack mt-4" aria-live="polite"></div>
           </details>
 
           <details id="specialZonePopover" class="card special-zone-editor-card sidebar-details-card" data-inline-editor="true" aria-labelledby="lblSpecialZoneEditor">

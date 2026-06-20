@@ -70,8 +70,63 @@ export function createAppearanceControlsController({
   const urbanAdaptiveTintStrengthValue = document.getElementById("urbanAdaptiveTintStrengthValue");
   const urbanMinAreaValue = document.getElementById("urbanMinAreaValue");
   const appearanceLayerFilter = document.getElementById("appearanceLayerFilter");
+  const mapContentStack = document.getElementById("mapContentStack");
+  const mapContentPanelSpecs = [
+    {
+      panel: document.getElementById("appearancePanelOcean"),
+      tabId: "ocean",
+      labelledBy: "mapContentTabOcean",
+    },
+    {
+      panel: document.getElementById("appearancePanelDayNight"),
+      tabId: "daynight",
+      labelledBy: "mapContentTabDayNight",
+    },
+    {
+      panel: document.getElementById("appearancePanelTexture"),
+      tabId: "texture",
+      labelledBy: "mapContentTabTexture",
+    },
+    {
+      panel: document.getElementById("lblRiversPanel")?.closest(".appearance-mini-section"),
+      tabId: "rivers",
+      labelledBy: "mapContentTabRivers",
+    },
+  ];
+  const moveAppearanceLayerPanel = (summaryId, targetStackId) => {
+    const panel = document.getElementById(summaryId)?.closest(".appearance-mini-section");
+    const targetStack = document.getElementById(targetStackId);
+    if (!panel || !targetStack) return;
+    panel.hidden = false;
+    panel.classList.remove("hidden", "is-active");
+    panel.removeAttribute("data-appearance-panel");
+    panel.removeAttribute("role");
+    targetStack.appendChild(panel);
+  };
+  const moveAppearanceLayerPanels = () => {
+    moveAppearanceLayerPanel("lblPhysicalPanel", "appearancePhysicalStack");
+    moveAppearanceLayerPanel("lblUrbanPanel", "appearanceUrbanStack");
+    moveAppearanceLayerPanel("lblCityPointsPanel", "appearanceCityPointsStack");
+  };
+  const moveMapContentPanels = () => {
+    if (!mapContentStack) return;
+    mapContentPanelSpecs.filter((spec) => spec.panel).forEach(({ panel, tabId, labelledBy }) => {
+      panel.hidden = false;
+      panel.classList.remove("hidden", "is-active");
+      panel.removeAttribute("data-appearance-panel");
+      panel.setAttribute("data-map-content-panel", tabId);
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", labelledBy);
+      if (panel instanceof HTMLDetailsElement) panel.open = true;
+      mapContentStack.appendChild(panel);
+    });
+  };
+  moveAppearanceLayerPanels();
+  moveMapContentPanels();
   const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
   const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
+  const mapContentTabButtons = Array.from(document.querySelectorAll("[data-map-content-tab]"));
+  const mapContentTabPanels = Array.from(document.querySelectorAll("[data-map-content-panel]"));
   const appearanceFilterItems = Array.from(document.querySelectorAll("[data-appearance-filter-item]"));
   const appearanceSpecialZoneBtn = document.getElementById("appearanceSpecialZoneBtn");
   const recentContainer = document.getElementById("recentColors");
@@ -243,8 +298,8 @@ export function createAppearanceControlsController({
     });
   };
 
-  const setAppearanceTab = (tabId = "ocean") => {
-    const normalizedTabId = String(tabId || "ocean").trim().toLowerCase();
+  const setAppearanceTab = (tabId = "borders") => {
+    const normalizedTabId = String(tabId || "borders").trim().toLowerCase();
     appearanceTabButtons.forEach((button) => {
       const id = String(button.dataset.appearanceTab || "").trim().toLowerCase();
       const isActive = id === normalizedTabId;
@@ -273,7 +328,40 @@ export function createAppearanceControlsController({
         : (currentIndex + direction + buttons.length) % buttons.length;
     const nextButton = buttons[nextIndex];
     if (!nextButton) return;
-    setAppearanceTab(nextButton.dataset.appearanceTab || "ocean");
+    setAppearanceTab(nextButton.dataset.appearanceTab || "borders");
+    nextButton.focus?.();
+  };
+
+  const setMapContentTab = (tabId = "ocean") => {
+    const normalizedTabId = String(tabId || "ocean").trim().toLowerCase();
+    mapContentTabButtons.forEach((button) => {
+      const id = String(button.dataset.mapContentTab || "").trim().toLowerCase();
+      const isActive = id === normalizedTabId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.setAttribute("tabindex", isActive ? "0" : "-1");
+    });
+    mapContentTabPanels.forEach((panel) => {
+      const id = String(panel.dataset.mapContentPanel || "").trim().toLowerCase();
+      const isActive = id === normalizedTabId;
+      panel.classList.toggle("is-active", isActive);
+      panel.classList.toggle("hidden", !isActive);
+      panel.hidden = !isActive;
+    });
+  };
+
+  const moveMapContentTabFocus = (currentButton, direction) => {
+    const buttons = mapContentTabButtons.filter((button) => !button.disabled && !button.hidden);
+    if (!buttons.length) return;
+    const currentIndex = Math.max(0, buttons.indexOf(currentButton));
+    const nextIndex = direction === "first"
+      ? 0
+      : direction === "last"
+        ? buttons.length - 1
+        : (currentIndex + direction + buttons.length) % buttons.length;
+    const nextButton = buttons[nextIndex];
+    if (!nextButton) return;
+    setMapContentTab(nextButton.dataset.mapContentTab || "ocean");
     nextButton.focus?.();
   };
 
@@ -405,7 +493,7 @@ export function createAppearanceControlsController({
     appearanceTabButtons.forEach((button) => {
       if (button.dataset.bound === "true") return;
       button.addEventListener("click", () => {
-        setAppearanceTab(button.dataset.appearanceTab || "ocean");
+        setAppearanceTab(button.dataset.appearanceTab || "borders");
       });
       button.addEventListener("keydown", (event) => {
         if (event.key === "ArrowRight") {
@@ -420,6 +508,29 @@ export function createAppearanceControlsController({
         } else if (event.key === "End") {
           event.preventDefault();
           moveAppearanceTabFocus(button, "last");
+        }
+      });
+      button.dataset.bound = "true";
+    });
+
+    mapContentTabButtons.forEach((button) => {
+      if (button.dataset.bound === "true") return;
+      button.addEventListener("click", () => {
+        setMapContentTab(button.dataset.mapContentTab || "ocean");
+      });
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          moveMapContentTabFocus(button, 1);
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          moveMapContentTabFocus(button, -1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          moveMapContentTabFocus(button, "first");
+        } else if (event.key === "End") {
+          event.preventDefault();
+          moveMapContentTabFocus(button, "last");
         }
       });
       button.dataset.bound = "true";
@@ -560,6 +671,8 @@ export function createAppearanceControlsController({
       urbanMinArea.dataset.bound = "true";
     }
   };
+
+  setMapContentTab("ocean");
 
   return {
     applyAppearanceFilter,

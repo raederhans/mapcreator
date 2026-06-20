@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 277853,
+      "size_bytes": 281013,
       "source_kind": "dist"
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8459136,
+      "size_bytes": 8459711,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -45487,7 +45487,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 260397,
+      "size_bytes": 263878,
       "source_kind": "dist"
     },
     {
@@ -45637,7 +45637,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 92781,
+      "size_bytes": 92853,
       "source_kind": "dist"
     },
     {
@@ -46387,7 +46387,7 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 33104,
+      "size_bytes": 33633,
       "source_kind": "dist"
     },
     {
@@ -46472,7 +46472,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 27012,
+      "size_bytes": 31626,
       "source_kind": "dist"
     },
     {
@@ -46637,7 +46637,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 125216,
+      "size_bytes": 125218,
       "source_kind": "dist"
     },
     {
@@ -47101,5 +47101,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153135162
+  "total_bytes": 1153147472
 }

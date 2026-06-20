@@ -527,9 +527,10 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             ".special-zone-workbench-card select {",
             "  appearance: none;",
             "  -webkit-appearance: none;",
+            "  border-radius: 12px;",
             "  background-image:",
-            "    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),",
-            "    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);",
+            "    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 252, 0.82)),",
+            "    url(\"data:image/svg+xml,%3Csvg",
             "select:hover:not(:disabled),",
             "select:focus-visible,",
             "select:disabled,",
@@ -546,11 +547,21 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             ".inspector-color-suggestion-select {\n",
             "  background-color: rgba(255, 255, 255, 0.86);",
             ".hgo-identity-variant-select {\n",
-            "  background-color: rgba(255, 255, 255, 0.92);",
+            "  font-weight: 650;",
             ".special-zone-workbench-field select,\n.special-zone-workbench-card select {\n  padding-right: 32px;",
         ]:
             self.assertIn(token, css_content)
 
+        self.assertNotIn("linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%)", css_content)
+        special_zone_select_block_start = css_content.index(
+            '.special-zone-workbench-field input[type="text"],\n'
+            '.special-zone-workbench-field input[type="number"],\n'
+            ".special-zone-workbench-field select,\n"
+            ".special-zone-workbench-card select {"
+        )
+        special_zone_select_block_end = css_content.index("}", special_zone_select_block_start)
+        special_zone_select_block = css_content[special_zone_select_block_start:special_zone_select_block_end]
+        self.assertIn("border-radius: 12px;", special_zone_select_block)
         self.assertNotIn("background: #fff8cc;", css_content)
         self.assertIn(
             'setSourceSelect.className = "select-input special-zone-member-set-select";',

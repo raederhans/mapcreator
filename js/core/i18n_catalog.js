@@ -30,6 +30,7 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Before you edit": { zh: "\u5f00\u59cb\u524d", en: "Before you edit" },
   HGO: { zh: "HGO", en: "HGO" },
   Appearance: { zh: "\u5916\u89c2", en: "Appearance" },
+  "Map Content": { zh: "\u5730\u56fe\u5185\u5bb9", en: "Map Content" },
   "Edit tools": { zh: "\u7f16\u8f91\u5de5\u5177", en: "Edit tools" },
   "Project tools": { zh: "\u9879\u76ee\u5de5\u5177", en: "Project tools" },
   Checks: { zh: "\u68c0\u67e5", en: "Checks" },

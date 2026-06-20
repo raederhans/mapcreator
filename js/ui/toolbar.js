@@ -2914,7 +2914,7 @@ function initToolbar({ render } = {}) {
   callRuntimeHook(state, "updatePaintModeUIFn");
   registerRuntimeHook(state, "updateDockCollapsedUiFn", updateDockCollapsedUi);
   updateDockCollapsedUi();
-  setAppearanceTabController("ocean");
+  setAppearanceTabController("borders");
   applyAppearanceFilter();
   refreshScenarioContextBar();
   renderRecentColors();

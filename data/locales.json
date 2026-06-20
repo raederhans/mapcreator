@@ -9460,6 +9460,10 @@
       "en": "Blank Map",
       "zh": "空白地图"
     },
+    "Editable ownerless map canvas with full province geometry and no pre-assigned ownership, controllers, or cores.": {
+      "en": "Editable ownerless map canvas with full province geometry and no pre-assigned ownership, controllers, or cores.",
+      "zh": "可编辑的无归属地图画布，包含完整省份几何，且没有预先分配的归属、控制方或核心。"
+    },
     "Blansko": {
       "en": "Blansko",
       "zh": "布兰斯科"
@@ -295013,6 +295017,14 @@
     "Appearance sections": {
       "en": "Appearance sections",
       "zh": "外观分区"
+    },
+    "Map Content": {
+      "en": "Map Content",
+      "zh": "地图内容"
+    },
+    "Map content sections": {
+      "en": "Map content sections",
+      "zh": "地图内容分区"
     },
     "Applied": {
       "en": "Applied",

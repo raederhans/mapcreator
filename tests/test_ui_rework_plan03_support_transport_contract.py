@@ -149,6 +149,8 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
     def test_left_sidebar_typography_and_redundant_copy_contract(self):
         index_content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        controller_content = (REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js").read_text(encoding="utf-8")
+        toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
 
         for token in [
             'id="scenarioStatus" class="body-text visually-hidden"',
@@ -161,6 +163,11 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             'id="lblAppearanceFilter"',
             'id="lblTextureInfo"',
             'Apply a subtle overlay texture for a vintage map feel.',
+            'id="appearanceTabOcean"',
+            'id="appearanceTabLayers"',
+            'id="appearanceTabDayNight"',
+            'id="appearanceTabTexture"',
+            'id="lblContextLayers"',
             'id="cityPointsPresetDensityGroupHint"',
             'id="cityPointsMarkerDensityHint"',
             'id="cityPointsLabelDensityHint"',
@@ -174,16 +181,32 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             "--left-panel-font-control: 0.74rem;",
             "#leftSidebar .toggle-label,",
             "#leftSidebar .palette-library-title,",
-            "#appearancePanelLayers .appearance-subsection-stack,",
+            ".appearance-layer-tab-panel .appearance-subsection-stack,",
+            "#mapContentStack > .map-content-panel,",
+            "#mapContentStack > .appearance-mini-section {",
+            "padding: 18px 20px 20px;",
+            "#mapContentStack > .map-content-panel > .section-header,",
+            "#mapContentStack > details.appearance-mini-section > summary.section-header {",
+            "#mapContentStack > details.appearance-mini-section > summary.section-header::after,",
+            "#mapContentStack .map-content-panel > .appearance-ocean-grid,",
+            "#mapContentStack .rivers-panel,",
             "#appearancePanelTexture > .space-y-3",
             ".appearance-control-card {",
+            "box-sizing: border-box;",
+            "width: 100%;",
             ".appearance-ocean-grid {",
             ".appearance-day-night-stack {",
-            "#appearancePanelLayers .appearance-mini-section .ml-5 {",
-            "#appearancePanelLayers .appearance-mini-section .flex.items-center.justify-between.gap-3 {",
+            ".appearance-layer-tab-panel .appearance-mini-section .ml-5,",
+            "#mapContentStack .appearance-mini-section .ml-5 {",
+            ".appearance-layer-tab-panel .appearance-mini-section .flex.items-center.justify-between.gap-3,",
+            "#mapContentStack .map-content-panel .flex.items-center.justify-between.gap-3,",
+            "#mapContentStack .appearance-mini-section .flex.items-center.justify-between.gap-3 {",
             "#appearancePanelTransport .transport-family-body .flex.items-center.justify-between.gap-3 {",
             "grid-template-columns: minmax(0, 1fr) minmax(96px, 1.35fr);",
-            "#appearancePanelLayers .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary) {",
+            ".appearance-layer-tab-panel .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),",
+            "#mapContentStack .map-content-panel .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),",
+            "#mapContentStack .map-content-panel .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),",
+            "#mapContentStack .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary) {",
             ".city-points-toggle-card,",
             ".rivers-toggle-card,",
             ".transport-family-body > section,",
@@ -201,11 +224,79 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
             'id="cityPointsHelpTooltip" class="info-tooltip"',
             'id="lblCityPointsStyleGroup" class="appearance-control-card-title"',
             'id="lblCityPointsLabelGroup" class="appearance-control-card-title"',
+            'class="appearance-control-card rivers-visibility-card" aria-labelledby="lblRiversVisibilityGroup"',
+            'id="lblRiversVisibilityGroup" class="appearance-control-card-title" data-i18n="Visibility"',
             'id="lblRiversStrokeGroup" class="appearance-control-card-title"',
             'id="lblRiversOutlineGroup" class="appearance-control-card-title"',
             'class="toggle-label transport-master-toggle-card"',
         ]:
             self.assertIn(token, index_content)
+
+        for token in [
+            'id="labelMapContent" class="section-header" data-i18n="Map Content"',
+            'class="appearance-tab-row map-content-tab-row"',
+            'data-i18n-aria-label="Map content sections"',
+            'id="mapContentTabOcean"',
+            'data-map-content-tab="ocean"',
+            'aria-controls="appearancePanelOcean"',
+            'id="mapContentTabDayNight"',
+            'data-map-content-tab="daynight"',
+            'aria-controls="appearancePanelDayNight"',
+            'id="mapContentTabTexture"',
+            'data-map-content-tab="texture"',
+            'aria-controls="appearancePanelTexture"',
+            'id="mapContentTabRivers"',
+            'data-map-content-tab="rivers"',
+            'aria-controls="mapContentPanelRivers"',
+            'id="mapContentStack" class="appearance-stack mt-4"',
+            'id="appearancePanelOcean"\n                class="card-flat appearance-subsection map-content-panel"',
+            'id="appearancePanelDayNight"\n                class="card-flat appearance-subsection map-content-panel"',
+            'id="appearancePanelTexture"\n                class="card-flat appearance-subsection map-content-panel"',
+            'id="mapContentPanelRivers" class="appearance-mini-section"',
+            'id="appearancePanelLayers"\n                class="hidden"\n                hidden\n                aria-hidden="true"',
+            'id="appearancePanelBorders"\n                class="card-flat appearance-subsection appearance-tab-panel is-active"',
+            'id="appearanceTabPhysical"',
+            'data-appearance-tab="physical"',
+            'aria-controls="appearancePanelPhysical"',
+            'id="appearanceTabUrban"',
+            'data-appearance-tab="urban"',
+            'aria-controls="appearancePanelUrban"',
+            'id="appearanceTabCityPoints"',
+            'data-appearance-tab="citypoints"',
+            'aria-controls="appearancePanelCityPoints"',
+            'id="appearancePanelPhysical"\n                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"',
+            'data-appearance-panel="physical"',
+            'id="appearancePanelUrban"\n                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"',
+            'data-appearance-panel="urban"',
+            'id="appearancePanelCityPoints"\n                class="card-flat appearance-subsection appearance-tab-panel appearance-layer-tab-panel"',
+            'data-appearance-panel="citypoints"',
+            'id="appearancePhysicalStack" class="appearance-subsection-stack mt-3"',
+            'id="appearanceUrbanStack" class="appearance-subsection-stack mt-3"',
+            'id="appearanceCityPointsStack" class="appearance-subsection-stack mt-3"',
+        ]:
+            self.assertIn(token, index_content)
+
+        for token in [
+            'moveAppearanceLayerPanel("lblPhysicalPanel", "appearancePhysicalStack");',
+            'moveAppearanceLayerPanel("lblUrbanPanel", "appearanceUrbanStack");',
+            'moveAppearanceLayerPanel("lblCityPointsPanel", "appearanceCityPointsStack");',
+            'document.getElementById("appearancePanelOcean")',
+            'document.getElementById("appearancePanelDayNight")',
+            'document.getElementById("appearancePanelTexture")',
+            'document.getElementById("lblRiversPanel")?.closest(".appearance-mini-section")',
+            'panel.setAttribute("data-map-content-panel", tabId);',
+            'panel.setAttribute("role", "tabpanel");',
+            'panel.setAttribute("aria-labelledby", labelledBy);',
+            'if (panel instanceof HTMLDetailsElement) panel.open = true;',
+            'mapContentStack.appendChild(panel);',
+            'const setMapContentTab = (tabId = "ocean") => {',
+            'setMapContentTab("ocean");',
+            'const setAppearanceTab = (tabId = "borders") => {',
+        ]:
+            self.assertIn(token, controller_content)
+
+        self.assertIn('setAppearanceTabController("borders");', toolbar_content)
+        self.assertNotIn('setAppearanceTabController("ocean");', toolbar_content)
 
     def test_river_dash_style_applies_to_outline_and_core_strokes(self):
         owner_content = RIVER_LAYER_RENDER_OWNER_JS.read_text(encoding="utf-8")

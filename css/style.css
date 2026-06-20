@@ -874,16 +874,19 @@ select.select-input,
 .special-zone-workbench-card select {
   appearance: none;
   -webkit-appearance: none;
-  background-color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(37, 54, 73, 0.08);
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.78);
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
-    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 252, 0.82)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b6b7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-position:
-    calc(100% - 17px) 50%,
-    calc(100% - 13px) 50%;
+    0 0,
+    right 11px center;
   background-repeat: no-repeat;
-  background-size: 6px 6px, 6px 6px;
+  background-size: auto, 14px 14px;
   padding-right: 34px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   cursor: pointer;
 }
 
@@ -896,11 +899,11 @@ select.select-input:hover:not(:disabled),
 .hgo-identity-variant-select:hover:not(:disabled),
 .special-zone-workbench-field select:hover:not(:disabled),
 .special-zone-workbench-card select:hover:not(:disabled) {
-  border-color: rgba(32, 76, 119, 0.18);
-  background-color: rgba(255, 255, 255, 0.96);
+  border-color: rgba(32, 76, 119, 0.24);
+  background-color: rgba(255, 255, 255, 0.9);
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%),
-    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 252, 0.88)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23204c77' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 select:focus,
@@ -922,10 +925,10 @@ select.select-input:focus-visible,
 .special-zone-workbench-card select:focus,
 .special-zone-workbench-card select:focus-visible {
   border-color: rgba(32, 76, 119, 0.28);
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.95);
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%),
-    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%);
+    linear-gradient(180deg, #ffffff, rgba(246, 249, 252, 0.92)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23204c77' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   box-shadow: 0 0 0 3px rgba(32, 76, 119, 0.12);
   outline: none;
 }
@@ -1939,6 +1942,29 @@ input[type="checkbox"].checkbox-input {
   padding: 16px;
 }
 
+#mapContentStack > .map-content-panel,
+#mapContentStack > .appearance-mini-section {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 18px 20px 20px;
+  overflow: hidden;
+}
+
+#mapContentStack > .map-content-panel > .section-header,
+#mapContentStack > .appearance-mini-section > summary.section-header {
+  margin-bottom: 14px;
+  padding-inline: 2px;
+}
+
+#mapContentStack > details.appearance-mini-section > summary.section-header {
+  cursor: default;
+}
+
+#mapContentStack > details.appearance-mini-section > summary.section-header::after,
+#mapContentStack > details.appearance-mini-section > summary.section-header::-webkit-details-marker {
+  display: none;
+}
+
 #leftSidebar .appearance-tab-panel > .section-header {
   margin-bottom: 12px;
 }
@@ -2124,16 +2150,26 @@ details.appearance-subsection > *:not(summary),
   width: 100%;
 }
 
-#appearancePanelLayers .appearance-subsection-stack,
+.appearance-layer-tab-panel .appearance-subsection-stack,
+#mapContentStack .rivers-panel,
 #appearancePanelTexture > .space-y-3 {
   margin-top: 10px;
 }
 
-#appearancePanelLayers .appearance-subsection-stack {
+#mapContentStack .map-content-panel > .appearance-ocean-grid,
+#mapContentStack .map-content-panel > .appearance-day-night-stack,
+#mapContentStack .map-content-panel > .space-y-3,
+#mapContentStack .appearance-mini-section > .rivers-panel {
+  margin-top: 0;
+}
+
+.appearance-layer-tab-panel .appearance-subsection-stack {
   gap: 0;
 }
 
 .appearance-control-card {
+  box-sizing: border-box;
+  width: 100%;
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 13px;
@@ -2226,28 +2262,32 @@ details.appearance-subsection > *:not(summary),
   margin-top: 0;
 }
 
-#appearancePanelLayers .appearance-mini-section > *:not(summary) {
+.appearance-layer-tab-panel .appearance-mini-section > *:not(summary),
+#mapContentStack .appearance-mini-section > *:not(summary) {
   padding: 2px 6px 15px;
 }
 
-#appearancePanelLayers .appearance-mini-section > summary.section-header {
+.appearance-layer-tab-panel .appearance-mini-section > summary.section-header,
+#mapContentStack .appearance-mini-section > summary.section-header {
   padding-inline: 0 12px;
 }
 
-#appearancePanelLayers .appearance-subsection-stack > .appearance-mini-section + .appearance-mini-section {
+.appearance-layer-tab-panel .appearance-subsection-stack > .appearance-mini-section + .appearance-mini-section {
   border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-#appearancePanelLayers .appearance-mini-section > *:not(summary) > .mt-3 {
+.appearance-layer-tab-panel .appearance-mini-section > *:not(summary) > .mt-3,
+#mapContentStack .appearance-mini-section > *:not(summary) > .mt-3 {
   margin-top: 0;
 }
 
-#appearancePanelLayers .appearance-mini-section .ml-5 {
+.appearance-layer-tab-panel .appearance-mini-section .ml-5,
+#mapContentStack .appearance-mini-section .ml-5 {
   margin-left: 0;
 }
 
-#appearancePanelLayers .appearance-mini-section .ml-5.space-y-2,
-#appearancePanelLayers .city-points-panel-body {
+.appearance-layer-tab-panel .appearance-mini-section .ml-5.space-y-2,
+.appearance-layer-tab-panel .city-points-panel-body {
   margin-top: 11px;
   padding: 10px 9px;
   border: 1px solid rgba(15, 23, 42, 0.07);
@@ -2255,7 +2295,9 @@ details.appearance-subsection > *:not(summary),
   background: rgba(255, 255, 255, 0.56);
 }
 
-#appearancePanelLayers .appearance-mini-section .flex.items-center.justify-between.gap-3 {
+.appearance-layer-tab-panel .appearance-mini-section .flex.items-center.justify-between.gap-3,
+#mapContentStack .map-content-panel .flex.items-center.justify-between.gap-3,
+#mapContentStack .appearance-mini-section .flex.items-center.justify-between.gap-3 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(96px, 1.35fr);
   align-items: center;
@@ -2269,34 +2311,42 @@ details.appearance-subsection > *:not(summary),
   gap: 6px;
 }
 
-#appearancePanelLayers .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary) {
+.appearance-layer-tab-panel .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),
+#mapContentStack .map-content-panel .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),
+#mapContentStack .map-content-panel .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary),
+#mapContentStack .appearance-prop-group .flex.items-center.justify-between.gap-2:has(> .sidebar-action-secondary + .sidebar-action-secondary) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-#appearancePanelLayers .appearance-mini-section .range-label,
+.appearance-layer-tab-panel .appearance-mini-section .range-label,
+#mapContentStack .map-content-panel .range-label,
+#mapContentStack .appearance-mini-section .range-label,
 #appearancePanelTransport .transport-family-body .range-label {
   min-width: 0;
 }
 
-#appearancePanelLayers .appearance-mini-section .select-input,
+.appearance-layer-tab-panel .appearance-mini-section .select-input,
+#mapContentStack .map-content-panel .select-input,
+#mapContentStack .appearance-mini-section .select-input,
 #appearancePanelTransport .transport-family-body .select-input {
   min-width: 0;
 }
 
-#appearancePanelLayers .rivers-panel-body {
+#mapContentStack .rivers-panel-body {
   margin-top: 10px;
   padding: 0;
   border: 0;
   background: transparent;
 }
 
-#appearancePanelLayers .appearance-mini-section .toggle-label.mt-2 {
+.appearance-layer-tab-panel .appearance-mini-section .toggle-label.mt-2,
+#mapContentStack .appearance-mini-section .toggle-label.mt-2 {
   margin-top: 0;
 }
 
-#appearancePanelLayers .urban-adaptive-tint-group {
+.appearance-layer-tab-panel .urban-adaptive-tint-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2437,15 +2487,15 @@ details.appearance-subsection > *:not(summary),
   gap: 12px;
 }
 
-#appearancePanelLayers .rivers-panel-stack {
+#mapContentStack .rivers-panel-stack {
   gap: 10px;
 }
 
-#appearancePanelLayers .rivers-panel .appearance-control-card {
+#mapContentStack .rivers-panel .appearance-control-card {
   padding: 11px 12px;
 }
 
-#appearancePanelLayers .rivers-panel .appearance-control-card-stack {
+#mapContentStack .rivers-panel .appearance-control-card-stack {
   gap: 9px;
 }
 
@@ -2534,7 +2584,7 @@ details.appearance-subsection > *:not(summary),
   cursor: default;
 }
 
-#appearancePanelLayers .city-points-panel-body .city-points-toggle-card {
+.appearance-layer-tab-panel .city-points-panel-body .city-points-toggle-card {
   padding: 0 0 10px;
   border: 0;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
@@ -7235,8 +7285,8 @@ body.counter-editor-modal-open {
   border: 1px solid rgba(37, 54, 73, 0.1);
   border-radius: 12px;
   background:
-    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
-    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b6b7f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 11px center / 14px 14px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 252, 0.82)),
     rgba(255, 255, 255, 0.92);
   color: var(--text-primary);
   font-size: 0.82rem;
@@ -7249,16 +7299,16 @@ body.counter-editor-modal-open {
 .project-file-option .select-input:hover {
   border-color: rgba(32, 76, 119, 0.18);
   background:
-    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
-    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23204c77' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 11px center / 14px 14px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 252, 0.88)),
     rgba(255, 255, 255, 0.98);
 }
 
 .project-file-option .select-input:focus {
   border-color: rgba(32, 76, 119, 0.32);
   background:
-    linear-gradient(45deg, transparent 50%, var(--color-accent) 50%) calc(100% - 17px) 50% / 6px 6px no-repeat,
-    linear-gradient(135deg, var(--color-accent) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23204c77' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 11px center / 14px 14px no-repeat,
+    linear-gradient(180deg, #ffffff, rgba(246, 249, 252, 0.92)),
     #ffffff;
   box-shadow: 0 0 0 3px rgba(32, 76, 119, 0.12), 0 10px 22px rgba(15, 23, 42, 0.06);
 }
@@ -10394,9 +10444,6 @@ body.scenario-guide-open #devWorkspaceToggleBtn {
   width: 100%;
   min-width: 0;
   min-height: 32px;
-  border: 1px solid rgba(32, 76, 119, 0.18);
-  border-radius: 7px;
-  background-color: rgba(255, 255, 255, 0.92);
   color: var(--text-primary);
   font-size: var(--inspector-font-meta);
   font-weight: 650;
@@ -12667,7 +12714,7 @@ body.right-drawer-open::after {
   min-height: 32px;
   padding: 8px 10px;
   border: 1px solid rgba(37, 54, 73, 0.08);
-  border-radius: 10px;
+  border-radius: 12px;
   background-color: rgba(255, 255, 255, 0.78);
   color: var(--text-primary);
   font: inherit;

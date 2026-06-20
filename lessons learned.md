@@ -89,6 +89,7 @@
 - ready 文案、禁用态、可编辑性、真实 runtime capability 共用同一份 contract。
 - 侧栏折叠这类布局变化最终由 `ResizeObserver` 锁住。
 - 把 layout 刷新从 `resize` 切到自定义事件时，同步接上 toolbar / dock / context bar 等所有原 `resize` 订阅者。
+- 拆 UI tab 到独立栏目时，同步更新默认 tab、`aria-labelledby` 和静态合同；只移动控件节点会留下空白首屏或悬空无障碍引用。
 
 ### i18n 和容器绑定尊重 DOM 结构
 - 带子节点的 summary / heading 容器不要整块写 `textContent`。
@@ -109,6 +110,7 @@
 - 新边界优先补 source contract、node contract、targeted Python contract，再决定是否上更重的 E2E。
 - static contract 进入具名入口后，route registry 递归展开到真实 leaf test 文件。
 - owner boundary 测试锁具体 owner token，必要时把旧实现 token 一起列入禁令，避免整文件级禁令误伤无关 sidebar 或邻近 owner 的改动。
+- CSS 视觉合同要检查后置规则的最终层叠结果；只检查共享 token 存在会漏掉后面 selector 把圆角、背景或间距覆盖回旧值。
 - 退休一个 spec 时，同步删除 manifest、test list、allowlist、引用关系。
 - data URL harness、import-safe tool、CLI/library mode 这类特殊运行环境单独有合同。
 - 交通工作台新增国家资源包时，先确认 family runtime 的 geometry contract；`industrial_zones` 已是显式 `polygon_or_point` 合同，新增点状或面状工业源都要让 capability、descriptor、inspector、Pages dist 合同一起同步。
