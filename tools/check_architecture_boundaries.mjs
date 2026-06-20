@@ -122,8 +122,8 @@ function collectFailures() {
   const frameGraphBridgeStart = scenarioRefreshPlans.indexOf("function getFrameGraphInvalidationTargetPasses(", frameGraphFactoryStart);
   if (frameGraphFactoryStart < 0 || frameGraphBridgeStart < 0) {
     failures.push(`${FILES.scenarioRefreshPlans} must keep createFrameGraphInvalidation next to the FrameGraph execution bridge.`);
-  } else if (/legacyTargetPasses|targetPasses:/.test(scenarioRefreshPlans.slice(frameGraphFactoryStart, frameGraphBridgeStart))) {
-    failures.push(`${FILES.scenarioRefreshPlans} FrameGraph invalidation descriptors must not expose legacy pass fields.`);
+  } else if (/legacyTargetPasses|targetPasses\s*=|targetPasses:|getTargetResourcesForPasses\(targetPasses\)/.test(scenarioRefreshPlans.slice(frameGraphFactoryStart, frameGraphBridgeStart))) {
+    failures.push(`${FILES.scenarioRefreshPlans} FrameGraph invalidation descriptors must not accept or expose pass fields.`);
   }
   const exportBlock = scenarioRefreshPlans.slice(scenarioRefreshPlans.indexOf("export {"));
   if (exportBlock.includes("getFrameGraphInvalidationTargetPasses,")) {

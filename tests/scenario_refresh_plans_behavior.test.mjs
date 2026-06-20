@@ -88,7 +88,7 @@ test("frame graph invalidation separates data, visible render, and interaction a
     dataRevisionLayers: [" political ", "political", "WATER"],
     renderVisibleLayers: ["cities"],
     interactionAuthorityLayers: ["scenario_atlantropa"],
-    targetPasses: ["political", "labels"],
+    targetResources: ["politicalBaseBuffer", "hitIndex", "labelBuffer"],
     clearLastGoodFrame: true,
     clearReferenceTransforms: true,
     clearPartialPoliticalDirtyIds: true,
@@ -113,11 +113,10 @@ test("frame graph invalidation separates data, visible render, and interaction a
   });
 });
 
-test("frame graph invalidation treats explicit resources as authority over legacy passes", () => {
+test("frame graph invalidation is resource-first and ignores pass-only fan-out", () => {
   const invalidation = createFrameGraphInvalidation({
     reason: "resource-authority",
     targetResources: [" labelBuffer ", "politicalBaseBuffer", "labelBuffer", "", null],
-    targetPasses: ["contextBase"],
   });
 
   assert.deepEqual(invalidation.targetResources, ["labelBuffer", "politicalBaseBuffer"]);
@@ -125,10 +124,24 @@ test("frame graph invalidation treats explicit resources as authority over legac
   assert.equal(Object.hasOwn(invalidation, "targetPasses"), false);
   assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(invalidation).targetPasses, ["labels", "political"]);
 
+  assert.throws(
+    () => createFrameGraphInvalidation({
+      reason: "pass-only-no-fanout",
+      targetPasses: ["political", "labels"],
+    }),
+    /targetResources only/,
+  );
+  assert.throws(
+    () => createFrameGraphInvalidation({
+      reason: "legacy-pass-field",
+      legacyTargetPasses: ["political"],
+    }),
+    /targetResources only/,
+  );
+
   const emptyResourceInvalidation = createFrameGraphInvalidation({
     reason: "empty-resource-authority",
     targetResources: [],
-    targetPasses: ["political", "labels"],
   });
   assert.deepEqual(emptyResourceInvalidation.targetResources, []);
   assert.equal(Object.hasOwn(emptyResourceInvalidation, "legacyTargetPasses"), false);
@@ -254,7 +267,7 @@ test("first-frame resource allowlist keeps startup visual work to the baseline",
 test("renderer refresh plan normalization applies defaults and trims pass names", () => {
   const frameGraphInvalidation = createFrameGraphInvalidation({
     reason: "normalize",
-    targetPasses: ["political"],
+    targetResources: ["politicalBaseBuffer", "hitIndex"],
   });
 
   assert.deepEqual(
@@ -293,7 +306,6 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
       frameGraphInvalidation: createFrameGraphInvalidation({
         reason: "explicit-resource",
         targetResources: ["contextScenarioBuffer"],
-        targetPasses: ["labels"],
       }),
     },
     changedLayerKeys: ["strategicvalues"],
@@ -310,7 +322,6 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
       frameGraphInvalidation: createFrameGraphInvalidation({
         reason: "explicit-empty-resource",
         targetResources: [],
-        targetPasses: ["political"],
       }),
     },
     changedLayerKeys: ["strategicvalues"],
@@ -336,7 +347,6 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
   const explicitResourceInvalidation = createFrameGraphInvalidation({
     reason: "explicit-resource",
     targetResources: ["contextScenarioBuffer"],
-    targetPasses: ["labels"],
   });
   assert.deepEqual(
     resolveFrameGraphInvalidationExecutionPlan(explicitResourceInvalidation, ["political"]),
@@ -351,7 +361,6 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
   const explicitEmptyInvalidation = createFrameGraphInvalidation({
     reason: "explicit-empty-resource",
     targetResources: [],
-    targetPasses: ["political", "labels"],
   });
   assert.deepEqual(
     resolveFrameGraphInvalidationExecutionPlan(explicitEmptyInvalidation, ["political"]),
@@ -502,7 +511,6 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
       frameGraphInvalidation: createFrameGraphInvalidation({
         reason: "explicit-empty-resource-plan",
         targetResources: [],
-        targetPasses: ["political", "labels"],
         clearReferenceTransforms: true,
       }),
     },

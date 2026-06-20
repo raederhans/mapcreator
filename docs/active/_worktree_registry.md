@@ -6,9 +6,9 @@ Last updated: 2026-06-20
 
 - Owner: main integration owner.
 - Current base: main after Render Chain Slimming V3 closeout.
-- Active implementation worktree: none.
-- Live test/build owner: none.
-- Subagents: none active.
+- Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4`.
+- Live test/build owner: main Codex agent for V4 targeted checks and final gates.
+- Subagents: static-only lanes for code mapping, contract coverage, and review.
 
 ## Recommended Order
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-20
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| _None_ | _None_ | _None_ | clean | no active implementation worktree | `git worktree list` shows only main | Green | Start a new worktree for the next phase. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4` | `codex/render-chain-slimming-v4@d2ef4854` | `main@d2ef4854` | in-progress | planned hot files: `scenario_refresh_plans.js`, scenario refresh contracts, architecture boundary tool, Pages dist mirrors | Worktree created from clean synced `main`; active docs under `docs/active/render-chain-slimming-v4/` | Yellow for renderer refresh-chain contracts; no other active worktree overlap | Keep main agent as live test owner; integrate after V4 verification passes. |
 
 ## Recent Integrated Branches
 

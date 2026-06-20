@@ -1503,7 +1503,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     frameGraphInvalidationReachesScenarioRefreshRuntime:
       scenarioRefreshPlansSource.includes("function createFrameGraphInvalidation")
       && scenarioRefreshPlansSource.includes("frameGraphInvalidation")
-      && !/function createFrameGraphInvalidation\([\s\S]*?(legacyTargetPasses|targetPasses:)[\s\S]*?function getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
+      && !/function createFrameGraphInvalidation\([\s\S]*?(legacyTargetPasses|targetPasses\s*=|targetPasses:|getTargetResourcesForPasses\(targetPasses\))[\s\S]*?function getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
       && !/export\s*\{[\s\S]*getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
       && scenarioRefreshPlansSource.includes("function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = [])")

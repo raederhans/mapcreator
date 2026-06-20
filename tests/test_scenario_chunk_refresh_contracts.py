@@ -734,7 +734,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         frame_graph_source = self.scenario_refresh_plans_source[frame_graph_start:frame_graph_end]
         export_source = self.scenario_refresh_plans_source[self.scenario_refresh_plans_source.index("export {"):]
         self.assertNotIn("legacyTargetPasses", frame_graph_source)
+        self.assertNotIn("targetPasses", frame_graph_source)
         self.assertNotRegex(frame_graph_source, r"\btargetPasses:")
+        self.assertNotIn("getTargetResourcesForPasses(targetPasses)", frame_graph_source)
         self.assertNotIn("getFrameGraphInvalidationTargetPasses,", export_source)
         self.assertIn("createScenarioVisualInvalidationExecutor({", self.scenario_refresh_runtime_source)
         self.assertIn("scenarioVisualInvalidationExecutor.executeScenarioVisualInvalidation({", promotion_source)

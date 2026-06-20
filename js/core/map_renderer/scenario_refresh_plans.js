@@ -90,6 +90,11 @@ const FIRST_FRAME_HGO_TARGET_RESOURCES = Object.freeze([
   "hgoPreviewBuffer",
 ]);
 
+const UNSUPPORTED_FRAME_GRAPH_INVALIDATION_INPUT_KEYS = Object.freeze([
+  "targetPasses",
+  "legacyTargetPasses",
+]);
+
 function getTargetResourcesForPasses(targetPasses = []) {
   return normalizeStringList((Array.isArray(targetPasses) ? targetPasses : []).flatMap((passName) => (
     PASS_RESOURCE_MAP[String(passName || "").trim()] || []
@@ -130,32 +135,37 @@ function resolveFirstFrameTargetResources(targetResources = [], {
   ]);
 }
 
-function createFrameGraphInvalidation({
-  reason = "scenario-refresh",
-  changedLayerKeys = [],
-  dataRevisionLayers = changedLayerKeys,
-  renderVisibleLayers = changedLayerKeys,
-  interactionAuthorityLayers = changedLayerKeys,
-  targetPasses = [],
-  targetResources = null,
-  clearLastGoodFrame = false,
-  clearReferenceTransforms = false,
-  clearPartialPoliticalDirtyIds = false,
-  resetWaterCacheReason = "",
-  clearOpeningOwnerBorderCache = false,
-  clearInteractionComposite = false,
-} = {}) {
-  const hasExplicitTargetResources = Array.isArray(targetResources);
-  const normalizedTargetResources = hasExplicitTargetResources
-    ? normalizeStringList(targetResources)
-    : getTargetResourcesForPasses(targetPasses);
+function createFrameGraphInvalidation(options = {}) {
+  const {
+    reason = "scenario-refresh",
+    changedLayerKeys = [],
+    dataRevisionLayers = changedLayerKeys,
+    renderVisibleLayers = changedLayerKeys,
+    interactionAuthorityLayers = changedLayerKeys,
+    targetResources = [],
+    clearLastGoodFrame = false,
+    clearReferenceTransforms = false,
+    clearPartialPoliticalDirtyIds = false,
+    resetWaterCacheReason = "",
+    clearOpeningOwnerBorderCache = false,
+    clearInteractionComposite = false,
+    ...unsupportedInputs
+  } = options && typeof options === "object" ? options : {};
+  const unsupportedInputKey = UNSUPPORTED_FRAME_GRAPH_INVALIDATION_INPUT_KEYS.find((key) => (
+    Object.prototype.hasOwnProperty.call(unsupportedInputs, key)
+  ));
+  if (unsupportedInputKey) {
+    throw new Error(
+      `FrameGraph invalidation descriptors accept targetResources only; remove ${unsupportedInputKey}.`
+    );
+  }
   return {
     kind: "FrameGraphInvalidation",
     reason: String(reason || "scenario-refresh"),
     dataRevisionLayers: normalizeLayerKeyList(dataRevisionLayers),
     renderVisibleLayers: normalizeLayerKeyList(renderVisibleLayers),
     interactionAuthorityLayers: normalizeLayerKeyList(interactionAuthorityLayers),
-    targetResources: normalizedTargetResources,
+    targetResources: normalizeStringList(targetResources),
     clearLastGoodFrame: !!clearLastGoodFrame,
     clearReferenceTransforms: !!clearReferenceTransforms,
     clearPartialPoliticalDirtyIds: !!clearPartialPoliticalDirtyIds,
@@ -227,7 +237,6 @@ function createScenarioChunkPromotionRefreshPlan({
   const targetResources = firstFrameOnly
     ? resolveFirstFrameTargetResources(promotionTargetResources, { hgoPreviewDirty })
     : promotionTargetResources;
-  const targetPasses = getTargetPassesForResources(targetResources);
   return createScenarioRefreshPlan({
     source: "scenario-chunk-promotion",
     changedLayerKeys: normalizedChangedLayerKeys,
