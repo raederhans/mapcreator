@@ -1223,6 +1223,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     exactAfterSettleRefreshLeavesContextScenarioOutsidePhysicalRefreshPasses:
       /function getPhysicalExactRefreshPasses\(\) \{[\s\S]*?\["physicalBase", "political", "contextBase", "borders"\][\s\S]*?\["political", "contextBase", "borders"\][\s\S]*?return passes;[\s\S]*?\}/.test(rendererSource)
       && /function applyExactAfterSettleRefreshPlan[\s\S]*?invalidateRenderPasses\(\["physicalBase", "contextBase"\], "physical-visible-exact"\);[\s\S]*?invalidateRenderPasses\(getPhysicalExactRefreshPasses\(\), reuseDecision\.reason \|\| "context-base-exact"\);/.test(exactSchedulerSource),
+    politicalSceneReadinessCountsRuntimeColors:
+      /function getResolvedColorCountForSceneSnapshot\(\) \{[\s\S]*?const colorSource = runtimeState\.colors[\s\S]*?const colorRevision = Number\(runtimeState\.colorRevision \|\| 0\);[\s\S]*?resolvedColorCountSnapshot\.count = Object\.keys\(colorSource\)\.length;/.test(rendererSource)
+      && !/function getResolvedColorCountForSceneSnapshot\(\) \{[\s\S]*?runtimeState\.resolvedColors/.test(rendererSource),
     colorRefreshUsesPartialPoliticalInvalidation:
       /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\), \{[\s\S]*?startedAt: inputStartedAt,[\s\S]*?inputLabel,[\s\S]*?\}\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
       && rendererSource.includes('invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");')
@@ -1597,6 +1600,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
       && rendererSource.includes("function scheduleScenarioPoliticalBackgroundDeferredFullCache")
       && rendererSource.includes("function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent")
       && /function getScenarioPoliticalBackgroundFullPassIdentity\([\s\S]*?const sceneIdentity = getVisibleFrameIdentity\(transform\);[\s\S]*?sceneIdentity\.sceneGeneration[\s\S]*?sceneIdentity\.scenarioDataGeneration/.test(rendererSource)
+      && /function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent\(state, transform = runtimeState\.zoomTransform \|\| globalThis\.d3\?\.zoomIdentity\) \{[\s\S]*?const transformSignature = getTransformSignature\(transform\);[\s\S]*?String\(state\.transformSignature \|\| ""\) === transformSignature/.test(rendererSource)
       && /function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\) \{[\s\S]*?state\.repaintDeferredRecorded = true;[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred"/.test(rendererSource)
       && rendererSource.includes("function runScenarioPoliticalBackgroundDeferredFullCacheSlice")
       && /function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?const normalizedEntries = state\.entries;[\s\S]*?isScenarioPoliticalBackgroundFullPassCacheKeyReady\(state\.fullPassCacheKey\)/.test(rendererSource)

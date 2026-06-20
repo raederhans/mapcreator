@@ -2452,8 +2452,27 @@ function countFeatureCollectionFeatures(collection) {
   return Array.isArray(collection?.features) ? collection.features.length : 0;
 }
 
+const resolvedColorCountSnapshot = {
+  colorSource: null,
+  colorRevision: -1,
+  count: 0,
+};
+
 function getResolvedColorCountForSceneSnapshot() {
-  return Object.keys(runtimeState.resolvedColors || {}).length;
+  const colorSource = runtimeState.colors && typeof runtimeState.colors === "object"
+    ? runtimeState.colors
+    : {};
+  const colorRevision = Number(runtimeState.colorRevision || 0);
+  if (
+    resolvedColorCountSnapshot.colorSource === colorSource
+    && resolvedColorCountSnapshot.colorRevision === colorRevision
+  ) {
+    return resolvedColorCountSnapshot.count;
+  }
+  resolvedColorCountSnapshot.colorSource = colorSource;
+  resolvedColorCountSnapshot.colorRevision = colorRevision;
+  resolvedColorCountSnapshot.count = Object.keys(colorSource).length;
+  return resolvedColorCountSnapshot.count;
 }
 
 function ensureCurrentSceneSnapshot(reason = "visible-frame") {
@@ -15122,12 +15141,14 @@ function recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred(
   });
 }
 
-function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform = state?.transform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
+function isScenarioPoliticalBackgroundDeferredFullCacheStateCurrent(state, transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
   if (!state || typeof state !== "object") return false;
   const identity = getVisibleFrameIdentity(transform);
+  const transformSignature = getTransformSignature(transform);
   return String(state.scenarioId || "") === identity.scenarioId
     && Number(state.sceneGeneration || 0) === Number(identity.sceneGeneration || 0)
-    && Number(state.scenarioDataGeneration || 0) === Number(identity.scenarioDataGeneration || 0);
+    && Number(state.scenarioDataGeneration || 0) === Number(identity.scenarioDataGeneration || 0)
+    && String(state.transformSignature || "") === transformSignature;
 }
 
 function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
@@ -15307,6 +15328,7 @@ function scheduleScenarioPoliticalBackgroundDeferredFullCache(entries = [], {
     scenarioId: identity.scenarioId,
     sceneGeneration: identity.sceneGeneration,
     scenarioDataGeneration: identity.scenarioDataGeneration,
+    transformSignature: identity.transformSignature,
     transform: cloneZoomTransform(transform),
     entries: normalizedEntries,
     index: 0,

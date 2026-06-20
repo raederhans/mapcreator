@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  createScenarioRefreshRuntime,
+} from "../js/core/map_renderer/scenario_refresh_runtime.js";
+import {
   createFrameGraphInvalidation,
   createScenarioApplyRefreshPlan,
   createScenarioChunkPromotionRefreshPlan,
@@ -166,4 +169,121 @@ test("renderer refresh plan normalization applies defaults and trims pass names"
       resetWaterCacheReason: "water-default",
     },
   );
+});
+
+test("chunk promotion runtime executes default frame graph invalidation effects", () => {
+  const calls = [];
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    runtimeChunkLoadState: {
+      selectionVersion: 3,
+      pendingVisualPromotion: {
+        queuedAt: 10,
+        primaryVisibleFeatureCount: 2,
+      },
+    },
+    activeScenarioMeshPack: { meshes: {} },
+    scenarioPoliticalChunkData: { type: "FeatureCollection", features: [{ id: "a" }] },
+    scenarioPoliticalVisibleChunkData: { type: "FeatureCollection", features: [{ id: "a" }] },
+  };
+  const deps = {
+    runtimeState,
+    buildIndex: () => calls.push(["buildIndex"]),
+    buildSpatialIndexChunked: () => calls.push(["buildSpatialIndexChunked"]),
+    rebuildPoliticalLandCollections: () => calls.push(["rebuildPoliticalLandCollections"]),
+    rebuildRuntimeDerivedState: () => calls.push(["rebuildRuntimeDerivedState"]),
+    rebuildPrimaryPoliticalDerivedState: (options) => calls.push(["rebuildPrimaryPoliticalDerivedState", options]),
+    setInteractionInfrastructureState: (...args) => calls.push(["setInteractionInfrastructureState", ...args]),
+    scheduleSecondarySpatialIndexBuild: (...args) => calls.push(["scheduleSecondarySpatialIndexBuild", ...args]),
+    scheduleHitCanvasBuildIfNeeded: (...args) => calls.push(["scheduleHitCanvasBuildIfNeeded", ...args]),
+    ensureSovereigntyState: () => calls.push(["ensureSovereigntyState"]),
+    refreshScenarioOpeningOwnerBorders: (...args) => calls.push(["refreshScenarioOpeningOwnerBorders", ...args]),
+    invalidateBorderCache: () => calls.push(["invalidateBorderCache"]),
+    updateDynamicBorderStatusUI: () => calls.push(["updateDynamicBorderStatusUI"]),
+    updateSpecialZonesPaths: () => calls.push(["updateSpecialZonesPaths"]),
+    renderSpecialZoneEditorOverlay: () => calls.push(["renderSpecialZoneEditorOverlay"]),
+    render: () => calls.push(["render"]),
+    recordRenderPerfMetric: (...args) => calls.push(["recordRenderPerfMetric", ...args]),
+    recordInteractionRecoveryTaskMetric: (...args) => calls.push(["recordInteractionRecoveryTaskMetric", ...args]),
+    beginInteractionRecoveryTask: (...args) => calls.push(["beginInteractionRecoveryTask", ...args]),
+    endInteractionRecoveryTask: (...args) => calls.push(["endInteractionRecoveryTask", ...args]),
+    isInteractionRecoverySettled: () => true,
+    scheduleDeferredWork: (...args) => {
+      calls.push(["scheduleDeferredWork", ...args]);
+      return { kind: "deferred-work" };
+    },
+    cancelDeferredWork: (...args) => calls.push(["cancelDeferredWork", ...args]),
+    yieldToMain: async () => calls.push(["yieldToMain"]),
+    nowMs: (() => {
+      let now = 100;
+      return () => {
+        now += 5;
+        return now;
+      };
+    })(),
+    markRendererTopologyChanged: (...args) => calls.push(["markRendererTopologyChanged", ...args]),
+    clearDeferredInternalBorderMeshCaches: () => calls.push(["clearDeferredInternalBorderMeshCaches"]),
+    scheduleDeferredHeavyBorderMeshes: () => calls.push(["scheduleDeferredHeavyBorderMeshes"]),
+    resetScenarioWaterCacheAdaptiveState: (...args) => calls.push(["resetScenarioWaterCacheAdaptiveState", ...args]),
+    syncScenarioSecondaryRegionIndexes: (...args) => {
+      calls.push(["syncScenarioSecondaryRegionIndexes", ...args]);
+      return false;
+    },
+    invalidateRenderPasses: (...args) => calls.push(["invalidateRenderPasses", ...args]),
+    markAllOverlaysDirty: () => calls.push(["markAllOverlaysDirty"]),
+    updateZoomTranslateExtent: () => calls.push(["updateZoomTranslateExtent"]),
+    isUsableMesh: () => false,
+    resetRendererTransactionState: (...args) => calls.push(["resetRendererTransactionState", ...args]),
+    clearLastGoodFrame: (...args) => calls.push(["clearLastGoodFrame", ...args]),
+    invalidateInteractionComposite: (...args) => calls.push(["invalidateInteractionComposite", ...args]),
+    resetFirstVisibleFramePainted: (...args) => calls.push(["resetFirstVisibleFramePainted", ...args]),
+    clearRenderPassReferenceTransforms: (...args) => calls.push(["clearRenderPassReferenceTransforms", ...args]),
+    rebuildStaticMeshes: (...args) => calls.push(["rebuildStaticMeshes", ...args]),
+    getEffectiveAtlantropaFeatures: () => ({ water: [] }),
+    rebuildAuxiliaryRegionIndexes: () => calls.push(["rebuildAuxiliaryRegionIndexes"]),
+    getSpatialIndexRuntimeOwner: () => ({
+      resetSecondarySpatialIndexState: (...args) => calls.push(["resetSecondarySpatialIndexState", ...args]),
+      buildSecondarySpatialIndexes: (...args) => calls.push(["buildSecondarySpatialIndexes", ...args]),
+    }),
+    queueIndexUiRefresh: (...args) => calls.push(["queueIndexUiRefresh", ...args]),
+  };
+  const runtime = createScenarioRefreshRuntime(deps);
+  const plan = createScenarioChunkPromotionRefreshPlan({
+    changedLayerKeys: ["water"],
+    hasPoliticalChange: true,
+  });
+  const targetPasses = getRendererRefreshPlan(plan).frameGraphInvalidation.targetPasses;
+
+  runtime.refreshMapDataForScenarioChunkPromotion({
+    reason: "test-chunk-promotion",
+    changedLayerKeys: ["water"],
+    hasPoliticalPayloadChange: true,
+    refreshPlan: getRendererRefreshPlan(plan),
+    suppressRender: true,
+  });
+
+  assert.deepEqual(calls.find(([name]) => name === "clearLastGoodFrame"), [
+    "clearLastGoodFrame",
+    "test-chunk-promotion-frame-graph",
+  ]);
+  assert.deepEqual(calls.find(([name]) => name === "clearRenderPassReferenceTransforms"), [
+    "clearRenderPassReferenceTransforms",
+    targetPasses,
+  ]);
+  assert.deepEqual(calls.find(([name]) => name === "invalidateInteractionComposite"), [
+    "invalidateInteractionComposite",
+    "test-chunk-promotion-frame-graph",
+  ]);
+  assert.ok(calls.some(([name]) => name === "invalidateBorderCache"));
+  assert.ok(calls.some(([name, reason]) => (
+    name === "resetScenarioWaterCacheAdaptiveState"
+    && reason === "scenario-water-regions-data-replaced"
+  )));
+  assert.deepEqual(calls.find(([name]) => name === "invalidateRenderPasses"), [
+    "invalidateRenderPasses",
+    targetPasses,
+    "test-chunk-promotion",
+  ]);
+  assert.ok(calls.some(([name]) => name === "scheduleDeferredWork"));
+  assert.equal(calls.some(([name]) => name === "render"), false);
 });
