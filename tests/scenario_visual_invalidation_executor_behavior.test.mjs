@@ -115,7 +115,42 @@ test("scenario visual invalidation executor rejects retired execution plan targe
   );
 });
 
-test("scenario visual invalidation executor keeps default pass fan-out for legacy callers", () => {
+test("scenario visual invalidation executor rejects retired execution plan legacyTargetPasses", () => {
+  const { executor } = createExecutorWithCalls();
+
+  assert.throws(
+    () => executor.executeScenarioVisualInvalidation({
+      executionPlan: {
+        legacyTargetPasses: ["political"],
+      },
+    }),
+    /invalidationTargetPasses; remove legacyTargetPasses/,
+  );
+});
+
+test("scenario visual invalidation executor rejects retired top-level targetPasses", () => {
+  const { executor } = createExecutorWithCalls();
+
+  assert.throws(
+    () => executor.executeScenarioVisualInvalidation({
+      targetPasses: ["political"],
+    }),
+    /executionPlan\.invalidationTargetPasses; remove targetPasses/,
+  );
+});
+
+test("scenario visual invalidation executor rejects retired top-level legacyTargetPasses", () => {
+  const { executor } = createExecutorWithCalls();
+
+  assert.throws(
+    () => executor.executeScenarioVisualInvalidation({
+      legacyTargetPasses: ["political"],
+    }),
+    /executionPlan\.invalidationTargetPasses; remove legacyTargetPasses/,
+  );
+});
+
+test("scenario visual invalidation executor keeps default pass fan-out without an execution plan", () => {
   const { calls, executor } = createExecutorWithCalls();
 
   executor.executeScenarioVisualInvalidation({

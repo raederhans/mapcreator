@@ -5,20 +5,22 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `main@6e3a262c` after Render Chain Slimming V5 archive closeout; local V5 worktree removed.
-- Active implementation worktree: none.
-- Live test/build owner: none active.
-- Subagents: none active.
+- Current base: `main@a3e4f8a0` after Render Chain Slimming V5 cleanup.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-render-chain-slimming-v6`.
+- Live test/build owner: main Codex agent only; no live process currently active.
+- Subagents: read-only code-mapper lane completed and closed for executor targetPasses audit.
 
 ## Recommended Order
 
-1. Continue future render-chain work from refreshed `origin/main`.
+1. Finish V6 visual executor pass-language retirement from `origin/main@a3e4f8a0`.
+2. Keep renderer refresh plan `targetPasses` at renderer boundaries only.
+3. Run targeted render-chain verification before integration.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| _None_ | _None_ | _None_ | _None_ | _None_ | _None_ | Green | No active implementation worktree remains after V5 closeout. |
+| `C:\Users\raede\Desktop\dev\mapcreator-render-chain-slimming-v6` | `codex/render-chain-slimming-v6@a3e4f8a0` | `origin/main@a3e4f8a0` | ready-for-integration | hot files changed: `scenario_visual_invalidation_executor.js`, focused visual invalidation contracts, architecture boundary checker, Pages dist mirror and manifest | Executor top-level and execution-plan `targetPasses`/`legacyTargetPasses` now fail fast; final review finding fixed. Targeted render-chain tests, architecture boundaries, import graph, Pages dist builder, landing showcase view, diff check, and source/dist mirror compare passed. `verify:pages-dist` startup shell failed on a base-reproduced landing builder `ArrayMemoryError`. | Yellow: same visual invalidation executor and render-chain contract surfaces as V5; Pages dist startup shell blocker is base/main, not V6-specific. | Commit and fast-forward merge to `main`; track landing builder memory failure as separate gate repair. |
 
 ## Recent Integrated Branches
 

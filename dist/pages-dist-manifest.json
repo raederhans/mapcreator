@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
-      "size_bytes": 3691,
+      "size_bytes": 4321,
       "source_kind": "dist"
     },
     {
@@ -47116,5 +47116,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154178767
+  "total_bytes": 1154179520
 }

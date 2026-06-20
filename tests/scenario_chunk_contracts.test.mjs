@@ -1533,9 +1533,14 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !/executionPlan:\s*\{[^}]*\btargetPasses\s*[,}:]/.test(chunkPromotionRuntimeSource)
       && scenarioVisualInvalidationExecutorSource.includes("const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([")
       && scenarioVisualInvalidationExecutorSource.includes("function getRequiredRendererEffect(deps, name)")
+      && scenarioVisualInvalidationExecutorSource.includes("function findRetiredVisualInvalidationPassInputKey(inputs = {})")
       && scenarioVisualInvalidationExecutorSource.includes("function createScenarioVisualInvalidationExecutor(deps = {})")
       && scenarioVisualInvalidationExecutorSource.includes("function executeScenarioVisualInvalidation({")
-      && scenarioVisualInvalidationExecutorSource.includes("assertExecutionPlanHasNoRetiredPassFields(executionPlan);")
+      && scenarioVisualInvalidationExecutorSource.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")
+      && scenarioVisualInvalidationExecutorSource.includes("findRetiredVisualInvalidationPassInputKey(executionPlan)")
+      && scenarioVisualInvalidationExecutorSource.includes("assertExecutionPlanHasNoRetiredPassFields(executionPlan, retiredInputs);")
+      && !/function executeScenarioVisualInvalidation\([\s\S]*?\btargetPasses\s*=/.test(scenarioVisualInvalidationExecutorSource)
+      && !/const legacyTargetPasses =/.test(scenarioVisualInvalidationExecutorSource)
       && [
         "clearLastGoodFrame(`${reason}-frame-graph`)",
         "clearRenderPassReferenceTransforms(invalidationTargetPasses)",

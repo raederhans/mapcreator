@@ -417,3 +417,6 @@
 
 ### 退役渲染合同要显式失败
 - FrameGraph descriptor 退役 pass 字段时，旧字段输入要 fail-fast 并补行为测试；静默忽略会把 stale caller 变成空 fan-out，后续更难定位。
+
+### Pages startup shell 内存失败先做 base 对照
+- `verify:pages-dist` 的 startup shell 会重新跑 landing asset builder；若 `topojson` 反量化触发 GiB 级 `ArrayMemoryError`，先在干净 main 跑同一 unittest 证明是否为 base gate，再把 Pages builder 和 landing Node view 分开验证本轮改动。

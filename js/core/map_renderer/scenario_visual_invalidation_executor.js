@@ -12,6 +12,11 @@ const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([
   "render",
 ]);
 
+const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([
+  "targetPasses",
+  "legacyTargetPasses",
+]);
+
 function normalizeStringList(values = []) {
   const result = [];
   const seen = new Set();
@@ -32,9 +37,26 @@ function getRequiredRendererEffect(deps, name) {
   return effect;
 }
 
-function assertExecutionPlanHasNoRetiredPassFields(executionPlan) {
-  if (executionPlan && typeof executionPlan === "object" && Object.hasOwn(executionPlan, "targetPasses")) {
-    throw new Error("Scenario visual invalidation execution plans use invalidationTargetPasses; remove targetPasses.");
+function findRetiredVisualInvalidationPassInputKey(inputs = {}) {
+  return RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS.find((key) => (
+    Object.prototype.hasOwnProperty.call(inputs, key)
+  ));
+}
+
+function assertExecutionPlanHasNoRetiredPassFields(executionPlan, topLevelInputs = {}) {
+  if (executionPlan && typeof executionPlan === "object") {
+    const retiredExecutionPlanKey = findRetiredVisualInvalidationPassInputKey(executionPlan);
+    if (retiredExecutionPlanKey) {
+      throw new Error(
+        `Scenario visual invalidation execution plans use invalidationTargetPasses; remove ${retiredExecutionPlanKey}.`
+      );
+    }
+  }
+  const retiredTopLevelInputKey = findRetiredVisualInvalidationPassInputKey(topLevelInputs);
+  if (retiredTopLevelInputKey) {
+    throw new Error(
+      `Scenario visual invalidation inputs use executionPlan.invalidationTargetPasses; remove ${retiredTopLevelInputKey}.`
+    );
   }
 }
 
@@ -59,15 +81,14 @@ function createScenarioVisualInvalidationExecutor(deps = {}) {
     suppressRender = false,
     frameGraphInvalidation = null,
     executionPlan = null,
-    targetPasses = [],
     hasExplicitTargetResources = false,
+    ...retiredInputs
   } = {}) {
-    assertExecutionPlanHasNoRetiredPassFields(executionPlan);
+    assertExecutionPlanHasNoRetiredPassFields(executionPlan, retiredInputs);
     const explicitResources = executionPlan?.hasExplicitTargetResources === true || hasExplicitTargetResources === true;
-    const legacyTargetPasses = normalizeStringList(targetPasses);
     const invalidationTargetPasses = Array.isArray(executionPlan?.invalidationTargetPasses)
       ? normalizeStringList(executionPlan.invalidationTargetPasses)
-      : (legacyTargetPasses.length ? legacyTargetPasses : (explicitResources ? [] : DEFAULT_RENDER_INVALIDATION_PASSES));
+      : (explicitResources ? [] : DEFAULT_RENDER_INVALIDATION_PASSES);
 
     if (frameGraphInvalidation?.clearLastGoodFrame) {
       clearLastGoodFrame(`${reason}-frame-graph`);

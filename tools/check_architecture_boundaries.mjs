@@ -113,6 +113,18 @@ function collectFailures() {
   if (!scenarioVisualInvalidationExecutor.includes("function executeScenarioVisualInvalidation({")) {
     failures.push(`${FILES.scenarioVisualInvalidationExecutor} must own executeScenarioVisualInvalidation.`);
   }
+  if (!scenarioVisualInvalidationExecutor.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must define retired visual invalidation pass inputs.`);
+  }
+  if (!scenarioVisualInvalidationExecutor.includes("findRetiredVisualInvalidationPassInputKey(executionPlan)")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must reject retired execution-plan pass inputs through one retired-key check.`);
+  }
+  if (/function executeScenarioVisualInvalidation\([\s\S]*?\btargetPasses\s*=/.test(scenarioVisualInvalidationExecutor)) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not accept top-level targetPasses.`);
+  }
+  if (scenarioVisualInvalidationExecutor.includes("const legacyTargetPasses =")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must route fallback pass lists through the execution plan bridge.`);
+  }
   if (!scenarioRefreshRuntime.includes("createScenarioVisualInvalidationExecutor({")) {
     failures.push(`${FILES.scenarioRefreshRuntime} must create the scenario visual invalidation executor.`);
   }

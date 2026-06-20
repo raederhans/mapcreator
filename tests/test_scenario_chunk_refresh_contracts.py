@@ -772,6 +772,27 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             "function createScenarioVisualInvalidationExecutor(deps = {})",
             self.scenario_visual_invalidation_executor_source,
         )
+        self.assertIn(
+            "const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertIn(
+            "function findRetiredVisualInvalidationPassInputKey(inputs = {})",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertIn(
+            "findRetiredVisualInvalidationPassInputKey(executionPlan)",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertIn(
+            "assertExecutionPlanHasNoRetiredPassFields(executionPlan, retiredInputs);",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertNotRegex(
+            self.scenario_visual_invalidation_executor_source,
+            r"function executeScenarioVisualInvalidation\([\s\S]*?\btargetPasses\s*=",
+        )
+        self.assertNotIn("const legacyTargetPasses =", self.scenario_visual_invalidation_executor_source)
         self.assertNotIn("scenario_refresh_runtime.js", self.scenario_visual_invalidation_executor_source)
         self.assertNotIn("exact_after_settle_scheduler.js", self.scenario_visual_invalidation_executor_source)
         self.assertNotIn("map_renderer.js", self.scenario_visual_invalidation_executor_source)
