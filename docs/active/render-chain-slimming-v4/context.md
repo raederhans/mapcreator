@@ -2,7 +2,8 @@
 
 ## 2026-06-20 Start
 
-- Base: `main@d2ef4854`.
+- Initial base: `main@d2ef4854`.
+- Rebased base: `main@861e79e5`.
 - Branch: `codex/render-chain-slimming-v4`.
 - Worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4`.
 - Main checkout was clean and aligned with `origin/main` before worktree creation.
@@ -34,3 +35,10 @@
 - Validation passed after code changes: `npm run test:node:renderer-runtime-state-behavior` (10/10).
 - Validation passed after code changes: `git diff --check`.
 - Source/dist mirror check passed for `scenario_refresh_plans.js`.
+- Reviewer found one low-risk issue: pass-shaped factory inputs were silently ignored after the resource-first change.
+- Fixed reviewer issue by making `createFrameGraphInvalidation(...)` fail fast on retired pass fields while keeping bridge fallback intact.
+- Rebased V4 onto `main@861e79e5` after `Keep UI review contracts current` landed on `origin/main`.
+- Rebase conflict was limited to generated `dist/pages-dist-manifest.json`; resolved by rerunning `npm run verify:pages-dist` on the final tree.
+- Post-rebase validation passed: `npm run verify:pages-dist` (startup shell 38/38, landing showcase 8/8).
+- Post-rebase validation passed: `npm run test:node:scenario-refresh-plans` (16/16), `npm run test:node:scenario-chunk-contracts` (54/54), `npm run test:node:scenario-chunk-promotion-helpers` (9/9), `npm run test:node:exact-after-settle-refresh-plans` (8/8), `npm run test:node:renderer-runtime-state-behavior` (10/10), full Python boundary set (46 tests), `npm run verify:test-import-graph`, `npm run verify:architecture-boundaries`, `git diff --check`, and source/dist mirror check.
+- Final reviewer re-check returned no findings.

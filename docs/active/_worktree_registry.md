@@ -5,7 +5,7 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: main after Render Chain Slimming V3 closeout.
+- Current base: `main@861e79e5` after UI review contract update and Render Chain Slimming V3 closeout.
 - Active implementation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4`.
 - Live test/build owner: main Codex agent for V4 targeted checks and final gates.
 - Subagents: static-only lanes for code mapping, contract coverage, and review.
@@ -20,7 +20,7 @@ Last updated: 2026-06-20
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4` | `codex/render-chain-slimming-v4@d2ef4854` | `main@d2ef4854` | in-progress | planned hot files: `scenario_refresh_plans.js`, scenario refresh contracts, architecture boundary tool, Pages dist mirrors | Worktree created from clean synced `main`; active docs under `docs/active/render-chain-slimming-v4/` | Yellow for renderer refresh-chain contracts; no other active worktree overlap | Keep main agent as live test owner; integrate after V4 verification passes. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-chain-slimming-v4` | `codex/render-chain-slimming-v4@HEAD` (functional commit `7f15cf43`) | `main@861e79e5` | ready-for-integration | hot files: `scenario_refresh_plans.js`, scenario refresh contracts, architecture boundary tool, Pages dist mirrors | Resource-first factory implemented; pass-shaped descriptor inputs fail fast; post-rebase validation passed scenario refresh 16/16, promotion helpers 9/9, scenario chunk contracts 54/54, exact plans 8/8, runtime state 10/10, Python contracts 46, architecture boundaries, import graph, Pages dist, diff check, and final review no findings | Yellow for renderer refresh-chain contracts; no active worktree overlap | Fast-forward merge into main, run post-merge targeted validation, archive docs, commit closeout, push, then remove worktree. |
 
 ## Recent Integrated Branches
 
