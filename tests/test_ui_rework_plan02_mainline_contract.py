@@ -233,12 +233,23 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             self.assertIn(token, sidebar_content)
 
         toolbar_content = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")
+        scenario_context_bar_content = (
+            REPO_ROOT / "js" / "ui" / "toolbar" / "scenario_context_bar_controller.js"
+        ).read_text(encoding="utf-8")
         for token in [
+            "const bindResponsiveChromeLayout = () => {",
             "const refreshResponsiveChromeLayout = () => {",
-            'globalThis.addEventListener("resize", refreshResponsiveChromeLayout);',
-            'globalThis.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);',
+            'globalRef.addEventListener("resize", refreshResponsiveChromeLayout);',
+            'globalRef.addEventListener("mapcreator:sidebar-layout-refresh", refreshResponsiveChromeLayout);',
             "refreshScenarioContextBar();",
             "handlePaletteLibraryResize();",
+        ]:
+            self.assertIn(token, scenario_context_bar_content)
+
+        for token in [
+            "bindResponsiveChromeLayout,",
+            "bindResponsiveChromeLayout();",
+            "refreshScenarioContextBar();",
         ]:
             self.assertIn(token, toolbar_content)
 
