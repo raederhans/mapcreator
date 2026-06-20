@@ -30,4 +30,4 @@
 - [x] 同步 dist/app。
 - [x] 运行 targeted 验证与边界验证。
 - [x] 派发 review 自检并修复发现的问题。
-- [ ] commit、合并 main、推送、归档、清理 worktree。
+- [x] commit、合并 main、推送、归档、清理 worktree。

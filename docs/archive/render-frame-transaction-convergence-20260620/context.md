@@ -38,3 +38,11 @@
 - `npm run verify:architecture-boundaries` passed.
 - `npm run verify:dist-drift` passed after staging generated dist.
 - `git diff --check` passed.
+
+## Closeout
+
+- Functional commit `be9acb74` was fast-forwarded into `main` and pushed to `origin/main`.
+- The feature worktree `C:\Users\raede\Desktop\dev\mapcreator-frame-transaction` and local branch `frame-transaction-convergence` were removed after merge.
+- Post-merge `main` validation passed `npm run verify:architecture-boundaries` and `git diff --check`.
+- Parent checkout `npm run verify:dist-drift` was polluted by the existing dirty `data/locales.json` and changed generated ignored file sizes; `dist/pages-dist-manifest.json` was restored, and the same command passed in the clean feature worktree at the same commit `be9acb74`.
+- Parent checkout final expected dirty state is only `data/locales.json`.
