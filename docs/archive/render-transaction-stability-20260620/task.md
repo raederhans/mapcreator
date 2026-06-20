@@ -28,7 +28,7 @@
    - Dist: `dist/app/js/core/scenario/chunk_runtime.js`, `dist/app/js/core/scenario_resources.js`, `dist/app/js/core/map_renderer/scenario_refresh_plans.js`, `dist/app/js/workers/political_raster.worker.js`, `dist/pages-dist-manifest.json`
    - Docs: `docs/active/_worktree_registry.md`, `docs/active/render-transaction-stability/*` during execution, then archived under `docs/archive/render-transaction-stability-20260620/*` during closeout.
 3. Diff summary: 13 tracked code/dist/test files changed plus task docs before final archive closeout.
-4. Commit status: ready to commit after final status/diff check.
+4. Commit status: functional commit `516a64eb`; registry closeout commit follows.
 5. Base/main divergence: base is `origin/main@d3671ca5`; branch created from current `origin/main`.
 6. Potential conflicts: `js/core/scenario/chunk_runtime.js`, `js/core/scenario_resources.js`, `js/core/map_renderer/scenario_refresh_plans.js`, matching dist mirrors, and registry docs.
 7. Validation:
