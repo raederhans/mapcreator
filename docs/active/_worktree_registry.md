@@ -5,16 +5,17 @@ Last updated: 2026-06-20
 ## Integration Owner
 
 - Owner: main integration owner.
-- Current base: `origin/main@4f481de`; parent Appearance / Map Content UI batch is committed locally on top of it.
-- Active integration lane: parent Appearance / Map Content UI batch is ready to push; `codex/tno-coverage-chain-audit` remains the only non-main active worktree.
+- Current base: `origin/main@c96af211` after the Appearance / Map Content UI batch landed.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit`.
 - Live test/build owner: main Codex agent owns all live tests, Pages dist, build, merge, push, and cleanup commands.
 - Subagents: static/review lanes only; no child agent owns live tests.
 
 ## Recommended Order
 
-1. Push the parent checkout's Appearance / Map Content UI commit after final status checks.
-2. Let the `codex/tno-coverage-chain-audit` owner continue its data/contract work from its own worktree; it must rebase after this UI batch because `dist/pages-dist-manifest.json`, the registry, package/test/tool changes, and Pages dist are shared integration surfaces.
-3. Start future renderer/frame-transaction work in a new isolated worktree because `map_renderer.js`, refresh runtime, and Pages dist remain shared hotspots.
+1. Keep parent `main@c96af211` clean and unchanged during TNO integration.
+2. Commit the post-rebase generated TNO artifacts and Pages manifest refresh.
+3. Fast-forward `origin/main` from `codex/tno-coverage-chain-audit`.
+4. Archive task docs after successful main push and cleanup.
 
 ## Current Worktrees
 
@@ -22,8 +23,8 @@ Only paths expected to remain after the current audit cleanup are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at current local UI commit | `origin/main@4f481de` | ready to push | hot files resolved by the UI commit: `index.html`, `css/style.css`, `js/ui/toolbar.js`, `js/ui/toolbar/appearance_controls_controller.js`, `js/ui/i18n.js`, `js/core/i18n_catalog.js`, `data/locales.json`, `dist/app/*`, `dist/pages-dist-manifest.json`, UI contract tests, archived task docs | Appearance / Map Content IA batch verified with targeted UI contract tests, Pages dist rebuild, Pages startup shell, source/dist parity, browser DOM/click/computed-style checks, and diff check. | Red versus TNO audit worktree on `dist/pages-dist-manifest.json` and registry; yellow for shared localization/catalog surfaces. | Push this UI commit; later TNO integration should rebase, resolve registry text deliberately, and rebuild Pages dist. |
-| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-chain-audit@27ace561` | behind current `origin/main` | in-progress | dirty TNO scenario data under `data/scenarios/tno_1962/`, derived audit JSON, `package.json`, scenario/e2e/TNO water tests, `tools/check_scenario_contracts.py`, `tools/test_route_registry.mjs`, `tools/validate_tno_water_geometries.py`, `docs/active/_worktree_registry.md`, and `docs/active/tno-coverage-chain-audit/` | Worktree exists in `git worktree list`; it has no commits beyond base yet. | Red direct overlap on this registry and `dist/pages-dist-manifest.json`; yellow integration risk for package/test/tool validation surfaces; green by path versus UI source files. | Rebase after the parent UI commit lands; rerun its scenario/tooling verification and Pages dist generation before integration. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c96af211` | `origin/main@c96af211` | clean parent checkout | none | `git status --short` clean during TNO rebase; parent HEAD equals `origin/main`. | Green for staging; no parent WIP remains in current checkout. | Leave parent clean; integrate TNO from its isolated worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator-tno-coverage-chain-audit` | `codex/tno-coverage-chain-audit@6d0a583e` on `origin/main@c96af211` | `origin/main@c96af211` | post-rebase verified, ready for integration | hot files: `tools/check_scenario_contracts.py`, `tools/validate_tno_water_geometries.py`, `tools/build_pages_dist.py`, `package.json`, `tools/test_route_registry.mjs`, TNO generated ledgers, TNO scenario metadata, `dist/pages-dist-manifest.json`, focused tests | Post-rebase verification passed `verify:tno-coverage-chain`, `verify:scenario-contracts:hgo`, `test:py:tno-water-repair-contracts`, water geometry audit, `verify:pages-dist` with 38 Pages startup tests and 8 landing tests, scenario contract unittest 40/40, route registry unittest, targeted TNO water geometry unittest, Python compile, and dist ledger/hash proof. | Yellow: scenario contract, generated data, and Pages dist manifest surfaces overlap recently landed UI batch on Pages dist manifest only; conflict was resolved by regenerating Pages dist. | Amend feature commit with post-rebase generated data and docs, push/fast-forward main, archive docs, then remove this worktree. |
 
 ## Recent Integrated Branches
 

@@ -1685,7 +1685,7 @@ def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():
         chunk_feature_collections=[("water.fixture.json", source_water)],
     )
 
-    assert report["contract"]["schema_version"] == 2
+    assert report["contract"]["schema_version"] == 3
     checks = report["checks"]
     for key in (
         "source",
@@ -1694,6 +1694,7 @@ def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():
         "d3_spherical",
         "first_wave_probe_coverage",
         "first_wave_named_water_seams",
+        "aq_polar_spherical_diagnostics",
         "macro_land_overlap",
         "named_water_snapshot_inflation",
         "id_consistency",
@@ -1706,6 +1707,59 @@ def test_tno_water_validator_report_schema_locks_ocean_refinement_signals():
         for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items()
     }
     assert "phase2_arctic" in checks["ocean_refinement_targets"]["phases"]
+    assert checks["aq_polar_spherical_diagnostics"]["failure_count"] == 0
+
+
+def test_tno_water_validator_reports_aq_polar_spherical_diagnostics():
+    water_feature = {
+        "type": "Feature",
+        "properties": {
+            "id": "tno_ross_sea",
+            "region_group": "marine_macro",
+            "water_type": "sea",
+            "source_standard": "fixture",
+        },
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [-170.0, -78.0],
+                [-168.0, -78.0],
+                [-168.0, -77.0],
+                [-170.0, -77.0],
+                [-170.0, -78.0],
+            ]],
+        },
+    }
+    aq_feature = {
+        "type": "Feature",
+        "properties": {"id": "AQ"},
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [20.0, -82.0],
+                [20.0, -80.0],
+                [24.0, -80.0],
+                [24.0, -82.0],
+                [20.0, -82.0],
+            ]],
+        },
+    }
+    source_water = {"type": "FeatureCollection", "features": [water_feature]}
+    runtime_political = {"type": "FeatureCollection", "features": [aq_feature]}
+
+    report = build_report_from_collections(
+        scenario_id="tno_1962",
+        source_water=source_water,
+        runtime_water=source_water,
+        runtime_political=runtime_political,
+        named_water_snapshot=source_water,
+        chunk_feature_collections=[("water.fixture.json", source_water)],
+    )
+
+    diagnostics = report["checks"]["aq_polar_spherical_diagnostics"]
+    assert diagnostics["feature_count"] == 1
+    assert diagnostics["failure_count"] == 0
+    assert diagnostics["features"][0]["id"] == "AQ"
 
 
 def test_tno_water_validator_report_allows_missing_chunks_when_runtime_gate_owns_chunks():
@@ -2096,6 +2150,12 @@ class TnoWaterRecentRefinementContractTest(unittest.TestCase):
 
     def test_family_refinement_rejects_invalid_source_review_contract(self):
         test_tno_water_family_refinement_rejects_invalid_source_review_contract()
+
+    def test_water_validator_report_schema_locks_ocean_refinement_signals(self):
+        test_tno_water_validator_report_schema_locks_ocean_refinement_signals()
+
+    def test_water_validator_reports_aq_polar_spherical_diagnostics(self):
+        test_tno_water_validator_reports_aq_polar_spherical_diagnostics()
 
     def test_manifest_and_startup_bundles_reflect_current_water_bootstrap(self):
         test_tno_manifest_and_startup_bundles_reflect_current_water_bootstrap()

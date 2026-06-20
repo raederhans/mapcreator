@@ -1387,6 +1387,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/hgo_catalogs/flags_png/medium/AB/ABK.png",
             "app/data/city_lights/historical_1930_entries.json",
             "app/data/scenarios/tno_1962/startup.bundle.en.json",
+            "app/data/scenarios/tno_1962/derived/atlantropa_donor_ledger.json",
+            "app/data/scenarios/tno_1962/derived/geometry_drop_audit.json",
             "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
             "app/data/europe_topology.na_v2.json",
             "app/data/transport_layers/global_road/catalog.json",
@@ -1459,6 +1461,41 @@ class PagesDistStartupShellTest(unittest.TestCase):
         ):
             with self.subTest(excluded_path=excluded_path):
                 self.assertNotIn(excluded_path, paths)
+
+    def test_tno_coverage_ledgers_are_published_with_runtime_metadata_hashes(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        paths = {record["path"] for record in payload["files"]}
+        ledger_files = {
+            "atlantropa_donor_ledger": "derived/atlantropa_donor_ledger.json",
+            "geometry_drop_audit": "derived/geometry_drop_audit.json",
+        }
+        dist_scenario_dir = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "tno_1962"
+        source_scenario_dir = REPO_ROOT / "data" / "scenarios" / "tno_1962"
+        runtime_meta = json.loads((dist_scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))
+        build_snapshot = json.loads((dist_scenario_dir / "build_snapshot.json").read_text(encoding="utf-8"))
+
+        for ledger_key, ledger_relative_path in ledger_files.items():
+            dist_manifest_path = f"app/data/scenarios/tno_1962/{ledger_relative_path}"
+            source_path = source_scenario_dir / ledger_relative_path
+            dist_path = dist_scenario_dir / ledger_relative_path
+            expected_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+            with self.subTest(ledger_key=ledger_key):
+                self.assertIn(dist_manifest_path, paths)
+                self.assertTrue(dist_path.is_file())
+                self.assertEqual(hashlib.sha256(dist_path.read_bytes()).hexdigest(), expected_hash)
+                self.assertEqual(runtime_meta["coverage_ledger_hashes"][ledger_key], expected_hash)
+                self.assertEqual(build_snapshot["output_sha"][ledger_relative_path], expected_hash)
+
+        self.assertEqual(
+            runtime_meta["coverage_report_paths"]["strict"],
+            ".runtime/reports/generated/tno_1962.strict_contract_report.json",
+        )
+        self.assertEqual(
+            runtime_meta["coverage_report_paths"]["polar"],
+            ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
+        )
 
     def test_dist_hgo_png_manifest_references_only_published_assets(self) -> None:
         if not DIST_MANIFEST.exists():

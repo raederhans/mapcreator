@@ -574,14 +574,18 @@ function diagnostics(geometry) {
   return { area, bounds, worldBounds, excessiveArea, invalid: worldBounds || excessiveArea };
 }
 
-function analyzeCollection(collection) {
+function analyzeCollection(collection, includeFeatureDiagnostics = false) {
   const invalidFeatures = [];
   const invalidParts = [];
+  const featureDiagnosticsRows = [];
   const features = Array.isArray(collection && collection.features) ? collection.features : [];
   for (const feature of features) {
     if (!feature || !feature.geometry) continue;
     const id = featureId(feature);
     const featureDiagnostics = diagnostics(feature.geometry);
+    if (includeFeatureDiagnostics) {
+      featureDiagnosticsRows.push({ id, ...featureDiagnostics });
+    }
     if (featureDiagnostics.invalid) {
       invalidFeatures.push({ id, ...featureDiagnostics });
     }
@@ -598,12 +602,13 @@ function analyzeCollection(collection) {
     invalidPartCount: invalidParts.length,
     invalidFeatures,
     invalidParts,
+    featureDiagnostics: featureDiagnosticsRows,
   };
 }
 
 const report = {};
 for (const [label, collection] of Object.entries(payload.collections || {})) {
-  report[label] = analyzeCollection(collection);
+  report[label] = analyzeCollection(collection, String(label).startsWith("aq_"));
 }
 process.stdout.write(JSON.stringify(report));
 """
@@ -617,6 +622,49 @@ process.stdout.write(JSON.stringify(report));
         check=True,
     )
     return json.loads(completed.stdout or "{}")
+
+
+def _aq_polar_feature_collection(runtime_political: dict | None) -> dict:
+    features = []
+    for feature in (runtime_political or {}).get("features") or []:
+        if not isinstance(feature, dict):
+            continue
+        feature_id = _feature_id(feature).upper()
+        if feature_id == "AQ" or feature_id.startswith("AQ_"):
+            features.append(feature)
+    return {"type": "FeatureCollection", "features": features}
+
+
+def _collect_aq_polar_spherical_diagnostics(
+    *,
+    scenario_id: str,
+    aq_polar_runtime: dict,
+    d3_spherical_metrics: dict,
+) -> dict:
+    metrics = d3_spherical_metrics.get("aq_polar_runtime") or {}
+    feature_diagnostics = metrics.get("featureDiagnostics")
+    feature_diagnostics = feature_diagnostics if isinstance(feature_diagnostics, list) else []
+    failures = []
+    if scenario_id == "tno_1962" and not feature_diagnostics:
+        failures.append({"reason": "missing_aq_runtime_feature"})
+    for row in feature_diagnostics:
+        if not isinstance(row, dict):
+            continue
+        if row.get("invalid"):
+            failures.append(
+                {
+                    "reason": "invalid_d3_spherical_geometry",
+                    "id": str(row.get("id") or ""),
+                    "worldBounds": bool(row.get("worldBounds")),
+                    "excessiveArea": bool(row.get("excessiveArea")),
+                }
+            )
+    return {
+        "feature_count": len(aq_polar_runtime.get("features") or []),
+        "failure_count": len(failures),
+        "failures": failures,
+        "features": feature_diagnostics,
+    }
 
 
 def _collect_ocean_macro_coverage(feature_collection: dict) -> dict:
@@ -896,6 +944,9 @@ def build_report_from_collections(
         or runtime_context_land_mask
         or {"type": "FeatureCollection", "features": []},
     }
+    aq_polar_runtime = _aq_polar_feature_collection(runtime_political)
+    if aq_polar_runtime["features"]:
+        d3_collections["aq_polar_runtime"] = aq_polar_runtime
     for label, collection in chunk_feature_collections or []:
         d3_collections[f"chunk:{label}"] = collection
     d3_spherical_metrics = collect_d3_spherical_metrics(d3_collections)
@@ -906,7 +957,7 @@ def build_report_from_collections(
         "scenario_id": scenario_id,
         "contract": {
             "name": "tno_water_geometry",
-            "schema_version": 2,
+            "schema_version": 3,
             "ocean_refinement_phase_targets": {
                 phase: list(target_ids)
                 for phase, target_ids in OCEAN_REFINEMENT_PHASE_TARGET_IDS.items()
@@ -922,6 +973,11 @@ def build_report_from_collections(
             "ocean_macro_coverage": _collect_ocean_macro_coverage(source_water),
             "first_wave_probe_coverage": _collect_probe_coverage(source_water),
             "first_wave_named_water_seams": _collect_named_water_seams(source_water),
+            "aq_polar_spherical_diagnostics": _collect_aq_polar_spherical_diagnostics(
+                scenario_id=scenario_id,
+                aq_polar_runtime=aq_polar_runtime,
+                d3_spherical_metrics=d3_spherical_metrics,
+            ),
             "macro_land_overlap": _collect_macro_land_overlap(source_water, runtime_political),
             "named_water_snapshot_inflation": _collect_named_water_snapshot_inflation(
                 source_water,
@@ -994,6 +1050,9 @@ def summarize_failures(report: dict, *, require_chunks: bool = True) -> list[str
         failures.append(
             f"first_wave_named_water_seams: gaps={len(checks['first_wave_named_water_seams']['failures'])}"
         )
+    aq_polar = checks.get("aq_polar_spherical_diagnostics") or {}
+    if int(aq_polar.get("failure_count") or 0):
+        failures.append(f"aq_polar_spherical_diagnostics: failures={aq_polar['failure_count']}")
     if checks["macro_land_overlap"]["suspicious_count"]:
         failures.append(
             f"macro_land_overlap: suspicious={checks['macro_land_overlap']['suspicious_count']}"

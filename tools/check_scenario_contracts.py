@@ -95,6 +95,59 @@ ATLANTROPA_PREFIX_FIELD_RULES = (
     ("ATLWLD_", "land", "owner"),
     ("ATLSHL_", "shoal", "shoal_pattern"),
 )
+TNO_COVERAGE_DERIVED_DIRNAME = "derived"
+TNO_ATLANTROPA_DONOR_LEDGER_FILENAME = "atlantropa_donor_ledger.json"
+TNO_GEOMETRY_DROP_AUDIT_FILENAME = "geometry_drop_audit.json"
+TNO_COVERAGE_LEDGER_FILENAMES = (
+    f"{TNO_COVERAGE_DERIVED_DIRNAME}/{TNO_ATLANTROPA_DONOR_LEDGER_FILENAME}",
+    f"{TNO_COVERAGE_DERIVED_DIRNAME}/{TNO_GEOMETRY_DROP_AUDIT_FILENAME}",
+)
+TNO_COVERAGE_REPORT_PATHS = {
+    "strict": ".runtime/reports/generated/tno_1962.strict_contract_report.json",
+    "coverage_ledger": ".runtime/reports/generated/tno_1962.coverage_ledger_report.json",
+    "atlantropa": ".runtime/reports/generated/tno_1962.atlantropa_coverage_report.json",
+    "polar": ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
+}
+TNO_PROTECTED_COVERAGE_PREFIXES = (
+    "RU_ARCTIC_FB_",
+    "ATLSEA_FILL_",
+    "ATLSEA_",
+    "ATLPRV_",
+    "ATLISL_",
+    "AQ",
+)
+TNO_ATLANTROPA_BASIN_PROBES = (
+    {
+        "id": "ionian_mediterranean",
+        "label": "Ionian Mediterranean",
+        "bbox": [19.0, 34.4, 22.5, 40.0],
+        "expected_prefixes": ("ATLSEA_", "ATLSEA_FILL_"),
+    },
+    {
+        "id": "libya_suez_chain",
+        "label": "Libya and Suez Atlantropa Chain",
+        "bbox": [11.0, 27.8, 34.2, 35.3],
+        "expected_prefixes": ("ATLSEA_", "ATLSEA_FILL_", "ATLPRV_"),
+    },
+    {
+        "id": "suez_canal_site",
+        "label": "Suez Atlantropa Canal Site",
+        "bbox": [31.0, 27.8, 35.0, 32.5],
+        "expected_prefixes": ("ATLSEA_", "ATLSEA_FILL_", "ATLPRV_"),
+    },
+    {
+        "id": "malta_rebuilt_island",
+        "label": "Malta Rebuilt Island",
+        "bbox": [13.0, 35.0, 15.5, 36.6],
+        "expected_prefixes": ("ATLISL_", "ATLSEA_", "ATLSEA_FILL_"),
+    },
+    {
+        "id": "cretan_mediterranean",
+        "label": "Cretan Mediterranean",
+        "bbox": [22.0, 34.4, 31.0, 36.9],
+        "expected_prefixes": ("ATLSEA_", "ATLSEA_FILL_", "ATLISL_"),
+    },
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -165,6 +218,11 @@ def build_scenario_report(scenario_dir: Path, strict: bool) -> dict[str, Any]:
         "artifact_counts": {},
         "owner_bucket_mismatch_count": 0,
         "reverse_coverage_gap_count": 0,
+        "coverage_ledger_ok": True,
+        "protected_prefix_drop_count": 0,
+        "basin_probe_failures": [],
+        "polar_feature_count": 0,
+        "polar_gate_ref": "",
         "repair_tracks": create_repair_tracks(),
     }
 
@@ -204,6 +262,121 @@ def _load_optional_json(path: Path) -> dict[str, Any] | None:
         return None
     payload = load_json(path)
     return payload if isinstance(payload, dict) else None
+
+
+def _coverage_prefix_for_feature_id(feature_id: str) -> str:
+    normalized = str(feature_id or "").strip().upper()
+    for prefix in TNO_PROTECTED_COVERAGE_PREFIXES:
+        if prefix == "AQ":
+            if normalized == "AQ" or normalized.startswith("AQ_"):
+                return "AQ"
+            continue
+        if normalized.startswith(prefix):
+            return prefix
+    return ""
+
+
+def _iter_coordinate_positions(value: Any):
+    if not isinstance(value, (list, tuple)):
+        return
+    if (
+        len(value) >= 2
+        and isinstance(value[0], (int, float))
+        and isinstance(value[1], (int, float))
+    ):
+        yield float(value[0]), float(value[1])
+        return
+    for item in value:
+        yield from _iter_coordinate_positions(item)
+
+
+def _geometry_bbox(geometry: Any) -> list[float] | None:
+    if not isinstance(geometry, dict):
+        return None
+    geometry_type = str(geometry.get("type") or "").strip()
+    if geometry_type == "GeometryCollection":
+        bboxes = [
+            bbox
+            for bbox in (_geometry_bbox(child) for child in geometry.get("geometries") or [])
+            if bbox is not None
+        ]
+        if not bboxes:
+            return None
+        return [
+            min(bbox[0] for bbox in bboxes),
+            min(bbox[1] for bbox in bboxes),
+            max(bbox[2] for bbox in bboxes),
+            max(bbox[3] for bbox in bboxes),
+        ]
+    positions = list(_iter_coordinate_positions(geometry.get("coordinates")))
+    if not positions:
+        return None
+    xs = [point[0] for point in positions]
+    ys = [point[1] for point in positions]
+    return [min(xs), min(ys), max(xs), max(ys)]
+
+
+def _bbox_intersects(
+    left: list[float] | tuple[float, ...] | None,
+    right: list[float] | tuple[float, ...] | None,
+) -> bool:
+    if left is None or right is None or len(left) < 4 or len(right) < 4:
+        return False
+    return not (
+        float(left[2]) < float(right[0])
+        or float(right[2]) < float(left[0])
+        or float(left[3]) < float(right[1])
+        or float(right[3]) < float(left[1])
+    )
+
+
+def _ring_planar_area(ring: Any) -> float:
+    if not isinstance(ring, (list, tuple)) or len(ring) < 4:
+        return 0.0
+    total = 0.0
+    for first, second in zip(ring, ring[1:]):
+        if not (
+            isinstance(first, (list, tuple))
+            and isinstance(second, (list, tuple))
+            and len(first) >= 2
+            and len(second) >= 2
+        ):
+            continue
+        total += (float(first[0]) * float(second[1])) - (float(second[0]) * float(first[1]))
+    return total / 2.0
+
+
+def _polygon_planar_area(coordinates: Any) -> float:
+    if not isinstance(coordinates, (list, tuple)) or not coordinates:
+        return 0.0
+    exterior = abs(_ring_planar_area(coordinates[0]))
+    holes = sum(abs(_ring_planar_area(ring)) for ring in coordinates[1:])
+    return max(0.0, exterior - holes)
+
+
+def _geometry_planar_area(geometry: Any) -> float:
+    if not isinstance(geometry, dict):
+        return 0.0
+    geometry_type = str(geometry.get("type") or "").strip()
+    if geometry_type == "Polygon":
+        return _polygon_planar_area(geometry.get("coordinates"))
+    if geometry_type == "MultiPolygon":
+        return sum(_polygon_planar_area(polygon) for polygon in geometry.get("coordinates") or [])
+    if geometry_type == "GeometryCollection":
+        return sum(_geometry_planar_area(child) for child in geometry.get("geometries") or [])
+    return 0.0
+
+
+def _runtime_object_geometries(payload: dict[str, Any], object_name: str) -> list[dict[str, Any]]:
+    objects = payload.get("objects") if isinstance(payload, dict) else None
+    runtime_object = objects.get(object_name) if isinstance(objects, dict) else None
+    geometries = runtime_object.get("geometries") if isinstance(runtime_object, dict) else None
+    return [geometry for geometry in geometries if isinstance(geometry, dict)] if isinstance(geometries, list) else []
+
+
+def _feature_id_from_mapping(mapping: dict[str, Any]) -> str:
+    props = mapping.get("properties") if isinstance(mapping.get("properties"), dict) else {}
+    return str(props.get("id") or mapping.get("id") or "").strip()
 
 
 def _minimal_geo_locale_patch_payload(scenario_id: str, generated_at: str) -> dict[str, Any]:
@@ -348,6 +521,8 @@ def _collect_snapshot_outputs(
         "mesh_pack.json": scenario_dir / "mesh_pack.json",
         "scenario_atlantropa.topo.json": scenario_dir / "scenario_atlantropa.topo.json",
         "scenario_atlantropa_metadata.json": scenario_dir / "scenario_atlantropa_metadata.json",
+        TNO_COVERAGE_LEDGER_FILENAMES[0]: scenario_dir / TNO_COVERAGE_LEDGER_FILENAMES[0],
+        TNO_COVERAGE_LEDGER_FILENAMES[1]: scenario_dir / TNO_COVERAGE_LEDGER_FILENAMES[1],
         "locales.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_LOCALES_FILENAME,
         "geo_aliases.startup.json": scenario_dir / SCENARIO_CHECKPOINT_STARTUP_GEO_ALIASES_FILENAME,
         SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"]: scenario_dir / SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE["en"],
@@ -445,6 +620,332 @@ def _refresh_audit_payload(
     return audit_payload
 
 
+def _load_chunk_feature_index(
+    scenario_dir: Path,
+    *,
+    layer_name: str | None = None,
+) -> dict[str, dict[str, Any]]:
+    detail_manifest = _load_optional_json(scenario_dir / "detail_chunks.manifest.json") or {}
+    chunks = detail_manifest.get("chunks") if isinstance(detail_manifest.get("chunks"), list) else []
+    by_feature_id: dict[str, dict[str, Any]] = {}
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
+        chunk_layer = str(chunk.get("layer") or "").strip()
+        if layer_name and chunk_layer != layer_name:
+            continue
+        chunk_url = str(chunk.get("url") or "").strip()
+        chunk_path = scenario_relative_url_to_path(chunk_url)
+        if chunk_path is None or not chunk_path.exists():
+            continue
+        chunk_payload = _load_optional_json(chunk_path) or {}
+        features = chunk_payload.get("features") if isinstance(chunk_payload.get("features"), list) else []
+        chunk_id = str(chunk.get("id") or chunk_path.stem).strip()
+        chunk_lod = str(chunk.get("lod") or "").strip()
+        for feature in features:
+            if not isinstance(feature, dict):
+                continue
+            feature_id = _feature_id_from_mapping(feature)
+            if not feature_id:
+                continue
+            entry = by_feature_id.setdefault(
+                feature_id,
+                {
+                    "chunk_ids": [],
+                    "detail_chunk_ids": [],
+                    "feature": None,
+                    "feature_source_chunk_id": "",
+                },
+            )
+            entry["chunk_ids"].append(chunk_id)
+            if chunk_lod == "detail":
+                entry["detail_chunk_ids"].append(chunk_id)
+            if entry["feature"] is None or chunk_lod == "detail":
+                entry["feature"] = feature
+                entry["feature_source_chunk_id"] = chunk_id
+    return by_feature_id
+
+
+def _round_bbox(bbox: list[float] | None) -> list[float] | None:
+    if bbox is None:
+        return None
+    return [round(float(value), 6) for value in bbox[:4]]
+
+
+def _atlantropa_feature_row(
+    geometry: dict[str, Any],
+    chunk_entry: dict[str, Any] | None,
+) -> dict[str, Any]:
+    props = geometry.get("properties") if isinstance(geometry.get("properties"), dict) else {}
+    feature_id = str(props.get("id") or geometry.get("id") or "").strip()
+    feature = chunk_entry.get("feature") if isinstance(chunk_entry, dict) else None
+    feature_geometry = feature.get("geometry") if isinstance(feature, dict) else None
+    bbox = _geometry_bbox(feature_geometry)
+    chunk_ids = sorted(str(chunk_id) for chunk_id in (chunk_entry or {}).get("chunk_ids", []) if str(chunk_id).strip())
+    detail_chunk_ids = sorted(
+        str(chunk_id) for chunk_id in (chunk_entry or {}).get("detail_chunk_ids", []) if str(chunk_id).strip()
+    )
+    prefix = _coverage_prefix_for_feature_id(feature_id)
+    return {
+        "feature_id": feature_id,
+        "prefix": prefix,
+        "source_kind": str(props.get("__source") or "").strip(),
+        "donor_basin": str(props.get("admin1_group") or props.get("region_group") or "").strip(),
+        "donor_state": str(props.get("cntr_code") or "").strip(),
+        "donor_province": feature_id.rsplit("_", 1)[-1] if "_" in feature_id else feature_id,
+        "role": str(props.get("atl_geometry_role") or "").strip(),
+        "join_mode": str(props.get("atl_join_mode") or "").strip(),
+        "surface_kind": str(props.get("atl_surface_kind") or "").strip(),
+        "render_layer": str(props.get("atl_render_layer") or "").strip(),
+        "color_rule": str(props.get("atl_color_rule") or "").strip(),
+        "interactive": props.get("atl_interactive") is True,
+        "runtime_present": True,
+        "chunk_present": bool(detail_chunk_ids or chunk_ids),
+        "chunk_ids": detail_chunk_ids or chunk_ids,
+        "bbox": _round_bbox(bbox),
+        "planar_area": round(_geometry_planar_area(feature_geometry), 6),
+        "drop_reason": "" if detail_chunk_ids or chunk_ids else "missing_scenario_atlantropa_chunk",
+    }
+
+
+def _build_basin_probe_rows(feature_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    probe_rows: list[dict[str, Any]] = []
+    for probe in TNO_ATLANTROPA_BASIN_PROBES:
+        expected_prefixes = set(probe["expected_prefixes"])
+        matches = [
+            row
+            for row in feature_rows
+            if row.get("prefix") in expected_prefixes
+            and _bbox_intersects(row.get("bbox"), probe["bbox"])
+        ]
+        chunk_missing = sorted(str(row["feature_id"]) for row in matches if not row.get("chunk_present"))
+        failure_reasons = []
+        if not matches:
+            failure_reasons.append("no_matching_atlantropa_feature_bbox")
+        if chunk_missing:
+            failure_reasons.append("matching_features_missing_detail_chunk")
+        probe_rows.append(
+            {
+                "id": probe["id"],
+                "label": probe["label"],
+                "bbox": list(probe["bbox"]),
+                "expected_prefixes": sorted(expected_prefixes),
+                "matching_feature_ids": sorted(str(row["feature_id"]) for row in matches)[:50],
+                "match_count": len(matches),
+                "chunk_missing_feature_ids": chunk_missing[:50],
+                "ok": not failure_reasons,
+                "failure_reasons": failure_reasons,
+            }
+        )
+    return probe_rows
+
+
+def _build_atlantropa_donor_ledger(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+    runtime_payload: dict[str, Any],
+) -> dict[str, Any]:
+    metadata_path = scenario_dir / "scenario_atlantropa_metadata.json"
+    detail_manifest_path = scenario_dir / "detail_chunks.manifest.json"
+    chunk_index = _load_chunk_feature_index(scenario_dir, layer_name=SCENARIO_ATLANTROPA_LAYER_KEY)
+    geometries = _runtime_object_geometries(runtime_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)
+    feature_rows = [
+        _atlantropa_feature_row(geometry, chunk_index.get(_feature_id_from_mapping(geometry)))
+        for geometry in geometries
+    ]
+    prefix_counts: dict[str, int] = defaultdict(int)
+    for row in feature_rows:
+        prefix = str(row.get("prefix") or "").strip()
+        if prefix:
+            prefix_counts[prefix] += 1
+    basin_probes = _build_basin_probe_rows(feature_rows)
+    missing_chunk_ids = sorted(str(row["feature_id"]) for row in feature_rows if not row.get("chunk_present"))
+    metadata = _load_optional_json(metadata_path) or {}
+    return {
+        "version": 1,
+        "scenario_id": scenario_dir.name,
+        "generated_at": str(manifest.get("generated_at") or "").strip(),
+        "source": {
+            "runtime_topology_sha256": _sha256_path(scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME),
+            "scenario_atlantropa_metadata_sha256": _sha256_path(metadata_path) if metadata_path.exists() else "",
+            "detail_chunk_manifest_sha256": _sha256_path(detail_manifest_path) if detail_manifest_path.exists() else "",
+        },
+        "protected_prefixes": list(TNO_PROTECTED_COVERAGE_PREFIXES),
+        "summary": {
+            "runtime_feature_count": len(feature_rows),
+            "chunk_feature_count": len({feature_id for feature_id, entry in chunk_index.items() if entry.get("feature") is not None}),
+            "interactive_feature_count": len([row for row in feature_rows if row.get("interactive")]),
+            "prefix_counts": dict(sorted(prefix_counts.items())),
+            "metadata_prefix_counts": metadata.get("prefix_counts") if isinstance(metadata.get("prefix_counts"), dict) else {},
+            "missing_chunk_count": len(missing_chunk_ids),
+            "basin_probe_count": len(basin_probes),
+            "basin_probe_failure_count": len([probe for probe in basin_probes if not probe.get("ok")]),
+        },
+        "basin_probes": basin_probes,
+        "missing_chunk_feature_ids": missing_chunk_ids[:100],
+        "features": sorted(feature_rows, key=lambda row: str(row.get("feature_id") or "")),
+    }
+
+
+def _prefix_counts_for_ids(feature_ids: set[str]) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for feature_id in feature_ids:
+        prefix = _coverage_prefix_for_feature_id(feature_id)
+        if prefix:
+            counts[prefix] += 1
+    return dict(sorted(counts.items()))
+
+
+def _protected_ids_from_mappings(*mappings: dict[str, Any]) -> set[str]:
+    ids: set[str] = set()
+    for mapping in mappings:
+        for feature_id in mapping.keys():
+            normalized = str(feature_id or "").strip()
+            if _coverage_prefix_for_feature_id(normalized):
+                ids.add(normalized)
+    return ids
+
+
+def _protected_ids_from_runtime_geometries(geometries: list[dict[str, Any]]) -> set[str]:
+    return {
+        feature_id
+        for feature_id in (_feature_id_from_mapping(geometry) for geometry in geometries)
+        if _coverage_prefix_for_feature_id(feature_id)
+    }
+
+
+def _build_geometry_drop_audit(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+    runtime_payload: dict[str, Any],
+) -> dict[str, Any]:
+    owners = (_load_optional_json(scenario_dir / "owners.by_feature.json") or {}).get("owners")
+    cores = (_load_optional_json(scenario_dir / "cores.by_feature.json") or {}).get("cores")
+    owners = owners if isinstance(owners, dict) else {}
+    cores = cores if isinstance(cores, dict) else {}
+    runtime_political_geometries = _runtime_object_geometries(runtime_payload, "political")
+    runtime_atlantropa_geometries = _runtime_object_geometries(runtime_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)
+    runtime_political_ids = _protected_ids_from_runtime_geometries(runtime_political_geometries)
+    runtime_atlantropa_ids = _protected_ids_from_runtime_geometries(runtime_atlantropa_geometries)
+    runtime_props_by_id = {
+        _feature_id_from_mapping(geometry): geometry.get("properties") if isinstance(geometry.get("properties"), dict) else {}
+        for geometry in runtime_political_geometries + runtime_atlantropa_geometries
+        if _coverage_prefix_for_feature_id(_feature_id_from_mapping(geometry))
+    }
+    bootstrap_payload = _load_optional_json(scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_BOOTSTRAP_FILENAME) or {}
+    bootstrap_ids = _protected_ids_from_runtime_geometries(_runtime_object_geometries(bootstrap_payload, "political"))
+    bootstrap_ids.update(_protected_ids_from_runtime_geometries(_runtime_object_geometries(bootstrap_payload, SCENARIO_ATLANTROPA_OBJECT_NAME)))
+    chunk_index = _load_chunk_feature_index(scenario_dir)
+    chunk_ids = {feature_id for feature_id in chunk_index.keys() if _coverage_prefix_for_feature_id(feature_id)}
+    owner_ids = _protected_ids_from_mappings(owners)
+    core_ids = _protected_ids_from_mappings(cores)
+    protected_ids = sorted(runtime_political_ids | runtime_atlantropa_ids | bootstrap_ids | chunk_ids | owner_ids | core_ids)
+    rows: list[dict[str, Any]] = []
+    for feature_id in protected_ids:
+        prefix = _coverage_prefix_for_feature_id(feature_id)
+        runtime_stage = feature_id in runtime_political_ids or feature_id in runtime_atlantropa_ids
+        owner_core_stage = feature_id in owner_ids and feature_id in core_ids
+        bootstrap_stage = feature_id in bootstrap_ids
+        chunk_stage = feature_id in chunk_ids
+        props = runtime_props_by_id.get(feature_id, {})
+        expected_stages = ["runtime", "detail_chunk"]
+        if prefix == "RU_ARCTIC_FB_":
+            expected_stages.append("startup_bootstrap")
+        else:
+            expected_stages.append("owner_core")
+        present_by_stage = {
+            "runtime": runtime_stage,
+            "owner_core": owner_core_stage,
+            "startup_bootstrap": bootstrap_stage,
+            "detail_chunk": chunk_stage,
+        }
+        missing_stages = [stage for stage in expected_stages if not present_by_stage.get(stage)]
+        source_area = props.get("source_fragment_area")
+        final_area = props.get("retained_fragment_area")
+        try:
+            source_area_float = float(source_area)
+        except (TypeError, ValueError):
+            source_area_float = None
+        try:
+            final_area_float = float(final_area)
+        except (TypeError, ValueError):
+            final_area_float = None
+        rows.append(
+            {
+                "feature_id": feature_id,
+                "prefix": prefix,
+                "expected_stages": expected_stages,
+                "present": present_by_stage,
+                "missing_stages": missing_stages,
+                "drop_reason": ",".join(missing_stages),
+                "source_area": source_area_float,
+                "final_area": final_area_float,
+                "area_delta": round(final_area_float - source_area_float, 6)
+                if source_area_float is not None and final_area_float is not None
+                else None,
+                "owner_hint_present": bool(props.get("scenario_shell_owner_hint")),
+                "controller_hint_present": bool(props.get("scenario_shell_controller_hint")),
+                "visual_only": props.get("interactive") is False and props.get("render_as_base_geography") is False,
+            }
+        )
+    drop_rows = [row for row in rows if row["missing_stages"]]
+    stages = {
+        "runtime_political": _prefix_counts_for_ids(runtime_political_ids),
+        "runtime_atlantropa": _prefix_counts_for_ids(runtime_atlantropa_ids),
+        "startup_bootstrap": _prefix_counts_for_ids(bootstrap_ids),
+        "owner_core": _prefix_counts_for_ids(owner_ids & core_ids),
+        "detail_chunk": _prefix_counts_for_ids(chunk_ids),
+    }
+    return {
+        "version": 1,
+        "scenario_id": scenario_dir.name,
+        "generated_at": str(manifest.get("generated_at") or "").strip(),
+        "protected_prefixes": list(TNO_PROTECTED_COVERAGE_PREFIXES),
+        "summary": {
+            "protected_feature_count": len(rows),
+            "protected_prefix_drop_count": len(drop_rows),
+            "runtime_only_shell_count": len([row for row in rows if row["prefix"] == "RU_ARCTIC_FB_"]),
+            "polar_feature_count": len([row for row in rows if row["prefix"] == "AQ"]),
+        },
+        "stages": stages,
+        "features": rows,
+        "drop_rows": drop_rows[:100],
+        "polar_gate_ref": "verify:tno-polar-coverage",
+    }
+
+
+def write_tno_coverage_ledgers(
+    scenario_dir: Path,
+    manifest: dict[str, Any],
+) -> dict[str, str]:
+    if scenario_dir.name != "tno_1962":
+        return {}
+    runtime_payload = load_json(scenario_dir / SCENARIO_CHECKPOINT_RUNTIME_TOPOLOGY_FILENAME)
+    derived_dir = scenario_dir / TNO_COVERAGE_DERIVED_DIRNAME
+    derived_dir.mkdir(parents=True, exist_ok=True)
+    ledger_path = derived_dir / TNO_ATLANTROPA_DONOR_LEDGER_FILENAME
+    drop_audit_path = derived_dir / TNO_GEOMETRY_DROP_AUDIT_FILENAME
+    write_json(ledger_path, _build_atlantropa_donor_ledger(scenario_dir, manifest, runtime_payload))
+    write_json(drop_audit_path, _build_geometry_drop_audit(scenario_dir, manifest, runtime_payload))
+    ledger_hashes = {
+        "atlantropa_donor_ledger": _sha256_path(ledger_path),
+        "geometry_drop_audit": _sha256_path(drop_audit_path),
+    }
+    runtime_meta_path = scenario_dir / "runtime_meta.json"
+    runtime_meta = _load_optional_json(runtime_meta_path) or {
+        "version": 1,
+        "scenario_id": scenario_dir.name,
+    }
+    runtime_meta["coverage_ledger_hashes"] = ledger_hashes
+    runtime_meta["coverage_ledger_paths"] = {
+        "atlantropa_donor_ledger": f"data/scenarios/{scenario_dir.name}/{TNO_COVERAGE_LEDGER_FILENAMES[0]}",
+        "geometry_drop_audit": f"data/scenarios/{scenario_dir.name}/{TNO_COVERAGE_LEDGER_FILENAMES[1]}",
+    }
+    runtime_meta["coverage_report_paths"] = dict(TNO_COVERAGE_REPORT_PATHS)
+    write_json(runtime_meta_path, runtime_meta)
+    return ledger_hashes
+
+
 def apply_safe_scenario_contract_repairs(
     scenario_dir: Path,
     *,
@@ -530,6 +1031,13 @@ def apply_safe_scenario_contract_repairs(
         )
         safe_fixes_applied.append("chunk_assets")
 
+    if scenario_id == "tno_1962":
+        write_tno_coverage_ledgers(
+            scenario_dir,
+            manifest,
+        )
+        safe_fixes_applied.append("coverage_ledgers")
+
     if profile.expect_startup_assets:
         for language, field_name in SCENARIO_STARTUP_BUNDLE_MANIFEST_LANGUAGE_FIELDS.items():
             manifest[field_name] = f"data/scenarios/{scenario_id}/{SCENARIO_STARTUP_BUNDLE_FILENAMES_BY_LANGUAGE[language]}"
@@ -606,6 +1114,7 @@ def _capture_safe_repair_hashes(scenario_dir: Path) -> dict[str, str]:
         "context_lod.manifest.json",
         "runtime_meta.json",
         "mesh_pack.json",
+        *TNO_COVERAGE_LEDGER_FILENAMES,
     ]
     hashes: dict[str, str] = {}
     for relative_path in tracked_paths:
@@ -644,6 +1153,12 @@ def _classify_violation(message: str) -> str:
         "manifest.summary.feature_count",
         "startup bundle",
         "startup support",
+        "coverage ledger",
+        "atlantropa donor ledger",
+        "geometry_drop_audit",
+        "protected prefix coverage",
+        "basin probes",
+        "runtime_meta.json coverage_ledger",
     )
     if any(marker in message for marker in safe_markers):
         return "safe"
@@ -1995,6 +2510,88 @@ def _validate_atlantropa_publish_mirror(
         )
 
 
+def _validate_tno_coverage_ledgers(
+    target_dir: Path,
+    errors: list[str],
+    report: dict[str, Any] | None,
+) -> None:
+    if target_dir.name != "tno_1962":
+        return
+    ledger_path = target_dir / TNO_COVERAGE_DERIVED_DIRNAME / TNO_ATLANTROPA_DONOR_LEDGER_FILENAME
+    drop_audit_path = target_dir / TNO_COVERAGE_DERIVED_DIRNAME / TNO_GEOMETRY_DROP_AUDIT_FILENAME
+    missing_paths = [
+        str(path.relative_to(target_dir)).replace("\\", "/")
+        for path in (ledger_path, drop_audit_path)
+        if not path.exists()
+    ]
+    if missing_paths:
+        if report is not None:
+            report["coverage_ledger_ok"] = False
+        errors.append(
+            "coverage ledger files must be generated for tno_1962 strict mode. "
+            f"Missing: {missing_paths}."
+        )
+        return
+    ledger = _load_required_local_json(ledger_path, errors)
+    drop_audit = _load_required_local_json(drop_audit_path, errors)
+    if ledger is None or drop_audit is None:
+        if report is not None:
+            report["coverage_ledger_ok"] = False
+        return
+    ledger_failures: list[str] = []
+    if ledger.get("scenario_id") != "tno_1962":
+        ledger_failures.append("atlantropa_donor_ledger scenario_id mismatch")
+    if drop_audit.get("scenario_id") != "tno_1962":
+        ledger_failures.append("geometry_drop_audit scenario_id mismatch")
+    summary = ledger.get("summary") if isinstance(ledger.get("summary"), dict) else {}
+    drop_summary = drop_audit.get("summary") if isinstance(drop_audit.get("summary"), dict) else {}
+    missing_chunk_count = int(summary.get("missing_chunk_count") or 0)
+    basin_probe_failures = [
+        probe
+        for probe in ledger.get("basin_probes", [])
+        if isinstance(probe, dict) and not probe.get("ok")
+    ] if isinstance(ledger.get("basin_probes"), list) else []
+    protected_prefix_drop_count = int(drop_summary.get("protected_prefix_drop_count") or 0)
+    polar_feature_count = int(drop_summary.get("polar_feature_count") or 0)
+    polar_gate_ref = str(drop_audit.get("polar_gate_ref") or "verify:tno-polar-coverage").strip()
+    if missing_chunk_count:
+        ledger_failures.append(f"atlantropa donor ledger has {missing_chunk_count} features missing chunks")
+    if basin_probe_failures:
+        ledger_failures.append(f"atlantropa donor ledger has {len(basin_probe_failures)} basin probe failures")
+    if protected_prefix_drop_count:
+        ledger_failures.append(f"geometry_drop_audit has {protected_prefix_drop_count} protected prefix drops")
+    if polar_feature_count < 1:
+        ledger_failures.append("geometry_drop_audit must record at least one AQ polar runtime feature")
+    runtime_meta = _load_optional_json(target_dir / "runtime_meta.json") or {}
+    runtime_hashes = runtime_meta.get("coverage_ledger_hashes") if isinstance(runtime_meta.get("coverage_ledger_hashes"), dict) else {}
+    expected_hashes = {
+        "atlantropa_donor_ledger": _sha256_path(ledger_path),
+        "geometry_drop_audit": _sha256_path(drop_audit_path),
+    }
+    for key, expected_hash in expected_hashes.items():
+        if str(runtime_hashes.get(key) or "").strip() != expected_hash:
+            ledger_failures.append(f"runtime_meta.json coverage_ledger_hashes.{key} must match {key} content")
+    if report is not None:
+        report["coverage_ledger_ok"] = not ledger_failures
+        report["protected_prefix_drop_count"] = protected_prefix_drop_count
+        report["basin_probe_failures"] = [
+            {
+                "id": str(probe.get("id") or ""),
+                "label": str(probe.get("label") or ""),
+                "failure_reasons": list(probe.get("failure_reasons") or []),
+            }
+            for probe in basin_probe_failures
+        ]
+        report["polar_feature_count"] = polar_feature_count
+        report["polar_gate_ref"] = polar_gate_ref
+        report.setdefault("artifact_counts", {})["atlantropa_ledger_features"] = int(summary.get("runtime_feature_count") or 0)
+        report.setdefault("artifact_counts", {})["protected_coverage_features"] = int(
+            drop_summary.get("protected_feature_count") or 0
+        )
+    if ledger_failures:
+        errors.append("coverage ledger strict checks failed: " + "; ".join(ledger_failures[:5]))
+
+
 def validate_strict_bundle_contract(
     target_dir: Path,
     errors: list[str],
@@ -2301,6 +2898,7 @@ def validate_strict_bundle_contract(
             "runtime-only Arctic shell features must be coalesced shell_fallback geometry with owner/controller hints in strict mode. "
             f"Sample: {shell_runtime_only_contract_errors[:10]}."
         )
+    _validate_tno_coverage_ledgers(target_dir, errors, report)
     snapshot_payload = _validate_build_snapshot(target_dir, manifest, errors)
     if snapshot_payload is not None and report is not None:
         report["snapshot_fingerprint"] = str(snapshot_payload.get("snapshot_fingerprint") or "").strip()

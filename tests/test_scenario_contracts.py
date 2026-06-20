@@ -255,6 +255,55 @@ class ScenarioContractTest(unittest.TestCase):
         self.assertTrue(all("hgo_runtime/provinces.bmp" not in value for value in manifest_urls.values()))
         self.assertTrue(all(not value.lower().endswith(".bmp") for value in manifest_urls.values()))
 
+    def test_checked_in_tno_coverage_ledgers_expose_strict_machine_fields(self) -> None:
+        scenario_dir = Path(__file__).resolve().parents[1] / "data" / "scenarios" / "tno_1962"
+        ledger_path = scenario_dir / "derived" / "atlantropa_donor_ledger.json"
+        drop_audit_path = scenario_dir / "derived" / "geometry_drop_audit.json"
+        runtime_meta = json.loads((scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        drop_audit = json.loads(drop_audit_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(ledger["scenario_id"], "tno_1962")
+        self.assertGreater(ledger["summary"]["runtime_feature_count"], 800)
+        self.assertEqual(ledger["summary"]["missing_chunk_count"], 0)
+        self.assertEqual(ledger["summary"]["basin_probe_failure_count"], 0)
+        self.assertEqual(drop_audit["summary"]["protected_prefix_drop_count"], 0)
+        self.assertEqual(drop_audit["summary"]["polar_feature_count"], 1)
+        self.assertEqual(drop_audit["polar_gate_ref"], "verify:tno-polar-coverage")
+        self.assertEqual(
+            runtime_meta["coverage_report_paths"]["strict"],
+            ".runtime/reports/generated/tno_1962.strict_contract_report.json",
+        )
+        self.assertEqual(
+            runtime_meta["coverage_report_paths"]["polar"],
+            ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
+        )
+        self.assertEqual(
+            runtime_meta["coverage_ledger_hashes"]["atlantropa_donor_ledger"],
+            _sha256_path(ledger_path),
+        )
+        self.assertEqual(
+            runtime_meta["coverage_ledger_hashes"]["geometry_drop_audit"],
+            _sha256_path(drop_audit_path),
+        )
+        required_probe_ids = {
+            "ionian_mediterranean",
+            "libya_suez_chain",
+            "suez_canal_site",
+            "malta_rebuilt_island",
+            "cretan_mediterranean",
+        }
+        self.assertEqual({probe["id"] for probe in ledger["basin_probes"]}, required_probe_ids)
+
+        report = inspect_scenario_contract(scenario_dir, {}, strict=True)
+
+        self.assertEqual(report["errors"], [])
+        self.assertTrue(report["coverage_ledger_ok"])
+        self.assertEqual(report["protected_prefix_drop_count"], 0)
+        self.assertEqual(report["basin_probe_failures"], [])
+        self.assertEqual(report["polar_feature_count"], 1)
+        self.assertEqual(report["polar_gate_ref"], "verify:tno-polar-coverage")
+
     def test_checked_in_hoi4_scenarios_pass_shared_strict_review(self) -> None:
         scenarios_root = Path(__file__).resolve().parents[1] / "data" / "scenarios"
         duplicate_scenario_dirs = collect_duplicate_scenario_dirs(

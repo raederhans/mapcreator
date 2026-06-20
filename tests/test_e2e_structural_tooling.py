@@ -256,6 +256,17 @@ for (const lock of ['heavy-geo', 'scenario-data', '.runtime-output']) {
 if (!tnoWaterRoute.guidance?.ownerFiles?.includes('tools/validate_tno_water_geometries.py')) {
   throw new Error(`TNO water route must expose owner-file guidance: ${JSON.stringify(tnoWaterRoute.guidance)}`);
 }
+for (const [routeId, commandRef] of [
+  ['infra:tno-coverage-ledger', 'verify:tno-coverage-ledger'],
+  ['infra:tno-atlantropa-coverage', 'verify:tno-atlantropa-coverage'],
+  ['infra:tno-polar-coverage', 'verify:tno-polar-coverage'],
+  ['infra:tno-coverage-chain', 'verify:tno-coverage-chain'],
+]) {
+  const route = routes.find((candidate) => candidate.id === routeId);
+  if (!route || route.commandRef !== commandRef || route.executionOwner !== 'main-thread') {
+    throw new Error(`missing or invalid TNO coverage route ${routeId}: ${JSON.stringify(route)}`);
+  }
+}
 const transportRoute = routes.find((route) => route.id === 'infra:transport-manifest-contracts');
 if (!transportRoute || transportRoute.executionOwner !== 'child-safe' || transportRoute.resourceLocks.length !== 0) {
   throw new Error(`transport manifest route must stay child-safe and lock-free: ${JSON.stringify(transportRoute)}`);

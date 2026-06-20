@@ -22,7 +22,7 @@ APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
 # TNO water refinements and the independent HGO runtime now publish large
 # checked-in runtime assets; the cap stays close to the measured Pages payload.
-MAX_PAGES_DIST_BYTES = 1100 * 1024 * 1024
+MAX_PAGES_DIST_BYTES = 1102 * 1024 * 1024
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -98,6 +98,10 @@ HGO_RUNTIME_FILES = (
 )
 HGO_IDENTITY_FLAG_TIERS = ("small", "medium")
 SCENARIO_EXCLUDED_DIR_NAMES = {"derived"}
+SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES = {
+    Path("tno_1962") / "derived" / "atlantropa_donor_ledger.json",
+    Path("tno_1962") / "derived" / "geometry_drop_audit.json",
+}
 SCENARIO_EXCLUDED_FILE_NAMES = {"audit.json"}
 SCENARIO_EXCLUDED_RELATIVE_FILES = {
     Path("modern_world") / "runtime_topology.topo.json",
@@ -340,6 +344,8 @@ def copy_scenario_runtime_data() -> None:
             chunked_full_topology_excludes.add(manifest_path.parent.relative_to(source_dir) / "runtime_topology.topo.json")
 
     def should_copy_file(relative_path: Path, _source_file: Path) -> bool:
+        if relative_path in SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES:
+            return True
         parts = set(relative_path.parts)
         if parts.intersection(SCENARIO_EXCLUDED_DIR_NAMES):
             return False

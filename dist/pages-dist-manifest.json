@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -39912,7 +39912,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/build_snapshot.json",
-      "size_bytes": 3050,
+      "size_bytes": 3270,
       "source_kind": "generated_ignored"
     },
     {
@@ -41811,6 +41811,16 @@
       "source_kind": "generated_ignored"
     },
     {
+      "path": "app/data/scenarios/tno_1962/derived/atlantropa_donor_ledger.json",
+      "size_bytes": 644935,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/derived/geometry_drop_audit.json",
+      "size_bytes": 366686,
+      "source_kind": "generated_ignored"
+    },
+    {
       "path": "app/data/scenarios/tno_1962/detail_chunks.manifest.json",
       "size_bytes": 3082521,
       "source_kind": "generated_ignored"
@@ -41827,7 +41837,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/geo_locale_patch.en.json",
-      "size_bytes": 1063281,
+      "size_bytes": 1063290,
       "source_kind": "generated_ignored"
     },
     {
@@ -41852,7 +41862,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/locales.startup.json",
-      "size_bytes": 3818903,
+      "size_bytes": 3819758,
       "source_kind": "generated_ignored"
     },
     {
@@ -41882,7 +41892,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/runtime_meta.json",
-      "size_bytes": 691,
+      "size_bytes": 1506,
       "source_kind": "generated_ignored"
     },
     {
@@ -47082,7 +47092,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454091,
+      "size_bytes": 1454416,
       "source_kind": "dist"
     },
     {
@@ -47091,7 +47101,7 @@
       "source_kind": "dist"
     }
   ],
-  "max_allowed_bytes": 1153433600,
+  "max_allowed_bytes": 1155530752,
   "required_files": [
     "index.html",
     "app/index.html",
@@ -47101,5 +47111,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153147472
+  "total_bytes": 1154161440
 }
