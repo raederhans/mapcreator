@@ -12,7 +12,8 @@
 - [x] Refresh Pages dist output if source/dist mirrors change.
 - [x] Run final verification suite.
 - [x] Run final review and first-principles bug check.
-- [ ] Merge to `main`, commit, push, archive docs, and clean worktree.
+- [x] Merge to `main`, commit, archive docs, and clean worktree.
+- [ ] Push `origin/main`.
 
 ## Delivery Package Draft
 
@@ -28,7 +29,7 @@
    - Core: `js/core/map_renderer/scenario_visual_invalidation_executor.js`.
    - Tests/contracts: `tests/scenario_visual_invalidation_executor_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/test_scenario_chunk_refresh_contracts.py`, `tools/check_architecture_boundaries.mjs`.
    - Dist mirrors: `dist/app/js/core/map_renderer/scenario_visual_invalidation_executor.js`, `dist/pages-dist-manifest.json`.
-   - Docs: `docs/active/_worktree_registry.md`, `docs/active/render-chain-slimming-v6/{plan,context,task}.md`, `lessons learned.md`.
+   - Docs: `docs/active/_worktree_registry.md`, `docs/archive/render-chain-slimming-v6-20260620/{plan,context,task}.md`, `lessons learned.md`.
    - Temp/logs: `.runtime/tests/pages-dist-startup-shell-v6-rerun.*.log`, `.runtime/tests/pages-dist-startup-shell-base-a3e4f8a.*.log` are untracked runtime evidence only.
 
 3. Diff summary versus `origin/main@a3e4f8a0`:
@@ -38,15 +39,16 @@
    - Active docs/registry: records V6 plan, evidence, validation, and integration state.
 
 4. Commit status:
-   - Not committed yet; ready for commit after final status check.
+   - Functional commit: `4f9307872d1aae053f728335296db0dc64ec7266`.
+   - Closeout/archive commit pending.
 
 5. Base/main divergence:
    - Base commit: `a3e4f8a0da221bf132f9c5b897f305f947f5090c`.
    - Clean main was still at the same commit during base Pages startup shell comparison.
 
 6. Potential worktree conflicts:
-   - Current `git worktree list` contains main plus this V6 worktree.
-   - Direct overlap risk is yellow for future render refresh-chain work touching `scenario_visual_invalidation_executor.js`, render-chain contracts, or Pages dist mirrors.
+   - Current `git worktree list` contains only main after V6 worktree cleanup.
+   - Direct overlap risk is green for current filesystem worktrees; future render refresh-chain work should still treat `scenario_visual_invalidation_executor.js`, render-chain contracts, and Pages dist mirrors as hot files.
 
 7. Verification:
    - Passed `npm run test:node:scenario-refresh-plans`.
@@ -61,6 +63,11 @@
    - Passed `npm run test:node:landing-showcase-view`.
    - Passed `git diff --check`.
    - Passed source/dist mirror compare for `scenario_visual_invalidation_executor.js`.
+   - Post-merge main passed `npm run test:node:scenario-refresh-plans`.
+   - Post-merge main passed `npm run verify:architecture-boundaries`.
+   - Post-merge main passed `npm run verify:test-import-graph`.
+   - Post-merge main passed source/dist mirror compare for `scenario_visual_invalidation_executor.js`.
+   - Post-merge main passed `git diff --check`.
    - `npm run verify:pages-dist` partially completed: build succeeded, startup shell failed with base-reproduced `ArrayMemoryError` in landing asset builder, and `landing-showcase-view` passed separately.
 
 8. Remaining risks:
@@ -68,4 +75,4 @@
    - The V6 code path itself is covered by targeted render-chain behavior/static tests.
 
 9. Recommended next step:
-   - Commit and integrate V6. Track the Pages startup shell failure as a base gate issue for a separate landing builder memory-slimming task.
+   - Commit closeout/archive changes, push `origin/main`, then track the Pages startup shell failure as a separate landing builder memory-slimming task.

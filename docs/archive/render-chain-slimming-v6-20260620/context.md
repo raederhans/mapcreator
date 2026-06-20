@@ -56,4 +56,13 @@
   - The following startup shell stage failed with two `numpy._core._exceptions._ArrayMemoryError` errors while `topojson` tried to allocate a 3.98 GiB array in `tools/build_landing_europe_1936_showcase.py`.
   - Re-running `npm run python -- -m unittest tests.test_pages_dist_startup_shell -q` in the V6 worktree reproduced the same two errors.
   - Running the same startup shell command on clean main `a3e4f8a0da221bf132f9c5b897f305f947f5090c` reproduced the same two errors, so this is a base gate blocker rather than a V6 regression.
+- Functional commit `4f9307872d1aae053f728335296db0dc64ec7266` was fast-forward merged into main.
+- Post-merge main validation passed:
+  - `npm run test:node:scenario-refresh-plans`
+  - `npm run verify:architecture-boundaries`
+  - `npm run verify:test-import-graph`
+  - source/dist mirror compare for `scenario_visual_invalidation_executor.js`
+  - `git diff --check`
+- Active docs were archived under `docs/archive/render-chain-slimming-v6-20260620/`.
+- V6 worktree was removed after merge and validation; recovery remains available through branch `codex/render-chain-slimming-v6` and commit `4f930787`.
 - Live process status: no active tests or builds remain.
