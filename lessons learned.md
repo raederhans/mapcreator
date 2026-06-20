@@ -414,3 +414,6 @@
 - 可见 optional chunk 的 `scenarioDataGeneration` 判定要复用 `scenario_resources` 的 visibility helper；在 chunk runtime 复制 layer 白名单会漏掉后续新增层，例如 `strategicvalues`。
 - optional chunk 的默认可见语义要和 UI state / chunk selection 保持一致；`undefined` 对 water、special、Atlantropa、relief、cities 是默认可见，对 special zones、strategic markers 是默认隐藏。
 - optional-only promotion 的 generation bump 和 refresh 要放在最终 current 检查之后；stale rollback 同时恢复 optional payload、revision 和 generation snapshot。
+
+### FrameGraph descriptor 要进入执行链
+- 新增 frame transaction / invalidation descriptor 时，要同时锁住 factory、normalizer 和 runtime consumer；只验证 descriptor shape 会漏掉“计划生成了但执行端丢弃”的问题。

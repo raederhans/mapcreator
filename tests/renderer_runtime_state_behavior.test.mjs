@@ -83,6 +83,10 @@ test("renderer supporting factories keep cache shapes aligned", () => {
   const spatialIndex = createDefaultSpatialIndexState();
 
   assert.equal(renderPass.lastGoodFrame.valid, false);
+  assert.equal(renderPass.lastGoodFrame.commitKey, null);
+  assert.equal(renderPass.lastGoodFrame.commitKeySignature, "");
+  assert.equal(renderPass.lastGoodFrame.committedFrameIdentity, null);
+  assert.equal(renderPass.lastGoodFrame.metadata, null);
   assert.equal(renderPass.lastGoodFrame.sceneGeneration, 0);
   assert.equal(renderPass.lastGoodFrame.scenarioDataGeneration, 0);
   assert.equal(renderPass.lastGoodFrame.politicalDataStage, "unknown");

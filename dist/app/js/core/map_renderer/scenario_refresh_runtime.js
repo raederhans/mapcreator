@@ -340,8 +340,29 @@ function createScenarioRefreshRuntime(deps = {}) {
       targetPasses: defaultTargetPasses,
       refreshOpeningOwnerBorders: hasPoliticalChange,
     });
+    const frameGraphInvalidation = rendererRefreshPlan.frameGraphInvalidation && typeof rendererRefreshPlan.frameGraphInvalidation === "object"
+      ? rendererRefreshPlan.frameGraphInvalidation
+      : null;
+    const targetPasses = Array.isArray(frameGraphInvalidation?.targetPasses) && frameGraphInvalidation.targetPasses.length
+      ? frameGraphInvalidation.targetPasses
+      : rendererRefreshPlan.targetPasses;
+    if (frameGraphInvalidation?.clearLastGoodFrame) {
+      clearLastGoodFrame(`${reason}-frame-graph`);
+    }
+    if (frameGraphInvalidation?.clearReferenceTransforms) {
+      clearRenderPassReferenceTransforms(targetPasses);
+    }
+    if (frameGraphInvalidation?.clearInteractionComposite) {
+      invalidateInteractionComposite(`${reason}-frame-graph`);
+    }
+    if (frameGraphInvalidation?.clearOpeningOwnerBorderCache) {
+      invalidateBorderCache();
+    }
+    if (frameGraphInvalidation?.resetWaterCacheReason) {
+      resetScenarioWaterCacheAdaptiveState(frameGraphInvalidation.resetWaterCacheReason);
+    }
     invalidateRenderPasses(
-      rendererRefreshPlan.targetPasses.length ? rendererRefreshPlan.targetPasses : ["political", "borders", "labels"],
+      targetPasses.length ? targetPasses : ["political", "borders", "labels"],
       reason,
     );
     markAllOverlaysDirty();

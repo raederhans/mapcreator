@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   buildScenarioChunkPromotionVisualMetricDetails,
+  createDrawSubsetIndex,
+  isDrawSubsetIndexCurrent,
   resolveScenarioChunkPromotionChangeSet,
 } from "../js/core/renderer/scenario_chunk_promotion_helpers.js";
 
@@ -88,4 +90,70 @@ test("scenario chunk promotion visual metrics preserve zero visible subset count
   assert.equal(result.viewportVisibleSubsetFeatureCount, 0);
   assert.equal(result.primaryVisibleIsSubset, true);
   assert.equal(result.promotedVisibleIsSubset, true);
+});
+
+test("draw subset index returns null for empty subset input", () => {
+  assert.equal(createDrawSubsetIndex({
+    scenarioId: "demo",
+    scenarioDataGeneration: 2,
+    primaryDrawFeatureIds: ["", null],
+    visibleFeatureIndexesByChunkId: { a: [] },
+  }), null);
+});
+
+test("draw subset index de-duplicates ids and reports rejected entries", () => {
+  const result = createDrawSubsetIndex({
+    scenarioId: "demo",
+    scenarioDataGeneration: 3,
+    subsetSignature: "viewport-a",
+    primaryDrawFeatureIds: [" a ", "b", "a", "missing"],
+    visibleFeatureIndexesByChunkId: {
+      chunkA: [0, 2, 2, 9, -1, 1.5],
+      chunkB: [1],
+    },
+    knownFeatureIds: ["a", "b"],
+    chunkFeatureCounts: { chunkA: 3, chunkB: 2 },
+  });
+
+  assert.deepEqual(result.primaryDrawFeatureIds, ["a", "b"]);
+  assert.deepEqual(result.visibleFeatureIndexesByChunkId, {
+    chunkA: [0, 2],
+    chunkB: [1],
+  });
+  assert.deepEqual(result.diagnostics, {
+    duplicateFeatureIdCount: 1,
+    unknownFeatureIdCount: 1,
+    duplicateIndexCount: 1,
+    outOfRangeIndexCount: 3,
+  });
+});
+
+test("draw subset index rejects indexes for known empty chunks", () => {
+  const result = createDrawSubsetIndex({
+    scenarioId: "demo",
+    scenarioDataGeneration: 3,
+    visibleFeatureIndexesByChunkId: {
+      emptyChunk: [0],
+      unknownCountChunk: [0],
+    },
+    chunkFeatureCounts: { emptyChunk: 0 },
+  });
+
+  assert.deepEqual(result.visibleFeatureIndexesByChunkId, {
+    unknownCountChunk: [0],
+  });
+  assert.equal(result.diagnostics.outOfRangeIndexCount, 1);
+});
+
+test("draw subset index currentness is bound to scenario and data generation", () => {
+  const result = createDrawSubsetIndex({
+    scenarioId: "demo",
+    scenarioDataGeneration: 4,
+    primaryDrawFeatureIds: ["a"],
+  });
+
+  assert.equal(isDrawSubsetIndexCurrent(result, { scenarioId: "demo", scenarioDataGeneration: 4 }), true);
+  assert.equal(isDrawSubsetIndexCurrent(result, { scenarioId: "other", scenarioDataGeneration: 4 }), false);
+  assert.equal(isDrawSubsetIndexCurrent(result, { scenarioId: "demo", scenarioDataGeneration: 5 }), false);
+  assert.equal(isDrawSubsetIndexCurrent(null, { scenarioId: "demo", scenarioDataGeneration: 4 }), false);
 });

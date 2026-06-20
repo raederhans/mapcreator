@@ -45742,17 +45742,17 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_plans.js",
-      "size_bytes": 4950,
+      "size_bytes": 8867,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/scenario_refresh_runtime.js",
-      "size_bytes": 20792,
+      "size_bytes": 21787,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 900428,
+      "size_bytes": 904516,
       "source_kind": "dist"
     },
     {
@@ -45907,7 +45907,7 @@
     },
     {
       "path": "app/js/core/renderer/scenario_chunk_promotion_helpers.js",
-      "size_bytes": 4782,
+      "size_bytes": 8505,
       "source_kind": "dist"
     },
     {
@@ -46042,7 +46042,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 118482,
+      "size_bytes": 118984,
       "source_kind": "dist"
     },
     {
@@ -46107,7 +46107,7 @@
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 29895,
+      "size_bytes": 31421,
       "source_kind": "dist"
     },
     {
@@ -46157,7 +46157,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 41823,
+      "size_bytes": 41905,
       "source_kind": "dist"
     },
     {
@@ -46262,7 +46262,7 @@
     },
     {
       "path": "app/js/core/state/renderer_runtime_state.js",
-      "size_bytes": 21640,
+      "size_bytes": 21751,
       "source_kind": "dist"
     },
     {
@@ -47101,5 +47101,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1153119420
+  "total_bytes": 1153134364
 }

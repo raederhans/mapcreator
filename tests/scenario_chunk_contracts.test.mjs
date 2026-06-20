@@ -6,8 +6,10 @@ import vm from "node:vm";
 import { createScenarioChunkRuntimeController } from "../js/core/scenario/chunk_runtime.js";
 import {
   buildViewportGeoBounds,
+  getVisibleScenarioChunkLayers,
   mergeScenarioChunkPayloadsForViewport,
   normalizeScenarioChunkManifest,
+  resolveRequiredScenarioSemanticLayers,
   selectScenarioChunks,
 } from "../js/core/scenario_chunk_manager.js";
 import {
@@ -266,6 +268,25 @@ function getRingSignedArea(ring) {
   }
   return total / 2;
 }
+
+test("TNO required semantic layers enter chunk selection independent of UI visibility", () => {
+  const requiredLayers = resolveRequiredScenarioSemanticLayers({
+    scenarioId: "tno_1962",
+    manifest: { scenario_id: "tno_1962" },
+  });
+
+  assert.deepEqual(requiredLayers, ["scenario_atlantropa", "water"]);
+  assert.deepEqual(getVisibleScenarioChunkLayers({
+    includePoliticalCore: true,
+    showWaterRegions: false,
+    showScenarioAtlantropa: false,
+    requiredSemanticLayers: requiredLayers,
+  }), ["political", "scenario_atlantropa", "water"]);
+  assert.deepEqual(resolveRequiredScenarioSemanticLayers({
+    scenarioId: "tno_1962",
+    manifest: { required_semantic_layers: ["cities"] },
+  }), ["cities"]);
+});
 
 test("scheduled chunk refresh starts without seeded pending reason", async () => {
   const originalSetTimeout = globalThis.setTimeout;
@@ -1397,13 +1418,20 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     continuityFrameReuseIdentityIncludesSelectionAndContextFlags:
       rendererSource.includes("function getRuntimeChunkSelectionVersion()")
       && rendererSource.includes("function getVisibleContextFlagSignature()")
+      && rendererSource.includes("function getCommittedFrameIdentity")
+      && rendererSource.includes("function getCommittedFrameKeySignature")
       && /function getVisibleFrameIdentity[\s\S]*?selectionVersion: getRuntimeChunkSelectionVersion\(\)[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)/.test(rendererSource)
+      && /function getCommittedFrameIdentity[\s\S]*?const commitKey = \{[\s\S]*?scenarioId: identity\.scenarioId[\s\S]*?sceneGeneration: identity\.sceneGeneration[\s\S]*?scenarioDataGeneration: identity\.scenarioDataGeneration[\s\S]*?selectionVersion: identity\.selectionVersion[\s\S]*?topologyRevision: identity\.topologyRevision[\s\S]*?colorRevision: identity\.colorRevision[\s\S]*?contextFlagSignature: identity\.contextFlagSignature[\s\S]*?pixelWidth: identity\.pixelWidth[\s\S]*?pixelHeight: identity\.pixelHeight/.test(rendererSource)
+      && /function recordVisibleFrameTransactionMetric[\s\S]*?committedFrameIdentity: providedCommittedFrameIdentity[\s\S]*?getCommittedFrameIdentity\(transform[\s\S]*?commitKey: getCommittedFrameKeySignature\(committedFrameIdentity\.commitKey\)[\s\S]*?committedFrameIdentity/.test(rendererSource)
       && /function getInteractionCompositeMismatchReasons[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(renderCacheOwnerSource)
       && /function getInteractionCompositeReuseDecision[\s\S]*?allowSelectionTopologyContinuity[\s\S]*?continuityReasons\.has\(reason\)/.test(renderCacheOwnerSource)
-      && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)
-      && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(rendererSource)
+      && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.commitKeySignature = getCommittedFrameKeySignature\(identity\)[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)
+      && /function drawLastGoodFrameFallback[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch[\s\S]*?commit-key-mismatch/.test(rendererSource)
       && rendererRuntimeStateSource.includes("selectionVersion: 0")
-      && rendererRuntimeStateSource.includes('contextFlagSignature: ""'),
+      && rendererRuntimeStateSource.includes('contextFlagSignature: ""')
+      && rendererRuntimeStateSource.includes("commitKey: null")
+      && rendererRuntimeStateSource.includes('commitKeySignature: ""')
+      && rendererRuntimeStateSource.includes("committedFrameIdentity: null"),
     exactAfterSettleFreshnessIdentityIncludesContextFlags:
       /function getExactAfterSettleIdentity\(\)[\s\S]*?selectionVersion:[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)[\s\S]*?transformBucket: getTransformBucketSignature\(\)/.test(exactSchedulerSource)
       && /function assignExactAfterSettleIdentity[\s\S]*?controller\.contextFlagSignature = identity\.contextFlagSignature/.test(exactSchedulerSource)
@@ -1467,6 +1495,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /scheduleScenarioChunkRefresh\(\{[\s\S]*?reason: "scenario-apply",[\s\S]*?refreshSourceStartedAtMs: prewarmStartedAt,[\s\S]*?\}\);/.test(postApplyEffectsSource),
     delayedPoliticalCoreReadyMetricKeepsCoarseReadinessDetails:
       /const coarseReadyDetails = \{[\s\S]*?source: "chunk-promotion-coarse-ready"[\s\S]*?readinessLevel: "coarse-chunk"[\s\S]*?promotedPoliticalFeatureCount[\s\S]*?recordScenarioPerfMetric\("timeToPoliticalCoreReady", coarseReadyMs, coarseReadyDetails\);[\s\S]*?recordScenarioPerfMetric\("timeToInteractiveCoarseFrame", coarseReadyMs, coarseReadyDetails\);/.test(chunkRuntimeSource),
+    frameGraphInvalidationReachesScenarioRefreshRuntime:
+      scenarioRefreshPlansSource.includes("function createFrameGraphInvalidation")
+      && scenarioRefreshPlansSource.includes("frameGraphInvalidation")
+      && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
+      && /function refreshMapDataForScenarioChunkPromotion\([\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?clearLastGoodFrame\(`\$\{reason\}-frame-graph`\)[\s\S]*?clearRenderPassReferenceTransforms\(targetPasses\)[\s\S]*?invalidateInteractionComposite\(`\$\{reason\}-frame-graph`\)[\s\S]*?invalidateBorderCache\(\)[\s\S]*?invalidateRenderPasses\([\s\S]*?targetPasses\.length \? targetPasses/.test(scenarioRefreshRuntimeSource),
     chunkSelectionCarriesCostFieldsAndSums:
       chunkManagerSource.includes("byteSize")
       && chunkManagerSource.includes("coordCount")

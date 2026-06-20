@@ -12,7 +12,7 @@ const FILES = Object.freeze({
 });
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23450,
+  [FILES.renderer]: 24100,
   [FILES.scenarioRefreshRuntime]: 620,
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,

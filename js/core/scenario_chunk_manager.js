@@ -404,15 +404,56 @@ export function getVisibleScenarioChunkLayers({
   showScenarioAtlantropa = false,
   showScenarioReliefOverlays = false,
   showCityPoints = false,
+  requiredSemanticLayers = [],
 } = {}) {
-  return [
+  return Array.from(new Set([
     includePoliticalCore ? "political" : "",
     showWaterRegions ? "water" : "",
     showScenarioSpecialRegions ? "special" : "",
     showScenarioAtlantropa ? "scenario_atlantropa" : "",
     showScenarioReliefOverlays ? "relief" : "",
     showCityPoints ? "cities" : "",
-  ].filter(Boolean);
+    ...(Array.isArray(requiredSemanticLayers) ? requiredSemanticLayers : []),
+  ]
+    .map((layerKey) => String(layerKey || "").trim().toLowerCase())
+    .filter(Boolean)));
+}
+
+const DEFAULT_REQUIRED_SEMANTIC_LAYERS_BY_SCENARIO = Object.freeze({
+  tno_1962: Object.freeze(["scenario_atlantropa", "water"]),
+});
+
+function normalizeRequiredSemanticLayerList(values = []) {
+  return Array.from(new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean)
+  ));
+}
+
+export function resolveRequiredScenarioSemanticLayers({
+  scenarioId = "",
+  manifest = null,
+} = {}) {
+  const normalizedScenarioId = String(
+    scenarioId || manifest?.scenario_id || manifest?.scenarioId || ""
+  ).trim().toLowerCase();
+  const defaults = normalizeRequiredSemanticLayerList(
+    DEFAULT_REQUIRED_SEMANTIC_LAYERS_BY_SCENARIO[normalizedScenarioId] || []
+  );
+  const rawManifestLayers = manifest?.required_semantic_layers;
+  if (Array.isArray(rawManifestLayers)) {
+    return normalizeRequiredSemanticLayerList(rawManifestLayers);
+  }
+  if (rawManifestLayers && typeof rawManifestLayers === "object") {
+    const mode = String(rawManifestLayers.mode || "extend").trim().toLowerCase();
+    const layers = normalizeRequiredSemanticLayerList(rawManifestLayers.layers);
+    if (mode === "replace" || mode === "override") {
+      return layers;
+    }
+    return normalizeRequiredSemanticLayerList([...defaults, ...layers]);
+  }
+  return defaults;
 }
 
 export function buildViewportGeoBounds({

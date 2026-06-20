@@ -2245,9 +2245,23 @@ function recordVisibleFrameTransactionMetric(status, details = {}) {
   if (normalizedStatus === "rejected") incrementPerfCounter("visibleFrameRejectedCount");
   if (normalizedStatus === "missing") incrementPerfCounter("visibleFrameMissingCount");
   if (normalizedStatus === "blocked") incrementPerfCounter("visibleFrameBlockedCount");
-  const { transform: metricTransform, durationMs: metricDurationMs, ...publicDetails } = details;
+  const {
+    transform: metricTransform,
+    durationMs: metricDurationMs,
+    committedFrameIdentity: providedCommittedFrameIdentity,
+    ...publicDetails
+  } = details;
   const transform = metricTransform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
-  const identity = getVisibleFrameIdentity(transform);
+  const committedFrameIdentity = providedCommittedFrameIdentity || getCommittedFrameIdentity(transform, {
+    status: normalizedStatus,
+    reason: String(details.reason || cache.lastAction || "visible-frame"),
+    paintSource: String(details.paintSource || ""),
+    blockReason: String(details.blockReason || ""),
+  });
+  const identity = {
+    ...(committedFrameIdentity.commitKey || {}),
+    ...(committedFrameIdentity.metadata || {}),
+  };
   return recordRenderPerfMetric("visibleFrameTransaction", Number(metricDurationMs || 0), {
     ...publicDetails,
     status: normalizedStatus,
@@ -2273,6 +2287,8 @@ function recordVisibleFrameTransactionMetric(status, details = {}) {
     blockedCount: Number(cache.counters.visibleFrameBlockedCount || 0),
     staleAgeMs: Math.max(0, Number(details.staleAgeMs || 0)),
     dirtyFeatureCount: Math.max(0, Number(details.dirtyFeatureCount || 0)),
+    commitKey: getCommittedFrameKeySignature(committedFrameIdentity.commitKey),
+    committedFrameIdentity,
   });
 }
 
@@ -2508,12 +2524,66 @@ function getVisibleFrameIdentity(transform = runtimeState.zoomTransform || globa
   };
 }
 
+function getCommittedFrameKeySignature(commitKey = {}) {
+  return [
+    String(commitKey.scenarioId || ""),
+    Number(commitKey.sceneGeneration || 0),
+    Number(commitKey.scenarioDataGeneration || 0),
+    Number(commitKey.selectionVersion || 0),
+    Number(commitKey.topologyRevision || 0),
+    Number(commitKey.colorRevision || 0),
+    String(commitKey.contextFlagSignature || ""),
+    Number(commitKey.dpr || 1).toFixed(2),
+    Number(commitKey.pixelWidth || 0),
+    Number(commitKey.pixelHeight || 0),
+  ].join("::");
+}
+
+function getCommittedFrameIdentity(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity, metadata = {}) {
+  const identity = getVisibleFrameIdentity(transform);
+  const cache = getRenderPassCacheState();
+  const commitKey = {
+    scenarioId: identity.scenarioId,
+    sceneGeneration: identity.sceneGeneration,
+    scenarioDataGeneration: identity.scenarioDataGeneration,
+    selectionVersion: identity.selectionVersion,
+    topologyRevision: identity.topologyRevision,
+    colorRevision: identity.colorRevision,
+    contextFlagSignature: identity.contextFlagSignature,
+    dpr: identity.dpr,
+    pixelWidth: identity.pixelWidth,
+    pixelHeight: identity.pixelHeight,
+  };
+  return {
+    commitKey,
+    metadata: {
+      politicalDataStage: identity.politicalDataStage,
+      fullPoliticalReady: identity.fullPoliticalReady,
+      finePoliticalCacheReady: identity.finePoliticalCacheReady,
+      referenceTransform: cloneZoomTransform(transform),
+      transformBucket: identity.transformBucket,
+      passSignature: getRenderPassSignature("political", transform),
+      dirtyReasons: { ...(cache.reasons || {}) },
+      resourcesReady: {
+        politicalPassCurrent: !cache.dirty?.political,
+        fullPoliticalReady: identity.fullPoliticalReady,
+        finePoliticalCacheReady: identity.finePoliticalCacheReady,
+      },
+      ...metadata,
+    },
+  };
+}
+
 function clearLastGoodFrame(reason = "clear") {
   const cache = getRenderPassCacheState();
   if (!cache.lastGoodFrame || typeof cache.lastGoodFrame !== "object") return;
   cache.lastGoodFrame.valid = false;
   cache.lastGoodFrame.stale = false;
   cache.lastGoodFrame.referenceTransform = null;
+  cache.lastGoodFrame.commitKey = null;
+  cache.lastGoodFrame.commitKeySignature = "";
+  cache.lastGoodFrame.committedFrameIdentity = null;
+  cache.lastGoodFrame.metadata = null;
   cache.lastGoodFrame.invalidatedAt = Date.now();
   cache.lastGoodFrame.reason = String(reason || "clear");
   cache.lastGoodFrame.staleReason = "";
@@ -2773,8 +2843,17 @@ function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTra
   targetContext.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
   targetContext.drawImage(context.canvas, 0, 0);
   const cache = getRenderPassCacheState();
-  const identity = getVisibleFrameIdentity(transform);
+  const committedFrameIdentity = getCommittedFrameIdentity(transform, {
+    status: "committed",
+    reason: String(reason || "frame"),
+    paintSource: "last-good-capture",
+  });
+  const identity = committedFrameIdentity.commitKey;
   cache.lastGoodFrame.referenceTransform = cloneZoomTransform(transform);
+  cache.lastGoodFrame.commitKey = { ...identity };
+  cache.lastGoodFrame.commitKeySignature = getCommittedFrameKeySignature(identity);
+  cache.lastGoodFrame.committedFrameIdentity = committedFrameIdentity;
+  cache.lastGoodFrame.metadata = { ...(committedFrameIdentity.metadata || {}) };
   cache.lastGoodFrame.capturedAt = Date.now();
   cache.lastGoodFrame.invalidatedAt = 0;
   cache.lastGoodFrame.valid = true;
@@ -2792,13 +2871,14 @@ function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTra
   cache.lastGoodFrame.dpr = identity.dpr;
   cache.lastGoodFrame.pixelWidth = identity.pixelWidth;
   cache.lastGoodFrame.pixelHeight = identity.pixelHeight;
-  cache.lastGoodFrame.politicalDataStage = identity.politicalDataStage;
-  cache.lastGoodFrame.fullPoliticalReady = identity.fullPoliticalReady;
-  cache.lastGoodFrame.finePoliticalCacheReady = identity.finePoliticalCacheReady;
+  cache.lastGoodFrame.politicalDataStage = String(committedFrameIdentity.metadata?.politicalDataStage || "unknown");
+  cache.lastGoodFrame.fullPoliticalReady = !!committedFrameIdentity.metadata?.fullPoliticalReady;
+  cache.lastGoodFrame.finePoliticalCacheReady = !!committedFrameIdentity.metadata?.finePoliticalCacheReady;
   recordVisibleFrameTransactionMetric("committed", {
     reason: String(reason || "frame"),
     paintSource: "last-good-capture",
     transform,
+    committedFrameIdentity,
   });
   return true;
 }
@@ -2924,6 +3004,11 @@ function markFirstVisibleFramePainted(reason = "visible-frame") {
   recordVisibleFrameTransactionMetric("committed", {
     reason: String(reason || "visible-frame"),
     paintSource: "first-visible-frame",
+    committedFrameIdentity: getCommittedFrameIdentity(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity, {
+      status: "committed",
+      reason: String(reason || "visible-frame"),
+      paintSource: "first-visible-frame",
+    }),
   });
   callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", {
     reason: String(reason || "visible-frame"),
@@ -2975,6 +3060,11 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
     return false;
   }
   const identity = getVisibleFrameIdentity(currentTransform);
+  const currentCommittedFrameIdentity = getCommittedFrameIdentity(currentTransform, {
+    status: "reused",
+    reason: String(frame.reason || "last-good-frame"),
+    paintSource: "last-good-frame",
+  });
   const staleSince = frame.stale && Number(frame.invalidatedAt || 0) > 0
     ? Number(frame.invalidatedAt || 0)
     : Number(frame.capturedAt || 0);
@@ -2992,6 +3082,7 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
       staleAgeMs,
       transform: currentTransform,
       activeScenarioId: identity.scenarioId,
+      committedFrameIdentity: currentCommittedFrameIdentity,
     });
     return false;
   };
@@ -3043,6 +3134,10 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
   if (Number(frame.colorRevision || 0) !== identity.colorRevision) {
     return reject("color-revision-mismatch");
   }
+  const currentCommitKeySignature = getCommittedFrameKeySignature(currentCommittedFrameIdentity.commitKey);
+  if (frame.commitKeySignature && frame.commitKeySignature !== currentCommitKeySignature) {
+    return reject("commit-key-mismatch");
+  }
   if (frame.stale && staleAgeMs > CONTINUITY_FRAME_MAX_STALE_AGE_MS) {
     return reject("stale-age-limit");
   }
@@ -3082,6 +3177,7 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
     staleAgeMs,
     transform: currentTransform,
     activeScenarioId: identity.scenarioId,
+    committedFrameIdentity: frame.committedFrameIdentity || currentCommittedFrameIdentity,
   });
   return true;
 }

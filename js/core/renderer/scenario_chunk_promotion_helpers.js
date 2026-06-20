@@ -32,6 +32,108 @@ function toNonNegativeCount(value, defaultValue = 0) {
   return Math.max(0, Number(defaultValue) || 0);
 }
 
+function normalizeStringSet(values = []) {
+  return (Array.isArray(values) ? values : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+export function createDrawSubsetIndex({
+  scenarioId = "",
+  scenarioDataGeneration = 0,
+  subsetSignature = "",
+  primaryDrawFeatureIds = null,
+  visibleFeatureIndexesByChunkId = null,
+  knownFeatureIds = null,
+  chunkFeatureCounts = null,
+} = {}) {
+  const knownFeatureSet = knownFeatureIds instanceof Set
+    ? knownFeatureIds
+    : (Array.isArray(knownFeatureIds) ? new Set(normalizeStringSet(knownFeatureIds)) : null);
+  const rawFeatureIds = Array.isArray(primaryDrawFeatureIds) ? primaryDrawFeatureIds : null;
+  let duplicateFeatureIdCount = 0;
+  let unknownFeatureIdCount = 0;
+  const seenFeatureIds = new Set();
+  const normalizedFeatureIds = [];
+  if (rawFeatureIds) {
+    rawFeatureIds.forEach((value) => {
+      const featureId = String(value || "").trim();
+      if (!featureId) return;
+      if (seenFeatureIds.has(featureId)) {
+        duplicateFeatureIdCount += 1;
+        return;
+      }
+      seenFeatureIds.add(featureId);
+      if (knownFeatureSet && !knownFeatureSet.has(featureId)) {
+        unknownFeatureIdCount += 1;
+        return;
+      }
+      normalizedFeatureIds.push(featureId);
+    });
+  }
+
+  const normalizedIndexesByChunkId = {};
+  let duplicateIndexCount = 0;
+  let outOfRangeIndexCount = 0;
+  const rawIndexesByChunkId = visibleFeatureIndexesByChunkId && typeof visibleFeatureIndexesByChunkId === "object"
+    ? visibleFeatureIndexesByChunkId
+    : null;
+  if (rawIndexesByChunkId) {
+    Object.entries(rawIndexesByChunkId).forEach(([chunkId, rawIndexes]) => {
+      const normalizedChunkId = String(chunkId || "").trim();
+      if (!normalizedChunkId || !Array.isArray(rawIndexes)) return;
+      const hasKnownFeatureCount = Object.hasOwn(chunkFeatureCounts || {}, normalizedChunkId);
+      const maxFeatureCount = hasKnownFeatureCount
+        ? Math.max(0, Number(chunkFeatureCounts?.[normalizedChunkId] || 0))
+        : 0;
+      const seenIndexes = new Set();
+      const indexes = [];
+      rawIndexes.forEach((value) => {
+        const index = Number(value);
+        if (!Number.isInteger(index) || index < 0 || (hasKnownFeatureCount && index >= maxFeatureCount)) {
+          outOfRangeIndexCount += 1;
+          return;
+        }
+        if (seenIndexes.has(index)) {
+          duplicateIndexCount += 1;
+          return;
+        }
+        seenIndexes.add(index);
+        indexes.push(index);
+      });
+      if (indexes.length) {
+        normalizedIndexesByChunkId[normalizedChunkId] = indexes;
+      }
+    });
+  }
+
+  const hasFeatureIds = normalizedFeatureIds.length > 0;
+  const hasChunkIndexes = Object.keys(normalizedIndexesByChunkId).length > 0;
+  if (!hasFeatureIds && !hasChunkIndexes) return null;
+  return {
+    scenarioId: String(scenarioId || ""),
+    scenarioDataGeneration: Math.max(0, Number(scenarioDataGeneration || 0)),
+    subsetSignature: String(subsetSignature || ""),
+    ...(hasFeatureIds ? { primaryDrawFeatureIds: normalizedFeatureIds } : {}),
+    ...(hasChunkIndexes ? { visibleFeatureIndexesByChunkId: normalizedIndexesByChunkId } : {}),
+    diagnostics: {
+      duplicateFeatureIdCount,
+      unknownFeatureIdCount,
+      duplicateIndexCount,
+      outOfRangeIndexCount,
+    },
+  };
+}
+
+export function isDrawSubsetIndexCurrent(drawSubsetIndex, {
+  scenarioId = "",
+  scenarioDataGeneration = 0,
+} = {}) {
+  if (!drawSubsetIndex || typeof drawSubsetIndex !== "object") return false;
+  return String(drawSubsetIndex.scenarioId || "") === String(scenarioId || "")
+    && Math.max(0, Number(drawSubsetIndex.scenarioDataGeneration || 0)) === Math.max(0, Number(scenarioDataGeneration || 0));
+}
+
 export function buildScenarioChunkPromotionVisualMetricDetails({
   activeScenarioId = "",
   reason = "scenario-chunk-promotion",

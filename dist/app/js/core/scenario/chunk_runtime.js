@@ -203,6 +203,7 @@ function createScenarioChunkRuntimeController({
   getScenarioBundleId,
   getCachedScenarioBundle,
   getVisibleScenarioChunkLayers,
+  resolveRequiredScenarioSemanticLayers = () => [],
   selectScenarioChunks,
   mergeScenarioChunkPayloads,
   mergeScenarioChunkPayloadsForViewport = null,
@@ -1728,6 +1729,10 @@ function createScenarioChunkRuntimeController({
       showScenarioSpecialRegions: normalizeScenarioPerformanceHints(bundle.manifest).specialRegionsDefault !== false,
       showScenarioAtlantropa: normalizeScenarioPerformanceHints(bundle.manifest).scenarioAtlantropaDefault !== false,
       showScenarioReliefOverlays: normalizeScenarioPerformanceHints(bundle.manifest).scenarioReliefOverlaysDefault === true,
+      requiredSemanticLayers: resolveRequiredScenarioSemanticLayers({
+        scenarioId: getScenarioBundleId(bundle),
+        manifest: bundle.manifest,
+      }),
       // First-frame coarse prewarm keeps the apply transaction focused on
       // political/runtime shell readiness. City chunks continue to load through
       // follow-up visibility refreshes after the scenario is interactive.
@@ -1867,6 +1872,10 @@ function createScenarioChunkRuntimeController({
     const visibleLayers = startupInitialPoliticalOnly
       ? getVisibleScenarioChunkLayers({
         includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
+        requiredSemanticLayers: resolveRequiredScenarioSemanticLayers({
+          scenarioId,
+          manifest: bundle.manifest,
+        }),
       })
       : getVisibleScenarioChunkLayers({
         includePoliticalCore: scenarioBundleUsesChunkedLayer(bundle, "political"),
@@ -1875,6 +1884,10 @@ function createScenarioChunkRuntimeController({
         showScenarioAtlantropa: runtimeState.showScenarioAtlantropa !== false,
         showScenarioReliefOverlays: runtimeState.showScenarioReliefOverlays !== false,
         showCityPoints: runtimeState.showCityPoints !== false,
+        requiredSemanticLayers: resolveRequiredScenarioSemanticLayers({
+          scenarioId,
+          manifest: bundle.manifest,
+        }),
       });
     const chunkState = ensureActiveScenarioChunkState();
     chunkState.scenarioId = scenarioId;

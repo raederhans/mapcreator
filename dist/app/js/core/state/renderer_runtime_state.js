@@ -140,6 +140,10 @@ export function createDefaultRenderPassCacheState() {
     lastGoodFrame: {
       canvas: null,
       referenceTransform: null,
+      commitKey: null,
+      commitKeySignature: "",
+      committedFrameIdentity: null,
+      metadata: null,
       valid: false,
       stale: false,
       capturedAt: 0,
