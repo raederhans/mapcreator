@@ -211,6 +211,7 @@ function createScenarioChunkRuntimeController({
   scenarioSupportsChunkedRuntime,
   scenarioBundleUsesChunkedLayer,
   getScenarioOptionalLayerConfig,
+  isScenarioOptionalLayerRequestedForVisibility = () => false,
   syncScenarioLocalizationState,
   refreshMapDataForScenarioChunkPromotion,
   flushRenderBoundary,
@@ -930,10 +931,12 @@ function createScenarioChunkRuntimeController({
   function applyMergedScenarioChunkLayerPayloads(mergedLayerPayloads, { renderNow = false } = {}) {
     let changed = false;
     const changedLayerKeys = [];
+    const renderVisibleChangedLayerKeys = [];
     Object.keys(mergedLayerPayloads || {}).forEach((layerKey) => {
       if (!hasScenarioMergedLayerPayload(mergedLayerPayloads, layerKey)) {
         return;
       }
+      const normalizedLayerKey = String(layerKey || "").trim().toLowerCase();
       const config = getScenarioOptionalLayerConfig(layerKey);
       if (!config) {
         return;
@@ -945,6 +948,9 @@ function createScenarioChunkRuntimeController({
         syncScenarioLocalizationState({ cityOverridesPayload: nextPayload });
         changed = true;
         changedLayerKeys.push(layerKey);
+        if (isScenarioOptionalLayerRequestedForVisibility(normalizedLayerKey, config)) {
+          renderVisibleChangedLayerKeys.push(normalizedLayerKey);
+        }
         return;
       }
       runtimeState[config.stateField] = nextPayload;
@@ -953,6 +959,9 @@ function createScenarioChunkRuntimeController({
       }
       changed = true;
       changedLayerKeys.push(layerKey);
+      if (isScenarioOptionalLayerRequestedForVisibility(normalizedLayerKey, config)) {
+        renderVisibleChangedLayerKeys.push(normalizedLayerKey);
+      }
     });
     if (changed && renderNow) {
       flushRenderBoundary("scenario-optional-layer-apply");
@@ -960,6 +969,7 @@ function createScenarioChunkRuntimeController({
     return {
       changed,
       changedLayerKeys,
+      renderVisibleChangedLayerKeys: Array.from(new Set(renderVisibleChangedLayerKeys)),
     };
   }
 
@@ -1062,17 +1072,27 @@ function createScenarioChunkRuntimeController({
     return true;
   }
 
-  function refreshScenarioAtlantropaChunkPayloadChange({
+  function refreshScenarioRenderVisibleOptionalChunkPayloadChange({
     renderNow = false,
     reason = "refresh",
     changedLayerKeys = [],
+    renderVisibleChangedLayerKeys = [],
   } = {}) {
-    const normalizedChangedLayerKeys = (Array.isArray(changedLayerKeys) ? changedLayerKeys : [])
-      .map((layerKey) => String(layerKey || "").trim().toLowerCase())
-      .filter(Boolean);
-    if (!normalizedChangedLayerKeys.includes("scenario_atlantropa")) {
+    const normalizedRenderVisibleChangedLayerKeys = Array.from(new Set(
+      (Array.isArray(renderVisibleChangedLayerKeys) ? renderVisibleChangedLayerKeys : [])
+        .map((layerKey) => String(layerKey || "").trim().toLowerCase())
+        .filter(Boolean)
+    ));
+    if (!normalizedRenderVisibleChangedLayerKeys.length) {
       return false;
     }
+    const normalizedChangedLayerKeys = Array.from(new Set([
+      ...(Array.isArray(changedLayerKeys) ? changedLayerKeys : [])
+        .map((layerKey) => String(layerKey || "").trim().toLowerCase())
+        .filter(Boolean),
+      ...normalizedRenderVisibleChangedLayerKeys,
+    ]));
+    bumpScenarioDataGenerationState(runtimeState, String(reason || "scenario-optional-layer-payload"));
     refreshMapDataForScenarioChunkPromotion({
       suppressRender: !renderNow,
       reason,
@@ -1254,10 +1274,11 @@ function createScenarioChunkRuntimeController({
         forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
       });
       if (!politicalPayloadChanged) {
-        refreshScenarioAtlantropaChunkPayloadChange({
+        refreshScenarioRenderVisibleOptionalChunkPayloadChange({
           renderNow: false,
           reason: pendingPromotion.reason,
           changedLayerKeys: effectiveChangedLayerKeys,
+          renderVisibleChangedLayerKeys: mergedLayerResult.renderVisibleChangedLayerKeys,
         });
       }
       // Keep the render lock across this frame break so a half-applied visual payload
@@ -1738,7 +1759,7 @@ function createScenarioChunkRuntimeController({
       const mergedLayerPayloads = mergedResult.mergedLayerPayloads;
       loadState.layerSelectionSignatures = layerSignatures;
       loadState.mergedLayerPayloadCache = mergedLayerPayloads;
-      applyMergedScenarioChunkLayerPayloads(mergedLayerPayloads, { renderNow: false });
+      const mergedLayerResult = applyMergedScenarioChunkLayerPayloads(mergedLayerPayloads, { renderNow: false });
       const politicalPayloadChanged = applyScenarioPoliticalChunkPayload(bundle, mergedLayerPayloads.political || null, {
         renderNow: false,
         reason: "coarse-prewarm",
@@ -1746,10 +1767,11 @@ function createScenarioChunkRuntimeController({
         primaryPoliticalPayload: mergedResult.primaryMergedLayerPayloads?.political || null,
       });
       if (!politicalPayloadChanged) {
-        refreshScenarioAtlantropaChunkPayloadChange({
+        refreshScenarioRenderVisibleOptionalChunkPayloadChange({
           renderNow: false,
           reason: "coarse-prewarm",
           changedLayerKeys: mergedResult.changedLayerKeys,
+          renderVisibleChangedLayerKeys: mergedLayerResult.renderVisibleChangedLayerKeys,
         });
       }
       return mergedLayerPayloads;

@@ -563,6 +563,7 @@ const {
   scenarioSupportsChunkedRuntime,
   scenarioBundleUsesChunkedLayer,
   getScenarioOptionalLayerConfig,
+  isScenarioOptionalLayerRequestedForVisibility,
   syncScenarioLocalizationState,
   refreshMapDataForScenarioChunkPromotion,
   flushRenderBoundary,

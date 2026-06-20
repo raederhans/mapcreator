@@ -411,3 +411,4 @@
 
 ### 渐进政治缓存要绑定场景代际
 - progressive coarse underlay、deferred full cache、worker bitmap、last-good frame 和 partial repaint 共用同一画布时，cache key 里要带 `sceneGeneration` 与 `scenarioDataGeneration`；只看 transform/color/pass signature 会让旧场景结果在新场景恢复期被重新提交。
+- 可见 optional chunk 的 `scenarioDataGeneration` 判定要复用 `scenario_resources` 的 visibility helper；在 chunk runtime 复制 layer 白名单会漏掉后续新增层，例如 `strategicvalues`。

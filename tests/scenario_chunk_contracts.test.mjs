@@ -2601,6 +2601,199 @@ test("chunk promotion applies viewport-clipped political payload for primary rec
   }
 });
 
+async function runOptionalChunkPromotionScenario({
+  layerKey,
+  stateField,
+  revisionField = "",
+  requestedForVisibility = true,
+  reason = "optional-only",
+  featureId = "optional-feature",
+} = {}) {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const chunk = {
+    id: `${layerKey}.coarse.world`,
+    layer: layerKey,
+    lod: "coarse",
+    url: `${layerKey}.coarse.world.json`,
+    bounds: [-180, -90, 180, 90],
+  };
+  const payload = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", id: featureId, properties: {}, geometry: null },
+    ],
+  };
+  const bundle = {
+    manifest: { scenario_id: "tno_1962" },
+    chunkRegistry: { byLayer: { [layerKey]: [chunk] } },
+    runtimeShell: { renderBudgetHints: {} },
+    countriesPayload: { countries: {} },
+    chunkPayloadCacheById: {},
+  };
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioChunks: {
+      scenarioId: "tno_1962",
+      loadedChunkIds: [],
+      payloadByChunkId: {},
+      mergedLayerPayloads: {},
+      lruChunkIds: [],
+    },
+    runtimeChunkLoadState: {
+      shellStatus: "ready",
+      selectionVersion: 0,
+      layerSelectionSignatures: {},
+      mergedLayerPayloadCache: {},
+    },
+    renderPerfMetrics: {},
+    uiState: { developerMode: true },
+    renderDiagnostics: { perfOverlayEnabled: true },
+    zoomTransform: { k: 1 },
+    getViewportGeoBoundsFn: () => [-180, -90, 180, 90],
+  };
+  const refreshCalls = [];
+
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const controller = createScenarioChunkRuntimeController({
+      runtimeState,
+      getSearchParams: () => new URLSearchParams(),
+      normalizeScenarioId: (value) => String(value || "").trim(),
+      normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+      normalizeScenarioFeatureCollection: (payload) => (
+        Array.isArray(payload?.features)
+          ? { type: "FeatureCollection", features: payload.features }
+          : null
+      ),
+      getScenarioFeatureCollectionIdentityList: (payload) => (
+        Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+      ),
+      areScenarioFeatureCollectionsEquivalent: (left, right) => {
+        const leftIds = Array.isArray(left?.features) ? left.features.map((feature) => feature.id) : [];
+        const rightIds = Array.isArray(right?.features) ? right.features.map((feature) => feature.id) : [];
+        return leftIds.length === rightIds.length && leftIds.every((id, index) => id === rightIds[index]);
+      },
+      getScenarioDefaultCountryCode: () => "",
+      getScenarioBundleId: () => "tno_1962",
+      getCachedScenarioBundle: () => bundle,
+      getVisibleScenarioChunkLayers: () => [layerKey],
+      selectScenarioChunks: () => ({
+        scenarioId: "tno_1962",
+        requiredChunks: [chunk],
+        optionalChunks: [],
+        evictableChunkIds: [],
+        viewportBbox: [-180, -90, 180, 90],
+        selectedFeatureCountSum: 1,
+      }),
+      mergeScenarioChunkPayloads: (_layerKey, payloads) => ({
+        type: "FeatureCollection",
+        features: payloads.flatMap((payload) => payload?.features || []),
+      }),
+      normalizeScenarioRenderBudgetHints: (value) => value || {},
+      loadScenarioChunkFile: async () => ({ payload }),
+      scenarioSupportsChunkedRuntime: () => true,
+      scenarioBundleUsesChunkedLayer: (_bundle, requestedLayerKey = "") => !requestedLayerKey || requestedLayerKey === layerKey,
+      getScenarioOptionalLayerConfig: (requestedLayerKey) => (
+        String(requestedLayerKey || "").trim().toLowerCase() === layerKey
+          ? {
+            stateField,
+            revisionField,
+          }
+          : null
+      ),
+      isScenarioOptionalLayerRequestedForVisibility: () => requestedForVisibility,
+      syncScenarioLocalizationState: () => {},
+      refreshMapDataForScenarioChunkPromotion: (options) => {
+        refreshCalls.push(options);
+      },
+      flushRenderBoundary: () => {},
+      recordScenarioPerfMetric: () => {},
+      ensureScenarioChunkRegistryLoaded: async () => {},
+    });
+
+    assert.equal(controller.scheduleScenarioChunkRefresh({ reason, delayMs: 0 }), "scheduled");
+    for (let i = 0; i < 10; i += 1) {
+      await Promise.resolve();
+    }
+
+    return { runtimeState, refreshCalls };
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+}
+
+test("visible optional chunk promotion advances scenario data generation without political change", async () => {
+  const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+    layerKey: "scenario_atlantropa",
+    stateField: "scenarioAtlantropaData",
+    revisionField: "scenarioAtlantropaRevision",
+    requestedForVisibility: true,
+    reason: "atlantropa-only",
+    featureId: "atl-donor",
+  });
+
+  assert.equal(runtimeState.scenarioDataGeneration, 1);
+  assert.equal(runtimeState.scenarioDataGenerationReason, "atlantropa-only");
+  assert.equal(runtimeState.scenarioAtlantropaRevision, 1);
+  assert.deepEqual(
+    runtimeState.scenarioAtlantropaData.features.map((feature) => feature.id),
+    ["atl-donor"],
+  );
+  assert.equal(refreshCalls.length, 1);
+  assert.equal(refreshCalls[0].hasPoliticalPayloadChange, false);
+  assert.deepEqual(refreshCalls[0].politicalFeatureIds, []);
+  assert.ok(refreshCalls[0].changedLayerKeys.includes("scenario_atlantropa"));
+});
+
+test("strategic values chunk promotion advances scenario data generation when visible", async () => {
+  const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+    layerKey: "strategicvalues",
+    stateField: "scenarioStrategicValuesData",
+    revisionField: "scenarioStrategicValuesRevision",
+    requestedForVisibility: true,
+    reason: "strategicvalues-only",
+    featureId: "strategic-donor",
+  });
+
+  assert.equal(runtimeState.scenarioDataGeneration, 1);
+  assert.equal(runtimeState.scenarioDataGenerationReason, "strategicvalues-only");
+  assert.equal(runtimeState.scenarioStrategicValuesRevision, 1);
+  assert.deepEqual(
+    runtimeState.scenarioStrategicValuesData.features.map((feature) => feature.id),
+    ["strategic-donor"],
+  );
+  assert.equal(refreshCalls.length, 1);
+  assert.equal(refreshCalls[0].hasPoliticalPayloadChange, false);
+  assert.ok(refreshCalls[0].changedLayerKeys.includes("strategicvalues"));
+});
+
+test("hidden optional chunk promotion does not advance scenario data generation", async () => {
+  const { runtimeState, refreshCalls } = await runOptionalChunkPromotionScenario({
+    layerKey: "relief",
+    stateField: "scenarioReliefOverlaysData",
+    revisionField: "scenarioReliefOverlayRevision",
+    requestedForVisibility: false,
+    reason: "hidden-relief-only",
+    featureId: "relief-hidden",
+  });
+
+  assert.equal(Number(runtimeState.scenarioDataGeneration || 0), 0);
+  assert.equal(runtimeState.scenarioDataGenerationReason, undefined);
+  assert.equal(runtimeState.scenarioReliefOverlayRevision, 1);
+  assert.deepEqual(
+    runtimeState.scenarioReliefOverlaysData.features.map((feature) => feature.id),
+    ["relief-hidden"],
+  );
+  assert.equal(refreshCalls.length, 0);
+});
+
 test("coarse prewarm keeps complete political payload for initial promotion", async () => {
   const politicalChunk = {
     id: "political.coarse.world",

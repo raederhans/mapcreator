@@ -129,6 +129,10 @@ function getScenarioChunkPromotionTargetPasses({
     }
     if (normalized === "scenario_atlantropa") {
       ["political", "contextScenario", "borders", "labels"].forEach((passName) => targetPasses.add(passName));
+      return;
+    }
+    if (normalized === "strategicvalues") {
+      ["political", "contextMarkers", "labels"].forEach((passName) => targetPasses.add(passName));
     }
   });
   return Array.from(targetPasses);

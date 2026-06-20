@@ -15,6 +15,8 @@ function reply(payload, transfer = []) {
 function normalizeIdentity(identity = {}) {
   return {
     protocolVersion: PROTOCOL_VERSION,
+    sceneGeneration: Number(identity.sceneGeneration || 0),
+    scenarioDataGeneration: Number(identity.scenarioDataGeneration || 0),
     scenarioId: String(identity.scenarioId || ""),
     selectionVersion: Number(identity.selectionVersion || 0),
     topologyRevision: Number(identity.topologyRevision || 0),

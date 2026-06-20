@@ -61,6 +61,16 @@ test("chunk promotion target passes stay unique across political and layer chang
   );
 });
 
+test("strategic values chunk promotion refreshes political and marker passes", () => {
+  assert.deepEqual(
+    getScenarioChunkPromotionTargetPasses({
+      hasPoliticalChange: false,
+      changedLayerKeys: ["strategicvalues"],
+    }),
+    ["political", "contextMarkers", "labels"],
+  );
+});
+
 test("renderer refresh plan normalization applies defaults and trims pass names", () => {
   assert.deepEqual(
     normalizeRendererRefreshPlan({

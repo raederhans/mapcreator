@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Integration Owner
 
@@ -21,7 +21,8 @@ Only paths present in the latest `git worktree list` are listed here.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main`, after functional commit `0c13e8e0` plus archive closeout | `origin/main@8c13c395b9704cb8c380d4aa8c0f05e302326074` | integrated and pushed | hot files resolved: `js/core/map_renderer.js`, `js/core/state/renderer_runtime_state.js`, `js/core/political_raster_worker_client.js`, `js/core/renderer/render_cache_owner.js`, `js/core/scenario/chunk_runtime.js`, `js/core/scenario_rollback.js`, matching `dist/app` mirrors, renderer/runtime/scenario/rollback tests, archived docs | Feature branch `origin/codex/render-scene-snapshot-stability` was pushed, fast-forwarded into `main`, and pushed to `origin/main`. Validation passed: JS syntax checks, Node behavior/contract suite 87/87, focused Python boundary contracts 70/70, `npm run test:node:scenario-chunk-contracts` 47/47, `npm run verify:pages-dist` with startup shell 37/37 and landing showcase 8/8 after a transient topojson memory retry, `git diff --check`, subagent review CLEAR, and post-merge main checks 22/22 Node plus 7/7 Python. | Green for direct worktree overlap because this is the only current worktree; yellow only for future renderer/rollback hot-path work. | No active integration action; recovery via `origin/codex/render-scene-snapshot-stability` and functional commit `0c13e8e0`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@d3671ca5` | `origin/main@d3671ca5` | local parent checkout, not integration target | dirty unrelated file: `data/locales.json` | Parent checkout preserved as user WIP. | Yellow only because current repair starts from the same main but uses isolated worktree. | Do not stage or edit parent checkout. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-transaction-stability` | `codex/render-transaction-stability@d3671ca5` | `origin/main@d3671ca5e8117e0bbc3f8503444072b8359ea091` | ready-for-integration | changed hot files: `js/workers/political_raster.worker.js`, `js/core/scenario/chunk_runtime.js`, `js/core/scenario_resources.js`, `js/core/map_renderer/scenario_refresh_plans.js`, matching `dist/app/js` mirrors, worker/scenario/refresh-plan tests, archived docs under `docs/archive/render-transaction-stability-20260620/` | Worker identity roundtrip and visible optional chunk generation semantics implemented. Passed worker packet 3/3, scenario chunk contracts 51/51, Python refresh/cache/runtime hooks 44/44, Python scenario resources 53/53, scenario refresh plans 5/5, chunk promotion helpers 3/3, `verify:pages-dist`, JS syntax checks, and diff check. Architect re-review CLEAR, code-simplifier PASS, code-reviewer has no code findings; LSP diagnostics were unavailable in this session. Main Codex agent owns all live tests and Pages dist; subagents are static/review lanes only. | Yellow versus future scenario chunk runtime, scenario resources, refresh-plan, or worker-protocol work; no current worktree file overlap found. | Fast-forward/push from the feature worktree while preserving parent checkout WIP, then clean the worktree after push. |
 
 ## Recent Integrated Branches
 
