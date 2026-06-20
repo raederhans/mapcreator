@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 281325,
+      "size_bytes": 281619,
       "source_kind": "dist"
     },
     {
@@ -46487,7 +46487,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 31751,
+      "size_bytes": 31896,
       "source_kind": "dist"
     },
     {
@@ -47116,5 +47116,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154178927
+  "total_bytes": 1154179366
 }

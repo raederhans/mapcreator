@@ -116,6 +116,9 @@ export function createAppearanceControlsController({
       panel.hidden = false;
       panel.classList.remove("hidden", "is-active");
       panel.removeAttribute("data-appearance-panel");
+      if (panel instanceof HTMLDetailsElement) {
+        panel.classList.add("card-flat", "appearance-subsection", "map-content-panel");
+      }
       panel.setAttribute("data-map-content-panel", tabId);
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", labelledBy);

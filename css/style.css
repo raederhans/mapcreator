@@ -1965,6 +1965,12 @@ input[type="checkbox"].checkbox-input {
   display: none;
 }
 
+#mapContentStack > details.map-content-panel.appearance-mini-section {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: rgba(247, 250, 252, 0.8);
+}
+
 #leftSidebar .appearance-tab-panel > .section-header {
   margin-bottom: 12px;
 }
@@ -2345,8 +2351,12 @@ details.appearance-subsection > *:not(summary),
   min-width: 0;
 }
 
+#mapContentStack > details.map-content-panel.appearance-mini-section > .rivers-panel {
+  padding: 0;
+}
+
 #mapContentStack .rivers-panel-body {
-  margin-top: 10px;
+  margin-top: 0;
   padding: 0;
   border: 0;
   background: transparent;
