@@ -86,16 +86,51 @@ async function scheduleExactAfterSettleRefreshForFocusedTest(page) {
 }
 
 async function waitForStableExactRender(page, { timeout = 30_000 } = {}) {
-  await page.waitForFunction(() => {
-    const state = globalThis.__playwrightStateRef || null;
-    return String(state.renderPhase || "") === "idle"
-      && !state.deferExactAfterSettle
-      && !state.exactAfterSettleHandle
-      && !state.runtimeChunkLoadState?.pendingPromotion
-      && !state.runtimeChunkLoadState?.promotionScheduled
-      && !state.runtimeChunkLoadState?.refreshScheduled
-      && !state.runtimeChunkLoadState?.promotionCommitInFlight;
-  }, { timeout });
+  try {
+    await page.waitForFunction(() => {
+      const state = globalThis.__playwrightStateRef || null;
+      return String(state.renderPhase || "") === "idle"
+        && !state.deferExactAfterSettle
+        && !state.exactAfterSettleHandle
+        && !state.runtimeChunkLoadState?.pendingPromotion
+        && !state.runtimeChunkLoadState?.promotionScheduled
+        && !state.runtimeChunkLoadState?.refreshScheduled
+        && !state.runtimeChunkLoadState?.promotionCommitInFlight;
+    }, undefined, { timeout });
+  } catch (error) {
+    const stateSnapshot = await page.evaluate(() => {
+      const state = globalThis.__playwrightStateRef || null;
+      const loadState = state?.runtimeChunkLoadState || {};
+      const metrics = state?.renderPerfMetrics && typeof state.renderPerfMetrics === "object"
+        ? state.renderPerfMetrics
+        : (globalThis.__renderPerfMetrics || {});
+      return {
+        renderPhase: String(state?.renderPhase || ""),
+        deferExactAfterSettle: !!state?.deferExactAfterSettle,
+        hasExactAfterSettleHandle: !!state?.exactAfterSettleHandle,
+        pendingPromotion: !!loadState.pendingPromotion,
+        pendingVisualPromotion: !!loadState.pendingVisualPromotion,
+        pendingInfraPromotion: !!loadState.pendingInfraPromotion,
+        promotionScheduled: !!loadState.promotionScheduled,
+        refreshScheduled: !!loadState.refreshScheduled,
+        promotionCommitInFlight: !!loadState.promotionCommitInFlight,
+        pendingReason: String(loadState.pendingReason || ""),
+        selectionVersion: Number(loadState.selectionVersion || 0),
+        scenarioDataGeneration: Number(state?.scenarioDataGeneration || 0),
+        colorRevision: Number(state?.colorRevision || 0),
+        activeScenarioId: String(state?.activeScenarioId || ""),
+        activeInteractionRecoveryTaskKey: String(state?.activeInteractionRecoveryTaskKey || ""),
+        activePostReadyTaskKey: String(state?.activePostReadyTaskKey || ""),
+        hitCanvasBuildScheduled: !!state?.hitCanvasBuildScheduled,
+        interactionInfrastructureBuildInFlight: !!state?.interactionInfrastructureBuildInFlight,
+        scenarioChunkPromotionVisualStage: metrics.scenarioChunkPromotionVisualStage || null,
+        settleExactRefreshPasses: metrics.settleExactRefreshPasses || null,
+      };
+    }).catch((snapshotError) => ({
+      snapshotError: String(snapshotError?.message || snapshotError || ""),
+    }));
+    throw new Error(`${error.message}\nstate=${JSON.stringify(stateSnapshot)}`);
+  }
 }
 
 async function startChunkPromotionProbe(page) {

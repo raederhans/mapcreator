@@ -5,21 +5,22 @@ Last updated: 2026-06-21
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: main@29c008f73348752ced55ebd56f916d734b86e37e after the render transaction diagnostics closeout commit.
-- Active implementation worktree: none for Scenario Apply Transaction Ownership stage2; integration closeout is being recorded from `C:\Users\raede\.codex\worktrees\mapcreator-stage2-main-integration`.
+- Integration base: `origin/main@b2f3a97ef073bf5cc4c7743ede3ea079f0530471` after Scenario Apply Transaction Ownership stage2 closeout.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-stage3-political-color-readiness` on branch `stage3-political-color-readiness`.
 - Live test/build owner: main Codex agent only; no live process currently active.
-- Subagents: available for static mapping and final independent review; they must not own shared live commands.
+- Subagents: static mapping and final independent review only; they must not own shared live commands.
 
 ## Recommended Order
 
-1. Keep renderer refresh plan `targetPasses` at renderer boundaries only.
-2. Complete Scenario Apply Transaction Ownership stage2 before color, Atlantropa, or chunk-coverage specialty fixes.
+1. Complete Stage 3 Political Core and Resolved Color Readiness from the isolated worktree.
+2. Keep water/Atlantropa required semantic layer coverage as Phase 4 unless Stage 3 evidence proves a direct political-core dependency.
 3. Track the Pages startup shell `topojson` memory failure as a separate landing builder gate repair if it reappears.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\Desktop\dev\mapcreator-stage3-political-color-readiness` | `stage3-political-color-readiness@b2f3a97e` | `origin/main@b2f3a97ef073bf5cc4c7743ede3ea079f0530471` | ready-for-integration | hot files changed: render diagnostics, map renderer color readiness, exact-after-settle scheduler, scenario chunk contracts, render diagnostics tests, exact-after-settle E2E, Pages dist mirrors, active task docs | Runtime sampling saved `.runtime/output/render-diagnostics/stage3-political-color-readiness.json`: stable Stage 3 core warning count 0, stable deferred Stage 4 warning count 2. Validation passed render diagnostics 16/16, scenario apply ownership 3/3, scenario runtime 6/6, renderer runtime 10/10, scenario chunk contracts 55/55, scenario apply concurrency E2E 1/1, scenario chunk runtime E2E 8/8, Pages dist build plus startup shell 38/38 and landing showcase 8/8. Independent code review approve-with-notes; architecture blocker fixes landed. | Yellow: renderer/chunk/scenario diagnostics hot paths and Pages dist mirrors; no direct overlap with parent checkout docs WIP. Stable remaining warnings are deferred Phase 4 semantic-layer coverage for `relief`. | Run final `git diff --check`, then commit and push from this clean worktree if `origin/main` is still at the base or fast-forwards cleanly. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-stage2-main-integration` | `codex/scenario-apply-stage2-main-integration@8ae91ae6` | `origin/main@29c008f73348752ced55ebd56f916d734b86e37e` | integrated, verified, pushed, ready for cleanup | hot files resolved: scenario manager, apply pipeline, post-apply effects, chunk runtime, scenario resources, focused tests, Pages dist mirrors | Stage2 ownership/fence implementation complete. Validation passed syntax checks, scenario apply ownership, render diagnostics, runtime state, lifecycle, chunk contracts, optional layers, Python boundary contracts, E2E concurrency, runtime diagnostics sample, Pages dist, diff check, code-review follow-up CLEAR, post-merge spot checks, and push to `origin/main`. Delivery package archived under `docs/archive/scenario-apply-transaction-stage2-20260621/`. | Yellow for future scenario lifecycle/chunk/runtime work; current active implementation overlap is closed. Parent main checkout has unrelated docs WIP preserved. | Remove temporary integration and feature worktrees; recovery via branch `codex/scenario-apply-transaction-stage2`, functional commit `c98c65da`, and closeout commit `8ae91ae6`. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main`; former `codex/render-transaction-diagnostics-20260621@21c49be3` | `main@967d9f58` / `origin/main@967d9f58` | integrated, pushed, verified | hot files resolved: scenario apply, scenario post apply, chunk runtime, scenario resources, map renderer, focused Node test, Pages dist mirror, archived docs, lessons learned | Functional commit `21c49be3`; delivery package archived under `docs/archive/render-transaction-diagnostics-20260621/`; validation passed syntax checks, render transaction diagnostics 14/14, scenario chunk contracts 54/54, renderer runtime state 10/10, scenario runtime state 6/6, scenario lifecycle 12/12, optional layers 6/6, architecture boundaries, Pages dist startup shell 38/38, landing showcase 8/8, diff check, and main push verification. | Yellow only for future renderer/chunk/scenario diagnostics paths; green for current filesystem overlap because `git worktree list` shows only this active worktree. | No active integration action; recovery via former branch `codex/render-transaction-diagnostics-20260621` and functional commit `21c49be3`. |
 

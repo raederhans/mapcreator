@@ -4,10 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  classifyRenderTransactionPhaseKind,
   exposeRenderTransactionDiagnostics,
   getMergedPayloadStateForDiagnostics,
   getRenderTransactionGlobalName,
   nextScenarioApplyEpoch,
+  recordPendingPoliticalColorEditClearDiagnostics,
   recordRenderInvariantWarning,
   recordRenderPassInvalidation,
   recordRenderTransactionSnapshot,
@@ -168,6 +170,91 @@ test("render transaction identity records scenario and renderer epochs", () => {
   assert.equal(snapshot.selectionVersion, 9);
 });
 
+test("render transaction phases classify readiness boundaries", () => {
+  assert.equal(classifyRenderTransactionPhaseKind("render-pass-invalidated"), "transient");
+  assert.equal(classifyRenderTransactionPhaseKind("scenario-chunk-promotion-visual-start"), "transient");
+  assert.equal(classifyRenderTransactionPhaseKind("scenario-chunk-promotion-visual-complete"), "stable");
+  assert.equal(classifyRenderTransactionPhaseKind("scenario-post-apply-start"), "transient");
+  assert.equal(classifyRenderTransactionPhaseKind("scenario-refresh-map-data-start"), "transient");
+  assert.equal(classifyRenderTransactionPhaseKind("visible-frame-committed"), "stable");
+
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    runtimeChunkLoadState: {
+      lastSelection: {
+        selectionVersion: 1,
+        requiredChunkIds: ["political.coarse.r0c0"],
+      },
+    },
+    activeScenarioChunks: { loadedChunkIds: ["political.coarse.r0c0"] },
+    renderPassCache: {},
+  };
+
+  const transientSnapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-chunk-promotion-visual-start",
+    expectedScenarioId: "tno_1962",
+  });
+  assert.equal(transientSnapshot.phaseKind, "transient");
+  assert.ok(transientSnapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.politicalVisibleSubsetEmptyWithRequiredChunks
+      && warning.phaseKind === "transient"
+  ));
+
+  const stableSnapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-chunk-promotion-visual-complete",
+    expectedScenarioId: "tno_1962",
+  });
+  assert.equal(stableSnapshot.phaseKind, "stable");
+  assert.ok(stableSnapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.politicalVisibleSubsetEmptyWithRequiredChunks
+      && warning.phaseKind === "stable"
+  ));
+});
+
+test("pending color edit lifecycle resets are separate from missing render proof", () => {
+  const lifecycleResetState = {
+    activeScenarioId: "modern_world",
+    landData: { features: [{ id: "A" }] },
+    colors: { A: "#112233" },
+    renderPassCache: {},
+  };
+  const resetSnapshot = recordPendingPoliticalColorEditClearDiagnostics(lifecycleResetState, {
+    resetReason: "set-map-data",
+    pendingFeatureCount: 3,
+    pendingReason: "refresh-colors",
+    inputLabel: "refresh-colors",
+    renderedCount: 0,
+    renderedIdCount: 0,
+    force: true,
+    paintSource: "set-map-data",
+  });
+  assert.equal(resetSnapshot.phaseKind, "stable");
+  assert.equal(resetSnapshot.extra.clearedWithoutRender, false);
+  assert.equal(lifecycleResetState.renderTransactionDiagnostics.warnings.length, 0);
+
+  const fillState = {
+    activeScenarioId: "tno_1962",
+    landData: { features: [{ id: "A" }] },
+    colors: { A: "#112233" },
+    renderPassCache: {},
+  };
+  const fillSnapshot = recordPendingPoliticalColorEditClearDiagnostics(fillState, {
+    resetReason: "force",
+    pendingFeatureCount: 3,
+    pendingReason: "refresh-colors",
+    inputLabel: "refresh-colors",
+    renderedCount: 0,
+    renderedIdCount: 0,
+    force: true,
+    paintSource: "political-pass",
+  });
+  assert.equal(fillSnapshot.extra.clearedWithoutRender, true);
+  assert.ok(fillState.renderTransactionDiagnostics.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.pendingColorEditClearedWithoutRender
+      && warning.phaseKind === "stable"
+  ));
+});
+
 test("scenario apply epoch follows the snapshot scenario instead of the latest global apply", () => {
   const runtimeState = {
     activeScenarioId: "alpha",
@@ -306,6 +393,17 @@ test("render transaction diagnostics classify invariant warnings", () => {
   assert.ok(colorsSnapshot.warnings.some(
     (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.resolvedColorsEmptyWithLand
   ));
+
+  const startupShellColorSnapshot = recordRenderTransactionSnapshot({
+    landData: { features: [{ id: "A" }] },
+    colors: {},
+    renderPassCache: {},
+  }, {
+    phase: "visible-frame-committed",
+  });
+  assert.equal(startupShellColorSnapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.resolvedColorsEmptyWithLand
+  ), false);
 
   const politicalChunkState = {
     activeScenarioId: "tno_1962",

@@ -45702,7 +45702,7 @@
     },
     {
       "path": "app/js/core/map_renderer/exact_after_settle_scheduler.js",
-      "size_bytes": 29284,
+      "size_bytes": 30760,
       "source_kind": "dist"
     },
     {
@@ -45767,7 +45767,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 908275,
+      "size_bytes": 910281,
       "source_kind": "dist"
     },
     {
@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/renderer/render_transaction_diagnostics.js",
-      "size_bytes": 36731,
+      "size_bytes": 38869,
       "source_kind": "dist"
     },
     {
@@ -47121,5 +47121,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154300625
+  "total_bytes": 1154306245
 }

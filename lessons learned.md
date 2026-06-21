@@ -427,3 +427,6 @@
 
 ### Scenario apply 写入权属于最新目标
 - queued request 开始 drain 后仍要在 commit 前检查 `latestScenarioApplyTargetId`；只看 active request id 会让中间请求在 later request 到达后抢先写 runtime。
+
+### Exact-after-settle 中断要带本地重排入口
+- pre-paint identity 或 phase 中断只 reset controller 会把 `deferExactAfterSettle=true` 留成无 handle 的空转状态；abort helper 要记录原因、窄失效 political pass，并在 defer 仍有效时重新 schedule exact refresh。

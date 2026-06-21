@@ -111,6 +111,33 @@ function createExactAfterSettleScheduler({
     return resetExactAfterSettleControllerState(runtimeState, { reason, generation });
   }
 
+  function abortInterruptedExactAfterSettleRefresh(reason = "interrupted", generation = null) {
+    const normalizedReason = String(reason || "interrupted").trim() || "interrupted";
+    const shouldRearmExactRefresh = !!runtimeState.deferExactAfterSettle;
+    cancelDeferredExactContextRefresh();
+    recordRenderPerfMetric("settleExactRefreshAbortBeforePaint", 0, {
+      activeScenarioId: String(runtimeState.activeScenarioId || ""),
+      generation: generation == null ? Number(getExactAfterSettleControllerState().generation || 0) : Number(generation || 0),
+      reason: normalizedReason,
+      renderPhase: String(runtimeState.renderPhase || ""),
+      deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
+    });
+    resetExactAfterSettleController(`abort-${normalizedReason}`, generation);
+    runtimeState.deferExactAfterSettle = shouldRearmExactRefresh;
+    runtimeState.pendingExactPoliticalFastFrame = shouldRearmExactRefresh;
+    invalidateRenderPasses("political", "exact-after-settle-abort");
+    if (shouldRearmExactRefresh) {
+      scheduleExactAfterSettleRefresh(runtimeState.adaptiveSettleProfile || getAdaptiveSettleProfile());
+    }
+    requestRendererRender("exact-after-settle-abort-recover", {
+      flush: false,
+      fallback: () => {
+        if (getContext()) render();
+      },
+    });
+    return false;
+  }
+
   function beginExactAfterSettleControllerSchedule(scheduleStartedAt) {
     const controller = getExactAfterSettleControllerState();
     const nextGeneration = Number(controller.generation || 0) + 1;
@@ -149,8 +176,7 @@ function createExactAfterSettleScheduler({
     }
     const controller = getExactAfterSettleControllerState();
     if (!isExactAfterSettleIdentityCurrent(controller)) {
-      resetExactAfterSettleController("pass-complete-identity-mismatch", generation);
-      return false;
+      return abortInterruptedExactAfterSettleRefresh("pass-complete-identity-mismatch", generation);
     }
     const applyFinishedAt = nowMs();
     Object.assign(controller, {
@@ -179,8 +205,7 @@ function createExactAfterSettleScheduler({
       return false;
     }
     if (!isExactAfterSettleIdentityCurrent(controller)) {
-      resetExactAfterSettleController("pass-start-identity-mismatch", generation);
-      return false;
+      return abortInterruptedExactAfterSettleRefresh("pass-start-identity-mismatch", generation);
     }
     const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
     const definitions = filterExactAfterSettleIdleRenderPassDefinitions(
@@ -205,11 +230,11 @@ function createExactAfterSettleScheduler({
         const activeController = getExactAfterSettleControllerState();
         if (!isExactAfterSettleGenerationCurrent(generation, "applying")) return;
         if (runtimeState.renderPhase !== renderPhaseIdle) {
-          resetExactAfterSettleController(`${passName}-phase-interrupted`, generation);
+          abortInterruptedExactAfterSettleRefresh(`${passName}-phase-interrupted`, generation);
           return;
         }
         if (!isExactAfterSettleIdentityCurrent(activeController)) {
-          resetExactAfterSettleController(`${passName}-identity-mismatch`, generation);
+          abortInterruptedExactAfterSettleRefresh(`${passName}-identity-mismatch`, generation);
           return;
         }
         if (passName === "political") {
@@ -408,13 +433,11 @@ function createExactAfterSettleScheduler({
     }
     const generation = Number(controller.generation || 0);
     if (!isExactAfterSettleIdentityCurrent(controller)) {
-      resetExactAfterSettleController("identity-mismatch", generation);
-      return false;
+      return abortInterruptedExactAfterSettleRefresh("identity-mismatch", generation);
     }
     const plan = controller.pendingPlan;
     if (!plan || typeof plan !== "object") {
-      resetExactAfterSettleController("missing-plan", generation);
-      return false;
+      return abortInterruptedExactAfterSettleRefresh("missing-plan", generation);
     }
     const finalizeStartedAt = nowMs();
     controller.phase = "finalizing";
@@ -598,9 +621,13 @@ function createExactAfterSettleScheduler({
     return enqueueFrameTask(() => {
       const startedAt = nowMs();
       if (!isExactAfterSettleGenerationCurrent(generation, "scheduled")) return;
-      if (!runtimeState.deferExactAfterSettle || runtimeState.renderPhase !== renderPhaseIdle) return;
+      if (!runtimeState.deferExactAfterSettle) return;
+      if (runtimeState.renderPhase !== renderPhaseIdle) {
+        abortInterruptedExactAfterSettleRefresh(`${label}-phase-interrupted`, generation);
+        return;
+      }
       if (!isExactAfterSettleIdentityCurrent(getExactAfterSettleControllerState())) {
-        resetExactAfterSettleController(`${label}-identity-mismatch`, generation);
+        abortInterruptedExactAfterSettleRefresh(`${label}-identity-mismatch`, generation);
         return;
       }
       task();

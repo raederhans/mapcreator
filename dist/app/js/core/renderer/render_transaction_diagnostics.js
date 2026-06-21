@@ -46,12 +46,63 @@ const FALLBACK_LAYER_CONFIGS = Object.freeze({
   }),
 });
 
+const STABLE_RENDER_TRANSACTION_PHASES = new Set([
+  "scenario-post-apply-complete",
+  "scenario-chunk-promotion-visual-complete",
+  "visible-frame-committed",
+  "visible-frame-reused",
+  "exact-after-settle-complete",
+  "exact-after-settle-focused-refresh-complete",
+  "pending-political-color-edit-cleared",
+]);
+
+const TRANSIENT_RENDER_TRANSACTION_PHASES = new Set([
+  "render-pass-invalidated",
+  "scenario-chunk-selection-created",
+  "scenario-chunk-refresh-requested",
+  "scenario-chunk-refresh-deferred",
+  "scenario-detail-prewarm-scheduled",
+  "scenario-detail-prewarm-complete",
+  "scenario-chunk-promotion-pending-created",
+  "scenario-chunk-promotion-commit-scheduled",
+  "scenario-chunk-promotion-commit-start",
+  "scenario-chunk-promotion-infra-complete",
+  "scenario-chunk-promotion-visual-start",
+  "scenario-apply-committed",
+  "scenario-apply-target-committed",
+  "scenario-post-apply-start",
+  "scenario-refresh-map-data-start",
+]);
+
+const PENDING_COLOR_EDIT_LIFECYCLE_RESET_REASONS = new Set([
+  "init-map",
+  "set-map-data",
+  "stale-scenario-color-rebuild",
+]);
+
 function nowMs() {
   return Date.now();
 }
 
 function normalizeId(value) {
   return String(value || "").trim();
+}
+
+export function classifyRenderTransactionPhaseKind(phase = "") {
+  const normalizedPhase = normalizeId(phase);
+  if (STABLE_RENDER_TRANSACTION_PHASES.has(normalizedPhase)) return "stable";
+  if (TRANSIENT_RENDER_TRANSACTION_PHASES.has(normalizedPhase)) return "transient";
+  if (normalizedPhase.startsWith("scenario-apply-prepare")
+    || normalizedPhase.startsWith("scenario-apply-precommit")
+    || normalizedPhase.startsWith("scenario-apply-runtime-commit")
+    || normalizedPhase.startsWith("scenario-apply-postcommit")
+    || normalizedPhase.startsWith("scenario-apply-staged")
+    || normalizedPhase.startsWith("scenario-apply-bundle")
+    || normalizedPhase.startsWith("scenario-apply-pipeline")
+  ) {
+    return "transient";
+  }
+  return "unknown";
 }
 
 function toBooleanParam(value) {
@@ -412,6 +463,7 @@ export function recordRenderInvariantWarning(runtimeState, {
     code: normalizedCode,
     severity: String(severity || "warning"),
     phase: String(phase || ""),
+    phaseKind: classifyRenderTransactionPhaseKind(phase),
     reason: String(reason || ""),
     details: details && typeof details === "object" ? { ...details } : {},
   };
@@ -468,7 +520,7 @@ function detectSnapshotWarnings(runtimeState, snapshot) {
     Number(snapshot.featureCounts?.landData || 0),
     Number(snapshot.featureCounts?.landDataFull || 0),
   );
-  if (landCount > 0 && Number(snapshot.featureCounts?.resolvedColors || 0) <= 0) {
+  if (activeScenarioId && landCount > 0 && Number(snapshot.featureCounts?.resolvedColors || 0) <= 0) {
     pushWarning(RENDER_TRANSACTION_WARNING_CODES.resolvedColorsEmptyWithLand, {
       landData: Number(snapshot.featureCounts?.landData || 0),
       landDataFull: Number(snapshot.featureCounts?.landDataFull || 0),
@@ -574,6 +626,7 @@ export function recordRenderTransactionSnapshot(runtimeState, {
     sequence,
     recordedAt: nowMs(),
     phase: String(phase || "unknown"),
+    phaseKind: classifyRenderTransactionPhaseKind(phase),
     reason: String(reason || ""),
     source: String(source || ""),
     ...identity,
@@ -623,6 +676,7 @@ function recordRenderTransactionIdentitySnapshot(runtimeState, {
     sequence,
     recordedAt: nowMs(),
     phase: String(phase || "unknown"),
+    phaseKind: classifyRenderTransactionPhaseKind(phase),
     reason: String(reason || ""),
     source: String(source || ""),
     ...identity,
@@ -705,7 +759,8 @@ export function recordPendingPoliticalColorEditClearDiagnostics(runtimeState, {
   const clearedWithoutRender = Math.max(0, Number(pendingFeatureCount || 0)) > 0
     && Number(renderedCount || 0) <= 0
     && Math.max(0, Number(renderedIdCount || 0)) <= 0
-    && !firstPixelRecorded;
+    && !firstPixelRecorded
+    && !(force && PENDING_COLOR_EDIT_LIFECYCLE_RESET_REASONS.has(String(resetReason || "").trim()));
   if (clearedWithoutRender) {
     recordRenderInvariantWarning(runtimeState, {
       code: RENDER_TRANSACTION_WARNING_CODES.pendingColorEditClearedWithoutRender,

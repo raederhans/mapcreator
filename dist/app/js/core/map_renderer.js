@@ -7067,6 +7067,46 @@ function getResolvedColorSourceName() {
     : "landData";
 }
 
+let visibleFrameColorReadinessAttemptSignature = "";
+
+function ensureResolvedColorsReadyForStableVisibleFrame(reason = "visible-frame") {
+  const colorSourceName = getResolvedColorSourceName();
+  const colorSourceFeatureCount = getResolvedColorSourceFeatures().length;
+  const landFeatureCount = Math.max(
+    getFullLandDataFeatures().length,
+    Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
+  );
+  if (landFeatureCount <= 0) return false;
+  if (Object.keys(runtimeState.colors || {}).length > 0) return false;
+  const attemptSignature = [
+    String(runtimeState.activeScenarioId || ""),
+    Number(runtimeState.sceneGeneration || 0),
+    Number(runtimeState.scenarioDataGeneration || 0),
+    Number(runtimeState.topologyRevision || 0),
+    Number(runtimeState.colorRevision || 0),
+    colorSourceName,
+    colorSourceFeatureCount,
+    landFeatureCount,
+  ].join("|");
+  if (visibleFrameColorReadinessAttemptSignature === attemptSignature) return false;
+  visibleFrameColorReadinessAttemptSignature = attemptSignature;
+  const startedAt = nowMs();
+  const colors = rebuildResolvedColors();
+  const resolvedColorCount = Object.keys(colors || {}).length;
+  if (resolvedColorCount > 0) {
+    visibleFrameColorReadinessAttemptSignature = "";
+  }
+  recordRenderPerfMetric("visibleFrameResolvedColorReadiness", nowMs() - startedAt, {
+    reason: String(reason || "visible-frame"),
+    landFeatureCount,
+    resolvedColorCount,
+    colorRevision: Number(runtimeState.colorRevision || 0),
+    sourceFeatureCount: colorSourceFeatureCount,
+    sourceName: colorSourceName,
+  });
+  return resolvedColorCount > 0;
+}
+
 function findResolvedColorFeatureById(featureId) {
   const id = String(featureId || "").trim();
   if (!id) return null;
@@ -7307,6 +7347,7 @@ function clearPendingPoliticalColorEdit({
   renderedIds = null,
   force = false,
   paintSource = "political-pass",
+  resetReason = "",
 } = {}) {
   const cache = getRenderPassCacheState();
   const preClearPendingIds = cache.pendingPoliticalColorEditIds instanceof Set ? new Set(cache.pendingPoliticalColorEditIds) : new Set();
@@ -7328,7 +7369,7 @@ function clearPendingPoliticalColorEdit({
     });
     return true;
   };
-  if (force) return reset("force");
+  if (force) return reset(String(resetReason || "").trim() || "force");
   if (!hasPendingPoliticalColorEdit()) return false;
   const hasRenderedIdScope = renderedIds !== null && renderedIds !== undefined;
   if (hasRenderedIdScope) {
@@ -7353,7 +7394,11 @@ function retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColo
   const pendingScenarioId = String(cache.pendingPoliticalColorEditScenarioId || "");
   const activeScenarioId = String(runtimeState.activeScenarioId || "");
   if (pendingScenarioId && pendingScenarioId !== activeScenarioId) {
-    clearPendingPoliticalColorEdit({ force: true });
+    clearPendingPoliticalColorEdit({
+      force: true,
+      resetReason: "stale-scenario-color-rebuild",
+      paintSource: "color-rebuild",
+    });
     return false;
   }
   const previousRevision = Number(previousColorRevision ?? -1);
@@ -20565,6 +20610,7 @@ function render() {
     });
     return;
   }
+  ensureResolvedColorsReadyForStableVisibleFrame("render");
   drawCanvas();
   if (runtimeState.renderPhase === RENDER_PHASE_IDLE) {
     scheduleHitCanvasBuildIfNeeded();
@@ -23613,7 +23659,11 @@ function initMap({
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
   runtimeState.hitCanvasTopologyRevision = 0;
   const renderPassCache = getRenderPassCacheState();
-  clearPendingPoliticalColorEdit({ force: true });
+  clearPendingPoliticalColorEdit({
+    force: true,
+    resetReason: "init-map",
+    paintSource: "init-map",
+  });
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
   renderPassCache.fullReferenceTransforms = {};
@@ -23759,7 +23809,11 @@ function setMapData({
     cancelSecondarySpatialBuild: true,
   });
   const renderPassCache = getRenderPassCacheState();
-  clearPendingPoliticalColorEdit({ force: true });
+  clearPendingPoliticalColorEdit({
+    force: true,
+    resetReason: "set-map-data",
+    paintSource: "set-map-data",
+  });
   renderPassCache.referenceTransform = null;
   renderPassCache.referenceTransforms = {};
   renderPassCache.fullReferenceTransforms = {};
