@@ -424,3 +424,6 @@
 ### 渲染诊断默认路径要轻量且保留事务身份
 - 可见帧诊断默认只记录 identity、epoch、generation 和 pass 状态；完整 feature/chunk/layer snapshot 放在显式 diagnostics 模式，避免为了查 bug 把 renderer 热路径变重。
 - Scenario apply 的 epoch 要按目标 scenario 固定记录，并由异步 post-apply/chunk/visible-frame 快照沿用；只读全局 latest epoch 会让延迟记录漂到下一次 apply。
+
+### Scenario apply 写入权属于最新目标
+- queued request 开始 drain 后仍要在 commit 前检查 `latestScenarioApplyTargetId`；只看 active request id 会让中间请求在 later request 到达后抢先写 runtime。

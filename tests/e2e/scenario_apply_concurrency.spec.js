@@ -3,7 +3,7 @@ const { getAppUrl, waitForAppInteractive } = require("./support/playwright-app")
 
 test.setTimeout(180_000);
 
-const APP_URL = getAppUrl('/?render_profile=balanced&startup_interaction=full&startup_worker=0&startup_cache=1&default_scenario=hoi4_1939');
+const APP_URL = getAppUrl('/?render_profile=balanced&startup_interaction=full&startup_worker=0&startup_cache=1&default_scenario=hoi4_1939&render_diag=1');
 
 async function waitForScenarioControlsReady(page) {
   await page.goto(APP_URL, { waitUntil: "domcontentloaded" });
@@ -102,11 +102,16 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
     globalThis.__scenarioTestJsonCounters = {
       manifest: 0,
     };
+    globalThis.__scenarioTestJsonDelays = {
+      "data/scenarios/tno_1962/manifest.json": 700,
+    };
     globalThis.d3.json = async (...args) => {
       const url = String(args[0] || '');
-      if (url.includes('data/scenarios/tno_1962/manifest.json')) {
+      const delayEntry = Object.entries(globalThis.__scenarioTestJsonDelays || {})
+        .find(([needle]) => url.includes(needle));
+      if (delayEntry) {
         globalThis.__scenarioTestJsonCounters.manifest += 1;
-        await new Promise((resolve) => setTimeout(resolve, 700));
+        await new Promise((resolve) => setTimeout(resolve, Number(delayEntry[1] || 0)));
       }
       return originalJson(...args);
     };
@@ -166,4 +171,164 @@ test('scenario apply is single-flight and english ui uses entry.en overrides', a
   expect(englishOverride.scenarioGuide).toBe(
     'Scenario loaded. 1) Select a country 2) Choose an active owner 3) Use Activate or Scenario Actions.'
   );
+
+  const queueResult = await page.evaluate(async () => {
+    globalThis.__scenarioTestJsonDelays = {
+      ...(globalThis.__scenarioTestJsonDelays || {}),
+      "data/scenarios/hoi4_1936/manifest.json": 900,
+    };
+    const { applyScenarioByIdCommand } = await import("/js/core/scenario_dispatcher.js");
+    const { state } = await import("/js/core/state.js");
+    const commandOptions = {
+      renderMode: "none",
+      markDirtyReason: "",
+      showToastOnComplete: false,
+    };
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const first = applyScenarioByIdCommand("hoi4_1936", commandOptions);
+    await sleep(30);
+    const second = applyScenarioByIdCommand("modern_world", commandOptions);
+    await sleep(30);
+    const third = applyScenarioByIdCommand("hoi4_1939", commandOptions);
+    const results = await Promise.allSettled([first, second, third]);
+    const diagnostics = globalThis.__scenarioForgeRenderTransactions || {};
+    const snapshots = Array.isArray(diagnostics.snapshots) ? diagnostics.snapshots : [];
+    const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+    return {
+      results: results.map((result) => ({
+        status: String(result.status || ""),
+        valueScenarioId: String(result.value?.manifest?.scenario_id || result.value?.meta?.scenario_id || ""),
+        reason: String(result.reason?.message || result.reason || ""),
+      })),
+      activeScenarioId: String(state.activeScenarioId || ""),
+      scenarioApplyInFlight: !!state.scenarioApplyInFlight,
+      queueSnapshots: snapshots
+        .filter((snapshot) => [
+          "scenario-apply-queued-latest-target",
+          "scenario-apply-queue-drain-started",
+          "scenario-apply-queue-drain-skipped-stale",
+          "scenario-apply-queue-drain-complete",
+        ].includes(snapshot.phase))
+        .slice(-12)
+        .map((snapshot) => ({
+          phase: snapshot.phase,
+          requestedScenarioId: snapshot.requestedScenarioId,
+          expectedScenarioId: snapshot.expectedScenarioId,
+          scenarioApplyRequestId: snapshot.extra?.scenarioApplyRequestId || 0,
+          activeScenarioApplyTargetId: snapshot.extra?.activeScenarioApplyTargetId || "",
+          queuedScenarioApplyTargetId: snapshot.extra?.queuedScenarioApplyTargetId || snapshot.extra?.latestQueuedScenarioApplyTargetId || "",
+          resolution: snapshot.extra?.resolution || "",
+          finalActiveScenarioId: snapshot.extra?.finalActiveScenarioId || "",
+        })),
+      mismatchWarnings: warnings
+        .filter((warning) => warning.code === "scenario-apply-inflight-target-mismatch")
+        .slice(-8)
+        .map((warning) => ({
+          activeScenarioApplyTargetId: warning.details?.activeScenarioApplyTargetId || "",
+          requestedScenarioId: warning.details?.requestedScenarioId || "",
+          queuedScenarioApplyTargetId: warning.details?.queuedScenarioApplyTargetId || "",
+          resolution: warning.details?.resolution || "",
+        })),
+    };
+  });
+
+  expect(queueResult.results.every((result) => result.status === "fulfilled")).toBe(true);
+  expect(queueResult.activeScenarioId).toBe("hoi4_1939");
+  expect(queueResult.scenarioApplyInFlight).toBe(false);
+  expect(queueResult.mismatchWarnings.some((warning) => (
+    warning.activeScenarioApplyTargetId === "hoi4_1936"
+    && warning.requestedScenarioId === "modern_world"
+    && warning.resolution === "queued-latest-request"
+  ))).toBe(true);
+  expect(queueResult.mismatchWarnings.some((warning) => warning.requestedScenarioId === "hoi4_1939")).toBe(true);
+  expect(queueResult.queueSnapshots.some((snapshot) => (
+    snapshot.phase === "scenario-apply-queue-drain-skipped-stale"
+    && snapshot.requestedScenarioId === "modern_world"
+    && snapshot.resolution === "replaced-by-latest-request"
+  ))).toBe(true);
+  expect(queueResult.queueSnapshots.some((snapshot) => (
+    snapshot.phase === "scenario-apply-queue-drain-complete"
+    && snapshot.requestedScenarioId === "hoi4_1939"
+    && snapshot.finalActiveScenarioId === "hoi4_1939"
+  ))).toBe(true);
+
+  const middleStartedResult = await page.evaluate(async () => {
+    const diagnosticsBefore = globalThis.__scenarioForgeRenderTransactions || {};
+    const sequenceStart = Number(diagnosticsBefore.sequence || 0);
+    globalThis.__scenarioTestJsonDelays = {
+      ...(globalThis.__scenarioTestJsonDelays || {}),
+      "data/scenarios/hgo_1936/manifest.json": 500,
+      "data/scenarios/blank_base/manifest.json": 900,
+    };
+    const { applyScenarioByIdCommand } = await import("/js/core/scenario_dispatcher.js");
+    const { state } = await import("/js/core/state.js");
+    ["hgo_1936", "blank_base", "modern_world"].forEach((scenarioId) => {
+      if (state.scenarioBundleCacheById && typeof state.scenarioBundleCacheById === "object") {
+        delete state.scenarioBundleCacheById[scenarioId];
+      }
+    });
+    const commandOptions = {
+      renderMode: "none",
+      markDirtyReason: "",
+      showToastOnComplete: false,
+    };
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const waitForQueueDrainStarted = async (scenarioId, timeoutMs = 15_000) => {
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < timeoutMs) {
+        const diagnostics = globalThis.__scenarioForgeRenderTransactions || {};
+        const snapshots = Array.isArray(diagnostics.snapshots) ? diagnostics.snapshots : [];
+        const found = snapshots.some((snapshot) => (
+          Number(snapshot.sequence || 0) > sequenceStart
+          && snapshot.phase === "scenario-apply-queue-drain-started"
+          && snapshot.requestedScenarioId === scenarioId
+        ));
+        if (found) return true;
+        await sleep(25);
+      }
+      return false;
+    };
+    const first = applyScenarioByIdCommand("hgo_1936", commandOptions);
+    await sleep(30);
+    const second = applyScenarioByIdCommand("blank_base", commandOptions);
+    const middleStarted = await waitForQueueDrainStarted("blank_base");
+    const third = applyScenarioByIdCommand("modern_world", commandOptions);
+    const results = await Promise.allSettled([first, second, third]);
+    const diagnostics = globalThis.__scenarioForgeRenderTransactions || {};
+    const snapshots = Array.isArray(diagnostics.snapshots) ? diagnostics.snapshots : [];
+    const recentSnapshots = snapshots.filter((snapshot) => Number(snapshot.sequence || 0) > sequenceStart);
+    return {
+      middleStarted,
+      results: results.map((result) => ({
+        status: String(result.status || ""),
+        valueScenarioId: String(result.value?.manifest?.scenario_id || result.value?.meta?.scenario_id || ""),
+        reason: String(result.reason?.message || result.reason || ""),
+      })),
+      activeScenarioId: String(state.activeScenarioId || ""),
+      scenarioApplyInFlight: !!state.scenarioApplyInFlight,
+      blankBaseCommitted: recentSnapshots.some((snapshot) => (
+        snapshot.phase === "scenario-apply-target-committed"
+        && snapshot.requestedScenarioId === "blank_base"
+      )),
+      staleBlankBaseSkipped: recentSnapshots.some((snapshot) => (
+        snapshot.phase === "scenario-apply-stale-callback-skipped"
+        && snapshot.expectedScenarioId === "blank_base"
+        && snapshot.extra?.callbackPhase === "commit-start"
+        && snapshot.extra?.resolution === "skipped-stale-request"
+      )),
+      modernDrainComplete: recentSnapshots.some((snapshot) => (
+        snapshot.phase === "scenario-apply-queue-drain-complete"
+        && snapshot.requestedScenarioId === "modern_world"
+        && snapshot.extra?.finalActiveScenarioId === "modern_world"
+      )),
+    };
+  });
+
+  expect(middleStartedResult.middleStarted).toBe(true);
+  expect(middleStartedResult.results.every((result) => result.status === "fulfilled")).toBe(true);
+  expect(middleStartedResult.activeScenarioId).toBe("modern_world");
+  expect(middleStartedResult.scenarioApplyInFlight).toBe(false);
+  expect(middleStartedResult.blankBaseCommitted).toBe(false);
+  expect(middleStartedResult.staleBlankBaseSkipped).toBe(true);
+  expect(middleStartedResult.modernDrainComplete).toBe(true);
 });

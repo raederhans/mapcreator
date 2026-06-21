@@ -314,6 +314,7 @@ function createScenarioApplyPipeline({
       syncPalette = true,
       interactionLevel = "full",
       scenarioApplyEpoch = 0,
+      scenarioApplyRequestId = 0,
     } = {}
   ) {
     // apply 前半段先守住“能不能安全进入场景”这条线：
@@ -520,6 +521,7 @@ function createScenarioApplyPipeline({
     const staged = {
       scenarioId,
       scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+      scenarioApplyRequestId: Math.max(0, Number(scenarioApplyRequestId || 0)),
       baseCountryMap,
       defaultCountryCode,
       mapSemanticMode,
@@ -564,6 +566,7 @@ function createScenarioApplyPipeline({
         scenarioAtlantropaSource: scenarioAtlantropaFromTopology ? "topology-or-merged" : "none",
         scenarioSpecialSource: scenarioSpecialRegionsFromTopology ? "topology-or-merged" : "none",
         scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(scenarioApplyRequestId || 0)),
         fixedOwnerColorCount: Object.keys(scenarioColorMap || {}).length,
         coarseColorCount: Object.keys(coarseColorMap || {}).length,
         resolvedOwnerCount: Object.keys(resolvedOwners || {}).length,
@@ -581,6 +584,7 @@ function createScenarioApplyPipeline({
       extra: {
         allowScenarioMismatch: true,
         scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
       },
     });
     runScenarioActivationPreCommitPhase(bundle, staged);
@@ -592,6 +596,7 @@ function createScenarioApplyPipeline({
       extra: {
         allowScenarioMismatch: true,
         scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
       },
     });
     commitScenarioActivationState(bundle, staged);
@@ -603,6 +608,7 @@ function createScenarioApplyPipeline({
       source: "scenario_apply_pipeline",
       extra: {
         scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
         runtimeTopologyWritten: !!runtimeState.scenarioRuntimeTopologyData,
         runtimePoliticalTopologySource: runtimeState.runtimePoliticalTopology === staged?.runtimeTopologyPayload
           ? "staged"
@@ -627,6 +633,7 @@ function createScenarioApplyPipeline({
       source: "scenario_apply_pipeline",
       extra: {
         scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
       },
     });
   }

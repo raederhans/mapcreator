@@ -26,6 +26,72 @@ function readRepoFile(...relativeParts) {
   return fs.readFileSync(path.join(REPO_ROOT, ...relativeParts), "utf8");
 }
 
+test("political chunk payload write skips stale scenario apply request", () => {
+  const previousPayload = {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", id: "old-feature", properties: {}, geometry: null }],
+  };
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 2,
+    scenarioPoliticalChunkData: previousPayload,
+    scenarioPoliticalVisibleChunkData: null,
+    renderTransactionDiagnostics: null,
+  };
+  let refreshCalled = false;
+  const controller = createScenarioChunkRuntimeController({
+    runtimeState,
+    getSearchParams: () => new URLSearchParams(),
+    normalizeScenarioId: (value) => String(value || "").trim(),
+    normalizeCountryCodeAlias: (value) => String(value || "").trim().toUpperCase(),
+    normalizeScenarioPerformanceHints: (value) => value || {},
+    normalizeScenarioFeatureCollection: (payload) => payload,
+    getScenarioFeatureCollectionIdentityList: (payload) => (
+      Array.isArray(payload?.features) ? payload.features.map((feature) => String(feature?.id || "")) : []
+    ),
+    areScenarioFeatureCollectionsEquivalent: () => false,
+    getScenarioDefaultCountryCode: () => "",
+    getScenarioBundleId: (bundle) => String(bundle?.manifest?.scenario_id || ""),
+    getCachedScenarioBundle: () => null,
+    getVisibleScenarioChunkLayers: () => [],
+    selectScenarioChunks: () => ({ requiredChunks: [], optionalChunks: [], evictableChunkIds: [] }),
+    mergeScenarioChunkPayloads: () => null,
+    normalizeScenarioRenderBudgetHints: (value) => value || {},
+    loadScenarioChunkFile: async () => null,
+    scenarioSupportsChunkedRuntime: () => false,
+    scenarioBundleUsesChunkedLayer: () => false,
+    getScenarioOptionalLayerConfig: () => null,
+    syncScenarioLocalizationState: () => {},
+    refreshMapDataForScenarioChunkPromotion: () => {
+      refreshCalled = true;
+    },
+    flushRenderBoundary: () => {},
+    recordScenarioPerfMetric: () => {},
+    ensureScenarioChunkRegistryLoaded: async () => {},
+  });
+
+  const changed = controller.applyScenarioPoliticalChunkPayload({
+    manifest: { scenario_id: "tno_1962" },
+  }, {
+    type: "FeatureCollection",
+    features: [{ type: "Feature", id: "new-feature", properties: {}, geometry: null }],
+  }, {
+    reason: "unit-stale-request",
+    scenarioApplyEpoch: 4,
+    scenarioApplyRequestId: 1,
+  });
+
+  assert.equal(changed, false);
+  assert.equal(runtimeState.scenarioPoliticalChunkData, previousPayload);
+  assert.equal(refreshCalled, false);
+  assert.ok(runtimeState.renderTransactionDiagnostics?.snapshots?.some((snapshot) => (
+    snapshot.phase === "scenario-apply-stale-callback-skipped"
+    && snapshot.extra?.callbackPhase === "political-chunk-payload-write"
+    && snapshot.extra?.scenarioApplyRequestId === 1
+    && snapshot.extra?.currentScenarioApplyRequestId === 2
+  )));
+});
+
 function sliceBetween(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
   if (start < 0) return "";

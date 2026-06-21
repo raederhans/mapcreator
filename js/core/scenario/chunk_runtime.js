@@ -317,6 +317,79 @@ function createScenarioChunkRuntimeController({
     });
   }
 
+  function getCurrentScenarioApplyRequestId() {
+    return Math.max(0, Number(runtimeState?.currentScenarioApplyRequestId || 0));
+  }
+
+  function getScenarioApplyRequestIdBySelectionVersion(loadState, selectionVersion = 0) {
+    const normalizedSelectionVersion = Math.max(0, Number(selectionVersion || 0));
+    const requestIdBySelectionVersion =
+      loadState?.scenarioApplyRequestIdBySelectionVersion
+      && typeof loadState.scenarioApplyRequestIdBySelectionVersion === "object"
+        ? loadState.scenarioApplyRequestIdBySelectionVersion
+        : {};
+    return normalizedSelectionVersion > 0
+      ? Math.max(0, Number(requestIdBySelectionVersion[normalizedSelectionVersion] || 0))
+      : 0;
+  }
+
+  function resolveScenarioChunkApplyRequestId({
+    scenarioApplyRequestId = 0,
+    pendingPromotion = null,
+    loadState = null,
+    selectionVersion = 0,
+  } = {}) {
+    const explicitRequestId = Math.max(0, Number(scenarioApplyRequestId || 0));
+    if (explicitRequestId > 0) return explicitRequestId;
+    const pendingRequestId = Math.max(0, Number(pendingPromotion?.scenarioApplyRequestId || 0));
+    if (pendingRequestId > 0) return pendingRequestId;
+    const selectionRequestId = getScenarioApplyRequestIdBySelectionVersion(loadState, selectionVersion);
+    if (selectionRequestId > 0) return selectionRequestId;
+    const lastSelectionRequestId = Math.max(0, Number(loadState?.lastSelection?.scenarioApplyRequestId || 0));
+    if (lastSelectionRequestId > 0) return lastSelectionRequestId;
+    return getCurrentScenarioApplyRequestId();
+  }
+
+  function isScenarioApplyRequestCurrentForScenario({
+    scenarioId = "",
+    scenarioApplyRequestId = 0,
+  } = {}) {
+    const normalizedScenarioId = normalizeScenarioId(scenarioId || runtimeState?.activeScenarioId);
+    if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState?.activeScenarioId)) {
+      return false;
+    }
+    const expectedRequestId = Math.max(0, Number(scenarioApplyRequestId || 0));
+    const currentRequestId = getCurrentScenarioApplyRequestId();
+    return !(expectedRequestId > 0 && currentRequestId > 0 && expectedRequestId !== currentRequestId);
+  }
+
+  function recordScenarioApplyStaleCallbackSkipped({
+    callbackPhase = "",
+    reason = "scenario-chunk-runtime",
+    scenarioId = "",
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    extra = {},
+  } = {}) {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-stale-callback-skipped",
+      reason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        ...extra,
+        allowScenarioMismatch: true,
+        callbackPhase,
+        resolution: "skipped-stale-request",
+        scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: Math.max(0, Number(scenarioApplyRequestId || 0)),
+        currentScenarioApplyRequestId: getCurrentScenarioApplyRequestId(),
+        activeScenarioId: normalizeScenarioId(runtimeState?.activeScenarioId),
+      },
+    });
+  }
+
   function yieldToFrame() {
     return new Promise((resolve) => {
       if (typeof globalThis.requestAnimationFrame === "function") {
@@ -368,6 +441,10 @@ function createScenarioChunkRuntimeController({
       Number.isFinite(Number(runtimeState.runtimeChunkLoadState.pendingDelayMs))
         ? Number(runtimeState.runtimeChunkLoadState.pendingDelayMs)
         : null;
+    runtimeState.runtimeChunkLoadState.pendingScenarioApplyRequestId = Math.max(
+      0,
+      Number(runtimeState.runtimeChunkLoadState.pendingScenarioApplyRequestId || 0),
+    );
     runtimeState.runtimeChunkLoadState.focusCountryOverride =
       typeof runtimeState.runtimeChunkLoadState.focusCountryOverride === "string"
         ? runtimeState.runtimeChunkLoadState.focusCountryOverride
@@ -400,6 +477,11 @@ function createScenarioChunkRuntimeController({
       runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion
       && typeof runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion === "object"
         ? runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion
+        : {};
+    runtimeState.runtimeChunkLoadState.scenarioApplyRequestIdBySelectionVersion =
+      runtimeState.runtimeChunkLoadState.scenarioApplyRequestIdBySelectionVersion
+      && typeof runtimeState.runtimeChunkLoadState.scenarioApplyRequestIdBySelectionVersion === "object"
+        ? runtimeState.runtimeChunkLoadState.scenarioApplyRequestIdBySelectionVersion
         : {};
     runtimeState.runtimeChunkLoadState.pendingVisualPromotion =
       runtimeState.runtimeChunkLoadState.pendingVisualPromotion && typeof runtimeState.runtimeChunkLoadState.pendingVisualPromotion === "object"
@@ -480,6 +562,7 @@ function createScenarioChunkRuntimeController({
   function clearPendingScenarioChunkRefresh(loadState = ensureRuntimeChunkLoadState()) {
     loadState.pendingReason = "";
     loadState.pendingDelayMs = null;
+    loadState.pendingScenarioApplyRequestId = 0;
   }
 
 
@@ -547,10 +630,15 @@ function createScenarioChunkRuntimeController({
     requiredChunkIds = [],
     cacheOnlyChunkIds = [],
     retainedActiveChunkIds = [],
+    scenarioApplyRequestId = 0,
   } = {}) {
     if (runtimeState.runtimeChunkLoadState !== loadState) return false;
     const normalizedScenarioId = normalizeScenarioId(scenarioId);
     if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return false;
+    if (!isScenarioApplyRequestCurrentForScenario({
+      scenarioId: normalizedScenarioId,
+      scenarioApplyRequestId,
+    })) return false;
     if (Math.max(0, Number(loadState.selectionVersion || 0)) !== Math.max(0, Number(selectionVersion || 0))) return false;
     if (normalizeScenarioId(loadState.lastSelection?.scenarioId) !== normalizedScenarioId) return false;
     if (Math.max(0, Number(loadState.lastSelection?.selectionVersion || 0)) !== Math.max(0, Number(selectionVersion || 0))) return false;
@@ -567,10 +655,17 @@ function createScenarioChunkRuntimeController({
     );
   }
 
-  function markPendingScenarioChunkRefresh(reason = "refresh", delayMs = null) {
+  function markPendingScenarioChunkRefresh(reason = "refresh", delayMs = null, {
+    scenarioApplyRequestId = 0,
+  } = {}) {
     const loadState = ensureRuntimeChunkLoadState();
     loadState.pendingReason = String(reason || "refresh").trim() || "refresh";
     loadState.pendingDelayMs = Number.isFinite(Number(delayMs)) ? Number(delayMs) : null;
+    loadState.pendingScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      scenarioApplyRequestId,
+      loadState,
+      selectionVersion: loadState.selectionVersion,
+    });
     return loadState;
   }
 
@@ -795,6 +890,28 @@ function createScenarioChunkRuntimeController({
     if (!bundle) {
       clearPendingScenarioChunkRefresh(loadState);
       return "noop";
+    }
+    const pendingScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      scenarioApplyRequestId: loadState.pendingScenarioApplyRequestId,
+      loadState,
+      selectionVersion: loadState.selectionVersion,
+    });
+    const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
+    if (pendingScenarioApplyRequestId > 0 && !isScenarioApplyRequestCurrentForScenario({
+      scenarioId: activeScenarioId,
+      scenarioApplyRequestId: pendingScenarioApplyRequestId,
+    })) {
+      recordScenarioApplyStaleCallbackSkipped({
+        callbackPhase: "chunk-refresh-execute",
+        reason,
+        scenarioId: activeScenarioId,
+        scenarioApplyRequestId: pendingScenarioApplyRequestId,
+        extra: {
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
+      clearPendingScenarioChunkRefresh(loadState);
+      return "stale-request";
     }
     if (loadState.pendingPromotion && loadState.promotionScheduled) {
       if (flushPending) {
@@ -1080,8 +1197,26 @@ function createScenarioChunkRuntimeController({
     forceRefresh = false,
     firstFrameOnly = false,
     scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
   } = {}) {
     const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
+    const bundleScenarioId = getScenarioBundleId(bundle);
+    const transactionScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      scenarioApplyRequestId,
+    });
+    if (!isScenarioApplyRequestCurrentForScenario({
+      scenarioId: bundleScenarioId,
+      scenarioApplyRequestId: transactionScenarioApplyRequestId,
+    })) {
+      recordScenarioApplyStaleCallbackSkipped({
+        callbackPhase: "political-chunk-payload-write",
+        reason,
+        scenarioId: bundleScenarioId,
+        scenarioApplyEpoch,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
+      });
+      return false;
+    }
     const normalizeStartedAt = startedAt;
     const normalizedPayload = normalizeScenarioFeatureCollection(politicalPayload);
     const normalizedPrimaryPayload = normalizeScenarioFeatureCollection(primaryPoliticalPayload);
@@ -1119,6 +1254,7 @@ function createScenarioChunkRuntimeController({
           previousPrimaryFeatureCount: previousPrimaryFeatureIds.length,
           nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
           scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
         },
       });
       recordScenarioRenderMetric("politicalChunkPromotionBreakdown", compareEndedAt - startedAt, {
@@ -1143,7 +1279,7 @@ function createScenarioChunkRuntimeController({
     recordRenderTransactionSnapshot(runtimeState, {
       phase: "scenario-political-chunk-payload-written",
       reason,
-      expectedScenarioId: getScenarioBundleId(bundle),
+      expectedScenarioId: bundleScenarioId,
       source: "scenario_chunk_runtime",
       searchParams: getSearchParams(),
       extra: {
@@ -1155,6 +1291,7 @@ function createScenarioChunkRuntimeController({
         nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
         primaryPayloadHasSubset: !!primaryPayloadHasSubset,
         scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
       },
     });
     const resolvedPoliticalFeatureIds = Array.from(new Set([
@@ -1297,6 +1434,10 @@ function createScenarioChunkRuntimeController({
     if (runId > 0 && Math.max(0, Number(loadState.promotionCommitRunId || 0)) !== runId) return false;
     const normalizedScenarioId = normalizeScenarioId(scenarioId || pendingPromotion.scenarioId || runtimeState.activeScenarioId);
     if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return false;
+    if (!isScenarioApplyRequestCurrentForScenario({
+      scenarioId: normalizedScenarioId,
+      scenarioApplyRequestId: pendingPromotion.scenarioApplyRequestId,
+    })) return false;
     if (loadState.pendingPromotion && loadState.pendingPromotion !== pendingPromotion) return false;
     const pendingSelectionVersion = Math.max(0, Number(pendingPromotion.selectionVersion || 0));
     const currentSelectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
@@ -1309,6 +1450,10 @@ function createScenarioChunkRuntimeController({
     if (runtimeState.runtimeChunkLoadState !== loadState) return false;
     const normalizedScenarioId = normalizeScenarioId(scenarioId || pendingPromotion.scenarioId || runtimeState.activeScenarioId);
     if (!normalizedScenarioId || normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) return false;
+    if (!isScenarioApplyRequestCurrentForScenario({
+      scenarioId: normalizedScenarioId,
+      scenarioApplyRequestId: pendingPromotion.scenarioApplyRequestId,
+    })) return false;
     if (runId > 0 && Math.max(0, Number(loadState.promotionCommitRunId || 0)) !== runId) return false;
     return true;
   }
@@ -1329,7 +1474,13 @@ function createScenarioChunkRuntimeController({
       pendingPromotion,
       loadState,
     });
+    const promotionScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      pendingPromotion,
+      loadState,
+      selectionVersion: pendingPromotion.selectionVersion,
+    });
     pendingPromotion.scenarioApplyEpoch = promotionScenarioApplyEpoch;
+    pendingPromotion.scenarioApplyRequestId = promotionScenarioApplyRequestId;
     if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
       if (loadState.pendingPromotion === pendingPromotion) {
         clearPendingScenarioChunkPromotion(loadState);
@@ -1345,6 +1496,7 @@ function createScenarioChunkRuntimeController({
           runId,
           selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
           scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          scenarioApplyRequestId: promotionScenarioApplyRequestId,
           currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
         },
       });
@@ -1385,6 +1537,7 @@ function createScenarioChunkRuntimeController({
         runId,
         selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
         scenarioApplyEpoch: promotionScenarioApplyEpoch,
+        scenarioApplyRequestId: promotionScenarioApplyRequestId,
         requiredChunkCount: Array.isArray(pendingPromotion.requiredChunkIds) ? pendingPromotion.requiredChunkIds.length : 0,
         changedLayerCount: Array.isArray(pendingPromotion.changedLayerKeys) ? pendingPromotion.changedLayerKeys.length : 0,
         politicalFeatureCount: Array.isArray(pendingPromotion.politicalFeatureIds) ? pendingPromotion.politicalFeatureIds.length : 0,
@@ -1436,6 +1589,7 @@ function createScenarioChunkRuntimeController({
           runId,
           selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
           scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          scenarioApplyRequestId: promotionScenarioApplyRequestId,
           changedLayerKeys: Array.isArray(mergedLayerResult?.changedLayerKeys) ? mergedLayerResult.changedLayerKeys : [],
         },
       });
@@ -1459,6 +1613,7 @@ function createScenarioChunkRuntimeController({
             runId,
             selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
             scenarioApplyEpoch: promotionScenarioApplyEpoch,
+            scenarioApplyRequestId: promotionScenarioApplyRequestId,
             currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
           },
         });
@@ -1476,6 +1631,7 @@ function createScenarioChunkRuntimeController({
           runId,
           selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
           scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          scenarioApplyRequestId: promotionScenarioApplyRequestId,
           politicalFeatureCount: Array.isArray(pendingPromotion.politicalFeatureIds) ? pendingPromotion.politicalFeatureIds.length : 0,
           primaryVisibleFeatureSubsetChanged: !!pendingPromotion.primaryVisibleFeatureSubsetChanged,
         },
@@ -1502,6 +1658,7 @@ function createScenarioChunkRuntimeController({
         forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
         firstFrameOnly: !!allowStartupInitialVisual,
         scenarioApplyEpoch: promotionScenarioApplyEpoch,
+        scenarioApplyRequestId: promotionScenarioApplyRequestId,
       });
       if (!politicalPayloadChanged) {
         deferredOptionalVisibleRefresh = {
@@ -1541,6 +1698,7 @@ function createScenarioChunkRuntimeController({
             runId,
             selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
             scenarioApplyEpoch: promotionScenarioApplyEpoch,
+            scenarioApplyRequestId: promotionScenarioApplyRequestId,
             currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
             politicalPayloadChanged,
           },
@@ -1645,6 +1803,7 @@ function createScenarioChunkRuntimeController({
           runId,
           selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
           scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          scenarioApplyRequestId: promotionScenarioApplyRequestId,
           politicalPayloadChanged,
           renderNow: resolvedRenderNow !== false,
           changedLayerCount: Array.isArray(mergedLayerResult?.changedLayerKeys) ? mergedLayerResult.changedLayerKeys.length : 0,
@@ -1687,7 +1846,13 @@ function createScenarioChunkRuntimeController({
       pendingPromotion: resolvedPendingPromotion,
       loadState,
     });
+    const resolvedPromotionScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      pendingPromotion: resolvedPendingPromotion,
+      loadState,
+      selectionVersion: resolvedPendingPromotion.selectionVersion,
+    });
     resolvedPendingPromotion.scenarioApplyEpoch = resolvedPromotionScenarioApplyEpoch;
+    resolvedPendingPromotion.scenarioApplyRequestId = resolvedPromotionScenarioApplyRequestId;
     if (!scenarioId || scenarioId !== normalizeScenarioId(resolvedPendingPromotion.scenarioId)) {
       if (loadState.pendingPromotion === resolvedPendingPromotion) {
         clearPendingScenarioChunkPromotion(loadState);
@@ -1702,6 +1867,7 @@ function createScenarioChunkRuntimeController({
         extra: {
           runId,
           scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+          scenarioApplyRequestId: resolvedPromotionScenarioApplyRequestId,
           activeScenarioId: scenarioId,
           pendingScenarioId: normalizeScenarioId(resolvedPendingPromotion.scenarioId),
         },
@@ -1724,6 +1890,7 @@ function createScenarioChunkRuntimeController({
           runId,
           selectionVersion: Math.max(0, Number(resolvedPendingPromotion.selectionVersion || 0)),
           scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+          scenarioApplyRequestId: resolvedPromotionScenarioApplyRequestId,
         },
       });
       return false;
@@ -1741,6 +1908,7 @@ function createScenarioChunkRuntimeController({
       markPendingScenarioChunkRefresh(
         resolvedPendingPromotion.reason || loadState.pendingReason || "chunk-promotion-deferred",
         retryDelayMs,
+        { scenarioApplyRequestId: resolvedPromotionScenarioApplyRequestId },
       );
       recordScenarioChunkRuntimeMetric("chunkPromotionDeferredRetryMs", retryDelayMs, {
         scenarioId,
@@ -1762,6 +1930,7 @@ function createScenarioChunkRuntimeController({
           runId,
           retryDelayMs,
           scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+          scenarioApplyRequestId: resolvedPromotionScenarioApplyRequestId,
           retryCount: Math.max(0, Number(loadState.promotionRetryCount || 0)) + 1,
         },
       });
@@ -1808,8 +1977,14 @@ function createScenarioChunkRuntimeController({
       pendingPromotion: resolvedPendingPromotion,
       loadState,
     });
+    const commitScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      pendingPromotion: resolvedPendingPromotion,
+      loadState,
+      selectionVersion: resolvedPendingPromotion?.selectionVersion || loadState.selectionVersion || 0,
+    });
     if (resolvedPendingPromotion) {
       resolvedPendingPromotion.scenarioApplyEpoch = commitScenarioApplyEpoch;
+      resolvedPendingPromotion.scenarioApplyRequestId = commitScenarioApplyRequestId;
     }
     recordRenderTransactionSnapshot(runtimeState, {
       phase: "scenario-chunk-promotion-commit-scheduled",
@@ -1821,6 +1996,7 @@ function createScenarioChunkRuntimeController({
         runId,
         selectionVersion: Math.max(0, Number(resolvedPendingPromotion?.selectionVersion || loadState.selectionVersion || 0)),
         scenarioApplyEpoch: commitScenarioApplyEpoch,
+        scenarioApplyRequestId: commitScenarioApplyRequestId,
         allowStartupInitialVisual: !!allowStartupInitialVisual,
       },
     });
@@ -1861,9 +2037,14 @@ function createScenarioChunkRuntimeController({
       ) {
         const pendingScenarioId = normalizeScenarioId(pendingPostCommitRefresh.scenarioId || runtimeState.activeScenarioId);
         const pendingSelectionVersion = Math.max(0, Number(pendingPostCommitRefresh.selectionVersion || 0));
+        const pendingScenarioApplyRequestId = Math.max(0, Number(pendingPostCommitRefresh.scenarioApplyRequestId || 0));
         const staleReplay = (
           pendingScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)
           || (pendingSelectionVersion > 0 && pendingSelectionVersion !== Math.max(0, Number(loadState.selectionVersion || 0)))
+          || !isScenarioApplyRequestCurrentForScenario({
+            scenarioId: pendingScenarioId,
+            scenarioApplyRequestId: pendingScenarioApplyRequestId,
+          })
         );
         if (staleReplay) {
           recordScenarioChunkRuntimeMetric("staleRefreshDiscardedCount", 1, {
@@ -1872,6 +2053,16 @@ function createScenarioChunkRuntimeController({
             selectionVersion: pendingSelectionVersion,
             currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
             source: "post-commit-replay",
+          });
+          recordScenarioApplyStaleCallbackSkipped({
+            callbackPhase: "post-commit-refresh-replay",
+            reason: pendingPostCommitRefresh.reason || "post-commit-refresh",
+            scenarioId: pendingScenarioId,
+            scenarioApplyRequestId: pendingScenarioApplyRequestId,
+            extra: {
+              selectionVersion: pendingSelectionVersion,
+              currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+            },
           });
           return;
         }
@@ -1887,6 +2078,7 @@ function createScenarioChunkRuntimeController({
             ? Number(pendingPostCommitRefresh.delayMs)
             : 0,
           refreshSourceStartedAtMs: Number(pendingPostCommitRefresh.refreshSourceStartedAtMs || 0),
+          scenarioApplyRequestId: pendingScenarioApplyRequestId,
         });
         return;
       }
@@ -2094,6 +2286,7 @@ function createScenarioChunkRuntimeController({
         scenarioId: bundleScenarioId,
         loadState,
       });
+      chunkState.scenarioApplyRequestId = resolveScenarioChunkApplyRequestId({ loadState });
       coarseSelection.requiredChunks.forEach((chunk) => {
         const payload = bundle.chunkPayloadCacheById?.[chunk.id];
         if (!payload) return;
@@ -2120,6 +2313,7 @@ function createScenarioChunkRuntimeController({
         changedLayerKeys: mergedResult.changedLayerKeys,
         primaryPoliticalPayload: mergedResult.primaryMergedLayerPayloads?.political || null,
         scenarioApplyEpoch: chunkState.scenarioApplyEpoch,
+        scenarioApplyRequestId: chunkState.scenarioApplyRequestId,
       });
       if (!politicalPayloadChanged) {
         refreshScenarioRenderVisibleOptionalChunkPayloadChange({
@@ -2179,7 +2373,9 @@ function createScenarioChunkRuntimeController({
     const loadState = ensureRuntimeChunkLoadState();
     const allowZoomEndSettling = shouldZoomEndPromoteImmediately(bundle, reason);
     if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling, allowStartupInitialVisual })) {
-      markPendingScenarioChunkRefresh(reason);
+      markPendingScenarioChunkRefresh(reason, null, {
+        scenarioApplyRequestId: getCurrentScenarioApplyRequestId(),
+      });
       if (loadState.selectionVersion <= 0 && !runtimeState.activeScenarioChunks?.loadedChunkIds?.length) {
         setScenarioChunkShellStatus("loading", loadState);
       }
@@ -2300,12 +2496,19 @@ function createScenarioChunkRuntimeController({
       selectionVersion: nextSelectionVersion,
       loadState,
     });
+    const selectionScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      loadState,
+      selectionVersion: nextSelectionVersion,
+    });
     chunkState.scenarioApplyEpoch = selectionScenarioApplyEpoch;
+    chunkState.scenarioApplyRequestId = selectionScenarioApplyRequestId;
     loadState.scenarioApplyEpochBySelectionVersion[nextSelectionVersion] = selectionScenarioApplyEpoch;
+    loadState.scenarioApplyRequestIdBySelectionVersion[nextSelectionVersion] = selectionScenarioApplyRequestId;
     loadState.lastSelection = {
       reason: String(reason || "refresh"),
       scenarioId,
       scenarioApplyEpoch: selectionScenarioApplyEpoch,
+      scenarioApplyRequestId: selectionScenarioApplyRequestId,
       viewportBbox,
       requiredChunkIds: nextRequiredChunkIds,
       optionalChunkIds: nextOptionalChunkIds,
@@ -2332,6 +2535,7 @@ function createScenarioChunkRuntimeController({
       extra: {
         selectionVersion: nextSelectionVersion,
         scenarioApplyEpoch: selectionScenarioApplyEpoch,
+        scenarioApplyRequestId: selectionScenarioApplyRequestId,
         requiredChunkCount: nextRequiredChunkIds.length,
         optionalChunkCount: nextOptionalChunkIds.length,
         cacheOnlyChunkCount: nextCacheOnlyChunkIds.length,
@@ -2389,6 +2593,7 @@ function createScenarioChunkRuntimeController({
       requiredChunkIds: nextRequiredChunkIds,
       cacheOnlyChunkIds: nextCacheOnlyChunkIds,
       retainedActiveChunkIds: nextRetainedActiveChunkIds,
+      scenarioApplyRequestId: selectionScenarioApplyRequestId,
     })) {
       recordScenarioChunkRuntimeMetric("staleRefreshDiscardedCount", 1, {
         scenarioId,
@@ -2405,6 +2610,7 @@ function createScenarioChunkRuntimeController({
         extra: {
           selectionVersion: nextSelectionVersion,
           scenarioApplyEpoch: selectionScenarioApplyEpoch,
+          scenarioApplyRequestId: selectionScenarioApplyRequestId,
           currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
           requiredChunkCount: nextRequiredChunkIds.length,
         },
@@ -2505,6 +2711,7 @@ function createScenarioChunkRuntimeController({
         extra: {
           selectionVersion: nextSelectionVersion,
           scenarioApplyEpoch: selectionScenarioApplyEpoch,
+          scenarioApplyRequestId: selectionScenarioApplyRequestId,
           hasMergedLayerChange,
           hasPoliticalFeatureChange,
           requiredChunkCount: nextRequiredChunkIds.length,
@@ -2520,6 +2727,7 @@ function createScenarioChunkRuntimeController({
       scenarioId,
       reason,
       scenarioApplyEpoch: selectionScenarioApplyEpoch,
+      scenarioApplyRequestId: selectionScenarioApplyRequestId,
       selectionVersion: nextSelectionVersion,
       requiredChunkIds: nextRequiredChunkIds,
       selectedFeatureCountSum: Math.max(0, Number(selection.selectedFeatureCountSum || 0)),
@@ -2538,6 +2746,7 @@ function createScenarioChunkRuntimeController({
       scenarioId,
       reason,
       scenarioApplyEpoch: selectionScenarioApplyEpoch,
+      scenarioApplyRequestId: selectionScenarioApplyRequestId,
       changedLayerKeys: effectiveChangedLayerKeys,
       selectionVersion: nextSelectionVersion,
       queuedAt: promotionQueuedAt,
@@ -2546,6 +2755,7 @@ function createScenarioChunkRuntimeController({
       scenarioId,
       reason,
       scenarioApplyEpoch: selectionScenarioApplyEpoch,
+      scenarioApplyRequestId: selectionScenarioApplyRequestId,
       renderNow,
       mergedLayerPayloads,
       primaryMergedLayerPayloads,
@@ -2579,6 +2789,7 @@ function createScenarioChunkRuntimeController({
       extra: {
         selectionVersion: nextSelectionVersion,
         scenarioApplyEpoch: selectionScenarioApplyEpoch,
+        scenarioApplyRequestId: selectionScenarioApplyRequestId,
         requiredChunkCount: nextRequiredChunkIds.length,
         changedLayerCount: effectiveChangedLayerKeys.length,
         politicalRequired,
@@ -2593,7 +2804,9 @@ function createScenarioChunkRuntimeController({
     loadState.lastPromotionRetryAt = 0;
     setScenarioChunkShellStatus("loading", loadState);
     if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling, allowStartupInitialVisual })) {
-      markPendingScenarioChunkRefresh(reason);
+      markPendingScenarioChunkRefresh(reason, null, {
+        scenarioApplyRequestId: selectionScenarioApplyRequestId,
+      });
       return selection;
     }
     schedulePendingScenarioChunkPromotionCommit({
@@ -2779,12 +2992,18 @@ function createScenarioChunkRuntimeController({
     delayMs = null,
     flushPending = false,
     refreshSourceStartedAtMs = 0,
+    scenarioApplyRequestId = 0,
   } = {}) {
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
     if (!scenarioId) return "noop";
     const bundle = getCachedScenarioBundle(scenarioId);
     if (!bundle || !scenarioBundleUsesChunkedLayer(bundle)) return "noop";
     const loadState = ensureRuntimeChunkLoadState();
+    const transactionScenarioApplyRequestId = resolveScenarioChunkApplyRequestId({
+      scenarioApplyRequestId,
+      loadState,
+      selectionVersion: loadState.selectionVersion,
+    });
     const hadPendingReason = !!String(loadState.pendingReason || "").trim();
     const nextReason = flushPending && hadPendingReason
       ? String(loadState.pendingReason || "refresh").trim() || "refresh"
@@ -2805,8 +3024,24 @@ function createScenarioChunkRuntimeController({
         flushPending: !!flushPending,
         delayMs: nextDelayMs,
         selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
       },
     });
+    if (!isScenarioApplyRequestCurrentForScenario({
+      scenarioId,
+      scenarioApplyRequestId: transactionScenarioApplyRequestId,
+    })) {
+      recordScenarioApplyStaleCallbackSkipped({
+        callbackPhase: "chunk-refresh-request",
+        reason: nextReason,
+        scenarioId,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
+        extra: {
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
+      return "stale-request";
+    }
     if (shouldSkipStalePostApplyRefreshAfterZoomEnd(loadState, nextReason, {
       scenarioId,
       selectionVersion: loadState.selectionVersion,
@@ -2823,6 +3058,7 @@ function createScenarioChunkRuntimeController({
         extra: {
           selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
           refreshSourceStartedAtMs,
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
         },
       });
       return "stale-post-apply-after-zoom-end";
@@ -2857,6 +3093,7 @@ function createScenarioChunkRuntimeController({
         reason: nextReason,
         delayMs: nextDelayMs,
         refreshSourceStartedAtMs,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
         requestedAt: Date.now(),
       };
       recordRenderTransactionSnapshot(runtimeState, {
@@ -2868,12 +3105,15 @@ function createScenarioChunkRuntimeController({
         extra: {
           delayMs: nextDelayMs,
           selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
         },
       });
       return "promotion-commit-in-flight";
     }
     if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })) {
-      markPendingScenarioChunkRefresh(nextReason, nextDelayMs);
+      markPendingScenarioChunkRefresh(nextReason, nextDelayMs, {
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
+      });
       recordRenderTransactionSnapshot(runtimeState, {
         phase: "scenario-chunk-refresh-deferred",
         reason: nextReason,
@@ -2883,6 +3123,7 @@ function createScenarioChunkRuntimeController({
         extra: {
           delayMs: nextDelayMs,
           selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
         },
       });
       return "deferred";
@@ -2903,6 +3144,7 @@ function createScenarioChunkRuntimeController({
         searchParams: getSearchParams(),
         extra: {
           selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
         },
       });
       return executeScenarioChunkRefreshNow({
@@ -2917,7 +3159,24 @@ function createScenarioChunkRuntimeController({
       loadState.refreshTimerId = null;
       loadState.refreshScheduled = false;
       if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })) {
-        markPendingScenarioChunkRefresh(nextReason, nextDelayMs);
+        markPendingScenarioChunkRefresh(nextReason, nextDelayMs, {
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
+        });
+        return;
+      }
+      if (!isScenarioApplyRequestCurrentForScenario({
+        scenarioId,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
+      })) {
+        recordScenarioApplyStaleCallbackSkipped({
+          callbackPhase: "chunk-refresh-timer",
+          reason: nextReason,
+          scenarioId,
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
+          extra: {
+            selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          },
+        });
         return;
       }
       executeScenarioChunkRefreshNow({
@@ -2936,6 +3195,7 @@ function createScenarioChunkRuntimeController({
       extra: {
         delayMs: resolvedDelayMs,
         selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
         zoomEndPriorityEnabled,
       },
     });

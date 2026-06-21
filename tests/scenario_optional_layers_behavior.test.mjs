@@ -9,6 +9,94 @@ import {
 import { createScenarioBundleAssembler } from "../js/core/scenario/bundle_loader.js";
 import { createLayerFromPreset } from "../js/core/special_zone_layers.js";
 
+test("visibility sync skips stale optional layer writes after scenario apply request changes", async () => {
+  const previousActiveScenarioId = state.activeScenarioId;
+  const previousBundleCache = state.scenarioBundleCacheById;
+  const previousShowWaterRegions = state.showWaterRegions;
+  const previousShowScenarioSpecialRegions = state.showScenarioSpecialRegions;
+  const previousShowScenarioAtlantropa = state.showScenarioAtlantropa;
+  const previousShowScenarioReliefOverlays = state.showScenarioReliefOverlays;
+  const previousShowCityPoints = state.showCityPoints;
+  const previousScenarioWaterRegionsData = state.scenarioWaterRegionsData;
+  const previousCurrentScenarioApplyRequestId = state.currentScenarioApplyRequestId;
+  const previousDiagnostics = state.renderTransactionDiagnostics;
+  const previousFetch = globalThis.fetch;
+
+  const bundle = {
+    manifest: {
+      scenario_id: "stale_optional_test",
+      water_regions_url: "data/scenarios/stale_optional_test/water_regions.json",
+    },
+    optionalLayerPromises: {},
+    optionalLayerSettledByKey: {},
+  };
+  state.activeScenarioId = "stale_optional_test";
+  state.currentScenarioApplyRequestId = 1;
+  state.scenarioBundleCacheById = { stale_optional_test: bundle };
+  state.showWaterRegions = true;
+  state.showScenarioSpecialRegions = false;
+  state.showScenarioAtlantropa = false;
+  state.showScenarioReliefOverlays = false;
+  state.showCityPoints = false;
+  state.scenarioWaterRegionsData = null;
+  state.renderTransactionDiagnostics = null;
+  const staleJsonClient = {
+    json: async () => {
+      state.currentScenarioApplyRequestId = 2;
+      state.activeScenarioId = "newer_optional_test";
+      return {
+        type: "FeatureCollection",
+        features: [{ type: "Feature", id: "water-a", properties: {}, geometry: null }],
+      };
+    },
+  };
+  globalThis.fetch = async () => {
+    state.currentScenarioApplyRequestId = 2;
+    state.activeScenarioId = "newer_optional_test";
+    return {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: async () => JSON.stringify({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", id: "water-a", properties: {}, geometry: null }],
+      }),
+    };
+  };
+
+  try {
+    const payloads = await ensureActiveScenarioOptionalLayersForVisibility({
+      bundle,
+      d3Client: staleJsonClient,
+      renderNow: false,
+      scenarioApplyEpoch: 7,
+      scenarioApplyRequestId: 1,
+    });
+
+    assert.deepEqual(payloads, []);
+    assert.equal(state.scenarioWaterRegionsData, null);
+    const snapshots = state.renderTransactionDiagnostics?.snapshots || [];
+    assert.ok(snapshots.some((snapshot) => (
+      snapshot.phase === "scenario-apply-stale-callback-skipped"
+      && snapshot.extra?.callbackPhase === "optional-layer-visibility-sync-after-load"
+      && snapshot.extra?.scenarioApplyRequestId === 1
+      && snapshot.extra?.currentScenarioApplyRequestId === 2
+    )));
+  } finally {
+    state.activeScenarioId = previousActiveScenarioId;
+    state.scenarioBundleCacheById = previousBundleCache;
+    state.showWaterRegions = previousShowWaterRegions;
+    state.showScenarioSpecialRegions = previousShowScenarioSpecialRegions;
+    state.showScenarioAtlantropa = previousShowScenarioAtlantropa;
+    state.showScenarioReliefOverlays = previousShowScenarioReliefOverlays;
+    state.showCityPoints = previousShowCityPoints;
+    state.scenarioWaterRegionsData = previousScenarioWaterRegionsData;
+    state.currentScenarioApplyRequestId = previousCurrentScenarioApplyRequestId;
+    state.renderTransactionDiagnostics = previousDiagnostics;
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("failed special zone optional layer load clears stale runtime state", async () => {
   const previousActiveScenarioId = state.activeScenarioId;
   const previousActiveScenarioManifest = state.activeScenarioManifest;

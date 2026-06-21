@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -46062,7 +46062,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 139578,
+      "size_bytes": 151611,
       "source_kind": "dist"
     },
     {
@@ -46122,7 +46122,7 @@
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 29888,
+      "size_bytes": 30444,
       "source_kind": "dist"
     },
     {
@@ -46157,7 +46157,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 42182,
+      "size_bytes": 55862,
       "source_kind": "dist"
     },
     {
@@ -46167,7 +46167,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 22847,
+      "size_bytes": 30037,
       "source_kind": "dist"
     },
     {
@@ -46177,7 +46177,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 43096,
+      "size_bytes": 48299,
       "source_kind": "dist"
     },
     {
@@ -47121,5 +47121,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154261840
+  "total_bytes": 1154300625
 }

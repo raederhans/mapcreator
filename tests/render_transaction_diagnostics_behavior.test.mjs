@@ -460,6 +460,12 @@ test("render transaction instrumentation remains wired into apply, chunk, and re
     "scenario-apply-committed",
     "scenario-post-apply-complete",
     "scenarioApplyInflightTargetMismatch",
+    "scenario-apply-reused-active-target",
+    "scenario-apply-queued-latest-target",
+    "scenario-apply-queue-drain-started",
+    "scenario-apply-queue-drain-skipped-stale",
+    "scenario-apply-queue-drain-complete",
+    "scenario-apply-target-committed",
   ].forEach((token) => assert.ok(scenarioManager.includes(token), `scenario_manager should include ${token}`));
 
   [
@@ -473,6 +479,8 @@ test("render transaction instrumentation remains wired into apply, chunk, and re
     "scenario-refresh-map-data-complete",
     "scenario-data-health-refreshed",
     "scenario-detail-prewarm-complete",
+    "scenario-apply-stale-callback-skipped",
+    "scenarioApplyRequestId",
   ].forEach((token) => assert.ok(postApply.includes(token), `scenario_post_apply_effects should include ${token}`));
 
   [
@@ -483,6 +491,8 @@ test("render transaction instrumentation remains wired into apply, chunk, and re
     "scenario-chunk-promotion-commit-start",
     "scenario-chunk-promotion-visual-complete",
     "scenario-political-chunk-payload-written",
+    "scenarioApplyRequestIdBySelectionVersion",
+    "political-chunk-payload-write",
   ].forEach((token) => assert.ok(chunkRuntime.includes(token), `chunk_runtime should include ${token}`));
 
   [
@@ -501,5 +511,6 @@ test("render transaction instrumentation remains wired into apply, chunk, and re
     "registerRenderTransactionOptionalLayerConfigs",
     "optional-layer-visibility-sync-start",
     "optional-layer-visibility-sync-complete",
+    "optional-layer-state-apply",
   ].forEach((token) => assert.ok(scenarioResources.includes(token), `scenario_resources should include ${token}`));
 });

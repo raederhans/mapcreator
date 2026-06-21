@@ -152,6 +152,65 @@ const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_IDLE = 60;
 const SCENARIO_OWNER_FEATURE_COVERAGE_MIN_RATIO = 0.85;
 const SCENARIO_OWNER_FEATURE_COVERAGE_MIN_FEATURES = 1000;
+
+function getCurrentScenarioApplyRequestId() {
+  return Math.max(0, Number(runtimeState.currentScenarioApplyRequestId || 0));
+}
+
+function isScenarioApplyContextCurrent({
+  scenarioId = "",
+  scenarioApplyRequestId = 0,
+  isScenarioApplyRequestCurrent = null,
+} = {}) {
+  if (typeof isScenarioApplyRequestCurrent === "function" && !isScenarioApplyRequestCurrent()) {
+    return false;
+  }
+  const normalizedScenarioId = normalizeScenarioId(scenarioId);
+  if (normalizedScenarioId && normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
+    return false;
+  }
+  const expectedRequestId = Math.max(0, Number(scenarioApplyRequestId || 0));
+  const currentRequestId = getCurrentScenarioApplyRequestId();
+  return !(expectedRequestId > 0 && currentRequestId > 0 && expectedRequestId !== currentRequestId);
+}
+
+function recordScenarioApplyStaleCallbackSkipped({
+  callbackPhase = "",
+  reason = "scenario-resources",
+  scenarioId = "",
+  scenarioApplyEpoch = 0,
+  scenarioApplyRequestId = 0,
+  extra = {},
+} = {}) {
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-apply-stale-callback-skipped",
+    reason,
+    expectedScenarioId: scenarioId,
+    source: "scenario_resources",
+    extra: {
+      ...extra,
+      allowScenarioMismatch: true,
+      callbackPhase,
+      resolution: "skipped-stale-request",
+      scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+      scenarioApplyRequestId: Math.max(0, Number(scenarioApplyRequestId || 0)),
+      currentScenarioApplyRequestId: getCurrentScenarioApplyRequestId(),
+      activeScenarioId: normalizeScenarioId(runtimeState.activeScenarioId),
+    },
+  });
+}
+
+function shouldContinueScenarioApplyContext(context, callbackPhase) {
+  if (isScenarioApplyContextCurrent(context)) {
+    return true;
+  }
+  recordScenarioApplyStaleCallbackSkipped({
+    ...context,
+    callbackPhase,
+  });
+  return false;
+}
+
 // optional layer 的单一映射表。
 // 这里同时定义 bundle 字段、runtime state 字段、manifest URL、可见性开关和 revision 语义，
 // 新增 layer 时优先补这里，而不是在各条加载链里散落硬编码字符串。
@@ -673,11 +732,32 @@ function shouldEagerLoadScenarioOptionalLayer(layerKey, manifest, runtimeTopolog
   return !!manifest?.[config.urlField];
 }
 
-function applyScenarioOptionalLayerState(bundle, layerKey, payload) {
+function applyScenarioOptionalLayerState(
+  bundle,
+  layerKey,
+  payload,
+  {
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
+    reason = "scenario-optional-layer-apply",
+  } = {},
+) {
   const config = getScenarioOptionalLayerConfig(layerKey);
   if (!config) return false;
   const bundleScenarioId = getScenarioBundleId(bundle);
-  if (!bundleScenarioId || bundleScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
+  const transactionScenarioApplyRequestId = Math.max(0, Number(scenarioApplyRequestId || bundle?.chunkLifecycle?.scenarioApplyRequestId || 0));
+  if (!bundleScenarioId || !shouldContinueScenarioApplyContext({
+    scenarioId: bundleScenarioId,
+    scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    scenarioApplyRequestId: transactionScenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
+    reason,
+    extra: {
+      layerKey,
+    },
+  }, "optional-layer-state-apply")) {
     return false;
   }
   if (config.stateField === "scenarioCityOverridesData") {
@@ -738,6 +818,9 @@ async function loadScenarioOptionalLayerPayload(
     d3Client = globalThis.d3,
     forceReload = false,
     applyToActiveScenario = false,
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
   } = {}
 ) {
   const config = getScenarioOptionalLayerConfig(layerKey);
@@ -757,7 +840,12 @@ async function loadScenarioOptionalLayerPayload(
   if (!forceReload && bundle.optionalLayerPromises[layerKey]) {
     const payload = await bundle.optionalLayerPromises[layerKey];
     if (applyToActiveScenario) {
-      applyScenarioOptionalLayerState(bundle, layerKey, payload);
+      applyScenarioOptionalLayerState(bundle, layerKey, payload, {
+        scenarioApplyEpoch,
+        scenarioApplyRequestId,
+        isScenarioApplyRequestCurrent,
+        reason: "scenario-optional-layer-promise-cache",
+      });
     }
     return payload;
   }
@@ -767,7 +855,12 @@ async function loadScenarioOptionalLayerPayload(
   if (!forceReload && bundle.optionalLayerSettledByKey[layerKey] === true) {
     const payload = bundle[config.bundleField] ?? null;
     if (applyToActiveScenario) {
-      applyScenarioOptionalLayerState(bundle, layerKey, payload);
+      applyScenarioOptionalLayerState(bundle, layerKey, payload, {
+        scenarioApplyEpoch,
+        scenarioApplyRequestId,
+        isScenarioApplyRequestCurrent,
+        reason: "scenario-optional-layer-settled-cache",
+      });
     }
     return payload;
   }
@@ -838,7 +931,12 @@ async function loadScenarioOptionalLayerPayload(
       cacheHit: false,
     });
     if (applyToActiveScenario) {
-      applyScenarioOptionalLayerState(bundle, layerKey, payload);
+      applyScenarioOptionalLayerState(bundle, layerKey, payload, {
+        scenarioApplyEpoch,
+        scenarioApplyRequestId,
+        isScenarioApplyRequestCurrent,
+        reason: "scenario-optional-layer-loaded",
+      });
     }
     return payload;
   } finally {
@@ -872,6 +970,9 @@ async function ensureActiveScenarioOptionalLayerLoaded(
     d3Client = globalThis.d3,
     renderNow = true,
     forceReload = false,
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
   } = {}
 ) {
   const normalizedKey = normalizeScenarioOptionalLayerKey(layerKey);
@@ -883,6 +984,7 @@ async function ensureActiveScenarioOptionalLayerLoaded(
     scheduleScenarioChunkRefresh({
       reason: `visibility:${normalizedKey}`,
       delayMs: 0,
+      scenarioApplyRequestId,
     });
     return state[getScenarioOptionalLayerConfig(normalizedKey)?.stateField] || null;
   }
@@ -890,7 +992,19 @@ async function ensureActiveScenarioOptionalLayerLoaded(
     d3Client,
     forceReload,
     applyToActiveScenario: true,
+    scenarioApplyEpoch,
+    scenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
   });
+  if (!shouldContinueScenarioApplyContext({
+    scenarioId: getScenarioBundleId(bundle),
+    scenarioApplyEpoch,
+    scenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
+    reason: `scenario-optional-layer:${normalizedKey}`,
+  }, "optional-layer-loaded-before-render")) {
+    return payload;
+  }
   if (renderNow) {
     flushRenderBoundary(`scenario-optional-layer:${normalizedKey}`);
   }
@@ -915,11 +1029,26 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     bundle = null,
     d3Client = globalThis.d3,
     renderNow = true,
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
   } = {}
 ) {
   const activeScenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
   const activeBundle = bundle || runtimeState.scenarioBundleCacheById?.[activeScenarioId] || null;
   if (!activeScenarioId || !activeBundle) return [];
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || activeBundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
+  const transactionScenarioApplyRequestId = Math.max(0, Number(scenarioApplyRequestId || activeBundle?.chunkLifecycle?.scenarioApplyRequestId || 0));
+  const currentnessContext = {
+    scenarioId: activeScenarioId,
+    scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    scenarioApplyRequestId: transactionScenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
+    reason: "visibility-sync",
+  };
+  if (!shouldContinueScenarioApplyContext(currentnessContext, "optional-layer-visibility-sync-start")) {
+    return [];
+  }
   // chunked layer 和独立 payload layer 的可见性同步路径不同：
   // 前者交给 chunk refresh 统一决策，后者才在这里补拉 payload。
   // 这样可以避免把 chunk layer 当成普通 JSON 再加载一遍。
@@ -931,6 +1060,7 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     scheduleScenarioChunkRefresh({
       reason: "visibility-sync",
       delayMs: 0,
+      scenarioApplyRequestId: transactionScenarioApplyRequestId,
     });
   }
   recordRenderTransactionSnapshot(runtimeState, {
@@ -940,6 +1070,8 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
     source: "scenario_resources",
     extra: {
       requestedChunkedLayers,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      scenarioApplyRequestId: transactionScenarioApplyRequestId,
     },
   });
   const requestedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
@@ -963,6 +1095,8 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
         requestedChunkedLayers,
         requestedLayers,
         loadedPayloadCount: 0,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
       },
     });
     return [];
@@ -972,9 +1106,15 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
       loadScenarioOptionalLayerPayload(activeBundle, layerKey, {
         d3Client,
         applyToActiveScenario: true,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        scenarioApplyRequestId: transactionScenarioApplyRequestId,
+        isScenarioApplyRequestCurrent,
       })
     )
   );
+  if (!shouldContinueScenarioApplyContext(currentnessContext, "optional-layer-visibility-sync-after-load")) {
+    return [];
+  }
   if (renderNow) {
     flushRenderBoundary("scenario-optional-layers-visibility");
   }
@@ -987,6 +1127,8 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
       requestedChunkedLayers,
       requestedLayers,
       loadedPayloadCount: payloads.length,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      scenarioApplyRequestId: transactionScenarioApplyRequestId,
     },
   });
   return payloads;

@@ -76,7 +76,10 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("function applyDeferredScenarioMetadata(bundle, { scenarioId = \"\" } = {}) {", content)
         self.assertIn("applyDeferredScenarioMetadata(bundle, { scenarioId });", content)
-        self.assertIn("function applyScenarioOptionalLayerState(bundle, layerKey, payload) {", content)
+        self.assertIn("function applyScenarioOptionalLayerState(", content)
+        self.assertIn("scenarioApplyRequestId = 0", content)
+        self.assertIn("isScenarioApplyRequestCurrent = null", content)
+        self.assertIn("shouldContinueScenarioApplyContext({", content)
         self.assertNotIn("assignOptionalLayerPayloadToActiveScenario", content)
         self.assertNotIn("state.scenarioApplyInFlight", content)
 
@@ -182,7 +185,9 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertIn("ensureChunkedScenarioFirstFrameReady", content)
         self.assertIn("async function syncVisibleScenarioOptionalLayersForPostApply({", content)
         self.assertIn("if (runtimeState.bootBlocking) {", content)
-        self.assertIn("await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })", content)
+        self.assertIn("await ensureActiveScenarioOptionalLayersForVisibility({", content)
+        self.assertIn("scenarioApplyRequestId: transactionScenarioApplyRequestId", content)
+        self.assertIn("isScenarioApplyRequestCurrent", content)
         self.assertIn("const coarsePayload = await preloadScenarioCoarseChunks(bundle);", content)
         self.assertIn("awaitPrewarm = true", content)
         self.assertIn("awaited: shouldAwaitPrewarm", content)
@@ -197,10 +202,14 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
         self.assertIn("chunkRefreshScheduledAt: refreshScheduledAt", content)
         self.assertIn("hints.sync_focus_detail_prewarm_default === true", content)
         self.assertIn("await ensureChunkedScenarioFirstFrameReady({", content)
-        self.assertIn("await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });", content)
+        optional_sync_call = "await syncVisibleScenarioOptionalLayersForPostApply({"
+        self.assertIn(optional_sync_call, content)
+        self.assertIn("scenarioApplyEpoch: transactionScenarioApplyEpoch", content)
+        self.assertIn("scenarioApplyRequestId: transactionScenarioApplyRequestId", content)
+        self.assertIn("isScenarioApplyRequestCurrent", content)
         self.assertLess(
             apply_body.index("await ensureChunkedScenarioFirstFrameReady({"),
-            apply_body.index("await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });"),
+            apply_body.index(optional_sync_call),
         )
         self.assertNotIn("void ensureChunkedScenarioFirstFrameReady({ bundle, scenarioId });", content)
         self.assertIn('reason: "scenario-apply"', content)
