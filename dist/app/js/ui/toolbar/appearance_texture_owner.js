@@ -343,7 +343,7 @@ export function createAppearanceTextureOwner({
     runtimeState.syncDayNightClockTimerFn?.();
   };
 
-  const updateTextureStyle = (mutate, { historyKind = "texture-style", commitHistory = false } = {}) => {
+  const updateTextureStyle = (mutate, { historyKind = "texture-style", commitHistory = false, renderReason = "texture-style" } = {}) => {
     // input/change 共用同一份 history capture：拖动滑杆期间持续改 working state，
     // 到 commit 边界再写入一条 undo 记录，避免一帧一个历史快照。
     beginTextureHistoryCapture(historyKind);
@@ -351,7 +351,7 @@ export function createAppearanceTextureOwner({
     if (typeof mutate === "function") mutate(texture);
     syncTextureConfig();
     renderTextureUI();
-    renderDirty("texture-style");
+    renderDirty(renderReason);
     if (commitHistory) {
       commitTextureHistory(historyKind);
     }
@@ -360,10 +360,10 @@ export function createAppearanceTextureOwner({
   const bindTextureRange = (element, handler) => {
     if (!element || element.dataset.bound === "true") return;
     element.addEventListener("input", (event) => {
-      handler(event, false);
+      handler(event, false, "texture-style-input");
     });
     element.addEventListener("change", (event) => {
-      handler(event, true);
+      handler(event, true, "texture-style");
     });
     element.dataset.bound = "true";
   };
@@ -399,150 +399,150 @@ export function createAppearanceTextureOwner({
       nodes.textureSelect.dataset.bound = "true";
     }
 
-    bindTextureRange(nodes.textureOpacity, (event, commit) => {
+    bindTextureRange(nodes.textureOpacity, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         if (normalizeTextureMode(texture.mode) === "none") return;
         texture.opacity = clamp(Number.isFinite(value) ? value / 100 : 0.88, 0, 1);
-      }, { historyKind: "texture-opacity", commitHistory: commit });
+      }, { historyKind: "texture-opacity", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.texturePaperScale, (event, commit) => {
+    bindTextureRange(nodes.texturePaperScale, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.paper.scale = clamp(Number.isFinite(value) ? value / 100 : 1, 0.55, 2.4);
-      }, { historyKind: "texture-paper-scale", commitHistory: commit });
+      }, { historyKind: "texture-paper-scale", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.texturePaperWarmth, (event, commit) => {
+    bindTextureRange(nodes.texturePaperWarmth, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.paper.warmth = clamp(Number.isFinite(value) ? value / 100 : 0.62, 0, 1);
-      }, { historyKind: "texture-paper-warmth", commitHistory: commit });
+      }, { historyKind: "texture-paper-warmth", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.texturePaperGrain, (event, commit) => {
+    bindTextureRange(nodes.texturePaperGrain, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.paper.grain = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
-      }, { historyKind: "texture-paper-grain", commitHistory: commit });
+      }, { historyKind: "texture-paper-grain", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.texturePaperWear, (event, commit) => {
+    bindTextureRange(nodes.texturePaperWear, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.paper.wear = clamp(Number.isFinite(value) ? value / 100 : 0.26, 0, 1);
-      }, { historyKind: "texture-paper-wear", commitHistory: commit });
+      }, { historyKind: "texture-paper-wear", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMajorStep, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMajorStep, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.majorStep = clamp(Number.isFinite(value) ? value : 30, 10, 90);
         texture.graticule.minorStep = clamp(texture.graticule.minorStep, 1, texture.graticule.majorStep);
         texture.graticule.labelStep = Math.max(texture.graticule.labelStep, texture.graticule.majorStep);
-      }, { historyKind: "texture-graticule-major", commitHistory: commit });
+      }, { historyKind: "texture-graticule-major", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMinorStep, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMinorStep, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.minorStep = clamp(Number.isFinite(value) ? value : 15, 1, texture.graticule.majorStep);
-      }, { historyKind: "texture-graticule-minor", commitHistory: commit });
+      }, { historyKind: "texture-graticule-minor", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleLabelStep, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleLabelStep, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.labelStep = clamp(Number.isFinite(value) ? value : 60, texture.graticule.majorStep, 180);
-      }, { historyKind: "texture-graticule-label", commitHistory: commit });
+      }, { historyKind: "texture-graticule-label", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleColor, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleColor, (event, commit, renderReason) => {
       updateTextureStyle((texture) => {
         texture.graticule.color = normalizeOceanFillColor(event.target.value);
-      }, { historyKind: "texture-graticule-color", commitHistory: commit });
+      }, { historyKind: "texture-graticule-color", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleLabelColor, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleLabelColor, (event, commit, renderReason) => {
       updateTextureStyle((texture) => {
         texture.graticule.labelColor = normalizeOceanFillColor(event.target.value);
-      }, { historyKind: "texture-graticule-label-color", commitHistory: commit });
+      }, { historyKind: "texture-graticule-label-color", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleLabelSize, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleLabelSize, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.labelSize = clamp(Math.round(Number.isFinite(value) ? value : 12), 9, 24);
-      }, { historyKind: "texture-graticule-label-size", commitHistory: commit });
+      }, { historyKind: "texture-graticule-label-size", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMajorWidth, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMajorWidth, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.majorWidth = clamp(Number.isFinite(value) ? value : 1.2, 0.2, 4);
-      }, { historyKind: "texture-graticule-major-width", commitHistory: commit });
+      }, { historyKind: "texture-graticule-major-width", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMinorWidth, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMinorWidth, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.minorWidth = clamp(Number.isFinite(value) ? value : 0.7, 0.1, 3);
-      }, { historyKind: "texture-graticule-minor-width", commitHistory: commit });
+      }, { historyKind: "texture-graticule-minor-width", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMajorOpacity, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMajorOpacity, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.majorOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.34, 0, 1);
-      }, { historyKind: "texture-graticule-major-opacity", commitHistory: commit });
+      }, { historyKind: "texture-graticule-major-opacity", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureGraticuleMinorOpacity, (event, commit) => {
+    bindTextureRange(nodes.textureGraticuleMinorOpacity, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.graticule.minorOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.14, 0, 1);
-      }, { historyKind: "texture-graticule-minor-opacity", commitHistory: commit });
+      }, { historyKind: "texture-graticule-minor-opacity", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftMajorStep, (event, commit) => {
+    bindTextureRange(nodes.textureDraftMajorStep, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.majorStep = clamp(Number.isFinite(value) ? value : 24, 12, 90);
         texture.draftGrid.minorStep = Math.min(texture.draftGrid.minorStep, texture.draftGrid.majorStep);
-      }, { historyKind: "texture-draft-major", commitHistory: commit });
+      }, { historyKind: "texture-draft-major", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftMinorStep, (event, commit) => {
+    bindTextureRange(nodes.textureDraftMinorStep, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.minorStep = clamp(Number.isFinite(value) ? value : 12, 4, texture.draftGrid.majorStep);
-      }, { historyKind: "texture-draft-minor", commitHistory: commit });
+      }, { historyKind: "texture-draft-minor", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftLonOffset, (event, commit) => {
+    bindTextureRange(nodes.textureDraftLonOffset, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.lonOffset = clamp(Number.isFinite(value) ? value : 0, -180, 180);
-      }, { historyKind: "texture-draft-longitude", commitHistory: commit });
+      }, { historyKind: "texture-draft-longitude", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftLatOffset, (event, commit) => {
+    bindTextureRange(nodes.textureDraftLatOffset, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.latOffset = clamp(Number.isFinite(value) ? value : 12, -80, 80);
-      }, { historyKind: "texture-draft-latitude", commitHistory: commit });
+      }, { historyKind: "texture-draft-latitude", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftRoll, (event, commit) => {
+    bindTextureRange(nodes.textureDraftRoll, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.roll = clamp(Number.isFinite(value) ? value : -18, -180, 180);
-      }, { historyKind: "texture-draft-roll", commitHistory: commit });
+      }, { historyKind: "texture-draft-roll", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftColor, (event, commit) => {
+    bindTextureRange(nodes.textureDraftColor, (event, commit, renderReason) => {
       updateTextureStyle((texture) => {
         texture.draftGrid.color = normalizeOceanFillColor(event.target.value);
-      }, { historyKind: "texture-draft-color", commitHistory: commit });
+      }, { historyKind: "texture-draft-color", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftWidth, (event, commit) => {
+    bindTextureRange(nodes.textureDraftWidth, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.width = clamp(Number.isFinite(value) ? value : 1.1, 0.2, 4);
-      }, { historyKind: "texture-draft-width", commitHistory: commit });
+      }, { historyKind: "texture-draft-width", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftMajorOpacity, (event, commit) => {
+    bindTextureRange(nodes.textureDraftMajorOpacity, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.majorOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.28, 0, 1);
-      }, { historyKind: "texture-draft-major-opacity", commitHistory: commit });
+      }, { historyKind: "texture-draft-major-opacity", commitHistory: commit, renderReason });
     });
-    bindTextureRange(nodes.textureDraftMinorOpacity, (event, commit) => {
+    bindTextureRange(nodes.textureDraftMinorOpacity, (event, commit, renderReason) => {
       const value = Number(event.target.value);
       updateTextureStyle((texture) => {
         texture.draftGrid.minorOpacity = clamp(Number.isFinite(value) ? value / 100 : 0.14, 0, 1);
-      }, { historyKind: "texture-draft-minor-opacity", commitHistory: commit });
+      }, { historyKind: "texture-draft-minor-opacity", commitHistory: commit, renderReason });
     });
     if (nodes.textureDraftDash && nodes.textureDraftDash.dataset.bound !== "true") {
       nodes.textureDraftDash.addEventListener("change", (event) => {

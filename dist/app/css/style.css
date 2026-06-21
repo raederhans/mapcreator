@@ -2422,6 +2422,34 @@ details.appearance-subsection > *:not(summary),
   line-height: 1.35;
 }
 
+.layer-status-strip {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.layer-status-strip.is-active {
+  color: #166534;
+}
+
+.layer-status-strip.is-warning {
+  color: #92400e;
+}
+
+.layer-status-strip.is-muted {
+  color: #64748b;
+}
+
+.appearance-control-card-title + .layer-status-strip,
+.section-header + .layer-status-strip {
+  margin-top: 4px;
+}
+
+.transport-workbench-only-status {
+  padding-top: 2px;
+}
+
 .transport-family-body {
   display: flex;
   flex-direction: column;

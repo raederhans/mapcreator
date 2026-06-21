@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 281619,
+      "size_bytes": 282056,
       "source_kind": "dist"
     },
     {
@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/renderer/render_transaction_diagnostics.js",
-      "size_bytes": 47304,
+      "size_bytes": 47147,
       "source_kind": "dist"
     },
     {
@@ -46492,7 +46492,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 31896,
+      "size_bytes": 36489,
       "source_kind": "dist"
     },
     {
@@ -46522,7 +46522,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_texture_owner.js",
-      "size_bytes": 39692,
+      "size_bytes": 40433,
       "source_kind": "dist"
     },
     {
@@ -46551,8 +46551,13 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/toolbar/layer_status_diagnostics.js",
+      "size_bytes": 13535,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/toolbar/ocean_lake_controls_controller.js",
-      "size_bytes": 19373,
+      "size_bytes": 19446,
       "source_kind": "dist"
     },
     {
@@ -46578,6 +46583,11 @@
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
       "size_bytes": 47947,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/toolbar/toolbar_render_scheduler.js",
+      "size_bytes": 3512,
       "source_kind": "dist"
     },
     {
@@ -46657,7 +46667,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 125218,
+      "size_bytes": 125354,
       "source_kind": "dist"
     },
     {
@@ -47102,7 +47112,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454708,
+      "size_bytes": 1454969,
       "source_kind": "dist"
     },
     {
@@ -47121,5 +47131,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154314680
+  "total_bytes": 1154337811
 }

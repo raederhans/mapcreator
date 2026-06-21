@@ -14,6 +14,15 @@ import { createAppearanceReferenceOwner } from "./appearance_reference_owner.js"
 import { createAppearanceRiversOwner } from "./appearance_rivers_owner.js";
 import { createAppearancePresetsOwner } from "./appearance_presets_owner.js";
 import {
+  buildLayerStatusDiagnostics,
+  sanitizeLayerStatusText,
+} from "./layer_status_diagnostics.js";
+import {
+  createToolbarDirtyRenderScheduler,
+  normalizeRenderReason,
+  shouldBatchToolbarRenderReason,
+} from "./toolbar_render_scheduler.js";
+import {
   getTransportOverviewDataLayerKeys,
   getTransportOverviewVisibilityField,
   listTransportOverviewCapabilityFamilyIds,
@@ -41,12 +50,24 @@ export function createAppearanceControlsController({
   t,
   clamp,
   markDirty,
-  renderDirty,
+  requestRender,
   ensureActiveScenarioOptionalLayerLoaded,
   normalizeOceanFillColor,
   updateSwatchUI,
   openSpecialZonePopover,
 }) {
+  const layerRenderScheduler = createToolbarDirtyRenderScheduler({ markDirty, requestRender });
+  const renderLayerDirtyNow = (reason) => {
+    const normalizedReason = normalizeRenderReason(reason);
+    if (typeof markDirty === "function") markDirty(normalizedReason);
+    if (typeof requestRender === "function") requestRender(normalizedReason);
+    return normalizedReason;
+  };
+  const scheduleLayerRenderDirty = (reason) => (
+    shouldBatchToolbarRenderReason(reason)
+      ? layerRenderScheduler.schedule(reason)
+      : renderLayerDirtyNow(reason)
+  );
   const toggleUrban = document.getElementById("toggleUrban");
   const urbanMode = document.getElementById("urbanMode");
   const urbanAdaptiveControls = document.getElementById("urbanAdaptiveControls");
@@ -128,6 +149,78 @@ export function createAppearanceControlsController({
   };
   moveAppearanceLayerPanels();
   moveMapContentPanels();
+  const layerStatusAnchorById = Object.freeze({
+    borders: "lblBordersPanel",
+    physical: "lblPhysicalPanel",
+    urban: "lblUrbanPanel",
+    "city-points": "lblCityPointsPanel",
+    rivers: "lblRiversPanel",
+    ocean: "lblOcean",
+    bathymetry: "lblOceanStyleCard",
+    "day-night": "lblDayNightPanel",
+    texture: "lblTexture",
+    transport: "lblTransportPanel",
+  });
+  const layerStatusNodes = new Map();
+  const ensureLayerStatusNode = (diagnosticId) => {
+    if (layerStatusNodes.has(diagnosticId)) return layerStatusNodes.get(diagnosticId);
+    const anchorId = layerStatusAnchorById[diagnosticId];
+    const anchor = anchorId ? document.getElementById(anchorId) : null;
+    if (!anchor?.parentNode) return null;
+    const node = document.createElement("p");
+    node.className = "layer-status-strip";
+    node.setAttribute("role", "status");
+    node.setAttribute("aria-live", "polite");
+    node.dataset.layerStatusId = diagnosticId;
+    anchor.insertAdjacentElement("afterend", node);
+    layerStatusNodes.set(diagnosticId, node);
+    return node;
+  };
+  const setLayerStatusNode = (node, diagnostic) => {
+    if (!node || !diagnostic) return;
+    const summary = sanitizeLayerStatusText(diagnostic.summary);
+    if (node.dataset.statusSummary !== summary) {
+      node.textContent = summary;
+      node.dataset.statusSummary = summary;
+    }
+    const severity = String(diagnostic.severity || "active").trim() || "active";
+    node.dataset.severity = severity;
+    node.classList.toggle("is-muted", severity === "muted");
+    node.classList.toggle("is-warning", severity === "warning");
+    node.classList.toggle("is-active", severity === "active");
+  };
+  const ensureTransportWorkbenchOnlyStatusNode = () => {
+    const container = document.getElementById("transportVisualModeControls");
+    if (!container) return null;
+    let node = document.getElementById("transportWorkbenchOnlyStatus");
+    if (node) return node;
+    node = document.createElement("p");
+    node.id = "transportWorkbenchOnlyStatus";
+    node.className = "layer-status-strip transport-workbench-only-status is-muted";
+    container.appendChild(node);
+    return node;
+  };
+  const renderLayerStatusSummaries = () => {
+    const diagnostics = buildLayerStatusDiagnostics(runtimeState, { translate: t });
+    const diagnosticsById = new Map(diagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
+    Object.keys(layerStatusAnchorById).forEach((diagnosticId) => {
+      const diagnostic = diagnosticsById.get(diagnosticId);
+      if (!diagnostic) return;
+      setLayerStatusNode(ensureLayerStatusNode(diagnosticId), diagnostic);
+    });
+    const unsupportedTransportFamilies = diagnostics
+      .filter((diagnostic) => diagnostic.familyId && diagnostic.supported === false && diagnostic.familyId !== "layers");
+    const workbenchStatusNode = ensureTransportWorkbenchOnlyStatusNode();
+    if (workbenchStatusNode) {
+      const labels = unsupportedTransportFamilies
+        .map((diagnostic) => t(diagnostic.label || diagnostic.familyId, "ui"))
+        .filter(Boolean);
+      workbenchStatusNode.textContent = labels.length
+        ? `${t("Workbench only", "ui")}: ${labels.join(", ")}`
+        : "";
+      workbenchStatusNode.hidden = labels.length === 0;
+    }
+  };
   const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
   const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
   const mapContentTabButtons = Array.from(document.querySelectorAll("[data-map-content-tab]"));
@@ -204,7 +297,7 @@ export function createAppearanceControlsController({
       list: document.getElementById("appearancePresetList"),
     },
     t,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     captureHistoryState: captureRuntimeHistoryState,
     pushHistoryEntry: pushRuntimeHistoryEntry,
     requestUiRefresh: () => renderAppearanceStyleControlsUi(),
@@ -217,14 +310,17 @@ export function createAppearanceControlsController({
     runtimeState,
     t,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     normalizeOceanFillColor,
   });
-  const renderTransportAppearanceUi = transportAppearanceController.renderTransportAppearanceUi;
+  const renderTransportAppearanceUi = () => {
+    transportAppearanceController.renderTransportAppearanceUi();
+    renderLayerStatusSummaries();
+  };
   const textureOwner = createAppearanceTextureOwner({
     runtimeState,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     normalizeOceanFillColor,
   });
   const renderTextureUI = textureOwner.renderTextureUI;
@@ -233,7 +329,7 @@ export function createAppearanceControlsController({
     runtimeState,
     t,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     normalizeOceanFillColor,
     ensureActiveScenarioOptionalLayerLoaded,
   });
@@ -241,7 +337,7 @@ export function createAppearanceControlsController({
     runtimeState,
     t,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     normalizeOceanFillColor,
   });
   const urbanIntensityFieldEditor = createIntensityFieldEditorSection({
@@ -255,14 +351,14 @@ export function createAppearanceControlsController({
     reasonPrefix: "urban-intensity-field",
     t,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     captureHistoryState: captureRuntimeHistoryState,
     pushHistoryEntry: pushRuntimeHistoryEntry,
   });
   const riversOwner = createAppearanceRiversOwner({
     runtimeState,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
     normalizeOceanFillColor,
   });
   const referenceOwner = createAppearanceReferenceOwner({
@@ -274,7 +370,7 @@ export function createAppearanceControlsController({
   const borderOwner = createAppearanceBorderOwner({
     runtimeState,
     clamp,
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
   });
   const renderBorderUi = borderOwner.renderBorderUi;
   const parentBorderOwner = createAppearanceParentBorderOwner({
@@ -292,7 +388,7 @@ export function createAppearanceControlsController({
       emptyNode: parentBorderEmpty,
     },
     translateGeo: (label) => t(label, "geo"),
-    renderDirty,
+    renderDirty: scheduleLayerRenderDirty,
   });
 
   const applyAppearanceFilter = () => {
@@ -456,6 +552,7 @@ export function createAppearanceControlsController({
     syncUrbanControls();
     urbanIntensityFieldEditor.render();
     appearancePresetsOwner.renderAppearancePresetsUi();
+    renderLayerStatusSummaries();
   };
 
   const renderRecentColors = () => {
@@ -566,7 +663,7 @@ export function createAppearanceControlsController({
         if (runtimeState.showUrban && typeof runtimeState.ensureContextLayerDataFn === "function") {
           void runtimeState.ensureContextLayerDataFn("urban", { reason: "toolbar-toggle", renderNow: true });
         }
-        renderDirty("toggle-urban");
+        scheduleLayerRenderDirty("toggle-urban");
       });
       toggleUrban.dataset.bound = "true";
     }
@@ -578,7 +675,7 @@ export function createAppearanceControlsController({
         const capability = getUrbanCapability();
         cfg.mode = requestedMode === "adaptive" && !capability.adaptiveAvailable ? "manual" : requestedMode;
         syncUrbanControls();
-        renderDirty("urban-mode");
+        scheduleLayerRenderDirty("urban-mode");
       });
       urbanMode.dataset.bound = "true";
     }
@@ -586,7 +683,7 @@ export function createAppearanceControlsController({
       urbanColor.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         cfg.color = normalizeOceanFillColor(event.target.value);
-        renderDirty("urban-color");
+        scheduleLayerRenderDirty("urban-color");
       });
       urbanColor.dataset.bound = "true";
     }
@@ -596,7 +693,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.fillOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.fillOpacity, 0, 1);
         if (urbanOpacityValue) urbanOpacityValue.textContent = `${Math.round(cfg.fillOpacity * 100)}%`;
-        renderDirty("urban-opacity");
+        scheduleLayerRenderDirty("urban-opacity");
       });
       urbanOpacity.dataset.bound = "true";
     }
@@ -604,7 +701,7 @@ export function createAppearanceControlsController({
       urbanBlendMode.addEventListener("change", (event) => {
         const cfg = syncUrbanConfig();
         cfg.blendMode = String(event.target.value || "multiply");
-        renderDirty("urban-blend");
+        scheduleLayerRenderDirty("urban-blend");
       });
       urbanBlendMode.dataset.bound = "true";
     }
@@ -614,7 +711,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.adaptiveStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveStrength, 0, 1);
         if (urbanAdaptiveStrengthValue) urbanAdaptiveStrengthValue.textContent = `${Math.round(cfg.adaptiveStrength * 100)}%`;
-        renderDirty("urban-adaptive-strength");
+        scheduleLayerRenderDirty("urban-adaptive-strength");
       });
       urbanAdaptiveStrength.dataset.bound = "true";
     }
@@ -624,7 +721,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.strokeOpacity = clamp(Number.isFinite(value) ? value / 100 : cfg.strokeOpacity, 0, 1);
         if (urbanStrokeOpacityValue) urbanStrokeOpacityValue.textContent = `${Math.round(cfg.strokeOpacity * 100)}%`;
-        renderDirty("urban-stroke-opacity");
+        scheduleLayerRenderDirty("urban-stroke-opacity");
       });
       urbanStrokeOpacity.dataset.bound = "true";
     }
@@ -634,7 +731,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.toneBias = clamp(Number.isFinite(value) ? value / 100 : cfg.toneBias, -0.3, 0.3);
         if (urbanToneBiasValue) urbanToneBiasValue.textContent = formatUrbanToneBias(cfg.toneBias);
-        renderDirty("urban-tone-bias");
+        scheduleLayerRenderDirty("urban-tone-bias");
       });
       urbanToneBias.dataset.bound = "true";
     }
@@ -643,7 +740,7 @@ export function createAppearanceControlsController({
         const cfg = syncUrbanConfig();
         cfg.adaptiveTintEnabled = !!event.target.checked;
         syncUrbanControls();
-        renderDirty("urban-adaptive-tint-enabled");
+        scheduleLayerRenderDirty("urban-adaptive-tint-enabled");
       });
       urbanAdaptiveTintEnabled.dataset.bound = "true";
     }
@@ -651,7 +748,7 @@ export function createAppearanceControlsController({
       urbanAdaptiveTintColor.addEventListener("input", (event) => {
         const cfg = syncUrbanConfig();
         cfg.adaptiveTintColor = normalizeOceanFillColor(event.target.value || cfg.adaptiveTintColor || URBAN_ADAPTIVE_TINT_DEFAULT_COLOR);
-        renderDirty("urban-adaptive-tint-color");
+        scheduleLayerRenderDirty("urban-adaptive-tint-color");
       });
       urbanAdaptiveTintColor.dataset.bound = "true";
     }
@@ -661,7 +758,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.adaptiveTintStrength = clamp(Number.isFinite(value) ? value / 100 : cfg.adaptiveTintStrength, 0, 0.5);
         if (urbanAdaptiveTintStrengthValue) urbanAdaptiveTintStrengthValue.textContent = `${Math.round(cfg.adaptiveTintStrength * 100)}%`;
-        renderDirty("urban-adaptive-tint-strength");
+        scheduleLayerRenderDirty("urban-adaptive-tint-strength");
       });
       urbanAdaptiveTintStrength.dataset.bound = "true";
     }
@@ -671,7 +768,7 @@ export function createAppearanceControlsController({
         const value = Number(event.target.value);
         cfg.minAreaPx = clamp(Number.isFinite(value) ? value : 1, 1, 80);
         if (urbanMinAreaValue) urbanMinAreaValue.textContent = `${Math.round(cfg.minAreaPx)}`;
-        renderDirty("urban-area");
+        scheduleLayerRenderDirty("urban-area");
       });
       urbanMinArea.dataset.bound = "true";
     }
@@ -691,6 +788,7 @@ export function createAppearanceControlsController({
     renderDayNightUI,
     renderTextureUI,
     renderTransportAppearanceUi,
+    renderLayerStatusSummaries,
     setAppearanceTab,
     syncParentBorderVisibilityUI,
   };

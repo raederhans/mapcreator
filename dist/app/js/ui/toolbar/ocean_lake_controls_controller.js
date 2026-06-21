@@ -58,6 +58,7 @@ export function createOceanLakeControlsController({
   oceanDeepFadeEndZoomValue,
   oceanScenarioSyntheticContourFadeEndZoomValue,
   oceanScenarioShallowContourFadeEndZoomValue,
+  requestLayerStatusRefresh = () => {},
   documentRef = globalThis.document,
 }) {
   let pendingOceanVisualFrame = 0;
@@ -303,6 +304,7 @@ export function createOceanLakeControlsController({
     if (oceanBathymetryContoursValue) {
       oceanBathymetryContoursValue.textContent = String(state.activeBathymetryContoursData?.features?.length || 0);
     }
+    requestLayerStatusRefresh();
   };
 
   const renderOceanLakeControlsUi = () => {
