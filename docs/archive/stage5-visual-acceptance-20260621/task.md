@@ -2,11 +2,11 @@
 
 ## Current Status
 
-- Status: ready-for-integration.
+- Status: integrated locally, archived, and ready for push/cleanup.
 - Base: `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9`.
 - Branch: `codex/stage5-visual-acceptance`.
 - Worktree: `C:\Users\raede\Desktop\dev\mapcreator-stage5-visual-acceptance`.
-- Commit state: commit pending; final report records the resulting commit hash.
+- Commit state: functional commit `138de67f002c66741cce31c81eb27259a9a3ee83`; this archive move is recorded by the closeout commit.
 
 ## Delivery Package
 
@@ -21,7 +21,7 @@
    - Core files: `js/core/scenario_chunk_manager.js`, `dist/app/js/core/scenario_chunk_manager.js`.
    - Test files: `tests/e2e/dev/full_visual_acceptance.dev.spec.js`, `tests/e2e/test-import-graph.json`, `tests/scenario_chunk_contracts.test.mjs`.
    - Tooling files: `package.json`, `tools/eslint-rules/state-writer-allowlist.json`, `dist/pages-dist-manifest.json`.
-   - Documentation files: `docs/active/_worktree_registry.md`, `docs/active/stage5-visual-acceptance/plan.md`, `docs/active/stage5-visual-acceptance/context.md`, `docs/active/stage5-visual-acceptance/task.md`.
+   - Documentation files: `docs/active/_worktree_registry.md`, archived package under `docs/archive/stage5-visual-acceptance-20260621/`.
    - Temporary ignored files: `.omx/ultragoal/brief.md`, `.omx/ultragoal/goals.json`, `.omx/ultragoal/ledger.jsonl`, `.runtime/...`.
 
 3. Diff summary:
@@ -32,7 +32,8 @@
    - Dist and generated graph files were refreshed from the source changes.
 
 4. Commit state:
-   - Commit pending. Independent review is complete; this package is ready for staging and commit.
+   - Functional commit: `138de67f002c66741cce31c81eb27259a9a3ee83`.
+   - Closeout commit: records this archive move, registry transition, and final push/cleanup package.
 
 5. Base divergence:
    - The worktree base matches `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9`.
@@ -65,10 +66,10 @@
    - `mapcreator-layer-observability` should refresh or regenerate shared dist files after Stage 5 lands.
 
 9. Recommended next step:
-   - Commit this worktree and enter integration.
-   - Recommended integration: fast-forward `main` from this branch if `origin/main` remains `8e79ea0cebb3a44d89247dc6094baca9f25b22c9`; otherwise rebase or merge from latest `origin/main` in a clean integration path, run the Stage 5 gate and `verify:pages-dist`, then push.
+   - Fast-forward `origin/main` from this branch while remote `main` remains `8e79ea0cebb3a44d89247dc6094baca9f25b22c9`.
+   - Remove this worktree after push status is confirmed; keep branch `codex/stage5-visual-acceptance` and commit hashes as recovery evidence.
    - Hold full `test:e2e:water-rendering` as a separate baseline repair item.
 
 10. Integration answer:
-   - This worktree is functionally ready to integrate.
-   - Integrate as one focused Stage 5 commit because the harness and relief required-layer fix prove the same acceptance gap.
+   - This worktree is integrated locally and ready for push/cleanup.
+   - Functional changes stay in one Stage 5 commit; closeout changes archive the delivery package.
