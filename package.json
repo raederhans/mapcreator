@@ -121,6 +121,7 @@
     "test:e2e:physical-layer-runtime-contract": "node node_modules/@playwright/test/cli.js test tests/e2e/physical_layer_runtime_contract.spec.js --workers=1 --retries=0",
     "test:e2e:dev:tno-ready-state": "node node_modules/@playwright/test/cli.js test tests/e2e/dev/tno_ready_state_contract.dev.spec.js --workers=1 --retries=0",
     "test:e2e:dev:scenario-chunk-runtime": "node node_modules/@playwright/test/cli.js test tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js --workers=1 --retries=0",
+    "test:e2e:dev:stage5-visual-acceptance": "node node_modules/@playwright/test/cli.js test tests/e2e/dev/full_visual_acceptance.dev.spec.js --workers=1 --retries=0",
     "test:e2e:dev:political-progressive-recovery": "node node_modules/@playwright/test/cli.js test tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js --grep \"Great Lakes Congo political detail fill stable|post-edit keeps political detail fill|runtime color coverage\" --workers=1 --retries=0",
     "test:e2e:smoke": "node tools/e2e_layering.mjs run smoke",
     "test:e2e:strategic-overlay-smoke": "node node_modules/@playwright/test/cli.js test tests/e2e/strategic_overlay_smoke.spec.js --workers=1 --retries=0",

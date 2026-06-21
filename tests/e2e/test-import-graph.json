@@ -2,53 +2,53 @@
   "schemaVersion": 1,
   "graphMode": "artifact-only",
   "summary": {
-    "specCount": 48,
-    "nodeCount": 60,
-    "reverseIndexKeyCount": 81,
+    "specCount": 49,
+    "nodeCount": 61,
+    "reverseIndexKeyCount": 83,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "js/core/map_renderer.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "js/core/scenario_dispatcher.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "js/core/state.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "js/ui/sidebar.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-app-paths.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-app.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-frontline-panel.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-project-import.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-web-server.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/startup-paths.js",
-        "specCount": 48
+        "specCount": 49
       },
       {
         "dependency": "tests/e2e/support/playwright-selectors.js",
@@ -299,6 +299,42 @@
         "js/core/scenario_dispatcher.js",
         "js/core/state.js",
         "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/full_visual_acceptance.dev.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
         "js/ui/sidebar.js"
       ]
     },
@@ -1538,6 +1574,7 @@
       "tests/e2e/interaction_funnel_contract.spec.js"
     ],
     "js/core/feature_identity.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
     ],
     "js/core/history_manager.js": [
@@ -1550,6 +1587,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -1600,6 +1638,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -1648,6 +1687,9 @@
       "tests/e2e/interaction_funnel_contract.spec.js",
       "tests/e2e/shortcut_history_render_boundary.spec.js"
     ],
+    "js/core/renderer/render_transaction_diagnostics.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js"
+    ],
     "js/core/scenario_dispatcher.js": [
       "tests/e2e/city_label_i18n_redraw.spec.js",
       "tests/e2e/city_lights_layer_regression.spec.js",
@@ -1655,6 +1697,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -1727,6 +1770,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -1794,6 +1838,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -1875,6 +1920,9 @@
     ],
     "tests/e2e/dev_workspace_render_boundary.spec.js": [
       "tests/e2e/dev_workspace_render_boundary.spec.js"
+    ],
+    "tests/e2e/dev/full_visual_acceptance.dev.spec.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js"
     ],
     "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js": [
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
@@ -1977,6 +2025,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -2027,6 +2076,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -2077,6 +2127,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -2127,6 +2178,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -2188,6 +2240,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",
@@ -2232,6 +2285,7 @@
       "tests/e2e/water_cache_strategy_regression.spec.js"
     ],
     "tests/e2e/support/political-pixel-probe.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
     ],
     "tests/e2e/support/startup-paths.js": [
@@ -2241,6 +2295,7 @@
       "tests/e2e/city_points_urban_runtime.spec.js",
       "tests/e2e/city_reveal_plan_regression.spec.js",
       "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
       "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
       "tests/e2e/dev_workspace_i18n.spec.js",

@@ -64,6 +64,7 @@
     "js/ui/toolbar/transport_workbench_right_deck_owner.js",
     "js/ui/toolbar/transport_workbench_state_owner.js",
     "tests/e2e/city_label_i18n_redraw.spec.js",
+    "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
     "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
     "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
     "tests/e2e/dev_workspace_i18n.spec.js",

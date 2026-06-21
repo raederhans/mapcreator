@@ -5,23 +5,24 @@ Last updated: 2026-06-21
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@ee9ad5c8f23bf59abab3f995dd198e975c04775b` after Stage 3 Political Core and Resolved Color Readiness closeout.
-- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-stage4-semantic-layer-coverage` on branch `codex/stage4-semantic-layer-coverage`.
+- Integration base: `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9` after Stage 4 Semantic Layer Coverage and Source Ownership closeout.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator-stage5-visual-acceptance` on branch `codex/stage5-visual-acceptance`, ready for integration.
 - Live test/build owner: main Codex agent only; no live process currently active.
-- Subagents: static mapping, test planning, and final independent review only; they must not own shared live commands.
+- Subagents: static mapping, acceptance planning, and final independent review only; they must not own shared live commands.
 
 ## Recommended Order
 
-1. Complete Stage 4 Semantic Layer Coverage and Source Ownership from the isolated worktree.
-2. Keep Phase 5 visual screenshot regression and acceptance separate from Stage 4 runtime contract work.
-3. Track the Pages startup shell `topojson` memory failure as a separate landing builder gate repair if it reappears.
+1. Integrate `codex/stage5-visual-acceptance` first because independent review is complete and the branch is a small runtime-contract fix plus one acceptance harness.
+2. Rebase or refresh `codex/layer-observability-stability-20260621` after Stage 5 lands because it has direct overlap in `package.json`, `dist/pages-dist-manifest.json`, and generated `dist/app/js/core/scenario_chunk_manager.js`.
+3. Preserve the dirty parent checkout until integration uses a clean path and the parent WIP is explicitly handled.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator-stage4-semantic-layer-coverage` | `codex/stage4-semantic-layer-coverage@cbaa47ba`; closeout follows | `origin/main@ee9ad5c8f23bf59abab3f995dd198e975c04775b` | integrated, pushed, verified, ready for cleanup | hot files resolved: `js/core/renderer/render_transaction_diagnostics.js`, focused diagnostics tests, Pages dist mirror, registry/task docs | Stage 4 semantic layer coverage/source ownership landed in `cbaa47ba`. Runtime sampling reports `stableVisibleRequiredLayerMissingCount=0`; water/Atlantropa/relief stable required missing all zero and latest stable snapshots are present/runtime-state. Targeted syntax, Node, E2E, Pages dist, runtime sampling, diff checks, ai-slop-cleaner, code-reviewer CLEAR, and architect CLEAR passed. | Green after functional push; yellow only for future renderer diagnostics and Pages dist mirror work. | Push closeout registry update, then clean this isolated worktree. Recovery via branch `origin/codex/stage4-semantic-layer-coverage` and commit `cbaa47ba`. |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@29c008f7` | `origin/main@ee9ad5c8f23bf59abab3f995dd198e975c04775b` | parent checkout, behind remote, dirty docs WIP | unrelated docs/archive deletions and `lessons learned.md`; production code untouched for Stage 4 | `git status --short --branch` shows `main...origin/main [behind 4]` plus docs WIP. | Green for production-code overlap; yellow for shared docs if integration rewrites registry or lessons learned. | Preserve until Stage 4 branch is integrated; sync parent only after preserving user WIP. |
+| `C:\Users\raede\Desktop\dev\mapcreator-stage5-visual-acceptance` | `codex/stage5-visual-acceptance@8e79ea0c` with uncommitted Stage 5 diff | `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9` | ready-for-integration | hot files: `js/core/scenario_chunk_manager.js`, `dist/app/js/core/scenario_chunk_manager.js`, `dist/pages-dist-manifest.json`, `package.json`, E2E dev harness, import graph, state-writer allowlist, active docs/registry | Stage 5 summary `pass=true`, 9/9 cases after review fixes; diagnostics latest stable prohibited warnings are zero for every case; stable-kind prohibited warnings since test start are zero; TNO startup/Atlantropa/water/relief/fill-before-zoom report water 141, `scenario_atlantropa` 897, relief 25 as runtime-state required layers; code-review follow-up APPROVE; `verify:pages-dist` passed. | Red with `mapcreator-layer-observability` on `package.json`, `dist/pages-dist-manifest.json`, and generated `dist/app/js/core/scenario_chunk_manager.js`; yellow for render diagnostics concepts; green against parent production WIP. | Commit and integrate before layer-observability, then rerun Stage 5 gate and Pages dist on the integration path. |
+| `C:\Users\raede\Desktop\dev\mapcreator-layer-observability` | `codex/layer-observability-stability-20260621@8e79ea0c` with uncommitted UI/dist diff | `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9` | in-progress | hot files: `js/ui/toolbar*.js`, `css/style.css`, `package.json`, toolbar diagnostics/scheduler tests, active docs, broad generated `dist/app` and `dist/pages-dist-manifest.json` changes | `git status --short` shows toolbar/UI source changes plus broad Pages dist churn; no Stage 5 validation evidence recorded in this registry row. | Red with Stage 5 on `package.json`, `dist/pages-dist-manifest.json`, and generated `dist/app/js/core/scenario_chunk_manager.js`; yellow if dist was generated before Stage 5 source fix. | Rebase or regenerate dist after Stage 5 lands. Do not integrate before Stage 5 unless an integration owner re-evaluates the shared files. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@29c008f7` | `origin/main@8e79ea0cebb3a44d89247dc6094baca9f25b22c9` | parent checkout, behind remote, dirty WIP | docs/archive deletions, `lessons learned.md`, `js/ui/toolbar/appearance_controls_controller.js`, and `css/style.css`; production renderer code untouched for Stage 5 | `git status --short --branch` shows `main...origin/main [behind 6]` plus local WIP. | Yellow for shared docs/style/UI files; green for Stage 5 runtime-contract source file. | Preserve during Stage 5. Use a clean integration worktree or stash/backup parent WIP before syncing parent. |
 
 ## Recent Integrated Branches
 

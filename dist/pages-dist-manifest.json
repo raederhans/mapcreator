@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/renderer/render_transaction_diagnostics.js",
-      "size_bytes": 47304,
+      "size_bytes": 47147,
       "source_kind": "dist"
     },
     {
@@ -46127,7 +46127,7 @@
     },
     {
       "path": "app/js/core/scenario_chunk_manager.js",
-      "size_bytes": 31421,
+      "size_bytes": 31431,
       "source_kind": "dist"
     },
     {
@@ -47121,5 +47121,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154314680
+  "total_bytes": 1154314533
 }

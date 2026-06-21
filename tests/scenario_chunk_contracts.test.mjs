@@ -348,13 +348,13 @@ test("TNO required semantic layers enter chunk selection independent of UI visib
     manifest: { scenario_id: "tno_1962" },
   });
 
-  assert.deepEqual(requiredLayers, ["scenario_atlantropa", "water"]);
+  assert.deepEqual(requiredLayers, ["scenario_atlantropa", "water", "relief"]);
   assert.deepEqual(getVisibleScenarioChunkLayers({
     includePoliticalCore: true,
     showWaterRegions: false,
     showScenarioAtlantropa: false,
     requiredSemanticLayers: requiredLayers,
-  }), ["political", "scenario_atlantropa", "water"]);
+  }), ["political", "scenario_atlantropa", "water", "relief"]);
   assert.deepEqual(resolveRequiredScenarioSemanticLayers({
     scenarioId: "tno_1962",
     manifest: { required_semantic_layers: ["cities"] },

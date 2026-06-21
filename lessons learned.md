@@ -430,3 +430,7 @@
 
 ### Exact-after-settle 中断要带本地重排入口
 - pre-paint identity 或 phase 中断只 reset controller 会把 `deferExactAfterSettle=true` 留成无 handle 的空转状态；abort helper 要记录原因、窄失效 political pass，并在 defer 仍有效时重新 schedule exact refresh。
+
+### Visual acceptance 探针要逐点失败
+- 经纬度像素探针投影到 canvas 外时要显式失败；把坐标 clamp 到边缘会让错误位置被附近像素掩盖。
+- 固定探针适合要求每个点通过，运行时 centroid 采样适合要求最小通过数量；两类断言分开能保留证据强度。

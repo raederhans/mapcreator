@@ -420,7 +420,7 @@ export function getVisibleScenarioChunkLayers({
 }
 
 const DEFAULT_REQUIRED_SEMANTIC_LAYERS_BY_SCENARIO = Object.freeze({
-  tno_1962: Object.freeze(["scenario_atlantropa", "water"]),
+  tno_1962: Object.freeze(["scenario_atlantropa", "water", "relief"]),
 });
 
 function normalizeRequiredSemanticLayerList(values = []) {
