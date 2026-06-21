@@ -6,7 +6,7 @@ Last updated: 2026-06-21
 
 - Owner: main integration owner.
 - Integration base: main@967d9f58 aligned with origin/main before the render transaction diagnostics merge.
-- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator` on `main`; functional render transaction diagnostics commit `21c49be3` is integrated and the registry closeout is pending push.
+- Active implementation worktree: `C:\Users\raede\Desktop\dev\mapcreator` on `main`; functional render transaction diagnostics commit `21c49be3` is integrated and main push has been verified.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: read-only code-mapper completed static mapping; code-reviewer returned COMMENT and fixes were applied; architect returned WATCH and fixes were applied; final code-reviewer returned BLOCK and the epoch/staging findings were addressed.
 
@@ -14,13 +14,13 @@ Last updated: 2026-06-21
 
 1. Keep renderer refresh plan `targetPasses` at renderer boundaries only.
 2. Track the Pages startup shell `topojson` memory failure as a separate landing builder gate repair.
-3. Push integrated Render Transaction Snapshot diagnostics on `main`.
+3. No active integration action remains for Render Transaction Snapshot diagnostics.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main`; former `codex/render-transaction-diagnostics-20260621@21c49be3` | `main@967d9f58` / `origin/main@967d9f58` | integrated, verified, ready to push | hot files resolved: scenario apply, scenario post apply, chunk runtime, scenario resources, map renderer, focused Node test, Pages dist mirror, archived docs, lessons learned | Functional commit `21c49be3`; delivery package archived under `docs/archive/render-transaction-diagnostics-20260621/`; validation passed syntax checks, render transaction diagnostics 14/14, scenario chunk contracts 54/54, renderer runtime state 10/10, scenario runtime state 6/6, scenario lifecycle 12/12, optional layers 6/6, architecture boundaries, Pages dist startup shell 38/38, landing showcase 8/8, and diff check with CRLF warnings only. | Yellow only for future renderer/chunk/scenario diagnostics paths; green for current filesystem overlap because `git worktree list` shows only this active worktree. | Push `origin/main`; recovery via former branch `codex/render-transaction-diagnostics-20260621` and functional commit `21c49be3`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main`; former `codex/render-transaction-diagnostics-20260621@21c49be3` | `main@967d9f58` / `origin/main@967d9f58` | integrated, pushed, verified | hot files resolved: scenario apply, scenario post apply, chunk runtime, scenario resources, map renderer, focused Node test, Pages dist mirror, archived docs, lessons learned | Functional commit `21c49be3`; delivery package archived under `docs/archive/render-transaction-diagnostics-20260621/`; validation passed syntax checks, render transaction diagnostics 14/14, scenario chunk contracts 54/54, renderer runtime state 10/10, scenario runtime state 6/6, scenario lifecycle 12/12, optional layers 6/6, architecture boundaries, Pages dist startup shell 38/38, landing showcase 8/8, diff check, and main push verification. | Yellow only for future renderer/chunk/scenario diagnostics paths; green for current filesystem overlap because `git worktree list` shows only this active worktree. | No active integration action; recovery via former branch `codex/render-transaction-diagnostics-20260621` and functional commit `21c49be3`. |
 
 ## Recent Integrated Branches
 
