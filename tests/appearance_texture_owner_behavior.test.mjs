@@ -179,7 +179,7 @@ test("texture owner binds range inputs once and commits texture history on chang
   assert.equal(harness.nodes.texturePaperScale.listeners.get("input").length, 1);
   assert.equal(harness.nodes.texturePaperScale.listeners.get("change").length, 1);
   assert.equal(harness.runtimeState.styleConfig.texture.paper.scale, 1.5);
-  assert.deepEqual(harness.dirtyReasons, ["texture-style", "texture-style"]);
+  assert.deepEqual(harness.dirtyReasons, ["texture-style-input", "texture-style"]);
   assert.equal(harness.historyEntries.length, 1);
   assert.equal(harness.historyEntries[0].kind, "texture-paper-scale");
   assert.deepEqual(harness.historyEntries[0].before.stylePaths, TEXTURE_STYLE_PATHS);
@@ -229,7 +229,7 @@ test("texture paper scale roundtrips back to one-to-one size", () => {
 
   assert.equal(harness.runtimeState.styleConfig.texture.paper.scale, 1);
   assert.equal(harness.nodes.texturePaperScaleValue.textContent, "1.00x");
-  assert.deepEqual(harness.dirtyReasons, ["texture-style", "texture-style", "texture-style"]);
+  assert.deepEqual(harness.dirtyReasons, ["texture-style-input", "texture-style-input", "texture-style"]);
 });
 
 test("day-night owner syncs computer UTC time into the manual slider", () => {

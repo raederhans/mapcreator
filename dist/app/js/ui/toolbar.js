@@ -1572,7 +1572,9 @@ function initToolbar({ render } = {}) {
     t,
     clamp,
     markDirty,
-    renderDirty,
+    requestRender: () => {
+      if (render) render();
+    },
     ensureActiveScenarioOptionalLayerLoaded,
     normalizeOceanFillColor,
     updateSwatchUI,
@@ -1590,6 +1592,7 @@ function initToolbar({ render } = {}) {
     renderReferenceOverlayUi,
     renderTextureUI,
     renderTransportAppearanceUi,
+    renderLayerStatusSummaries,
     setAppearanceTab: setAppearanceTabController,
     syncParentBorderVisibilityUI,
   } = appearanceControlsController;
@@ -1642,6 +1645,7 @@ function initToolbar({ render } = {}) {
     oceanDeepFadeEndZoomValue,
     oceanScenarioSyntheticContourFadeEndZoomValue,
     oceanScenarioShallowContourFadeEndZoomValue,
+    requestLayerStatusRefresh: renderLayerStatusSummaries,
   });
   const {
     applyAutoFillOceanColor,
