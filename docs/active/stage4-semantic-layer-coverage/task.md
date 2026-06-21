@@ -10,7 +10,7 @@
 
 ## Current Status
 
-- Status: ready-for-integration; commit, push, registry closeout, and cleanup still pending.
+- Status: integrated; cleanup still pending.
 - Base: `origin/main@ee9ad5c8f23bf59abab3f995dd198e975c04775b`.
 - Branch: `codex/stage4-semantic-layer-coverage`.
 - Worktree: `C:\Users\raede\Desktop\dev\mapcreator-stage4-semantic-layer-coverage`.
@@ -49,8 +49,9 @@ Temporary ignored files:
 
 ## Commit State
 
-- Current worktree is not committed yet.
-- Reason: final ai-slop-cleaner and independent `$code-review` gates still need to run.
+- Functional commit: `cbaa47ba`.
+- Pushed branch: `origin/codex/stage4-semantic-layer-coverage`.
+- Pushed main: `origin/main@cbaa47ba` before closeout registry update.
 
 ## Base Divergence
 
@@ -93,7 +94,7 @@ Temporary ignored files:
 
 ## Recommended Next Step
 
-- If clear, commit with Lore trailers, fast-forward `origin/main`, update registry to integrated, and clean the isolated worktree while preserving branch/commit recovery.
+- Clean the isolated worktree after the closeout commit is pushed.
 
 ## AI Slop Cleanup Report
 

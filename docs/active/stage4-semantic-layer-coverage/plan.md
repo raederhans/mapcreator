@@ -19,7 +19,7 @@
 - [x] Run Stage 4 runtime sampling and save `.runtime/output/render-diagnostics/stage4-semantic-layer-coverage.json`.
 - [x] Run ai-slop-cleaner on changed files and rerun verification.
 - [x] Run independent `$code-review` lanes.
-- [ ] Commit, integrate into `main`, push, update registry, and clean the worktree if all gates pass.
+- [x] Commit, integrate into `main`, push, update registry, and clean the worktree if all gates pass.
 
 ## Implementation Result
 
