@@ -339,6 +339,239 @@ test("registered layer configs drive layer snapshots", () => {
   ), false);
 });
 
+test("semantic layer diagnostics keep optional selected layers out of required coverage", () => {
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      required_semantic_layers: [],
+    },
+    showScenarioReliefOverlays: true,
+    runtimeChunkLoadState: {
+      lastSelection: {
+        requiredChunkIds: ["political.detail.r0c0"],
+        optionalChunkIds: ["relief.detail.r0c0"],
+      },
+    },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {},
+      loadedChunkIds: [],
+    },
+    renderPassCache: {},
+  };
+
+  const snapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "visible-frame-committed",
+    expectedScenarioId: "tno_1962",
+  });
+
+  assert.equal(snapshot.layers.relief.visible, true);
+  assert.equal(snapshot.layers.relief.manifestRequired, false);
+  assert.equal(snapshot.layers.relief.requiredByRequiredChunk, false);
+  assert.equal(snapshot.layers.relief.selectedAsOptionalChunk, true);
+  assert.equal(snapshot.layers.relief.required, false);
+  assert.equal(snapshot.layers.relief.selected, true);
+  assert.equal(snapshot.layers.relief.coverageStatus, "optional-deferred");
+  assert.equal(snapshot.layers.relief.missingReason, "optional-deferred");
+  assert.equal(snapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.visibleRequiredLayerMissing
+  ), false);
+});
+
+test("semantic layer diagnostics record visible required missing with source reason", () => {
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      required_semantic_layers: ["scenario_atlantropa"],
+    },
+    showScenarioAtlantropa: true,
+    activeScenarioChunks: {
+      mergedLayerPayloads: {
+        scenario_atlantropa: null,
+      },
+      loadedChunkIds: [],
+    },
+    renderPassCache: {},
+  };
+
+  const snapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "visible-frame-committed",
+    expectedScenarioId: "tno_1962",
+  });
+  const layer = snapshot.layers.scenario_atlantropa;
+  const warning = snapshot.warnings.find(
+    (entry) => entry.code === RENDER_TRANSACTION_WARNING_CODES.visibleRequiredLayerMissing
+  );
+
+  assert.equal(layer.manifestRequired, true);
+  assert.equal(layer.required, true);
+  assert.equal(layer.coverageStatus, "required-missing");
+  assert.equal(layer.sourceKind, "explicit-empty");
+  assert.equal(layer.missingReason, "explicit-empty");
+  assert.ok(warning);
+  assert.equal(warning.phaseKind, "stable");
+  assert.equal(warning.details.layerKey, "scenario_atlantropa");
+  assert.equal(warning.details.requiredReason, "manifest");
+  assert.equal(warning.details.coverageStatus, "required-missing");
+  assert.equal(warning.details.missingReason, "explicit-empty");
+});
+
+test("semantic layer diagnostics report required chunks still loading before missing", () => {
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      required_semantic_layers: [],
+    },
+    showScenarioReliefOverlays: true,
+    scenarioReliefOverlaysData: null,
+    runtimeChunkLoadState: {
+      lastSelection: {
+        requiredChunkIds: ["relief.coarse.r0c0"],
+        optionalChunkIds: [],
+      },
+    },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {
+        relief: null,
+      },
+      loadedChunkIds: [],
+    },
+    renderPassCache: {},
+  };
+
+  const snapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "visible-frame-committed",
+    expectedScenarioId: "tno_1962",
+  });
+  const layer = snapshot.layers.relief;
+
+  assert.equal(layer.visible, true);
+  assert.equal(layer.required, true);
+  assert.equal(layer.requiredByRequiredChunk, true);
+  assert.equal(layer.sourceKind, "explicit-empty");
+  assert.equal(layer.coverageStatus, "transient-loading");
+  assert.equal(layer.missingReason, "not-yet-loaded");
+  assert.deepEqual(layer.expectedChunkIds, ["relief.coarse.r0c0"]);
+  assert.deepEqual(layer.loadedChunkIds, []);
+  assert.deepEqual(layer.missingChunkIds, ["relief.coarse.r0c0"]);
+  assert.equal(snapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.visibleRequiredLayerMissing
+  ), false);
+});
+
+test("semantic layer diagnostics record water and Atlantropa required coverage", () => {
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      required_semantic_layers: ["water", "scenario_atlantropa"],
+    },
+    showWaterRegions: true,
+    showScenarioAtlantropa: true,
+    scenarioWaterRegionsData: { features: [{ id: "water-1" }] },
+    scenarioAtlantropaData: { features: [{ id: "atl-1" }] },
+    runtimeChunkLoadState: {
+      lastSelection: {
+        requiredChunkIds: ["water.detail.r0c0", "scenario_atlantropa.detail.r0c1"],
+        optionalChunkIds: [],
+      },
+    },
+    activeScenarioChunks: {
+      mergedLayerPayloads: {
+        water: { features: [{ id: "water-1" }] },
+        scenario_atlantropa: { features: [{ id: "atl-1" }] },
+      },
+      loadedChunkIds: ["water.detail.r0c0", "scenario_atlantropa.detail.r0c1"],
+    },
+    renderPassCache: {},
+  };
+
+  const snapshot = recordRenderTransactionSnapshot(runtimeState, {
+    phase: "visible-frame-committed",
+    expectedScenarioId: "tno_1962",
+  });
+
+  ["water", "scenario_atlantropa"].forEach((layerKey) => {
+    const layer = snapshot.layers[layerKey];
+    assert.equal(layer.visible, true);
+    assert.equal(layer.required, true);
+    assert.equal(layer.manifestRequired, true);
+    assert.equal(layer.requiredByRequiredChunk, true);
+    assert.equal(layer.coverageStatus, "present");
+    assert.equal(layer.sourceKind, "runtime-state");
+    assert.equal(layer.stateFeatureCount, 1);
+    assert.equal(layer.mergedFeatureCount, 1);
+    assert.equal(layer.missingChunkIds.length, 0);
+    assert.equal(layer.loadedChunkIds.length, 1);
+    assert.equal(layer.requiredReason, "manifest+required-chunk");
+  });
+  assert.equal(snapshot.warnings.some(
+    (warning) => warning.code === RENDER_TRANSACTION_WARNING_CODES.visibleRequiredLayerMissing
+  ), false);
+});
+
+test("semantic layer diagnostics distinguish not-owned explicit-empty and present sources", () => {
+  const buildSnapshot = (mergedPayloads, runtimeStateOverrides = {}) => recordRenderTransactionSnapshot({
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: {
+      scenario_id: "tno_1962",
+      required_semantic_layers: [],
+    },
+    showCustomLayer: true,
+    runtimeChunkLoadState: {
+      lastSelection: {
+        requiredChunkIds: [],
+        optionalChunkIds: ["custom_layer.detail.r0c0"],
+      },
+    },
+    activeScenarioChunks: {
+      mergedLayerPayloads: mergedPayloads,
+      loadedChunkIds: ["custom_layer.detail.r0c0"],
+    },
+    renderPassCache: {},
+    ...runtimeStateOverrides,
+    renderTransactionDiagnostics: {
+      optionalLayerConfigs: {
+        custom_layer: {
+          stateField: "customLayerPayload",
+          visibilityField: "showCustomLayer",
+        },
+      },
+    },
+  }, {
+    phase: "visible-frame-committed",
+    expectedScenarioId: "tno_1962",
+  });
+
+  const notOwned = buildSnapshot({});
+  assert.equal(notOwned.layers.custom_layer.sourceKind, "not-owned");
+  assert.equal(notOwned.layers.custom_layer.sourceStatus, "not-owned");
+  assert.equal(notOwned.layers.custom_layer.coverageStatus, "optional-deferred");
+
+  const explicitEmpty = buildSnapshot({ custom_layer: null });
+  assert.equal(explicitEmpty.layers.custom_layer.sourceKind, "explicit-empty");
+  assert.equal(explicitEmpty.layers.custom_layer.sourceStatus, "empty");
+  assert.equal(explicitEmpty.layers.custom_layer.coverageStatus, "explicit-empty");
+  assert.equal(explicitEmpty.layers.custom_layer.missingReason, "explicit-empty");
+
+  const present = buildSnapshot({ custom_layer: { features: [{ id: "custom-1" }] } });
+  assert.equal(present.layers.custom_layer.sourceKind, "merged-chunk");
+  assert.equal(present.layers.custom_layer.sourceStatus, "present");
+  assert.equal(present.layers.custom_layer.coverageStatus, "present");
+  assert.equal(present.layers.custom_layer.mergedFeatureCount, 1);
+
+  const stateEmptyMergedPresent = buildSnapshot(
+    { custom_layer: { features: [{ id: "custom-2" }] } },
+    { customLayerPayload: null }
+  );
+  assert.equal(stateEmptyMergedPresent.layers.custom_layer.sourceKind, "merged-chunk");
+  assert.equal(stateEmptyMergedPresent.layers.custom_layer.sourceStatus, "present");
+  assert.equal(stateEmptyMergedPresent.layers.custom_layer.coverageStatus, "present");
+  assert.equal(stateEmptyMergedPresent.layers.custom_layer.mergedFeatureCount, 1);
+});
+
 test("render transaction diagnostics classify invariant warnings", () => {
   assert.equal(getMergedPayloadStateForDiagnostics(undefined), "not-owned");
   assert.equal(getMergedPayloadStateForDiagnostics(null), "empty");

@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/renderer/render_transaction_diagnostics.js",
-      "size_bytes": 38869,
+      "size_bytes": 47304,
       "source_kind": "dist"
     },
     {
@@ -47121,5 +47121,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154306245
+  "total_bytes": 1154314680
 }

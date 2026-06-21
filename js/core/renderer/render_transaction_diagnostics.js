@@ -29,6 +29,10 @@ const FALLBACK_LAYER_CONFIGS = Object.freeze({
     stateField: "scenarioSpecialRegionsData",
     visibilityField: "showScenarioSpecialRegions",
   }),
+  specialzonelayers: Object.freeze({
+    stateField: "specialZoneLayers",
+    visibilityField: "showSpecialZones",
+  }),
   relief: Object.freeze({
     stateField: "scenarioReliefOverlaysData",
     visibilityField: "showScenarioReliefOverlays",
@@ -152,6 +156,13 @@ function getPayloadState(value) {
   if (getFeatureCount(value) > 0 || getObjectSize(value) > 0) return "present";
   if (typeof value === "object") return "empty";
   return "unknown";
+}
+
+function hasOwnValue(owner, fieldName) {
+  return !!fieldName
+    && !!owner
+    && typeof owner === "object"
+    && Object.prototype.hasOwnProperty.call(owner, fieldName);
 }
 
 function getLayerConfigs(runtimeState) {
@@ -360,12 +371,34 @@ function buildChunkSnapshot(runtimeState) {
   };
 }
 
-function getLayerRequired(runtimeState, layerKey, chunkIds) {
-  const requiredLayers = Array.isArray(runtimeState?.activeScenarioManifest?.required_semantic_layers)
-    ? runtimeState.activeScenarioManifest.required_semantic_layers
-    : [];
-  return requiredLayers.includes(layerKey)
-    || chunkIds.some((chunkId) => chunkId === layerKey || chunkId.startsWith(`${layerKey}.`));
+function getManifestRequiredLayers(runtimeState) {
+  const rawLayers = runtimeState?.activeScenarioManifest?.required_semantic_layers;
+  if (Array.isArray(rawLayers)) return copyStringList(rawLayers);
+  if (rawLayers && typeof rawLayers === "object") return copyStringList(rawLayers.layers);
+  return [];
+}
+
+function chunkIdsContainLayer(chunkIds, layerKey) {
+  const normalizedLayerKey = normalizeId(layerKey);
+  if (!normalizedLayerKey) return false;
+  return copyStringList(chunkIds).some(
+    (chunkId) => chunkId === normalizedLayerKey || chunkId.startsWith(`${normalizedLayerKey}.`)
+  );
+}
+
+function getLayerChunkIds(chunkIds, layerKey) {
+  const normalizedLayerKey = normalizeId(layerKey);
+  if (!normalizedLayerKey) return [];
+  return copyStringList(chunkIds).filter(
+    (chunkId) => chunkId === normalizedLayerKey || chunkId.startsWith(`${normalizedLayerKey}.`)
+  );
+}
+
+function getRequiredReason({ manifestRequired = false, requiredByRequiredChunk = false } = {}) {
+  if (manifestRequired && requiredByRequiredChunk) return "manifest+required-chunk";
+  if (manifestRequired) return "manifest";
+  if (requiredByRequiredChunk) return "required-chunk";
+  return "";
 }
 
 function getLayerVisibility(runtimeState, layerKey, config) {
@@ -380,27 +413,190 @@ function getLayerVisibility(runtimeState, layerKey, config) {
   return visibilityField !== "showSpecialZones" && visibilityField !== "showStrategicResourceMarkers";
 }
 
+function getActiveScenarioBundle(runtimeState) {
+  const activeScenarioId = normalizeId(runtimeState?.activeScenarioId);
+  return runtimeState?.activeScenarioBundle
+    || (activeScenarioId ? runtimeState?.scenarioBundleCacheById?.[activeScenarioId] : null)
+    || null;
+}
+
+function getTopologyObjectState(runtimeState, config) {
+  const objectName = normalizeId(config?.objectName);
+  if (!objectName) return "not-owned";
+  const topologyCandidates = [
+    runtimeState?.scenarioRuntimeTopologyData,
+    runtimeState?.runtimePoliticalTopology,
+    runtimeState?.topologyPrimary,
+    runtimeState?.topology,
+  ];
+  const topology = topologyCandidates.find((candidate) => (
+    candidate?.objects && Object.prototype.hasOwnProperty.call(candidate.objects, objectName)
+  ));
+  return topology ? getPayloadState(topology.objects[objectName]) : "not-owned";
+}
+
+function getLayerSourceInfo(runtimeState, config, {
+  statePayloadState,
+  mergedPayload,
+  mergedPayloadState,
+} = {}) {
+  const stateField = normalizeId(config?.stateField);
+  const bundleField = normalizeId(config?.bundleField);
+  const activeBundle = getActiveScenarioBundle(runtimeState);
+  const bundlePayload = hasOwnValue(activeBundle, bundleField) ? activeBundle[bundleField] : undefined;
+  const bundlePayloadState = getPayloadState(bundlePayload);
+  const topologyObjectState = getTopologyObjectState(runtimeState, config);
+  if (statePayloadState === "present") {
+    return { sourceKind: "runtime-state", sourceStatus: "present" };
+  }
+  if (mergedPayloadState === "present") {
+    return { sourceKind: "merged-chunk", sourceStatus: "present" };
+  }
+  if (bundlePayloadState === "present") {
+    return { sourceKind: "bundle-payload", sourceStatus: "present" };
+  }
+  if (topologyObjectState === "present") {
+    return { sourceKind: "topology-object", sourceStatus: "present" };
+  }
+  if (hasOwnValue(runtimeState, stateField) && statePayloadState === "empty") {
+    return { sourceKind: "explicit-empty", sourceStatus: "empty" };
+  }
+  if (mergedPayload !== undefined && mergedPayloadState === "empty") {
+    return { sourceKind: "explicit-empty", sourceStatus: "empty" };
+  }
+  if (bundlePayload !== undefined && bundlePayloadState === "empty") {
+    return { sourceKind: "explicit-empty", sourceStatus: "empty" };
+  }
+  if (topologyObjectState === "empty") {
+    return { sourceKind: "explicit-empty", sourceStatus: "empty" };
+  }
+  if (statePayloadState === "unknown" || mergedPayloadState === "unknown" || bundlePayloadState === "unknown") {
+    return { sourceKind: "unknown", sourceStatus: "unknown" };
+  }
+  return { sourceKind: "not-owned", sourceStatus: "not-owned" };
+}
+
+function getMissingReason({
+  required = false,
+  intentionallyDeferred = false,
+  statePayloadState = "not-owned",
+  mergedPayloadState = "not-owned",
+  sourceKind = "unknown",
+  missingChunkIds = [],
+} = {}) {
+  if (required && missingChunkIds.length > 0) return "not-yet-loaded";
+  if (sourceKind === "explicit-empty") return "explicit-empty";
+  if (intentionallyDeferred) return "optional-deferred";
+  if (missingChunkIds.length > 0) return "not-yet-loaded";
+  if (required && statePayloadState === "empty") return "state-empty";
+  if (required && mergedPayloadState === "empty") return "merged-empty";
+  if (required && mergedPayloadState === "not-owned") return "merged-not-owned";
+  if (sourceKind === "unknown") return "payload-malformed";
+  return "";
+}
+
+function getCoverageStatus({
+  visible = false,
+  required = false,
+  selected = false,
+  present = false,
+  intentionallyDeferred = false,
+  sourceKind = "unknown",
+  missingChunkIds = [],
+} = {}) {
+  if (!visible) return "not-visible";
+  if (present) return "present";
+  if (required && missingChunkIds.length > 0) return "transient-loading";
+  if (required) return "required-missing";
+  if (sourceKind === "explicit-empty") return "explicit-empty";
+  if (intentionallyDeferred) return "optional-deferred";
+  if (!selected) return "not-selected";
+  if (sourceKind === "not-owned") return "optional-deferred";
+  return "unknown";
+}
+
 function buildLayerSnapshot(runtimeState, chunks) {
   const layerConfigs = getLayerConfigs(runtimeState);
-  const requiredChunkIds = [
-    ...copyStringList(chunks.requiredChunkIds),
-    ...copyStringList(chunks.optionalChunkIds),
-  ];
+  const manifestRequiredLayers = getManifestRequiredLayers(runtimeState);
+  const requiredChunkIds = copyStringList(chunks.requiredChunkIds);
+  const optionalChunkIds = copyStringList(chunks.optionalChunkIds);
+  const loadedChunkIds = copyStringList(chunks.loadedChunkIds);
   return Object.fromEntries(
     Object.entries(layerConfigs)
       .filter(([, config]) => config && typeof config === "object")
       .map(([layerKey, config]) => {
         const stateField = normalizeId(config?.stateField);
         const revisionField = normalizeId(config?.revisionField);
-        const statePayload = stateField ? runtimeState?.[stateField] : null;
-        const mergedPayload = runtimeState?.activeScenarioChunks?.mergedLayerPayloads?.[layerKey];
+        const normalizedLayerKey = normalizeId(layerKey);
+        const statePayload = stateField ? runtimeState?.[stateField] : undefined;
+        const mergedPayload = runtimeState?.activeScenarioChunks?.mergedLayerPayloads?.[normalizedLayerKey];
+        const statePayloadState = getPayloadState(statePayload);
+        const mergedPayloadState = getPayloadState(mergedPayload);
+        const manifestRequired = manifestRequiredLayers.includes(normalizedLayerKey);
+        const requiredByRequiredChunk = chunkIdsContainLayer(requiredChunkIds, normalizedLayerKey);
+        const selectedAsOptionalChunk = chunkIdsContainLayer(optionalChunkIds, normalizedLayerKey);
+        const required = manifestRequired || requiredByRequiredChunk;
+        const selected = requiredByRequiredChunk || selectedAsOptionalChunk;
+        const expectedChunkIds = Array.from(new Set([
+          ...getLayerChunkIds(requiredChunkIds, normalizedLayerKey),
+          ...getLayerChunkIds(optionalChunkIds, normalizedLayerKey),
+        ]));
+        const layerLoadedChunkIds = expectedChunkIds.filter((chunkId) => loadedChunkIds.includes(chunkId));
+        const missingChunkIds = expectedChunkIds.filter((chunkId) => !loadedChunkIds.includes(chunkId));
+        const stateFeatureCount = getFeatureCount(statePayload);
+        const mergedFeatureCount = getFeatureCount(mergedPayload);
+        const sourceInfo = getLayerSourceInfo(runtimeState, config, {
+          statePayloadState,
+          mergedPayload,
+          mergedPayloadState,
+        });
+        const visible = getLayerVisibility(runtimeState, normalizedLayerKey, config);
+        const present = stateFeatureCount > 0
+          || mergedFeatureCount > 0
+          || sourceInfo.sourceStatus === "present";
+        const intentionallyDeferred = visible
+          && !required
+          && selectedAsOptionalChunk
+          && !present;
+        const coverageStatus = getCoverageStatus({
+          visible,
+          required,
+          selected,
+          present,
+          intentionallyDeferred,
+          sourceKind: sourceInfo.sourceKind,
+          missingChunkIds,
+        });
+        const missingReason = getMissingReason({
+          required,
+          intentionallyDeferred,
+          statePayloadState,
+          mergedPayloadState,
+          sourceKind: sourceInfo.sourceKind,
+          missingChunkIds,
+        });
         return [layerKey, {
-          visible: getLayerVisibility(runtimeState, layerKey, config),
-          required: getLayerRequired(runtimeState, layerKey, requiredChunkIds),
+          visible,
+          manifestRequired,
+          requiredByRequiredChunk,
+          selectedAsOptionalChunk,
+          required,
+          selected,
+          intentionallyDeferred,
           stateField,
-          stateFeatureCount: getFeatureCount(statePayload),
-          mergedPayloadState: getPayloadState(mergedPayload),
+          stateFeatureCount,
+          statePayloadState,
+          mergedPayloadState,
+          mergedFeatureCount,
           revision: revisionField ? Math.max(0, Number(runtimeState?.[revisionField] || 0)) : 0,
+          sourceStatus: sourceInfo.sourceStatus,
+          sourceKind: sourceInfo.sourceKind,
+          coverageStatus,
+          requiredReason: getRequiredReason({ manifestRequired, requiredByRequiredChunk }),
+          missingReason,
+          expectedChunkIds,
+          loadedChunkIds: layerLoadedChunkIds,
+          missingChunkIds,
         }];
       })
   );
@@ -505,13 +701,20 @@ function detectSnapshotWarnings(runtimeState, snapshot) {
     if (
       layer?.visible
       && layer?.required
-      && Number(layer.stateFeatureCount || 0) <= 0
-      && ["empty", "not-owned"].includes(String(layer.mergedPayloadState || ""))
+      && String(layer.coverageStatus || "") === "required-missing"
     ) {
       pushWarning(RENDER_TRANSACTION_WARNING_CODES.visibleRequiredLayerMissing, {
         layerKey,
         stateFeatureCount: Number(layer.stateFeatureCount || 0),
         mergedPayloadState: String(layer.mergedPayloadState || ""),
+        mergedFeatureCount: Number(layer.mergedFeatureCount || 0),
+        sourceKind: String(layer.sourceKind || "unknown"),
+        coverageStatus: String(layer.coverageStatus || ""),
+        requiredReason: String(layer.requiredReason || ""),
+        missingReason: String(layer.missingReason || ""),
+        manifestRequired: !!layer.manifestRequired,
+        requiredByRequiredChunk: !!layer.requiredByRequiredChunk,
+        selectedAsOptionalChunk: !!layer.selectedAsOptionalChunk,
       });
     }
   });
