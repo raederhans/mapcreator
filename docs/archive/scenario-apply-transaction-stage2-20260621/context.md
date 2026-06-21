@@ -56,4 +56,6 @@
 - Sampling console output included one resource `401 Unauthorized` message; page errors were empty and the transaction chain completed.
 - Final code-review follow-up returned CLEAR after stale commit-start rollback repair.
 - Integration note: parent `C:\Users\raede\Desktop\dev\mapcreator` checkout contains unrelated docs WIP; use an isolated integration worktree to preserve it.
+- Integration evidence: feature commit `c98c65da` fast-forward merged into clean temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-stage2-main-integration`.
+- Post-merge spot checks passed: `node --check js/core/scenario_manager.js`, `npm run test:node:scenario-apply-transaction-ownership`, `git diff --check`.
 - No live process currently active; main Codex agent remains the only owner for future tests/builds.

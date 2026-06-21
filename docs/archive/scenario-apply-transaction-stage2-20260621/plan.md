@@ -45,7 +45,8 @@
 - [x] 运行 targeted verification。
 - [x] 采样浏览器或运行时 diagnostics。
 - [x] 执行 final code-review gate。
-- [ ] 提交、合并回 main、推送并清理 worktree。
+- [x] 提交并合并到 clean integration worktree。
+- [ ] 推送并清理 worktree。
 
 ## 验证计划
 

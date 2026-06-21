@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-ready-for-integration。实现、目标验证、Pages dist、runtime diagnostics 采样、code-review follow-up 已完成；review 发现的 middle queued request 抢 commit 与 prepare-time runtime 写入残留风险均已补测试和诊断证据。
+integrated。实现、目标验证、Pages dist、runtime diagnostics 采样、code-review follow-up、post-merge spot checks 已完成；review 发现的 middle queued request 抢 commit 与 prepare-time runtime 写入残留风险均已补测试和诊断证据。
 
 ## 已完成
 
@@ -38,7 +38,8 @@ ready-for-integration。实现、目标验证、Pages dist、runtime diagnostics
 
 4. Commit 状态
 
-- 当前 worktree 尚未 commit；下一步会用 Lore protocol 提交 feature branch。
+- Feature commit: `c98c65da`.
+- Closeout commit: pending at this document update.
 
 5. Base 与 main 分叉状态
 
@@ -87,8 +88,8 @@ ready-for-integration。实现、目标验证、Pages dist、runtime diagnostics
 
 11. 推荐下一步
 
-- Commit feature branch，使用干净 integration worktree 更新并合并 main，运行 post-merge spot checks，push，archive docs，cleanup worktree。
+- Push closeout to `origin/main`，then cleanup temporary integration and feature worktrees.
 
 12. 可否整合
 
-- 当前状态：ready-for-integration。code-review follow-up returned CLEAR。
+- 当前状态：integrated in clean integration worktree。code-review follow-up returned CLEAR。
