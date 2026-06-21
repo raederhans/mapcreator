@@ -21,6 +21,9 @@ import {
   scheduleScenarioChunkRefresh,
   scenarioSupportsChunkedRuntime,
 } from "./scenario_resources.js";
+import {
+  recordRenderTransactionSnapshot,
+} from "./renderer/render_transaction_diagnostics.js";
 import { refreshScenarioShellOverlays } from "./scenario_shell_overlay.js";
 import { syncCountryUi } from "./scenario_ui_sync.js";
 import { requestRender } from "./render_boundary.js";
@@ -82,12 +85,24 @@ function scheduleScenarioDetailChunkPrewarm({
   bundle,
   scenarioId = "",
   prewarmStartedAt = 0,
+  scenarioApplyEpoch = 0,
 } = {}) {
   // 细节政治块只在首帧已经交给 coarse 数据兜住可见性的前提下异步补齐。
   // 这里重复检查 activeScenarioId，是为了避免用户在等待期间切剧本后把旧 detail 刷回当前页面。
   if (!scenarioSupportsChunkedRuntime(bundle)) return;
   const normalizedScenarioId = String(scenarioId || "").trim();
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
   scheduleAfterFirstFrame(() => {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-detail-prewarm-scheduled",
+      reason: "scenario-apply-detail-prewarm",
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        prewarmStartedAt,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
     void (async () => {
       if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
         return;
@@ -118,6 +133,18 @@ function scheduleScenarioDetailChunkPrewarm({
           detailPrewarmStartedAt,
           detailPrewarmCompletedAt: Date.now(),
         });
+        recordRenderTransactionSnapshot(runtimeState, {
+          phase: "scenario-detail-prewarm-complete",
+          reason: "scenario-apply-detail-prewarm",
+          expectedScenarioId: normalizedScenarioId,
+          source: "scenario_post_apply_effects",
+          extra: {
+            prewarmStartedAt,
+            detailPrewarmStartedAt,
+            scenarioApplyEpoch: transactionScenarioApplyEpoch,
+            status: "committed",
+          },
+        });
       } catch (error) {
         console.warn(`[scenario] Detail chunk prewarm failed for "${scenarioId}".`, error);
         if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
@@ -133,6 +160,18 @@ function scheduleScenarioDetailChunkPrewarm({
           detailPrewarmFailed: true,
           detailPrewarmFailure: String(error?.message || error || "Unknown detail prewarm error"),
         });
+        recordRenderTransactionSnapshot(runtimeState, {
+          phase: "scenario-detail-prewarm-failed",
+          reason: "scenario-apply-detail-prewarm",
+          expectedScenarioId: normalizedScenarioId,
+          source: "scenario_post_apply_effects",
+          extra: {
+            prewarmStartedAt,
+            detailPrewarmStartedAt,
+            scenarioApplyEpoch: transactionScenarioApplyEpoch,
+            error: String(error?.message || error || "Unknown detail prewarm error"),
+          },
+        });
       }
     })();
   });
@@ -142,6 +181,7 @@ async function ensureChunkedScenarioFirstFrameReady({
   bundle,
   scenarioId = "",
   awaitPrewarm = true,
+  scenarioApplyEpoch = 0,
 } = {}) {
   // 这里负责“apply 成功后第一眼必须看见什么”：
   // coarse chunk 永远先到位，focus detail 只在 manifest 明确要求时同步阻塞。
@@ -149,6 +189,7 @@ async function ensureChunkedScenarioFirstFrameReady({
     return { chunkPrewarmAwaited: true, chunkPrewarmDeferred: false };
   }
   const normalizedScenarioId = String(scenarioId || "").trim();
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
   const synchronous = shouldSynchronouslyPrewarmChunkedScenario(bundle);
   const normalizedMode = synchronous ? "sync" : "async";
   const prewarmStartedAt = Date.now();
@@ -167,6 +208,18 @@ async function ensureChunkedScenarioFirstFrameReady({
     coarsePrewarmCommitted: false,
     prewarmStartedAt,
   }, { replace: true });
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-coarse-prewarm-start",
+    reason: "scenario-apply",
+    expectedScenarioId: normalizedScenarioId,
+    source: "scenario_post_apply_effects",
+    extra: {
+      prewarmStartedAt,
+      awaited: shouldAwaitPrewarm,
+      synchronous: normalizedMode === "sync",
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    },
+  });
   if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
     return prewarmStatus;
   }
@@ -196,6 +249,19 @@ async function ensureChunkedScenarioFirstFrameReady({
       bundle,
       scenarioId: normalizedScenarioId,
       prewarmStartedAt,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-coarse-prewarm-deferred",
+      reason: "scenario-apply",
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        prewarmStartedAt,
+        refreshScheduledAt,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        status: "deferred",
+      },
     });
     return {
       chunkPrewarmAwaited: false,
@@ -234,6 +300,19 @@ async function ensureChunkedScenarioFirstFrameReady({
       coarsePrewarmCommitted,
       coarsePrewarmCompletedAt: prewarmCompletedAt,
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-coarse-prewarm-complete",
+      reason: "scenario-apply",
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        prewarmStartedAt,
+        prewarmCompletedAt,
+        coarsePrewarmCommitted,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        status: coarsePrewarmCommitted ? "committed" : "empty",
+      },
+    });
   } catch (error) {
     console.warn(`[scenario] Coarse chunk prewarm failed for "${scenarioId}".`, error);
     if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
@@ -261,6 +340,18 @@ async function ensureChunkedScenarioFirstFrameReady({
       coarsePrewarmCompletedAt: failedAt,
       prewarmFailed: true,
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-coarse-prewarm-failed",
+      reason: "scenario-apply",
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        prewarmStartedAt,
+        prewarmCompletedAt: failedAt,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        error: String(error?.message || error || "Unknown prewarm error"),
+      },
+    });
   } finally {
     if (normalizedScenarioId && normalizedScenarioId !== String(runtimeState.activeScenarioId || "").trim()) {
       return prewarmStatus;
@@ -285,8 +376,21 @@ async function ensureChunkedScenarioFirstFrameReady({
         bundle,
         scenarioId: normalizedScenarioId,
         prewarmStartedAt,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
       });
     }
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-coarse-prewarm-refresh-scheduled",
+      reason: "scenario-apply",
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        prewarmStartedAt,
+        refreshScheduledAt,
+        coarsePrewarmCommitted,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
   }
   return prewarmStatus;
 }
@@ -304,14 +408,44 @@ async function syncVisibleScenarioOptionalLayersForPostApply({
   bundle,
   scenarioId = "",
   renderNow = false,
+  scenarioApplyEpoch = 0,
 } = {}) {
   if (runtimeState.bootBlocking) {
     return;
   }
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-optional-layers-post-apply-start",
+    reason: "scenario-post-apply",
+    expectedScenarioId: scenarioId,
+    source: "scenario_post_apply_effects",
+    extra: {
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    },
+  });
   await ensureActiveScenarioOptionalLayersForVisibility({ bundle, renderNow })
     .catch((error) => {
       console.warn(`[scenario] Optional layer visibility sync failed for "${scenarioId}".`, error);
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-optional-layers-post-apply-failed",
+        reason: "scenario-post-apply",
+        expectedScenarioId: scenarioId,
+        source: "scenario_post_apply_effects",
+        extra: {
+          scenarioApplyEpoch: transactionScenarioApplyEpoch,
+          error: String(error?.message || error || "Unknown optional layer sync error"),
+        },
+      });
     });
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-optional-layers-post-apply-complete",
+    reason: "scenario-post-apply",
+    expectedScenarioId: scenarioId,
+    source: "scenario_post_apply_effects",
+    extra: {
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    },
+  });
 }
 
 async function runPostScenarioApplyEffects({
@@ -320,6 +454,7 @@ async function runPostScenarioApplyEffects({
   deferChunkPrewarm = false,
   renderNow = false,
   suppressRender = false,
+  scenarioApplyEpoch = 0,
 } = {}) {
   // post-apply 只收口 apply 之后的可见修复和 UI 回放。
   // 真正的 scenario state 提交已经在更早阶段完成，这里避免再引入第二套写口。
@@ -327,15 +462,46 @@ async function runPostScenarioApplyEffects({
   const refreshPlan = createScenarioApplyRefreshPlan({
     refreshOpeningOwnerBorders: false,
   });
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
   let scenarioMapRefreshMode = "light";
   try {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-refresh-map-data-start",
+      reason: "scenario-post-apply",
+      expectedScenarioId: scenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        mode: "light",
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
     refreshMapDataForScenarioApply({
       suppressRender: useSingleFinalRender ? true : suppressRender,
       refreshPlan,
     });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-refresh-map-data-complete",
+      reason: "scenario-post-apply",
+      expectedScenarioId: scenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        mode: "light",
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
   } catch (refreshError) {
     scenarioMapRefreshMode = "setMapData-fallback";
     console.warn("[scenario] Lightweight scenario apply refresh failed; falling back to setMapData.", refreshError);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-refresh-map-data-fallback",
+      reason: "scenario-post-apply",
+      expectedScenarioId: scenarioId,
+      source: "scenario_post_apply_effects",
+      extra: {
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        error: String(refreshError?.message || refreshError || "Unknown refresh error"),
+      },
+    });
     setMapData({
       refitProjection: false,
       resetZoom: false,
@@ -358,9 +524,10 @@ async function runPostScenarioApplyEffects({
       bundle,
       scenarioId,
       awaitPrewarm: !deferChunkPrewarm,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
     });
   }
-  await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow });
+  await syncVisibleScenarioOptionalLayersForPostApply({ bundle, scenarioId, renderNow, scenarioApplyEpoch: transactionScenarioApplyEpoch });
   const shouldExposeScenarioDataHealthSignals =
     !bundle?.loadDiagnostics?.startupBundle
     && !runtimeState.startupReadonly
@@ -372,6 +539,25 @@ async function runPostScenarioApplyEffects({
   const dataHealth = refreshScenarioDataHealth({
     showWarningToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
     showErrorToast: shouldExposeScenarioDataHealthSignals && !suppressChunkedCoarseDataHealthToast,
+  });
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-data-health-refreshed",
+    reason: "scenario-post-apply",
+    expectedScenarioId: scenarioId,
+    source: "scenario_post_apply_effects",
+    extra: {
+      scenarioMapRefreshMode,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      hasChunkedRuntime: scenarioSupportsChunkedRuntime(bundle),
+      chunkPrewarmResult,
+      dataHealth: {
+        expectedFeatureCount: Number(dataHealth?.expectedFeatureCount || 0),
+        runtimeFeatureCount: Number(dataHealth?.runtimeFeatureCount || 0),
+        ratio: Number(dataHealth?.ratio || 0),
+        warning: String(dataHealth?.warning || ""),
+        severity: String(dataHealth?.severity || ""),
+      },
+    },
   });
   syncCountryUi({ renderNow: useSingleFinalRender ? true : (renderNow && !suppressRender) });
   return {

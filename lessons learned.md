@@ -420,3 +420,7 @@
 
 ### Pages startup shell 内存失败先做 base 对照
 - `verify:pages-dist` 的 startup shell 会重新跑 landing asset builder；若 `topojson` 反量化触发 GiB 级 `ArrayMemoryError`，先在干净 main 跑同一 unittest 证明是否为 base gate，再把 Pages builder 和 landing Node view 分开验证本轮改动。
+
+### 渲染诊断默认路径要轻量且保留事务身份
+- 可见帧诊断默认只记录 identity、epoch、generation 和 pass 状态；完整 feature/chunk/layer snapshot 放在显式 diagnostics 模式，避免为了查 bug 把 renderer 热路径变重。
+- Scenario apply 的 epoch 要按目标 scenario 固定记录，并由异步 post-apply/chunk/visible-frame 快照沿用；只读全局 latest epoch 会让延迟记录漂到下一次 apply。

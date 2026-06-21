@@ -129,6 +129,10 @@ import {
 import {
   normalizeScenarioStrategicValuesPayload,
 } from "./scenario/strategic_values.js";
+import {
+  registerRenderTransactionOptionalLayerConfigs,
+  recordRenderTransactionSnapshot,
+} from "./renderer/render_transaction_diagnostics.js";
 import { consumeScenarioTestHook } from "./scenario_recovery.js";
 import { t } from "./i18n.js";
 import { callRuntimeHook } from "./state/index.js";
@@ -206,6 +210,8 @@ const SCENARIO_OPTIONAL_LAYER_CONFIGS = {
     revisionField: "scenarioStrategicValuesRevision",
   },
 };
+
+registerRenderTransactionOptionalLayerConfigs(runtimeState, SCENARIO_OPTIONAL_LAYER_CONFIGS);
 
 const normalizeStartupBundleRuntimePoliticalMeta = normalizeBundleLoaderScenarioRuntimePoliticalMeta;
 
@@ -927,6 +933,15 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
       delayMs: 0,
     });
   }
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "optional-layer-visibility-sync-start",
+    reason: "visibility-sync",
+    expectedScenarioId: activeScenarioId,
+    source: "scenario_resources",
+    extra: {
+      requestedChunkedLayers,
+    },
+  });
   const requestedLayers = Object.entries(SCENARIO_OPTIONAL_LAYER_CONFIGS)
     .filter(([layerKey, config]) => isScenarioOptionalLayerRequestedForVisibility(layerKey, config))
     .filter(([layerKey]) => !scenarioBundleUsesChunkedLayer(activeBundle, layerKey))
@@ -938,7 +953,20 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
       return !activeBundle[config.bundleField] && !state[config.stateField];
     })
     .map(([layerKey]) => layerKey);
-  if (!requestedLayers.length) return [];
+  if (!requestedLayers.length) {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "optional-layer-visibility-sync-complete",
+      reason: "visibility-sync",
+      expectedScenarioId: activeScenarioId,
+      source: "scenario_resources",
+      extra: {
+        requestedChunkedLayers,
+        requestedLayers,
+        loadedPayloadCount: 0,
+      },
+    });
+    return [];
+  }
   const payloads = await Promise.all(
     requestedLayers.map((layerKey) =>
       loadScenarioOptionalLayerPayload(activeBundle, layerKey, {
@@ -950,6 +978,17 @@ async function ensureActiveScenarioOptionalLayersForVisibility(
   if (renderNow) {
     flushRenderBoundary("scenario-optional-layers-visibility");
   }
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "optional-layer-visibility-sync-complete",
+    reason: "visibility-sync",
+    expectedScenarioId: activeScenarioId,
+    source: "scenario_resources",
+    extra: {
+      requestedChunkedLayers,
+      requestedLayers,
+      loadedPayloadCount: payloads.length,
+    },
+  });
   return payloads;
 }
 

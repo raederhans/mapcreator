@@ -8,6 +8,9 @@ import {
 } from "../state/scenario_runtime_state.js";
 import { registerRuntimeHook } from "../state/index.js";
 import { bumpScenarioDataGenerationState } from "../state/renderer_runtime_state.js";
+import {
+  recordRenderTransactionSnapshot as recordRenderTransactionSnapshotBase,
+} from "../renderer/render_transaction_diagnostics.js";
 
 const FOCUS_COUNTRY_OVERRIDE_TTL_MS = 5000;
 const STARTUP_INITIAL_VISUAL_READY_TIMEOUT_MS = 8000;
@@ -225,6 +228,95 @@ function createScenarioChunkRuntimeController({
   let promotionCommitPromise = null;
   let promotionCommitRunId = 0;
 
+  function getScenarioApplyEpochFromDiagnostics(scenarioId = "") {
+    const diagnostics = runtimeState?.renderTransactionDiagnostics || {};
+    const normalizedScenarioId = normalizeScenarioId(scenarioId || runtimeState?.activeScenarioId);
+    const epochByScenarioId =
+      diagnostics.scenarioApplyEpochByScenarioId && typeof diagnostics.scenarioApplyEpochByScenarioId === "object"
+        ? diagnostics.scenarioApplyEpochByScenarioId
+        : {};
+    return Math.max(
+      0,
+      Number(
+        (normalizedScenarioId ? epochByScenarioId[normalizedScenarioId] : 0)
+        || diagnostics.scenarioApplyEpoch
+        || 0
+      )
+    );
+  }
+
+  function getScenarioApplyEpochBySelectionVersion(loadState, selectionVersion = 0) {
+    const normalizedSelectionVersion = Math.max(0, Number(selectionVersion || 0));
+    const epochBySelectionVersion =
+      loadState?.scenarioApplyEpochBySelectionVersion
+      && typeof loadState.scenarioApplyEpochBySelectionVersion === "object"
+        ? loadState.scenarioApplyEpochBySelectionVersion
+        : {};
+    return normalizedSelectionVersion > 0
+      ? Math.max(0, Number(epochBySelectionVersion[normalizedSelectionVersion] || 0))
+      : 0;
+  }
+
+  function resolveScenarioChunkApplyEpoch({
+    bundle = null,
+    scenarioId = "",
+    selectionVersion = 0,
+    pendingPromotion = null,
+    loadState = null,
+  } = {}) {
+    const normalizedScenarioId = normalizeScenarioId(
+      scenarioId
+      || pendingPromotion?.scenarioId
+      || loadState?.lastSelection?.scenarioId
+      || runtimeState?.activeScenarioId
+    );
+    const normalizedSelectionVersion = Math.max(0, Number(selectionVersion || pendingPromotion?.selectionVersion || 0));
+    const pendingEpoch = Math.max(0, Number(pendingPromotion?.scenarioApplyEpoch || 0));
+    if (pendingEpoch > 0) return pendingEpoch;
+    const loadStateSelectionEpoch = getScenarioApplyEpochBySelectionVersion(loadState, normalizedSelectionVersion);
+    if (loadStateSelectionEpoch > 0) return loadStateSelectionEpoch;
+    const loadStatePendingPromotion = loadState?.pendingPromotion;
+    const loadStatePendingEpoch = loadStatePendingPromotion
+      && normalizeScenarioId(loadStatePendingPromotion.scenarioId) === normalizedScenarioId
+      && (
+        normalizedSelectionVersion <= 0
+        || Math.max(0, Number(loadStatePendingPromotion.selectionVersion || 0)) === normalizedSelectionVersion
+      )
+      ? Math.max(0, Number(loadStatePendingPromotion.scenarioApplyEpoch || 0))
+      : 0;
+    if (loadStatePendingEpoch > 0) return loadStatePendingEpoch;
+    const lastSelection = loadState?.lastSelection;
+    const lastSelectionEpoch = normalizeScenarioId(lastSelection?.scenarioId) === normalizedScenarioId
+      && (
+        normalizedSelectionVersion <= 0
+        || Math.max(0, Number(lastSelection?.selectionVersion || 0)) === normalizedSelectionVersion
+      )
+      ? Math.max(0, Number(lastSelection?.scenarioApplyEpoch || 0))
+      : 0;
+    if (lastSelectionEpoch > 0) return lastSelectionEpoch;
+    const bundleEpoch = Math.max(0, Number(bundle?.chunkLifecycle?.scenarioApplyEpoch || 0));
+    if (bundleEpoch > 0) return bundleEpoch;
+    return getScenarioApplyEpochFromDiagnostics(normalizedScenarioId);
+  }
+
+  function recordRenderTransactionSnapshot(runtimeStateArg, options = {}) {
+    const extra = options?.extra && typeof options.extra === "object" ? options.extra : {};
+    const loadState = runtimeStateArg?.runtimeChunkLoadState || runtimeState?.runtimeChunkLoadState || null;
+    const scenarioApplyEpoch = Math.max(0, Number(extra.scenarioApplyEpoch || 0))
+      || resolveScenarioChunkApplyEpoch({
+        scenarioId: options.expectedScenarioId || options.requestedScenarioId,
+        selectionVersion: extra.selectionVersion,
+        loadState,
+      });
+    return recordRenderTransactionSnapshotBase(runtimeStateArg, {
+      ...options,
+      extra: {
+        ...extra,
+        scenarioApplyEpoch,
+      },
+    });
+  }
+
   function yieldToFrame() {
     return new Promise((resolve) => {
       if (typeof globalThis.requestAnimationFrame === "function") {
@@ -304,6 +396,11 @@ function createScenarioChunkRuntimeController({
       0,
       Number(runtimeState.runtimeChunkLoadState.selectionVersion || 0),
     );
+    runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion =
+      runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion
+      && typeof runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion === "object"
+        ? runtimeState.runtimeChunkLoadState.scenarioApplyEpochBySelectionVersion
+        : {};
     runtimeState.runtimeChunkLoadState.pendingVisualPromotion =
       runtimeState.runtimeChunkLoadState.pendingVisualPromotion && typeof runtimeState.runtimeChunkLoadState.pendingVisualPromotion === "object"
         ? runtimeState.runtimeChunkLoadState.pendingVisualPromotion
@@ -982,6 +1079,7 @@ function createScenarioChunkRuntimeController({
     primaryPoliticalPayload = null,
     forceRefresh = false,
     firstFrameOnly = false,
+    scenarioApplyEpoch = 0,
   } = {}) {
     const startedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     const normalizeStartedAt = startedAt;
@@ -1009,6 +1107,20 @@ function createScenarioChunkRuntimeController({
     );
     const compareEndedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
     if (samePayload && samePrimaryPayload && !forceRefresh) {
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-political-chunk-payload-unchanged",
+        reason,
+        expectedScenarioId: getScenarioBundleId(bundle),
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          previousFeatureCount: previousFeatureIds.length,
+          nextFeatureCount: nextFeatureIds.length,
+          previousPrimaryFeatureCount: previousPrimaryFeatureIds.length,
+          nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
+          scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+        },
+      });
       recordScenarioRenderMetric("politicalChunkPromotionBreakdown", compareEndedAt - startedAt, {
         scenarioId: getScenarioBundleId(bundle),
         reason: String(reason || "refresh"),
@@ -1028,6 +1140,23 @@ function createScenarioChunkRuntimeController({
     runtimeState.scenarioPoliticalChunkData = normalizedPayload || null;
     runtimeState.scenarioPoliticalVisibleChunkData = nextPrimaryPoliticalChunkData || null;
     bumpScenarioDataGenerationState(runtimeState, String(reason || "political-chunk-payload"));
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-political-chunk-payload-written",
+      reason,
+      expectedScenarioId: getScenarioBundleId(bundle),
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        forceRefresh: !!forceRefresh,
+        firstFrameOnly: !!firstFrameOnly,
+        previousFeatureCount: previousFeatureIds.length,
+        nextFeatureCount: nextFeatureIds.length,
+        previousPrimaryFeatureCount: previousPrimaryFeatureIds.length,
+        nextPrimaryFeatureCount: nextPrimaryFeatureIds.length,
+        primaryPayloadHasSubset: !!primaryPayloadHasSubset,
+        scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+      },
+    });
     const resolvedPoliticalFeatureIds = Array.from(new Set([
       ...(Array.isArray(politicalFeatureIds) ? politicalFeatureIds : []),
       ...previousFeatureIds,
@@ -1193,11 +1322,32 @@ function createScenarioChunkRuntimeController({
       return false;
     }
     const scenarioId = normalizeScenarioId(pendingPromotion.scenarioId || runtimeState.activeScenarioId);
+    const promotionScenarioApplyEpoch = resolveScenarioChunkApplyEpoch({
+      bundle,
+      scenarioId,
+      selectionVersion: pendingPromotion.selectionVersion,
+      pendingPromotion,
+      loadState,
+    });
+    pendingPromotion.scenarioApplyEpoch = promotionScenarioApplyEpoch;
     if (!isPendingScenarioChunkPromotionCurrent(pendingPromotion, loadState, { scenarioId, runId })) {
       if (loadState.pendingPromotion === pendingPromotion) {
         clearPendingScenarioChunkPromotion(loadState);
       }
       setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-stale-skip",
+        reason: pendingPromotion.reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+          scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
       return false;
     }
     // pendingPromotion 是一次“已经选好 chunk、等待正式提交”的快照。
@@ -1225,6 +1375,21 @@ function createScenarioChunkRuntimeController({
         changedLayerCount: Array.isArray(pendingPromotion.changedLayerKeys) ? pendingPromotion.changedLayerKeys.length : 0,
       });
     }
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-chunk-promotion-commit-start",
+      reason: pendingPromotion.reason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        runId,
+        selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+        scenarioApplyEpoch: promotionScenarioApplyEpoch,
+        requiredChunkCount: Array.isArray(pendingPromotion.requiredChunkIds) ? pendingPromotion.requiredChunkIds.length : 0,
+        changedLayerCount: Array.isArray(pendingPromotion.changedLayerKeys) ? pendingPromotion.changedLayerKeys.length : 0,
+        politicalFeatureCount: Array.isArray(pendingPromotion.politicalFeatureIds) ? pendingPromotion.politicalFeatureIds.length : 0,
+      },
+    });
     const previousRenderLock = !!runtimeState.scenarioChunkPromotionRenderLocked;
     const mergedLayerSnapshot = captureMergedLayerRuntimeSnapshot(mergedLayerPayloads);
     const previousPoliticalChunkData = runtimeState.scenarioPoliticalChunkData;
@@ -1261,6 +1426,19 @@ function createScenarioChunkRuntimeController({
         reason: String(pendingPromotion.reason || "refresh"),
         changedLayerCount: mergedLayerResult?.changedLayerKeys?.length || 0,
       });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-infra-complete",
+        reason: pendingPromotion.reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+          scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          changedLayerKeys: Array.isArray(mergedLayerResult?.changedLayerKeys) ? mergedLayerResult.changedLayerKeys : [],
+        },
+      });
       // promotion 分成 infra -> visual 两段：
       // 先把 merged layer / localization / runtime payload 写稳，再让出一帧给渲染系统消化，
       // 返回后还要重新验证 current，防止旧 run 在新 selection 之后继续落地。
@@ -1271,10 +1449,37 @@ function createScenarioChunkRuntimeController({
           restoreScenarioDataGenerationSnapshot();
         }
         setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
+        recordRenderTransactionSnapshot(runtimeState, {
+          phase: "scenario-chunk-promotion-stale-after-infra",
+          reason: pendingPromotion.reason,
+          expectedScenarioId: scenarioId,
+          source: "scenario_chunk_runtime",
+          searchParams: getSearchParams(),
+          extra: {
+            runId,
+            selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+            scenarioApplyEpoch: promotionScenarioApplyEpoch,
+            currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          },
+        });
         return false;
       }
 
       setPromotionCommitStatus(loadState, "applying-visual", { inFlight: true, runId, scenarioId });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-visual-start",
+        reason: pendingPromotion.reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+          scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          politicalFeatureCount: Array.isArray(pendingPromotion.politicalFeatureIds) ? pendingPromotion.politicalFeatureIds.length : 0,
+          primaryVisibleFeatureSubsetChanged: !!pendingPromotion.primaryVisibleFeatureSubsetChanged,
+        },
+      });
       const visualStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
       const primaryMergedLayerPayloads =
         pendingPromotion.primaryMergedLayerPayloads && typeof pendingPromotion.primaryMergedLayerPayloads === "object"
@@ -1296,6 +1501,7 @@ function createScenarioChunkRuntimeController({
         primaryPoliticalPayload: primaryMergedLayerPayloads.political || null,
         forceRefresh: !!pendingPromotion.primaryVisibleFeatureSubsetChanged || shouldForceStartupInitialVisualRefresh,
         firstFrameOnly: !!allowStartupInitialVisual,
+        scenarioApplyEpoch: promotionScenarioApplyEpoch,
       });
       if (!politicalPayloadChanged) {
         deferredOptionalVisibleRefresh = {
@@ -1325,6 +1531,20 @@ function createScenarioChunkRuntimeController({
           }
         }
         setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
+        recordRenderTransactionSnapshot(runtimeState, {
+          phase: "scenario-chunk-promotion-stale-after-visual",
+          reason: pendingPromotion.reason,
+          expectedScenarioId: scenarioId,
+          source: "scenario_chunk_runtime",
+          searchParams: getSearchParams(),
+          extra: {
+            runId,
+            selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+            scenarioApplyEpoch: promotionScenarioApplyEpoch,
+            currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+            politicalPayloadChanged,
+          },
+        });
         return false;
       }
       if (deferredOptionalVisibleRefresh) {
@@ -1415,6 +1635,21 @@ function createScenarioChunkRuntimeController({
       clearPendingScenarioChunkPromotion(loadState);
       clearPendingScenarioChunkRefresh(loadState);
       setPromotionCommitStatus(loadState, "promotion-committed", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-visual-complete",
+        reason: pendingPromotion.reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          selectionVersion: Math.max(0, Number(pendingPromotion.selectionVersion || 0)),
+          scenarioApplyEpoch: promotionScenarioApplyEpoch,
+          politicalPayloadChanged,
+          renderNow: resolvedRenderNow !== false,
+          changedLayerCount: Array.isArray(mergedLayerResult?.changedLayerKeys) ? mergedLayerResult.changedLayerKeys.length : 0,
+        },
+      });
       return true;
     } finally {
       runtimeState.scenarioChunkPromotionRenderLocked = previousRenderLock;
@@ -1432,14 +1667,45 @@ function createScenarioChunkRuntimeController({
     const resolvedPendingPromotion = pendingPromotion || loadState.pendingPromotion;
     if (!resolvedPendingPromotion || typeof resolvedPendingPromotion !== "object") {
       setPromotionCommitStatus(loadState, "noop", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-commit-noop",
+        reason: "missing-pending-promotion",
+        expectedScenarioId: runtimeState.activeScenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+        },
+      });
       return false;
     }
     const scenarioId = normalizeScenarioId(runtimeState.activeScenarioId);
+    const resolvedPromotionScenarioApplyEpoch = resolveScenarioChunkApplyEpoch({
+      bundle,
+      scenarioId,
+      selectionVersion: resolvedPendingPromotion.selectionVersion,
+      pendingPromotion: resolvedPendingPromotion,
+      loadState,
+    });
+    resolvedPendingPromotion.scenarioApplyEpoch = resolvedPromotionScenarioApplyEpoch;
     if (!scenarioId || scenarioId !== normalizeScenarioId(resolvedPendingPromotion.scenarioId)) {
       if (loadState.pendingPromotion === resolvedPendingPromotion) {
         clearPendingScenarioChunkPromotion(loadState);
       }
       setPromotionCommitStatus(loadState, "promotion-skipped-stale", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-commit-stale",
+        reason: resolvedPendingPromotion.reason,
+        expectedScenarioId: resolvedPendingPromotion.scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+          activeScenarioId: scenarioId,
+          pendingScenarioId: normalizeScenarioId(resolvedPendingPromotion.scenarioId),
+        },
+      });
       return false;
     }
     const resolvedBundle = bundle || getCachedScenarioBundle(scenarioId);
@@ -1448,6 +1714,18 @@ function createScenarioChunkRuntimeController({
         clearPendingScenarioChunkPromotion(loadState);
       }
       setPromotionCommitStatus(loadState, "noop", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-commit-noop",
+        reason: "missing-bundle",
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          selectionVersion: Math.max(0, Number(resolvedPendingPromotion.selectionVersion || 0)),
+          scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+        },
+      });
       return false;
     }
     if (shouldDeferScenarioChunkRefreshFor({ allowStartupInitialVisual })) {
@@ -1474,6 +1752,19 @@ function createScenarioChunkRuntimeController({
         retry: true,
       });
       setPromotionCommitStatus(loadState, "promotion-deferred", { inFlight: false, finishedAt: Date.now() });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-commit-deferred",
+        reason: resolvedPendingPromotion.reason || loadState.pendingReason || "chunk-promotion-deferred",
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          runId,
+          retryDelayMs,
+          scenarioApplyEpoch: resolvedPromotionScenarioApplyEpoch,
+          retryCount: Math.max(0, Number(loadState.promotionRetryCount || 0)) + 1,
+        },
+      });
       return false;
     }
     return applyPendingScenarioChunkPromotion(resolvedBundle, resolvedPendingPromotion, loadState, {
@@ -1509,6 +1800,29 @@ function createScenarioChunkRuntimeController({
       reason: resolvedPendingPromotion?.reason || loadState.pendingReason || "",
       startedAt,
       error: "",
+    });
+    const commitScenarioApplyEpoch = resolveScenarioChunkApplyEpoch({
+      bundle,
+      scenarioId: resolvedPendingPromotion?.scenarioId || runtimeState.activeScenarioId,
+      selectionVersion: resolvedPendingPromotion?.selectionVersion || loadState.selectionVersion || 0,
+      pendingPromotion: resolvedPendingPromotion,
+      loadState,
+    });
+    if (resolvedPendingPromotion) {
+      resolvedPendingPromotion.scenarioApplyEpoch = commitScenarioApplyEpoch;
+    }
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-chunk-promotion-commit-scheduled",
+      reason: resolvedPendingPromotion?.reason || loadState.pendingReason || "chunk-promotion",
+      expectedScenarioId: resolvedPendingPromotion?.scenarioId || runtimeState.activeScenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        runId,
+        selectionVersion: Math.max(0, Number(resolvedPendingPromotion?.selectionVersion || loadState.selectionVersion || 0)),
+        scenarioApplyEpoch: commitScenarioApplyEpoch,
+        allowStartupInitialVisual: !!allowStartupInitialVisual,
+      },
     });
     promotionCommitPromise = runPendingScenarioChunkPromotionCommit({
       bundle,
@@ -1775,6 +2089,11 @@ function createScenarioChunkRuntimeController({
         return null;
       }
       chunkState.scenarioId = bundleScenarioId;
+      chunkState.scenarioApplyEpoch = resolveScenarioChunkApplyEpoch({
+        bundle,
+        scenarioId: bundleScenarioId,
+        loadState,
+      });
       coarseSelection.requiredChunks.forEach((chunk) => {
         const payload = bundle.chunkPayloadCacheById?.[chunk.id];
         if (!payload) return;
@@ -1800,6 +2119,7 @@ function createScenarioChunkRuntimeController({
         reason: "coarse-prewarm",
         changedLayerKeys: mergedResult.changedLayerKeys,
         primaryPoliticalPayload: mergedResult.primaryMergedLayerPayloads?.political || null,
+        scenarioApplyEpoch: chunkState.scenarioApplyEpoch,
       });
       if (!politicalPayloadChanged) {
         refreshScenarioRenderVisibleOptionalChunkPayloadChange({
@@ -1974,9 +2294,18 @@ function createScenarioChunkRuntimeController({
     const currentSelectionVersion = Math.max(0, Number(loadState.selectionVersion || 0));
     const nextSelectionVersion = selectionUnchanged ? currentSelectionVersion : currentSelectionVersion + 1;
     const selectionRecordedAt = Date.now();
+    const selectionScenarioApplyEpoch = resolveScenarioChunkApplyEpoch({
+      bundle,
+      scenarioId,
+      selectionVersion: nextSelectionVersion,
+      loadState,
+    });
+    chunkState.scenarioApplyEpoch = selectionScenarioApplyEpoch;
+    loadState.scenarioApplyEpochBySelectionVersion[nextSelectionVersion] = selectionScenarioApplyEpoch;
     loadState.lastSelection = {
       reason: String(reason || "refresh"),
       scenarioId,
+      scenarioApplyEpoch: selectionScenarioApplyEpoch,
       viewportBbox,
       requiredChunkIds: nextRequiredChunkIds,
       optionalChunkIds: nextOptionalChunkIds,
@@ -1994,6 +2323,25 @@ function createScenarioChunkRuntimeController({
         ? selectionRecordedAt + 5000
         : (shouldCarryZoomEndProtection ? previousZoomEndProtectionUntil : 0),
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: selectionUnchanged ? "scenario-chunk-selection-reused" : "scenario-chunk-selection-created",
+      reason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        selectionVersion: nextSelectionVersion,
+        scenarioApplyEpoch: selectionScenarioApplyEpoch,
+        requiredChunkCount: nextRequiredChunkIds.length,
+        optionalChunkCount: nextOptionalChunkIds.length,
+        cacheOnlyChunkCount: nextCacheOnlyChunkIds.length,
+        retainedActiveChunkCount: nextRetainedActiveChunkIds.length,
+        evictableChunkCount: selection.evictableChunkIds.length,
+        selectedVisibleFeatureCountSum: Math.max(0, Number(selection.selectedVisibleFeatureCountSum || 0)),
+        selectedPoliticalFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalFeatureCountSum || 0)),
+        selectedPoliticalVisibleFeatureCountSum: Math.max(0, Number(selection.selectedPoliticalVisibleFeatureCountSum || 0)),
+      },
+    });
     if (selectionUnchanged) {
       if (nextRequiredChunkIds.length || chunkState.loadedChunkIds.length) {
         setScenarioChunkShellStatus("ready", loadState);
@@ -2047,6 +2395,19 @@ function createScenarioChunkRuntimeController({
         reason: String(reason || "refresh"),
         selectionVersion: nextSelectionVersion,
         currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+      });
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-selection-stale-after-load",
+        reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          selectionVersion: nextSelectionVersion,
+          scenarioApplyEpoch: selectionScenarioApplyEpoch,
+          currentSelectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          requiredChunkCount: nextRequiredChunkIds.length,
+        },
       });
       return null;
     }
@@ -2135,6 +2496,20 @@ function createScenarioChunkRuntimeController({
         setScenarioChunkShellStatus("ready", loadState);
       }
       consumeScenarioChunkFocusCountryOverride(loadState);
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-promotion-not-needed",
+        reason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          selectionVersion: nextSelectionVersion,
+          scenarioApplyEpoch: selectionScenarioApplyEpoch,
+          hasMergedLayerChange,
+          hasPoliticalFeatureChange,
+          requiredChunkCount: nextRequiredChunkIds.length,
+        },
+      });
       return selection;
     }
     const promotionQueuedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
@@ -2144,6 +2519,7 @@ function createScenarioChunkRuntimeController({
     loadState.pendingVisualPromotion = {
       scenarioId,
       reason,
+      scenarioApplyEpoch: selectionScenarioApplyEpoch,
       selectionVersion: nextSelectionVersion,
       requiredChunkIds: nextRequiredChunkIds,
       selectedFeatureCountSum: Math.max(0, Number(selection.selectedFeatureCountSum || 0)),
@@ -2161,6 +2537,7 @@ function createScenarioChunkRuntimeController({
     loadState.pendingInfraPromotion = {
       scenarioId,
       reason,
+      scenarioApplyEpoch: selectionScenarioApplyEpoch,
       changedLayerKeys: effectiveChangedLayerKeys,
       selectionVersion: nextSelectionVersion,
       queuedAt: promotionQueuedAt,
@@ -2168,6 +2545,7 @@ function createScenarioChunkRuntimeController({
     loadState.pendingPromotion = {
       scenarioId,
       reason,
+      scenarioApplyEpoch: selectionScenarioApplyEpoch,
       renderNow,
       mergedLayerPayloads,
       primaryMergedLayerPayloads,
@@ -2192,6 +2570,25 @@ function createScenarioChunkRuntimeController({
       politicalFeatureIds,
       queuedAt: promotionQueuedAt,
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-chunk-promotion-pending-created",
+      reason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        selectionVersion: nextSelectionVersion,
+        scenarioApplyEpoch: selectionScenarioApplyEpoch,
+        requiredChunkCount: nextRequiredChunkIds.length,
+        changedLayerCount: effectiveChangedLayerKeys.length,
+        politicalRequired,
+        requiredPoliticalChunkCount: selection.requiredChunks.filter((chunk) => chunk.layer === "political").length,
+        politicalFeatureCount: politicalFeatureIds.length,
+        primaryVisibleFeatureCount,
+        primaryTotalFeatureCount,
+        primaryVisibleFeatureSubsetChanged,
+      },
+    });
     loadState.promotionRetryCount = 0;
     loadState.lastPromotionRetryAt = 0;
     setScenarioChunkShellStatus("loading", loadState);
@@ -2398,6 +2795,18 @@ function createScenarioChunkRuntimeController({
       : (flushPending && Number.isFinite(Number(loadState.pendingDelayMs))
         ? Number(loadState.pendingDelayMs)
         : null);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-chunk-refresh-requested",
+      reason: nextReason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        flushPending: !!flushPending,
+        delayMs: nextDelayMs,
+        selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+      },
+    });
     if (shouldSkipStalePostApplyRefreshAfterZoomEnd(loadState, nextReason, {
       scenarioId,
       selectionVersion: loadState.selectionVersion,
@@ -2405,6 +2814,17 @@ function createScenarioChunkRuntimeController({
       normalizeScenarioIdFn: normalizeScenarioId,
     })) {
       clearPendingScenarioChunkRefresh(loadState);
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-refresh-stale-post-apply",
+        reason: nextReason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+          refreshSourceStartedAtMs,
+        },
+      });
       return "stale-post-apply-after-zoom-end";
     }
     const zoomEndPriorityEnabled = shouldZoomEndPromoteImmediately(bundle, nextReason);
@@ -2439,10 +2859,32 @@ function createScenarioChunkRuntimeController({
         refreshSourceStartedAtMs,
         requestedAt: Date.now(),
       };
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-refresh-post-commit-replay-queued",
+        reason: nextReason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          delayMs: nextDelayMs,
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
       return "promotion-commit-in-flight";
     }
     if (shouldDeferScenarioChunkRefreshFor({ allowZoomEndSettling: zoomEndPriorityEnabled })) {
       markPendingScenarioChunkRefresh(nextReason, nextDelayMs);
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-refresh-deferred",
+        reason: nextReason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          delayMs: nextDelayMs,
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
       return "deferred";
     }
     clearPendingScenarioChunkRefresh(loadState);
@@ -2453,6 +2895,16 @@ function createScenarioChunkRuntimeController({
         ? refreshDelayInteracting
         : refreshDelayIdle));
     if (flushPending) {
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-chunk-refresh-flush-now",
+        reason: nextReason,
+        expectedScenarioId: scenarioId,
+        source: "scenario_chunk_runtime",
+        searchParams: getSearchParams(),
+        extra: {
+          selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        },
+      });
       return executeScenarioChunkRefreshNow({
         bundle,
         reason: nextReason,
@@ -2475,6 +2927,18 @@ function createScenarioChunkRuntimeController({
         allowRefreshStart: true,
       });
     }, resolvedDelayMs);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-chunk-refresh-scheduled",
+      reason: nextReason,
+      expectedScenarioId: scenarioId,
+      source: "scenario_chunk_runtime",
+      searchParams: getSearchParams(),
+      extra: {
+        delayMs: resolvedDelayMs,
+        selectionVersion: Math.max(0, Number(loadState.selectionVersion || 0)),
+        zoomEndPriorityEnabled,
+      },
+    });
     return "scheduled";
   }
 

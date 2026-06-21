@@ -182,6 +182,7 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
   buildFacilityInfoCardBody,
@@ -2262,10 +2263,15 @@ function recordVisibleFrameTransactionMetric(status, details = {}) {
     ...(committedFrameIdentity.commitKey || {}),
     ...(committedFrameIdentity.metadata || {}),
   };
+  const reason = String(details.reason || cache.lastAction || "visible-frame");
+  recordVisibleFrameTransactionDiagnostics(runtimeState, {
+    status: normalizedStatus, reason, details, identity, committedFrameIdentity,
+    visibleFrameCommitKey: getCommittedFrameKeySignature(committedFrameIdentity.commitKey), durationMs: Number(metricDurationMs || 0),
+  });
   return recordRenderPerfMetric("visibleFrameTransaction", Number(metricDurationMs || 0), {
     ...publicDetails,
     status: normalizedStatus,
-    reason: String(details.reason || cache.lastAction || "visible-frame"),
+    reason,
     paintSource: String(details.paintSource || ""),
     accepted: normalizedStatus === "committed" || normalizedStatus === "reused",
     blockReason: String(details.blockReason || ""),
@@ -2635,17 +2641,20 @@ function invalidateInteractionComposite(reason = "interaction-composite-invalida
 function invalidateRenderPasses(passNames, reason = "unspecified") {
   const cache = getRenderPassCacheState();
   const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
-  const targetPassNames = rawTargetPassNames.flatMap((passName) => {
+  const expandedTargetPassNames = rawTargetPassNames.flatMap((passName) => {
     if (passName === "context") {
       return ["contextBase", "contextScenario"];
     }
     return [passName];
   });
+  const targetPassNames = expandedTargetPassNames.filter((passName) => passName && RENDER_PASS_NAMES.includes(passName));
   targetPassNames.forEach((passName) => {
-    if (!passName || !RENDER_PASS_NAMES.includes(passName)) return;
     cache.dirty[passName] = true;
     cache.reasons[passName] = String(reason || "unspecified");
   });
+  if (targetPassNames.length) {
+    recordRenderPassInvalidationDiagnostics(runtimeState, targetPassNames, reason);
+  }
   if (targetPassNames.some((passName) => LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES.has(passName))) {
     invalidateLastGoodFrame(reason);
   }
@@ -7007,6 +7016,9 @@ function rebuildResolvedColors() {
   const colorSourceFeatures = getResolvedColorSourceFeatures();
   if (!colorSourceFeatures.length) {
     replaceResolvedColorsState(state, nextColors);
+    recordColorRebuildDiagnostics(runtimeState, {
+      phase: "color-rebuild-empty-source", previousColorRevision, sourceFeatureCount: 0, resolvedColorCount: 0,
+    });
     recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
       featureCount: 0,
       sourceFeatureCount: 0,
@@ -7030,6 +7042,9 @@ function rebuildResolvedColors() {
   bumpColorRevision(state);
   retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColorRevision);
   invalidateRenderPasses(["physicalBase", "political", "contextBase"], "rebuild-colors");
+  recordColorRebuildDiagnostics(runtimeState, {
+    phase: "color-rebuild-complete", previousColorRevision, sourceFeatureCount: colorSourceFeatures.length, resolvedColorCount: Object.keys(nextColors).length, sourceName: getResolvedColorSourceName(),
+  });
   recordRenderPerfMetric("rebuildResolvedColors", nowMs() - startedAt, {
     featureCount: Object.keys(nextColors).length,
     sourceFeatureCount: colorSourceFeatures.length,
@@ -7273,6 +7288,9 @@ function paintPoliticalPatchOverlayForIds(featureIds, { inputLabel = "refresh-co
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
     colorRevision: Number(runtimeState.colorRevision || 0),
   });
+  recordPoliticalPatchOverlayPaintDiagnostics(runtimeState, {
+    inputLabel, requestedFeatureCount: ids.length, candidateFeatureCount: features.length, renderedCount,
+  });
   if (renderedCount > 0) {
     getRenderPassCacheState().pendingPoliticalPatchOverlayTransformSignature = transformSignature;
     recordFillPatchFirstPixelMetric({
@@ -7291,38 +7309,41 @@ function clearPendingPoliticalColorEdit({
   paintSource = "political-pass",
 } = {}) {
   const cache = getRenderPassCacheState();
-  const reset = () => {
-    if (cache.pendingPoliticalColorEditIds instanceof Set) {
-      cache.pendingPoliticalColorEditIds.clear();
-    } else {
-      cache.pendingPoliticalColorEditIds = new Set();
-    }
+  const preClearPendingIds = cache.pendingPoliticalColorEditIds instanceof Set ? new Set(cache.pendingPoliticalColorEditIds) : new Set();
+  const preClearPendingFeatureCount = preClearPendingIds.size;
+  const preClearPendingReason = String(cache.pendingPoliticalColorEditReason || "");
+  const preClearInputLabel = String(cache.pendingPoliticalColorEditInputLabel || "");
+  const preClearFirstPixelRecorded = !!cache.pendingPoliticalColorEditFirstPixelRecorded;
+  const renderedIdCount = renderedIds instanceof Set ? renderedIds.size : (Array.isArray(renderedIds) ? renderedIds.length : 0);
+  const reset = (resetReason = "pending-edit-cleared") => {
+    if (cache.pendingPoliticalColorEditIds instanceof Set) cache.pendingPoliticalColorEditIds.clear(); else cache.pendingPoliticalColorEditIds = new Set();
     cache.pendingPoliticalColorEditRevision = -1;
-    cache.pendingPoliticalColorEditScenarioId = "";
-    cache.pendingPoliticalColorEditReason = "";
-    cache.pendingPoliticalColorEditStartedAt = 0;
-    cache.pendingPoliticalColorEditInputLabel = "";
-    cache.pendingPoliticalColorEditFirstPixelRecorded = false;
-    cache.pendingPoliticalColorEditFirstPixelPaintSource = "";
+    Object.assign(cache, {
+      pendingPoliticalColorEditScenarioId: "", pendingPoliticalColorEditReason: "", pendingPoliticalColorEditStartedAt: 0,
+      pendingPoliticalColorEditInputLabel: "", pendingPoliticalColorEditFirstPixelRecorded: false, pendingPoliticalColorEditFirstPixelPaintSource: "",
+    });
     clearPoliticalPatchOverlay("pending-edit-cleared");
+    recordPendingPoliticalColorEditClearDiagnostics(runtimeState, {
+      resetReason, pendingFeatureCount: preClearPendingFeatureCount, pendingReason: preClearPendingReason, inputLabel: preClearInputLabel, firstPixelRecorded: preClearFirstPixelRecorded, renderedCount, renderedIdCount, force, paintSource,
+    });
     return true;
   };
-  if (force) return reset();
+  if (force) return reset("force");
   if (!hasPendingPoliticalColorEdit()) return false;
   const hasRenderedIdScope = renderedIds !== null && renderedIds !== undefined;
   if (hasRenderedIdScope) {
     const renderedIdList = normalizePoliticalColorEditIds(renderedIds);
     if (!renderedIdList.length) return false;
     const pendingIds = cache.pendingPoliticalColorEditIds;
-    if (!(pendingIds instanceof Set) || !pendingIds.size) return reset();
+    if (!(pendingIds instanceof Set) || !pendingIds.size) return reset("empty-pending-set");
     renderedIdList.forEach((id) => pendingIds.delete(id));
     if (pendingIds.size > 0) return false;
     recordFillPatchFirstPixelMetric({ renderedCount, renderedIds, paintSource });
-    return reset();
+    return reset("rendered-id-scope-complete");
   }
   if (Number(renderedCount || 0) <= 0) return false;
   recordFillPatchFirstPixelMetric({ renderedCount, renderedIds, paintSource });
-  return reset();
+  return reset("rendered-count-complete");
 }
 
 function retargetPendingPoliticalColorEditRevisionAfterColorRebuild(previousColorRevision) {
@@ -7388,6 +7409,9 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false, input
   if (shouldRefreshContextBaseForColorChanges()) {
     invalidateRenderPasses("contextBase", "refresh-colors-context-base");
   }
+  recordPartialColorRefreshDiagnostics(runtimeState, {
+    requestedFeatureCount: ids.length, pendingRenderFeatureCount: pendingRenderIds.size, renderNow, inputLabel,
+  });
 
   if (renderNow && context) {
     requestRendererRender("refresh-colors", {
@@ -15291,6 +15315,9 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   });
   scenarioPoliticalBackgroundDeferredFullCacheState = null;
   invalidateRenderPasses("political", "progressive-political-full-cache-ready");
+  recordProgressivePoliticalFullCacheReadyDiagnostics(runtimeState, {
+    entryCount: normalizedEntries.length, groupCount: Number(finalized?.groupCount || 0), builtPathCount: Number(state.builtPathCount || 0), reusedPathCount: Number(state.reusedPathCount || 0), pathlessEntryCount: Number(state.pathlessEntryCount || 0), sliceCount: Number(state.sliceCount || 0),
+  });
   const repaintRequested = requestRendererRender("progressive-political-full-cache-ready", {
     flush: false,
     fallback: () => {

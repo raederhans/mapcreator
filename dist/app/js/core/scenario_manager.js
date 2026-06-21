@@ -87,6 +87,12 @@ import {
   createScenarioApplyPipeline,
 } from "./scenario_apply_pipeline.js";
 import {
+  nextScenarioApplyEpoch,
+  recordRenderInvariantWarning,
+  recordRenderTransactionSnapshot,
+  RENDER_TRANSACTION_WARNING_CODES,
+} from "./renderer/render_transaction_diagnostics.js";
+import {
   getSearchParams,
   shouldBypassScenarioCache,
   scenarioBundleSatisfiesLevel,
@@ -122,6 +128,7 @@ const SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER = ["na_v2", "na_v1", "legacy_bak", "
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_INTERACTING = 180;
 const SCENARIO_CHUNK_REFRESH_DELAY_MS_IDLE = 60;
 let activeScenarioApplyPromise = null;
+let activeScenarioApplyTargetId = "";
 
 /**
  * Cross-module shared high-frequency state fields.
@@ -504,22 +511,97 @@ async function applyScenarioBundle(
     showToastOnComplete = false,
     interactionLevel = "full",
     deferChunkPrewarm = false,
+    scenarioApplyEpoch = 0,
   } = {}
 ) {
   const applyStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
   if (!bundle?.manifest) {
     throw new Error("Scenario bundle is missing a manifest.");
   }
+  const requestedScenarioId = normalizeScenarioId(bundle.manifest?.scenario_id || bundle.meta?.scenario_id);
+  const transactionScenarioApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || 0))
+    || nextScenarioApplyEpoch(runtimeState, {
+      scenarioId: requestedScenarioId,
+      reason: markDirtyReason,
+    });
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-apply-bundle-start",
+    reason: markDirtyReason,
+    requestedScenarioId,
+    source: "scenario_manager",
+    searchParams: getSearchParams(),
+    extra: {
+      allowScenarioMismatch: true,
+      suppressRender: !!suppressRender,
+      renderNow: !!renderNow,
+      interactionLevel,
+      deferChunkPrewarm: !!deferChunkPrewarm,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    },
+  });
   const rollbackSnapshot = captureScenarioApplyRollbackSnapshot();
   let staged = null;
   let topologyDecodeMs = 0;
   try {
     // apply 主链顺序固定：先 stage、再一次性提交 runtimeState、再跑 post-apply 副作用和一致性检查。
     const topologyDecodeStartedAt = globalThis.performance?.now ? globalThis.performance.now() : Date.now();
-    staged = await prepareScenarioApplyState(bundle, { syncPalette, interactionLevel });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-prepare-start",
+      reason: markDirtyReason,
+      requestedScenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        allowScenarioMismatch: true,
+        syncPalette: !!syncPalette,
+        interactionLevel,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
+    staged = await prepareScenarioApplyState(bundle, { syncPalette, interactionLevel, scenarioApplyEpoch: transactionScenarioApplyEpoch });
     topologyDecodeMs = (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - topologyDecodeStartedAt;
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-staged",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        allowScenarioMismatch: true,
+        topologyDecodeMs,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        runtimeTopologyRenderable: hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload),
+        runtimeVersionTag: staged.runtimeVersionTag || "",
+        fixedOwnerColorCount: Object.keys(staged.scenarioColorMap || {}).length,
+        coarseColorCount: Object.keys(staged.coarseColorMap || {}).length,
+        resolvedOwnerCount: Object.keys(staged.resolvedOwners || {}).length,
+      },
+    });
 
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-commit-start",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        allowScenarioMismatch: true,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
     applyPreparedScenarioState(bundle, staged);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-committed",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      expectedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        runtimeVersionTag: staged.runtimeVersionTag || "",
+      },
+    });
     if (Object.keys(staged.scenarioOwnerBackfill).length) {
       console.info(
         `[scenario] Applied HOI4 Far East owner backfill for "${staged.scenarioId}": ${Object.keys(staged.scenarioOwnerBackfill).length} missing RU runtime features -> SOV.`
@@ -527,8 +609,21 @@ async function applyScenarioBundle(
     }
     bundle.chunkLifecycle = {
       applyStartedAt,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
       politicalCoreReadyRecorded: false,
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-post-apply-start",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      expectedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        deferChunkPrewarm: !!deferChunkPrewarm,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
     const {
       dataHealth,
       scenarioMapRefreshMode,
@@ -542,6 +637,30 @@ async function applyScenarioBundle(
       deferChunkPrewarm,
       renderNow,
       suppressRender,
+      scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-post-apply-complete",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      expectedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioMapRefreshMode,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        hasChunkedRuntime: !!hasChunkedRuntime,
+        chunkPrewarmAwaited: !!chunkPrewarmAwaited,
+        chunkPrewarmDeferred: !!chunkPrewarmDeferred,
+        coarsePrewarmCommitted: !!coarsePrewarmCommitted,
+        dataHealth: {
+          expectedFeatureCount: Number(dataHealth?.expectedFeatureCount || 0),
+          runtimeFeatureCount: Number(dataHealth?.runtimeFeatureCount || 0),
+          ratio: Number(dataHealth?.ratio || 0),
+          warning: String(dataHealth?.warning || ""),
+          severity: String(dataHealth?.severity || ""),
+        },
+      },
     });
     if (bundle.loadDiagnostics?.startupBundle) {
       const startupHydrationHealth = evaluateScenarioHydrationHealthGateState({
@@ -688,7 +807,33 @@ async function applyScenarioBundle(
       mapRefreshMode: scenarioMapRefreshMode,
       applyMs: (globalThis.performance?.now ? globalThis.performance.now() : Date.now()) - applyStartedAt,
     });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-complete",
+      reason: markDirtyReason,
+      requestedScenarioId: staged.scenarioId,
+      expectedScenarioId: staged.scenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        topologyDecodeMs,
+        scenarioMapRefreshMode,
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
   } catch (error) {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-rollback-start",
+      reason: markDirtyReason,
+      requestedScenarioId: staged?.scenarioId || requestedScenarioId,
+      expectedScenarioId: rollbackSnapshot?.activeScenarioId || "",
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        error: String(error?.message || error || "Unknown scenario apply error"),
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+        allowScenarioMismatch: true,
+      },
+    });
     // rollback 只恢复 apply 前快照；若快照恢复或恢复后一致性检查失败，进入 fatal recovery，阻止 UI 继续操作半提交状态。
     let rollbackRestoreError = null;
     try {
@@ -701,6 +846,19 @@ async function applyScenarioBundle(
       console.error("[scenario] Failed to restore scenario apply rollback snapshot.", rollbackError);
     }
     if (rollbackRestoreError) {
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-apply-rollback-failed",
+        reason: markDirtyReason,
+        requestedScenarioId: staged?.scenarioId || requestedScenarioId,
+        expectedScenarioId: rollbackSnapshot?.activeScenarioId || "",
+        source: "scenario_manager",
+        searchParams: getSearchParams(),
+        extra: {
+          error: String(rollbackRestoreError?.message || rollbackRestoreError || "Unknown rollback error"),
+          scenarioApplyEpoch: transactionScenarioApplyEpoch,
+          allowScenarioMismatch: true,
+        },
+      });
       enterScenarioFatalRecovery({
         phase: "rollback",
         rootError: error,
@@ -715,6 +873,19 @@ async function applyScenarioBundle(
       phase: "rollback",
     });
     if (!rollbackConsistency.ok) {
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-apply-rollback-failed",
+        reason: markDirtyReason,
+        requestedScenarioId: staged?.scenarioId || requestedScenarioId,
+        expectedScenarioId: rollbackSnapshot?.activeScenarioId || "",
+        source: "scenario_manager",
+        searchParams: getSearchParams(),
+        extra: {
+          consistencyProblems: rollbackConsistency.problems || [],
+          scenarioApplyEpoch: transactionScenarioApplyEpoch,
+          allowScenarioMismatch: true,
+        },
+      });
       enterScenarioFatalRecovery({
         phase: "rollback",
         rootError: error,
@@ -724,6 +895,17 @@ async function applyScenarioBundle(
       fatalError.cause = error;
       throw fatalError;
     }
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-rollback-complete",
+      reason: markDirtyReason,
+      requestedScenarioId: staged?.scenarioId || requestedScenarioId,
+      expectedScenarioId: rollbackSnapshot?.activeScenarioId || "",
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch: transactionScenarioApplyEpoch,
+      },
+    });
     throw error;
   }
 }
@@ -748,23 +930,100 @@ async function applyScenarioById(
   if (!normalizedScenarioId) {
     throw new Error("[scenario] Scenario id is required.");
   }
+  const scenarioApplyEpoch = nextScenarioApplyEpoch(runtimeState, {
+    scenarioId: normalizedScenarioId,
+    reason: markDirtyReason,
+  });
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase: "scenario-apply-requested",
+    reason: markDirtyReason,
+    requestedScenarioId: normalizedScenarioId,
+    source: "scenario_manager",
+    searchParams: getSearchParams(),
+    extra: {
+      scenarioApplyEpoch,
+      allowScenarioMismatch: true,
+      renderNow: !!renderNow,
+      showToastOnComplete: !!showToastOnComplete,
+    },
+  });
   const cachedScenarioBundle = runtimeState.scenarioBundleCacheById?.[normalizedScenarioId] || null;
   if (canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId)) {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-cache-hit",
+      reason: markDirtyReason,
+      requestedScenarioId: normalizedScenarioId,
+      expectedScenarioId: normalizedScenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch,
+      },
+    });
     return cachedScenarioBundle;
   }
   if (runtimeState.scenarioApplyInFlight && activeScenarioApplyPromise) {
+    if (activeScenarioApplyTargetId && activeScenarioApplyTargetId !== normalizedScenarioId) {
+      recordRenderInvariantWarning(runtimeState, {
+        code: RENDER_TRANSACTION_WARNING_CODES.scenarioApplyInflightTargetMismatch,
+        phase: "scenario-apply-requested",
+        reason: markDirtyReason,
+        details: {
+          activeScenarioApplyTargetId,
+          requestedScenarioId: normalizedScenarioId,
+        },
+      });
+    }
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-inflight-reused",
+      reason: markDirtyReason,
+      requestedScenarioId: normalizedScenarioId,
+      expectedScenarioId: activeScenarioApplyTargetId || "",
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch,
+        activeScenarioApplyTargetId,
+        allowScenarioMismatch: true,
+      },
+    });
     return activeScenarioApplyPromise;
   }
 
   runtimeState.scenarioApplyInFlight = true;
+  activeScenarioApplyTargetId = normalizedScenarioId;
   activeScenarioApplyPromise = (async () => {
     // 同一时刻只允许一个 scenario apply；UI 先同步为“加载中”，finally 再同步结束态，避免控件读到中间状态。
     syncScenarioUi();
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-load-bundle-start",
+      reason: markDirtyReason,
+      requestedScenarioId: normalizedScenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch,
+        allowScenarioMismatch: true,
+      },
+    });
     const bundle = await loadScenarioBundle(normalizedScenarioId, { bundleLevel: "full" });
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-load-bundle-complete",
+      reason: markDirtyReason,
+      requestedScenarioId: normalizedScenarioId,
+      source: "scenario_manager",
+      searchParams: getSearchParams(),
+      extra: {
+        scenarioApplyEpoch,
+        allowScenarioMismatch: true,
+        bundleLevel: String(bundle?.bundleLevel || "full"),
+      },
+    });
     await applyScenarioBundle(bundle, {
       renderNow,
       markDirtyReason,
       showToastOnComplete,
+      scenarioApplyEpoch,
     });
     return bundle;
   })();
@@ -773,6 +1032,7 @@ async function applyScenarioById(
     return await activeScenarioApplyPromise;
   } finally {
     activeScenarioApplyPromise = null;
+    activeScenarioApplyTargetId = "";
     runtimeState.scenarioApplyInFlight = false;
     syncScenarioUi();
   }

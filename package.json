@@ -101,6 +101,7 @@
     "test:node:political-collection-fragment-camouflage": "node --test tests/political_collection_fragment_camouflage_behavior.test.mjs",
     "test:node:transport-overview-line-contract": "node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs",
     "test:node:renderer-runtime-state-behavior": "node --test tests/renderer_runtime_state_behavior.test.mjs",
+    "test:node:render-transaction-diagnostics": "node --test tests/render_transaction_diagnostics_behavior.test.mjs",
     "test:node:border-draw-owner-behavior": "node --test tests/border_draw_owner_behavior.test.mjs",
     "test:node:border-mesh-owner-behavior": "node --test tests/border_mesh_owner_behavior.test.mjs",
     "test:node:canvas-layer-manager": "node --test tests/canvas_layer_manager_behavior.test.mjs",

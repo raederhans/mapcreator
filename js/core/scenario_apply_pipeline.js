@@ -7,6 +7,9 @@ import { commitScenarioActivationRuntimeState } from "./state/scenario_runtime_s
 import {
   normalizeScenarioStrategicValuesPayload,
 } from "./scenario/strategic_values.js";
+import {
+  recordRenderTransactionSnapshot,
+} from "./renderer/render_transaction_diagnostics.js";
 
 function createScenarioApplyPipeline({
   runtimeState,
@@ -310,6 +313,7 @@ function createScenarioApplyPipeline({
     {
       syncPalette = true,
       interactionLevel = "full",
+      scenarioApplyEpoch = 0,
     } = {}
   ) {
     // apply 前半段先守住“能不能安全进入场景”这条线：
@@ -513,8 +517,9 @@ function createScenarioApplyPipeline({
           : { ...owners }
       );
     const activationContext = prepareScenarioActivationContext(bundle);
-    return {
+    const staged = {
       scenarioId,
+      scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
       baseCountryMap,
       defaultCountryCode,
       mapSemanticMode,
@@ -544,12 +549,86 @@ function createScenarioApplyPipeline({
       releasableIndex,
       ...activationContext,
     };
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-pipeline-staged",
+      reason: "prepareScenarioApplyState",
+      requestedScenarioId: scenarioId,
+      source: "scenario_apply_pipeline",
+      extra: {
+        allowScenarioMismatch: true,
+        runtimeTopologyRenderable: hasRenderableScenarioPoliticalTopology(runtimeTopologyPayload),
+        runtimeTopologyObjectCount: runtimeTopologyPayload?.objects && typeof runtimeTopologyPayload.objects === "object"
+          ? Object.keys(runtimeTopologyPayload.objects).length
+          : 0,
+        scenarioWaterSource: scenarioWaterRegionsFromTopology ? "topology-or-merged" : "none",
+        scenarioAtlantropaSource: scenarioAtlantropaFromTopology ? "topology-or-merged" : "none",
+        scenarioSpecialSource: scenarioSpecialRegionsFromTopology ? "topology-or-merged" : "none",
+        scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
+        fixedOwnerColorCount: Object.keys(scenarioColorMap || {}).length,
+        coarseColorCount: Object.keys(coarseColorMap || {}).length,
+        resolvedOwnerCount: Object.keys(resolvedOwners || {}).length,
+      },
+    });
+    return staged;
   }
 
   function applyPreparedScenarioState(bundle, staged) {
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-precommit-start",
+      reason: "applyPreparedScenarioState",
+      requestedScenarioId: staged?.scenarioId,
+      source: "scenario_apply_pipeline",
+      extra: {
+        allowScenarioMismatch: true,
+        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+      },
+    });
     runScenarioActivationPreCommitPhase(bundle, staged);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-runtime-commit-start",
+      reason: "applyPreparedScenarioState",
+      requestedScenarioId: staged?.scenarioId,
+      source: "scenario_apply_pipeline",
+      extra: {
+        allowScenarioMismatch: true,
+        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+      },
+    });
     commitScenarioActivationState(bundle, staged);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-runtime-commit-complete",
+      reason: "applyPreparedScenarioState",
+      requestedScenarioId: staged?.scenarioId,
+      expectedScenarioId: staged?.scenarioId,
+      source: "scenario_apply_pipeline",
+      extra: {
+        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+        runtimeTopologyWritten: !!runtimeState.scenarioRuntimeTopologyData,
+        runtimePoliticalTopologySource: runtimeState.runtimePoliticalTopology === staged?.runtimeTopologyPayload
+          ? "staged"
+          : "runtime-or-default",
+        scenarioWaterFeatureCount: Array.isArray(runtimeState.scenarioWaterRegionsData?.features)
+          ? runtimeState.scenarioWaterRegionsData.features.length
+          : 0,
+        scenarioAtlantropaFeatureCount: Array.isArray(runtimeState.scenarioAtlantropaData?.features)
+          ? runtimeState.scenarioAtlantropaData.features.length
+          : 0,
+        scenarioSpecialFeatureCount: Array.isArray(runtimeState.scenarioSpecialRegionsData?.features)
+          ? runtimeState.scenarioSpecialRegionsData.features.length
+          : 0,
+      },
+    });
     runScenarioActivationPostCommitPhase(bundle, staged);
+    recordRenderTransactionSnapshot(runtimeState, {
+      phase: "scenario-apply-postcommit-complete",
+      reason: "applyPreparedScenarioState",
+      requestedScenarioId: staged?.scenarioId,
+      expectedScenarioId: staged?.scenarioId,
+      source: "scenario_apply_pipeline",
+      extra: {
+        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+      },
+    });
   }
 
   return {

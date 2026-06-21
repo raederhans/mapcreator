@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -45767,7 +45767,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 905314,
+      "size_bytes": 908275,
       "source_kind": "dist"
     },
     {
@@ -45916,6 +45916,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/render_transaction_diagnostics.js",
+      "size_bytes": 36731,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/river_layer_render_owner.js",
       "size_bytes": 8239,
       "source_kind": "dist"
@@ -46057,7 +46062,7 @@
     },
     {
       "path": "app/js/core/scenario/chunk_runtime.js",
-      "size_bytes": 119087,
+      "size_bytes": 139578,
       "source_kind": "dist"
     },
     {
@@ -46117,7 +46122,7 @@
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 26141,
+      "size_bytes": 29888,
       "source_kind": "dist"
     },
     {
@@ -46152,7 +46157,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 32291,
+      "size_bytes": 42182,
       "source_kind": "dist"
     },
     {
@@ -46162,7 +46167,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 15556,
+      "size_bytes": 22847,
       "source_kind": "dist"
     },
     {
@@ -46172,7 +46177,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 41905,
+      "size_bytes": 43096,
       "source_kind": "dist"
     },
     {
@@ -47097,7 +47102,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454568,
+      "size_bytes": 1454708,
       "source_kind": "dist"
     },
     {
@@ -47116,5 +47121,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154179520
+  "total_bytes": 1154261840
 }
