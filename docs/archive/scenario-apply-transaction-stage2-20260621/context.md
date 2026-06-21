@@ -58,4 +58,5 @@
 - Integration note: parent `C:\Users\raede\Desktop\dev\mapcreator` checkout contains unrelated docs WIP; use an isolated integration worktree to preserve it.
 - Integration evidence: feature commit `c98c65da` fast-forward merged into clean temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-stage2-main-integration`.
 - Post-merge spot checks passed: `node --check js/core/scenario_manager.js`, `npm run test:node:scenario-apply-transaction-ownership`, `git diff --check`.
+- Push evidence: `git push origin HEAD:main` advanced `origin/main` from `29c008f7` to `8ae91ae6`.
 - No live process currently active; main Codex agent remains the only owner for future tests/builds.

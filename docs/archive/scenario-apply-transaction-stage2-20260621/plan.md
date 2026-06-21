@@ -46,7 +46,8 @@
 - [x] 采样浏览器或运行时 diagnostics。
 - [x] 执行 final code-review gate。
 - [x] 提交并合并到 clean integration worktree。
-- [ ] 推送并清理 worktree。
+- [x] 推送到 `origin/main`。
+- [ ] 清理 worktree。
 
 ## 验证计划
 

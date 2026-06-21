@@ -39,7 +39,7 @@ integrated。实现、目标验证、Pages dist、runtime diagnostics 采样、c
 4. Commit 状态
 
 - Feature commit: `c98c65da`.
-- Closeout commit: pending at this document update.
+- Closeout commit: `8ae91ae6`.
 
 5. Base 与 main 分叉状态
 
@@ -88,8 +88,8 @@ integrated。实现、目标验证、Pages dist、runtime diagnostics 采样、c
 
 11. 推荐下一步
 
-- Push closeout to `origin/main`，then cleanup temporary integration and feature worktrees.
+- Cleanup temporary integration and feature worktrees.
 
 12. 可否整合
 
-- 当前状态：integrated in clean integration worktree。code-review follow-up returned CLEAR。
+- 当前状态：integrated and pushed to `origin/main`。code-review follow-up returned CLEAR。
