@@ -1,27 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 12:28 -04:00
+Last updated: 2026-06-22 12:17 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@ad4b6b8659d2d56a2e8f01b9f4cbd2428462782f`.
-- Latest integrated work: Thematic runtime discovery preview functional commit `a5d99022f2589f0ca071b5165d4f90f233c0b1ae`; closeout archive, registry cleanup, lessons note, and manifest refresh are committed locally on main and pending push.
+- Integration base: `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47`.
+- Latest integrated work: Thematic runtime discovery preview functional commit `a5d99022f2589f0ca071b5165d4f90f233c0b1ae`; closeout archive, registry cleanup, lessons note, and manifest refresh are pushed on main at `a31a75fb12bb28048dd8878b0cb80379c7b25d47`.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: code-reviewer and architect lanes are read-only; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Push `main` so `origin/main` contains `a5d99022f2589f0ca071b5165d4f90f233c0b1ae` plus archive/registry updates.
-2. Rebase or refresh `codex/thematic-real-source-wgi-v1-20260622` after this preview closeout lands; it directly overlaps generated thematic data, builder routes, package scripts, and publish artifacts.
+1. Treat Thematic Runtime Discovery and Read-only Panel Preview as integrated, pushed, archived, and cleaned on main.
+2. Rebase or refresh `codex/thematic-real-source-wgi-v1-20260622` in its own integration plan; the current WGI worktree is detached at `a31a75fb12bb28048dd8878b0cb80379c7b25d47` with unresolved conflicts in `dist/pages-dist-manifest.json` and `docs/active/_worktree_registry.md`.
 3. Keep real-source ingestion, thematic canvas rendering, and scenario save-format changes outside the completed preview task.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@closeout-after-a5d99022` | `origin/main@ad4b6b86` | local closeout committed, pending push | none after closeout commit | `git worktree list` shows main plus the WGI worktree; post-merge validation passed thematic catalog/preview 5/5, toolbar split 53/53, Pages dist 38+8, `git diff --check`, and `git diff --cached --check`. | Green as integration surface; only remaining active worktree is WGI. | Push main, then delete merged preview branch. |
-| `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | `codex/thematic-real-source-wgi-v1-20260622@ab2879cd` | `origin/main@ad4b6b8659d2d56a2e8f01b9f4cbd2428462782f` | in-progress, dirty | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `dist/**`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files | `git status --short --branch` shows branch ahead 1 with WGI data, schema, builder, route, catalog, docs, and large generated dist edits. | Red with completed preview through thematic generated data, route registry, package scripts, `dist/**`, and publish artifacts. | Leave untouched; rebase/refresh after preview closeout push under a separate integration plan. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | pushed, clean, and current | none | `git status --short --branch` shows `## main...origin/main`; `git rev-parse HEAD` equals `git rev-parse origin/main`; preview branch lookup is empty. | Green as integration surface; only remaining filesystem worktree is WGI. | Keep as current main baseline. |
+| `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | detached `HEAD@a31a75fb12bb28048dd8878b0cb80379c7b25d47`; branch `codex/thematic-real-source-wgi-v1-20260622@ab2879cd0ebf48a53b636afdd2f02d546a816c49` still exists | `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | in-progress, dirty, unresolved conflicts | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `dist/**`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files; unmerged: `dist/pages-dist-manifest.json`, `docs/active/_worktree_registry.md` | `git -C ... status --short --branch` shows `## HEAD (no branch)` with WGI data/schema/builder/route/docs edits and two `UU` files. | Red with completed preview through thematic generated data, route registry, package scripts, `dist/**`, and publish artifacts. | Leave untouched for now; recover the branch/ref and resolve conflicts under a separate WGI integration plan. |
 
 ## Recent Integrated Branches
 
