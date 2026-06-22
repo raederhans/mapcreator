@@ -12,8 +12,8 @@
 - [x] Extend focused tests.
 - [x] Run targeted validation and Pages dist.
 - [x] Run independent code-review and architecture review.
-- [ ] Commit feature work.
-- [ ] Merge to main, push, archive docs, and clean the worktree.
+- [x] Commit feature work.
+- [x] Merge to main, push, archive docs, and clean the worktree.
 
 ## Delivery Package Draft
 
@@ -29,8 +29,8 @@
   - Generated: `dist/app/**` mirrors for changed source files and `dist/pages-dist-manifest.json`.
   - Docs: this active task folder and `docs/active/_worktree_registry.md`.
 - Diff summary: source/UI/tests/docs plus generated Pages dist mirrors; no real-source thematic data changes after builders.
-- Commit status: not committed yet; independent code-review and architecture review are complete.
-- Base divergence: branch was refreshed to `origin/main@ad4b6b8659d2d56a2e8f01b9f4cbd2428462782f`; current feature diff is on top of that base.
+- Commit status: feature commit `a5d99022f2589f0ca071b5165d4f90f233c0b1ae`; closeout commit `a31a75fb12bb28048dd8878b0cb80379c7b25d47`; registry truth corrections pushed through `faa5b50788dea059a4c9d20873fca1078abbbbdb`.
+- Base divergence: branch was refreshed to `origin/main@ad4b6b8659d2d56a2e8f01b9f4cbd2428462782f`, fast-forwarded into main, and main now matches pushed `origin/main`.
 - Potential conflicts: red/yellow with active WGI work because it also touches thematic data/build routes/package/generated publish artifacts; yellow with future work touching `index.html`, `css/style.css`, `appearance_controls_controller.js`, `layer_panel_contracts.js`, `layer_status_diagnostics.js`, or generated `dist/**`.
 - Verification:
   - `node --check` on changed JS modules passed.
@@ -49,4 +49,4 @@
   - `git diff --check` passed with the existing Windows line-ending warning for `package.json`.
 - Remaining risk: no browser smoke was run because this phase is contract-visible and read-only; real-source ingestion and thematic map rendering remain future phases.
 - Review follow-up: restored thematic Python contract route and selector golden case after code review finding; rebased to current `origin/main` so safety metadata stays intact; sanitized preview loader errors so raw `undefined/null/NaN` values do not render; staged all new files after code-review flagged the incomplete staged diff.
-- Recommendation: commit this branch and fast-forward into main after re-checking `origin/main`.
+- Recommendation: treat this preview phase as complete. Handle the remaining WGI real-source worktree under a separate integration plan because it is detached, dirty, and has unresolved conflicts in generated publish metadata and the registry.
