@@ -1,25 +1,25 @@
 # Worktree Registry
 
-Last updated: 2026-06-21 21:56 -04:00
+Last updated: 2026-06-21 22:01 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@d39064276d00f16ea1a81cdf4c32ebfd9e712301`.
-- Latest integrated work: Thematic Layer Foundation feature commit `b81a83ffb3ae926b54877869322c38feea712c5f`, closeout commit `d39064276d00f16ea1a81cdf4c32ebfd9e712301`, pushed to `origin/main`, with the temporary worktree removed.
+- Integration base: `origin/main@447b972d94674897aaa2be586c6cd1d609500c72`.
+- Latest integrated work: Thematic Layer Foundation feature commit `b81a83ffb3ae926b54877869322c38feea712c5f`, closeout commit `d39064276d00f16ea1a81cdf4c32ebfd9e712301`, and follow-up registry cleanup on current `main`; the temporary worktree has been removed.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: no active subagents.
 
 ## Recommended Order
 
-1. Start future thematic UI/runtime work from current `main@d39064276d00f16ea1a81cdf4c32ebfd9e712301`; the current milestone is data-contract only.
+1. Start future thematic UI/runtime work from current `main`; the current milestone is data-contract only.
 2. Use feature commit `b81a83ffb3ae926b54877869322c38feea712c5f` and archive docs `docs/archive/thematic-layer-foundation-v1/` as recovery context.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@d3906427` | `origin/main@d3906427` | clean after push | none | `main`, `origin/main`, and `HEAD` all resolve to `d39064276d00f16ea1a81cdf4c32ebfd9e712301`; only current worktree remains. | Green as integration surface. | No active integration action. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | current `main` | current `origin/main` | clean after push | none | `git worktree list --porcelain` shows only the main checkout; `git status --short --branch` is clean after push verification. | Green as integration surface. | No active integration action. |
 
 ## Recent Integrated Branches
 
