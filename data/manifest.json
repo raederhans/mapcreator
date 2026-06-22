@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 25935,
-      "sha256": "67316289564045547a2529539c9deefee935d14a5d9d310f94e7f2c5d522f2fa"
+      "size_bytes": 26390,
+      "sha256": "1cf4480bdd7f8994f6e5e77be86d1816fb6bf14d343b7ae12aa53898b5e64146"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -1294,7 +1294,9 @@
         "url": "data/thematic_layers/index.json",
         "role": "thematic_layer_catalog",
         "metadata": {
-          "layer_count": 3
+          "layer_count": 3,
+          "publish_scope": "repo_only",
+          "runtime_readiness": "catalog_only"
         }
       },
       "thematic_layer:political_state_capacity_demo": {
@@ -1302,8 +1304,11 @@
         "role": "thematic_layer_manifest",
         "metadata": {
           "layer_id": "political_state_capacity_demo",
+          "source_policy": "fixture_only",
           "theme": "political",
-          "geometry_kind": "admin0"
+          "geometry_kind": "admin0",
+          "publish_scope": "repo_only",
+          "runtime_readiness": "catalog_only"
         }
       },
       "thematic_layer:social_human_development_demo": {
@@ -1311,8 +1316,11 @@
         "role": "thematic_layer_manifest",
         "metadata": {
           "layer_id": "social_human_development_demo",
+          "source_policy": "fixture_only",
           "theme": "social",
-          "geometry_kind": "admin0"
+          "geometry_kind": "admin0",
+          "publish_scope": "repo_only",
+          "runtime_readiness": "catalog_only"
         }
       },
       "thematic_layer:population_density_demo": {
@@ -1320,8 +1328,11 @@
         "role": "thematic_layer_manifest",
         "metadata": {
           "layer_id": "population_density_demo",
+          "source_policy": "fixture_only",
           "theme": "population",
-          "geometry_kind": "grid_720x360"
+          "geometry_kind": "grid_720x360",
+          "publish_scope": "repo_only",
+          "runtime_readiness": "catalog_only"
         }
       }
     },

@@ -500,6 +500,18 @@ const cases = [
     expectedCommands: ['test:node:backend-cloud-support', 'test:py:backend-cloud-support'],
   },
   {
+    name: 'thematic builder and contracts route to thematic contract suite',
+    changedFiles: [
+      'tools/build_thematic_layers.py',
+      'map_builder/thematic_layer_contracts.py',
+      'data/thematic_layers/index.json',
+      'tests/test_thematic_layer_contracts.py',
+    ],
+    expectedCommands: ['test:py:thematic-layer-contracts'],
+    expectedExecutionOwners: ['child-safe'],
+    expectedResourceLocks: [],
+  },
+  {
     name: 'pytest style tno water file routes through pytest',
     changedFiles: ['tests/test_tno_water_geometries.py'],
     expectedCommands: ['python -m pytest tests/test_tno_water_geometries.py -q'],

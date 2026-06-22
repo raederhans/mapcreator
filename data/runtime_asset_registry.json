@@ -541,7 +541,9 @@
       "url": "data/thematic_layers/index.json",
       "role": "thematic_layer_catalog",
       "metadata": {
-        "layer_count": 3
+        "layer_count": 3,
+        "publish_scope": "repo_only",
+        "runtime_readiness": "catalog_only"
       }
     },
     "thematic_layer:political_state_capacity_demo": {
@@ -549,8 +551,11 @@
       "role": "thematic_layer_manifest",
       "metadata": {
         "layer_id": "political_state_capacity_demo",
+        "source_policy": "fixture_only",
         "theme": "political",
-        "geometry_kind": "admin0"
+        "geometry_kind": "admin0",
+        "publish_scope": "repo_only",
+        "runtime_readiness": "catalog_only"
       }
     },
     "thematic_layer:social_human_development_demo": {
@@ -558,8 +563,11 @@
       "role": "thematic_layer_manifest",
       "metadata": {
         "layer_id": "social_human_development_demo",
+        "source_policy": "fixture_only",
         "theme": "social",
-        "geometry_kind": "admin0"
+        "geometry_kind": "admin0",
+        "publish_scope": "repo_only",
+        "runtime_readiness": "catalog_only"
       }
     },
     "thematic_layer:population_density_demo": {
@@ -567,8 +575,11 @@
       "role": "thematic_layer_manifest",
       "metadata": {
         "layer_id": "population_density_demo",
+        "source_policy": "fixture_only",
         "theme": "population",
-        "geometry_kind": "grid_720x360"
+        "geometry_kind": "grid_720x360",
+        "publish_scope": "repo_only",
+        "runtime_readiness": "catalog_only"
       }
     }
   },

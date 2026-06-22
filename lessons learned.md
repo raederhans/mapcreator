@@ -435,3 +435,6 @@
 ### Visual acceptance 探针要逐点失败
 - 经纬度像素探针投影到 canvas 外时要显式失败；把坐标 clamp 到边缘会让错误位置被附近像素掩盖。
 - 固定探针适合要求每个点通过，运行时 centroid 采样适合要求最小通过数量；两类断言分开能保留证据强度。
+
+### Fixture 资产进入 runtime registry 要写发布边界
+- fixture-only 或 catalog-only 数据放进 `runtime_asset_registry.json` 时，要同步写 `publish_scope` 和 `runtime_readiness`，并用合同测试锁住，避免后续运行时代码把 repo-only 合同数据当成可发布渲染资产。

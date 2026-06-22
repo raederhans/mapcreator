@@ -63,6 +63,8 @@ THEMATIC_OUTPUT_PATHS = (
     POP_AUDIT_RELATIVE_PATH,
 )
 MANIFEST_REFRESH_PATHS = (*THEMATIC_OUTPUT_PATHS, "runtime_asset_registry.json")
+THEMATIC_RUNTIME_PUBLISH_SCOPE = "repo_only"
+THEMATIC_RUNTIME_READINESS = "catalog_only"
 
 
 COUNTRIES = (
@@ -784,7 +786,11 @@ def update_runtime_asset_registry(payloads: dict[str, dict[str, Any]]) -> None:
     assets["thematic_layer_catalog"] = runtime_asset_registry_entry(
         INDEX_RELATIVE_PATH,
         role="thematic_layer_catalog",
-        metadata={"layer_count": len(payloads[INDEX_RELATIVE_PATH]["layers"])},
+        metadata={
+            "layer_count": len(payloads[INDEX_RELATIVE_PATH]["layers"]),
+            "publish_scope": THEMATIC_RUNTIME_PUBLISH_SCOPE,
+            "runtime_readiness": THEMATIC_RUNTIME_READINESS,
+        },
     )
     manifest_keys = {
         "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
@@ -803,8 +809,11 @@ def update_runtime_asset_registry(payloads: dict[str, dict[str, Any]]) -> None:
             role="thematic_layer_manifest",
             metadata={
                 "layer_id": layer_id,
+                "source_policy": manifest["source_policy"],
                 "theme": manifest["theme"],
                 "geometry_kind": manifest["geometry_kind"],
+                "publish_scope": THEMATIC_RUNTIME_PUBLISH_SCOPE,
+                "runtime_readiness": THEMATIC_RUNTIME_READINESS,
             },
         )
 

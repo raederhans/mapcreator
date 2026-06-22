@@ -94,6 +94,7 @@
     "test:py:hgo-runtime-seed": "npm run python -- -m unittest tests.test_hgo_runtime_seed_builder -q",
     "test:py:hgo-runtime-assets": "npm run python -- -m unittest tests.test_hgo_runtime_seed_builder -q",
     "test:py:hgo-runtime-assets-contract": "npm run python -- -m unittest tests.test_data_manifest_contract tests.test_data_catalog_contract -q",
+    "test:py:thematic-layer-contracts": "npm run python -- -m unittest tests.test_thematic_layer_contracts -q",
     "smoke:hgo-runtime-source": "npm run python -- tools/build_hgo_runtime_seed.py",
     "build:hgo-runtime-assets": "npm run python -- tools/build_hgo_runtime_assets.py",
     "spike:hgo-runtime-lod": "node tools/spike_hgo_runtime_lod_assets.mjs",

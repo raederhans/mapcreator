@@ -13,7 +13,11 @@ from map_builder.thematic_layer_contracts import (
     validate_thematic_layer_index,
     validate_thematic_layer_manifest,
 )
-from tools.build_thematic_layers import build_payloads
+from tools.build_thematic_layers import (
+    THEMATIC_RUNTIME_PUBLISH_SCOPE,
+    THEMATIC_RUNTIME_READINESS,
+    build_payloads,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -140,11 +144,23 @@ class ThematicLayerContractTest(unittest.TestCase):
             EXPECTED_LAYER_IDS,
         )
         self.assertEqual(assets["thematic_layer_catalog"]["url"], "data/thematic_layers/index.json")
+        self.assertEqual(
+            assets["thematic_layer_catalog"]["metadata"]["publish_scope"],
+            THEMATIC_RUNTIME_PUBLISH_SCOPE,
+        )
+        self.assertEqual(
+            assets["thematic_layer_catalog"]["metadata"]["runtime_readiness"],
+            THEMATIC_RUNTIME_READINESS,
+        )
         for layer_id, asset_key in registry["thematic_layer_manifest_keys"].items():
             with self.subTest(layer_id=layer_id):
                 self.assertIn(asset_key, assets)
-                self.assertTrue(_repo_path(assets[asset_key]["url"]).is_file())
-                self.assertEqual(assets[asset_key]["metadata"]["layer_id"], layer_id)
+                manifest = _read_json(_repo_path(assets[asset_key]["url"]))
+                metadata = assets[asset_key]["metadata"]
+                self.assertEqual(metadata["layer_id"], layer_id)
+                self.assertEqual(metadata["source_policy"], manifest["source_policy"])
+                self.assertEqual(metadata["publish_scope"], THEMATIC_RUNTIME_PUBLISH_SCOPE)
+                self.assertEqual(metadata["runtime_readiness"], THEMATIC_RUNTIME_READINESS)
 
 
 if __name__ == "__main__":
