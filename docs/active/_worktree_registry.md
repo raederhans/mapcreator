@@ -1,27 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 14:20 -04:00
+Last updated: 2026-06-22 17:01 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: current pushed `origin/main`.
-- Latest integrated work: WGI real-source QA fix functional commit `d7e361f4` preserves uncertainty, publishes thematic registry assets in Pages dist, and is verified for fast-forward push to main; the earlier WGI source-ingest commit remains `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Integration base: current pushed `origin/main@551347f4`.
+- Latest integrated work: docs/lessons cleanup commit `551347f4` cleared the unrelated WGI-closeout residue after WGI QA was pushed at `6ac22158`; the WGI source-ingest commit remains `7336c05583fa546dcb783970a972ffe3868a855f` and WGI QA functional commit remains `d7e361f4`.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: code-reviewer and architect lanes are read-only; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Fast-forward push the verified WGI QA fix branch to `origin/main` if remote main still equals `902c83fd5aff6bffb8ea1f29ceec36800e6a6882`.
-2. Remove the WGI QA fix worktree after the push succeeds; recovery refs are functional commit `d7e361f4` and docs `docs/archive/wgi-real-source-qa-fix-20260622/`.
-3. Resolve or preserve the unrelated local docs/lessons cleanup traces in the main checkout as a separate cleanup decision.
-4. Keep thematic canvas rendering and scenario save-format changes outside the completed WGI ingestion task.
+1. Treat WGI source ingest and WGI QA as complete on `origin/main`; recovery refs are `7336c055`, `d7e361f4`, `6ac22158`, and docs `docs/archive/wgi-real-source-qa-fix-20260622/`.
+2. Treat docs/lessons residue cleanup as complete on `origin/main@551347f4`.
+3. Use a fresh isolated worktree for `thematic-admin-metrics-runtime-loader-v1` and keep renderer/UI/scenario state work out of that slice.
+4. Remove stale WGI post-push truth worktree after confirming its uncommitted docs diff is covered by current registry/archive text.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@902c83fd` | `origin/main@902c83fd` before WGI QA push | local checkout has unrelated docs/lessons WIP present | uncommitted unrelated docs archive/active deletions, three untracked archive directories, and `lessons learned.md`; not used for the WGI QA fix | `git worktree list` shows main plus `mapcreator-wgi-real-source-qa-fix-20260622`; `git status --short --branch` in main shows `## main...origin/main` plus unrelated docs/lessons traces. | Yellow only because local main is dirty; green for WGI QA code/data if pushed from the clean QA worktree. | Preserve main WIP; integrate WGI QA by fast-forward push from the clean branch. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@551347f4` | `origin/main@551347f4` | clean main checkout, ready to create the loader worktree | none | `git status --short --branch` shows `## main...origin/main`; cleanup verification passed `git diff --check` and `git diff --cached --check`. | Green for new worktree creation. | Create isolated loader worktree from current main. |
 
 ## Recent Integrated Branches
 

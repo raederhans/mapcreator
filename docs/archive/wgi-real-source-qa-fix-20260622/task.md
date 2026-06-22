@@ -2,13 +2,17 @@
 
 ## Status
 
-ready-for-integration
+integrated, pushed, archived, and cleaned
 
-## Current Worktree
+## Historical Recovery Info
 
-- Path: `C:\Users\raede\Desktop\dev\mapcreator-wgi-real-source-qa-fix-20260622`
-- Branch: `codex/wgi-real-source-qa-fix-20260622`
+- Former path: `C:\Users\raede\Desktop\dev\mapcreator-wgi-real-source-qa-fix-20260622`
+- Recovery branch: `codex/wgi-real-source-qa-fix-20260622@6ac22158`
+- Functional commit: `d7e361f4`
+- Closeout commit: `6ac22158`
 - Base: `origin/main@902c83fd5aff6bffb8ea1f29ceec36800e6a6882`
+- Cleanup commit after WGI closeout: `551347f4`
+- Current remote after cleanup: `origin/main@551347f4`
 
 ## Files Touched So Far
 
@@ -45,7 +49,7 @@ ready-for-integration
 
 ## Next Step
 
-Fast-forward push this branch to `origin/main` if remote main still equals base `902c83fd5aff6bffb8ea1f29ceec36800e6a6882`, then remove the QA fix worktree.
+Treat WGI QA as complete. Future thematic work should start from current main and keep renderer/UI/scenario-state changes in later slices.
 
 ## Delivery Package
 
@@ -68,15 +72,15 @@ Fast-forward push this branch to `origin/main` if remote main still equals base 
 
 - Functional commit: `d7e361f4`.
 - Base commit: `902c83fd5aff6bffb8ea1f29ceec36800e6a6882`.
-- Main divergence: branch is a direct descendant of `origin/main@902c83fd`; local main checkout has unrelated docs/lessons WIP and was not used for integration.
+- Main divergence: branch was a direct descendant of `origin/main@902c83fd`; local main checkout had unrelated docs/lessons WIP and was kept out of the WGI QA push.
 - Hot files touched: thematic data assets, WGI ingest owner, thematic contracts, runtime thematic catalog diagnostics, Pages dist manifest, data manifest.
 
 ### Conflict And Integration Assessment
 
-- Direct file overlap with local main dirty state: `lessons learned.md` only; local main edits are unrelated and preserved outside this worktree.
-- Direct file overlap with active current worktrees: none besides main dirty docs/lessons traces from `git worktree list`.
-- Risk rating: yellow while local main remains dirty; green for the code/data/dist path after fast-forward push from the clean QA fix worktree.
-- Recommended integration: fast-forward push this verified branch to `origin/main`; avoid local `main` checkout merge because it has unrelated WIP.
+- Direct file overlap with local main dirty state was `lessons learned.md` only; the unrelated cleanup is now isolated in `551347f4`.
+- Direct file overlap with active current worktrees: none after WGI post-push truth worktree cleanup.
+- Risk rating: green for the completed WGI QA code/data/dist path.
+- Recommended integration: complete; use this archive as recovery evidence only.
 
 ### Verification Gaps
 
@@ -85,4 +89,4 @@ Fast-forward push this branch to `origin/main` if remote main still equals base 
 
 ### Recommendation
 
-Merge by fast-forward push, then remove the QA fix worktree after the push succeeds.
+Do not replay the old integration recommendation; WGI QA is already on `origin/main`, and the next thematic slice should start from current main.
