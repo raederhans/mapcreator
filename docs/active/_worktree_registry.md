@@ -1,29 +1,31 @@
 # Worktree Registry
 
-Last updated: 2026-06-21
+Last updated: 2026-06-21 21:14 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2`.
-- Active implementation worktrees: baseline architecture repair and state-write allowlist repair.
+- Integration base: `origin/main@a023e4a3a764ef30143598ef3f761deea43f515c`.
+- Active implementation worktree: Stage C Layer Panel Contract Foundation.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: none active.
 
 ## Recommended Order
 
-1. Integrate A1 architecture boundary repair from `codex/baseline-architecture-boundary-repair-20260621`.
-2. Integrate A2 state-write allowlist repair from `codex/state-write-allowlist-repair-20260621`, which is based on A1.
-3. Back up and sync the dirty parent checkout before using it as an integration surface.
-4. Start Stage C Layer Panel Contract Foundation after both baseline gates are green on `main`.
+1. Finish Stage C Layer Panel Contract Foundation on `codex/layer-panel-contract-foundation-20260621`.
+2. Run the Stage C verification set, including baseline gates and Pages dist.
+3. Integrate Stage C into `main` if `origin/main` is still fast-forwardable.
+4. Clean integrated Stage A and Stage C worktrees after push and final registry update.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@29c008f7` | local main behind remote | parent checkout, dirty WIP | docs/archive deletions, `lessons learned.md`, `js/ui/toolbar/appearance_controls_controller.js`, and `css/style.css`; production integration used clean worktrees | `git status --short --branch` shows dirty local WIP and a behind remote main. | Yellow for shared docs/style/UI local WIP; red for using this checkout as an integration surface while dirty. | Preserve parent WIP. Sync parent only after backing up or otherwise handling the local WIP. |
-| `C:\Users\raede\Desktop\dev\mapcreator-baseline-architecture-repair` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/renderer/canvas_color_helpers.js`, `tools/check_architecture_boundaries.mjs`, Pages dist mirrors, boundary test, baseline gate task docs | A1 validation passed syntax checks, `verify:architecture-boundaries`, color boundary unittest, `verify:test-import-graph`, scenario chunk contracts 55/55, renderer runtime state 10/10, render transaction diagnostics 21/21, `verify:pages-dist`, and `git diff --check`. | Yellow for future renderer/Pages dist work; direct overlap with A2 only through docs registry/task docs. | Integrate before A2 or use A2 branch that already contains this commit. |
-| `C:\Users\raede\Desktop\dev\mapcreator-state-write-allowlist-repair` | `codex/state-write-allowlist-repair-20260621` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | ready-for-integration after commit | hot files: `tools/eslint-rules/state-writer-allowlist.json`, `tests/test_state_write_guardrail_contract.py`, registry/task docs | A2 validation passed JSON parse, `verify:state-write-allowlist` with 112 tracked files, state write guardrail unittest 14/14, `verify:architecture-boundaries`, `verify:test-import-graph`, layer status diagnostics 5/5, and toolbar render scheduler 7/7. | Yellow for state ownership guardrail; it intentionally preserves Layer Status diagnostics and Toolbar render scheduler outside the writer allowlist. | Integrate after A1; then run both baseline gates on `main`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@a023e4a3` | `origin/main@a023e4a3` | parent checkout, clean and synced | none | Parent WIP was backed up under `.runtime/cleanup-backups/parent-wip-before-main-sync-20260621`, stashed as `parent-wip-before-main-sync-20260621`, then parent fast-forwarded to `origin/main`. | Green as integration surface after WIP backup; yellow only if old stash is replayed wholesale. | Keep clean. Use only after Stage C integration or cleanup requires parent. |
+| `C:\Users\raede\Desktop\dev\mapcreator-baseline-architecture-repair` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2` | integrated, clean, ready for cleanup | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/canvas_color_helpers.js`, architecture checker, Pages dist mirrors, boundary test, baseline task docs | Functional commit `609f8280` is included in pushed `origin/main@a023e4a3`. A1 validation passed syntax checks, `verify:architecture-boundaries`, color boundary unittest, `verify:test-import-graph`, scenario chunk contracts, renderer runtime state, render transaction diagnostics, Pages dist, and diff check. | Green for current Stage C; yellow only for future renderer and Pages dist work. | Remove worktree after final closeout preserves branch and commit recovery refs. |
+| `C:\Users\raede\Desktop\dev\mapcreator-state-write-allowlist-repair` | `codex/state-write-allowlist-repair-20260621@a023e4a3` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | integrated, clean, ready for cleanup | hot files resolved: `tools/eslint-rules/state-writer-allowlist.json`, `tests/test_state_write_guardrail_contract.py`, registry/task docs | Functional commit `a023e4a3` is pushed to `origin/main`. A2 validation passed JSON parse, `verify:state-write-allowlist`, state write guardrail unittest, `verify:architecture-boundaries`, `verify:test-import-graph`, layer status diagnostics, toolbar render scheduler, and diff check. | Green for Stage C; yellow only for future state writer allowlist work. | Remove worktree after final closeout preserves branch and commit recovery refs. |
+| `C:\Users\raede\Desktop\dev\mapcreator-stage-a-integration` | `codex/stage-a-baseline-gate-integration-20260621@a023e4a3` | `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2` | integrated, clean, ready for cleanup | none beyond integrated A1/A2 files | Fast-forward integration branch pushed `a023e4a3` to `origin/main`; post-push spot checks passed architecture and state-write gates. | Green. | Remove worktree after final closeout preserves branch and commit recovery refs. |
+| `C:\Users\raede\Desktop\dev\mapcreator-layer-panel-contract-foundation` | `codex/layer-panel-contract-foundation-20260621@a023e4a3` plus working diff | `origin/main@a023e4a3` | in-progress | hot files: `js/ui/toolbar/layer_panel_contracts.js`, `js/ui/toolbar/layer_status_diagnostics.js`, `js/ui/toolbar/appearance_controls_controller.js`, `package.json`, toolbar boundary test, Stage C docs | Initial validation passed syntax checks, contract test 5/5, layer diagnostics 5/5, and toolbar split boundary 53/53. | Yellow for Appearance shell, layer diagnostics, transport capability policy, and Pages dist. | Finish verification, refresh dist, commit, integrate, push, then clean. |
 
 ## Recent Integrated Branches
 
