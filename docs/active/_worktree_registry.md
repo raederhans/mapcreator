@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 12:37 -04:00
+Last updated: 2026-06-22 12:48 -04:00
 
 ## Integration Owner
 
@@ -21,7 +21,7 @@ Last updated: 2026-06-22 12:37 -04:00
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16e9e4ef` | current pushed `origin/main` | pushed with unrelated local docs/lessons WIP present | uncommitted unrelated docs archive/active deletions, three untracked archive directories, and `lessons learned.md`; WGI closeout files are committed | `git worktree list` shows only the main worktree; WGI worktree has been removed; `git status --short --branch` shows `## main...origin/main` plus unrelated local docs/lessons traces. | Green for WGI; yellow for future integration until unrelated docs/lessons traces are handled. | Keep WGI closed; handle unrelated docs/lessons traces as a separate cleanup decision. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c2683d1f` | current pushed `origin/main` | pushed with unrelated local docs/lessons WIP present | uncommitted unrelated docs archive/active deletions, three untracked archive directories, and `lessons learned.md`; WGI closeout files are committed | `git worktree list` shows only the main worktree; WGI worktree has been removed; `git status --short --branch` shows `## main...origin/main` plus unrelated local docs/lessons traces. | Green for WGI; yellow for future integration until unrelated docs/lessons traces are handled. | Keep WGI closed; handle unrelated docs/lessons traces as a separate cleanup decision. |
 
 ## Recent Integrated Branches
 
