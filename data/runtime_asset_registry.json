@@ -541,7 +541,7 @@
       "url": "data/thematic_layers/index.json",
       "role": "thematic_layer_catalog",
       "metadata": {
-        "layer_count": 3,
+        "layer_count": 4,
         "publish_scope": "repo_only",
         "runtime_readiness": "catalog_only"
       }
@@ -578,6 +578,18 @@
         "source_policy": "fixture_only",
         "theme": "population",
         "geometry_kind": "grid_720x360",
+        "publish_scope": "repo_only",
+        "runtime_readiness": "catalog_only"
+      }
+    },
+    "thematic_layer:political_wgi_state_capacity_v1": {
+      "url": "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+      "role": "thematic_layer_manifest",
+      "metadata": {
+        "layer_id": "political_wgi_state_capacity_v1",
+        "source_policy": "real_source_cache_only",
+        "theme": "political",
+        "geometry_kind": "admin0",
         "publish_scope": "repo_only",
         "runtime_readiness": "catalog_only"
       }
@@ -671,6 +683,7 @@
   "thematic_layer_manifest_keys": {
     "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
     "social_human_development_demo": "thematic_layer:social_human_development_demo",
-    "population_density_demo": "thematic_layer:population_density_demo"
+    "population_density_demo": "thematic_layer:population_density_demo",
+    "political_wgi_state_capacity_v1": "thematic_layer:political_wgi_state_capacity_v1"
   }
 }

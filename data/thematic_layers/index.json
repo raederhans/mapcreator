@@ -55,6 +55,24 @@
         "opacity": 0.55,
         "neutral_value": 0
       }
+    },
+    {
+      "layer_id": "political_wgi_state_capacity_v1",
+      "theme": "political",
+      "title": "WGI State Capacity",
+      "description": "World Bank WGI 2024 admin0 state capacity scores from government effectiveness and rule of law.",
+      "geometry_kind": "admin0",
+      "manifest_path": "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+      "status": "experimental",
+      "source_policy": "real_source_cache_only",
+      "coverage_scope": "215 admin0 ISO_A3 source-cache features",
+      "default_visible": false,
+      "default_style": {
+        "renderer": "choropleth",
+        "palette": "viridis_0_100",
+        "opacity": 0.72,
+        "neutral_value": null
+      }
     }
   ],
   "source_policy_legend": {

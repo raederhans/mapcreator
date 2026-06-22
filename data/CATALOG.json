@@ -2,7 +2,7 @@
   "version": 1,
   "generated_at": "2026-06-14T00:58:50.128793Z",
   "counts": {
-    "entries": 654,
+    "entries": 658,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -42,12 +42,12 @@
       "special_zones": 1,
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
-      "thematic_admin_metrics": 2,
-      "thematic_build_audit": 3,
+      "thematic_admin_metrics": 3,
+      "thematic_build_audit": 4,
       "thematic_grid_rle": 1,
       "thematic_layer_catalog": 1,
-      "thematic_layer_manifest": 3,
-      "thematic_source_recipe": 3,
+      "thematic_layer_manifest": 4,
+      "thematic_source_recipe": 4,
       "transport_build_audit": 130,
       "transport_carrier_payload": 8,
       "transport_catalog": 2,
@@ -62,12 +62,12 @@
       "bmp": 1,
       "geojson": 147,
       "javascript": 2,
-      "json": 336,
+      "json": 340,
       "topojson": 168
     },
     "by_read_mode": {
       "binary": 1,
-      "json": 651,
+      "json": 655,
       "module": 2
     }
   },
@@ -839,6 +839,47 @@
       "aliases": []
     },
     {
+      "key": "manifest_output:thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+      "url": "data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+      "role": "thematic_build_audit",
+      "format": "json",
+      "schemaRef": "schema://thematic/build_audit/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/build_audit.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+      "url": "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+      "role": "thematic_layer_manifest",
+      "format": "json",
+      "schemaRef": "schema://thematic/layer_manifest/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/manifest.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "thematic_layer:political_wgi_state_capacity_v1"
+      ]
+    },
+    {
+      "key": "manifest_output:thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json",
+      "url": "data/thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json",
+      "role": "thematic_admin_metrics",
+      "format": "json",
+      "schemaRef": "schema://thematic/admin_metrics/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
       "key": "manifest_output:thematic_layers/population/population_density_demo/build_audit.json",
       "url": "data/thematic_layers/population/population_density_demo/build_audit.json",
       "role": "thematic_build_audit",
@@ -953,6 +994,19 @@
       "format": "json",
       "schemaRef": "schema://json/object/v1",
       "hashRef": "data/manifest.json::outputs::thematic_layers/source_recipes/wgi_state_capacity.manual.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
+      "url": "data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
+      "role": "thematic_source_recipe",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json::sha256",
       "owner": "tools.build_thematic_layers",
       "cachePolicy": "default",
       "sourceId": "",

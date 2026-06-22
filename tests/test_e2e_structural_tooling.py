@@ -504,8 +504,10 @@ const cases = [
     changedFiles: [
       'tools/build_thematic_layers.py',
       'map_builder/thematic_layer_contracts.py',
+      'map_builder/thematic_wgi_ingest.py',
       'data/thematic_layers/index.json',
       'tests/test_thematic_layer_contracts.py',
+      'tests/test_thematic_wgi_source_ingest.py',
     ],
     expectedCommands: ['test:py:thematic-layer-contracts'],
     expectedExecutionOwners: ['child-safe'],

@@ -24,6 +24,15 @@ from map_builder.thematic_layer_contracts import (
     validate_thematic_layer_index,
     validate_thematic_layer_manifest,
 )
+from map_builder.thematic_wgi_ingest import (
+    DEFAULT_WGI_SOURCE_CACHE_PATH,
+    WGI_AUDIT_RELATIVE_PATH,
+    WGI_LAYER_ID,
+    WGI_MANIFEST_RELATIVE_PATH,
+    WGI_METRICS_RELATIVE_PATH,
+    WGI_RECIPE_RELATIVE_PATH as WGI_REAL_RECIPE_RELATIVE_PATH,
+    build_wgi_real_source_payloads,
+)
 
 
 DATA_ROOT = REPO_ROOT / "data"
@@ -65,6 +74,12 @@ THEMATIC_OUTPUT_PATHS = (
 MANIFEST_REFRESH_PATHS = (*THEMATIC_OUTPUT_PATHS, "runtime_asset_registry.json")
 THEMATIC_RUNTIME_PUBLISH_SCOPE = "repo_only"
 THEMATIC_RUNTIME_READINESS = "catalog_only"
+WGI_REAL_OUTPUT_PATHS = (
+    WGI_REAL_RECIPE_RELATIVE_PATH,
+    WGI_MANIFEST_RELATIVE_PATH,
+    WGI_METRICS_RELATIVE_PATH,
+    WGI_AUDIT_RELATIVE_PATH,
+)
 
 
 COUNTRIES = (
@@ -116,6 +131,17 @@ def parse_args() -> argparse.Namespace:
         "--generated-at",
         default=DEFAULT_GENERATED_AT,
         help="Stable timestamp embedded in generated thematic fixture files.",
+    )
+    parser.add_argument(
+        "--include-wgi-real",
+        action="store_true",
+        help="Regenerate the WGI real-source layer from the local source cache.",
+    )
+    parser.add_argument(
+        "--wgi-source-cache-path",
+        type=Path,
+        default=DEFAULT_WGI_SOURCE_CACHE_PATH,
+        help="Local WGI .xlsx or .csv cache path used only with --include-wgi-real.",
     )
     parser.add_argument(
         "--skip-runtime-registry",
@@ -394,66 +420,93 @@ def recipe_payloads(generated_at: str) -> dict[str, dict[str, Any]]:
     }
 
 
-def build_index_payload(generated_at: str) -> dict[str, Any]:
+def build_wgi_index_entry(manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "layer_id": WGI_LAYER_ID,
+        "theme": "political",
+        "title": manifest.get("title", "WGI State Capacity"),
+        "description": manifest.get(
+            "description",
+            "World Bank WGI admin0 state capacity layer from government effectiveness and rule of law.",
+        ),
+        "geometry_kind": "admin0",
+        "manifest_path": data_url(WGI_MANIFEST_RELATIVE_PATH),
+        "status": manifest.get("status", "experimental"),
+        "source_policy": "real_source_cache_only",
+        "coverage_scope": f"{manifest.get('feature_counts', {}).get('features', 0)} admin0 ISO_A3 source-cache features",
+        "default_visible": False,
+        "default_style": {
+            "renderer": "choropleth",
+            "palette": "viridis_0_100",
+            "opacity": 0.72,
+            "neutral_value": None,
+        },
+    }
+
+
+def build_index_payload(generated_at: str, *, extra_layers: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    layers = [
+        {
+            "layer_id": "political_state_capacity_demo",
+            "theme": "political",
+            "title": "State Capacity Demo",
+            "description": "Fixture-only admin0 thematic layer shaped for future WGI-backed ingestion.",
+            "geometry_kind": "admin0",
+            "manifest_path": data_url(STATE_MANIFEST_RELATIVE_PATH),
+            "status": "fixture",
+            "source_policy": "fixture_only",
+            "coverage_scope": "10 admin0 ISO_A3 demo features",
+            "default_visible": False,
+            "default_style": {
+                "renderer": "choropleth",
+                "palette": "viridis_0_100",
+                "opacity": 0.72,
+                "neutral_value": None,
+            },
+        },
+        {
+            "layer_id": "social_human_development_demo",
+            "theme": "social",
+            "title": "Human Development Demo",
+            "description": "Fixture-only admin0 thematic layer shaped for future UNDP HDI ingestion.",
+            "geometry_kind": "admin0",
+            "manifest_path": data_url(HDI_MANIFEST_RELATIVE_PATH),
+            "status": "fixture",
+            "source_policy": "fixture_only",
+            "coverage_scope": "10 admin0 ISO_A3 demo features",
+            "default_visible": False,
+            "default_style": {
+                "renderer": "choropleth",
+                "palette": "plasma_0_100",
+                "opacity": 0.72,
+                "neutral_value": None,
+            },
+        },
+        {
+            "layer_id": "population_density_demo",
+            "theme": "population",
+            "title": "Population Density Demo",
+            "description": "Fixture-only 720x360 grid layer shaped for future GHSL or WorldPop ingestion.",
+            "geometry_kind": "grid_720x360",
+            "manifest_path": data_url(POP_MANIFEST_RELATIVE_PATH),
+            "status": "fixture",
+            "source_policy": "fixture_only",
+            "coverage_scope": "global 720x360 WGS84 grid",
+            "default_visible": False,
+            "default_style": {
+                "renderer": "grid_heatmap",
+                "palette": "inferno_0_255",
+                "opacity": 0.55,
+                "neutral_value": 0,
+            },
+        },
+    ]
+    if extra_layers:
+        layers.extend(extra_layers)
     return {
         "schema_version": 1,
         "generated_at": generated_at,
-        "layers": [
-            {
-                "layer_id": "political_state_capacity_demo",
-                "theme": "political",
-                "title": "State Capacity Demo",
-                "description": "Fixture-only admin0 thematic layer shaped for future WGI-backed ingestion.",
-                "geometry_kind": "admin0",
-                "manifest_path": data_url(STATE_MANIFEST_RELATIVE_PATH),
-                "status": "fixture",
-                "source_policy": "fixture_only",
-                "coverage_scope": "10 admin0 ISO_A3 demo features",
-                "default_visible": False,
-                "default_style": {
-                    "renderer": "choropleth",
-                    "palette": "viridis_0_100",
-                    "opacity": 0.72,
-                    "neutral_value": None,
-                },
-            },
-            {
-                "layer_id": "social_human_development_demo",
-                "theme": "social",
-                "title": "Human Development Demo",
-                "description": "Fixture-only admin0 thematic layer shaped for future UNDP HDI ingestion.",
-                "geometry_kind": "admin0",
-                "manifest_path": data_url(HDI_MANIFEST_RELATIVE_PATH),
-                "status": "fixture",
-                "source_policy": "fixture_only",
-                "coverage_scope": "10 admin0 ISO_A3 demo features",
-                "default_visible": False,
-                "default_style": {
-                    "renderer": "choropleth",
-                    "palette": "plasma_0_100",
-                    "opacity": 0.72,
-                    "neutral_value": None,
-                },
-            },
-            {
-                "layer_id": "population_density_demo",
-                "theme": "population",
-                "title": "Population Density Demo",
-                "description": "Fixture-only 720x360 grid layer shaped for future GHSL or WorldPop ingestion.",
-                "geometry_kind": "grid_720x360",
-                "manifest_path": data_url(POP_MANIFEST_RELATIVE_PATH),
-                "status": "fixture",
-                "source_policy": "fixture_only",
-                "coverage_scope": "global 720x360 WGS84 grid",
-                "default_visible": False,
-                "default_style": {
-                    "renderer": "grid_heatmap",
-                    "palette": "inferno_0_255",
-                    "opacity": 0.55,
-                    "neutral_value": 0,
-                },
-            },
-        ],
+        "layers": layers,
         "source_policy_legend": {
             "fixture_only": "Checked-in synthetic data for contract validation only.",
             "manual_seed": "Checked-in manual source rows with explicit provenance.",
@@ -559,6 +612,7 @@ def build_audit_payload(
         "coverage_summary": coverage_summary,
         "missing_join_keys": [],
         "unmatched_source_rows": [],
+        "dropped_aggregate_rows": [],
         "outliers": [],
         "normalization_summary": normalization_summary,
         "license_summary": {
@@ -573,7 +627,31 @@ def build_audit_payload(
     }
 
 
-def build_payloads(generated_at: str) -> dict[str, dict[str, Any]]:
+def load_existing_wgi_payloads() -> dict[str, dict[str, Any]]:
+    existing_paths = {
+        relative_path: data_path(relative_path)
+        for relative_path in WGI_REAL_OUTPUT_PATHS
+        if data_path(relative_path).is_file()
+    }
+    if not existing_paths:
+        return {}
+    missing_paths = [relative_path for relative_path in WGI_REAL_OUTPUT_PATHS if relative_path not in existing_paths]
+    if missing_paths:
+        formatted = ", ".join(missing_paths)
+        raise FileNotFoundError(f"WGI real-source outputs are incomplete; missing: {formatted}")
+
+    payloads: dict[str, dict[str, Any]] = {}
+    for relative_path in WGI_REAL_OUTPUT_PATHS:
+        payloads[relative_path] = read_json(existing_paths[relative_path])
+    return payloads
+
+
+def build_payloads(
+    generated_at: str,
+    *,
+    wgi_payloads: dict[str, dict[str, Any]] | None = None,
+    include_existing_wgi: bool = False,
+) -> dict[str, dict[str, Any]]:
     state_metrics = admin_metrics_payload(
         layer_id="political_state_capacity_demo",
         metric_ids=STATE_METRIC_IDS,
@@ -593,13 +671,21 @@ def build_payloads(generated_at: str) -> dict[str, dict[str, Any]]:
     hdi_counts = coverage_counts_for_admin(hdi_metrics)
     population_counts = {"features": GRID_CELL_COUNT, "complete": GRID_CELL_COUNT, "partial": 0, "missing": 0}
 
+    if wgi_payloads is None and include_existing_wgi:
+        wgi_payloads = load_existing_wgi_payloads()
+    extra_layers: list[dict[str, Any]] = []
+    if wgi_payloads and WGI_MANIFEST_RELATIVE_PATH in wgi_payloads:
+        extra_layers.append(build_wgi_index_entry(wgi_payloads[WGI_MANIFEST_RELATIVE_PATH]))
+
     payloads: dict[str, dict[str, Any]] = {
-        INDEX_RELATIVE_PATH: build_index_payload(generated_at),
+        INDEX_RELATIVE_PATH: build_index_payload(generated_at, extra_layers=extra_layers),
         STATE_METRICS_RELATIVE_PATH: state_metrics,
         HDI_METRICS_RELATIVE_PATH: hdi_metrics,
         POP_GRID_RELATIVE_PATH: population_grid,
         **recipe_payloads(generated_at),
     }
+    if wgi_payloads:
+        payloads.update(wgi_payloads)
 
     payloads[STATE_MANIFEST_RELATIVE_PATH] = manifest_payload(
         layer_id="political_state_capacity_demo",
@@ -792,18 +878,14 @@ def update_runtime_asset_registry(payloads: dict[str, dict[str, Any]]) -> None:
             "runtime_readiness": THEMATIC_RUNTIME_READINESS,
         },
     )
-    manifest_keys = {
-        "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
-        "social_human_development_demo": "thematic_layer:social_human_development_demo",
-        "population_density_demo": "thematic_layer:population_density_demo",
-    }
-    for layer_id, asset_key in manifest_keys.items():
-        manifest_path = {
-            "political_state_capacity_demo": STATE_MANIFEST_RELATIVE_PATH,
-            "social_human_development_demo": HDI_MANIFEST_RELATIVE_PATH,
-            "population_density_demo": POP_MANIFEST_RELATIVE_PATH,
-        }[layer_id]
-        manifest = payloads[manifest_path]
+    manifest_keys: dict[str, str] = {}
+    for layer in payloads[INDEX_RELATIVE_PATH]["layers"]:
+        layer_id = str(layer["layer_id"])
+        asset_key = f"thematic_layer:{layer_id}"
+        manifest_path = str(layer["manifest_path"]).removeprefix("data/")
+        manifest = payloads.get(manifest_path)
+        if manifest is None:
+            manifest = read_json(data_path(manifest_path))
         assets[asset_key] = runtime_asset_registry_entry(
             manifest_path,
             role="thematic_layer_manifest",
@@ -816,6 +898,7 @@ def update_runtime_asset_registry(payloads: dict[str, dict[str, Any]]) -> None:
                 "runtime_readiness": THEMATIC_RUNTIME_READINESS,
             },
         )
+        manifest_keys[layer_id] = asset_key
 
     registry["thematic_layer_index_key"] = "thematic_layer_catalog"
     registry["thematic_layer_manifest_keys"] = manifest_keys
@@ -905,25 +988,39 @@ def refresh_data_manifest(output_paths: tuple[str, ...] = MANIFEST_REFRESH_PATHS
     write_json(manifest_path, manifest)
 
 
+def manifest_refresh_paths_for_payloads(payloads: dict[str, dict[str, Any]]) -> tuple[str, ...]:
+    return (*tuple(payloads.keys()), "runtime_asset_registry.json")
+
+
 def main() -> None:
     args = parse_args()
-    payloads = build_payloads(args.generated_at)
+    wgi_payloads: dict[str, dict[str, Any]] | None = None
+    if args.include_wgi_real:
+        wgi_payloads = build_wgi_real_source_payloads(
+            args.wgi_source_cache_path,
+            generated_at=args.generated_at,
+        )
+    payloads = build_payloads(
+        args.generated_at,
+        wgi_payloads=wgi_payloads,
+        include_existing_wgi=not args.include_wgi_real,
+    )
     errors = validate_payloads(payloads)
     if errors:
         raise SystemExit("\n".join(errors))
 
-    for relative_path in THEMATIC_OUTPUT_PATHS:
+    for relative_path in payloads:
         write_json(data_path(relative_path), payloads[relative_path])
 
     if not args.skip_runtime_registry:
         update_runtime_asset_registry(payloads)
     if not args.skip_data_manifest:
-        refresh_data_manifest()
+        refresh_data_manifest(manifest_refresh_paths_for_payloads(payloads))
 
     print(
         "[Thematic Layers] "
         f"layers={len(payloads[INDEX_RELATIVE_PATH]['layers'])} "
-        f"outputs={len(THEMATIC_OUTPUT_PATHS)} "
+        f"outputs={len(payloads)} "
         f"generated_at={args.generated_at}"
     )
 

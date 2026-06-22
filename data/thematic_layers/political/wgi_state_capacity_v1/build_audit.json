@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "layer_id": "political_wgi_state_capacity_v1",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "builder": {
+    "tool": "tools/build_thematic_layers.py",
+    "command": "python tools/build_thematic_layers.py --include-wgi-real",
+    "ingest_module": "map_builder.thematic_wgi_ingest"
+  },
+  "source_inputs": [
+    {
+      "recipe_path": "data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
+      "source_policy": "real_source_cache_only",
+      "status": "local_cache_observed",
+      "title": "WGI 2025 Revision: Governance Estimates and Absolute Scores (1996-2024)",
+      "version": "7",
+      "year": 2024,
+      "license": "Creative Commons Attribution 4.0",
+      "source_cache_path": ".runtime/source-cache/thematic/wgi/WGI_2025_Revision_Governance_Estimates_and_Absolute_Scores_1996_2024.xlsx",
+      "source_sha256": "25a2f9eabb90b0092973392c0b31571aa58b691cc5786292e504b52f693e1eb8",
+      "source_size_bytes": 10423344,
+      "accessed_at": "2026-06-22T00:00:00Z"
+    }
+  ],
+  "coverage_summary": {
+    "features": 215,
+    "complete": 213,
+    "partial": 2,
+    "missing": 0,
+    "selected_year": 2024,
+    "join_key_type": "iso_a3",
+    "metric_count": 3,
+    "source_rows_unmatched": 0,
+    "source_rows_dropped_aggregate": 0
+  },
+  "missing_join_keys": [],
+  "unmatched_source_rows": [],
+  "dropped_aggregate_rows": [],
+  "outliers": [
+    {
+      "metric_id": "wgi_government_effectiveness_score_0_100",
+      "bottom": [
+        {
+          "join_key": "SSD",
+          "name": "South Sudan",
+          "normalized_value": 9.091619
+        },
+        {
+          "join_key": "HTI",
+          "name": "Haiti",
+          "normalized_value": 12.147424
+        },
+        {
+          "join_key": "SOM",
+          "name": "Federal Republic of Somalia",
+          "normalized_value": 13.423622
+        },
+        {
+          "join_key": "AFG",
+          "name": "Afghanistan",
+          "normalized_value": 13.73581
+        },
+        {
+          "join_key": "YEM",
+          "name": "Yemen, Rep.",
+          "normalized_value": 14.925753
+        }
+      ],
+      "top": [
+        {
+          "join_key": "SGP",
+          "name": "Singapore",
+          "normalized_value": 95.665586
+        },
+        {
+          "join_key": "JPN",
+          "name": "Japan",
+          "normalized_value": 91.937844
+        },
+        {
+          "join_key": "LUX",
+          "name": "Luxembourg",
+          "normalized_value": 91.000712
+        },
+        {
+          "join_key": "DNK",
+          "name": "Denmark",
+          "normalized_value": 88.534917
+        },
+        {
+          "join_key": "NZL",
+          "name": "New Zealand",
+          "normalized_value": 87.296065
+        }
+      ]
+    },
+    {
+      "metric_id": "wgi_rule_of_law_score_0_100",
+      "bottom": [
+        {
+          "join_key": "SOM",
+          "name": "Federal Republic of Somalia",
+          "normalized_value": 19.007372
+        },
+        {
+          "join_key": "VEN",
+          "name": "Venezuela, RB",
+          "normalized_value": 19.027603
+        },
+        {
+          "join_key": "SSD",
+          "name": "South Sudan",
+          "normalized_value": 23.016075
+        },
+        {
+          "join_key": "AFG",
+          "name": "Afghanistan",
+          "normalized_value": 23.653589
+        },
+        {
+          "join_key": "YEM",
+          "name": "Yemen, Rep.",
+          "normalized_value": 24.237016
+        }
+      ],
+      "top": [
+        {
+          "join_key": "FIN",
+          "name": "Finland",
+          "normalized_value": 91.752197
+        },
+        {
+          "join_key": "DNK",
+          "name": "Denmark",
+          "normalized_value": 91.46038
+        },
+        {
+          "join_key": "NOR",
+          "name": "Norway",
+          "normalized_value": 90.5162
+        },
+        {
+          "join_key": "CHE",
+          "name": "Switzerland",
+          "normalized_value": 87.318395
+        },
+        {
+          "join_key": "LUX",
+          "name": "Luxembourg",
+          "normalized_value": 87.28598
+        }
+      ]
+    },
+    {
+      "metric_id": "wgi_state_capacity_composite_0_100",
+      "bottom": [
+        {
+          "join_key": "SSD",
+          "name": "South Sudan",
+          "normalized_value": 16.053847
+        },
+        {
+          "join_key": "SOM",
+          "name": "Federal Republic of Somalia",
+          "normalized_value": 16.215497
+        },
+        {
+          "join_key": "AFG",
+          "name": "Afghanistan",
+          "normalized_value": 18.694699
+        },
+        {
+          "join_key": "YEM",
+          "name": "Yemen, Rep.",
+          "normalized_value": 19.581384
+        },
+        {
+          "join_key": "HTI",
+          "name": "Haiti",
+          "normalized_value": 20.758285
+        }
+      ],
+      "top": [
+        {
+          "join_key": "DNK",
+          "name": "Denmark",
+          "normalized_value": 89.997648
+        },
+        {
+          "join_key": "FIN",
+          "name": "Finland",
+          "normalized_value": 89.212796
+        },
+        {
+          "join_key": "LUX",
+          "name": "Luxembourg",
+          "normalized_value": 89.143346
+        },
+        {
+          "join_key": "NOR",
+          "name": "Norway",
+          "normalized_value": 88.846558
+        },
+        {
+          "join_key": "SGP",
+          "name": "Singapore",
+          "normalized_value": 88.630918
+        }
+      ]
+    }
+  ],
+  "normalization_summary": {
+    "government_effectiveness": "WGI Governance score (0-100) passthrough.",
+    "rule_of_law": "WGI Governance score (0-100) passthrough.",
+    "state_capacity_composite": "Mean of government effectiveness and rule of law when both are observed.",
+    "missing_value_policy": "Null raw_value and normalized_value for source_gap or partial_source_gap."
+  },
+  "license_summary": {
+    "fixture_data": "none",
+    "source_metadata": [
+      "Creative Commons Attribution 4.0",
+      "World Bank WGI Data Catalog entry and package metadata are recorded in manifest provenance."
+    ],
+    "attribution_required": true
+  },
+  "warnings": [
+    "2 features have partial source coverage."
+  ],
+  "fixture_notice": {
+    "enabled": false,
+    "reason": "Layer metrics are derived from a local real-source WGI cache."
+  }
+}

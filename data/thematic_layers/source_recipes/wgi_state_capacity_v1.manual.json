@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "recipe_id": "wgi_state_capacity_v1",
+  "title": "WGI state capacity v1 source recipe",
+  "source_family": "World Bank Worldwide Governance Indicators",
+  "phase": "real_source_cache_v1",
+  "source_policy": "real_source_cache_only",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "download_policy": {
+    "network_allowed": false,
+    "default_builder_downloads": false,
+    "source_cache_path": ".runtime/source-cache/thematic/wgi/WGI_2025_Revision_Governance_Estimates_and_Absolute_Scores_1996_2024.xlsx"
+  },
+  "official_sources": [
+    {
+      "source_id": "world_bank_wgi_2025_revision",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038026/worldwide-governance-indicators",
+      "source_package_url": "https://datacatalogfiles.worldbank.org/ddh-published/0038026/DR0095947/wgidataset_with_sourcedata-2025.xlsx",
+      "release": "WGI 2025 Revision: Governance Estimates and Absolute Scores (1996-2024)",
+      "version": "7",
+      "periodicity": "annual",
+      "temporal_coverage": "1996-2024",
+      "license": "Creative Commons Attribution 4.0",
+      "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
+      "selection_rule": "Use 2024 country/economy rows from ge and rl sheets; derive composite only when both scores exist."
+    }
+  ],
+  "metric_selection": {
+    "year": 2024,
+    "source_sheets": {
+      "ge": "government_effectiveness",
+      "rl": "rule_of_law"
+    },
+    "metrics": [
+      "wgi_government_effectiveness_score_0_100",
+      "wgi_rule_of_law_score_0_100",
+      "wgi_state_capacity_composite_0_100"
+    ]
+  },
+  "join_key_policy": {
+    "join_key_type": "iso_a3",
+    "special_code_map": {
+      "ADO": "AND",
+      "IMY": "IMN",
+      "KSV": "XKX",
+      "ROM": "ROU",
+      "TMP": "TLS",
+      "WBG": "PSE",
+      "XKX": "XKX",
+      "ZAR": "COD"
+    },
+    "aggregate_codes_are_dropped": [
+      "AFE",
+      "AFW",
+      "ARB",
+      "CEB",
+      "CSS",
+      "EAP",
+      "EAR",
+      "EAS",
+      "ECA",
+      "ECS",
+      "EMU",
+      "EUU",
+      "FCS",
+      "HIC",
+      "HPC",
+      "IBD",
+      "IBT",
+      "IDA",
+      "IDB",
+      "IDX",
+      "LAC",
+      "LCN",
+      "LDC",
+      "LIC",
+      "LMC",
+      "LMY",
+      "LTE",
+      "MEA",
+      "MIC",
+      "MNA",
+      "NAC",
+      "OED",
+      "OSS",
+      "PRE",
+      "PSS",
+      "PST",
+      "SAS",
+      "SSA",
+      "SSF",
+      "SST",
+      "TEA",
+      "TEC",
+      "TLA",
+      "TMN",
+      "TSA",
+      "TSS",
+      "UMC",
+      "WLD"
+    ],
+    "unmatched_rows_are_audited": true,
+    "name_fuzzy_matching": false
+  },
+  "missing_value_policy": "Missing or unavailable source values stay null and carry source_gap or partial_source_gap status."
+}

@@ -82,6 +82,37 @@ class DataManifestContractTest(unittest.TestCase):
         self.assertEqual(metadata.get("size_bytes"), RUNTIME_ASSET_REGISTRY_SOURCE.stat().st_size)
         self.assertEqual(metadata.get("sha256"), hashlib.sha256(output_bytes).hexdigest())
 
+    def test_manifest_outputs_include_wgi_state_capacity_assets(self) -> None:
+        manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))
+        outputs = manifest.get("outputs") or {}
+        expected = {
+            "thematic_layers/political/wgi_state_capacity_v1/manifest.json": "schema://thematic/layer_manifest/v1",
+            "thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json": "schema://thematic/admin_metrics/v1",
+            "thematic_layers/political/wgi_state_capacity_v1/build_audit.json": "schema://thematic/build_audit/v1",
+            "thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json": "",
+        }
+
+        for relative_path, schema_ref in expected.items():
+            with self.subTest(relative_path=relative_path):
+                metadata = outputs.get(relative_path) or {}
+                output_path = REPO_ROOT / "data" / relative_path
+                self.assertTrue(output_path.is_file())
+                self.assertEqual(metadata.get("role", "").startswith("thematic_"), True)
+                if schema_ref:
+                    self.assertEqual(metadata.get("schema_ref"), schema_ref)
+                self.assertEqual(metadata.get("size_bytes"), output_path.stat().st_size)
+                self.assertEqual(metadata.get("sha256"), hashlib.sha256(output_path.read_bytes()).hexdigest())
+
+        registry = manifest.get("runtime_asset_registry") or {}
+        self.assertEqual(
+            registry.get("thematic_layer_manifest_keys", {}).get("political_wgi_state_capacity_v1"),
+            "thematic_layer:political_wgi_state_capacity_v1",
+        )
+        self.assertEqual(
+            registry.get("assets", {}).get("thematic_layer:political_wgi_state_capacity_v1", {}).get("url"),
+            "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+        )
+
     def test_runtime_asset_registry_declares_phase1_assets(self) -> None:
         manifest = json.loads(DATA_MANIFEST.read_text(encoding="utf-8"))
         registry = manifest.get("runtime_asset_registry") or {}

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "layer_id": "political_wgi_state_capacity_v1",
+  "theme": "political",
+  "title": "WGI State Capacity",
+  "description": "World Bank WGI 2024 admin0 state capacity scores from government effectiveness and rule of law.",
+  "geometry_kind": "admin0",
+  "metric_ids": [
+    "wgi_government_effectiveness_score_0_100",
+    "wgi_rule_of_law_score_0_100",
+    "wgi_state_capacity_composite_0_100"
+  ],
+  "period": {
+    "kind": "year",
+    "year": 2024,
+    "label": "2024",
+    "basis": "WGI 2025 Revision country/economy rows."
+  },
+  "coverage_scope": {
+    "geography_level": "admin0",
+    "join_key_type": "iso_a3",
+    "feature_count": 215,
+    "source_year": 2024
+  },
+  "source_policy": "real_source_cache_only",
+  "status": "experimental",
+  "paths": {
+    "metrics": "data/thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json",
+    "build_audit": "data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+    "source_recipes": [
+      "data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json"
+    ]
+  },
+  "provenance": [
+    {
+      "source_id": "world_bank_wgi_2025_revision",
+      "name": "Worldwide Governance Indicators",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038026/worldwide-governance-indicators",
+      "source_package_url": "https://datacatalogfiles.worldbank.org/ddh-published/0038026/DR0095947/wgidataset_with_sourcedata-2025.xlsx",
+      "release": "WGI 2025 Revision: Governance Estimates and Absolute Scores (1996-2024)",
+      "version": "7",
+      "published_at": "2026-03-11",
+      "metadata_updated_at": "2026-03-18",
+      "accessed_at": "2026-06-22T00:00:00Z",
+      "temporal_coverage": "1996-2024",
+      "selected_year": 2024,
+      "license": "Creative Commons Attribution 4.0",
+      "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
+      "selection_rule": "Use 2024 rows from ge and rl sheets; mean the two 0-100 scores only when both are present.",
+      "source_cache_path": ".runtime/source-cache/thematic/wgi/WGI_2025_Revision_Governance_Estimates_and_Absolute_Scores_1996_2024.xlsx",
+      "source_sha256": "25a2f9eabb90b0092973392c0b31571aa58b691cc5786292e504b52f693e1eb8",
+      "source_size_bytes": 10423344
+    }
+  ],
+  "license": {
+    "fixture_data": "none",
+    "source_metadata": [
+      "Creative Commons Attribution 4.0",
+      "World Bank Data Catalog metadata last updated 2026-03-18."
+    ],
+    "attribution_required": true
+  },
+  "normalization": {
+    "method": "source_score_0_100_passthrough",
+    "range": [
+      0,
+      100
+    ],
+    "composite": "mean(government_effectiveness, rule_of_law) when both are observed"
+  },
+  "feature_counts": {
+    "features": 215,
+    "complete": 213,
+    "partial": 2,
+    "missing": 0
+  },
+  "build_audit_path": "data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "build_command": "python tools/build_thematic_layers.py --include-wgi-real",
+  "runtime_consumer": {
+    "status": "catalog_only",
+    "entry": "thematic_layer_catalog",
+    "supports_main_map_render": false
+  },
+  "limitations": [
+    "WGI scores are country/economy-level governance indicators and are not subnational topology measures.",
+    "The composite is a simple two-indicator mean for map exploration, not an official World Bank index.",
+    "Rows without explicit join keys stay out of the metric payload and are reported in build_audit.",
+    "The layer is catalog-only until a later UI/runtime rendering phase accepts it."
+  ]
+}

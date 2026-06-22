@@ -11,6 +11,7 @@
     "coverage_summary",
     "missing_join_keys",
     "unmatched_source_rows",
+    "dropped_aggregate_rows",
     "outliers",
     "normalization_summary",
     "license_summary",
@@ -93,6 +94,9 @@
       "type": "array"
     },
     "unmatched_source_rows": {
+      "type": "array"
+    },
+    "dropped_aggregate_rows": {
       "type": "array"
     },
     "outliers": {

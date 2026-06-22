@@ -2,7 +2,7 @@
 
 - generated_at: 2026-06-14T00:58:50.128793Z
 - version: 1
-- entries: 654
+- entries: 658
 
 ## Counts by role
 
@@ -46,12 +46,12 @@
 | special_zones | 1 |
 | terrain_contours_major_topology | 1 |
 | terrain_contours_minor_topology | 1 |
-| thematic_admin_metrics | 2 |
-| thematic_build_audit | 3 |
+| thematic_admin_metrics | 3 |
+| thematic_build_audit | 4 |
 | thematic_grid_rle | 1 |
 | thematic_layer_catalog | 1 |
-| thematic_layer_manifest | 3 |
-| thematic_source_recipe | 3 |
+| thematic_layer_manifest | 4 |
+| thematic_source_recipe | 4 |
 | transport_build_audit | 130 |
 | transport_carrier_payload | 8 |
 | transport_catalog | 2 |
@@ -122,6 +122,9 @@
 | manifest_output:thematic_layers/political/state_capacity_demo/build_audit.json | data/thematic_layers/political/state_capacity_demo/build_audit.json | thematic_build_audit | json | json | schema://thematic/build_audit/v1 | data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/build_audit.json::sha256 | no-cache | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/political/state_capacity_demo/manifest.json | data/thematic_layers/political/state_capacity_demo/manifest.json | thematic_layer_manifest | json | json | schema://thematic/layer_manifest/v1 | data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/manifest.json::sha256 | no-cache | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/political/state_capacity_demo/metrics.admin0.json | data/thematic_layers/political/state_capacity_demo/metrics.admin0.json | thematic_admin_metrics | json | json | schema://thematic/admin_metrics/v1 | data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/metrics.admin0.json::sha256 | default | tools.build_thematic_layers |  |
+| manifest_output:thematic_layers/political/wgi_state_capacity_v1/build_audit.json | data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json | thematic_build_audit | json | json | schema://thematic/build_audit/v1 | data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/build_audit.json::sha256 | no-cache | tools.build_thematic_layers |  |
+| manifest_output:thematic_layers/political/wgi_state_capacity_v1/manifest.json | data/thematic_layers/political/wgi_state_capacity_v1/manifest.json | thematic_layer_manifest | json | json | schema://thematic/layer_manifest/v1 | data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/manifest.json::sha256 | no-cache | tools.build_thematic_layers |  |
+| manifest_output:thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json | data/thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json | thematic_admin_metrics | json | json | schema://thematic/admin_metrics/v1 | data/manifest.json::outputs::thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json::sha256 | default | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/population/population_density_demo/build_audit.json | data/thematic_layers/population/population_density_demo/build_audit.json | thematic_build_audit | json | json | schema://thematic/build_audit/v1 | data/manifest.json::outputs::thematic_layers/population/population_density_demo/build_audit.json::sha256 | no-cache | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/population/population_density_demo/grid.rle.json | data/thematic_layers/population/population_density_demo/grid.rle.json | thematic_grid_rle | json | json | schema://thematic/grid_rle/v1 | data/manifest.json::outputs::thematic_layers/population/population_density_demo/grid.rle.json::sha256 | default | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/population/population_density_demo/manifest.json | data/thematic_layers/population/population_density_demo/manifest.json | thematic_layer_manifest | json | json | schema://thematic/layer_manifest/v1 | data/manifest.json::outputs::thematic_layers/population/population_density_demo/manifest.json::sha256 | no-cache | tools.build_thematic_layers |  |
@@ -131,6 +134,7 @@
 | manifest_output:thematic_layers/source_recipes/population_density_grid.manual.json | data/thematic_layers/source_recipes/population_density_grid.manual.json | thematic_source_recipe | json | json | schema://json/object/v1 | data/manifest.json::outputs::thematic_layers/source_recipes/population_density_grid.manual.json::sha256 | default | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/source_recipes/undp_hdi.manual.json | data/thematic_layers/source_recipes/undp_hdi.manual.json | thematic_source_recipe | json | json | schema://json/object/v1 | data/manifest.json::outputs::thematic_layers/source_recipes/undp_hdi.manual.json::sha256 | default | tools.build_thematic_layers |  |
 | manifest_output:thematic_layers/source_recipes/wgi_state_capacity.manual.json | data/thematic_layers/source_recipes/wgi_state_capacity.manual.json | thematic_source_recipe | json | json | schema://json/object/v1 | data/manifest.json::outputs::thematic_layers/source_recipes/wgi_state_capacity.manual.json::sha256 | default | tools.build_thematic_layers |  |
+| manifest_output:thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json | data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json | thematic_source_recipe | json | json | schema://json/object/v1 | data/manifest.json::outputs::thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json::sha256 | default | tools.build_thematic_layers |  |
 | transport:china_airport:full:airports | data/transport_layers/china_airport/airports.geojson | transport_pack | geojson | json | schema://geojson/feature_collection/point/v1 |  | default | python tools/build_transport_country_real_packs.py --pack china_airport |  |
 | transport:china_airport:preview:airports | data/transport_layers/china_airport/airports.preview.geojson | transport_pack | geojson | json | schema://geojson/feature_collection/point/v1 |  | default | python tools/build_transport_country_real_packs.py --pack china_airport |  |
 | transport:china_airport:build_audit | data/transport_layers/china_airport/build_audit.json | transport_build_audit | json | json | schema://transport/build_audit/v1 |  | no-cache | python tools/build_transport_country_real_packs.py --pack china_airport |  |

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from map_builder.json_schema_contracts import validate_json_contract
 MISSING_SOURCE_STATUSES = {
     "missing",
     "not_applicable",
+    "partial_source_gap",
     "source_gap",
     "unmatched",
 }
@@ -60,6 +62,10 @@ def _rle_value_count(runs: object, expected_value: int) -> int:
         ):
             total += run[1]
     return total
+
+
+def _is_finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
 
 
 def validate_thematic_layer_index(
@@ -145,6 +151,13 @@ def validate_thematic_admin_metrics(
                     )
             elif raw_value is None or normalized_value is None:
                 errors.append(f"{source_label}: {metric_path} observed values must not be null")
+            else:
+                if not _is_finite_number(raw_value):
+                    errors.append(f"{source_label}: {metric_path}.raw_value must be a finite number")
+                if not _is_finite_number(normalized_value):
+                    errors.append(f"{source_label}: {metric_path}.normalized_value must be a finite number")
+                elif not 0 <= float(normalized_value) <= 100:
+                    errors.append(f"{source_label}: {metric_path}.normalized_value must be between 0 and 100")
     return errors
 
 

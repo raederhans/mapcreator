@@ -74,10 +74,48 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertEqual(schema_counts["schema://hgo/runtime_seed/v1"], 1)
         self.assertEqual(schema_counts["schema://bitmap/bmp_rgb24/v1"], 1)
         self.assertEqual(schema_counts["schema://thematic/layer_index/v1"], 1)
-        self.assertEqual(schema_counts["schema://thematic/layer_manifest/v1"], 3)
-        self.assertEqual(schema_counts["schema://thematic/admin_metrics/v1"], 2)
+        self.assertEqual(schema_counts["schema://thematic/layer_manifest/v1"], 4)
+        self.assertEqual(schema_counts["schema://thematic/admin_metrics/v1"], 3)
         self.assertEqual(schema_counts["schema://thematic/grid_rle/v1"], 1)
-        self.assertEqual(schema_counts["schema://thematic/build_audit/v1"], 3)
+        self.assertEqual(schema_counts["schema://thematic/build_audit/v1"], 4)
+
+    def test_catalog_contains_wgi_state_capacity_assets(self) -> None:
+        payload = self._load_catalog()
+        entries = {entry["key"]: entry for entry in payload.get("entries") or []}
+        expected = {
+            "manifest_output:thematic_layers/political/wgi_state_capacity_v1/manifest.json": (
+                "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+                "thematic_layer_manifest",
+                "schema://thematic/layer_manifest/v1",
+            ),
+            "manifest_output:thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json": (
+                "data/thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json",
+                "thematic_admin_metrics",
+                "schema://thematic/admin_metrics/v1",
+            ),
+            "manifest_output:thematic_layers/political/wgi_state_capacity_v1/build_audit.json": (
+                "data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+                "thematic_build_audit",
+                "schema://thematic/build_audit/v1",
+            ),
+            "manifest_output:thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json": (
+                "data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
+                "thematic_source_recipe",
+                "schema://json/object/v1",
+            ),
+        }
+
+        for key, (url, role, schema_ref) in expected.items():
+            with self.subTest(key=key):
+                self.assertIn(key, entries)
+                self.assertEqual(entries[key]["url"], url)
+                self.assertEqual(entries[key]["role"], role)
+                self.assertEqual(entries[key]["schemaRef"], schema_ref)
+                self.assertEqual(entries[key]["hashRef"], f"data/manifest.json::outputs::{url.removeprefix('data/')}::sha256")
+        self.assertIn(
+            "thematic_layer:political_wgi_state_capacity_v1",
+            entries["manifest_output:thematic_layers/political/wgi_state_capacity_v1/manifest.json"].get("aliases") or [],
+        )
 
     def test_landing_catalog_count_matches_checked_in_catalog(self) -> None:
         payload = self._load_catalog()

@@ -21,6 +21,7 @@
   },
   "missing_join_keys": [],
   "unmatched_source_rows": [],
+  "dropped_aggregate_rows": [],
   "outliers": [],
   "normalization_summary": {
     "method": "manual_fixture_linear_0_100",

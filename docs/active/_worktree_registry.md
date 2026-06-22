@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 12:19 -04:00
+Last updated: 2026-06-22 12:22 -04:00
 
 ## Integration Owner
 
@@ -13,15 +13,16 @@ Last updated: 2026-06-22 12:19 -04:00
 ## Recommended Order
 
 1. Treat Thematic Runtime Discovery and Read-only Panel Preview as integrated, pushed, archived, and cleaned on main.
-2. Rebase or refresh `codex/thematic-real-source-wgi-v1-20260622` in its own integration plan; the current WGI worktree is detached at `a31a75fb12bb28048dd8878b0cb80379c7b25d47` with unresolved conflicts in `dist/pages-dist-manifest.json` and `docs/active/_worktree_registry.md`.
-3. Keep real-source ingestion, thematic canvas rendering, and scenario save-format changes outside the completed preview task.
+2. Finish the current WGI rebase on current `origin/main`, rerun focused validation, then fast-forward WGI into main.
+3. Archive `docs/active/thematic-real-source-wgi-v1/` after WGI lands, then push and clean the WGI worktree.
+4. Keep thematic canvas rendering and scenario save-format changes outside this real-source ingestion task.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | current pushed `main` | current pushed `origin/main` | pushed, clean, and current | none | `git status --short --branch` shows `## main...origin/main`; `git rev-parse HEAD` equals `git rev-parse origin/main`; preview branch lookup is empty. | Green as integration surface; only remaining filesystem worktree is WGI. | Keep as current main baseline. |
-| `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | detached `HEAD@a31a75fb12bb28048dd8878b0cb80379c7b25d47`; branch `codex/thematic-real-source-wgi-v1-20260622@ab2879cd0ebf48a53b636afdd2f02d546a816c49` still exists | `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | in-progress, dirty, unresolved conflicts | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `dist/**`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files; unmerged: `dist/pages-dist-manifest.json`, `docs/active/_worktree_registry.md` | `git -C ... status --short --branch` shows `## HEAD (no branch)` with WGI data/schema/builder/route/docs edits and two `UU` files. | Red with completed preview through thematic generated data, route registry, package scripts, `dist/**`, and publish artifacts. | Leave untouched for now; recover the branch/ref and resolve conflicts under a separate WGI integration plan. |
+| `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | rebase in progress for `codex/thematic-real-source-wgi-v1-20260622`; source commit `4ad72a78` | current pushed `origin/main` | ready-for-integration after rebase validation | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `dist/**`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `package.json`, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files | WGI real-source ingest implemented and reviewed; latest rebase conflict is limited to registry text after preview closeout registry commits. Prior focused WGI validation and Pages dist passed on the same content before this registry-only rebase. | Yellow after preview because generated catalog/dist/package overlap is expected and now rebased onto main. | Complete registry conflict resolution, rerun focused validation, fast-forward main, archive docs, push, then clean WGI worktree. |
 
 ## Recent Integrated Branches
 

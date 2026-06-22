@@ -1,0 +1,15 @@
+Economy (name),Economy (code),Year,Governance dimension,Governance score (0-100),is_aggregate
+United Stats Typo,USA,2024,Government Effectiveness,80,
+United Stats Typo,USA,2024,Rule of Law,72,
+Brazil,BRA,2024,Government Effectiveness,51,
+Russia,RUS,2024,Rule of Law,39,
+South Africa,ZAF,2024,Government Effectiveness,,
+South Africa,ZAF,2024,Rule of Law,,
+Andorra,ADO,2024,Government Effectiveness,75,
+Andorra,ADO,2024,Rule of Law,78,
+Kosovo,XKX,2024,Government Effectiveness,45,
+Kosovo,XKX,2024,Rule of Law,41,
+Channel Islands,CHI,2024,Government Effectiveness,66,
+World,WLD,2024,Government Effectiveness,54,true
+High income,HIC,2024,Rule of Law,82,true
+France,FRA,2023,Government Effectiveness,73,

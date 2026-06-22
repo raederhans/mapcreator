@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 26390,
-      "sha256": "1cf4480bdd7f8994f6e5e77be86d1816fb6bf14d343b7ae12aa53898b5e64146"
+      "size_bytes": 26947,
+      "sha256": "9678b719381ff610cc0c25e6c2263662de21155795589b00d7bafff12f07d8ba"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -595,11 +595,11 @@
       "artifact_class": "derived",
       "owner": "tools.build_thematic_layers",
       "description": "Catalog for checked-in thematic layer manifests and fixture-only foundation layers.",
-      "size_bytes": 2737,
-      "sha256": "66eb5e3e9f9d3658ceacac90ffcff0b0486f8e9068d88d9a86125a7c8fb5e330",
+      "size_bytes": 3452,
+      "sha256": "0dcdc2d75290b22fc22ba405d93e300a0e469341a311a306ba6a1a2a53b9bf1e",
       "schema_ref": "schema://thematic/layer_index/v1",
       "type": "thematic_layer_index",
-      "layer_count": 3
+      "layer_count": 4
     },
     "thematic_layers/source_recipes/wgi_state_capacity.manual.json": {
       "role": "thematic_source_recipe",
@@ -668,8 +668,8 @@
       "artifact_class": "derived",
       "owner": "tools.build_thematic_layers",
       "description": "Build audit for fixture-only state capacity thematic layer.",
-      "size_bytes": 1197,
-      "sha256": "bab9919f00f98a6c42bef89a0c54811b4147cadac182f79a8be6c5aec72d9571",
+      "size_bytes": 1229,
+      "sha256": "8e17f33622d983fff1fde85f2ecd89f7db2b4933c16675cddb97868a249bd33f",
       "schema_ref": "schema://thematic/build_audit/v1",
       "type": "thematic_build_audit",
       "layer_id": "political_state_capacity_demo",
@@ -706,8 +706,8 @@
       "artifact_class": "derived",
       "owner": "tools.build_thematic_layers",
       "description": "Build audit for fixture-only human development thematic layer.",
-      "size_bytes": 1185,
-      "sha256": "170f0cc58542d04a01eb90b1036ecc74d2babb380c7919c5b3852e183a3ec842",
+      "size_bytes": 1217,
+      "sha256": "e3e0a90134260e9193f60bb1932a4d393c44522f16b2aad2769ab5b66bae9ae3",
       "schema_ref": "schema://thematic/build_audit/v1",
       "type": "thematic_build_audit",
       "layer_id": "social_human_development_demo",
@@ -743,11 +743,61 @@
       "artifact_class": "derived",
       "owner": "tools.build_thematic_layers",
       "description": "Build audit for fixture-only population-density thematic layer.",
-      "size_bytes": 1199,
-      "sha256": "3f01290f2739e5ac42ebca834b0c6c4cd8c8ff96617618132df99a756b7ba55e",
+      "size_bytes": 1231,
+      "sha256": "4c5bb8d377991c5e3cb10d6ae266f13e9da8bf352e9d997af016174705fc021e",
       "schema_ref": "schema://thematic/build_audit/v1",
       "type": "thematic_build_audit",
       "layer_id": "population_density_demo",
+      "warning_count": 1
+    },
+    "thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json": {
+      "role": "thematic_source_recipe",
+      "artifact_class": "manual",
+      "owner": "tools.build_thematic_layers",
+      "description": "Cache-only source recipe for the WGI 2025 state capacity thematic layer.",
+      "size_bytes": 2734,
+      "sha256": "8afb51051e446b1d4a410cc948729e9378895006c9fdb98a99c5e91dcc735ff6",
+      "type": "thematic_source_recipe",
+      "recipe_id": "wgi_state_capacity_v1",
+      "source_family": "World Bank Worldwide Governance Indicators",
+      "source_policy": "real_source_cache_only"
+    },
+    "thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json": {
+      "role": "thematic_admin_metrics",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "World Bank WGI 2024 admin0 government effectiveness, rule of law, and composite scores.",
+      "size_bytes": 413886,
+      "sha256": "6d577e56c215c5a78a809b63273633267f258817c458b450747eea18e1bfdd2f",
+      "schema_ref": "schema://thematic/admin_metrics/v1",
+      "type": "thematic_admin_metrics",
+      "layer_id": "political_wgi_state_capacity_v1",
+      "metric_count": 3,
+      "feature_count": 215
+    },
+    "thematic_layers/political/wgi_state_capacity_v1/manifest.json": {
+      "role": "thematic_layer_manifest",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "World Bank WGI 2025 admin0 state capacity thematic layer manifest.",
+      "size_bytes": 3593,
+      "sha256": "e247d96d3c064d451ef9e72c920df278bde010bb066a4b49d78edfd8f998e260",
+      "schema_ref": "schema://thematic/layer_manifest/v1",
+      "type": "thematic_layer_manifest",
+      "layer_id": "political_wgi_state_capacity_v1",
+      "theme": "political",
+      "geometry_kind": "admin0"
+    },
+    "thematic_layers/political/wgi_state_capacity_v1/build_audit.json": {
+      "role": "thematic_build_audit",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Build audit for the World Bank WGI state capacity thematic layer.",
+      "size_bytes": 6276,
+      "sha256": "8651ad79602e5fd270d968365d5dd00a5c4bb6c924609b25e38eaf09f2863e04",
+      "schema_ref": "schema://thematic/build_audit/v1",
+      "type": "thematic_build_audit",
+      "layer_id": "political_wgi_state_capacity_v1",
       "warning_count": 1
     }
   },
@@ -1294,7 +1344,7 @@
         "url": "data/thematic_layers/index.json",
         "role": "thematic_layer_catalog",
         "metadata": {
-          "layer_count": 3,
+          "layer_count": 4,
           "publish_scope": "repo_only",
           "runtime_readiness": "catalog_only"
         }
@@ -1331,6 +1381,18 @@
           "source_policy": "fixture_only",
           "theme": "population",
           "geometry_kind": "grid_720x360",
+          "publish_scope": "repo_only",
+          "runtime_readiness": "catalog_only"
+        }
+      },
+      "thematic_layer:political_wgi_state_capacity_v1": {
+        "url": "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+        "role": "thematic_layer_manifest",
+        "metadata": {
+          "layer_id": "political_wgi_state_capacity_v1",
+          "source_policy": "real_source_cache_only",
+          "theme": "political",
+          "geometry_kind": "admin0",
           "publish_scope": "repo_only",
           "runtime_readiness": "catalog_only"
         }
@@ -1424,7 +1486,8 @@
     "thematic_layer_manifest_keys": {
       "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
       "social_human_development_demo": "thematic_layer:social_human_development_demo",
-      "population_density_demo": "thematic_layer:population_density_demo"
+      "population_density_demo": "thematic_layer:population_density_demo",
+      "political_wgi_state_capacity_v1": "thematic_layer:political_wgi_state_capacity_v1"
     }
   }
 }

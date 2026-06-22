@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import copy
 import json
+import math
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from map_builder.thematic_layer_contracts import (
     MISSING_SOURCE_STATUSES,
@@ -13,6 +16,8 @@ from map_builder.thematic_layer_contracts import (
     validate_thematic_layer_index,
     validate_thematic_layer_manifest,
 )
+from map_builder.thematic_wgi_ingest import WGI_LAYER_ID, WGI_METRIC_IDS
+from tools import build_thematic_layers as thematic_builder
 from tools.build_thematic_layers import (
     THEMATIC_RUNTIME_PUBLISH_SCOPE,
     THEMATIC_RUNTIME_READINESS,
@@ -27,6 +32,7 @@ INDEX_PATH = THEMATIC_ROOT / "index.json"
 RUNTIME_ASSET_REGISTRY_PATH = DATA_ROOT / "runtime_asset_registry.json"
 EXPECTED_LAYER_IDS = {
     "political_state_capacity_demo",
+    WGI_LAYER_ID,
     "social_human_development_demo",
     "population_density_demo",
 }
@@ -58,7 +64,7 @@ def _grid_payload() -> tuple[dict, dict]:
 class ThematicLayerContractTest(unittest.TestCase):
     def test_checked_in_index_matches_builder_and_schema(self) -> None:
         index_payload = _read_json(INDEX_PATH)
-        rebuilt = build_payloads(index_payload["generated_at"])
+        rebuilt = build_payloads(index_payload["generated_at"], include_existing_wgi=True)
 
         self.assertEqual(index_payload, rebuilt["thematic_layers/index.json"])
         self.assertEqual(validate_thematic_layer_index(index_payload), [])
@@ -69,7 +75,12 @@ class ThematicLayerContractTest(unittest.TestCase):
             with self.subTest(layer_id=layer["layer_id"]):
                 self.assertEqual(validate_thematic_layer_manifest(manifest, source_label=layer["manifest_path"]), [])
                 self.assertEqual(manifest["layer_id"], layer["layer_id"])
-                self.assertEqual(manifest["source_policy"], "fixture_only")
+                if layer["layer_id"] == WGI_LAYER_ID:
+                    self.assertEqual(manifest["source_policy"], "real_source_cache_only")
+                    self.assertEqual(manifest["metric_ids"], list(WGI_METRIC_IDS))
+                    self.assertEqual(manifest["coverage_scope"]["join_key_type"], "iso_a3")
+                else:
+                    self.assertEqual(manifest["source_policy"], "fixture_only")
                 self.assertGreaterEqual(len(manifest["limitations"]), 1)
 
                 paths = manifest["paths"]
@@ -99,7 +110,40 @@ class ThematicLayerContractTest(unittest.TestCase):
                     else:
                         self.assertIsInstance(metric_payload["raw_value"], (int, float))
                         self.assertIsInstance(metric_payload["normalized_value"], (int, float))
-            self.assertTrue(missing_seen)
+            if manifest["source_policy"] == "fixture_only":
+                self.assertTrue(missing_seen)
+
+    def test_admin_metric_contract_rejects_non_finite_numbers(self) -> None:
+        for _layer, manifest in _iter_layer_manifests():
+            if manifest["geometry_kind"] == "grid_720x360":
+                continue
+            metrics_payload = _read_json(_repo_path(manifest["paths"]["metrics"]))
+            broken_payload = copy.deepcopy(metrics_payload)
+            broken_metric = broken_payload["features"][0]["values"][broken_payload["metric_ids"][0]]
+            broken_metric["raw_value"] = math.nan
+            broken_metric["normalized_value"] = math.inf
+
+            errors = validate_thematic_admin_metrics(broken_payload)
+
+            self.assertTrue(any("raw_value must be a finite number" in error for error in errors), errors)
+            self.assertTrue(any("normalized_value must be a finite number" in error for error in errors), errors)
+            return
+        raise AssertionError("admin metric payload not found")
+
+    def test_existing_wgi_payloads_fail_fast_when_outputs_are_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            first_output = thematic_builder.WGI_REAL_OUTPUT_PATHS[0]
+            first_path = temp_root / first_output
+            first_path.parent.mkdir(parents=True)
+            first_path.write_text("{}", encoding="utf-8")
+
+            with mock.patch.object(thematic_builder, "data_path", side_effect=lambda relative_path: temp_root / relative_path):
+                with self.assertRaises(FileNotFoundError) as raised:
+                    thematic_builder.load_existing_wgi_payloads()
+
+        self.assertIn("WGI real-source outputs are incomplete", str(raised.exception))
+        self.assertIn(thematic_builder.WGI_REAL_OUTPUT_PATHS[1], str(raised.exception))
 
     def test_grid_rle_contract_matches_declared_grid_size(self) -> None:
         manifest, grid_payload = _grid_payload()
@@ -129,10 +173,14 @@ class ThematicLayerContractTest(unittest.TestCase):
             errors = validate_thematic_build_audit(audit_payload, source_label=manifest["build_audit_path"])
 
             self.assertEqual(errors, [])
-            self.assertTrue(audit_payload["fixture_notice"]["enabled"])
+            if manifest["source_policy"] == "fixture_only":
+                self.assertTrue(audit_payload["fixture_notice"]["enabled"])
+            else:
+                self.assertFalse(audit_payload["fixture_notice"]["enabled"])
+                self.assertIn("dropped_aggregate_rows", audit_payload)
             self.assertGreaterEqual(audit_payload["coverage_summary"]["features"], 1)
             for source_input in audit_payload["source_inputs"]:
-                self.assertEqual(source_input["source_policy"], "fixture_only")
+                self.assertEqual(source_input["source_policy"], manifest["source_policy"])
 
     def test_runtime_asset_registry_declares_thematic_catalog_and_manifests(self) -> None:
         registry = _read_json(RUNTIME_ASSET_REGISTRY_PATH)
