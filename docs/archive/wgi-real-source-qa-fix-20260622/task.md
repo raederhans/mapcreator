@@ -12,7 +12,8 @@ integrated, pushed, archived, and cleaned
 - Closeout commit: `6ac22158`
 - Base: `origin/main@902c83fd5aff6bffb8ea1f29ceec36800e6a6882`
 - Cleanup commit after WGI closeout: `551347f4`
-- Current remote after cleanup: `origin/main@551347f4`
+- Registry truth commit after cleanup: `159870ed`
+- Current remote after cleanup and registry truth: `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24`
 
 ## Files Touched So Far
 
