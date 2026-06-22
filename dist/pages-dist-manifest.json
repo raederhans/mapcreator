@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 282056,
+      "size_bytes": 284074,
       "source_kind": "dist"
     },
     {
@@ -37092,7 +37092,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 56912,
+      "size_bytes": 57389,
       "source_kind": "generated_ignored"
     },
     {
@@ -37237,7 +37237,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 25935,
+      "size_bytes": 26390,
       "source_kind": "generated_ignored"
     },
     {
@@ -45497,7 +45497,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 263878,
+      "size_bytes": 265255,
       "source_kind": "dist"
     },
     {
@@ -46052,7 +46052,7 @@
     },
     {
       "path": "app/js/core/runtime_asset_registry.js",
-      "size_bytes": 1888,
+      "size_bytes": 3189,
       "source_kind": "dist"
     },
     {
@@ -46326,6 +46326,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/thematic_layer_catalog.js",
+      "size_bytes": 8499,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/transport_capability_registry.js",
       "size_bytes": 24864,
       "source_kind": "dist"
@@ -46497,7 +46502,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 36252,
+      "size_bytes": 36702,
       "source_kind": "dist"
     },
     {
@@ -46557,12 +46562,12 @@
     },
     {
       "path": "app/js/ui/toolbar/layer_panel_contracts.js",
-      "size_bytes": 10588,
+      "size_bytes": 13645,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/layer_status_diagnostics.js",
-      "size_bytes": 12801,
+      "size_bytes": 15109,
       "source_kind": "dist"
     },
     {
@@ -46593,6 +46598,11 @@
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
       "size_bytes": 47947,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/toolbar/thematic_layer_preview_controller.js",
+      "size_bytes": 6012,
       "source_kind": "dist"
     },
     {
@@ -47122,7 +47132,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1455226,
+      "size_bytes": 1455487,
       "source_kind": "dist"
     },
     {
@@ -47141,5 +47151,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154358747
+  "total_bytes": 1154384962
 }

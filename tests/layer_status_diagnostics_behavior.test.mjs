@@ -11,6 +11,7 @@ import {
 import {
   buildBathymetryDiagnostic,
   buildLayerStatusDiagnostics,
+  buildThematicCatalogDiagnostic,
   buildTransportFamilyDiagnostics,
   buildTransportMasterDiagnostic,
   sanitizeLayerStatusText,
@@ -101,6 +102,35 @@ test("bathymetry diagnostic explains disabled and pending data states", () => {
   }), { translate: (key) => key });
   assert.equal(pending.summary, "Bathymetry data pending for selected style");
   assert.equal(pending.severity, "warning");
+});
+
+test("thematic catalog diagnostic reports read-only fixture preview state", () => {
+  const preview = {
+    status: "ready",
+    layerCount: 3,
+    loadedManifestCount: 3,
+    layers: [
+      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
+      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
+      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
+    ],
+  };
+  const diagnostic = buildThematicCatalogDiagnostic({ thematicCatalogPreview: preview }, { translate: (key) => key });
+
+  assert.equal(diagnostic.id, "thematic");
+  assert.equal(diagnostic.enabled, false);
+  assert.equal(diagnostic.loadedCount, 3);
+  assert.equal(diagnostic.visibleCount, 0);
+  assert.equal(diagnostic.severity, "muted");
+  assert.equal(diagnostic.summary.includes("Preview metadata available"), true);
+  assert.equal(diagnostic.summary.includes("Runtime rendering disabled"), true);
+  assert.equal(diagnostic.summary.includes("Real source not ingested"), true);
+
+  const diagnostics = buildLayerStatusDiagnostics(createState(), {
+    translate: (key) => key,
+    thematicCatalogPreview: preview,
+  });
+  assert.ok(diagnostics.find((entry) => entry.id === "thematic"));
 });
 
 test("layer diagnostics keep text clean and do not mutate default state", () => {

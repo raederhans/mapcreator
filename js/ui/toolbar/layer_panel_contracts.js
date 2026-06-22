@@ -5,9 +5,14 @@ import {
   listTransportCapabilityFamilyIds,
   supportsTransportCapabilityOverview,
 } from "../../core/transport_capability_registry.js";
+import {
+  listDefaultThematicLayerSummaries,
+  THEMATIC_LAYER_RENDER_DISABLED_REASON,
+} from "../../core/thematic_layer_catalog.js";
 
-const CONTRACT_GROUPS = Object.freeze(["appearance", "map-content", "transport", "workbench"]);
+const CONTRACT_GROUPS = Object.freeze(["appearance", "map-content", "transport", "workbench", "thematic"]);
 const WORKBENCH_ONLY_REASON = "Available in Transport Workbench only";
+const THEMATIC_PANEL_ID = "mapContentPanelThematic";
 
 function translateUi(translate, key) {
   return typeof translate === "function" ? translate(key, "ui") : key;
@@ -31,13 +36,24 @@ function createLayerPanelContract({
   supportsMainOverview = true,
   supportsWorkbench = false,
   defaultVisibilityField = null,
+  defaultVisible = null,
+  hiddenByDefault = false,
   requiredRuntimeKeys = [],
   dataKeys = [],
   loadKeys = [],
   metricNames = [],
+  supportsRuntimePreview = false,
   enabled = null,
   disabledReasonProvider = null,
   unsupportedReasonProvider = null,
+  theme = "",
+  geometryKind = "",
+  sourcePolicy = "",
+  status = "",
+  coverageScope = "",
+  manifestPath = "",
+  defaultStyle = null,
+  description = "",
 }) {
   return Object.freeze({
     id,
@@ -53,13 +69,24 @@ function createLayerPanelContract({
     supportsMainOverview,
     supportsWorkbench,
     defaultVisibilityField,
+    defaultVisible,
+    hiddenByDefault,
     requiredRuntimeKeys: freezeArray(requiredRuntimeKeys),
     dataKeys: freezeArray(dataKeys),
     loadKeys: freezeArray(loadKeys),
     metricNames: freezeArray(metricNames),
+    supportsRuntimePreview,
     enabled,
     disabledReasonProvider,
     unsupportedReasonProvider,
+    theme,
+    geometryKind,
+    sourcePolicy,
+    status,
+    coverageScope,
+    manifestPath,
+    defaultStyle,
+    description,
   });
 }
 
@@ -223,6 +250,59 @@ const LAYER_STATUS_ANCHOR_BY_ID = Object.freeze(Object.fromEntries(
     .map((contract) => [contract.id, contract.anchorId])
 ));
 
+function createThematicCatalogPanelContract() {
+  return createLayerPanelContract({
+    id: "thematic",
+    familyId: "thematic",
+    label: "Thematic Layers",
+    group: "thematic",
+    panelId: THEMATIC_PANEL_ID,
+    stateOwner: "thematic_layer_catalog_preview",
+    dataOwner: "thematic_layer_catalog",
+    renderOwner: null,
+    statusProviderId: "thematic-catalog",
+    supportsMainOverview: false,
+    supportsRuntimePreview: true,
+    defaultVisible: false,
+    hiddenByDefault: true,
+    requiredRuntimeKeys: ["thematic_layer_catalog"],
+    dataKeys: ["thematic_layer_catalog"],
+    loadKeys: ["thematic_layer_catalog"],
+    disabledReasonProvider: ({ translate } = {}) => translateUi(translate, THEMATIC_LAYER_RENDER_DISABLED_REASON),
+  });
+}
+
+function createThematicLayerPanelContract(layer) {
+  return createLayerPanelContract({
+    id: `thematic-layer:${layer.layerId}`,
+    familyId: "thematic",
+    label: layer.title || layer.layerId,
+    group: "thematic",
+    panelId: THEMATIC_PANEL_ID,
+    stateOwner: "thematic_layer_catalog_preview",
+    dataOwner: `thematic_layer:${layer.layerId}`,
+    renderOwner: null,
+    statusProviderId: "thematic-layer",
+    supportsMainOverview: false,
+    supportsRuntimePreview: true,
+    defaultVisible: layer.defaultVisible,
+    hiddenByDefault: layer.hiddenByDefault,
+    requiredRuntimeKeys: ["thematic_layer_catalog", `thematic_layer:${layer.layerId}`],
+    dataKeys: ["thematic_layer_catalog", `thematic_layer:${layer.layerId}`],
+    loadKeys: ["thematic_layer_catalog", `thematic_layer:${layer.layerId}`],
+    enabled: () => false,
+    disabledReasonProvider: ({ translate } = {}) => translateUi(translate, THEMATIC_LAYER_RENDER_DISABLED_REASON),
+    theme: layer.theme,
+    geometryKind: layer.geometryKind,
+    sourcePolicy: layer.sourcePolicy,
+    status: layer.status,
+    coverageScope: layer.coverageScope,
+    manifestPath: layer.manifestPath,
+    defaultStyle: layer.defaultStyle,
+    description: layer.description,
+  });
+}
+
 function createTransportLayerPanelContract(familyId) {
   const metadata = getTransportCapabilityFamilyMetadata(familyId);
   const supportsMainOverview = supportsTransportCapabilityOverview(familyId);
@@ -255,6 +335,9 @@ function cloneContract(contract) {
     dataKeys: freezeArray(contract.dataKeys),
     loadKeys: freezeArray(contract.loadKeys),
     metricNames: freezeArray(contract.metricNames),
+    defaultStyle: contract.defaultStyle && typeof contract.defaultStyle === "object"
+      ? Object.freeze({ ...contract.defaultStyle })
+      : contract.defaultStyle,
   });
 }
 
@@ -272,9 +355,17 @@ export function listTransportLayerPanelContracts() {
   return listTransportCapabilityFamilyIds().map(createTransportLayerPanelContract);
 }
 
+export function listThematicLayerPanelContracts() {
+  return [
+    createThematicCatalogPanelContract(),
+    ...listDefaultThematicLayerSummaries().map(createThematicLayerPanelContract),
+  ].map(cloneContract);
+}
+
 export function listLayerPanelContracts() {
   return [
     ...listBaseLayerPanelContracts(),
+    ...listThematicLayerPanelContracts(),
     ...listTransportLayerPanelContracts(),
   ];
 }

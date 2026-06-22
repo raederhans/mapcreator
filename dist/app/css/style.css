@@ -2450,6 +2450,116 @@ details.appearance-subsection > *:not(summary),
   padding-top: 2px;
 }
 
+.thematic-layer-preview-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.thematic-layer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.thematic-layer-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.thematic-layer-card-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.thematic-layer-card-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.thematic-layer-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thematic-layer-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 8px;
+  background: rgba(239, 246, 255, 0.82);
+  color: #1d4ed8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.thematic-layer-badge.is-warning {
+  border-color: rgba(180, 83, 9, 0.2);
+  background: rgba(255, 251, 235, 0.88);
+  color: #92400e;
+}
+
+.thematic-layer-badge.is-muted {
+  border-color: rgba(71, 85, 105, 0.14);
+  background: rgba(248, 250, 252, 0.9);
+  color: #475569;
+}
+
+.thematic-layer-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(82px, max-content) minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.thematic-layer-meta-row {
+  display: contents;
+}
+
+.thematic-layer-meta-label,
+.thematic-layer-meta-value {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.thematic-layer-meta-label {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.thematic-layer-meta-value {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.thematic-layer-empty {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
 .transport-family-body {
   display: flex;
   flex-direction: column;

@@ -9,6 +9,12 @@ import {
   buildTransportFamilySummaryText,
 } from "./appearance_transport_summary.js";
 import {
+  THEMATIC_CATALOG_PENDING_SUMMARY,
+  THEMATIC_CATALOG_READY_SUMMARY,
+  THEMATIC_LAYER_RENDER_DISABLED_REASON,
+  THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON,
+} from "../../core/thematic_layer_catalog.js";
+import {
   getLayerPanelContractById,
   getLayerPanelDisabledReason,
   getLayerPanelUnsupportedReason,
@@ -230,6 +236,51 @@ export function buildDayNightDiagnostic(state = {}, { translate } = {}) {
   };
 }
 
+export function buildThematicCatalogDiagnostic({
+  thematicCatalogPreview = null,
+} = {}, { translate } = {}) {
+  const contract = getLayerPanelContractById("thematic");
+  const preview = thematicCatalogPreview && typeof thematicCatalogPreview === "object"
+    ? thematicCatalogPreview
+    : {};
+  const layers = Array.isArray(preview.layers) ? preview.layers : [];
+  const status = String(preview.status || "").trim().toLowerCase();
+  const error = String(preview.error || "").trim();
+  const layerCount = normalizeFiniteCount(preview.layerCount ?? layers.length) ?? layers.length;
+  const loadedManifestCount = normalizeFiniteCount(preview.loadedManifestCount) ?? layers.filter((layer) => layer.manifestLoaded).length;
+  const fixtureOnlyCount = layers.filter((layer) => layer.fixtureOnly).length;
+  const hiddenByDefaultCount = layers.filter((layer) => layer.hiddenByDefault).length;
+  let summary = THEMATIC_CATALOG_PENDING_SUMMARY;
+  let severity = STATUS_SEVERITY.MUTED;
+  if (status === "error" || error) {
+    summary = joinStatusParts(
+      translateUi(translate, "Thematic catalog unavailable"),
+      error,
+    );
+    severity = STATUS_SEVERITY.WARNING;
+  } else if (layerCount > 0) {
+    summary = joinStatusParts(
+      translateUi(translate, THEMATIC_CATALOG_READY_SUMMARY),
+      `${layerCount} ${translateUi(translate, "layers")}`,
+      `${loadedManifestCount} ${translateUi(translate, "manifests")}`,
+      fixtureOnlyCount > 0 ? translateUi(translate, "Fixture only") : "",
+      hiddenByDefaultCount > 0 ? translateUi(translate, "Hidden by default") : "",
+      translateUi(translate, THEMATIC_LAYER_RENDER_DISABLED_REASON),
+      translateUi(translate, THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON),
+    );
+    severity = STATUS_SEVERITY.MUTED;
+  }
+  return {
+    id: "thematic",
+    label: contract?.label || "Thematic Layers",
+    enabled: false,
+    loadedCount: layerCount,
+    visibleCount: 0,
+    severity,
+    summary: sanitizeLayerStatusText(summary),
+  };
+}
+
 function getTransportFamilyConfig(transportConfig, familyId) {
   const defaults = getTransportCapabilityDefaultOverviewConfig(familyId) || {};
   const source = transportConfig?.[familyId] && typeof transportConfig[familyId] === "object"
@@ -339,7 +390,7 @@ export function buildTransportFamilyDiagnostics(state = {}, { translate } = {}) 
   });
 }
 
-export function buildLayerStatusDiagnostics(state = {}, { translate } = {}) {
+export function buildLayerStatusDiagnostics(state = {}, { translate, thematicCatalogPreview = null } = {}) {
   const layerDiagnostics = listBaseLayerStatusContracts().map((definition) => (
     createLayerDiagnostic(definition, state, translate)
   ));
@@ -348,6 +399,7 @@ export function buildLayerStatusDiagnostics(state = {}, { translate } = {}) {
     buildBathymetryDiagnostic(state, { translate }),
     buildDayNightDiagnostic(state, { translate }),
     buildTextureDiagnostic(state, { translate }),
+    buildThematicCatalogDiagnostic({ thematicCatalogPreview }, { translate }),
     buildTransportMasterDiagnostic(state, { translate }),
     ...buildTransportFamilyDiagnostics(state, { translate }),
   ];

@@ -18,6 +18,15 @@ function normalizeRuntimeAssetKey(key) {
   return String(key || "").trim();
 }
 
+export const THEMATIC_LAYER_INDEX_ASSET_KEY = normalizeRuntimeAssetKey(
+  RUNTIME_ASSET_REGISTRY?.thematic_layer_index_key || "thematic_layer_catalog"
+);
+export const THEMATIC_LAYER_MANIFEST_ASSET_KEYS = Object.freeze({
+  ...((RUNTIME_ASSET_REGISTRY?.thematic_layer_manifest_keys && typeof RUNTIME_ASSET_REGISTRY.thematic_layer_manifest_keys === "object")
+    ? RUNTIME_ASSET_REGISTRY.thematic_layer_manifest_keys
+    : {}),
+});
+
 export function resolveDataAssetUrl(key) {
   const normalizedKey = normalizeRuntimeAssetKey(key);
   const url = RUNTIME_ASSET_URLS[normalizedKey];
@@ -44,4 +53,28 @@ export function resolveTransportManifestUrl(familyId) {
     throw new Error(`[runtime_asset_registry] Unknown transport manifest family: ${normalizedFamilyId || "<empty>"}.`);
   }
   return resolveDataAssetUrl(assetKey);
+}
+
+export function resolveThematicLayerCatalogAssetKey() {
+  if (!THEMATIC_LAYER_INDEX_ASSET_KEY) {
+    throw new Error("[runtime_asset_registry] Thematic layer catalog asset key is not configured.");
+  }
+  return THEMATIC_LAYER_INDEX_ASSET_KEY;
+}
+
+export function resolveThematicLayerCatalogUrl() {
+  return resolveDataAssetUrl(resolveThematicLayerCatalogAssetKey());
+}
+
+export function resolveThematicLayerManifestAssetKey(layerId) {
+  const normalizedLayerId = normalizeRuntimeAssetKey(layerId);
+  const assetKey = THEMATIC_LAYER_MANIFEST_ASSET_KEYS[normalizedLayerId];
+  if (!assetKey) {
+    throw new Error(`[runtime_asset_registry] Unknown thematic layer manifest: ${normalizedLayerId || "<empty>"}.`);
+  }
+  return assetKey;
+}
+
+export function resolveThematicLayerManifestUrl(layerId) {
+  return resolveDataAssetUrl(resolveThematicLayerManifestAssetKey(layerId));
 }

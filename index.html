@@ -2035,6 +2035,19 @@
                   Ocean
                 </button>
                 <button
+                  id="mapContentTabThematic"
+                  type="button"
+                  class="appearance-tab-btn"
+                  data-map-content-tab="thematic"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="mapContentPanelThematic"
+                  tabindex="-1"
+                  data-i18n="Thematic"
+                >
+                  Thematic
+                </button>
+                <button
                   id="mapContentTabDayNight"
                   type="button"
                   class="appearance-tab-btn"
@@ -2072,7 +2085,28 @@
                 </button>
               </div>
             </div>
-            <div id="mapContentStack" class="appearance-stack mt-4" aria-live="polite"></div>
+            <div id="mapContentStack" class="appearance-stack mt-4" aria-live="polite">
+              <section
+                id="mapContentPanelThematic"
+                class="card-flat appearance-subsection map-content-panel"
+                data-map-content-panel="thematic"
+                role="tabpanel"
+                aria-labelledby="mapContentTabThematic"
+                hidden
+              >
+                <h2 id="lblThematicLayersPanel" class="section-header" data-i18n="Thematic Layers">Thematic Layers</h2>
+                <p
+                  id="thematicLayerCatalogStatus"
+                  class="layer-status-strip is-muted"
+                  role="status"
+                  aria-live="polite"
+                  data-i18n="Preview metadata pending"
+                >
+                  Preview metadata pending
+                </p>
+                <div id="thematicLayerPreviewList" class="thematic-layer-preview-list" role="list"></div>
+              </section>
+            </div>
           </details>
 
           <details id="specialZonePopover" class="card special-zone-editor-card sidebar-details-card" data-inline-editor="true" aria-labelledby="lblSpecialZoneEditor">

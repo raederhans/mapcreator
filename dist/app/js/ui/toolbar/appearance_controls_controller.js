@@ -17,6 +17,7 @@ import {
   buildLayerStatusDiagnostics,
   sanitizeLayerStatusText,
 } from "./layer_status_diagnostics.js";
+import { createThematicLayerPreviewController } from "./thematic_layer_preview_controller.js";
 import {
   getLayerPanelStatusAnchorMap,
 } from "./layer_panel_contracts.js";
@@ -154,6 +155,7 @@ export function createAppearanceControlsController({
   moveMapContentPanels();
   const layerStatusAnchorById = getLayerPanelStatusAnchorMap();
   const layerStatusNodes = new Map();
+  let thematicLayerPreviewController = null;
   const ensureLayerStatusNode = (diagnosticId) => {
     if (layerStatusNodes.has(diagnosticId)) return layerStatusNodes.get(diagnosticId);
     const anchorId = layerStatusAnchorById[diagnosticId];
@@ -193,7 +195,10 @@ export function createAppearanceControlsController({
     return node;
   };
   const renderLayerStatusSummaries = () => {
-    const diagnostics = buildLayerStatusDiagnostics(runtimeState, { translate: t });
+    const diagnostics = buildLayerStatusDiagnostics(runtimeState, {
+      translate: t,
+      thematicCatalogPreview: thematicLayerPreviewController?.getPreview?.() || null,
+    });
     const diagnosticsById = new Map(diagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
     Object.keys(layerStatusAnchorById).forEach((diagnosticId) => {
       const diagnostic = diagnosticsById.get(diagnosticId);
@@ -213,6 +218,8 @@ export function createAppearanceControlsController({
       workbenchStatusNode.hidden = labels.length === 0;
     }
   };
+  thematicLayerPreviewController = createThematicLayerPreviewController({ t });
+  void thematicLayerPreviewController.load().then(() => renderLayerStatusSummaries());
   const appearanceTabButtons = Array.from(document.querySelectorAll("[data-appearance-tab]"));
   const appearanceTabPanels = Array.from(document.querySelectorAll("[data-appearance-panel]"));
   const mapContentTabButtons = Array.from(document.querySelectorAll("[data-map-content-tab]"));
@@ -544,6 +551,7 @@ export function createAppearanceControlsController({
     syncUrbanControls();
     urbanIntensityFieldEditor.render();
     appearancePresetsOwner.renderAppearancePresetsUi();
+    thematicLayerPreviewController?.render();
     renderLayerStatusSummaries();
   };
 

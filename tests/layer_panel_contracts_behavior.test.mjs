@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 
 import {
   CONTRACT_GROUPS,
+  getLayerPanelDisabledReason,
   getLayerPanelStatusAnchorMap,
   getLayerPanelUnsupportedReason,
   getLayerStatusAnchorById,
   listBaseLayerPanelContracts,
   listLayerPanelContracts,
+  listThematicLayerPanelContracts,
   listTransportLayerPanelContracts,
   WORKBENCH_ONLY_REASON,
 } from "../js/ui/toolbar/layer_panel_contracts.js";
@@ -101,6 +103,34 @@ test("transport contract support status is derived from the transport capability
     assert.equal(contract.supportsMainOverview, false);
     assert.equal(contract.group, "workbench");
     assert.equal(getLayerPanelUnsupportedReason(contract, { translate: (key) => key }), WORKBENCH_ONLY_REASON);
+  });
+});
+
+test("thematic panel contracts expose a read-only catalog preview surface", () => {
+  const thematicContracts = listThematicLayerPanelContracts();
+  const catalogContract = thematicContracts.find((contract) => contract.id === "thematic");
+  const layerContracts = thematicContracts.filter((contract) => contract.id.startsWith("thematic-layer:"));
+
+  assert.ok(catalogContract);
+  assert.equal(catalogContract.group, "thematic");
+  assert.equal(catalogContract.panelId, "mapContentPanelThematic");
+  assert.equal(catalogContract.supportsMainOverview, false);
+  assert.equal(catalogContract.supportsRuntimePreview, true);
+  assert.equal(catalogContract.renderOwner, null);
+  assert.equal(getLayerStatusAnchorById("thematic"), "");
+  assert.equal(getLayerPanelDisabledReason(catalogContract, { translate: (key) => key }), "Runtime rendering disabled");
+
+  assert.equal(layerContracts.length, 3);
+  layerContracts.forEach((contract) => {
+    assert.equal(contract.group, "thematic");
+    assert.equal(contract.panelId, "mapContentPanelThematic");
+    assert.equal(contract.supportsMainOverview, false);
+    assert.equal(contract.supportsRuntimePreview, true);
+    assert.equal(contract.renderOwner, null);
+    assert.equal(contract.sourcePolicy, "fixture_only");
+    assert.equal(contract.defaultVisible, false);
+    assert.equal(contract.hiddenByDefault, true);
+    assert.equal(contract.requiredRuntimeKeys.includes("thematic_layer_catalog"), true);
   });
 });
 

@@ -35,6 +35,8 @@ WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "tool
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
 LAYER_PANEL_CONTRACTS_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "layer_panel_contracts.js"
 LAYER_STATUS_DIAGNOSTICS_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "layer_status_diagnostics.js"
+THEMATIC_LAYER_CATALOG_JS = REPO_ROOT / "js" / "core" / "thematic_layer_catalog.js"
+THEMATIC_LAYER_PREVIEW_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "thematic_layer_preview_controller.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 APPEARANCE_CITY_POINTS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_owner.js"
@@ -996,20 +998,40 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
         diagnostics_content = LAYER_STATUS_DIAGNOSTICS_JS.read_text(encoding="utf-8")
         contract_content = LAYER_PANEL_CONTRACTS_JS.read_text(encoding="utf-8")
+        thematic_catalog_content = THEMATIC_LAYER_CATALOG_JS.read_text(encoding="utf-8")
+        thematic_preview_content = THEMATIC_LAYER_PREVIEW_CONTROLLER_JS.read_text(encoding="utf-8")
+        index_content = INDEX_HTML.read_text(encoding="utf-8")
 
         self.assertIn("from \"./layer_panel_contracts.js\";", controller_content)
         self.assertIn("getLayerPanelStatusAnchorMap", controller_content)
         self.assertIn("const layerStatusAnchorById = getLayerPanelStatusAnchorMap();", controller_content)
         self.assertNotIn("const layerStatusAnchorById = Object.freeze({", controller_content)
+        self.assertIn("./thematic_layer_preview_controller.js", controller_content)
+        self.assertIn("thematicCatalogPreview: thematicLayerPreviewController?.getPreview?.() || null", controller_content)
 
         self.assertIn("from \"./layer_panel_contracts.js\";", diagnostics_content)
         self.assertIn("listBaseLayerStatusContracts", diagnostics_content)
         self.assertIn("listTransportLayerPanelContracts", diagnostics_content)
+        self.assertIn("buildThematicCatalogDiagnostic", diagnostics_content)
         self.assertNotIn("const LAYER_DEFINITIONS = Object.freeze([", diagnostics_content)
 
         self.assertIn("export function listLayerPanelContracts()", contract_content)
+        self.assertIn("export function listThematicLayerPanelContracts()", contract_content)
         self.assertIn("export function getLayerPanelUnsupportedReason", contract_content)
+        self.assertIn("../../core/thematic_layer_catalog.js", contract_content)
         self.assertIn("../../core/transport_capability_registry.js", contract_content)
+        self.assertIn("resolveThematicLayerCatalogAssetKey", thematic_catalog_content)
+        self.assertIn("getAsset", thematic_catalog_content)
+        self.assertIn("resolveThematicLayerManifestAssetKey", thematic_catalog_content)
+        self.assertIn("createThematicLayerPreviewController", thematic_preview_content)
+        self.assertIn("buildThematicCatalogDiagnostic", thematic_preview_content)
+        self.assertNotIn("markDirty", thematic_preview_content)
+        self.assertNotIn("requestRender", thematic_preview_content)
+        self.assertNotIn("pushHistoryEntry", thematic_preview_content)
+        self.assertNotIn("runtimeState", thematic_preview_content)
+        self.assertIn("mapContentTabThematic", index_content)
+        self.assertIn("mapContentPanelThematic", index_content)
+        self.assertIn("thematicLayerPreviewList", index_content)
 
     def test_appearance_preset_apply_loads_city_points_base_data_before_optional_layer(self):
         owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
