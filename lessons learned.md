@@ -438,3 +438,6 @@
 
 ### Fixture 资产进入 runtime registry 要写发布边界
 - fixture-only 或 catalog-only 数据放进 `runtime_asset_registry.json` 时，要同步写 `publish_scope` 和 `runtime_readiness`，并用合同测试锁住，避免后续运行时代码把 repo-only 合同数据当成可发布渲染资产。
+
+### Review 前确认新增文件已进索引
+- `git diff` 看不到 untracked 新文件；新模块被已跟踪文件 import 时，review/commit 前用 `git add -A` 和 `git ls-files --others --exclude-standard` 检查，避免本地能跑但提交缺文件。
