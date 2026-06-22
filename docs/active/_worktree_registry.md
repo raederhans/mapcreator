@@ -1,25 +1,25 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 17:52 -04:00
+Last updated: 2026-06-22 18:25 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `main` synced with `origin/main` after admin metrics loader integration, final quality polish, and worktree cleanup.
-- Latest integrated work: Admin metrics loader commit `f75e32f4` plus follow-up main closeout and final quality polish follows Legend/Safety planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` and closeout commit `353645b7`, registry truth commit `159870ed`, docs/lessons cleanup commit `551347f4`, WGI QA closeout `6ac22158`, WGI QA functional commit `d7e361f4`, and WGI source-ingest commit `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Integration base: `main` synced with `origin/main@f44ddbaf` before the audit follow-up; no secondary worktree was active.
+- Latest integrated work: The current audit follow-up hardens admin metrics numeric/coverage contracts and WGI source-code audit boundaries after admin metrics loader commit `f75e32f4`, quality polish `f44ddbaf`, Legend/Safety planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72`, WGI QA functional commit `d7e361f4`, and WGI source-ingest commit `7336c05583fa546dcb783970a972ffe3868a855f`.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: test-engineer/code-reviewer/architect lanes are read-only; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Treat WGI source ingest, WGI QA, docs/lessons cleanup, registry truth, Legend/Safety planning docs, admin metrics loader, and final admin loader quality polish as integrated on `main`.
+1. Treat WGI source ingest, WGI QA, docs/lessons cleanup, registry truth, Legend/Safety planning docs, admin metrics loader, final admin loader quality polish, and this audit hardening follow-up as integrated on `main`.
 2. Use `docs/active/thematic-legend-safety-semantics-20260622/` as the next implementation guide; keep renderer, map toggle, save-format, generated data, and Pages dist outside that later contract-test-first slice.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` synced to `origin/main` after final admin loader quality polish | current `origin/main` | clean integrated checkout | none | `git worktree list` shows only the main worktree after admin loader cleanup; final validation passed syntax, admin metrics loader 20/20, architecture boundaries, import graph, scoped ai-slop fallback-like scan, independent final review, and `git diff --check`. | Green; no active overlap remains. | No active integration action; keep branch `codex/thematic-admin-metrics-loader-20260622` and commits as recovery. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` audit hardening follow-up on top of `origin/main@f44ddbaf` | current `origin/main@f44ddbaf` | ready for commit/push from main checkout | hot files: `js/core/thematic_admin_metrics_loader.js`, `map_builder/thematic_layer_contracts.py`, `map_builder/thematic_wgi_ingest.py`, admin metrics/WGI tests, fixture, registry, lessons | `git worktree list` shows only the main worktree; validation passed JS syntax, Python compile, admin metrics loader 21/21, thematic Python contracts 21/21, architecture boundaries, import graph, malformed metric repro, WGI `ZZZ` unmatched audit repro, independent code-review COMMENT with no blocker, architect OK, and `git diff --check`. | Green; no active worktree overlap remains. | Commit and push this audit follow-up from `main`; keep branch `codex/thematic-admin-metrics-loader-20260622` and recent main commits as recovery. |
 
 ## Recent Integrated Branches
 

@@ -68,6 +68,30 @@ SOURCE_CODE_TO_ISO_A3 = {
     "ZAR": "COD",
 }
 
+# Audited target join keys for the checked-in WGI admin0 layer; new source codes should enter audit first.
+WGI_AUDITED_TARGET_JOIN_KEYS = frozenset(
+    """
+    ABW AFG AGO AIA ALB AND ARE ARG ARM ASM ATG AUS
+    AUT AZE BDI BEL BEN BFA BGD BGR BHR BHS BIH BLR
+    BLZ BMU BOL BRA BRB BRN BTN BWA CAF CAN CHE CHL
+    CHN CIV CMR COD COG COK COL COM CPV CRI CUB CYM
+    CYP CZE DEU DJI DMA DNK DOM DZA ECU EGY ERI ESP
+    EST ETH FIN FJI FRA FSM GAB GBR GEO GHA GIN GMB
+    GNB GNQ GRC GRD GRL GTM GUF GUM GUY HKG HND HRV
+    HTI HUN IDN IND IRL IRN IRQ ISL ISR ITA JAM JEY
+    JOR JPN KAZ KEN KGZ KHM KIR KNA KOR KWT LAO LBN
+    LBR LBY LCA LIE LKA LSO LTU LUX LVA MAC MAR MCO
+    MDA MDG MDV MEX MHL MKD MLI MLT MMR MNE MNG MOZ
+    MRT MTQ MUS MWI MYS NAM NCL NER NGA NIC NIU NLD
+    NOR NPL NRU NZL OMN PAK PAN PER PHL PLW PNG POL
+    PRI PRK PRT PRY PSE PYF QAT REU ROU RUS RWA SAU
+    SDN SEN SGP SLB SLE SLV SMR SOM SRB SSD STP SUR
+    SVK SVN SWE SWZ SYC SYR TCD TGO THA TJK TKM TLS
+    TON TTO TUN TUR TUV TWN TZA UGA UKR URY USA UZB
+    VCT VEN VIR VNM VUT WSM XKX YEM ZAF ZMB ZWE
+    """.split()
+)
+
 KNOWN_NON_ISO_ECONOMY_CODES = {
     "ANT",
     "CHI",
@@ -266,8 +290,8 @@ def source_code_to_join_key(source_code: str) -> str | None:
         return None
     mapped = SOURCE_CODE_TO_ISO_A3.get(normalized)
     if mapped:
-        return mapped
-    if re.fullmatch(r"[A-Z]{3}", normalized):
+        return mapped if mapped in WGI_AUDITED_TARGET_JOIN_KEYS else None
+    if normalized in WGI_AUDITED_TARGET_JOIN_KEYS:
         return normalized
     return None
 

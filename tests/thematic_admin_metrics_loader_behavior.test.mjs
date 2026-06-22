@@ -213,6 +213,46 @@ test("loads manifest and metrics through runtime asset and catalog allowlist API
   assert.equal(getThematicAdminMetricValue(lookup, "USA", "state_capacity_index").rawValue, 78);
 });
 
+test("loads WGI admin metrics through runtime asset and catalog allowlist APIs", async () => {
+  const requested = [];
+  const payloadsByPath = {
+    [wgiManifest.paths.metrics]: wgiMetrics,
+  };
+  const lookup = await loadThematicAdminMetrics("political_wgi_state_capacity_v1", {
+    loadAsset: async (key) => {
+      requested.push(["asset", key]);
+      assert.equal(key, "thematic_layer:political_wgi_state_capacity_v1");
+      return wgiManifest;
+    },
+    getCatalogAssetMetadata: (path) => {
+      requested.push(["metadata", path]);
+      return payloadsByPath[path] ? createAdminMetadata(path) : null;
+    },
+    loadCatalogAsset: async (path) => {
+      requested.push(["catalog", path]);
+      return payloadsByPath[path];
+    },
+  });
+
+  assert.deepEqual(requested, [
+    ["asset", "thematic_layer:political_wgi_state_capacity_v1"],
+    ["metadata", wgiManifest.paths.metrics],
+    ["catalog", wgiManifest.paths.metrics],
+  ]);
+  assert.deepEqual(listThematicAdminMetricIds(lookup), [
+    "wgi_government_effectiveness_score_0_100",
+    "wgi_rule_of_law_score_0_100",
+    "wgi_state_capacity_composite_0_100",
+  ]);
+  assert.deepEqual(getThematicAdminCoverageSummary(lookup), {
+    layerId: "political_wgi_state_capacity_v1",
+    features: 215,
+    complete: 213,
+    partial: 2,
+    missing: 0,
+  });
+});
+
 test("rejects unknown layer id before metrics payload loading", async () => {
   let catalogRequested = false;
 
@@ -481,6 +521,41 @@ test("rejects malformed feature metric values before lookup creation", () => {
   invalidCoverageStatusPayload.features[0].coverage_status = "blank";
   assertThrowsWithReason(
     () => createThematicAdminMetricLookup(invalidCoverageStatusPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const coverageStatusMismatchPayload = cloneJson(politicalMetrics);
+  coverageStatusMismatchPayload.features.find((feature) => feature.join_key === "BRA").coverage_status = "complete";
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(coverageStatusMismatchPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const missingStatusWithValuesPayload = cloneJson(politicalMetrics);
+  missingStatusWithValuesPayload.features[0].values.state_capacity_index.source_status = "source_gap";
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(missingStatusWithValuesPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const nullObservedValuePayload = cloneJson(politicalMetrics);
+  nullObservedValuePayload.features[0].values.state_capacity_index.raw_value = null;
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(nullObservedValuePayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const stringMetricValuePayload = cloneJson(politicalMetrics);
+  stringMetricValuePayload.features[0].values.state_capacity_index.raw_value = "78";
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(stringMetricValuePayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const outOfRangeNormalizedPayload = cloneJson(politicalMetrics);
+  outOfRangeNormalizedPayload.features[0].values.state_capacity_index.normalized_value = 150;
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(outOfRangeNormalizedPayload),
     THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
   );
 });

@@ -87,6 +87,29 @@ def _validate_uncertainty_values(value: object, path: str, errors: list[str], so
         errors.append(f"{source_label}: {path} must be a finite number or null")
 
 
+def _metric_value_is_missing(metric_payload: dict[str, Any]) -> bool:
+    source_status = str(metric_payload.get("source_status") or "")
+    if source_status in MISSING_SOURCE_STATUSES:
+        return True
+    return metric_payload.get("raw_value") is None or metric_payload.get("normalized_value") is None
+
+
+def _expected_feature_coverage_status(values: dict[str, Any], metric_ids: set[str]) -> str:
+    metric_values = [
+        values[metric_id]
+        for metric_id in metric_ids
+        if isinstance(values.get(metric_id), dict)
+    ]
+    if not metric_values:
+        return "missing"
+    missing_count = sum(1 for metric_payload in metric_values if _metric_value_is_missing(metric_payload))
+    if missing_count == len(metric_values):
+        return "missing"
+    if missing_count > 0 or len(metric_values) < len(metric_ids):
+        return "partial"
+    return "complete"
+
+
 def validate_thematic_layer_index(
     payload: object,
     *,
@@ -151,6 +174,13 @@ def validate_thematic_admin_metrics(
         if not isinstance(feature, dict):
             continue
         values = _dict_field(feature, "values")
+        coverage_status = str(feature.get("coverage_status") or "")
+        expected_coverage_status = _expected_feature_coverage_status(values, metric_ids)
+        if coverage_status != expected_coverage_status:
+            errors.append(
+                f"{source_label}: $.features.{feature_index}.coverage_status must be {expected_coverage_status} "
+                f"for its metric values, got {coverage_status or '<empty>'}"
+            )
         missing_metrics = sorted(metric_ids.difference(values))
         if missing_metrics:
             errors.append(

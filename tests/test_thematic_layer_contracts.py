@@ -130,6 +130,28 @@ class ThematicLayerContractTest(unittest.TestCase):
             return
         raise AssertionError("admin metric payload not found")
 
+    def test_admin_metric_contract_rejects_coverage_status_value_mismatch(self) -> None:
+        for _layer, manifest in _iter_layer_manifests():
+            if manifest["geometry_kind"] == "grid_720x360":
+                continue
+            metrics_payload = _read_json(_repo_path(manifest["paths"]["metrics"]))
+            broken_payload = copy.deepcopy(metrics_payload)
+            target_feature = next(
+                (feature for feature in broken_payload["features"] if feature.get("coverage_status") == "partial"),
+                broken_payload["features"][0],
+            )
+            expected_status = target_feature["coverage_status"]
+            target_feature["coverage_status"] = "complete" if expected_status != "complete" else "missing"
+
+            errors = validate_thematic_admin_metrics(broken_payload)
+
+            self.assertTrue(
+                any(f"coverage_status must be {expected_status}" in error for error in errors),
+                errors,
+            )
+            return
+        raise AssertionError("admin metric payload not found")
+
     def test_admin_metric_contract_rejects_non_finite_uncertainty_numbers(self) -> None:
         for _layer, manifest in _iter_layer_manifests():
             if manifest["geometry_kind"] == "grid_720x360":

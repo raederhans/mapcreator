@@ -99,10 +99,12 @@ class ThematicWgiSourceIngestTest(unittest.TestCase):
         self.assertEqual(source_code_to_join_key("ADO"), "AND")
         self.assertEqual(source_code_to_join_key("XKX"), "XKX")
         self.assertIsNone(source_code_to_join_key("CHI"))
+        self.assertIsNone(source_code_to_join_key("ZZZ"))
         self.assertIn("USA", join_keys)
         self.assertIn("AND", join_keys)
         self.assertIn("XKX", join_keys)
         self.assertNotIn("CHI", join_keys)
+        self.assertNotIn("ZZZ", join_keys)
 
     def test_wgi_ingest_drops_aggregate_rows_into_audit(self) -> None:
         payloads = self._build_fixture_payloads()
@@ -119,11 +121,13 @@ class ThematicWgiSourceIngestTest(unittest.TestCase):
     def test_wgi_unmatched_rows_are_audited(self) -> None:
         audit = self._build_fixture_payloads()[WGI_AUDIT_RELATIVE_PATH]
         unmatched = audit["unmatched_source_rows"]
+        unmatched_by_code = {row["source_code"]: row for row in unmatched}
 
-        self.assertEqual(len(unmatched), 1)
-        self.assertEqual(unmatched[0]["source_code"], "CHI")
-        self.assertEqual(unmatched[0]["reason"], "unmatched_join_key")
-        self.assertEqual(unmatched[0]["dimension"], "government_effectiveness")
+        self.assertEqual(set(unmatched_by_code), {"CHI", "ZZZ"})
+        self.assertEqual(unmatched_by_code["CHI"]["reason"], "unmatched_join_key")
+        self.assertEqual(unmatched_by_code["CHI"]["dimension"], "government_effectiveness")
+        self.assertEqual(unmatched_by_code["ZZZ"]["reason"], "unmatched_join_key")
+        self.assertEqual(unmatched_by_code["ZZZ"]["dimension"], "rule_of_law")
 
     def test_wgi_missing_one_metric_sets_composite_partial_source_gap(self) -> None:
         metrics = self._build_fixture_payloads()[WGI_METRICS_RELATIVE_PATH]
