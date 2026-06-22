@@ -22,9 +22,13 @@
 - Query functions keep unknown join keys, unknown metric ids, and known null source gaps as separate states.
 - Main Codex agent owns all validation commands.
 
-## Next Step
+## Final Closeout
 
-Task implementation, validation, and read-only review are complete. Next step is branch commit and main integration.
+- Feature commit `f75e32f4` was integrated into `main`, followed by main registry closeout and final quality polish.
+- The final ai-slop pass found one naming issue: local normalization helpers used `fallback` for ordinary default values. The parameter names now use `defaultValue` so error-recovery terminology stays reserved for real recovery paths.
+- Final code-review found one runtime contract gap: missing or malformed per-feature metric values could be normalized into a normal source-gap query result. The loader now rejects missing metric keys, non-object metric values, missing required metric value fields, invalid `source_status`, and invalid `coverage_status` before lookup creation.
+- Worktree `C:\Users\raede\Desktop\dev\mapcreator-thematic-admin-metrics-loader-20260622` was removed after integration. Recovery remains available through branch `codex/thematic-admin-metrics-loader-20260622`, commit `f75e32f4`, and the main follow-up commits.
+- `main` was pushed to `origin/main`.
 
 ## Validation Evidence
 
@@ -37,8 +41,15 @@ Task implementation, validation, and read-only review are complete. Next step is
 - `npm run verify:architecture-boundaries`: pass.
 - `npm run verify:test-import-graph`: pass.
 - `git diff --check`: pass, with CRLF conversion warnings only.
+- Final quality polish repeat: `node --check js/core/thematic_admin_metrics_loader.js js/core/thematic_layer_catalog.js js/core/data_service.js js/core/runtime_asset_registry.js`: pass.
+- Final quality polish repeat: `npm run test:node:thematic-admin-metrics-loader`: pass, 20/20.
+- Final quality polish repeat: `npm run verify:architecture-boundaries`: pass.
+- Final quality polish repeat: `npm run verify:test-import-graph`: pass.
+- Final quality polish repeat: `git diff --check`: pass, with CRLF conversion warning only.
+- Final ai-slop scan on changed code scope: no fallback-like signals after `defaultValue` rename.
 
 ## Review Evidence
 
 - Code-reviewer result: REQUEST CHANGES for silent malformed join key filtering and missing source/metadata tests; fixed by rejecting blank/duplicate join keys and adding regression coverage; follow-up result CLEAR.
 - Architect result: WATCH for missing schema version and empty feature payload checks; fixed by centralizing schema version `1` and rejecting empty `features`; follow-up result CLEAR.
+- Final code-review result: REQUEST CHANGES for malformed feature metric values being normalized as source gaps; fixed with required metric-value contract checks and regression coverage.

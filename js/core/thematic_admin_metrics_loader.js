@@ -33,6 +33,32 @@ const MISSING_SOURCE_STATUSES = Object.freeze([
   "source_gap",
   "unmatched",
 ]);
+const FEATURE_COVERAGE_STATUSES = Object.freeze([
+  "complete",
+  "missing",
+  "not_applicable",
+  "partial",
+  "partial_source_gap",
+  "source_gap",
+  "unmatched",
+]);
+const METRIC_SOURCE_STATUSES = Object.freeze([
+  "estimated",
+  "fixture",
+  "manual_seed",
+  "missing",
+  "not_applicable",
+  "observed",
+  "partial_source_gap",
+  "source_gap",
+  "unmatched",
+]);
+const REQUIRED_METRIC_VALUE_FIELDS = Object.freeze([
+  "raw_value",
+  "normalized_value",
+  "year",
+  "source_status",
+]);
 
 function freezeArray(values = []) {
   return Object.freeze([...(Array.isArray(values) ? values : [])]);
@@ -55,15 +81,15 @@ function freezeJsonObject(value = {}) {
   return freezeJsonValue(value);
 }
 
-function normalizeText(value, fallback = "") {
+function normalizeText(value, defaultValue = "") {
   const text = String(value ?? "").trim();
-  return text || fallback;
+  return text || defaultValue;
 }
 
-function normalizeNumber(value, fallback = null) {
-  if (value === null || value === undefined) return fallback;
+function normalizeNumber(value, defaultValue = null) {
+  if (value === null || value === undefined) return defaultValue;
   const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
+  return Number.isFinite(number) ? number : defaultValue;
 }
 
 function normalizeMetricId(value) {
@@ -155,6 +181,79 @@ function assertUniqueFeatureJoinKeys(rawFeatures, layerId) {
   });
 }
 
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function assertFeatureValuesObject(feature, featureIndex, layerId) {
+  const values = feature?.values;
+  if (values && typeof values === "object" && !Array.isArray(values)) return values;
+  throw createThematicAdminMetricsError(
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+    `[thematic_admin_metrics_loader] feature ${featureIndex} in ${layerId || "<unknown>"} must include values object.`,
+    { layerId, featureIndex },
+  );
+}
+
+function assertMetricValueObject(metricValue, featureIndex, metricId, layerId) {
+  if (metricValue && typeof metricValue === "object" && !Array.isArray(metricValue)) return metricValue;
+  throw createThematicAdminMetricsError(
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+    `[thematic_admin_metrics_loader] feature ${featureIndex} in ${layerId || "<unknown>"} must include object value for ${metricId}.`,
+    { layerId, featureIndex, metricId },
+  );
+}
+
+function assertMetricValueContract(metricValue, featureIndex, metricId, layerId) {
+  REQUIRED_METRIC_VALUE_FIELDS.forEach((field) => {
+    if (!hasOwn(metricValue, field)) {
+      throw createThematicAdminMetricsError(
+        THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+        `[thematic_admin_metrics_loader] feature ${featureIndex} metric ${metricId} must include ${field}.`,
+        { layerId, featureIndex, metricId, field },
+      );
+    }
+  });
+  const sourceStatus = normalizeText(metricValue.source_status);
+  if (!METRIC_SOURCE_STATUSES.includes(sourceStatus)) {
+    throw createThematicAdminMetricsError(
+      THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+      `[thematic_admin_metrics_loader] feature ${featureIndex} metric ${metricId} has invalid source_status.`,
+      { layerId, featureIndex, metricId, sourceStatus },
+    );
+  }
+}
+
+function assertFeatureMetricContracts(feature, featureIndex, metricIds, layerId) {
+  if (!feature || typeof feature !== "object" || Array.isArray(feature)) {
+    throw createThematicAdminMetricsError(
+      THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+      `[thematic_admin_metrics_loader] feature ${featureIndex} in ${layerId || "<unknown>"} must be an object.`,
+      { layerId, featureIndex },
+    );
+  }
+  const coverageStatus = normalizeText(feature.coverage_status);
+  if (!FEATURE_COVERAGE_STATUSES.includes(coverageStatus)) {
+    throw createThematicAdminMetricsError(
+      THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+      `[thematic_admin_metrics_loader] feature ${featureIndex} in ${layerId || "<unknown>"} has invalid coverage_status.`,
+      { layerId, featureIndex, coverageStatus },
+    );
+  }
+  const values = assertFeatureValuesObject(feature, featureIndex, layerId);
+  metricIds.forEach((metricId) => {
+    if (!hasOwn(values, metricId)) {
+      throw createThematicAdminMetricsError(
+        THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+        `[thematic_admin_metrics_loader] feature ${featureIndex} in ${layerId || "<unknown>"} is missing metric ${metricId}.`,
+        { layerId, featureIndex, metricId },
+      );
+    }
+    const metricValue = assertMetricValueObject(values[metricId], featureIndex, metricId, layerId);
+    assertMetricValueContract(metricValue, featureIndex, metricId, layerId);
+  });
+}
+
 function isMissingMetricValue(metricValue = {}) {
   const sourceStatus = normalizeText(metricValue.source_status);
   if (MISSING_SOURCE_STATUSES.includes(sourceStatus)) return true;
@@ -189,7 +288,7 @@ function normalizeMetricValue(metricValue = {}) {
 }
 
 function normalizeFeature(feature = {}, metricIds = []) {
-  const rawValues = feature?.values && typeof feature.values === "object" ? feature.values : {};
+  const rawValues = feature.values;
   const values = Object.fromEntries(
     metricIds.map((metricId) => [metricId, normalizeMetricValue(rawValues[metricId])]),
   );
@@ -258,6 +357,9 @@ export function normalizeThematicAdminMetricsPayload(payload, options = {}) {
   const metricIds = normalizeMetricIds(metricsPayload);
   const layerId = normalizeText(options.layerId || metricsPayload.layer_id);
   assertUniqueFeatureJoinKeys(rawFeatures, layerId);
+  rawFeatures.forEach((feature, featureIndex) => {
+    assertFeatureMetricContracts(feature, featureIndex, metricIds, layerId);
+  });
   const features = freezeArray(
     rawFeatures.map((feature) => normalizeFeature(feature, metricIds)),
   );

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for integration.
+Integrated, pushed, and cleaned.
 
 ## Changed Files
 
@@ -19,9 +19,10 @@ Test files:
 Documentation files:
 
 - `docs/active/_worktree_registry.md`
-- `docs/active/thematic-admin-metrics-runtime-loader-v1/plan.md`
-- `docs/active/thematic-admin-metrics-runtime-loader-v1/context.md`
-- `docs/active/thematic-admin-metrics-runtime-loader-v1/task.md`
+- `docs/archive/thematic-admin-metrics-runtime-loader-v1/plan.md`
+- `docs/archive/thematic-admin-metrics-runtime-loader-v1/context.md`
+- `docs/archive/thematic-admin-metrics-runtime-loader-v1/task.md`
+- `lessons learned.md`
 
 Temporary files:
 
@@ -33,7 +34,7 @@ Temporary files:
 2. Uses manifest asset keys plus catalog metadata/read APIs to keep runtime loading inside the data catalog allowlist.
 3. Rejects grid layers and mismatched payload contracts before creating lookups.
 4. Preserves source gaps as `null`, keeps `0` as a real value, and exposes WGI uncertainty/source fields.
-5. Adds focused Node tests and a named npm script.
+5. Adds focused Node tests and a named npm script; final quality pass also rejects malformed per-feature metric values before lookup creation.
 
 Diff summary relative to base:
 
@@ -41,22 +42,22 @@ Diff summary relative to base:
 - Small `data_service` metadata export for catalog role checks.
 - New admin metrics behavior tests.
 - New package test script.
-- Active docs and registry updates for worktree tracking.
+- Archived docs and registry updates for worktree tracking and final integration truth.
 
 Commit state:
 
-- Committed on feature branch before main integration. The branch remains recoverable as `codex/thematic-admin-metrics-loader-20260622`.
+- Committed on feature branch as `f75e32f4`, integrated into `main`, followed by main closeout and final quality polish commits. The branch remains recoverable as `codex/thematic-admin-metrics-loader-20260622`.
 
 Base divergence:
 
 - Base commit: `main@159870ed`.
-- Current branch: `codex/thematic-admin-metrics-loader-20260622`.
-- Current `main` and `origin/main` are expected to be aligned at `159870ed` until the final pre-merge pull.
+- Feature branch: `codex/thematic-admin-metrics-loader-20260622`.
+- Current `main` is synced with `origin/main` after integration.
 
 Conflict scan:
 
-- Direct file overlap with `codex/thematic-legend-safety-semantics-20260622`: `docs/active/_worktree_registry.md`.
-- No current tracked JS, data, package, or test overlap with that worktree.
+- Direct file overlap with `codex/thematic-legend-safety-semantics-20260622` was `docs/active/_worktree_registry.md`; it was resolved during rebase and closeout.
+- No current active worktree overlap remains.
 
 Validation:
 
@@ -69,6 +70,12 @@ Validation:
 - Passed: `npm run verify:architecture-boundaries`.
 - Passed: `npm run verify:test-import-graph`.
 - Passed: `git diff --check`; only CRLF conversion warnings were printed.
+- Final repeat passed: `node --check js/core/thematic_admin_metrics_loader.js js/core/thematic_layer_catalog.js js/core/data_service.js js/core/runtime_asset_registry.js`.
+- Final repeat passed: `npm run test:node:thematic-admin-metrics-loader` with 20/20 tests.
+- Final repeat passed: `npm run verify:architecture-boundaries`.
+- Final repeat passed: `npm run verify:test-import-graph`.
+- Final repeat passed: `git diff --check`; only a CRLF conversion warning was printed.
+- Final ai-slop scan passed on changed code scope after `defaultValue` rename.
 
 Unverified risks:
 
@@ -77,9 +84,11 @@ Unverified risks:
 
 Recommended next action:
 
-- Fast-forward merge into `main`, push, then remove the worktree after the main closeout registry update.
+- Continue with the next planned thematic Legend/Safety semantics slice from `docs/active/thematic-legend-safety-semantics-20260622/`.
 
 Review:
 
 - Code-reviewer: CLEAR after malformed join key and missing test coverage fixes.
 - Architect: CLEAR after schema version and empty feature payload fixes.
+- Final code-reviewer: REQUEST CHANGES for missing or malformed feature metric values being normalized as source gaps; fixed with runtime contract checks and negative tests.
+- Final review gate rerun requested independent code-reviewer and architect lanes against current `main`.

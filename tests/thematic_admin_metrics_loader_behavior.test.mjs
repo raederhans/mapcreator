@@ -43,6 +43,14 @@ function assertRejectsWithReason(action, reason) {
   });
 }
 
+function assertThrowsWithReason(action, reason) {
+  assert.throws(action, (error) => {
+    assert.equal(error.reason, reason);
+    assert.equal(error.code, reason);
+    return true;
+  });
+}
+
 test("normalizes fixture admin0 metrics and exposes known values", () => {
   const lookup = createThematicAdminMetricLookup(politicalMetrics);
   const usa = getThematicAdminMetricValue(lookup, "USA", "state_capacity_index");
@@ -92,6 +100,7 @@ test("preserves null metric values separately from zero values", () => {
   assert.equal(brazilRuleOfLaw.reason, THEMATIC_ADMIN_METRICS_REASON.METRIC_VALUE_MISSING);
 
   const zeroPayload = cloneJson(politicalMetrics);
+  zeroPayload.metric_ids = ["state_capacity_index"];
   zeroPayload.features = [
     {
       join_key: "AAA",
@@ -433,11 +442,45 @@ test("rejects blank and duplicate feature join keys before lookup creation", asy
 });
 
 test("rejects invalid payload shape before lookup creation", () => {
-  assert.throws(
+  assertThrowsWithReason(
     () => normalizeThematicAdminMetricsPayload({ layer_id: "broken", metric_ids: [] }),
-    (error) => {
-      assert.equal(error.reason, THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID);
-      return true;
-    },
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+});
+
+test("rejects malformed feature metric values before lookup creation", () => {
+  const missingMetricPayload = cloneJson(politicalMetrics);
+  delete missingMetricPayload.features[0].values.state_capacity_index;
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(missingMetricPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const nonObjectMetricPayload = cloneJson(politicalMetrics);
+  nonObjectMetricPayload.features[0].values.state_capacity_index = null;
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(nonObjectMetricPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const missingRequiredMetricFieldPayload = cloneJson(politicalMetrics);
+  delete missingRequiredMetricFieldPayload.features[0].values.state_capacity_index.source_status;
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(missingRequiredMetricFieldPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const invalidSourceStatusPayload = cloneJson(politicalMetrics);
+  invalidSourceStatusPayload.features[0].values.state_capacity_index.source_status = "blank";
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(invalidSourceStatusPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const invalidCoverageStatusPayload = cloneJson(politicalMetrics);
+  invalidCoverageStatusPayload.features[0].coverage_status = "blank";
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(invalidCoverageStatusPayload),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
   );
 });

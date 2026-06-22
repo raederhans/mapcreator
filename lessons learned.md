@@ -446,3 +446,4 @@
 
 ### Runtime lookup 入口要拒绝坏 join key
 - 建 lookup 前先校验 feature `join_key` 非空且唯一；静默过滤 malformed feature 会让 payload 合同错误伪装成后续 `unknown_join_key`，review 时很难从结果状态倒推出根因。
+- 同一入口也要校验每个声明 metric 都有对象值和合法 `source_status`；缺 metric 值不能被 normalize 成正常 `source_gap`，否则坏 payload 会伪装成真实来源缺口。
