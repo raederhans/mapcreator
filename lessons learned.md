@@ -77,9 +77,8 @@
 - perf gate 变红时先在同机同环境重跑 HEAD，区分补丁回归和环境漂移。
 - post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
 - full hit canvas 从 startup/recovery 同步路径移到 idle 后，先结合 `mode`、`reason` 和 `hitCanvasViewportProfile.profile` 判断它是否还压在启动热路径上。
-- editor performance benchmark 默认使用当前 worktree 的 runtime root；显式复用 server 时同步校验 `active_server.json` 里的 `pid` 和 `cwd`，避免命中别的 worktree 服务。
+- editor performance benchmark 默认使用当前 worktree 的 runtime root 和 active server URL；显式复用 server 时同步校验 `active_server.json` 里的 `pid`、`cwd` 和 URL，避免命中旧 worktree 服务或默认端口漂移页。
 - 黑帧、长任务、wheel idle、最终 sharpness、真正首屏完成时间分别记录。
-- editor performance benchmark 必须显式绑定当前 worktree 的 active server URL；默认端口可能命中旧服务，导致报告 git head 看似正确但运行页来源漂移。
 
 ## UI、交互与文案
 
@@ -259,9 +258,6 @@
 
 ### Facility preview 也要算入 Pages 体积
 - 新增点状 facility pack 时，full 可以留在仓库数据包，preview 会进入 Pages dist；先按工作台可读性设 preview cap，再用 `verify:pages-dist` 校验体积，不要等发布门槛失败后再回头缩数据。
-
-### geo locale 生成要分离值变化和格式变化
-- `build_tno_1962_geo_locale_patch.py` 可能改变 checked-in patch 文件的顶层顺序或语言文件结构；地名修正后要保留已提交结构，只回写审定后的 `geo` 值，避免把格式重排混进 localization diff。
 
 ### worktree 重放后用内容合同判断清理
 - cherry-pick 到新 main 后，旧分支 commit id 可能仍显示未合入；清理前要用目标文件 diff、patch 等价和验证结果一起确认，避免误删尚未吸收的工作。
