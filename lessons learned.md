@@ -373,6 +373,7 @@
 
 ### 行尾过滤噪音卡住 main 同步时先判定语义差异
 - 归档文件的旧 CRLF blob 与当前 `eol=lf` attributes 可能让 `restore` 后仍显示脏；先用 `git diff --ignore-cr-at-eol` 和 `git hash-object --no-filters` 判定是否只有行尾差异，再用临时提交 + rebase skip 让远端清理生效。
+- Byte-exact manifest 测试失败时先用 `git ls-files --eol` 比对 index/worktree；若 index/hash 是 LF 而工作树是 CRLF，先恢复工作树 LF 并 `git add` 刷新索引，再重跑 manifest 测试。
 - 拖拽这类 UI 会话状态进入 runtime domain 后，临时字段应保存在 domain 私有 session 中；history `before/after` 快照只保存业务模型，避免 undo/redo 恢复内部字段。
 
 ### 编辑事务下沉要区分 click 和 drag 语义
