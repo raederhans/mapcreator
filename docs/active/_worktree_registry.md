@@ -1,26 +1,25 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 11:19 -04:00
+Last updated: 2026-06-22 11:23 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@d91daf1fd5da7af2e2b48b72d8daf565e83c28e1`.
-- Latest integrated work: Thematic Layer Foundation feature commit `b81a83ffb3ae926b54877869322c38feea712c5f`, closeout commit `d39064276d00f16ea1a81cdf4c32ebfd9e712301`, and follow-up registry cleanup on current `main`; the temporary worktree has been removed. Current audit work is repairing thematic contract routing and fixture runtime registry boundaries before the active thematic branches merge.
+- Integration base: `origin/main@e675cd512d414deab22f9be8c16a1ffc57feb22a`.
+- Latest integrated work: Audit repair commit `e675cd512d414deab22f9be8c16a1ffc57feb22a` keeps thematic contract routing and fixture runtime registry boundaries enforceable before the active thematic branches merge.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: code-reviewer and architect read-only lanes completed; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Commit and push the current main audit repair first so active thematic branches inherit the named thematic test route and `repo_only` / `catalog_only` runtime boundary.
-2. Rebase or refresh `codex/thematic-real-source-wgi-v1-20260622` on the audit commit before delivery; it directly overlaps thematic generated data, builder, tests, package scripts, and route registry.
-3. Keep `codex/thematic-runtime-discovery-readonly-preview-20260622` separate until WGI data work is integrated or explicitly sequenced behind it; preview work consumes the thematic catalog shape and touches package/UI/dist files.
+1. Rebase or refresh `codex/thematic-real-source-wgi-v1-20260622` on `origin/main@e675cd512d414deab22f9be8c16a1ffc57feb22a` before delivery; it directly overlaps thematic generated data, builder, tests, package scripts, and route registry.
+2. Keep `codex/thematic-runtime-discovery-readonly-preview-20260622` separate until WGI data work is integrated or explicitly sequenced behind it; preview work consumes the thematic catalog shape and touches package/UI/dist files.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@d91daf1f` | `origin/main@d91daf1f` | audit fix in progress | `data/manifest.json`, `data/runtime_asset_registry.json`, `package.json`, `tests/test_e2e_structural_tooling.py`, `tests/test_thematic_layer_contracts.py`, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, `lessons learned.md`, this registry | The audit repair passed thematic contracts, selector probes, route registry check, structural golden case, data manifest/catalog contracts, syntax checks, and diff check. | Red with WGI real-source branch by direct file overlap; yellow/red with preview through package and thematic runtime semantics. | Commit and push audit repair first; leave active thematic branches in-progress for later rebase/merge planning. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@e675cd51` | `origin/main@e675cd51` | clean after audit push | this registry closeout | The audit repair passed thematic contracts, selector probes, route registry check, structural golden case, data manifest/catalog contracts, data health, syntax checks, diff check, and push verification. | Green as integration surface; active thematic branches are red/yellow until rebased on the audit repair. | Leave active thematic branches in-progress for later rebase/merge planning. |
 | `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | `codex/thematic-real-source-wgi-v1-20260622@d91daf1f` | `origin/main@d91daf1fd5da7af2e2b48b72d8daf565e83c28e1` | in-progress | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files | `git status --short --branch` shows source-cache WGI data, schema, builder, route, catalog, and docs edits. | Red with current audit repair by direct thematic builder/data/test route overlap; yellow with preview through thematic catalog and generated publish artifacts. | Rebase or refresh after audit push, then run independent WGI verification and review before integration. |
 | `C:\Users\raede\Desktop\dev\mapcreator-thematic-runtime-discovery-readonly-preview-20260622` | `codex/thematic-runtime-discovery-readonly-preview-20260622@d91daf1f` | `origin/main@d91daf1fd5da7af2e2b48b72d8daf565e83c28e1` | in-progress | `css/style.css`, `index.html`, `landing/dist` mirrors, `js/core/runtime_asset_registry.js`, thematic catalog/preview controllers, layer panel/status diagnostics, package scripts, focused tests, task docs | `git status --short --branch` shows UI/runtime preview, dist mirror, package, and docs edits. | Yellow/red with audit through package and thematic runtime metadata semantics; yellow with WGI because preview consumes catalog shape. | Keep separate; re-evaluate after WGI data and audit repair are on main. |
 
