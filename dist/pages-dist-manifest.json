@@ -12,7 +12,7 @@
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 292160,
+      "size_bytes": 302354,
       "source_kind": "generated_ignored"
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242646,
+      "size_bytes": 242758,
       "source_kind": "generated_ignored"
     },
     {
@@ -37092,7 +37092,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 60399,
+      "size_bytes": 60406,
       "source_kind": "generated_ignored"
     },
     {
@@ -37232,7 +37232,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209631,
+      "size_bytes": 209642,
       "source_kind": "generated_ignored"
     },
     {
@@ -41971,6 +41971,91 @@
       "source_kind": "generated_ignored"
     },
     {
+      "path": "app/data/thematic_layers/index.json",
+      "size_bytes": 3478,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/state_capacity_demo/build_audit.json",
+      "size_bytes": 1229,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/state_capacity_demo/manifest.json",
+      "size_bytes": 2579,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/state_capacity_demo/metrics.admin0.json",
+      "size_bytes": 10229,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/wgi_state_capacity_v1/build_audit.json",
+      "size_bytes": 6426,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
+      "size_bytes": 4222,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/political/wgi_state_capacity_v1/metrics.admin0.json",
+      "size_bytes": 653323,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/population/population_density_demo/build_audit.json",
+      "size_bytes": 1231,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/population/population_density_demo/grid.rle.json",
+      "size_bytes": 13864,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/population/population_density_demo/manifest.json",
+      "size_bytes": 3074,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/social/human_development_demo/build_audit.json",
+      "size_bytes": 1217,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/social/human_development_demo/manifest.json",
+      "size_bytes": 2492,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/social/human_development_demo/metrics.admin0.json",
+      "size_bytes": 10183,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/source_recipes/population_density_grid.manual.json",
+      "size_bytes": 1531,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/source_recipes/undp_hdi.manual.json",
+      "size_bytes": 1042,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/source_recipes/wgi_state_capacity.manual.json",
+      "size_bytes": 1186,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
+      "size_bytes": 3218,
+      "source_kind": "generated_ignored"
+    },
+    {
       "path": "app/data/transport_layers/china_airport/airports.preview.geojson",
       "size_bytes": 25966,
       "source_kind": "generated_ignored"
@@ -46327,7 +46412,7 @@
     },
     {
       "path": "app/js/core/thematic_layer_catalog.js",
-      "size_bytes": 8499,
+      "size_bytes": 8909,
       "source_kind": "dist"
     },
     {
@@ -46567,7 +46652,7 @@
     },
     {
       "path": "app/js/ui/toolbar/layer_status_diagnostics.js",
-      "size_bytes": 15109,
+      "size_bytes": 15565,
       "source_kind": "dist"
     },
     {
@@ -47132,7 +47217,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1455487,
+      "size_bytes": 1458338,
       "source_kind": "dist"
     },
     {
@@ -47151,5 +47236,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154388406
+  "total_bytes": 1155122971
 }

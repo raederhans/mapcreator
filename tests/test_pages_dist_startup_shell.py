@@ -1377,6 +1377,8 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/CATALOG.json",
             "app/data/scenarios/index.json",
             "app/data/runtime_asset_registry.json",
+            "app/data/thematic_layers/index.json",
+            "app/data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
             "app/data/country_feature_policies.json",
             "app/data/hgo_catalogs/index.json",
             "app/data/hgo_catalogs/hgo_place_names.json",
@@ -1570,6 +1572,24 @@ class PagesDistStartupShellTest(unittest.TestCase):
         for key, url in expected.items():
             with self.subTest(catalog_key=key):
                 self.assertEqual(catalog_entries.get(key, {}).get("url"), url)
+
+    def test_dist_runtime_registry_references_only_published_files(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        registry_path = REPO_ROOT / "dist" / "app" / "data" / "runtime_asset_registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        missing: list[str] = []
+
+        for asset_key, asset in (registry.get("assets") or {}).items():
+            runtime_url = asset.get("url") if isinstance(asset, dict) else None
+            if isinstance(runtime_url, str) and runtime_url.startswith("data/"):
+                dist_path = f"app/{runtime_url}"
+                if dist_path not in dist_paths or not (REPO_ROOT / "dist" / dist_path).is_file():
+                    missing.append(f"{asset_key} -> {runtime_url}")
+
+        self.assertFalse(missing[:20], missing[:20])
 
     def test_dist_hgo_runtime_manifest_hashes_match_published_files(self) -> None:
         if not DIST_MANIFEST.exists():

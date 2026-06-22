@@ -81,6 +81,16 @@ class ThematicWgiSourceIngestTest(unittest.TestCase):
         self.assertEqual(values[WGI_COMPOSITE_METRIC_ID]["normalized_value"], 76.0)
         self.assertEqual(values[WGI_COMPOSITE_METRIC_ID]["source_status"], "observed")
         self.assertEqual(values[WGI_COMPOSITE_METRIC_ID]["year"], 2024)
+        ge_uncertainty = values[WGI_GOVERNMENT_EFFECTIVENESS_METRIC_ID]["uncertainty"]
+        self.assertEqual(ge_uncertainty["number_of_sources"], 12)
+        self.assertEqual(ge_uncertainty["score_standard_error"], 4.2)
+        self.assertEqual(ge_uncertainty["score_confidence_interval_90"], {"lower": 72.0, "upper": 88.0})
+        self.assertEqual(ge_uncertainty["estimate"], 1.2)
+        self.assertEqual(ge_uncertainty["estimate_standard_error"], 0.15)
+        self.assertEqual(ge_uncertainty["estimate_confidence_interval_90"], {"lower": 0.9, "upper": 1.5})
+        composite_uncertainty = values[WGI_COMPOSITE_METRIC_ID]["uncertainty"]
+        self.assertEqual(composite_uncertainty["method"], "not_computed")
+        self.assertIn("not inferred", composite_uncertainty["reason"])
 
     def test_wgi_join_uses_explicit_codes_without_fuzzy_name_matching(self) -> None:
         metrics = self._build_fixture_payloads()[WGI_METRICS_RELATIVE_PATH]
@@ -166,6 +176,29 @@ class ThematicWgiSourceIngestTest(unittest.TestCase):
         self.assertIsNone(canada["values"][WGI_GOVERNMENT_EFFECTIVENESS_METRIC_ID]["raw_value"])
         self.assertIsNone(canada["values"][WGI_RULE_OF_LAW_METRIC_ID]["raw_value"])
         self.assertEqual(mexico["values"][WGI_COMPOSITE_METRIC_ID]["normalized_value"], 50.0)
+
+    def test_wgi_number_of_sources_requires_non_negative_integer(self) -> None:
+        rows = "\n".join(
+            [
+                "Economy (name),Economy (code),Year,Governance dimension,Governance score (0-100),Number of sources",
+                "United States,USA,2024,Government Effectiveness,44,12.5",
+                "United States,USA,2024,Rule of Law,56,7.0",
+                "Canada,CAN,2024,Government Effectiveness,62,-1",
+                "Canada,CAN,2024,Rule of Law,58,8",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_path = Path(temp_dir) / "wgi-source-counts.csv"
+            source_path.write_text(rows, encoding="utf-8")
+            metrics = build_wgi_real_source_payloads(source_path)[WGI_METRICS_RELATIVE_PATH]
+
+        usa = _feature_by_join_key(metrics, "USA")
+        canada = _feature_by_join_key(metrics, "CAN")
+
+        self.assertIsNone(usa["values"][WGI_GOVERNMENT_EFFECTIVENESS_METRIC_ID]["uncertainty"]["number_of_sources"])
+        self.assertEqual(usa["values"][WGI_RULE_OF_LAW_METRIC_ID]["uncertainty"]["number_of_sources"], 7)
+        self.assertIsNone(canada["values"][WGI_GOVERNMENT_EFFECTIVENESS_METRIC_ID]["uncertainty"]["number_of_sources"])
+        self.assertEqual(canada["values"][WGI_RULE_OF_LAW_METRIC_ID]["uncertainty"]["number_of_sources"], 8)
 
 
 if __name__ == "__main__":

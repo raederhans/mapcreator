@@ -130,6 +130,30 @@ class ThematicLayerContractTest(unittest.TestCase):
             return
         raise AssertionError("admin metric payload not found")
 
+    def test_admin_metric_contract_rejects_non_finite_uncertainty_numbers(self) -> None:
+        for _layer, manifest in _iter_layer_manifests():
+            if manifest["geometry_kind"] == "grid_720x360":
+                continue
+            metrics_payload = _read_json(_repo_path(manifest["paths"]["metrics"]))
+            broken_payload = copy.deepcopy(metrics_payload)
+            broken_metric = broken_payload["features"][0]["values"][broken_payload["metric_ids"][0]]
+            broken_metric["uncertainty"] = {
+                "method": "not_computed",
+                "reason": "Allowed text fields stay textual.",
+                "score_standard_error": "nan",
+                "score_confidence_interval_90": {"lower": 1.0, "upper": math.inf},
+            }
+
+            errors = validate_thematic_admin_metrics(broken_payload)
+
+            self.assertTrue(any("uncertainty.score_standard_error must be a finite number" in error for error in errors), errors)
+            self.assertTrue(
+                any("uncertainty.score_confidence_interval_90.upper must be a finite number" in error for error in errors),
+                errors,
+            )
+            return
+        raise AssertionError("admin metric payload not found")
+
     def test_existing_wgi_payloads_fail_fast_when_outputs_are_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)

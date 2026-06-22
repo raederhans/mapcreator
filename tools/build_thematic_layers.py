@@ -345,7 +345,7 @@ def recipe_payloads(generated_at: str) -> dict[str, dict[str, Any]]:
         WGI_RECIPE_RELATIVE_PATH: {
             "schema_version": 1,
             "recipe_id": "wgi_state_capacity_manual",
-            "title": "WGI state capacity source recipe",
+            "title": "WGI governance proxy source recipe",
             "source_family": "World Bank Worldwide Governance Indicators",
             "phase": "foundation_contract",
             "source_policy": "fixture_only",
@@ -360,7 +360,7 @@ def recipe_payloads(generated_at: str) -> dict[str, dict[str, Any]]:
                     "periodicity": "annual",
                     "license": "World Bank catalog metadata; default World Bank data license is CC BY 4.0 unless metadata says otherwise.",
                     "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
-                    "selection_rule": "Pin release, year, indicators, and source package checksum before ingest.",
+                    "selection_rule": "Pin release, year, official WGI dimensions, project proxy method, and source package checksum before ingest.",
                 }
             ],
             "missing_value_policy": "Missing or unavailable source values must stay null and carry source_gap status.",
@@ -424,10 +424,10 @@ def build_wgi_index_entry(manifest: dict[str, Any]) -> dict[str, Any]:
     return {
         "layer_id": WGI_LAYER_ID,
         "theme": "political",
-        "title": manifest.get("title", "WGI State Capacity"),
+        "title": manifest.get("title", "WGI Governance Proxy"),
         "description": manifest.get(
             "description",
-            "World Bank WGI admin0 state capacity layer from government effectiveness and rule of law.",
+            "World Bank WGI admin0 Government Effectiveness and Rule of Law scores with a project-defined state-capacity proxy.",
         ),
         "geometry_kind": "admin0",
         "manifest_path": data_url(WGI_MANIFEST_RELATIVE_PATH),

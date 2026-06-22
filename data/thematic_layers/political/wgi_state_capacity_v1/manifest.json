@@ -2,8 +2,8 @@
   "schema_version": 1,
   "layer_id": "political_wgi_state_capacity_v1",
   "theme": "political",
-  "title": "WGI State Capacity",
-  "description": "World Bank WGI 2024 admin0 state capacity scores from government effectiveness and rule of law.",
+  "title": "WGI Governance Proxy",
+  "description": "World Bank WGI 2024 admin0 Government Effectiveness and Rule of Law scores with a project-defined state-capacity proxy.",
   "geometry_kind": "admin0",
   "metric_ids": [
     "wgi_government_effectiveness_score_0_100",
@@ -46,10 +46,22 @@
       "selected_year": 2024,
       "license": "Creative Commons Attribution 4.0",
       "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
-      "selection_rule": "Use 2024 rows from ge and rl sheets; mean the two 0-100 scores only when both are present.",
+      "selection_rule": "Use 2024 rows from official ge and rl sheets; mean the two 0-100 scores only for the project-defined proxy when both source scores are present.",
       "source_cache_path": ".runtime/source-cache/thematic/wgi/WGI_2025_Revision_Governance_Estimates_and_Absolute_Scores_1996_2024.xlsx",
       "source_sha256": "25a2f9eabb90b0092973392c0b31571aa58b691cc5786292e504b52f693e1eb8",
-      "source_size_bytes": 10423344
+      "source_size_bytes": 10423344,
+      "official_dimensions": {
+        "government_effectiveness": "Government Effectiveness",
+        "rule_of_law": "Rule of Law"
+      },
+      "uncertainty_fields_preserved": [
+        "number_of_sources",
+        "score_standard_error",
+        "score_confidence_interval_90",
+        "estimate",
+        "estimate_standard_error",
+        "estimate_confidence_interval_90"
+      ]
     }
   ],
   "license": {
@@ -66,7 +78,7 @@
       0,
       100
     ],
-    "composite": "mean(government_effectiveness, rule_of_law) when both are observed"
+    "composite": "project_defined_proxy_mean(government_effectiveness, rule_of_law) when both are observed"
   },
   "feature_counts": {
     "features": 215,
@@ -84,7 +96,8 @@
   },
   "limitations": [
     "WGI scores are country/economy-level governance indicators and are not subnational topology measures.",
-    "The composite is a simple two-indicator mean for map exploration, not an official World Bank index.",
+    "The state-capacity proxy is a project-defined two-indicator mean, not an official World Bank index or rating.",
+    "WGI includes uncertainty; source metric standard errors and 90% confidence intervals are preserved in metrics.admin0.json.",
     "Rows without explicit join keys stay out of the metric payload and are reported in build_audit.",
     "The layer is catalog-only until a later UI/runtime rendering phase accepts it."
   ]

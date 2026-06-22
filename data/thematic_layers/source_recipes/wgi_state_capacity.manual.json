@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "recipe_id": "wgi_state_capacity_manual",
-  "title": "WGI state capacity source recipe",
+  "title": "WGI governance proxy source recipe",
   "source_family": "World Bank Worldwide Governance Indicators",
   "phase": "foundation_contract",
   "source_policy": "fixture_only",
@@ -19,7 +19,7 @@
       "periodicity": "annual",
       "license": "World Bank catalog metadata; default World Bank data license is CC BY 4.0 unless metadata says otherwise.",
       "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
-      "selection_rule": "Pin release, year, indicators, and source package checksum before ingest."
+      "selection_rule": "Pin release, year, official WGI dimensions, project proxy method, and source package checksum before ingest."
     }
   ],
   "missing_value_policy": "Missing or unavailable source values must stay null and carry source_gap status."

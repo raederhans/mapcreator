@@ -444,3 +444,6 @@
 
 ### Review 前确认新增文件已进索引
 - `git diff` 看不到 untracked 新文件；新模块被已跟踪文件 import 时，review/commit 前用 `git add -A` 和 `git ls-files --others --exclude-standard` 检查，避免本地能跑但提交缺文件。
+
+### WGI 源层要保留不确定性字段
+- 接入 WGI workbook 时先查真实表头；number of sources、standard error 和 90% confidence interval 是 source metric 合同字段，project-defined composite 要明确记录不推导 composite uncertainty。

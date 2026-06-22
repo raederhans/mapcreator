@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "recipe_id": "wgi_state_capacity_v1",
-  "title": "WGI state capacity v1 source recipe",
+  "title": "WGI governance proxy v1 source recipe",
   "source_family": "World Bank Worldwide Governance Indicators",
   "phase": "real_source_cache_v1",
   "source_policy": "real_source_cache_only",
@@ -22,7 +22,7 @@
       "temporal_coverage": "1996-2024",
       "license": "Creative Commons Attribution 4.0",
       "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
-      "selection_rule": "Use 2024 country/economy rows from ge and rl sheets; derive composite only when both scores exist."
+      "selection_rule": "Use 2024 country/economy rows from official ge and rl sheets; derive a project proxy only when both scores exist."
     }
   ],
   "metric_selection": {
@@ -31,11 +31,18 @@
       "ge": "government_effectiveness",
       "rl": "rule_of_law"
     },
+    "official_dimensions": {
+      "government_effectiveness": "Government Effectiveness",
+      "rule_of_law": "Rule of Law"
+    },
     "metrics": [
       "wgi_government_effectiveness_score_0_100",
       "wgi_rule_of_law_score_0_100",
       "wgi_state_capacity_composite_0_100"
-    ]
+    ],
+    "project_defined_metrics": {
+      "wgi_state_capacity_composite_0_100": "Mean of Government Effectiveness and Rule of Law when both source scores are observed."
+    }
   },
   "join_key_policy": {
     "join_key_type": "iso_a3",
@@ -102,5 +109,6 @@
     "unmatched_rows_are_audited": true,
     "name_fuzzy_matching": false
   },
-  "missing_value_policy": "Missing or unavailable source values stay null and carry source_gap or partial_source_gap status."
+  "missing_value_policy": "Missing or unavailable source values stay null and carry source_gap or partial_source_gap status.",
+  "uncertainty_policy": "Preserve WGI number of sources, standard errors, and 90% confidence intervals for source metrics; do not infer composite uncertainty."
 }

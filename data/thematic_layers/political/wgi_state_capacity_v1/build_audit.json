@@ -212,8 +212,9 @@
   "normalization_summary": {
     "government_effectiveness": "WGI Governance score (0-100) passthrough.",
     "rule_of_law": "WGI Governance score (0-100) passthrough.",
-    "state_capacity_composite": "Mean of government effectiveness and rule of law when both are observed.",
-    "missing_value_policy": "Null raw_value and normalized_value for source_gap or partial_source_gap."
+    "state_capacity_composite": "Project-defined mean of government effectiveness and rule of law when both are observed.",
+    "missing_value_policy": "Null raw_value and normalized_value for source_gap or partial_source_gap.",
+    "uncertainty_policy": "Preserve source metric standard errors and 90% confidence intervals; do not infer composite uncertainty."
   },
   "license_summary": {
     "fixture_data": "none",

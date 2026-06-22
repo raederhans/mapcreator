@@ -6,9 +6,11 @@ import {
 
 export const THEMATIC_LAYER_RENDER_DISABLED_REASON = "Runtime rendering disabled";
 export const THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON = "Real source not ingested";
+export const THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON = "Real-source derived metadata";
 export const THEMATIC_CATALOG_PENDING_SUMMARY = "Preview metadata pending";
 export const THEMATIC_CATALOG_READY_SUMMARY = "Preview metadata available";
 export const THEMATIC_SOURCE_POLICY_FIXTURE_ONLY = "fixture_only";
+export const THEMATIC_SOURCE_POLICY_REAL_SOURCE_CACHE_ONLY = "real_source_cache_only";
 
 function freezeArray(values = []) {
   return Object.freeze([...(Array.isArray(values) ? values : [])]);
@@ -91,6 +93,13 @@ function createSummaryText({
     .join(" | ");
 }
 
+function createRealSourceStatus(sourcePolicy) {
+  if (sourcePolicy === THEMATIC_SOURCE_POLICY_REAL_SOURCE_CACHE_ONLY) {
+    return THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON;
+  }
+  return THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON;
+}
+
 function normalizeLayerSummary(layer = {}, {
   manifest = null,
   sourcePolicyLegend = {},
@@ -147,7 +156,7 @@ function normalizeLayerSummary(layer = {}, {
     supportsRuntimePreview: true,
     supportsMainMapRender: false,
     disabledReason: THEMATIC_LAYER_RENDER_DISABLED_REASON,
-    realSourceStatus: THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON,
+    realSourceStatus: createRealSourceStatus(sourcePolicy),
     summary,
   });
 }

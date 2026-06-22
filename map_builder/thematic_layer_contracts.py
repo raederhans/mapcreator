@@ -16,6 +16,7 @@ MISSING_SOURCE_STATUSES = {
     "source_gap",
     "unmatched",
 }
+UNCERTAINTY_TEXT_FIELDS = {"method", "reason"}
 
 
 def read_thematic_json(path: Path) -> Any:
@@ -66,6 +67,24 @@ def _rle_value_count(runs: object, expected_value: int) -> int:
 
 def _is_finite_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+
+
+def _validate_uncertainty_values(value: object, path: str, errors: list[str], source_label: str) -> None:
+    if value is None:
+        return
+    if isinstance(value, dict):
+        for key, child in value.items():
+            _validate_uncertainty_values(child, f"{path}.{key}", errors, source_label)
+        return
+    if isinstance(value, list):
+        for index, child in enumerate(value):
+            _validate_uncertainty_values(child, f"{path}.{index}", errors, source_label)
+        return
+    field_name = path.rsplit(".", 1)[-1]
+    if isinstance(value, str) and field_name in UNCERTAINTY_TEXT_FIELDS:
+        return
+    if not _is_finite_number(value):
+        errors.append(f"{source_label}: {path} must be a finite number or null")
 
 
 def validate_thematic_layer_index(
@@ -144,6 +163,13 @@ def validate_thematic_admin_metrics(
             source_status = str(metric_payload.get("source_status") or "")
             raw_value = metric_payload.get("raw_value")
             normalized_value = metric_payload.get("normalized_value")
+            if "uncertainty" in metric_payload:
+                _validate_uncertainty_values(
+                    metric_payload["uncertainty"],
+                    f"{metric_path}.uncertainty",
+                    errors,
+                    source_label,
+                )
             if source_status in MISSING_SOURCE_STATUSES:
                 if raw_value is not None or normalized_value is not None:
                     errors.append(

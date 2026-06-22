@@ -12,6 +12,7 @@ import {
   THEMATIC_CATALOG_PENDING_SUMMARY,
   THEMATIC_CATALOG_READY_SUMMARY,
   THEMATIC_LAYER_RENDER_DISABLED_REASON,
+  THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON,
   THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON,
 } from "../../core/thematic_layer_catalog.js";
 import {
@@ -250,6 +251,8 @@ export function buildThematicCatalogDiagnostic({
   const loadedManifestCount = normalizeFiniteCount(preview.loadedManifestCount) ?? layers.filter((layer) => layer.manifestLoaded).length;
   const fixtureOnlyCount = layers.filter((layer) => layer.fixtureOnly).length;
   const hiddenByDefaultCount = layers.filter((layer) => layer.hiddenByDefault).length;
+  const hasRealSourceNotIngested = layers.some((layer) => layer.realSourceStatus === THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON);
+  const hasRealSourceDerivedMetadata = layers.some((layer) => layer.realSourceStatus === THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON);
   let summary = THEMATIC_CATALOG_PENDING_SUMMARY;
   let severity = STATUS_SEVERITY.MUTED;
   if (status === "error" || error) {
@@ -266,7 +269,8 @@ export function buildThematicCatalogDiagnostic({
       fixtureOnlyCount > 0 ? translateUi(translate, "Fixture only") : "",
       hiddenByDefaultCount > 0 ? translateUi(translate, "Hidden by default") : "",
       translateUi(translate, THEMATIC_LAYER_RENDER_DISABLED_REASON),
-      translateUi(translate, THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON),
+      hasRealSourceNotIngested ? translateUi(translate, THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON) : "",
+      hasRealSourceDerivedMetadata ? translateUi(translate, THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON) : "",
     );
     severity = STATUS_SEVERITY.MUTED;
   }

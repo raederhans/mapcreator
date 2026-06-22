@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import thematicIndex from "../data/thematic_layers/index.json" with { type: "json" };
 import {
   CONTRACT_GROUPS,
   getLayerPanelDisabledReason,
@@ -120,18 +121,22 @@ test("thematic panel contracts expose a read-only catalog preview surface", () =
   assert.equal(getLayerStatusAnchorById("thematic"), "");
   assert.equal(getLayerPanelDisabledReason(catalogContract, { translate: (key) => key }), "Runtime rendering disabled");
 
-  assert.equal(layerContracts.length, 3);
+  assert.equal(layerContracts.length, thematicIndex.layers.length);
   layerContracts.forEach((contract) => {
     assert.equal(contract.group, "thematic");
     assert.equal(contract.panelId, "mapContentPanelThematic");
     assert.equal(contract.supportsMainOverview, false);
     assert.equal(contract.supportsRuntimePreview, true);
     assert.equal(contract.renderOwner, null);
-    assert.equal(contract.sourcePolicy, "fixture_only");
     assert.equal(contract.defaultVisible, false);
     assert.equal(contract.hiddenByDefault, true);
     assert.equal(contract.requiredRuntimeKeys.includes("thematic_layer_catalog"), true);
   });
+  const wgiContract = layerContracts.find((contract) => contract.id === "thematic-layer:political_wgi_state_capacity_v1");
+  assert.equal(wgiContract.sourcePolicy, "real_source_cache_only");
+  layerContracts
+    .filter((contract) => contract !== wgiContract)
+    .forEach((contract) => assert.equal(contract.sourcePolicy, "fixture_only"));
 });
 
 test("layer panel contract module stays read-only and renderer-free", () => {

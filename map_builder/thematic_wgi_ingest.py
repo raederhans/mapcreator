@@ -52,6 +52,10 @@ DIMENSION_TO_METRIC_ID = {
     "government_effectiveness": WGI_GOVERNMENT_EFFECTIVENESS_METRIC_ID,
     "rule_of_law": WGI_RULE_OF_LAW_METRIC_ID,
 }
+WGI_OFFICIAL_DIMENSIONS = {
+    "government_effectiveness": "Government Effectiveness",
+    "rule_of_law": "Rule of Law",
+}
 
 SOURCE_CODE_TO_ISO_A3 = {
     "ADO": "AND",
@@ -137,6 +141,14 @@ class WgiObservation:
     dimension: str
     year: int
     score_0_100: float | None
+    score_standard_error: float | None
+    score_confidence_interval_lower_90: float | None
+    score_confidence_interval_upper_90: float | None
+    estimate: float | None
+    estimate_standard_error: float | None
+    estimate_confidence_interval_lower_90: float | None
+    estimate_confidence_interval_upper_90: float | None
+    number_of_sources: int | None
     source_row_ref: str
 
 
@@ -211,20 +223,36 @@ def _parse_year(value: object) -> int | None:
         return None
 
 
-def _parse_score(value: object) -> float | None:
+def _parse_number(value: object) -> float | None:
     if value is None or value == "":
         return None
-    if isinstance(value, (int, float)):
-        score = float(value)
-        return round(score, 6) if math.isfinite(score) and 0 <= score <= 100 else None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        parsed = float(value)
+        return round(parsed, 6) if math.isfinite(parsed) else None
     text = str(value).strip()
     if not text or text in {"..", "NA", "N/A", "nan"}:
         return None
     try:
-        score = float(text)
+        parsed = float(text)
     except ValueError:
         return None
-    return round(score, 6) if math.isfinite(score) and 0 <= score <= 100 else None
+    return round(parsed, 6) if math.isfinite(parsed) else None
+
+
+def _parse_score(value: object) -> float | None:
+    score = _parse_number(value)
+    return score if score is not None and 0 <= score <= 100 else None
+
+
+def _parse_float(value: object) -> float | None:
+    return _parse_number(value)
+
+
+def _parse_count(value: object) -> int | None:
+    parsed = _parse_number(value)
+    if parsed is None or parsed < 0 or not float(parsed).is_integer():
+        return None
+    return int(parsed)
 
 
 def _is_truthy(value: object) -> bool:
@@ -256,6 +284,24 @@ def _row_to_observation(
     source_code = _normalize_code(_select_field(row, ("Economy (code)", "economy_code", "code")))
     year = _parse_year(_select_field(row, ("Year", "year")))
     score = _parse_score(_select_field(row, ("Governance score (0-100)", "score_0_100", "score")))
+    score_standard_error = _parse_float(_select_field(row, ("Standard error (gov. score)", "score_standard_error")))
+    score_confidence_interval_lower_90 = _parse_score(
+        _select_field(row, ("Lower threshold (90% conf. int. score)", "score_confidence_interval_lower_90"))
+    )
+    score_confidence_interval_upper_90 = _parse_score(
+        _select_field(row, ("Upper threshold (90% conf. int. score)", "score_confidence_interval_upper_90"))
+    )
+    estimate = _parse_float(
+        _select_field(row, ("Governance estimate (approx. -2.5 to +2.5)", "governance_estimate"))
+    )
+    estimate_standard_error = _parse_float(_select_field(row, ("Standard error (estimate)", "estimate_standard_error")))
+    estimate_confidence_interval_lower_90 = _parse_float(
+        _select_field(row, ("Lower threshold (90% conf. int. estimate)", "estimate_confidence_interval_lower_90"))
+    )
+    estimate_confidence_interval_upper_90 = _parse_float(
+        _select_field(row, ("Upper threshold (90% conf. int. estimate)", "estimate_confidence_interval_upper_90"))
+    )
+    number_of_sources = _parse_count(_select_field(row, ("Number of sources", "number_of_sources")))
     source_row_ref = f"{source_label}:row:{row_number}"
 
     if year != selected_year:
@@ -275,6 +321,14 @@ def _row_to_observation(
             dimension=dimension,
             year=selected_year,
             score_0_100=score,
+            score_standard_error=score_standard_error,
+            score_confidence_interval_lower_90=score_confidence_interval_lower_90,
+            score_confidence_interval_upper_90=score_confidence_interval_upper_90,
+            estimate=estimate,
+            estimate_standard_error=estimate_standard_error,
+            estimate_confidence_interval_lower_90=estimate_confidence_interval_lower_90,
+            estimate_confidence_interval_upper_90=estimate_confidence_interval_upper_90,
+            number_of_sources=number_of_sources,
             source_row_ref=source_row_ref,
         ),
         None,
@@ -378,6 +432,23 @@ def _missing_metric_payload(*, year: int, source_status: str, notes: str) -> dic
     }
 
 
+def _uncertainty_payload(observation: WgiObservation) -> dict[str, Any]:
+    return {
+        "number_of_sources": observation.number_of_sources,
+        "score_standard_error": observation.score_standard_error,
+        "score_confidence_interval_90": {
+            "lower": observation.score_confidence_interval_lower_90,
+            "upper": observation.score_confidence_interval_upper_90,
+        },
+        "estimate": observation.estimate,
+        "estimate_standard_error": observation.estimate_standard_error,
+        "estimate_confidence_interval_90": {
+            "lower": observation.estimate_confidence_interval_lower_90,
+            "upper": observation.estimate_confidence_interval_upper_90,
+        },
+    }
+
+
 def _observed_metric_payload(observation: WgiObservation) -> dict[str, Any]:
     if observation.score_0_100 is None:
         return _missing_metric_payload(
@@ -385,6 +456,7 @@ def _observed_metric_payload(observation: WgiObservation) -> dict[str, Any]:
             source_status="source_gap",
             notes=f"WGI {observation.dimension} row exists but score is empty.",
         ) | {
+            "uncertainty": _uncertainty_payload(observation),
             "source_country_code": observation.source_code,
             "source_row_ref": observation.source_row_ref,
         }
@@ -395,6 +467,7 @@ def _observed_metric_payload(observation: WgiObservation) -> dict[str, Any]:
         "unit": "score_0_100",
         "source_status": "observed",
         "notes": f"WGI {observation.dimension} score for {WGI_SELECTED_YEAR}.",
+        "uncertainty": _uncertainty_payload(observation),
         "source_country_code": observation.source_code,
         "source_row_ref": observation.source_row_ref,
     }
@@ -416,7 +489,11 @@ def _composite_metric_payload(
             "year": selected_year,
             "unit": "score_0_100",
             "source_status": "observed",
-            "notes": "Mean of WGI government effectiveness and rule of law scores.",
+            "notes": "Project-defined proxy: mean of WGI government effectiveness and rule of law scores.",
+            "uncertainty": {
+                "method": "not_computed",
+                "reason": "Composite uncertainty is not inferred from the two source dimensions.",
+            },
             "source_row_refs": {
                 "government_effectiveness": ge_observation.source_row_ref,
                 "rule_of_law": rl_observation.source_row_ref,
@@ -501,6 +578,7 @@ def build_admin_metrics_payload(
         "notes": [
             "Built from a local World Bank WGI source cache; the builder does not download by default.",
             "Join keys use explicit WGI economy code rules; unmatched rows stay in build audit.",
+            "WGI standard errors and 90% confidence intervals are preserved per source metric.",
         ],
     }
 
@@ -555,7 +633,7 @@ def build_wgi_recipe_payload(generated_at: str) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "recipe_id": "wgi_state_capacity_v1",
-        "title": "WGI state capacity v1 source recipe",
+        "title": "WGI governance proxy v1 source recipe",
         "source_family": "World Bank Worldwide Governance Indicators",
         "phase": "real_source_cache_v1",
         "source_policy": "real_source_cache_only",
@@ -576,13 +654,17 @@ def build_wgi_recipe_payload(generated_at: str) -> dict[str, Any]:
                 "temporal_coverage": "1996-2024",
                 "license": WGI_LICENSE,
                 "citation": WGI_CITATION,
-                "selection_rule": "Use 2024 country/economy rows from ge and rl sheets; derive composite only when both scores exist.",
+                "selection_rule": "Use 2024 country/economy rows from official ge and rl sheets; derive a project proxy only when both scores exist.",
             }
         ],
         "metric_selection": {
             "year": WGI_SELECTED_YEAR,
             "source_sheets": {"ge": "government_effectiveness", "rl": "rule_of_law"},
+            "official_dimensions": WGI_OFFICIAL_DIMENSIONS,
             "metrics": list(WGI_METRIC_IDS),
+            "project_defined_metrics": {
+                WGI_COMPOSITE_METRIC_ID: "Mean of Government Effectiveness and Rule of Law when both source scores are observed."
+            },
         },
         "join_key_policy": {
             "join_key_type": "iso_a3",
@@ -592,6 +674,7 @@ def build_wgi_recipe_payload(generated_at: str) -> dict[str, Any]:
             "name_fuzzy_matching": False,
         },
         "missing_value_policy": "Missing or unavailable source values stay null and carry source_gap or partial_source_gap status.",
+        "uncertainty_policy": "Preserve WGI number of sources, standard errors, and 90% confidence intervals for source metrics; do not infer composite uncertainty.",
     }
 
 
@@ -607,8 +690,8 @@ def build_manifest_payload(
         "schema_version": 1,
         "layer_id": WGI_LAYER_ID,
         "theme": "political",
-        "title": "WGI State Capacity",
-        "description": "World Bank WGI 2024 admin0 state capacity scores from government effectiveness and rule of law.",
+        "title": "WGI Governance Proxy",
+        "description": "World Bank WGI 2024 admin0 Government Effectiveness and Rule of Law scores with a project-defined state-capacity proxy.",
         "geometry_kind": "admin0",
         "metric_ids": list(WGI_METRIC_IDS),
         "period": {
@@ -645,10 +728,19 @@ def build_manifest_payload(
                 "selected_year": WGI_SELECTED_YEAR,
                 "license": WGI_LICENSE,
                 "citation": WGI_CITATION,
-                "selection_rule": "Use 2024 rows from ge and rl sheets; mean the two 0-100 scores only when both are present.",
+                "selection_rule": "Use 2024 rows from official ge and rl sheets; mean the two 0-100 scores only for the project-defined proxy when both source scores are present.",
                 "source_cache_path": signature.repo_relative_path,
                 "source_sha256": signature.sha256,
                 "source_size_bytes": signature.size_bytes,
+                "official_dimensions": WGI_OFFICIAL_DIMENSIONS,
+                "uncertainty_fields_preserved": [
+                    "number_of_sources",
+                    "score_standard_error",
+                    "score_confidence_interval_90",
+                    "estimate",
+                    "estimate_standard_error",
+                    "estimate_confidence_interval_90",
+                ],
             }
         ],
         "license": {
@@ -662,7 +754,7 @@ def build_manifest_payload(
         "normalization": {
             "method": "source_score_0_100_passthrough",
             "range": [0, 100],
-            "composite": "mean(government_effectiveness, rule_of_law) when both are observed",
+            "composite": "project_defined_proxy_mean(government_effectiveness, rule_of_law) when both are observed",
         },
         "feature_counts": coverage_counts,
         "build_audit_path": data_url(WGI_AUDIT_RELATIVE_PATH),
@@ -675,7 +767,8 @@ def build_manifest_payload(
         },
         "limitations": [
             "WGI scores are country/economy-level governance indicators and are not subnational topology measures.",
-            "The composite is a simple two-indicator mean for map exploration, not an official World Bank index.",
+            "The state-capacity proxy is a project-defined two-indicator mean, not an official World Bank index or rating.",
+            "WGI includes uncertainty; source metric standard errors and 90% confidence intervals are preserved in metrics.admin0.json.",
             "Rows without explicit join keys stay out of the metric payload and are reported in build_audit.",
             "The layer is catalog-only until a later UI/runtime rendering phase accepts it.",
         ],
@@ -738,8 +831,9 @@ def build_audit_payload(
         "normalization_summary": {
             "government_effectiveness": "WGI Governance score (0-100) passthrough.",
             "rule_of_law": "WGI Governance score (0-100) passthrough.",
-            "state_capacity_composite": "Mean of government effectiveness and rule of law when both are observed.",
+            "state_capacity_composite": "Project-defined mean of government effectiveness and rule of law when both are observed.",
             "missing_value_policy": "Null raw_value and normalized_value for source_gap or partial_source_gap.",
+            "uncertainty_policy": "Preserve source metric standard errors and 90% confidence intervals; do not infer composite uncertainty.",
         },
         "license_summary": {
             "fixture_data": "none",

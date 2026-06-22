@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON,
+  THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON,
+} from "../js/core/thematic_layer_catalog.js";
+import {
   createDefaultContentState,
 } from "../js/core/state/content_state.js";
 import {
@@ -105,26 +109,29 @@ test("bathymetry diagnostic explains disabled and pending data states", () => {
 });
 
 test("thematic catalog diagnostic reports read-only fixture preview state", () => {
+  const layers = [
+    { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true, realSourceStatus: THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON },
+    { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true, realSourceStatus: THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON },
+    { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true, realSourceStatus: THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON },
+    { fixtureOnly: false, hiddenByDefault: true, manifestLoaded: true, realSourceStatus: THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON },
+  ];
   const preview = {
     status: "ready",
-    layerCount: 3,
-    loadedManifestCount: 3,
-    layers: [
-      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
-      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
-      { fixtureOnly: true, hiddenByDefault: true, manifestLoaded: true },
-    ],
+    layerCount: layers.length,
+    loadedManifestCount: layers.length,
+    layers,
   };
   const diagnostic = buildThematicCatalogDiagnostic({ thematicCatalogPreview: preview }, { translate: (key) => key });
 
   assert.equal(diagnostic.id, "thematic");
   assert.equal(diagnostic.enabled, false);
-  assert.equal(diagnostic.loadedCount, 3);
+  assert.equal(diagnostic.loadedCount, layers.length);
   assert.equal(diagnostic.visibleCount, 0);
   assert.equal(diagnostic.severity, "muted");
   assert.equal(diagnostic.summary.includes("Preview metadata available"), true);
   assert.equal(diagnostic.summary.includes("Runtime rendering disabled"), true);
-  assert.equal(diagnostic.summary.includes("Real source not ingested"), true);
+  assert.equal(diagnostic.summary.includes(THEMATIC_REAL_SOURCE_NOT_INGESTED_REASON), true);
+  assert.equal(diagnostic.summary.includes(THEMATIC_REAL_SOURCE_DERIVED_METADATA_REASON), true);
 
   const diagnostics = buildLayerStatusDiagnostics(createState(), {
     translate: (key) => key,

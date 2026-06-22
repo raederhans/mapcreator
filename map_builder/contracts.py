@@ -194,14 +194,14 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         role="thematic_source_recipe",
         artifact_class=ARTIFACT_CLASS_MANUAL,
         owner="tools.build_thematic_layers",
-        description="Manual source recipe for future WGI-derived state capacity thematic layers.",
+        description="Manual source recipe for future WGI-derived governance proxy thematic layers.",
     ),
     DataArtifactSpec(
         path="thematic_layers/source_recipes/wgi_state_capacity_v1.manual.json",
         role="thematic_source_recipe",
         artifact_class=ARTIFACT_CLASS_MANUAL,
         owner="tools.build_thematic_layers",
-        description="Cache-only source recipe for the WGI 2025 state capacity thematic layer.",
+        description="Cache-only source recipe for the WGI 2025 governance proxy thematic layer.",
     ),
     DataArtifactSpec(
         path="thematic_layers/source_recipes/undp_hdi.manual.json",
@@ -246,7 +246,7 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         role="thematic_layer_manifest",
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="tools.build_thematic_layers",
-        description="World Bank WGI 2025 admin0 state capacity thematic layer manifest.",
+        description="World Bank WGI 2025 admin0 governance proxy thematic layer manifest.",
         schema_ref="schema://thematic/layer_manifest/v1",
     ),
     DataArtifactSpec(
@@ -254,7 +254,7 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         role="thematic_admin_metrics",
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="tools.build_thematic_layers",
-        description="World Bank WGI 2024 admin0 government effectiveness, rule of law, and composite scores.",
+        description="World Bank WGI 2024 admin0 official dimension scores and project-defined proxy scores.",
         schema_ref="schema://thematic/admin_metrics/v1",
     ),
     DataArtifactSpec(
@@ -262,7 +262,7 @@ DATA_ARTIFACT_SPECS: tuple[DataArtifactSpec, ...] = (
         role="thematic_build_audit",
         artifact_class=ARTIFACT_CLASS_DERIVED,
         owner="tools.build_thematic_layers",
-        description="Build audit for the World Bank WGI state capacity thematic layer.",
+        description="Build audit for the World Bank WGI governance proxy thematic layer.",
         schema_ref="schema://thematic/build_audit/v1",
     ),
     DataArtifactSpec(

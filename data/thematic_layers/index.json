@@ -59,8 +59,8 @@
     {
       "layer_id": "political_wgi_state_capacity_v1",
       "theme": "political",
-      "title": "WGI State Capacity",
-      "description": "World Bank WGI 2024 admin0 state capacity scores from government effectiveness and rule of law.",
+      "title": "WGI Governance Proxy",
+      "description": "World Bank WGI 2024 admin0 Government Effectiveness and Rule of Law scores with a project-defined state-capacity proxy.",
       "geometry_kind": "admin0",
       "manifest_path": "data/thematic_layers/political/wgi_state_capacity_v1/manifest.json",
       "status": "experimental",

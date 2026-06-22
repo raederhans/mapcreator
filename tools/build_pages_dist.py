@@ -84,6 +84,7 @@ DATA_RUNTIME_DIRS = (
     "palettes",
     "releasables",
     "scenario-rules",
+    "thematic_layers",
     "unit_counter_libraries",
 )
 HGO_IDENTITY_RUNTIME_FILES = (
