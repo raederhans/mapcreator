@@ -38,3 +38,12 @@
 - Added WGI ingest tests to the named `test:py:thematic-layer-contracts` route and structural route registry so future ingest edits select the real-source tests.
 - Latest validation passed compile, WGI/thematic contracts, named npm thematic route, structural tooling, WGI real/default builds, catalog rebuild, data manifest/catalog contracts, data catalog check, architecture boundaries, import graph, Pages dist, and diff check. `verify:dist-drift` is expected to report pending dist changes before commit because the commit has not yet recorded the regenerated dist files.
 - Integration note: this feature branch is currently 2 commits behind `origin/main@ad4b6b8659d2d56a2e8f01b9f4cbd2428462782f`; integrate only after rebasing or merging current main and re-rating overlap with the thematic runtime preview worktree.
+
+## 2026-06-22 Integration Closeout
+
+- Preview work landed first on main, so WGI was rebased through the preview closeout commits before integration.
+- Final WGI feature commit: `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Main fast-forwarded WGI from `64a8ab719128e83a1f21f388144e0b801f98a91b` to `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Post-merge validation passed: WGI/thematic npm route 18 tests, structural tooling 28 tests, data manifest/catalog 32 tests, data catalog check with 658 entries, architecture boundaries, import graph, Pages dist 38 startup tests plus 8 landing tests, and `git diff --check`.
+- The first structural tooling rerun on main failed because the main checkout was missing local Node dependency `@playwright/test`; `npm ci --ignore-scripts` restored ignored local dependencies and the same test then passed.
+- WGI remains catalog-only and experimental. Rendering, UI control, scenario save-format, and topology changes remain future phases.

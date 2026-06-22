@@ -31,14 +31,14 @@ Add the first real-source political thematic layer using the World Bank Worldwid
 
 ## Work Plan
 
-- [ ] Confirm current worktrees, base commits, and overlap risk.
-- [ ] Create WGI ingest module with CSV fixture reader and XLSX cache reader.
-- [ ] Extend schemas/contracts for real-source WGI audit fields and partial source gaps.
-- [ ] Extend thematic builder to include WGI generation behind an explicit real-source flag and preserve checked-in WGI assets in default runs.
-- [ ] Add fixture tests and update existing thematic/catalog/manifest contracts.
-- [ ] Generate WGI checked-in assets from the local source cache.
-- [ ] Run targeted validation and final QA/review gates.
-- [ ] Record delivery package, checkpoint ultragoal stories, commit, integrate, push, archive, and clean.
+- [x] Confirm current worktrees, base commits, and overlap risk.
+- [x] Create WGI ingest module with CSV fixture reader and XLSX cache reader.
+- [x] Extend schemas/contracts for real-source WGI audit fields and partial source gaps.
+- [x] Extend thematic builder to include WGI generation behind an explicit real-source flag and preserve checked-in WGI assets in default runs.
+- [x] Add fixture tests and update existing thematic/catalog/manifest contracts.
+- [x] Generate WGI checked-in assets from the local source cache.
+- [x] Run targeted validation and final QA/review gates.
+- [x] Record delivery package, checkpoint ultragoal stories, commit, integrate, push, archive, and clean.
 
 ## Live Process Ownership
 
