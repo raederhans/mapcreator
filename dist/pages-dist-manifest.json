@@ -46497,7 +46497,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 36489,
+      "size_bytes": 36252,
       "source_kind": "dist"
     },
     {
@@ -46556,8 +46556,13 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/toolbar/layer_panel_contracts.js",
+      "size_bytes": 10588,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/toolbar/layer_status_diagnostics.js",
-      "size_bytes": 13535,
+      "size_bytes": 12801,
       "source_kind": "dist"
     },
     {
@@ -47117,7 +47122,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1455098,
+      "size_bytes": 1455226,
       "source_kind": "dist"
     },
     {
@@ -47136,5 +47141,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154338427
+  "total_bytes": 1154348172
 }

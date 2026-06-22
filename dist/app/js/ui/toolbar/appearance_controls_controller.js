@@ -18,6 +18,9 @@ import {
   sanitizeLayerStatusText,
 } from "./layer_status_diagnostics.js";
 import {
+  getLayerPanelStatusAnchorMap,
+} from "./layer_panel_contracts.js";
+import {
   createToolbarDirtyRenderScheduler,
   normalizeRenderReason,
   shouldBatchToolbarRenderReason,
@@ -149,18 +152,7 @@ export function createAppearanceControlsController({
   };
   moveAppearanceLayerPanels();
   moveMapContentPanels();
-  const layerStatusAnchorById = Object.freeze({
-    borders: "lblBordersPanel",
-    physical: "lblPhysicalPanel",
-    urban: "lblUrbanPanel",
-    "city-points": "lblCityPointsPanel",
-    rivers: "lblRiversPanel",
-    ocean: "lblOcean",
-    bathymetry: "lblOceanStyleCard",
-    "day-night": "lblDayNightPanel",
-    texture: "lblTexture",
-    transport: "lblTransportPanel",
-  });
+  const layerStatusAnchorById = getLayerPanelStatusAnchorMap();
   const layerStatusNodes = new Map();
   const ensureLayerStatusNode = (diagnosticId) => {
     if (layerStatusNodes.has(diagnosticId)) return layerStatusNodes.get(diagnosticId);

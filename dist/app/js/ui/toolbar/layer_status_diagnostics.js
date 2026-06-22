@@ -1,68 +1,26 @@
 import {
   getTransportCapabilityDefaultOverviewConfig,
-  getTransportCapabilityFamilyMetadata,
   getTransportOverviewVisibilityField,
-  listTransportCapabilityFamilyIds,
   listTransportOverviewCapabilityFamilyIds,
   normalizeTransportOverviewVisualMode,
   resolveLinkedTransportOverviewScopeAndThreshold,
-  supportsTransportCapabilityOverview,
 } from "../../core/transport_capability_registry.js";
 import {
   buildTransportFamilySummaryText,
 } from "./appearance_transport_summary.js";
+import {
+  getLayerPanelContractById,
+  getLayerPanelDisabledReason,
+  getLayerPanelUnsupportedReason,
+  listBaseLayerStatusContracts,
+  listTransportLayerPanelContracts,
+} from "./layer_panel_contracts.js";
 
 const STATUS_SEVERITY = Object.freeze({
   ACTIVE: "active",
   MUTED: "muted",
   WARNING: "warning",
 });
-
-const LAYER_DEFINITIONS = Object.freeze([
-  {
-    id: "borders",
-    label: "Borders",
-    enabled: (state) => state.parentBordersVisible !== false,
-    dataKeys: ["landData"],
-  },
-  {
-    id: "physical",
-    label: "Physical Regions",
-    enabled: (state) => state.showPhysical !== false,
-    dataKeys: ["physicalData", "physicalSemanticsData", "physicalContourMajorData", "physicalContourMinorData"],
-    loadKeys: ["physical", "physical_semantics", "physical_contours_major", "physical_contours_minor"],
-    metricNames: ["drawPhysicalContourLayer", "drawPhysicalAtlasLayer", "drawPhysicalBasePass", "drawPhysicalReliefOverlayLayer"],
-  },
-  {
-    id: "urban",
-    label: "Urban Areas",
-    enabled: (state) => state.showUrban !== false,
-    dataKeys: ["urbanData"],
-    loadKeys: ["urban"],
-    metricNames: ["drawUrbanLayer"],
-  },
-  {
-    id: "city-points",
-    label: "City Points",
-    enabled: (state) => state.showCityPoints !== false,
-    dataKeys: ["worldCitiesData"],
-    metricNames: ["drawCityPointsLayer"],
-  },
-  {
-    id: "rivers",
-    label: "Rivers",
-    enabled: (state) => state.showRivers !== false,
-    dataKeys: ["riversData"],
-    loadKeys: ["rivers"],
-    metricNames: ["drawRiversLayer"],
-  },
-  {
-    id: "ocean",
-    label: "Ocean",
-    enabled: () => true,
-    dataKeys: ["oceanData"],
-  },
-]);
 
 function translateUi(translate, key) {
   return typeof translate === "function" ? translate(key, "ui") : key;
@@ -171,7 +129,9 @@ function buildEnabledSummary({
 }
 
 function createLayerDiagnostic(definition, state, translate) {
-  const enabled = !!definition.enabled(state || {});
+  const enabled = typeof definition.enabled === "function"
+    ? !!definition.enabled(state || {})
+    : true;
   const metric = getMetric(state?.renderPerfMetrics, definition.metricNames);
   const metricFeatureCount = normalizeFiniteCount(metric?.featureCount);
   const dataFeatureCount = sumFeatureCounts(state || {}, definition.dataKeys);
@@ -202,6 +162,7 @@ function createLayerDiagnostic(definition, state, translate) {
 }
 
 export function buildBathymetryDiagnostic(state = {}, { translate } = {}) {
+  const contract = getLayerPanelContractById("bathymetry");
   const oceanStyle = state.styleConfig?.ocean || {};
   const enabled = oceanStyle.experimentalAdvancedStyles === true;
   const preset = String(oceanStyle.preset || "flat").trim() || "flat";
@@ -211,7 +172,8 @@ export function buildBathymetryDiagnostic(state = {}, { translate } = {}) {
   let summary = "";
   let severity = STATUS_SEVERITY.ACTIVE;
   if (!enabled) {
-    summary = translateUi(translate, "Experimental Bathymetry disabled");
+    summary = getLayerPanelDisabledReason(contract, { translate })
+      || translateUi(translate, "Experimental Bathymetry disabled");
     severity = STATUS_SEVERITY.MUTED;
   } else if (preset === "flat") {
     summary = translateUi(translate, "Experimental Bathymetry enabled · flat style selected");
@@ -228,7 +190,7 @@ export function buildBathymetryDiagnostic(state = {}, { translate } = {}) {
   }
   return {
     id: "bathymetry",
-    label: "Bathymetry",
+    label: contract?.label || "Bathymetry",
     enabled,
     loadedCount: bandsCount + contoursCount,
     visibleCount: null,
@@ -238,11 +200,12 @@ export function buildBathymetryDiagnostic(state = {}, { translate } = {}) {
 }
 
 export function buildTextureDiagnostic(state = {}, { translate } = {}) {
+  const contract = getLayerPanelContractById("texture");
   const mode = String(state.styleConfig?.texture?.mode || "none").trim().toLowerCase() || "none";
   const enabled = mode !== "none";
   return {
     id: "texture",
-    label: "Texture",
+    label: contract?.label || "Texture",
     enabled,
     severity: enabled ? STATUS_SEVERITY.ACTIVE : STATUS_SEVERITY.MUTED,
     summary: sanitizeLayerStatusText(enabled
@@ -252,12 +215,13 @@ export function buildTextureDiagnostic(state = {}, { translate } = {}) {
 }
 
 export function buildDayNightDiagnostic(state = {}, { translate } = {}) {
+  const contract = getLayerPanelContractById("day-night");
   const config = state.styleConfig?.dayNight || {};
   const enabled = config.enabled === true;
   const mode = String(config.mode || "manual").trim().toLowerCase() || "manual";
   return {
     id: "day-night",
-    label: "Day / Night",
+    label: contract?.label || "Day / Night",
     enabled,
     severity: enabled ? STATUS_SEVERITY.ACTIVE : STATUS_SEVERITY.MUTED,
     summary: sanitizeLayerStatusText(enabled
@@ -292,6 +256,7 @@ function getEffectiveTransportScopeState(familyId, familyConfig) {
 }
 
 export function buildTransportMasterDiagnostic(state = {}, { translate } = {}) {
+  const contract = getLayerPanelContractById("transport");
   const masterEnabled = state.showTransport !== false;
   const selectedFamilies = listTransportOverviewCapabilityFamilyIds()
     .filter((familyId) => {
@@ -312,7 +277,7 @@ export function buildTransportMasterDiagnostic(state = {}, { translate } = {}) {
   }
   return {
     id: "transport",
-    label: "Transport",
+    label: contract?.label || "Transport",
     enabled: masterEnabled,
     selectedFamilies,
     severity,
@@ -325,19 +290,21 @@ export function buildTransportFamilyDiagnostics(state = {}, { translate } = {}) 
   const masterEnabled = state.showTransport !== false;
   const visualMode = normalizeTransportOverviewVisualMode(transportConfig.visualMode, "distribution");
   const overviewFamilies = new Set(listTransportOverviewCapabilityFamilyIds());
-  return listTransportCapabilityFamilyIds().map((familyId) => {
-    const metadata = getTransportCapabilityFamilyMetadata(familyId);
-    const overviewSupported = supportsTransportCapabilityOverview(familyId);
+  return listTransportLayerPanelContracts().map((contract) => {
+    const familyId = contract.familyId || String(contract.id || "").replace(/^transport-/, "");
+    const overviewSupported = contract.supportsMainOverview === true;
     if (!overviewSupported) {
+      const reason = getLayerPanelUnsupportedReason(contract, { translate })
+        || translateUi(translate, "Available in Transport Workbench only");
       return {
         id: `transport-${familyId}`,
         familyId,
-        label: metadata?.label || familyId,
+        label: contract.label || familyId,
         enabled: false,
         supported: false,
         severity: STATUS_SEVERITY.MUTED,
-        disabledReason: translateUi(translate, "Available in Transport Workbench only"),
-        summary: sanitizeLayerStatusText(translateUi(translate, "Available in Transport Workbench only")),
+        disabledReason: reason,
+        summary: sanitizeLayerStatusText(reason),
       };
     }
     const visibilityField = getTransportOverviewVisibilityField(familyId);
@@ -347,7 +314,7 @@ export function buildTransportFamilyDiagnostics(state = {}, { translate } = {}) 
     return {
       id: `transport-${familyId}`,
       familyId,
-      label: metadata?.label || familyId,
+      label: contract.label || familyId,
       enabled: masterEnabled && familyEnabled,
       supported: overviewFamilies.has(familyId),
       severity: masterEnabled && familyEnabled ? STATUS_SEVERITY.ACTIVE : STATUS_SEVERITY.MUTED,
@@ -373,7 +340,7 @@ export function buildTransportFamilyDiagnostics(state = {}, { translate } = {}) 
 }
 
 export function buildLayerStatusDiagnostics(state = {}, { translate } = {}) {
-  const layerDiagnostics = LAYER_DEFINITIONS.map((definition) => (
+  const layerDiagnostics = listBaseLayerStatusContracts().map((definition) => (
     createLayerDiagnostic(definition, state, translate)
   ));
   return [
