@@ -5,22 +5,25 @@ Last updated: 2026-06-21
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@c8f4f24f` after Stage 5 Visual Acceptance closeout.
-- Active implementation worktree: none after the Layer Observability integration push and cleanup.
+- Integration base: `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2`.
+- Active implementation worktrees: baseline architecture repair and state-write allowlist repair.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: none active.
 
 ## Recommended Order
 
-1. Layer Observability was merged after Stage 5 from a clean integration worktree and archived under `docs/archive/layer-observability-interaction-stability-20260621/`.
-2. Remove temporary integration and Layer Observability worktrees after the push succeeds; recovery remains in main history and the former feature branch commit.
-3. Preserve the dirty parent checkout until its WIP is explicitly handled.
+1. Integrate A1 architecture boundary repair from `codex/baseline-architecture-boundary-repair-20260621`.
+2. Integrate A2 state-write allowlist repair from `codex/state-write-allowlist-repair-20260621`, which is based on A1.
+3. Back up and sync the dirty parent checkout before using it as an integration surface.
+4. Start Stage C Layer Panel Contract Foundation after both baseline gates are green on `main`.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@29c008f7` | local main behind remote | parent checkout, dirty WIP | docs/archive deletions, `lessons learned.md`, `js/ui/toolbar/appearance_controls_controller.js`, and `css/style.css`; production integration used clean worktrees | `git status --short --branch` shows dirty local WIP and a behind remote main. | Yellow for shared docs/style/UI local WIP; red for using this checkout as an integration surface while dirty. | Preserve parent WIP. Sync parent only after backing up or otherwise handling the local WIP. |
+| `C:\Users\raede\Desktop\dev\mapcreator-baseline-architecture-repair` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | `origin/main@1a52603de0be04d798a9e71d50788b9ff5e3c2e2` | ready-for-integration | hot files: `js/core/map_renderer.js`, `js/core/renderer/canvas_color_helpers.js`, `tools/check_architecture_boundaries.mjs`, Pages dist mirrors, boundary test, baseline gate task docs | A1 validation passed syntax checks, `verify:architecture-boundaries`, color boundary unittest, `verify:test-import-graph`, scenario chunk contracts 55/55, renderer runtime state 10/10, render transaction diagnostics 21/21, `verify:pages-dist`, and `git diff --check`. | Yellow for future renderer/Pages dist work; direct overlap with A2 only through docs registry/task docs. | Integrate before A2 or use A2 branch that already contains this commit. |
+| `C:\Users\raede\Desktop\dev\mapcreator-state-write-allowlist-repair` | `codex/state-write-allowlist-repair-20260621` | `codex/baseline-architecture-boundary-repair-20260621@609f8280` | ready-for-integration after commit | hot files: `tools/eslint-rules/state-writer-allowlist.json`, `tests/test_state_write_guardrail_contract.py`, registry/task docs | A2 validation passed JSON parse, `verify:state-write-allowlist` with 112 tracked files, state write guardrail unittest 14/14, `verify:architecture-boundaries`, `verify:test-import-graph`, layer status diagnostics 5/5, and toolbar render scheduler 7/7. | Yellow for state ownership guardrail; it intentionally preserves Layer Status diagnostics and Toolbar render scheduler outside the writer allowlist. | Integrate after A1; then run both baseline gates on `main`. |
 
 ## Recent Integrated Branches
 

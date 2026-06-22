@@ -6,8 +6,11 @@
 - [x] Reproduce A1 architecture boundary failure.
 - [x] Identify focused owner extraction for `map_renderer.js`.
 - [x] Run A1 validation commands.
-- [ ] Commit and push A1 branch.
-- [ ] Continue A2 state-write allowlist repair.
+- [x] Commit A1 branch.
+- [x] Continue A2 state-write allowlist repair.
+- [x] Run A2 validation commands.
+- [ ] Commit A2 branch.
+- [ ] Integrate Stage A into `main` and push.
 
 ## A1 Delivery Notes
 
@@ -79,3 +82,63 @@ Documentation files:
 ### Recommended Next Step
 
 Commit A1, checkpoint G038-G069, then start A2 from the A1 branch or a second branch based on A1 so the state-write repair sees the fixed architecture baseline.
+
+## A2 Delivery Notes
+
+1. Reproduced `verify:state-write-allowlist` on the A1 baseline branch.
+2. Added exactly the 14 scanner-reported direct writer files to `tools/eslint-rules/state-writer-allowlist.json`.
+3. Left `js/ui/toolbar/layer_status_diagnostics.js` and `js/ui/toolbar/toolbar_render_scheduler.js` outside the writer allowlist.
+4. Added a guardrail test for those two Layer Observability paths.
+5. Verified both Stage A gates pass together on the A2 branch.
+
+### Files
+
+Core files:
+
+- `tools/eslint-rules/state-writer-allowlist.json`
+
+Test files:
+
+- `tests/test_state_write_guardrail_contract.py`
+
+Documentation files:
+
+- `docs/active/_worktree_registry.md`
+- `docs/active/baseline-gate-repair-20260621/context.md`
+- `docs/active/baseline-gate-repair-20260621/task.md`
+
+### Diff Summary
+
+- The allowlist now tracks existing renderer owners, runtime state owners, UI state shells, and tests that the scanner already detects as direct state writers.
+- The guardrail contract now asserts Layer Status diagnostics and Toolbar render scheduler remain read-only from the allowlist perspective.
+
+### Commit Status
+
+- A2 worktree is pending commit at the time this delivery note is written.
+- Base commit is A1 `609f828023d8a96032b08a32fd5ed40777e04bfc`.
+- Parent checkout remains dirty and behind `origin/main`; Stage B will back it up and sync after Stage A integration.
+
+### Overlap / Integration Risk
+
+- Shared hotspot: `tools/eslint-rules/state-writer-allowlist.json`.
+- Semantic overlap: Layer Observability diagnostics and toolbar scheduler are protected by the new test.
+- Recommended integration order remains A1, A2, Stage B parent WIP sync, Stage C contract foundation.
+
+### Verification
+
+- `node -e "JSON.parse(...state-writer-allowlist.json...)"` - passed.
+- `npm run verify:state-write-allowlist` - passed with 112 tracked files.
+- `npm run python -- -m unittest tests.test_state_write_guardrail_contract -q` - passed, 14 tests.
+- `npm run verify:architecture-boundaries` - passed.
+- `npm run verify:test-import-graph` - passed, wrote import graph for 49 specs.
+- `npm run test:node:layer-status-diagnostics` - passed, 5 tests.
+- `npm run test:node:toolbar-render-scheduler` - passed, 7 tests.
+
+### Remaining Risk
+
+- Stage A still needs integration into `main`, push, and post-merge baseline gate verification.
+- Stage B still needs parent WIP backup before syncing the dirty parent checkout.
+
+### Recommended Next Step
+
+Commit A2, checkpoint G070-G099, then integrate the A2 branch to `main` from a clean integration surface.
