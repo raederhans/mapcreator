@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+planning docs integrated; implementation slice pending
 
 ## Objective
 
@@ -53,7 +53,7 @@ Prepare the semantic contract for thematic legends and safety metadata before an
 - Base: `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24`.
 - Current branch: `codex/thematic-legend-safety-semantics-20260622`.
 - Scope: docs-only registry/archive truth plus active planning docs.
-- Current commit state: pending commit during this draft package; final commit hash should be recorded in the registry closeout after integration.
+- Current commit state: docs planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` is pushed to main; the temporary worktree has been removed and the registry closeout records recovery.
 - Main divergence: no production divergence; branch starts from current `origin/main@159870ed`.
 
 ### Overlap Assessment
@@ -79,4 +79,4 @@ Prepare the semantic contract for thematic legends and safety metadata before an
 
 ## Integration Recommendation
 
-Merge this docs-only pass into `main` after verification, then remove the temporary worktree. Keep the admin metrics loader worktree independent until its owner publishes a delivery package.
+This docs-only pass is integrated and cleaned. Start the next implementation slice from current main with contract tests first. Keep the admin metrics loader worktree independent until its owner publishes a delivery package and reconciles the shared registry row.

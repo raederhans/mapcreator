@@ -2,7 +2,7 @@
 
 ## Current Truth
 
-- Current base for this planning phase is `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24`.
+- This planning phase was integrated through `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` after starting from `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24`.
 - WGI real-source QA is already integrated and pushed via `codex/wgi-real-source-qa-fix-20260622@6ac22158`.
 - WGI source ingest preserves uncertainty and source-derived metadata.
 - Thematic layers remain catalog-only and hidden by default.
@@ -27,11 +27,12 @@ The next product risk is interpretation safety. The project can already carry re
 
 ## Evidence Log
 
-- `git worktree list --porcelain`: main, admin metrics loader, and this Legend/Safety worktree all start from `159870ed`.
+- `git worktree list --porcelain`: after integration cleanup, only main and the separate admin metrics loader worktree remain.
 - `docs/archive/wgi-real-source-qa-fix-20260622/task.md`: WGI QA is marked integrated, pushed, archived, and cleaned.
 - `docs/active/_worktree_registry.md`: updated to treat WGI and cleanup as complete and to keep future semantic work before rendering.
+- `ecdbd88adceaf47d2eee0a0a498f825f6855fc72`: pushed docs-only planning commit for this phase.
 
 ## Live Process Ownership
 
 - No dev server, browser inspection, long build, or long test is active.
-- `npm run test:node:thematic-layer-catalog` is the only planned runtime check for this docs-only pass.
+- `npm run test:node:thematic-layer-catalog` passed 5/5 for this docs-only pass.
