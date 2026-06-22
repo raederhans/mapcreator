@@ -33,6 +33,8 @@ TRANSPORT_WORKBENCH_EVENT_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "tran
 TRANSPORT_WORKBENCH_CARRIER_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_carrier.js"
 WORKSPACE_CHROME_SUPPORT_SURFACE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "workspace_chrome_support_surface_controller.js"
 APPEARANCE_CONTROLS_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
+LAYER_PANEL_CONTRACTS_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "layer_panel_contracts.js"
+LAYER_STATUS_DIAGNOSTICS_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "layer_status_diagnostics.js"
 TRANSPORT_APPEARANCE_CONTROLLER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "transport_appearance_controller.js"
 APPEARANCE_CITY_POINTS_DESCRIPTOR_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_descriptor.js"
 APPEARANCE_CITY_POINTS_OWNER_JS = REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_city_points_owner.js"
@@ -989,6 +991,25 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('renderDirty(normalizedReason || "transport-appearance");', transport_owner_content)
         self.assertIn("if (transportAppearanceUiFrameId) return;", transport_owner_content)
         self.assertIn("transportAppearanceUiFrameId = scheduleTransportAppearanceFrame(() => {", transport_owner_content)
+
+    def test_layer_panel_contracts_own_status_anchors_and_layer_definitions(self):
+        controller_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")
+        diagnostics_content = LAYER_STATUS_DIAGNOSTICS_JS.read_text(encoding="utf-8")
+        contract_content = LAYER_PANEL_CONTRACTS_JS.read_text(encoding="utf-8")
+
+        self.assertIn("from \"./layer_panel_contracts.js\";", controller_content)
+        self.assertIn("getLayerPanelStatusAnchorMap", controller_content)
+        self.assertIn("const layerStatusAnchorById = getLayerPanelStatusAnchorMap();", controller_content)
+        self.assertNotIn("const layerStatusAnchorById = Object.freeze({", controller_content)
+
+        self.assertIn("from \"./layer_panel_contracts.js\";", diagnostics_content)
+        self.assertIn("listBaseLayerStatusContracts", diagnostics_content)
+        self.assertIn("listTransportLayerPanelContracts", diagnostics_content)
+        self.assertNotIn("const LAYER_DEFINITIONS = Object.freeze([", diagnostics_content)
+
+        self.assertIn("export function listLayerPanelContracts()", contract_content)
+        self.assertIn("export function getLayerPanelUnsupportedReason", contract_content)
+        self.assertIn("../../core/transport_capability_registry.js", contract_content)
 
     def test_appearance_preset_apply_loads_city_points_base_data_before_optional_layer(self):
         owner_content = APPEARANCE_CONTROLS_CONTROLLER_JS.read_text(encoding="utf-8")

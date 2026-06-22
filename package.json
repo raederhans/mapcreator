@@ -24,6 +24,7 @@
     "test:node:appearance-reference-owner": "node --test tests/appearance_reference_owner_behavior.test.mjs",
     "test:node:appearance-rivers-owner": "node --test tests/appearance_rivers_owner_behavior.test.mjs",
     "test:node:appearance-texture-owner": "node --test tests/appearance_texture_owner_behavior.test.mjs",
+    "test:node:layer-panel-contracts": "node --test tests/layer_panel_contracts_behavior.test.mjs",
     "test:node:layer-status-diagnostics": "node --test tests/layer_status_diagnostics_behavior.test.mjs",
     "test:node:toolbar-render-scheduler": "node --test tests/toolbar_render_scheduler_behavior.test.mjs",
     "python": "node tools/run_python.mjs",
