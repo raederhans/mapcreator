@@ -6,6 +6,7 @@ const REPO_ROOT = process.cwd();
 
 const FILES = Object.freeze({
   renderer: "js/core/map_renderer.js",
+  canvasColorHelpers: "js/core/renderer/canvas_color_helpers.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
   scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
@@ -48,6 +49,7 @@ function sliceBetween(source, startMarker, endMarker) {
 function collectFailures() {
   const failures = [];
   const renderer = readProjectFile(FILES.renderer);
+  const canvasColorHelpers = readProjectFile(FILES.canvasColorHelpers);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
   const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
@@ -55,6 +57,7 @@ function collectFailures() {
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const sources = {
     [FILES.renderer]: renderer,
+    [FILES.canvasColorHelpers]: canvasColorHelpers,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
@@ -70,6 +73,7 @@ function collectFailures() {
 
   const requiredImports = [
     "./map_renderer/scenario_refresh_runtime.js",
+    "./renderer/canvas_color_helpers.js",
     "./map_renderer/exact_after_settle_scheduler.js",
     "./map_renderer/hgo_runtime_preview_render_owner.js",
   ];
@@ -81,6 +85,7 @@ function collectFailures() {
 
   const ownerFiles = [
     FILES.scenarioRefreshRuntime,
+    FILES.canvasColorHelpers,
     FILES.scenarioVisualInvalidationExecutor,
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
@@ -166,6 +171,30 @@ function collectFailures() {
   }
 
   const ownershipRules = [
+    {
+      ownerPath: FILES.canvasColorHelpers,
+      ownerTokens: [
+        "function isProbablyCanvasColor(value) {",
+        "function getSafeCanvasColor(value, fallback) {",
+        "function parseCanvasColorChannels(value) {",
+        "function getCanvasColorRelativeLuminance(value) {",
+        "function mixCanvasColors(baseColor, targetColor, amount) {",
+        'import { ColorManager } from "../color_manager.js";',
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/canvas_color_helpers.js\";",
+      ],
+      rendererForbiddenTokens: [
+        "const COLOR_HEX_RE =",
+        "const COLOR_FUNC_RE =",
+        "const COLOR_NAME_RE =",
+        "function isProbablyCanvasColor(value) {",
+        "function getSafeCanvasColor(value, fallback) {",
+        "function parseCanvasColorChannels(value) {",
+        "function getCanvasColorRelativeLuminance(value) {",
+        "function mixCanvasColors(baseColor, targetColor, amount) {",
+      ],
+    },
     {
       ownerPath: FILES.scenarioRefreshRuntime,
       ownerTokens: [

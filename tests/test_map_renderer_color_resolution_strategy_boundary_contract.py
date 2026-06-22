@@ -5,6 +5,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+CANVAS_COLOR_HELPERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "canvas_color_helpers.js"
 COLOR_RESOLUTION_STRATEGY_JS = REPO_ROOT / "js" / "core" / "renderer" / "color_resolution_strategy.js"
 
 
@@ -82,6 +83,38 @@ class MapRendererColorResolutionStrategyBoundaryContractTest(unittest.TestCase):
         self.assertIsNone(re.search(r"function\s+getDisplayOwnerCode\s*\(", renderer_content))
         self.assertIsNone(re.search(r"function\s+getResolvedFeatureColor\s*\(", renderer_content))
         self.assertNotIn('from "./color_resolver.js"', renderer_content)
+
+    def test_canvas_color_helpers_move_to_renderer_owner(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        helper_content = CANVAS_COLOR_HELPERS_JS.read_text(encoding="utf-8")
+        renderer_imports = renderer_content.replace('"', "'")
+
+        self.assertIn("from './renderer/canvas_color_helpers.js';", renderer_imports)
+        self.assertIn('import { ColorManager } from "../color_manager.js";', helper_content)
+        for token in (
+            "function isProbablyCanvasColor(value) {",
+            "function getSafeCanvasColor(value, fallback) {",
+            "function parseCanvasColorChannels(value) {",
+            "function getCanvasColorRelativeLuminance(value) {",
+            "function mixCanvasColors(baseColor, targetColor, amount) {",
+            "getSafeCanvasColor,",
+            "parseCanvasColorChannels,",
+            "getCanvasColorRelativeLuminance,",
+            "mixCanvasColors,",
+        ):
+            self.assertIn(token, helper_content)
+
+        for token in (
+            "const COLOR_HEX_RE =",
+            "const COLOR_FUNC_RE =",
+            "const COLOR_NAME_RE =",
+            "function isProbablyCanvasColor(value) {",
+            "function getSafeCanvasColor(value, fallback) {",
+            "function parseCanvasColorChannels(value) {",
+            "function getCanvasColorRelativeLuminance(value) {",
+            "function mixCanvasColors(baseColor, targetColor, amount) {",
+        ):
+            self.assertNotIn(token, renderer_content)
 
 
 if __name__ == "__main__":

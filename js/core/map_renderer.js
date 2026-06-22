@@ -59,6 +59,12 @@ import {
 } from "./city_lights_historical_1930_asset.js";
 import { ColorManager } from "./color_manager.js";
 import {
+  getCanvasColorRelativeLuminance,
+  getSafeCanvasColor,
+  mixCanvasColors,
+  parseCanvasColorChannels,
+} from "./renderer/canvas_color_helpers.js";
+import {
   getCountryCode as getSharedFeatureCountryCode,
   getFeatureId as getSharedFeatureId,
 } from "./feature_identity.js";
@@ -853,9 +859,6 @@ const PAPER_TEXTURE_ASSET_URLS = {
 // Keep this list empty by default. Polygon winding issues are repaired dynamically.
 const KNOWN_BAD_FEATURE_IDS = new Set();
 const DEBUG_MODES = new Set(["PROD", "GEOMETRY", "ARTIFACTS", "ISLANDS", "ID_HASH"]);
-const COLOR_HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const COLOR_FUNC_RE = /^(?:rgb|rgba|hsl|hsla)\([^)]*\)$/i;
-const COLOR_NAME_RE = /^[a-z]+$/i;
 const RENDER_DIAG_PARAM = "render_diag";
 const PERF_OVERLAY_PARAM = "perf_overlay";
 const POLITICAL_RECOVERY_QUALITY_PARAM = "political_recovery_quality";
@@ -4663,70 +4666,6 @@ function getFeatureRegionTag(feature) {
     props.cntr_code ||
     props.CNTR_CODE ||
     "Unknown"
-  );
-}
-
-function isProbablyCanvasColor(value) {
-  if (typeof value !== "string") return false;
-  const candidate = value.trim();
-  if (!candidate || candidate.includes("var(")) return false;
-  if (COLOR_HEX_RE.test(candidate)) {
-    return true;
-  }
-  if (!COLOR_FUNC_RE.test(candidate) && !COLOR_NAME_RE.test(candidate)) {
-    return false;
-  }
-  if (globalThis.CSS?.supports) {
-    return globalThis.CSS.supports("color", candidate);
-  }
-  return false;
-}
-
-function getSafeCanvasColor(value, fallback) {
-  if (isProbablyCanvasColor(value)) {
-    return String(value).trim();
-  }
-  return fallback;
-}
-
-function parseCanvasColorChannels(value) {
-  const candidate = String(value || "").trim();
-  if (!candidate) return null;
-
-  const normalizedHex = ColorManager.normalizeHexColor(candidate);
-  if (normalizedHex) {
-    const rgb = ColorManager.hexToRgb(normalizedHex);
-    return rgb ? { ...rgb, a: 1 } : null;
-  }
-
-  const rgbMatch = /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+)\s*)?\)$/iu.exec(candidate);
-  if (!rgbMatch) return null;
-  return {
-    r: clamp(Number(rgbMatch[1]) || 0, 0, 255),
-    g: clamp(Number(rgbMatch[2]) || 0, 0, 255),
-    b: clamp(Number(rgbMatch[3]) || 0, 0, 255),
-    a: clamp(rgbMatch[4] === undefined ? 1 : (Number(rgbMatch[4]) || 0), 0, 1),
-  };
-}
-
-function getCanvasColorRelativeLuminance(value) {
-  const channels = parseCanvasColorChannels(value);
-  if (!channels) return null;
-  const r = ColorManager.srgbToLinear(channels.r / 255);
-  const g = ColorManager.srgbToLinear(channels.g / 255);
-  const b = ColorManager.srgbToLinear(channels.b / 255);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function mixCanvasColors(baseColor, targetColor, amount) {
-  const base = parseCanvasColorChannels(baseColor);
-  const target = parseCanvasColorChannels(targetColor);
-  if (!base || !target) return null;
-  const mix = clamp(Number(amount) || 0, 0, 1);
-  return ColorManager.rgbToHex(
-    base.r + ((target.r - base.r) * mix),
-    base.g + ((target.g - base.g) * mix),
-    base.b + ((target.b - base.b) * mix),
   );
 }
 

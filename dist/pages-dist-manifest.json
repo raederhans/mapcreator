@@ -45767,7 +45767,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 910281,
+      "size_bytes": 908192,
       "source_kind": "dist"
     },
     {
@@ -45843,6 +45843,11 @@
     {
       "path": "app/js/core/renderer/border_mesh_source_selection.js",
       "size_bytes": 8126,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/canvas_color_helpers.js",
+      "size_bytes": 2566,
       "source_kind": "dist"
     },
     {
@@ -47112,7 +47117,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1454969,
+      "size_bytes": 1455098,
       "source_kind": "dist"
     },
     {
@@ -47131,5 +47136,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154337821
+  "total_bytes": 1154338427
 }
