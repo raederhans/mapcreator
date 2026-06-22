@@ -1,12 +1,12 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 12:17 -04:00
+Last updated: 2026-06-22 12:19 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47`.
-- Latest integrated work: Thematic runtime discovery preview functional commit `a5d99022f2589f0ca071b5165d4f90f233c0b1ae`; closeout archive, registry cleanup, lessons note, and manifest refresh are pushed on main at `a31a75fb12bb28048dd8878b0cb80379c7b25d47`.
+- Integration base: current pushed `origin/main`.
+- Latest integrated work: Thematic runtime discovery preview functional commit `a5d99022f2589f0ca071b5165d4f90f233c0b1ae`; closeout archive, registry cleanup, lessons note, and manifest refresh are pushed on main at `a31a75fb12bb28048dd8878b0cb80379c7b25d47`; this registry file tracks the latest pushed main state without embedding its own commit hash.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: code-reviewer and architect lanes are read-only; no subagent owns live tests or build processes.
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-22 12:17 -04:00
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | pushed, clean, and current | none | `git status --short --branch` shows `## main...origin/main`; `git rev-parse HEAD` equals `git rev-parse origin/main`; preview branch lookup is empty. | Green as integration surface; only remaining filesystem worktree is WGI. | Keep as current main baseline. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | current pushed `main` | current pushed `origin/main` | pushed, clean, and current | none | `git status --short --branch` shows `## main...origin/main`; `git rev-parse HEAD` equals `git rev-parse origin/main`; preview branch lookup is empty. | Green as integration surface; only remaining filesystem worktree is WGI. | Keep as current main baseline. |
 | `C:\Users\raede\Desktop\dev\mapcreator-thematic-real-source-wgi-v1-20260622` | detached `HEAD@a31a75fb12bb28048dd8878b0cb80379c7b25d47`; branch `codex/thematic-real-source-wgi-v1-20260622@ab2879cd0ebf48a53b636afdd2f02d546a816c49` still exists | `origin/main@a31a75fb12bb28048dd8878b0cb80379c7b25d47` | in-progress, dirty, unresolved conflicts | `data/CATALOG.*`, `data/manifest.json`, `data/runtime_asset_registry.json`, `data/thematic_layers/**`, `landing/*`, `dist/**`, `map_builder/contracts.py`, thematic schemas/contracts/tests, `tools/build_thematic_layers.py`, `tools/test_route_registry.mjs`, task docs, WGI ingest files; unmerged: `dist/pages-dist-manifest.json`, `docs/active/_worktree_registry.md` | `git -C ... status --short --branch` shows `## HEAD (no branch)` with WGI data/schema/builder/route/docs edits and two `UU` files. | Red with completed preview through thematic generated data, route registry, package scripts, `dist/**`, and publish artifacts. | Leave untouched for now; recover the branch/ref and resolve conflicts under a separate WGI integration plan. |
 
 ## Recent Integrated Branches
