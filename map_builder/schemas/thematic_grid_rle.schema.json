@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://thematic/grid_rle/v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "layer_id",
+    "metric_id",
+    "geometry_kind",
+    "grid",
+    "encoding",
+    "neutral_value",
+    "min_value",
+    "max_value",
+    "missing_value_policy",
+    "missing_cell_count",
+    "data",
+    "normalization",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "layer_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:-]+$"
+    },
+    "metric_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:-]+$"
+    },
+    "geometry_kind": {
+      "const": "grid_720x360"
+    },
+    "grid": {
+      "type": "object",
+      "required": ["columns", "rows", "bounds", "crs", "cell_order"],
+      "properties": {
+        "columns": {
+          "const": 720
+        },
+        "rows": {
+          "const": 360
+        },
+        "bounds": {
+          "type": "array",
+          "prefixItems": [
+            {"const": -180},
+            {"const": -90},
+            {"const": 180},
+            {"const": 90}
+          ],
+          "items": false
+        },
+        "crs": {
+          "const": "EPSG:4326"
+        },
+        "cell_order": {
+          "const": "row_major_north_to_south"
+        }
+      },
+      "additionalProperties": false
+    },
+    "encoding": {
+      "const": "rle-u8-array"
+    },
+    "neutral_value": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "min_value": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "max_value": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "missing_value_policy": {
+      "type": "object",
+      "required": ["source_gap_encoding", "requires_missing_mask"],
+      "properties": {
+        "source_gap_encoding": {
+          "enum": ["none", "missing_mask_rle", "reserved_nodata_value"]
+        },
+        "requires_missing_mask": {
+          "type": "boolean"
+        },
+        "reserved_nodata_value": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 255
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "missing_cell_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "missing_mask_rle": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          {
+            "type": "integer",
+            "minimum": 1
+          }
+        ],
+        "items": false
+      }
+    },
+    "data": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          {
+            "type": "integer",
+            "minimum": 1
+          }
+        ],
+        "items": false
+      }
+    },
+    "normalization": {
+      "type": "object",
+      "required": ["method", "range"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "range": {
+          "type": "array",
+          "prefixItems": [
+            {"type": "number"},
+            {"type": "number"}
+          ],
+          "items": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    }
+  },
+  "additionalProperties": false
+}

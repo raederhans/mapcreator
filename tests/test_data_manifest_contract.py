@@ -192,6 +192,51 @@ class DataManifestContractTest(unittest.TestCase):
             str(context.exception),
         )
 
+    def test_runtime_asset_registry_business_rules_keep_thematic_reference_errors(self) -> None:
+        with self.assertRaises(ValueError) as context:
+            _validate_runtime_asset_registry(
+                {
+                    "assets": {
+                        "scenario_registry": {"url": "data/scenarios/index.json"},
+                        "thematic_layer_catalog": {
+                            "url": "data/thematic_layers/index.json",
+                            "role": "thematic_layer_catalog",
+                        },
+                    },
+                    "scenario_registry_key": "scenario_registry",
+                    "transport_manifest_keys": {},
+                    "thematic_layer_index_key": "thematic_layer_catalog",
+                    "thematic_layer_manifest_keys": {"population_density_demo": "missing_asset"},
+                }
+            )
+
+        self.assertIn(
+            "runtime_asset_registry.thematic_layer_manifest_keys.population_density_demo must reference an existing asset",
+            str(context.exception),
+        )
+
+    def test_runtime_asset_registry_business_rules_keep_thematic_role_errors(self) -> None:
+        with self.assertRaises(ValueError) as context:
+            _validate_runtime_asset_registry(
+                {
+                    "assets": {
+                        "scenario_registry": {"url": "data/scenarios/index.json"},
+                        "wrong_catalog_role": {
+                            "url": "data/thematic_layers/index.json",
+                            "role": "transport_manifest",
+                        },
+                    },
+                    "scenario_registry_key": "scenario_registry",
+                    "transport_manifest_keys": {},
+                    "thematic_layer_index_key": "wrong_catalog_role",
+                }
+            )
+
+        self.assertIn(
+            "runtime_asset_registry.thematic_layer_index_key must reference an asset with role thematic_layer_catalog",
+            str(context.exception),
+        )
+
     def test_catalog_entry_contract_reports_missing_required_and_type_errors(self) -> None:
         missing_errors = validate_catalog_entry_contract(
             {

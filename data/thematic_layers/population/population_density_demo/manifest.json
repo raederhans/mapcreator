@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "layer_id": "population_density_demo",
+  "theme": "population",
+  "title": "Population Density Demo",
+  "description": "Fixture-only 720x360 RLE grid that reserves population density grid contracts.",
+  "geometry_kind": "grid_720x360",
+  "metric_ids": [
+    "population_density_intensity_demo"
+  ],
+  "period": {
+    "kind": "fixture",
+    "label": "global grid fixture",
+    "basis": "GHSL or WorldPop grid shape only"
+  },
+  "coverage_scope": {
+    "geography_level": "grid",
+    "join_key_type": "grid_cell",
+    "feature_count": 259200
+  },
+  "source_policy": "fixture_only",
+  "status": "fixture",
+  "paths": {
+    "grid": "data/thematic_layers/population/population_density_demo/grid.rle.json",
+    "build_audit": "data/thematic_layers/population/population_density_demo/build_audit.json",
+    "source_recipes": [
+      "data/thematic_layers/source_recipes/population_density_grid.manual.json"
+    ]
+  },
+  "provenance": [
+    {
+      "source_id": "ghsl_population",
+      "name": "Global Human Settlement Layer population products",
+      "url": "https://human-settlement.emergency.copernicus.eu/data.php",
+      "release": "GHSL Data Package P2023 family; product code and epoch must be pinned.",
+      "accessed_at": "2026-06-22T00:00:00Z",
+      "license": "CC BY 4.0 with GHSL release and product citation.",
+      "citation": "GHSL release publication and selected product publication.",
+      "selection_rule": "Pin product code, epoch, resolution, CRS, and NoData marker before ingest."
+    },
+    {
+      "source_id": "worldpop_population",
+      "name": "WorldPop gridded population datasets",
+      "url": "https://www.worldpop.org/faq/",
+      "release": "dataset-specific DOI and production date required",
+      "accessed_at": "2026-06-22T00:00:00Z",
+      "license": "Dataset-specific CC BY 4.0 and possible ODbL split.",
+      "citation": "WorldPop dataset-specific DOI and recommended citation.",
+      "selection_rule": "Pin DOI, variant, production date, license split, and checksum before ingest."
+    }
+  ],
+  "license": {
+    "fixture_data": "Synthetic fixture values generated for this repository.",
+    "source_metadata": [
+      "GHSL uses CC BY 4.0 with release/product citation.",
+      "WorldPop dataset pages provide DOI-specific citation and license split."
+    ]
+  },
+  "normalization": {
+    "method": "manual_fixture_intensity_0_255_to_0_100",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "feature_counts": {
+    "features": 259200,
+    "complete": 259200,
+    "partial": 0,
+    "missing": 0
+  },
+  "build_audit_path": "data/thematic_layers/population/population_density_demo/build_audit.json",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "build_command": "python tools/build_thematic_layers.py",
+  "runtime_consumer": {
+    "status": "catalog_only",
+    "entry": "thematic_layer_catalog"
+  },
+  "limitations": [
+    "Grid values are synthetic fixtures and must not be shown as real population density.",
+    "Real grid ingestion requires pinned product code, epoch, resolution, and NoData mapping."
+  ]
+}

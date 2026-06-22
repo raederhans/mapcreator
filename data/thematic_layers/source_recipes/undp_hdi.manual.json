@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "recipe_id": "undp_hdi_manual",
+  "title": "UNDP HDI source recipe",
+  "source_family": "UNDP Human Development Index",
+  "phase": "foundation_contract",
+  "source_policy": "fixture_only",
+  "future_source_policy": "real_source_cache_only",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "download_policy": {
+    "network_allowed": false,
+    "phase1_real_downloads": false
+  },
+  "official_sources": [
+    {
+      "source_id": "undp_hdi",
+      "url": "https://hdr.undp.org/data-center/human-development-index",
+      "release": "latest HDI dataset entry point; yearly recalculation policy applies",
+      "license": "CC BY 3.0 IGO for HDRO materials unless source-specific terms say otherwise.",
+      "citation": "United Nations Development Programme Human Development Reports Data Center.",
+      "selection_rule": "Pin report release, method note, country table, and revision basis before ingest."
+    }
+  ],
+  "missing_value_policy": "Latest-available-data gaps must stay null and preserve method-year notes."
+}

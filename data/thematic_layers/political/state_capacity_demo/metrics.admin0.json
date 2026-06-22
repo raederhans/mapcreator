@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "layer_id": "political_state_capacity_demo",
+  "geography_level": "admin0",
+  "join_key_type": "iso_a3",
+  "metric_ids": [
+    "state_capacity_index",
+    "government_effectiveness_demo",
+    "rule_of_law_demo"
+  ],
+  "features": [
+    {
+      "join_key": "USA",
+      "name": "United States",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 78.0,
+          "normalized_value": 78.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 82.0,
+          "normalized_value": 82.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 74.0,
+          "normalized_value": 74.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "GBR",
+      "name": "United Kingdom",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 80.0,
+          "normalized_value": 80.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 84.0,
+          "normalized_value": 84.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 79.0,
+          "normalized_value": 79.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "FRA",
+      "name": "France",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 76.0,
+          "normalized_value": 76.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 78.0,
+          "normalized_value": 78.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 73.0,
+          "normalized_value": 73.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "DEU",
+      "name": "Germany",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 83.0,
+          "normalized_value": 83.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 86.0,
+          "normalized_value": 86.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 81.0,
+          "normalized_value": 81.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "JPN",
+      "name": "Japan",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 81.0,
+          "normalized_value": 81.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 83.0,
+          "normalized_value": 83.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 80.0,
+          "normalized_value": 80.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "CHN",
+      "name": "China",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 68.0,
+          "normalized_value": 68.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 70.0,
+          "normalized_value": 70.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 58.0,
+          "normalized_value": 58.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "IND",
+      "name": "India",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 59.0,
+          "normalized_value": 59.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 57.0,
+          "normalized_value": 57.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 52.0,
+          "normalized_value": 52.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "BRA",
+      "name": "Brazil",
+      "coverage_status": "partial",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 55.0,
+          "normalized_value": 55.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 51.0,
+          "normalized_value": 51.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": null,
+          "normalized_value": null,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "source_gap",
+          "notes": "Fixture keeps this metric empty to test missing-value behavior."
+        }
+      }
+    },
+    {
+      "join_key": "RUS",
+      "name": "Russia",
+      "coverage_status": "partial",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 60.0,
+          "normalized_value": 60.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 61.0,
+          "normalized_value": 61.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": null,
+          "normalized_value": null,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "source_gap",
+          "notes": "Fixture keeps this metric empty to test missing-value behavior."
+        }
+      }
+    },
+    {
+      "join_key": "ZAF",
+      "name": "South Africa",
+      "coverage_status": "complete",
+      "values": {
+        "state_capacity_index": {
+          "raw_value": 53.0,
+          "normalized_value": 53.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "government_effectiveness_demo": {
+          "raw_value": 49.0,
+          "normalized_value": 49.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "rule_of_law_demo": {
+          "raw_value": 47.0,
+          "normalized_value": 47.0,
+          "year": 2024,
+          "unit": "index_0_100",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    }
+  ],
+  "notes": [
+    "Fixture-only values lock contract shape and missing-value semantics.",
+    "Real WGI/HDI ingestion is intentionally deferred to the source-cache phase."
+  ]
+}

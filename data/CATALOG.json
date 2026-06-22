@@ -2,7 +2,7 @@
   "version": 1,
   "generated_at": "2026-06-14T00:58:50.128793Z",
   "counts": {
-    "entries": 641,
+    "entries": 654,
     "by_role": {
       "bathymetry_topology": 1,
       "build_manifest": 1,
@@ -42,6 +42,12 @@
       "special_zones": 1,
       "terrain_contours_major_topology": 1,
       "terrain_contours_minor_topology": 1,
+      "thematic_admin_metrics": 2,
+      "thematic_build_audit": 3,
+      "thematic_grid_rle": 1,
+      "thematic_layer_catalog": 1,
+      "thematic_layer_manifest": 3,
+      "thematic_source_recipe": 3,
       "transport_build_audit": 130,
       "transport_carrier_payload": 8,
       "transport_catalog": 2,
@@ -56,12 +62,12 @@
       "bmp": 1,
       "geojson": 147,
       "javascript": 2,
-      "json": 323,
+      "json": 336,
       "topojson": 168
     },
     "by_read_mode": {
       "binary": 1,
-      "json": 638,
+      "json": 651,
       "module": 2
     }
   },
@@ -771,6 +777,183 @@
       "schemaRef": "schema://geojson/feature_collection/v1",
       "hashRef": "",
       "owner": "runtime_asset_registry.assets.special_zones",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "thematic_layer_catalog",
+      "url": "data/thematic_layers/index.json",
+      "role": "thematic_layer_catalog",
+      "format": "json",
+      "schemaRef": "schema://thematic/layer_index/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/index.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "manifest_output:thematic_layers/index.json"
+      ]
+    },
+    {
+      "key": "manifest_output:thematic_layers/political/state_capacity_demo/build_audit.json",
+      "url": "data/thematic_layers/political/state_capacity_demo/build_audit.json",
+      "role": "thematic_build_audit",
+      "format": "json",
+      "schemaRef": "schema://thematic/build_audit/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/build_audit.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/political/state_capacity_demo/manifest.json",
+      "url": "data/thematic_layers/political/state_capacity_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "format": "json",
+      "schemaRef": "schema://thematic/layer_manifest/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/manifest.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "thematic_layer:political_state_capacity_demo"
+      ]
+    },
+    {
+      "key": "manifest_output:thematic_layers/political/state_capacity_demo/metrics.admin0.json",
+      "url": "data/thematic_layers/political/state_capacity_demo/metrics.admin0.json",
+      "role": "thematic_admin_metrics",
+      "format": "json",
+      "schemaRef": "schema://thematic/admin_metrics/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/political/state_capacity_demo/metrics.admin0.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/population/population_density_demo/build_audit.json",
+      "url": "data/thematic_layers/population/population_density_demo/build_audit.json",
+      "role": "thematic_build_audit",
+      "format": "json",
+      "schemaRef": "schema://thematic/build_audit/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/population/population_density_demo/build_audit.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/population/population_density_demo/grid.rle.json",
+      "url": "data/thematic_layers/population/population_density_demo/grid.rle.json",
+      "role": "thematic_grid_rle",
+      "format": "json",
+      "schemaRef": "schema://thematic/grid_rle/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/population/population_density_demo/grid.rle.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/population/population_density_demo/manifest.json",
+      "url": "data/thematic_layers/population/population_density_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "format": "json",
+      "schemaRef": "schema://thematic/layer_manifest/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/population/population_density_demo/manifest.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "thematic_layer:population_density_demo"
+      ]
+    },
+    {
+      "key": "manifest_output:thematic_layers/social/human_development_demo/build_audit.json",
+      "url": "data/thematic_layers/social/human_development_demo/build_audit.json",
+      "role": "thematic_build_audit",
+      "format": "json",
+      "schemaRef": "schema://thematic/build_audit/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/social/human_development_demo/build_audit.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/social/human_development_demo/manifest.json",
+      "url": "data/thematic_layers/social/human_development_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "format": "json",
+      "schemaRef": "schema://thematic/layer_manifest/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/social/human_development_demo/manifest.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "no-cache",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": [
+        "thematic_layer:social_human_development_demo"
+      ]
+    },
+    {
+      "key": "manifest_output:thematic_layers/social/human_development_demo/metrics.admin0.json",
+      "url": "data/thematic_layers/social/human_development_demo/metrics.admin0.json",
+      "role": "thematic_admin_metrics",
+      "format": "json",
+      "schemaRef": "schema://thematic/admin_metrics/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/social/human_development_demo/metrics.admin0.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/source_recipes/population_density_grid.manual.json",
+      "url": "data/thematic_layers/source_recipes/population_density_grid.manual.json",
+      "role": "thematic_source_recipe",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/source_recipes/population_density_grid.manual.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/source_recipes/undp_hdi.manual.json",
+      "url": "data/thematic_layers/source_recipes/undp_hdi.manual.json",
+      "role": "thematic_source_recipe",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/source_recipes/undp_hdi.manual.json::sha256",
+      "owner": "tools.build_thematic_layers",
+      "cachePolicy": "default",
+      "sourceId": "",
+      "readMode": "json",
+      "aliases": []
+    },
+    {
+      "key": "manifest_output:thematic_layers/source_recipes/wgi_state_capacity.manual.json",
+      "url": "data/thematic_layers/source_recipes/wgi_state_capacity.manual.json",
+      "role": "thematic_source_recipe",
+      "format": "json",
+      "schemaRef": "schema://json/object/v1",
+      "hashRef": "data/manifest.json::outputs::thematic_layers/source_recipes/wgi_state_capacity.manual.json::sha256",
+      "owner": "tools.build_thematic_layers",
       "cachePolicy": "default",
       "sourceId": "",
       "readMode": "json",

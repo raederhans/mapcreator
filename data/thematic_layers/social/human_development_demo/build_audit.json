@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "layer_id": "social_human_development_demo",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "builder": {
+    "tool": "tools/build_thematic_layers.py",
+    "command": "python tools/build_thematic_layers.py"
+  },
+  "source_inputs": [
+    {
+      "recipe_path": "data/thematic_layers/source_recipes/undp_hdi.manual.json",
+      "source_policy": "fixture_only",
+      "status": "declared_requirements_only"
+    }
+  ],
+  "coverage_summary": {
+    "features": 10,
+    "complete": 9,
+    "partial": 1,
+    "missing": 0
+  },
+  "missing_join_keys": [],
+  "unmatched_source_rows": [],
+  "outliers": [],
+  "normalization_summary": {
+    "method": "manual_fixture_hdi_0_1_to_0_100",
+    "missing_value_policy": "null"
+  },
+  "license_summary": {
+    "fixture_data": "Synthetic fixture values generated for this repository.",
+    "source_metadata": [
+      "UNDP HDI metadata only; real values not ingested."
+    ]
+  },
+  "warnings": [
+    "Fixture-only layer. Real-source download is intentionally out of scope for phase 1."
+  ],
+  "fixture_notice": {
+    "enabled": true,
+    "reason": "Phase 1 locks contracts and catalog plumbing before any real source download."
+  }
+}

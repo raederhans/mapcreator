@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "layer_id": "social_human_development_demo",
+  "geography_level": "admin0",
+  "join_key_type": "iso_a3",
+  "metric_ids": [
+    "human_development_index_demo",
+    "education_index_demo",
+    "income_index_demo"
+  ],
+  "features": [
+    {
+      "join_key": "USA",
+      "name": "United States",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.927,
+          "normalized_value": 92.7,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.899,
+          "normalized_value": 89.9,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.936,
+          "normalized_value": 93.6,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "GBR",
+      "name": "United Kingdom",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.94,
+          "normalized_value": 94.0,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.914,
+          "normalized_value": 91.4,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.924,
+          "normalized_value": 92.4,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "FRA",
+      "name": "France",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.91,
+          "normalized_value": 91.0,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.884,
+          "normalized_value": 88.4,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.902,
+          "normalized_value": 90.2,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "DEU",
+      "name": "Germany",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.95,
+          "normalized_value": 95.0,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.92,
+          "normalized_value": 92.0,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.936,
+          "normalized_value": 93.6,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "JPN",
+      "name": "Japan",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.925,
+          "normalized_value": 92.5,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.887,
+          "normalized_value": 88.7,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.908,
+          "normalized_value": 90.8,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "CHN",
+      "name": "China",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.788,
+          "normalized_value": 78.8,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.728,
+          "normalized_value": 72.8,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.802,
+          "normalized_value": 80.2,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "IND",
+      "name": "India",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.644,
+          "normalized_value": 64.4,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.588,
+          "normalized_value": 58.8,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.672,
+          "normalized_value": 67.2,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "BRA",
+      "name": "Brazil",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.76,
+          "normalized_value": 76.0,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.707,
+          "normalized_value": 70.7,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.742,
+          "normalized_value": 74.2,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    },
+    {
+      "join_key": "RUS",
+      "name": "Russia",
+      "coverage_status": "partial",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.821,
+          "normalized_value": 82.1,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.832,
+          "normalized_value": 83.2,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": null,
+          "normalized_value": null,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "source_gap",
+          "notes": "Fixture keeps this metric empty to test missing-value behavior."
+        }
+      }
+    },
+    {
+      "join_key": "ZAF",
+      "name": "South Africa",
+      "coverage_status": "complete",
+      "values": {
+        "human_development_index_demo": {
+          "raw_value": 0.717,
+          "normalized_value": 71.7,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "education_index_demo": {
+          "raw_value": 0.683,
+          "normalized_value": 68.3,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        },
+        "income_index_demo": {
+          "raw_value": 0.704,
+          "normalized_value": 70.4,
+          "year": 2024,
+          "unit": "index_0_1",
+          "source_status": "fixture",
+          "notes": "Synthetic fixture value; not a real source observation."
+        }
+      }
+    }
+  ],
+  "notes": [
+    "Fixture-only values lock contract shape and missing-value semantics.",
+    "Real WGI/HDI ingestion is intentionally deferred to the source-cache phase."
+  ]
+}

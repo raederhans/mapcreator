@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-22T00:00:00Z",
+  "layers": [
+    {
+      "layer_id": "political_state_capacity_demo",
+      "theme": "political",
+      "title": "State Capacity Demo",
+      "description": "Fixture-only admin0 thematic layer shaped for future WGI-backed ingestion.",
+      "geometry_kind": "admin0",
+      "manifest_path": "data/thematic_layers/political/state_capacity_demo/manifest.json",
+      "status": "fixture",
+      "source_policy": "fixture_only",
+      "coverage_scope": "10 admin0 ISO_A3 demo features",
+      "default_visible": false,
+      "default_style": {
+        "renderer": "choropleth",
+        "palette": "viridis_0_100",
+        "opacity": 0.72,
+        "neutral_value": null
+      }
+    },
+    {
+      "layer_id": "social_human_development_demo",
+      "theme": "social",
+      "title": "Human Development Demo",
+      "description": "Fixture-only admin0 thematic layer shaped for future UNDP HDI ingestion.",
+      "geometry_kind": "admin0",
+      "manifest_path": "data/thematic_layers/social/human_development_demo/manifest.json",
+      "status": "fixture",
+      "source_policy": "fixture_only",
+      "coverage_scope": "10 admin0 ISO_A3 demo features",
+      "default_visible": false,
+      "default_style": {
+        "renderer": "choropleth",
+        "palette": "plasma_0_100",
+        "opacity": 0.72,
+        "neutral_value": null
+      }
+    },
+    {
+      "layer_id": "population_density_demo",
+      "theme": "population",
+      "title": "Population Density Demo",
+      "description": "Fixture-only 720x360 grid layer shaped for future GHSL or WorldPop ingestion.",
+      "geometry_kind": "grid_720x360",
+      "manifest_path": "data/thematic_layers/population/population_density_demo/manifest.json",
+      "status": "fixture",
+      "source_policy": "fixture_only",
+      "coverage_scope": "global 720x360 WGS84 grid",
+      "default_visible": false,
+      "default_style": {
+        "renderer": "grid_heatmap",
+        "palette": "inferno_0_255",
+        "opacity": 0.55,
+        "neutral_value": 0
+      }
+    }
+  ],
+  "source_policy_legend": {
+    "fixture_only": "Checked-in synthetic data for contract validation only.",
+    "manual_seed": "Checked-in manual source rows with explicit provenance.",
+    "real_source_cache_only": "Real source files must already exist in a local cache.",
+    "external_download_supported": "A later fetcher may download after release and license pinning."
+  },
+  "status_legend": {
+    "fixture": "Contract and validation fixture.",
+    "demo": "Demo data allowed in runtime preview.",
+    "experimental": "Real-source candidate that still needs review.",
+    "ready": "Pinned, audited, and ready for runtime consumption."
+  }
+}

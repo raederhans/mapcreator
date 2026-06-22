@@ -243,8 +243,8 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8459136,
-      "sha256": "ede907323c5dcbc603a641e2696fb19777456a2e198a88ab127f425bdafa7491",
+      "size_bytes": 8459711,
+      "sha256": "8827eb20eff63d8b99b9951a217211328434a877f217ea51bbb4b9496ec82fb2",
       "type": "locales",
       "geo_entry_count": 73680,
       "ui_entry_count": 1805
@@ -262,8 +262,8 @@
       "artifact_class": "manual",
       "owner": "data/runtime_asset_registry.json",
       "description": "Manual runtime asset registry shared by JS resolvers and build manifest generation.",
-      "size_bytes": 24435,
-      "sha256": "563fdd238d50ff53df1166fbd80a05db5923044496826a273b9852f50e0dccfa"
+      "size_bytes": 25935,
+      "sha256": "67316289564045547a2529539c9deefee935d14a5d9d310f94e7f2c5d522f2fa"
     },
     "palettes/index.json": {
       "role": "palette_registry",
@@ -589,6 +589,166 @@
         "maxWeight": 1,
         "meanWeight": 0.5864
       }
+    },
+    "thematic_layers/index.json": {
+      "role": "thematic_layer_catalog",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Catalog for checked-in thematic layer manifests and fixture-only foundation layers.",
+      "size_bytes": 2737,
+      "sha256": "66eb5e3e9f9d3658ceacac90ffcff0b0486f8e9068d88d9a86125a7c8fb5e330",
+      "schema_ref": "schema://thematic/layer_index/v1",
+      "type": "thematic_layer_index",
+      "layer_count": 3
+    },
+    "thematic_layers/source_recipes/wgi_state_capacity.manual.json": {
+      "role": "thematic_source_recipe",
+      "artifact_class": "manual",
+      "owner": "tools.build_thematic_layers",
+      "description": "Manual source recipe for future WGI-derived state capacity thematic layers.",
+      "size_bytes": 1149,
+      "sha256": "390a40c0ac4f7e23ebe06bb72ec9aace9960d95c58c649861c12d8684b1fbaef",
+      "type": "thematic_source_recipe",
+      "recipe_id": "wgi_state_capacity_manual",
+      "source_family": "World Bank Worldwide Governance Indicators",
+      "source_policy": "fixture_only"
+    },
+    "thematic_layers/source_recipes/undp_hdi.manual.json": {
+      "role": "thematic_source_recipe",
+      "artifact_class": "manual",
+      "owner": "tools.build_thematic_layers",
+      "description": "Manual source recipe for future UNDP HDI-derived thematic layers.",
+      "size_bytes": 1042,
+      "sha256": "c66bd2bab5f9c12407b474d040416a3683f7039fe1b1209771e29c42e83acb8b",
+      "type": "thematic_source_recipe",
+      "recipe_id": "undp_hdi_manual",
+      "source_family": "UNDP Human Development Index",
+      "source_policy": "fixture_only"
+    },
+    "thematic_layers/source_recipes/population_density_grid.manual.json": {
+      "role": "thematic_source_recipe",
+      "artifact_class": "manual",
+      "owner": "tools.build_thematic_layers",
+      "description": "Manual source recipe for future population-density grid thematic layers.",
+      "size_bytes": 1531,
+      "sha256": "e818bc015f6e2e16adedfe5250c929bbe5eaa2c7c005e690019f1b9a27abe97a",
+      "type": "thematic_source_recipe",
+      "recipe_id": "population_density_grid_manual",
+      "source_family": "GHSL or WorldPop population grids",
+      "source_policy": "fixture_only"
+    },
+    "thematic_layers/political/state_capacity_demo/manifest.json": {
+      "role": "thematic_layer_manifest",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only admin0 state capacity thematic layer manifest.",
+      "size_bytes": 2579,
+      "sha256": "6adafd938257f5164beb6d61ae6f428104105462da2b2b283d0d70aea87623e5",
+      "schema_ref": "schema://thematic/layer_manifest/v1",
+      "type": "thematic_layer_manifest",
+      "layer_id": "political_state_capacity_demo",
+      "theme": "political",
+      "geometry_kind": "admin0"
+    },
+    "thematic_layers/political/state_capacity_demo/metrics.admin0.json": {
+      "role": "thematic_admin_metrics",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only admin0 state capacity metric values.",
+      "size_bytes": 10229,
+      "sha256": "5b8a600e10c210f5f90d6e2148b56bbb5524ae8e584f52d1ed4269e0f9a3eff4",
+      "schema_ref": "schema://thematic/admin_metrics/v1",
+      "type": "thematic_admin_metrics",
+      "layer_id": "political_state_capacity_demo",
+      "metric_count": 3,
+      "feature_count": 10
+    },
+    "thematic_layers/political/state_capacity_demo/build_audit.json": {
+      "role": "thematic_build_audit",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Build audit for fixture-only state capacity thematic layer.",
+      "size_bytes": 1197,
+      "sha256": "bab9919f00f98a6c42bef89a0c54811b4147cadac182f79a8be6c5aec72d9571",
+      "schema_ref": "schema://thematic/build_audit/v1",
+      "type": "thematic_build_audit",
+      "layer_id": "political_state_capacity_demo",
+      "warning_count": 1
+    },
+    "thematic_layers/social/human_development_demo/manifest.json": {
+      "role": "thematic_layer_manifest",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only admin0 human development thematic layer manifest.",
+      "size_bytes": 2492,
+      "sha256": "9fabb9f62af6d74a46f94226c05c27698a9271edd44775cb2de6ccf56f74b0b7",
+      "schema_ref": "schema://thematic/layer_manifest/v1",
+      "type": "thematic_layer_manifest",
+      "layer_id": "social_human_development_demo",
+      "theme": "social",
+      "geometry_kind": "admin0"
+    },
+    "thematic_layers/social/human_development_demo/metrics.admin0.json": {
+      "role": "thematic_admin_metrics",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only admin0 human development metric values.",
+      "size_bytes": 10183,
+      "sha256": "ce8f8bb02c07872fd7c076eb406ff41f796a064ff85c1aa6b77a44fe9508b6bd",
+      "schema_ref": "schema://thematic/admin_metrics/v1",
+      "type": "thematic_admin_metrics",
+      "layer_id": "social_human_development_demo",
+      "metric_count": 3,
+      "feature_count": 10
+    },
+    "thematic_layers/social/human_development_demo/build_audit.json": {
+      "role": "thematic_build_audit",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Build audit for fixture-only human development thematic layer.",
+      "size_bytes": 1185,
+      "sha256": "170f0cc58542d04a01eb90b1036ecc74d2babb380c7919c5b3852e183a3ec842",
+      "schema_ref": "schema://thematic/build_audit/v1",
+      "type": "thematic_build_audit",
+      "layer_id": "social_human_development_demo",
+      "warning_count": 1
+    },
+    "thematic_layers/population/population_density_demo/manifest.json": {
+      "role": "thematic_layer_manifest",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only 720x360 population-density thematic layer manifest.",
+      "size_bytes": 3074,
+      "sha256": "fa8e43efb8649bd8047be773cf83cfb594895214ee468d8f889b8dacd9ea034b",
+      "schema_ref": "schema://thematic/layer_manifest/v1",
+      "type": "thematic_layer_manifest",
+      "layer_id": "population_density_demo",
+      "theme": "population",
+      "geometry_kind": "grid_720x360"
+    },
+    "thematic_layers/population/population_density_demo/grid.rle.json": {
+      "role": "thematic_grid_rle",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Fixture-only 720x360 population-density RLE grid.",
+      "size_bytes": 13864,
+      "sha256": "a2528a74906d50fa1d7791a8b842c3ce5f04da89a70677ad8cbfde3d9b660d0c",
+      "schema_ref": "schema://thematic/grid_rle/v1",
+      "type": "thematic_grid_rle",
+      "layer_id": "population_density_demo",
+      "rle_run_count": 397
+    },
+    "thematic_layers/population/population_density_demo/build_audit.json": {
+      "role": "thematic_build_audit",
+      "artifact_class": "derived",
+      "owner": "tools.build_thematic_layers",
+      "description": "Build audit for fixture-only population-density thematic layer.",
+      "size_bytes": 1199,
+      "sha256": "3f01290f2739e5ac42ebca834b0c6c4cd8c8ff96617618132df99a756b7ba55e",
+      "schema_ref": "schema://thematic/build_audit/v1",
+      "type": "thematic_build_audit",
+      "layer_id": "population_density_demo",
+      "warning_count": 1
     }
   },
   "runtime_asset_registry": {
@@ -611,6 +771,14 @@
       "city_aliases": {
         "url": "data/city_aliases.json",
         "role": "city_aliases"
+      },
+      "locales": {
+        "url": "data/locales.json",
+        "role": "locales"
+      },
+      "geo_aliases": {
+        "url": "data/geo_aliases.json",
+        "role": "geo_aliases"
       },
       "ru_city_overrides": {
         "url": "data/ru_city_overrides.geojson",
@@ -1122,13 +1290,39 @@
         "role": "transport_manifest",
         "family_id": "uk_mineral_resources"
       },
-      "locales": {
-        "url": "data/locales.json",
-        "role": "locales"
+      "thematic_layer_catalog": {
+        "url": "data/thematic_layers/index.json",
+        "role": "thematic_layer_catalog",
+        "metadata": {
+          "layer_count": 3
+        }
       },
-      "geo_aliases": {
-        "url": "data/geo_aliases.json",
-        "role": "geo_aliases"
+      "thematic_layer:political_state_capacity_demo": {
+        "url": "data/thematic_layers/political/state_capacity_demo/manifest.json",
+        "role": "thematic_layer_manifest",
+        "metadata": {
+          "layer_id": "political_state_capacity_demo",
+          "theme": "political",
+          "geometry_kind": "admin0"
+        }
+      },
+      "thematic_layer:social_human_development_demo": {
+        "url": "data/thematic_layers/social/human_development_demo/manifest.json",
+        "role": "thematic_layer_manifest",
+        "metadata": {
+          "layer_id": "social_human_development_demo",
+          "theme": "social",
+          "geometry_kind": "admin0"
+        }
+      },
+      "thematic_layer:population_density_demo": {
+        "url": "data/thematic_layers/population/population_density_demo/manifest.json",
+        "role": "thematic_layer_manifest",
+        "metadata": {
+          "layer_id": "population_density_demo",
+          "theme": "population",
+          "geometry_kind": "grid_720x360"
+        }
       }
     },
     "scenario_registry_key": "scenario_registry",
@@ -1214,6 +1408,12 @@
         "exclusions_key": "city_lights:historical_1930:exclusions"
       }
     },
-    "country_feature_policies_key": "country_feature_policies"
+    "country_feature_policies_key": "country_feature_policies",
+    "thematic_layer_index_key": "thematic_layer_catalog",
+    "thematic_layer_manifest_keys": {
+      "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
+      "social_human_development_demo": "thematic_layer:social_human_development_demo",
+      "population_density_demo": "thematic_layer:population_density_demo"
+    }
   }
 }

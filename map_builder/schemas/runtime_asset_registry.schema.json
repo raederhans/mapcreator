@@ -35,6 +35,17 @@
         "type": "string",
         "pattern": "\\S"
       }
+    },
+    "thematic_layer_index_key": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "thematic_layer_manifest_keys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
     }
   },
   "additionalProperties": true

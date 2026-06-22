@@ -536,6 +536,40 @@
       "url": "data/transport_layers/uk_mineral_resources/manifest.json",
       "role": "transport_manifest",
       "family_id": "uk_mineral_resources"
+    },
+    "thematic_layer_catalog": {
+      "url": "data/thematic_layers/index.json",
+      "role": "thematic_layer_catalog",
+      "metadata": {
+        "layer_count": 3
+      }
+    },
+    "thematic_layer:political_state_capacity_demo": {
+      "url": "data/thematic_layers/political/state_capacity_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "metadata": {
+        "layer_id": "political_state_capacity_demo",
+        "theme": "political",
+        "geometry_kind": "admin0"
+      }
+    },
+    "thematic_layer:social_human_development_demo": {
+      "url": "data/thematic_layers/social/human_development_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "metadata": {
+        "layer_id": "social_human_development_demo",
+        "theme": "social",
+        "geometry_kind": "admin0"
+      }
+    },
+    "thematic_layer:population_density_demo": {
+      "url": "data/thematic_layers/population/population_density_demo/manifest.json",
+      "role": "thematic_layer_manifest",
+      "metadata": {
+        "layer_id": "population_density_demo",
+        "theme": "population",
+        "geometry_kind": "grid_720x360"
+      }
     }
   },
   "scenario_registry_key": "scenario_registry",
@@ -621,5 +655,11 @@
       "exclusions_key": "city_lights:historical_1930:exclusions"
     }
   },
-  "country_feature_policies_key": "country_feature_policies"
+  "country_feature_policies_key": "country_feature_policies",
+  "thematic_layer_index_key": "thematic_layer_catalog",
+  "thematic_layer_manifest_keys": {
+    "political_state_capacity_demo": "thematic_layer:political_state_capacity_demo",
+    "social_human_development_demo": "thematic_layer:social_human_development_demo",
+    "population_density_demo": "thematic_layer:population_density_demo"
+  }
 }

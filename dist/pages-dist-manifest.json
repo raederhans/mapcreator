@@ -37092,7 +37092,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 47837,
+      "size_bytes": 56912,
       "source_kind": "generated_ignored"
     },
     {
@@ -37237,7 +37237,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 24435,
+      "size_bytes": 25935,
       "source_kind": "generated_ignored"
     },
     {
@@ -47141,5 +47141,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1154348172
+  "total_bytes": 1154358747
 }

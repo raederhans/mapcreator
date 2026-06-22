@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://thematic/admin_metrics/v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "layer_id",
+    "geography_level",
+    "join_key_type",
+    "metric_ids",
+    "features"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "layer_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:-]+$"
+    },
+    "geography_level": {
+      "enum": ["admin0", "admin1", "admin2"]
+    },
+    "join_key_type": {
+      "enum": ["iso_a3", "iso_3166_2"]
+    },
+    "metric_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_:-]+$"
+      },
+      "uniqueItems": true
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["join_key", "name", "coverage_status", "values"],
+        "properties": {
+          "join_key": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "coverage_status": {
+            "enum": ["complete", "partial", "missing", "not_applicable", "unmatched", "source_gap"]
+          },
+          "values": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": ["raw_value", "normalized_value", "year", "source_status"],
+              "properties": {
+                "raw_value": {
+                  "type": ["number", "null"]
+                },
+                "normalized_value": {
+                  "type": ["number", "null"],
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "year": {
+                  "type": ["integer", "null"]
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "source_status": {
+                  "enum": ["fixture", "manual_seed", "observed", "estimated", "missing", "not_applicable", "unmatched", "source_gap"]
+                },
+                "notes": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -13,6 +13,7 @@ data/palettes/*.json text eol=lf
 data/hgo_catalogs/hgo_identity_aliases.json text eol=lf
 data/hgo_runtime/*.json text eol=lf
 data/hgo_runtime/*.bmp binary
+data/thematic_layers/**/*.json text eol=lf
 data/scenarios/index.json text eol=lf
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
@@ -60,6 +61,7 @@ dist/app/**/*.json text eol=lf
 dist/app/**/*.md text eol=lf
 dist/app/**/*.svg text eol=lf
 dist/app/**/*.txt text eol=lf
+docs/active/**/*.md text eol=lf
 docs/archive/**/*.md text eol=lf
 tests/landing_showcase_view_behavior.test.mjs text eol=lf
 tools/svgo.landing.config.mjs text eol=lf

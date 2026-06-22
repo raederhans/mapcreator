@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "layer_id": "social_human_development_demo",
+  "theme": "social",
+  "title": "Human Development Demo",
+  "description": "Fixture-only admin0 layer that reserves UNDP HDI provenance and recalculation semantics.",
+  "geometry_kind": "admin0",
+  "metric_ids": [
+    "human_development_index_demo",
+    "education_index_demo",
+    "income_index_demo"
+  ],
+  "period": {
+    "kind": "year",
+    "year": 2024,
+    "label": "2024 fixture",
+    "basis": "HDI latest-available-data shape only"
+  },
+  "coverage_scope": {
+    "geography_level": "admin0",
+    "join_key_type": "iso_a3",
+    "feature_count": 10
+  },
+  "source_policy": "fixture_only",
+  "status": "fixture",
+  "paths": {
+    "metrics": "data/thematic_layers/social/human_development_demo/metrics.admin0.json",
+    "build_audit": "data/thematic_layers/social/human_development_demo/build_audit.json",
+    "source_recipes": [
+      "data/thematic_layers/source_recipes/undp_hdi.manual.json"
+    ]
+  },
+  "provenance": [
+    {
+      "source_id": "undp_hdi",
+      "name": "Human Development Index",
+      "url": "https://hdr.undp.org/data-center/human-development-index",
+      "release": "latest HDI dataset entry point; yearly recalculation policy applies",
+      "accessed_at": "2026-06-22T00:00:00Z",
+      "license": "CC BY 3.0 IGO for HDRO materials unless source-specific terms say otherwise.",
+      "citation": "United Nations Development Programme Human Development Reports Data Center.",
+      "selection_rule": "Use pinned report tables and method notes after release-year selection."
+    }
+  ],
+  "license": {
+    "fixture_data": "Synthetic fixture values generated for this repository.",
+    "source_metadata": [
+      "UNDP HDRO terms use CC BY 3.0 IGO and yearly recalculation guidance."
+    ]
+  },
+  "normalization": {
+    "method": "manual_fixture_hdi_0_1_to_0_100",
+    "range": [
+      0,
+      100
+    ]
+  },
+  "feature_counts": {
+    "features": 10,
+    "complete": 9,
+    "partial": 1,
+    "missing": 0
+  },
+  "build_audit_path": "data/thematic_layers/social/human_development_demo/build_audit.json",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "build_command": "python tools/build_thematic_layers.py",
+  "runtime_consumer": {
+    "status": "catalog_only",
+    "entry": "thematic_layer_catalog"
+  },
+  "limitations": [
+    "Values are synthetic fixtures and must not be shown as real HDI observations.",
+    "Real HDI ingestion requires a pinned report release and methodology note."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "recipe_id": "population_density_grid_manual",
+  "title": "Population density grid source recipe",
+  "source_family": "GHSL or WorldPop population grids",
+  "phase": "foundation_contract",
+  "source_policy": "fixture_only",
+  "future_source_policy": "real_source_cache_only",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "download_policy": {
+    "network_allowed": false,
+    "phase1_real_downloads": false
+  },
+  "official_sources": [
+    {
+      "source_id": "ghsl_population",
+      "url": "https://human-settlement.emergency.copernicus.eu/data.php",
+      "release": "GHSL Data Package P2023 family; product code and epoch must be pinned.",
+      "license": "CC BY 4.0 with required GHSL release and product citation.",
+      "citation": "Global Human Settlement Layer product and release publications.",
+      "selection_rule": "Pin product code, epoch, resolution, CRS, and NoData marker before ingest."
+    },
+    {
+      "source_id": "worldpop_population",
+      "url": "https://www.worldpop.org/faq/",
+      "release": "dataset-specific DOI and production date required",
+      "license": "Dataset pages use CC BY 4.0 and may include ODbL for OSM/Microsoft-derived inputs.",
+      "citation": "WorldPop dataset-specific recommended citation and DOI.",
+      "selection_rule": "Pin DOI, country/global variant, production date, license split, and checksum before ingest."
+    }
+  ],
+  "missing_value_policy": "Source NoData markers must map to null or neutral cells with explicit audit counts."
+}

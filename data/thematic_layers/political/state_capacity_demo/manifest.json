@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "layer_id": "political_state_capacity_demo",
+  "theme": "political",
+  "title": "State Capacity Demo",
+  "description": "Fixture-only admin0 layer that reserves WGI-shaped provenance and missing-value semantics.",
+  "geometry_kind": "admin0",
+  "metric_ids": [
+    "state_capacity_index",
+    "government_effectiveness_demo",
+    "rule_of_law_demo"
+  ],
+  "period": {
+    "kind": "year",
+    "year": 2024,
+    "label": "2024 fixture",
+    "basis": "WGI annual release shape only"
+  },
+  "coverage_scope": {
+    "geography_level": "admin0",
+    "join_key_type": "iso_a3",
+    "feature_count": 10
+  },
+  "source_policy": "fixture_only",
+  "status": "fixture",
+  "paths": {
+    "metrics": "data/thematic_layers/political/state_capacity_demo/metrics.admin0.json",
+    "build_audit": "data/thematic_layers/political/state_capacity_demo/build_audit.json",
+    "source_recipes": [
+      "data/thematic_layers/source_recipes/wgi_state_capacity.manual.json"
+    ]
+  },
+  "provenance": [
+    {
+      "source_id": "world_bank_wgi",
+      "name": "Worldwide Governance Indicators",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038026/worldwide-governance-indicators",
+      "release": "version 7 latest; updated 2026-03-18; coverage 1996-2024",
+      "published_at": "2026-03-18",
+      "accessed_at": "2026-06-22T00:00:00Z",
+      "license": "World Bank catalog license metadata, usually CC BY 4.0 unless custom metadata applies.",
+      "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
+      "selection_rule": "Use country-year rows after release, year, and indicator subset are pinned."
+    }
+  ],
+  "license": {
+    "fixture_data": "Synthetic fixture values generated for this repository.",
+    "source_metadata": [
+      "World Bank Data Catalog license metadata; release pin required before real ingest."
+    ]
+  },
+  "normalization": {
+    "method": "manual_fixture_linear_0_100",
+    "range": [
+      0,
+      100
+    ]
+  },
+  "feature_counts": {
+    "features": 10,
+    "complete": 8,
+    "partial": 2,
+    "missing": 0
+  },
+  "build_audit_path": "data/thematic_layers/political/state_capacity_demo/build_audit.json",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "build_command": "python tools/build_thematic_layers.py",
+  "runtime_consumer": {
+    "status": "catalog_only",
+    "entry": "thematic_layer_catalog"
+  },
+  "limitations": [
+    "Values are synthetic fixtures and must not be shown as real WGI observations.",
+    "Real WGI ingestion requires a pinned release package and source checksum."
+  ]
+}

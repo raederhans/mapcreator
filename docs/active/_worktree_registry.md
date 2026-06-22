@@ -1,26 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-21 21:35 -04:00
+Last updated: 2026-06-22 00:00 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `origin/main@c6142749690cbe1e702b274f206fbd271335fc30`.
-- Latest integrated work: Stage C Layer Panel Contract Foundation through `origin/main@c6142749690cbe1e702b274f206fbd271335fc30`.
+- Integration base: `origin/main@447b972d94674897aaa2be586c6cd1d609500c72`.
+- Latest integrated work: Stage C Layer Panel Contract Foundation cleanup state through `origin/main@447b972d94674897aaa2be586c6cd1d609500c72`.
 - Live test/build owner: main Codex agent only; no live process currently active.
-- Subagents: final independent review lanes only.
+- Subagents: final independent review lanes completed for thematic layer foundation.
 
 ## Recommended Order
 
-1. Keep `codex/thematic-layer-foundation-v1-20260622` isolated until its dirty thematic data/catalog/builder/docs work has its own commit, tests, and delivery package.
-2. Integrate the thematic worktree from a clean `main@c6142749` after rebasing or otherwise reconciling the four Stage C commits now on `origin/main`.
+1. Run final post-rebase validation for `codex/thematic-layer-foundation-v1-20260622`.
+2. Fast-forward merge the thematic branch into clean `main@447b972d` if validation stays green.
+3. Archive the thematic task docs and remove the thematic worktree after merge, push, and recovery refs are confirmed.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@c6142749` | `origin/main@c6142749` | parent checkout clean and synced | none | Stage A and Stage C worktrees were integrated, pushed, then removed after clean status checks. Parent WIP backup remains under `.runtime/cleanup-backups/parent-wip-before-main-sync-20260621`, with stash `parent-wip-before-main-sync-20260621`. | Green as integration surface. | Use as the next clean integration surface. |
-| `C:\Users\raede\Desktop\dev\mapcreator-thematic-layer-foundation-v1` | `codex/thematic-layer-foundation-v1-20260622@a023e4a3` plus working diff | `origin/main@c6142749`, branch created from earlier `origin/main@a023e4a3` | in-progress, dirty | hot files: `data/CATALOG.json`, `data/CATALOG.md`, `data/manifest.json`, `data/runtime_asset_registry.json`, `landing/app.js`, `landing/index.html`, `map_builder/contracts.py`, `map_builder/thematic_layer_contracts.py`, `map_builder/schemas/thematic_*.schema.json`, `data/thematic_layers/`, `tests/test_data_catalog_contract.py`, `tests/test_thematic_layer_contracts.py`, `tools/build_thematic_layers.py`, `docs/active/thematic-layer-foundation-v1/` | `git status --short` shows dirty thematic work; no thematic commit has been made yet. | Green vs Stage C by file paths; yellow by roadmap because both are layer contract foundations and thematic started before the Stage C main update. | Leave isolated. Rebase/sync against `main@c6142749`, then create a delivery package and run thematic-specific validation before integration. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@447b972d` | `origin/main@447b972d` | parent checkout clean and synced | none | `git status --short --branch` is clean; `git log` shows `447b972d Record cleaned Stage C integration state`. | Green as integration surface. | Use as the clean integration surface after thematic validation. |
+| `C:\Users\raede\Desktop\dev\mapcreator-thematic-layer-foundation-v1` | `codex/thematic-layer-foundation-v1-20260622@12c4a542` rebased onto `main@447b972d` | branch created from `main@a023e4a3`, rebased to `main@447b972d` | ready-for-integration after final post-rebase validation | hot files: `.gitattributes`, `data/CATALOG.json`, `data/CATALOG.md`, `data/manifest.json`, `data/runtime_asset_registry.json`, `landing/app.js`, `landing/index.html`, `map_builder/contracts.py`, `map_builder/runtime_asset_registry.py`, `map_builder/thematic_layer_contracts.py`, `map_builder/schemas/runtime_asset_registry.schema.json`, `map_builder/schemas/thematic_*.schema.json`, `data/thematic_layers/`, `tests/test_data_catalog_contract.py`, `tests/test_data_manifest_contract.py`, `tests/test_thematic_layer_contracts.py`, `tools/build_thematic_layers.py`, `docs/active/thematic-layer-foundation-v1/` | Feature commit created, rebased without conflicts, builder/catalog regenerated on current main, independent code-review follow-up found no blocking or medium findings, architect follow-up reported no blocking architecture findings. | Green by direct file overlap because no other active worktrees remain; yellow by roadmap because Stage C and thematic are both layer contract foundations. | Run final post-rebase validation, fast-forward merge to main, push, archive docs, then clean this worktree. |
 
 ## Recent Integrated Branches
 

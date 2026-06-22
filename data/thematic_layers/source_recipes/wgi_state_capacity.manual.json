@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "recipe_id": "wgi_state_capacity_manual",
+  "title": "WGI state capacity source recipe",
+  "source_family": "World Bank Worldwide Governance Indicators",
+  "phase": "foundation_contract",
+  "source_policy": "fixture_only",
+  "future_source_policy": "real_source_cache_only",
+  "generated_at": "2026-06-22T00:00:00Z",
+  "download_policy": {
+    "network_allowed": false,
+    "phase1_real_downloads": false
+  },
+  "official_sources": [
+    {
+      "source_id": "world_bank_wgi",
+      "url": "https://datacatalog.worldbank.org/search/dataset/0038026/worldwide-governance-indicators",
+      "release": "version 7 latest; updated 2026-03-18; coverage 1996-2024",
+      "periodicity": "annual",
+      "license": "World Bank catalog metadata; default World Bank data license is CC BY 4.0 unless metadata says otherwise.",
+      "citation": "World Bank Worldwide Governance Indicators Data Catalog entry.",
+      "selection_rule": "Pin release, year, indicators, and source package checksum before ingest."
+    }
+  ],
+  "missing_value_policy": "Missing or unavailable source values must stay null and carry source_gap status."
+}

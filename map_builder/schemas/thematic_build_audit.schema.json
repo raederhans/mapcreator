@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schema://thematic/build_audit/v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "layer_id",
+    "generated_at",
+    "builder",
+    "source_inputs",
+    "coverage_summary",
+    "missing_join_keys",
+    "unmatched_source_rows",
+    "outliers",
+    "normalization_summary",
+    "license_summary",
+    "warnings",
+    "fixture_notice"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "layer_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:-]+$"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "builder": {
+      "type": "object",
+      "required": ["tool", "command"],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "command": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": true
+    },
+    "source_inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["recipe_path", "source_policy", "status"],
+        "properties": {
+          "recipe_path": {
+            "type": "string",
+            "pattern": "^data/thematic_layers/source_recipes/.+\\.json$"
+          },
+          "source_policy": {
+            "enum": ["fixture_only", "manual_seed", "real_source_cache_only", "external_download_supported"]
+          },
+          "status": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "coverage_summary": {
+      "type": "object",
+      "required": ["features", "complete", "partial", "missing"],
+      "properties": {
+        "features": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "complete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "partial": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "missing_join_keys": {
+      "type": "array"
+    },
+    "unmatched_source_rows": {
+      "type": "array"
+    },
+    "outliers": {
+      "type": "array"
+    },
+    "normalization_summary": {
+      "type": "object"
+    },
+    "license_summary": {
+      "type": "object",
+      "required": ["fixture_data", "source_metadata"],
+      "properties": {
+        "fixture_data": {
+          "type": "string"
+        },
+        "source_metadata": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fixture_notice": {
+      "type": "object",
+      "required": ["enabled", "reason"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

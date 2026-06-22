@@ -21,7 +21,7 @@ CATALOG_JSON = REPO_ROOT / "data" / "CATALOG.json"
 CATALOG_MD = REPO_ROOT / "data" / "CATALOG.md"
 LANDING_INDEX = REPO_ROOT / "landing" / "index.html"
 LANDING_APP = REPO_ROOT / "landing" / "app.js"
-EXPECTED_SCHEMA_REF_COUNT = 23
+EXPECTED_SCHEMA_REF_COUNT = 28
 
 
 class DataCatalogContractTest(unittest.TestCase):
@@ -73,6 +73,11 @@ class DataCatalogContractTest(unittest.TestCase):
         self.assertEqual(schema_counts["schema://hgo/runtime_manifest/v1"], 1)
         self.assertEqual(schema_counts["schema://hgo/runtime_seed/v1"], 1)
         self.assertEqual(schema_counts["schema://bitmap/bmp_rgb24/v1"], 1)
+        self.assertEqual(schema_counts["schema://thematic/layer_index/v1"], 1)
+        self.assertEqual(schema_counts["schema://thematic/layer_manifest/v1"], 3)
+        self.assertEqual(schema_counts["schema://thematic/admin_metrics/v1"], 2)
+        self.assertEqual(schema_counts["schema://thematic/grid_rle/v1"], 1)
+        self.assertEqual(schema_counts["schema://thematic/build_audit/v1"], 3)
 
     def test_landing_catalog_count_matches_checked_in_catalog(self) -> None:
         payload = self._load_catalog()
