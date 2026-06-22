@@ -1,28 +1,28 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 17:20 -04:00
+Last updated: 2026-06-22 17:35 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: main checkout after Legend/Safety docs integration and worktree cleanup.
-- Latest integrated work: Legend/Safety planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` follows registry truth commit `159870ed`, docs/lessons cleanup commit `551347f4`, WGI QA closeout `6ac22158`, WGI QA functional commit `d7e361f4`, and WGI source-ingest commit `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Integration base: current pushed `origin/main@353645b7` after Legend/Safety docs integration and worktree cleanup.
+- Latest integrated work: Legend/Safety planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` and closeout commit `353645b7` follow registry truth commit `159870ed`, docs/lessons cleanup commit `551347f4`, WGI QA closeout `6ac22158`, WGI QA functional commit `d7e361f4`, and WGI source-ingest commit `7336c05583fa546dcb783970a972ffe3868a855f`.
 - Live test/build owner: main Codex agent only; no live process currently active.
-- Subagents: code-reviewer and architect lanes are read-only; no subagent owns live tests or build processes.
+- Subagents: test-engineer/code-reviewer/architect lanes are read-only; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Treat WGI source ingest, WGI QA, docs/lessons cleanup, registry truth, and Legend/Safety planning docs as complete on main.
-2. Preserve recovery refs `7336c055`, `d7e361f4`, `6ac22158`, and `docs/archive/wgi-real-source-qa-fix-20260622/`.
-3. Keep the existing admin metrics loader worktree isolated until that owner publishes a delivery package; it currently owns dirty code/test/doc files and `package.json`.
-4. Use `docs/active/thematic-legend-safety-semantics-20260622/` as the next implementation guide; keep renderer, map toggle, save-format, generated data, and Pages dist outside the next contract-test-first slice.
+1. Treat WGI source ingest, WGI QA, docs/lessons cleanup, registry truth, and Legend/Safety planning docs as complete on `origin/main@353645b7`.
+2. Integrate `codex/thematic-admin-metrics-loader-20260622` next; it is ready after validation, code-review CLEAR, architect CLEAR, and archived docs at `docs/archive/thematic-admin-metrics-runtime-loader-v1/`.
+3. After admin loader lands, mark it integrated in a main closeout commit and remove the loader worktree.
+4. Use `docs/active/thematic-legend-safety-semantics-20260622/` as the next implementation guide; keep renderer, map toggle, save-format, generated data, and Pages dist outside that later contract-test-first slice.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` after Legend/Safety closeout | main after `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` docs integration | clean main checkout aligned with remote before this closeout commit | none | `git worktree list --porcelain` shows only main plus admin metrics loader after Legend/Safety worktree cleanup; `git status --short --branch` is clean before this registry closeout. | Green for docs-only closeout and future isolated worktree creation. | Push this closeout commit, then keep main clean. |
-| `C:\Users\raede\Desktop\dev\mapcreator-thematic-admin-metrics-loader-20260622` | `codex/thematic-admin-metrics-loader-20260622@159870ed` | `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24` | in-progress isolated worktree owned by the admin metrics loader slice | dirty shared files: `docs/active/_worktree_registry.md`, `js/core/data_service.js`, `package.json`; new files: `docs/active/thematic-admin-metrics-runtime-loader-v1/`, `js/core/thematic_admin_metrics_loader.js`, `tests/thematic_admin_metrics_loader_behavior.test.mjs` | `git status --short --branch` shows the listed dirty and new files. | Red for direct registry overlap with this docs pass; yellow for shared code/config surfaces. | Wait for that owner delivery package; after this docs pass lands, admin owner should rebase/replay its registry row before integration. Do not stage, merge, or clean from this task. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@353645b7` | `origin/main@353645b7` | clean main checkout | none | `git worktree list` shows only main plus admin metrics loader after Legend/Safety worktree cleanup; `git status --short --branch` shows `## main...origin/main`. | Green for admin loader integration base. | Fast-forward merge the verified loader branch after rebase. |
+| `C:\Users\raede\Desktop\dev\mapcreator-thematic-admin-metrics-loader-20260622` | `codex/thematic-admin-metrics-loader-20260622` | `main@353645b7` | ready-for-integration after rebase | hot files: `js/core/data_service.js`, `js/core/thematic_admin_metrics_loader.js`, `tests/thematic_admin_metrics_loader_behavior.test.mjs`, `package.json`, `lessons learned.md`, archived task docs, registry | Adds a catalog metadata read API, a read-only admin metrics loader/query API, and focused Node tests. Validation passed syntax, admin metrics loader 19/19, explicit node test 19/19, thematic catalog 5/5, layer panel 6/6, layer diagnostics 6/6, architecture boundaries, test import graph, and `git diff --check`; code-review CLEAR and architect CLEAR. | Green against current production code/data/dist; red conflict on registry was resolved by preserving Legend/Safety main truth and admin loader readiness. | Finish rebase, run validation, fast-forward merge into main, then mark integrated in a main closeout commit. |
 
 ## Recent Integrated Branches
 

@@ -443,3 +443,6 @@
 
 ### WGI 源层要保留不确定性字段
 - 接入 WGI workbook 时先查真实表头；number of sources、standard error 和 90% confidence interval 是 source metric 合同字段，project-defined composite 要明确记录不推导 composite uncertainty。
+
+### Runtime lookup 入口要拒绝坏 join key
+- 建 lookup 前先校验 feature `join_key` 非空且唯一；静默过滤 malformed feature 会让 payload 合同错误伪装成后续 `unknown_join_key`，review 时很难从结果状态倒推出根因。
