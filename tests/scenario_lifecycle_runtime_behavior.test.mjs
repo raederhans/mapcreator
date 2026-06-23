@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import { createScenarioLifecycleRuntime } from "../js/core/scenario/lifecycle_runtime.js";
 import { createScenarioApplyPipeline } from "../js/core/scenario_apply_pipeline.js";
@@ -277,6 +278,60 @@ function createRawStrategicValuesPayload() {
   };
 }
 
+async function readJsonFixture(path) {
+  return JSON.parse(await readFile(new URL(path, import.meta.url), "utf8"));
+}
+
+function normalizeOwnerCodeForTest(value) {
+  const code = String(value || "").trim().toUpperCase();
+  return /^[A-Z][A-Z0-9_]{1,15}$/.test(code) ? code : "";
+}
+
+function addOwnerCodeForTest(target, value) {
+  const code = normalizeOwnerCodeForTest(value);
+  if (code) {
+    target.add(code);
+  }
+}
+
+function collectTnoRuntimePoliticalOwnerCodes({
+  countriesPayload,
+  ownersPayload,
+  runtimeTopologyPayload,
+  countryNames = {},
+  baseTopologyPayload = null,
+}) {
+  const codes = new Set();
+  Object.keys(countriesPayload?.countries || {}).forEach((tag) => addOwnerCodeForTest(codes, tag));
+  Object.keys(countryNames || {}).forEach((tag) => addOwnerCodeForTest(codes, tag));
+  Object.values(ownersPayload?.owners || {}).forEach((tag) => addOwnerCodeForTest(codes, tag));
+  const collectTopologyCodes = (topologyPayload) => {
+    const geometries = Array.isArray(topologyPayload?.objects?.political?.geometries)
+      ? topologyPayload.objects.political.geometries
+      : [];
+    geometries.forEach((geometry) => {
+      const props = geometry?.properties || {};
+      [
+        props.cntr_code,
+        props.CNTR_CODE,
+        props.country_code,
+        props.countryCode,
+        props.iso_a2,
+        props.ISO_A2,
+        props.iso_a2_eh,
+        props.ISO_A2_EH,
+        props.adm0_a2,
+        props.ADM0_A2,
+        props.scenario_shell_owner_hint,
+        props.scenario_shell_controller_hint,
+      ].forEach((value) => addOwnerCodeForTest(codes, value));
+    });
+  };
+  collectTopologyCodes(runtimeTopologyPayload);
+  collectTopologyCodes(baseTopologyPayload);
+  return [...codes].sort();
+}
+
 test("scenario apply staging rejects unrenderable political runtime topology before commit", async () => {
   const runtimeState = createBaseState({ activeScenarioId: "previous" });
   const pipeline = createScenarioApplyPipeline({
@@ -427,6 +482,160 @@ test("scenario apply normalizes bundled strategic values before commit", async (
   assert.equal(runtimeState.scenarioStrategicValuesData.victoryPointsByFeature["POL-A"][0].name, "Warsaw");
   assert.equal(runtimeState.scenarioStrategicValuesData.resourcePoints.type, "FeatureCollection");
   assert.equal(runtimeState.scenarioStrategicValuesRevision, 1);
+});
+
+test("scenario apply includes external political owner codes in base color mirrors", async () => {
+  const ownerCodes = ["CF", "CG", "CM", "CY", "EH", "GA", "MT", "TW", "VA"];
+  const runtimeState = createBaseState({
+    activeScenarioId: "",
+    activePalettePack: {
+      entries: {
+        CAF: { map_hex: "#224466" },
+        CMR: { map_hex: "#335577" },
+        MLT: { map_hex: "#446688" },
+        TWN: { map_hex: "#557799" },
+      },
+    },
+    activePaletteMap: {
+      mapped: {
+        CAF: { iso2: "CF" },
+        CMR: { iso2: "CM" },
+        MLT: { iso2: "MT" },
+        TWN: { iso2: "TW" },
+      },
+    },
+  });
+  const pipeline = createApplyPipelineForRuntimeTest(runtimeState, {
+    getScenarioFixedOwnerColors: () => ({
+      AAA: "#111111",
+      GER: "#222222",
+    }),
+  });
+  const runtimeTopologyPayload = {
+    type: "Topology",
+    objects: {
+      political: {
+        type: "GeometryCollection",
+        geometries: ownerCodes.map((code, index) => ({
+          type: "Polygon",
+          id: index,
+          arcs: [],
+          properties: {
+            id: code,
+            cntr_code: code,
+            scenario_shell_owner_hint: code === "VA" ? "VA" : "",
+          },
+        })),
+      },
+    },
+    arcs: [],
+  };
+  const staged = await pipeline.prepareScenarioApplyState({
+    manifest: {
+      scenario_id: "tno_sample",
+      baseline_hash: "abc123",
+    },
+    countriesPayload: {
+      countries: {
+        AAA: { display_name: "Alpha", color_hex: "#111111" },
+        GER: { display_name: "Germany", color_hex: "#222222", base_iso2: "DE", lookup_iso2: "DE" },
+      },
+    },
+    ownersPayload: {
+      owners: {
+        "feature-owned-by-cg": "CG",
+      },
+    },
+    coresPayload: { cores: {} },
+    runtimeTopologyPayload,
+  }, { syncPalette: false });
+
+  pipeline.applyPreparedScenarioState({ manifest: { scenario_id: "tno_sample" } }, staged);
+
+  assert.equal(runtimeState.sovereignBaseColors.AAA, "#111111");
+  assert.equal(runtimeState.sovereignBaseColors.GER, "#222222");
+  for (const code of ownerCodes) {
+    assert.match(runtimeState.sovereignBaseColors[code], /^#[0-9a-f]{6}$/);
+    assert.equal(runtimeState.countryBaseColors[code], runtimeState.sovereignBaseColors[code]);
+  }
+  assert.equal(runtimeState.sovereignBaseColors.CF, "#224466");
+  assert.equal(runtimeState.sovereignBaseColors.CM, "#335577");
+  assert.equal(runtimeState.sovereignBaseColors.MT, "#446688");
+  assert.equal(runtimeState.sovereignBaseColors.TW, "#557799");
+  assert.deepEqual([...runtimeState.scenarioGeneratedColorTags].sort(), ["CG", "CY", "EH", "GA", "VA"]);
+});
+
+test("scenario apply gives every TNO 1962 runtime political owner code a base color", async () => {
+  const [
+    manifest,
+    countriesPayload,
+    ownersPayload,
+    runtimeTopologyPayload,
+    baseTopologyPayload,
+    palettePack,
+    paletteMap,
+  ] = await Promise.all([
+    readJsonFixture("../data/scenarios/tno_1962/manifest.json"),
+    readJsonFixture("../data/scenarios/tno_1962/countries.json"),
+    readJsonFixture("../data/scenarios/tno_1962/owners.by_feature.json"),
+    readJsonFixture("../data/scenarios/tno_1962/runtime_topology.topo.json"),
+    readJsonFixture("../data/europe_topology.json"),
+    readJsonFixture("../data/palettes/tno.palette.json"),
+    readJsonFixture("../data/palette-maps/tno.map.json"),
+  ]);
+  const runtimeState = createBaseState({
+    activeScenarioId: "",
+    activePalettePack: palettePack,
+    activePaletteMap: paletteMap,
+    topology: baseTopologyPayload,
+    topologyPrimary: baseTopologyPayload,
+  });
+  const pipeline = createApplyPipelineForRuntimeTest(runtimeState, {
+    countryNames: appState.countryNames,
+    getScenarioDefaultCountryCode: () => "GER",
+    getScenarioFixedOwnerColors: (countryMap = {}) => {
+      const colors = {};
+      Object.entries(countryMap || {}).forEach(([tag, entry]) => {
+        const code = normalizeOwnerCodeForTest(tag);
+        const color = String(entry?.color_hex || entry?.colorHex || "").trim().toLowerCase();
+        if (code && /^#[0-9a-f]{6}$/.test(color)) {
+          colors[code] = color;
+        }
+      });
+      return colors;
+    },
+    buildScenarioRuntimeVersionTag: () => "tno_1962:runtime-topology",
+  });
+  const bundle = {
+    manifest,
+    countriesPayload,
+    ownersPayload,
+    coresPayload: { cores: {} },
+    runtimeTopologyPayload,
+  };
+  const ownerCodes = collectTnoRuntimePoliticalOwnerCodes({
+    countriesPayload,
+    ownersPayload,
+    runtimeTopologyPayload,
+    countryNames: appState.countryNames,
+    baseTopologyPayload,
+  });
+
+  const staged = await pipeline.prepareScenarioApplyState(bundle, { syncPalette: false });
+  pipeline.applyPreparedScenarioState(bundle, staged);
+
+  assert.ok(ownerCodes.length > 300, `unexpected TNO owner universe size: ${ownerCodes.length}`);
+  for (const code of ["CF", "CG", "CM", "CY", "EH", "GA", "MT", "TW", "VA"]) {
+    assert.ok(ownerCodes.includes(code), `${code} absent from TNO owner universe fixture`);
+  }
+  const missingSovereignColors = ownerCodes
+    .filter((code) => !/^#[0-9a-f]{6}$/.test(String(runtimeState.sovereignBaseColors?.[code] || "")));
+  const missingCountryColors = ownerCodes
+    .filter((code) => !/^#[0-9a-f]{6}$/.test(String(runtimeState.countryBaseColors?.[code] || "")));
+  assert.deepEqual(missingSovereignColors.slice(0, 20), [], `missing sovereign colors: ${missingSovereignColors.slice(0, 20).join(", ")}`);
+  assert.equal(missingSovereignColors.length, 0);
+  assert.deepEqual(missingCountryColors.slice(0, 20), [], `missing country colors: ${missingCountryColors.slice(0, 20).join(", ")}`);
+  assert.equal(missingCountryColors.length, 0);
 });
 
 test("blank scenario apply preserves ownerless editable runtime topology", async () => {

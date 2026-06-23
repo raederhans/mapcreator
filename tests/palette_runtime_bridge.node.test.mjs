@@ -458,6 +458,77 @@ test("buildScenarioOwnerColorMapDetails keeps seed tag colors above palette and 
   assert.deepEqual(details.generatedTags, []);
 });
 
+test("buildScenarioOwnerColorMapDetails colors owner tags outside country map", () => {
+  const ownerCodes = ["CF", "CG", "CM", "CY", "EH", "GA", "MT", "TW", "VA"];
+  const details = buildScenarioOwnerColorMapDetails(
+    {
+      GER: { color_hex: "#111111", base_iso2: "DE", lookup_iso2: "DE" },
+    },
+    {
+      ownerTags: ownerCodes,
+      palettePack: {
+        entries: {
+          CAF: { map_hex: "#224466" },
+          CMR: { map_hex: "#335577" },
+          MLT: { map_hex: "#446688" },
+          TWN: { map_hex: "#557799" },
+        },
+      },
+      paletteMap: {
+        mapped: {
+          CAF: { iso2: "CF" },
+          CMR: { iso2: "CM" },
+          MLT: { iso2: "MT" },
+          TWN: { iso2: "TW" },
+        },
+      },
+    },
+  );
+
+  for (const code of ownerCodes) {
+    assert.match(details.byTag[code], /^#[0-9a-f]{6}$/);
+  }
+  assert.equal(details.byTag.CF, "#224466");
+  assert.equal(details.byTag.CM, "#335577");
+  assert.equal(details.byTag.MT, "#446688");
+  assert.equal(details.byTag.TW, "#557799");
+  assert.deepEqual([...details.generatedTags].sort(), ["CG", "CY", "EH", "GA", "VA"]);
+});
+
+test("buildScenarioOwnerColorMapDetails keeps explicit colors above owner-universe fallback", () => {
+  const details = buildScenarioOwnerColorMapDetails(
+    {
+      GER: { color_hex: "#111111", base_iso2: "DE", lookup_iso2: "DE" },
+      FRA: { color_hex: "#222222", base_iso2: "FR", lookup_iso2: "FR" },
+    },
+    {
+      ownerTags: ["GER", "FRA", "CM"],
+      seedColorByTag: {
+        GER: "#333333",
+      },
+      palettePack: {
+        entries: {
+          GER: { map_hex: "#444444" },
+          FRA: { map_hex: "#555555" },
+          CMR: { map_hex: "#666666" },
+        },
+      },
+      paletteMap: {
+        mapped: {
+          GER: { iso2: "DE" },
+          FRA: { iso2: "FR" },
+          CMR: { iso2: "CM" },
+        },
+      },
+    },
+  );
+
+  assert.equal(details.byTag.GER, "#333333");
+  assert.equal(details.byTag.FRA, "#222222");
+  assert.equal(details.byTag.CM, "#666666");
+  assert.deepEqual(details.generatedTags, []);
+});
+
 test("buildScenarioOwnerColorMapDetails preserves TNO mixed-policy explicit colors", () => {
   const details = buildScenarioOwnerColorMapDetails(
     {

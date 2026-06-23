@@ -452,3 +452,6 @@
 
 ### Chunk promotion readiness 要区分可见子集和完整派生状态
 - 视口可见子集可以服务第一帧快速绘制；交互稳定态必须用完整 feature-id 覆盖校验恢复 `landData`、spatial/index 和 colors。颜色表缺口只记录诊断，避免把 palette 数据问题误判成 chunk 派生状态问题。
+
+### Scenario owner 颜色覆盖要从完整 runtime universe 收集
+- Chunked 场景的政治 feature 可能使用 `countries.json` 之外的二字母 owner code；owner/base-color map 要从 base topology、runtime topology、owner/controller、shell hint 和 releasable parent/child 一起收集，再按显式色、palette tag、ISO2 bridge、deterministic generated color 的顺序解析。

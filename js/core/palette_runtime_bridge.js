@@ -105,6 +105,45 @@ function getRuntimeBridgeCountryIso2(tag, countryEntry, paletteMap) {
   return normalizeRuntimeBridgeIso2(countryEntry?.base_iso2 || countryEntry?.lookup_iso2);
 }
 
+function getRuntimeBridgeOwnerColorEntry(tag, rawEntry) {
+  const entry = rawEntry && typeof rawEntry === "object" ? { ...rawEntry } : {};
+  if (String(tag || "").trim().length === 2) {
+    if (!entry.base_iso2) {
+      entry.base_iso2 = tag;
+    }
+    if (!entry.lookup_iso2) {
+      entry.lookup_iso2 = tag;
+    }
+  }
+  return entry;
+}
+
+function buildScenarioOwnerColorEntryPairs(countryMap, {
+  ownerTags = [],
+  ownerEntriesByTag = {},
+} = {}) {
+  const entryByTag = new Map();
+  Object.entries(countryMap || {}).forEach(([rawTag, rawEntry]) => {
+    const tag = normalizeRuntimeBridgeTag(rawTag);
+    if (!tag) return;
+    entryByTag.set(tag, rawEntry && typeof rawEntry === "object" ? rawEntry : {});
+  });
+  (Array.isArray(ownerTags) ? ownerTags : []).forEach((rawTag) => {
+    const tag = normalizeRuntimeBridgeTag(rawTag);
+    if (!tag || entryByTag.has(tag)) return;
+    entryByTag.set(tag, ownerEntriesByTag?.[tag] || {});
+  });
+  Object.entries(ownerEntriesByTag || {}).forEach(([rawTag, rawEntry]) => {
+    const tag = normalizeRuntimeBridgeTag(rawTag);
+    if (!tag || entryByTag.has(tag)) return;
+    entryByTag.set(tag, rawEntry && typeof rawEntry === "object" ? rawEntry : {});
+  });
+  return Array.from(entryByTag.entries()).map(([tag, rawEntry]) => [
+    tag,
+    getRuntimeBridgeOwnerColorEntry(tag, rawEntry),
+  ]);
+}
+
 function buildRuntimeDefaultTagByIso2(paletteMap) {
   const mapped = paletteMap?.mapped && typeof paletteMap.mapped === "object" ? paletteMap.mapped : {};
   const defaultTagByIso2 = {};
@@ -179,6 +218,8 @@ function buildScenarioOwnerColorMapDetails(
     paletteMap = null,
     seedColorByTag = {},
     fallbackColorByTag = {},
+    ownerTags = [],
+    ownerEntriesByTag = {},
   } = {}
 ) {
   const colorByIso2 = buildRuntimeDefaultColorsByIso2(palettePack, paletteMap, {
@@ -186,10 +227,10 @@ function buildScenarioOwnerColorMapDetails(
   });
   const byTag = {};
   const generatedTags = [];
-  Object.entries(countryMap || {}).forEach(([rawTag, rawEntry]) => {
-    const tag = normalizeRuntimeBridgeTag(rawTag);
-    if (!tag) return;
-    const entry = rawEntry && typeof rawEntry === "object" ? rawEntry : {};
+  buildScenarioOwnerColorEntryPairs(countryMap, {
+    ownerTags,
+    ownerEntriesByTag,
+  }).forEach(([tag, entry]) => {
     const ownColor = normalizeRuntimeBridgeHex(
       seedColorByTag?.[tag]
       || fallbackColorByTag?.[tag]

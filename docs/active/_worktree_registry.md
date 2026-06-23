@@ -1,25 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 20:35 -04:00
+Last updated: 2026-06-23 02:05 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `main` synced with `origin/main@6402153b` before the scenario political chunk full-derived-state phase-1 repair; no secondary worktree is active.
-- Latest integrated work: Current `main@6402153b` already includes the prior thematic/admin loader closeouts. This row tracks the renderer/chunk promotion phase-1 fix only.
-- Live test/build owner: main Codex agent only; no live process currently active.
-- Subagents: test-engineer/code-reviewer/architect lanes are read-only; no subagent owns live tests or build processes.
+- Integration base: Phase 2A work starts from `origin/main@123e36ec`, which includes the pushed Phase 1 full-derived-state repair.
+- Latest integrated work: `123e36ec` pushed the renderer/chunk promotion phase-1 fix. The active row now tracks Phase 1.5 + Phase 2A owner/base-color coverage only.
+- Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
+- Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Push the scenario political chunk full-derived-state phase-1 repair from `main` after final commit.
-2. Treat 1936/1939 Red Sea and TNO palette/base-color coverage gaps as later phases.
+1. Commit and fast-forward push `codex/tno-owner-color-coverage-20260623` if `origin/main` still descends from `123e36ec`.
+2. Keep residual TNO post-edit pixel probe as a later draw/probe lane.
+3. Keep 1936/1939 Red Sea as Phase 2B.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` phase-1 commit from `6402153b` | current `origin/main@6402153b` | integrated locally, push pending | hot files touched: `js/core/map_renderer/scenario_refresh_runtime.js`, `tests/scenario_refresh_plans_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, Python boundary contracts, archived task docs, registry, and Pages dist mirrors. Unrelated local `data/i18n/manual_ui.json` remains excluded. | Validation passed: syntax check, scenario refresh plans 22/22, scenario chunk contracts 55/55, promotion helpers 9/9, lifecycle 12/12, runtime state 6/6, render diagnostics 21/21, Python boundary 48/48, targeted Playwright post-edit detail fill 1/1, `verify:pages-dist` with Pages shell 39/39 plus landing 8/8, `git diff --check`, and code-review CLEAR after fixing P1/P2 color coverage findings. Docs archived at `docs/archive/scenario-political-chunk-full-derived-state-20260622/`. | Green for worktree overlap; yellow for shared renderer runtime and generated dist mirrors. Phase 2 palette/base-color gaps remain separate. | Commit with Lore trailers, push `main`, then no cleanup worktree is needed because this task ran directly on main. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@123e36ec` | `origin/main@123e36ec` | parent checkout, read-only for this phase | dirty unrelated file: `data/i18n/manual_ui.json`; do not stage or edit. | Parent status recorded before Phase 2A. Phase 1 commit `123e36ec` is already pushed. | Green for code overlap because this checkout is read-only; red if `manual_ui.json` is touched. | Preserve as-is while Phase 2A runs in the clean worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-tno-owner-color-coverage-20260623` | `codex/tno-owner-color-coverage-20260623@123e36ec + local diff` | `origin/main@123e36ec` | ready-for-integration | hot files: `js/core/palette_runtime_bridge.js`, `js/core/scenario_apply_pipeline.js`, lifecycle/palette tests, active docs, `lessons learned.md`, Pages dist mirrors. | Phase 1.5 stability signal passed; Phase 2A owner/base-color gaps fixed generically; Node/Python/Pages gates passed; full scenario chunk e2e now passes color coverage but still has pre-existing post-edit pixel probe failure. | Green vs parent dirty `manual_ui.json`; yellow for scenario apply/color shared flows; Phase 2B Red Sea out of scope. | Commit with Lore protocol, push fast-forward to `origin/main`, refresh parent checkout if safe, then clean this worktree or mark retained if parent dirty state blocks local cleanup. |
 
 ## Recent Integrated Branches
 

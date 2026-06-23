@@ -11,6 +11,141 @@ import {
   recordRenderTransactionSnapshot,
 } from "./renderer/render_transaction_diagnostics.js";
 
+const SCENARIO_OWNER_COLOR_PROPERTY_KEYS = Object.freeze([
+  "owner",
+  "owner_tag",
+  "ownerTag",
+  "controller",
+  "controller_tag",
+  "controllerTag",
+  "sovereign",
+  "sovereign_tag",
+  "sovereignTag",
+  "cntr_code",
+  "CNTR_CODE",
+  "CNTR",
+  "country_code",
+  "countryCode",
+  "iso_a2",
+  "ISO_A2",
+  "iso_a2_eh",
+  "ISO_A2_EH",
+  "adm0_a2",
+  "ADM0_A2",
+  "scenario_shell_owner_hint",
+  "scenario_shell_controller_hint",
+]);
+
+function normalizeScenarioOwnerColorTag(value) {
+  const tag = String(value || "").trim().toUpperCase();
+  if (!tag || tag === "-99" || tag === "NULL" || tag === "NONE") {
+    return "";
+  }
+  return /^[A-Z][A-Z0-9_]{1,15}$/.test(tag) ? tag : "";
+}
+
+function addScenarioOwnerColorTag(target, value) {
+  const tag = normalizeScenarioOwnerColorTag(value);
+  if (tag) {
+    target.add(tag);
+  }
+}
+
+function collectScenarioOwnerColorTagsFromRecordValues(target, record) {
+  if (!record || typeof record !== "object") return;
+  Object.values(record).forEach((value) => {
+    if (Array.isArray(value)) {
+      value.forEach((entry) => addScenarioOwnerColorTag(target, entry));
+      return;
+    }
+    if (value && typeof value === "object") {
+      SCENARIO_OWNER_COLOR_PROPERTY_KEYS.forEach((key) => addScenarioOwnerColorTag(target, value[key]));
+      return;
+    }
+    addScenarioOwnerColorTag(target, value);
+  });
+}
+
+function collectScenarioOwnerColorTagsFromCountryMap(target, countryMap) {
+  Object.entries(countryMap || {}).forEach(([rawTag, entry]) => {
+    addScenarioOwnerColorTag(target, rawTag);
+    if (!entry || typeof entry !== "object") return;
+    [
+      entry.code,
+      entry.tag,
+      entry.parent_owner_tag,
+      entry.parentOwnerTag,
+    ].forEach((value) => addScenarioOwnerColorTag(target, value));
+    (Array.isArray(entry.parent_owner_tags) ? entry.parent_owner_tags : []).forEach(
+      (value) => addScenarioOwnerColorTag(target, value)
+    );
+  });
+}
+
+function collectScenarioOwnerColorTagsFromNameMap(target, nameMap) {
+  Object.keys(nameMap || {}).forEach((rawTag) => {
+    addScenarioOwnerColorTag(target, rawTag);
+  });
+}
+
+function collectScenarioOwnerColorTagsFromReleasableIndex(target, releasableIndex) {
+  const byTag = releasableIndex?.byTag && typeof releasableIndex.byTag === "object"
+    ? releasableIndex.byTag
+    : {};
+  collectScenarioOwnerColorTagsFromCountryMap(target, byTag);
+  Object.entries(releasableIndex?.childTagsByParent || {}).forEach(([parentTag, childTags]) => {
+    addScenarioOwnerColorTag(target, parentTag);
+    (Array.isArray(childTags) ? childTags : []).forEach((childTag) => {
+      addScenarioOwnerColorTag(target, childTag);
+    });
+  });
+}
+
+function collectScenarioOwnerColorTagsFromTopology(target, topologyPayload) {
+  const geometries = Array.isArray(topologyPayload?.objects?.political?.geometries)
+    ? topologyPayload.objects.political.geometries
+    : [];
+  geometries.forEach((geometry) => {
+    const props = geometry?.properties && typeof geometry.properties === "object"
+      ? geometry.properties
+      : {};
+    SCENARIO_OWNER_COLOR_PROPERTY_KEYS.forEach((key) => addScenarioOwnerColorTag(target, props[key]));
+  });
+}
+
+function buildScenarioOwnerColorUniverse({
+  baseCountryMap,
+  countryMap,
+  countryNames,
+  baseTopologyPayload,
+  owners,
+  resolvedOwners,
+  releasableIndex,
+  releasableCountries,
+  runtimeTopologyPayload,
+  startupApplySeed,
+} = {}) {
+  const tags = new Set();
+  collectScenarioOwnerColorTagsFromCountryMap(tags, baseCountryMap);
+  collectScenarioOwnerColorTagsFromCountryMap(tags, countryMap);
+  collectScenarioOwnerColorTagsFromNameMap(tags, countryNames);
+  collectScenarioOwnerColorTagsFromTopology(tags, baseTopologyPayload);
+  collectScenarioOwnerColorTagsFromCountryMap(tags, releasableCountries);
+  collectScenarioOwnerColorTagsFromReleasableIndex(tags, releasableIndex);
+  collectScenarioOwnerColorTagsFromRecordValues(tags, owners);
+  collectScenarioOwnerColorTagsFromRecordValues(tags, resolvedOwners);
+  collectScenarioOwnerColorTagsFromRecordValues(tags, startupApplySeed?.resolved_owners);
+  collectScenarioOwnerColorTagsFromCountryMap(tags, startupApplySeed?.scenario_country_map);
+  Object.keys(startupApplySeed?.scenario_color_map || {}).forEach((tag) => {
+    addScenarioOwnerColorTag(tags, tag);
+  });
+  Object.keys(startupApplySeed?.coarse_color_map || {}).forEach((tag) => {
+    addScenarioOwnerColorTag(tags, tag);
+  });
+  collectScenarioOwnerColorTagsFromTopology(tags, runtimeTopologyPayload);
+  return [...tags];
+}
+
 function createScenarioApplyPipeline({
   runtimeState,
   countryNames,
@@ -485,19 +620,6 @@ function createScenarioApplyPipeline({
     const seedScenarioColorMap = startupApplySeed?.scenario_color_map && typeof startupApplySeed.scenario_color_map === "object"
       ? { ...startupApplySeed.scenario_color_map }
       : {};
-    const fixedScenarioCountryColors = getScenarioFixedOwnerColors(countryMap);
-    const scenarioColorDetails = buildScenarioOwnerColorMapDetails(countryMap, {
-      palettePack: runtimeState.activePalettePack,
-      paletteMap: runtimeState.activePaletteMap,
-      seedColorByTag: seedScenarioColorMap,
-      fallbackColorByTag: fixedScenarioCountryColors,
-    });
-    const scenarioColorMap = scenarioColorDetails.byTag;
-    const coarseColorMap = buildScenarioCoarseColorMap({
-      startupApplySeed,
-      countryMap,
-      scenarioColorMap,
-    });
     const scenarioOwnerBackfill = startupApplySeed?.resolved_owners && typeof startupApplySeed.resolved_owners === "object"
       ? {}
       : buildHoi4FarEastSovietOwnerBackfill(scenarioId, {
@@ -517,6 +639,32 @@ function createScenarioApplyPipeline({
           }
           : { ...owners }
       );
+    const ownerColorTags = buildScenarioOwnerColorUniverse({
+      baseCountryMap,
+      countryMap,
+      countryNames,
+      baseTopologyPayload: runtimeState.topologyPrimary || runtimeState.topology || null,
+      owners,
+      resolvedOwners,
+      releasableIndex,
+      releasableCountries,
+      runtimeTopologyPayload,
+      startupApplySeed,
+    });
+    const fixedScenarioCountryColors = getScenarioFixedOwnerColors(countryMap);
+    const scenarioColorDetails = buildScenarioOwnerColorMapDetails(countryMap, {
+      palettePack: runtimeState.activePalettePack,
+      paletteMap: runtimeState.activePaletteMap,
+      seedColorByTag: seedScenarioColorMap,
+      fallbackColorByTag: fixedScenarioCountryColors,
+      ownerTags: ownerColorTags,
+    });
+    const scenarioColorMap = scenarioColorDetails.byTag;
+    const coarseColorMap = buildScenarioCoarseColorMap({
+      startupApplySeed,
+      countryMap,
+      scenarioColorMap,
+    });
     const activationContext = prepareScenarioActivationContext(bundle);
     const staged = {
       scenarioId,
@@ -544,6 +692,7 @@ function createScenarioApplyPipeline({
       scenarioNameMap,
       scenarioColorMap,
       scenarioGeneratedColorTags: scenarioColorDetails.generatedTags,
+      scenarioOwnerColorTags: ownerColorTags,
       coarseColorMap,
       scenarioOwnerBackfill,
       resolvedOwners,
@@ -568,6 +717,8 @@ function createScenarioApplyPipeline({
         scenarioApplyEpoch: Math.max(0, Number(scenarioApplyEpoch || 0)),
         scenarioApplyRequestId: Math.max(0, Number(scenarioApplyRequestId || 0)),
         fixedOwnerColorCount: Object.keys(scenarioColorMap || {}).length,
+        ownerColorUniverseCount: ownerColorTags.length,
+        generatedOwnerColorCount: scenarioColorDetails.generatedTags.length,
         coarseColorCount: Object.keys(coarseColorMap || {}).length,
         resolvedOwnerCount: Object.keys(resolvedOwners || {}).length,
       },
