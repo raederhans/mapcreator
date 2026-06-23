@@ -2,6 +2,7 @@ import {
   getRuntimeGeometryFeatureId,
   getScenarioRuntimeGeometryCountryCode,
   hasExplicitScenarioAssignment,
+  isScenarioWaterLikeFeature,
   shouldApplyHoi4FarEastSovietBackfill,
 } from "../scenario_runtime_queries.js";
 import {
@@ -12,6 +13,13 @@ const DEFAULT_OCEAN_FILL_COLOR = "#aadaff";
 const SCENARIO_RENDER_PROFILES = new Set(["auto", "balanced", "full"]);
 const EMPTY_FROZEN_LIST = Object.freeze([]);
 const hoi4FarEastSovietRuntimeCandidateFeatureIdsByTopology = new WeakMap();
+
+function isHoi4FarEastSovietBackfillLandCandidate(geometry, featureId = "") {
+  if (geometry?.properties?.render_as_base_geography === true) {
+    return false;
+  }
+  return !isScenarioWaterLikeFeature(geometry, featureId);
+}
 
 function getHoi4FarEastSovietRuntimeCandidateFeatureIds(runtimeTopology) {
   if (!runtimeTopology || typeof runtimeTopology !== "object") {
@@ -31,6 +39,9 @@ function getHoi4FarEastSovietRuntimeCandidateFeatureIds(runtimeTopology) {
     const featureId = getRuntimeGeometryFeatureId(geometry);
     if (!featureId) return;
     if (getScenarioRuntimeGeometryCountryCode(geometry) !== "RU") {
+      return;
+    }
+    if (!isHoi4FarEastSovietBackfillLandCandidate(geometry, featureId)) {
       return;
     }
     candidateFeatureIds.push(featureId);
@@ -93,6 +104,7 @@ export {
   SCENARIO_RENDER_PROFILES,
   buildHoi4FarEastSovietOwnerBackfill,
   getHoi4FarEastSovietRuntimeCandidateFeatureIds,
+  isHoi4FarEastSovietBackfillLandCandidate,
   normalizeScenarioOceanFillColor,
   normalizeScenarioRenderProfile,
   recordScenarioPerfMetric,

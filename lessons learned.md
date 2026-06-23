@@ -454,3 +454,6 @@
 
 ### Post-edit 颜色要挡住 progressive 粗底图跳过
 - Chunk promotion 触发 `rebuild-colors` 后，pending edit 可能已经清空；如果可见 feature 仍有显式 visual/feature override，progressive coarse underlay 不能跳过 fine political loop，否则 state 里的新色会正确、主 canvas 仍停在旧 owner/base 色。
+
+### 水域边界探针要同时看最终画布和命中目标
+- Red Sea 这类边界点可能同时落进政治 shell fallback 和水域 region；诊断时要记录 final canvas RGB、water spatial index、selected water hit 和政治 feature 命中，避免把地理重叠误判成最终绘制污染。

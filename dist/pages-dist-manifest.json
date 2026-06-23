@@ -45852,7 +45852,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 908842,
+      "size_bytes": 908873,
       "source_kind": "dist"
     },
     {
@@ -45952,7 +45952,7 @@
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 2786,
+      "size_bytes": 3621,
       "source_kind": "dist"
     },
     {
@@ -46187,7 +46187,7 @@
     },
     {
       "path": "app/js/core/scenario/pure_helpers.js",
-      "size_bytes": 3457,
+      "size_bytes": 3852,
       "source_kind": "dist"
     },
     {
@@ -46277,7 +46277,7 @@
     },
     {
       "path": "app/js/core/scenario_runtime_queries.js",
-      "size_bytes": 1743,
+      "size_bytes": 2756,
       "source_kind": "dist"
     },
     {
@@ -47241,5 +47241,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155171998
+  "total_bytes": 1155174272
 }

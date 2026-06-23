@@ -18,7 +18,9 @@ import {
   normalizeFeatureCountryCode,
 } from "../js/core/feature_identity.js";
 import { createRenderCacheOwner } from "../js/core/renderer/render_cache_owner.js";
+import { createColorResolutionStrategyOwner } from "../js/core/renderer/color_resolution_strategy.js";
 import { buildSpatialGridSnapshot, getSpatialBucketKey } from "../js/core/renderer/spatial_index_runtime_builders.js";
+import { isScenarioWaterLikeFeature } from "../js/core/scenario_runtime_queries.js";
 
 const REPO_ROOT = process.cwd();
 
@@ -1908,6 +1910,68 @@ test("spatial grid builder returns stable bucket snapshots without renderer stat
   assert.equal(snapshot.grid.has(getSpatialBucketKey(4, 4)), false);
 });
 
+test("color strategy resolves generic water-like political features to ocean fill while preserving owner land", () => {
+  const state = {
+    mapSemanticMode: "ownership",
+    visualOverrides: {},
+    featureOverrides: {},
+    sovereigntyByFeatureId: {
+      marine_red_sea: "SOV",
+      RU_LAND: "SOV",
+      ATL_OWNER: "ATL",
+    },
+    scenarioAutoShellOwnerByFeatureId: {},
+    sovereignBaseColors: {
+      SOV: "#c01010",
+      ATL: "#123abc",
+    },
+    countryBaseColors: {},
+  };
+  const helpers = {
+    canonicalCountryCode: (value) => String(value || "").trim().toUpperCase(),
+    getFeatureCountryCodeNormalized: (feature) => String(feature?.properties?.cntr_code || "").trim().toUpperCase(),
+    getFeatureId,
+    getAtlantropaRuleColor: (rule) => (String(rule || "").trim() === "atlantropa_sea" ? "#2d4769" : ""),
+    getOceanBaseFillColor: () => "#2d4769",
+    getSafeCanvasColor: (value, fallback = "") => (/^#[0-9a-f]{6}$/i.test(String(value || "").trim()) ? String(value).trim().toLowerCase() : fallback),
+    isAntarcticSectorFeature: () => false,
+    isAtlantropaSeaFeature: (feature) => String(feature?.properties?.atl_color_rule || "").trim() === "atlantropa_sea",
+    isScenarioShellFeature: () => false,
+    normalizeMapSemanticMode: (value) => String(value || "ownership").trim().toLowerCase(),
+  };
+  const owner = createColorResolutionStrategyOwner({ state, helpers });
+  const redSeaFeature = {
+    type: "Feature",
+    id: "marine_red_sea",
+    properties: {
+      id: "marine_red_sea",
+      cntr_code: "RU",
+      water_type: "sea",
+      region_group: "marine_macro",
+    },
+  };
+  const ruLandFeature = {
+    type: "Feature",
+    id: "RU_LAND",
+    properties: { id: "RU_LAND", cntr_code: "RU" },
+  };
+  const atlantropaOwnerFeature = {
+    type: "Feature",
+    id: "ATL_OWNER",
+    properties: {
+      id: "ATL_OWNER",
+      cntr_code: "ATL",
+      atl_color_rule: "owner",
+      region_group: "atlantropa_gulf_of_gabes_exposure_sea",
+    },
+  };
+
+  assert.equal(isScenarioWaterLikeFeature(redSeaFeature, "marine_red_sea"), true);
+  assert.equal(owner.getResolvedFeatureColor(redSeaFeature, "marine_red_sea"), "#2d4769");
+  assert.equal(owner.getResolvedFeatureColor(ruLandFeature, "RU_LAND"), "#c01010");
+  assert.equal(owner.getResolvedFeatureColor(atlantropaOwnerFeature, "ATL_OWNER"), "#123abc");
+});
+
 test("TNO water topology contracts keep exclusive scenario water and shared surface version signal", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
@@ -1926,8 +1990,9 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       /function getEffectiveWaterRegionFeatures\(\) \{[\s\S]*?if \(isScenarioWaterTopologyExclusiveMode\(\)\) \{[\s\S]*?return sanitizeWaterRegionFeatures\(scenarioFeatures\.filter\(\(feature\) => !isWaterRegionExcludedByScenario\(feature\)\)\);/.test(rendererSource),
     openOceanRenderAndInteractionUseActiveOverlayGate:
       /function isOpenOceanOverlayActive\(\) \{[\s\S]*?return isOpenOceanSelectionEnabled\(\) \|\| isOpenOceanPaintEnabled\(\);[\s\S]*?\}/.test(rendererSource)
-      && /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
+      && /function isWaterRegionRenderable\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanRenderable\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
       && /function isWaterRegionEnabled\(feature\) \{[\s\S]*?if \(isOpenOceanWaterRegion\(feature\)\) \{[\s\S]*?return isOpenOceanOverlayActive\(\);[\s\S]*?return feature\?\.properties\?\.interactive !== false;[\s\S]*?\}/.test(rendererSource)
+      && /function getWaterHitFromPointer\([\s\S]*?\) \{[\s\S]*?if \(!runtimeState\.showWaterRegions && !isOpenOceanOverlayActive\(\)\) return createHitResult\(\);/.test(rendererSource)
       && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) return;/.test(rendererSource)
       && /function collectWaterGridCandidates\(px, py, radiusProj = 0\) \{[\s\S]*?shouldIncludeItem: \(item\) => isWaterRegionEnabled\(item\.feature\),/.test(rendererSource)
       && /function rebuildAuxiliaryRegionIndexes\(\) \{[\s\S]*?if \(!isWaterRegionEnabled\(selectedFeature\)\) \{[\s\S]*?runtimeState\.selectedWaterRegionId = "";/.test(rendererSource)

@@ -9707,7 +9707,7 @@ function getWaterHitFromPointer(
   pointer,
   { enableSnap = true, snapPx = HIT_SNAP_RADIUS_PX, eventType = "unknown" } = {}
 ) {
-  if (!runtimeState.showWaterRegions) return createHitResult();
+  if (!runtimeState.showWaterRegions && !isOpenOceanOverlayActive()) return createHitResult();
   if (!runtimeState.waterSpatialItems?.length) {
     recordWaterHitDiagnostic({
       reason: "empty-water-spatial-items",

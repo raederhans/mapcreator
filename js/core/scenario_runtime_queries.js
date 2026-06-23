@@ -5,6 +5,7 @@ import {
   getFeatureId as getSharedFeatureId,
 } from "./feature_identity.js";
 const state = runtimeState;
+const WATER_LIKE_TOKEN_PATTERN = /(^|[_-])(water|marine|ocean|sea|gulf|bay|lake|river|strait|chokepoint)([_-]|$)/i;
 
 export function canonicalScenarioCountryCode(rawCode) {
   return normalizeCountryCodeAlias(rawCode);
@@ -27,6 +28,33 @@ export function getRuntimeGeometryFeatureId(geometry) {
 
 export function getScenarioRuntimeGeometryCountryCode(geometry) {
   return canonicalScenarioCountryCode(getSharedFeatureCountryCode(geometry));
+}
+
+export function isScenarioWaterLikeFeature(feature, featureId = "") {
+  const props = feature?.properties || {};
+  const waterType = String(props.water_type || "").trim();
+  if (waterType) return true;
+
+  const regionGroup = String(props.region_group || "").trim();
+  if (regionGroup && WATER_LIKE_TOKEN_PATTERN.test(regionGroup)) return true;
+
+  const geometryRole = String(props.geometry_role || "").trim();
+  if (geometryRole && WATER_LIKE_TOKEN_PATTERN.test(geometryRole)) return true;
+
+  if (props.render_as_base_geography === true) {
+    const identity = [
+      featureId,
+      getSharedFeatureId(feature, { fallback: "" }),
+      props.__source,
+      props.source_layer,
+      props.layer,
+      props.feature_class,
+      props.kind,
+    ].map((value) => String(value || "").trim()).filter(Boolean).join(" ");
+    return WATER_LIKE_TOKEN_PATTERN.test(identity);
+  }
+
+  return false;
 }
 
 export function getScenarioEffectiveOwnerCodeByFeatureId(featureId) {

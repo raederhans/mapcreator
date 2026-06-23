@@ -1,6 +1,28 @@
 import { resolveFeatureColor } from "../color_resolver.js";
+import { isScenarioWaterLikeFeature } from "../scenario_runtime_queries.js";
 
 const BLANK_OWNERLESS_FEATURE_FILL_COLOR = "#d7d3c7";
+
+function isAtlantropaTaggedFeature(feature) {
+  const props = feature?.properties || {};
+  return !!(
+    String(props.atl_color_rule || "").trim()
+    || String(props.atl_surface_kind || "").trim()
+    || String(props.region_group || "").trim().toLowerCase().startsWith("atlantropa_")
+  );
+}
+
+export function isColorResolutionOceanFeature(feature, id, {
+  isAtlantropaSeaFeature,
+} = {}) {
+  if (typeof isAtlantropaSeaFeature === "function" && isAtlantropaSeaFeature(feature, id)) {
+    return true;
+  }
+  if (isAtlantropaTaggedFeature(feature)) {
+    return false;
+  }
+  return isScenarioWaterLikeFeature(feature, id);
+}
 
 /**
  * Owns political fill color strategy:
@@ -57,7 +79,11 @@ export function createColorResolutionStrategyOwner({
       state,
       feature,
       getSafeColor: getSafeCanvasColor,
-      isOceanFeature: isAtlantropaSeaFeature,
+      isOceanFeature: (candidateFeature, candidateId) => isColorResolutionOceanFeature(
+        candidateFeature,
+        candidateId,
+        { isAtlantropaSeaFeature },
+      ),
       getAtlantropaRuleColor,
       getOceanBaseFillColor,
       getOwnerCode: getDisplayOwnerCode,
