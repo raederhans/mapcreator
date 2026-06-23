@@ -1,27 +1,25 @@
 # Worktree Registry
 
-Last updated: 2026-06-23 02:05 UTC
+Last updated: 2026-06-23 02:20 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Integration base: Phase 2A work starts from `origin/main@123e36ec`, which includes the pushed Phase 1 full-derived-state repair.
-- Latest integrated work: `123e36ec` pushed the renderer/chunk promotion phase-1 fix. The active row now tracks Phase 1.5 + Phase 2A owner/base-color coverage only.
+- Latest integrated work: `7abadf1c` pushed the Phase 2A owner/base-color coverage repair after `123e36ec` stabilized full political derived state restore.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Commit and fast-forward push `codex/tno-owner-color-coverage-20260623` if `origin/main` still descends from `123e36ec`.
-2. Keep residual TNO post-edit pixel probe as a later draw/probe lane.
-3. Keep 1936/1939 Red Sea as Phase 2B.
+1. Keep residual TNO post-edit pixel probe as a later draw/probe lane.
+2. Keep 1936/1939 Red Sea as Phase 2B.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@123e36ec` | `origin/main@123e36ec` | parent checkout, read-only for this phase | dirty unrelated file: `data/i18n/manual_ui.json`; do not stage or edit. | Parent status recorded before Phase 2A. Phase 1 commit `123e36ec` is already pushed. | Green for code overlap because this checkout is read-only; red if `manual_ui.json` is touched. | Preserve as-is while Phase 2A runs in the clean worktree. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-tno-owner-color-coverage-20260623` | `codex/tno-owner-color-coverage-20260623@123e36ec + local diff` | `origin/main@123e36ec` | ready-for-integration | hot files: `js/core/palette_runtime_bridge.js`, `js/core/scenario_apply_pipeline.js`, lifecycle/palette tests, active docs, `lessons learned.md`, Pages dist mirrors. | Phase 1.5 stability signal passed; Phase 2A owner/base-color gaps fixed generically; Node/Python/Pages gates passed; full scenario chunk e2e now passes color coverage but still has pre-existing post-edit pixel probe failure. | Green vs parent dirty `manual_ui.json`; yellow for scenario apply/color shared flows; Phase 2B Red Sea out of scope. | Commit with Lore protocol, push fast-forward to `origin/main`, refresh parent checkout if safe, then clean this worktree or mark retained if parent dirty state blocks local cleanup. |
 
 ## Recent Integrated Branches
 
@@ -29,6 +27,7 @@ These rows are historical integration summaries retained for recovery and sequen
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-tno-owner-color-coverage-20260623` | `codex/tno-owner-color-coverage-20260623@7abadf1c` | `origin/main@123e36ec` | integrated, pushed, archived, and ready for cleanup | hot files resolved: `js/core/palette_runtime_bridge.js`, `js/core/scenario_apply_pipeline.js`, lifecycle/palette tests, `lessons learned.md`, Pages dist mirrors, archived task docs | Phase 1.5 stability signal passed; Phase 2A owner/base-color gaps fixed generically; Node/Python/Pages/syntax/diff checks passed. Full scenario chunk e2e passed Phase 1.5 and Phase 2A color coverage, with residual post-edit FR_ARR_18002 pixel probe failure recorded for a later lane. | Green vs parent dirty `manual_ui.json`; yellow only for future scenario apply/color shared-flow work. Phase 2B Red Sea remains separate. | No active integration action after closeout push. Recovery via commit `7abadf1cdc2c04197796a5b1f1163e9e0ebbfcad` and docs `docs/archive/tno-owner-base-color-coverage-phase2a-20260623/`. |
 | `C:\Users\raede\Desktop\dev\mapcreator-thematic-admin-metrics-loader-20260622` | `codex/thematic-admin-metrics-loader-20260622@f75e32f4` plus main follow-up quality polish | rebased onto `main@353645b7` | integrated, verified, archived, and cleaned | hot files resolved: `js/core/data_service.js`, `js/core/thematic_admin_metrics_loader.js`, `tests/thematic_admin_metrics_loader_behavior.test.mjs`, `package.json`, `lessons learned.md`, archived task docs, registry | Adds a read-only runtime loader/query API for thematic admin metrics, catalog metadata role/readMode checks, schema version and feature join-key validation, null/source-gap preservation, WGI uncertainty/source field preservation, and focused Node coverage. Validation passed syntax, admin metrics loader 19/19, explicit node test 19/19, thematic catalog 5/5, layer panel 6/6, layer diagnostics 6/6, architecture boundaries, test import graph, `git diff --check`, code-review CLEAR, architect CLEAR, post-merge admin loader 19/19 plus architecture/import/diff checks, and final quality polish with repeat admin loader 20/20 plus architecture/import/diff checks. | Green after integration; direct registry conflict with Legend/Safety was resolved during rebase by preserving main truth and moving admin loader to historical integrated status. | No active integration action; recovery via branch `codex/thematic-admin-metrics-loader-20260622`, commit `f75e32f4`, main follow-up commits, and archive docs `docs/archive/thematic-admin-metrics-runtime-loader-v1/`. |
 | `C:\Users\raede\Desktop\dev\mapcreator-thematic-legend-safety-semantics-20260622` | `codex/thematic-legend-safety-semantics-20260622@ecdbd88a` | `origin/main@159870ed0752d5e03ef550c2ac51e2af87125f24` | integrated, pushed, and cleaned | docs only: registry/archive truth and `docs/active/thematic-legend-safety-semantics-20260622/` | Added the active Legend/Safety planning surface, recorded WGI post-push truth, registered admin metrics loader overlap risk, pushed `ecdbd88a` to main, synced main, and removed the temporary worktree. Verification passed `git diff --check`, stale WGI action `rg` check, thematic catalog Node 5/5, architect CLEAR, and code-reviewer APPROVE. | Green after cleanup for production code/data/dist; red registry overlap remains only for the separate admin metrics loader worktree. | No active integration action; recovery via commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72` and branch `codex/thematic-legend-safety-semantics-20260622`. |
 | `C:\Users\raede\Desktop\dev\mapcreator-wgi-real-source-qa-fix-20260622` | `codex/wgi-real-source-qa-fix-20260622@6ac22158`; functional commit `d7e361f4` | `origin/main@902c83fd5aff6bffb8ea1f29ceec36800e6a6882` | integrated, pushed, archived, and cleaned | hot files resolved: WGI ingest/contracts/data assets, thematic runtime catalog diagnostics, Pages dist allowlist/manifest, WGI and Pages startup tests, lessons learned, archived task docs | Preserves WGI source uncertainty fields, keeps composite uncertainty `not_computed`, labels UI metadata as source-derived, publishes thematic registry URLs in Pages dist, and adds runtime-registry URL contracts. Validation passed py_compile, WGI/thematic/data unittest 52, data catalog check 658, data health, thematic catalog 5, layer panel 6, diagnostics 6, toolbar boundary 53, architecture boundaries, state-write allowlist 112, import graph 49, Pages dist build with 39 startup shell tests plus 8 landing tests, runtime registry probe missing_count 0, `git diff --check`, follow-up code review CLEAR, and later cleanup/registry truth commits `551347f4` and `159870ed`. | Green for the completed code/data/dist path; future thematic semantics should start from current main. | No active integration action; recovery via branch `codex/wgi-real-source-qa-fix-20260622@6ac22158` and archive docs. |
