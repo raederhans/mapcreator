@@ -91,6 +91,22 @@ class ThematicLayerContractTest(unittest.TestCase):
                     recipe = _read_json(_repo_path(recipe_path))
                     self.assertFalse(recipe["download_policy"]["network_allowed"])
 
+    def test_admin_metric_manifest_rejects_duplicate_metric_ids(self) -> None:
+        for _layer, manifest in _iter_layer_manifests():
+            if manifest["geometry_kind"] == "grid_720x360":
+                continue
+            broken_manifest = copy.deepcopy(manifest)
+            broken_manifest["metric_ids"] = [
+                broken_manifest["metric_ids"][0],
+                broken_manifest["metric_ids"][0],
+            ]
+
+            errors = validate_thematic_layer_manifest(broken_manifest)
+
+            self.assertTrue(any("$.metric_ids" in error for error in errors), errors)
+            return
+        raise AssertionError("admin metric manifest not found")
+
     def test_admin_metric_payloads_preserve_missing_values_as_null(self) -> None:
         for _layer, manifest in _iter_layer_manifests():
             if manifest["geometry_kind"] == "grid_720x360":
@@ -149,6 +165,23 @@ class ThematicLayerContractTest(unittest.TestCase):
                 any(f"coverage_status must be {expected_status}" in error for error in errors),
                 errors,
             )
+            return
+        raise AssertionError("admin metric payload not found")
+
+    def test_admin_metric_contract_rejects_duplicate_metric_ids(self) -> None:
+        for _layer, manifest in _iter_layer_manifests():
+            if manifest["geometry_kind"] == "grid_720x360":
+                continue
+            metrics_payload = _read_json(_repo_path(manifest["paths"]["metrics"]))
+            broken_payload = copy.deepcopy(metrics_payload)
+            broken_payload["metric_ids"] = [
+                broken_payload["metric_ids"][0],
+                broken_payload["metric_ids"][0],
+            ]
+
+            errors = validate_thematic_admin_metrics(broken_payload)
+
+            self.assertTrue(any("$.metric_ids duplicates" in error for error in errors), errors)
             return
         raise AssertionError("admin metric payload not found")
 

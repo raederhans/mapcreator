@@ -46412,7 +46412,7 @@
     },
     {
       "path": "app/js/core/thematic_admin_metrics_loader.js",
-      "size_bytes": 28770,
+      "size_bytes": 29340,
       "source_kind": "dist"
     },
     {
@@ -47241,5 +47241,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155167792
+  "total_bytes": 1155168362
 }

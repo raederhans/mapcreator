@@ -169,7 +169,13 @@ def validate_thematic_admin_metrics(
     if not isinstance(payload, dict):
         return errors
 
-    metric_ids = {str(metric_id) for metric_id in _list_field(payload, "metric_ids")}
+    raw_metric_ids = [str(metric_id) for metric_id in _list_field(payload, "metric_ids")]
+    metric_ids = set(raw_metric_ids)
+    seen_metric_ids: set[str] = set()
+    for metric_id in raw_metric_ids:
+        if metric_id in seen_metric_ids:
+            errors.append(f"{source_label}: $.metric_ids duplicates {metric_id}")
+        seen_metric_ids.add(metric_id)
     for feature_index, feature in enumerate(_list_field(payload, "features")):
         if not isinstance(feature, dict):
             continue

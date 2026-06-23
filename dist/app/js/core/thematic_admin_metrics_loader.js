@@ -147,14 +147,28 @@ function assertSchemaVersion(payload, label, reason, layerId = "") {
   );
 }
 
-function normalizeMetricIds(payload) {
+function normalizeMetricIds(payload, {
+  reason = THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  label = "metrics payload",
+} = {}) {
   const metricIds = normalizeStringList(payload?.metric_ids);
   if (!metricIds.length) {
     throw createThematicAdminMetricsError(
-      THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
-      "[thematic_admin_metrics_loader] metrics payload must include metric_ids.",
+      reason,
+      `[thematic_admin_metrics_loader] ${label} must include metric_ids.`,
       { layerId: normalizeText(payload?.layer_id) },
     );
+  }
+  const seenMetricIds = new Set();
+  for (const [metricIndex, metricId] of metricIds.entries()) {
+    if (seenMetricIds.has(metricId)) {
+      throw createThematicAdminMetricsError(
+        reason,
+        `[thematic_admin_metrics_loader] ${label} has duplicate metric_id ${metricId}.`,
+        { layerId: normalizeText(payload?.layer_id), metricId, metricIndex },
+      );
+    }
+    seenMetricIds.add(metricId);
   }
   return metricIds;
 }
@@ -618,7 +632,10 @@ function assertSupportedManifest(manifest, layerId) {
     layerId: manifestLayerId,
     metricsPath,
     geometryKind,
-    metricIds: normalizeStringList(manifest?.metric_ids),
+    metricIds: normalizeMetricIds(manifest, {
+      reason: THEMATIC_ADMIN_METRICS_REASON.MANIFEST_LOAD_FAILED,
+      label: "thematic layer manifest",
+    }),
     geographyLevel: normalizeText(manifest?.coverage_scope?.geography_level),
     joinKeyType: normalizeText(manifest?.coverage_scope?.join_key_type),
     featureCount: normalizeNumber(

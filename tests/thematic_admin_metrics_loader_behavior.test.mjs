@@ -385,6 +385,32 @@ test("rejects unsupported manifest and payload schema versions", async () => {
   );
 });
 
+test("rejects duplicate manifest metric ids before metrics payload loading", async () => {
+  let metadataRequested = false;
+  let metricsRequested = false;
+  const duplicateMetricManifest = {
+    ...politicalManifest,
+    metric_ids: ["state_capacity_index", "state_capacity_index"],
+  };
+
+  await assertRejectsWithReason(
+    () => loadThematicAdminMetrics("political_state_capacity_demo", {
+      loadManifest: async () => duplicateMetricManifest,
+      getCatalogAssetMetadata: () => {
+        metadataRequested = true;
+        return createAdminMetadata(duplicateMetricManifest.paths.metrics);
+      },
+      loadMetrics: async () => {
+        metricsRequested = true;
+        return politicalMetrics;
+      },
+    }),
+    THEMATIC_ADMIN_METRICS_REASON.MANIFEST_LOAD_FAILED,
+  );
+  assert.equal(metadataRequested, false);
+  assert.equal(metricsRequested, false);
+});
+
 test("rejects empty feature payloads", () => {
   const emptyPayload = {
     ...cloneJson(politicalMetrics),
@@ -484,6 +510,13 @@ test("rejects blank and duplicate feature join keys before lookup creation", asy
 test("rejects invalid payload shape before lookup creation", () => {
   assertThrowsWithReason(
     () => normalizeThematicAdminMetricsPayload({ layer_id: "broken", metric_ids: [] }),
+    THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
+  );
+
+  const duplicateMetricPayload = cloneJson(politicalMetrics);
+  duplicateMetricPayload.metric_ids = ["state_capacity_index", "state_capacity_index"];
+  assertThrowsWithReason(
+    () => createThematicAdminMetricLookup(duplicateMetricPayload),
     THEMATIC_ADMIN_METRICS_REASON.METRICS_PAYLOAD_INVALID,
   );
 });
