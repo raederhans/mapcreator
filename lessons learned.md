@@ -451,3 +451,6 @@
 
 ### Scenario owner 颜色覆盖要从完整 runtime universe 收集
 - Chunked 场景的政治 feature 可能使用 `countries.json` 之外的二字母 owner code；owner/base-color map 要从 base topology、runtime topology、owner/controller、shell hint 和 releasable parent/child 一起收集，再按显式色、palette tag、ISO2 bridge、deterministic generated color 的顺序解析。
+
+### Post-edit 颜色要挡住 progressive 粗底图跳过
+- Chunk promotion 触发 `rebuild-colors` 后，pending edit 可能已经清空；如果可见 feature 仍有显式 visual/feature override，progressive coarse underlay 不能跳过 fine political loop，否则 state 里的新色会正确、主 canvas 仍停在旧 owner/base 色。

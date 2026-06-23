@@ -45852,7 +45852,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 908192,
+      "size_bytes": 908842,
       "source_kind": "dist"
     },
     {
@@ -46457,7 +46457,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 47190,
+      "size_bytes": 50176,
       "source_kind": "dist"
     },
     {
@@ -47241,5 +47241,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155168362
+  "total_bytes": 1155171998
 }

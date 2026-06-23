@@ -1,25 +1,26 @@
 # Worktree Registry
 
-Last updated: 2026-06-23 18:55 UTC
+Last updated: 2026-06-23 17:12 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: current audit closeout starts from `origin/main@4b3728c6`.
-- Latest integrated work: `40b07f43` records the admin metric duplicate `metric_ids` contract fix prepared in a clean temporary worktree.
+- Integration base: current Phase 2C work starts from `origin/main@75ffdaa7`.
+- Latest integrated work: `75ffdaa7` records branch cleanup truth after the earlier Phase 2A closeout and admin metric follow-ups.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Keep residual TNO post-edit pixel probe as a later draw/probe lane.
+1. Finish `codex/phase2c-post-edit-determinism-20260623` as the residual TNO post-edit draw/probe lane.
 2. Keep 1936/1939 Red Sea as Phase 2B.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@4b3728c6` | `origin/main@4b3728c6` before audit closeout push | parent checkout, preserved with unrelated WIP | dirty user WIP includes docs archive moves plus local edits in `data/i18n/manual_ui.json`, `js/main.js`, `dist/app/js/main.js`, `package.json`, startup tests, lessons, and overlapping admin metric files. | Parent status recorded before audit closeout; integration ran from clean temporary worktree `C:\Users\raede\.codex\worktrees\mapcreator-audit-admin-metric-dup-closeout-20260623`. | Red for direct file overlap with parent WIP on admin metric loader/contracts/dist; handled by committing from the clean worktree without staging parent changes. | Preserve parent WIP; after push, remove only the clean temporary audit worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@75ffdaa7` | `origin/main@75ffdaa7` | parent checkout, clean at Phase 2C start | none in `git status --short --branch` at start | Parent checkout is preserved; Phase 2C implementation runs in the isolated worktree below. | Green for no current dirty files; preserve the user-named WIP paths if they reappear. | Do not edit for Phase 2C until integration step. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-phase2c-post-edit-determinism-20260623` | `codex/phase2c-post-edit-determinism-20260623@75ffdaa7` plus uncommitted verified diff | `origin/main@75ffdaa7` | ready-for-integration after final diff check and commit | hot files: `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`, `tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js`, `tests/scenario_chunk_contracts.test.mjs`, `lessons learned.md`, active docs, registry; UI/Thematic/Appearance/Map Content and 1936/1939 Red Sea untouched | Delivery: classified the residual FR_ARR_18002 blue sample as production draw/cache; visible explicit political color overrides now block progressive coarse fine-loop skip after chunk promotion clears pending edit; E2E records four snapshots and waits for post-edit political paint before pixel probe; E2E target is locked to `FR_ARR_18002` with a probe derived from target geometry; lower Node regression locks override foreground and final fill color. Validation passed syntax checks, focused grep 1/1 after target lock, full `scenario-chunk-runtime` 8/8 after target lock, required Node set, direct Python boundary 55/55, `verify:pages-dist` 39/39 plus 8/8, and final `git diff --check`. Broader manual Python bridge contract still fails on current-base stale import expectation outside this diff. | Yellow for renderer/chunk shared flow; green for Phase 1.5/2A preservation; Phase 2B Red Sea remains separate. | Commit with Lore protocol, then merge/rebase into clean main and push after final integration checks. |
 
 ## Recent Integrated Branches
 

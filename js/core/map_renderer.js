@@ -6061,6 +6061,15 @@ function isPoliticalForegroundFeature(feature, featureId = null) {
     || isPendingPoliticalColorEditFeature(feature, id);
 }
 
+function hasVisiblePoliticalForegroundColorOverride(entries = []) {
+  if (!Array.isArray(entries) || !entries.length) return false;
+  return entries.some((entry) => {
+    const feature = entry?.feature || entry;
+    const featureId = entry?.id || getFeatureId(feature);
+    return hasPoliticalForegroundColorOverride(featureId);
+  });
+}
+
 function orderPoliticalShellUnderlayFirst(entries = []) {
   const underlayEntries = [];
   const detailEntries = [];
@@ -16719,11 +16728,18 @@ function drawPoliticalPass(k) {
   });
   recordPoliticalRasterWorkerSnapshot();
   const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();
-  const skipFineFeatureLoopForProgressiveRecovery = (
+  const progressiveRecoveryCoarseSkipCandidate = (
     !!backgroundSummary?.progressive
     && !backgroundSummary?.deferredFullCacheReady
     && String(backgroundSummary?.coarseUnderlay || "") === "admin0"
     && !pendingPoliticalColorEdit
+  );
+  const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate
+    ? hasVisiblePoliticalForegroundColorOverride(visibleItems)
+    : false;
+  const skipFineFeatureLoopForProgressiveRecovery = (
+    progressiveRecoveryCoarseSkipCandidate
+    && !visiblePoliticalForegroundColorOverride
   );
   if (skipFineFeatureLoopForProgressiveRecovery) {
     recordRenderPerfMetric("drawPoliticalFeatureFillLoop", 0, {

@@ -201,12 +201,14 @@ function createRendererShellPolicyHarness(rendererSource) {
     "isPoliticalVisualRenderableFeature",
     "isPoliticalInteractionRenderableFeature",
     "getRuntimePoliticalBaseCollection",
+    "getPoliticalFeatureFillColor",
   ];
   const source = `
     const runtimeState = {
       mapSemanticMode: "ownership",
       activeScenarioId: "test",
       colorRevision: 1,
+      colors: {},
       visualOverrides: {},
       featureOverrides: {},
       renderPassCache: {
@@ -217,6 +219,16 @@ function createRendererShellPolicyHarness(rendererSource) {
     };
     const getFeatureId = (feature) => String(feature?.properties?.id || feature?.id || "").trim();
     const getSafeCanvasColor = (value, fallback = null) => (typeof value === "string" && value.trim() ? value : fallback);
+    const debugMode = "PROD";
+    const LAND_FILL_COLOR = "#f0f0f0";
+    const isAtlantropaSeaFeature = () => false;
+    const getAtlantropaSeaPoliticalFillColor = () => "#123456";
+    const getResolvedFeatureColor = (feature, id) => (
+      runtimeState.featureOverrides?.[id]
+      || runtimeState.visualOverrides?.[id]
+      || feature?.properties?.fill
+      || ""
+    );
     const getRenderPassCacheState = () => runtimeState.renderPassCache;
     function hasPendingPoliticalColorEdit() {
       const cache = getRenderPassCacheState();
@@ -245,6 +257,8 @@ function createRendererShellPolicyHarness(rendererSource) {
       isPoliticalVisualRenderableFeature,
       isPoliticalInteractionRenderableFeature,
       getRuntimePoliticalBaseCollection,
+      getPoliticalFeatureFillColor,
+      setColors: (value) => { runtimeState.colors = value || {}; },
       setMapSemanticMode: (value) => { runtimeState.mapSemanticMode = value; },
       setVisualOverrides: (value) => {
         runtimeState.visualOverrides = value || {};
@@ -1339,6 +1353,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
       && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
       && !rendererSource.includes('!["refresh-colors", "rebuild-colors"].includes(String(reason || "unspecified"))'),
+    progressiveRecoveryKeepsFineLoopForVisibleColorOverrides:
+      /function hasVisiblePoliticalForegroundColorOverride\(entries = \[\]\) \{[\s\S]*?hasPoliticalForegroundColorOverride\(featureId\);[\s\S]*?\}/.test(rendererSource)
+      && /const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate[\s\S]*?hasVisiblePoliticalForegroundColorOverride\(visibleItems\)[\s\S]*?const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?progressiveRecoveryCoarseSkipCandidate[\s\S]*?!visiblePoliticalForegroundColorOverride[\s\S]*?\);/.test(rendererSource),
     politicalPathCachePreservesTargetedColorAndDeferredFullCacheReady:
       /const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set\(\[[\s\S]*?"refresh-colors"[\s\S]*?"progressive-political-full-cache-ready"[\s\S]*?\]\);/.test(rendererSource)
       && /targetPassNames\.includes\("political"\)[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);[\s\S]*?cancelScenarioPoliticalBackgroundDeferredFullCache/.test(invalidateRenderPassesBody)
@@ -1759,7 +1776,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
           && /if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheHandle = scheduleDeferredWork\([\s\S]*?runScenarioPoliticalBackgroundDeferredFullCacheSlice,[\s\S]*?\{ timeout: POLITICAL_DEFERRED_FULL_CACHE_TIMEOUT_MS \},[\s\S]*?\);[\s\S]*?recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred\(state\);[\s\S]*?return false;[\s\S]*?\}/.test(body);
       })()
       && /function drawScenarioPoliticalBackgroundFills\([\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?politicalDirtyReason !== "refresh-colors"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?allowBuild: false[\s\S]*?drawAdmin0BackgroundFills\(\{[\s\S]*?scheduleScenarioPoliticalBackgroundDeferredFullCache/.test(rendererSource)
-      && /function drawPoliticalPass\(k\) \{[\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);/.test(rendererSource)
+      && /function drawPoliticalPass\(k\) \{[\s\S]*?const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit\(\);[\s\S]*?const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?progressiveRecoveryCoarseSkipCandidate/.test(rendererSource)
       && /function clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedCount = 0,[\s\S]*?renderedIds = null,[\s\S]*?force = false,[\s\S]*?paintSource = "political-pass"[\s\S]*?\} = \{\}\) \{[\s\S]*?cache\.pendingPoliticalColorEditIds\.clear\(\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = -1;/.test(rendererSource)
       && /function drawPoliticalFeature\([\s\S]*?metricsCollector\.renderedIds instanceof Set[\s\S]*?metricsCollector\.renderedIds\.add\(id\);/.test(rendererSource)
       && /const featureMetrics = \{[\s\S]*?renderedIds: new Set\(\),[\s\S]*?\};[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?renderedIds: featureMetrics\.renderedIds,[\s\S]*?\}\);/.test(rendererSource)
@@ -2308,6 +2325,72 @@ test("renderer shell fallback policy behaves as visual-only underlay coverage", 
   );
   harness.setMapSemanticMode("blank");
   assert.equal(harness.getRuntimePoliticalBaseCollection({ type: "FeatureCollection", features: [shellFeature] }).features.length, 1);
+});
+
+test("post-edit visual override remains foreground after chunk promotion clears pending edit", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const harness = createRendererShellPolicyHarness(rendererSource);
+  const primaryFallbackFeature = {
+    id: "FR",
+    properties: {
+      id: "FR",
+      __source: "primary",
+      fill: "#0f0f65",
+    },
+  };
+  const baseFeature = {
+    id: "REAL_FR",
+    properties: {
+      id: "REAL_FR",
+      cntr_code: "FR",
+      fill: "#0f0f65",
+    },
+  };
+  const editedDetailFeature = {
+    id: "FR_ARR_18002",
+    properties: {
+      id: "FR_ARR_18002",
+      __source: "detail",
+      fill: "#0f0f65",
+    },
+  };
+
+  harness.setColors({
+    [primaryFallbackFeature.id]: "#0f0f65",
+    [baseFeature.id]: "#0f0f65",
+    [editedDetailFeature.id]: "#ff00aa",
+  });
+  harness.setVisualOverrides({ [editedDetailFeature.id]: "#ff00aa" });
+  harness.setPendingColorEditIds([editedDetailFeature.id]);
+
+  assert.equal(harness.isPoliticalForegroundFeature(editedDetailFeature, editedDetailFeature.id), true);
+  assert.equal(
+    harness.getPoliticalFeatureFillColor(editedDetailFeature, editedDetailFeature.id, 0, 1000),
+    "#ff00aa",
+  );
+  assert.deepEqual(
+    Array.from(harness.orderPoliticalShellUnderlayFirst([
+      { id: editedDetailFeature.id, feature: editedDetailFeature },
+      { id: primaryFallbackFeature.id, feature: primaryFallbackFeature },
+      { id: baseFeature.id, feature: baseFeature },
+    ]), (entry) => entry.id),
+    [primaryFallbackFeature.id, baseFeature.id, editedDetailFeature.id],
+  );
+
+  harness.setPendingColorEditIds([]);
+  assert.equal(harness.isPoliticalForegroundFeature(editedDetailFeature, editedDetailFeature.id), true);
+  assert.equal(
+    harness.getPoliticalFeatureFillColor(editedDetailFeature, editedDetailFeature.id, 0, 1000),
+    "#ff00aa",
+  );
+  assert.deepEqual(
+    Array.from(harness.orderPoliticalShellUnderlayFirst([
+      { id: editedDetailFeature.id, feature: editedDetailFeature },
+      { id: primaryFallbackFeature.id, feature: primaryFallbackFeature },
+      { id: baseFeature.id, feature: baseFeature },
+    ]), (entry) => entry.id),
+    [primaryFallbackFeature.id, baseFeature.id, editedDetailFeature.id],
+  );
 });
 
 test("TNO Russian Arctic shell fallbacks remain visual-only political coverage", () => {
