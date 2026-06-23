@@ -442,13 +442,9 @@
 ### Review 前确认新增文件已进索引
 - `git diff` 看不到 untracked 新文件；新模块被已跟踪文件 import 时，review/commit 前用 `git add -A` 和 `git ls-files --others --exclude-standard` 检查，避免本地能跑但提交缺文件。
 
-### WGI 源层要保留不确定性字段
-- 接入 WGI workbook 时先查真实表头；number of sources、standard error 和 90% confidence interval 是 source metric 合同字段，project-defined composite 要明确记录不推导 composite uncertainty。
-
-### Runtime lookup 入口要拒绝坏 join key
-- 建 lookup 前先校验 feature `join_key` 非空且唯一；静默过滤 malformed feature 会让 payload 合同错误伪装成后续 `unknown_join_key`，review 时很难从结果状态倒推出根因。
-- 同一入口也要校验每个声明 metric 都有对象值和合法 `source_status`；缺 metric 值不能被 normalize 成正常 `source_gap`，否则坏 payload 会伪装成真实来源缺口。
-- 非缺失 metric 值还要校验 `raw_value` / `normalized_value` 是有限数字，且 normalized 落在 0-100；只查字段存在会让字符串、NaN 或越界值进入正常查询结果。
+### thematic 源 payload 先锁 source 语义和 lookup 完整性
+- 接入 WGI 这类 thematic workbook 时先查真实表头；number of sources、standard error 和 90% confidence interval 这类 source metric 要作为合同字段保留下来，project-defined composite 继续明确记录不推导 composite uncertainty。
+- 建 runtime lookup 前先校验 feature `join_key` 非空且唯一，并验证每个声明 metric 都有对象值、合法 `source_status`，以及有限且落在合同范围内的 `raw_value` / `normalized_value`；这样坏 payload 会在入口直接暴露，而不是伪装成正常 `source_gap` 或 `unknown_join_key`。
 
 ### Chunk promotion readiness 要区分可见子集和完整派生状态
 - 视口可见子集可以服务第一帧快速绘制；交互稳定态必须用完整 feature-id 覆盖校验恢复 `landData`、spatial/index 和 colors。颜色表缺口只记录诊断，避免把 palette 数据问题误判成 chunk 派生状态问题。
