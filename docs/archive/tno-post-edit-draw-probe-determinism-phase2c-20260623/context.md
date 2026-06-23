@@ -44,3 +44,4 @@
 - Failure class: production draw/cache bug.
 - Main reason: `resolvedColor` and overrides updated state, while `rebuild-colors` plus progressive coarse recovery skipped the fine political loop after the pending edit state had already cleared.
 - Out of scope kept: Thematic, Appearance, Map Content UI, and 1936/1939 Red Sea.
+- Integration: functional commit `8130f496` was pushed to `origin/main`; parent local main was left untouched because it had unrelated UI/palette WIP.

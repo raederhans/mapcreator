@@ -41,7 +41,7 @@
 
 ### Commit state
 
-Not committed at task-doc update time. Recommended commit after `git diff --check`, final status review, and integration checks.
+Functional commit `8130f496` was pushed to `origin/main`. The closeout commit moves this task folder to archive and updates registry truth.
 
 ### Base divergence
 
@@ -69,4 +69,4 @@ Risk is yellow because `js/core/map_renderer.js` and scenario chunk E2E are shar
 
 ### Recommendation
 
-Merge after final diff check and commit. Integration risk is yellow but bounded to renderer/chunk draw behavior; no Phase 2B Red Sea integration should be done in this branch.
+Phase 2C is integrated. Keep Phase 2B Red Sea as the next separate lane.
