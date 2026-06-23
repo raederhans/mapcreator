@@ -109,6 +109,15 @@ function requestMainRender(reason = "", { flush = false } = {}) {
   return flush ? flushRenderBoundary(reason) : requestRender(reason);
 }
 
+function isUiShellDebugMode() {
+  if (typeof globalThis.URLSearchParams !== "function") {
+    return false;
+  }
+  const params = new globalThis.URLSearchParams(globalThis.location?.search || "");
+  const raw = String(params.get("ui_shell") || params.get("startup_mode") || "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "ui-shell";
+}
+
 let milsymbolLoadPromise = null;
 let deferredUiBootstrapPromise = null;
 let postReadyContextWarmupScheduled = false;
@@ -1046,6 +1055,85 @@ async function bootstrap() {
   let startupUiBootstrapFailed = false;
   try {
     bindBeforeUnload();
+    if (isUiShellDebugMode()) {
+      runtimeState.uiShellDebug = true;
+      document.body?.classList.add("app-ui-shell-debug");
+      setBootState("ui-shell", {
+        message: getBootLanguage() === "zh"
+          ? "正在启动 UI 调试外壳。"
+          : "Starting the UI debug shell.",
+        progress: 55,
+        canContinueWithoutScenario: false,
+      });
+      startBootMetric("ui-shell");
+      initLongAnimationFrameObserver();
+      const startupInteractionLevel = "full";
+      initMap({
+        suppressRender: true,
+        interactionLevel: startupInteractionLevel,
+        deferInteractionInfrastructure: false,
+      });
+      setMapData({
+        refitProjection: false,
+        resetZoom: false,
+        suppressRender: true,
+        interactionLevel: startupInteractionLevel,
+        deferInteractionInfrastructure: false,
+      });
+
+      renderDispatcher = createRenderDispatcher(() => {
+        try {
+          render();
+        } finally {
+          markRenderBoundaryFlushed();
+        }
+      });
+      const renderApp = () => {
+        renderDispatcher.schedule();
+      };
+      globalThis.renderApp = renderApp;
+      bindRenderBoundary({
+        scheduleRender: () => renderDispatcher.schedule(),
+        flushRender: () => renderDispatcher.flush(),
+        ensureDetailTopology: (options = {}) =>
+          ensureDetailTopologyReady({
+            renderDispatcher,
+            ...options,
+          }),
+      });
+      const flushRenderNow = () => flushRenderBoundary("ui-shell-render-now");
+      globalThis.renderNow = flushRenderNow;
+      registerRuntimeHook(state, "renderNowFn", flushRenderNow);
+      registerRuntimeHook(state, "ensureDetailTopologyFn", (options = {}) =>
+        ensureDetailTopologyReady({
+          renderDispatcher,
+          ...options,
+        }));
+
+      initToast();
+      registerRuntimeHook(state, "showToastFn", showToast);
+      setBootPreviewVisible(false);
+      initPresetState();
+      startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
+      await startupUiBootstrapPromise;
+      startupUiBootstrapAwaited = true;
+      runPostScenarioUiReplay({ full: true });
+      renderDispatcher.flush();
+      setBootState("ready", {
+        blocking: false,
+        progress: 100,
+        canContinueWithoutScenario: false,
+      });
+      finishBootMetric("ui-shell", { mode: "debug" });
+      checkpointBootMetricOnce("ui-shell-ready");
+      completeBootSequenceLogging();
+      globalThis.__mapcreatorUiShellDebug = {
+        ready: true,
+        skippedStartupData: true,
+        skippedScenarioApply: true,
+      };
+      return;
+    }
     // Phase: 加载基础拓扑 | Input: 启动配置与 bootstrap 资源 promise | Output: startupBaseData + 已注入基础 state 字段。
     // 这一段只建立 base runtimeState 与启动 bundle promise，不应用场景；场景写入必须等 map shell 与 render boundary 建好之后执行。
     setBootState("base-data");

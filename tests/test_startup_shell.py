@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+import json
 from pathlib import Path
 
 
@@ -58,6 +59,11 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('"bootstrap-first-political-frame"', main_js)
         self.assertIn("function checkpointFirstVisibleFrameMetrics()", main_js)
         self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', main_js)
+        self.assertIn("function isUiShellDebugMode()", main_js)
+        self.assertIn('params.get("ui_shell") || params.get("startup_mode")', main_js)
+        self.assertIn('globalThis.__mapcreatorUiShellDebug = {', main_js)
+        self.assertIn('skippedStartupData: true,', main_js)
+        self.assertIn('skippedScenarioApply: true,', main_js)
         self.assertLess(
             main_js.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
             main_js.index("if (startupUiBootstrapPromise) {"),
@@ -116,6 +122,17 @@ class StartupShellTest(unittest.TestCase):
             "state.countryNames = {\n      ...countryNames,\n      ...staged.scenarioNameMap,\n    };",
             scenario_manager_js,
         )
+
+    def test_ui_shell_debug_start_entry_uses_app_shell_without_startup_data(self) -> None:
+        package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+        script = package_json["scripts"]["start:ui-shell"]
+        self.assertIn("/app/?ui_shell=1&startup_interaction=full&startup_worker=0&startup_cache=0", script)
+        self.assertIn("tools/dev_server.py", script)
+
+        batch = (REPO_ROOT / "start_ui_shell_debug.bat").read_text(encoding="utf-8")
+        self.assertIn("MAPCREATOR_OPEN_PATH=/app/?ui_shell=1&startup_interaction=full&startup_worker=0&startup_cache=0", batch)
+        self.assertIn("MAPCREATOR_DEV_CACHE_MODE=nostore", batch)
+        self.assertIn("call run_server.bat %*", batch)
 
 
 if __name__ == "__main__":

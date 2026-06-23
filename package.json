@@ -47,6 +47,7 @@
     "test:node:transport-workbench-right-deck-owner": "node --test tests/transport_workbench_right_deck_owner_behavior.test.mjs",
     "test:node:transport-workbench-state-owner": "node --test tests/transport_workbench_state_owner_behavior.test.mjs",
     "test:py:backend-cloud-support": "npm run python -- -m unittest tests.test_backend_service tests.test_backend_routes -q",
+    "start:ui-shell": "npm run python -- tools/dev_server.py \"/app/?ui_shell=1&startup_interaction=full&startup_worker=0&startup_cache=0\"",
     "build:transport-workbench-carrier": "npm run python -- tools/build_transport_workbench_japan_carrier.py",
     "build:transport-workbench-japan-roads": "npm run python -- tools/build_transport_workbench_japan_roads.py",
     "build:transport-workbench-japan-rail": "npm run python -- tools/build_transport_workbench_japan_rail.py",
