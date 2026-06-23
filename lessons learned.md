@@ -388,6 +388,7 @@
 
 ### i18n 拆分按纯逻辑和 DOM 行为分界
 - 迁移 `i18n` owner 时，catalog、`t()`、tooltip model 适合进 `js/core`，DOM sweep、language toggle、`localStorage` 和 UI runtime hook 调用留在 `js/ui/i18n.js`；工具和测试以 core catalog 为真相源，UI catalog 只做兼容 re-export。
+- Thematic 这类新增 UI 文案如果既走 `data/locales.json`，又被 `tools/i18n_audit.py` 视作 `js/core/i18n_catalog.js` 的责任区，就要同轮同步 source/dist catalog 和 locales；只补运行时 locale 文件会让页面可翻译但审计仍保持 `ui_missing`。
 
 ### Worktree 注册表当前段只列真实路径
 - `Current Worktrees` 只放 `git worktree list` 当前存在的路径；已整合或已清理的分支放到历史整合或恢复记录段，避免后续 integration owner 误以为还有活跃 worktree。
@@ -448,3 +449,6 @@
 - 建 lookup 前先校验 feature `join_key` 非空且唯一；静默过滤 malformed feature 会让 payload 合同错误伪装成后续 `unknown_join_key`，review 时很难从结果状态倒推出根因。
 - 同一入口也要校验每个声明 metric 都有对象值和合法 `source_status`；缺 metric 值不能被 normalize 成正常 `source_gap`，否则坏 payload 会伪装成真实来源缺口。
 - 非缺失 metric 值还要校验 `raw_value` / `normalized_value` 是有限数字，且 normalized 落在 0-100；只查字段存在会让字符串、NaN 或越界值进入正常查询结果。
+
+### Chunk promotion readiness 要区分可见子集和完整派生状态
+- 视口可见子集可以服务第一帧快速绘制；交互稳定态必须用完整 feature-id 覆盖校验恢复 `landData`、spatial/index 和 colors。颜色表缺口只记录诊断，避免把 palette 数据问题误判成 chunk 派生状态问题。

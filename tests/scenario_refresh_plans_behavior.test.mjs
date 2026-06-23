@@ -523,3 +523,301 @@ test("chunk promotion runtime executes default frame graph invalidation effects"
   ]);
   assert.equal(calls.some(([name]) => name === "invalidateRenderPasses"), false);
 });
+
+test("chunk promotion deferred infra restores full political derived state after primary visible subset refresh", async () => {
+  const feature = (id) => ({ type: "Feature", id, properties: { id }, geometry: null });
+  const fullPoliticalPayload = {
+    type: "FeatureCollection",
+    features: ["GER", "ITA", "POL", "FRA"].map(feature),
+  };
+  const primaryVisiblePayload = {
+    type: "FeatureCollection",
+    features: ["GER", "ITA"].map(feature),
+  };
+  const idsOf = (payload) => (payload?.features || []).map((entry) => entry.id);
+  const colorsFor = (payload) => Object.fromEntries(idsOf(payload).map((id) => [id, `#${id}`]));
+  const calls = [];
+  let deferredCallback = null;
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    runtimeChunkLoadState: {
+      selectionVersion: 7,
+      pendingVisualPromotion: {
+        queuedAt: 10,
+        primaryVisibleFeatureCount: 2,
+        primaryTotalFeatureCount: 4,
+      },
+      lastSelection: {
+        requiredChunkIds: ["political.detail.west"],
+        cacheOnlyChunkIds: ["political.detail.east"],
+        retainedActiveChunkIds: ["political.detail.west"],
+      },
+    },
+    activeScenarioMeshPack: { meshes: {} },
+    scenarioPoliticalChunkData: fullPoliticalPayload,
+    scenarioPoliticalVisibleChunkData: primaryVisiblePayload,
+    landData: primaryVisiblePayload,
+    landDataFull: primaryVisiblePayload,
+    colors: colorsFor(primaryVisiblePayload),
+    renderDiagnostics: { perfOverlayEnabled: true },
+    uiState: { developerMode: true },
+  };
+  const deps = {
+    runtimeState,
+    buildIndex: () => calls.push(["buildIndex"]),
+    buildSpatialIndexChunked: () => calls.push(["buildSpatialIndexChunked"]),
+    rebuildPoliticalLandCollections: () => {
+      calls.push(["rebuildPoliticalLandCollections"]);
+      runtimeState.landData = fullPoliticalPayload;
+      runtimeState.landDataFull = fullPoliticalPayload;
+      return {
+        fullCollection: fullPoliticalPayload,
+        interactiveCollection: fullPoliticalPayload,
+      };
+    },
+    rebuildRuntimeDerivedState: () => {
+      calls.push(["rebuildRuntimeDerivedState"]);
+      runtimeState.colors = colorsFor(fullPoliticalPayload);
+      return runtimeState.colors;
+    },
+    rebuildPrimaryPoliticalDerivedState: (options) => {
+      calls.push(["rebuildPrimaryPoliticalDerivedState", options]);
+      runtimeState.landData = primaryVisiblePayload;
+      runtimeState.landDataFull = primaryVisiblePayload;
+      runtimeState.colors = colorsFor(primaryVisiblePayload);
+    },
+    setInteractionInfrastructureState: (...args) => calls.push(["setInteractionInfrastructureState", ...args]),
+    scheduleSecondarySpatialIndexBuild: (...args) => calls.push(["scheduleSecondarySpatialIndexBuild", ...args]),
+    scheduleHitCanvasBuildIfNeeded: (...args) => calls.push(["scheduleHitCanvasBuildIfNeeded", ...args]),
+    ensureSovereigntyState: () => calls.push(["ensureSovereigntyState"]),
+    refreshScenarioOpeningOwnerBorders: (...args) => calls.push(["refreshScenarioOpeningOwnerBorders", ...args]),
+    invalidateBorderCache: () => calls.push(["invalidateBorderCache"]),
+    updateDynamicBorderStatusUI: () => calls.push(["updateDynamicBorderStatusUI"]),
+    updateSpecialZonesPaths: () => calls.push(["updateSpecialZonesPaths"]),
+    renderSpecialZoneEditorOverlay: () => calls.push(["renderSpecialZoneEditorOverlay"]),
+    render: () => calls.push(["render"]),
+    recordRenderPerfMetric: (...args) => calls.push(["recordRenderPerfMetric", ...args]),
+    recordInteractionRecoveryTaskMetric: (...args) => calls.push(["recordInteractionRecoveryTaskMetric", ...args]),
+    beginInteractionRecoveryTask: (...args) => {
+      calls.push(["beginInteractionRecoveryTask", ...args]);
+      return true;
+    },
+    endInteractionRecoveryTask: (...args) => calls.push(["endInteractionRecoveryTask", ...args]),
+    isInteractionRecoverySettled: () => true,
+    scheduleDeferredWork: (callback, options) => {
+      calls.push(["scheduleDeferredWork", options]);
+      deferredCallback = callback;
+      return { kind: "deferred-work" };
+    },
+    cancelDeferredWork: (...args) => calls.push(["cancelDeferredWork", ...args]),
+    yieldToMain: async () => calls.push(["yieldToMain"]),
+    nowMs: (() => {
+      let now = 200;
+      return () => {
+        now += 5;
+        return now;
+      };
+    })(),
+    markRendererTopologyChanged: (...args) => calls.push(["markRendererTopologyChanged", ...args]),
+    clearDeferredInternalBorderMeshCaches: () => calls.push(["clearDeferredInternalBorderMeshCaches"]),
+    scheduleDeferredHeavyBorderMeshes: () => calls.push(["scheduleDeferredHeavyBorderMeshes"]),
+    resetScenarioWaterCacheAdaptiveState: (...args) => calls.push(["resetScenarioWaterCacheAdaptiveState", ...args]),
+    syncScenarioSecondaryRegionIndexes: (...args) => {
+      calls.push(["syncScenarioSecondaryRegionIndexes", ...args]);
+      return false;
+    },
+    invalidateRenderPasses: (...args) => calls.push(["invalidateRenderPasses", ...args]),
+    markAllOverlaysDirty: () => calls.push(["markAllOverlaysDirty"]),
+    updateZoomTranslateExtent: () => calls.push(["updateZoomTranslateExtent"]),
+    isUsableMesh: () => false,
+    resetRendererTransactionState: (...args) => calls.push(["resetRendererTransactionState", ...args]),
+    clearLastGoodFrame: (...args) => calls.push(["clearLastGoodFrame", ...args]),
+    invalidateInteractionComposite: (...args) => calls.push(["invalidateInteractionComposite", ...args]),
+    resetFirstVisibleFramePainted: (...args) => calls.push(["resetFirstVisibleFramePainted", ...args]),
+    clearRenderPassReferenceTransforms: (...args) => calls.push(["clearRenderPassReferenceTransforms", ...args]),
+    rebuildStaticMeshes: (...args) => calls.push(["rebuildStaticMeshes", ...args]),
+    getEffectiveAtlantropaFeatures: () => ({ water: [] }),
+    rebuildAuxiliaryRegionIndexes: () => calls.push(["rebuildAuxiliaryRegionIndexes"]),
+    getSpatialIndexRuntimeOwner: () => ({
+      resetSecondarySpatialIndexState: (...args) => calls.push(["resetSecondarySpatialIndexState", ...args]),
+      buildSecondarySpatialIndexes: (...args) => calls.push(["buildSecondarySpatialIndexes", ...args]),
+    }),
+    queueIndexUiRefresh: (...args) => calls.push(["queueIndexUiRefresh", ...args]),
+  };
+  const runtime = createScenarioRefreshRuntime(deps);
+
+  runtime.refreshMapDataForScenarioChunkPromotion({
+    reason: "primary-visible-subset-regression",
+    changedLayerKeys: ["political"],
+    hasPoliticalPayloadChange: true,
+    suppressRender: true,
+  });
+
+  assert.deepEqual(idsOf(runtimeState.landData), ["GER", "ITA"]);
+  assert.equal(runtimeState.runtimeChunkLoadState.pendingInfraPromotion.completePoliticalDerivedStateReady, false);
+  assert.equal(typeof deferredCallback, "function");
+
+  deferredCallback();
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+
+  assert.equal(runtimeState.scenarioPoliticalVisibleChunkData, null);
+  assert.deepEqual(idsOf(runtimeState.landData), ["GER", "ITA", "POL", "FRA"]);
+  assert.deepEqual(Object.keys(runtimeState.colors), ["GER", "ITA", "POL", "FRA"]);
+  assert.ok(calls.some(([name]) => name === "rebuildPoliticalLandCollections"));
+  assert.ok(calls.some(([name]) => name === "rebuildRuntimeDerivedState"));
+  assert.ok(calls.some(([name, metricName, _duration, details]) => (
+    name === "recordRenderPerfMetric"
+    && metricName === "scenarioPoliticalDerivedStateCoverage"
+    && details?.completePoliticalFeatureCount === 4
+    && details?.primaryVisibleFeatureCount === 2
+    && details?.landDataFeatureCount === 2
+    && details?.colorsCount === 2
+    && Array.isArray(details?.missingLandFeatureIdsSample)
+    && details.missingLandFeatureIdsSample.includes("POL")
+    && Array.isArray(details?.missingColorFeatureIdsSample)
+    && details.missingColorFeatureIdsSample.includes("FRA")
+  )));
+});
+
+test("chunk promotion deferred infra refreshes stale colors when land coverage is already complete", async () => {
+  const feature = (id) => ({ type: "Feature", id, properties: { id }, geometry: null });
+  const fullPoliticalPayload = {
+    type: "FeatureCollection",
+    features: ["GER", "ITA", "POL", "FRA"].map(feature),
+  };
+  const idsOf = (payload) => (payload?.features || []).map((entry) => entry.id);
+  const colorsFor = (ids) => Object.fromEntries(ids.map((id) => [id, `#${id}`]));
+  const calls = [];
+  let deferredCallback = null;
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    runtimeChunkLoadState: {
+      selectionVersion: 8,
+      pendingVisualPromotion: {
+        queuedAt: 20,
+        primaryVisibleFeatureCount: 4,
+        primaryTotalFeatureCount: 4,
+      },
+      lastSelection: {
+        requiredChunkIds: ["political.detail.full"],
+        cacheOnlyChunkIds: [],
+        retainedActiveChunkIds: ["political.detail.full"],
+      },
+    },
+    activeScenarioMeshPack: { meshes: {} },
+    scenarioPoliticalChunkData: fullPoliticalPayload,
+    scenarioPoliticalVisibleChunkData: null,
+    landData: fullPoliticalPayload,
+    landDataFull: fullPoliticalPayload,
+    colors: colorsFor(["GER", "ITA"]),
+    renderDiagnostics: { perfOverlayEnabled: true },
+    uiState: { developerMode: true },
+  };
+  const deps = {
+    runtimeState,
+    buildIndex: () => calls.push(["buildIndex"]),
+    buildSpatialIndexChunked: () => calls.push(["buildSpatialIndexChunked"]),
+    rebuildPoliticalLandCollections: () => {
+      calls.push(["rebuildPoliticalLandCollections"]);
+      runtimeState.landData = fullPoliticalPayload;
+      runtimeState.landDataFull = fullPoliticalPayload;
+      return {
+        fullCollection: fullPoliticalPayload,
+        interactiveCollection: fullPoliticalPayload,
+      };
+    },
+    rebuildRuntimeDerivedState: () => {
+      calls.push(["rebuildRuntimeDerivedState"]);
+      runtimeState.colors = colorsFor(idsOf(fullPoliticalPayload));
+      return runtimeState.colors;
+    },
+    rebuildPrimaryPoliticalDerivedState: () => calls.push(["rebuildPrimaryPoliticalDerivedState"]),
+    setInteractionInfrastructureState: (...args) => calls.push(["setInteractionInfrastructureState", ...args]),
+    scheduleSecondarySpatialIndexBuild: (...args) => calls.push(["scheduleSecondarySpatialIndexBuild", ...args]),
+    scheduleHitCanvasBuildIfNeeded: (...args) => calls.push(["scheduleHitCanvasBuildIfNeeded", ...args]),
+    ensureSovereigntyState: () => calls.push(["ensureSovereigntyState"]),
+    refreshScenarioOpeningOwnerBorders: (...args) => calls.push(["refreshScenarioOpeningOwnerBorders", ...args]),
+    invalidateBorderCache: () => calls.push(["invalidateBorderCache"]),
+    updateDynamicBorderStatusUI: () => calls.push(["updateDynamicBorderStatusUI"]),
+    updateSpecialZonesPaths: () => calls.push(["updateSpecialZonesPaths"]),
+    renderSpecialZoneEditorOverlay: () => calls.push(["renderSpecialZoneEditorOverlay"]),
+    render: () => calls.push(["render"]),
+    recordRenderPerfMetric: (...args) => calls.push(["recordRenderPerfMetric", ...args]),
+    recordInteractionRecoveryTaskMetric: (...args) => calls.push(["recordInteractionRecoveryTaskMetric", ...args]),
+    beginInteractionRecoveryTask: (...args) => {
+      calls.push(["beginInteractionRecoveryTask", ...args]);
+      return true;
+    },
+    endInteractionRecoveryTask: (...args) => calls.push(["endInteractionRecoveryTask", ...args]),
+    isInteractionRecoverySettled: () => true,
+    scheduleDeferredWork: (callback, options) => {
+      calls.push(["scheduleDeferredWork", options]);
+      deferredCallback = callback;
+      return { kind: "deferred-work" };
+    },
+    cancelDeferredWork: (...args) => calls.push(["cancelDeferredWork", ...args]),
+    yieldToMain: async () => calls.push(["yieldToMain"]),
+    nowMs: (() => {
+      let now = 300;
+      return () => {
+        now += 5;
+        return now;
+      };
+    })(),
+    markRendererTopologyChanged: (...args) => calls.push(["markRendererTopologyChanged", ...args]),
+    clearDeferredInternalBorderMeshCaches: () => calls.push(["clearDeferredInternalBorderMeshCaches"]),
+    scheduleDeferredHeavyBorderMeshes: () => calls.push(["scheduleDeferredHeavyBorderMeshes"]),
+    resetScenarioWaterCacheAdaptiveState: (...args) => calls.push(["resetScenarioWaterCacheAdaptiveState", ...args]),
+    syncScenarioSecondaryRegionIndexes: (...args) => {
+      calls.push(["syncScenarioSecondaryRegionIndexes", ...args]);
+      return false;
+    },
+    invalidateRenderPasses: (...args) => calls.push(["invalidateRenderPasses", ...args]),
+    markAllOverlaysDirty: () => calls.push(["markAllOverlaysDirty"]),
+    updateZoomTranslateExtent: () => calls.push(["updateZoomTranslateExtent"]),
+    isUsableMesh: () => false,
+    resetRendererTransactionState: (...args) => calls.push(["resetRendererTransactionState", ...args]),
+    clearLastGoodFrame: (...args) => calls.push(["clearLastGoodFrame", ...args]),
+    invalidateInteractionComposite: (...args) => calls.push(["invalidateInteractionComposite", ...args]),
+    resetFirstVisibleFramePainted: (...args) => calls.push(["resetFirstVisibleFramePainted", ...args]),
+    clearRenderPassReferenceTransforms: (...args) => calls.push(["clearRenderPassReferenceTransforms", ...args]),
+    rebuildStaticMeshes: (...args) => calls.push(["rebuildStaticMeshes", ...args]),
+    getEffectiveAtlantropaFeatures: () => ({ water: [] }),
+    rebuildAuxiliaryRegionIndexes: () => calls.push(["rebuildAuxiliaryRegionIndexes"]),
+    getSpatialIndexRuntimeOwner: () => ({
+      resetSecondarySpatialIndexState: (...args) => calls.push(["resetSecondarySpatialIndexState", ...args]),
+      buildSecondarySpatialIndexes: (...args) => calls.push(["buildSecondarySpatialIndexes", ...args]),
+    }),
+    queueIndexUiRefresh: (...args) => calls.push(["queueIndexUiRefresh", ...args]),
+  };
+  const runtime = createScenarioRefreshRuntime(deps);
+
+  runtime.refreshMapDataForScenarioChunkPromotion({
+    reason: "stale-color-coverage-regression",
+    changedLayerKeys: ["political"],
+    hasPoliticalPayloadChange: true,
+    suppressRender: true,
+  });
+
+  assert.equal(runtimeState.runtimeChunkLoadState.pendingInfraPromotion.completePoliticalDerivedStateReady, false);
+  assert.equal(typeof deferredCallback, "function");
+
+  deferredCallback();
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+
+  assert.deepEqual(idsOf(runtimeState.landData), ["GER", "ITA", "POL", "FRA"]);
+  assert.deepEqual(Object.keys(runtimeState.colors), ["GER", "ITA", "POL", "FRA"]);
+  assert.ok(calls.some(([name]) => name === "rebuildRuntimeDerivedState"));
+  assert.ok(calls.some(([name, metricName, _duration, details]) => (
+    name === "recordRenderPerfMetric"
+    && metricName === "scenarioPoliticalDerivedStateCoverage"
+    && details?.landDataCoverageMissing === false
+    && details?.colorCoverageMissing === true
+    && Array.isArray(details?.missingColorFeatureIdsSample)
+    && details.missingColorFeatureIdsSample.includes("POL")
+  )));
+});

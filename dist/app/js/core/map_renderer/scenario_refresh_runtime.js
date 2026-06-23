@@ -9,6 +9,138 @@ import {
   readFirstNonNegativeCount,
   resolveScenarioChunkPromotionChangeSet,
 } from "../renderer/scenario_chunk_promotion_helpers.js";
+import { getFeatureId } from "../feature_identity.js";
+
+const POLITICAL_DERIVED_STATE_MISSING_SAMPLE_LIMIT = 8;
+
+function getFeatureCollectionFeatures(payload) {
+  return Array.isArray(payload?.features) ? payload.features : [];
+}
+
+function collectFeatureIdSet(features = []) {
+  return new Set(
+    (Array.isArray(features) ? features : [])
+      .map((feature) => String(getFeatureId(feature) || feature?.id || feature?.properties?.id || "").trim())
+      .filter(Boolean)
+  );
+}
+
+function getMissingFeatureIdSample(completeFeatureIds, candidateFeatureIds) {
+  const missing = [];
+  completeFeatureIds.forEach((featureId) => {
+    if (missing.length >= POLITICAL_DERIVED_STATE_MISSING_SAMPLE_LIMIT) return;
+    if (!candidateFeatureIds.has(featureId)) {
+      missing.push(featureId);
+    }
+  });
+  return missing;
+}
+
+function isPoliticalCoverageDiagnosticsEnabled(runtimeState) {
+  if (runtimeState?.renderDiagnostics?.perfOverlayEnabled || runtimeState?.renderDiagnostics?.enabled) return true;
+  if (runtimeState?.uiState?.developerMode) return true;
+  try {
+    const params = new URLSearchParams(globalThis.location?.search || "");
+    return params.has("render_diag") || params.has("perf_overlay");
+  } catch (_error) {
+    return false;
+  }
+}
+
+function analyzeScenarioPoliticalDerivedStateCoverage(runtimeState) {
+  const completeFeatures = getFeatureCollectionFeatures(runtimeState?.scenarioPoliticalChunkData);
+  const primaryVisibleFeatures = getFeatureCollectionFeatures(runtimeState?.scenarioPoliticalVisibleChunkData);
+  const landDataFeatures = getFeatureCollectionFeatures(runtimeState?.landData);
+  const colorIds = new Set(Object.keys(runtimeState?.colors || {}).map((featureId) => String(featureId || "").trim()).filter(Boolean));
+  const completeFeatureIds = collectFeatureIdSet(completeFeatures);
+  const primaryVisibleFeatureIds = collectFeatureIdSet(primaryVisibleFeatures);
+  const landDataFeatureIds = collectFeatureIdSet(landDataFeatures);
+  const completePoliticalFeatureCount = completeFeatures.length;
+  const primaryVisibleFeatureCount = primaryVisibleFeatures.length;
+  const landDataFeatureCount = landDataFeatures.length;
+  const colorsCount = colorIds.size;
+  const primaryVisibleFeatureSubsetActive = primaryVisibleFeatureCount > 0
+    && completePoliticalFeatureCount > primaryVisibleFeatureCount
+    && (
+      primaryVisibleFeatureIds.size <= 0
+      || Array.from(primaryVisibleFeatureIds).every((featureId) => completeFeatureIds.has(featureId))
+    );
+  const missingLandFeatureIdsSample = completeFeatureIds.size > 0
+    ? getMissingFeatureIdSample(completeFeatureIds, landDataFeatureIds)
+    : [];
+  const missingColorFeatureIdsSample = completeFeatureIds.size > 0
+    ? getMissingFeatureIdSample(completeFeatureIds, colorIds)
+    : [];
+  const landDataCoverageMissing = completePoliticalFeatureCount > 0
+    && (
+      landDataFeatureCount < completePoliticalFeatureCount
+      || missingLandFeatureIdsSample.length > 0
+    );
+  const colorCoverageMissing = completePoliticalFeatureCount > 0
+    && (
+      colorsCount < completePoliticalFeatureCount
+      || missingColorFeatureIdsSample.length > 0
+    );
+
+  return {
+    completePoliticalFeatureCount,
+    primaryVisibleFeatureCount,
+    landDataFeatureCount,
+    colorsCount,
+    primaryVisibleFeatureSubsetActive,
+    landDataCoverageMissing,
+    colorCoverageMissing,
+    missingLandFeatureIdsSample,
+    missingColorFeatureIdsSample,
+  };
+}
+
+function getScenarioChunkSelectionDiagnostics(runtimeState) {
+  const loadState = runtimeState?.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
+    ? runtimeState.runtimeChunkLoadState
+    : {};
+  const lastSelection = loadState.lastSelection && typeof loadState.lastSelection === "object"
+    ? loadState.lastSelection
+    : {};
+  return {
+    selectionVersion: Math.max(0, Number(loadState.selectionVersion || lastSelection.selectionVersion || 0)),
+    requiredChunkIds: Array.isArray(lastSelection.requiredChunkIds) ? [...lastSelection.requiredChunkIds] : [],
+    cacheOnlyChunkIds: Array.isArray(lastSelection.cacheOnlyChunkIds) ? [...lastSelection.cacheOnlyChunkIds] : [],
+    retainedActiveChunkIds: Array.isArray(lastSelection.retainedActiveChunkIds) ? [...lastSelection.retainedActiveChunkIds] : [],
+  };
+}
+
+function recordScenarioPoliticalDerivedStateCoverage({
+  runtimeState,
+  recordRenderPerfMetric,
+  reason = "scenario-chunk-promotion",
+  stage = "check",
+  coverage,
+  restoredFullPoliticalChunkData = false,
+} = {}) {
+  if (typeof recordRenderPerfMetric !== "function" || !coverage) return null;
+  const shouldRecord = isPoliticalCoverageDiagnosticsEnabled(runtimeState)
+    || coverage.primaryVisibleFeatureSubsetActive
+    || coverage.landDataCoverageMissing
+    || coverage.colorCoverageMissing
+    || restoredFullPoliticalChunkData;
+  if (!shouldRecord) return null;
+  return recordRenderPerfMetric("scenarioPoliticalDerivedStateCoverage", 0, {
+    reason: String(reason || "scenario-chunk-promotion"),
+    stage: String(stage || "check"),
+    completePoliticalFeatureCount: coverage.completePoliticalFeatureCount,
+    primaryVisibleFeatureCount: coverage.primaryVisibleFeatureCount,
+    landDataFeatureCount: coverage.landDataFeatureCount,
+    colorsCount: coverage.colorsCount,
+    primaryVisibleFeatureSubsetActive: !!coverage.primaryVisibleFeatureSubsetActive,
+    landDataCoverageMissing: !!coverage.landDataCoverageMissing,
+    colorCoverageMissing: !!coverage.colorCoverageMissing,
+    missingLandFeatureIdsSample: coverage.missingLandFeatureIdsSample,
+    missingColorFeatureIdsSample: coverage.missingColorFeatureIdsSample,
+    restoredFullPoliticalChunkData: !!restoredFullPoliticalChunkData,
+    ...getScenarioChunkSelectionDiagnostics(runtimeState),
+  });
+}
 
 function createScenarioRefreshRuntime(deps = {}) {
   const {
@@ -54,6 +186,8 @@ function createScenarioRefreshRuntime(deps = {}) {
     suppressRender = false,
     promotionVersion = scenarioChunkPromotionVersion,
     hasPoliticalGeometryChange = false,
+    primaryVisibleDerivedStateReady = false,
+    completePoliticalDerivedStateReady = false,
     primaryDerivedStateReady = false,
     refreshOpeningOwnerBorders = true,
   } = {}) {
@@ -65,6 +199,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady,
         primaryDerivedStateReady,
         refreshOpeningOwnerBorders,
       });
@@ -78,6 +214,8 @@ function createScenarioRefreshRuntime(deps = {}) {
     suppressRender = false,
     promotionVersion = scenarioChunkPromotionVersion,
     hasPoliticalGeometryChange = false,
+    primaryVisibleDerivedStateReady = false,
+    completePoliticalDerivedStateReady = false,
     primaryDerivedStateReady = false,
     refreshOpeningOwnerBorders = true,
   } = {}) {
@@ -90,6 +228,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady,
         primaryDerivedStateReady,
         refreshOpeningOwnerBorders,
       });
@@ -102,6 +242,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady,
         primaryDerivedStateReady,
         refreshOpeningOwnerBorders,
       });
@@ -114,7 +256,12 @@ function createScenarioRefreshRuntime(deps = {}) {
     let fullPoliticalRestoreMs = 0;
     let restoredFullPoliticalChunkData = false;
     try {
-      if (!primaryDerivedStateReady) {
+      let politicalCoverageBeforeRestore = hasPoliticalGeometryChange
+        ? analyzeScenarioPoliticalDerivedStateCoverage(runtimeState)
+        : null;
+      let resolvedCompletePoliticalDerivedStateReady = !!completePoliticalDerivedStateReady
+        || (!!primaryDerivedStateReady && !politicalCoverageBeforeRestore?.primaryVisibleFeatureSubsetActive);
+      if (!resolvedCompletePoliticalDerivedStateReady) {
         buildIndex();
         await yieldToMain();
         yieldCount += 1;
@@ -126,20 +273,29 @@ function createScenarioRefreshRuntime(deps = {}) {
           keepReady: true,
         });
       }
-      if (hasPoliticalGeometryChange && Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)) {
+      if (hasPoliticalGeometryChange) {
         const fullRestoreStartedAt = nowMs();
-        runtimeState.scenarioPoliticalVisibleChunkData = null;
-        const completePoliticalFeatureCount = Array.isArray(runtimeState.scenarioPoliticalChunkData?.features)
-          ? runtimeState.scenarioPoliticalChunkData.features.length
-          : 0;
-        const renderedLandFeatureCount = Array.isArray(runtimeState.landData?.features)
-          ? runtimeState.landData.features.length
-          : 0;
+        const hasPrimaryVisiblePoliticalSubset = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features);
+        recordScenarioPoliticalDerivedStateCoverage({
+          runtimeState,
+          recordRenderPerfMetric,
+          reason,
+          stage: "before-deferred-restore",
+          coverage: politicalCoverageBeforeRestore,
+        });
         const shouldRestoreFullPoliticalDerivedState = (
-          !primaryDerivedStateReady
-          && completePoliticalFeatureCount > 0
-          && renderedLandFeatureCount < completePoliticalFeatureCount
+          politicalCoverageBeforeRestore.completePoliticalFeatureCount > 0
+          && (
+            !resolvedCompletePoliticalDerivedStateReady
+            || !!primaryVisibleDerivedStateReady
+            || politicalCoverageBeforeRestore.primaryVisibleFeatureSubsetActive
+            || politicalCoverageBeforeRestore.landDataCoverageMissing
+            || politicalCoverageBeforeRestore.colorCoverageMissing
+          )
         );
+        if (hasPrimaryVisiblePoliticalSubset || shouldRestoreFullPoliticalDerivedState) {
+          runtimeState.scenarioPoliticalVisibleChunkData = null;
+        }
         if (shouldRestoreFullPoliticalDerivedState) {
           rebuildPoliticalLandCollections();
           rebuildRuntimeDerivedState({
@@ -150,11 +306,31 @@ function createScenarioRefreshRuntime(deps = {}) {
           });
           runtimeState.hitCanvasDirty = true;
           runtimeState.hitCanvasTopologyRevision = 0;
+          invalidateRenderPasses(
+            ["physicalBase", "political", "contextBase", "contextScenario", "borders"],
+            "scenario-political-full-derived-state-restore"
+          );
           await yieldToMain();
           yieldCount += 1;
         }
         fullPoliticalRestoreMs = nowMs() - fullRestoreStartedAt;
         restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;
+        politicalCoverageBeforeRestore = analyzeScenarioPoliticalDerivedStateCoverage(runtimeState);
+        if (
+          restoredFullPoliticalChunkData
+          && !politicalCoverageBeforeRestore.landDataCoverageMissing
+          && !politicalCoverageBeforeRestore.colorCoverageMissing
+        ) {
+          resolvedCompletePoliticalDerivedStateReady = true;
+        }
+        recordScenarioPoliticalDerivedStateCoverage({
+          runtimeState,
+          recordRenderPerfMetric,
+          reason,
+          stage: "after-deferred-restore",
+          coverage: politicalCoverageBeforeRestore,
+          restoredFullPoliticalChunkData,
+        });
         if (promotionVersion !== scenarioChunkPromotionVersion) {
           return false;
         }
@@ -200,6 +376,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender: !!suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady: !!primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady: !!resolvedCompletePoliticalDerivedStateReady,
         primaryDerivedStateReady: !!primaryDerivedStateReady,
         restoredFullPoliticalChunkData,
         fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
@@ -209,6 +387,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender: !!suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady: !!primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady: !!resolvedCompletePoliticalDerivedStateReady,
         primaryDerivedStateReady: !!primaryDerivedStateReady,
         restoredFullPoliticalChunkData,
         fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
@@ -218,6 +398,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender: !!suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady: !!primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady: !!resolvedCompletePoliticalDerivedStateReady,
         primaryDerivedStateReady: !!primaryDerivedStateReady,
         restoredFullPoliticalChunkData,
         fullPoliticalRestoreMs: Math.max(0, fullPoliticalRestoreMs),
@@ -227,6 +409,8 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender: !!suppressRender,
         promotionVersion,
         hasPoliticalGeometryChange: !!hasPoliticalGeometryChange,
+        primaryVisibleDerivedStateReady: !!primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady: !!resolvedCompletePoliticalDerivedStateReady,
         primaryDerivedStateReady: !!primaryDerivedStateReady,
         refreshOpeningOwnerBorders: refreshOpeningOwnerBorders !== false,
         restoredFullPoliticalChunkData,
@@ -314,6 +498,13 @@ function createScenarioRefreshRuntime(deps = {}) {
     const promotedPrimaryFeatureCount = Array.isArray(runtimeState.scenarioPoliticalVisibleChunkData?.features)
       ? runtimeState.scenarioPoliticalVisibleChunkData.features.length
       : promotedTotalFeatureCount;
+    const currentPoliticalCoverage = analyzeScenarioPoliticalDerivedStateCoverage(runtimeState);
+    const primaryVisibleDerivedStateReady = hasPoliticalChange
+      && !!currentPoliticalCoverage.primaryVisibleFeatureSubsetActive;
+    const completePoliticalDerivedStateReady = hasPoliticalChange
+      && !currentPoliticalCoverage.primaryVisibleFeatureSubsetActive
+      && !currentPoliticalCoverage.landDataCoverageMissing
+      && !currentPoliticalCoverage.colorCoverageMissing;
     const promotedVisibleFeatureCount = readFirstNonNegativeCount(
       pendingVisualPromotion?.primaryVisibleFeatureCount,
       pendingPromotion?.primaryVisibleFeatureCount,
@@ -361,7 +552,9 @@ function createScenarioRefreshRuntime(deps = {}) {
         selectionVersion,
         promotionVersion: scenarioChunkPromotionVersion,
         hasPoliticalGeometryChange: hasPoliticalChange,
-        primaryDerivedStateReady: hasPoliticalChange,
+        primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady,
+        primaryDerivedStateReady: completePoliticalDerivedStateReady,
         promotionDelta,
       };
     }
@@ -387,7 +580,9 @@ function createScenarioRefreshRuntime(deps = {}) {
         suppressRender,
         promotionVersion: scenarioChunkPromotionVersion,
         hasPoliticalGeometryChange: hasPoliticalChange,
-        primaryDerivedStateReady: hasPoliticalChange,
+        primaryVisibleDerivedStateReady,
+        completePoliticalDerivedStateReady,
+        primaryDerivedStateReady: completePoliticalDerivedStateReady,
         refreshOpeningOwnerBorders: !shouldRefreshOpeningOwnerBordersInVisual,
       });
     }

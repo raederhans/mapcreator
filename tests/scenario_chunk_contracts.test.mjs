@@ -1487,10 +1487,14 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /allowStartupInitialVisual = false,[\s\S]*?shouldForceStartupInitialVisualRefresh = !!allowStartupInitialVisual[\s\S]*?getFeatureCount\(runtimeState\.landData\) <= 0[\s\S]*?getColorCount\(\) <= 0[\s\S]*?forceRefresh: !!pendingPromotion\.primaryVisibleFeatureSubsetChanged \|\| shouldForceStartupInitialVisualRefresh/.test(chunkRuntimeSource)
       && /loadState\.pendingVisualPromotion = \{[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource)
       && /loadState\.pendingPromotion = \{[\s\S]*?requiredPoliticalChunkCount:[\s\S]*?selectedFeatureCountSum:[\s\S]*?selectedByteCountSum:[\s\S]*?selectedEstimatedPathCostSum:/.test(chunkRuntimeSource),
-    deferredInfraSkipsFullPoliticalRestoreWhenCompleteLandDataAlreadyOwnsRender:
-      /const completePoliticalFeatureCount = Array\.isArray\(runtimeState\.scenarioPoliticalChunkData\?\.features\)[\s\S]*?runtimeState\.scenarioPoliticalChunkData\.features\.length/.test(scenarioRefreshRuntimeSource)
-      && /const renderedLandFeatureCount = Array\.isArray\(runtimeState\.landData\?\.features\)[\s\S]*?runtimeState\.landData\.features\.length/.test(scenarioRefreshRuntimeSource)
-      && /const shouldRestoreFullPoliticalDerivedState = \([\s\S]*?!primaryDerivedStateReady[\s\S]*?completePoliticalFeatureCount > 0[\s\S]*?renderedLandFeatureCount < completePoliticalFeatureCount[\s\S]*?\);/.test(scenarioRefreshRuntimeSource)
+    deferredInfraRestoresFullPoliticalDerivedStateWhenVisibleSubsetIsActive:
+      scenarioRefreshRuntimeSource.includes("function analyzeScenarioPoliticalDerivedStateCoverage(runtimeState)")
+      && scenarioRefreshRuntimeSource.includes('recordRenderPerfMetric("scenarioPoliticalDerivedStateCoverage"')
+      && scenarioRefreshRuntimeSource.includes("primaryVisibleDerivedStateReady = false")
+      && scenarioRefreshRuntimeSource.includes("completePoliticalDerivedStateReady = false")
+      && /const shouldRestoreFullPoliticalDerivedState = \([\s\S]*?politicalCoverageBeforeRestore\.completePoliticalFeatureCount > 0[\s\S]*?!resolvedCompletePoliticalDerivedStateReady[\s\S]*?primaryVisibleDerivedStateReady[\s\S]*?primaryVisibleFeatureSubsetActive[\s\S]*?landDataCoverageMissing[\s\S]*?colorCoverageMissing[\s\S]*?\);/.test(scenarioRefreshRuntimeSource)
+      && /colorCoverageMissing: !!coverage\.colorCoverageMissing,/.test(scenarioRefreshRuntimeSource)
+      && /if \(hasPrimaryVisiblePoliticalSubset \|\| shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?runtimeState\.scenarioPoliticalVisibleChunkData = null;[\s\S]*?\}[\s\S]*?if \(shouldRestoreFullPoliticalDerivedState\) \{/.test(scenarioRefreshRuntimeSource)
       && /if \(shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(scenarioRefreshRuntimeSource)
       && /restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;/.test(scenarioRefreshRuntimeSource),
     exactAfterSettleDefersPoliticalFastExact:
@@ -1961,6 +1965,8 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
         "buildSpatial: true",
         "includeSecondarySpatial: false",
         "async function runDeferredScenarioChunkPromotionInfraRefresh({",
+        "primaryVisibleDerivedStateReady = false",
+        "completePoliticalDerivedStateReady = false",
         "primaryDerivedStateReady = false",
         "buildIndex();",
         "await buildSpatialIndexChunked({",

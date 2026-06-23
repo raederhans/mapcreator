@@ -1,25 +1,25 @@
 # Worktree Registry
 
-Last updated: 2026-06-22 18:25 -04:00
+Last updated: 2026-06-22 20:35 -04:00
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: `main` synced with `origin/main@f44ddbaf` before the audit follow-up; no secondary worktree was active.
-- Latest integrated work: The current audit follow-up hardens admin metrics numeric/coverage contracts and WGI source-code audit boundaries after admin metrics loader commit `f75e32f4`, quality polish `f44ddbaf`, Legend/Safety planning commit `ecdbd88adceaf47d2eee0a0a498f825f6855fc72`, WGI QA functional commit `d7e361f4`, and WGI source-ingest commit `7336c05583fa546dcb783970a972ffe3868a855f`.
+- Integration base: `main` synced with `origin/main@6402153b` before the scenario political chunk full-derived-state phase-1 repair; no secondary worktree is active.
+- Latest integrated work: Current `main@6402153b` already includes the prior thematic/admin loader closeouts. This row tracks the renderer/chunk promotion phase-1 fix only.
 - Live test/build owner: main Codex agent only; no live process currently active.
 - Subagents: test-engineer/code-reviewer/architect lanes are read-only; no subagent owns live tests or build processes.
 
 ## Recommended Order
 
-1. Treat WGI source ingest, WGI QA, docs/lessons cleanup, registry truth, Legend/Safety planning docs, admin metrics loader, final admin loader quality polish, and this audit hardening follow-up as integrated on `main`.
-2. Use `docs/active/thematic-legend-safety-semantics-20260622/` as the next implementation guide; keep renderer, map toggle, save-format, generated data, and Pages dist outside that later contract-test-first slice.
+1. Push the scenario political chunk full-derived-state phase-1 repair from `main` after final commit.
+2. Treat 1936/1939 Red Sea and TNO palette/base-color coverage gaps as later phases.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` audit hardening follow-up on top of `origin/main@f44ddbaf` | current `origin/main@f44ddbaf` | ready for commit/push from main checkout | hot files: `js/core/thematic_admin_metrics_loader.js`, `map_builder/thematic_layer_contracts.py`, `map_builder/thematic_wgi_ingest.py`, admin metrics/WGI tests, fixture, registry, lessons | `git worktree list` shows only the main worktree; validation passed JS syntax, Python compile, admin metrics loader 21/21, thematic Python contracts 21/21, architecture boundaries, import graph, malformed metric repro, WGI `ZZZ` unmatched audit repro, independent code-review COMMENT with no blocker, architect OK, and `git diff --check`. | Green; no active worktree overlap remains. | Commit and push this audit follow-up from `main`; keep branch `codex/thematic-admin-metrics-loader-20260622` and recent main commits as recovery. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` phase-1 commit from `6402153b` | current `origin/main@6402153b` | integrated locally, push pending | hot files touched: `js/core/map_renderer/scenario_refresh_runtime.js`, `tests/scenario_refresh_plans_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, Python boundary contracts, archived task docs, registry, and Pages dist mirrors. Unrelated local `data/i18n/manual_ui.json` remains excluded. | Validation passed: syntax check, scenario refresh plans 22/22, scenario chunk contracts 55/55, promotion helpers 9/9, lifecycle 12/12, runtime state 6/6, render diagnostics 21/21, Python boundary 48/48, targeted Playwright post-edit detail fill 1/1, `verify:pages-dist` with Pages shell 39/39 plus landing 8/8, `git diff --check`, and code-review CLEAR after fixing P1/P2 color coverage findings. Docs archived at `docs/archive/scenario-political-chunk-full-derived-state-20260622/`. | Green for worktree overlap; yellow for shared renderer runtime and generated dist mirrors. Phase 2 palette/base-color gaps remain separate. | Commit with Lore trailers, push `main`, then no cleanup worktree is needed because this task ran directly on main. |
 
 ## Recent Integrated Branches
 

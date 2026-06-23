@@ -79,7 +79,7 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
         self.assertRegex(
             self.refresh_plan_content,
             re.compile(
-                r'function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?if \(hasPoliticalChange\) \{\s*\["political", "contextBase", "contextMarkers", "borders", "labels"\]',
+                r'function getScenarioChunkPromotionTargetPasses\(\{[\s\S]*?return getTargetPassesForResources\(getScenarioChunkPromotionTargetResources\(\{[\s\S]*?function getScenarioChunkPromotionTargetResources\(\{[\s\S]*?if \(hasPoliticalChange\) \{\s*addResources\(\[\s*"politicalBaseBuffer",\s*"hitIndex",\s*"contextBaseBuffer",\s*"contextMarkersBuffer",\s*"borderBuffer",\s*"interactionOverlay",\s*"labelBuffer",',
                 re.S,
             ),
         )
@@ -92,12 +92,14 @@ class MapRendererSpatialIndexRuntimeOrchestrationContractTest(unittest.TestCase)
             ),
         )
 
-    def test_chunk_promotion_infra_skips_primary_rebuild_when_visual_stage_is_ready(self):
+    def test_chunk_promotion_infra_uses_complete_derived_state_readiness(self):
         self.assertRegex(
             self.refresh_runtime_content,
             re.compile(
-                r'async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?primaryDerivedStateReady = false,[\s\S]*?'
-                r'if \(!primaryDerivedStateReady\) \{\s*buildIndex\(\);\s*await yieldToMain\(\);[\s\S]*?await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);\s*\}[\s\S]*?'
+                r'async function runDeferredScenarioChunkPromotionInfraRefresh\(\{[\s\S]*?'
+                r'primaryVisibleDerivedStateReady = false,[\s\S]*?completePoliticalDerivedStateReady = false,[\s\S]*?'
+                r'let resolvedCompletePoliticalDerivedStateReady = !!completePoliticalDerivedStateReady[\s\S]*?'
+                r'if \(!resolvedCompletePoliticalDerivedStateReady\) \{\s*buildIndex\(\);\s*await yieldToMain\(\);[\s\S]*?await buildSpatialIndexChunked\(\{\s*includeSecondary: false,\s*keepReady: true,\s*\}\);\s*\}[\s\S]*?'
                 r'scheduleSecondarySpatialIndexBuild\(\{',
                 re.S,
             ),

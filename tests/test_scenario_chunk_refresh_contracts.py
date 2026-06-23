@@ -105,7 +105,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'if \(shouldDeferScenarioChunkRefreshFor\(\{ allowStartupInitialVisual \}\)\) \{[\s\S]*?markPendingScenarioChunkRefresh\(\s*resolvedPendingPromotion\.reason \|\| loadState\.pendingReason \|\| "chunk-promotion-deferred",\s*retryDelayMs,\s*\);\s*recordScenarioChunkRuntimeMetric\("chunkPromotionDeferredRetryMs", retryDelayMs, \{\s*scenarioId,',
+                r'if \(shouldDeferScenarioChunkRefreshFor\(\{ allowStartupInitialVisual \}\)\) \{[\s\S]*?markPendingScenarioChunkRefresh\(\s*resolvedPendingPromotion\.reason \|\| loadState\.pendingReason \|\| "chunk-promotion-deferred",\s*retryDelayMs,\s*\{ scenarioApplyRequestId: resolvedPromotionScenarioApplyRequestId \},\s*\);\s*recordScenarioChunkRuntimeMetric\("chunkPromotionDeferredRetryMs", retryDelayMs, \{\s*scenarioId,',
                 re.S,
             ),
         )
@@ -287,7 +287,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             self.scenario_chunk_runtime_source,
             re.compile(
-                r'if \(flushPending\) \{\s*return executeScenarioChunkRefreshNow\(\{\s*bundle,\s*reason: nextReason,\s*flushPending,\s*allowRefreshStart: hadPendingReason,',
+                r'if \(flushPending\) \{\s*recordRenderTransactionSnapshot\(runtimeState, \{\s*phase: "scenario-chunk-refresh-flush-now",[\s\S]*?\}\);\s*return executeScenarioChunkRefreshNow\(\{\s*bundle,\s*reason: nextReason,\s*flushPending,\s*allowRefreshStart: hadPendingReason,',
                 re.S,
             ),
         )
@@ -688,6 +688,8 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         start = self.scenario_refresh_runtime_source.index("async function runDeferredScenarioChunkPromotionInfraRefresh(")
         end = self.scenario_refresh_runtime_source.index("function refreshMapDataForScenarioChunkPromotion(", start)
         promotion_infra_source = self.scenario_refresh_runtime_source[start:end]
+        self.assertIn("primaryVisibleDerivedStateReady = false,", promotion_infra_source)
+        self.assertIn("completePoliticalDerivedStateReady = false,", promotion_infra_source)
         self.assertIn("primaryDerivedStateReady = false,", promotion_infra_source)
         self.assertIn('if (hasPoliticalGeometryChange) {', promotion_infra_source)
         self.assertIn('ensureSovereigntyState();', promotion_infra_source)
@@ -838,7 +840,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertRegex(
             infra_source,
             re.compile(
-                r'if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{\s*scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{\s*reason,\s*suppressRender,\s*promotionVersion,\s*hasPoliticalGeometryChange,\s*primaryDerivedStateReady,\s*refreshOpeningOwnerBorders,\s*\}\);',
+                r'if \(!isInteractionRecoverySettled\(\{ quietMs: 600 \}\)\) \{\s*scheduleDeferredScenarioChunkPromotionInfraRefresh\(\{\s*reason,\s*suppressRender,\s*promotionVersion,\s*hasPoliticalGeometryChange,\s*primaryVisibleDerivedStateReady,\s*completePoliticalDerivedStateReady,\s*primaryDerivedStateReady,\s*refreshOpeningOwnerBorders,\s*\}\);',
                 re.S,
             ),
         )
