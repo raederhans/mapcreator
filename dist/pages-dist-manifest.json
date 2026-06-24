@@ -45617,7 +45617,7 @@
     },
     {
       "path": "app/js/bootstrap/ui_shell_debug_seed.js",
-      "size_bytes": 14074,
+      "size_bytes": 14767,
       "source_kind": "dist"
     },
     {
@@ -45957,7 +45957,7 @@
     },
     {
       "path": "app/js/core/renderer/color_resolution_strategy.js",
-      "size_bytes": 3621,
+      "size_bytes": 3756,
       "source_kind": "dist"
     },
     {
@@ -46282,7 +46282,7 @@
     },
     {
       "path": "app/js/core/scenario_runtime_queries.js",
-      "size_bytes": 2756,
+      "size_bytes": 2884,
       "source_kind": "dist"
     },
     {
@@ -46577,7 +46577,7 @@
     },
     {
       "path": "app/js/ui/styled_selects.js",
-      "size_bytes": 11417,
+      "size_bytes": 12000,
       "source_kind": "dist"
     },
     {
@@ -46697,7 +46697,7 @@
     },
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
-      "size_bytes": 49782,
+      "size_bytes": 52859,
       "source_kind": "dist"
     },
     {
@@ -47251,5 +47251,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155207356
+  "total_bytes": 1155211972
 }

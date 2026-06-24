@@ -18,6 +18,7 @@ export function isColorResolutionOceanFeature(feature, id, {
   if (typeof isAtlantropaSeaFeature === "function" && isAtlantropaSeaFeature(feature, id)) {
     return true;
   }
+  // Atlantropa 带色规则和 surface kind 的 feature 继续走政治/规则色，通用 water token 只接管普通水体壳层。
   if (isAtlantropaTaggedFeature(feature)) {
     return false;
   }

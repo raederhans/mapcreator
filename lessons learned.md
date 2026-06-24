@@ -467,3 +467,6 @@
 
 ### UI-shell 调试 seed 要显式绑定 preset lookup
 - 调试用 scenario country 同时带 `lookup_iso2` 和 fake `regional_presets` 时，侧栏会优先用 lookup code 读取默认国家 preset；预览数据要显式设置 `preset_lookup_code` 指向调试 tag，避免真实默认 preset 抢占 UI。
+
+### Scenario UI await 后要复核事务归属
+- 点击处理器等待 optional scenario asset 后再写 UI 状态时，要同时复核 `activeScenarioId` 和 `currentScenarioApplyRequestId`；数据层挡住 stale payload 后，UI continuation 仍可能把旧 scenario 操作写进新 scenario。

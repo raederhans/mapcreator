@@ -363,9 +363,11 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         owner_content = SPECIAL_ZONES_WORKBENCH_CONTROLLER_JS.read_text(encoding="utf-8")
 
         self.assertIn('let loadedScenarioLayerAssetId = "";', owner_content)
+        self.assertIn("let loadedScenarioLayerRequestId = 0;", owner_content)
         self.assertIn('const scenarioId = String(runtimeState.activeScenarioId || "").trim();', owner_content)
-        self.assertIn("if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;", owner_content)
+        self.assertIn("if (isScenarioLayerCacheLoadedForContext(loadContext)) return runtimeState.specialZoneLayers;", owner_content)
         self.assertIn("loadedScenarioLayerAssetId = scenarioId;", owner_content)
+        self.assertIn("loadedScenarioLayerRequestId = scenarioApplyRequestId;", owner_content)
         self.assertIn("await loadScenarioSpecialZoneLayers();", owner_content)
         self.assertIn('fetch("/__dev/scenario/special-zone-layers/save"', owner_content)
         self.assertIn("saveBtn.setAttribute(\"aria-busy\", \"true\");", owner_content)

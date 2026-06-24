@@ -149,9 +149,12 @@ function createSpecialZonesWorkbenchController({
   let memberImportInputNode = null;
   let lastDiagnosticsToastKey = "";
   let loadedScenarioLayerAssetId = "";
+  let loadedScenarioLayerRequestId = 0;
   let failedScenarioLayerAssetId = "";
+  let failedScenarioLayerRequestId = 0;
   let scenarioLayerLoadPromise = null;
   let scenarioLayerLoadScenarioId = "";
+  let scenarioLayerLoadRequestId = 0;
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
@@ -185,6 +188,37 @@ function createSpecialZonesWorkbenchController({
     if (isOpen) openCategories.add(normalizedCategory);
     else openCategories.delete(normalizedCategory);
     runtimeState.specialZonePresetOpenCategories = Array.from(openCategories);
+  };
+
+  const createScenarioLayerLoadContext = () => ({
+    scenarioId: String(runtimeState.activeScenarioId || "").trim(),
+    scenarioApplyRequestId: Math.max(0, Number(runtimeState.currentScenarioApplyRequestId || 0)),
+    declaresLayerAsset: activeScenarioDeclaresLayerAsset(),
+  });
+
+  const isScenarioLayerLoadContextCurrent = (context = {}) => {
+    const scenarioId = String(context.scenarioId || "").trim();
+    if (!scenarioId) return false;
+    if (String(runtimeState.activeScenarioId || "").trim() !== scenarioId) return false;
+    const expectedRequestId = Math.max(0, Number(context.scenarioApplyRequestId || 0));
+    const currentRequestId = Math.max(0, Number(runtimeState.currentScenarioApplyRequestId || 0));
+    return currentRequestId === expectedRequestId;
+  };
+
+  const isScenarioLayerCacheLoadedForContext = (context = {}) => {
+    const scenarioId = String(context.scenarioId || "").trim();
+    const scenarioApplyRequestId = Math.max(0, Number(context.scenarioApplyRequestId || 0));
+    return !!scenarioId
+      && loadedScenarioLayerAssetId === scenarioId
+      && loadedScenarioLayerRequestId === scenarioApplyRequestId;
+  };
+
+  const isScenarioLayerCacheFailedForContext = (context = {}) => {
+    const scenarioId = String(context.scenarioId || "").trim();
+    const scenarioApplyRequestId = Math.max(0, Number(context.scenarioApplyRequestId || 0));
+    return !!scenarioId
+      && failedScenarioLayerAssetId === scenarioId
+      && failedScenarioLayerRequestId === scenarioApplyRequestId;
   };
 
   const getDevSelectionFeatureIds = () => {
@@ -377,8 +411,10 @@ function createSpecialZonesWorkbenchController({
     const addLayerBtn = createButton(translate("New layer"));
     addLayerBtn.addEventListener("click", async () => {
       const source = runtimeState.activeScenarioId ? "scenario" : "project";
+      const loadContext = source === "scenario" ? createScenarioLayerLoadContext() : null;
       if (source === "scenario") {
-        await loadScenarioSpecialZoneLayers();
+        await loadScenarioSpecialZoneLayers(loadContext);
+        if (!isScenarioLayerLoadContextCurrent(loadContext)) return;
       }
       updateState({ action: "addLayer", layer: createLayerFromPreset("custom", { source }) }, "special-zone-layer-add");
     });
@@ -934,7 +970,8 @@ function createSpecialZonesWorkbenchController({
     };
     syncScenarioSaveButtonState();
     saveBtn.addEventListener("click", async () => {
-      const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+      const loadContext = createScenarioLayerLoadContext();
+      const scenarioId = loadContext.scenarioId;
       if (!scenarioId) return;
       let stateToSave = null;
       saveBtn.disabled = true;
@@ -942,12 +979,15 @@ function createSpecialZonesWorkbenchController({
       saveBtn.setAttribute("aria-busy", "true");
       if (statusNode) statusNode.textContent = translate("Saving scenario special zone layers…");
       try {
-        if (loadedScenarioLayerAssetId !== scenarioId) {
+        if (!isScenarioLayerCacheLoadedForContext(loadContext)) {
           const pendingState = serializeSpecialZoneLayersState(normalizeState(), {
             topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
           });
-          await loadScenarioSpecialZoneLayers();
-          if (loadedScenarioLayerAssetId !== scenarioId) {
+          await loadScenarioSpecialZoneLayers(loadContext);
+          if (
+            !isScenarioLayerLoadContextCurrent(loadContext)
+            || !isScenarioLayerCacheLoadedForContext(loadContext)
+          ) {
             throw new Error("Scenario special zone layer asset load unavailable.");
           }
           // 首次保存可能发生在 optional asset 载入前；已有本地 layer 时保存本地意图，避免载入结果覆盖用户刚做的编辑。
@@ -1027,13 +1067,14 @@ function createSpecialZonesWorkbenchController({
       overlayToggleNode.checked = !!runtimeState.showSpecialZones;
     }
     const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+    const loadContext = createScenarioLayerLoadContext();
     if (
       runtimeState.showSpecialZones
       && scenarioId
-      && loadedScenarioLayerAssetId !== scenarioId
-      && failedScenarioLayerAssetId !== scenarioId
+      && !isScenarioLayerCacheLoadedForContext(loadContext)
+      && !isScenarioLayerCacheFailedForContext(loadContext)
     ) {
-      void loadScenarioSpecialZoneLayers();
+      void loadScenarioSpecialZoneLayers(loadContext);
     }
     renderLayerList(state);
     registerSpecialZonesWorkbenchRuntimeHooks(runtimeState, {
@@ -1061,25 +1102,43 @@ function createSpecialZonesWorkbenchController({
     (activeRow || newLayerButton || root).focus?.();
   };
 
-  const loadScenarioSpecialZoneLayers = async () => {
-    const scenarioId = String(runtimeState.activeScenarioId || "").trim();
+  const loadScenarioSpecialZoneLayers = async (context = createScenarioLayerLoadContext()) => {
+    const loadContext = context && typeof context === "object" ? context : createScenarioLayerLoadContext();
+    const scenarioId = String(loadContext.scenarioId || "").trim();
+    const scenarioApplyRequestId = Math.max(0, Number(loadContext.scenarioApplyRequestId || 0));
     if (!scenarioId) {
       loadedScenarioLayerAssetId = "";
+      loadedScenarioLayerRequestId = 0;
       failedScenarioLayerAssetId = "";
+      failedScenarioLayerRequestId = 0;
       scenarioLayerLoadPromise = null;
       scenarioLayerLoadScenarioId = "";
+      scenarioLayerLoadRequestId = 0;
       return null;
     }
-    if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;
+    if (isScenarioLayerCacheLoadedForContext(loadContext)) return runtimeState.specialZoneLayers;
     if (typeof ensureActiveScenarioOptionalLayerLoaded !== "function") return null;
-    if (scenarioLayerLoadPromise && scenarioLayerLoadScenarioId === scenarioId) {
+    if (
+      scenarioLayerLoadPromise &&
+      scenarioLayerLoadScenarioId === scenarioId &&
+      scenarioLayerLoadRequestId === scenarioApplyRequestId
+    ) {
       return scenarioLayerLoadPromise;
     }
     scenarioLayerLoadScenarioId = scenarioId;
+    scenarioLayerLoadRequestId = scenarioApplyRequestId;
     scenarioLayerLoadPromise = (async () => {
-      const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", { renderNow: false });
-      if (!result && activeScenarioDeclaresLayerAsset()) {
+      const loadOptions = { renderNow: false };
+      if (scenarioApplyRequestId > 0) {
+        loadOptions.scenarioApplyRequestId = scenarioApplyRequestId;
+      }
+      const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", loadOptions);
+      if (!isScenarioLayerLoadContextCurrent(loadContext)) {
+        return null;
+      }
+      if (!result && loadContext.declaresLayerAsset) {
         failedScenarioLayerAssetId = scenarioId;
+        failedScenarioLayerRequestId = scenarioApplyRequestId;
         setLoadFailedSpecialZoneLayersState(scenarioId);
         if (statusNode) statusNode.textContent = translate("Scenario special zone layer load failed.");
         showToast?.(translate("Scenario special zone layer asset could not be loaded. Retry from the workbench."), {
@@ -1091,7 +1150,9 @@ function createSpecialZonesWorkbenchController({
         return null;
       }
       loadedScenarioLayerAssetId = scenarioId;
+      loadedScenarioLayerRequestId = scenarioApplyRequestId;
       failedScenarioLayerAssetId = "";
+      failedScenarioLayerRequestId = 0;
       normalizeRuntimeSpecialZoneLayersState(runtimeState, {
         defaultSource: "scenario",
         topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
@@ -1114,9 +1175,13 @@ function createSpecialZonesWorkbenchController({
     try {
       return await scenarioLayerLoadPromise;
     } finally {
-      if (scenarioLayerLoadScenarioId === scenarioId) {
+      if (
+        scenarioLayerLoadScenarioId === scenarioId
+        && scenarioLayerLoadRequestId === scenarioApplyRequestId
+      ) {
         scenarioLayerLoadPromise = null;
         scenarioLayerLoadScenarioId = "";
+        scenarioLayerLoadRequestId = 0;
       }
     }
   };

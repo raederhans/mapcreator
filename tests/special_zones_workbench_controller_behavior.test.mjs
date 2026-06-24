@@ -460,6 +460,103 @@ test("new scenario layer waits for optional layer load before mutating state", a
   }
 });
 
+test("new scenario layer ignores stale optional layer load after scenario changes", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 1,
+    activeScenarioManifest: { special_zone_layers_url: "data/scenarios/tno_1962/special_zone_layers.json" },
+    showSpecialZones: false,
+    specialZoneLayers: { layers: [], activeLayerId: "" },
+  };
+  let resolveLoad;
+  let loadCount = 0;
+  const loadOptions = [];
+  const dirty = [];
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty: (label) => dirty.push(label),
+    render() {},
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async (_layerKey, options = {}) => {
+      loadCount += 1;
+      loadOptions.push(options);
+      await new Promise((resolve) => { resolveLoad = resolve; });
+      runtimeState.specialZoneLayers = { layers: [], activeLayerId: "", diagnostics: [] };
+      return runtimeState.specialZoneLayers;
+    },
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const newLayerButton = findButtonByText(container, "New layer");
+    assert.ok(newLayerButton, "new layer button should render");
+    const clickPromise = newLayerButton.click();
+    await Promise.resolve();
+
+    assert.equal(loadCount, 1);
+    assert.equal(loadOptions[0].scenarioApplyRequestId, 1);
+    runtimeState.activeScenarioId = "hoi4_1936";
+    runtimeState.currentScenarioApplyRequestId = 2;
+    resolveLoad();
+    await clickPromise;
+
+    assert.equal(runtimeState.showSpecialZones, false);
+    assert.equal(runtimeState.specialZoneLayers.layers.length, 0);
+    assert.deepEqual(dirty, []);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("scenario layer load cache follows the current apply request", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    currentScenarioApplyRequestId: 1,
+    activeScenarioManifest: { special_zone_layers_url: "data/scenarios/tno_1962/special_zone_layers.json" },
+    showSpecialZones: false,
+    specialZoneLayers: { layers: [], activeLayerId: "" },
+  };
+  const loadOptions = [];
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render() {},
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async (_layerKey, options = {}) => {
+      loadOptions.push(options);
+      runtimeState.specialZoneLayers = { layers: [], activeLayerId: "", diagnostics: [] };
+      return runtimeState.specialZoneLayers;
+    },
+    t: (value) => value,
+  });
+
+  try {
+    await controller.loadScenarioSpecialZoneLayers();
+    await controller.loadScenarioSpecialZoneLayers();
+    assert.equal(loadOptions.length, 1);
+    assert.equal(loadOptions[0].scenarioApplyRequestId, 1);
+
+    runtimeState.currentScenarioApplyRequestId = 2;
+    await controller.loadScenarioSpecialZoneLayers();
+
+    assert.equal(loadOptions.length, 2);
+    assert.equal(loadOptions[1].scenarioApplyRequestId, 2);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
 test("topology mismatch diagnostics stay out of the workbench chrome", () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();
