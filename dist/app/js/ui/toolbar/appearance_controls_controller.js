@@ -15,6 +15,7 @@ import { createAppearanceRiversOwner } from "./appearance_rivers_owner.js";
 import { createAppearancePresetsOwner } from "./appearance_presets_owner.js";
 import {
   buildLayerStatusDiagnostics,
+  resolveLayerStatusTone,
   sanitizeLayerStatusText,
 } from "./layer_status_diagnostics.js";
 import { createThematicLayerPreviewController } from "./thematic_layer_preview_controller.js";
@@ -179,6 +180,7 @@ export function createAppearanceControlsController({
     }
     const severity = String(diagnostic.severity || "active").trim() || "active";
     node.dataset.severity = severity;
+    node.dataset.statusTone = resolveLayerStatusTone(diagnostic, severity);
     node.classList.toggle("is-muted", severity === "muted");
     node.classList.toggle("is-warning", severity === "warning");
     node.classList.toggle("is-active", severity === "active");
@@ -191,6 +193,8 @@ export function createAppearanceControlsController({
     node = document.createElement("p");
     node.id = "transportWorkbenchOnlyStatus";
     node.className = "layer-status-strip transport-workbench-only-status is-muted";
+    node.dataset.severity = "muted";
+    node.dataset.statusTone = "muted";
     container.appendChild(node);
     return node;
   };

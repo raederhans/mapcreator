@@ -33,8 +33,12 @@ import { bindRenderBoundary, flushRenderBoundary, markRenderBoundaryFlushed, req
 import { registerRuntimeHook } from "./core/state/index.js";
 import { initPresetState } from "./core/preset_state.js";
 import { runPostScenarioUiReplay } from "./core/scenario_post_apply_effects.js";
+import {
+  applyUiShellDebugTerritorySeed,
+  revealUiShellDebugTerritoryPanels,
+} from "./bootstrap/ui_shell_debug_seed.js";
 import { registerMapcreatorSnapshotProvider } from "./core/mapcreator_snapshot.js";
-import { initTranslations } from "./ui/i18n.js";
+import { initTranslations, updateUIText } from "./ui/i18n.js";
 import { initToast, showToast } from "./ui/toast.js";
 import { bindBeforeUnload } from "./core/dirty_state.js";
 const state = runtimeState;
@@ -305,17 +309,21 @@ function bootstrapDeferredUi(renderApp) {
       { initToolbar },
       { initSidebar },
       { initScenarioControls },
+      { initStyledSelects },
       { initShortcuts },
     ] = await Promise.all([
       import("./ui/toolbar.js"),
       import("./ui/sidebar.js"),
       import("./ui/scenario_controls.js"),
+      import("./ui/styled_selects.js"),
       import("./ui/shortcuts.js"),
     ]);
     await yieldToMain();
     initToolbar({ render: renderApp });
     await yieldToMain();
     initSidebar({ render: renderApp });
+    await yieldToMain();
+    initStyledSelects();
     await yieldToMain();
     initScenarioControls();
     initTranslations();
@@ -344,7 +352,9 @@ async function ensureBaseCityDataReady({ reason = "manual", renderNow = true } =
 }
 
 async function ensureFullLocalizationDataReady({ reason = "post-ready", renderNow = true } = {}) {
-  return getStartupDataPipelineOwner().ensureFullLocalizationDataReady({ reason, renderNow });
+  const result = await getStartupDataPipelineOwner().ensureFullLocalizationDataReady({ reason, renderNow });
+  updateUIText();
+  return result;
 }
 
 registerRuntimeHook(state, "ensureFullLocalizationDataReadyFn", ensureFullLocalizationDataReady);
@@ -1114,10 +1124,13 @@ async function bootstrap() {
       registerRuntimeHook(state, "showToastFn", showToast);
       setBootPreviewVisible(false);
       initPresetState();
+      const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();
       startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
       await startupUiBootstrapPromise;
       startupUiBootstrapAwaited = true;
+      revealUiShellDebugTerritoryPanels();
       runPostScenarioUiReplay({ full: true });
+      await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });
       renderDispatcher.flush();
       setBootState("ready", {
         blocking: false,
@@ -1131,6 +1144,7 @@ async function bootstrap() {
         ready: true,
         skippedStartupData: true,
         skippedScenarioApply: true,
+        territoryPreview: uiShellTerritorySeed,
       };
       return;
     }

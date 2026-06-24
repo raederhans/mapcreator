@@ -133,6 +133,12 @@ function resolvePaletteLibraryEntryRegion(entry = {}, appState = runtimeState) {
   return resolvePaletteLibraryRegionFromMeta(scenarioMeta || {});
 }
 
+function resolveAdaptivePaletteLibraryHeight(contentHeight, maximumHeight) {
+  const content = Math.max(0, Number(contentHeight) || 0);
+  const cap = Math.max(0, Number(maximumHeight) || 0);
+  return cap > 0 ? Math.min(content, cap) : content;
+}
+
 function createPaletteLibraryRegionGroup(region, entry) {
   return {
     key: `region:${region.key}`,
@@ -217,10 +223,7 @@ function createPaletteLibraryPanelController({
   renderPalette,
   updateSwatchUI,
 } = {}) {
-  const PALETTE_LIBRARY_HEIGHT = {
-    base: 240,
-    cap: 480,
-  };
+  const PALETTE_LIBRARY_HEIGHT_CAP = 480;
 
   const readPaletteLibraryBlockSize = (name, fallbackValue) => {
     const source = paletteLibraryList || document.documentElement;
@@ -317,6 +320,10 @@ function createPaletteLibraryPanelController({
 
     const details = document.createElement("details");
     details.className = "palette-library-variant-details";
+    details.addEventListener("toggle", () => {
+      syncPaletteLibraryRowFocus();
+      scheduleAdaptivePaletteLibraryHeight();
+    });
 
     const summary = document.createElement("summary");
     summary.textContent = runtimeState.currentLanguage === "zh"
@@ -541,21 +548,16 @@ function createPaletteLibraryPanelController({
     updatePaletteLibraryGroupingControls(mode);
   };
 
-  const clampPaletteLibraryHeight = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
-
   const syncAdaptivePaletteLibraryHeight = () => {
     adaptivePaletteLibraryHeightFrame = 0;
     if (!paletteLibraryList || !runtimeState.paletteLibraryOpen) return;
+    paletteLibraryList.style.height = "auto";
+    paletteLibraryList.style.maxHeight = "";
     const scrollHeight = Number(paletteLibraryList.scrollHeight || 0);
-    const minimumHeight = readPaletteLibraryBlockSize("--palette-library-list-min-block", PALETTE_LIBRARY_HEIGHT.base);
-    const maximumHeight = readPaletteLibraryBlockSize("--palette-library-list-max-block", PALETTE_LIBRARY_HEIGHT.cap);
-    const nextHeight = clampPaletteLibraryHeight(
-      scrollHeight,
-      minimumHeight,
-      maximumHeight
-    );
+    const maximumHeight = readPaletteLibraryBlockSize("--palette-library-list-max-block", PALETTE_LIBRARY_HEIGHT_CAP);
+    const nextHeight = resolveAdaptivePaletteLibraryHeight(scrollHeight, maximumHeight);
     paletteLibraryList.style.height = `${Math.round(nextHeight)}px`;
-    paletteLibraryList.style.maxHeight = `${Math.round(nextHeight)}px`;
+    paletteLibraryList.style.maxHeight = `${Math.round(maximumHeight)}px`;
   };
 
   const scheduleAdaptivePaletteLibraryHeight = () => {
@@ -804,6 +806,7 @@ export {
   buildPaletteLibraryGroups,
   createPaletteLibraryPanelController,
   normalizePaletteLibraryGroupingMode,
+  resolveAdaptivePaletteLibraryHeight,
   resolvePaletteLibraryEntryRegion,
 };
 

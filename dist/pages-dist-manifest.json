@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 284074,
+      "size_bytes": 285324,
       "source_kind": "dist"
     },
     {
@@ -37087,7 +37087,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8459711,
+      "size_bytes": 8460173,
       "source_kind": "generated_ignored"
     },
     {
@@ -45616,6 +45616,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/ui_shell_debug_seed.js",
+      "size_bytes": 14074,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/city_lights_historical_1930_asset.js",
       "size_bytes": 1704,
       "source_kind": "dist"
@@ -45732,7 +45737,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 92853,
+      "size_bytes": 93245,
       "source_kind": "dist"
     },
     {
@@ -46457,7 +46462,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 50176,
+      "size_bytes": 50736,
       "source_kind": "dist"
     },
     {
@@ -46527,7 +46532,7 @@
     },
     {
       "path": "app/js/ui/sidebar/country_inspector_controller.js",
-      "size_bytes": 50589,
+      "size_bytes": 51975,
       "source_kind": "dist"
     },
     {
@@ -46571,6 +46576,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/ui/styled_selects.js",
+      "size_bytes": 11417,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/ui/toast.js",
       "size_bytes": 3707,
       "source_kind": "dist"
@@ -46592,7 +46602,7 @@
     },
     {
       "path": "app/js/ui/toolbar/appearance_controls_controller.js",
-      "size_bytes": 36702,
+      "size_bytes": 36880,
       "source_kind": "dist"
     },
     {
@@ -46657,7 +46667,7 @@
     },
     {
       "path": "app/js/ui/toolbar/layer_status_diagnostics.js",
-      "size_bytes": 15565,
+      "size_bytes": 16512,
       "source_kind": "dist"
     },
     {
@@ -46667,7 +46677,7 @@
     },
     {
       "path": "app/js/ui/toolbar/palette_library_panel.js",
-      "size_bytes": 29499,
+      "size_bytes": 29729,
       "source_kind": "dist"
     },
     {
@@ -46687,12 +46697,12 @@
     },
     {
       "path": "app/js/ui/toolbar/special_zones_workbench_controller.js",
-      "size_bytes": 47947,
+      "size_bytes": 49782,
       "source_kind": "dist"
     },
     {
       "path": "app/js/ui/toolbar/thematic_layer_preview_controller.js",
-      "size_bytes": 6012,
+      "size_bytes": 6127,
       "source_kind": "dist"
     },
     {
@@ -47222,7 +47232,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1458468,
+      "size_bytes": 1458706,
       "source_kind": "dist"
     },
     {
@@ -47241,5 +47251,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155174272
+  "total_bytes": 1155207356
 }

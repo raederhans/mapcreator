@@ -1,11 +1,11 @@
 # Worktree Registry
 
-Last updated: 2026-06-24 00:20 UTC
+Last updated: 2026-06-24 02:58 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: RC stabilization started from `origin/main@6196e737dbbe211f5dbdb63b7a8a0f9749b30403`.
+- Integration base: UI/palette/startup WIP integration started from `origin/main@15941a7dbe54655fbc79c28932159e9d8c47723c`.
 - Latest integrated work: Render Chain RC Stabilization confirms the Phase 1/2A/2B/2C renderer baseline and cleans stale test contracts only.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
@@ -13,14 +13,15 @@ Last updated: 2026-06-24 00:20 UTC
 ## Recommended Order
 
 1. Treat the pushed RC stabilization cleanup as the renderer-stable baseline.
-2. Rebase or resync UI/palette/startup WIP onto the new `origin/main` before integration.
-3. Keep future renderer behavior changes in a separate lane unless a new production regression is reproduced.
+2. Migrate preserved UI/palette/startup WIP through the clean integration worktree.
+3. Regenerate dist from source and keep renderer behavior changes out of this lane unless a new production regression is reproduced.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@75ffdaa7`; remote `origin/main` after RC cleanup push | current pushed `origin/main` | parent checkout has unrelated UI/palette/startup WIP and is preserved | dirty files include `css/style.css`, `js/main.js`, palette panel files, UI-shell/support tests, startup tests, `lessons learned.md`, and `docs/active/_worktree_registry.md`; RC stabilization did not edit this checkout | Parent checkout stayed untouched while RC stabilization was created, verified, committed, and pushed from an isolated worktree. | Yellow for registry overlap only; green for RC production renderer files because production code was unchanged. | Sync/rebase parent WIP separately when that task is ready. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-ui-palette-startup-integration-20260624` | `codex/ui-palette-startup-integration-20260624@180886f7` plus dist/docs closeout | `origin/main@15941a7dbe54655fbc79c28932159e9d8c47723c` | integrated after push, archived, ready for cleanup | hot files resolved: UI/palette/startup source, focused tests, regenerated dist, registry and archive docs; renderer core source unchanged | Delivery: parent WIP inventory completed read-only with 27 tracked files, 4 untracked files, and no staged changes. Source commit `1197b0d6` migrates UI shell, palette, startup, styled selects, and special-zone workbench timing. Test/support commit `180886f7` refreshes focused UI/startup contracts, import graph, state-write allowlist, and current-baseline architecture budgets. Dist/docs closeout regenerates `dist/app/**`, archives task docs under `docs/archive/ui-palette-startup-integration-20260624/`, and records `git diff --check` as passed. Validation passed UI/palette Node tests, startup Python contracts 45/45, UI support E2E 14/14, import graph, state-write allowlist, architecture boundaries, `verify:pages-dist` 39+8, scenario chunk runtime 8/8, non-1962 1936/1939 Red Sea targeted checks 2/2, and requested renderer Node sentinels. | Green for renderer baseline sentinels and parent checkout preservation; yellow for `css/style.css`, `js/main.js`, UI toolbar/sidebar tests, startup contracts, and generated dist because those are the intentional migrated WIP surface. | After origin/main push, clean the temporary worktree. Recovery via branch `codex/ui-palette-startup-integration-20260624` and archive docs `docs/archive/ui-palette-startup-integration-20260624/`. |
 
 ## Recent Integrated Branches
 

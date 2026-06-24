@@ -29,6 +29,14 @@ const STATUS_SEVERITY = Object.freeze({
   WARNING: "warning",
 });
 
+const STATUS_TONE = Object.freeze({
+  ACTIVE: "active",
+  DISABLED: "disabled",
+  MUTED: "muted",
+  PENDING: "pending",
+  WARNING: "warning",
+});
+
 function translateUi(translate, key) {
   return typeof translate === "function" ? translate(key, "ui") : key;
 }
@@ -99,6 +107,18 @@ export function sanitizeLayerStatusText(value) {
     .filter(Boolean)
     .join(" · ");
   return sanitized || "Status unavailable";
+}
+
+export function resolveLayerStatusTone(diagnostic = {}, severity = "") {
+  const normalizedSeverity = String(severity || diagnostic?.severity || "").trim().toLowerCase();
+  const loadStatus = String(diagnostic?.loadStatus || diagnostic?.status || "").trim().toLowerCase();
+  if (normalizedSeverity === STATUS_SEVERITY.ACTIVE) return STATUS_TONE.ACTIVE;
+  if (loadStatus === "loading" || loadStatus === "pending") return STATUS_TONE.PENDING;
+  if (normalizedSeverity === STATUS_SEVERITY.WARNING || loadStatus === "error" || loadStatus === "failed") {
+    return STATUS_TONE.WARNING;
+  }
+  if (diagnostic?.enabled === false || diagnostic?.supported === false) return STATUS_TONE.DISABLED;
+  return STATUS_TONE.MUTED;
 }
 
 function formatCount(count, noun, translate) {
@@ -278,6 +298,7 @@ export function buildThematicCatalogDiagnostic({
     id: "thematic",
     label: contract?.label || "Thematic Layers",
     enabled: false,
+    loadStatus: status || (layerCount > 0 ? "loaded" : "pending"),
     loadedCount: layerCount,
     visibleCount: 0,
     severity,
@@ -410,5 +431,6 @@ export function buildLayerStatusDiagnostics(state = {}, { translate, thematicCat
 }
 
 export {
+  STATUS_TONE,
   STATUS_SEVERITY,
 };

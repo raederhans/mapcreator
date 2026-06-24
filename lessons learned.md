@@ -457,3 +457,13 @@
 
 ### 水域边界探针要同时看最终画布和命中目标
 - Red Sea 这类边界点可能同时落进政治 shell fallback 和水域 region；诊断时要记录 final canvas RGB、water spatial index、selected water hit 和政治 feature 命中，避免把地理重叠误判成最终绘制污染。
+
+### UI shell 也要走完整 i18n 补水
+- `ui_shell=1` 这类提前返回的启动分支会绕过 normal boot 的 post-ready hydration；如果动态面板出现“切换语言后才正常”，先检查 full localization load 后是否调用了统一 UI text refresh。
+
+### 原生 select 弹出层要用统一外壳接管
+- 浏览器会接管原生 `<select>` 的弹出层，圆角、阴影和选项 hover 很难稳定统一；需要项目级风格时，用轻量 listbox 外壳同步原生 select 的 value/change，保留原 select 作为数据入口。
+- 自定义 select 菜单放在滚动/折叠容器内会被父级 overflow 裁切；打开时用 viewport fixed 定位，并在底部空间不足时向上展开。
+
+### UI-shell 调试 seed 要显式绑定 preset lookup
+- 调试用 scenario country 同时带 `lookup_iso2` 和 fake `regional_presets` 时，侧栏会优先用 lookup code 读取默认国家 preset；预览数据要显式设置 `preset_lookup_code` 指向调试 tag，避免真实默认 preset 抢占 UI。
