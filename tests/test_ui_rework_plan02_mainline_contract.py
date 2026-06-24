@@ -524,6 +524,8 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
 
     def test_native_selects_share_app_dropdown_chrome(self):
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        main_content = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        styled_selects_content = (REPO_ROOT / "js" / "ui" / "styled_selects.js").read_text(encoding="utf-8")
         special_zones_content = (
             REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
         ).read_text(encoding="utf-8")
@@ -539,9 +541,18 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             "  appearance: none;",
             "  -webkit-appearance: none;",
             "  border-radius: 12px;",
-            "  background-image:",
-            "    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 252, 0.82)),",
-            "    url(\"data:image/svg+xml,%3Csvg",
+            "  background-image: var(--app-select-chevron-muted);",
+            ".app-select-shell {",
+            ".app-select-button {",
+            ".app-select-menu {",
+            ".app-select-option {",
+            "  font-size: 0.75rem;",
+            "  font-weight: 600;",
+            "  position: fixed;",
+            "  top: var(--app-select-menu-top, 0);",
+            "  left: var(--app-select-menu-left, 0);",
+            "  width: var(--app-select-menu-width, 100%);",
+            "  max-height: var(--app-select-menu-max-height, 220px);",
             "select:hover:not(:disabled),",
             "select:focus-visible,",
             "select:disabled,",
@@ -564,6 +575,36 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             self.assertIn(token, css_content)
 
         self.assertNotIn("linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%)", css_content)
+        self.assertNotIn(
+            "linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 252, 0.88)),\n"
+            "    url(\"data:image/svg+xml,%3Csvg",
+            css_content,
+        )
+        for token in [
+            "const ENHANCED_SELECT_SELECTOR = [",
+            "const MENU_VIEWPORT_GAP = 8;",
+            "function positionSurfaceMenu(surface) {",
+            'surface.menu.style.setProperty("--app-select-menu-left"',
+            'surface.menu.style.setProperty("--app-select-menu-top"',
+            'surface.menu.style.setProperty("--app-select-menu-width"',
+            'surface.menu.style.setProperty("--app-select-menu-max-height"',
+            "spaceBelow >= MENU_MAX_HEIGHT || spaceBelow >= spaceAbove",
+            "positionSurfaceMenu(surface);",
+            "\"select.select-input\",",
+            "\"select.transport-workbench-pack-select\",",
+            "\".special-zone-workbench-field select\",",
+            "select.dispatchEvent(new Event(\"change\", { bubbles: true }));",
+            "observer.observe(document.body, {",
+            'document.addEventListener("scroll", () => {',
+            "export function initStyledSelects(root = document) {",
+        ]:
+            self.assertIn(token, styled_selects_content)
+        for token in [
+            '{ initStyledSelects },',
+            'import("./ui/styled_selects.js"),',
+            "initStyledSelects();",
+        ]:
+            self.assertIn(token, main_content)
         special_zone_select_block_start = css_content.index(
             '.special-zone-workbench-field input[type="text"],\n'
             '.special-zone-workbench-field input[type="number"],\n'

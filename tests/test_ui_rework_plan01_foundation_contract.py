@@ -98,7 +98,6 @@ class UiReworkPlan01FoundationContractTest(unittest.TestCase):
             "--scenario-bar-base-max-inline: 560px;",
             "--scenario-bar-safe-max-width: 100vw;",
             "--scenario-bar-chip-max-inline: 24ch;",
-            "--palette-library-list-min-block: 240px;",
             "--palette-library-list-max-block: 480px;",
             ".u-min-0 {",
             ".u-truncate {",

@@ -44,8 +44,11 @@ class MainStartupDataPipelineBoundaryContractTest(unittest.TestCase):
     def test_main_keeps_bootstrap_facade_and_owner_wrappers(self):
         content = MAIN_JS.read_text(encoding="utf-8")
 
+        self.assertIn('import { initTranslations, updateUIText } from "./ui/i18n.js";', content)
         self.assertIn("return getStartupDataPipelineOwner().ensureBaseCityDataReady({ reason, renderNow });", content)
-        self.assertIn("return getStartupDataPipelineOwner().ensureFullLocalizationDataReady({ reason, renderNow });", content)
+        self.assertIn("const result = await getStartupDataPipelineOwner().ensureFullLocalizationDataReady({ reason, renderNow });", content)
+        self.assertIn("updateUIText();", content)
+        self.assertIn("return result;", content)
         self.assertIn("return getStartupDataPipelineOwner().ensureActiveScenarioBundleHydrated({ reason, renderNow });", content)
         self.assertIn("return getStartupDataPipelineOwner().shouldFastTrackScenarioHydration();", content)
         self.assertIn("return getStartupDataPipelineOwner().ensureContextLayerDataReady(requestedLayerNames, {", content)

@@ -360,10 +360,12 @@ test("HGO identity controls stay cold until the user enables them", () => {
     const enabledControls = harness.host.querySelector("[data-hgo-identity-controls]");
     const modeButtons = enabledControls.querySelectorAll(".hgo-identity-mode-btn");
     const suggestedInput = enabledControls.querySelector(".hgo-identity-suggested-toggle input");
+    const detailsInput = enabledControls.querySelector(".country-inspector-details-toggle input");
     assert.equal(harness.coverageCalls, 1);
     assert.equal(enabledControls.querySelector(".hgo-identity-summary"), null);
     assert.equal(modeButtons.every((button) => button.disabled === false), true);
     assert.equal(suggestedInput.disabled, false);
+    assert.equal(detailsInput.checked, false);
 
     const hgoModeButton = modeButtons.find((button) => button.textContent === "HGO names");
     hgoModeButton.click();
@@ -374,6 +376,11 @@ test("HGO identity controls stay cold until the user enables them", () => {
     suggestedInput.change();
     assert.equal(harness.runtimeState.hgoIdentity.showSuggestedAliases, false);
     assert.equal(harness.settingsChangeCalls, 3);
+
+    detailsInput.checked = true;
+    detailsInput.change();
+    assert.equal(harness.runtimeState.countryInspectorShowDetails, true);
+    assert.equal(harness.settingsChangeCalls, 4);
   } finally {
     globalThis.document = previousDocument;
   }
@@ -410,6 +417,14 @@ test("HGO identity detail uses medium artwork before resolver preferred small ar
     assert.equal(flag.src, "data/hgo_catalogs/flags_png/medium/AB/ABK.png");
     assert.equal(flag.alt, "");
     assert.equal(flag.getAttribute("aria-hidden"), "true");
+    assert.equal(harness.countryInspectorSelected.querySelector(".hgo-identity-badges"), null);
+    assert.equal(harness.countryInspectorSelected.querySelector(".hgo-identity-name-list"), null);
+
+    harness.runtimeState.countryInspectorShowDetails = true;
+    harness.controller.renderCountryInspectorDetail();
+
+    assert.match(textOf(harness.countryInspectorSelected.querySelector(".hgo-identity-badges")), /exact/);
+    assert.match(textOf(harness.countryInspectorSelected.querySelector(".hgo-identity-name-list")), /Abkhazia/);
   } finally {
     globalThis.document = previousDocument;
   }
@@ -537,13 +552,12 @@ test("related country child rows hide releasable parent lists", () => {
           }],
         }]],
       ]),
-      buildCountryRowMetaText: (countryState, _identity, { showRelationMeta = false } = {}) => {
+      buildCountryRowMetaText: (countryState, { showRelationMeta = false } = {}) => {
         const parts = [];
         if (countryState?.subregionDisplayLabel) parts.push(countryState.subregionDisplayLabel);
         if (countryState?.releasable && showRelationMeta) {
           parts.push("可自以下母国释放：中华民国, 英格兰王国");
         }
-        parts.push(`tag ${countryState.code}`);
         return parts.join(" · ");
       },
     });
@@ -552,8 +566,25 @@ test("related country child rows hide releasable parent lists", () => {
 
     harness.controller.renderList();
 
-    const renderedText = textOf(harness.host);
+    let renderedText = textOf(harness.host);
     assert.match(renderedText, /Nanjing China/);
+    assert.doesNotMatch(renderedText, /东亚/);
+    assert.doesNotMatch(renderedText, /tag CHI/);
+    assert.doesNotMatch(renderedText, /可自以下母国释放/);
+
+    const germanyRow = harness.host
+      .querySelectorAll(".country-select-row")
+      .find((row) => row.dataset.countryCode === "GER");
+    germanyRow.querySelector(".country-select-main").click();
+    const germanyTitle = germanyRow.querySelector(".country-select-title");
+    assert.equal(germanyTitle.textContent, "Germany");
+
+    const detailsInput = harness.host.querySelector(".country-inspector-details-toggle input");
+    detailsInput.checked = true;
+    detailsInput.change();
+    harness.controller.renderList();
+
+    renderedText = textOf(harness.host);
     assert.match(renderedText, /东亚/);
     assert.match(renderedText, /tag CHI/);
     assert.doesNotMatch(renderedText, /可自以下母国释放/);

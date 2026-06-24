@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPaletteLibraryGroups,
   normalizePaletteLibraryGroupingMode,
+  resolveAdaptivePaletteLibraryHeight,
   resolvePaletteLibraryEntryRegion,
 } from "../js/ui/toolbar/palette_library_panel.js";
 
@@ -93,4 +94,10 @@ test("imported palette regions still group unmapped HGO-style entries", () => {
   });
 
   assert.deepEqual(groups.map((group) => group.key), ["region:europe"]);
+});
+
+test("adaptive palette library height follows content until the cap", () => {
+  assert.equal(resolveAdaptivePaletteLibraryHeight(96, 480), 96);
+  assert.equal(resolveAdaptivePaletteLibraryHeight(720, 480), 480);
+  assert.equal(resolveAdaptivePaletteLibraryHeight(96, 0), 96);
 });

@@ -285,6 +285,45 @@ test("style presets render as collapsed category groups with rectangular preview
   }
 });
 
+test("style preset category expansion survives workbench rerender", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    specialZoneLayers: {
+      layers: [createLayerFromPreset("custom", { id: "project-layer", memberFeatureIds: ["a"] })],
+      activeLayerId: "project-layer",
+    },
+  };
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty() {},
+    render() {},
+    updateToolUI() {},
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const securityGroup = findFirst(container, (node) => node.dataset?.presetCategory === "security");
+    assert.ok(securityGroup);
+    assert.equal(securityGroup.open, false);
+    securityGroup.open = true;
+    for (const handler of securityGroup.listeners.get("toggle") || []) {
+      await handler({ target: securityGroup, currentTarget: securityGroup });
+    }
+
+    controller.renderSpecialZonesWorkbenchUi();
+    const rerenderedSecurityGroup = findFirst(container, (node) => node.dataset?.presetCategory === "security");
+    assert.ok(rerenderedSecurityGroup);
+    assert.equal(rerenderedSecurityGroup.open, true);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
 test("pattern choices render localized preview buttons and update the active layer", async () => {
   const previousDocument = globalThis.document;
   globalThis.document = createTestDocument();
@@ -371,6 +410,51 @@ test("overlay toggle enables map overlay and loads scenario layers", async () =>
     assert.deepEqual(loads, [{ layerId: "specialZoneLayers", options: { renderNow: false } }]);
     assert.deepEqual(dirty, ["toggle-special-zones"]);
     assert.equal(renderCount, 1);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("new scenario layer waits for optional layer load before mutating state", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = createTestDocument();
+
+  const container = new TestElement("section");
+  const runtimeState = {
+    activeScenarioId: "tno_1962",
+    activeScenarioManifest: { special_zone_layers_url: "data/scenarios/tno_1962/special_zone_layers.json" },
+    showSpecialZones: false,
+    specialZoneLayers: { layers: [], activeLayerId: "" },
+  };
+  let loadCount = 0;
+  const dirty = [];
+  const controller = createSpecialZonesWorkbenchController({
+    runtimeState,
+    container,
+    markDirty: (label) => dirty.push(label),
+    render() {},
+    updateToolUI() {},
+    ensureActiveScenarioOptionalLayerLoaded: async () => {
+      loadCount += 1;
+      await Promise.resolve();
+      runtimeState.specialZoneLayers = { layers: [], activeLayerId: "", diagnostics: [] };
+      return runtimeState.specialZoneLayers;
+    },
+    t: (value) => value,
+  });
+
+  try {
+    controller.renderSpecialZonesWorkbenchUi();
+    const newLayerButton = findButtonByText(container, "New layer");
+    assert.ok(newLayerButton, "new layer button should render");
+    await newLayerButton.click();
+
+    assert.equal(loadCount, 1);
+    assert.equal(runtimeState.showSpecialZones, true);
+    assert.equal(runtimeState.specialZoneLayers.layers.length, 1);
+    assert.equal(runtimeState.specialZoneLayers.layers[0].source, "scenario");
+    assert.equal(runtimeState.specialZoneLayers.activeLayerId, runtimeState.specialZoneLayers.layers[0].id);
+    assert.deepEqual(dirty, ["special-zone-layer-add"]);
   } finally {
     globalThis.document = previousDocument;
   }

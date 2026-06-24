@@ -582,6 +582,7 @@
     },
     "tests/e2e/non_1962_runtime_matrix.spec.js": {
       "directDependencies": [
+        "js/core/map_renderer.js",
         "js/core/state.js",
         "tests/e2e/support/playwright-app.js"
       ],

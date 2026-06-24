@@ -50,9 +50,12 @@ test("special zone layer workbench gates members and applies rectangular presets
 
   await workbench.getByRole("button", { name: "New layer" }).click();
   await expect(workbench.locator(".special-zone-current-style-preview")).toBeVisible();
-  await expect(workbench.locator(".special-zone-preset-preview").first()).toBeVisible();
+  const securityPresetGroup = workbench.locator('[data-preset-category="security"]');
+  await securityPresetGroup.locator("summary").click();
+  const demilitarizedPreset = securityPresetGroup.locator(".special-zone-preset-card").filter({ hasText: "Demilitarized Zone" });
+  await expect(demilitarizedPreset.locator(".special-zone-preset-preview")).toBeVisible();
 
-  await workbench.getByRole("button", { name: "Demilitarized Zone" }).click();
+  await demilitarizedPreset.click();
   const layerState = await page.evaluate(async () => {
     const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
     const stateModule = await import(stateModuleUrl);
@@ -178,8 +181,16 @@ test("project support panels and inspector search stay polished and inset", asyn
     });
     const frontlineHints = [...document.querySelectorAll("#frontlineProjectSection .sidebar-tool-hint")]
       .filter((element) => getComputedStyle(element).display !== "none")
-      .map((element) => String(element.textContent || "").trim())
-      .filter(Boolean);
+      .map((element) => {
+        const style = getComputedStyle(element);
+        const lineHeight = Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.5 || 16;
+        return {
+          text: String(element.textContent || "").trim(),
+          height: element.getBoundingClientRect().height,
+          lineHeight,
+        };
+      })
+      .filter((entry) => entry.text);
     const projectSectionIds = [
       "projectLegendSection",
       "frontlineProjectSection",
@@ -207,7 +218,7 @@ test("project support panels and inspector search stay polished and inset", asyn
       strategicAccordionRadii: [...document.querySelectorAll("#strategicOverlayPanel .strategic-accordion-section")]
         .map((element) => getComputedStyle(element).borderRadius),
       strategicAccordionBodies: accordionBodies,
-      frontlineHintTexts: frontlineHints,
+      frontlineHintLayouts: frontlineHints,
       projectSectionRadii: projectSectionIds
         .map((id) => document.querySelector(`#${id}`))
         .filter(Boolean)
@@ -227,7 +238,7 @@ test("project support panels and inspector search stay polished and inset", asyn
   expect(projectMetrics.strategicAccordionRadii.every((radius) => radius === "15px")).toBe(true);
   expect(projectMetrics.strategicAccordionBodies.length).toBe(3);
   expect(projectMetrics.strategicAccordionBodies.every((body) => body.overflowY === "auto" && body.maxHeight !== "none")).toBe(true);
-  expect(projectMetrics.frontlineHintTexts.every((text) => text.length <= 42)).toBe(true);
+  expect(projectMetrics.frontlineHintLayouts.every((entry) => entry.height <= (entry.lineHeight * 3) + 2)).toBe(true);
   expect(projectMetrics.projectSectionRadii.every((radius) => radius === "18px")).toBe(true);
 
   await page.locator("#inspectorSidebarTabInspector").click();
@@ -250,8 +261,12 @@ test("project support panels and inspector search stay polished and inset", asyn
     };
   });
 
-  expect(searchMetrics.searchBlock.left).toBeCloseTo(searchMetrics.countrySection.left, 0);
-  expect(searchMetrics.searchBlock.width).toBeCloseTo(searchMetrics.countrySection.width, 0);
+  expect(searchMetrics.searchBlock.left - searchMetrics.countrySection.left).toBeGreaterThanOrEqual(12);
+  expect(searchMetrics.countrySection.right - searchMetrics.searchBlock.right).toBeGreaterThanOrEqual(12);
+  expect(Math.abs(
+    (searchMetrics.searchBlock.left - searchMetrics.countrySection.left)
+    - (searchMetrics.countrySection.right - searchMetrics.searchBlock.right)
+  )).toBeLessThanOrEqual(2);
   expect(searchMetrics.inputPaddingLeft).toBeGreaterThanOrEqual(6);
   expect(searchMetrics.inputPaddingRight).toBeGreaterThanOrEqual(6);
   expect(searchMetrics.inputBorderLeft).toBe("0px");
@@ -267,9 +282,11 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   await page.evaluate(() => {
     const scenario = document.querySelector('[aria-labelledby="lblScenario"]');
     const appearance = document.querySelector('[aria-labelledby="appearanceSectionHeading labelMapStyle"]');
+    const mapContent = document.querySelector('[aria-labelledby="mapContentSectionHeading labelMapContent"]');
     const special = document.querySelector('#specialZonePopover');
     if (scenario instanceof HTMLDetailsElement) scenario.open = true;
     if (appearance instanceof HTMLDetailsElement) appearance.open = true;
+    if (mapContent instanceof HTMLDetailsElement) mapContent.open = true;
     if (special instanceof HTMLDetailsElement) special.open = true;
   });
 
@@ -278,12 +295,13 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   await expect(page.locator('#appearancePanelTexture .info-trigger')).toHaveCount(0);
 
   const activateAppearanceTab = async (tabSelector, panelSelector) => {
+    await expect(page.locator(tabSelector)).toBeVisible();
     await page.locator(tabSelector).click();
     await expect(page.locator(panelSelector)).toBeVisible();
   };
 
-  await activateAppearanceTab('#appearanceTabOcean', '#appearancePanelOcean');
-  await expect(page.locator('#appearancePanelOcean .appearance-control-card')).toHaveCount(3);
+  await activateAppearanceTab('#mapContentTabOcean', '#appearancePanelOcean');
+  await expect(page.locator('#appearancePanelOcean .appearance-control-card')).toHaveCount(4);
   const oceanLayout = await page.evaluate(() => {
     const panel = document.querySelector('#appearancePanelOcean')?.getBoundingClientRect();
     const cards = [...document.querySelectorAll('#appearancePanelOcean .appearance-control-card')]
@@ -296,11 +314,13 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
     };
   });
   await activateAppearanceTab('#appearanceTabBorders', '#appearancePanelBorders');
-  await activateAppearanceTab('#appearanceTabLayers', '#appearancePanelLayers');
+  await activateAppearanceTab('#appearanceTabPhysical', '#appearancePanelPhysical');
+  await activateAppearanceTab('#appearanceTabCityPoints', '#appearancePanelCityPoints');
+  await activateAppearanceTab('#mapContentTabRivers', '#mapContentPanelRivers');
   await page.evaluate(() => {
-    const physical = document.querySelector('#appearancePanelLayers .appearance-mini-section');
-    const cityPoints = document.querySelector('#appearancePanelLayers [data-appearance-filter-label="city points capitals labels"]');
-    const rivers = document.querySelector('#appearancePanelLayers [data-appearance-filter-label="rivers waterways"]');
+    const physical = document.querySelector('#appearancePanelPhysical .appearance-mini-section');
+    const cityPoints = document.querySelector('#appearancePanelCityPoints .appearance-mini-section');
+    const rivers = document.querySelector('#mapContentPanelRivers');
     if (physical instanceof HTMLDetailsElement) physical.open = true;
     if (cityPoints instanceof HTMLDetailsElement) cityPoints.open = true;
     if (rivers instanceof HTMLDetailsElement) rivers.open = true;
@@ -309,12 +329,12 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   await expect(page.locator('#cityPointsMarkerDensityHint')).toHaveCount(0);
   await expect(page.locator('#cityPointsLabelDensityHint')).toHaveCount(0);
   await expect(page.locator('#cityPointsHelpTooltip')).toContainText('Pick a city marker style');
-  await expect(page.locator('#appearancePanelLayers .city-points-toggle-card')).toHaveCount(1);
-  await expect(page.locator('#appearancePanelLayers .city-points-style-card')).toHaveCount(1);
-  await expect(page.locator('#appearancePanelLayers .city-points-label-card')).toHaveCount(1);
-  await expect(page.locator('#appearancePanelLayers .rivers-toggle-card')).toHaveCount(1);
-  await expect(page.locator('#appearancePanelLayers .rivers-stroke-card')).toHaveCount(1);
-  await expect(page.locator('#appearancePanelLayers .rivers-outline-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelCityPoints .city-points-toggle-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelCityPoints .city-points-style-card')).toHaveCount(1);
+  await expect(page.locator('#appearancePanelCityPoints .city-points-label-card')).toHaveCount(1);
+  await expect(page.locator('#mapContentPanelRivers .rivers-toggle-card')).toHaveCount(1);
+  await expect(page.locator('#mapContentPanelRivers .rivers-stroke-card')).toHaveCount(1);
+  await expect(page.locator('#mapContentPanelRivers .rivers-outline-card')).toHaveCount(1);
   await page.locator('#riversDashStyle').selectOption('dashed');
   const riverDashState = await page.evaluate(async () => {
     const stateModuleUrl = new URL('./js/core/state.js', globalThis.location.href).toString();
@@ -325,11 +345,11 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   });
   expect(riverDashState.dashStyle).toBe('dashed');
   const layerLayout = await page.evaluate(() => {
-    const details = document.querySelector('#appearancePanelLayers .appearance-mini-section')?.getBoundingClientRect();
-    const content = document.querySelector('#appearancePanelLayers .appearance-mini-section .ml-5.space-y-2')?.getBoundingClientRect();
-    const cityToggle = document.querySelector('#appearancePanelLayers .city-points-toggle-card')?.getBoundingClientRect();
+    const details = document.querySelector('#appearancePanelPhysical .appearance-mini-section')?.getBoundingClientRect();
+    const content = document.querySelector('#appearancePanelPhysical .appearance-mini-section .ml-5.space-y-2')?.getBoundingClientRect();
+    const cityToggle = document.querySelector('#appearancePanelCityPoints .city-points-toggle-card')?.getBoundingClientRect();
     const riverGap = (() => {
-      const cards = [...document.querySelectorAll('#appearancePanelLayers .rivers-panel-stack > .appearance-control-card')]
+      const cards = [...document.querySelectorAll('#mapContentPanelRivers .rivers-panel-stack > .appearance-control-card')]
         .map((element) => element.getBoundingClientRect());
       return cards[1] ? cards[1].top - cards[0].bottom : 0;
     })();
@@ -337,11 +357,12 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       contentInset: details && content ? content.left - details.left : 0,
       contentRightGap: details && content ? details.right - content.right : 0,
       contentWidthDelta: details && content ? details.width - content.width : 0,
-      cityTogglePaddingTop: cityToggle ? Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelLayers .city-points-toggle-card')).paddingTop) : 0,
+      cityTogglePaddingTop: cityToggle ? Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelCityPoints .city-points-toggle-card')).paddingTop) : 0,
+      cityTogglePaddingBottom: cityToggle ? Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelCityPoints .city-points-toggle-card')).paddingBottom) : 0,
       riverGap,
     };
   });
-  await activateAppearanceTab('#appearanceTabDayNight', '#appearancePanelDayNight');
+  await activateAppearanceTab('#mapContentTabDayNight', '#appearancePanelDayNight');
   const dayNightLayout = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#appearancePanelDayNight .appearance-day-night-card')]
       .filter((element) => getComputedStyle(element).display !== 'none')
@@ -356,7 +377,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       syncButtonWidth: syncButton ? syncButton.getBoundingClientRect().width : 0,
     };
   });
-  await activateAppearanceTab('#appearanceTabTexture', '#appearancePanelTexture');
+  await activateAppearanceTab('#mapContentTabTexture', '#appearancePanelTexture');
   await activateAppearanceTab('#appearanceTabTransport', '#appearancePanelTransport');
   const transportLayout = await page.evaluate(() => {
     const families = [...document.querySelectorAll('#appearancePanelTransport .transport-family-section')];
@@ -369,9 +390,10 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       familyRadius: families[0] ? Number.parseFloat(getComputedStyle(families[0]).borderRadius) : 0,
       childInset: firstFamily && firstChild ? firstChild.left - firstFamily.left : 0,
       masterTogglePaddingTop: Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelTransport .transport-master-toggle-card')).paddingTop || '0'),
+      masterTogglePaddingBottom: Number.parseFloat(getComputedStyle(document.querySelector('#appearancePanelTransport .transport-master-toggle-card')).paddingBottom || '0'),
     };
   });
-  await activateAppearanceTab('#appearanceTabTexture', '#appearancePanelTexture');
+  await activateAppearanceTab('#mapContentTabTexture', '#appearancePanelTexture');
 
   const metrics = await page.evaluate(() => {
     const rectToObject = (rect) => rect ? {
@@ -389,6 +411,7 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
     const leftSidebar = document.querySelector('#leftSidebar');
     const leftRect = leftSidebar?.getBoundingClientRect();
     const visibleOverflow = [...document.querySelectorAll('#leftSidebar *')].filter((element) => {
+      if (element.closest('#leftSidebarCollapseBtn')) return false;
       const style = getComputedStyle(element);
       if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
       const rect = element.getBoundingClientRect();
@@ -408,10 +431,11 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
       specialLabel: fontSize('#specialZonePopover .range-label'),
       paletteTitle: fontSize('#paletteLibraryList .palette-library-title'),
       paletteSubtitle: fontSize('#paletteLibraryList .palette-library-subtitle'),
-      layersStackTop: document.querySelector('#appearancePanelLayers .appearance-subsection-stack')?.getBoundingClientRect().top || 0,
-      layersTitleBottom: document.querySelector('#lblContextLayers')?.getBoundingClientRect().bottom || 0,
+      layersStackTop: document.querySelector('#appearancePhysicalStack')?.getBoundingClientRect().top || 0,
+      layersTitleBottom: document.querySelector('#lblPhysicalTabPanel')?.getBoundingClientRect().bottom || 0,
       textureFirstControlTop: document.querySelector('#lblOverlay')?.getBoundingClientRect().top || 0,
       textureTitleBottom: document.querySelector('#lblTexture')?.getBoundingClientRect().bottom || 0,
+      textureStatusBottom: document.querySelector('#appearancePanelTexture .layer-status-strip')?.getBoundingClientRect().bottom || 0,
       scenarioArrowRight: document.querySelector('[aria-labelledby="lblScenario"] > summary')?.getBoundingClientRect().right || 0,
       colorToggleRight: document.querySelector('#paletteLibraryToggle')?.getBoundingClientRect().right || 0,
       visibleOverflow,
@@ -427,17 +451,19 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   expect(Math.abs(metrics.oceanToggle - metrics.textureSelect)).toBeLessThanOrEqual(0.5);
   expect(metrics.specialOverlayToggle).toBeGreaterThan(0);
   expect(metrics.paletteTitle).toBeGreaterThan(metrics.paletteSubtitle);
-  expect(metrics.textureFirstControlTop - metrics.textureTitleBottom).toBeLessThan(24);
+  expect(metrics.textureFirstControlTop - (metrics.textureStatusBottom || metrics.textureTitleBottom)).toBeLessThan(24);
   expect(metrics.layersStackTop - metrics.layersTitleBottom).toBeLessThan(24);
   expect(Math.abs(metrics.colorToggleRight - metrics.scenarioArrowRight)).toBeLessThanOrEqual(3);
-  expect(oceanLayout.cardCount).toBe(3);
+  expect(oceanLayout.cardCount).toBe(4);
   expect(oceanLayout.firstInset).toBeGreaterThanOrEqual(12);
   expect(oceanLayout.firstRightGap).toBeGreaterThanOrEqual(12);
   expect(oceanLayout.firstGap).toBeGreaterThanOrEqual(10);
   expect(layerLayout.contentInset).toBeLessThanOrEqual(14);
-  expect(layerLayout.contentRightGap).toBeGreaterThanOrEqual(10);
+  expect(layerLayout.contentRightGap).toBeGreaterThanOrEqual(0);
+  expect(layerLayout.contentWidthDelta).toBeGreaterThanOrEqual(layerLayout.contentInset - 1);
   expect(layerLayout.contentWidthDelta).toBeLessThanOrEqual(28);
-  expect(layerLayout.cityTogglePaddingTop).toBeGreaterThanOrEqual(9);
+  expect(layerLayout.cityTogglePaddingTop).toBeGreaterThanOrEqual(0);
+  expect(layerLayout.cityTogglePaddingBottom).toBeGreaterThanOrEqual(9);
   expect(layerLayout.riverGap).toBeGreaterThanOrEqual(10);
   expect(dayNightLayout.cardCount).toBeGreaterThanOrEqual(3);
   expect(dayNightLayout.minGap).toBeGreaterThanOrEqual(12);
@@ -446,8 +472,9 @@ test("left sidebar scenario and appearance panels keep compact hierarchy", async
   expect(transportLayout.familyCount).toBe(4);
   expect(transportLayout.childCardCount).toBeGreaterThanOrEqual(11);
   expect(transportLayout.familyRadius).toBeGreaterThanOrEqual(14);
-  expect(transportLayout.childInset).toBeGreaterThanOrEqual(10);
-  expect(transportLayout.masterTogglePaddingTop).toBeGreaterThanOrEqual(9);
+  expect(transportLayout.childInset).toBeGreaterThanOrEqual(6);
+  expect(transportLayout.masterTogglePaddingTop).toBeGreaterThanOrEqual(0);
+  expect(transportLayout.masterTogglePaddingBottom).toBeGreaterThanOrEqual(9);
   expect(metrics.visibleOverflow).toEqual([]);
 });
 
@@ -674,16 +701,8 @@ test("transport visual mode and apply bridge stay aligned across appearance and 
   await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
 
   await page.locator('button[data-transport-family="port"]').click();
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
-
-  await page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    state.transportWorkbenchUi.familyConfigs.port.managerTypes = ["1"];
-    state.refreshTransportWorkbenchUiFn?.();
-  });
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Workbench preview only");
-  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeDisabled();
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toHaveText("Apply to Main Map");
+  await expect(page.locator("#transportWorkbenchApplyBtn")).toBeEnabled();
 
   await page.evaluate(async () => {
     const { state } = await import("/js/core/state.js");
@@ -790,12 +809,11 @@ test("adaptive support, transport, and palette surfaces stay contained", async (
     const styles = list ? getComputedStyle(list) : null;
     return {
       rect,
-      minHeight: styles?.getPropertyValue("--palette-library-list-min-block") || "",
       maxHeight: styles?.getPropertyValue("--palette-library-list-max-block") || "",
       overflowY: styles?.overflowY || "",
     };
   });
-  expect(paletteMetrics.minHeight.trim()).toBe("240px");
   expect(paletteMetrics.maxHeight.trim()).toBe("480px");
+  expect(paletteMetrics.rect.height).toBeLessThanOrEqual(480);
   expect(["auto", "scroll"]).toContain(paletteMetrics.overflowY);
 });

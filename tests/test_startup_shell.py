@@ -46,8 +46,12 @@ class StartupShellTest(unittest.TestCase):
         scenario_bundle_loader_js = (
             REPO_ROOT / "js" / "core" / "scenario" / "bundle_loader.js"
         ).read_text(encoding="utf-8")
+        ui_shell_debug_seed_js = (
+            REPO_ROOT / "js" / "bootstrap" / "ui_shell_debug_seed.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn('import { initPresetState } from "./core/preset_state.js";', main_js)
+        self.assertIn('from "./bootstrap/ui_shell_debug_seed.js";', main_js)
         self.assertNotRegex(main_js, r'import\s+\{\s*initSidebar')
         self.assertNotRegex(main_js, r'import\s+\{\s*initToolbar')
         self.assertNotRegex(main_js, r'import\s+\{\s*initShortcuts')
@@ -64,6 +68,27 @@ class StartupShellTest(unittest.TestCase):
         self.assertIn('globalThis.__mapcreatorUiShellDebug = {', main_js)
         self.assertIn('skippedStartupData: true,', main_js)
         self.assertIn('skippedScenarioApply: true,', main_js)
+        self.assertIn('territoryPreview: uiShellTerritorySeed,', main_js)
+        self.assertLess(
+            main_js.index('initPresetState();'),
+            main_js.index('const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();'),
+        )
+        self.assertLess(
+            main_js.index('const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();'),
+            main_js.index('startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);'),
+        )
+        self.assertLess(
+            main_js.index('await startupUiBootstrapPromise;'),
+            main_js.index('revealUiShellDebugTerritoryPanels();'),
+        )
+        self.assertLess(
+            main_js.index('runPostScenarioUiReplay({ full: true });'),
+            main_js.index('await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
+        )
+        self.assertLess(
+            main_js.index('await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
+            main_js.index('finishBootMetric("ui-shell", { mode: "debug" });'),
+        )
         self.assertLess(
             main_js.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
             main_js.index("if (startupUiBootstrapPromise) {"),
@@ -122,6 +147,19 @@ class StartupShellTest(unittest.TestCase):
             "state.countryNames = {\n      ...countryNames,\n      ...staged.scenarioNameMap,\n    };",
             scenario_manager_js,
         )
+        self.assertIn('const UI_SHELL_TERRITORY_PREVIEW_SCENARIO_ID = "ui_shell_territory_preview";', ui_shell_debug_seed_js)
+        self.assertIn('const UI_SHELL_TERRITORY_PREVIEW_SELECTED_CODE = "GER";', ui_shell_debug_seed_js)
+        self.assertIn('state.activeScenarioId = UI_SHELL_TERRITORY_PREVIEW_SCENARIO_ID;', ui_shell_debug_seed_js)
+        self.assertIn('state.scenarioCountriesByTag = countries;', ui_shell_debug_seed_js)
+        self.assertIn('state.scenarioReleasableIndex = buildPreviewReleasableIndex(countries);', ui_shell_debug_seed_js)
+        self.assertIn('state.hierarchyGroupsByCode = new Map(', ui_shell_debug_seed_js)
+        self.assertIn('state.ui.rightSidebarTab = "inspector";', ui_shell_debug_seed_js)
+        self.assertIn('state.selectedInspectorCountryCode = UI_SHELL_TERRITORY_PREVIEW_SELECTED_CODE;', ui_shell_debug_seed_js)
+        self.assertIn('documentRef.querySelector("[data-inspector-tab=\\"inspector\\"]");', ui_shell_debug_seed_js)
+        self.assertIn("inspectorTabButton.click();", ui_shell_debug_seed_js)
+        self.assertIn('makePreset("Rhineland Industrial Belt"', ui_shell_debug_seed_js)
+        self.assertIn('makePreset("Austrian Core Territory"', ui_shell_debug_seed_js)
+        self.assertIn('makePreset("Brittany Core Territory"', ui_shell_debug_seed_js)
 
     def test_ui_shell_debug_start_entry_uses_app_shell_without_startup_data(self) -> None:
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))

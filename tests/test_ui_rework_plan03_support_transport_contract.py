@@ -312,6 +312,52 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertIn('dashStyle: String(cfg.dashStyle || "solid"),', owner_content)
         self.assertIn("dashPattern: resolvedDashPattern,", owner_content)
 
+    def test_layer_status_indicators_share_dot_and_tone_contract(self):
+        css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
+        dist_css_content = (REPO_ROOT / "dist" / "app" / "css" / "style.css").read_text(encoding="utf-8")
+        diagnostics_content = (
+            REPO_ROOT / "js" / "ui" / "toolbar" / "layer_status_diagnostics.js"
+        ).read_text(encoding="utf-8")
+        appearance_controller_content = (
+            REPO_ROOT / "js" / "ui" / "toolbar" / "appearance_controls_controller.js"
+        ).read_text(encoding="utf-8")
+        thematic_controller_content = (
+            REPO_ROOT / "js" / "ui" / "toolbar" / "thematic_layer_preview_controller.js"
+        ).read_text(encoding="utf-8")
+
+        for content in (css_content, dist_css_content):
+            for token in [
+                ".layer-status-strip {",
+                "display: flex;",
+                "align-items: center;",
+                "gap: 7px;",
+                "margin: 6px 0 10px;",
+                "font-weight: 600;",
+                ".layer-status-strip::before {",
+                "flex: 0 0 7px;",
+                ".layer-status-strip[data-status-tone=\"active\"]::before {",
+                ".layer-status-strip[data-status-tone=\"warning\"]::before,",
+                ".layer-status-strip[data-status-tone=\"pending\"]::before {",
+                ".layer-status-strip[data-status-tone=\"disabled\"] {",
+                ".layer-status-strip[data-status-tone=\"disabled\"]::before {",
+                ".appearance-control-card-title + .layer-status-strip,",
+                ".section-header + .layer-status-strip {",
+                "margin-top: 6px;",
+            ]:
+                self.assertIn(token, content)
+
+        for token in [
+            "const STATUS_TONE = Object.freeze({",
+            "export function resolveLayerStatusTone",
+            "if (diagnostic?.enabled === false || diagnostic?.supported === false) return STATUS_TONE.DISABLED;",
+            'loadStatus: status || (layerCount > 0 ? "loaded" : "pending"),',
+        ]:
+            self.assertIn(token, diagnostics_content)
+
+        self.assertIn("node.dataset.statusTone = resolveLayerStatusTone(diagnostic, severity);", appearance_controller_content)
+        self.assertIn('node.dataset.statusTone = "muted";', appearance_controller_content)
+        self.assertIn("node.dataset.statusTone = resolveLayerStatusTone(diagnostic, normalizedSeverity);", thematic_controller_content)
+
     def test_transport_shell_uses_phase03_titles_and_status_contract(self):
         content = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
         required_tokens = [
@@ -349,7 +395,8 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         for token in [
             "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode {",
             "appearance: none;",
-            "background-position: 0 0, right 11px center;",
+            "background-image: var(--app-select-chevron-muted);",
+            "background-position: right 11px center;",
             "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode:focus-visible {",
             "#appearancePanelTransport .transport-visual-mode-card #transportVisualMode:disabled {",
         ]:
@@ -465,13 +512,14 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         for token in [
             "width: var(--layout-popover-inline);",
             "max-block-size: var(--layout-popover-block);",
-            "min-height: var(--palette-library-list-min-block);",
+            "height: auto;",
             "max-height: var(--palette-library-list-max-block);",
         ]:
             self.assertIn(token, css_content)
 
-        self.assertIn('readPaletteLibraryBlockSize("--palette-library-list-min-block"', palette_content)
         self.assertIn('readPaletteLibraryBlockSize("--palette-library-list-max-block"', palette_content)
+        self.assertIn('paletteLibraryList.style.height = "auto";', palette_content)
+        self.assertIn("resolveAdaptivePaletteLibraryHeight(scrollHeight, maximumHeight)", palette_content)
         self.assertIn('title.className = "palette-library-title u-truncate";', palette_content)
         self.assertIn('fileName.className = "project-file-name u-truncate";', sidebar_content)
 
