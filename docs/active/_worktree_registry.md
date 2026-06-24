@@ -1,26 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-23 23:05 UTC
+Last updated: 2026-06-24 00:20 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: Phase 2B started from `origin/main@bad30a8d7b32ec7f91963538b318b73e3f14d621`.
+- Integration base: RC stabilization started from `origin/main@6196e737dbbe211f5dbdb63b7a8a0f9749b30403`.
 - Latest integrated work: Phase 2B keeps 1936/1939 Red Sea water-political boundaries stable while preserving the Phase 2C post-edit draw/cache fix.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat Phase 2B Red Sea / water-political boundary repair as integrated after the closeout push.
-2. Keep parent checkout UI/palette/startup WIP untouched.
-3. Start any later Phase 2B follow-up or Phase 2C work from current pushed `origin/main`.
+1. Commit and push the RC stabilization test-contract cleanup from the clean worktree.
+2. Treat the pushed RC stabilization commit as the renderer-stable baseline.
+3. Rebase or resync UI/palette/startup WIP onto the new `origin/main` before integration.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@75ffdaa7`; remote `origin/main` after Phase 2B closeout push | current pushed `origin/main` | parent checkout has unrelated UI/palette/startup WIP and is preserved | dirty files include `css/style.css`, `js/main.js`, palette panel files, UI-shell/support tests, startup tests, `lessons learned.md`, and `docs/active/_worktree_registry.md`; Phase 2B did not edit this checkout | Parent checkout stayed untouched while the Phase 2B worktree was created, verified, and pushed from an isolated branch. | Yellow for registry overlap only; green for Phase 2B production/test files because all work was isolated. | Sync/rebase parent WIP separately when that task is ready. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@75ffdaa7`; remote `origin/main@6196e737` before RC cleanup push | current pushed `origin/main` | parent checkout has unrelated UI/palette/startup WIP and is preserved | dirty files include `css/style.css`, `js/main.js`, palette panel files, UI-shell/support tests, startup tests, `lessons learned.md`, and `docs/active/_worktree_registry.md`; RC stabilization did not edit this checkout | Parent checkout stayed untouched while RC stabilization was created and verified from an isolated worktree. | Yellow for registry overlap only; green for RC production renderer files because production code was unchanged. | Sync/rebase parent WIP separately when the RC cleanup is pushed and that task is ready. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-rc-render-chain-stabilization-20260623` | `codex/rc-render-chain-stabilization-20260623@6196e737` plus local test/docs cleanup | `origin/main@6196e737dbbe211f5dbdb63b7a8a0f9749b30403` | ready-for-integration; commit/push pending | hot files: `tests/e2e/non_1962_runtime_matrix.spec.js`, `tests/test_scenario_renderer_bridge_boundary_contract.py`, RC archive docs, registry | Delivery evidence collected locally: full scenario chunk runtime passed 8/8, full non-1962 matrix passed 4/4 after stale optional startup localization contract cleanup, requested Node suites passed, requested Python boundary suites passed 61/61 after stale bridge import contract cleanup, `verify:pages-dist` passed, and `git diff --check` passed. | Yellow for renderer/test contracts; green for Thematic/Appearance/Map Content UI and parent checkout WIP. | Commit and push the test/docs cleanup, then mark integrated and remove this worktree. |
 
 ## Recent Integrated Branches
 

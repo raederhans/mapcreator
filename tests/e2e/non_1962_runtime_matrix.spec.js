@@ -26,9 +26,15 @@ const SCREENSHOT_DIR = path.join(
   "non-1962-runtime-matrix"
 );
 
+const OPTIONAL_STARTUP_LOCALIZATION_RESOURCE_PATTERN = /(?:^|\/)data\/scenarios\/[a-z0-9_]+\/(?:locales|geo_aliases)\.startup\.json(?:$|\?)/;
+
 const ALLOWED_CONSOLE_WARNING_PATTERNS = [
   /^Failed to load resource: the server responded with a status of 401 \(Unauthorized\)$/,
+  // Chromium console resource errors omit the URL; response tracking below keeps URL-specific 404 enforcement.
+  /^Failed to load resource: the server responded with a status of 404 \(File not found\)$/,
   /^Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true\./,
+  /^Locales file missing or invalid, using defaults\.[\s\S]*data\/scenarios\/[a-z0-9_]+\/locales\.startup\.json/i,
+  /^Geo alias file missing or invalid, using defaults\.[\s\S]*data\/scenarios\/[a-z0-9_]+\/geo_aliases\.startup\.json/i,
   /^\[map_renderer\] Removed 2 D3-unsafe water geometry part\(s\): marine_arctic_ocean, marine_southern_ocean$/,
   /^\[physical\] global_physical_semantics\.topo\.json unavailable or deferred; disabling physical atlas instead of using the old fallback\.$/,
   /^\[physical\] global_contours\.major\.topo\.json unavailable or deferred; skipping terrain contours\.$/,
@@ -47,6 +53,7 @@ function isActionableNetworkFailure(response) {
   const url = response.url();
   if (status < 400) return false;
   if (status === 401 && /\/api\/backend\/auth\/me(?:$|\?)/.test(url)) return false;
+  if (status === 404 && OPTIONAL_STARTUP_LOCALIZATION_RESOURCE_PATTERN.test(url)) return false;
   return !url.startsWith("data:");
 }
 
