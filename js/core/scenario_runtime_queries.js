@@ -30,6 +30,7 @@ export function getScenarioRuntimeGeometryCountryCode(geometry) {
   return canonicalScenarioCountryCode(getSharedFeatureCountryCode(geometry));
 }
 
+// water-like 判定服务渲染和命中共同边界；新增 token 时同步检查颜色、hit 和 open-ocean 交互合同。
 export function isScenarioWaterLikeFeature(feature, featureId = "") {
   const props = feature?.properties || {};
   const waterType = String(props.water_type || "").trim();

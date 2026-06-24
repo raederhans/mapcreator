@@ -40,6 +40,7 @@ const makeVariant = (id, label, ids) => ({
   },
 });
 
+// UI shell 调试种子只模拟 inspector/preset 需要的最小 runtime 合同；新增字段前先确认真实启动路径也消费同名字段。
 const previewCountries = Object.freeze({
   GER: {
     code: "GER",
@@ -264,6 +265,7 @@ function buildPreviewReleasableIndex(countries) {
     consumedPresetNamesByParentLookup: {},
   };
 
+  // 这里复用 releasable_manager 的 tag 归一化规则，让调试种子和真实 scenario releasable 保持同一套父子索引语义。
   Object.entries(countries).forEach(([rawCode, entry]) => {
     const code = normalizeCountryCode(rawCode);
     if (!code || !entry?.releasable) return;
@@ -291,6 +293,7 @@ function buildPreviewReleasableIndex(countries) {
 }
 
 function applyPreviewHierarchy(state) {
+  // Inspector 同时读取 legacy 对象和 Map 结构；调试种子需要两边一起补水，避免只验证其中一条 UI 路径。
   state.hierarchyData = {
     labels: Object.fromEntries(
       Object.values(hierarchyGroups)
@@ -353,6 +356,7 @@ function applyUiShellDebugTerritorySeed(state = runtimeState) {
   }
 
   const countries = clonePreviewValue(previewCountries);
+  // 该 scenario id 是 UI shell 专用的稳定哨兵，测试用它确认这里没有触发真实 scenario bundle 下载。
   state.activeScenarioId = UI_SHELL_TERRITORY_PREVIEW_SCENARIO_ID;
   state.scenarioCountriesByTag = countries;
   state.scenarioReleasableIndex = buildPreviewReleasableIndex(countries);
@@ -380,6 +384,7 @@ function applyUiShellDebugTerritorySeed(state = runtimeState) {
 function revealUiShellDebugTerritoryPanels(documentRef = globalThis.document, state = runtimeState) {
   if (!state?.uiShellDebugTerritorySeeded || !documentRef) return;
   documentRef.body?.classList.add("app-ui-shell-territory-preview");
+  // 先走真实 tab click，再直接展开关键 details，覆盖正常 sidebar 事件链和无事件环境两种测试入口。
   const inspectorTabButton = documentRef.querySelector("[data-inspector-tab=\"inspector\"]");
   if (typeof inspectorTabButton?.click === "function") {
     inspectorTabButton.click();

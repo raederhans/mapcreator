@@ -20,6 +20,7 @@ const MENU_MIN_WIDTH = 160;
 const MENU_MIN_HEIGHT = 96;
 const MENU_MAX_HEIGHT = 240;
 
+// 统一 select 外壳保留原生 select 作为数据入口；业务 owner 继续监听原 select 的 input/change 事件。
 function isElement(value) {
   return value && typeof value === "object" && value.nodeType === 1;
 }
@@ -79,6 +80,7 @@ function positionSurfaceMenu(surface) {
   );
   const spaceBelow = viewportHeight - rect.bottom - MENU_TRIGGER_GAP - MENU_VIEWPORT_GAP;
   const spaceAbove = rect.top - MENU_TRIGGER_GAP - MENU_VIEWPORT_GAP;
+  // 菜单固定在 viewport 上，滚动容器裁切问题由这里统一处理。
   const openBelow = spaceBelow >= MENU_MAX_HEIGHT || spaceBelow >= spaceAbove;
   const maxHeight = Math.max(
     MENU_MIN_HEIGHT,
@@ -165,6 +167,7 @@ function syncSurface(select) {
   surface.button.disabled = !!select.disabled;
   surface.button.title = select.title || "";
   surface.button.setAttribute("aria-label", getSelectLabel(select));
+  // option 节点数量和禁用态可能由面板重新渲染，整表重建比增量补丁更贴近原生 select 真相源。
   surface.menu.replaceChildren();
   Array.from(select.options || []).forEach((option, index) => {
     const value = option.value;
@@ -213,6 +216,7 @@ function enhanceSelect(select) {
   shell.append(select, button, menu);
   select.dataset.appSelectEnhanced = "true";
   select.classList.add("app-select-native");
+  // 原生 select 留在 DOM 内负责表单值和事件合同，视觉和键盘入口交给 app-select-button。
   select.setAttribute("aria-hidden", "true");
   select.tabIndex = -1;
 
@@ -291,6 +295,7 @@ export function initStyledSelects(root = document) {
       }
     });
     if (shouldScan) {
+      // 动态面板经常先插入容器再填 select，微任务扫描可以等同一批 DOM 写入结束后统一增强。
       queueMicrotask(() => enhanceAll(document));
     }
   });
