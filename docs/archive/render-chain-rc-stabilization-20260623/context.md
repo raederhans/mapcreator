@@ -19,6 +19,8 @@
 - 2026-06-24 00:00 UTC: Initialized UltraQA scenario matrix and active docs.
 - 2026-06-24 00:08 UTC: Completed read-only verification and classified two stale test-contract drifts.
 - 2026-06-24 00:13 UTC: Applied test-only cleanup for optional startup localization sidecars and the current scenario refresh descriptor import contract.
+- 2026-06-24 00:19 UTC: Committed test/docs cleanup as `ed08b08a435807e35186485dcf6169ac4fb72f92`.
+- 2026-06-24 00:20 UTC: Read-only code review requested registry state to reflect actual commit/push status; registry closeout now references the real cleanup commit.
 
 ## Validation Log
 

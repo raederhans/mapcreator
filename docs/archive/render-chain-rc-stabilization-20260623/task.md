@@ -13,5 +13,5 @@
 - [x] Run `git diff --check`.
 - [x] Classify and clean stale contract drift if reproduced.
 - [x] Produce RC stabilization report.
-- [ ] Commit and push only intentional cleanup/docs changes.
-- [ ] Clean worktree and UltraQA state.
+- [x] Commit and push only intentional cleanup/docs changes.
+- [x] Clean worktree and UltraQA state.
