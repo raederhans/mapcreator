@@ -301662,6 +301662,26 @@
       "en": "Scenario names",
       "zh": "剧本名称"
     },
+    "Preview metadata pending": {
+      "en": "Preview metadata pending",
+      "zh": "预览元数据待加载"
+    },
+    "Show more info": {
+      "en": "Show more info",
+      "zh": "显示更多信息"
+    },
+    "Thematic": {
+      "en": "Thematic",
+      "zh": "专题"
+    },
+    "Thematic Layers": {
+      "en": "Thematic Layers",
+      "zh": "专题图层"
+    },
+    "Workbench only": {
+      "en": "Workbench only",
+      "zh": "仅工作台"
+    },
     "Show suggested aliases": {
       "en": "Show suggested aliases",
       "zh": "显示建议别名"

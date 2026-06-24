@@ -117,6 +117,12 @@ export function createCountryInspectorController({
     return runtimeState.hgoIdentity;
   };
 
+  const isCountryInspectorDetailsVisible = () => runtimeState.countryInspectorShowDetails === true;
+
+  const setCountryInspectorDetailsVisible = (visible) => {
+    runtimeState.countryInspectorShowDetails = visible === true;
+  };
+
   const getCountryHgoIdentity = (countryState) => {
     const settings = ensureHgoIdentitySettings();
     if (!settings.enabled || typeof getHgoIdentity !== "function") return null;
@@ -199,7 +205,8 @@ export function createCountryInspectorController({
     return formatHgoVariantRawLabel(raw);
   };
 
-  const getRowMetaText = (countryState, identity, { showRelationMeta = false } = {}) => {
+  const getRowMetaText = (countryState, identity, { showDetails = false, showRelationMeta = false } = {}) => {
+    if (!showDetails) return "";
     const metaBits = [
       buildCountryRowMetaText(countryState, { showRelationMeta }),
       countryState?.code ? `tag ${countryState.code}` : "",
@@ -307,6 +314,22 @@ export function createCountryInspectorController({
       modeRow.appendChild(button);
     });
     controls.appendChild(modeRow);
+
+    const detailsLabel = document.createElement("label");
+    detailsLabel.className = "toggle-label country-inspector-details-toggle";
+    const detailsInput = document.createElement("input");
+    detailsInput.type = "checkbox";
+    detailsInput.className = "checkbox-input";
+    detailsInput.checked = isCountryInspectorDetailsVisible();
+    detailsInput.addEventListener("change", () => {
+      setCountryInspectorDetailsVisible(detailsInput.checked);
+      onHgoIdentitySettingsChange?.();
+    });
+    const detailsText = document.createElement("span");
+    detailsText.textContent = t("Show more info", "ui");
+    detailsLabel.appendChild(detailsInput);
+    detailsLabel.appendChild(detailsText);
+    controls.appendChild(detailsLabel);
 
     const suggestedLabel = document.createElement("label");
     suggestedLabel.className = "toggle-label hgo-identity-suggested-toggle";
@@ -418,12 +441,14 @@ export function createCountryInspectorController({
     const identity = getCountryHgoIdentity(countryState);
     updateFlagImage(ref.flag, identity, "small");
     if (ref.title) {
-      ref.title.textContent = `${getCountryInspectorDisplayName(countryState, identity)} (${countryState.code})`;
+      ref.title.textContent = getCountryInspectorDisplayName(countryState, identity);
     }
     if (ref.meta) {
       ref.meta.textContent = getRowMetaText(countryState, identity, {
+        showDetails: isCountryInspectorDetailsVisible(),
         showRelationMeta: !!ref.showRelationMeta,
       });
+      ref.meta.classList.toggle("hidden", !ref.meta.textContent);
     }
   };
 
@@ -546,7 +571,11 @@ export function createCountryInspectorController({
 
     const meta = document.createElement("div");
     meta.className = "country-select-meta";
-    meta.textContent = getRowMetaText(countryState, identity, { showRelationMeta });
+    meta.textContent = getRowMetaText(countryState, identity, {
+      showDetails: isCountryInspectorDetailsVisible(),
+      showRelationMeta,
+    });
+    meta.classList.toggle("hidden", !meta.textContent);
 
     const side = document.createElement("div");
     side.className = "country-select-side";
@@ -845,23 +874,26 @@ export function createCountryInspectorController({
     const title = document.createElement("div");
     title.className = "hgo-identity-detail-title";
     title.textContent = getCountryInspectorDisplayName(countryState, identity);
-    const badges = document.createElement("div");
-    badges.className = "hgo-identity-badges";
-    appendHgoBadge(badges, getHgoMatchLabel(identity.matchKind), {
-      tone: getHgoBadgeTone(identity.matchKind),
-    });
-    if (identity.targetTag && identity.targetTag !== identity.tag) {
-      appendHgoBadge(badges, `${identity.tag} -> ${identity.targetTag}`, {
+    copy.appendChild(title);
+    const showDetails = isCountryInspectorDetailsVisible();
+    if (showDetails) {
+      const badges = document.createElement("div");
+      badges.className = "hgo-identity-badges";
+      appendHgoBadge(badges, getHgoMatchLabel(identity.matchKind), {
         tone: getHgoBadgeTone(identity.matchKind),
       });
+      if (identity.targetTag && identity.targetTag !== identity.tag) {
+        appendHgoBadge(badges, `${identity.tag} -> ${identity.targetTag}`, {
+          tone: getHgoBadgeTone(identity.matchKind),
+        });
+      }
+      copy.appendChild(badges);
     }
-    copy.appendChild(title);
-    copy.appendChild(badges);
     header.appendChild(copy);
     detail.appendChild(header);
 
     const names = identity.hgoNames || {};
-    if (Object.keys(names).length > 0) {
+    if (showDetails && Object.keys(names).length > 0) {
       const namesList = document.createElement("div");
       namesList.className = "hgo-identity-name-list";
       Object.entries(names).forEach(([language, name]) => {
@@ -928,7 +960,7 @@ export function createCountryInspectorController({
       detail.appendChild(picker);
     }
 
-    if (identity.paletteColor) {
+    if (showDetails && identity.paletteColor) {
       const palette = document.createElement("div");
       palette.className = "hgo-identity-palette-row";
       const swatch = document.createElement("span");

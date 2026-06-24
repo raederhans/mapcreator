@@ -150,6 +150,8 @@ function createSpecialZonesWorkbenchController({
   let lastDiagnosticsToastKey = "";
   let loadedScenarioLayerAssetId = "";
   let failedScenarioLayerAssetId = "";
+  let scenarioLayerLoadPromise = null;
+  let scenarioLayerLoadScenarioId = "";
 
   const translate = (value) => (typeof t === "function" ? t(value, "ui") : value);
 
@@ -163,6 +165,26 @@ function createSpecialZonesWorkbenchController({
   const activeLayer = () => {
     const state = normalizeState();
     return state.layers.find((layer) => layer.id === state.activeLayerId) || state.layers[0] || null;
+  };
+
+  const getOpenPresetCategories = () => {
+    const rawCategories = runtimeState.specialZonePresetOpenCategories;
+    if (rawCategories instanceof Set) {
+      return new Set(Array.from(rawCategories).map((category) => String(category || "").trim()).filter(Boolean));
+    }
+    if (Array.isArray(rawCategories)) {
+      return new Set(rawCategories.map((category) => String(category || "").trim()).filter(Boolean));
+    }
+    return new Set();
+  };
+
+  const setPresetCategoryOpen = (category, isOpen) => {
+    const normalizedCategory = String(category || "").trim();
+    if (!normalizedCategory) return;
+    const openCategories = getOpenPresetCategories();
+    if (isOpen) openCategories.add(normalizedCategory);
+    else openCategories.delete(normalizedCategory);
+    runtimeState.specialZonePresetOpenCategories = Array.from(openCategories);
   };
 
   const getDevSelectionFeatureIds = () => {
@@ -353,8 +375,11 @@ function createSpecialZonesWorkbenchController({
     const title = document.createElement("h4");
     title.textContent = translate("Layers");
     const addLayerBtn = createButton(translate("New layer"));
-    addLayerBtn.addEventListener("click", () => {
+    addLayerBtn.addEventListener("click", async () => {
       const source = runtimeState.activeScenarioId ? "scenario" : "project";
+      if (source === "scenario") {
+        await loadScenarioSpecialZoneLayers();
+      }
       updateState({ action: "addLayer", layer: createLayerFromPreset("custom", { source }) }, "special-zone-layer-add");
     });
     header.append(title, addLayerBtn);
@@ -418,6 +443,7 @@ function createSpecialZonesWorkbenchController({
       return;
     }
     setSpecialZonePresetCategoryState(runtimeState, "all");
+    const openPresetCategories = getOpenPresetCategories();
     const groups = new Map();
     SPECIAL_ZONE_PRESETS.forEach((preset) => {
       const category = String(preset.category || "custom").trim() || "custom";
@@ -432,6 +458,8 @@ function createSpecialZonesWorkbenchController({
         const group = document.createElement("details");
         group.className = "special-zone-preset-group";
         group.dataset.presetCategory = category;
+        group.open = openPresetCategories.has(category);
+        group.addEventListener("toggle", () => setPresetCategoryOpen(category, group.open));
         const summary = document.createElement("summary");
         summary.className = "special-zone-preset-group-summary";
         const label = document.createElement("span");
@@ -1038,43 +1066,59 @@ function createSpecialZonesWorkbenchController({
     if (!scenarioId) {
       loadedScenarioLayerAssetId = "";
       failedScenarioLayerAssetId = "";
+      scenarioLayerLoadPromise = null;
+      scenarioLayerLoadScenarioId = "";
       return null;
     }
     if (loadedScenarioLayerAssetId === scenarioId) return runtimeState.specialZoneLayers;
     if (typeof ensureActiveScenarioOptionalLayerLoaded !== "function") return null;
-    const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", { renderNow: false });
-    if (!result && activeScenarioDeclaresLayerAsset()) {
-      failedScenarioLayerAssetId = scenarioId;
-      setLoadFailedSpecialZoneLayersState(scenarioId);
-      if (statusNode) statusNode.textContent = translate("Scenario special zone layer load failed.");
-      showToast?.(translate("Scenario special zone layer asset could not be loaded. Retry from the workbench."), {
-        title: translate("Special zone layer load failed"),
-        tone: "warning",
+    if (scenarioLayerLoadPromise && scenarioLayerLoadScenarioId === scenarioId) {
+      return scenarioLayerLoadPromise;
+    }
+    scenarioLayerLoadScenarioId = scenarioId;
+    scenarioLayerLoadPromise = (async () => {
+      const result = await ensureActiveScenarioOptionalLayerLoaded("specialZoneLayers", { renderNow: false });
+      if (!result && activeScenarioDeclaresLayerAsset()) {
+        failedScenarioLayerAssetId = scenarioId;
+        setLoadFailedSpecialZoneLayersState(scenarioId);
+        if (statusNode) statusNode.textContent = translate("Scenario special zone layer load failed.");
+        showToast?.(translate("Scenario special zone layer asset could not be loaded. Retry from the workbench."), {
+          title: translate("Special zone layer load failed"),
+          tone: "warning",
+        });
+        render?.();
+        renderSpecialZonesWorkbenchUi();
+        return null;
+      }
+      loadedScenarioLayerAssetId = scenarioId;
+      failedScenarioLayerAssetId = "";
+      normalizeRuntimeSpecialZoneLayersState(runtimeState, {
+        defaultSource: "scenario",
+        topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
       });
-      render?.();
+      const diagnostics = Array.isArray(runtimeState.specialZoneLayers?.diagnostics)
+        ? runtimeState.specialZoneLayers.diagnostics
+        : [];
+      const mismatchDiagnostics = diagnostics.filter((entry) => entry?.code === "topology_fingerprint_mismatch");
+      const diagnosticsKey = `${scenarioId}:${mismatchDiagnostics.map((entry) => `${entry.expected || ""}/${entry.actual || ""}`).join("|")}`;
+      if (mismatchDiagnostics.length && diagnosticsKey !== lastDiagnosticsToastKey) {
+        lastDiagnosticsToastKey = diagnosticsKey;
+        showToast?.(translate("Special zone topology fingerprint mismatch is listed in the right-side project diagnostics."), {
+          title: translate("Special zone topology mismatch"),
+          tone: "warning",
+        });
+      }
       renderSpecialZonesWorkbenchUi();
-      return null;
+      return result;
+    })();
+    try {
+      return await scenarioLayerLoadPromise;
+    } finally {
+      if (scenarioLayerLoadScenarioId === scenarioId) {
+        scenarioLayerLoadPromise = null;
+        scenarioLayerLoadScenarioId = "";
+      }
     }
-    loadedScenarioLayerAssetId = scenarioId;
-    failedScenarioLayerAssetId = "";
-    normalizeRuntimeSpecialZoneLayersState(runtimeState, {
-      defaultSource: "scenario",
-      topologyFingerprint: resolveSpecialZoneTopologyFingerprint(runtimeState),
-    });
-    const diagnostics = Array.isArray(runtimeState.specialZoneLayers?.diagnostics)
-      ? runtimeState.specialZoneLayers.diagnostics
-      : [];
-    const mismatchDiagnostics = diagnostics.filter((entry) => entry?.code === "topology_fingerprint_mismatch");
-    const diagnosticsKey = `${scenarioId}:${mismatchDiagnostics.map((entry) => `${entry.expected || ""}/${entry.actual || ""}`).join("|")}`;
-    if (mismatchDiagnostics.length && diagnosticsKey !== lastDiagnosticsToastKey) {
-      lastDiagnosticsToastKey = diagnosticsKey;
-      showToast?.(translate("Special zone topology fingerprint mismatch is listed in the right-side project diagnostics."), {
-        title: translate("Special zone topology mismatch"),
-        tone: "warning",
-      });
-    }
-    renderSpecialZonesWorkbenchUi();
-    return result;
   };
 
   return {

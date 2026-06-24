@@ -5,6 +5,7 @@ import {
 } from "../../core/thematic_layer_catalog.js";
 import {
   buildThematicCatalogDiagnostic,
+  resolveLayerStatusTone,
   sanitizeLayerStatusText,
 } from "./layer_status_diagnostics.js";
 
@@ -45,9 +46,10 @@ function createTextNodeElement(tagName, className, text) {
   return element;
 }
 
-function setStatusSeverity(node, severity) {
-  const normalizedSeverity = String(severity || "muted").trim() || "muted";
+function setStatusSeverity(node, diagnostic) {
+  const normalizedSeverity = String(diagnostic?.severity || "muted").trim() || "muted";
   node.dataset.severity = normalizedSeverity;
+  node.dataset.statusTone = resolveLayerStatusTone(diagnostic, normalizedSeverity);
   node.classList.toggle("is-active", normalizedSeverity === "active");
   node.classList.toggle("is-warning", normalizedSeverity === "warning");
   node.classList.toggle("is-muted", normalizedSeverity === "muted");
@@ -124,7 +126,7 @@ export function createThematicLayerPreviewController({
     const summary = sanitizeLayerStatusText(diagnostic.summary || THEMATIC_CATALOG_PENDING_SUMMARY);
     statusNode.textContent = summary;
     statusNode.dataset.statusSummary = summary;
-    setStatusSeverity(statusNode, diagnostic.severity);
+    setStatusSeverity(statusNode, diagnostic);
   };
 
   const renderEmptyState = () => {
