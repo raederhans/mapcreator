@@ -1,26 +1,26 @@
 # Worktree Registry
 
-Last updated: 2026-06-24 16:18 UTC
+Last updated: 2026-06-24 18:43 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: UI/palette/startup WIP integration started from `origin/main@15941a7dbe54655fbc79c28932159e9d8c47723c`.
-- Latest integrated work: Render Chain RC Stabilization confirms the Phase 1/2A/2B/2C renderer baseline and cleans stale test contracts only.
+- Integration base: UI/palette/startup WIP was reconciled onto `origin/main@9af3d156b8be61497df9ed2b067bc7acf4a2ec36`.
+- Latest integrated work: `2c52d627` keeps the Pages manifest aligned after the UI integration verification regenerated the checked-in manifest.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat the pushed RC stabilization cleanup as the renderer-stable baseline.
-2. Migrate preserved UI/palette/startup WIP through the clean integration worktree.
-3. Regenerate dist from source and keep renderer behavior changes out of this lane unless a new production regression is reproduced.
+1. Treat pushed `main@2c52d627` as the current UI/palette/startup integration baseline.
+2. Keep the remaining docs/archive deletion WIP out of interaction or renderer commits until a cleanup owner reviews it.
+3. Start future thematic legend/safety implementation from current `origin/main`, with Pages dist regenerated after any UI or generated asset change.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@75ffdaa7`; remote `origin/main` after RC cleanup push | current pushed `origin/main` | parent checkout has unrelated UI/palette/startup WIP and is preserved | dirty files include `css/style.css`, `js/main.js`, palette panel files, UI-shell/support tests, startup tests, `lessons learned.md`, and `docs/active/_worktree_registry.md`; RC stabilization did not edit this checkout | Parent checkout stayed untouched while RC stabilization was created, verified, committed, and pushed from an isolated worktree. | Yellow for registry overlap only; green for RC production renderer files because production code was unchanged. | Sync/rebase parent WIP separately when that task is ready. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@2c52d627`; remote `origin/main@2c52d627` | current pushed `origin/main@2c52d627` | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are docs/archive deletions from the earlier cleanup lane; UI/palette/startup source, tests, dist mirrors, and Pages manifest are integrated and pushed. | Interaction merge closeout fast-forwarded the parent checkout through `9af3d156`, reapplied the preserved WIP for comparison, kept upstream UI source truth because the local UI hunks were already absorbed, committed manifest alignment as `2c52d627`, and pushed main. Validation passed targeted UI Node tests 29/29, focused Python UI/startup contracts 98/98, `git diff --check`, and `npm run verify:pages-dist` with startup shell 39/39 plus landing showcase 8/8. | Green for UI/palette/startup production files; yellow for docs/archive cleanup because it remains unstaged local WIP. | Keep docs/archive deletions for a separate cleanup decision; future feature work should start from pushed `origin/main@2c52d627`. |
 
 ## Recent Integrated Branches
 
