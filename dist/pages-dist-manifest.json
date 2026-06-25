@@ -45606,6 +45606,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/render_runtime_binding.js",
+      "size_bytes": 3214,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/startup_boot_overlay.js",
       "size_bytes": 16693,
       "source_kind": "dist"
@@ -46472,7 +46477,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 35896,
+      "size_bytes": 34272,
       "source_kind": "dist"
     },
     {
@@ -47242,7 +47247,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1458961,
+      "size_bytes": 1459088,
       "source_kind": "dist"
     },
     {
@@ -47261,5 +47266,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155215247
+  "total_bytes": 1155216964
 }

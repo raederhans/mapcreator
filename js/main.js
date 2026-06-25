@@ -13,9 +13,9 @@ import {
   POST_READY_IDLE_QUIET_MS,
 } from "./bootstrap/post_ready_scheduler.js";
 import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnostics.js";
+import { createStartupRenderRuntimeBinding } from "./bootstrap/render_runtime_binding.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
-  createRenderDispatcher,
   configureStartupSupportKeyUsageAudit,
   getBootLanguage,
   hydrateLanguage,
@@ -32,11 +32,9 @@ import {
   invalidateContextLayerVisualStateBatch,
   reconcileDetailPromotionPoliticalPass,
   setMapData,
-  render,
 } from "./core/map_renderer/public.js";
-import { bindRenderBoundary, flushRenderBoundary, markRenderBoundaryFlushed, requestRender } from "./core/render_boundary.js";
+import { flushRenderBoundary, requestRender } from "./core/render_boundary.js";
 import { registerRuntimeHook } from "./core/state/index.js";
-import { initPresetState } from "./core/preset_state.js";
 import { runPostScenarioUiReplay } from "./core/scenario_post_apply_effects.js";
 import {
   applyUiShellDebugTerritorySeed,
@@ -44,7 +42,6 @@ import {
 } from "./bootstrap/ui_shell_debug_seed.js";
 import { registerMapcreatorSnapshotProvider } from "./core/mapcreator_snapshot.js";
 import { initTranslations, updateUIText } from "./ui/i18n.js";
-import { initToast, showToast } from "./ui/toast.js";
 import { bindBeforeUnload } from "./core/dirty_state.js";
 const state = runtimeState;
 configureStartupSupportKeyUsageAudit();
@@ -753,39 +750,14 @@ async function bootstrap() {
         deferInteractionInfrastructure: false,
       });
 
-      renderDispatcher = createRenderDispatcher(() => {
-        try {
-          render();
-        } finally {
-          markRenderBoundaryFlushed();
-        }
+      const renderRuntime = createStartupRenderRuntimeBinding({
+        targetState: state,
+        setBootPreviewVisible,
+        ensureDetailTopologyReady,
+        flushReason: "ui-shell-render-now",
       });
-      const renderApp = () => {
-        renderDispatcher.schedule();
-      };
-      globalThis.renderApp = renderApp;
-      bindRenderBoundary({
-        scheduleRender: () => renderDispatcher.schedule(),
-        flushRender: () => renderDispatcher.flush(),
-        ensureDetailTopology: (options = {}) =>
-          ensureDetailTopologyReady({
-            renderDispatcher,
-            ...options,
-          }),
-      });
-      const flushRenderNow = () => flushRenderBoundary("ui-shell-render-now");
-      globalThis.renderNow = flushRenderNow;
-      registerRuntimeHook(state, "renderNowFn", flushRenderNow);
-      registerRuntimeHook(state, "ensureDetailTopologyFn", (options = {}) =>
-        ensureDetailTopologyReady({
-          renderDispatcher,
-          ...options,
-        }));
-
-      initToast();
-      registerRuntimeHook(state, "showToastFn", showToast);
-      setBootPreviewVisible(false);
-      initPresetState();
+      renderDispatcher = renderRuntime.renderDispatcher;
+      const { renderApp } = renderRuntime;
       const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();
       startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
       await startupUiBootstrapPromise;
@@ -861,39 +833,14 @@ async function bootstrap() {
       deferInteractionInfrastructure: startupInteractionLevel === "readonly-startup",
     });
 
-    renderDispatcher = createRenderDispatcher(() => {
-      try {
-        render();
-      } finally {
-        markRenderBoundaryFlushed();
-      }
+    const renderRuntime = createStartupRenderRuntimeBinding({
+      targetState: state,
+      setBootPreviewVisible,
+      ensureDetailTopologyReady,
+      flushReason: "legacy-render-now",
     });
-    const renderApp = () => {
-      renderDispatcher.schedule();
-    };
-    globalThis.renderApp = renderApp;
-    bindRenderBoundary({
-      scheduleRender: () => renderDispatcher.schedule(),
-      flushRender: () => renderDispatcher.flush(),
-      ensureDetailTopology: (options = {}) =>
-        ensureDetailTopologyReady({
-          renderDispatcher,
-          ...options,
-        }),
-    });
-    const flushRenderNow = () => flushRenderBoundary("legacy-render-now");
-    globalThis.renderNow = flushRenderNow;
-    registerRuntimeHook(state, "renderNowFn", flushRenderNow);
-    registerRuntimeHook(state, "ensureDetailTopologyFn", (options = {}) =>
-      ensureDetailTopologyReady({
-        renderDispatcher,
-        ...options,
-      }));
-
-    initToast();
-    registerRuntimeHook(state, "showToastFn", showToast);
-    setBootPreviewVisible(false);
-    initPresetState();
+    renderDispatcher = renderRuntime.renderDispatcher;
+    const { renderApp } = renderRuntime;
     void loadDeferredMilsymbol();
     startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
 
