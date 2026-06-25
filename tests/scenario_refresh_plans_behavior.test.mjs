@@ -373,6 +373,17 @@ test("frame graph invalidation execution plan resolves pass compatibility at one
   );
 });
 
+test("frame graph default invalidation passes return a fresh list", () => {
+  const firstPlan = resolveFrameGraphInvalidationExecutionPlan(null, []);
+  firstPlan.invalidationTargetPasses.push("mutated");
+
+  assert.deepEqual(resolveFrameGraphInvalidationExecutionPlan(null, []).invalidationTargetPasses, [
+    "political",
+    "borders",
+    "labels",
+  ]);
+});
+
 test("chunk promotion runtime executes default frame graph invalidation effects", () => {
   const calls = [];
   const runtimeState = {

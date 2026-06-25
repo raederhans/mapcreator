@@ -13,6 +13,7 @@ const FILES = Object.freeze({
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
+  renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -22,6 +23,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,
   [FILES.renderPassCatalog]: 80,
+  [FILES.renderInvalidationCatalog]: 180,
 });
 
 function readProjectFile(relativePath) {
@@ -58,6 +60,7 @@ function collectFailures() {
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
+  const renderInvalidationCatalog = readProjectFile(FILES.renderInvalidationCatalog);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -66,6 +69,7 @@ function collectFailures() {
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
     [FILES.renderPassCatalog]: renderPassCatalog,
+    [FILES.renderInvalidationCatalog]: renderInvalidationCatalog,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -94,6 +98,7 @@ function collectFailures() {
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
     FILES.renderPassCatalog,
+    FILES.renderInvalidationCatalog,
   ];
   for (const ownerPath of ownerFiles) {
     const source = sources[ownerPath];
@@ -123,8 +128,14 @@ function collectFailures() {
   if (!scenarioVisualInvalidationExecutor.includes("function executeScenarioVisualInvalidation({")) {
     failures.push(`${FILES.scenarioVisualInvalidationExecutor} must own executeScenarioVisualInvalidation.`);
   }
-  if (!scenarioVisualInvalidationExecutor.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")) {
-    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must define retired visual invalidation pass inputs.`);
+  if (!scenarioVisualInvalidationExecutor.includes("from \"./render_invalidation_catalog.js\";")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must import render invalidation catalog.`);
+  }
+  if (!scenarioVisualInvalidationExecutor.includes("UNSUPPORTED_RENDER_PASS_INPUT_KEYS")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must use UNSUPPORTED_RENDER_PASS_INPUT_KEYS from the catalog.`);
+  }
+  if (scenarioVisualInvalidationExecutor.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")) {
+    failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not locally define retired visual invalidation pass inputs.`);
   }
   if (!scenarioVisualInvalidationExecutor.includes("findRetiredVisualInvalidationPassInputKey(executionPlan)")) {
     failures.push(`${FILES.scenarioVisualInvalidationExecutor} must reject retired execution-plan pass inputs through one retired-key check.`);
@@ -173,6 +184,33 @@ function collectFailures() {
   );
   if (/\btargetPasses\s*[,}:]/.test(frameGraphExecutionPlanSource)) {
     failures.push(`${FILES.scenarioRefreshPlans} execution plans must expose invalidationTargetPasses instead of targetPasses.`);
+  }
+  if (!scenarioRefreshPlans.includes("from \"./render_invalidation_catalog.js\";")) {
+    failures.push(`${FILES.scenarioRefreshPlans} must import render invalidation catalog.`);
+  }
+  for (const token of [
+    "const PASS_RESOURCE_MAP = Object.freeze({",
+    "const RESOURCE_PASS_MAP = Object.freeze(",
+    "const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([",
+    "const FIRST_FRAME_HGO_TARGET_RESOURCES = Object.freeze([",
+    "const UNSUPPORTED_FRAME_GRAPH_INVALIDATION_INPUT_KEYS = Object.freeze([",
+    "function getTargetResourcesForPasses(",
+    "function getTargetPassesForResources(",
+    "function hasAnyTargetResource(",
+    "function getFirstFrameTargetResources(",
+    "function resolveFirstFrameTargetResources(",
+  ]) {
+    if (scenarioRefreshPlans.includes(token)) {
+      failures.push(`${FILES.scenarioRefreshPlans} must not own extracted render invalidation catalog token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const DEFAULT_RENDER_INVALIDATION_PASSES =",
+    "const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([",
+  ]) {
+    if (scenarioVisualInvalidationExecutor.includes(token)) {
+      failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not own extracted render invalidation catalog token: ${token}`);
+    }
   }
 
   const ownershipRules = [
@@ -281,6 +319,21 @@ function collectFailures() {
         "const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE =",
       ],
     },
+    {
+      ownerPath: FILES.renderInvalidationCatalog,
+      ownerTokens: [
+        "export const PASS_RESOURCE_MAP = Object.freeze({",
+        "export const RESOURCE_PASS_MAP = Object.freeze(",
+        "export const DEFAULT_RENDER_INVALIDATION_PASSES = [",
+        "export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([",
+        "export const FIRST_FRAME_HGO_TARGET_RESOURCES = Object.freeze([",
+        "export const UNSUPPORTED_RENDER_PASS_INPUT_KEYS = Object.freeze([",
+        "export function getTargetResourcesForPasses(",
+        "export function getTargetPassesForResources(",
+        "export function getFirstFrameTargetResources(",
+        "export function resolveFirstFrameTargetResources(",
+      ],
+    },
   ];
 
   for (const rule of ownershipRules) {
@@ -290,12 +343,12 @@ function collectFailures() {
         failures.push(`${rule.ownerPath} must own token: ${token}`);
       }
     }
-    for (const token of rule.rendererRequiredTokens) {
+    for (const token of rule.rendererRequiredTokens || []) {
       if (!renderer.includes(token)) {
         failures.push(`${FILES.renderer} must keep wrapper token: ${token}`);
       }
     }
-    for (const token of rule.rendererForbiddenTokens) {
+    for (const token of rule.rendererForbiddenTokens || []) {
       if (renderer.includes(token)) {
         failures.push(`${FILES.renderer} must not own extracted token: ${token}`);
       }

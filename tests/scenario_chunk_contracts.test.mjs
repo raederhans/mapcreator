@@ -1173,6 +1173,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const exactAfterSettlePlansSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_refresh_plans.js");
   const exactSchedulerSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_scheduler.js");
   const renderPassCatalogSource = readRepoFile("js", "core", "map_renderer", "render_pass_catalog.js");
+  const renderInvalidationCatalogSource = readRepoFile("js", "core", "map_renderer", "render_invalidation_catalog.js");
   const scenarioOwnershipEditorSource = readRepoFile("js", "core", "scenario_ownership_editor.js");
   const politicalRasterWorkerClientSource = readRepoFile("js", "core", "political_raster_worker_client.js");
   const politicalRasterWorkerSource = readRepoFile("js", "workers", "political_raster.worker.js");
@@ -1627,7 +1628,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !/export\s*\{[\s\S]*getFrameGraphInvalidationTargetPasses/.test(scenarioRefreshPlansSource)
       && /function normalizeRendererRefreshPlan\(refreshPlan, defaults = \{\}\) \{[\s\S]*?const frameGraphInvalidation = plan\.frameGraphInvalidation[\s\S]*?\.\.\.\(frameGraphInvalidation \? \{ frameGraphInvalidation \} : \{\}\)/.test(scenarioRefreshPlansSource)
       && scenarioRefreshPlansSource.includes("function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fallbackTargetPasses = [])")
-      && /const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const resolvedInvalidationPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = resolvedInvalidationPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \["political", "borders", "labels"\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(frameGraphExecutionPlanSource)
+      && /const hasExplicitTargetResources = Array\.isArray\(frameGraphInvalidation\?\.targetResources\);[\s\S]*?const resolvedInvalidationPasses = getFrameGraphInvalidationTargetPasses\([\s\S]*?const invalidationTargetPasses = resolvedInvalidationPasses\.length[\s\S]*?hasExplicitTargetResources \? \[\] : \[\.\.\.DEFAULT_RENDER_INVALIDATION_PASSES\][\s\S]*?return \{[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?hasExplicitTargetResources,/.test(frameGraphExecutionPlanSource)
+      && renderInvalidationCatalogSource.includes('export const DEFAULT_RENDER_INVALIDATION_PASSES = ["political", "borders", "labels"];')
       && !/\btargetPasses\s*[,}:]/.test(frameGraphExecutionPlanSource)
       && /function resolveScenarioChunkPromotionRendererRefreshDescriptor\([\s\S]*?const rendererRefreshPlan = normalizeRendererRefreshPlan[\s\S]*?const frameGraphInvalidation = rendererRefreshPlan\.frameGraphInvalidation[\s\S]*?const executionPlan = resolveFrameGraphInvalidationExecutionPlan\([\s\S]*?\.\.\.executionPlan/.test(scenarioRefreshPlansSource)
       && /const \{[\s\S]*?hasExplicitTargetResources,[\s\S]*?targetResources,[\s\S]*?invalidationTargetPasses,[\s\S]*?\} = resolveScenarioChunkPromotionRendererRefreshDescriptor\(\{[\s\S]*?refreshPlan,[\s\S]*?changedLayerKeys: effectiveChangedLayerKeys,[\s\S]*?hasPoliticalChange,[\s\S]*?\}\)/.test(chunkPromotionRuntimeSource)
@@ -1639,7 +1641,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && scenarioVisualInvalidationExecutorSource.includes("function findRetiredVisualInvalidationPassInputKey(inputs = {})")
       && scenarioVisualInvalidationExecutorSource.includes("function createScenarioVisualInvalidationExecutor(deps = {})")
       && scenarioVisualInvalidationExecutorSource.includes("function executeScenarioVisualInvalidation({")
-      && scenarioVisualInvalidationExecutorSource.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")
+      && renderInvalidationCatalogSource.includes("export const UNSUPPORTED_RENDER_PASS_INPUT_KEYS = Object.freeze([")
+      && scenarioVisualInvalidationExecutorSource.includes("UNSUPPORTED_RENDER_PASS_INPUT_KEYS")
+      && scenarioVisualInvalidationExecutorSource.includes("from \"./render_invalidation_catalog.js\";")
+      && !scenarioVisualInvalidationExecutorSource.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")
       && scenarioVisualInvalidationExecutorSource.includes("findRetiredVisualInvalidationPassInputKey(executionPlan)")
       && scenarioVisualInvalidationExecutorSource.includes("assertExecutionPlanHasNoRetiredPassFields(executionPlan, retiredInputs);")
       && !/function executeScenarioVisualInvalidation\([\s\S]*?\btargetPasses\s*=/.test(scenarioVisualInvalidationExecutorSource)
@@ -1653,17 +1658,19 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
         "invalidateRenderPasses(invalidationTargetPasses, reason);",
       ].every((snippet) => scenarioVisualInvalidationExecutorSource.includes(snippet)),
     startupInitialVisualUsesFirstFrameResourceAllowlist:
-      scenarioRefreshPlansSource.includes("const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([")
-      && scenarioRefreshPlansSource.includes('"backgroundBuffer"')
-      && scenarioRefreshPlansSource.includes('"physicalBaseBuffer"')
-      && scenarioRefreshPlansSource.includes('"politicalBaseBuffer"')
-      && scenarioRefreshPlansSource.includes('"hitIndex"')
-      && scenarioRefreshPlansSource.includes('"borderBuffer"')
-      && scenarioRefreshPlansSource.includes('"interactionOverlay"')
-      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"labelBuffer"/.test(scenarioRefreshPlansSource)
-      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextBaseBuffer"/.test(scenarioRefreshPlansSource)
-      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextScenarioBuffer"/.test(scenarioRefreshPlansSource)
-      && !/const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"dayNightBuffer"/.test(scenarioRefreshPlansSource)
+      renderInvalidationCatalogSource.includes("export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([")
+      && renderInvalidationCatalogSource.includes('"backgroundBuffer"')
+      && renderInvalidationCatalogSource.includes('"physicalBaseBuffer"')
+      && renderInvalidationCatalogSource.includes('"politicalBaseBuffer"')
+      && renderInvalidationCatalogSource.includes('"hitIndex"')
+      && renderInvalidationCatalogSource.includes('"borderBuffer"')
+      && renderInvalidationCatalogSource.includes('"interactionOverlay"')
+      && scenarioRefreshPlansSource.includes("from \"./render_invalidation_catalog.js\";")
+      && !scenarioRefreshPlansSource.includes("const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([")
+      && !/export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"labelBuffer"/.test(renderInvalidationCatalogSource)
+      && !/export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextBaseBuffer"/.test(renderInvalidationCatalogSource)
+      && !/export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"contextScenarioBuffer"/.test(renderInvalidationCatalogSource)
+      && !/export const FIRST_FRAME_BASE_TARGET_RESOURCES = Object\.freeze\(\[[^\]]*?"dayNightBuffer"/.test(renderInvalidationCatalogSource)
       && /createScenarioChunkPromotionRefreshPlan\(\{[\s\S]*?firstFrameOnly = false,[\s\S]*?hgoPreviewDirty = false,[\s\S]*?const targetResources = firstFrameOnly[\s\S]*?resolveFirstFrameTargetResources/.test(scenarioRefreshPlansSource)
       && /function refreshMapDataForScenarioChunkPromotion\(options = \{\}\) \{[\s\S]*?firstFrameOnly: !!options\.firstFrameOnly,[\s\S]*?hgoPreviewDirty: !!options\.hgoPreviewDirty/.test(scenarioRendererBridgeSource)
       && /function applyScenarioPoliticalChunkPayload\([\s\S]*?firstFrameOnly = false,[\s\S]*?refreshMapDataForScenarioChunkPromotion\(\{[\s\S]*?firstFrameOnly,/.test(chunkRuntimeSource)

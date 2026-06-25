@@ -7,6 +7,7 @@ MAP_RENDERER_PATH = ROOT / "js/core/map_renderer.js"
 SCENARIO_REFRESH_RUNTIME_PATH = ROOT / "js/core/map_renderer/scenario_refresh_runtime.js"
 SCENARIO_REFRESH_PLANS_PATH = ROOT / "js/core/map_renderer/scenario_refresh_plans.js"
 SCENARIO_VISUAL_INVALIDATION_EXECUTOR_PATH = ROOT / "js/core/map_renderer/scenario_visual_invalidation_executor.js"
+RENDER_INVALIDATION_CATALOG_PATH = ROOT / "js/core/map_renderer/render_invalidation_catalog.js"
 EXACT_AFTER_SETTLE_SCHEDULER_PATH = ROOT / "js/core/map_renderer/exact_after_settle_scheduler.js"
 SCENARIO_RESOURCES_PATH = ROOT / "js/core/scenario_resources.js"
 SCENARIO_MANAGER_PATH = ROOT / "js/core/scenario_manager.js"
@@ -27,6 +28,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_refresh_runtime_source = SCENARIO_REFRESH_RUNTIME_PATH.read_text(encoding="utf-8")
         cls.scenario_refresh_plans_source = SCENARIO_REFRESH_PLANS_PATH.read_text(encoding="utf-8")
         cls.scenario_visual_invalidation_executor_source = SCENARIO_VISUAL_INVALIDATION_EXECUTOR_PATH.read_text(encoding="utf-8")
+        cls.render_invalidation_catalog_source = RENDER_INVALIDATION_CATALOG_PATH.read_text(encoding="utf-8")
         cls.exact_after_settle_scheduler_source = EXACT_AFTER_SETTLE_SCHEDULER_PATH.read_text(encoding="utf-8")
         cls.scenario_resources_source = SCENARIO_RESOURCES_PATH.read_text(encoding="utf-8")
         cls.scenario_manager_source = SCENARIO_MANAGER_PATH.read_text(encoding="utf-8")
@@ -777,6 +779,18 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
             self.scenario_visual_invalidation_executor_source,
         )
         self.assertIn(
+            "export const UNSUPPORTED_RENDER_PASS_INPUT_KEYS = Object.freeze([",
+            self.render_invalidation_catalog_source,
+        )
+        self.assertIn(
+            "UNSUPPORTED_RENDER_PASS_INPUT_KEYS",
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertIn(
+            'from "./render_invalidation_catalog.js";',
+            self.scenario_visual_invalidation_executor_source,
+        )
+        self.assertNotIn(
             "const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([",
             self.scenario_visual_invalidation_executor_source,
         )
