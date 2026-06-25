@@ -35,6 +35,7 @@
     "test:node:startup-failure-recovery": "node --test tests/startup_failure_recovery_behavior.test.mjs tests/main_startup_failure_recovery_boundary.test.mjs",
     "test:node:ui-shell-boot": "node --test tests/ui_shell_boot_behavior.test.mjs tests/main_ui_shell_boot_boundary.test.mjs",
     "test:node:deferred-bootstrap": "node --test tests/deferred_vendor_loader_behavior.test.mjs tests/deferred_ui_bootstrap_behavior.test.mjs tests/main_deferred_bootstrap_boundary.test.mjs",
+    "test:node:main-bootstrap-wiring": "node --test tests/main_bootstrap_wiring_boundary.test.mjs",
     "python": "node tools/run_python.mjs",
     "test:node:backend-cloud-support": "node --test tests/backend_client_behavior.test.mjs tests/project_support_diagnostics_controller_behavior.test.mjs tests/backend_console_helpers.test.mjs",
     "test:node:backend-console-helpers": "node --test tests/backend_console_helpers.test.mjs",

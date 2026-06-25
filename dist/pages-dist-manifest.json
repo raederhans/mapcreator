@@ -46497,7 +46497,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 29782,
+      "size_bytes": 29755,
       "source_kind": "dist"
     },
     {
@@ -47286,5 +47286,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155225692
+  "total_bytes": 1155225665
 }

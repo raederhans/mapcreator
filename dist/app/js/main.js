@@ -24,7 +24,6 @@ import {
   getBootLanguage,
   hydrateLanguage,
   initLongAnimationFrameObserver,
-  normalizeBatchFillScopes,
   persistViewSettings,
   postStartupSupportKeyUsageReport,
   warnOnStartupBundleIntegrity,
@@ -47,6 +46,7 @@ import {
 import { registerMapcreatorSnapshotProvider } from "./core/mapcreator_snapshot.js";
 import { updateUIText } from "./ui/i18n.js";
 import { bindBeforeUnload } from "./core/dirty_state.js";
+
 const state = runtimeState;
 configureStartupSupportKeyUsageAudit();
 
