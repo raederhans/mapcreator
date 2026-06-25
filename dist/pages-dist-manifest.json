@@ -45596,6 +45596,16 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/deferred_ui_bootstrap.js",
+      "size_bytes": 1967,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/bootstrap/deferred_vendor_loader.js",
+      "size_bytes": 2440,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/main_runtime_diagnostics.js",
       "size_bytes": 3812,
       "source_kind": "dist"
@@ -46487,7 +46497,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 31966,
+      "size_bytes": 29782,
       "source_kind": "dist"
     },
     {
@@ -47257,7 +47267,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1459335,
+      "size_bytes": 1459588,
       "source_kind": "dist"
     },
     {
@@ -47276,5 +47286,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155223216
+  "total_bytes": 1155225692
 }

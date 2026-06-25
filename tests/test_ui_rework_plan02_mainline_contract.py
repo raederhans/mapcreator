@@ -524,7 +524,9 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
 
     def test_native_selects_share_app_dropdown_chrome(self):
         css_content = (REPO_ROOT / "css" / "style.css").read_text(encoding="utf-8")
-        main_content = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        deferred_ui_bootstrap_content = (
+            REPO_ROOT / "js" / "bootstrap" / "deferred_ui_bootstrap.js"
+        ).read_text(encoding="utf-8")
         styled_selects_content = (REPO_ROOT / "js" / "ui" / "styled_selects.js").read_text(encoding="utf-8")
         special_zones_content = (
             REPO_ROOT / "js" / "ui" / "toolbar" / "special_zones_workbench_controller.js"
@@ -601,10 +603,10 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
             self.assertIn(token, styled_selects_content)
         for token in [
             '{ initStyledSelects },',
-            'import("./ui/styled_selects.js"),',
+            '"../ui/styled_selects.js",',
             "initStyledSelects();",
         ]:
-            self.assertIn(token, main_content)
+            self.assertIn(token, deferred_ui_bootstrap_content)
         special_zone_select_block_start = css_content.index(
             '.special-zone-workbench-field input[type="text"],\n'
             '.special-zone-workbench-field input[type="number"],\n'

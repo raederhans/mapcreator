@@ -1166,6 +1166,7 @@ test("viewport geo bounds samples curved projection edges for chunk eligibility"
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const mainSource = readRepoFile("js", "main.js");
+  const deferredUiBootstrapSource = readRepoFile("js", "bootstrap", "deferred_ui_bootstrap.js");
   const contextScenarioSignatureBranch = extractRendererPassSignatureBranch(rendererSource, "contextScenario");
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
@@ -1458,7 +1459,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /export function getFrameSchedulerQueueLength\(\{ byPriority = false, byLabelGeneration = false \} = \{\}\) \{[\s\S]*?high:[\s\S]*?normal:[\s\S]*?low:[\s\S]*?total:/.test(frameSchedulerSource)
       && /function render\(\) \{[\s\S]*?getFrameSchedulerQueueLength\(\{ byPriority: true, byLabelGeneration: true \}\);[\s\S]*?recordRenderPerfMetric\("frameSchedulerQueueDepth", 0, frameSchedulerQueue\);/.test(rendererSource),
     deferredUiYieldPrefersSchedulerYield:
-      /async function yieldToMain\(\) \{[\s\S]*?typeof globalThis\.scheduler\?\.yield === "function"[\s\S]*?await globalThis\.scheduler\.yield\(\);[\s\S]*?globalThis\.setTimeout\(resolve, 0\);/.test(mainSource),
+      /export async function yieldToMain\(\{ globalScope = globalThis \} = \{\}\) \{[\s\S]*?typeof globalScope\?\.scheduler\?\.yield === "function"[\s\S]*?await globalScope\.scheduler\.yield\(\);[\s\S]*?getTimeoutFn\(globalScope\)\(resolve, 0\);/.test(deferredUiBootstrapSource)
+      && !/async function yieldToMain\(/.test(mainSource),
     exactAfterSettleDedupesByGeneration:
       /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(exactSchedulerSource)
       && /label: `exact-after-settle-pass-\$\{passName\}`,[\s\S]*?generation,[\s\S]*?dedupe: true,[\s\S]*?deferOnContinuousInput: false/.test(exactSchedulerSource)

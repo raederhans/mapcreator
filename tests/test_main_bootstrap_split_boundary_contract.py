@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 STARTUP_BOOTSTRAP_SUPPORT_JS = REPO_ROOT / "js" / "bootstrap" / "startup_bootstrap_support.js"
+STARTUP_FAILURE_RECOVERY_JS = REPO_ROOT / "js" / "bootstrap" / "startup_failure_recovery.js"
 
 
 class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
@@ -61,18 +62,20 @@ class MainBootstrapSplitBoundaryContractTest(unittest.TestCase):
 
     def test_main_keeps_startup_ui_bootstrap_failure_and_recovery_contract(self):
         content = MAIN_JS.read_text(encoding="utf-8")
+        failure_recovery_content = STARTUP_FAILURE_RECOVERY_JS.read_text(encoding="utf-8")
 
         self.assertIn("async function rollbackStartupScenarioToBaseMap() {", content)
         self.assertIn('const { clearActiveScenario } = await import("./core/scenario_manager.js");', content)
         self.assertIn("let startupUiBootstrapPromise = null;", content)
         self.assertIn("let startupUiBootstrapAwaited = false;", content)
         self.assertIn("let startupUiBootstrapFailed = false;", content)
-        self.assertIn("startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);", content)
+        self.assertIn("startupUiBootstrapPromise = deferredUiBootstrapper.bootstrapDeferredUi(renderApp);", content)
+        self.assertIn("bootstrapDeferredUi,", content)
         self.assertIn("if (startupUiBootstrapPromise) {", content)
         self.assertIn("startupUiBootstrapAwaited = true;", content)
         self.assertIn("startupUiBootstrapFailed = true;", content)
-        self.assertIn("if (startupUiBootstrapPromise && !startupUiBootstrapAwaited) {", content)
-        self.assertIn("await rollbackStartupScenarioToBaseMap();", content)
+        self.assertIn("if (startupUiBootstrapPromise && !startupUiBootstrapAwaited) {", failure_recovery_content)
+        self.assertIn("await helpers.rollbackStartupScenarioToBaseMap();", failure_recovery_content)
         self.assertIn("allowDuringBootBlocking: true,", content)
 
     def test_startup_bootstrap_support_keeps_runtime_contracts(self):

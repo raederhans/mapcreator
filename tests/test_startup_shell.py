@@ -24,6 +24,18 @@ class StartupShellTest(unittest.TestCase):
 
     def test_main_bootstrap_uses_dynamic_ui_imports_and_boot_metrics(self) -> None:
         main_js = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        deferred_ui_bootstrap_js = (
+            REPO_ROOT / "js" / "bootstrap" / "deferred_ui_bootstrap.js"
+        ).read_text(encoding="utf-8")
+        ui_shell_boot_js = (
+            REPO_ROOT / "js" / "bootstrap" / "ui_shell_boot.js"
+        ).read_text(encoding="utf-8")
+        render_runtime_binding_js = (
+            REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
+        ).read_text(encoding="utf-8")
+        startup_failure_recovery_js = (
+            REPO_ROOT / "js" / "bootstrap" / "startup_failure_recovery.js"
+        ).read_text(encoding="utf-8")
         startup_bootstrap_support_js = (
             REPO_ROOT / "js" / "bootstrap" / "startup_bootstrap_support.js"
         ).read_text(encoding="utf-8")
@@ -50,51 +62,52 @@ class StartupShellTest(unittest.TestCase):
             REPO_ROOT / "js" / "bootstrap" / "ui_shell_debug_seed.js"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('import { initPresetState } from "./core/preset_state.js";', main_js)
+        self.assertIn('import { initPresetState } from "../core/preset_state.js";', render_runtime_binding_js)
         self.assertIn('from "./bootstrap/ui_shell_debug_seed.js";', main_js)
         self.assertNotRegex(main_js, r'import\s+\{\s*initSidebar')
         self.assertNotRegex(main_js, r'import\s+\{\s*initToolbar')
         self.assertNotRegex(main_js, r'import\s+\{\s*initShortcuts')
-        self.assertIn('import("./ui/toolbar.js")', main_js)
-        self.assertIn('import("./ui/sidebar.js")', main_js)
-        self.assertIn('import("./ui/shortcuts.js")', main_js)
-        self.assertIn('"first-visible-base"', main_js)
+        self.assertIn('"../ui/toolbar.js"', deferred_ui_bootstrap_js)
+        self.assertIn('"../ui/sidebar.js"', deferred_ui_bootstrap_js)
+        self.assertIn('"../ui/shortcuts.js"', deferred_ui_bootstrap_js)
+        self.assertIn('"first-visible-base"', startup_failure_recovery_js)
         self.assertIn('"first-visible-scenario"', main_js)
         self.assertIn('"bootstrap-first-political-frame"', main_js)
         self.assertIn("function checkpointFirstVisibleFrameMetrics()", main_js)
         self.assertIn('registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisibleFrameMetrics);', main_js)
-        self.assertIn("function isUiShellDebugMode()", main_js)
-        self.assertIn('params.get("ui_shell") || params.get("startup_mode")', main_js)
-        self.assertIn('globalThis.__mapcreatorUiShellDebug = {', main_js)
-        self.assertIn('skippedStartupData: true,', main_js)
-        self.assertIn('skippedScenarioApply: true,', main_js)
-        self.assertIn('territoryPreview: uiShellTerritorySeed,', main_js)
+        self.assertIn("export function isUiShellDebugMode({ globalScope = globalThis } = {})", ui_shell_boot_js)
+        self.assertIn('params.get("ui_shell") || params.get("startup_mode")', ui_shell_boot_js)
+        self.assertIn('globalScope.__mapcreatorUiShellDebug = {', ui_shell_boot_js)
+        self.assertIn('skippedStartupData: true,', ui_shell_boot_js)
+        self.assertIn('skippedScenarioApply: true,', ui_shell_boot_js)
+        self.assertIn('territoryPreview: uiShellTerritorySeed,', ui_shell_boot_js)
+        self.assertIn('initPresetStateFn();', render_runtime_binding_js)
         self.assertLess(
-            main_js.index('initPresetState();'),
-            main_js.index('const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();'),
+            ui_shell_boot_js.index('const renderRuntime = helpers.createStartupRenderRuntimeBinding({'),
+            ui_shell_boot_js.index('const uiShellTerritorySeed = helpers.applyUiShellDebugTerritorySeed();'),
         )
         self.assertLess(
-            main_js.index('const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();'),
-            main_js.index('startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);'),
+            ui_shell_boot_js.index('const uiShellTerritorySeed = helpers.applyUiShellDebugTerritorySeed();'),
+            ui_shell_boot_js.index('const startupUiBootstrapPromise = helpers.bootstrapDeferredUi(renderRuntime.renderApp);'),
         )
         self.assertLess(
-            main_js.index('await startupUiBootstrapPromise;'),
-            main_js.index('revealUiShellDebugTerritoryPanels();'),
+            ui_shell_boot_js.index('await startupUiBootstrapPromise;'),
+            ui_shell_boot_js.index('helpers.revealUiShellDebugTerritoryPanels();'),
         )
         self.assertLess(
-            main_js.index('runPostScenarioUiReplay({ full: true });'),
-            main_js.index('await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
+            ui_shell_boot_js.index('helpers.runPostScenarioUiReplay({ full: true });'),
+            ui_shell_boot_js.index('await helpers.ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
         )
         self.assertLess(
-            main_js.index('await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
-            main_js.index('finishBootMetric("ui-shell", { mode: "debug" });'),
+            ui_shell_boot_js.index('await helpers.ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });'),
+            ui_shell_boot_js.index('helpers.finishBootMetric("ui-shell", { mode: "debug" });'),
         )
         self.assertLess(
             main_js.index('invalidateAllRenderPasses("bootstrap-first-political-frame");'),
             main_js.index("if (startupUiBootstrapPromise) {"),
         )
         self.assertIn('setBootPreviewVisibleState(state, active);', startup_boot_overlay_js)
-        self.assertIn('import {\n  createRenderDispatcher,', main_js)
+        self.assertIn('import { createRenderDispatcher } from "./startup_bootstrap_support.js";', render_runtime_binding_js)
         self.assertIn('locales: payload?.base?.locales || null,', startup_bootstrap_support_js)
         self.assertIn('geoAliases: payload?.base?.geo_aliases || null,', startup_bootstrap_support_js)
         self.assertIn('data/scenarios/${normalizedScenarioId}/${normalizedFilename}', startup_bootstrap_support_js)

@@ -1,5 +1,5 @@
 // App entry point (Phase 13)
-import { normalizeCityLayerStyleConfig, state as runtimeState } from "./core/state.js";
+import { state as runtimeState } from "./core/state.js";
 import "./core/data_service.js";
 import {
   setBootPreviewVisibleState,
@@ -16,6 +16,8 @@ import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnos
 import { createStartupRenderRuntimeBinding } from "./bootstrap/render_runtime_binding.js";
 import { handleStartupFailure } from "./bootstrap/startup_failure_recovery.js";
 import { isUiShellDebugMode, runUiShellDebugBoot } from "./bootstrap/ui_shell_boot.js";
+import { createDeferredMilsymbolLoader } from "./bootstrap/deferred_vendor_loader.js";
+import { createDeferredUiBootstrapper } from "./bootstrap/deferred_ui_bootstrap.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   configureStartupSupportKeyUsageAudit,
@@ -43,7 +45,7 @@ import {
   revealUiShellDebugTerritoryPanels,
 } from "./bootstrap/ui_shell_debug_seed.js";
 import { registerMapcreatorSnapshotProvider } from "./core/mapcreator_snapshot.js";
-import { initTranslations, updateUIText } from "./ui/i18n.js";
+import { updateUIText } from "./ui/i18n.js";
 import { bindBeforeUnload } from "./core/dirty_state.js";
 const state = runtimeState;
 configureStartupSupportKeyUsageAudit();
@@ -57,11 +59,12 @@ function requestMainRender(reason = "", { flush = false } = {}) {
   return flush ? flushRenderBoundary(reason) : requestRender(reason);
 }
 
-let milsymbolLoadPromise = null;
-let deferredUiBootstrapPromise = null;
 let postReadyContextWarmupScheduled = false;
 let postReadyHydrationScheduled = false;
 const postReadyScheduler = createPostReadyScheduler({ targetState: runtimeState });
+const deferredMilsymbolLoader = createDeferredMilsymbolLoader();
+const deferredUiBootstrapper = createDeferredUiBootstrapper();
+const bootstrapDeferredUi = deferredUiBootstrapper.bootstrapDeferredUi;
 
 const bootOverlayController = createStartupBootOverlayController();
 const {
@@ -174,90 +177,6 @@ function getDeferredDetailPromotionOwner() {
     },
   });
   return deferredDetailPromotionOwner;
-}
-
-async function yieldToMain() {
-  if (typeof globalThis.scheduler?.yield === "function") {
-    await globalThis.scheduler.yield();
-    return;
-  }
-  await new Promise((resolve) => {
-    globalThis.setTimeout(resolve, 0);
-  });
-}
-
-function loadDeferredMilsymbol() {
-  if (globalThis.ms?.Symbol) {
-    return Promise.resolve(true);
-  }
-  if (milsymbolLoadPromise) {
-    return milsymbolLoadPromise;
-  }
-  if (typeof document === "undefined") {
-    return Promise.resolve(false);
-  }
-
-  const existingScript = Array.from(document.scripts || []).find((script) => (
-    String(script?.src || "").endsWith("/vendor/milsymbol.js")
-    || String(script?.getAttribute?.("src") || "").trim() === "vendor/milsymbol.js"
-  ));
-  if (existingScript) {
-    milsymbolLoadPromise = new Promise((resolve) => {
-      const finalize = (loaded) => resolve(loaded && !!globalThis.ms?.Symbol);
-      existingScript.addEventListener("load", () => finalize(true), { once: true });
-      existingScript.addEventListener("error", () => finalize(false), { once: true });
-      if (globalThis.ms?.Symbol) {
-        finalize(true);
-      }
-    });
-    return milsymbolLoadPromise;
-  }
-
-  milsymbolLoadPromise = new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "vendor/milsymbol.js";
-    script.async = true;
-    script.onload = () => resolve(!!globalThis.ms?.Symbol);
-    script.onerror = () => {
-      console.warn("[boot] Failed to load deferred milsymbol renderer.");
-      resolve(false);
-    };
-    document.body?.appendChild(script);
-  });
-  return milsymbolLoadPromise;
-}
-
-function bootstrapDeferredUi(renderApp) {
-  if (deferredUiBootstrapPromise) {
-    return deferredUiBootstrapPromise;
-  }
-  deferredUiBootstrapPromise = (async () => {
-    const [
-      { initToolbar },
-      { initSidebar },
-      { initScenarioControls },
-      { initStyledSelects },
-      { initShortcuts },
-    ] = await Promise.all([
-      import("./ui/toolbar.js"),
-      import("./ui/sidebar.js"),
-      import("./ui/scenario_controls.js"),
-      import("./ui/styled_selects.js"),
-      import("./ui/shortcuts.js"),
-    ]);
-    await yieldToMain();
-    initToolbar({ render: renderApp });
-    await yieldToMain();
-    initSidebar({ render: renderApp });
-    await yieldToMain();
-    initStyledSelects();
-    await yieldToMain();
-    initScenarioControls();
-    initTranslations();
-    initShortcuts();
-    return true;
-  })();
-  return deferredUiBootstrapPromise;
 }
 
 async function rollbackStartupScenarioToBaseMap() {
@@ -704,7 +623,7 @@ async function bootstrap() {
     canContinueWithoutScenario: false,
   });
   setBootContinueHandler(null);
-  deferredUiBootstrapPromise = null;
+  deferredUiBootstrapper.reset();
   postReadyContextWarmupScheduled = false;
   postReadyHydrationScheduled = false;
   postReadyScheduler.reset("bootstrap");
@@ -815,8 +734,8 @@ async function bootstrap() {
     });
     renderDispatcher = renderRuntime.renderDispatcher;
     const { renderApp } = renderRuntime;
-    void loadDeferredMilsymbol();
-    startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
+    void deferredMilsymbolLoader.loadMilsymbol();
+    startupUiBootstrapPromise = deferredUiBootstrapper.bootstrapDeferredUi(renderApp);
 
     // Phase: 应用启动场景 | Input: scenarioBundlePromise + UI bootstrap promise | Output: active scenario state + source/recovery metadata。
     // UI bootstrap 与 scenario apply 并行启动，但 post-scenario UI replay 必须等 UI 绑定完成，避免控件用旧状态覆盖刚应用的场景。
