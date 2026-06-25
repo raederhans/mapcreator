@@ -33,6 +33,7 @@ test("main imports phase1 through phase6 bootstrap owners", () => {
     './bootstrap/ui_shell_boot.js',
     './bootstrap/deferred_vendor_loader.js',
     './bootstrap/deferred_ui_bootstrap.js',
+    './bootstrap/startup_ready_handoff.js',
   ];
 
   for (const ownerImport of ownerImports) {
@@ -60,20 +61,22 @@ test("main no longer owns extracted bootstrap implementations", () => {
   }
 });
 
-test("main keeps phase7 ready handoff policy local", () => {
+test("main delegates phase8 ready handoff policy to the startup ready handoff owner", () => {
   const mainSource = readRepoFile("js", "main.js");
-  const retainedPolicyTokens = [
-    "function scheduleReadyPostBootWork(",
-    "function flushPendingScenarioChunkRefreshAfterReady(",
-    "function startDeferredFullInteractionInfrastructureBuild(",
-    "function schedulePostReadyHydration(",
-    "function schedulePostReadyDeferredContextWarmup(",
-    "function schedulePostReadyVisualWarmup(",
-    "function schedulePostReadyPoliticalReconcile(",
+  const delegatedPolicyTokens = [
+    "function getStartupReadyHandoffOwner()",
+    "createStartupReadyHandoffOwner({",
+    "flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady",
+    "schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup",
+    "schedulePostReadyHydration: startupReadyHandoff.schedulePostReadyHydration",
+    "schedulePostReadyPoliticalReconcile: startupReadyHandoff.schedulePostReadyPoliticalReconcile",
+    "schedulePostReadyVisualWarmup: startupReadyHandoff.schedulePostReadyVisualWarmup",
+    "startDeferredFullInteractionInfrastructureBuild: startupReadyHandoff.startDeferredFullInteractionInfrastructureBuild",
+    'getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state")',
   ];
 
-  for (const token of retainedPolicyTokens) {
-    assert.ok(mainSource.includes(token), `phase7 should still retain ${token}`);
+  for (const token of delegatedPolicyTokens) {
+    assert.ok(mainSource.includes(token), `phase8 should delegate through ${token}`);
   }
 });
 
@@ -116,7 +119,6 @@ test("main top-level wiring order remains composition-root shaped", () => {
     "configureStartupSupportKeyUsageAudit();",
     "registerMainRuntimeDiagnostics({",
     "function requestMainRender(",
-    "let postReadyContextWarmupScheduled = false;",
     "const postReadyScheduler = createPostReadyScheduler({ targetState: runtimeState });",
     "const deferredMilsymbolLoader = createDeferredMilsymbolLoader();",
     "const deferredUiBootstrapper = createDeferredUiBootstrapper();",
@@ -124,7 +126,11 @@ test("main top-level wiring order remains composition-root shaped", () => {
     "const bootOverlayController = createStartupBootOverlayController();",
     'registerRuntimeHook(state, "setStartupReadonlyStateFn", setStartupReadonlyState);',
     "let startupDataPipelineOwner = null;",
+    "let deferredDetailPromotionOwner = null;",
+    "let startupScenarioBootOwner = null;",
+    "let startupReadyHandoffOwner = null;",
     "function getStartupDataPipelineOwner()",
+    "function getStartupReadyHandoffOwner()",
   ]);
 });
 

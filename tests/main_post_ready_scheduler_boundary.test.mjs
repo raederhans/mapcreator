@@ -45,8 +45,8 @@ test("main no longer owns post-ready scheduler internals", () => {
   }
 });
 
-test("main keeps post-ready policy functions and task keys", () => {
-  const mainSource = readRepoFile("js", "main.js");
+test("startup ready handoff owner keeps post-ready policy functions and task keys", () => {
+  const ownerSource = readRepoFile("js", "bootstrap", "startup_ready_handoff.js");
 
   for (const token of [
     "function schedulePostReadyHydration()",
@@ -62,13 +62,13 @@ test("main keeps post-ready policy functions and task keys", () => {
     "post-ready-context-warmup",
     "post-ready-contour-warmup",
   ]) {
-    assert.ok(mainSource.includes(token), `missing policy token ${token}`);
+    assert.ok(ownerSource.includes(token), `missing policy token ${token}`);
   }
 });
 
 test("ready-state post-boot scheduling order stays stable", () => {
-  const mainSource = readRepoFile("js", "main.js");
-  const readyBody = sliceFunction(mainSource, "scheduleReadyPostBootWork");
+  const ownerSource = readRepoFile("js", "bootstrap", "startup_ready_handoff.js");
+  const readyBody = sliceFunction(ownerSource, "scheduleReadyPostBootWork");
   const orderedTokens = [
     "checkpointBootMetric(\"time-to-interactive\");",
     "checkpointBootMetric(\"first-interactive\");",

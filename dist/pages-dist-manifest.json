@@ -45641,6 +45641,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/startup_ready_handoff.js",
+      "size_bytes": 10203,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
       "size_bytes": 6262,
       "source_kind": "dist"
@@ -46497,7 +46502,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 29755,
+      "size_bytes": 22596,
       "source_kind": "dist"
     },
     {
@@ -47267,7 +47272,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1459588,
+      "size_bytes": 1459715,
       "source_kind": "dist"
     },
     {
@@ -47286,5 +47291,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155225665
+  "total_bytes": 1155228836
 }

@@ -8,10 +8,8 @@ import {
 import { createStartupBootOverlayController } from "./bootstrap/startup_boot_overlay.js";
 import { createStartupDataPipelineOwner } from "./bootstrap/startup_data_pipeline.js";
 import { createDeferredDetailPromotionOwner } from "./bootstrap/deferred_detail_promotion.js";
-import {
-  createPostReadyScheduler,
-  POST_READY_IDLE_QUIET_MS,
-} from "./bootstrap/post_ready_scheduler.js";
+import { createPostReadyScheduler } from "./bootstrap/post_ready_scheduler.js";
+import { createStartupReadyHandoffOwner } from "./bootstrap/startup_ready_handoff.js";
 import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnostics.js";
 import { createStartupRenderRuntimeBinding } from "./bootstrap/render_runtime_binding.js";
 import { handleStartupFailure } from "./bootstrap/startup_failure_recovery.js";
@@ -59,8 +57,6 @@ function requestMainRender(reason = "", { flush = false } = {}) {
   return flush ? flushRenderBoundary(reason) : requestRender(reason);
 }
 
-let postReadyContextWarmupScheduled = false;
-let postReadyHydrationScheduled = false;
 const postReadyScheduler = createPostReadyScheduler({ targetState: runtimeState });
 const deferredMilsymbolLoader = createDeferredMilsymbolLoader();
 const deferredUiBootstrapper = createDeferredUiBootstrapper();
@@ -88,6 +84,7 @@ registerRuntimeHook(state, "setStartupReadonlyStateFn", setStartupReadonlyState)
 let startupDataPipelineOwner = null;
 let deferredDetailPromotionOwner = null;
 let startupScenarioBootOwner = null;
+let startupReadyHandoffOwner = null;
 
 function checkpointFirstVisibleFrameMetrics() {
   if (!state.firstVisibleFramePainted) {
@@ -114,7 +111,8 @@ registerRuntimeHook(state, "noteFirstVisibleFramePaintedFn", checkpointFirstVisi
  * Startup owner boundaries:
  * 1) StartupDataPipelineOwner: drives bootstrap data ingestion and base-state hydration.
  * 2) StartupScenarioBootOwner: applies the startup scenario bundle onto hydrated base runtimeState.
- * 3) DeferredDetailPromotionOwner: promotes delayed detail topology and unlocks interaction readiness.
+ * 3) StartupReadyHandoffOwner: owns ready-state handoff and post-ready work policy.
+ * 4) DeferredDetailPromotionOwner: promotes delayed detail topology and unlocks interaction readiness.
  */
 function getStartupDataPipelineOwner() {
   if (startupDataPipelineOwner) {
@@ -149,10 +147,35 @@ function getStartupScenarioBootOwner() {
   return startupScenarioBootOwner;
 }
 
+function getStartupReadyHandoffOwner() {
+  if (startupReadyHandoffOwner) {
+    return startupReadyHandoffOwner;
+  }
+  startupReadyHandoffOwner = createStartupReadyHandoffOwner({
+    runtimeState: state,
+    postReadyScheduler,
+    helpers: {
+      buildInteractionInfrastructureAfterStartup,
+      checkpointBootMetric,
+      completeBootSequenceLogging,
+      ensureActiveScenarioBundleHydrated,
+      ensureContextLayerDataReady,
+      ensureFullLocalizationDataReady,
+      reconcileDetailPromotionPoliticalPass,
+      requestMainRender,
+      scheduleDeferredDetailPromotion,
+      shouldFastTrackScenarioHydration,
+      consoleWarn: console.warn.bind(console),
+    },
+  });
+  return startupReadyHandoffOwner;
+}
+
 function getDeferredDetailPromotionOwner() {
   if (deferredDetailPromotionOwner) {
     return deferredDetailPromotionOwner;
   }
+  const startupReadyHandoff = getStartupReadyHandoffOwner();
   deferredDetailPromotionOwner = createDeferredDetailPromotionOwner({
     runtimeState: state,
     helpers: {
@@ -160,19 +183,19 @@ function getDeferredDetailPromotionOwner() {
       checkpointBootMetric,
       completeBootSequenceLogging,
       finishBootMetric,
-      flushPendingScenarioChunkRefreshAfterReady,
+      flushPendingScenarioChunkRefreshAfterReady: startupReadyHandoff.flushPendingScenarioChunkRefreshAfterReady,
       getBootProgressWindow,
       hasStartupReadonlyUnlockScheduled,
       requestMainRender,
-      schedulePostReadyDeferredContextWarmup,
-      schedulePostReadyHydration,
-      schedulePostReadyPoliticalReconcile,
-      schedulePostReadyVisualWarmup,
+      schedulePostReadyDeferredContextWarmup: startupReadyHandoff.schedulePostReadyDeferredContextWarmup,
+      schedulePostReadyHydration: startupReadyHandoff.schedulePostReadyHydration,
+      schedulePostReadyPoliticalReconcile: startupReadyHandoff.schedulePostReadyPoliticalReconcile,
+      schedulePostReadyVisualWarmup: startupReadyHandoff.schedulePostReadyVisualWarmup,
       scheduleStartupReadonlyUnlockTimer,
       setBootState,
       setStartupReadonlyState,
       startBootMetric,
-      startDeferredFullInteractionInfrastructureBuild,
+      startDeferredFullInteractionInfrastructureBuild: startupReadyHandoff.startDeferredFullInteractionInfrastructureBuild,
       warnOnStartupBundleIntegrity,
     },
   });
@@ -213,65 +236,6 @@ function shouldFastTrackScenarioHydration() {
   return getStartupDataPipelineOwner().shouldFastTrackScenarioHydration();
 }
 
-function schedulePostReadyHydration() {
-  if (postReadyHydrationScheduled) {
-    return;
-  }
-  postReadyHydrationScheduled = true;
-  // ready 之后再补齐完整本地化与场景 bundle，保证首屏先可见；调度器负责等待交互空窗，避免和用户第一轮缩放抢主线程。
-  postReadyScheduler.scheduleTask("post-ready-localization-hydration", () => (
-    ensureFullLocalizationDataReady({ reason: "post-ready-idle", renderNow: true }).catch((error) => {
-      console.warn("[boot] Deferred full localization hydration failed during idle scheduling.", error);
-      return null;
-    })
-  ), {
-    timeout: 2200,
-    delayMs: 1200,
-    retryDelayMs: 600,
-  });
-  postReadyScheduler.scheduleTask("post-ready-scenario-hydration", () => (
-    ensureActiveScenarioBundleHydrated({ reason: "post-ready-idle", renderNow: true }).catch((error) => {
-      console.warn("[boot] Deferred full scenario hydration failed during idle scheduling.", error);
-      return null;
-    })
-  ), {
-    timeout: 4800,
-    delayMs: shouldFastTrackScenarioHydration() ? 300 : 4200,
-    retryDelayMs: shouldFastTrackScenarioHydration() ? 450 : 900,
-  });
-}
-
-const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";
-
-function schedulePostReadyPoliticalReconcileTask(reason = "detail-promotion-political-reconcile") {
-  const normalizedReason = String(reason || "detail-promotion-political-reconcile").trim()
-    || "detail-promotion-political-reconcile";
-  postReadyScheduler.scheduleTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {
-    if (!runtimeState.detailPromotionCompleted) {
-      schedulePostReadyPoliticalReconcileTask(normalizedReason);
-      return false;
-    }
-    const requested = reconcileDetailPromotionPoliticalPass(normalizedReason);
-    if (!requested) {
-      schedulePostReadyPoliticalReconcileTask(normalizedReason);
-    }
-    return requested;
-  }, {
-    timeout: 1200,
-    delayMs: 0,
-    retryDelayMs: 320,
-    idleQuietMs: POST_READY_IDLE_QUIET_MS,
-  });
-  return true;
-}
-
-function schedulePostReadyPoliticalReconcile(reason = "detail-promotion-political-reconcile") {
-  if (!runtimeState.detailPromotionCompleted) {
-    return false;
-  }
-  return schedulePostReadyPoliticalReconcileTask(reason);
-}
-
 async function ensureContextLayerDataReady(
   requestedLayerNames,
   { reason = "manual", renderNow = true } = {}
@@ -279,45 +243,6 @@ async function ensureContextLayerDataReady(
   return getStartupDataPipelineOwner().ensureContextLayerDataReady(requestedLayerNames, {
     reason,
     renderNow,
-  });
-}
-
-function scheduleIdleTask(callback, { timeout = 1200, delayMs = 0 } = {}) {
-  const run = () => {
-    if (typeof globalThis.requestIdleCallback === "function") {
-      globalThis.requestIdleCallback(() => {
-        void callback();
-      }, { timeout });
-      return;
-    }
-    globalThis.setTimeout(() => {
-      void callback();
-    }, 0);
-  };
-  globalThis.setTimeout(run, Math.max(0, delayMs));
-}
-
-function flushPendingScenarioChunkRefreshAfterReady(reason = "post-ready") {
-  if (typeof runtimeState.scheduleScenarioChunkRefreshFn !== "function") {
-    return;
-  }
-  const loadState = runtimeState.runtimeChunkLoadState;
-  const normalizedReason = String(reason || "post-ready").trim() || "post-ready";
-  const shouldSeedFirstReadyFlush = !!(
-    loadState
-    && Number(loadState.selectionVersion || 0) <= 0
-    && !String(loadState.pendingReason || "").trim()
-    && !loadState.pendingPromotion
-  );
-  if (shouldSeedFirstReadyFlush) {
-    // 首次 ready 可能早于 chunk runtime 的 selection 初始化；这里补一个显式 pending reason，让 chunk owner 统一执行 first-ready 刷新。
-    loadState.pendingReason = normalizedReason;
-    loadState.pendingDelayMs = 0;
-  }
-  runtimeState.scheduleScenarioChunkRefreshFn({
-    reason: normalizedReason,
-    delayMs: 0,
-    flushPending: true,
   });
 }
 
@@ -354,147 +279,6 @@ async function ensureStartupInitialScenarioChunkVisualReady({
     );
   }
   return result;
-}
-
-function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state") {
-  // ready 是启动链的交接点：同步完成可交互指标与首轮 chunk flush；detail promotion 单独调度，交互基础设施和数据补水进入 post-ready 任务。
-  checkpointBootMetric("time-to-interactive");
-  checkpointBootMetric("first-interactive");
-  completeBootSequenceLogging();
-  flushPendingScenarioChunkRefreshAfterReady(reason);
-  scheduleDeferredDetailPromotion(renderDispatcher);
-  startDeferredFullInteractionInfrastructureBuild(reason);
-  schedulePostReadyHydration();
-  schedulePostReadyDeferredContextWarmup();
-  schedulePostReadyVisualWarmup();
-}
-
-function startDeferredFullInteractionInfrastructureBuild(reason = "post-ready-full-interaction") {
-  postReadyScheduler.scheduleTask("post-ready-full-interaction-infra", () => {
-    if (runtimeState.detailDeferred && !runtimeState.detailPromotionCompleted) {
-      startDeferredFullInteractionInfrastructureBuild(`${reason}-after-detail`);
-      return false;
-    }
-    return buildInteractionInfrastructureAfterStartup({
-      chunked: true,
-      buildHitCanvas: false,
-      mode: "full",
-    }).catch((error) => {
-      console.warn(`[boot] Deferred full interaction infrastructure build failed. reason=${reason}`, error);
-    });
-  }, {
-    timeout: 1200,
-    delayMs: 180,
-    retryDelayMs: 320,
-    idleQuietMs: POST_READY_IDLE_QUIET_MS,
-  });
-}
-
-function schedulePostReadyVisualWarmup() {
-  const textureMode = String(runtimeState.styleConfig?.texture?.mode || "none").trim().toLowerCase();
-  const dayNightEnabled = !!runtimeState.styleConfig?.dayNight?.enabled;
-  if (textureMode === "none" && !dayNightEnabled) {
-    return;
-  }
-  postReadyScheduler.scheduleTask("post-ready-visual-warmup", async () => {
-    if (!runtimeState.bootBlocking) {
-      requestMainRender("post-ready-visual-warmup");
-    }
-  }, {
-    timeout: 1200,
-    delayMs: 900,
-    retryDelayMs: 320,
-    idleQuietMs: POST_READY_IDLE_QUIET_MS,
-  });
-}
-
-function schedulePostReadyDeferredContextWarmup() {
-  if (runtimeState.bootBlocking || postReadyContextWarmupScheduled) {
-    return;
-  }
-  const requestedLayerNames = [];
-  const requestedContourLayerNames = [];
-  if (runtimeState.showRivers) {
-    requestedLayerNames.push("rivers");
-  }
-  if (runtimeState.showUrban) {
-    requestedLayerNames.push("urban");
-  }
-  if (runtimeState.showPhysical) {
-    requestedLayerNames.push("physical-set");
-    requestedContourLayerNames.push("physical-contours-set");
-  }
-  const shouldWarmCities =
-    runtimeState.showCityPoints !== false
-    && runtimeState.baseCityDataState === "idle"
-    && typeof runtimeState.ensureBaseCityDataFn === "function";
-  if (!requestedLayerNames.length && !shouldWarmCities) {
-    return;
-  }
-  postReadyContextWarmupScheduled = true;
-  postReadyScheduler.scheduleTask("post-ready-context-warmup", async () => {
-    if (runtimeState.bootBlocking) {
-      return;
-    }
-    const tasks = [];
-    if (requestedLayerNames.length) {
-      tasks.push(ensureContextLayerDataReady(requestedLayerNames, {
-        reason: "post-ready",
-        renderNow: false,
-      }));
-    }
-    if (shouldWarmCities && runtimeState.baseCityDataState === "idle" && typeof runtimeState.ensureBaseCityDataFn === "function") {
-      tasks.push(runtimeState.ensureBaseCityDataFn({ reason: "post-ready", renderNow: false }));
-    }
-    await Promise.allSettled(tasks);
-    requestMainRender("post-ready-context-warmup");
-  }, {
-    timeout: 1600,
-    delayMs: 900,
-    retryDelayMs: 420,
-    idleQuietMs: POST_READY_IDLE_QUIET_MS,
-  });
-  if (requestedContourLayerNames.length) {
-    postReadyScheduler.scheduleTask("post-ready-contour-warmup", async () => {
-      if (runtimeState.bootBlocking) {
-        return;
-      }
-      await ensureContextLayerDataReady(requestedContourLayerNames, {
-        reason: "post-ready-contours",
-        renderNow: false,
-      });
-      requestMainRender("post-ready-contours");
-    }, {
-      timeout: 1800,
-      delayMs: 1400,
-      retryDelayMs: 420,
-      idleQuietMs: POST_READY_IDLE_QUIET_MS,
-    });
-  }
-}
-
-function schedulePostReadyCityWarmup() {
-  if (
-    runtimeState.bootBlocking
-    || runtimeState.showCityPoints === false
-    || runtimeState.baseCityDataState !== "idle"
-    || typeof runtimeState.ensureBaseCityDataFn !== "function"
-  ) {
-    return;
-  }
-  const run = () => {
-    if (runtimeState.bootBlocking || runtimeState.baseCityDataState !== "idle") {
-      return;
-    }
-    void runtimeState.ensureBaseCityDataFn({ reason: "post-ready", renderNow: true }).catch(() => {});
-  };
-  if (typeof globalThis.requestIdleCallback === "function") {
-    globalThis.requestIdleCallback(() => {
-      run();
-    }, { timeout: 2200 });
-  } else {
-    globalThis.setTimeout(run, 900);
-  }
 }
 
 function hasDetailTopologyLoaded() {
@@ -578,7 +362,7 @@ async function finalizeReadyState(renderDispatcher) {
       progress: 100,
       canContinueWithoutScenario: false,
     });
-    scheduleReadyPostBootWork(renderDispatcher, "ready-state");
+    getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state");
     return;
   }
   if (shouldEnterStartupReadonly) {
@@ -600,7 +384,7 @@ async function finalizeReadyState(renderDispatcher) {
     progress: 100,
     canContinueWithoutScenario: false,
   });
-  scheduleReadyPostBootWork(renderDispatcher, "ready-state");
+  getStartupReadyHandoffOwner().scheduleReadyPostBootWork(renderDispatcher, "ready-state");
 }
 
 async function bootstrap() {
@@ -624,8 +408,7 @@ async function bootstrap() {
   });
   setBootContinueHandler(null);
   deferredUiBootstrapper.reset();
-  postReadyContextWarmupScheduled = false;
-  postReadyHydrationScheduled = false;
+  getStartupReadyHandoffOwner().reset("bootstrap");
   postReadyScheduler.reset("bootstrap");
   setStartupInteractionMode(state, resolveStartupInteractionMode());
   setStartupReadonlyState(false);
