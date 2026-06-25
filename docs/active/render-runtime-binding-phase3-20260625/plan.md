@@ -25,7 +25,7 @@ Extract the duplicated startup render runtime binding from `js/main.js` into `js
 - [x] Run requested Node/static verification.
 - [x] Run Pages dist and dist drift verification, including required dist changes.
 - [x] Run browser startup smoke.
-- [ ] Run final review, commit, push, and clean the integration worktree.
+- [x] Run final review, commit, push, and clean the integration worktree.
 
 ## Risk Notes
 

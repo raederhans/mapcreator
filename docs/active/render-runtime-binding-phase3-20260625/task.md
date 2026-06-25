@@ -39,11 +39,11 @@ Generated dist:
 
 ## Integration State
 
-- Commit status: not committed yet.
+- Commit status: functional commit `912a86d35a4de0a15285bf540f30516be5e504b0` pushed to feature branch and `origin/main`.
 - Base commit: `origin/main@5b88fb6d94e320bad6bb52a58c96ef7ce60f264c`.
 - Branch: `codex/render-runtime-binding-phase3-20260625`.
 - Parent checkout WIP: unrelated `docs/archive/**` deletions stay outside this worktree.
-- Current main divergence at creation: `HEAD...origin/main = 0 0`.
+- Current main divergence after push: `HEAD...origin/main = 0 0`.
 
 ## Overlap Risk
 
@@ -71,4 +71,4 @@ Generated dist:
 
 ## Recommended Next Step
 
-Run final review, then commit and push this branch and fast-forward `origin/main` from the clean worktree.
+No active integration action remains after registry closeout and local worktree cleanup. Recovery is available through commit `912a86d35a4de0a15285bf540f30516be5e504b0` and remote branch `origin/codex/render-runtime-binding-phase3-20260625`.

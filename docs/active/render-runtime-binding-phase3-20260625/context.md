@@ -43,3 +43,10 @@
 
 - Final reviewer requested changing empty `flushReason` fallback into a hard error. This was not applied because the phase3 task explicitly requires empty `flushReason` to normalize to `"legacy-render-now"`.
 - The real startup call sites are still protected by boundary tests requiring both explicit reasons: `"ui-shell-render-now"` and `"legacy-render-now"`.
+
+## Closeout
+
+- Functional commit: `912a86d35a4de0a15285bf540f30516be5e504b0`.
+- Pushed to `origin/codex/render-runtime-binding-phase3-20260625` and fast-forwarded to `origin/main`.
+- Post-push probe confirmed `HEAD`, `origin/main`, and the remote feature branch all pointed at `912a86d35a4de0a15285bf540f30516be5e504b0`.
+- Local worktree cleanup was performed after this registry closeout commit.
