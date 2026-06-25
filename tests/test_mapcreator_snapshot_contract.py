@@ -9,16 +9,23 @@ MAIN_JS = REPO_ROOT / "js" / "main.js"
 DATA_SERVICE_JS = REPO_ROOT / "js" / "core" / "data_service.js"
 SNAPSHOT_JS = REPO_ROOT / "js" / "core" / "mapcreator_snapshot.js"
 LOAD_STATUS_DISPLAY_JS = REPO_ROOT / "js" / "core" / "load_status_display.js"
+MAIN_RUNTIME_DIAGNOSTICS_JS = REPO_ROOT / "js" / "bootstrap" / "main_runtime_diagnostics.js"
 
 
 class MapcreatorSnapshotContractTest(unittest.TestCase):
     def test_main_registers_runtime_load_status_provider(self) -> None:
-        content = MAIN_JS.read_text(encoding="utf-8")
+        main_content = MAIN_JS.read_text(encoding="utf-8")
+        diagnostics_content = MAIN_RUNTIME_DIAGNOSTICS_JS.read_text(encoding="utf-8")
 
-        self.assertIn('./core/mapcreator_snapshot.js', content)
-        self.assertIn('registerMapcreatorSnapshotProvider("loadStatus", "main_runtime"', content)
-        self.assertIn('registerMapcreatorSnapshotProvider("version", "main_runtime"', content)
-        self.assertIn("buildMainRuntimeLoadStatusSnapshot", content)
+        self.assertIn('./core/mapcreator_snapshot.js', main_content)
+        self.assertIn('./bootstrap/main_runtime_diagnostics.js', main_content)
+        self.assertIn("registerMainRuntimeDiagnostics({", main_content)
+        self.assertIn("targetState: state,", main_content)
+        self.assertIn("registerSnapshotProvider: registerMapcreatorSnapshotProvider,", main_content)
+        self.assertIn('registerSnapshotProvider(\n    "loadStatus",\n    "main_runtime"', diagnostics_content)
+        self.assertIn('registerSnapshotProvider(\n    "version",\n    "main_runtime"', diagnostics_content)
+        self.assertIn("buildMainRuntimeLoadStatusSnapshot", diagnostics_content)
+        self.assertIn("buildMainRuntimeVersionSnapshot", diagnostics_content)
 
     def test_data_service_exports_read_only_snapshot_providers(self) -> None:
         content = DATA_SERVICE_JS.read_text(encoding="utf-8")

@@ -12,6 +12,7 @@ import {
   createPostReadyScheduler,
   POST_READY_IDLE_QUIET_MS,
 } from "./bootstrap/post_ready_scheduler.js";
+import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnostics.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   createRenderDispatcher,
@@ -48,70 +49,10 @@ import { bindBeforeUnload } from "./core/dirty_state.js";
 const state = runtimeState;
 configureStartupSupportKeyUsageAudit();
 
-function cloneSnapshotValue(value, fallback = null) {
-  if (value === undefined) return fallback;
-  if (typeof globalThis.structuredClone === "function") {
-    try {
-      return globalThis.structuredClone(value);
-    } catch (_error) {
-      // Fall through to JSON clone.
-    }
-  }
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (_error) {
-    return fallback;
-  }
-}
-
-function buildMainRuntimeLoadStatusSnapshot() {
-  const chunkLoadState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === "object"
-    ? state.runtimeChunkLoadState
-    : {};
-  // 这个 snapshot 给诊断面板和外部调试工具读“当前主线程还卡在哪一段”。
-  // 这里坚持只暴露可序列化的只读快照，避免把 runtimeState 原对象直接泄漏给诊断消费者。
-  return {
-    boot: {
-      phase: String(state.bootPhase || ""),
-      interactionMode: String(state.startupInteractionMode || ""),
-      readonly: !!state.startupReadonly,
-      bootProgressPhase: String(state.bootProgressPhase || ""),
-    },
-    startup: {
-      activeScenarioId: String(state.activeScenarioId || ""),
-      topologyBundleMode: String(state.topologyBundleMode || "single"),
-      detailDeferred: !!state.detailDeferred,
-      detailPromotionCompleted: !!state.detailPromotionCompleted,
-      startupBootCacheState: cloneSnapshotValue(state.startupBootCacheState, {}),
-    },
-    contextLayers: {
-      loadStateByName: cloneSnapshotValue(state.contextLayerLoadStateByName, {}),
-      deferredStatusByName: cloneSnapshotValue(state.contextLayerDeferredStatusByName, {}),
-    },
-    chunkRuntime: {
-      shellStatus: String(chunkLoadState.shellStatus || ""),
-      selectionVersion: Number(chunkLoadState.selectionVersion || 0),
-      pendingReason: String(chunkLoadState.pendingReason || ""),
-      pendingPromotion: !!chunkLoadState.pendingPromotion,
-      pendingVisualPromotion: !!chunkLoadState.pendingVisualPromotion,
-      pendingInfraPromotion: !!chunkLoadState.pendingInfraPromotion,
-      promotionScheduled: !!chunkLoadState.promotionScheduled,
-      refreshScheduled: !!chunkLoadState.refreshScheduled,
-      promotionCommitInFlight: !!chunkLoadState.promotionCommitInFlight,
-      errorByChunkId: cloneSnapshotValue(chunkLoadState.errorByChunkId, {}),
-      inFlightByChunkId: cloneSnapshotValue(chunkLoadState.inFlightByChunkId, {}),
-    },
-    postReadyScheduler: cloneSnapshotValue(state.postReadyTaskDiagnostics, {}),
-  };
-}
-
-registerMapcreatorSnapshotProvider("loadStatus", "main_runtime", buildMainRuntimeLoadStatusSnapshot);
-registerMapcreatorSnapshotProvider("version", "main_runtime", () => ({
-  appSchemaVersion: 1,
-  activeScenarioId: String(state.activeScenarioId || ""),
-  bootPhase: String(state.bootPhase || ""),
-  topologyBundleMode: String(state.topologyBundleMode || "single"),
-}));
+registerMainRuntimeDiagnostics({
+  targetState: state,
+  registerSnapshotProvider: registerMapcreatorSnapshotProvider,
+});
 
 function requestMainRender(reason = "", { flush = false } = {}) {
   return flush ? flushRenderBoundary(reason) : requestRender(reason);

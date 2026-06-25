@@ -45596,6 +45596,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/main_runtime_diagnostics.js",
+      "size_bytes": 3812,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/post_ready_scheduler.js",
       "size_bytes": 14048,
       "source_kind": "dist"
@@ -46467,7 +46472,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 38525,
+      "size_bytes": 35896,
       "source_kind": "dist"
     },
     {
@@ -47237,7 +47242,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1458832,
+      "size_bytes": 1458961,
       "source_kind": "dist"
     },
     {
@@ -47256,5 +47261,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155213935
+  "total_bytes": 1155215247
 }
