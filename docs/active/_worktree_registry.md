@@ -1,27 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-25 15:45 UTC
+Last updated: 2026-06-25 15:54 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: current remote main is `origin/main@c8fbe1241eca7bba7900464da67698868dd98f73`.
-- Latest integrated work: post-ready scheduler, main runtime diagnostics, and render runtime binding are on `origin/main`; the 2026-06-25 audit found no functional defect and removed the three covered clean local worktrees.
+- Integration base: current remote main is `origin/main@2aab955c5bc98694ca6109e5660ed613585557f2`.
+- Latest integrated work: post-ready scheduler, main runtime diagnostics, render runtime binding, and startup audit registry cleanup are on `origin/main`; phase4 is rebased over that registry-only cleanup.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat `origin/main@c8fbe124` as the current startup/platformization baseline.
-2. Keep `codex/startup-failure-recovery-phase4-20260625` serial: it touches `js/main.js`, `package.json`, generated dist, and startup recovery tests, and it still has uncommitted WIP.
+1. Treat `origin/main@2aab955c` as the current startup/platformization baseline.
+2. Finish startup failure recovery phase4 serially because it touches `js/main.js`, `package.json`, generated dist, startup recovery tests, and the registry.
 3. Keep the parent `docs/archive/**` deletion WIP out of startup/bootstrap commits until a cleanup owner reviews it.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@c4a5632f`; remote `origin/main@c8fbe124` | current pushed `origin/main@c8fbe124` | parent checkout has unrelated docs/archive deletion WIP, is behind remote main, and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane; production startup/bootstrap source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, parent `git status --short --branch`, and audit verification from clean `origin/main`. | Yellow for docs/archive cleanup; green for production startup/bootstrap files. | Keep docs/archive deletions for a separate cleanup decision; start feature/audit work from clean `origin/main`. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-startup-failure-recovery-phase4-20260625` | branch `codex/startup-failure-recovery-phase4-20260625@c8fbe124` plus uncommitted WIP | `origin/main@c8fbe124` | in-progress, not ready for integration | hot files: `js/main.js`, `package.json`, `docs/active/_worktree_registry.md`; untracked `js/bootstrap/startup_failure_recovery.js`, `tests/main_startup_failure_recovery_boundary.test.mjs`, `tests/startup_failure_recovery_behavior.test.mjs`; generated dist has large line-ending drift plus deleted `dist/.nojekyll` and `dist/pages-dist-manifest.json`. | Audit probe only: `git status --short --untracked-files=all`, `git diff --numstat`, and path overlap checks. No phase4 tests were run by this audit because the worktree is unfinished and touches shared startup files. | Red for `js/main.js`, `package.json`, generated dist, and startup/bootstrap semantics. | Original owner should normalize generated dist, stage new files, run the named startup-failure-recovery tests plus Pages dist, then integrate serially from current `origin/main`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@c4a5632f`; remote `origin/main@2aab955c` | current pushed `origin/main@2aab955c` | parent checkout has unrelated docs/archive deletion WIP, is behind remote main, and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane; production startup/bootstrap source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, parent `git status --short --branch`, and phase4 integration verification from a clean worktree. | Yellow for docs/archive cleanup; green for production startup/bootstrap files. | Keep docs/archive deletions for a separate cleanup decision; start feature/audit work from clean `origin/main`. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-startup-failure-recovery-phase4-20260625` | branch `codex/startup-failure-recovery-phase4-20260625`; rebasing functional commit over `origin/main@2aab955c` | original clean base `origin/main@c8fbe1241eca7bba7900464da67698868dd98f73`, current integration base `origin/main@2aab955c5bc98694ca6109e5660ed613585557f2` | ready-for-integration after registry conflict resolution | hot files: `js/main.js`, `js/bootstrap/startup_failure_recovery.js`, `package.json`, startup failure recovery tests, generated `dist/app/js/main.js`, generated `dist/app/js/bootstrap/startup_failure_recovery.js`, `dist/pages-dist-manifest.json`, active docs and registry | PASS syntax; startup failure recovery 14/14 after review follow-up; render runtime binding 14/14; main runtime diagnostics 12/12; post-ready scheduler 10/10; startup hydration 12/12; exact-after-settle 8/8; render diagnostics 21/21; state-write allowlist; architecture boundaries; Pages dist 39+8 with 1101.70 MiB total; ready-state browser smoke 5/5; full e2e smoke 4/4; staged dist drift passed. | Yellow for startup/bootstrap semantics and generated dist; green against parent docs/archive deletion WIP for production files. | Continue rebase, rerun focused post-rebase checks, then push branch/main and clean worktree after closeout. |
 
 ## Recent Integrated Branches
 

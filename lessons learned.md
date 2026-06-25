@@ -474,3 +474,6 @@
 
 ### 抽 owner 时同步旧边界合同
 - 从 `main.js` 抽出 bootstrap owner 后，除了新增 owner 合同，还要 grep 旧 Python/Node boundary tests 里的旧 owner token；否则正确的职责迁移会被旧合同当成回归。
+
+### Clean worktree 跑浏览器 smoke 先装依赖
+- 新建 clean worktree 可以跑纯 Node source tests，但 Playwright smoke 依赖本地 `node_modules/@playwright/test`；首次浏览器验证前先用 `npm ci` 建立 ignored 依赖树，避免把 `MODULE_NOT_FOUND` 误判成应用启动回归。

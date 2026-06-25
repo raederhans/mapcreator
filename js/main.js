@@ -14,6 +14,7 @@ import {
 } from "./bootstrap/post_ready_scheduler.js";
 import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnostics.js";
 import { createStartupRenderRuntimeBinding } from "./bootstrap/render_runtime_binding.js";
+import { handleStartupFailure } from "./bootstrap/startup_failure_recovery.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   configureStartupSupportKeyUsageAudit,
@@ -892,52 +893,28 @@ async function bootstrap() {
       source: scenarioBundleSource,
     });
   } catch (error) {
-    // 启动失败路径保持最小可恢复面：清 apply 标志、回放 UI 状态，再按是否已有 base map 决定能否继续。
-    let deferredUiBootstrapError = null;
-    if (startupUiBootstrapPromise && !startupUiBootstrapAwaited) {
-      try {
-        await startupUiBootstrapPromise;
-      } catch (uiBootstrapError) {
-        startupUiBootstrapFailed = true;
-        deferredUiBootstrapError = uiBootstrapError;
-        console.error("Deferred UI bootstrap failed during startup:", uiBootstrapError);
-      }
-    }
-    runtimeState.scenarioApplyInFlight = false;
-    runPostScenarioUiReplay({ full: true });
-    finishBootMetric("total", { failed: true });
-    console.error("Failed to boot application:", error);
-    console.error("Stack trace:", error?.stack);
-    setStartupReadonlyState(false);
-    const canContinueWithoutScenario =
-      !!runtimeState.landData?.features?.length
-      && !!renderDispatcher?.flush;
-    setBootContinueHandler(canContinueWithoutScenario
-      ? async () => {
-        if (String(runtimeState.activeScenarioId || "").trim()) {
-          await rollbackStartupScenarioToBaseMap();
-        }
-        if (startupUiBootstrapPromise && !startupUiBootstrapFailed && !deferredUiBootstrapError) {
-          await startupUiBootstrapPromise;
-        }
-        setBootState("warmup", {
-          message: getBootLanguage() === "zh"
-            ? "正在以基础地图模式继续。"
-            : "Continuing with the base map only.",
-          canContinueWithoutScenario: false,
-        });
-        invalidateAllRenderPasses("bootstrap-first-frame");
-        renderDispatcher.flush();
-        checkpointBootMetricOnce("first-visible");
-        checkpointBootMetricOnce("first-visible-base");
-        await finalizeReadyState(renderDispatcher);
-      }
-      : null);
-    setBootState("error", {
-      error: error?.message || "Failed to load the default startup scenario.",
-      canContinueWithoutScenario,
-      progress: runtimeState.bootProgress || getBootProgressWindow("scenario-apply").min,
+    const failureRecovery = await handleStartupFailure({
+      error,
+      targetState: runtimeState,
+      renderDispatcher,
+      startupUiBootstrapPromise,
+      startupUiBootstrapAwaited,
+      startupUiBootstrapFailed,
+      helpers: {
+        finalizeReadyState,
+        getBootLanguage,
+        getBootProgressWindow,
+        checkpointBootMetricOnce,
+        finishBootMetric,
+        invalidateAllRenderPasses,
+        rollbackStartupScenarioToBaseMap,
+        runPostScenarioUiReplay,
+        setBootContinueHandler,
+        setBootState,
+        setStartupReadonlyState,
+      },
     });
+    startupUiBootstrapFailed = !!failureRecovery.startupUiBootstrapFailed;
   }
 }
 
