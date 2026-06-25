@@ -38,7 +38,7 @@ Extract main runtime diagnostics snapshot construction from `js/main.js` into `j
    - Dist mirrors source and updates `pages-dist-manifest.json`.
 
 4. Commit status:
-   - Committed on `codex/main-runtime-diagnostics-phase2-20260625`; final branch HEAD hash is reported after the last amend/push.
+   - Committed and pushed as `feca3a194813950ec8f5366ee8c0e3b0bf006b85` on `codex/main-runtime-diagnostics-phase2-20260625` and `origin/main`.
 
 5. Base divergence:
    - Worktree branch started from `origin/main@949801b1582619be2f587a3fd8e99252eb39e6cf`, which already contains the post-ready scheduler phase1 integration closeout.
@@ -68,4 +68,4 @@ Extract main runtime diagnostics snapshot construction from `js/main.js` into `j
    - Full browser e2e smoke was not part of the phase2 verification list; published-path startup shell and landing smoke passed through `verify:pages-dist`.
 
 9. Recommended next step:
-   - Push the feature branch; fast-forward/push main if remote main remains at `949801b1`.
+   - Keep the local worktree until a cleanup pass records recovery and removes it.

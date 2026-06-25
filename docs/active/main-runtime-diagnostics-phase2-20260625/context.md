@@ -37,4 +37,6 @@
 - PASS repeat `npm run test:node:main-runtime-diagnostics` (12/12 after review fixes)
 - PASS final code review recheck: CLEAR after old boundary contract fixes.
 - Commit: current `codex/main-runtime-diagnostics-phase2-20260625` branch HEAD; final hash is reported after the last amend/push.
-- Pending: push branch and fast-forward/push main if remote main remains `949801b1`.
+- Pushed feature branch `origin/codex/main-runtime-diagnostics-phase2-20260625`.
+- Pushed `feca3a194813950ec8f5366ee8c0e3b0bf006b85` to `origin/main` after confirming remote main was still `949801b1`.
+- Cleanup pending: keep the local phase2 worktree until a cleanup pass records recovery and removes it.

@@ -12,7 +12,7 @@ Move the main runtime diagnostics snapshot construction out of `js/main.js` into
 - [x] Replace local `main.js` helpers with early `registerMainRuntimeDiagnostics(...)`.
 - [x] Add behavior and boundary tests plus package script.
 - [x] Run requested verification and handle expected dist drift.
-- [ ] Push branch, merge/push main, and record cleanup status.
+- [x] Push branch, merge/push main, and record cleanup status.
 
 ## Constraints
 
