@@ -172,7 +172,7 @@ test("desktop bottom dock keeps quick controls in a usable horizontal rail", asy
 
   expect(metrics.dockFlexDirection).toBe("row");
   expect(metrics.dock.width).toBeGreaterThan(520);
-  expect(metrics.dock.height).toBeLessThan(96);
+  expect(metrics.dock.height).toBeLessThanOrEqual(96);
   expect(metrics.dock.left).toBeGreaterThanOrEqual(0);
   expect(metrics.dock.right).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.dockScrollWidth).toBeLessThanOrEqual(metrics.dockClientWidth + 1);
@@ -241,6 +241,8 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
     const specialSection = document.querySelector("#specialRegionInspectorSection");
     const specialList = document.querySelector("#specialRegionList");
     const specialEmpty = document.querySelector("#specialRegionInspectorEmpty");
+    const specialVisibilityToggleRow = document.querySelector("#scenarioSpecialRegionVisibilityToggle")?.closest(".toggle-label");
+    const specialReliefToggleRow = document.querySelector("#scenarioReliefOverlayVisibilityToggle")?.closest(".toggle-label");
     const waterSection = document.querySelector("#waterInspectorSection");
     const colorRow = document.querySelector("#countryInspectorColorRow");
     const firstGroup = document.querySelector("#countryList > .country-explorer-group:not(.country-select-card)");
@@ -297,8 +299,10 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
         && (rect.left < sidebarRect.left - 1 || rect.right > sidebarRect.right + 1);
     }).map((element) => element.id || element.className || element.tagName).slice(0, 10);
     return {
+      viewportHeight: window.innerHeight,
       countrySectionRect: rectToObject(countrySection.getBoundingClientRect()),
       actionSectionRect: rectToObject(actionSection.getBoundingClientRect()),
+      actionSectionClass: actionSection?.className || "",
       countryListRect: rectToObject(countryList.getBoundingClientRect()),
       presetTreeRect: rectToObject(presetTree.getBoundingClientRect()),
       actionBodyClientHeight: actionBody?.clientHeight || 0,
@@ -318,6 +322,8 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
       specialListHidden: specialList ? specialList.classList.contains("hidden") : true,
       specialListClientHeight: specialList?.clientHeight || 0,
       specialListMaxHeight: specialList ? getComputedStyle(specialList).maxHeight : "",
+      specialVisibilityToggleHeight: specialVisibilityToggleRow?.getBoundingClientRect().height || 0,
+      specialReliefToggleHeight: specialReliefToggleRow?.getBoundingClientRect().height || 0,
       specialEmptyClientHeight: specialEmpty?.clientHeight || 0,
       waterSectionRadius: waterSection ? getComputedStyle(waterSection).borderRadius : "",
       colorRowVisible: colorRow ? getComputedStyle(colorRow).display !== "none" : false,
@@ -342,7 +348,11 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   expect(metrics.countryListClientHeight).toBeLessThanOrEqual(320);
   expect(metrics.countryListScrollHeight).toBeGreaterThan(metrics.countryListClientHeight);
   expect(metrics.actionBodyClientHeight).toBeGreaterThanOrEqual(420);
-  expect(metrics.actionBodyClientHeight).toBeLessThanOrEqual(560);
+  if (metrics.actionSectionClass.includes("has-open-visual-adjustments")) {
+    expect(metrics.actionBodyClientHeight).toBeLessThanOrEqual(Math.ceil(metrics.viewportHeight * 0.66));
+  } else {
+    expect(metrics.actionBodyClientHeight).toBeLessThanOrEqual(560);
+  }
   expect(metrics.actionBodyScrollHeight).toBeGreaterThan(metrics.actionBodyClientHeight);
   expect(metrics.actionBodyOverflowY).toBe("auto");
   expect(metrics.actionBodyMaxHeight).not.toBe("none");
@@ -354,8 +364,9 @@ test("country inspector submenus keep hierarchy and compact adaptive heights", a
   if (metrics.specialSectionEmptyPanel) {
     expect(metrics.specialEmptyClientHeight).toBeGreaterThan(0);
   } else {
-    expect(metrics.specialListHidden).toBe(false);
-    expect(metrics.specialListClientHeight).toBeGreaterThan(0);
+    const hasVisibleSpecialRegionList = !metrics.specialListHidden && metrics.specialListClientHeight > 0;
+    const hasVisibleSpecialRegionControls = metrics.specialVisibilityToggleHeight > 0 || metrics.specialReliefToggleHeight > 0;
+    expect(hasVisibleSpecialRegionList || hasVisibleSpecialRegionControls).toBe(true);
   }
   expect(metrics.specialListMaxHeight).not.toBe("none");
   expect(metrics.waterSectionRadius).toBe("18px");

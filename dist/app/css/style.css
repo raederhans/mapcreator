@@ -12393,6 +12393,12 @@ body.right-drawer-open::after {
   }
 }
 
+@media (min-width: 1024px) and (max-width: 1050px) {
+  .scenario-context-bar {
+    top: 78px;
+  }
+}
+
 @media (max-width: 767px) {
   .scenario-context-bar {
     top: 68px;

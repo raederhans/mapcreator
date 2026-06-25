@@ -7,7 +7,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 285324,
+      "size_bytes": 285425,
       "source_kind": "dist"
     },
     {
@@ -47271,5 +47271,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155219387
+  "total_bytes": 1155219488
 }

@@ -1,12 +1,12 @@
 # Worktree Registry
 
-Last updated: 2026-06-25 16:02 UTC
+Last updated: 2026-06-25 16:28 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Integration base before this closeout was `origin/main@2aab955c5bc98694ca6109e5660ed613585557f2`.
-- Latest integrated work now includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, and startup failure recovery phase4.
+- Latest integrated work now includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, and startup failure recovery phase4. Phase4.5 is now active for `test:e2e:ui-rework-mainline` layout gate recovery.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
@@ -21,6 +21,7 @@ Last updated: 2026-06-25 16:02 UTC
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@c4a5632f`; parent checkout preserved with separate docs cleanup WIP | current pushed mainline includes startup failure recovery closeout; local parent checkout still trails that remote head | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane; production startup/bootstrap source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, parent `git status --short --branch`, clean phase4 validation evidence, and this closeout archive sync. | Yellow for docs/archive cleanup; green for production startup/bootstrap files. | Keep docs/archive deletions for a separate cleanup decision; sync/review the parent checkout only when that lane is ready. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-ui-rework-mainline-phase45-20260625` | branch `codex/ui-rework-mainline-phase45-20260625@9fce9659` | `origin/main@9fce96593cc4ff8fa0e8616f86187a0580cb3cfc` | ready-for-integration | hot files: `css/style.css`, `dist/app/css/style.css`, `dist/pages-dist-manifest.json`, `tests/e2e/ui_rework_mainline_shell_sidebar.spec.js`, active docs, and registry | Evidence: reproduced `test:e2e:ui-rework-mainline` as 2/5 with failures in 1024px top-rail overlap, exact 96px bottom dock rail height, and visual-adjustments inspector height. Fixed one CSS breakpoint and rebaselined stale layout/selector assertions to current UI contracts. Validation passed ui mainline 5/5, UI mainline static contracts 18/18, TNO ready-state 5/5, smoke 4/4, render runtime binding 14/14, startup failure recovery 14/14, Pages dist 39+8, and dist drift. | Yellow for UI shell/sidebar layout semantics and generated dist; green against startup/bootstrap phase1-4 owner files and parent docs/archive deletion WIP. | Commit and push, then archive docs and clean this worktree. |
 
 ## Recent Integrated Branches
 
