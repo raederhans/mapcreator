@@ -108,11 +108,11 @@ class MainStartupScenarioBootBoundaryContractTest(unittest.TestCase):
         self.assertIn("function schedulePostReadyDeferredContextWarmup()", donor_content)
         self.assertIn("requestedLayerNames.push(\"physical-set\");", donor_content)
         self.assertIn("requestedContourLayerNames.push(\"physical-contours-set\");", donor_content)
-        self.assertIn("schedulePostReadyTask(\"post-ready-context-warmup\"", donor_content)
-        self.assertIn("schedulePostReadyTask(\"post-ready-contour-warmup\"", donor_content)
+        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-context-warmup\"", donor_content)
+        self.assertIn("postReadyScheduler.scheduleTask(\"post-ready-contour-warmup\"", donor_content)
         self.assertIn("ensureContextLayerDataReady(requestedContourLayerNames, {", donor_content)
         self.assertIn('reason: "post-ready-contours"', donor_content)
-        self.assertIn("pendingTaskKeys,", donor_content)
+        self.assertIn("postReadyScheduler: cloneSnapshotValue(state.postReadyTaskDiagnostics, {})", donor_content)
 
 
 if __name__ == "__main__":

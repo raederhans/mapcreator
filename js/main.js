@@ -8,6 +8,10 @@ import {
 import { createStartupBootOverlayController } from "./bootstrap/startup_boot_overlay.js";
 import { createStartupDataPipelineOwner } from "./bootstrap/startup_data_pipeline.js";
 import { createDeferredDetailPromotionOwner } from "./bootstrap/deferred_detail_promotion.js";
+import {
+  createPostReadyScheduler,
+  POST_READY_IDLE_QUIET_MS,
+} from "./bootstrap/post_ready_scheduler.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   createRenderDispatcher,
@@ -126,15 +130,7 @@ let milsymbolLoadPromise = null;
 let deferredUiBootstrapPromise = null;
 let postReadyContextWarmupScheduled = false;
 let postReadyHydrationScheduled = false;
-let postReadyTaskHandles = new Map();
-let postReadyTaskDiagnostics = new Map();
-let postReadyTaskEpoch = 0;
-const POST_READY_IDLE_QUIET_MS = 850;
-const POST_READY_IDLE_TIME_REMAINING_MS = 8;
-
-function nowMs() {
-  return globalThis.performance?.now ? globalThis.performance.now() : Date.now();
-}
+const postReadyScheduler = createPostReadyScheduler({ targetState: runtimeState });
 
 const bootOverlayController = createStartupBootOverlayController();
 const {
@@ -226,7 +222,7 @@ function getDeferredDetailPromotionOwner() {
   deferredDetailPromotionOwner = createDeferredDetailPromotionOwner({
     runtimeState: state,
     helpers: {
-      canRunPostReadyIdleWork,
+      canRunPostReadyIdleWork: postReadyScheduler.canRunIdleWork,
       checkpointBootMetric,
       completeBootSequenceLogging,
       finishBootMetric,
@@ -373,7 +369,7 @@ function schedulePostReadyHydration() {
   }
   postReadyHydrationScheduled = true;
   // ready 之后再补齐完整本地化与场景 bundle，保证首屏先可见；调度器负责等待交互空窗，避免和用户第一轮缩放抢主线程。
-  schedulePostReadyTask("post-ready-localization-hydration", () => (
+  postReadyScheduler.scheduleTask("post-ready-localization-hydration", () => (
     ensureFullLocalizationDataReady({ reason: "post-ready-idle", renderNow: true }).catch((error) => {
       console.warn("[boot] Deferred full localization hydration failed during idle scheduling.", error);
       return null;
@@ -383,7 +379,7 @@ function schedulePostReadyHydration() {
     delayMs: 1200,
     retryDelayMs: 600,
   });
-  schedulePostReadyTask("post-ready-scenario-hydration", () => (
+  postReadyScheduler.scheduleTask("post-ready-scenario-hydration", () => (
     ensureActiveScenarioBundleHydrated({ reason: "post-ready-idle", renderNow: true }).catch((error) => {
       console.warn("[boot] Deferred full scenario hydration failed during idle scheduling.", error);
       return null;
@@ -400,7 +396,7 @@ const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-det
 function schedulePostReadyPoliticalReconcileTask(reason = "detail-promotion-political-reconcile") {
   const normalizedReason = String(reason || "detail-promotion-political-reconcile").trim()
     || "detail-promotion-political-reconcile";
-  schedulePostReadyTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {
+  postReadyScheduler.scheduleTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {
     if (!runtimeState.detailPromotionCompleted) {
       schedulePostReadyPoliticalReconcileTask(normalizedReason);
       return false;
@@ -524,7 +520,7 @@ function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state") {
 }
 
 function startDeferredFullInteractionInfrastructureBuild(reason = "post-ready-full-interaction") {
-  schedulePostReadyTask("post-ready-full-interaction-infra", () => {
+  postReadyScheduler.scheduleTask("post-ready-full-interaction-infra", () => {
     if (runtimeState.detailDeferred && !runtimeState.detailPromotionCompleted) {
       startDeferredFullInteractionInfrastructureBuild(`${reason}-after-detail`);
       return false;
@@ -544,283 +540,13 @@ function startDeferredFullInteractionInfrastructureBuild(reason = "post-ready-fu
   });
 }
 
-function clearPostReadyTaskHandle(handle) {
-  if (!handle) return;
-  if (handle.type === "idle" && typeof globalThis.cancelIdleCallback === "function") {
-    globalThis.cancelIdleCallback(handle.id);
-    return;
-  }
-  if (handle.type === "raf" && typeof globalThis.cancelAnimationFrame === "function") {
-    globalThis.cancelAnimationFrame(handle.id);
-    return;
-  }
-  globalThis.clearTimeout?.(handle.id);
-}
-
-function clearScheduledPostReadyTask(taskKey) {
-  const handle = postReadyTaskHandles.get(taskKey);
-  if (handle) {
-    clearPostReadyTaskHandle(handle);
-  }
-  postReadyTaskHandles.delete(taskKey);
-  postReadyTaskDiagnostics.delete(taskKey);
-  updatePostReadySchedulerDiagnostics({ lastBlockedReason: "cleared", taskKey });
-}
-
-function clearAllScheduledPostReadyTasks() {
-  postReadyTaskHandles.forEach((handle) => {
-    clearPostReadyTaskHandle(handle);
-  });
-  postReadyTaskHandles.clear();
-  postReadyTaskDiagnostics.clear();
-  updatePostReadySchedulerDiagnostics({ lastBlockedReason: "cleared-all" });
-}
-
-function resolvePostReadyIdleBlockReason({
-  quietMs = POST_READY_IDLE_QUIET_MS,
-  allowChunkBacklog = false,
-} = {}) {
-  const phaseEnteredAt = Number(runtimeState.phaseEnteredAt || 0);
-  const zoomEndedAt = Number(runtimeState.zoomGestureEndedAt || 0);
-  const currentMs = nowMs();
-  const idleForMs = phaseEnteredAt > 0 ? currentMs - phaseEnteredAt : Number.POSITIVE_INFINITY;
-  const zoomQuietForMs = zoomEndedAt > 0 ? currentMs - zoomEndedAt : Number.POSITIVE_INFINITY;
-  const requiredQuietMs = Math.max(0, Number(quietMs) || 0);
-  if (runtimeState.bootBlocking) return "boot-blocking";
-  if (runtimeState.scenarioApplyInFlight) return "scenario-apply-in-flight";
-  if (runtimeState.startupReadonly) return "startup-readonly";
-  if (runtimeState.startupReadonlyUnlockInFlight) return "startup-readonly-unlock";
-  if (runtimeState.deferExactAfterSettle) return "defer-exact-after-settle";
-  if (!allowChunkBacklog && runtimeState.runtimeChunkLoadState?.promotionCommitInFlight) return "chunk-promotion-commit-in-flight";
-  if (!allowChunkBacklog && runtimeState.runtimeChunkLoadState?.pendingVisualPromotion) return "chunk-visual-promotion";
-  if (!allowChunkBacklog && runtimeState.runtimeChunkLoadState?.pendingPromotion) return "chunk-promotion";
-  if (!allowChunkBacklog && runtimeState.runtimeChunkLoadState?.pendingInfraPromotion) return "chunk-infra-promotion";
-  if (runtimeState.hitCanvasBuildScheduled) return "hit-canvas-build-scheduled";
-  if (runtimeState.interactionInfrastructureBuildInFlight) return "interaction-infra-in-flight";
-  if (runtimeState.activeInteractionRecoveryTaskKey) return "interaction-recovery-task";
-  if (runtimeState.isInteracting) return "interacting";
-  if (String(runtimeState.renderPhase || "idle") !== "idle") return "render-non-idle";
-  if (idleForMs < requiredQuietMs) return "phase-quiet-window";
-  if (zoomQuietForMs < requiredQuietMs) return "zoom-quiet-window";
-  return "ready";
-}
-
-function updatePostReadySchedulerDiagnostics({
-  taskKey = "",
-  lastBlockedReason = "",
-  lastScheduledTaskKey = "",
-  lastStartedTaskKey = "",
-  lastFinishedTaskKey = "",
-} = {}) {
-  const currentMs = nowMs();
-  const pendingEntries = [...postReadyTaskDiagnostics.entries()];
-  const pendingTaskKeys = [...postReadyTaskHandles.keys()].sort();
-  const maxPendingAgeMs = pendingEntries.reduce((maxAge, [_key, entry]) => (
-    Math.max(maxAge, Math.max(0, currentMs - Number(entry.firstScheduledAt || currentMs)))
-  ), 0);
-  const maxRetryCount = pendingEntries.reduce((maxRetry, [_key, entry]) => (
-    Math.max(maxRetry, Number(entry.retryCount || 0))
-  ), 0);
-  runtimeState.postReadyTaskDiagnostics = {
-    activeTaskKey: String(runtimeState.activePostReadyTaskKey || ""),
-    activeTaskAgeMs: runtimeState.activePostReadyTaskStartedAt
-      ? Math.max(0, currentMs - Number(runtimeState.activePostReadyTaskStartedAt || 0))
-      : 0,
-    pendingTaskKeys,
-    pendingTaskCount: pendingTaskKeys.length,
-    lastBlockedReason: String(lastBlockedReason || runtimeState.postReadyTaskDiagnostics?.lastBlockedReason || ""),
-    lastTaskKey: String(taskKey || ""),
-    lastScheduledTaskKey: String(lastScheduledTaskKey || runtimeState.postReadyTaskDiagnostics?.lastScheduledTaskKey || ""),
-    lastStartedTaskKey: String(lastStartedTaskKey || runtimeState.postReadyTaskDiagnostics?.lastStartedTaskKey || ""),
-    lastFinishedTaskKey: String(lastFinishedTaskKey || runtimeState.postReadyTaskDiagnostics?.lastFinishedTaskKey || ""),
-    maxPendingAgeMs,
-    maxRetryCount,
-    idleQuietMs: POST_READY_IDLE_QUIET_MS,
-    minIdleTimeRemainingMs: POST_READY_IDLE_TIME_REMAINING_MS,
-    reasonStateHint: {
-      renderPhase: String(runtimeState.renderPhase || ""),
-      isInteracting: !!runtimeState.isInteracting,
-      deferExactAfterSettle: !!runtimeState.deferExactAfterSettle,
-      interactionInfrastructureBuildInFlight: !!runtimeState.interactionInfrastructureBuildInFlight,
-      activeInteractionRecoveryTaskKey: String(runtimeState.activeInteractionRecoveryTaskKey || ""),
-      hitCanvasBuildScheduled: !!runtimeState.hitCanvasBuildScheduled,
-      chunkShellStatus: String(runtimeState.runtimeChunkLoadState?.shellStatus || ""),
-      hasPendingChunkVisualPromotion: !!runtimeState.runtimeChunkLoadState?.pendingVisualPromotion,
-      hasPendingChunkPromotion: !!runtimeState.runtimeChunkLoadState?.pendingPromotion,
-      hasPendingChunkInfraPromotion: !!runtimeState.runtimeChunkLoadState?.pendingInfraPromotion,
-    },
-    recordedAt: Date.now(),
-  };
-  runtimeState.renderPerfMetrics = runtimeState.renderPerfMetrics && typeof runtimeState.renderPerfMetrics === "object"
-    ? runtimeState.renderPerfMetrics
-    : {};
-  runtimeState.renderPerfMetrics.postReadySchedulerState = { ...runtimeState.postReadyTaskDiagnostics };
-  globalThis.__renderPerfMetrics = runtimeState.renderPerfMetrics;
-  return runtimeState.postReadyTaskDiagnostics;
-}
-
-function markPostReadyTaskRetry(taskKey, reason) {
-  const entry = postReadyTaskDiagnostics.get(taskKey);
-  if (entry) {
-    entry.retryCount = Math.max(0, Number(entry.retryCount || 0) + 1);
-    entry.lastRetryAt = nowMs();
-    entry.lastBlockedReason = String(reason || "");
-  }
-  updatePostReadySchedulerDiagnostics({ taskKey, lastBlockedReason: reason });
-}
-
-function canRunPostReadyIdleWork({
-  quietMs = POST_READY_IDLE_QUIET_MS,
-  allowChunkBacklog = false,
-} = {}) {
-  return resolvePostReadyIdleBlockReason({ quietMs, allowChunkBacklog }) === "ready";
-}
-
-function runPostReadyTaskCallback(taskKey, callback) {
-  runtimeState.activePostReadyTaskKey = taskKey;
-  runtimeState.activePostReadyTaskStartedAt = nowMs();
-  postReadyTaskDiagnostics.delete(taskKey);
-  updatePostReadySchedulerDiagnostics({ taskKey, lastStartedTaskKey: taskKey });
-
-  const clearActivePostReadyTask = () => {
-    if (runtimeState.activePostReadyTaskKey === taskKey) {
-      runtimeState.activePostReadyTaskKey = "";
-      runtimeState.activePostReadyTaskStartedAt = 0;
-    }
-    updatePostReadySchedulerDiagnostics({ taskKey, lastFinishedTaskKey: taskKey });
-  };
-
-  try {
-    Promise.resolve(callback())
-      .catch((error) => {
-        console.warn(`[boot] Post-ready task failed. task=${taskKey}`, error);
-      })
-      .finally(clearActivePostReadyTask);
-  } catch (error) {
-    console.warn(`[boot] Post-ready task failed. task=${taskKey}`, error);
-    clearActivePostReadyTask();
-  }
-}
-
-function reschedulePostReadyTask(normalizedTaskKey, callback, {
-  timeout,
-  retryDelayMs,
-  idleQuietMs,
-  minIdleTimeRemainingMs,
-} = {}) {
-  schedulePostReadyTask(normalizedTaskKey, callback, {
-    timeout,
-    delayMs: retryDelayMs,
-    retryDelayMs,
-    idleQuietMs,
-    minIdleTimeRemainingMs,
-  });
-}
-
-function schedulePostReadyTask(
-  taskKey,
-  callback,
-  {
-    timeout = 1200,
-    delayMs = 0,
-    retryDelayMs = 320,
-    idleQuietMs = POST_READY_IDLE_QUIET_MS,
-    minIdleTimeRemainingMs = POST_READY_IDLE_TIME_REMAINING_MS,
-  } = {}
-) {
-  const normalizedTaskKey = String(taskKey || "").trim();
-  if (!normalizedTaskKey) return;
-  // post-ready 队列的目标是把“首屏之后才值得做”的 warmup / reconcile 串成单拥有者空闲任务。
-  // 每次重排都会先清掉旧 handle，再沿用同一个 taskKey 的诊断记录，这样外部才能持续看到重试原因和最新排程时刻。
-  const previousDiagnostic = postReadyTaskDiagnostics.get(normalizedTaskKey);
-  clearScheduledPostReadyTask(normalizedTaskKey);
-  postReadyTaskDiagnostics.set(normalizedTaskKey, {
-    firstScheduledAt: Number(previousDiagnostic?.firstScheduledAt || 0) || nowMs(),
-    lastScheduledAt: nowMs(),
-    retryCount: Math.max(0, Number(previousDiagnostic?.retryCount || 0)),
-    timeout,
-    retryDelayMs,
-    idleQuietMs,
-    minIdleTimeRemainingMs,
-  });
-  updatePostReadySchedulerDiagnostics({
-    taskKey: normalizedTaskKey,
-    lastScheduledTaskKey: normalizedTaskKey,
-  });
-  const scheduledEpoch = postReadyTaskEpoch;
-
-  const runWhenIdle = () => {
-    if (scheduledEpoch !== postReadyTaskEpoch) {
-      clearScheduledPostReadyTask(normalizedTaskKey);
-      return;
-    }
-    const blockReason = runtimeState.activePostReadyTaskKey
-      ? "active-task"
-      : resolvePostReadyIdleBlockReason({ quietMs: idleQuietMs });
-    if (blockReason !== "ready") {
-      markPostReadyTaskRetry(normalizedTaskKey, blockReason);
-      const retryId = globalThis.setTimeout(runWhenIdle, Math.max(120, retryDelayMs));
-      postReadyTaskHandles.set(normalizedTaskKey, { type: "timeout", id: retryId });
-      return;
-    }
-    if (typeof globalThis.requestIdleCallback === "function") {
-      // requestIdleCallback 只在真正有空闲预算时才运行 callback；
-      // 剩余时间不足就回到统一重排链，避免 warmup 抢走正在稳定中的 render / chunk promotion 时间片。
-      const idleId = globalThis.requestIdleCallback((deadline) => {
-        postReadyTaskHandles.delete(normalizedTaskKey);
-        if (scheduledEpoch !== postReadyTaskEpoch) {
-          return;
-        }
-        const remainingMs = typeof deadline?.timeRemaining === "function"
-          ? Number(deadline.timeRemaining())
-          : Number.POSITIVE_INFINITY;
-        if (!deadline?.didTimeout && remainingMs < minIdleTimeRemainingMs) {
-          markPostReadyTaskRetry(normalizedTaskKey, "idle-time-remaining");
-          reschedulePostReadyTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
-          return;
-        }
-        const idleBlockReason = runtimeState.activePostReadyTaskKey
-          ? "active-task"
-          : resolvePostReadyIdleBlockReason({ quietMs: idleQuietMs });
-        if (idleBlockReason !== "ready") {
-          markPostReadyTaskRetry(normalizedTaskKey, idleBlockReason);
-          reschedulePostReadyTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
-          return;
-        }
-        runPostReadyTaskCallback(normalizedTaskKey, callback);
-      }, { timeout });
-      postReadyTaskHandles.set(normalizedTaskKey, { type: "idle", id: idleId });
-      return;
-    }
-    const timeoutId = globalThis.setTimeout(() => {
-      postReadyTaskHandles.delete(normalizedTaskKey);
-      if (scheduledEpoch !== postReadyTaskEpoch) {
-        return;
-      }
-      const timeoutBlockReason = runtimeState.activePostReadyTaskKey
-        ? "active-task"
-        : resolvePostReadyIdleBlockReason({ quietMs: idleQuietMs });
-      if (timeoutBlockReason !== "ready") {
-        markPostReadyTaskRetry(normalizedTaskKey, timeoutBlockReason);
-        reschedulePostReadyTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
-        return;
-      }
-      runPostReadyTaskCallback(normalizedTaskKey, callback);
-    }, 0);
-    postReadyTaskHandles.set(normalizedTaskKey, { type: "timeout", id: timeoutId });
-  };
-
-  const startId = globalThis.setTimeout(runWhenIdle, Math.max(0, delayMs));
-  postReadyTaskHandles.set(normalizedTaskKey, { type: "timeout", id: startId });
-}
-
 function schedulePostReadyVisualWarmup() {
   const textureMode = String(runtimeState.styleConfig?.texture?.mode || "none").trim().toLowerCase();
   const dayNightEnabled = !!runtimeState.styleConfig?.dayNight?.enabled;
   if (textureMode === "none" && !dayNightEnabled) {
     return;
   }
-  schedulePostReadyTask("post-ready-visual-warmup", async () => {
+  postReadyScheduler.scheduleTask("post-ready-visual-warmup", async () => {
     if (!runtimeState.bootBlocking) {
       requestMainRender("post-ready-visual-warmup");
     }
@@ -856,7 +582,7 @@ function schedulePostReadyDeferredContextWarmup() {
     return;
   }
   postReadyContextWarmupScheduled = true;
-  schedulePostReadyTask("post-ready-context-warmup", async () => {
+  postReadyScheduler.scheduleTask("post-ready-context-warmup", async () => {
     if (runtimeState.bootBlocking) {
       return;
     }
@@ -879,7 +605,7 @@ function schedulePostReadyDeferredContextWarmup() {
     idleQuietMs: POST_READY_IDLE_QUIET_MS,
   });
   if (requestedContourLayerNames.length) {
-    schedulePostReadyTask("post-ready-contour-warmup", async () => {
+    postReadyScheduler.scheduleTask("post-ready-contour-warmup", async () => {
       if (runtimeState.bootBlocking) {
         return;
       }
@@ -1050,12 +776,7 @@ async function bootstrap() {
   deferredUiBootstrapPromise = null;
   postReadyContextWarmupScheduled = false;
   postReadyHydrationScheduled = false;
-  runtimeState.activePostReadyTaskKey = "";
-  runtimeState.activePostReadyTaskStartedAt = 0;
-  runtimeState.postReadyTaskDiagnostics = null;
-  postReadyTaskDiagnostics.clear();
-  postReadyTaskEpoch += 1;
-  clearAllScheduledPostReadyTasks();
+  postReadyScheduler.reset("bootstrap");
   setStartupInteractionMode(state, resolveStartupInteractionMode());
   setStartupReadonlyState(false);
 

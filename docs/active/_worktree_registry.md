@@ -1,26 +1,27 @@
 # Worktree Registry
 
-Last updated: 2026-06-24 18:43 UTC
+Last updated: 2026-06-25 02:04 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration base: UI/palette/startup WIP was reconciled onto `origin/main@9af3d156b8be61497df9ed2b067bc7acf4a2ec36`.
-- Latest integrated work: `2c52d627` keeps the Pages manifest aligned after the UI integration verification regenerated the checked-in manifest.
+- Integration base: current remote main is `origin/main@c4a5632fc112ac2eed9a7381dd21e5eb58ea3721`.
+- Latest integrated work: `c4a5632f` keeps the interaction merge closeout recoverable.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat pushed `main@2c52d627` as the current UI/palette/startup integration baseline.
-2. Keep the remaining docs/archive deletion WIP out of interaction or renderer commits until a cleanup owner reviews it.
-3. Start future thematic legend/safety implementation from current `origin/main`, with Pages dist regenerated after any UI or generated asset change.
+1. Keep `codex/post-ready-scheduler-phase1-20260625` in ready-for-integration state until a clean main checkout or clean integration worktree is available.
+2. Keep the remaining parent `docs/archive/**` deletion WIP out of startup scheduler commits until a cleanup owner reviews it.
+3. Integrate the post-ready scheduler branch from `origin/main@c4a5632f`, rerun the recorded validation set, then clean the worktree after main push.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@2c52d627`; remote `origin/main@2c52d627` | current pushed `origin/main@2c52d627` | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are docs/archive deletions from the earlier cleanup lane; UI/palette/startup source, tests, dist mirrors, and Pages manifest are integrated and pushed. | Interaction merge closeout fast-forwarded the parent checkout through `9af3d156`, reapplied the preserved WIP for comparison, kept upstream UI source truth because the local UI hunks were already absorbed, committed manifest alignment as `2c52d627`, and pushed main. Validation passed targeted UI Node tests 29/29, focused Python UI/startup contracts 98/98, `git diff --check`, and `npm run verify:pages-dist` with startup shell 39/39 plus landing showcase 8/8. | Green for UI/palette/startup production files; yellow for docs/archive cleanup because it remains unstaged local WIP. | Keep docs/archive deletions for a separate cleanup decision; future feature work should start from pushed `origin/main@2c52d627`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@c4a5632f`; remote `origin/main@c4a5632f` | current pushed `origin/main@c4a5632f` | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane; production source for this post-ready scheduler task is untouched in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, parent `git status --short`, and branch `HEAD...origin/main` checks. | Yellow for registry/docs overlap; green for production startup scheduler files. | Keep docs/archive deletions for a separate cleanup decision; use a clean main checkout or clean integration worktree before merging the scheduler branch. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-post-ready-scheduler-phase1-20260625` | branch `codex/post-ready-scheduler-phase1-20260625`; final commit recorded by git history and closeout report | `origin/main@c4a5632fc112ac2eed9a7381dd21e5eb58ea3721` | ready-for-integration after commit | hot files: `js/main.js`, `js/bootstrap/post_ready_scheduler.js`, `package.json`, post-ready scheduler tests, startup/scenario chunk/physical contracts, active docs and registry | Validation passed `node --check js/bootstrap/post_ready_scheduler.js js/main.js`, `npm run test:node:post-ready-scheduler`, `npm run test:node:startup-hydration-behavior`, `npm run test:node:exact-after-settle-refresh-plans`, `npm run test:node:render-transaction-diagnostics`, `npm run verify:state-write-allowlist`, `npm run verify:architecture-boundaries`, `npm run test:node:physical-layer-contracts`, focused Python unittest 41 tests, and `git diff --check`. Architect review returned CLEAR; code review findings were addressed. | Yellow because it touches `js/main.js` startup scheduling and registry; green versus parent docs/archive WIP for production files. | Commit and push the branch, then merge from a clean main checkout or clean integration worktree. Rerun the validation set after merge; clean this worktree after main push. |
 
 ## Recent Integrated Branches
 

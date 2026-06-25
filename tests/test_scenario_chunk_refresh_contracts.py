@@ -15,6 +15,7 @@ SCENARIO_CHUNK_PROMOTION_HELPERS_PATH = ROOT / "js/core/renderer/scenario_chunk_
 SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.js"
 SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
 MAIN_JS_PATH = ROOT / "js/main.js"
+POST_READY_SCHEDULER_PATH = ROOT / "js/bootstrap/post_ready_scheduler.js"
 DEFERRED_DETAIL_PROMOTION_PATH = ROOT / "js/bootstrap/deferred_detail_promotion.js"
 SCENARIO_RUNTIME_STATE_PATH = ROOT / "js/core/state/scenario_runtime_state.js"
 
@@ -34,6 +35,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_post_apply_effects_source = SCENARIO_POST_APPLY_EFFECTS_PATH.read_text(encoding="utf-8")
         cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
         cls.main_source = MAIN_JS_PATH.read_text(encoding="utf-8")
+        cls.post_ready_scheduler_source = POST_READY_SCHEDULER_PATH.read_text(encoding="utf-8")
         cls.deferred_detail_promotion_source = DEFERRED_DETAIL_PROMOTION_PATH.read_text(encoding="utf-8")
         cls.scenario_runtime_state_source = SCENARIO_RUNTIME_STATE_PATH.read_text(encoding="utf-8")
 
@@ -134,16 +136,16 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("resolveScenarioChunkFocusCountry(bundle, loadState, { viewportBbox })", self.scenario_chunk_runtime_source)
 
     def test_post_ready_scheduler_exposes_pending_task_diagnostics(self):
-        self.assertIn("let postReadyTaskDiagnostics = new Map();", self.main_source)
-        self.assertIn("function resolvePostReadyIdleBlockReason(", self.main_source)
-        self.assertIn('if (runtimeState.deferExactAfterSettle) return "defer-exact-after-settle";', self.main_source)
-        self.assertIn('if (!allowChunkBacklog && runtimeState.runtimeChunkLoadState?.pendingInfraPromotion) return "chunk-infra-promotion";', self.main_source)
-        self.assertIn('if (runtimeState.interactionInfrastructureBuildInFlight) return "interaction-infra-in-flight";', self.main_source)
-        self.assertIn("runtimeState.renderPerfMetrics.postReadySchedulerState", self.main_source)
-        self.assertIn("pendingTaskKeys", self.main_source)
-        self.assertIn("maxRetryCount", self.main_source)
-        self.assertIn("reasonStateHint", self.main_source)
-        self.assertIn("allowChunkBacklog = false", self.main_source)
+        self.assertIn("const taskDiagnostics = new Map();", self.post_ready_scheduler_source)
+        self.assertIn("function resolveIdleBlockReason(", self.post_ready_scheduler_source)
+        self.assertIn('if (targetState.deferExactAfterSettle) return "defer-exact-after-settle";', self.post_ready_scheduler_source)
+        self.assertIn('if (!allowChunkBacklog && targetState.runtimeChunkLoadState?.pendingInfraPromotion) return "chunk-infra-promotion";', self.post_ready_scheduler_source)
+        self.assertIn('if (targetState.interactionInfrastructureBuildInFlight) return "interaction-infra-in-flight";', self.post_ready_scheduler_source)
+        self.assertIn("targetState.renderPerfMetrics.postReadySchedulerState", self.post_ready_scheduler_source)
+        self.assertIn("pendingTaskKeys", self.post_ready_scheduler_source)
+        self.assertIn("maxRetryCount", self.post_ready_scheduler_source)
+        self.assertIn("reasonStateHint", self.post_ready_scheduler_source)
+        self.assertIn("allowChunkBacklog = false", self.post_ready_scheduler_source)
         self.assertIn("allowChunkBacklog: true", self.deferred_detail_promotion_source)
         self.assertRegex(
             self.main_source,
@@ -492,7 +494,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("falling back to setMapData", detail_refresh_source)
         self.assertNotIn("catch (error)", detail_refresh_source)
         self.assertIn(
-            'schedulePostReadyTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {',
+            'postReadyScheduler.scheduleTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {',
             self.main_source,
         )
         self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", self.main_source)
