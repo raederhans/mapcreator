@@ -29,6 +29,7 @@
     "test:node:thematic-layer-catalog": "node --test tests/thematic_layer_catalog_behavior.test.mjs tests/thematic_layer_preview_controller_behavior.test.mjs",
     "test:node:thematic-admin-metrics-loader": "node --test tests/thematic_admin_metrics_loader_behavior.test.mjs",
     "test:node:toolbar-render-scheduler": "node --test tests/toolbar_render_scheduler_behavior.test.mjs",
+    "test:node:post-ready-scheduler": "node --test tests/post_ready_scheduler_behavior.test.mjs tests/main_post_ready_scheduler_boundary.test.mjs",
     "python": "node tools/run_python.mjs",
     "test:node:backend-cloud-support": "node --test tests/backend_client_behavior.test.mjs tests/project_support_diagnostics_controller_behavior.test.mjs tests/backend_console_helpers.test.mjs",
     "test:node:backend-console-helpers": "node --test tests/backend_console_helpers.test.mjs",
