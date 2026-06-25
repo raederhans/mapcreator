@@ -34,3 +34,10 @@
 - PASS `npm run test:e2e:smoke` 4/4. Existing smoke diagnostics included backend auth `/api/backend/auth/me` 401 and D3-unsafe water geometry warnings; smoke assertions passed.
 - PASS `npm ci` after clean worktree browser smoke first reported missing `node_modules/@playwright/test`.
 - Code review returned COMMENT with no runtime behavior findings; follow-up test coverage added for handler-registration-before-error-state and Proxy-observed target state writes.
+
+## Closeout
+
+- Functional commit is `898b2e1e418c437a049389de9865ca751cd33ea9` on `codex/startup-failure-recovery-phase4-20260625`.
+- The branch was rebased from base `origin/main@c8fbe1241eca7bba7900464da67698868dd98f73` onto integration base `origin/main@2aab955c5bc98694ca6109e5660ed613585557f2`.
+- Before final closeout, the only residual worktree noise was `dist/app/css/style.css` with LF-in-index vs CRLF-in-worktree mismatch; restoring the worktree copy removed the false dirty state with no content change.
+- Final docs action is archival under `docs/archive/startup-failure-recovery-phase4-20260625/` plus registry sync that moves phase4 out of Current Worktrees.

@@ -14,7 +14,7 @@
 
 - Core: `js/bootstrap/startup_failure_recovery.js`, `js/main.js`.
 - Tests: `tests/startup_failure_recovery_behavior.test.mjs`, `tests/main_startup_failure_recovery_boundary.test.mjs`, `package.json`.
-- Docs: `docs/active/startup-failure-recovery-phase4-20260625/{plan,context,task}.md`, `docs/active/_worktree_registry.md`.
+- Docs: `docs/archive/startup-failure-recovery-phase4-20260625/{plan,context,task}.md`, `docs/active/_worktree_registry.md`.
 - Dist: `dist/app/js/main.js`, `dist/app/js/bootstrap/startup_failure_recovery.js`, `dist/pages-dist-manifest.json`.
 
 ### Diff Summary
@@ -26,11 +26,12 @@
 
 ### Commit State
 
-- Pending final review, stage, commit, push, and cleanup.
+- Functional commit recorded as `898b2e1e418c437a049389de9865ca751cd33ea9`.
+- Archive/registry closeout follows in the final cleanup commit for this worktree.
 
 ### Base Divergence
 
-- Base is `origin/main@c8fbe1241eca7bba7900464da67698868dd98f73`; current branch starts from that commit.
+- Original base was `origin/main@c8fbe1241eca7bba7900464da67698868dd98f73`; final integration rebased the work onto `origin/main@2aab955c5bc98694ca6109e5660ed613585557f2`.
 
 ### Overlap Risk
 
@@ -45,15 +46,15 @@
 - PASS `npm run verify:state-write-allowlist`.
 - PASS `npm run verify:architecture-boundaries`.
 - PASS `npm run verify:pages-dist` with startup shell 39/39 and landing showcase 8/8.
-- `npm run verify:dist-drift` reported required generated dist changes before staging; final staged drift check remains pending.
+- PASS `npm run verify:dist-drift`.
 - PASS `npm run test:e2e:dev:tno-ready-state` 5/5.
 - PASS `npm run test:e2e:smoke` 4/4.
 
 ### Remaining Risks
 
 - Browser smoke still reports the existing unauthenticated backend `/api/backend/auth/me` 401 and known D3-unsafe water geometry warnings; smoke assertions passed.
-- Staged dist drift check remains before commit.
+- Future edits to startup/bootstrap ownership should preserve the continue-handler ordering contract recorded in this delivery.
 
 ### Recommended Next Step
 
-- Complete review, stage all phase4 source/test/dist/docs changes, rerun `verify:dist-drift`, then commit and push this clean worktree into `origin/main`.
+- No further phase4 implementation work remains. Keep recovery in main history plus `docs/archive/startup-failure-recovery-phase4-20260625/`, and treat any later follow-up as a new startup regression lane.
