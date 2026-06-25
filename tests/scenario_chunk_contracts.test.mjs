@@ -1172,6 +1172,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
   const exactAfterSettlePlansSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_refresh_plans.js");
   const exactSchedulerSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_scheduler.js");
+  const renderPassCatalogSource = readRepoFile("js", "core", "map_renderer", "render_pass_catalog.js");
   const scenarioOwnershipEditorSource = readRepoFile("js", "core", "scenario_ownership_editor.js");
   const politicalRasterWorkerClientSource = readRepoFile("js", "core", "political_raster_worker_client.js");
   const politicalRasterWorkerSource = readRepoFile("js", "workers", "political_raster.worker.js");
@@ -1244,7 +1245,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes('recordInteractionDurationMetric("interactionHoverFacilityProbeDuration"')
       && cityPointsRenderOwnerSource.includes('recordInteractionDurationMetric("interactionHoverCityProbeDuration"'),
     interactionCompositeUsesSingleMainPassCache:
-      rendererSource.includes("const INTERACTION_COMPOSITE_PASS_NAMES = [")
+      renderPassCatalogSource.includes("export const INTERACTION_COMPOSITE_PASS_NAMES = [")
       && rendererSource.includes('recordRenderPerfMetric("interactionCompositeBuild"')
       && rendererSource.includes('recordRenderPerfMetric("interactionCompositeContinuityReuse"')
       && renderCacheOwnerSource.includes("function getInteractionCompositeReuseDecision(")
@@ -1522,10 +1523,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /function drawTransformedFrameFromCaches[\s\S]*?settlePoliticalFastExactSkipped[\s\S]*?defer-to-sliced-exact-refresh/.test(rendererSource)
       && !/function drawTransformedFrameFromCaches[\s\S]*?renderPassToCache\("political", \(k\) => drawPoliticalPass\(k\)/.test(rendererSource),
     transformReusablePassSignaturesUseStableViewportKey:
-      rendererSource.includes("const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set")
-      && /const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set\(\[[\s\S]*?"contextBase",[\s\S]*?\]\);/.test(rendererSource)
+      renderPassCatalogSource.includes("export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set")
+      && /export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set\(\[[\s\S]*?"contextBase",[\s\S]*?\]\);/.test(renderPassCatalogSource)
       && (() => {
-        const stableSignatureSet = rendererSource.match(/const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
+        const stableSignatureSet = renderPassCatalogSource.match(/export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
         return [
           '"background"',
           '"physicalBase"',

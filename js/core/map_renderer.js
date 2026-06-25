@@ -179,6 +179,14 @@ import {
   EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
 } from "./map_renderer/exact_after_settle_refresh_plans.js";
 import {
+  INTERACTION_COMPOSITE_PASS_NAMES,
+  RENDER_PASS_NAMES,
+  RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+  TRANSFORM_REUSED_RENDER_PASS_NAMES,
+  TRANSFORMED_FRAME_PASS_NAMES,
+  VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES,
+} from "./map_renderer/render_pass_catalog.js";
+import {
   collectSpatialGridCandidates,
   createHitResult,
   findFirstContainingCandidate as findFirstContainingHitCandidate,
@@ -870,64 +878,8 @@ const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set([
 ]);
 const DAY_NIGHT_CLOCK_INTERVAL_MS = 15_000;
 const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 / 30;
-export const RENDER_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-  "borders",
-  "textureLabels",
-  "labels",
-];
-const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-]);
-const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set([
-  "contextBase",
-]);
-const INTERACTION_COMPOSITE_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-];
-const TRANSFORMED_FRAME_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-  "textureLabels",
-  "labels",
-];
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
-const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;
 const POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD = 48;
 const POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD = 160;
 const POLITICAL_PARTIAL_REPAINT_VIEWPORT_COVERAGE_MAX = 0.18;
@@ -24009,6 +23961,8 @@ function refreshMapDataForScenarioApply(options = {}) {
 // Batch 5 facade note:
 // 1) 生产代码侧尽量只用 named imports，避免 namespace import 把 donor surface 继续放大。
 // 2) 这里按 consumer lane 分组公开 stable facade，owner-backed 细节继续留在模块内部。
+export { RENDER_PASS_NAMES } from "./map_renderer/render_pass_catalog.js";
+
 export {
   // Core render lifecycle facade.
   initMap,

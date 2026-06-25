@@ -10,6 +10,7 @@ EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exac
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
+RENDER_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "render_pass_catalog.js"
 
 
 class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
@@ -123,6 +124,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_commit_content = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
+        render_pass_catalog_content = RENDER_PASS_CATALOG_JS.read_text(encoding="utf-8")
         signature_body = renderer_content.split("function getRenderPassSignature(passName", 1)[1].split(
             "\nfunction resolveHitMode",
             1,
@@ -170,7 +172,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "return isReady() ? HGO_RUNTIME_PREVIEW_TRANSFORMED_FRAME_PASS_NAMES : vectorTransformedFramePassNames;",
             hgo_preview_owner_content,
         )
-        interaction_composite_body = renderer_content.split("const INTERACTION_COMPOSITE_PASS_NAMES = [", 1)[1].split(
+        interaction_composite_body = render_pass_catalog_content.split("export const INTERACTION_COMPOSITE_PASS_NAMES = [", 1)[1].split(
             "];",
             1,
         )[0]

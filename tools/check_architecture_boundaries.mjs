@@ -12,6 +12,7 @@ const FILES = Object.freeze({
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+  renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -20,6 +21,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,
+  [FILES.renderPassCatalog]: 80,
 });
 
 function readProjectFile(relativePath) {
@@ -55,6 +57,7 @@ function collectFailures() {
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
+  const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -62,6 +65,7 @@ function collectFailures() {
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
+    [FILES.renderPassCatalog]: renderPassCatalog,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -89,6 +93,7 @@ function collectFailures() {
     FILES.scenarioVisualInvalidationExecutor,
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
+    FILES.renderPassCatalog,
   ];
   for (const ownerPath of ownerFiles) {
     const source = sources[ownerPath];
@@ -251,6 +256,29 @@ function collectFailures() {
         "const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES =",
         "function getHgoRuntimePreviewCanvasPointFromEvent(",
         "const HGO_RUNTIME_PREVIEW_PROJECTION_NAME =",
+      ],
+    },
+    {
+      ownerPath: FILES.renderPassCatalog,
+      ownerTokens: [
+        "export const RENDER_PASS_NAMES = [",
+        "export const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([",
+        "export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set([",
+        "export const INTERACTION_COMPOSITE_PASS_NAMES = [",
+        "export const TRANSFORMED_FRAME_PASS_NAMES = [",
+        "export const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;",
+      ],
+      rendererRequiredTokens: [
+        "from \"./map_renderer/render_pass_catalog.js\";",
+        "export { RENDER_PASS_NAMES } from \"./map_renderer/render_pass_catalog.js\";",
+      ],
+      rendererForbiddenTokens: [
+        "export const RENDER_PASS_NAMES = [",
+        "const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([",
+        "const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set([",
+        "const INTERACTION_COMPOSITE_PASS_NAMES = [",
+        "const TRANSFORMED_FRAME_PASS_NAMES = [",
+        "const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE =",
       ],
     },
   ];
