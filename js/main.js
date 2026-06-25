@@ -15,6 +15,7 @@ import {
 import { registerMainRuntimeDiagnostics } from "./bootstrap/main_runtime_diagnostics.js";
 import { createStartupRenderRuntimeBinding } from "./bootstrap/render_runtime_binding.js";
 import { handleStartupFailure } from "./bootstrap/startup_failure_recovery.js";
+import { isUiShellDebugMode, runUiShellDebugBoot } from "./bootstrap/ui_shell_boot.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
 import {
   configureStartupSupportKeyUsageAudit,
@@ -54,15 +55,6 @@ registerMainRuntimeDiagnostics({
 
 function requestMainRender(reason = "", { flush = false } = {}) {
   return flush ? flushRenderBoundary(reason) : requestRender(reason);
-}
-
-function isUiShellDebugMode() {
-  if (typeof globalThis.URLSearchParams !== "function") {
-    return false;
-  }
-  const params = new globalThis.URLSearchParams(globalThis.location?.search || "");
-  const raw = String(params.get("ui_shell") || params.get("startup_mode") || "").trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "ui-shell";
 }
 
 let milsymbolLoadPromise = null;
@@ -726,61 +718,42 @@ async function bootstrap() {
   try {
     bindBeforeUnload();
     if (isUiShellDebugMode()) {
-      runtimeState.uiShellDebug = true;
-      document.body?.classList.add("app-ui-shell-debug");
-      setBootState("ui-shell", {
-        message: getBootLanguage() === "zh"
-          ? "正在启动 UI 调试外壳。"
-          : "Starting the UI debug shell.",
-        progress: 55,
-        canContinueWithoutScenario: false,
-      });
-      startBootMetric("ui-shell");
-      initLongAnimationFrameObserver();
-      const startupInteractionLevel = "full";
-      initMap({
-        suppressRender: true,
-        interactionLevel: startupInteractionLevel,
-        deferInteractionInfrastructure: false,
-      });
-      setMapData({
-        refitProjection: false,
-        resetZoom: false,
-        suppressRender: true,
-        interactionLevel: startupInteractionLevel,
-        deferInteractionInfrastructure: false,
-      });
-
-      const renderRuntime = createStartupRenderRuntimeBinding({
+      const uiShellBootResult = await runUiShellDebugBoot({
         targetState: state,
-        setBootPreviewVisible,
-        ensureDetailTopologyReady,
-        flushReason: "ui-shell-render-now",
+        hooks: {
+          onRenderDispatcher: (nextRenderDispatcher) => {
+            renderDispatcher = nextRenderDispatcher;
+          },
+          onStartupUiBootstrapPromise: (promise) => {
+            startupUiBootstrapPromise = promise;
+          },
+          onStartupUiBootstrapAwaited: (value) => {
+            startupUiBootstrapAwaited = !!value;
+          },
+        },
+        helpers: {
+          applyUiShellDebugTerritorySeed,
+          bootstrapDeferredUi,
+          checkpointBootMetricOnce,
+          completeBootSequenceLogging,
+          createStartupRenderRuntimeBinding,
+          ensureDetailTopologyReady,
+          ensureFullLocalizationDataReady,
+          finishBootMetric,
+          getBootLanguage,
+          initLongAnimationFrameObserver,
+          initMap,
+          revealUiShellDebugTerritoryPanels,
+          runPostScenarioUiReplay,
+          setBootPreviewVisible,
+          setBootState,
+          setMapData,
+          startBootMetric,
+        },
       });
-      renderDispatcher = renderRuntime.renderDispatcher;
-      const { renderApp } = renderRuntime;
-      const uiShellTerritorySeed = applyUiShellDebugTerritorySeed();
-      startupUiBootstrapPromise = bootstrapDeferredUi(renderApp);
-      await startupUiBootstrapPromise;
-      startupUiBootstrapAwaited = true;
-      revealUiShellDebugTerritoryPanels();
-      runPostScenarioUiReplay({ full: true });
-      await ensureFullLocalizationDataReady({ reason: "ui-shell-ready", renderNow: false });
-      renderDispatcher.flush();
-      setBootState("ready", {
-        blocking: false,
-        progress: 100,
-        canContinueWithoutScenario: false,
-      });
-      finishBootMetric("ui-shell", { mode: "debug" });
-      checkpointBootMetricOnce("ui-shell-ready");
-      completeBootSequenceLogging();
-      globalThis.__mapcreatorUiShellDebug = {
-        ready: true,
-        skippedStartupData: true,
-        skippedScenarioApply: true,
-        territoryPreview: uiShellTerritorySeed,
-      };
+      renderDispatcher = uiShellBootResult.renderDispatcher;
+      startupUiBootstrapPromise = uiShellBootResult.startupUiBootstrapPromise;
+      startupUiBootstrapAwaited = !!uiShellBootResult.startupUiBootstrapAwaited;
       return;
     }
     // Phase: 加载基础拓扑 | Input: 启动配置与 bootstrap 资源 promise | Output: startupBaseData + 已注入基础 state 字段。

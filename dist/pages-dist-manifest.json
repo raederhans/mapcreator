@@ -45636,6 +45636,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/ui_shell_boot.js",
+      "size_bytes": 4619,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/ui_shell_debug_seed.js",
       "size_bytes": 14767,
       "source_kind": "dist"
@@ -46482,7 +46487,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 32975,
+      "size_bytes": 31966,
       "source_kind": "dist"
     },
     {
@@ -47252,7 +47257,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1459217,
+      "size_bytes": 1459335,
       "source_kind": "dist"
     },
     {
@@ -47271,5 +47276,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155219488
+  "total_bytes": 1155223216
 }

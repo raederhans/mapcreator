@@ -33,6 +33,7 @@
     "test:node:main-runtime-diagnostics": "node --test tests/main_runtime_diagnostics_behavior.test.mjs tests/main_runtime_diagnostics_boundary.test.mjs",
     "test:node:render-runtime-binding": "node --test tests/render_runtime_binding_behavior.test.mjs tests/main_render_runtime_binding_boundary.test.mjs",
     "test:node:startup-failure-recovery": "node --test tests/startup_failure_recovery_behavior.test.mjs tests/main_startup_failure_recovery_boundary.test.mjs",
+    "test:node:ui-shell-boot": "node --test tests/ui_shell_boot_behavior.test.mjs tests/main_ui_shell_boot_boundary.test.mjs",
     "python": "node tools/run_python.mjs",
     "test:node:backend-cloud-support": "node --test tests/backend_client_behavior.test.mjs tests/project_support_diagnostics_controller_behavior.test.mjs tests/backend_console_helpers.test.mjs",
     "test:node:backend-console-helpers": "node --test tests/backend_console_helpers.test.mjs",

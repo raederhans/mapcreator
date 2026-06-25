@@ -12,12 +12,15 @@ function readRepoFile(...segments) {
 
 test("main imports and calls the startup render runtime binding owner", () => {
   const mainSource = readRepoFile("js", "main.js");
+  const uiShellBootSource = readRepoFile("js", "bootstrap", "ui_shell_boot.js");
   const bindingCalls = mainSource.match(/createStartupRenderRuntimeBinding\(\{/g) || [];
 
   assert.match(mainSource, /from "\.\/bootstrap\/render_runtime_binding\.js";/);
-  assert.equal(bindingCalls.length, 2);
-  assert.match(mainSource, /flushReason: "ui-shell-render-now"/);
+  assert.equal(bindingCalls.length, 1);
+  assert.match(mainSource, /createStartupRenderRuntimeBinding,/);
   assert.match(mainSource, /flushReason: "legacy-render-now"/);
+  assert.match(uiShellBootSource, /helpers\.createStartupRenderRuntimeBinding\(\{/);
+  assert.match(uiShellBootSource, /flushReason: "ui-shell-render-now"/);
 });
 
 test("main no longer owns render runtime binding internals", () => {
