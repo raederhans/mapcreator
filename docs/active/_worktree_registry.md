@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-25 18:57 UTC
+Last updated: 2026-06-25 19:58 UTC
 
 ## Integration Owner
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-25 18:57 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@c4a5632f`; parent checkout preserved with separate docs cleanup WIP | current pushed mainline includes startup failure recovery closeout; local parent checkout still trails that remote head | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane; production startup/bootstrap source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, parent `git status --short --branch`, clean phase4 validation evidence, and this closeout archive sync. | Yellow for docs/archive cleanup; green for production startup/bootstrap files. | Keep docs/archive deletions for a separate cleanup decision; sync/review the parent checkout only when that lane is ready. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@3aab4ca8`; remote `origin/main@3aab4ca8` | current pushed mainline includes startup ready handoff phase8 plus registry-sync closeout | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; production startup/bootstrap source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, `git rev-parse HEAD origin/main`, parent `git status --short --branch`, and final `git diff --check`. | Yellow for docs/archive cleanup; green for production startup/bootstrap files. | Keep docs/archive deletions for a separate cleanup decision; future feature work can start from local or remote `main@3aab4ca8`. |
 
 ## Recent Integrated Branches
 
