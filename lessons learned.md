@@ -470,3 +470,6 @@
 
 ### Scenario UI await 后要复核事务归属
 - 点击处理器等待 optional scenario asset 后再写 UI 状态时，要同时复核 `activeScenarioId` 和 `currentScenarioApplyRequestId`；数据层挡住 stale payload 后，UI continuation 仍可能把旧 scenario 操作写进新 scenario。
+
+### 抽 owner 时同步旧边界合同
+- 从 `main.js` 抽出 bootstrap owner 后，除了新增 owner 合同，还要 grep 旧 Python/Node boundary tests 里的旧 owner token；否则正确的职责迁移会被旧合同当成回归。
