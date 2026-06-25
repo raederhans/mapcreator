@@ -35,6 +35,14 @@
   - `npm run verify:pages-dist` -> Pages startup shell 39/39 and landing showcase 8/8.
   - `npm run verify:dist-drift` -> passed after staging regenerated dist CSS and manifest.
 
+## Closeout
+
+- Functional commit: `90b207e2573e37ddbbb72088c6f2b81588ad6c97`.
+- Remote branch: `origin/codex/ui-rework-mainline-phase45-20260625`.
+- Main integration: pushed to `origin/main` on 2026-06-25.
+- Docs archived under `docs/archive/ui-rework-mainline-phase45-20260625/`.
+- Parent checkout `docs/archive/**` deletion WIP remained untouched.
+
 ## Live Process Ownership
 
 - Main Codex agent owns all live npm installs, Playwright tests, browser smoke, Pages dist, and dist drift checks.

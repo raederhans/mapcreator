@@ -51,3 +51,9 @@
 - `npm run test:node:startup-failure-recovery` -> 14/14 passed.
 - `npm run verify:pages-dist` -> passed, regenerated `dist/app/css/style.css` and `dist/pages-dist-manifest.json`.
 - `npm run verify:dist-drift` -> passed after generated dist changes were staged.
+
+## Integration Result
+
+- Functional commit: `90b207e2573e37ddbbb72088c6f2b81588ad6c97`.
+- `origin/main` includes phase4.5.
+- Phase5 can use `npm run test:e2e:ui-rework-mainline` as a restored dynamic UI shell regression signal.
