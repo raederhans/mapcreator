@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 15:34 UTC
+Last updated: 2026-06-26 16:03 UTC
 
 ## Integration Owner
 
@@ -20,7 +20,8 @@ Last updated: 2026-06-26 15:34 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@837b48c9` includes P18, renderer audit closeout, and P19 viewport command owner | parent is behind remote by P9-P19 renderer extraction commits plus audit closeout | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for integrated P19 renderer extraction because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@d2171b5f` includes P18, P19, and the P19 registry closeout | parent is behind remote by P9-P19 renderer extraction commits plus closeouts | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for integrated P19 renderer extraction because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p20-viewport-resize-lifecycle-owner` | branch `codex/viewport-resize-lifecycle-owner-p20-20260626`; `HEAD@d2171b5f` plus ready worktree diff | `origin/main@d2171b5fec0f78557736bf456416c1691925e204` | ready-for-integration | hot files resolved: `js/core/map_renderer.js`, `js/core/renderer/viewport_resize_lifecycle_owner.js`, `tests/viewport_resize_lifecycle_owner_behavior.test.mjs`, `tests/test_frontend_render_boundary_contract.py`, `tools/check_architecture_boundaries.mjs`, `tools/test_route_registry.mjs`, `package.json`, active P20 docs and registry. Forbidden paths stayed untouched: `dist/app/**`, state-write allowlist, and `js/core/map_renderer/public.js`. | Validation passed: owner 12/12, viewport command 8/8, viewport read-model 12/12, scenario water cache 7/7, projected bounds 12/12, transform reuse 7/7, render cache 6/6, host inventory 7/7, runtime state 10/10, diagnostics 21/21, scenario refresh 24/24, scenario chunk contracts 57/57, architecture, state-write allowlist, import graph, frontend boundary 5/5, e2e structural 28/28, selector check 189 routes, selector explain, TNO ready-state 5/5, smoke 4/4, diff/token scans. | Yellow: shared renderer host wrappers, package script, architecture checker, and route registry. Green against parent archive WIP and dist. | Commit, push branch/main, archive docs, update registry to integrated, and clean the isolated worktree. |
 
 ## Recent Integrated Branches
 

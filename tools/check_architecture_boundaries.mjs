@@ -19,6 +19,7 @@ const FILES = Object.freeze({
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
+  viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -38,6 +39,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
+  [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -84,6 +86,7 @@ function collectFailures() {
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
   const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
+  const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -104,6 +107,7 @@ function collectFailures() {
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
     [FILES.viewportCommandOwner]: viewportCommandOwner,
+    [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -143,6 +147,7 @@ function collectFailures() {
     FILES.projectedGeometryBoundsOwner,
     FILES.viewportReadModelOwner,
     FILES.viewportCommandOwner,
+    FILES.viewportResizeLifecycleOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -375,6 +380,24 @@ function collectFailures() {
   ]) {
     if (viewportCommandOwner.includes(token)) {
       failures.push(`${FILES.viewportCommandOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "../map_renderer.js",
+    "./map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "initZoom",
+    "renderPassToCache",
+    "createElement(",
+    "appendChild(",
+    ".getContext(",
+    "mapCanvas",
+    "mapSvg",
+    "projection.",
+  ]) {
+    if (viewportResizeLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.viewportResizeLifecycleOwner} must not touch renderer lifecycle token: ${token}`);
     }
   }
   for (const token of [
@@ -649,6 +672,35 @@ function collectFailures() {
         "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleBy",
         "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleTo",
         "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.translateBy",
+      ],
+    },
+    {
+      ownerPath: FILES.viewportResizeLifecycleOwner,
+      ownerTokens: [
+        "export function createViewportResizeLifecycleOwner(",
+        "function requestMapContainerResizeSync(",
+        "function bindMapContainerResizeObserver(",
+        "function bindBrowserPixelRatioObserver(",
+        "function bindVisualViewportResizeObserver(",
+        "function handleBrowserPixelRatioRefresh(",
+        "function handleResize(",
+        "function scheduleResizeSpatialRefresh(",
+      ],
+      rendererRequiredTokens: [
+        "createViewportResizeLifecycleOwner({",
+        "return getViewportResizeLifecycleOwner().requestMapContainerResizeSync(",
+        "return getViewportResizeLifecycleOwner().handleResize(",
+        "return getViewportResizeLifecycleOwner().bindBrowserZoomObservers(",
+      ],
+      rendererForbiddenTokens: [
+        "let mapContainerResizeObserver =",
+        "let mapContainerResizeFrame =",
+        "let mapContainerResizeTimer =",
+        "let pendingMapResizeReason =",
+        "let browserPixelRatioMediaQuery =",
+        "let browserPixelRatioMediaQueryHandler =",
+        "let visualViewportResizeHandler =",
+        "let resizeSpatialRefreshHandle =",
       ],
     },
     {

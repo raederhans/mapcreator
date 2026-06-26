@@ -41,10 +41,15 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         boundary = (REPO_ROOT / "js" / "core" / "render_boundary.js").read_text(encoding="utf-8")
         renderer = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
         main_js = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        render_runtime_binding = (
+            REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
+        ).read_text(encoding="utf-8")
         self.assertIn("lastScheduledReasons", boundary)
         self.assertIn("markRenderBoundaryFlushed", boundary)
         self.assertIn('recordRenderPerfMetric("renderBoundaryReasons", 0, getRenderBoundaryDebugState())', renderer)
-        self.assertIn("markRenderBoundaryFlushed();", main_js)
+        self.assertIn("flushRenderBoundary", main_js)
+        self.assertIn("markBoundaryFlushed = markRenderBoundaryFlushed", render_runtime_binding)
+        self.assertIn("markBoundaryFlushed();", render_runtime_binding)
 
     def test_core_modules_keep_ui_runtime_dependencies_behind_hooks(self):
         offenders = []
@@ -63,6 +68,9 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
         core_i18n_content = (REPO_ROOT / "js" / "core" / "i18n.js").read_text(encoding="utf-8")
         main_content = (REPO_ROOT / "js" / "main.js").read_text(encoding="utf-8")
+        render_runtime_binding_content = (
+            REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
+        ).read_text(encoding="utf-8")
         ui_i18n_content = (REPO_ROOT / "js" / "ui" / "i18n.js").read_text(encoding="utf-8")
         ui_catalog_content = (REPO_ROOT / "js" / "ui" / "i18n_catalog.js").read_text(encoding="utf-8")
 
@@ -70,53 +78,98 @@ class FrontendRenderBoundaryContractTest(unittest.TestCase):
         self.assertIn('callRuntimeHook(runtimeState, "showToastFn", message, options);', renderer_content)
         self.assertNotIn("globalThis.location", core_i18n_content)
         self.assertNotIn("localStorage", core_i18n_content)
-        self.assertIn('registerRuntimeHook(state, "showToastFn", showToast);', main_content)
+        self.assertIn('registerHook(targetState, "showToastFn", showToastFn);', render_runtime_binding_content)
+        self.assertIn("createStartupRenderRuntimeBinding({", main_content)
         self.assertIn("configureStartupSupportKeyUsageAudit();", main_content)
         self.assertIn('} from "../core/i18n.js";', ui_i18n_content)
         self.assertIn('export { UI_COPY_CATALOG } from "../core/i18n_catalog.js";', ui_catalog_content)
 
     def test_map_container_resize_observer_keeps_stage_resize_centered(self):
-        for renderer_path in (
-            REPO_ROOT / "js" / "core" / "map_renderer.js",
-            REPO_ROOT / "dist" / "app" / "js" / "core" / "map_renderer.js",
-        ):
-            content = renderer_path.read_text(encoding="utf-8")
-            with self.subTest(renderer=renderer_path.relative_to(REPO_ROOT).as_posix()):
-                self.assertIn("let mapContainerResizeObserver = null;", content)
-                self.assertIn("let pendingMapResizeReason = \"\";", content)
-                self.assertIn("let browserPixelRatioMediaQuery = null;", content)
-                self.assertIn("function bindMapContainerResizeObserver()", content)
-                self.assertIn("function shouldPreferFullResizeReason(currentReason, nextReason)", content)
-                self.assertIn("function bindBrowserPixelRatioObserver()", content)
-                self.assertIn("function bindVisualViewportResizeObserver()", content)
-                self.assertIn("function bindBrowserZoomObservers()", content)
-                self.assertIn("function handleBrowserPixelRatioRefresh(reason = \"browser-dpr-change\")", content)
-                self.assertIn("new globalThis.ResizeObserver", content)
-                self.assertIn('requestMapContainerResizeSync("map-container-resize");', content)
-                self.assertIn('requestMapContainerResizeSync("browser-dpr-change");', content)
-                self.assertIn('requestMapContainerResizeSync("visual-viewport-resize");', content)
-                self.assertIn('if (resizeReason === "browser-dpr-change")', content)
-                self.assertIn('if (pendingReason === "browser-dpr-change")', content)
-                self.assertIn("pendingMapResizeReason = resizeReason;", content)
-                self.assertIn("shouldPreferFullResizeReason(pendingMapResizeReason, resizeReason)", content)
-                self.assertIn("handleBrowserPixelRatioRefresh(pendingReason);", content)
-                self.assertIn("globalThis.matchMedia(getDevicePixelRatioMediaQuery())", content)
-                self.assertIn('browserPixelRatioMediaQuery.removeEventListener("change", browserPixelRatioMediaQueryHandler);', content)
-                self.assertIn('mediaQuery.addEventListener("change", handleBrowserPixelRatioChange);', content)
-                self.assertIn('viewport.addEventListener("resize", visualViewportResizeHandler, { passive: true });', content)
-                self.assertIn("forceDprInvalidation = false", content)
-                self.assertIn("forceDprInvalidation || Math.abs(previousDpr - runtimeState.dpr) >= 0.01", content)
-                self.assertIn("mapContainerResizeObserver.observe(mapContainer);", content)
-                self.assertIn("let resizeSpatialRefreshHandle = null;", content)
-                self.assertIn('window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);', content)
-                self.assertIn('window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));', content)
-                self.assertIn("function getProjectedRenderableContentBounds()", content)
-                self.assertIn("function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {})", content)
-                self.assertIn("const layoutSizeChangedDuringPhase = interactiveLayoutResize && (", content)
-                self.assertIn("centerContent: interactiveLayoutResize", content)
-                self.assertIn("fitProjection({ skipSpatialIndex: interactiveLayoutResize });", content)
-                self.assertIn("scheduleResizeSpatialRefresh(resizeReason);", content)
-                self.assertIn("bindBrowserZoomObservers();", content)
+        renderer_content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        owner_content = (
+            REPO_ROOT / "js" / "core" / "renderer" / "viewport_resize_lifecycle_owner.js"
+        ).read_text(encoding="utf-8")
+        dist_renderer = REPO_ROOT / "dist" / "app" / "js" / "core" / "map_renderer.js"
+
+        self.assertTrue(dist_renderer.exists())
+
+        self.assertIn('from "./renderer/viewport_resize_lifecycle_owner.js";', renderer_content)
+        self.assertIn("let viewportResizeLifecycleOwner = null;", renderer_content)
+        self.assertIn("createViewportResizeLifecycleOwner({", renderer_content)
+        self.assertIn("return getViewportResizeLifecycleOwner().requestMapContainerResizeSync(reason);", renderer_content)
+        self.assertIn("return getViewportResizeLifecycleOwner().handleResize(reason);", renderer_content)
+        self.assertIn("return getViewportResizeLifecycleOwner().bindBrowserZoomObservers();", renderer_content)
+        self.assertIn('window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);', renderer_content)
+        self.assertIn('window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));', renderer_content)
+        self.assertIn("function getProjectedRenderableContentBounds()", renderer_content)
+        self.assertIn("function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {})", renderer_content)
+        self.assertIn("setHitCanvasDirty: () => {", renderer_content)
+        self.assertIn("runtimeState.hitCanvasDirty = true;", renderer_content)
+        self.assertIn("forceDprInvalidation = false", renderer_content)
+        self.assertIn("forceDprInvalidation || Math.abs(previousDpr - runtimeState.dpr) >= 0.01", renderer_content)
+
+        for forbidden in [
+            "let mapContainerResizeObserver =",
+            "let mapContainerResizeFrame =",
+            "let mapContainerResizeTimer =",
+            "let pendingMapResizeReason =",
+            "let browserPixelRatioMediaQuery =",
+            "let browserPixelRatioMediaQueryHandler =",
+            "let visualViewportResizeHandler =",
+            "let resizeSpatialRefreshHandle =",
+        ]:
+            self.assertNotIn(forbidden, renderer_content)
+
+        for wrapper_name in [
+            "getResizeReason",
+            "isInteractiveLayoutResize",
+            "scheduleResizeSpatialRefresh",
+            "shouldPreferFullResizeReason",
+            "requestMapContainerResizeSync",
+            "bindMapContainerResizeObserver",
+            "getDevicePixelRatioMediaQuery",
+            "unbindBrowserPixelRatioObserver",
+            "bindBrowserPixelRatioObserver",
+            "bindVisualViewportResizeObserver",
+            "bindBrowserZoomObservers",
+            "handleBrowserPixelRatioRefresh",
+            "handleResize",
+            "handleSidebarLayoutStart",
+        ]:
+            self.assertIn(f"function {wrapper_name}", renderer_content)
+
+        for owner_token in [
+            "let mapContainerResizeObserver = null;",
+            "let mapContainerResizeFrame = 0;",
+            "let mapContainerResizeTimer = 0;",
+            "let pendingMapResizeReason = \"\";",
+            "let browserPixelRatioMediaQuery = null;",
+            "let browserPixelRatioMediaQueryHandler = null;",
+            "let visualViewportResizeHandler = null;",
+            "let resizeSpatialRefreshHandle = null;",
+            "function requestMapContainerResizeSync(",
+            "function bindMapContainerResizeObserver(",
+            "function bindBrowserPixelRatioObserver(",
+            "function bindVisualViewportResizeObserver(",
+            "function handleBrowserPixelRatioRefresh(",
+            "function handleResize(",
+            'requestMapContainerResizeSync("browser-dpr-change");',
+            'requestMapContainerResizeSync("visual-viewport-resize");',
+            'viewport.addEventListener("resize", visualViewportResizeHandler, { passive: true });',
+            "scheduleResizeSpatialRefresh(resizeReason);",
+        ]:
+            self.assertIn(owner_token, owner_content)
+
+        for forbidden in [
+            "runtimeState",
+            "drawCanvas",
+            "initZoom",
+            "renderPassToCache",
+            "createElement(",
+            "appendChild(",
+            ".getContext(",
+        ]:
+            self.assertNotIn(forbidden, owner_content)
 
 
 if __name__ == "__main__":

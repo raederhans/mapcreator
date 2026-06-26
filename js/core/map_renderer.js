@@ -197,6 +197,7 @@ import { createRenderTransformReusePolicyOwner } from "./renderer/render_transfo
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
 import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
+import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
@@ -323,14 +324,6 @@ let pathSVG = null;
 let pathCanvas = null;
 let pathHitCanvas = null;
 let zoomBehavior = null;
-let mapContainerResizeObserver = null;
-let mapContainerResizeFrame = 0;
-let mapContainerResizeTimer = 0;
-let pendingMapResizeReason = "";
-let browserPixelRatioMediaQuery = null;
-let browserPixelRatioMediaQueryHandler = null;
-let visualViewportResizeHandler = null;
-let resizeSpatialRefreshHandle = null;
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
 let activeContextMetricSession = null;
@@ -1007,6 +1000,7 @@ let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
 let viewportCommandOwner = null;
+let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
@@ -1893,6 +1887,43 @@ function getViewportCommandOwner() {
     },
   });
   return viewportCommandOwner;
+}
+
+function getViewportResizeLifecycleOwner() {
+  if (viewportResizeLifecycleOwner) {
+    return viewportResizeLifecycleOwner;
+  }
+  viewportResizeLifecycleOwner = createViewportResizeLifecycleOwner({
+    state,
+    getters: {
+      getMapContainer: () => mapContainer,
+      getGlobal: () => globalThis,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      hasLandFeatures: () => !!runtimeState.landData?.features?.length,
+    },
+    helpers: {
+      scheduleDeferredWork,
+      cancelDeferredWork,
+      nowMs,
+      recordRenderPerfMetric,
+    },
+    effects: {
+      setRenderPhaseInteracting: () => setRenderPhase(RENDER_PHASE_INTERACTING),
+      scheduleRenderPhaseIdle,
+      setCanvasSize,
+      fitProjection,
+      resetZoomToFit,
+      enforceZoomConstraints,
+      markAllOverlaysDirty,
+      render,
+      buildSpatialIndex,
+      setHitCanvasDirty: () => {
+        runtimeState.hitCanvasDirty = true;
+      },
+      scheduleHitCanvasBuildIfNeeded,
+    },
+  });
+  return viewportResizeLifecycleOwner;
 }
 
 function getScenarioWaterCachePolicyOwner() {
@@ -22466,208 +22497,59 @@ function fitProjection({ skipSpatialIndex = false } = {}) {
 }
 
 function getResizeReason(reason, fallback = "resize") {
-  return typeof reason === "string" && reason.trim() ? reason.trim() : fallback;
+  return getViewportResizeLifecycleOwner().getResizeReason(reason, fallback);
 }
 
 function isInteractiveLayoutResize(reason) {
-  return reason === "map-container-resize" || reason === "sidebar-layout-refresh";
+  return getViewportResizeLifecycleOwner().isInteractiveLayoutResize(reason);
 }
 
 function scheduleResizeSpatialRefresh(reason = "resize") {
-  cancelDeferredWork(resizeSpatialRefreshHandle);
-  resizeSpatialRefreshHandle = scheduleDeferredWork(() => {
-    resizeSpatialRefreshHandle = null;
-    if (!runtimeState.landData?.features?.length) return;
-    const startedAt = nowMs();
-    buildSpatialIndex();
-    runtimeState.hitCanvasDirty = true;
-    scheduleHitCanvasBuildIfNeeded({ reason: "resize-spatial-refresh" });
-    recordRenderPerfMetric("resizeSpatialRefresh", nowMs() - startedAt, {
-      reason: getResizeReason(reason),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }, {
-    timeout: 360,
-  });
+  return getViewportResizeLifecycleOwner().scheduleResizeSpatialRefresh(reason);
 }
 
 function shouldPreferFullResizeReason(currentReason, nextReason) {
-  return currentReason === "browser-dpr-change" && nextReason !== "browser-dpr-change";
+  return getViewportResizeLifecycleOwner().shouldPreferFullResizeReason(currentReason, nextReason);
 }
 
 function requestMapContainerResizeSync(reason = "map-container-resize") {
-  const resizeReason = getResizeReason(reason, "map-container-resize");
-  if (resizeReason === "browser-dpr-change") {
-    if (mapContainerResizeFrame) {
-      pendingMapResizeReason = pendingMapResizeReason || resizeReason;
-      return;
-    }
-    pendingMapResizeReason = resizeReason;
-    const requestFrame = typeof globalThis.requestAnimationFrame === "function"
-      ? globalThis.requestAnimationFrame
-      : (callback) => globalThis.setTimeout(callback, 0);
-    mapContainerResizeFrame = requestFrame(() => {
-      mapContainerResizeFrame = 0;
-      const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-      pendingMapResizeReason = "";
-      if (pendingReason === "browser-dpr-change") {
-        handleBrowserPixelRatioRefresh(pendingReason);
-      } else {
-        handleResize(pendingReason);
-      }
-    });
-    return;
-  }
-  if (resizeReason === "map-container-resize") {
-    if (mapContainerResizeTimer) {
-      globalThis.clearTimeout(mapContainerResizeTimer);
-    }
-    mapContainerResizeTimer = globalThis.setTimeout(() => {
-      mapContainerResizeTimer = 0;
-      handleResize(resizeReason);
-    }, 120);
-    return;
-  }
-  if (mapContainerResizeFrame) {
-    if (shouldPreferFullResizeReason(pendingMapResizeReason, resizeReason)) {
-      pendingMapResizeReason = resizeReason;
-    }
-    return;
-  }
-  pendingMapResizeReason = resizeReason;
-  const requestFrame = typeof globalThis.requestAnimationFrame === "function"
-    ? globalThis.requestAnimationFrame
-    : (callback) => globalThis.setTimeout(callback, 0);
-  mapContainerResizeFrame = requestFrame(() => {
-    mapContainerResizeFrame = 0;
-    const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-    pendingMapResizeReason = "";
-    handleResize(pendingReason);
-  });
+  return getViewportResizeLifecycleOwner().requestMapContainerResizeSync(reason);
 }
 
 function bindMapContainerResizeObserver() {
-  if (!mapContainer || typeof globalThis.ResizeObserver !== "function") return;
-  if (mapContainerResizeObserver) {
-    mapContainerResizeObserver.disconnect();
-  }
-  mapContainerResizeObserver = new globalThis.ResizeObserver((entries = []) => {
-    const entry = entries[0] || null;
-    const width = Math.round(Number(entry?.contentRect?.width || mapContainer.clientWidth || 0));
-    const height = Math.round(Number(entry?.contentRect?.height || mapContainer.clientHeight || 0));
-    if (width <= 0 || height <= 0) return;
-    if (width === Number(runtimeState.width || 0) && height === Number(runtimeState.height || 0)) return;
-    requestMapContainerResizeSync("map-container-resize");
-  });
-  mapContainerResizeObserver.observe(mapContainer);
+  return getViewportResizeLifecycleOwner().bindMapContainerResizeObserver();
 }
 
 function getDevicePixelRatioMediaQuery() {
-  const dpr = Math.max(1, Number(globalThis.devicePixelRatio || 1));
-  return `(resolution: ${dpr}dppx)`;
+  return getViewportResizeLifecycleOwner().getDevicePixelRatioMediaQuery();
 }
 
 function unbindBrowserPixelRatioObserver() {
-  if (!browserPixelRatioMediaQuery || !browserPixelRatioMediaQueryHandler) {
-    browserPixelRatioMediaQuery = null;
-    browserPixelRatioMediaQueryHandler = null;
-    return;
-  }
-  if (typeof browserPixelRatioMediaQuery.removeEventListener === "function") {
-    browserPixelRatioMediaQuery.removeEventListener("change", browserPixelRatioMediaQueryHandler);
-  } else if (typeof browserPixelRatioMediaQuery.removeListener === "function") {
-    browserPixelRatioMediaQuery.removeListener(browserPixelRatioMediaQueryHandler);
-  }
-  browserPixelRatioMediaQuery = null;
-  browserPixelRatioMediaQueryHandler = null;
+  return getViewportResizeLifecycleOwner().unbindBrowserPixelRatioObserver();
 }
 
 function bindBrowserPixelRatioObserver() {
-  if (typeof globalThis.matchMedia !== "function") return;
-  unbindBrowserPixelRatioObserver();
-  const mediaQuery = globalThis.matchMedia(getDevicePixelRatioMediaQuery());
-  const handleBrowserPixelRatioChange = () => {
-    requestMapContainerResizeSync("browser-dpr-change");
-    bindBrowserPixelRatioObserver();
-  };
-  if (typeof mediaQuery.addEventListener === "function") {
-    mediaQuery.addEventListener("change", handleBrowserPixelRatioChange);
-  } else if (typeof mediaQuery.addListener === "function") {
-    mediaQuery.addListener(handleBrowserPixelRatioChange);
-  } else {
-    return;
-  }
-  browserPixelRatioMediaQuery = mediaQuery;
-  browserPixelRatioMediaQueryHandler = handleBrowserPixelRatioChange;
+  return getViewportResizeLifecycleOwner().bindBrowserPixelRatioObserver();
 }
 
 function bindVisualViewportResizeObserver() {
-  const viewport = globalThis.visualViewport;
-  if (!viewport || typeof viewport.addEventListener !== "function") return;
-  if (visualViewportResizeHandler && typeof viewport.removeEventListener === "function") {
-    viewport.removeEventListener("resize", visualViewportResizeHandler);
-  }
-  visualViewportResizeHandler = () => requestMapContainerResizeSync("visual-viewport-resize");
-  viewport.addEventListener("resize", visualViewportResizeHandler, { passive: true });
+  return getViewportResizeLifecycleOwner().bindVisualViewportResizeObserver();
 }
 
 function bindBrowserZoomObservers() {
-  bindBrowserPixelRatioObserver();
-  bindVisualViewportResizeObserver();
+  return getViewportResizeLifecycleOwner().bindBrowserZoomObservers();
 }
 
 function handleBrowserPixelRatioRefresh(reason = "browser-dpr-change") {
-  const resizeReason = getResizeReason(reason, "browser-dpr-change");
-  const canvasSizeChanged = setCanvasSize({
-    reason: resizeReason,
-    forceDprInvalidation: true,
-  });
-  if (!canvasSizeChanged) return;
-  markAllOverlaysDirty();
-  render();
+  return getViewportResizeLifecycleOwner().handleBrowserPixelRatioRefresh(reason);
 }
 
 function handleResize(reason = "resize") {
-  const resizeReason = getResizeReason(reason);
-  const interactiveLayoutResize = isInteractiveLayoutResize(resizeReason);
-  const previousViewport = {
-    width: Number(runtimeState.width || 0),
-    height: Number(runtimeState.height || 0),
-  };
-  if (interactiveLayoutResize) {
-    setRenderPhase(RENDER_PHASE_INTERACTING);
-  }
-  const canvasSizeChanged = setCanvasSize({ reason: resizeReason });
-  const layoutSizeChangedDuringPhase = interactiveLayoutResize && (
-    previousViewport.width !== Number(runtimeState.width || 0)
-    || previousViewport.height !== Number(runtimeState.height || 0)
-  );
-  if (!canvasSizeChanged && !layoutSizeChangedDuringPhase) {
-    if (interactiveLayoutResize) {
-      scheduleRenderPhaseIdle();
-    }
-    return;
-  }
-  fitProjection({ skipSpatialIndex: interactiveLayoutResize });
-  resetZoomToFit({
-    centerContent: interactiveLayoutResize,
-    centerX: true,
-    centerY: false,
-  });
-  if (!interactiveLayoutResize) {
-    enforceZoomConstraints();
-  }
-  markAllOverlaysDirty();
-  render();
-  if (interactiveLayoutResize) {
-    scheduleResizeSpatialRefresh(resizeReason);
-    scheduleRenderPhaseIdle();
-  }
+  return getViewportResizeLifecycleOwner().handleResize(reason);
 }
 
 function handleSidebarLayoutStart() {
-  setRenderPhase(RENDER_PHASE_INTERACTING);
-  scheduleRenderPhaseIdle();
+  return getViewportResizeLifecycleOwner().handleSidebarLayoutStart();
 }
 
 function initZoom() {
