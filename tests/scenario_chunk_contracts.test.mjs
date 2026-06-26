@@ -1990,6 +1990,7 @@ test("color strategy resolves generic water-like political features to ocean fil
 
 test("TNO water topology contracts keep exclusive scenario water and shared surface version signal", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const projectedGeometryBoundsOwnerSource = readRepoFile("js", "core", "renderer", "projected_geometry_bounds_owner.js");
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
@@ -2014,9 +2015,10 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function rebuildAuxiliaryRegionIndexes\(\) \{[\s\S]*?if \(!isWaterRegionEnabled\(selectedFeature\)\) \{[\s\S]*?runtimeState\.selectedWaterRegionId = "";/.test(rendererSource)
       && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?if \(!isWaterRegionEnabled\(feature\)\) return;/.test(rendererSource),
     waterSphericalDiagnosticsBacksSanitization:
-      /function getSphericalGeometryDiagnostics\(geoObject\) \{[\s\S]*?globalThis\.d3\.geoArea[\s\S]*?globalThis\.d3\.geoBounds[\s\S]*?isWorldBounds\(bounds\)[\s\S]*?SPHERICAL_GEOMETRY_MAX_AREA/.test(rendererSource)
-      && /function collectSafeWaterRegionGeometryPartsInfo\(feature\) \{[\s\S]*?isSphericalGeometryUnsafe\(part\)[\s\S]*?removedCount \+= 1;/.test(rendererSource)
-      && /function sanitizeWaterRegionFeatures\(features = \[\]\) \{[\s\S]*?recordRenderPerfMetric\("waterSphericalSanitization"/.test(rendererSource),
+      /function getSphericalGeometryDiagnostics\(geoObject\) \{[\s\S]*?const d3 = getD3\(\);[\s\S]*?d3\.geoArea[\s\S]*?d3\.geoBounds[\s\S]*?isWorldBounds\(bounds\)[\s\S]*?sphericalGeometryMaxArea/.test(projectedGeometryBoundsOwnerSource)
+      && /function collectSafeWaterRegionGeometryPartsInfo\(feature\) \{[\s\S]*?isSphericalGeometryUnsafe\(part\)[\s\S]*?removedCount \+= 1;/.test(projectedGeometryBoundsOwnerSource)
+      && /function sanitizeWaterRegionFeatures\(features = \[\]\) \{[\s\S]*?recordRenderPerfMetric\("waterSphericalSanitization"/.test(projectedGeometryBoundsOwnerSource)
+      && /function sanitizeWaterRegionFeatures\(features = \[\]\) \{[\s\S]*?return getProjectedGeometryBoundsOwner\(\)\.sanitizeWaterRegionFeatures\(features\);/.test(rendererSource),
     waterDrawAndHighlightUseSafeParts:
       /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?pathCanvas\(part\)/.test(rendererSource)
       && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?pathCanvas\(part\)/.test(rendererSource),
@@ -2130,6 +2132,7 @@ test("owner/base diagnostics separate geometry country from display owner", () =
 
 test("Atlantropa field-driven interaction contracts preserve explicit render and hit layers", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const projectedGeometryBoundsOwnerSource = readRepoFile("js", "core", "renderer", "projected_geometry_bounds_owner.js");
   const spatialBuilderSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_builders.js");
   const spatialOwnerSource = readRepoFile("js", "core", "renderer", "spatial_index_runtime_owner.js");
   const chunkAssetToolSource = readRepoFile("tools", "scenario_chunk_assets.py");
@@ -2243,7 +2246,8 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /function drawScenarioAtlantropaLandLikeOverlayLayer\(k\) \{[\s\S]*?const buckets = getEffectiveAtlantropaFeatures\(\);[\s\S]*?\.\.\.buckets\.shoal,/.test(rendererSource)
       && /function drawScenarioAtlantropaLandLikeOverlayLayer\(k\) \{[\s\S]*?getSafeCanvasColor\(runtimeState\.colors\?\.\[id\], null\)[\s\S]*?getSafeCanvasColor\(getResolvedFeatureColor\(feature, id\), null\)/.test(rendererSource)
       && /function drawScenarioRegionOverlaysPass\(k\) \{[\s\S]*?const showAtlantropaLandLikeOverlay = showWater && isScenarioAtlantropaVisible\(\);[\s\S]*?if \(showAtlantropaLandLikeOverlay\) \{[\s\S]*?drawScenarioAtlantropaLandLikeOverlayLayer\(k\);[\s\S]*?\}/.test(rendererSource)
-      && /function shouldExcludeWaterHitGeometry\(hitGeometry, feature = null\) \{[\s\S]*?return isSphericalGeometryUnsafe\(hitGeometry\);[\s\S]*?\}/.test(rendererSource)
+      && /function shouldExcludeWaterHitGeometry\(hitGeometry, feature = null\) \{[\s\S]*?return getProjectedGeometryBoundsOwner\(\)\.shouldExcludeWaterHitGeometry\(hitGeometry, feature\);[\s\S]*?\}/.test(rendererSource)
+      && /function shouldExcludeWaterHitGeometry\(hitGeometry, _feature = null\) \{[\s\S]*?return isSphericalGeometryUnsafe\(hitGeometry\);[\s\S]*?\}/.test(projectedGeometryBoundsOwnerSource)
       && /function getUnifiedWaterBaseStyle\(feature\) \{[\s\S]*?isAtlantropaSeaFeature\(feature\)[\s\S]*?getAtlantropaSeaPoliticalFillColor\(\)/.test(rendererSource)
       && /function getWaterRegionColor\(id, feature = null\) \{[\s\S]*?const defaultStyleFeature = feature \|\| runtimeState\.waterRegionsById\?\.get\(resolvedId\);/.test(rendererSource)
       && /context\.fillStyle = getWaterRegionColor\(id, feature\);/.test(rendererSource)

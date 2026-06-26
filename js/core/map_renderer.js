@@ -194,6 +194,7 @@ import {
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
+import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -950,17 +951,12 @@ let physicalLandClipPathCache = {
   path: null,
 };
 const SCENARIO_BACKGROUND_MERGE_MAX_AREA = Math.PI * 2;
-const SPHERICAL_GEOMETRY_MAX_AREA = Math.PI * 2;
 const SCENARIO_COASTLINE_MAX_AREA_DELTA_RATIO = 0.02;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_RATIO = 0.25;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_COUNT = 500;
 const suspiciousScenarioBackgroundMergeWarnings = new Set();
 const scenarioOwnerOnlyCanonicalFallbackWarnings = new Set();
 const missingPhysicalContextWarnings = new Set();
-const waterSphericalSanitizationWarnings = new Set();
-const sphericalGeometryDiagnosticsByObject = new WeakMap();
-const safeWaterRegionGeometryPartsByFeature = new WeakMap();
-const sanitizedWaterRegionFeatureByFeature = new WeakMap();
 let scenarioWaterPartPathCache = new WeakMap();
 let scenarioWaterFeaturePathCache = new WeakMap();
 const renderDiag = {
@@ -1017,6 +1013,7 @@ let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
 let renderTransformReusePolicyOwner = null;
+let projectedGeometryBoundsOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1818,6 +1815,35 @@ function getRenderTransformReusePolicyOwner() {
     },
   });
   return renderTransformReusePolicyOwner;
+}
+
+function getProjectedGeometryBoundsOwner() {
+  if (projectedGeometryBoundsOwner) {
+    return projectedGeometryBoundsOwner;
+  }
+  projectedGeometryBoundsOwner = createProjectedGeometryBoundsOwner({
+    getters: {
+      getProjection: () => projection,
+      getPathCanvas: () => pathCanvas,
+      getPathSvg: () => pathSVG,
+      getProjectedBoundsCache: ensureProjectedBoundsCache,
+      getLandFeatures: () => runtimeState.landData?.features || [],
+      getRiverFeatures: () => runtimeState.riversData?.features || [],
+      getActiveScenarioId: () => runtimeState.activeScenarioId || "",
+      getD3: () => globalThis.d3,
+    },
+    helpers: {
+      getFeatureId,
+      recordRenderPerfMetric,
+      recordProjectedBoundsDiagnosticsState,
+      resetHostWaterPathCaches: () => {
+        scenarioWaterPartPathCache = new WeakMap();
+        scenarioWaterFeaturePathCache = new WeakMap();
+      },
+      warn: (...args) => console.warn(...args),
+    },
+  });
+  return projectedGeometryBoundsOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -5383,16 +5409,14 @@ function ensureProjectedBoundsCache() {
 }
 
 function clearProjectedBoundsCache() {
-  ensureProjectedBoundsCache().clear();
-  scenarioWaterPartPathCache = new WeakMap();
-  scenarioWaterFeaturePathCache = new WeakMap();
+  return getProjectedGeometryBoundsOwner().clearProjectedBoundsCache();
 }
 
 function isLineGeometryType(geometryType) {
   return geometryType === "LineString" || geometryType === "MultiLineString";
 }
 
-function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
+function recordProjectedBoundsDiagnosticsState(feature, reason = "unknown") {
   const geometryType = String(feature?.geometry?.type || "").trim() || "Unknown";
   const diagnostics = runtimeState.projectedBoundsDiagnostics && typeof runtimeState.projectedBoundsDiagnostics === "object"
     ? runtimeState.projectedBoundsDiagnostics
@@ -5422,309 +5446,76 @@ function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
   });
 }
 
+function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
+  return getProjectedGeometryBoundsOwner().recordProjectedBoundsDiagnostic(feature, reason);
+}
+
 function computeProjectedFeatureBounds(feature) {
-  return computeProjectedGeoBounds(feature);
+  return getProjectedGeometryBoundsOwner().computeProjectedFeatureBounds(feature);
 }
 
 function computeProjectedCoordinateBounds(geoObject) {
-  if (!projection || !geoObject || typeof geoObject !== "object") return null;
-  const geometry = String(geoObject.type || "") === "Feature" ? geoObject.geometry : geoObject;
-  const coordinates = geometry?.coordinates;
-  if (!Array.isArray(coordinates)) return null;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const visit = (value) => {
-    if (!Array.isArray(value)) return;
-    if (value.length >= 2 && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
-      const projected = projection([Number(value[0]), Number(value[1])]);
-      if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
-      minX = Math.min(minX, projected[0]);
-      minY = Math.min(minY, projected[1]);
-      maxX = Math.max(maxX, projected[0]);
-      maxY = Math.max(maxY, projected[1]);
-      return;
-    }
-    value.forEach(visit);
-  };
-  visit(coordinates);
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: maxX - minX,
-    height: maxY - minY,
-    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
-  };
+  return getProjectedGeometryBoundsOwner().computeProjectedCoordinateBounds(geoObject);
 }
 
 function computeProjectedGeoBounds(geoObject) {
-  const pathRef = pathCanvas || pathSVG;
-  if (!pathRef || !geoObject) return null;
-
-  let bounds = null;
-  try {
-    bounds = pathRef.bounds(geoObject);
-  } catch (error) {
-    return computeProjectedCoordinateBounds(geoObject);
-  }
-
-  if (!bounds || bounds.length !== 2) return computeProjectedCoordinateBounds(geoObject);
-  const minX = bounds[0][0];
-  const minY = bounds[0][1];
-  const maxX = bounds[1][0];
-  const maxY = bounds[1][1];
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return computeProjectedCoordinateBounds(geoObject);
-
-  const featureWidth = maxX - minX;
-  const featureHeight = maxY - minY;
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: featureWidth,
-    height: featureHeight,
-    area: Math.max(0, featureWidth) * Math.max(0, featureHeight),
-  };
+  return getProjectedGeometryBoundsOwner().computeProjectedGeoBounds(geoObject);
 }
 
 function normalizeGeoObjectForSphericalDiagnostics(geoObject) {
-  if (!geoObject || typeof geoObject !== "object") return null;
-  const objectType = String(geoObject.type || "").trim();
-  if (objectType === "Feature" || objectType === "FeatureCollection" || objectType === "Sphere") {
-    return geoObject;
-  }
-  if (objectType) {
-    return {
-      type: "Feature",
-      properties: {},
-      geometry: geoObject,
-    };
-  }
-  return null;
+  return getProjectedGeometryBoundsOwner().normalizeGeoObjectForSphericalDiagnostics(geoObject);
 }
 
 function getSphericalGeometryDiagnostics(geoObject) {
-  const normalizedGeoObject = normalizeGeoObjectForSphericalDiagnostics(geoObject);
-  if (!normalizedGeoObject || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds) {
-    return null;
-  }
-  if (sphericalGeometryDiagnosticsByObject.has(geoObject)) {
-    return sphericalGeometryDiagnosticsByObject.get(geoObject) || null;
-  }
-
-  try {
-    const area = Number(globalThis.d3.geoArea(normalizedGeoObject));
-    const bounds = globalThis.d3.geoBounds(normalizedGeoObject);
-    const diagnostics = {
-      area,
-      bounds,
-      isWorldBounds: isWorldBounds(bounds),
-      hasExcessiveSphereArea: Number.isFinite(area) && area > SPHERICAL_GEOMETRY_MAX_AREA,
-    };
-    diagnostics.invalid = diagnostics.isWorldBounds || diagnostics.hasExcessiveSphereArea;
-    sphericalGeometryDiagnosticsByObject.set(geoObject, diagnostics);
-    return diagnostics;
-  } catch (_error) {
-    return null;
-  }
+  return getProjectedGeometryBoundsOwner().getSphericalGeometryDiagnostics(geoObject);
 }
 
 function isSphericalGeometryUnsafe(geoObject) {
-  return !!getSphericalGeometryDiagnostics(geoObject)?.invalid;
+  return getProjectedGeometryBoundsOwner().isSphericalGeometryUnsafe(geoObject);
 }
 
 function collectPolygonalGeometryParts(geometry) {
-  if (!geometry || typeof geometry !== "object") return [];
-  const geometryType = String(geometry.type || "");
-  if (geometryType === "Polygon") {
-    return [geometry];
-  }
-  if (geometryType === "MultiPolygon") {
-    const coordinates = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
-    return coordinates
-      .filter((partCoordinates) => Array.isArray(partCoordinates) && partCoordinates.length > 0)
-      .map((partCoordinates) => ({
-        type: "Polygon",
-        coordinates: partCoordinates,
-      }));
-  }
-  if (geometryType === "GeometryCollection") {
-    return (Array.isArray(geometry.geometries) ? geometry.geometries : [])
-      .flatMap((partGeometry) => collectPolygonalGeometryParts(partGeometry));
-  }
-  return [];
+  return getProjectedGeometryBoundsOwner().collectPolygonalGeometryParts(geometry);
 }
 
 function collectFeatureHitGeometries(feature) {
-  const geometry = feature?.geometry;
-  const polygonParts = collectPolygonalGeometryParts(geometry);
-  return polygonParts.length ? polygonParts : (geometry ? [geometry] : []);
+  return getProjectedGeometryBoundsOwner().collectFeatureHitGeometries(feature);
 }
 
 function buildWaterRegionFeatureFromParts(feature, parts) {
-  const safeParts = Array.isArray(parts) ? parts : [];
-  if (!feature || !safeParts.length) return null;
-  if (safeParts.length === 1) {
-    return {
-      ...feature,
-      geometry: safeParts[0],
-    };
-  }
-  return {
-    ...feature,
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: safeParts
-        .filter((part) => String(part?.type || "") === "Polygon" && Array.isArray(part.coordinates))
-        .map((part) => part.coordinates),
-    },
-  };
+  return getProjectedGeometryBoundsOwner().buildWaterRegionFeatureFromParts(feature, parts);
 }
 
 function collectSafeWaterRegionGeometryPartsInfo(feature) {
-  if (!feature || typeof feature !== "object") {
-    return { parts: [], rawCount: 0, removedCount: 0 };
-  }
-  if (safeWaterRegionGeometryPartsByFeature.has(feature)) {
-    return safeWaterRegionGeometryPartsByFeature.get(feature);
-  }
-  const rawParts = collectFeatureHitGeometries(feature);
-  const safeParts = [];
-  let removedCount = 0;
-  rawParts.forEach((part) => {
-    if (isSphericalGeometryUnsafe(part)) {
-      removedCount += 1;
-      return;
-    }
-    safeParts.push(part);
-  });
-  const info = {
-    parts: safeParts,
-    rawCount: rawParts.length,
-    removedCount,
-  };
-  safeWaterRegionGeometryPartsByFeature.set(feature, info);
-  return info;
+  return getProjectedGeometryBoundsOwner().collectSafeWaterRegionGeometryPartsInfo(feature);
 }
 
 function collectSafeWaterRegionGeometryParts(feature) {
-  return collectSafeWaterRegionGeometryPartsInfo(feature).parts;
+  return getProjectedGeometryBoundsOwner().collectSafeWaterRegionGeometryParts(feature);
 }
 
 function shouldExcludeWaterHitGeometry(hitGeometry, feature = null) {
-  return isSphericalGeometryUnsafe(hitGeometry);
+  return getProjectedGeometryBoundsOwner().shouldExcludeWaterHitGeometry(hitGeometry, feature);
 }
 
 function sanitizeWaterRegionFeature(feature) {
-  if (!feature || typeof feature !== "object") return null;
-  if (sanitizedWaterRegionFeatureByFeature.has(feature)) {
-    return sanitizedWaterRegionFeatureByFeature.get(feature);
-  }
-  const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
-  const sanitized = partInfo.removedCount > 0
-    ? buildWaterRegionFeatureFromParts(feature, partInfo.parts)
-    : feature;
-  sanitizedWaterRegionFeatureByFeature.set(feature, sanitized);
-  return sanitized;
+  return getProjectedGeometryBoundsOwner().sanitizeWaterRegionFeature(feature);
 }
 
 function sanitizeWaterRegionFeatures(features = []) {
-  const sanitizedFeatures = [];
-  const changedFeatureIds = [];
-  let removedPartCount = 0;
-  (Array.isArray(features) ? features : []).forEach((feature) => {
-    const sanitized = sanitizeWaterRegionFeature(feature);
-    const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
-    if (partInfo.removedCount > 0) {
-      const featureId = getFeatureId(feature);
-      if (featureId) changedFeatureIds.push(featureId);
-      removedPartCount += partInfo.removedCount;
-    }
-    if (sanitized) sanitizedFeatures.push(sanitized);
-  });
-  if (removedPartCount > 0) {
-    const uniqueIds = Array.from(new Set(changedFeatureIds)).sort();
-    recordRenderPerfMetric("waterSphericalSanitization", 0, {
-      removedPartCount,
-      featureIds: uniqueIds,
-    });
-    const warningKey = `${runtimeState.activeScenarioId || ""}:${uniqueIds.join(",")}:${removedPartCount}`;
-    if (!waterSphericalSanitizationWarnings.has(warningKey)) {
-      waterSphericalSanitizationWarnings.add(warningKey);
-      console.warn(
-        `[map_renderer] Removed ${removedPartCount} D3-unsafe water geometry part(s): ${uniqueIds.join(", ")}`
-      );
-    }
-  }
-  return sanitizedFeatures;
+  return getProjectedGeometryBoundsOwner().sanitizeWaterRegionFeatures(features);
 }
 
 function rebuildProjectedBoundsCache() {
-  clearProjectedBoundsCache();
-  const cache = ensureProjectedBoundsCache();
-  if (runtimeState.landData?.features?.length) {
-    runtimeState.landData.features.forEach((feature) => {
-      const featureId = getFeatureId(feature);
-      if (!featureId) return;
-      const bounds = computeProjectedFeatureBounds(feature);
-      if (!bounds) return;
-      cache.set(featureId, bounds);
-    });
-  }
-  if (runtimeState.riversData?.features?.length) {
-    runtimeState.riversData.features.forEach((feature) => {
-      const featureId = getFeatureId(feature);
-      if (!featureId) return;
-      const bounds = computeProjectedFeatureBounds(feature);
-      if (!bounds) return;
-      cache.set(featureId, bounds);
-    });
-  }
+  return getProjectedGeometryBoundsOwner().rebuildProjectedBoundsCache();
 }
 
 function getProjectedFeatureBounds(feature, { featureId = null, allowCompute = true } = {}) {
-  const resolvedFeatureId = featureId || getFeatureId(feature);
-  if (resolvedFeatureId) {
-    const cache = ensureProjectedBoundsCache();
-    if (cache.has(resolvedFeatureId)) {
-      return cache.get(resolvedFeatureId) || null;
-    }
-    if (!allowCompute) return null;
-    const computed = computeProjectedFeatureBounds(feature);
-    if (computed) {
-      cache.set(resolvedFeatureId, computed);
-    }
-    return computed;
-  }
-
-  if (!allowCompute) return null;
-  return computeProjectedFeatureBounds(feature);
+  return getProjectedGeometryBoundsOwner().getProjectedFeatureBounds(feature, { featureId, allowCompute });
 }
 
 function mergeProjectedBounds(boundsList = []) {
-  const bounds = (Array.isArray(boundsList) ? boundsList : []).filter(Boolean);
-  if (!bounds.length) return null;
-  const minX = Math.min(...bounds.map((entry) => Number(entry.minX)));
-  const minY = Math.min(...bounds.map((entry) => Number(entry.minY)));
-  const maxX = Math.max(...bounds.map((entry) => Number(entry.maxX)));
-  const maxY = Math.max(...bounds.map((entry) => Number(entry.maxY)));
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
-    return null;
-  }
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
-  };
+  return getProjectedGeometryBoundsOwner().mergeProjectedBounds(boundsList);
 }
 
 function isKnownBadFeatureId(featureId) {

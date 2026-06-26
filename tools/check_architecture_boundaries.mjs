@@ -16,6 +16,7 @@ const FILES = Object.freeze({
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
   renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
+  projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
@@ -31,6 +32,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.hgoPreviewRenderOwner]: 280,
   [FILES.renderCacheOwner]: 620,
   [FILES.renderTransformReusePolicyOwner]: 260,
+  [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
@@ -73,6 +75,7 @@ function collectFailures() {
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
   const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
+  const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
@@ -89,6 +92,7 @@ function collectFailures() {
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
     [FILES.renderCacheOwner]: renderCacheOwner,
     [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
+    [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
@@ -124,6 +128,7 @@ function collectFailures() {
     FILES.hgoPreviewRenderOwner,
     FILES.renderCacheOwner,
     FILES.renderTransformReusePolicyOwner,
+    FILES.projectedGeometryBoundsOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
     FILES.renderPassCatalog,
@@ -315,6 +320,23 @@ function collectFailures() {
     failures.push(`${FILES.renderTransformReusePolicyOwner} must not write or read runtimeState directly.`);
   }
   for (const token of [
+    "runtimeState",
+    "state.",
+    "globalThis.d3",
+    "Path2D",
+    "document.",
+    "window.",
+    "requestAnimationFrame(",
+    ".getContext(",
+    "drawCanvas",
+    "renderPassToCache",
+    "zoomBehavior",
+  ]) {
+    if (projectedGeometryBoundsOwner.includes(token)) {
+      failures.push(`${FILES.projectedGeometryBoundsOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
     "const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([",
     "const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [",
     "function getExactAfterSettleDprRestorePasses(",
@@ -481,6 +503,40 @@ function collectFailures() {
         "const CONTEXT_BASE_BUCKET_MID_MAX =",
         "const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX =",
         "const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT =",
+      ],
+    },
+    {
+      ownerPath: FILES.projectedGeometryBoundsOwner,
+      ownerTokens: [
+        "export function createProjectedGeometryBoundsOwner(",
+        "function computeProjectedCoordinateBounds(",
+        "function computeProjectedGeoBounds(",
+        "function getProjectedFeatureBounds(",
+        "function rebuildProjectedBoundsCache(",
+        "function getSphericalGeometryDiagnostics(",
+        "function collectSafeWaterRegionGeometryPartsInfo(",
+        "function sanitizeWaterRegionFeatures(",
+        "function clearProjectedBoundsCache(",
+        "function mergeProjectedBounds(",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/projected_geometry_bounds_owner.js\";",
+        "let projectedGeometryBoundsOwner = null;",
+        "createProjectedGeometryBoundsOwner({",
+        "getD3: () => globalThis.d3,",
+        "return getProjectedGeometryBoundsOwner().computeProjectedGeoBounds(geoObject);",
+        "return getProjectedGeometryBoundsOwner().getProjectedFeatureBounds(feature, { featureId, allowCompute });",
+        "return getProjectedGeometryBoundsOwner().sanitizeWaterRegionFeatures(features);",
+        "collectFeatureHitGeometries: collectSafeWaterRegionGeometryParts,",
+        "let scenarioWaterPartPathCache = new WeakMap();",
+        "let scenarioWaterFeaturePathCache = new WeakMap();",
+      ],
+      rendererForbiddenTokens: [
+        "const sphericalGeometryDiagnosticsByObject = new WeakMap();",
+        "const safeWaterRegionGeometryPartsByFeature = new WeakMap();",
+        "const sanitizedWaterRegionFeatureByFeature = new WeakMap();",
+        "const waterSphericalSanitizationWarnings = new Set();",
+        "const SPHERICAL_GEOMETRY_MAX_AREA =",
       ],
     },
     {
