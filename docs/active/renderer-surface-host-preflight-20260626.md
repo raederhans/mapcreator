@@ -34,29 +34,15 @@ The current runtime host keeps the only active renderer scene. P24 should start 
 
 ## P24 candidate surface host API
 
-Draft only. P23 does not implement this module.
+Draft only. P23 does not implement this module, and P24 may choose the concrete factory and method names that best fit the extraction.
 
-```js
-createRendererSurfaceHost({ document, d3, state, helpers });
-surfaceHost.initializeSurface({ containerId });
-surfaceHost.getMapContainer();
-surfaceHost.getCanvasLayer(name);
-surfaceHost.getMapCanvas();
-surfaceHost.getContext();
-surfaceHost.getHitCanvas();
-surfaceHost.getHitContext();
-surfaceHost.getMapSvg();
-surfaceHost.getInteractionRect();
-surfaceHost.getProjection();
-surfaceHost.getPathSvg();
-surfaceHost.getPathCanvas();
-surfaceHost.getPathHitCanvas();
-surfaceHost.setZoomBehavior(zoomBehavior);
-surfaceHost.getZoomBehavior();
-surfaceHost.resetSurfaceHandles(reason);
-```
+The first surface-host API should express these responsibilities:
 
-The API should expose getters first. It should avoid moving semantic renderer flows during the first extraction step.
+- Own DOM, canvas, SVG handle grouping and lifecycle reset for the active renderer scene.
+- Expose a getter-first handle registry for root DOM handles, canvas layers and contexts, SVG groups, projection/path handles, and zoom behavior.
+- Keep canvas access aligned with `CANVAS_LAYER_NAMES` so the host does not duplicate layer-name literals.
+- Keep `map_renderer.js` wrapper names, owner construction order, and side-effect timing stable while callers are moved to the registry.
+- Leave mutation-heavy renderer flows in `map_renderer.js` during the first extraction step.
 
 ## P24 allowed first move
 

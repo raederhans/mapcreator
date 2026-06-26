@@ -208,6 +208,15 @@ test("P23 preflight document keeps P24 surface host anchors", () => {
   }
 });
 
+test("package exposes the renderer surface host inventory script", () => {
+  const packageSource = readRepoFile("package.json");
+  assertIncludes(
+    packageSource,
+    '"test:node:renderer-surface-host-inventory": "node --test tests/renderer_surface_host_inventory_boundary.test.mjs"',
+    "package.json must expose renderer surface host inventory test script",
+  );
+});
+
 test("P23 does not introduce the production surface host module", () => {
   const surfaceHostPath = path.join(REPO_ROOT, "js", "core", "renderer", "renderer_surface_host.js");
   assert.equal(
