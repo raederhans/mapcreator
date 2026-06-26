@@ -17,6 +17,7 @@ SCENARIO_POST_APPLY_EFFECTS_PATH = ROOT / "js/core/scenario_post_apply_effects.j
 SCENARIO_APPLY_PIPELINE_PATH = ROOT / "js/core/scenario_apply_pipeline.js"
 MAIN_JS_PATH = ROOT / "js/main.js"
 POST_READY_SCHEDULER_PATH = ROOT / "js/bootstrap/post_ready_scheduler.js"
+STARTUP_READY_HANDOFF_PATH = ROOT / "js/bootstrap/startup_ready_handoff.js"
 DEFERRED_DETAIL_PROMOTION_PATH = ROOT / "js/bootstrap/deferred_detail_promotion.js"
 SCENARIO_RUNTIME_STATE_PATH = ROOT / "js/core/state/scenario_runtime_state.js"
 
@@ -38,6 +39,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         cls.scenario_apply_pipeline_source = SCENARIO_APPLY_PIPELINE_PATH.read_text(encoding="utf-8")
         cls.main_source = MAIN_JS_PATH.read_text(encoding="utf-8")
         cls.post_ready_scheduler_source = POST_READY_SCHEDULER_PATH.read_text(encoding="utf-8")
+        cls.startup_ready_handoff_source = STARTUP_READY_HANDOFF_PATH.read_text(encoding="utf-8")
         cls.deferred_detail_promotion_source = DEFERRED_DETAIL_PROMOTION_PATH.read_text(encoding="utf-8")
         cls.scenario_runtime_state_source = SCENARIO_RUNTIME_STATE_PATH.read_text(encoding="utf-8")
 
@@ -150,10 +152,10 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertIn("allowChunkBacklog = false", self.post_ready_scheduler_source)
         self.assertIn("allowChunkBacklog: true", self.deferred_detail_promotion_source)
         self.assertRegex(
-            self.main_source,
+            self.startup_ready_handoff_source,
             re.compile(
                 r'function startDeferredFullInteractionInfrastructureBuild\(.*?'
-                r'if \(runtimeState\.detailDeferred && !runtimeState\.detailPromotionCompleted\) \{.*?'
+                r'if \(targetRuntime\.detailDeferred && !targetRuntime\.detailPromotionCompleted\) \{.*?'
                 r'startDeferredFullInteractionInfrastructureBuild',
                 re.S,
             ),
@@ -391,9 +393,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         )
 
     def test_ready_state_flushes_pending_scenario_chunk_refresh_before_deferred_full_interaction(self):
-        self.assertIn('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")', self.main_source)
+        self.assertIn('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")', self.startup_ready_handoff_source)
         self.assertRegex(
-            self.main_source,
+            self.startup_ready_handoff_source,
             re.compile(
                 r'function scheduleReadyPostBootWork\(renderDispatcher, reason = "ready-state"\) \{[\s\S]*?completeBootSequenceLogging\(\);[\s\S]*?flushPendingScenarioChunkRefreshAfterReady\(reason\);[\s\S]*?scheduleDeferredDetailPromotion\(renderDispatcher\);[\s\S]*?startDeferredFullInteractionInfrastructureBuild\(reason\);',
                 re.S,
@@ -401,15 +403,15 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         )
         self.assertGreaterEqual(self.main_source.count('scheduleReadyPostBootWork(renderDispatcher, "ready-state");'), 2)
         self.assertRegex(
-            self.main_source,
+            self.startup_ready_handoff_source,
             re.compile(
-                r'runtimeState\.scheduleScenarioChunkRefreshFn\(\{\s*reason: normalizedReason,\s*delayMs: 0,\s*flushPending: true,',
+                r'targetRuntime\.scheduleScenarioChunkRefreshFn\(\{\s*reason: normalizedReason,\s*delayMs: 0,\s*flushPending: true,',
                 re.S,
             ),
         )
-        self.assertIn("const shouldSeedFirstReadyFlush = !!(", self.main_source)
-        self.assertIn("loadState.pendingReason = normalizedReason;", self.main_source)
-        self.assertIn("loadState.pendingDelayMs = 0;", self.main_source)
+        self.assertIn("const shouldSeedFirstReadyFlush = !!(", self.startup_ready_handoff_source)
+        self.assertIn("loadState.pendingReason = normalizedReason;", self.startup_ready_handoff_source)
+        self.assertIn("loadState.pendingDelayMs = 0;", self.startup_ready_handoff_source)
 
     def test_startup_initial_visual_gate_runs_before_first_visible_and_deferred_work(self):
         self.assertTrue(
@@ -426,9 +428,9 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertLess(gate_index, warmup_index)
         self.assertIn('assertStartupFirstVisibleFrameAccepted("bootstrap-first-political-frame");', boot_source)
 
-        ready_work_start = self.main_source.index('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")')
-        ready_work_end = self.main_source.index("function startDeferredFullInteractionInfrastructureBuild", ready_work_start)
-        ready_work_source = self.main_source[ready_work_start:ready_work_end]
+        ready_work_start = self.startup_ready_handoff_source.index('function scheduleReadyPostBootWork(renderDispatcher, reason = "ready-state")')
+        ready_work_end = self.startup_ready_handoff_source.index("function startDeferredFullInteractionInfrastructureBuild", ready_work_start)
+        ready_work_source = self.startup_ready_handoff_source[ready_work_start:ready_work_end]
         self.assertRegex(
             ready_work_source,
             re.compile(
@@ -465,7 +467,7 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("requestMainRender", reconcile_source)
         self.assertNotIn("requestRender(", reconcile_source)
         self.assertRegex(
-            self.main_source,
+            self.startup_ready_handoff_source,
             re.compile(
                 r"const requested = reconcileDetailPromotionPoliticalPass\(normalizedReason\);\s*"
                 r"if \(!requested\) \{\s*"
@@ -496,10 +498,10 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
         self.assertNotIn("falling back to setMapData", detail_refresh_source)
         self.assertNotIn("catch (error)", detail_refresh_source)
         self.assertIn(
-            'postReadyScheduler.scheduleTask(POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {',
-            self.main_source,
+            'postReadyScheduler.scheduleTask(DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY, () => {',
+            self.startup_ready_handoff_source,
         )
-        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", self.main_source)
+        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", self.startup_ready_handoff_source)
 
     def test_detail_topology_prepare_without_map_refresh_defers_political_reconcile(self):
         self.assertRegex(

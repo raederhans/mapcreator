@@ -7,6 +7,7 @@ import {
   createFrameGraphInvalidation,
   createScenarioApplyRefreshPlan,
   createScenarioChunkPromotionRefreshPlan,
+  createStartupHydrationRefreshPlan,
   getFirstFrameTargetResources,
   getTargetPassesForResources,
   getTargetResourcesForPasses,
@@ -334,6 +335,40 @@ test("chunk promotion descriptor resolves resources before runtime execution", (
   assert.deepEqual(emptyResourceDescriptor.targetResources, []);
   assert.equal(Object.hasOwn(emptyResourceDescriptor, "targetPasses"), false);
   assert.deepEqual(emptyResourceDescriptor.invalidationTargetPasses, []);
+});
+
+test("startup hydration plan layer keys still drive chunk promotion resource fan-out", () => {
+  const startupPlan = createStartupHydrationRefreshPlan({
+    changedLayerKeys: ["political", "water", "cities"],
+    hasPoliticalChange: true,
+  });
+  const descriptor = resolveScenarioChunkPromotionRendererRefreshDescriptor({
+    refreshPlan: getRendererRefreshPlan(startupPlan),
+    changedLayerKeys: startupPlan.changedLayerKeys,
+    hasPoliticalChange: true,
+  });
+
+  assert.deepEqual(startupPlan.changedLayerKeys, ["political", "water", "cities"]);
+  assert.deepEqual(descriptor.targetResources, [
+    "politicalBaseBuffer",
+    "hitIndex",
+    "contextBaseBuffer",
+    "contextMarkersBuffer",
+    "borderBuffer",
+    "interactionOverlay",
+    "labelBuffer",
+    "contextScenarioBuffer",
+    "dayNightBuffer",
+  ]);
+  assert.deepEqual(descriptor.invalidationTargetPasses, [
+    "political",
+    "contextBase",
+    "contextMarkers",
+    "borders",
+    "labels",
+    "contextScenario",
+    "dayNight",
+  ]);
 });
 
 test("frame graph invalidation execution plan resolves pass compatibility at one bridge", () => {

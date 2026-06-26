@@ -68,7 +68,7 @@ class ScenarioRendererBridgeBoundaryContractTest(unittest.TestCase):
         )
         self.assertRegex(
             content,
-            r"function refreshMapDataForScenarioChunkPromotion\(options = \{\}\) \{[\s\S]*?createScenarioChunkPromotionRefreshPlan\(\{[\s\S]*?runRendererScenarioChunkPromotionRefresh\(\{[\s\S]*?refreshPlan: getRendererRefreshPlan\(refreshPlan\),",
+            r"function refreshMapDataForScenarioChunkPromotion\(options = \{\}\) \{[\s\S]*?createScenarioChunkPromotionRefreshPlan\(\{[\s\S]*?runRendererScenarioChunkPromotionRefresh\(\{[\s\S]*?changedLayerKeys: options\.changedLayerKeys \?\? refreshPlan\.changedLayerKeys,[\s\S]*?refreshPlan: getRendererRefreshPlan\(refreshPlan\),",
         )
 
     def test_internal_scenario_callers_use_bridge_instead_of_full_renderer_surface(self):

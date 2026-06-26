@@ -43,6 +43,7 @@ function refreshMapDataForScenarioChunkPromotion(options = {}) {
   });
   return runRendererScenarioChunkPromotionRefresh({
     ...options,
+    changedLayerKeys: options.changedLayerKeys ?? refreshPlan.changedLayerKeys,
     refreshPlan: getRendererRefreshPlan(refreshPlan),
   });
 }
