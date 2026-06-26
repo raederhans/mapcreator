@@ -17,6 +17,7 @@ const FILES = Object.freeze({
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
   renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
+  viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
@@ -33,6 +34,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderCacheOwner]: 620,
   [FILES.renderTransformReusePolicyOwner]: 260,
   [FILES.projectedGeometryBoundsOwner]: 420,
+  [FILES.viewportReadModelOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
@@ -76,6 +78,7 @@ function collectFailures() {
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
   const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
+  const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
@@ -93,6 +96,7 @@ function collectFailures() {
     [FILES.renderCacheOwner]: renderCacheOwner,
     [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
+    [FILES.viewportReadModelOwner]: viewportReadModelOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
@@ -129,6 +133,7 @@ function collectFailures() {
     FILES.renderCacheOwner,
     FILES.renderTransformReusePolicyOwner,
     FILES.projectedGeometryBoundsOwner,
+    FILES.viewportReadModelOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
     FILES.renderPassCatalog,
@@ -337,6 +342,17 @@ function collectFailures() {
     }
   }
   for (const token of [
+    "zoomBehavior",
+    "interactionRect",
+    ".call(zoomBehavior",
+    "runtimeState",
+    "document.",
+  ]) {
+    if (viewportReadModelOwner.includes(token)) {
+      failures.push(`${FILES.viewportReadModelOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
     "const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([",
     "const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [",
     "function getExactAfterSettleDprRestorePasses(",
@@ -537,6 +553,35 @@ function collectFailures() {
         "const sanitizedWaterRegionFeatureByFeature = new WeakMap();",
         "const waterSphericalSanitizationWarnings = new Set();",
         "const SPHERICAL_GEOMETRY_MAX_AREA =",
+      ],
+    },
+    {
+      ownerPath: FILES.viewportReadModelOwner,
+      ownerTokens: [
+        "export function createViewportReadModelOwner(",
+        "function getViewportRenderSignature(",
+        "function getProjectionRenderSignature(",
+        "function getViewportGeoBounds(",
+        "function calculatePanExtent(",
+        "function getProjectedRenderableContentBounds(",
+        "function getCenteredFitZoomTransform(",
+        "function getZoomPercent(",
+      ],
+      rendererRequiredTokens: [
+        "createViewportReadModelOwner({",
+        "return getViewportReadModelOwner().getViewportRenderSignature(",
+        "return getViewportReadModelOwner().getProjectionRenderSignature(",
+        "return getViewportReadModelOwner().getViewportGeoBounds(",
+        "return getViewportReadModelOwner().calculatePanExtent(",
+        "return getViewportReadModelOwner().getProjectedRenderableContentBounds(",
+        "return getViewportReadModelOwner().getCenteredFitZoomTransform(",
+        "return getViewportReadModelOwner().getZoomPercent(",
+      ],
+      rendererForbiddenTokens: [
+        "const samplePoints = [",
+        "sortedLongitudes[trimCount]",
+        "projection.scale() || 0",
+        "return `${Math.round(scale * 100)}%`;",
       ],
     },
     {

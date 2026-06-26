@@ -13,6 +13,7 @@ EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
 RENDER_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "render_pass_catalog.js"
+VIEWPORT_READ_MODEL_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "viewport_read_model_owner.js"
 
 
 class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
@@ -207,6 +208,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("drewExactFrame = composeCachedPasses(activeRenderPassNames);", renderer_content)
         self.assertIn("function getProjectedHgoRuntimePreviewBounds() {", renderer_content)
         self.assertIn("function getProjectedBounds() {", hgo_preview_owner_content)
+        viewport_owner_content = VIEWPORT_READ_MODEL_OWNER_JS.read_text(encoding="utf-8")
         render_pass_to_cache_body = renderer_content.split("function renderPassToCache(passName, drawFn, transform, timings) {", 1)[1].split(
             "\n\nfunction resetCanvasContext",
             1,
@@ -224,13 +226,15 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             render_pass_to_cache_body.index("if (politicalFineCacheReady) {"),
             render_pass_to_cache_body.index("cache.partialPoliticalDirtyIds.clear();"),
         )
-        self.assertIn("if (isHgoRuntimePreviewReady()) {\n    return getProjectedHgoRuntimePreviewBounds();\n  }", renderer_content)
+        self.assertIn("function getProjectedRenderableContentBounds()", viewport_owner_content)
+        self.assertIn("getters.isHgoRuntimePreviewReady()", viewport_owner_content)
+        self.assertIn("return getters.getHgoRuntimePreviewBounds?.() || null;", viewport_owner_content)
+        self.assertIn("return getViewportReadModelOwner().getProjectedRenderableContentBounds();", renderer_content)
         pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(
             "\n\nfunction updateZoomTranslateExtent",
             1,
         )[0]
-        self.assertIn("if (isHgoRuntimePreviewReady()) {", pan_extent_body)
-        self.assertIn("const bounds = getProjectedHgoRuntimePreviewBounds();", pan_extent_body)
+        self.assertIn("return getViewportReadModelOwner().calculatePanExtent();", pan_extent_body)
         reset_zoom_body = renderer_content.split("function resetZoomToFit(", 1)[1].split(
             "\n\nfunction zoomByStep",
             1,

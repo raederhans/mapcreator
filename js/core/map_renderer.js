@@ -195,6 +195,7 @@ import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_pass
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
+import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -1014,6 +1015,7 @@ let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
+let viewportReadModelOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1844,6 +1846,35 @@ function getProjectedGeometryBoundsOwner() {
     },
   });
   return projectedGeometryBoundsOwner;
+}
+
+function getViewportReadModelOwner() {
+  if (viewportReadModelOwner) {
+    return viewportReadModelOwner;
+  }
+  viewportReadModelOwner = createViewportReadModelOwner({
+    state,
+    constants: {
+      mapPanPaddingPx: MAP_PAN_PADDING_PX,
+      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+    },
+    getters: {
+      getProjection: () => projection,
+      getPathSvg: () => pathSVG,
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+      getLogicalCanvasDimensions,
+      getLandFeatures: () => runtimeState.landData?.features || [],
+      getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,
+      isHgoRuntimePreviewReady,
+    },
+    helpers: {
+      getFeatureId,
+      getProjectedFeatureBounds,
+      shouldSkipFeature,
+      getRenderableLandFeatures,
+    },
+  });
+  return viewportReadModelOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -5060,23 +5091,11 @@ function isHeavyScenarioStagedApplyCandidate() {
 }
 
 function getViewportRenderSignature() {
-  return [
-    Math.round(Number(runtimeState.width || 0)),
-    Math.round(Number(runtimeState.height || 0)),
-    Number(Number(runtimeState.dpr || 1).toFixed(2)),
-  ].join("|");
+  return getViewportReadModelOwner().getViewportRenderSignature();
 }
 
 function getProjectionRenderSignature() {
-  if (!projection || typeof projection.scale !== "function" || typeof projection.translate !== "function") {
-    return "projection:na";
-  }
-  const translate = projection.translate() || [0, 0];
-  return [
-    Number(Number(projection.scale() || 0).toFixed(3)),
-    Number(Number(translate[0] || 0).toFixed(3)),
-    Number(Number(translate[1] || 0).toFixed(3)),
-  ].join("|");
+  return getViewportReadModelOwner().getProjectionRenderSignature();
 }
 
 function getContextBaseZoomBucketId(k = runtimeState.zoomTransform?.k || 1) {
@@ -22501,52 +22520,7 @@ async function handleDoubleClick(event, _interactionContext = null) {
 }
 
 function calculatePanExtent() {
-  const fallback = [
-    [-MAP_PAN_PADDING_PX, -MAP_PAN_PADDING_PX],
-    [runtimeState.width + MAP_PAN_PADDING_PX, runtimeState.height + MAP_PAN_PADDING_PX],
-  ];
-
-  if (isHgoRuntimePreviewReady()) {
-    const bounds = getProjectedHgoRuntimePreviewBounds();
-    if (!bounds) return fallback;
-    return [
-      [bounds.minX - MAP_PAN_PADDING_PX, bounds.minY - MAP_PAN_PADDING_PX],
-      [bounds.maxX + MAP_PAN_PADDING_PX, bounds.maxY + MAP_PAN_PADDING_PX],
-    ];
-  }
-
-  if (!pathSVG || !runtimeState.landData || !runtimeState.landData.features?.length) return fallback;
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-
-  for (const feature of runtimeState.landData.features) {
-    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) continue;
-    const featureId = getFeatureId(feature);
-    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
-      || getProjectedFeatureBounds(feature, { featureId });
-    if (!bounds) continue;
-
-    const featureMinX = bounds.minX;
-    const featureMinY = bounds.minY;
-    const featureMaxX = bounds.maxX;
-    const featureMaxY = bounds.maxY;
-
-    minX = Math.min(minX, featureMinX);
-    minY = Math.min(minY, featureMinY);
-    maxX = Math.max(maxX, featureMaxX);
-    maxY = Math.max(maxY, featureMaxY);
-  }
-
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return fallback;
-
-  return [
-    [minX - MAP_PAN_PADDING_PX, minY - MAP_PAN_PADDING_PX],
-    [maxX + MAP_PAN_PADDING_PX, maxY + MAP_PAN_PADDING_PX],
-  ];
+  return getViewportReadModelOwner().calculatePanExtent();
 }
 
 function updateZoomTranslateExtent() {
@@ -22557,53 +22531,7 @@ function updateZoomTranslateExtent() {
 }
 
 function getViewportGeoBounds() {
-  if (!projection || typeof projection.invert !== "function") {
-    return [-180, -90, 180, 90];
-  }
-  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
-  const width = Math.max(1, Number(runtimeState.width || 1));
-  const height = Math.max(1, Number(runtimeState.height || 1));
-  const insetX = Math.min(width * 0.12, 160);
-  const insetY = Math.min(height * 0.12, 120);
-  const samplePoints = [
-    [insetX, insetY],
-    [width * 0.5, insetY],
-    [Math.max(insetX, width - insetX), insetY],
-    [insetX, height * 0.5],
-    [width * 0.5, height * 0.5],
-    [Math.max(insetX, width - insetX), height * 0.5],
-    [insetX, Math.max(insetY, height - insetY)],
-    [width * 0.5, Math.max(insetY, height - insetY)],
-    [Math.max(insetX, width - insetX), Math.max(insetY, height - insetY)],
-  ];
-  const longitudes = [];
-  const latitudes = [];
-  samplePoints.forEach(([screenX, screenY]) => {
-    try {
-      const mapX = (Number(screenX || 0) - Number(transform.x || 0)) / Math.max(0.0001, Number(transform.k || 1));
-      const mapY = (Number(screenY || 0) - Number(transform.y || 0)) / Math.max(0.0001, Number(transform.k || 1));
-      const inverted = projection.invert([mapX, mapY]);
-      if (!Array.isArray(inverted) || inverted.length < 2) return;
-      const [lon, lat] = inverted.map((value) => Number(value));
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
-      longitudes.push(Math.max(-180, Math.min(180, lon)));
-      latitudes.push(Math.max(-90, Math.min(90, lat)));
-    } catch (_error) {
-      // Ignore failed projection inversion and continue.
-    }
-  });
-  if (!longitudes.length || !latitudes.length) {
-    return [-180, -90, 180, 90];
-  }
-  const sortedLongitudes = [...longitudes].sort((left, right) => left - right);
-  const sortedLatitudes = [...latitudes].sort((left, right) => left - right);
-  const trimCount = sortedLongitudes.length >= 7 && sortedLatitudes.length >= 7 ? 1 : 0;
-  return [
-    sortedLongitudes[trimCount],
-    sortedLatitudes[trimCount],
-    sortedLongitudes[sortedLongitudes.length - 1 - trimCount],
-    sortedLatitudes[sortedLatitudes.length - 1 - trimCount],
-  ];
+  return getViewportReadModelOwner().getViewportGeoBounds();
 }
 
 function updateMap(transform) {
@@ -22626,58 +22554,11 @@ function getProjectedHgoRuntimePreviewBounds() {
 }
 
 function getProjectedRenderableContentBounds() {
-  if (isHgoRuntimePreviewReady()) {
-    return getProjectedHgoRuntimePreviewBounds();
-  }
-  if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
-    return null;
-  }
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-  const renderableFeatures = getRenderableLandFeatures(canvasWidth, canvasHeight, {
-    forceProd: true,
-  });
-  const features = renderableFeatures.length ? renderableFeatures : runtimeState.landData.features;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const feature of features) {
-    const featureId = getFeatureId(feature);
-    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
-      || getProjectedFeatureBounds(feature, { featureId });
-    if (!bounds) continue;
-    minX = Math.min(minX, Number(bounds.minX));
-    minY = Math.min(minY, Number(bounds.minY));
-    maxX = Math.max(maxX, Number(bounds.maxX));
-    maxY = Math.max(maxY, Number(bounds.maxY));
-  }
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
-    return null;
-  }
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-  };
+  return getViewportReadModelOwner().getProjectedRenderableContentBounds();
 }
 
 function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {}) {
-  const identity = globalThis.d3?.zoomIdentity;
-  if (!identity) return null;
-  const bounds = getProjectedRenderableContentBounds();
-  if (!bounds) return identity;
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 1));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 1));
-  const nextX = centerX && bounds.width < viewportWidth
-    ? ((viewportWidth - bounds.width) / 2) - bounds.minX
-    : 0;
-  const nextY = centerY && bounds.height < viewportHeight
-    ? ((viewportHeight - bounds.height) / 2) - bounds.minY
-    : 0;
-  return identity.translate(nextX, nextY);
+  return getViewportReadModelOwner().getCenteredFitZoomTransform({ centerX, centerY });
 }
 
 function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {}) {
@@ -22707,8 +22588,7 @@ function setZoomPercent(percent) {
 }
 
 function getZoomPercent() {
-  const scale = Math.max(0.01, Number(runtimeState.zoomTransform?.k) || 1);
-  return `${Math.round(scale * 100)}%`;
+  return getViewportReadModelOwner().getZoomPercent();
 }
 
 function enforceZoomConstraints() {
