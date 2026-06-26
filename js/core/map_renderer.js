@@ -196,6 +196,7 @@ import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
+import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -480,18 +481,6 @@ const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;
 const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MIN = 0.06;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MAX = 0.85;
-const SCENARIO_WATER_CACHE_MODE_PARAM = "water_cache_mode";
-const SCENARIO_WATER_CACHE_MODE_ALT_PARAM = "scenario_water_cache_mode";
-const SCENARIO_WATER_CACHE_MODES = new Set(["adaptive", "reuse", "redraw", "direct"]);
-const SCENARIO_WATER_COVERAGE_ALGO_PARAM = "water_cache_coverage_algo";
-const SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM = "scenario_water_cache_coverage_algo";
-const SCENARIO_WATER_COVERAGE_ALGOS = new Set(["legacy", "grid"]);
-const SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS = 64;
-const SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS = 36;
-const SCENARIO_WATER_COVERAGE_GRID_MAX_DPR = 3;
-const SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX = 24;
-const SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX = 0.2;
-const SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX = 28;
 const CONTOUR_ZOOM_STYLE_PROFILES = Object.freeze({
   low: Object.freeze({
     majorIntervalMultiplier: 3,
@@ -1016,6 +1005,7 @@ let renderCacheOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
+let scenarioWaterCachePolicyOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1875,6 +1865,27 @@ function getViewportReadModelOwner() {
     },
   });
   return viewportReadModelOwner;
+}
+
+function getScenarioWaterCachePolicyOwner() {
+  if (scenarioWaterCachePolicyOwner) {
+    return scenarioWaterCachePolicyOwner;
+  }
+  scenarioWaterCachePolicyOwner = createScenarioWaterCachePolicyOwner({
+    state,
+    getters: {
+      readSearchParam,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      getPreviousRenderedCount: () => lastScenarioWaterRenderedCount,
+    },
+    helpers: {
+      cloneZoomTransform: (transform) => cloneZoomTransform(transform || globalThis.d3?.zoomIdentity),
+      collectSafeWaterRegionGeometryParts,
+      computeProjectedGeoBounds,
+      isWaterRegionRenderable,
+    },
+  });
+  return scenarioWaterCachePolicyOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -5120,226 +5131,47 @@ function shouldEnableContextScenarioTransformReuse() {
 }
 
 function normalizeScenarioWaterCacheStrategyMode(rawMode) {
-  const normalized = String(rawMode || "").trim().toLowerCase();
-  return SCENARIO_WATER_CACHE_MODES.has(normalized) ? normalized : "";
+  return getScenarioWaterCachePolicyOwner().normalizeScenarioWaterCacheStrategyMode(rawMode);
 }
 
 function getFirstValidScenarioWaterCacheStrategyMode(...rawModes) {
-  for (let index = 0; index < rawModes.length; index += 1) {
-    const mode = normalizeScenarioWaterCacheStrategyMode(rawModes[index]);
-    if (mode) return mode;
-  }
-  return "";
+  return getScenarioWaterCachePolicyOwner().getFirstValidScenarioWaterCacheStrategyMode(...rawModes);
 }
 
 function getForcedScenarioWaterCacheMode() {
-  const queryMode = getFirstValidScenarioWaterCacheStrategyMode(
-    readSearchParam(SCENARIO_WATER_CACHE_MODE_PARAM),
-    readSearchParam(SCENARIO_WATER_CACHE_MODE_ALT_PARAM)
-  );
-  if (queryMode) {
-    return {
-      mode: queryMode,
-      source: "query-param",
-    };
-  }
-
-  const profileMode = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
-    ? getFirstValidScenarioWaterCacheStrategyMode(
-      runtimeState.renderProfile.waterCacheMode,
-      runtimeState.renderProfile.scenarioWaterCacheMode
-    )
-    : "";
-  if (profileMode) {
-    return {
-      mode: profileMode,
-      source: "render-profile",
-    };
-  }
-
-  const stateMode = getFirstValidScenarioWaterCacheStrategyMode(
-    runtimeState.scenarioWaterCacheMode,
-    runtimeState.waterCacheMode
-  );
-  if (stateMode) {
-    return {
-      mode: stateMode,
-      source: "state",
-    };
-  }
-
-  return {
-    mode: "adaptive",
-    source: "default",
-  };
+  return getScenarioWaterCachePolicyOwner().getForcedScenarioWaterCacheMode();
 }
 
 function normalizeScenarioWaterCoverageAlgo(rawValue) {
-  const normalized = String(rawValue || "").trim().toLowerCase();
-  return SCENARIO_WATER_COVERAGE_ALGOS.has(normalized) ? normalized : "";
+  return getScenarioWaterCachePolicyOwner().normalizeScenarioWaterCoverageAlgo(rawValue);
 }
 
 function getFirstValidScenarioWaterCoverageAlgo(...rawValues) {
-  for (let index = 0; index < rawValues.length; index += 1) {
-    const algo = normalizeScenarioWaterCoverageAlgo(rawValues[index]);
-    if (algo) return algo;
-  }
-  return "";
+  return getScenarioWaterCachePolicyOwner().getFirstValidScenarioWaterCoverageAlgo(...rawValues);
 }
 
 function getForcedScenarioWaterCoverageAlgo() {
-  const queryAlgo = getFirstValidScenarioWaterCoverageAlgo(
-    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_PARAM),
-    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM)
-  );
-  if (queryAlgo) {
-    return {
-      algo: queryAlgo,
-      source: "query-param",
-    };
-  }
-
-  const profileAlgo = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
-    ? getFirstValidScenarioWaterCoverageAlgo(
-      runtimeState.renderProfile.waterCacheCoverageAlgo,
-      runtimeState.renderProfile.scenarioWaterCacheCoverageAlgo
-    )
-    : "";
-  if (profileAlgo) {
-    return {
-      algo: profileAlgo,
-      source: "render-profile",
-    };
-  }
-
-  const stateAlgo = getFirstValidScenarioWaterCoverageAlgo(
-    runtimeState.waterCacheCoverageAlgo,
-    runtimeState.scenarioWaterCacheCoverageAlgo
-  );
-  if (stateAlgo) {
-    return {
-      algo: stateAlgo,
-      source: "state",
-    };
-  }
-
-  return {
-    algo: "grid",
-    source: "default",
-  };
+  return getScenarioWaterCachePolicyOwner().getForcedScenarioWaterCoverageAlgo();
 }
 
 function getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures = []) {
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
-  const viewportArea = viewportWidth * viewportHeight;
-  if (!(viewportArea > 0)) return 0;
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  let clippedArea = 0;
-  (Array.isArray(waterFeatures) ? waterFeatures : []).forEach((feature) => {
-    if (!isWaterRegionRenderable(feature)) return;
-    collectSafeWaterRegionGeometryParts(feature).forEach((part) => {
-      const bounds = computeProjectedGeoBounds(part);
-      if (!bounds) return;
-      const minX = bounds.minX * transform.k + transform.x;
-      const minY = bounds.minY * transform.k + transform.y;
-      const maxX = bounds.maxX * transform.k + transform.x;
-      const maxY = bounds.maxY * transform.k + transform.y;
-      if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
-      const clippedWidth = Math.max(0, Math.min(maxX, viewportWidth) - Math.max(minX, 0));
-      const clippedHeight = Math.max(0, Math.min(maxY, viewportHeight) - Math.max(minY, 0));
-      if (!(clippedWidth > 0 && clippedHeight > 0)) return;
-      clippedArea += clippedWidth * clippedHeight;
-    });
-  });
-  return Math.max(0, Math.min(1, clippedArea / viewportArea));
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures);
 }
 
 function getScenarioWaterVisibleCoverageRatioGrid(waterFeatures = []) {
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
-  if (!(viewportWidth > 0 && viewportHeight > 0)) return 0;
-  const dpr = Math.max(1, Math.min(SCENARIO_WATER_COVERAGE_GRID_MAX_DPR, Number(globalThis.devicePixelRatio || 1)));
-  const gridColumns = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS * dpr));
-  const gridRows = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS * dpr));
-  const totalCellCount = gridColumns * gridRows;
-  if (!(totalCellCount > 0)) return 0;
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  const covered = new Uint8Array(totalCellCount);
-  let coveredCount = 0;
-  const safeWaterFeatures = Array.isArray(waterFeatures) ? waterFeatures : [];
-  for (const feature of safeWaterFeatures) {
-    if (!isWaterRegionRenderable(feature)) continue;
-    if (coveredCount >= totalCellCount) break;
-    for (const part of collectSafeWaterRegionGeometryParts(feature)) {
-      if (coveredCount >= totalCellCount) break;
-      const bounds = computeProjectedGeoBounds(part);
-      if (!bounds) continue;
-      const minX = bounds.minX * transform.k + transform.x;
-      const minY = bounds.minY * transform.k + transform.y;
-      const maxX = bounds.maxX * transform.k + transform.x;
-      const maxY = bounds.maxY * transform.k + transform.y;
-      if (![minX, minY, maxX, maxY].every(Number.isFinite)) continue;
-      const clippedMinX = Math.max(0, Math.min(minX, viewportWidth));
-      const clippedMinY = Math.max(0, Math.min(minY, viewportHeight));
-      const clippedMaxX = Math.max(0, Math.min(maxX, viewportWidth));
-      const clippedMaxY = Math.max(0, Math.min(maxY, viewportHeight));
-      if (!(clippedMaxX > clippedMinX && clippedMaxY > clippedMinY)) continue;
-
-      const colStart = Math.max(0, Math.min(gridColumns - 1, Math.floor((clippedMinX / viewportWidth) * gridColumns)));
-      const colEnd = Math.max(0, Math.min(
-        gridColumns - 1,
-        Math.ceil((clippedMaxX / viewportWidth) * gridColumns) - 1
-      ));
-      const rowStart = Math.max(0, Math.min(gridRows - 1, Math.floor((clippedMinY / viewportHeight) * gridRows)));
-      const rowEnd = Math.max(0, Math.min(
-        gridRows - 1,
-        Math.ceil((clippedMaxY / viewportHeight) * gridRows) - 1
-      ));
-      if (colEnd < colStart || rowEnd < rowStart) continue;
-
-      for (let row = rowStart; row <= rowEnd; row += 1) {
-        const rowOffset = row * gridColumns;
-        for (let col = colStart; col <= colEnd; col += 1) {
-          const cellIndex = rowOffset + col;
-          if (covered[cellIndex]) continue;
-          covered[cellIndex] = 1;
-          coveredCount += 1;
-          if (coveredCount >= totalCellCount) break;
-        }
-        if (coveredCount >= totalCellCount) break;
-      }
-    }
-  }
-  return Math.max(0, Math.min(1, coveredCount / totalCellCount));
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatioGrid(waterFeatures);
 }
 
 function getScenarioWaterVisibleCoverageRatio(waterFeatures = [], options = {}) {
-  const algo = normalizeScenarioWaterCoverageAlgo(options?.algo) || getForcedScenarioWaterCoverageAlgo().algo;
-  if (algo === "legacy") return getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures);
-  return getScenarioWaterVisibleCoverageRatioGrid(waterFeatures);
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatio(waterFeatures, options);
 }
 
 function getScenarioWaterCacheComplexitySignals(waterFeatures = []) {
-  const featureCount = Array.isArray(waterFeatures) ? waterFeatures.length : 0;
-  const coverageAlgoDecision = getForcedScenarioWaterCoverageAlgo();
-  const visibleCoverageRatio = getScenarioWaterVisibleCoverageRatio(waterFeatures, { algo: coverageAlgoDecision.algo });
-  const previousRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
-  return {
-    featureCount,
-    visibleCoverageRatio: Number(visibleCoverageRatio.toFixed(4)),
-    previousRenderedCount,
-    waterCoverageAlgo: coverageAlgoDecision.algo,
-    waterCoverageAlgoSource: coverageAlgoDecision.source,
-  };
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterCacheComplexitySignals(waterFeatures);
 }
 
 function shouldUseDirectScenarioWaterDraw(signals) {
-  return (
-    Number(signals?.featureCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX
-    && Number(signals?.visibleCoverageRatio || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX
-    && Number(signals?.previousRenderedCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX
-  );
+  return getScenarioWaterCachePolicyOwner().shouldUseDirectScenarioWaterDraw(signals);
 }
 
 function getPassReferenceTransform(passName) {

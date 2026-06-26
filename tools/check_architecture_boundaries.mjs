@@ -18,6 +18,7 @@ const FILES = Object.freeze({
   renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
+  scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
@@ -35,6 +36,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderTransformReusePolicyOwner]: 260,
   [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.viewportReadModelOwner]: 260,
+  [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
@@ -79,6 +81,7 @@ function collectFailures() {
   const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
+  const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
@@ -97,6 +100,7 @@ function collectFailures() {
     [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
+    [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
@@ -134,6 +138,7 @@ function collectFailures() {
     FILES.renderTransformReusePolicyOwner,
     FILES.projectedGeometryBoundsOwner,
     FILES.viewportReadModelOwner,
+    FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
     FILES.renderPassCatalog,
@@ -350,6 +355,19 @@ function collectFailures() {
   ]) {
     if (viewportReadModelOwner.includes(token)) {
       failures.push(`${FILES.viewportReadModelOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "../map_renderer.js",
+    "./map_renderer.js",
+    "runtimeState",
+    "document.",
+    "zoomBehavior",
+    "drawScenarioRegionOverlaysPass",
+    "context.",
+  ]) {
+    if (scenarioWaterCachePolicyOwner.includes(token)) {
+      failures.push(`${FILES.scenarioWaterCachePolicyOwner} must not touch renderer lifecycle token: ${token}`);
     }
   }
   for (const token of [
@@ -582,6 +600,40 @@ function collectFailures() {
         "sortedLongitudes[trimCount]",
         "projection.scale() || 0",
         "return `${Math.round(scale * 100)}%`;",
+      ],
+    },
+    {
+      ownerPath: FILES.scenarioWaterCachePolicyOwner,
+      ownerTokens: [
+        "export function createScenarioWaterCachePolicyOwner(",
+        "function normalizeScenarioWaterCacheStrategyMode(",
+        "function getForcedScenarioWaterCacheMode(",
+        "function normalizeScenarioWaterCoverageAlgo(",
+        "function getForcedScenarioWaterCoverageAlgo(",
+        "function getScenarioWaterVisibleCoverageRatioLegacy(",
+        "function getScenarioWaterVisibleCoverageRatioGrid(",
+        "function getScenarioWaterCacheComplexitySignals(",
+        "function shouldUseDirectScenarioWaterDraw(",
+      ],
+      rendererRequiredTokens: [
+        "createScenarioWaterCachePolicyOwner({",
+        "return getScenarioWaterCachePolicyOwner().getForcedScenarioWaterCacheMode(",
+        "return getScenarioWaterCachePolicyOwner().getScenarioWaterCacheComplexitySignals(",
+        "return getScenarioWaterCachePolicyOwner().shouldUseDirectScenarioWaterDraw(",
+      ],
+      rendererForbiddenTokens: [
+        "const SCENARIO_WATER_CACHE_MODE_PARAM =",
+        "const SCENARIO_WATER_CACHE_MODE_ALT_PARAM =",
+        "const SCENARIO_WATER_CACHE_MODES =",
+        "const SCENARIO_WATER_COVERAGE_ALGO_PARAM =",
+        "const SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM =",
+        "const SCENARIO_WATER_COVERAGE_ALGOS =",
+        "const SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS =",
+        "const SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS =",
+        "const SCENARIO_WATER_COVERAGE_GRID_MAX_DPR =",
+        "const SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX =",
+        "const SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX =",
+        "const SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX =",
       ],
     },
     {

@@ -109,6 +109,7 @@
 - 新边界优先补 source contract、node contract、targeted Python contract，再决定是否上更重的 E2E。
 - static contract 进入具名入口后，route registry 递归展开到真实 leaf test 文件。
 - owner boundary 测试锁具体 owner token，必要时把旧实现 token 一起列入禁令，避免整文件级禁令误伤无关 sidebar 或邻近 owner 的改动。
+- 隔离 worktree 跑 Playwright E2E 前先确认 `node_modules` 入口；可用被 `.gitignore` 忽略的 junction 指向父 checkout 依赖，让验证使用当前工作树源码并复用既有依赖。
 - CSS 视觉合同要检查后置规则的最终层叠结果；只检查共享 token 存在会漏掉后面 selector 把圆角、背景或间距覆盖回旧值。
 - 追加可选 E2E gate 失败时，先在同 commit 的 clean baseline 跑同一命令；失败形态一致就登记为既有 gate 漂移，避免把非本轮布局债务混进启动抽取。
 - 退休一个 spec 时，同步删除 manifest、test list、allowlist、引用关系。
