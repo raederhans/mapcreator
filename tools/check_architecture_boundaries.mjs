@@ -18,6 +18,7 @@ const FILES = Object.freeze({
   renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
+  viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -36,6 +37,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderTransformReusePolicyOwner]: 260,
   [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.viewportReadModelOwner]: 260,
+  [FILES.viewportCommandOwner]: 220,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -81,6 +83,7 @@ function collectFailures() {
   const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
+  const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -100,6 +103,7 @@ function collectFailures() {
     [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
+    [FILES.viewportCommandOwner]: viewportCommandOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -138,6 +142,7 @@ function collectFailures() {
     FILES.renderTransformReusePolicyOwner,
     FILES.projectedGeometryBoundsOwner,
     FILES.viewportReadModelOwner,
+    FILES.viewportCommandOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -355,6 +360,21 @@ function collectFailures() {
   ]) {
     if (viewportReadModelOwner.includes(token)) {
       failures.push(`${FILES.viewportReadModelOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "../map_renderer.js",
+    "./map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "handleResize",
+    "initZoom",
+    "fitProjection",
+    "setCanvasSize",
+    "renderPassToCache",
+  ]) {
+    if (viewportCommandOwner.includes(token)) {
+      failures.push(`${FILES.viewportCommandOwner} must not touch renderer lifecycle token: ${token}`);
     }
   }
   for (const token of [
@@ -600,6 +620,35 @@ function collectFailures() {
         "sortedLongitudes[trimCount]",
         "projection.scale() || 0",
         "return `${Math.round(scale * 100)}%`;",
+      ],
+    },
+    {
+      ownerPath: FILES.viewportCommandOwner,
+      ownerTokens: [
+        "export function createViewportCommandOwner(",
+        "function updateZoomTranslateExtent(",
+        "function resetZoomToFit(",
+        "function zoomByStep(",
+        "function setZoomPercent(",
+        "function enforceZoomConstraints(",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/viewport_command_owner.js\";",
+        "let viewportCommandOwner = null;",
+        "createViewportCommandOwner({",
+        "setZoomTransform: (transform) => {",
+        "return getViewportCommandOwner().updateZoomTranslateExtent(",
+        "return getViewportCommandOwner().resetZoomToFit(",
+        "return getViewportCommandOwner().zoomByStep(",
+        "return getViewportCommandOwner().setZoomPercent(",
+        "return getViewportCommandOwner().enforceZoomConstraints(",
+      ],
+      rendererForbiddenTokens: [
+        "zoomBehavior.scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE]);",
+        "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, transform);",
+        "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleBy",
+        "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleTo",
+        "globalThis.d3.select(interactionRect.node()).call(zoomBehavior.translateBy",
       ],
     },
     {

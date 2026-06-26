@@ -196,6 +196,7 @@ import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
+import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
@@ -1005,6 +1006,7 @@ let renderCacheOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
+let viewportCommandOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
@@ -1865,6 +1867,32 @@ function getViewportReadModelOwner() {
     },
   });
   return viewportReadModelOwner;
+}
+
+function getViewportCommandOwner() {
+  if (viewportCommandOwner) {
+    return viewportCommandOwner;
+  }
+  viewportCommandOwner = createViewportCommandOwner({
+    state,
+    constants: {
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
+    },
+    getters: {
+      getZoomBehavior: () => zoomBehavior,
+      getInteractionRect: () => interactionRect,
+      getD3: () => globalThis.d3,
+      calculatePanExtent,
+      getCenteredFitZoomTransform,
+    },
+    effects: {
+      setZoomTransform: (transform) => {
+        runtimeState.zoomTransform = transform;
+      },
+    },
+  });
+  return viewportCommandOwner;
 }
 
 function getScenarioWaterCachePolicyOwner() {
@@ -22356,10 +22384,7 @@ function calculatePanExtent() {
 }
 
 function updateZoomTranslateExtent() {
-  if (!zoomBehavior || runtimeState.width <= 0 || runtimeState.height <= 0) return;
-  zoomBehavior.scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE]);
-  zoomBehavior.extent([[0, 0], [runtimeState.width, runtimeState.height]]);
-  zoomBehavior.translateExtent(calculatePanExtent());
+  return getViewportCommandOwner().updateZoomTranslateExtent();
 }
 
 function getViewportGeoBounds() {
@@ -22394,29 +22419,15 @@ function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {}) {
 }
 
 function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {}) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  updateZoomTranslateExtent();
-  const transform = centerContent
-    ? (getCenteredFitZoomTransform({ centerX, centerY }) || globalThis.d3.zoomIdentity)
-    : globalThis.d3.zoomIdentity;
-  runtimeState.zoomTransform = transform;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, transform);
+  return getViewportCommandOwner().resetZoomToFit({ centerContent, centerX, centerY });
 }
 
 function zoomByStep(direction = 1) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  const factor = Number(direction) >= 0 ? 1.2 : 1 / 1.2;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleBy, factor);
+  return getViewportCommandOwner().zoomByStep(direction);
 }
 
 function setZoomPercent(percent) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  const rawPercent = typeof percent === "string"
-    ? Number(String(percent).trim().replace(/%/g, ""))
-    : Number(percent);
-  if (!Number.isFinite(rawPercent)) return;
-  const nextScale = Math.min(MAX_ZOOM_SCALE, Math.max(MIN_ZOOM_SCALE, rawPercent / 100));
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleTo, nextScale);
+  return getViewportCommandOwner().setZoomPercent(percent);
 }
 
 function getZoomPercent() {
@@ -22424,8 +22435,7 @@ function getZoomPercent() {
 }
 
 function enforceZoomConstraints() {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.translateBy, 0, 0);
+  return getViewportCommandOwner().enforceZoomConstraints();
 }
 
 function fitProjection({ skipSpatialIndex = false } = {}) {
