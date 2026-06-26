@@ -80,10 +80,11 @@ async function waitForScenarioIdle(page) {
 
 async function exportProjectJson(page, outputPath) {
   await page.getByRole("tablist", { name: "Inspector panels" }).getByRole("tab", { name: "Project" }).click();
-  await page.locator("#projectManagement").evaluate((section) => {
-    const details = section.closest("details");
-    if (details) details.open = true;
-  });
+  const projectManagementSection = page.locator("#projectLegendSection");
+  if (!(await projectManagementSection.evaluate((section) => section.open))) {
+    await page.locator("#lblProjectLegend").click();
+  }
+  await expect(projectManagementSection).toHaveJSProperty("open", true);
   const downloadButton = page.locator("#downloadProjectBtn");
   await downloadButton.scrollIntoViewIfNeeded();
   await expect(downloadButton).toBeVisible({ timeout: 30000 });
@@ -124,7 +125,7 @@ test("render boundary contract routes scenario dispatcher render modes", async (
 
   const result = await page.evaluate(async () => {
     const { bindRenderBoundary, getRenderBoundaryDebugState } = await import("/js/core/render_boundary.js");
-    const { setScenarioViewModeCommand } = await import("/js/core/scenario_dispatcher.js");
+    const { clearActiveScenarioCommand } = await import("/js/core/scenario_dispatcher.js");
 
     const scheduleCalls = [];
     const flushCalls = [];
@@ -143,7 +144,7 @@ test("render boundary contract routes scenario dispatcher render modes", async (
       },
     });
 
-    setScenarioViewModeCommand("frontline", {
+    clearActiveScenarioCommand({
       renderMode: "none",
       markDirtyReason: "",
     });
@@ -152,7 +153,7 @@ test("render boundary contract routes scenario dispatcher render modes", async (
       flushCount: flushCalls.length,
     };
 
-    setScenarioViewModeCommand("ownership", {
+    clearActiveScenarioCommand({
       renderMode: "request",
       markDirtyReason: "",
     });
@@ -162,7 +163,7 @@ test("render boundary contract routes scenario dispatcher render modes", async (
       debug: getRenderBoundaryDebugState(),
     };
 
-    setScenarioViewModeCommand("frontline", {
+    clearActiveScenarioCommand({
       renderMode: "flush",
       markDirtyReason: "",
     });
@@ -186,11 +187,11 @@ test("render boundary contract routes scenario dispatcher render modes", async (
   });
   expect(result.afterRequest.scheduleCount).toBe(1);
   expect(result.afterRequest.flushCount).toBe(0);
-  expect(result.afterRequest.debug.pendingReasons).toContain("scenario-view:ownership");
+  expect(result.afterRequest.debug.pendingReasons).toContain("scenario-clear");
   expect(result.afterFlush.scheduleCount).toBe(1);
   expect(result.afterFlush.flushCount).toBe(1);
-  expect(result.flushCalls[0].reason).toBe("scenario-view:frontline");
-  expect(result.afterFlush.debug.lastFlushReason).toBe("scenario-view:frontline");
+  expect(result.flushCalls[0].reason).toBe("scenario-clear");
+  expect(result.afterFlush.debug.lastFlushReason).toBe("scenario-clear");
 });
 
 test("upload button dirty confirm and import path go through interaction funnel", async ({ page }) => {

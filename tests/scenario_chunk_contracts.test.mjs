@@ -1203,6 +1203,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
   const renderTransformReusePolicyOwnerSource = readRepoFile("js", "core", "renderer", "render_transform_reuse_policy_owner.js");
+  const zoomInteractionLifecycleOwnerSource = readRepoFile("js", "core", "renderer", "zoom_interaction_lifecycle_owner.js");
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
     rendererSource.match(/function isInteractionRecoveryBlocked\(\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body || "";
@@ -1241,7 +1242,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-visibility" });')
       && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-open" });')
       && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-clear" });')
-      && rendererSource.includes('renderHoverOverlayIfNeeded({ force: true, eventType: "zoom-start" });')
+      && zoomInteractionLifecycleOwnerSource.includes('renderHoverOverlayIfNeeded?.({ force: true, eventType: "zoom-start" });')
       && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "mouseleave" });')
       && rendererSource.includes('renderHoverOverlayIfNeeded({ eventType: "facility-card-close" });'),
     hoverFacilityAndCityProbeMetricsRemainNamed:

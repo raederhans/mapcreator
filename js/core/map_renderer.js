@@ -199,6 +199,7 @@ import { createViewportReadModelOwner } from "./renderer/viewport_read_model_own
 import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
 import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
+import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -1002,6 +1003,7 @@ let viewportReadModelOwner = null;
 let viewportCommandOwner = null;
 let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
+let zoomInteractionLifecycleOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1945,6 +1947,80 @@ function getScenarioWaterCachePolicyOwner() {
     },
   });
   return scenarioWaterCachePolicyOwner;
+}
+
+function getZoomInteractionLifecycleOwner() {
+  if (zoomInteractionLifecycleOwner) {
+    return zoomInteractionLifecycleOwner;
+  }
+  zoomInteractionLifecycleOwner = createZoomInteractionLifecycleOwner({
+    state,
+    constants: {
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+      renderPhaseSettling: RENDER_PHASE_SETTLING,
+    },
+    getters: {
+      getD3: () => globalThis.d3,
+      getWidth: () => runtimeState.width,
+      getHeight: () => runtimeState.height,
+      getInteractionRect: () => interactionRect,
+      getZoomBehavior: () => zoomBehavior,
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+      getZoomTransform: () => runtimeState.zoomTransform,
+      getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
+      getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
+      isZoomRenderScheduled: () => runtimeState.zoomRenderScheduled,
+    },
+    helpers: {
+      cloneZoomTransform,
+      shouldAllowZoomEvent,
+      nowMs,
+      requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),
+    },
+    effects: {
+      setZoomBehavior: (nextZoomBehavior) => {
+        zoomBehavior = nextZoomBehavior;
+      },
+      setZoomGestureStartTransform: (transform) => {
+        runtimeState.zoomGestureStartTransform = transform;
+      },
+      setZoomGestureScaleDelta: (scaleDelta) => {
+        runtimeState.zoomGestureScaleDelta = scaleDelta;
+      },
+      setPendingExactPoliticalFastFrame: (pending) => {
+        runtimeState.pendingExactPoliticalFastFrame = !!pending;
+      },
+      setPendingZoomTransform: (transform) => {
+        runtimeState.pendingZoomTransform = transform;
+      },
+      setZoomRenderScheduled: (scheduled) => {
+        runtimeState.zoomRenderScheduled = !!scheduled;
+      },
+      setZoomGestureEndedAt: (endedAtMs) => {
+        runtimeState.zoomGestureEndedAt = endedAtMs;
+      },
+      clearRenderPhaseTimer,
+      cancelExactAfterSettleRefresh,
+      setRenderPhase,
+      captureInteractionBorderSnapshot,
+      renderHoverOverlayIfNeeded,
+      dismissOnboardingHint,
+      updateMap,
+      scheduleScenarioChunkRefresh: (options) => {
+        if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
+          return runtimeState.scheduleScenarioChunkRefreshFn(options);
+        }
+        return "noop";
+      },
+      scheduleRenderPhaseIdle,
+      updateZoomTranslateExtent,
+      resetZoomToFit,
+      enforceZoomConstraints,
+    },
+  });
+  return zoomInteractionLifecycleOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -21454,6 +21530,12 @@ function shouldAllowZoomEvent(event) {
   return true;
 }
 
+function dismissOnboardingHint() {
+  if (typeof runtimeState.dismissOnboardingHintFn === "function") {
+    runtimeState.dismissOnboardingHintFn();
+  }
+}
+
 function resolveParentGroupKey(feature, featureId) {
   const scenarioDistrictGroup = String(runtimeState.scenarioDistrictGroupByFeatureId?.get(featureId) || "").trim();
   const scenarioOwnerTag = String(runtimeState.sovereigntyByFeatureId?.[featureId] || "").trim().toUpperCase();
@@ -21949,9 +22031,7 @@ async function handleClick(event, _interactionContext = null) {
     suppressNextClickAfterBrush = false;
     return;
   }
-  if (typeof runtimeState.dismissOnboardingHintFn === "function") {
-    runtimeState.dismissOnboardingHintFn();
-  }
+  dismissOnboardingHint();
   if (getIntensityFieldTool().active) {
     return;
   }
@@ -22553,66 +22633,7 @@ function handleSidebarLayoutStart() {
 }
 
 function initZoom() {
-  zoomBehavior = globalThis.d3
-    .zoom()
-    .scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE])
-    .extent([[0, 0], [runtimeState.width, runtimeState.height]])
-    .filter((event) => shouldAllowZoomEvent(event))
-    .on("start", () => {
-      clearRenderPhaseTimer();
-      cancelExactAfterSettleRefresh();
-      runtimeState.zoomGestureStartTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      runtimeState.zoomGestureScaleDelta = 0;
-      runtimeState.pendingExactPoliticalFastFrame = false;
-      setRenderPhase(RENDER_PHASE_INTERACTING);
-      captureInteractionBorderSnapshot(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      renderHoverOverlayIfNeeded({ force: true, eventType: "zoom-start" });
-      if (typeof runtimeState.dismissOnboardingHintFn === "function") {
-        runtimeState.dismissOnboardingHintFn();
-      }
-    })
-    .on("zoom", (event) => {
-      runtimeState.pendingZoomTransform = event.transform;
-      if (runtimeState.zoomRenderScheduled) return;
-      runtimeState.zoomRenderScheduled = true;
-      const flushLatestZoomTransform = () => {
-        const nextTransform = runtimeState.pendingZoomTransform;
-        runtimeState.pendingZoomTransform = null;
-        if (nextTransform) {
-          updateMap(nextTransform);
-        }
-        if (runtimeState.pendingZoomTransform) {
-          requestAnimationFrame(flushLatestZoomTransform);
-          return;
-        }
-        runtimeState.zoomRenderScheduled = false;
-      };
-      requestAnimationFrame(flushLatestZoomTransform);
-    })
-    .on("end", (event) => {
-      setRenderPhase(RENDER_PHASE_SETTLING);
-      runtimeState.pendingZoomTransform = null;
-      updateMap(event.transform);
-      const startK = Math.max(0.0001, Number(runtimeState.zoomGestureStartTransform?.k || event.transform?.k || 1));
-      const endK = Math.max(0.0001, Number(event.transform?.k || startK));
-      runtimeState.zoomGestureScaleDelta = Math.abs(Math.log2(endK / startK));
-      runtimeState.zoomGestureEndedAt = nowMs();
-      runtimeState.pendingExactPoliticalFastFrame = true;
-      if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
-        runtimeState.scheduleScenarioChunkRefreshFn({
-          reason: "zoom-end",
-          delayMs: 0,
-        });
-      }
-      scheduleRenderPhaseIdle();
-    });
-
-  updateZoomTranslateExtent();
-  const zoomTarget = globalThis.d3.select(interactionRect.node());
-  zoomTarget.call(zoomBehavior);
-  zoomTarget.on("dblclick.zoom", null);
-  resetZoomToFit();
-  enforceZoomConstraints();
+  return getZoomInteractionLifecycleOwner().initZoom();
 }
 
 function bindEvents() {

@@ -1,18 +1,18 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 16:05 UTC
+Last updated: 2026-06-26 18:52 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest renderer integration head is P20 functional commit `ac5a9ee0` on top of P19 closeout `d2171b5f`.
+- Latest renderer integration head is P20 closeout commit `efd0f840` on top of P20 functional commit `ac5a9ee0`.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, and P20 viewport resize lifecycle owner.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat P20 commit `ac5a9ee0` as the latest renderer refresh baseline containing P9 inventory, P10 render pass catalog ownership, P11 render invalidation vocabulary ownership, P12 render cache invalidation authority ownership, P13 idle render pipeline definition ownership, P14 exact-after-settle pass policy ownership, P15 transform reuse policy ownership, P16 projected geometry bounds ownership, P17 viewport read-model ownership, P18 scenario water cache policy ownership, the startup hydration bridge metadata fix, P19 viewport command ownership, and P20 viewport resize lifecycle ownership.
+1. Treat P20 closeout commit `efd0f840` as the latest renderer refresh baseline containing P9 inventory, P10 render pass catalog ownership, P11 render invalidation vocabulary ownership, P12 render cache invalidation authority ownership, P13 idle render pipeline definition ownership, P14 exact-after-settle pass policy ownership, P15 transform reuse policy ownership, P16 projected geometry bounds ownership, P17 viewport read-model ownership, P18 scenario water cache policy ownership, the startup hydration bridge metadata fix, P19 viewport command ownership, and P20 viewport resize lifecycle ownership.
 2. Keep the parent `docs/archive/**` deletion WIP out of renderer extraction history until a separate cleanup owner reviews it.
 3. Future renderer extraction should keep `RENDER_PASS_NAMES` as the public/cache pass-name catalog and `IDLE_RENDER_PASS_DEFINITIONS` as the idle execution-order catalog.
 
@@ -20,7 +20,8 @@ Last updated: 2026-06-26 16:05 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@ac5a9ee0` includes P18, P19, P20, and closeouts through P19 | parent is behind remote by P9-P20 renderer extraction commits plus closeouts | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for integrated P20 renderer extraction because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p21-zoom-interaction-lifecycle-owner` | branch `codex/p21-zoom-interaction-lifecycle-owner`; `HEAD@efd0f840` plus pending functional commit | `origin/main@efd0f840cd1b302dce4b628f4f94be415e1516be` | ready-for-integration | changed files: `js/core/map_renderer.js`, `js/core/renderer/zoom_interaction_lifecycle_owner.js`, `tests/zoom_interaction_lifecycle_owner_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/e2e/interaction_funnel_contract.spec.js`, `tools/check_architecture_boundaries.mjs`, `package.json`, P21 docs, registry. Shared hotspots: renderer host, package scripts, architecture boundary, interaction funnel E2E. Untouched: `dist/app/**`, state-write allowlist, public facade. | Validation passed: syntax checks; zoom owner 6/6; related owner node tests; scenario chunk 57/57; architecture; state-write; import graph; diff check; TNO ready-state 5/5; smoke 4/4; interaction funnel 3/3; final code-review no blocking findings. | Yellow with future renderer owner extraction touching `map_renderer.js`, package scripts, architecture boundary, or interaction funnel tests; green against parent docs/archive cleanup WIP. | Commit and push branch, fast-forward push to `origin/main` if remote remains compatible, then archive docs and clean this worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@efd0f840` includes P18, P19, P20, and P20 closeout | parent is behind remote by P9-P20 renderer extraction commits plus closeouts | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for integrated P20 renderer extraction because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches
 

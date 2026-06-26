@@ -20,6 +20,7 @@ const FILES = Object.freeze({
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
+  zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -40,6 +41,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
   [FILES.viewportResizeLifecycleOwner]: 360,
+  [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -87,6 +89,7 @@ function collectFailures() {
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
   const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
+  const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -108,6 +111,7 @@ function collectFailures() {
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
     [FILES.viewportCommandOwner]: viewportCommandOwner,
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
+    [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -148,6 +152,7 @@ function collectFailures() {
     FILES.viewportReadModelOwner,
     FILES.viewportCommandOwner,
     FILES.viewportResizeLifecycleOwner,
+    FILES.zoomInteractionLifecycleOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -411,6 +416,25 @@ function collectFailures() {
   ]) {
     if (scenarioWaterCachePolicyOwner.includes(token)) {
       failures.push(`${FILES.scenarioWaterCachePolicyOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "../map_renderer.js",
+    "./map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "renderPassToCache",
+    "handleResize",
+    "fitProjection",
+    "setCanvasSize",
+    "canvas",
+    "svg",
+    "projection",
+    "path",
+    "document.",
+  ]) {
+    if (zoomInteractionLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.zoomInteractionLifecycleOwner} must not touch renderer lifecycle token: ${token}`);
     }
   }
   for (const token of [
@@ -701,6 +725,24 @@ function collectFailures() {
         "let browserPixelRatioMediaQueryHandler =",
         "let visualViewportResizeHandler =",
         "let resizeSpatialRefreshHandle =",
+      ],
+    },
+    {
+      ownerPath: FILES.zoomInteractionLifecycleOwner,
+      ownerTokens: [
+        "export function createZoomInteractionLifecycleOwner(",
+        "function initZoom(",
+        "function flushLatestZoomTransform(",
+      ],
+      rendererRequiredTokens: [
+        "createZoomInteractionLifecycleOwner({",
+        "return getZoomInteractionLifecycleOwner().initZoom(",
+      ],
+      rendererForbiddenTokens: [
+        "zoomBehavior = globalThis.d3",
+        ".on(\"start\", () => {",
+        ".on(\"zoom\", (event) => {",
+        ".on(\"end\", (event) => {",
       ],
     },
     {
