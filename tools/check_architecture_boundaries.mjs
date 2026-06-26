@@ -21,6 +21,7 @@ const FILES = Object.freeze({
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
+  mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -42,6 +43,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportCommandOwner]: 220,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
+  [FILES.mapInteractionEventBindingOwner]: 220,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -90,6 +92,7 @@ function collectFailures() {
   const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
+  const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -112,6 +115,7 @@ function collectFailures() {
     [FILES.viewportCommandOwner]: viewportCommandOwner,
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
+    [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -153,6 +157,7 @@ function collectFailures() {
     FILES.viewportCommandOwner,
     FILES.viewportResizeLifecycleOwner,
     FILES.zoomInteractionLifecycleOwner,
+    FILES.mapInteractionEventBindingOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -435,6 +440,17 @@ function collectFailures() {
   ]) {
     if (zoomInteractionLifecycleOwner.includes(token)) {
       failures.push(`${FILES.zoomInteractionLifecycleOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "selectedColor",
+    "applyDevSelectionFill",
+    "drawCanvas",
+    "document.",
+  ]) {
+    if (mapInteractionEventBindingOwner.includes(token)) {
+      failures.push(`${FILES.mapInteractionEventBindingOwner} must not touch renderer behavior token: ${token}`);
     }
   }
   for (const token of [
@@ -743,6 +759,23 @@ function collectFailures() {
         ".on(\"start\", () => {",
         ".on(\"zoom\", (event) => {",
         ".on(\"end\", (event) => {",
+      ],
+    },
+    {
+      ownerPath: FILES.mapInteractionEventBindingOwner,
+      ownerTokens: [
+        "export function createMapInteractionEventBindingOwner(",
+        "function bindEvents(",
+      ],
+      rendererRequiredTokens: [
+        "createMapInteractionEventBindingOwner({",
+        "return getMapInteractionEventBindingOwner().bindEvents(",
+      ],
+      rendererForbiddenTokens: [
+        "bindInteractionFunnel({",
+        "interactionRect.on(\"mousemove\"",
+        "interactionRect.on(\"pointerdown.fieldTool\"",
+        "window.addEventListener(\"resize\"",
       ],
     },
     {

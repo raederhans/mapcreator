@@ -200,6 +200,7 @@ import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js
 import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
+import { createMapInteractionEventBindingOwner } from "./renderer/map_interaction_event_binding_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -1004,6 +1005,7 @@ let viewportCommandOwner = null;
 let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
+let mapInteractionEventBindingOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -2021,6 +2023,44 @@ function getZoomInteractionLifecycleOwner() {
     },
   });
   return zoomInteractionLifecycleOwner;
+}
+
+function getMapInteractionEventBindingOwner() {
+  if (mapInteractionEventBindingOwner) {
+    return mapInteractionEventBindingOwner;
+  }
+  mapInteractionEventBindingOwner = createMapInteractionEventBindingOwner({
+    getters: {
+      getInteractionRect: () => interactionRect,
+      getWindow: () => window,
+      getInteractionRectNode: () => interactionRect?.node?.(),
+    },
+    helpers: {
+      bindInteractionFunnel,
+    },
+    handlers: {
+      mapClick: handleClick,
+      mapDoubleClick: handleDoubleClick,
+      handleMouseMove,
+      handlePhysicalIntensityPointerDown,
+      handlePhysicalIntensityPointerMove,
+      handlePhysicalIntensityPointerEnd,
+      handleBrushPointerDown,
+      handleBrushPointerMove,
+      handleMouseLeave: handleMapMouseLeave,
+      dispatchMapClick,
+      dispatchMapDoubleClick,
+      handleSidebarLayoutStart,
+      handleResize,
+      flushSpecialZoneMembershipDragSession,
+      flushBrushSession,
+    },
+    effects: {
+      bindMapContainerResizeObserver,
+      bindBrowserZoomObservers,
+    },
+  });
+  return mapInteractionEventBindingOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -22636,43 +22676,21 @@ function initZoom() {
   return getZoomInteractionLifecycleOwner().initZoom();
 }
 
+function handleMapMouseLeave() {
+  runtimeState.hoveredId = null;
+  runtimeState.hoveredWaterRegionId = null;
+  runtimeState.hoveredSpecialRegionId = null;
+  hoveredFacilityEntry = null;
+  updateDevHoverHit(null);
+  runtimeState.hoverOverlayDirty = true;
+  renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
+  queueTooltipUpdate({ visible: false });
+  setMapInteractionCursor("");
+  hidePhysicalIntensityBrushPreview();
+}
+
 function bindEvents() {
-  if (!interactionRect) return;
-  bindInteractionFunnel({
-    mapClick: handleClick,
-    mapDoubleClick: handleDoubleClick,
-  });
-  interactionRect.on("mousemove", handleMouseMove);
-  interactionRect.on("pointerdown.fieldTool", handlePhysicalIntensityPointerDown);
-  interactionRect.on("pointermove.fieldTool", handlePhysicalIntensityPointerMove);
-  interactionRect.on("mousedown.brush", handleBrushPointerDown);
-  interactionRect.on("mousemove.brush", handleBrushPointerMove);
-  interactionRect.on("mouseleave", () => {
-    runtimeState.hoveredId = null;
-    runtimeState.hoveredWaterRegionId = null;
-    runtimeState.hoveredSpecialRegionId = null;
-    hoveredFacilityEntry = null;
-    updateDevHoverHit(null);
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
-    queueTooltipUpdate({ visible: false });
-    setMapInteractionCursor("");
-    hidePhysicalIntensityBrushPreview();
-  });
-  interactionRect.on("click", dispatchMapClick);
-  interactionRect.on("dblclick", dispatchMapDoubleClick);
-  window.addEventListener("mouseup", () => {
-    flushSpecialZoneMembershipDragSession();
-    flushBrushSession();
-  });
-  window.addEventListener("pointerup", handlePhysicalIntensityPointerEnd);
-  window.addEventListener("pointercancel", handlePhysicalIntensityPointerEnd);
-  interactionRect.node()?.addEventListener?.("lostpointercapture", handlePhysicalIntensityPointerEnd);
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);
-  window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));
-  bindMapContainerResizeObserver();
-  bindBrowserZoomObservers();
+  return getMapInteractionEventBindingOwner().bindEvents();
 }
 
 function initMap({

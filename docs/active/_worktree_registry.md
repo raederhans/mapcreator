@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 18:54 UTC
+Last updated: 2026-06-26 19:15 UTC
 
 ## Integration Owner
 
@@ -20,7 +20,8 @@ Last updated: 2026-06-26 18:54 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@efd0f840` includes P18, P19, P20, and P20 closeout | parent is behind remote by P9-P20 renderer extraction commits plus closeouts | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for integrated P20 renderer extraction because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p22-map-interaction-event-binding-owner` | branch `codex/p22-map-interaction-event-binding-owner`; current HEAD `cb6f551a` before P22 commit | `origin/main@cb6f551a0d02e67433947bf4cc1553b52666b45f` | ready-for-integration after review CLEAR and requested validation gates | hot files: `js/core/map_renderer.js`, `js/core/renderer/map_interaction_event_binding_owner.js`, `tests/map_interaction_event_binding_owner_behavior.test.mjs`, `tools/check_architecture_boundaries.mjs`, `package.json`, active P22 docs, registry. Untouched: `dist/app/**`, `tools/eslint-rules/state-writer-allowlist.json`, and `js/core/map_renderer/public.js`. | Delivery: event registration mechanics moved to `createMapInteractionEventBindingOwner`; renderer host keeps handler bodies, click/fill/selection/brush/tooltip behavior, and state writes. Validation passed syntax checks; new owner 6/6; zoom owner 6/6; viewport command 8/8; viewport resize lifecycle 12/12; viewport read model 12/12; host inventory 7/7; architecture; state-write; import graph; diff check; TNO ready-state 5/5; smoke 4/4; interaction funnel 3/3; strategic overlay smoke 1/1; code-review CLEAR. | Yellow for future interaction event binding owner, renderer host wrapper, package script, and architecture boundary changes; green against parent docs/archive WIP. | Commit and push this branch, fast-forward `origin/main` after final freshness check, archive P22 docs, then clean this worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@cb6f551a` includes P21 closeout | parent is behind remote by renderer extraction commits plus closeouts through P21 | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for P22 because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches
 
