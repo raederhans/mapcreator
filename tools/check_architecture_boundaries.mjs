@@ -30,6 +30,8 @@ const FILES = Object.freeze({
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
   rendererSurfaceHostInventoryTest: "tests/renderer_surface_host_inventory_boundary.test.mjs",
+  rendererSurfaceLifecyclePreflightDoc: "docs/active/renderer-surface-lifecycle-preflight-20260626.md",
+  rendererSurfaceLifecycleInventoryTest: "tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -89,6 +91,17 @@ function listProjectSourceFiles(rootRelativePath) {
   return results.sort();
 }
 
+function hasMapRendererImport(source) {
+  return /from\s+["'][^"']*map_renderer\.js["']/.test(source)
+    || /import\s*\(\s*["'][^"']*map_renderer\.js["']\s*\)/.test(source);
+}
+
+function isRendererOwnerPath(sourcePath) {
+  const baseName = path.basename(sourcePath);
+  return sourcePath.startsWith("js/core/renderer/")
+    && (baseName.endsWith("_owner.js") || baseName === "renderer_surface_lifecycle_owner.js");
+}
+
 function sliceBetween(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
   if (start < 0) return "";
@@ -123,6 +136,8 @@ function collectFailures() {
   const renderInvalidationCatalog = readProjectFile(FILES.renderInvalidationCatalog);
   const rendererSurfaceHostPreflightDoc = readProjectFile(FILES.rendererSurfaceHostPreflightDoc);
   const rendererSurfaceHostInventoryTest = readProjectFile(FILES.rendererSurfaceHostInventoryTest);
+  const rendererSurfaceLifecyclePreflightDoc = readProjectFile(FILES.rendererSurfaceLifecyclePreflightDoc);
+  const rendererSurfaceLifecycleInventoryTest = readProjectFile(FILES.rendererSurfaceLifecycleInventoryTest);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -149,6 +164,8 @@ function collectFailures() {
     [FILES.renderInvalidationCatalog]: renderInvalidationCatalog,
     [FILES.rendererSurfaceHostPreflightDoc]: rendererSurfaceHostPreflightDoc,
     [FILES.rendererSurfaceHostInventoryTest]: rendererSurfaceHostInventoryTest,
+    [FILES.rendererSurfaceLifecyclePreflightDoc]: rendererSurfaceLifecyclePreflightDoc,
+    [FILES.rendererSurfaceLifecycleInventoryTest]: rendererSurfaceLifecycleInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -259,6 +276,76 @@ function collectFailures() {
   ]) {
     if (!rendererSurfaceHostInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
+    }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P24 surface host state",
+    "## Current initMap surface lifecycle map",
+    "## DOM/root lifecycle inventory",
+    "## Canvas lifecycle inventory",
+    "## SVG/group lifecycle inventory",
+    "## Context acquisition inventory",
+    "## Projection/path lifecycle inventory",
+    "## Zoom/event lifecycle inventory",
+    "## RuntimeState bridge write inventory",
+    "## P26 allowed first move",
+    "## P26 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererSurfaceLifecyclePreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererSurfaceLifecyclePreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P26 candidate extraction is limited to DOM/canvas/SVG surface lifecycle wrapper; projection/path/zoom/event/render semantics are not yet moved.",
+    "P26 may add `js/core/renderer/renderer_surface_lifecycle_owner.js`.",
+    "Map container and tooltip lookup.",
+    "2D context acquisition into `rendererSurfaceHost`.",
+    "Projection/path creation.",
+    "`fitProjection`.",
+    "`initZoom`.",
+    "`bindEvents`.",
+    "Direct runtimeState writes.",
+    "P26 must not add `js/core/renderer/renderer_render_lifecycle_owner.js`.",
+  ]) {
+    if (!rendererSurfaceLifecyclePreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceLifecyclePreflightDoc} must lock P26 surface lifecycle boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const P26_ALLOWED_FIRST_MOVE_TOKENS = Object.freeze([",
+    "const P26_FORBIDDEN_REGION_TOKENS = Object.freeze([",
+    "const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([",
+    "renderer_surface_lifecycle_owner.js",
+    "DOM/canvas/SVG surface lifecycle wrapper",
+    "projection/path/zoom/event/render semantics are not yet moved",
+    "renderer_render_lifecycle_owner.js",
+    "assertNoRendererOwnerImportsMapRenderer",
+    "P25 must lock current runtimeState bridge writes without adding a test-file state writer",
+  ]) {
+    if (!rendererSurfaceLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceLifecycleInventoryTest} must lock P26 lifecycle inventory token: ${token}`);
+    }
+  }
+  for (const tokenParts of [
+    ["runtimeState.", "colorCanvas = rendererSurfaceHost.getMapCanvas()"],
+    ["runtimeState.", "colorCtx = rendererSurfaceHost.getContext()"],
+  ]) {
+    if (!rendererSurfaceLifecycleInventoryTest.includes(tokenParts[0])
+      || !rendererSurfaceLifecycleInventoryTest.includes(tokenParts[1])) {
+      failures.push(`${FILES.rendererSurfaceLifecycleInventoryTest} must lock runtimeState bridge token fragments: ${tokenParts.join("")}`);
+    }
+  }
+  const rendererSourceFiles = listProjectSourceFiles("js/core/renderer");
+  if (rendererSourceFiles.includes("js/core/renderer/renderer_render_lifecycle_owner.js")) {
+    failures.push("P25 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
+  }
+  for (const sourcePath of rendererSourceFiles.filter(isRendererOwnerPath)) {
+    const source = readProjectFile(sourcePath);
+    if (hasMapRendererImport(source)) {
+      failures.push(`${sourcePath} must not import js/core/map_renderer.js; keep ${FILES.renderer} as the composition root.`);
     }
   }
 
