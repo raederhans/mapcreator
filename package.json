@@ -118,6 +118,7 @@
     "test:node:political-collection-fragment-camouflage": "node --test tests/political_collection_fragment_camouflage_behavior.test.mjs",
     "test:node:transport-overview-line-contract": "node --test tests/transport_overview_line_strategy_scope_contract.node.test.mjs",
     "test:node:renderer-host-inventory": "node --test tests/renderer_host_inventory_boundary.test.mjs",
+    "test:node:renderer-surface-host-inventory": "node --test tests/renderer_surface_host_inventory_boundary.test.mjs",
     "test:node:render-cache-owner": "node --test tests/render_cache_owner_invalidation_behavior.test.mjs",
     "test:node:render-transform-reuse-policy-owner": "node --test tests/render_transform_reuse_policy_owner_behavior.test.mjs",
     "test:node:projected-geometry-bounds-owner": "node --test tests/projected_geometry_bounds_owner_behavior.test.mjs",

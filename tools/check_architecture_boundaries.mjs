@@ -27,6 +27,8 @@ const FILES = Object.freeze({
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
+  rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
+  rendererSurfaceHostInventoryTest: "tests/renderer_surface_host_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -98,6 +100,8 @@ function collectFailures() {
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
   const renderInvalidationCatalog = readProjectFile(FILES.renderInvalidationCatalog);
+  const rendererSurfaceHostPreflightDoc = readProjectFile(FILES.rendererSurfaceHostPreflightDoc);
+  const rendererSurfaceHostInventoryTest = readProjectFile(FILES.rendererSurfaceHostInventoryTest);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -121,12 +125,41 @@ function collectFailures() {
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
     [FILES.renderInvalidationCatalog]: renderInvalidationCatalog,
+    [FILES.rendererSurfaceHostPreflightDoc]: rendererSurfaceHostPreflightDoc,
+    [FILES.rendererSurfaceHostInventoryTest]: rendererSurfaceHostInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
     const count = lineCount(sources[relativePath]);
     if (count > budget) {
       failures.push(`${relativePath} has ${count} lines; budget is ${budget}. Move focused behavior into an owner.`);
+    }
+  }
+
+  const rendererSurfaceHostPath = path.join(REPO_ROOT, "js/core/renderer/renderer_surface_host.js");
+  if (fs.existsSync(rendererSurfaceHostPath)) {
+    failures.push("js/core/renderer/renderer_surface_host.js is reserved for P24 surface host implementation.");
+  }
+
+  for (const heading of [
+    "## Current surface handle inventory",
+    "## P24 candidate surface host API",
+    "## P24 allowed first move",
+  ]) {
+    if (!rendererSurfaceHostPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererSurfaceHostPreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+
+  for (const token of [
+    "let mapContainer = null;",
+    "getContext: () => context",
+    "getProjection: () => projection",
+    "getZoomBehavior: () => zoomBehavior",
+    "getMapContainer: () => mapContainer",
+  ]) {
+    if (!rendererSurfaceHostInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
     }
   }
 
