@@ -479,3 +479,6 @@
 
 ### Clean worktree 跑浏览器 smoke 先装依赖
 - 新建 clean worktree 可以跑纯 Node source tests，但 Playwright smoke 依赖本地 `node_modules/@playwright/test`；首次浏览器验证前先用 `npm ci` 建立 ignored 依赖树，避免把 `MODULE_NOT_FOUND` 误判成应用启动回归。
+
+### 收尾文档避免记录同提交自哈希
+- 如果交付包会被 amend 进同一个功能提交，文档里不要写该提交的精确 hash；先写 branch HEAD 或 recovery branch，等归档/closeout 提交再记录稳定功能 hash。

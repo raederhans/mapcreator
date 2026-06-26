@@ -15,7 +15,7 @@
 - Core: `js/core/renderer/viewport_command_owner.js`, `js/core/map_renderer.js`.
 - Tests: `tests/viewport_command_owner_behavior.test.mjs`.
 - Tooling: `tools/check_architecture_boundaries.mjs`, `package.json`.
-- Docs: `docs/active/viewport-command-owner-p19-20260626/`, `docs/active/_worktree_registry.md`.
+- Docs: `docs/archive/viewport-command-owner-p19-20260626/`, `docs/active/_worktree_registry.md`.
 
 ### Diff Summary
 
@@ -58,4 +58,4 @@
 
 ### Recommended Next Step
 
-- Push the feature branch and fast-forward `origin/main`, then archive docs and clean this isolated worktree after remote confirmation.
+- Push this archive/registry closeout, then clean this isolated worktree after remote confirmation.

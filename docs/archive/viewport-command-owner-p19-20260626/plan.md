@@ -18,7 +18,7 @@ Extract bounded viewport zoom command wrappers from `js/core/map_renderer.js` in
 2. [x] Read lessons learned, registry, current viewport wrappers, owner tests, and architecture boundaries.
 3. [x] Add `viewport_command_owner.js`, delegate existing host wrappers, add focused owner behavior tests, package script, and architecture checks.
 4. [x] Run syntax, focused Node, dependent owner/static gates, state-write, import graph, and e2e gates.
-5. [ ] Run final review/self-check, commit, push, archive docs, update registry, and clean the P19 worktree after remote confirmation.
+5. [x] Run final review/self-check, commit, push, archive docs, update registry, and clean the P19 worktree after remote confirmation.
 
 ## Validation Owner
 

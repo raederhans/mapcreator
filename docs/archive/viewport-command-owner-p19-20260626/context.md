@@ -52,9 +52,9 @@
 - `git diff --check` passed with LF/CRLF warnings only.
 - Forbidden path scan found no changes to `dist/app/**`, `tools/eslint-rules/state-writer-allowlist.json`, or `js/core/map_renderer/public.js`.
 
-## Pending Validation
+## Pending Closeout
 
-- Commit, push, archive docs, and cleanup.
+- Push this archive/registry closeout, then clean the isolated worktree after remote confirmation.
 
 ## Review Notes
 
