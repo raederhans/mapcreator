@@ -11,8 +11,9 @@
 - [x] Update Python boundary contract and architecture boundary checker.
 - [x] Run requested validation commands.
 - [x] Run static review lanes and fix blocking findings.
-- [ ] Commit with Lore trailers, push branch and `origin/main`.
-- [ ] Update registry closeout, archive docs, remove worktree.
+- [x] Commit with Lore trailers, push branch and `origin/main`.
+- [x] Update registry closeout and archive docs.
+- [ ] Remove worktree after closeout push.
 
 ## Delivery Package
 
@@ -36,7 +37,9 @@
    - Tests and architecture checks now assert the new split and summary contract.
 
 4. Commit state:
-   - Commit pending at this checkpoint. Next step is `git add -A`, final status check, Lore commit, branch push, and fast-forward push to `origin/main`.
+   - Functional commit: `ebfb86f3c5487a2ec7e09a5e62fd581d33b9b171`.
+   - Branch pushed: `origin/codex/render-cache-invalidation-owner-p12-20260625`.
+   - `origin/main` fast-forwarded to the functional commit before this docs closeout.
 
 5. Base/main divergence:
    - Worktree base is `origin/main@456b05130b37c2a7f8364c2a5a6a8430957388e8`.
@@ -57,7 +60,7 @@
    - Browser smoke still reports known local auth `401` and D3 water geometry warnings; both are outside P12.
 
 9. Recommended next step:
-   - Merge by fast-forwarding this worktree commit into `origin/main`, then archive this doc folder, move the registry row to recent integrated, push the closeout commit, and remove the temporary worktree.
+   - Push this closeout commit, confirm `origin/main`, then remove the temporary worktree and local branch.
 
 10. Integration readiness:
-   - Ready for integration after staging untracked test/docs with `git add -A`.
+   - Integrated; final cleanup follows the closeout push.

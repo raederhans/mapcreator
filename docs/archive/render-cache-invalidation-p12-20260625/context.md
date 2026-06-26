@@ -28,6 +28,8 @@
 - 2026-06-25/26: Added `tests/render_cache_owner_invalidation_behavior.test.mjs` plus `npm run test:node:render-cache-owner`; updated Python boundary, architecture boundary, and scenario chunk contracts to track the new owner/host split.
 - 2026-06-25/26: Static review lanes completed. Architect status was WATCH until the versioned summary envelope was added. Code-reviewer found one pre-commit issue: new test/docs were untracked; the closeout uses `git add -A` before committing to make that explicit.
 - 2026-06-25/26: Final self-review found no simpler safe implementation after the summary envelope cleanup. `lessons learned.md` already covers the two relevant lessons: update old owner boundary contracts and check untracked files before review/commit.
+- 2026-06-26: Functional commit `ebfb86f3c5487a2ec7e09a5e62fd581d33b9b171` was pushed to `origin/codex/render-cache-invalidation-owner-p12-20260625` and fast-forwarded into `origin/main`.
+- 2026-06-26: Task docs were archived under `docs/archive/render-cache-invalidation-p12-20260625/`; registry closeout records P12 as integrated and ready for local worktree cleanup after push.
 
 ## Validation Evidence
 
