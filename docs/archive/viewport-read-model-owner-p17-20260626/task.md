@@ -26,7 +26,8 @@
 
 ### Commit State
 
-- Ready to commit after final staging.
+- Functional commit `2eb791867350d510517d0fe350d78a638b18d43f` was created and pushed to both the feature branch and `origin/main`.
+- Closeout archive and registry changes are staged for a follow-up closeout commit.
 
 ### Base Divergence
 
@@ -54,4 +55,4 @@
 
 ### Recommended Next Step
 
-- Commit P17, push the branch and `origin/main`, archive this task folder, update registry, then clean the isolated worktree after confirming the branch is an ancestor of `origin/main`.
+- Commit and push this closeout, verify remote refs, then clean the isolated worktree after confirming the feature branch is an ancestor of `origin/main`.

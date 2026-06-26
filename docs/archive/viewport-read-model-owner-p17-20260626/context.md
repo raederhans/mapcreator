@@ -63,3 +63,10 @@
 - `git diff --check` passed.
 - Forbidden-path scan found no `dist/app/**`, state-write allowlist, or `js/core/map_renderer/public.js` edits.
 - Owner side-effect scan found no `runtimeState`, `zoomBehavior`, `interactionRect`, `document.`, or `map_renderer` references.
+
+## Closeout Notes
+
+- Functional commit: `2eb791867350d510517d0fe350d78a638b18d43f`.
+- Functional commit was pushed to `origin/codex/viewport-read-model-owner-p17-20260626` and fast-forwarded to `origin/main`.
+- This archive move and registry update are the closeout step.
+- Local isolated worktree cleanup follows after the closeout commit is pushed and verified as reachable from `origin/main`.

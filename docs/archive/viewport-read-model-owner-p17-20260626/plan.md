@@ -21,7 +21,7 @@ Extract viewport read-model helpers from `js/core/map_renderer.js` into `js/core
 5. [x] Add focused owner behavior tests and package script.
 6. [x] Extend architecture boundary checks.
 7. [x] Run syntax, focused Node, architecture, state-write, import graph, and e2e gates.
-8. [ ] Run final review/self-check, commit, push, archive docs, update registry, and clean worktree.
+8. [x] Run final review/self-check, commit, push, archive docs, and update registry. Clean the worktree after this closeout commit is pushed.
 
 ## Validation Owner
 
