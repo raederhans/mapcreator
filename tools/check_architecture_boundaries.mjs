@@ -13,6 +13,8 @@ const FILES = Object.freeze({
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
+  renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
+  renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
 });
@@ -24,6 +26,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,
   [FILES.renderCacheOwner]: 620,
+  [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
 });
@@ -62,6 +65,8 @@ function collectFailures() {
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
+  const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
+  const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
   const renderInvalidationCatalog = readProjectFile(FILES.renderInvalidationCatalog);
   const sources = {
@@ -72,6 +77,8 @@ function collectFailures() {
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
     [FILES.renderCacheOwner]: renderCacheOwner,
+    [FILES.renderPipelinePasses]: renderPipelinePasses,
+    [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
     [FILES.renderInvalidationCatalog]: renderInvalidationCatalog,
   };
@@ -102,6 +109,8 @@ function collectFailures() {
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
     FILES.renderCacheOwner,
+    FILES.renderPipelinePasses,
+    FILES.renderPipelineCatalog,
     FILES.renderPassCatalog,
     FILES.renderInvalidationCatalog,
   ];
@@ -350,6 +359,27 @@ function collectFailures() {
       ],
     },
     {
+      ownerPath: FILES.renderPipelineCatalog,
+      ownerTokens: [
+        "export const IDLE_RENDER_PASS_DEFINITIONS = [",
+        'passName: "background", drawKey: "drawBackgroundPass"',
+        'passName: "hgoPreview", drawKey: "drawHgoPreviewPass"',
+        'passName: "contextScenario", drawKey: "drawContextScenarioPass"',
+        'passName: "textureLabels", drawKey: "drawTextureLabelEffectsPass"',
+      ],
+      rendererRequiredPath: FILES.renderPipelinePasses,
+      rendererRequiredTokens: [
+        "from \"./render_pipeline_catalog.js\";",
+      ],
+      rendererForbiddenPath: FILES.renderPipelinePasses,
+      rendererForbiddenTokens: [
+        '["background", (k) => drawBackgroundPass(k)],',
+        '["hgoPreview", (k) => drawHgoPreviewPass(k)],',
+        '["contextScenario", (k) => drawContextScenarioPass(k)],',
+        '["textureLabels", (k) => drawTextureLabelEffectsPass(k)],',
+      ],
+    },
+    {
       ownerPath: FILES.renderPassCatalog,
       ownerTokens: [
         "export const RENDER_PASS_NAMES = [",
@@ -397,13 +427,15 @@ function collectFailures() {
       }
     }
     for (const token of rule.rendererRequiredTokens || []) {
-      if (!renderer.includes(token)) {
-        failures.push(`${FILES.renderer} must keep wrapper token: ${token}`);
+      const targetPath = rule.rendererRequiredPath || FILES.renderer;
+      if (!sources[targetPath].includes(token)) {
+        failures.push(`${targetPath} must keep wrapper token: ${token}`);
       }
     }
     for (const token of rule.rendererForbiddenTokens || []) {
-      if (renderer.includes(token)) {
-        failures.push(`${FILES.renderer} must not own extracted token: ${token}`);
+      const targetPath = rule.rendererForbiddenPath || FILES.renderer;
+      if (sources[targetPath].includes(token)) {
+        failures.push(`${targetPath} must not own extracted token: ${token}`);
       }
     }
   }

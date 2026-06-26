@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
+RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
@@ -17,6 +18,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_pass_orchestration_shell_while_idle_pass_owner_moves_to_module(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
+        pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
         exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
         exact_scheduler_content = EXACT_AFTER_SETTLE_SCHEDULER_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
@@ -59,11 +61,18 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertEqual(renderer_content.count("getRenderPipelinePassesOwner().ensureIdleRenderPasses("), 2)
 
         self.assertIn("export function createRenderPipelinePassesOwner({", owner_content)
+        self.assertIn('from "./render_pipeline_catalog.js";', owner_content)
         self.assertIn("function getIdleRenderPassDefinitions() {", owner_content)
-        self.assertIn('["background", (k) => drawBackgroundPass(k)],', owner_content)
-        self.assertIn('["hgoPreview", (k) => drawHgoPreviewPass(k)],', owner_content)
-        self.assertIn('["contextScenario", (k) => drawContextScenarioPass(k)],', owner_content)
-        self.assertIn('["textureLabels", (k) => drawTextureLabelEffectsPass(k)],', owner_content)
+        self.assertIn("IDLE_RENDER_PASS_DEFINITIONS.map", owner_content)
+        self.assertNotIn('["background", (k) => drawBackgroundPass(k)],', owner_content)
+        self.assertNotIn('["hgoPreview", (k) => drawHgoPreviewPass(k)],', owner_content)
+        self.assertNotIn('["contextScenario", (k) => drawContextScenarioPass(k)],', owner_content)
+        self.assertNotIn('["textureLabels", (k) => drawTextureLabelEffectsPass(k)],', owner_content)
+        self.assertIn("export const IDLE_RENDER_PASS_DEFINITIONS = [", pipeline_catalog_content)
+        self.assertIn('passName: "background", drawKey: "drawBackgroundPass"', pipeline_catalog_content)
+        self.assertIn('passName: "hgoPreview", drawKey: "drawHgoPreviewPass"', pipeline_catalog_content)
+        self.assertIn('passName: "contextScenario", drawKey: "drawContextScenarioPass"', pipeline_catalog_content)
+        self.assertIn('passName: "textureLabels", drawKey: "drawTextureLabelEffectsPass"', pipeline_catalog_content)
         self.assertIn("function shouldDeferExactAfterSettlePassForCriticalPaint(passName", owner_content)
         self.assertIn("function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings", owner_content)
         self.assertIn('recordRenderPerfMetric("contextScenarioSignatureChanged"', owner_content)

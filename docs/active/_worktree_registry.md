@@ -1,26 +1,28 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 00:36 UTC
+Last updated: 2026-06-26 01:04 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration head for the latest renderer extraction lane is P12 functional commit `origin/main@ebfb86f3c5487a2ec7e09a5e62fd581d33b9b171`; this closeout commit archives docs and registry truth.
+- Integration head for the latest integrated renderer extraction lane is P12 closeout commit `origin/main@0f07d9943dfec2b1245320160306e4d6dd3519f7`.
+- Active renderer extraction lane: P13 render pipeline pass definition catalog extraction on branch `codex/render-pipeline-catalog-p13-20260626`.
 - Latest integrated work now includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, and render cache invalidation authority P12.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat `origin/main@ebfb86f3` as the renderer extraction baseline containing P9 inventory, P10 render pass catalog ownership, P11 render invalidation vocabulary ownership, and P12 render cache invalidation authority ownership.
+1. Treat `origin/main@0f07d994` as the renderer extraction baseline containing P9 inventory, P10 render pass catalog ownership, P11 render invalidation vocabulary ownership, and P12 render cache invalidation authority ownership.
 2. Keep the parent `docs/archive/**` deletion WIP out of renderer extraction history until a separate cleanup owner reviews it.
-3. Recommended P12 scope: render cache / visible frame transaction wrapper consolidation. Defer viewport/surface split until the invalidation/resource vocabulary and cache transaction boundary are stable.
+3. Recommended P13 scope: extract idle render pipeline pass definitions into `js/core/renderer/render_pipeline_catalog.js`, while preserving runtime draw/prepare/cache behavior in `render_pipeline_passes.js`.
 
 ## Current Worktrees
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@ebfb86f3` | parent is behind remote by P9/P10/P11/P12 commits | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, `git rev-parse HEAD origin/main`, and parent `git status --short --branch`. | Yellow for docs/archive cleanup; green for P12 renderer extraction files. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@0f07d994` | parent is behind remote by P9/P10/P11/P12 commits plus closeout docs | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for P13 renderer extraction files. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-pipeline-catalog-p13-20260626` | branch `codex/render-pipeline-catalog-p13-20260626@0f07d994` with local P13 changes | `origin/main@0f07d9943dfec2b1245320160306e4d6dd3519f7` | ready-for-integration | hot files: `js/core/renderer/render_pipeline_catalog.js`, `js/core/renderer/render_pipeline_passes.js`, `tests/render_pipeline_catalog_behavior.test.mjs`, `tests/test_map_renderer_render_pipeline_passes_boundary_contract.py`, `tools/check_architecture_boundaries.mjs`, `package.json`, active docs and registry. Untouched by diff: `dist/app/**`, `tools/eslint-rules/state-writer-allowlist.json`, `js/core/map_renderer/public.js`, `js/core/map_renderer.js`. | Validation passed: four `node --check` commands; render pass catalog 6/6; invalidation catalog 6/6; cache owner 6/6; pipeline catalog 3/3; host inventory 7/7; runtime state 10/10; diagnostics 21/21; scenario refresh 23/23; exact-after-settle 8/8; canvas layer 4/4; scenario chunk 57/57; architecture; state-write allowlist; import graph; Python render pipeline boundary 5/5; TNO ready-state 5/5; smoke 4/4; `git diff --check` exit 0 with LF/CRLF warnings; code review CLEAR. E2E smoke recorded known local auth 401 and D3 unsafe water geometry warnings. Architect dist/name suggestions were resolved against explicit P13 constraints. | Yellow for renderer pipeline owner/package/architecture boundary overlap with future renderer extraction lanes; green against parent docs/archive deletion WIP. | Fast-forward integrate, archive docs, push, and clean worktree. |
 
 ## Recent Integrated Branches
 
