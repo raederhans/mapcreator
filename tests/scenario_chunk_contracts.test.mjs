@@ -1171,6 +1171,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const rendererRuntimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
   const frameSchedulerSource = readRepoFile("js", "core", "frame_scheduler.js");
   const exactAfterSettlePlansSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_refresh_plans.js");
+  const exactAfterSettlePassCatalogSource = readRepoFile("js", "core", "renderer", "exact_after_settle_pass_catalog.js");
   const exactSchedulerSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_scheduler.js");
   const renderPassCatalogSource = readRepoFile("js", "core", "map_renderer", "render_pass_catalog.js");
   const renderInvalidationCatalogSource = readRepoFile("js", "core", "map_renderer", "render_invalidation_catalog.js");
@@ -1430,12 +1431,13 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !rendererSource.includes('flushInteractionRender("click-erase")')
       && !rendererSource.includes('flushInteractionRender(kind);'),
     exactAfterSettleDefersContextPassesAfterCriticalPaint:
-      exactAfterSettlePlansSource.includes("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set")
+      exactAfterSettlePlansSource.includes("from \"../renderer/exact_after_settle_pass_catalog.js\";")
+      && exactAfterSettlePassCatalogSource.includes("export const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set")
       && rendererSource.includes("const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;")
       && rendererSource.includes('"contextBase",')
       && rendererSource.includes('"contextScenario",')
       && (() => {
-        const deferredPassSet = exactAfterSettlePlansSource.match(/const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
+        const deferredPassSet = exactAfterSettlePassCatalogSource.match(/export const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set\(\[[\s\S]*?\]\);/)?.[0] || "";
         return !deferredPassSet.includes('"background"') && !deferredPassSet.includes('"physicalBase"');
       })()
       && /function shouldDeferExactAfterSettlePassForCriticalPaint\(passName, cache = getRenderPassCacheState\(\)\) \{[\s\S]*?String\(controller\.phase \|\| ""\) !== "awaiting-paint"[\s\S]*?getPassReferenceTransform\(passName\)/.test(renderPipelinePassesSource)

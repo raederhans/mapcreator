@@ -1,4 +1,5 @@
 import { IDLE_RENDER_PASS_DEFINITIONS } from "./render_pipeline_catalog.js";
+import { EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES } from "./exact_after_settle_pass_catalog.js";
 
 export function createRenderPipelinePassesOwner({
   state = {},
@@ -7,7 +8,7 @@ export function createRenderPipelinePassesOwner({
   helpers = {},
 } = {}) {
   const {
-    exactAfterSettleDeferredPassNames = new Set(),
+    exactAfterSettleDeferredPassNames = EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
   } = constants;
 
   const {

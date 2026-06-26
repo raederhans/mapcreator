@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 01:10 UTC
+Last updated: 2026-06-26 02:02 UTC
 
 ## Integration Owner
 
@@ -20,6 +20,7 @@ Last updated: 2026-06-26 01:10 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-exact-after-settle-pass-policy-p14-20260626` | branch `codex/exact-after-settle-pass-policy-p14-20260626`; head `df3f5467` before functional commit | `origin/main@df3f54670ae9afb11dbc6455d6fe5e19e727b5a5` | ready-for-integration | hot files: `js/core/renderer/exact_after_settle_pass_catalog.js`, `js/core/map_renderer/exact_after_settle_refresh_plans.js`, `js/core/renderer/render_pipeline_passes.js`, `js/core/map_renderer.js`, `tools/check_architecture_boundaries.mjs`, `package.json`, exact/render pipeline boundary tests, P14 active docs. Forbidden paths remain untouched: `dist/app/**`, `tools/eslint-rules/state-writer-allowlist.json`, `js/core/map_renderer/public.js`. | Validation passed: syntax checks; exact pass catalog 6/6; exact refresh plans 9/9; render pass catalog 6/6; render invalidation catalog 6/6; render pipeline catalog 3/3; render cache owner 6/6; renderer host inventory 7/7; runtime state 10/10; diagnostics 21/21; scenario refresh 23/23; scenario chunk 57/57; architecture; state-write allowlist; import graph; Python render pipeline boundary 5/5; TNO ready-state 5/5; smoke 4/4; `git diff --check`. Smoke recorded known local auth 401 and D3 unsafe water geometry warnings. | Yellow because it touches renderer extraction hot files and package/tooling boundaries; green against parent docs/archive cleanup WIP. | Commit and push this worktree, then fast-forward-equivalent push to `origin/main`; archive docs and registry closeout in a second commit. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main` includes P13 functional and closeout commits after final push | parent is behind remote by P9/P10/P11/P12/P13 commits plus closeout docs | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for P13 renderer extraction files. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches

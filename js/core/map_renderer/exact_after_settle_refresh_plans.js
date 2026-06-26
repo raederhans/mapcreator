@@ -1,17 +1,8 @@
-const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([
-  "contextBase",
-  "contextScenario",
-  "contextMarkers",
-  "textureLabels",
-  "labels",
-]);
-
-const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [
-  "political",
-  "borders",
-  "labels",
-  "textureLabels",
-];
+import {
+  EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES,
+  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
+  getExactAfterSettleDprRestorePasses,
+} from "../renderer/exact_after_settle_pass_catalog.js";
 
 function normalizeStringList(values = []) {
   return Array.from(
@@ -45,10 +36,6 @@ function createExactAfterSettleRefreshPlan({
     metricSequenceStartedAt: Math.max(0, Number(metricSequenceStartedAt || 0)),
     settleWindowElapsedMs: Math.max(0, startedAt - Math.max(0, Number(scheduleStartedAt || 0))),
   };
-}
-
-function getExactAfterSettleDprRestorePasses(renderPassNames = []) {
-  return normalizeStringList(renderPassNames).filter((passName) => passName !== "political");
 }
 
 function filterExactAfterSettleIdleRenderPassDefinitions(definitions = [], targetPasses = []) {

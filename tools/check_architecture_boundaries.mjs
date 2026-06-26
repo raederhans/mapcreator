@@ -11,6 +11,8 @@ const FILES = Object.freeze({
   scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
+  exactAfterSettleRefreshPlans: "js/core/map_renderer/exact_after_settle_refresh_plans.js",
+  exactAfterSettlePassCatalog: "js/core/renderer/exact_after_settle_pass_catalog.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
@@ -24,6 +26,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
+  [FILES.exactAfterSettlePassCatalog]: 120,
   [FILES.hgoPreviewRenderOwner]: 280,
   [FILES.renderCacheOwner]: 620,
   [FILES.renderPipelineCatalog]: 120,
@@ -63,6 +66,8 @@ function collectFailures() {
   const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
+  const exactAfterSettleRefreshPlans = readProjectFile(FILES.exactAfterSettleRefreshPlans);
+  const exactAfterSettlePassCatalog = readProjectFile(FILES.exactAfterSettlePassCatalog);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
@@ -73,8 +78,11 @@ function collectFailures() {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
+    [FILES.scenarioRefreshPlans]: scenarioRefreshPlans,
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
+    [FILES.exactAfterSettleRefreshPlans]: exactAfterSettleRefreshPlans,
+    [FILES.exactAfterSettlePassCatalog]: exactAfterSettlePassCatalog,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
     [FILES.renderCacheOwner]: renderCacheOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
@@ -107,6 +115,8 @@ function collectFailures() {
     FILES.canvasColorHelpers,
     FILES.scenarioVisualInvalidationExecutor,
     FILES.exactAfterSettleScheduler,
+    FILES.exactAfterSettleRefreshPlans,
+    FILES.exactAfterSettlePassCatalog,
     FILES.hgoPreviewRenderOwner,
     FILES.renderCacheOwner,
     FILES.renderPipelinePasses,
@@ -237,6 +247,28 @@ function collectFailures() {
       failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not own extracted render invalidation catalog token: ${token}`);
     }
   }
+  if (!exactAfterSettleRefreshPlans.includes("from \"../renderer/exact_after_settle_pass_catalog.js\";")) {
+    failures.push(`${FILES.exactAfterSettleRefreshPlans} must import exact-after-settle pass catalog.`);
+  }
+  if (!renderPipelinePasses.includes("from \"./exact_after_settle_pass_catalog.js\";")) {
+    failures.push(`${FILES.renderPipelinePasses} must import exact-after-settle pass catalog.`);
+  }
+  if (renderer.includes("EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES")) {
+    failures.push(`${FILES.renderer} must not import or bridge EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES.`);
+  }
+  if (renderer.includes("exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES")) {
+    failures.push(`${FILES.renderer} must not inject exactAfterSettleDeferredPassNames from the host shell.`);
+  }
+  for (const token of [
+    "const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([",
+    "const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [",
+    "function getExactAfterSettleDprRestorePasses(",
+    "export function getExactAfterSettleDprRestorePasses(",
+  ]) {
+    if (exactAfterSettleRefreshPlans.includes(token)) {
+      failures.push(`${FILES.exactAfterSettleRefreshPlans} must not own extracted exact-after-settle pass policy token: ${token}`);
+    }
+  }
 
   const ownershipRules = [
     {
@@ -298,6 +330,14 @@ function collectFailures() {
         "let deferredExactContextRefreshHandle = null;",
         "function buildExactAfterSettleRefreshPlan(",
         "function applyExactAfterSettleRefreshPlan(plan) {",
+      ],
+    },
+    {
+      ownerPath: FILES.exactAfterSettlePassCatalog,
+      ownerTokens: [
+        "export const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([",
+        "export const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [",
+        "export function getExactAfterSettleDprRestorePasses(",
       ],
     },
     {

@@ -8,6 +8,10 @@ import {
   resolveDeferredExactContextTargetPasses,
   resolveExactAfterSettleTargetPasses,
 } from "../js/core/map_renderer/exact_after_settle_refresh_plans.js";
+import {
+  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES as CATALOG_DEFERRED_PASS_NAMES,
+  getExactAfterSettleDprRestorePasses as getCatalogDprRestorePasses,
+} from "../js/core/renderer/exact_after_settle_pass_catalog.js";
 
 const RENDER_PASSES = [
   "background",
@@ -47,6 +51,11 @@ test("DPR restore pass list keeps political invalidation explicit", () => {
     getExactAfterSettleDprRestorePasses(["political", "contextBase", "political", "labels"]),
     ["contextBase", "labels"],
   );
+});
+
+test("refresh plans keep exact-after-settle pass catalog compatibility exports", () => {
+  assert.equal(EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES, CATALOG_DEFERRED_PASS_NAMES);
+  assert.equal(getExactAfterSettleDprRestorePasses, getCatalogDprRestorePasses);
 });
 
 test("idle pass definition filter keeps scheduler pass selection in plan helpers", () => {

@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
 RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
+EXACT_AFTER_SETTLE_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "exact_after_settle_pass_catalog.js"
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
@@ -19,6 +20,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
+        exact_pass_catalog_content = EXACT_AFTER_SETTLE_PASS_CATALOG_JS.read_text(encoding="utf-8")
         exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
         exact_scheduler_content = EXACT_AFTER_SETTLE_SCHEDULER_JS.read_text(encoding="utf-8")
         renderer_imports = renderer_content.replace('"', "'")
@@ -31,7 +33,11 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         )
         self.assertIn("let renderPipelinePassesOwner = null;", renderer_content)
         self.assertIn("function getRenderPipelinePassesOwner() {", renderer_content)
-        self.assertIn("exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,", renderer_content)
+        self.assertNotIn("EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES", renderer_content)
+        self.assertNotIn(
+            "exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,",
+            renderer_content,
+        )
         self.assertIn("resolveExactAfterSettleTargetPasses", exact_scheduler_content)
         self.assertIn("drawContextScenarioPass,", renderer_content)
         self.assertIn("drawHgoPreviewPass,", renderer_content)
@@ -62,6 +68,11 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("export function createRenderPipelinePassesOwner({", owner_content)
         self.assertIn('from "./render_pipeline_catalog.js";', owner_content)
+        self.assertIn('from "./exact_after_settle_pass_catalog.js";', owner_content)
+        self.assertIn(
+            "exactAfterSettleDeferredPassNames = EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,",
+            owner_content,
+        )
         self.assertIn("function getIdleRenderPassDefinitions() {", owner_content)
         self.assertIn("IDLE_RENDER_PASS_DEFINITIONS.map", owner_content)
         self.assertNotIn('["background", (k) => drawBackgroundPass(k)],', owner_content)
@@ -105,7 +116,12 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         self.assertIn("function ensureIdleRenderPasses(timings, passNames = null) {", owner_content)
         self.assertIn("const requestedPassNames = Array.isArray(passNames) ? new Set(passNames.filter(Boolean)) : null;", owner_content)
         self.assertIn("detectContextScenarioReasonMismatch({ cache, renderPerf: state.renderPerfMetrics || {} });", owner_content)
-        self.assertIn("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_plan_content)
+        self.assertIn('from "../renderer/exact_after_settle_pass_catalog.js";', exact_plan_content)
+        self.assertNotIn("const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_plan_content)
+        self.assertNotIn("const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [", exact_plan_content)
+        self.assertIn("export const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set", exact_pass_catalog_content)
+        self.assertIn("export const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [", exact_pass_catalog_content)
+        self.assertIn("export function getExactAfterSettleDprRestorePasses(", exact_pass_catalog_content)
         self.assertIn("function resolveExactAfterSettleTargetPasses({", exact_plan_content)
         self.assertIn("function filterExactAfterSettleIdleRenderPassDefinitions(", exact_plan_content)
         self.assertIn("filterExactAfterSettleIdleRenderPassDefinitions(", exact_scheduler_content)

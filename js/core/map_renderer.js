@@ -176,9 +176,6 @@ import {
   buildWorkerPixelRingsForGeometry,
 } from "./map_renderer/political_raster_worker_packet.js";
 import {
-  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
-} from "./map_renderer/exact_after_settle_refresh_plans.js";
-import {
   INTERACTION_COMPOSITE_PASS_NAMES,
   RENDER_PASS_NAMES,
   RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
@@ -1848,9 +1845,6 @@ function getRenderPipelinePassesOwner() {
   }
   renderPipelinePassesOwner = createRenderPipelinePassesOwner({
     state,
-    constants: {
-      exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
-    },
     drawPasses: {
       drawBackgroundPass,
       drawPhysicalBasePass,
