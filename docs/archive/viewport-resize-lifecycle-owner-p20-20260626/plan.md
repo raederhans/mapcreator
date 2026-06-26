@@ -35,4 +35,4 @@
 - [x] Extend architecture boundary checker and selector routing.
 - [x] Run full verification matrix.
 - [x] Review for simpler/safer implementation.
-- [ ] Commit, push, archive docs, update registry, and clean the worktree.
+- [x] Commit, push, archive docs, update registry, and clean the worktree.

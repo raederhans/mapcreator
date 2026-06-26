@@ -39,8 +39,8 @@
 
 ### Commit State
 
-- Functional changes are ready to commit from branch `codex/viewport-resize-lifecycle-owner-p20-20260626`.
-- New owner and test files must be staged with the tracked changes before commit.
+- Functional commit `ac5a9ee0` was pushed to branch `codex/viewport-resize-lifecycle-owner-p20-20260626` and fast-forwarded to `origin/main`.
+- This closeout archives docs and records integration truth.
 
 ### Base Divergence
 
@@ -70,5 +70,5 @@
 
 ### Recommended Next Step
 
-- Commit this worktree, push the branch, fast-forward `origin/main`, archive the P20 docs, update registry status to integrated, then remove the isolated worktree.
-- Integration recommendation: merge/fast-forward as-is; no rebase is needed because the branch was created from current P19 closeout `origin/main`.
+- Push this closeout commit to branch and `origin/main`, then remove the isolated worktree.
+- Integration recommendation: complete; recovery path is functional commit `ac5a9ee0` plus branch `origin/codex/viewport-resize-lifecycle-owner-p20-20260626`.

@@ -65,3 +65,9 @@
 
 - E2E smoke retained the known local `/api/backend/auth/me` 401.
 - E2E smoke retained known D3 unsafe water geometry warnings for `marine_arctic_ocean` and `marine_southern_ocean`.
+
+## Closeout
+
+- Functional commit `ac5a9ee0` was pushed to `origin/codex/viewport-resize-lifecycle-owner-p20-20260626` and fast-forwarded to `origin/main`.
+- Active docs moved to `docs/archive/viewport-resize-lifecycle-owner-p20-20260626/`.
+- The isolated worktree is ready for cleanup after this closeout commit is pushed.
