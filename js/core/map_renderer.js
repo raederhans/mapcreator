@@ -193,6 +193,7 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -477,14 +478,6 @@ const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;
 const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MIN = 0.06;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MAX = 0.85;
-const CONTEXT_BASE_REUSE_MIN_DISTANCE_PX = 320;
-const CONTEXT_BASE_REUSE_MAX_DISTANCE_PX = 640;
-const CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO = 0.35;
-const CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD = 2;
-const CONTEXT_BASE_BUCKET_LOW_MAX = 1.4;
-const CONTEXT_BASE_BUCKET_MID_MAX = 2.5;
-const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;
-const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT = 24;
 const SCENARIO_WATER_CACHE_MODE_PARAM = "water_cache_mode";
 const SCENARIO_WATER_CACHE_MODE_ALT_PARAM = "scenario_water_cache_mode";
 const SCENARIO_WATER_CACHE_MODES = new Set(["adaptive", "reuse", "redraw", "direct"]);
@@ -1023,6 +1016,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let renderTransformReusePolicyOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1806,6 +1800,24 @@ function getRenderCacheOwner() {
     },
   });
   return renderCacheOwner;
+}
+
+function getRenderTransformReusePolicyOwner() {
+  if (renderTransformReusePolicyOwner) {
+    return renderTransformReusePolicyOwner;
+  }
+  renderTransformReusePolicyOwner = createRenderTransformReusePolicyOwner({
+    state,
+    getters: {
+      getRenderPassCacheState,
+      getPassReferenceTransform,
+    },
+    helpers: {
+      cloneZoomTransform,
+      isHeavyScenarioStagedApplyCandidate,
+    },
+  });
+  return renderTransformReusePolicyOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -5042,19 +5054,11 @@ function getProjectionRenderSignature() {
 }
 
 function getContextBaseZoomBucketId(k = runtimeState.zoomTransform?.k || 1) {
-  const normalized = Math.max(0.0001, Number(k || 1));
-  if (normalized < CONTEXT_BASE_BUCKET_LOW_MAX) return "low";
-  if (normalized < CONTEXT_BASE_BUCKET_MID_MAX) return "mid";
-  return "high";
+  return getRenderTransformReusePolicyOwner().getContextBaseZoomBucketId(k);
 }
 
 function getContextBaseReuseMaxDistancePx() {
-  const viewportMin = Math.max(1, Math.min(Number(runtimeState.width || 0), Number(runtimeState.height || 0)));
-  const scaled = viewportMin * CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO;
-  return Math.max(
-    CONTEXT_BASE_REUSE_MIN_DISTANCE_PX,
-    Math.min(CONTEXT_BASE_REUSE_MAX_DISTANCE_PX, scaled)
-  );
+  return getRenderTransformReusePolicyOwner().getContextBaseReuseMaxDistancePx();
 }
 
 function resetPhysicalLandClipPathCache() {
@@ -5063,15 +5067,11 @@ function resetPhysicalLandClipPathCache() {
 }
 
 function shouldEnableContextBaseTransformReuse() {
-  return (
-    String(runtimeState.renderProfile || "auto") === "balanced"
-    && isHeavyScenarioStagedApplyCandidate()
-    && !!runtimeState.activeScenarioId
-  );
+  return getRenderTransformReusePolicyOwner().shouldEnableContextBaseTransformReuse();
 }
 
 function shouldEnableContextScenarioTransformReuse() {
-  return String(runtimeState.renderProfile || "auto") === "balanced" && !!runtimeState.activeScenarioId;
+  return getRenderTransformReusePolicyOwner().shouldEnableContextScenarioTransformReuse();
 }
 
 function normalizeScenarioWaterCacheStrategyMode(rawMode) {
@@ -5360,176 +5360,19 @@ function createPoliticalPassDrawResult(sceneIdentity, {
 }
 
 function getTransformReuseDelta(currentTransform, referenceTransform) {
-  const current = cloneZoomTransform(currentTransform);
-  const reference = cloneZoomTransform(referenceTransform);
-  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
-  const dx = current.x - (reference.x * scaleRatio);
-  const dy = current.y - (reference.y * scaleRatio);
-  const distancePx = Math.hypot(dx, dy);
-  return {
-    current,
-    reference,
-    scaleRatio,
-    dx,
-    dy,
-    distancePx,
-  };
+  return getRenderTransformReusePolicyOwner().getTransformReuseDelta(currentTransform, referenceTransform);
 }
 
 function getContextBaseReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  const referenceTransform = getPassReferenceTransform("contextBase");
-  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
-  if (!shouldEnableContextBaseTransformReuse()) {
-    return {
-      enabled: false,
-      shouldExactRefresh: true,
-      reason: "reuse-disabled",
-      scaleRatio: 1,
-      distancePx: 0,
-      zoomBucket: currentBucket,
-      referenceZoomBucket: currentBucket,
-      crossesMinorContourThreshold: false,
-      referenceTransform,
-    };
-  }
-  if (!referenceTransform) {
-    return {
-      enabled: true,
-      shouldExactRefresh: true,
-      reason: "no-reference-transform",
-      scaleRatio: 1,
-      distancePx: 0,
-      zoomBucket: currentBucket,
-      referenceZoomBucket: "",
-      crossesMinorContourThreshold: false,
-      referenceTransform: null,
-    };
-  }
-  const delta = getTransformReuseDelta(transform, referenceTransform);
-  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
-  const crossesMinorContourThreshold =
-    (delta.reference.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD)
-    || (delta.reference.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD);
-  const crossesZoomBucket = currentBucket !== referenceBucket;
-  const maxDistancePx = getContextBaseReuseMaxDistancePx();
-  const shouldExactRefresh =
-    crossesZoomBucket
-    || delta.distancePx > maxDistancePx
-    || crossesMinorContourThreshold;
-  let reason = "transform-reuse";
-  if (crossesZoomBucket) {
-    reason = "zoom-bucket-change";
-  } else if (delta.distancePx > maxDistancePx) {
-    reason = "distance-threshold";
-  } else if (crossesMinorContourThreshold) {
-    reason = "minor-contour-threshold";
-  }
-  return {
-    enabled: true,
-    shouldExactRefresh,
-    reason,
-    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
-    distancePx: Number(delta.distancePx.toFixed(2)),
-    maxDistancePx: Number(maxDistancePx.toFixed(2)),
-    zoomBucket: currentBucket,
-    referenceZoomBucket: referenceBucket,
-    crossesZoomBucket,
-    crossesMinorContourThreshold,
-    referenceTransform,
-    currentTransform: delta.current,
-  };
+  return getRenderTransformReusePolicyOwner().getContextBaseReuseDecision(transform);
 }
 
 function getContextScenarioReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  const cache = getRenderPassCacheState();
-  const referenceTransform = getPassReferenceTransform("contextScenario");
-  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
-  const reuseFrameCount = Math.max(0, Number(cache.counters?.contextScenarioReuseCount || 0));
-  if (!shouldEnableContextScenarioTransformReuse()) {
-    return {
-      enabled: false,
-      shouldExactRefresh: true,
-      reason: "reuse-disabled",
-      scaleRatio: 1,
-      distancePx: 0,
-      maxDistancePx: getContextBaseReuseMaxDistancePx(),
-      zoomBucket: currentBucket,
-      referenceZoomBucket: currentBucket,
-      crossesZoomBucket: false,
-      reuseFrameCount,
-      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-      referenceTransform,
-    };
-  }
-  if (!referenceTransform) {
-    return {
-      enabled: true,
-      shouldExactRefresh: true,
-      reason: "no-reference-transform",
-      scaleRatio: 1,
-      distancePx: 0,
-      maxDistancePx: getContextBaseReuseMaxDistancePx(),
-      zoomBucket: currentBucket,
-      referenceZoomBucket: "",
-      crossesZoomBucket: false,
-      reuseFrameCount,
-      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-      referenceTransform: null,
-    };
-  }
-  const delta = getTransformReuseDelta(transform, referenceTransform);
-  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
-  const crossesZoomBucket = currentBucket !== referenceBucket;
-  const maxDistancePx = Math.max(
-    getContextBaseReuseMaxDistancePx(),
-    CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX,
-  );
-  const reachesReuseFrameLimit = reuseFrameCount >= CONTEXT_SCENARIO_REUSE_FRAME_LIMIT;
-  const shouldExactRefresh =
-    delta.distancePx > maxDistancePx
-    || reachesReuseFrameLimit;
-  let reason = "transform-reuse";
-  if (delta.distancePx > maxDistancePx) {
-    reason = "distance-threshold";
-  } else if (reachesReuseFrameLimit) {
-    reason = "reuse-frame-limit";
-  }
-  return {
-    enabled: true,
-    shouldExactRefresh,
-    reason,
-    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
-    distancePx: Number(delta.distancePx.toFixed(2)),
-    maxDistancePx: Number(maxDistancePx.toFixed(2)),
-    zoomBucket: currentBucket,
-    referenceZoomBucket: referenceBucket,
-    crossesZoomBucket,
-    reuseFrameCount,
-    reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-    referenceTransform,
-    currentTransform: delta.current,
-  };
+  return getRenderTransformReusePolicyOwner().getContextScenarioReuseDecision(transform);
 }
 
 function shouldStartExactAfterSettleFastPath() {
-  if (!shouldEnableContextBaseTransformReuse()) return false;
-  if (runtimeState.deferContextBasePass) return false;
-  const requiredPasses = [
-    "background",
-    "physicalBase",
-    "political",
-    "contextBase",
-    "contextScenario",
-    "effects",
-    "lineEffects",
-    "contextMarkers",
-    "dayNight",
-    "textureLabels",
-  ];
-  return requiredPasses.every((passName) => {
-    const cache = getRenderPassCacheState();
-    return !!cache.canvases?.[passName] && !!getPassReferenceTransform(passName);
-  });
+  return getRenderTransformReusePolicyOwner().shouldStartExactAfterSettleFastPath();
 }
 
 function ensureProjectedBoundsCache() {

@@ -1202,6 +1202,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
+  const renderTransformReusePolicyOwnerSource = readRepoFile("js", "core", "renderer", "render_transform_reuse_policy_owner.js");
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
     rendererSource.match(/function isInteractionRecoveryBlocked\(\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body || "";
@@ -1566,8 +1567,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function assignExactAfterSettleIdentity[\s\S]*?controller\.contextFlagSignature = identity\.contextFlagSignature/.test(exactSchedulerSource)
       && /function isExactAfterSettleIdentityCurrent[\s\S]*?String\(controller\.contextFlagSignature \|\| ""\) === identity\.contextFlagSignature/.test(exactSchedulerSource),
     contextScenarioReuseUsesScenarioDistanceBudget:
-      rendererSource.includes("const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;")
-      && /function getContextScenarioReuseDecision[\s\S]*?Math\.max\([\s\S]*?getContextBaseReuseMaxDistancePx\(\),[\s\S]*?CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX[\s\S]*?\)[\s\S]*?const shouldExactRefresh =[\s\S]*?delta\.distancePx > maxDistancePx[\s\S]*?reachesReuseFrameLimit/.test(rendererSource),
+      renderTransformReusePolicyOwnerSource.includes("const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;")
+      && renderTransformReusePolicyOwnerSource.includes("const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT = 24;")
+      && /function getContextScenarioReuseDecision[\s\S]*?Math\.max\([\s\S]*?getContextBaseReuseMaxDistancePx\(\),[\s\S]*?contextScenarioReuseMaxDistancePx[\s\S]*?\)[\s\S]*?const shouldExactRefresh =[\s\S]*?delta\.distancePx > maxDistancePx[\s\S]*?reachesReuseFrameLimit/.test(renderTransformReusePolicyOwnerSource)
+      && rendererSource.includes("return getRenderTransformReusePolicyOwner().getContextScenarioReuseDecision(transform);"),
     settlingFastFrameCanUseDirtyCachedPassesWithoutDirtyComposite:
       /function canDrawTransformedPass\(passName, cache = getRenderPassCacheState\(\), \{ allowDirty = false \} = \{\}\) \{[\s\S]*?cache\.dirty\?\.\[passName\] && !allowDirty/.test(rendererSource)
       && /function canBuildInteractionComposite\(cache = getRenderPassCacheState\(\)\) \{[\s\S]*?canDrawTransformedPass\(passName, cache\)/.test(rendererSource)

@@ -15,6 +15,7 @@ const FILES = Object.freeze({
   exactAfterSettlePassCatalog: "js/core/renderer/exact_after_settle_pass_catalog.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
+  renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
@@ -29,6 +30,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.exactAfterSettlePassCatalog]: 120,
   [FILES.hgoPreviewRenderOwner]: 280,
   [FILES.renderCacheOwner]: 620,
+  [FILES.renderTransformReusePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
@@ -70,6 +72,7 @@ function collectFailures() {
   const exactAfterSettlePassCatalog = readProjectFile(FILES.exactAfterSettlePassCatalog);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
+  const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
@@ -85,6 +88,7 @@ function collectFailures() {
     [FILES.exactAfterSettlePassCatalog]: exactAfterSettlePassCatalog,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
     [FILES.renderCacheOwner]: renderCacheOwner,
+    [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
     [FILES.renderPassCatalog]: renderPassCatalog,
@@ -119,6 +123,7 @@ function collectFailures() {
     FILES.exactAfterSettlePassCatalog,
     FILES.hgoPreviewRenderOwner,
     FILES.renderCacheOwner,
+    FILES.renderTransformReusePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
     FILES.renderPassCatalog,
@@ -259,6 +264,56 @@ function collectFailures() {
   if (renderer.includes("exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES")) {
     failures.push(`${FILES.renderer} must not inject exactAfterSettleDeferredPassNames from the host shell.`);
   }
+  const exactFastPathRequiredPassListSource = sliceBetween(
+    renderTransformReusePolicyOwner,
+    "const EXACT_AFTER_SETTLE_FAST_PATH_REQUIRED_PASS_NAMES = Object.freeze([",
+    "]);",
+  );
+  const exactFastPathRequiredPassNames = [
+    "background",
+    "physicalBase",
+    "political",
+    "contextBase",
+    "contextScenario",
+    "effects",
+    "lineEffects",
+    "contextMarkers",
+    "dayNight",
+    "textureLabels",
+  ];
+  const exactFastPathDeclaredPassNames = Array.from(
+    exactFastPathRequiredPassListSource.matchAll(/"([^"]+)"/g),
+    (match) => match[1],
+  );
+  if (JSON.stringify(exactFastPathDeclaredPassNames) !== JSON.stringify(exactFastPathRequiredPassNames)) {
+    failures.push(`${FILES.renderTransformReusePolicyOwner} exact fast-path list must exactly match the required pass order.`);
+  }
+  for (const passName of exactFastPathRequiredPassNames) {
+    if (!exactFastPathRequiredPassListSource.includes(`"${passName}"`)) {
+      failures.push(`${FILES.renderTransformReusePolicyOwner} exact fast-path list must include ${passName}.`);
+    }
+  }
+  for (const passName of ["borders", "labels", "hgoPreview"]) {
+    if (exactFastPathRequiredPassListSource.includes(`"${passName}"`)) {
+      failures.push(`${FILES.renderTransformReusePolicyOwner} exact fast-path list must not include ${passName}.`);
+    }
+  }
+  for (const token of [
+    "document.",
+    "window.",
+    "globalThis.d3",
+    "requestAnimationFrame(",
+    ".getContext(",
+    "projection.",
+    "zoomBehavior",
+  ]) {
+    if (renderTransformReusePolicyOwner.includes(token)) {
+      failures.push(`${FILES.renderTransformReusePolicyOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  if (/runtimeState\s*\./.test(renderTransformReusePolicyOwner)) {
+    failures.push(`${FILES.renderTransformReusePolicyOwner} must not write or read runtimeState directly.`);
+  }
   for (const token of [
     "const EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES = new Set([",
     "const EXACT_AFTER_SETTLE_ALWAYS_TARGET_PASSES = [",
@@ -396,6 +451,36 @@ function collectFailures() {
         "renderPassCache.referenceTransform = null;",
         "renderPassCache.referenceTransforms = {};",
         "renderPassCache.fullReferenceTransforms = {};",
+      ],
+    },
+    {
+      ownerPath: FILES.renderTransformReusePolicyOwner,
+      ownerTokens: [
+        "export function createRenderTransformReusePolicyOwner(",
+        "function getContextBaseZoomBucketId(",
+        "function getContextBaseReuseMaxDistancePx(",
+        "function getTransformReuseDelta(",
+        "function shouldEnableContextBaseTransformReuse(",
+        "function shouldEnableContextScenarioTransformReuse(",
+        "function getContextBaseReuseDecision(",
+        "function getContextScenarioReuseDecision(",
+        "function shouldStartExactAfterSettleFastPath(",
+      ],
+      rendererRequiredTokens: [
+        "createRenderTransformReusePolicyOwner({",
+        "return getRenderTransformReusePolicyOwner().getContextBaseReuseDecision(",
+        "return getRenderTransformReusePolicyOwner().getContextScenarioReuseDecision(",
+        "return getRenderTransformReusePolicyOwner().shouldStartExactAfterSettleFastPath(",
+      ],
+      rendererForbiddenTokens: [
+        "const CONTEXT_BASE_REUSE_MIN_DISTANCE_PX =",
+        "const CONTEXT_BASE_REUSE_MAX_DISTANCE_PX =",
+        "const CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO =",
+        "const CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD =",
+        "const CONTEXT_BASE_BUCKET_LOW_MAX =",
+        "const CONTEXT_BASE_BUCKET_MID_MAX =",
+        "const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX =",
+        "const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT =",
       ],
     },
     {
