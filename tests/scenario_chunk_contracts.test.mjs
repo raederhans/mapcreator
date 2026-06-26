@@ -1204,8 +1204,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
     rendererSource.match(/function isInteractionRecoveryBlocked\(\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body || "";
-  const invalidateRenderPassesBody =
-    rendererSource.match(/function invalidateRenderPasses\(passNames, reason = "unspecified"\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction invalidateAllRenderPasses/)?.[0] || "";
+  const applyRenderPassInvalidationEffectsBody =
+    rendererSource.match(/function applyRenderPassInvalidationEffects\(mutation = \{\}\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction invalidateRenderPasses/)?.[0] || "";
 
   const contract = {
     drawContextScenarioPassKeepsScenarioOverlayBoundary:
@@ -1254,7 +1254,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?allowInteractionCompositeContinuity = false[\s\S]*?drawInteractionComposite\(currentTransform, \{[\s\S]*?allowSelectionTopologyContinuity: allowInteractionCompositeContinuity[\s\S]*?composeRenderPassesToTarget\(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
     continuityFrameSkipsBaseFillDuringInteraction:
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
-      && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?cache\.lastGoodFrame\.stale = true;[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
+      && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?frame\.stale = true;/.test(renderCacheOwnerSource)
+      && /function recordLastGoodFrameInvalidationSummary\(summary = \{\}\) \{[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
       && /if \(runtimeState\.renderPhase === RENDER_PHASE_INTERACTING && runtimeState\.firstVisibleFramePainted\) \{[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(rendererSource)
       && rendererSource.includes('recordRenderPerfMetric("continuityFrameStaleAgeMs"')
       && rendererSource.includes('recordRenderPerfMetric("visibleFrameTransaction"')
@@ -1363,11 +1364,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?!pendingPoliticalColorEdit[\s\S]*?\);[\s\S]*?const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate[\s\S]*?hasVisiblePoliticalForegroundColorOverride\(visibleItems\)[\s\S]*?const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?progressiveRecoveryCoarseSkipCandidate[\s\S]*?!visiblePoliticalForegroundColorOverride[\s\S]*?\);/.test(rendererSource),
     politicalPathCachePreservesTargetedColorAndDeferredFullCacheReady:
       /const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set\(\[[\s\S]*?"refresh-colors"[\s\S]*?"progressive-political-full-cache-ready"[\s\S]*?\]\);/.test(rendererSource)
-      && /targetPassNames\.includes\("political"\)[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);[\s\S]*?cancelScenarioPoliticalBackgroundDeferredFullCache/.test(invalidateRenderPassesBody)
-      && !/pendingPoliticalColorEditIds\.clear\(\)/.test(invalidateRenderPassesBody)
+      && /function applyRenderPassInvalidationEffects\(mutation = \{\}\) \{[\s\S]*?hostFollowUps\.needsPoliticalPathCacheInvalidation[\s\S]*?!POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS\.has\(String\(reason \|\| "unspecified"\)\)[\s\S]*?cache\.partialPoliticalDirtyIds\.clear\(\);[\s\S]*?cancelScenarioPoliticalBackgroundDeferredFullCache/.test(applyRenderPassInvalidationEffectsBody)
+      && !/pendingPoliticalColorEditIds\.clear\(\)/.test(applyRenderPassInvalidationEffectsBody)
       && /function rebuildResolvedColors\(\) \{[\s\S]*?const previousColorRevision = Number\(runtimeState\.colorRevision \|\| 0\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?retargetPendingPoliticalColorEditRevisionAfterColorRebuild\(previousColorRevision\);[\s\S]*?invalidateRenderPasses\(\["physicalBase", "political", "contextBase"\], "rebuild-colors"\);/.test(rendererSource)
       && /function retargetPendingPoliticalColorEditRevisionAfterColorRebuild\(previousColorRevision\) \{[\s\S]*?pendingScenarioId && pendingScenarioId !== activeScenarioId[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?force: true,[\s\S]*?resetReason: "stale-scenario-color-rebuild",[\s\S]*?paintSource: "color-rebuild",[\s\S]*?\}\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = currentRevision;/.test(rendererSource)
-      && /function setMapData\([\s\S]*?const renderPassCache = getRenderPassCacheState\(\);[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?force: true,[\s\S]*?resetReason: "set-map-data",[\s\S]*?paintSource: "set-map-data",[\s\S]*?\}\);[\s\S]*?renderPassCache\.referenceTransform = null;/.test(rendererSource),
+      && /function setMapData\([\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?force: true,[\s\S]*?resetReason: "set-map-data",[\s\S]*?paintSource: "set-map-data",[\s\S]*?\}\);[\s\S]*?clearRenderPassReferenceTransforms\(\);[\s\S]*?clearLastGoodFrame\("set-map-data"\);/.test(rendererSource),
     politicalFullReferenceOnlyWrittenByFullPass:
       (() => {
         const body = rendererSource.match(/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";

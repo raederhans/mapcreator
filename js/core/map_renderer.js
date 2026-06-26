@@ -1806,7 +1806,6 @@ function getRenderCacheOwner() {
       ensureRenderPassCacheState,
       getTransformSignature,
       getVisibleFrameIdentity,
-      invalidateInteractionComposite,
     },
   });
   return renderCacheOwner;
@@ -2374,8 +2373,6 @@ function noteRenderAction(label, startedAt = null) {
   }
 }
 
-const LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES = new Set(["political", "contextBase", "contextScenario", "effects"]);
-
 function getRuntimeChunkSelectionVersion() {
   const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
     ? runtimeState.runtimeChunkLoadState
@@ -2555,82 +2552,58 @@ function getCommittedFrameIdentity(transform = runtimeState.zoomTransform || glo
 }
 
 function clearLastGoodFrame(reason = "clear") {
-  const cache = getRenderPassCacheState();
-  if (!cache.lastGoodFrame || typeof cache.lastGoodFrame !== "object") return;
-  cache.lastGoodFrame.valid = false;
-  cache.lastGoodFrame.stale = false;
-  cache.lastGoodFrame.referenceTransform = null;
-  cache.lastGoodFrame.commitKey = null;
-  cache.lastGoodFrame.commitKeySignature = "";
-  cache.lastGoodFrame.committedFrameIdentity = null;
-  cache.lastGoodFrame.metadata = null;
-  cache.lastGoodFrame.invalidatedAt = Date.now();
-  cache.lastGoodFrame.reason = String(reason || "clear");
-  cache.lastGoodFrame.staleReason = "";
-  cache.lastGoodFrame.rejectedReason = "";
+  return getRenderCacheOwner().clearLastGoodFrame(reason);
 }
 
-function invalidateLastGoodFrame(reason = "visual-invalidation") {
-  const cache = getRenderPassCacheState();
-  if (!cache.lastGoodFrame || !cache.lastGoodFrame.valid) return;
-  cache.lastGoodFrame.stale = true;
-  cache.lastGoodFrame.invalidatedAt = Date.now();
-  cache.lastGoodFrame.staleReason = String(reason || "visual-invalidation");
-  cache.lastGoodFrame.reason = String(reason || "visual-invalidation");
+function recordLastGoodFrameInvalidationSummary(summary = {}) {
+  const lastGoodFrame = summary.effects?.lastGoodFrame || summary.lastGoodFrame || {};
+  const hostFollowUps = summary.effects?.hostFollowUps || {};
+  if (!lastGoodFrame.invalidated && !summary.lastGoodFrameInvalidated) return;
+  if (hostFollowUps.needsContinuityMetric === false && !summary.lastGoodFrameInvalidated) return;
   recordRenderPerfMetric("continuityFrameMarkedStale", 0, {
-    reason: cache.lastGoodFrame.staleReason,
+    reason: lastGoodFrame.reason || summary.reason || "visual-invalidation",
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
   });
 }
 
 function invalidateInteractionComposite(reason = "interaction-composite-invalidation") {
-  const cache = getRenderPassCacheState();
-  if (!cache.interactionComposite || typeof cache.interactionComposite !== "object") return;
-  cache.interactionComposite.valid = false;
-  cache.interactionComposite.referenceTransform = null;
-  cache.interactionComposite.signature = "";
-  cache.interactionComposite.reason = String(reason || "interaction-composite-invalidation");
-  cache.interactionComposite.rejectedReason = String(reason || "interaction-composite-invalidation");
+  return getRenderCacheOwner().invalidateInteractionComposite(reason);
 }
 
-function invalidateRenderPasses(passNames, reason = "unspecified") {
-  const cache = getRenderPassCacheState();
-  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
-  const expandedTargetPassNames = rawTargetPassNames.flatMap((passName) => {
-    if (passName === "context") {
-      return ["contextBase", "contextScenario"];
-    }
-    return [passName];
-  });
-  const targetPassNames = expandedTargetPassNames.filter((passName) => passName && RENDER_PASS_NAMES.includes(passName));
-  targetPassNames.forEach((passName) => {
-    cache.dirty[passName] = true;
-    cache.reasons[passName] = String(reason || "unspecified");
-  });
-  if (targetPassNames.length) {
+function getMutationPassNames(mutation = {}) {
+  if (Array.isArray(mutation.normalizedPassNames)) return mutation.normalizedPassNames;
+  return Array.isArray(mutation.targetPassNames) ? mutation.targetPassNames : [];
+}
+
+function applyRenderPassInvalidationEffects(mutation = {}) {
+  const targetPassNames = getMutationPassNames(mutation);
+  const reason = mutation.reason || "unspecified";
+  const hostFollowUps = mutation.effects?.hostFollowUps || {};
+  if (hostFollowUps.needsRenderPassDiagnostics || targetPassNames.length) {
     recordRenderPassInvalidationDiagnostics(runtimeState, targetPassNames, reason);
   }
-  if (targetPassNames.some((passName) => LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES.has(passName))) {
-    invalidateLastGoodFrame(reason);
-  }
-  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
-    invalidateInteractionComposite(reason);
-  }
+  recordLastGoodFrameInvalidationSummary(mutation);
+  const cache = getRenderPassCacheState();
   if (
-    targetPassNames.includes("political")
+    (hostFollowUps.needsPoliticalPathCacheInvalidation || targetPassNames.includes("political"))
     && !POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS.has(String(reason || "unspecified"))
   ) {
     cache.partialPoliticalDirtyIds.clear();
     cancelScenarioPoliticalBackgroundDeferredFullCache(reason);
     invalidatePoliticalPathCache(reason);
   }
-  if (targetPassNames.includes("borders")) {
+  if (hostFollowUps.needsInteractionBorderSnapshotInvalidation || targetPassNames.includes("borders")) {
     invalidateInteractionBorderSnapshot(reason);
   }
+  return mutation;
+}
+
+function invalidateRenderPasses(passNames, reason = "unspecified") {
+  return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateRenderPasses(passNames, reason));
 }
 
 function invalidateAllRenderPasses(reason = "unspecified") {
-  invalidateRenderPasses(RENDER_PASS_NAMES, reason);
+  return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateAllRenderPasses(reason));
 }
 
 function releaseDeferredContextBasePass(reason = "deferred-context-release") {
@@ -2711,39 +2684,15 @@ function isBootInteractionReady() {
 }
 
 function clearRenderPassReferenceTransforms(passNames = null) {
-  const cache = getRenderPassCacheState();
-  if (!passNames) {
-    cache.referenceTransform = null;
-    cache.referenceTransforms = {};
-    cache.contextScenarioLayerCache = {};
-    clearPassFullReferenceTransforms();
-    invalidateInteractionComposite("clear-reference-transform");
-    invalidateInteractionBorderSnapshot("clear-reference-transform");
-    invalidatePoliticalPathCache("clear-reference-transform");
-    return;
+  const mutation = getRenderCacheOwner().clearRenderPassReferenceTransforms(passNames);
+  const hostFollowUps = mutation.effects?.hostFollowUps || {};
+  if (hostFollowUps.needsPoliticalPathCacheInvalidation || mutation.politicalPathCacheInvalidated) {
+    invalidatePoliticalPathCache(mutation.reason || "clear-reference-transform");
   }
-  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
-  const targetPassNames = rawTargetPassNames.flatMap((passName) => {
-    if (passName === "context") {
-      return ["contextBase", "contextScenario"];
-    }
-    return [passName];
-  });
-  targetPassNames.forEach((passName) => {
-    if (!passName) return;
-    delete cache.referenceTransforms[passName];
-  });
-  clearPassFullReferenceTransforms(targetPassNames);
-  cache.referenceTransform = null;
-  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
-    invalidateInteractionComposite("clear-reference-transform");
+  if (hostFollowUps.needsInteractionBorderSnapshotInvalidation || mutation.interactionBorderSnapshotInvalidated) {
+    invalidateInteractionBorderSnapshot(mutation.reason || "clear-reference-transform");
   }
-  if (targetPassNames.includes("political")) {
-    invalidatePoliticalPathCache("clear-reference-transform");
-  }
-  if (targetPassNames.includes("borders")) {
-    invalidateInteractionBorderSnapshot("clear-reference-transform");
-  }
+  return mutation;
 }
 
 function invalidateOceanVisualState(reason = "ocean-visual") {
@@ -23565,19 +23514,16 @@ function initMap({
   resetExactRefreshOptimizationState();
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
   runtimeState.hitCanvasTopologyRevision = 0;
-  const renderPassCache = getRenderPassCacheState();
   clearPendingPoliticalColorEdit({
     force: true,
     resetReason: "init-map",
     paintSource: "init-map",
   });
-  renderPassCache.referenceTransform = null;
-  renderPassCache.referenceTransforms = {};
-  renderPassCache.fullReferenceTransforms = {};
-  renderPassCache.contextScenarioLayerCache = {};
+  clearRenderPassReferenceTransforms();
   clearLastGoodFrame("init-map");
   invalidateInteractionComposite("init-map");
   resetFirstVisibleFramePainted("init-map");
+  const renderPassCache = getRenderPassCacheState();
   renderPassCache.perfOverlayEnabled = isPerfOverlayEnabled();
   ensureLayerDataFromTopology();
   rebuildPoliticalLandCollections();
@@ -23715,16 +23661,12 @@ function setMapData({
     cancelHoverOverlayRender: true,
     cancelSecondarySpatialBuild: true,
   });
-  const renderPassCache = getRenderPassCacheState();
   clearPendingPoliticalColorEdit({
     force: true,
     resetReason: "set-map-data",
     paintSource: "set-map-data",
   });
-  renderPassCache.referenceTransform = null;
-  renderPassCache.referenceTransforms = {};
-  renderPassCache.fullReferenceTransforms = {};
-  renderPassCache.contextScenarioLayerCache = {};
+  clearRenderPassReferenceTransforms();
   clearLastGoodFrame("set-map-data");
   invalidateInteractionComposite("set-map-data");
   resetFirstVisibleFramePainted("set-map-data");

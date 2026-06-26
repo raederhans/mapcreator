@@ -1,18 +1,18 @@
 # Worktree Registry
 
-Last updated: 2026-06-25 23:39 UTC
+Last updated: 2026-06-26 00:31 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Integration head for the latest renderer extraction lane is `origin/main@13b331f1dce574ef7ce7a14c90e3c1c7b819ed45`.
-- Latest integrated work now includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, and render invalidation catalog P11.
+- Integration head for the latest renderer extraction lane is `origin/main@456b05130b37c2a7f8364c2a5a6a8430957388e8`.
+- Latest integrated work now includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, and render invalidation catalog P11. P12 render cache invalidation authority is ready for integration from the active worktree row below.
 - Live test/build owner: main Codex agent only. Subagents are read-only/static unless explicitly assigned a non-live task.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
 
-1. Treat `origin/main@13b331f1` as the renderer extraction baseline containing P9 inventory, P10 render pass catalog ownership, and P11 render invalidation vocabulary ownership.
+1. Treat `origin/main@456b0513` as the renderer extraction baseline containing P9 inventory, P10 render pass catalog ownership, and P11 render invalidation vocabulary ownership.
 2. Keep the parent `docs/archive/**` deletion WIP out of renderer extraction history until a separate cleanup owner reviews it.
 3. Recommended P12 scope: render cache / visible frame transaction wrapper consolidation. Defer viewport/surface split until the invalidation/resource vocabulary and cache transaction boundary are stable.
 
@@ -20,7 +20,8 @@ Last updated: 2026-06-25 23:39 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@13b331f1` | parent is behind remote by P9/P10 and P11 closeout commits | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, `git rev-parse HEAD origin/main`, and parent `git status --short --branch`. | Yellow for docs/archive cleanup; green for P11 renderer extraction files. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-render-cache-p12-20260625` | branch `codex/render-cache-invalidation-owner-p12-20260625@456b0513 + working tree` | `origin/main@456b05130b37c2a7f8364c2a5a6a8430957388e8` | ready-for-integration | hot files: `js/core/renderer/render_cache_owner.js`, `js/core/map_renderer.js`, `tests/render_cache_owner_invalidation_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/test_map_renderer_render_cache_owner_boundary_contract.py`, `tools/check_architecture_boundaries.mjs`, `package.json`, active docs/registry. Untouched: `dist/app/**`, `tools/eslint-rules/state-writer-allowlist.json`, `js/core/map_renderer/public.js`. | Delivery: owner now owns render-pass invalidation, reference-transform clearing, last-good-frame invalidation/clear, and interaction-composite invalidation, returning versioned summaries for host diagnostics and adjacent side effects. Validation passed syntax, owner 6/6, render pass catalog 6/6, invalidation catalog 6/6, host inventory 7/7, runtime state 10/10, diagnostics 21/21, scenario refresh 23/23, exact-after-settle 8/8, canvas layer 4/4, scenario chunk 57/57, Python boundary 4/4, architecture, state-write allowlist, import graph, TNO ready-state 5/5, smoke 4/4, `git diff --check`, static architect/code-review lanes. | Yellow: direct renderer core/package/architecture/test overlap with prior P9-P11 extraction surfaces; green against parent docs/archive deletion WIP. | Stage all new files, commit with Lore trailers, push branch and fast-forward `origin/main`, then archive docs, move this row to recent integrated, push closeout, and clean worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main@456b0513` | parent is behind remote by P9/P10/P11 closeout commits | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-25: `git worktree list --porcelain`, `git rev-parse HEAD origin/main`, and parent `git status --short --branch`. | Yellow for docs/archive cleanup; green for P12 renderer extraction files. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches
 

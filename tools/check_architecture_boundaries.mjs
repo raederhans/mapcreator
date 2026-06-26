@@ -12,6 +12,7 @@ const FILES = Object.freeze({
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+  renderCacheOwner: "js/core/renderer/render_cache_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
 });
@@ -22,6 +23,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
   [FILES.hgoPreviewRenderOwner]: 280,
+  [FILES.renderCacheOwner]: 620,
   [FILES.renderPassCatalog]: 80,
   [FILES.renderInvalidationCatalog]: 180,
 });
@@ -59,6 +61,7 @@ function collectFailures() {
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
+  const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
   const renderPassCatalog = readProjectFile(FILES.renderPassCatalog);
   const renderInvalidationCatalog = readProjectFile(FILES.renderInvalidationCatalog);
   const sources = {
@@ -68,6 +71,7 @@ function collectFailures() {
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
+    [FILES.renderCacheOwner]: renderCacheOwner,
     [FILES.renderPassCatalog]: renderPassCatalog,
     [FILES.renderInvalidationCatalog]: renderInvalidationCatalog,
   };
@@ -97,6 +101,7 @@ function collectFailures() {
     FILES.scenarioVisualInvalidationExecutor,
     FILES.exactAfterSettleScheduler,
     FILES.hgoPreviewRenderOwner,
+    FILES.renderCacheOwner,
     FILES.renderPassCatalog,
     FILES.renderInvalidationCatalog,
   ];
@@ -136,6 +141,17 @@ function collectFailures() {
   }
   if (scenarioVisualInvalidationExecutor.includes("const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([")) {
     failures.push(`${FILES.scenarioVisualInvalidationExecutor} must not locally define retired visual invalidation pass inputs.`);
+  }
+  const renderCacheOwnerFactorySource = sliceBetween(
+    renderer,
+    "function getRenderCacheOwner() {",
+    "function getIntensityFieldMaskOwner() {",
+  );
+  if (renderCacheOwnerFactorySource.includes("invalidateInteractionComposite,")) {
+    failures.push(`${FILES.renderer} must not inject invalidateInteractionComposite into the render cache owner.`);
+  }
+  if (renderCacheOwner.includes("invalidateInteractionComposite = () => {}")) {
+    failures.push(`${FILES.renderCacheOwner} must not keep an injected invalidateInteractionComposite helper fallback.`);
   }
   if (!scenarioVisualInvalidationExecutor.includes("findRetiredVisualInvalidationPassInputKey(executionPlan)")) {
     failures.push(`${FILES.scenarioVisualInvalidationExecutor} must reject retired execution-plan pass inputs through one retired-key check.`);
@@ -294,6 +310,43 @@ function collectFailures() {
         "const HGO_RUNTIME_PREVIEW_RENDER_PASS_NAMES =",
         "function getHgoRuntimePreviewCanvasPointFromEvent(",
         "const HGO_RUNTIME_PREVIEW_PROJECTION_NAME =",
+      ],
+    },
+    {
+      ownerPath: FILES.renderCacheOwner,
+      ownerTokens: [
+        "function invalidateRenderPasses(",
+        "function invalidateAllRenderPasses(",
+        "function clearRenderPassReferenceTransforms(",
+        "function invalidateInteractionComposite(",
+        "function clearLastGoodFrame(",
+        "function createMutationSummary(",
+        "const RENDER_CACHE_OWNER_SUMMARY_VERSION = 1;",
+        "requestedPassNames,",
+        "normalizedPassNames,",
+        "droppedPassNames,",
+        "sharedReferenceTransformCleared",
+      ],
+      rendererRequiredTokens: [
+        "function getMutationPassNames(mutation = {})",
+        "return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateRenderPasses(",
+        "return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateAllRenderPasses(",
+        "const mutation = getRenderCacheOwner().clearRenderPassReferenceTransforms(",
+        "return getRenderCacheOwner().invalidateInteractionComposite(",
+        "return getRenderCacheOwner().clearLastGoodFrame(",
+      ],
+      rendererForbiddenTokens: [
+        "cache.dirty[passName] = true;",
+        "cache.reasons[passName] = String(reason || \"unspecified\");",
+        "cache.interactionComposite.valid = false;",
+        "cache.interactionComposite.referenceTransform = null;",
+        "cache.interactionComposite.signature = \"\";",
+        "cache.lastGoodFrame.valid = false;",
+        "cache.lastGoodFrame.stale = true;",
+        "delete cache.referenceTransforms[passName];",
+        "renderPassCache.referenceTransform = null;",
+        "renderPassCache.referenceTransforms = {};",
+        "renderPassCache.fullReferenceTransforms = {};",
       ],
     },
     {
