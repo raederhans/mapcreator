@@ -1,8 +1,18 @@
 /**
  * Owns render pass cache / canvas cache / reference transform cache.
- * map_renderer.js 保留更高层的 invalidation、render pass 编排和 visible frame 事务，
- * 这里专注于“缓存容器长什么样、何时初始化、怎样校验可复用性”。
+ * The owner also owns render-pass dirty/reason invalidation, reference-transform
+ * clearing, last-good-frame invalidation, and interaction-composite invalidation
+ * primitives. map_renderer.js keeps diagnostics, adjacent render side effects,
+ * render pass orchestration, and visible-frame transactions.
  */
+const LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASS_NAMES = new Set([
+  "political",
+  "contextBase",
+  "contextScenario",
+  "effects",
+]);
+const RENDER_CACHE_OWNER_SUMMARY_VERSION = 1;
+
 export function createRenderCacheOwner({
   state = {},
   constants = {},
@@ -23,14 +33,229 @@ export function createRenderCacheOwner({
     ensureRenderPassCacheState = () => ({}),
     getTransformSignature = () => "",
     getVisibleFrameIdentity = () => ({}),
-    invalidateInteractionComposite = () => {},
   } = helpers;
+
+  function normalizeReason(reason, fallback) {
+    return String(reason || fallback);
+  }
+
+  function normalizeRenderPassRequest(passNames, { filterKnown = true } = {}) {
+    const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
+    const requestedPassNames = rawTargetPassNames.filter(Boolean);
+    const expandedTargetPassNames = requestedPassNames.flatMap((passName) => {
+      if (passName === "context") {
+        return ["contextBase", "contextScenario"];
+      }
+      return [passName];
+    });
+    const normalizedPassNames = expandedTargetPassNames.filter((passName) => {
+      if (!passName) return false;
+      return !filterKnown || renderPassNames.includes(passName);
+    });
+    const droppedPassNames = filterKnown
+      ? expandedTargetPassNames.filter((passName) => passName && !renderPassNames.includes(passName))
+      : [];
+    return { requestedPassNames, normalizedPassNames, droppedPassNames };
+  }
+
+  function hasInteractionCompositePass(passNames) {
+    return passNames.some((passName) => interactionCompositePassNames.includes(passName));
+  }
+
+  function createMutationSummary({
+    operation,
+    reason,
+    requestedPassNames = [],
+    normalizedPassNames = [],
+    droppedPassNames = [],
+    changed = false,
+    effects = {},
+    legacy = {},
+  }) {
+    const referenceTransforms = effects.referenceTransforms || {
+      clearedAll: false,
+      sharedReferenceTransformCleared: false,
+      passNames: [],
+    };
+    const lastGoodFrame = effects.lastGoodFrame || { invalidated: false, reason };
+    const interactionComposite = effects.interactionComposite || { invalidated: false, reason };
+    const hostFollowUps = effects.hostFollowUps || {
+      needsRenderPassDiagnostics: false,
+      needsPoliticalPathCacheInvalidation: false,
+      needsInteractionBorderSnapshotInvalidation: false,
+      needsContinuityMetric: false,
+    };
+    return {
+      version: RENDER_CACHE_OWNER_SUMMARY_VERSION,
+      operation,
+      reason,
+      requestedPassNames,
+      normalizedPassNames,
+      targetPassNames: normalizedPassNames,
+      droppedPassNames,
+      changed,
+      effects: {
+        lastGoodFrame,
+        interactionComposite,
+        referenceTransforms,
+        hostFollowUps,
+      },
+      ...legacy,
+    };
+  }
+
+  function getInteractionCompositeEffect(summary, reason) {
+    return summary?.effects?.interactionComposite || {
+      invalidated: !!summary?.invalidated,
+      reason,
+    };
+  }
 
   function getRenderPassCacheState() {
     return ensureRenderPassCacheState(state, {
       cloneZoomTransform,
       renderPassNames,
     });
+  }
+
+  function invalidateLastGoodFrame(reason = "visual-invalidation") {
+    const cache = getRenderPassCacheState();
+    const frame = cache.lastGoodFrame;
+    const normalizedReason = normalizeReason(reason, "visual-invalidation");
+    if (!frame || typeof frame !== "object" || !frame.valid) {
+      return { invalidated: false, reason: normalizedReason };
+    }
+    frame.stale = true;
+    frame.invalidatedAt = Date.now();
+    frame.staleReason = normalizedReason;
+    frame.reason = normalizedReason;
+    return { invalidated: true, reason: normalizedReason };
+  }
+
+  function clearLastGoodFrame(reason = "clear") {
+    const cache = getRenderPassCacheState();
+    const frame = cache.lastGoodFrame;
+    const normalizedReason = normalizeReason(reason, "clear");
+    if (!frame || typeof frame !== "object") {
+      return createMutationSummary({
+        operation: "clearLastGoodFrame",
+        reason: normalizedReason,
+        changed: false,
+        effects: {
+          lastGoodFrame: { cleared: false, invalidated: false, reason: normalizedReason },
+        },
+        legacy: { cleared: false },
+      });
+    }
+    frame.valid = false;
+    frame.stale = false;
+    frame.referenceTransform = null;
+    frame.commitKey = null;
+    frame.commitKeySignature = "";
+    frame.committedFrameIdentity = null;
+    frame.metadata = null;
+    frame.capturedAt = 0;
+    frame.invalidatedAt = Date.now();
+    frame.reason = normalizedReason;
+    frame.staleReason = "";
+    frame.rejectedReason = "";
+    frame.scenarioId = "";
+    frame.sceneGeneration = 0;
+    frame.scenarioDataGeneration = 0;
+    frame.selectionVersion = 0;
+    frame.contextFlagSignature = "";
+    frame.topologyRevision = 0;
+    frame.colorRevision = 0;
+    frame.dpr = 1;
+    frame.pixelWidth = 0;
+    frame.pixelHeight = 0;
+    frame.politicalDataStage = "unknown";
+    frame.fullPoliticalReady = false;
+    frame.finePoliticalCacheReady = false;
+    return createMutationSummary({
+      operation: "clearLastGoodFrame",
+      reason: normalizedReason,
+      changed: true,
+      effects: {
+        lastGoodFrame: { cleared: true, invalidated: false, reason: normalizedReason },
+      },
+      legacy: { cleared: true },
+    });
+  }
+
+  function invalidateInteractionComposite(reason = "interaction-composite-invalidation") {
+    const cache = getRenderPassCacheState();
+    const composite = cache.interactionComposite;
+    const normalizedReason = normalizeReason(reason, "interaction-composite-invalidation");
+    if (!composite || typeof composite !== "object") {
+      return createMutationSummary({
+        operation: "invalidateInteractionComposite",
+        reason: normalizedReason,
+        changed: false,
+        effects: {
+          interactionComposite: { invalidated: false, reason: normalizedReason },
+        },
+        legacy: { invalidated: false },
+      });
+    }
+    composite.valid = false;
+    composite.referenceTransform = null;
+    composite.signature = "";
+    composite.reason = normalizedReason;
+    composite.rejectedReason = normalizedReason;
+    return createMutationSummary({
+      operation: "invalidateInteractionComposite",
+      reason: normalizedReason,
+      changed: true,
+      effects: {
+        interactionComposite: { invalidated: true, reason: normalizedReason },
+      },
+      legacy: { invalidated: true },
+    });
+  }
+
+  function invalidateRenderPasses(passNames, reason = "unspecified") {
+    const cache = getRenderPassCacheState();
+    const normalizedReason = normalizeReason(reason, "unspecified");
+    const { requestedPassNames, normalizedPassNames: targetPassNames, droppedPassNames } = normalizeRenderPassRequest(passNames);
+    targetPassNames.forEach((passName) => {
+      cache.dirty[passName] = true;
+      cache.reasons[passName] = normalizedReason;
+    });
+    const lastGoodFrame = targetPassNames.some((passName) => LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASS_NAMES.has(passName))
+      ? invalidateLastGoodFrame(normalizedReason)
+      : { invalidated: false, reason: normalizedReason };
+    const interactionComposite = hasInteractionCompositePass(targetPassNames)
+      ? getInteractionCompositeEffect(invalidateInteractionComposite(normalizedReason), normalizedReason)
+      : { invalidated: false, reason: normalizedReason };
+    return createMutationSummary({
+      operation: "invalidateRenderPasses",
+      reason: normalizedReason,
+      requestedPassNames,
+      normalizedPassNames: targetPassNames,
+      droppedPassNames,
+      changed: targetPassNames.length > 0,
+      effects: {
+        lastGoodFrame,
+        interactionComposite,
+        hostFollowUps: {
+          needsRenderPassDiagnostics: targetPassNames.length > 0,
+          needsPoliticalPathCacheInvalidation: targetPassNames.includes("political"),
+          needsInteractionBorderSnapshotInvalidation: targetPassNames.includes("borders"),
+          needsContinuityMetric: !!lastGoodFrame.invalidated,
+        },
+      },
+      legacy: {
+        lastGoodFrame,
+        lastGoodFrameInvalidated: !!lastGoodFrame.invalidated,
+        interactionComposite,
+        interactionCompositeInvalidated: !!interactionComposite.invalidated,
+      },
+    });
+  }
+
+  function invalidateAllRenderPasses(reason = "unspecified") {
+    return invalidateRenderPasses(renderPassNames, reason);
   }
 
   function getRenderPassOverscanRatio(passName) {
@@ -188,6 +413,91 @@ export function createRenderCacheOwner({
     });
   }
 
+  function clearRenderPassReferenceTransforms(passNames = null) {
+    const cache = getRenderPassCacheState();
+    const normalizedReason = "clear-reference-transform";
+    if (!passNames) {
+      const sharedReferenceTransformCleared = !!cache.referenceTransform;
+      cache.referenceTransform = null;
+      cache.referenceTransforms = {};
+      cache.contextScenarioLayerCache = {};
+      clearPassFullReferenceTransforms();
+      const interactionComposite = getInteractionCompositeEffect(
+        invalidateInteractionComposite(normalizedReason),
+        normalizedReason,
+      );
+      const targetPassNames = [...renderPassNames];
+      return createMutationSummary({
+        operation: "clearRenderPassReferenceTransforms",
+        reason: normalizedReason,
+        normalizedPassNames: targetPassNames,
+        changed: true,
+        effects: {
+          interactionComposite,
+          referenceTransforms: {
+            clearedAll: true,
+            sharedReferenceTransformCleared,
+            passNames: targetPassNames,
+          },
+          hostFollowUps: {
+            needsRenderPassDiagnostics: false,
+            needsPoliticalPathCacheInvalidation: true,
+            needsInteractionBorderSnapshotInvalidation: true,
+            needsContinuityMetric: false,
+          },
+        },
+        legacy: {
+          clearedAll: true,
+          interactionComposite,
+          interactionCompositeInvalidated: !!interactionComposite.invalidated,
+          politicalPathCacheInvalidated: true,
+          interactionBorderSnapshotInvalidated: true,
+        },
+      });
+    }
+    const { requestedPassNames, normalizedPassNames: targetPassNames, droppedPassNames } = normalizeRenderPassRequest(passNames, { filterKnown: false });
+    targetPassNames.forEach((passName) => {
+      delete cache.referenceTransforms[passName];
+    });
+    clearPassFullReferenceTransforms(targetPassNames);
+    const sharedReferenceTransformCleared = !!cache.referenceTransform;
+    cache.referenceTransform = null;
+    const interactionComposite = hasInteractionCompositePass(targetPassNames)
+      ? getInteractionCompositeEffect(invalidateInteractionComposite(normalizedReason), normalizedReason)
+      : { invalidated: false, reason: normalizedReason };
+    const needsPoliticalPathCacheInvalidation = targetPassNames.includes("political");
+    const needsInteractionBorderSnapshotInvalidation = targetPassNames.includes("borders");
+    return createMutationSummary({
+      operation: "clearRenderPassReferenceTransforms",
+      reason: normalizedReason,
+      requestedPassNames,
+      normalizedPassNames: targetPassNames,
+      droppedPassNames,
+      changed: targetPassNames.length > 0 || sharedReferenceTransformCleared,
+      effects: {
+        interactionComposite,
+        referenceTransforms: {
+          clearedAll: false,
+          sharedReferenceTransformCleared,
+          passNames: targetPassNames,
+        },
+        hostFollowUps: {
+          needsRenderPassDiagnostics: false,
+          needsPoliticalPathCacheInvalidation,
+          needsInteractionBorderSnapshotInvalidation,
+          needsContinuityMetric: false,
+        },
+      },
+      legacy: {
+        clearedAll: false,
+        interactionComposite,
+        interactionCompositeInvalidated: !!interactionComposite.invalidated,
+        politicalPathCacheInvalidated: needsPoliticalPathCacheInvalidation,
+        interactionBorderSnapshotInvalidated: needsInteractionBorderSnapshotInvalidation,
+      },
+    });
+  }
+
   function getInteractionCompositeSignature(cache = getRenderPassCacheState()) {
     return interactionCompositePassNames.map((passName) => [
       passName,
@@ -269,7 +579,9 @@ export function createRenderCacheOwner({
 
   return {
     canDrawInteractionComposite,
+    clearLastGoodFrame,
     clearPassFullReferenceTransforms,
+    clearRenderPassReferenceTransforms,
     ensureCompositeBufferCanvas,
     ensureInteractionCompositeCanvas,
     ensureLastGoodFrameCanvas,
@@ -281,6 +593,9 @@ export function createRenderCacheOwner({
     getRenderPassCacheState,
     getRenderPassLayout,
     hasPassFullReferenceTransform,
+    invalidateAllRenderPasses,
+    invalidateInteractionComposite,
+    invalidateRenderPasses,
     resizeRenderPassCanvases,
     setPassFullReferenceTransform,
     setPassReferenceTransform,

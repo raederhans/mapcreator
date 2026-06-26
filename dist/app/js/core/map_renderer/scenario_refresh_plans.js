@@ -1,3 +1,13 @@
+import {
+  DEFAULT_RENDER_INVALIDATION_PASSES,
+  UNSUPPORTED_RENDER_PASS_INPUT_KEYS,
+  getFirstFrameTargetResources,
+  getTargetPassesForResources,
+  getTargetResourcesForPasses,
+  hasAnyTargetResource,
+  resolveFirstFrameTargetResources,
+} from "./render_invalidation_catalog.js";
+
 function normalizeLayerKeyList(layerKeys = []) {
   return Array.from(
     new Set(
@@ -53,88 +63,6 @@ function createScenarioRefreshPlan({
   };
 }
 
-const PASS_RESOURCE_MAP = Object.freeze({
-  background: Object.freeze(["backgroundBuffer"]),
-  physicalBase: Object.freeze(["physicalBaseBuffer"]),
-  political: Object.freeze(["politicalBaseBuffer", "hitIndex"]),
-  hgoPreview: Object.freeze(["hgoPreviewBuffer"]),
-  contextBase: Object.freeze(["contextBaseBuffer"]),
-  contextScenario: Object.freeze(["contextScenarioBuffer"]),
-  effects: Object.freeze(["effectsBuffer"]),
-  lineEffects: Object.freeze(["lineEffectsBuffer"]),
-  contextMarkers: Object.freeze(["contextMarkersBuffer"]),
-  dayNight: Object.freeze(["dayNightBuffer"]),
-  borders: Object.freeze(["borderBuffer", "interactionOverlay"]),
-  textureLabels: Object.freeze(["textureLabelBuffer"]),
-  labels: Object.freeze(["labelBuffer"]),
-});
-
-const RESOURCE_PASS_MAP = Object.freeze(Object.entries(PASS_RESOURCE_MAP).reduce((acc, [passName, resourceNames]) => {
-  resourceNames.forEach((resourceName) => {
-    if (!acc[resourceName]) acc[resourceName] = [];
-    acc[resourceName].push(passName);
-  });
-  return acc;
-}, {}));
-
-const FIRST_FRAME_BASE_TARGET_RESOURCES = Object.freeze([
-  "backgroundBuffer",
-  "physicalBaseBuffer",
-  "politicalBaseBuffer",
-  "hitIndex",
-  "borderBuffer",
-  "interactionOverlay",
-]);
-
-const FIRST_FRAME_HGO_TARGET_RESOURCES = Object.freeze([
-  "hgoPreviewBuffer",
-]);
-
-const UNSUPPORTED_FRAME_GRAPH_INVALIDATION_INPUT_KEYS = Object.freeze([
-  "targetPasses",
-  "legacyTargetPasses",
-]);
-
-function getTargetResourcesForPasses(targetPasses = []) {
-  return normalizeStringList((Array.isArray(targetPasses) ? targetPasses : []).flatMap((passName) => (
-    PASS_RESOURCE_MAP[String(passName || "").trim()] || []
-  )));
-}
-
-function getTargetPassesForResources(targetResources = []) {
-  return normalizeStringList((Array.isArray(targetResources) ? targetResources : []).flatMap((resourceName) => (
-    RESOURCE_PASS_MAP[String(resourceName || "").trim()] || []
-  )));
-}
-
-function hasAnyTargetResource(targetResources = [], resourceNames = []) {
-  const targetResourceSet = new Set(normalizeStringList(targetResources));
-  return (Array.isArray(resourceNames) ? resourceNames : []).some((resourceName) => (
-    targetResourceSet.has(String(resourceName || "").trim())
-  ));
-}
-
-function getFirstFrameTargetResources({
-  hgoPreviewDirty = false,
-} = {}) {
-  return normalizeStringList([
-    ...FIRST_FRAME_BASE_TARGET_RESOURCES,
-    ...(hgoPreviewDirty ? FIRST_FRAME_HGO_TARGET_RESOURCES : []),
-  ]);
-}
-
-function resolveFirstFrameTargetResources(targetResources = [], {
-  hgoPreviewDirty = false,
-} = {}) {
-  const allowlist = new Set(getFirstFrameTargetResources({ hgoPreviewDirty }));
-  const filteredTargetResources = normalizeStringList(targetResources).filter((resourceName) => allowlist.has(resourceName));
-  return normalizeStringList([
-    ...FIRST_FRAME_BASE_TARGET_RESOURCES,
-    ...filteredTargetResources,
-    ...(hgoPreviewDirty ? FIRST_FRAME_HGO_TARGET_RESOURCES : []),
-  ]);
-}
-
 function createFrameGraphInvalidation(options = {}) {
   const {
     reason = "scenario-refresh",
@@ -151,7 +79,7 @@ function createFrameGraphInvalidation(options = {}) {
     clearInteractionComposite = false,
     ...unsupportedInputs
   } = options && typeof options === "object" ? options : {};
-  const unsupportedInputKey = UNSUPPORTED_FRAME_GRAPH_INVALIDATION_INPUT_KEYS.find((key) => (
+  const unsupportedInputKey = UNSUPPORTED_RENDER_PASS_INPUT_KEYS.find((key) => (
     Object.prototype.hasOwnProperty.call(unsupportedInputs, key)
   ));
   if (unsupportedInputKey) {
@@ -192,7 +120,7 @@ function resolveFrameGraphInvalidationExecutionPlan(frameGraphInvalidation, fall
     : getTargetResourcesForPasses(resolvedInvalidationPasses);
   const invalidationTargetPasses = resolvedInvalidationPasses.length
     ? resolvedInvalidationPasses
-    : (hasExplicitTargetResources ? [] : ["political", "borders", "labels"]);
+    : (hasExplicitTargetResources ? [] : [...DEFAULT_RENDER_INVALIDATION_PASSES]);
   return {
     targetResources,
     invalidationTargetPasses,

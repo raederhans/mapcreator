@@ -22,6 +22,7 @@ const FILES = Object.freeze({
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
+  rendererSurfaceHost: "js/core/renderer/renderer_surface_host.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -46,6 +47,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
+  [FILES.rendererSurfaceHost]: 120,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -67,6 +69,24 @@ function lineCount(source) {
 function includesImport(source, importPath) {
   const normalized = source.replaceAll('"', "'");
   return normalized.includes(`from '${importPath}';`);
+}
+
+function listProjectSourceFiles(rootRelativePath) {
+  const root = path.join(REPO_ROOT, rootRelativePath);
+  const results = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(absolutePath);
+      } else if (entry.isFile() && /\.m?js$/.test(entry.name)) {
+        results.push(path.relative(REPO_ROOT, absolutePath).replaceAll(path.sep, "/"));
+      }
+    }
+  }
+  return results.sort();
 }
 
 function sliceBetween(source, startMarker, endMarker) {
@@ -95,6 +115,7 @@ function collectFailures() {
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
+  const rendererSurfaceHost = readProjectFile(FILES.rendererSurfaceHost);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -120,6 +141,7 @@ function collectFailures() {
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
+    [FILES.rendererSurfaceHost]: rendererSurfaceHost,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -136,9 +158,85 @@ function collectFailures() {
     }
   }
 
-  const rendererSurfaceHostPath = path.join(REPO_ROOT, "js/core/renderer/renderer_surface_host.js");
-  if (fs.existsSync(rendererSurfaceHostPath)) {
-    failures.push("js/core/renderer/renderer_surface_host.js is reserved for P24 surface host implementation.");
+  for (const token of [
+    "export function createRendererSurfaceHost(options = {})",
+    "export const RENDERER_SURFACE_HANDLE_KEYS",
+    "function createEmptyHandles()",
+    "function normalizeHandleValue(value)",
+    "function describeHandle(value)",
+    "setMany",
+    "snapshot",
+  ]) {
+    if (!rendererSurfaceHost.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceHost} must own token: ${token}`);
+    }
+  }
+  for (const token of [
+    "map_renderer.js",
+    "runtimeState",
+    "from \"../state.js\"",
+    "from \"./state.js\"",
+    "drawCanvas",
+    "updateMap",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "applyDevSelectionFill",
+    "renderExportPassesToCanvas",
+    "renderLegend",
+    "projectGeoToScreen",
+    "invalidateRenderPasses",
+    "requestInteractionRender",
+    "requestRendererRender",
+    "setMapData",
+    "buildInteractionInfrastructureAfterStartup",
+    "handleResize",
+    "fitProjection",
+    "initZoom",
+    "bindEvents",
+  ]) {
+    if (rendererSurfaceHost.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceHost} must not own renderer semantic token: ${token}`);
+    }
+  }
+
+  if (!renderer.includes('from "./renderer/renderer_surface_host.js";')) {
+    failures.push(`${FILES.renderer} must import ${FILES.rendererSurfaceHost}.`);
+  }
+  for (const sourcePath of listProjectSourceFiles("js")) {
+    if (sourcePath === FILES.renderer) continue;
+    const source = readProjectFile(sourcePath);
+    if (source.includes("renderer_surface_host.js")) {
+      failures.push(`${sourcePath} must not import renderer_surface_host.js directly; use ${FILES.renderer} as the composition root.`);
+    }
+  }
+  if (!renderer.includes("const rendererSurfaceHost = createRendererSurfaceHost();")) {
+    failures.push(`${FILES.renderer} must instantiate rendererSurfaceHost once.`);
+  }
+  for (const token of [
+    "let mapContainer = null;",
+    "let canvasLayers = null;",
+    "let context = null;",
+    "let projection = null;",
+    "let pathCanvas = null;",
+    "let zoomBehavior = null;",
+    "let viewportGroup = null;",
+  ]) {
+    if (renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must store surface handle ${token} in rendererSurfaceHost.`);
+    }
+  }
+  for (const token of [
+    "getContext: () => rendererSurfaceHost.getContext()",
+    "getProjection: () => rendererSurfaceHost.getProjection()",
+    "getPathCanvas: () => rendererSurfaceHost.getPathCanvas()",
+    "getPathSvg: () => rendererSurfaceHost.getPathSvg()",
+    "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior()",
+    "getInteractionRect: () => rendererSurfaceHost.getInteractionRect()",
+    "getMapContainer: () => rendererSurfaceHost.getMapContainer()",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep owner getter closure: ${token}`);
+    }
   }
 
   for (const heading of [
@@ -152,11 +250,12 @@ function collectFailures() {
   }
 
   for (const token of [
-    "let mapContainer = null;",
-    "getContext: () => context",
-    "getProjection: () => projection",
-    "getZoomBehavior: () => zoomBehavior",
-    "getMapContainer: () => mapContainer",
+    "const HANDLE_DECLARATIONS = Object.freeze([",
+    "getContext: () => rendererSurfaceHost.getContext()",
+    "getProjection: () => rendererSurfaceHost.getProjection()",
+    "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior()",
+    "getMapContainer: () => rendererSurfaceHost.getMapContainer()",
+    "rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {",
   ]) {
     if (!rendererSurfaceHostInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
@@ -191,6 +290,7 @@ function collectFailures() {
     FILES.viewportResizeLifecycleOwner,
     FILES.zoomInteractionLifecycleOwner,
     FILES.mapInteractionEventBindingOwner,
+    FILES.rendererSurfaceHost,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,

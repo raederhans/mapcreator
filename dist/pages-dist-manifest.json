@@ -45827,7 +45827,7 @@
     },
     {
       "path": "app/js/core/map_renderer/exact_after_settle_refresh_plans.js",
-      "size_bytes": 4270,
+      "size_bytes": 4031,
       "source_kind": "dist"
     },
     {
@@ -45881,8 +45881,18 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/render_invalidation_catalog.js",
+      "size_bytes": 3279,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/render_pass_catalog.js",
+      "size_bytes": 1083,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/scenario_refresh_plans.js",
-      "size_bytes": 14418,
+      "size_bytes": 11770,
       "source_kind": "dist"
     },
     {
@@ -45892,12 +45902,12 @@
     },
     {
       "path": "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
-      "size_bytes": 4321,
+      "size_bytes": 4302,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 908873,
+      "size_bytes": 893278,
       "source_kind": "dist"
     },
     {
@@ -46006,6 +46016,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/exact_after_settle_pass_catalog.js",
+      "size_bytes": 685,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/facility_surface.js",
       "size_bytes": 12609,
       "source_kind": "dist"
@@ -46018,6 +46033,11 @@
     {
       "path": "app/js/core/renderer/interaction_border_snapshot_owner.js",
       "size_bytes": 5511,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/map_interaction_event_binding_owner.js",
+      "size_bytes": 3477,
       "source_kind": "dist"
     },
     {
@@ -46041,18 +46061,38 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/projected_geometry_bounds_owner.js",
+      "size_bytes": 11974,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/render_cache_owner.js",
-      "size_bytes": 10816,
+      "size_bytes": 22476,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/render_pipeline_catalog.js",
+      "size_bytes": 854,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/renderer/render_pipeline_passes.js",
-      "size_bytes": 8610,
+      "size_bytes": 7870,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/renderer/render_transaction_diagnostics.js",
       "size_bytes": 47147,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/render_transform_reuse_policy_owner.js",
+      "size_bytes": 9299,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/renderer_surface_host.js",
+      "size_bytes": 3888,
       "source_kind": "dist"
     },
     {
@@ -46068,6 +46108,11 @@
     {
       "path": "app/js/core/renderer/scenario_relief_overlay_render_owner.js",
       "size_bytes": 9139,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/scenario_water_cache_policy_owner.js",
+      "size_bytes": 11628,
       "source_kind": "dist"
     },
     {
@@ -46181,6 +46226,26 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/viewport_command_owner.js",
+      "size_bytes": 3519,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/viewport_read_model_owner.js",
+      "size_bytes": 9295,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/viewport_resize_lifecycle_owner.js",
+      "size_bytes": 12477,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/zoom_interaction_lifecycle_owner.js",
+      "size_bytes": 6038,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/runtime_asset_registry.js",
       "size_bytes": 3189,
       "source_kind": "dist"
@@ -46237,7 +46302,7 @@
     },
     {
       "path": "app/js/core/scenario/scenario_renderer_bridge.js",
-      "size_bytes": 2075,
+      "size_bytes": 2155,
       "source_kind": "dist"
     },
     {
@@ -47272,7 +47337,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1459715,
+      "size_bytes": 1461506,
       "source_kind": "dist"
     },
     {
@@ -47291,5 +47356,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155228836
+  "total_bytes": 1155300622
 }

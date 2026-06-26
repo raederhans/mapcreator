@@ -1,3 +1,6 @@
+import { IDLE_RENDER_PASS_DEFINITIONS } from "./render_pipeline_catalog.js";
+import { EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES } from "./exact_after_settle_pass_catalog.js";
+
 export function createRenderPipelinePassesOwner({
   state = {},
   constants = {},
@@ -5,24 +8,8 @@ export function createRenderPipelinePassesOwner({
   helpers = {},
 } = {}) {
   const {
-    exactAfterSettleDeferredPassNames = new Set(),
+    exactAfterSettleDeferredPassNames = EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
   } = constants;
-
-  const {
-    drawBackgroundPass = () => {},
-    drawPhysicalBasePass = () => {},
-    drawPoliticalPass = () => {},
-    drawHgoPreviewPass = () => {},
-    drawContextBasePass = () => {},
-    drawContextScenarioPass = () => {},
-    drawEffectsPass = () => {},
-    drawLineEffectsPass = () => {},
-    drawDayNightPass = () => {},
-    drawBordersPass = () => {},
-    drawContextMarkersPass = () => {},
-    drawTextureLabelEffectsPass = () => {},
-    drawLabelsPass = () => {},
-  } = drawPasses;
 
   const {
     detectContextScenarioReasonMismatch = () => {},
@@ -42,22 +29,13 @@ export function createRenderPipelinePassesOwner({
     tryPartialPoliticalPassRepaint = () => false,
   } = helpers;
 
+  const noopDrawPass = () => {};
+
   function getIdleRenderPassDefinitions() {
-    return [
-      ["background", (k) => drawBackgroundPass(k)],
-      ["physicalBase", (k) => drawPhysicalBasePass(k)],
-      ["political", (k) => drawPoliticalPass(k)],
-      ["hgoPreview", (k) => drawHgoPreviewPass(k)],
-      ["contextBase", (k) => drawContextBasePass(k)],
-      ["contextScenario", (k) => drawContextScenarioPass(k)],
-      ["effects", (k) => drawEffectsPass(k)],
-      ["lineEffects", (k) => drawLineEffectsPass(k)],
-      ["dayNight", (k) => drawDayNightPass(k)],
-      ["borders", (k) => drawBordersPass(k)],
-      ["contextMarkers", (k) => drawContextMarkersPass(k)],
-      ["textureLabels", (k) => drawTextureLabelEffectsPass(k)],
-      ["labels", (k) => drawLabelsPass(k)],
-    ];
+    return IDLE_RENDER_PASS_DEFINITIONS.map(({ passName, drawKey }) => {
+      const drawFn = typeof drawPasses[drawKey] === "function" ? drawPasses[drawKey] : noopDrawPass;
+      return [passName, (k) => drawFn(k)];
+    });
   }
 
   function getHgoPreviewVisibilityTokenFromSignature(signature) {

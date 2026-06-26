@@ -176,8 +176,13 @@ import {
   buildWorkerPixelRingsForGeometry,
 } from "./map_renderer/political_raster_worker_packet.js";
 import {
-  EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
-} from "./map_renderer/exact_after_settle_refresh_plans.js";
+  INTERACTION_COMPOSITE_PASS_NAMES,
+  RENDER_PASS_NAMES,
+  RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+  TRANSFORM_REUSED_RENDER_PASS_NAMES,
+  TRANSFORMED_FRAME_PASS_NAMES,
+  VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES,
+} from "./map_renderer/render_pass_catalog.js";
 import {
   collectSpatialGridCandidates,
   createHitResult,
@@ -188,6 +193,15 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
+import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
+import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
+import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
+import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
+import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
+import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
+import { createMapInteractionEventBindingOwner } from "./renderer/map_interaction_event_binding_owner.js";
+import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -291,55 +305,11 @@ const UNIT_COUNTER_STATS_PRESETS = Object.freeze({
   improvised: Object.freeze({ organizationPct: 47, equipmentPct: 42 }),
 });
 
-// 这些句柄共同描述当前唯一活跃的地图渲染现场。
-// startup / scenario apply / renderer re-init 时需要成组维护，
-// 否则很容易出现“旧 DOM 句柄 + 新 runtimeState”混搭的问题。
-let mapContainer = null;
-let canvasLayers = null;
-let mapCanvas = null;
-let politicalPatchCanvas = null;
-let interactionOverlayCanvas = null;
-let hitCanvas = null;
-let mapSvg = null;
-let interactionRect = null;
-let tooltip = null;
-let context = null;
-let politicalPatchContext = null;
-let interactionOverlayContext = null;
-let hitContext = null;
-
-let projection = null;
-let pathSVG = null;
-let pathCanvas = null;
-let pathHitCanvas = null;
-let zoomBehavior = null;
-let mapContainerResizeObserver = null;
-let mapContainerResizeFrame = 0;
-let mapContainerResizeTimer = 0;
-let pendingMapResizeReason = "";
-let browserPixelRatioMediaQuery = null;
-let browserPixelRatioMediaQueryHandler = null;
-let visualViewportResizeHandler = null;
-let resizeSpatialRefreshHandle = null;
+const rendererSurfaceHost = createRendererSurfaceHost();
 let interactionInfrastructureBasicPromise = null;
 let interactionInfrastructureFullPromise = null;
 let activeContextMetricSession = null;
 let lastHitCanvasBuildStats = null;
-
-let viewportGroup = null;
-let strategicDefs = null;
-let frontlineOverlayGroup = null;
-let frontlineLabelsGroup = null;
-let operationalLinesGroup = null;
-let operationGraphicsGroup = null;
-let operationGraphicsEditorGroup = null;
-let unitCountersGroup = null;
-let specialZonesGroup = null;
-let specialZoneEditorGroup = null;
-let hoverGroup = null;
-let devSelectionGroup = null;
-let inspectorHighlightGroup = null;
-let intensityFieldPreviewGroup = null;
 let legendControlElement = null;
 let legendControlHeaderElement = null;
 let legendControlBodyElement = null;
@@ -472,26 +442,6 @@ const DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS = 3600;
 const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MIN = 0.06;
 const ZOOM_SETTLE_ADAPTIVE_DELTA_MAX = 0.85;
-const CONTEXT_BASE_REUSE_MIN_DISTANCE_PX = 320;
-const CONTEXT_BASE_REUSE_MAX_DISTANCE_PX = 640;
-const CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO = 0.35;
-const CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD = 2;
-const CONTEXT_BASE_BUCKET_LOW_MAX = 1.4;
-const CONTEXT_BASE_BUCKET_MID_MAX = 2.5;
-const CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX = 960;
-const CONTEXT_SCENARIO_REUSE_FRAME_LIMIT = 24;
-const SCENARIO_WATER_CACHE_MODE_PARAM = "water_cache_mode";
-const SCENARIO_WATER_CACHE_MODE_ALT_PARAM = "scenario_water_cache_mode";
-const SCENARIO_WATER_CACHE_MODES = new Set(["adaptive", "reuse", "redraw", "direct"]);
-const SCENARIO_WATER_COVERAGE_ALGO_PARAM = "water_cache_coverage_algo";
-const SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM = "scenario_water_cache_coverage_algo";
-const SCENARIO_WATER_COVERAGE_ALGOS = new Set(["legacy", "grid"]);
-const SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS = 64;
-const SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS = 36;
-const SCENARIO_WATER_COVERAGE_GRID_MAX_DPR = 3;
-const SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX = 24;
-const SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX = 0.2;
-const SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX = 28;
 const CONTOUR_ZOOM_STYLE_PROFILES = Object.freeze({
   low: Object.freeze({
     majorIntervalMultiplier: 3,
@@ -870,64 +820,8 @@ const POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS = new Set([
 ]);
 const DAY_NIGHT_CLOCK_INTERVAL_MS = 15_000;
 const DAY_NIGHT_CYCLE_FRAME_INTERVAL_MS = 1000 / 30;
-export const RENDER_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-  "borders",
-  "textureLabels",
-  "labels",
-];
-const TRANSFORM_REUSED_RENDER_PASS_NAMES = new Set([
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-]);
-const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set([
-  "contextBase",
-]);
-const INTERACTION_COMPOSITE_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-];
-const TRANSFORMED_FRAME_PASS_NAMES = [
-  "background",
-  "physicalBase",
-  "political",
-  "hgoPreview",
-  "contextBase",
-  "contextScenario",
-  "effects",
-  "lineEffects",
-  "contextMarkers",
-  "dayNight",
-  "textureLabels",
-  "labels",
-];
 // exact-after-settle 的延后刷新只补 context/text 这批轻量 pass；
 // political pass 仍走单独的 guarded dirty 路径，避免和局部重绘缓存语义混线。
-const RENDER_PASS_OVERSCAN_RATIO_PER_SIDE = 0.15;
 const POLITICAL_PARTIAL_REPAINT_FEATURE_THRESHOLD = 48;
 const POLITICAL_PARTIAL_REPAINT_CANDIDATE_THRESHOLD = 160;
 const POLITICAL_PARTIAL_REPAINT_VIEWPORT_COVERAGE_MAX = 0.18;
@@ -1008,17 +902,12 @@ let physicalLandClipPathCache = {
   path: null,
 };
 const SCENARIO_BACKGROUND_MERGE_MAX_AREA = Math.PI * 2;
-const SPHERICAL_GEOMETRY_MAX_AREA = Math.PI * 2;
 const SCENARIO_COASTLINE_MAX_AREA_DELTA_RATIO = 0.02;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_RATIO = 0.25;
 const SCENARIO_COASTLINE_MAX_INTERIOR_RING_COUNT = 500;
 const suspiciousScenarioBackgroundMergeWarnings = new Set();
 const scenarioOwnerOnlyCanonicalFallbackWarnings = new Set();
 const missingPhysicalContextWarnings = new Set();
-const waterSphericalSanitizationWarnings = new Set();
-const sphericalGeometryDiagnosticsByObject = new WeakMap();
-const safeWaterRegionGeometryPartsByFeature = new WeakMap();
-const sanitizedWaterRegionFeatureByFeature = new WeakMap();
 let scenarioWaterPartPathCache = new WeakMap();
 let scenarioWaterFeaturePathCache = new WeakMap();
 const renderDiag = {
@@ -1074,6 +963,14 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let renderTransformReusePolicyOwner = null;
+let projectedGeometryBoundsOwner = null;
+let viewportReadModelOwner = null;
+let viewportCommandOwner = null;
+let viewportResizeLifecycleOwner = null;
+let scenarioWaterCachePolicyOwner = null;
+let zoomInteractionLifecycleOwner = null;
+let mapInteractionEventBindingOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1089,11 +986,11 @@ function getStrategicOverlayHelpersOwner() {
       strategicLineLabelFont: STRATEGIC_LINE_LABEL_FONT,
     },
     groupGetters: {
-      getOperationalLinesGroup: () => operationalLinesGroup,
-      getOperationGraphicsGroup: () => operationGraphicsGroup,
-      getUnitCountersGroup: () => unitCountersGroup,
-      getSpecialZonesGroup: () => specialZonesGroup,
-      getSpecialZoneEditorGroup: () => specialZoneEditorGroup,
+      getOperationalLinesGroup: () => rendererSurfaceHost.getOperationalLinesGroup(),
+      getOperationGraphicsGroup: () => rendererSurfaceHost.getOperationGraphicsGroup(),
+      getUnitCountersGroup: () => rendererSurfaceHost.getUnitCountersGroup(),
+      getSpecialZonesGroup: () => rendererSurfaceHost.getSpecialZonesGroup(),
+      getSpecialZoneEditorGroup: () => rendererSurfaceHost.getSpecialZoneEditorGroup(),
     },
     helpers: {
       renderStrategicDefs,
@@ -1155,14 +1052,14 @@ function getSpecialZoneLayersRenderOwner() {
   specialZoneLayersRenderOwner = createSpecialZoneLayersRenderOwner({
     state,
     groupGetters: {
-      getSpecialZonesGroup: () => specialZonesGroup,
-      getStrategicDefs: () => strategicDefs,
+      getSpecialZonesGroup: () => rendererSurfaceHost.getSpecialZonesGroup(),
+      getStrategicDefs: () => rendererSurfaceHost.getStrategicDefs(),
     },
     helpers: {
       clamp,
       getDashPattern,
       getFeatureId,
-      getPathSVG: () => pathSVG,
+      getPathSVG: () => rendererSurfaceHost.getPathSvg(),
       getSafeCanvasColor,
     },
   });
@@ -1223,7 +1120,7 @@ function getCityLabelOwner() {
   cityLabelOwner = createCityLabelOwner({
     constants: { textureLabelSerifStack: TEXTURE_LABEL_SERIF_STACK },
     getters: {
-      getContext: () => context,
+      getContext: () => rendererSurfaceHost.getContext(),
       getViewportSize: () => ({ width: runtimeState.width, height: runtimeState.height }),
     },
     helpers: {
@@ -1252,9 +1149,9 @@ function getCityPointsRenderOwner() {
       cityRevealProfileHybrid: CITY_REVEAL_PROFILE_HYBRID,
     },
     getters: {
-      getContext: () => context,
-      getMapSvg: () => mapSvg,
-      getProjection: () => projection,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getMapSvg: () => rendererSurfaceHost.getMapSvg(),
+      getProjection: () => rendererSurfaceHost.getProjection(),
     },
     helpers: {
       buildCityRevealPlan: (...args) => buildCityRevealPlan(...args),
@@ -1391,11 +1288,11 @@ function getRiverLayerRenderOwner() {
     helpers: {
       clamp,
       collectContextMetric,
-      getContext: () => context,
+      getContext: () => rendererSurfaceHost.getContext(),
       getContextBaseZoomBucketId,
       getDashPattern,
       getFeatureCollectionFeatureCount,
-      getPathCanvas: () => pathCanvas,
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
       getSafeCanvasColor,
       nowMs,
       pathBoundsInScreen,
@@ -1423,8 +1320,8 @@ function getOceanRenderOwner() {
       TNO_COASTAL_ACCENT_COLOR,
     },
     getters: {
-      getContext: () => context,
-      getPathCanvas: () => pathCanvas,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
     },
     helpers: {
       applyBathymetryCoverageExclusionMask,
@@ -1472,9 +1369,9 @@ function getPhysicalLayerRenderOwner() {
       PHYSICAL_ATLAS_PALETTE,
     },
     getters: {
-      getContext: () => context,
-      getPathCanvas: () => pathCanvas,
-      getProjection: () => projection,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+      getProjection: () => rendererSurfaceHost.getProjection(),
     },
     helpers: {
       applyPhysicalLandClipMask,
@@ -1529,8 +1426,8 @@ function getScenarioReliefOverlayRenderOwner() {
       RENDER_PHASE_SETTLING,
     },
     getters: {
-      getContext: () => context,
-      getPathCanvas: () => pathCanvas,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
     },
     helpers: {
       collectContextMetric,
@@ -1568,9 +1465,9 @@ function getCityLightsRenderOwner() {
       MODERN_CITY_LIGHTS_STEP_LON_DEG,
     },
     getters: {
-      getContext: () => context,
-      getPathCanvas: () => pathCanvas,
-      getProjection: () => projection,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+      getProjection: () => rendererSurfaceHost.getProjection(),
     },
     helpers: {
       buildNightHemisphereFeature,
@@ -1626,13 +1523,13 @@ function getTransportOverviewRenderOwner() {
       collectContextMetric,
       getActiveFacilityHighlightEntry,
       getCanvasColorRelativeLuminance,
-      getContext: () => context,
+      getContext: () => rendererSurfaceHost.getContext(),
       getFacilityHoverRadiusPx,
       getFeatureCollectionFeatureCount,
       getLineMidpointFromCoordinates,
       getMultiLineLabelAnchor,
-      getPathCanvas: () => pathCanvas,
-      getProjection: () => projection,
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+      getProjection: () => rendererSurfaceHost.getProjection(),
       invalidateRenderPasses,
       mixCanvasColors,
       nowMs,
@@ -1731,9 +1628,9 @@ function getBorderDrawOwner() {
       provinceBordersTransitionEndZoom: PROVINCE_BORDERS_TRANSITION_END_ZOOM,
     },
     getters: {
-      getContext: () => context,
-      getPathCanvas: () => pathCanvas,
-      getProjection: () => projection,
+      getContext: () => rendererSurfaceHost.getContext(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+      getProjection: () => rendererSurfaceHost.getProjection(),
       getDetailAdmMeshBuildState: () => detailAdmMeshBuildState,
       getScenarioOwnerOnlyCanonicalFallbackWarnings: () => scenarioOwnerOnlyCanonicalFallbackWarnings,
       getVisibleInternalBorderMeshSignature: () => visibleInternalBorderMeshSignature,
@@ -1773,7 +1670,7 @@ function getInteractionBorderSnapshotOwner() {
       renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
     },
     getters: {
-      getContext: () => context,
+      getContext: () => rendererSurfaceHost.getContext(),
       getRenderPassCacheState,
     },
     helpers: {
@@ -1805,7 +1702,7 @@ function getSpatialIndexRuntimeOwner() {
       hitMaxCellsPerItem: HIT_MAX_CELLS_PER_ITEM,
     },
     getters: {
-      getPathSvg: () => pathSVG,
+      getPathSvg: () => rendererSurfaceHost.getPathSvg(),
     },
     helpers: {
       rebuildAuxiliaryRegionIndexes,
@@ -1847,17 +1744,288 @@ function getRenderCacheOwner() {
       transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
     },
     getters: {
-      getContext: () => context,
+      getContext: () => rendererSurfaceHost.getContext(),
     },
     helpers: {
       cloneZoomTransform,
       ensureRenderPassCacheState,
       getTransformSignature,
       getVisibleFrameIdentity,
-      invalidateInteractionComposite,
     },
   });
   return renderCacheOwner;
+}
+
+function getRenderTransformReusePolicyOwner() {
+  if (renderTransformReusePolicyOwner) {
+    return renderTransformReusePolicyOwner;
+  }
+  renderTransformReusePolicyOwner = createRenderTransformReusePolicyOwner({
+    state,
+    getters: {
+      getRenderPassCacheState,
+      getPassReferenceTransform,
+    },
+    helpers: {
+      cloneZoomTransform,
+      isHeavyScenarioStagedApplyCandidate,
+    },
+  });
+  return renderTransformReusePolicyOwner;
+}
+
+function getProjectedGeometryBoundsOwner() {
+  if (projectedGeometryBoundsOwner) {
+    return projectedGeometryBoundsOwner;
+  }
+  projectedGeometryBoundsOwner = createProjectedGeometryBoundsOwner({
+    getters: {
+      getProjection: () => rendererSurfaceHost.getProjection(),
+      getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+      getPathSvg: () => rendererSurfaceHost.getPathSvg(),
+      getProjectedBoundsCache: ensureProjectedBoundsCache,
+      getLandFeatures: () => runtimeState.landData?.features || [],
+      getRiverFeatures: () => runtimeState.riversData?.features || [],
+      getActiveScenarioId: () => runtimeState.activeScenarioId || "",
+      getD3: () => globalThis.d3,
+    },
+    helpers: {
+      getFeatureId,
+      recordRenderPerfMetric,
+      recordProjectedBoundsDiagnosticsState,
+      resetHostWaterPathCaches: () => {
+        scenarioWaterPartPathCache = new WeakMap();
+        scenarioWaterFeaturePathCache = new WeakMap();
+      },
+      warn: (...args) => console.warn(...args),
+    },
+  });
+  return projectedGeometryBoundsOwner;
+}
+
+function getViewportReadModelOwner() {
+  if (viewportReadModelOwner) {
+    return viewportReadModelOwner;
+  }
+  viewportReadModelOwner = createViewportReadModelOwner({
+    state,
+    constants: {
+      mapPanPaddingPx: MAP_PAN_PADDING_PX,
+      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+    },
+    getters: {
+      getProjection: () => rendererSurfaceHost.getProjection(),
+      getPathSvg: () => rendererSurfaceHost.getPathSvg(),
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+      getLogicalCanvasDimensions,
+      getLandFeatures: () => runtimeState.landData?.features || [],
+      getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,
+      isHgoRuntimePreviewReady,
+    },
+    helpers: {
+      getFeatureId,
+      getProjectedFeatureBounds,
+      shouldSkipFeature,
+      getRenderableLandFeatures,
+    },
+  });
+  return viewportReadModelOwner;
+}
+
+function getViewportCommandOwner() {
+  if (viewportCommandOwner) {
+    return viewportCommandOwner;
+  }
+  viewportCommandOwner = createViewportCommandOwner({
+    state,
+    constants: {
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
+    },
+    getters: {
+      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getD3: () => globalThis.d3,
+      calculatePanExtent,
+      getCenteredFitZoomTransform,
+    },
+    effects: {
+      setZoomTransform: (transform) => {
+        runtimeState.zoomTransform = transform;
+      },
+    },
+  });
+  return viewportCommandOwner;
+}
+
+function getViewportResizeLifecycleOwner() {
+  if (viewportResizeLifecycleOwner) {
+    return viewportResizeLifecycleOwner;
+  }
+  viewportResizeLifecycleOwner = createViewportResizeLifecycleOwner({
+    state,
+    getters: {
+      getMapContainer: () => rendererSurfaceHost.getMapContainer(),
+      getGlobal: () => globalThis,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      hasLandFeatures: () => !!runtimeState.landData?.features?.length,
+    },
+    helpers: {
+      scheduleDeferredWork,
+      cancelDeferredWork,
+      nowMs,
+      recordRenderPerfMetric,
+    },
+    effects: {
+      setRenderPhaseInteracting: () => setRenderPhase(RENDER_PHASE_INTERACTING),
+      scheduleRenderPhaseIdle,
+      setCanvasSize,
+      fitProjection,
+      resetZoomToFit,
+      enforceZoomConstraints,
+      markAllOverlaysDirty,
+      render,
+      buildSpatialIndex,
+      setHitCanvasDirty: () => {
+        runtimeState.hitCanvasDirty = true;
+      },
+      scheduleHitCanvasBuildIfNeeded,
+    },
+  });
+  return viewportResizeLifecycleOwner;
+}
+
+function getScenarioWaterCachePolicyOwner() {
+  if (scenarioWaterCachePolicyOwner) {
+    return scenarioWaterCachePolicyOwner;
+  }
+  scenarioWaterCachePolicyOwner = createScenarioWaterCachePolicyOwner({
+    state,
+    getters: {
+      readSearchParam,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      getPreviousRenderedCount: () => lastScenarioWaterRenderedCount,
+    },
+    helpers: {
+      cloneZoomTransform: (transform) => cloneZoomTransform(transform || globalThis.d3?.zoomIdentity),
+      collectSafeWaterRegionGeometryParts,
+      computeProjectedGeoBounds,
+      isWaterRegionRenderable,
+    },
+  });
+  return scenarioWaterCachePolicyOwner;
+}
+
+function getZoomInteractionLifecycleOwner() {
+  if (zoomInteractionLifecycleOwner) {
+    return zoomInteractionLifecycleOwner;
+  }
+  zoomInteractionLifecycleOwner = createZoomInteractionLifecycleOwner({
+    state,
+    constants: {
+      minZoomScale: MIN_ZOOM_SCALE,
+      maxZoomScale: MAX_ZOOM_SCALE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+      renderPhaseSettling: RENDER_PHASE_SETTLING,
+    },
+    getters: {
+      getD3: () => globalThis.d3,
+      getWidth: () => runtimeState.width,
+      getHeight: () => runtimeState.height,
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+      getZoomTransform: () => runtimeState.zoomTransform,
+      getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
+      getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
+      isZoomRenderScheduled: () => runtimeState.zoomRenderScheduled,
+    },
+    helpers: {
+      cloneZoomTransform,
+      shouldAllowZoomEvent,
+      nowMs,
+      requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),
+    },
+    effects: {
+      setZoomBehavior: (nextZoomBehavior) => {
+        rendererSurfaceHost.setZoomBehavior(nextZoomBehavior);
+      },
+      setZoomGestureStartTransform: (transform) => {
+        runtimeState.zoomGestureStartTransform = transform;
+      },
+      setZoomGestureScaleDelta: (scaleDelta) => {
+        runtimeState.zoomGestureScaleDelta = scaleDelta;
+      },
+      setPendingExactPoliticalFastFrame: (pending) => {
+        runtimeState.pendingExactPoliticalFastFrame = !!pending;
+      },
+      setPendingZoomTransform: (transform) => {
+        runtimeState.pendingZoomTransform = transform;
+      },
+      setZoomRenderScheduled: (scheduled) => {
+        runtimeState.zoomRenderScheduled = !!scheduled;
+      },
+      setZoomGestureEndedAt: (endedAtMs) => {
+        runtimeState.zoomGestureEndedAt = endedAtMs;
+      },
+      clearRenderPhaseTimer,
+      cancelExactAfterSettleRefresh,
+      setRenderPhase,
+      captureInteractionBorderSnapshot,
+      renderHoverOverlayIfNeeded,
+      dismissOnboardingHint,
+      updateMap,
+      scheduleScenarioChunkRefresh: (options) => {
+        if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
+          return runtimeState.scheduleScenarioChunkRefreshFn(options);
+        }
+        return "noop";
+      },
+      scheduleRenderPhaseIdle,
+      updateZoomTranslateExtent,
+      resetZoomToFit,
+      enforceZoomConstraints,
+    },
+  });
+  return zoomInteractionLifecycleOwner;
+}
+
+function getMapInteractionEventBindingOwner() {
+  if (mapInteractionEventBindingOwner) {
+    return mapInteractionEventBindingOwner;
+  }
+  mapInteractionEventBindingOwner = createMapInteractionEventBindingOwner({
+    getters: {
+      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getWindow: () => window,
+      getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),
+    },
+    helpers: {
+      bindInteractionFunnel,
+    },
+    handlers: {
+      mapClick: handleClick,
+      mapDoubleClick: handleDoubleClick,
+      handleMouseMove,
+      handlePhysicalIntensityPointerDown,
+      handlePhysicalIntensityPointerMove,
+      handlePhysicalIntensityPointerEnd,
+      handleBrushPointerDown,
+      handleBrushPointerMove,
+      handleMouseLeave: handleMapMouseLeave,
+      dispatchMapClick,
+      dispatchMapDoubleClick,
+      handleSidebarLayoutStart,
+      handleResize,
+      flushSpecialZoneMembershipDragSession,
+      flushBrushSession,
+    },
+    effects: {
+      bindMapContainerResizeObserver,
+      bindBrowserZoomObservers,
+    },
+  });
+  return mapInteractionEventBindingOwner;
 }
 
 function getIntensityFieldMaskOwner() {
@@ -1866,7 +2034,7 @@ function getIntensityFieldMaskOwner() {
   }
   intensityFieldMaskOwner = createIntensityFieldMaskOwner({
     getFieldsState: () => runtimeState.intensityFields,
-    getProjection: () => projection,
+    getProjection: () => rendererSurfaceHost.getProjection(),
   });
   return intensityFieldMaskOwner;
 }
@@ -1879,9 +2047,9 @@ function getHgoRuntimePreviewRenderOwner() {
     runtimeState,
     renderPassNames: RENDER_PASS_NAMES,
     transformedFramePassNames: TRANSFORMED_FRAME_PASS_NAMES,
-    getProjection: () => projection,
-    getMapSvg: () => mapSvg,
-    getTargetCanvas: () => context?.canvas || null,
+    getProjection: () => rendererSurfaceHost.getProjection(),
+    getMapSvg: () => rendererSurfaceHost.getMapSvg(),
+    getTargetCanvas: () => rendererSurfaceHost.getContext()?.canvas || null,
     callRuntimeHook,
     createHitResult,
     resetCanvasContext,
@@ -1897,9 +2065,6 @@ function getRenderPipelinePassesOwner() {
   }
   renderPipelinePassesOwner = createRenderPipelinePassesOwner({
     state,
-    constants: {
-      exactAfterSettleDeferredPassNames: EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES,
-    },
     drawPasses: {
       drawBackgroundPass,
       drawPhysicalBasePass,
@@ -2080,7 +2245,7 @@ function getStrategicOverlayRuntimeOwner() {
       normalizeUnitCounterStatsPresetId,
       refreshSpecialZonesWorkbenchUi,
       renderNow: () => {
-        if (context) render();
+        if (rendererSurfaceHost.getContext()) render();
       },
       renderOperationGraphicsIfNeeded,
       renderSpecialZonesIfNeeded,
@@ -2422,8 +2587,6 @@ function noteRenderAction(label, startedAt = null) {
   }
 }
 
-const LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES = new Set(["political", "contextBase", "contextScenario", "effects"]);
-
 function getRuntimeChunkSelectionVersion() {
   const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
     ? runtimeState.runtimeChunkLoadState
@@ -2540,8 +2703,8 @@ function getVisibleFrameIdentity(transform = runtimeState.zoomTransform || globa
     selectionVersion: getRuntimeChunkSelectionVersion(),
     topologyRevision: Math.max(0, Number(runtimeState.topologyRevision || 0)),
     dpr: Math.max(1, Number(runtimeState.dpr || 1)),
-    pixelWidth: Math.max(1, Number(context?.canvas?.width || 1)),
-    pixelHeight: Math.max(1, Number(context?.canvas?.height || 1)),
+    pixelWidth: Math.max(1, Number(rendererSurfaceHost.getContext()?.canvas?.width || 1)),
+    pixelHeight: Math.max(1, Number(rendererSurfaceHost.getContext()?.canvas?.height || 1)),
     colorRevision: Number(runtimeState.colorRevision || 0),
     contextFlagSignature: getVisibleContextFlagSignature(),
     transformBucket: getTransformBucketSignature(transform),
@@ -2603,82 +2766,58 @@ function getCommittedFrameIdentity(transform = runtimeState.zoomTransform || glo
 }
 
 function clearLastGoodFrame(reason = "clear") {
-  const cache = getRenderPassCacheState();
-  if (!cache.lastGoodFrame || typeof cache.lastGoodFrame !== "object") return;
-  cache.lastGoodFrame.valid = false;
-  cache.lastGoodFrame.stale = false;
-  cache.lastGoodFrame.referenceTransform = null;
-  cache.lastGoodFrame.commitKey = null;
-  cache.lastGoodFrame.commitKeySignature = "";
-  cache.lastGoodFrame.committedFrameIdentity = null;
-  cache.lastGoodFrame.metadata = null;
-  cache.lastGoodFrame.invalidatedAt = Date.now();
-  cache.lastGoodFrame.reason = String(reason || "clear");
-  cache.lastGoodFrame.staleReason = "";
-  cache.lastGoodFrame.rejectedReason = "";
+  return getRenderCacheOwner().clearLastGoodFrame(reason);
 }
 
-function invalidateLastGoodFrame(reason = "visual-invalidation") {
-  const cache = getRenderPassCacheState();
-  if (!cache.lastGoodFrame || !cache.lastGoodFrame.valid) return;
-  cache.lastGoodFrame.stale = true;
-  cache.lastGoodFrame.invalidatedAt = Date.now();
-  cache.lastGoodFrame.staleReason = String(reason || "visual-invalidation");
-  cache.lastGoodFrame.reason = String(reason || "visual-invalidation");
+function recordLastGoodFrameInvalidationSummary(summary = {}) {
+  const lastGoodFrame = summary.effects?.lastGoodFrame || summary.lastGoodFrame || {};
+  const hostFollowUps = summary.effects?.hostFollowUps || {};
+  if (!lastGoodFrame.invalidated && !summary.lastGoodFrameInvalidated) return;
+  if (hostFollowUps.needsContinuityMetric === false && !summary.lastGoodFrameInvalidated) return;
   recordRenderPerfMetric("continuityFrameMarkedStale", 0, {
-    reason: cache.lastGoodFrame.staleReason,
+    reason: lastGoodFrame.reason || summary.reason || "visual-invalidation",
     activeScenarioId: String(runtimeState.activeScenarioId || ""),
   });
 }
 
 function invalidateInteractionComposite(reason = "interaction-composite-invalidation") {
-  const cache = getRenderPassCacheState();
-  if (!cache.interactionComposite || typeof cache.interactionComposite !== "object") return;
-  cache.interactionComposite.valid = false;
-  cache.interactionComposite.referenceTransform = null;
-  cache.interactionComposite.signature = "";
-  cache.interactionComposite.reason = String(reason || "interaction-composite-invalidation");
-  cache.interactionComposite.rejectedReason = String(reason || "interaction-composite-invalidation");
+  return getRenderCacheOwner().invalidateInteractionComposite(reason);
 }
 
-function invalidateRenderPasses(passNames, reason = "unspecified") {
-  const cache = getRenderPassCacheState();
-  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
-  const expandedTargetPassNames = rawTargetPassNames.flatMap((passName) => {
-    if (passName === "context") {
-      return ["contextBase", "contextScenario"];
-    }
-    return [passName];
-  });
-  const targetPassNames = expandedTargetPassNames.filter((passName) => passName && RENDER_PASS_NAMES.includes(passName));
-  targetPassNames.forEach((passName) => {
-    cache.dirty[passName] = true;
-    cache.reasons[passName] = String(reason || "unspecified");
-  });
-  if (targetPassNames.length) {
+function getMutationPassNames(mutation = {}) {
+  if (Array.isArray(mutation.normalizedPassNames)) return mutation.normalizedPassNames;
+  return Array.isArray(mutation.targetPassNames) ? mutation.targetPassNames : [];
+}
+
+function applyRenderPassInvalidationEffects(mutation = {}) {
+  const targetPassNames = getMutationPassNames(mutation);
+  const reason = mutation.reason || "unspecified";
+  const hostFollowUps = mutation.effects?.hostFollowUps || {};
+  if (hostFollowUps.needsRenderPassDiagnostics || targetPassNames.length) {
     recordRenderPassInvalidationDiagnostics(runtimeState, targetPassNames, reason);
   }
-  if (targetPassNames.some((passName) => LAST_GOOD_FRAME_VISUAL_INVALIDATION_PASSES.has(passName))) {
-    invalidateLastGoodFrame(reason);
-  }
-  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
-    invalidateInteractionComposite(reason);
-  }
+  recordLastGoodFrameInvalidationSummary(mutation);
+  const cache = getRenderPassCacheState();
   if (
-    targetPassNames.includes("political")
+    (hostFollowUps.needsPoliticalPathCacheInvalidation || targetPassNames.includes("political"))
     && !POLITICAL_PATH_CACHE_PRESERVING_INVALIDATION_REASONS.has(String(reason || "unspecified"))
   ) {
     cache.partialPoliticalDirtyIds.clear();
     cancelScenarioPoliticalBackgroundDeferredFullCache(reason);
     invalidatePoliticalPathCache(reason);
   }
-  if (targetPassNames.includes("borders")) {
+  if (hostFollowUps.needsInteractionBorderSnapshotInvalidation || targetPassNames.includes("borders")) {
     invalidateInteractionBorderSnapshot(reason);
   }
+  return mutation;
+}
+
+function invalidateRenderPasses(passNames, reason = "unspecified") {
+  return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateRenderPasses(passNames, reason));
 }
 
 function invalidateAllRenderPasses(reason = "unspecified") {
-  invalidateRenderPasses(RENDER_PASS_NAMES, reason);
+  return applyRenderPassInvalidationEffects(getRenderCacheOwner().invalidateAllRenderPasses(reason));
 }
 
 function releaseDeferredContextBasePass(reason = "deferred-context-release") {
@@ -2698,7 +2837,7 @@ function releaseDeferredContextBasePass(reason = "deferred-context-release") {
   requestRendererRender(normalizedReason, {
     flush: true,
     fallback: () => {
-      if (context) render();
+      if (rendererSurfaceHost.getContext()) render();
     },
   });
   recordRenderPerfMetric("releaseDeferredContextBasePass", 0, {
@@ -2759,39 +2898,15 @@ function isBootInteractionReady() {
 }
 
 function clearRenderPassReferenceTransforms(passNames = null) {
-  const cache = getRenderPassCacheState();
-  if (!passNames) {
-    cache.referenceTransform = null;
-    cache.referenceTransforms = {};
-    cache.contextScenarioLayerCache = {};
-    clearPassFullReferenceTransforms();
-    invalidateInteractionComposite("clear-reference-transform");
-    invalidateInteractionBorderSnapshot("clear-reference-transform");
-    invalidatePoliticalPathCache("clear-reference-transform");
-    return;
+  const mutation = getRenderCacheOwner().clearRenderPassReferenceTransforms(passNames);
+  const hostFollowUps = mutation.effects?.hostFollowUps || {};
+  if (hostFollowUps.needsPoliticalPathCacheInvalidation || mutation.politicalPathCacheInvalidated) {
+    invalidatePoliticalPathCache(mutation.reason || "clear-reference-transform");
   }
-  const rawTargetPassNames = Array.isArray(passNames) ? passNames : [passNames];
-  const targetPassNames = rawTargetPassNames.flatMap((passName) => {
-    if (passName === "context") {
-      return ["contextBase", "contextScenario"];
-    }
-    return [passName];
-  });
-  targetPassNames.forEach((passName) => {
-    if (!passName) return;
-    delete cache.referenceTransforms[passName];
-  });
-  clearPassFullReferenceTransforms(targetPassNames);
-  cache.referenceTransform = null;
-  if (targetPassNames.some((passName) => INTERACTION_COMPOSITE_PASS_NAMES.includes(passName))) {
-    invalidateInteractionComposite("clear-reference-transform");
+  if (hostFollowUps.needsInteractionBorderSnapshotInvalidation || mutation.interactionBorderSnapshotInvalidated) {
+    invalidateInteractionBorderSnapshot(mutation.reason || "clear-reference-transform");
   }
-  if (targetPassNames.includes("political")) {
-    invalidatePoliticalPathCache("clear-reference-transform");
-  }
-  if (targetPassNames.includes("borders")) {
-    invalidateInteractionBorderSnapshot("clear-reference-transform");
-  }
+  return mutation;
 }
 
 function invalidateOceanVisualState(reason = "ocean-visual") {
@@ -2866,13 +2981,13 @@ function canDrawInteractionComposite(currentTransform, cache = getRenderPassCach
 }
 
 function captureLastGoodFrame(reason = "frame", transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  if (!context?.canvas) return false;
+  if (!rendererSurfaceHost.getContext()?.canvas) return false;
   const targetCanvas = ensureLastGoodFrameCanvas();
   const targetContext = targetCanvas.getContext("2d");
   if (!targetContext) return false;
   targetContext.setTransform(1, 0, 0, 1, 0, 0);
   targetContext.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-  targetContext.drawImage(context.canvas, 0, 0);
+  targetContext.drawImage(rendererSurfaceHost.getContext().canvas, 0, 0);
   const cache = getRenderPassCacheState();
   const committedFrameIdentity = getCommittedFrameIdentity(transform, {
     status: "committed",
@@ -3060,7 +3175,7 @@ function canDrawBaseVisibleFrameFallback() {
 }
 
 function drawBaseVisibleFrameFallback(reason = "base-fill") {
-  if (!context?.canvas) return false;
+  if (!rendererSurfaceHost.getContext()?.canvas) return false;
   if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
     noteMissingVisibleFrameSkippedDuringInteraction(`${reason}-skipped-during-interaction`);
     return false;
@@ -3069,11 +3184,11 @@ function drawBaseVisibleFrameFallback(reason = "base-fill") {
     return false;
   }
   resetMainCanvas();
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.fillStyle = getOceanBaseFillColor();
-  context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-  context.restore();
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().fillStyle = getOceanBaseFillColor();
+  rendererSurfaceHost.getContext().fillRect(0, 0, rendererSurfaceHost.getContext().canvas.width, rendererSurfaceHost.getContext().canvas.height);
+  rendererSurfaceHost.getContext().restore();
   noteMissingVisibleFrame(reason, { recordTransaction: false });
   recordVisibleFrameTransactionMetric("committed", {
     reason: String(reason || "base-visible-fallback"),
@@ -3180,12 +3295,12 @@ function drawLastGoodFrameFallback(currentTransform = runtimeState.zoomTransform
   const dx = current.x - (reference.x * scaleRatio);
   const dy = current.y - (reference.y * scaleRatio);
   resetMainCanvas();
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
-  context.scale(scaleRatio * canvasScaleX, scaleRatio * canvasScaleY);
-  context.drawImage(fallbackCanvas, 0, 0);
-  context.restore();
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
+  rendererSurfaceHost.getContext().scale(scaleRatio * canvasScaleX, scaleRatio * canvasScaleY);
+  rendererSurfaceHost.getContext().drawImage(fallbackCanvas, 0, 0);
+  rendererSurfaceHost.getContext().restore();
   incrementPerfCounter("lastGoodFrameReuses");
   if (frame.stale) {
     incrementPerfCounter("continuityFrameReuses");
@@ -3366,11 +3481,11 @@ function getPoliticalPathCacheHandle(
 }
 
 function buildPoliticalFeaturePathEntry(feature) {
-  if (!feature?.geometry || !globalThis.Path2D || typeof pathSVG !== "function") {
+  if (!feature?.geometry || !globalThis.Path2D || typeof rendererSurfaceHost.getPathSvg() !== "function") {
     return null;
   }
   try {
-    const pathString = pathSVG(feature);
+    const pathString = rendererSurfaceHost.getPathSvg()(feature);
     if (!pathString) return null;
     return {
       path: new globalThis.Path2D(pathString),
@@ -3765,7 +3880,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       Number(runtimeState.dpr || 1).toFixed(2),
       Number(runtimeState.width || 0),
       Number(runtimeState.height || 0),
-      projection ? transformSignature : "projection:none",
+      rendererSurfaceHost.getProjection() ? transformSignature : "projection:none",
       hgoProjectionOptions.projectionName,
       hgoProjectionOptions.sourceProjection,
       `seed:${Number(summary.provinceCount || summary.province_count || 0)}:${Number(summary.stateCount || summary.state_count || 0)}:${Number(summary.countryCount || summary.country_count || 0)}`,
@@ -4745,7 +4860,7 @@ function getContourZoomStyleProfile(k) {
 }
 
 function getContourFeatureHostFillColor(feature) {
-  if (!feature || !runtimeState.spatialItems?.length || !projection) return null;
+  if (!feature || !runtimeState.spatialItems?.length || !rendererSurfaceHost.getProjection()) return null;
   const cacheKey = [
     Number(runtimeState.colorRevision || 0),
     String(runtimeState.activeScenarioId || ""),
@@ -4757,9 +4872,9 @@ function getContourFeatureHostFillColor(feature) {
   }
 
   const geographicCentroid = getFeatureGeoCentroid(feature);
-  const projectedCentroid = pathCanvas?.centroid
-    ? pathCanvas.centroid(feature)
-    : (Array.isArray(geographicCentroid) ? projection(geographicCentroid) : null);
+  const projectedCentroid = rendererSurfaceHost.getPathCanvas()?.centroid
+    ? rendererSurfaceHost.getPathCanvas().centroid(feature)
+    : (Array.isArray(geographicCentroid) ? rendererSurfaceHost.getProjection()(geographicCentroid) : null);
   const resolveFromRadius = (radiusProj = 0) => {
     if (
       !Array.isArray(projectedCentroid)
@@ -4932,10 +5047,10 @@ function setDebugMode(modeName) {
   debugMode = nextMode;
   runtimeState.debugMode = nextMode;
   invalidateRenderPasses(["political", "borders"], "debug-mode");
-  if (pathSVG) {
+  if (rendererSurfaceHost.getPathSvg()) {
     buildSpatialIndex();
   }
-  if (context) {
+  if (rendererSurfaceHost.getContext()) {
     render();
   }
 }
@@ -4966,15 +5081,15 @@ function prepareTargetContext(
 
 function withRenderTarget(targetContext, callback) {
   if (!targetContext || typeof callback !== "function") return undefined;
-  const previousContext = context;
-  const previousPathCanvas = pathCanvas;
-  context = targetContext;
-  pathCanvas = globalThis.d3.geoPath(projection, targetContext).pointRadius(PATH_POINT_RADIUS);
+  const previousContext = rendererSurfaceHost.getContext();
+  const previousPathCanvas = rendererSurfaceHost.getPathCanvas();
+  rendererSurfaceHost.setContext(targetContext);
+  rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(rendererSurfaceHost.getProjection(), targetContext).pointRadius(PATH_POINT_RADIUS));
   try {
     return callback();
   } finally {
-    context = previousContext;
-    pathCanvas = previousPathCanvas;
+    rendererSurfaceHost.setContext(previousContext);
+    rendererSurfaceHost.setPathCanvas(previousPathCanvas);
   }
 }
 
@@ -5002,8 +5117,8 @@ function recordPassTiming(timings, passName, startedAt) {
 
 function getLogicalCanvasDimensions() {
   const dpr = Math.max(runtimeState.dpr || 1, 1);
-  const widthFromCanvas = context?.canvas?.width ? context.canvas.width / dpr : 0;
-  const heightFromCanvas = context?.canvas?.height ? context.canvas.height / dpr : 0;
+  const widthFromCanvas = rendererSurfaceHost.getContext()?.canvas?.width ? rendererSurfaceHost.getContext().canvas.width / dpr : 0;
+  const heightFromCanvas = rendererSurfaceHost.getContext()?.canvas?.height ? rendererSurfaceHost.getContext().canvas.height / dpr : 0;
   const width = Math.max(runtimeState.width || 0, widthFromCanvas || 0, 1);
   const height = Math.max(runtimeState.height || 0, heightFromCanvas || 0, 1);
   return [width, height];
@@ -5067,7 +5182,7 @@ function getExactAfterSettleScheduler() {
     renderPassNames: RENDER_PASS_NAMES,
     renderPhaseIdle: RENDER_PHASE_IDLE,
     exactContextRefreshDelayMs: DEFERRED_EXACT_CONTEXT_REFRESH_DELAY_MS,
-    getContext: () => context,
+    getContext: () => rendererSurfaceHost.getContext(),
     getVisibleContextFlagSignature,
     cloneZoomTransform,
     getAdaptiveSettleProfile,
@@ -5127,39 +5242,19 @@ function isHeavyScenarioStagedApplyCandidate() {
 }
 
 function getViewportRenderSignature() {
-  return [
-    Math.round(Number(runtimeState.width || 0)),
-    Math.round(Number(runtimeState.height || 0)),
-    Number(Number(runtimeState.dpr || 1).toFixed(2)),
-  ].join("|");
+  return getViewportReadModelOwner().getViewportRenderSignature();
 }
 
 function getProjectionRenderSignature() {
-  if (!projection || typeof projection.scale !== "function" || typeof projection.translate !== "function") {
-    return "projection:na";
-  }
-  const translate = projection.translate() || [0, 0];
-  return [
-    Number(Number(projection.scale() || 0).toFixed(3)),
-    Number(Number(translate[0] || 0).toFixed(3)),
-    Number(Number(translate[1] || 0).toFixed(3)),
-  ].join("|");
+  return getViewportReadModelOwner().getProjectionRenderSignature();
 }
 
 function getContextBaseZoomBucketId(k = runtimeState.zoomTransform?.k || 1) {
-  const normalized = Math.max(0.0001, Number(k || 1));
-  if (normalized < CONTEXT_BASE_BUCKET_LOW_MAX) return "low";
-  if (normalized < CONTEXT_BASE_BUCKET_MID_MAX) return "mid";
-  return "high";
+  return getRenderTransformReusePolicyOwner().getContextBaseZoomBucketId(k);
 }
 
 function getContextBaseReuseMaxDistancePx() {
-  const viewportMin = Math.max(1, Math.min(Number(runtimeState.width || 0), Number(runtimeState.height || 0)));
-  const scaled = viewportMin * CONTEXT_BASE_REUSE_MAX_DISTANCE_VIEWPORT_RATIO;
-  return Math.max(
-    CONTEXT_BASE_REUSE_MIN_DISTANCE_PX,
-    Math.min(CONTEXT_BASE_REUSE_MAX_DISTANCE_PX, scaled)
-  );
+  return getRenderTransformReusePolicyOwner().getContextBaseReuseMaxDistancePx();
 }
 
 function resetPhysicalLandClipPathCache() {
@@ -5168,238 +5263,55 @@ function resetPhysicalLandClipPathCache() {
 }
 
 function shouldEnableContextBaseTransformReuse() {
-  return (
-    String(runtimeState.renderProfile || "auto") === "balanced"
-    && isHeavyScenarioStagedApplyCandidate()
-    && !!runtimeState.activeScenarioId
-  );
+  return getRenderTransformReusePolicyOwner().shouldEnableContextBaseTransformReuse();
 }
 
 function shouldEnableContextScenarioTransformReuse() {
-  return String(runtimeState.renderProfile || "auto") === "balanced" && !!runtimeState.activeScenarioId;
+  return getRenderTransformReusePolicyOwner().shouldEnableContextScenarioTransformReuse();
 }
 
 function normalizeScenarioWaterCacheStrategyMode(rawMode) {
-  const normalized = String(rawMode || "").trim().toLowerCase();
-  return SCENARIO_WATER_CACHE_MODES.has(normalized) ? normalized : "";
+  return getScenarioWaterCachePolicyOwner().normalizeScenarioWaterCacheStrategyMode(rawMode);
 }
 
 function getFirstValidScenarioWaterCacheStrategyMode(...rawModes) {
-  for (let index = 0; index < rawModes.length; index += 1) {
-    const mode = normalizeScenarioWaterCacheStrategyMode(rawModes[index]);
-    if (mode) return mode;
-  }
-  return "";
+  return getScenarioWaterCachePolicyOwner().getFirstValidScenarioWaterCacheStrategyMode(...rawModes);
 }
 
 function getForcedScenarioWaterCacheMode() {
-  const queryMode = getFirstValidScenarioWaterCacheStrategyMode(
-    readSearchParam(SCENARIO_WATER_CACHE_MODE_PARAM),
-    readSearchParam(SCENARIO_WATER_CACHE_MODE_ALT_PARAM)
-  );
-  if (queryMode) {
-    return {
-      mode: queryMode,
-      source: "query-param",
-    };
-  }
-
-  const profileMode = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
-    ? getFirstValidScenarioWaterCacheStrategyMode(
-      runtimeState.renderProfile.waterCacheMode,
-      runtimeState.renderProfile.scenarioWaterCacheMode
-    )
-    : "";
-  if (profileMode) {
-    return {
-      mode: profileMode,
-      source: "render-profile",
-    };
-  }
-
-  const stateMode = getFirstValidScenarioWaterCacheStrategyMode(
-    runtimeState.scenarioWaterCacheMode,
-    runtimeState.waterCacheMode
-  );
-  if (stateMode) {
-    return {
-      mode: stateMode,
-      source: "state",
-    };
-  }
-
-  return {
-    mode: "adaptive",
-    source: "default",
-  };
+  return getScenarioWaterCachePolicyOwner().getForcedScenarioWaterCacheMode();
 }
 
 function normalizeScenarioWaterCoverageAlgo(rawValue) {
-  const normalized = String(rawValue || "").trim().toLowerCase();
-  return SCENARIO_WATER_COVERAGE_ALGOS.has(normalized) ? normalized : "";
+  return getScenarioWaterCachePolicyOwner().normalizeScenarioWaterCoverageAlgo(rawValue);
 }
 
 function getFirstValidScenarioWaterCoverageAlgo(...rawValues) {
-  for (let index = 0; index < rawValues.length; index += 1) {
-    const algo = normalizeScenarioWaterCoverageAlgo(rawValues[index]);
-    if (algo) return algo;
-  }
-  return "";
+  return getScenarioWaterCachePolicyOwner().getFirstValidScenarioWaterCoverageAlgo(...rawValues);
 }
 
 function getForcedScenarioWaterCoverageAlgo() {
-  const queryAlgo = getFirstValidScenarioWaterCoverageAlgo(
-    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_PARAM),
-    readSearchParam(SCENARIO_WATER_COVERAGE_ALGO_ALT_PARAM)
-  );
-  if (queryAlgo) {
-    return {
-      algo: queryAlgo,
-      source: "query-param",
-    };
-  }
-
-  const profileAlgo = runtimeState.renderProfile && typeof runtimeState.renderProfile === "object"
-    ? getFirstValidScenarioWaterCoverageAlgo(
-      runtimeState.renderProfile.waterCacheCoverageAlgo,
-      runtimeState.renderProfile.scenarioWaterCacheCoverageAlgo
-    )
-    : "";
-  if (profileAlgo) {
-    return {
-      algo: profileAlgo,
-      source: "render-profile",
-    };
-  }
-
-  const stateAlgo = getFirstValidScenarioWaterCoverageAlgo(
-    runtimeState.waterCacheCoverageAlgo,
-    runtimeState.scenarioWaterCacheCoverageAlgo
-  );
-  if (stateAlgo) {
-    return {
-      algo: stateAlgo,
-      source: "state",
-    };
-  }
-
-  return {
-    algo: "grid",
-    source: "default",
-  };
+  return getScenarioWaterCachePolicyOwner().getForcedScenarioWaterCoverageAlgo();
 }
 
 function getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures = []) {
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
-  const viewportArea = viewportWidth * viewportHeight;
-  if (!(viewportArea > 0)) return 0;
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  let clippedArea = 0;
-  (Array.isArray(waterFeatures) ? waterFeatures : []).forEach((feature) => {
-    if (!isWaterRegionRenderable(feature)) return;
-    collectSafeWaterRegionGeometryParts(feature).forEach((part) => {
-      const bounds = computeProjectedGeoBounds(part);
-      if (!bounds) return;
-      const minX = bounds.minX * transform.k + transform.x;
-      const minY = bounds.minY * transform.k + transform.y;
-      const maxX = bounds.maxX * transform.k + transform.x;
-      const maxY = bounds.maxY * transform.k + transform.y;
-      if (![minX, minY, maxX, maxY].every(Number.isFinite)) return;
-      const clippedWidth = Math.max(0, Math.min(maxX, viewportWidth) - Math.max(minX, 0));
-      const clippedHeight = Math.max(0, Math.min(maxY, viewportHeight) - Math.max(minY, 0));
-      if (!(clippedWidth > 0 && clippedHeight > 0)) return;
-      clippedArea += clippedWidth * clippedHeight;
-    });
-  });
-  return Math.max(0, Math.min(1, clippedArea / viewportArea));
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures);
 }
 
 function getScenarioWaterVisibleCoverageRatioGrid(waterFeatures = []) {
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 0));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 0));
-  if (!(viewportWidth > 0 && viewportHeight > 0)) return 0;
-  const dpr = Math.max(1, Math.min(SCENARIO_WATER_COVERAGE_GRID_MAX_DPR, Number(globalThis.devicePixelRatio || 1)));
-  const gridColumns = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_COLUMNS * dpr));
-  const gridRows = Math.max(1, Math.round(SCENARIO_WATER_COVERAGE_GRID_BASE_ROWS * dpr));
-  const totalCellCount = gridColumns * gridRows;
-  if (!(totalCellCount > 0)) return 0;
-  const transform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity);
-  const covered = new Uint8Array(totalCellCount);
-  let coveredCount = 0;
-  const safeWaterFeatures = Array.isArray(waterFeatures) ? waterFeatures : [];
-  for (const feature of safeWaterFeatures) {
-    if (!isWaterRegionRenderable(feature)) continue;
-    if (coveredCount >= totalCellCount) break;
-    for (const part of collectSafeWaterRegionGeometryParts(feature)) {
-      if (coveredCount >= totalCellCount) break;
-      const bounds = computeProjectedGeoBounds(part);
-      if (!bounds) continue;
-      const minX = bounds.minX * transform.k + transform.x;
-      const minY = bounds.minY * transform.k + transform.y;
-      const maxX = bounds.maxX * transform.k + transform.x;
-      const maxY = bounds.maxY * transform.k + transform.y;
-      if (![minX, minY, maxX, maxY].every(Number.isFinite)) continue;
-      const clippedMinX = Math.max(0, Math.min(minX, viewportWidth));
-      const clippedMinY = Math.max(0, Math.min(minY, viewportHeight));
-      const clippedMaxX = Math.max(0, Math.min(maxX, viewportWidth));
-      const clippedMaxY = Math.max(0, Math.min(maxY, viewportHeight));
-      if (!(clippedMaxX > clippedMinX && clippedMaxY > clippedMinY)) continue;
-
-      const colStart = Math.max(0, Math.min(gridColumns - 1, Math.floor((clippedMinX / viewportWidth) * gridColumns)));
-      const colEnd = Math.max(0, Math.min(
-        gridColumns - 1,
-        Math.ceil((clippedMaxX / viewportWidth) * gridColumns) - 1
-      ));
-      const rowStart = Math.max(0, Math.min(gridRows - 1, Math.floor((clippedMinY / viewportHeight) * gridRows)));
-      const rowEnd = Math.max(0, Math.min(
-        gridRows - 1,
-        Math.ceil((clippedMaxY / viewportHeight) * gridRows) - 1
-      ));
-      if (colEnd < colStart || rowEnd < rowStart) continue;
-
-      for (let row = rowStart; row <= rowEnd; row += 1) {
-        const rowOffset = row * gridColumns;
-        for (let col = colStart; col <= colEnd; col += 1) {
-          const cellIndex = rowOffset + col;
-          if (covered[cellIndex]) continue;
-          covered[cellIndex] = 1;
-          coveredCount += 1;
-          if (coveredCount >= totalCellCount) break;
-        }
-        if (coveredCount >= totalCellCount) break;
-      }
-    }
-  }
-  return Math.max(0, Math.min(1, coveredCount / totalCellCount));
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatioGrid(waterFeatures);
 }
 
 function getScenarioWaterVisibleCoverageRatio(waterFeatures = [], options = {}) {
-  const algo = normalizeScenarioWaterCoverageAlgo(options?.algo) || getForcedScenarioWaterCoverageAlgo().algo;
-  if (algo === "legacy") return getScenarioWaterVisibleCoverageRatioLegacy(waterFeatures);
-  return getScenarioWaterVisibleCoverageRatioGrid(waterFeatures);
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterVisibleCoverageRatio(waterFeatures, options);
 }
 
 function getScenarioWaterCacheComplexitySignals(waterFeatures = []) {
-  const featureCount = Array.isArray(waterFeatures) ? waterFeatures.length : 0;
-  const coverageAlgoDecision = getForcedScenarioWaterCoverageAlgo();
-  const visibleCoverageRatio = getScenarioWaterVisibleCoverageRatio(waterFeatures, { algo: coverageAlgoDecision.algo });
-  const previousRenderedCount = Math.max(0, Number(lastScenarioWaterRenderedCount || 0));
-  return {
-    featureCount,
-    visibleCoverageRatio: Number(visibleCoverageRatio.toFixed(4)),
-    previousRenderedCount,
-    waterCoverageAlgo: coverageAlgoDecision.algo,
-    waterCoverageAlgoSource: coverageAlgoDecision.source,
-  };
+  return getScenarioWaterCachePolicyOwner().getScenarioWaterCacheComplexitySignals(waterFeatures);
 }
 
 function shouldUseDirectScenarioWaterDraw(signals) {
-  return (
-    Number(signals?.featureCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_FEATURE_MAX
-    && Number(signals?.visibleCoverageRatio || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_COVERAGE_MAX
-    && Number(signals?.previousRenderedCount || 0) <= SCENARIO_WATER_LOW_COMPLEXITY_PREV_RENDERED_MAX
-  );
+  return getScenarioWaterCachePolicyOwner().shouldUseDirectScenarioWaterDraw(signals);
 }
 
 function getPassReferenceTransform(passName) {
@@ -5465,176 +5377,19 @@ function createPoliticalPassDrawResult(sceneIdentity, {
 }
 
 function getTransformReuseDelta(currentTransform, referenceTransform) {
-  const current = cloneZoomTransform(currentTransform);
-  const reference = cloneZoomTransform(referenceTransform);
-  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
-  const dx = current.x - (reference.x * scaleRatio);
-  const dy = current.y - (reference.y * scaleRatio);
-  const distancePx = Math.hypot(dx, dy);
-  return {
-    current,
-    reference,
-    scaleRatio,
-    dx,
-    dy,
-    distancePx,
-  };
+  return getRenderTransformReusePolicyOwner().getTransformReuseDelta(currentTransform, referenceTransform);
 }
 
 function getContextBaseReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  const referenceTransform = getPassReferenceTransform("contextBase");
-  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
-  if (!shouldEnableContextBaseTransformReuse()) {
-    return {
-      enabled: false,
-      shouldExactRefresh: true,
-      reason: "reuse-disabled",
-      scaleRatio: 1,
-      distancePx: 0,
-      zoomBucket: currentBucket,
-      referenceZoomBucket: currentBucket,
-      crossesMinorContourThreshold: false,
-      referenceTransform,
-    };
-  }
-  if (!referenceTransform) {
-    return {
-      enabled: true,
-      shouldExactRefresh: true,
-      reason: "no-reference-transform",
-      scaleRatio: 1,
-      distancePx: 0,
-      zoomBucket: currentBucket,
-      referenceZoomBucket: "",
-      crossesMinorContourThreshold: false,
-      referenceTransform: null,
-    };
-  }
-  const delta = getTransformReuseDelta(transform, referenceTransform);
-  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
-  const crossesMinorContourThreshold =
-    (delta.reference.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD)
-    || (delta.reference.k >= CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD && delta.current.k < CONTEXT_BASE_MINOR_CONTOUR_THRESHOLD);
-  const crossesZoomBucket = currentBucket !== referenceBucket;
-  const maxDistancePx = getContextBaseReuseMaxDistancePx();
-  const shouldExactRefresh =
-    crossesZoomBucket
-    || delta.distancePx > maxDistancePx
-    || crossesMinorContourThreshold;
-  let reason = "transform-reuse";
-  if (crossesZoomBucket) {
-    reason = "zoom-bucket-change";
-  } else if (delta.distancePx > maxDistancePx) {
-    reason = "distance-threshold";
-  } else if (crossesMinorContourThreshold) {
-    reason = "minor-contour-threshold";
-  }
-  return {
-    enabled: true,
-    shouldExactRefresh,
-    reason,
-    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
-    distancePx: Number(delta.distancePx.toFixed(2)),
-    maxDistancePx: Number(maxDistancePx.toFixed(2)),
-    zoomBucket: currentBucket,
-    referenceZoomBucket: referenceBucket,
-    crossesZoomBucket,
-    crossesMinorContourThreshold,
-    referenceTransform,
-    currentTransform: delta.current,
-  };
+  return getRenderTransformReusePolicyOwner().getContextBaseReuseDecision(transform);
 }
 
 function getContextScenarioReuseDecision(transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity) {
-  const cache = getRenderPassCacheState();
-  const referenceTransform = getPassReferenceTransform("contextScenario");
-  const currentBucket = getContextBaseZoomBucketId(transform?.k || runtimeState.zoomTransform?.k || 1);
-  const reuseFrameCount = Math.max(0, Number(cache.counters?.contextScenarioReuseCount || 0));
-  if (!shouldEnableContextScenarioTransformReuse()) {
-    return {
-      enabled: false,
-      shouldExactRefresh: true,
-      reason: "reuse-disabled",
-      scaleRatio: 1,
-      distancePx: 0,
-      maxDistancePx: getContextBaseReuseMaxDistancePx(),
-      zoomBucket: currentBucket,
-      referenceZoomBucket: currentBucket,
-      crossesZoomBucket: false,
-      reuseFrameCount,
-      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-      referenceTransform,
-    };
-  }
-  if (!referenceTransform) {
-    return {
-      enabled: true,
-      shouldExactRefresh: true,
-      reason: "no-reference-transform",
-      scaleRatio: 1,
-      distancePx: 0,
-      maxDistancePx: getContextBaseReuseMaxDistancePx(),
-      zoomBucket: currentBucket,
-      referenceZoomBucket: "",
-      crossesZoomBucket: false,
-      reuseFrameCount,
-      reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-      referenceTransform: null,
-    };
-  }
-  const delta = getTransformReuseDelta(transform, referenceTransform);
-  const referenceBucket = getContextBaseZoomBucketId(referenceTransform?.k || 1);
-  const crossesZoomBucket = currentBucket !== referenceBucket;
-  const maxDistancePx = Math.max(
-    getContextBaseReuseMaxDistancePx(),
-    CONTEXT_SCENARIO_REUSE_MAX_DISTANCE_PX,
-  );
-  const reachesReuseFrameLimit = reuseFrameCount >= CONTEXT_SCENARIO_REUSE_FRAME_LIMIT;
-  const shouldExactRefresh =
-    delta.distancePx > maxDistancePx
-    || reachesReuseFrameLimit;
-  let reason = "transform-reuse";
-  if (delta.distancePx > maxDistancePx) {
-    reason = "distance-threshold";
-  } else if (reachesReuseFrameLimit) {
-    reason = "reuse-frame-limit";
-  }
-  return {
-    enabled: true,
-    shouldExactRefresh,
-    reason,
-    scaleRatio: Number(delta.scaleRatio.toFixed(4)),
-    distancePx: Number(delta.distancePx.toFixed(2)),
-    maxDistancePx: Number(maxDistancePx.toFixed(2)),
-    zoomBucket: currentBucket,
-    referenceZoomBucket: referenceBucket,
-    crossesZoomBucket,
-    reuseFrameCount,
-    reuseFrameLimit: CONTEXT_SCENARIO_REUSE_FRAME_LIMIT,
-    referenceTransform,
-    currentTransform: delta.current,
-  };
+  return getRenderTransformReusePolicyOwner().getContextScenarioReuseDecision(transform);
 }
 
 function shouldStartExactAfterSettleFastPath() {
-  if (!shouldEnableContextBaseTransformReuse()) return false;
-  if (runtimeState.deferContextBasePass) return false;
-  const requiredPasses = [
-    "background",
-    "physicalBase",
-    "political",
-    "contextBase",
-    "contextScenario",
-    "effects",
-    "lineEffects",
-    "contextMarkers",
-    "dayNight",
-    "textureLabels",
-  ];
-  return requiredPasses.every((passName) => {
-    const cache = getRenderPassCacheState();
-    return !!cache.canvases?.[passName] && !!getPassReferenceTransform(passName);
-  });
+  return getRenderTransformReusePolicyOwner().shouldStartExactAfterSettleFastPath();
 }
 
 function ensureProjectedBoundsCache() {
@@ -5645,16 +5400,14 @@ function ensureProjectedBoundsCache() {
 }
 
 function clearProjectedBoundsCache() {
-  ensureProjectedBoundsCache().clear();
-  scenarioWaterPartPathCache = new WeakMap();
-  scenarioWaterFeaturePathCache = new WeakMap();
+  return getProjectedGeometryBoundsOwner().clearProjectedBoundsCache();
 }
 
 function isLineGeometryType(geometryType) {
   return geometryType === "LineString" || geometryType === "MultiLineString";
 }
 
-function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
+function recordProjectedBoundsDiagnosticsState(feature, reason = "unknown") {
   const geometryType = String(feature?.geometry?.type || "").trim() || "Unknown";
   const diagnostics = runtimeState.projectedBoundsDiagnostics && typeof runtimeState.projectedBoundsDiagnostics === "object"
     ? runtimeState.projectedBoundsDiagnostics
@@ -5684,309 +5437,76 @@ function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
   });
 }
 
+function recordProjectedBoundsDiagnostic(feature, reason = "unknown") {
+  return getProjectedGeometryBoundsOwner().recordProjectedBoundsDiagnostic(feature, reason);
+}
+
 function computeProjectedFeatureBounds(feature) {
-  return computeProjectedGeoBounds(feature);
+  return getProjectedGeometryBoundsOwner().computeProjectedFeatureBounds(feature);
 }
 
 function computeProjectedCoordinateBounds(geoObject) {
-  if (!projection || !geoObject || typeof geoObject !== "object") return null;
-  const geometry = String(geoObject.type || "") === "Feature" ? geoObject.geometry : geoObject;
-  const coordinates = geometry?.coordinates;
-  if (!Array.isArray(coordinates)) return null;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const visit = (value) => {
-    if (!Array.isArray(value)) return;
-    if (value.length >= 2 && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
-      const projected = projection([Number(value[0]), Number(value[1])]);
-      if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
-      minX = Math.min(minX, projected[0]);
-      minY = Math.min(minY, projected[1]);
-      maxX = Math.max(maxX, projected[0]);
-      maxY = Math.max(maxY, projected[1]);
-      return;
-    }
-    value.forEach(visit);
-  };
-  visit(coordinates);
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return null;
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: maxX - minX,
-    height: maxY - minY,
-    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
-  };
+  return getProjectedGeometryBoundsOwner().computeProjectedCoordinateBounds(geoObject);
 }
 
 function computeProjectedGeoBounds(geoObject) {
-  const pathRef = pathCanvas || pathSVG;
-  if (!pathRef || !geoObject) return null;
-
-  let bounds = null;
-  try {
-    bounds = pathRef.bounds(geoObject);
-  } catch (error) {
-    return computeProjectedCoordinateBounds(geoObject);
-  }
-
-  if (!bounds || bounds.length !== 2) return computeProjectedCoordinateBounds(geoObject);
-  const minX = bounds[0][0];
-  const minY = bounds[0][1];
-  const maxX = bounds[1][0];
-  const maxY = bounds[1][1];
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return computeProjectedCoordinateBounds(geoObject);
-
-  const featureWidth = maxX - minX;
-  const featureHeight = maxY - minY;
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: featureWidth,
-    height: featureHeight,
-    area: Math.max(0, featureWidth) * Math.max(0, featureHeight),
-  };
+  return getProjectedGeometryBoundsOwner().computeProjectedGeoBounds(geoObject);
 }
 
 function normalizeGeoObjectForSphericalDiagnostics(geoObject) {
-  if (!geoObject || typeof geoObject !== "object") return null;
-  const objectType = String(geoObject.type || "").trim();
-  if (objectType === "Feature" || objectType === "FeatureCollection" || objectType === "Sphere") {
-    return geoObject;
-  }
-  if (objectType) {
-    return {
-      type: "Feature",
-      properties: {},
-      geometry: geoObject,
-    };
-  }
-  return null;
+  return getProjectedGeometryBoundsOwner().normalizeGeoObjectForSphericalDiagnostics(geoObject);
 }
 
 function getSphericalGeometryDiagnostics(geoObject) {
-  const normalizedGeoObject = normalizeGeoObjectForSphericalDiagnostics(geoObject);
-  if (!normalizedGeoObject || !globalThis.d3?.geoArea || !globalThis.d3?.geoBounds) {
-    return null;
-  }
-  if (sphericalGeometryDiagnosticsByObject.has(geoObject)) {
-    return sphericalGeometryDiagnosticsByObject.get(geoObject) || null;
-  }
-
-  try {
-    const area = Number(globalThis.d3.geoArea(normalizedGeoObject));
-    const bounds = globalThis.d3.geoBounds(normalizedGeoObject);
-    const diagnostics = {
-      area,
-      bounds,
-      isWorldBounds: isWorldBounds(bounds),
-      hasExcessiveSphereArea: Number.isFinite(area) && area > SPHERICAL_GEOMETRY_MAX_AREA,
-    };
-    diagnostics.invalid = diagnostics.isWorldBounds || diagnostics.hasExcessiveSphereArea;
-    sphericalGeometryDiagnosticsByObject.set(geoObject, diagnostics);
-    return diagnostics;
-  } catch (_error) {
-    return null;
-  }
+  return getProjectedGeometryBoundsOwner().getSphericalGeometryDiagnostics(geoObject);
 }
 
 function isSphericalGeometryUnsafe(geoObject) {
-  return !!getSphericalGeometryDiagnostics(geoObject)?.invalid;
+  return getProjectedGeometryBoundsOwner().isSphericalGeometryUnsafe(geoObject);
 }
 
 function collectPolygonalGeometryParts(geometry) {
-  if (!geometry || typeof geometry !== "object") return [];
-  const geometryType = String(geometry.type || "");
-  if (geometryType === "Polygon") {
-    return [geometry];
-  }
-  if (geometryType === "MultiPolygon") {
-    const coordinates = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
-    return coordinates
-      .filter((partCoordinates) => Array.isArray(partCoordinates) && partCoordinates.length > 0)
-      .map((partCoordinates) => ({
-        type: "Polygon",
-        coordinates: partCoordinates,
-      }));
-  }
-  if (geometryType === "GeometryCollection") {
-    return (Array.isArray(geometry.geometries) ? geometry.geometries : [])
-      .flatMap((partGeometry) => collectPolygonalGeometryParts(partGeometry));
-  }
-  return [];
+  return getProjectedGeometryBoundsOwner().collectPolygonalGeometryParts(geometry);
 }
 
 function collectFeatureHitGeometries(feature) {
-  const geometry = feature?.geometry;
-  const polygonParts = collectPolygonalGeometryParts(geometry);
-  return polygonParts.length ? polygonParts : (geometry ? [geometry] : []);
+  return getProjectedGeometryBoundsOwner().collectFeatureHitGeometries(feature);
 }
 
 function buildWaterRegionFeatureFromParts(feature, parts) {
-  const safeParts = Array.isArray(parts) ? parts : [];
-  if (!feature || !safeParts.length) return null;
-  if (safeParts.length === 1) {
-    return {
-      ...feature,
-      geometry: safeParts[0],
-    };
-  }
-  return {
-    ...feature,
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: safeParts
-        .filter((part) => String(part?.type || "") === "Polygon" && Array.isArray(part.coordinates))
-        .map((part) => part.coordinates),
-    },
-  };
+  return getProjectedGeometryBoundsOwner().buildWaterRegionFeatureFromParts(feature, parts);
 }
 
 function collectSafeWaterRegionGeometryPartsInfo(feature) {
-  if (!feature || typeof feature !== "object") {
-    return { parts: [], rawCount: 0, removedCount: 0 };
-  }
-  if (safeWaterRegionGeometryPartsByFeature.has(feature)) {
-    return safeWaterRegionGeometryPartsByFeature.get(feature);
-  }
-  const rawParts = collectFeatureHitGeometries(feature);
-  const safeParts = [];
-  let removedCount = 0;
-  rawParts.forEach((part) => {
-    if (isSphericalGeometryUnsafe(part)) {
-      removedCount += 1;
-      return;
-    }
-    safeParts.push(part);
-  });
-  const info = {
-    parts: safeParts,
-    rawCount: rawParts.length,
-    removedCount,
-  };
-  safeWaterRegionGeometryPartsByFeature.set(feature, info);
-  return info;
+  return getProjectedGeometryBoundsOwner().collectSafeWaterRegionGeometryPartsInfo(feature);
 }
 
 function collectSafeWaterRegionGeometryParts(feature) {
-  return collectSafeWaterRegionGeometryPartsInfo(feature).parts;
+  return getProjectedGeometryBoundsOwner().collectSafeWaterRegionGeometryParts(feature);
 }
 
 function shouldExcludeWaterHitGeometry(hitGeometry, feature = null) {
-  return isSphericalGeometryUnsafe(hitGeometry);
+  return getProjectedGeometryBoundsOwner().shouldExcludeWaterHitGeometry(hitGeometry, feature);
 }
 
 function sanitizeWaterRegionFeature(feature) {
-  if (!feature || typeof feature !== "object") return null;
-  if (sanitizedWaterRegionFeatureByFeature.has(feature)) {
-    return sanitizedWaterRegionFeatureByFeature.get(feature);
-  }
-  const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
-  const sanitized = partInfo.removedCount > 0
-    ? buildWaterRegionFeatureFromParts(feature, partInfo.parts)
-    : feature;
-  sanitizedWaterRegionFeatureByFeature.set(feature, sanitized);
-  return sanitized;
+  return getProjectedGeometryBoundsOwner().sanitizeWaterRegionFeature(feature);
 }
 
 function sanitizeWaterRegionFeatures(features = []) {
-  const sanitizedFeatures = [];
-  const changedFeatureIds = [];
-  let removedPartCount = 0;
-  (Array.isArray(features) ? features : []).forEach((feature) => {
-    const sanitized = sanitizeWaterRegionFeature(feature);
-    const partInfo = collectSafeWaterRegionGeometryPartsInfo(feature);
-    if (partInfo.removedCount > 0) {
-      const featureId = getFeatureId(feature);
-      if (featureId) changedFeatureIds.push(featureId);
-      removedPartCount += partInfo.removedCount;
-    }
-    if (sanitized) sanitizedFeatures.push(sanitized);
-  });
-  if (removedPartCount > 0) {
-    const uniqueIds = Array.from(new Set(changedFeatureIds)).sort();
-    recordRenderPerfMetric("waterSphericalSanitization", 0, {
-      removedPartCount,
-      featureIds: uniqueIds,
-    });
-    const warningKey = `${runtimeState.activeScenarioId || ""}:${uniqueIds.join(",")}:${removedPartCount}`;
-    if (!waterSphericalSanitizationWarnings.has(warningKey)) {
-      waterSphericalSanitizationWarnings.add(warningKey);
-      console.warn(
-        `[map_renderer] Removed ${removedPartCount} D3-unsafe water geometry part(s): ${uniqueIds.join(", ")}`
-      );
-    }
-  }
-  return sanitizedFeatures;
+  return getProjectedGeometryBoundsOwner().sanitizeWaterRegionFeatures(features);
 }
 
 function rebuildProjectedBoundsCache() {
-  clearProjectedBoundsCache();
-  const cache = ensureProjectedBoundsCache();
-  if (runtimeState.landData?.features?.length) {
-    runtimeState.landData.features.forEach((feature) => {
-      const featureId = getFeatureId(feature);
-      if (!featureId) return;
-      const bounds = computeProjectedFeatureBounds(feature);
-      if (!bounds) return;
-      cache.set(featureId, bounds);
-    });
-  }
-  if (runtimeState.riversData?.features?.length) {
-    runtimeState.riversData.features.forEach((feature) => {
-      const featureId = getFeatureId(feature);
-      if (!featureId) return;
-      const bounds = computeProjectedFeatureBounds(feature);
-      if (!bounds) return;
-      cache.set(featureId, bounds);
-    });
-  }
+  return getProjectedGeometryBoundsOwner().rebuildProjectedBoundsCache();
 }
 
 function getProjectedFeatureBounds(feature, { featureId = null, allowCompute = true } = {}) {
-  const resolvedFeatureId = featureId || getFeatureId(feature);
-  if (resolvedFeatureId) {
-    const cache = ensureProjectedBoundsCache();
-    if (cache.has(resolvedFeatureId)) {
-      return cache.get(resolvedFeatureId) || null;
-    }
-    if (!allowCompute) return null;
-    const computed = computeProjectedFeatureBounds(feature);
-    if (computed) {
-      cache.set(resolvedFeatureId, computed);
-    }
-    return computed;
-  }
-
-  if (!allowCompute) return null;
-  return computeProjectedFeatureBounds(feature);
+  return getProjectedGeometryBoundsOwner().getProjectedFeatureBounds(feature, { featureId, allowCompute });
 }
 
 function mergeProjectedBounds(boundsList = []) {
-  const bounds = (Array.isArray(boundsList) ? boundsList : []).filter(Boolean);
-  if (!bounds.length) return null;
-  const minX = Math.min(...bounds.map((entry) => Number(entry.minX)));
-  const minY = Math.min(...bounds.map((entry) => Number(entry.minY)));
-  const maxX = Math.max(...bounds.map((entry) => Number(entry.maxX)));
-  const maxY = Math.max(...bounds.map((entry) => Number(entry.maxY)));
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
-    return null;
-  }
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-    area: Math.max(0, maxX - minX) * Math.max(0, maxY - minY),
-  };
+  return getProjectedGeometryBoundsOwner().mergeProjectedBounds(boundsList);
 }
 
 function isKnownBadFeatureId(featureId) {
@@ -6769,7 +6289,7 @@ function scheduleHoverOverlayRender() {
 }
 
 function renderDevSelectionOverlay() {
-  if (!devSelectionGroup || !pathSVG) return;
+  if (!rendererSurfaceHost.getDevSelectionGroup() || !rendererSurfaceHost.getPathSvg()) return;
   const orderedIds = Array.isArray(runtimeState.devSelectionOrder)
     ? runtimeState.devSelectionOrder.map((value) => String(value || "").trim()).filter(Boolean)
     : [];
@@ -6778,7 +6298,7 @@ function renderDevSelectionOverlay() {
     .filter(Boolean);
   const overlayData = buildDevSelectionOverlayData(orderedIds, data);
 
-  const selection = devSelectionGroup
+  const selection = rendererSurfaceHost.getDevSelectionGroup()
     .selectAll("path.dev-selected-feature")
     .data(overlayData, (feature, index) => feature?.devSelectionKey || getFeatureId(feature) || `dev-selection-${index}`);
 
@@ -6790,13 +6310,13 @@ function renderDevSelectionOverlay() {
     .attr("aria-hidden", "true")
     .attr("vector-effect", "non-scaling-stroke")
     .merge(selection)
-    .attr("d", pathSVG)
+    .attr("d", rendererSurfaceHost.getPathSvg())
     .attr("fill", "rgba(14, 165, 233, 0.14)")
     .attr("stroke", "rgba(14, 165, 233, 0.94)")
     .attr("stroke-width", 1.35);
 
   selection.exit().remove();
-  devSelectionGroup
+  rendererSurfaceHost.getDevSelectionGroup()
     .attr("aria-hidden", data.length ? "false" : "true")
     .attr("aria-label", data.length ? `Development selection overlay (${data.length})` : "Development selection overlay");
 }
@@ -6853,12 +6373,12 @@ function renderDevSelectionOverlayIfNeeded({ force = false } = {}) {
 }
 
 function applyTooltipState(nextState = null) {
-  if (!tooltip) return;
+  if (!rendererSurfaceHost.getTooltip()) return;
   const visible = !!nextState?.visible;
   const text = visible ? String(nextState?.text || "") : "";
-  tooltip.textContent = text;
-  tooltip.style.opacity = visible ? "1" : "0";
-  tooltip.style.transform = visible
+  rendererSurfaceHost.getTooltip().textContent = text;
+  rendererSurfaceHost.getTooltip().style.opacity = visible ? "1" : "0";
+  rendererSurfaceHost.getTooltip().style.transform = visible
     ? `translate3d(${Math.round(Number(nextState?.x || 0))}px, ${Math.round(Number(nextState?.y || 0))}px, 0)`
     : "translate3d(-9999px, -9999px, 0)";
 }
@@ -7195,7 +6715,7 @@ function recordFillPatchFirstPixelMetric({ renderedCount = 0, renderedIds = null
 }
 
 function clearPoliticalPatchOverlay(reason = "clear") {
-  const cleared = clearCanvasLayer(getCanvasLayer(canvasLayers, CANVAS_LAYER_NAMES.politicalPatch));
+  const cleared = clearCanvasLayer(getCanvasLayer(rendererSurfaceHost.getCanvasLayers(), CANVAS_LAYER_NAMES.politicalPatch));
   if (cleared) {
     getRenderPassCacheState().pendingPoliticalPatchOverlayTransformSignature = "";
     recordRenderPerfMetric("politicalPatchOverlayClear", 0, {
@@ -7222,7 +6742,7 @@ function clearPoliticalPatchOverlayIfStale(reason = "stale-overlay") {
 }
 
 function paintPoliticalPatchOverlayForIds(featureIds, { inputLabel = "refresh-colors" } = {}) {
-  if (!politicalPatchContext?.canvas || !projection || !pathCanvas) return false;
+  if (!rendererSurfaceHost.getPoliticalPatchContext()?.canvas || !rendererSurfaceHost.getProjection() || !rendererSurfaceHost.getPathCanvas()) return false;
   const ids = normalizePoliticalColorEditIds(featureIds);
   if (!ids.length) {
     clearPoliticalPatchOverlay("empty-pending-edit");
@@ -7246,9 +6766,9 @@ function paintPoliticalPatchOverlayForIds(featureIds, { inputLabel = "refresh-co
     renderedCount: 0,
     renderedIds: new Set(),
   };
-  politicalPatchContext.save();
-  const k = prepareTargetContext(politicalPatchContext, transform);
-  withRenderTarget(politicalPatchContext, () => {
+  rendererSurfaceHost.getPoliticalPatchContext().save();
+  const k = prepareTargetContext(rendererSurfaceHost.getPoliticalPatchContext(), transform);
+  withRenderTarget(rendererSurfaceHost.getPoliticalPatchContext(), () => {
     orderPoliticalShellUnderlayFirst(features).forEach(({ feature, id }, index) => {
       drawPoliticalFeature(feature, index, {
         k,
@@ -7266,7 +6786,7 @@ function paintPoliticalPatchOverlayForIds(featureIds, { inputLabel = "refresh-co
       }
     });
   });
-  politicalPatchContext.restore();
+  rendererSurfaceHost.getPoliticalPatchContext().restore();
   const renderedCount = Number(metricsCollector.renderedCount || 0);
   recordRenderPerfMetric("politicalPatchOverlayPaint", nowMs() - startedAt, {
     inputLabel: String(inputLabel || "refresh-colors"),
@@ -7406,7 +6926,7 @@ function refreshResolvedColorsForFeatures(featureIds, { renderNow = false, input
     requestedFeatureCount: ids.length, pendingRenderFeatureCount: pendingRenderIds.size, renderNow, inputLabel,
   });
 
-  if (renderNow && context) {
+  if (renderNow && rendererSurfaceHost.getContext()) {
     requestRendererRender("refresh-colors", {
       flush: false,
       fallback: () => render(),
@@ -7473,13 +6993,13 @@ function refreshColorState({ renderNow = true } = {}) {
     renderNow: !!renderNow,
     featureCount: Object.keys(runtimeState.colors || {}).length,
   });
-  if (renderNow && context) {
+  if (renderNow && rendererSurfaceHost.getContext()) {
     render();
   }
 }
 
 function pathBoundsInScreen(feature) {
-  if (!pathSVG) return false;
+  if (!rendererSurfaceHost.getPathSvg()) return false;
   const geometryType = String(feature?.geometry?.type || "").trim();
   const bounds = getProjectedFeatureBounds(feature, { allowCompute: false }) || getProjectedFeatureBounds(feature);
   if (!bounds) {
@@ -7710,14 +7230,14 @@ function ensureHybridLayers() {
   const legacyColorCanvas = document.getElementById("colorCanvas");
   const legacyLineCanvas = document.getElementById("lineCanvas");
 
-  canvasLayers = ensureCanvasLayers(mapContainer, {
+  const nextCanvasLayers = rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {
     before: legacyColorCanvas || legacyLineCanvas || null,
-  });
-  mapCanvas = getCanvasLayer(canvasLayers, CANVAS_LAYER_NAMES.composite)?.canvas || null;
-  politicalPatchCanvas = getCanvasLayer(canvasLayers, CANVAS_LAYER_NAMES.politicalPatch)?.canvas || null;
-  interactionOverlayCanvas = getCanvasLayer(canvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null;
+  }));
+  const nextMapCanvas = rendererSurfaceHost.setMapCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.composite)?.canvas || null);
+  rendererSurfaceHost.setPoliticalPatchCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.politicalPatch)?.canvas || null);
+  rendererSurfaceHost.setInteractionOverlayCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null);
 
-  if (legacyColorCanvas && legacyColorCanvas !== mapCanvas) {
+  if (legacyColorCanvas && legacyColorCanvas !== nextMapCanvas) {
     legacyColorCanvas.style.display = "none";
     legacyColorCanvas.style.pointerEvents = "none";
   }
@@ -7726,154 +7246,169 @@ function ensureHybridLayers() {
     legacyLineCanvas.style.pointerEvents = "none";
   }
 
-  mapSvg = mapContainer.querySelector("#map-svg");
-  if (!mapSvg) {
-    mapSvg = createSvgElement();
-    mapContainer.appendChild(mapSvg);
+  let nextMapSvg = rendererSurfaceHost.getMapContainer().querySelector("#map-svg");
+  if (!nextMapSvg) {
+    nextMapSvg = createSvgElement();
+    rendererSurfaceHost.getMapContainer().appendChild(nextMapSvg);
   }
-  mapSvg.style.display = "block";
-  mapSvg.style.zIndex = "3";
+  rendererSurfaceHost.setMapSvg(nextMapSvg);
+  nextMapSvg.style.display = "block";
+  nextMapSvg.style.zIndex = "3";
 
-  const svg = globalThis.d3.select(mapSvg);
+  const svg = globalThis.d3.select(nextMapSvg);
   svg.style("pointer-events", "none");
 
-  viewportGroup = svg.select("g.viewport-layer");
-  if (viewportGroup.empty()) {
-    viewportGroup = svg.append("g").attr("class", "viewport-layer");
+  let nextViewportGroup = svg.select("g.viewport-layer");
+  if (nextViewportGroup.empty()) {
+    nextViewportGroup = svg.append("g").attr("class", "viewport-layer");
   }
-  viewportGroup.style("pointer-events", "none");
+  rendererSurfaceHost.setViewportGroup(nextViewportGroup);
+  nextViewportGroup.style("pointer-events", "none");
 
-  strategicDefs = svg.select("defs.strategic-overlay-defs");
-  if (strategicDefs.empty()) {
-    strategicDefs = svg.append("defs").attr("class", "strategic-overlay-defs");
+  let nextStrategicDefs = svg.select("defs.strategic-overlay-defs");
+  if (nextStrategicDefs.empty()) {
+    nextStrategicDefs = svg.append("defs").attr("class", "strategic-overlay-defs");
   }
+  rendererSurfaceHost.setStrategicDefs(nextStrategicDefs);
 
-  frontlineOverlayGroup = viewportGroup.select("g.frontline-overlay-layer");
-  if (frontlineOverlayGroup.empty()) {
-    frontlineOverlayGroup = viewportGroup.append("g").attr("class", "frontline-overlay-layer");
+  let nextFrontlineOverlayGroup = nextViewportGroup.select("g.frontline-overlay-layer");
+  if (nextFrontlineOverlayGroup.empty()) {
+    nextFrontlineOverlayGroup = nextViewportGroup.append("g").attr("class", "frontline-overlay-layer");
   }
-  frontlineOverlayGroup
+  rendererSurfaceHost.setFrontlineOverlayGroup(nextFrontlineOverlayGroup);
+  nextFrontlineOverlayGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Strategic frontline overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  frontlineLabelsGroup = viewportGroup.select("g.frontline-labels-layer");
-  if (frontlineLabelsGroup.empty()) {
-    frontlineLabelsGroup = viewportGroup.append("g").attr("class", "frontline-labels-layer");
+  let nextFrontlineLabelsGroup = nextViewportGroup.select("g.frontline-labels-layer");
+  if (nextFrontlineLabelsGroup.empty()) {
+    nextFrontlineLabelsGroup = nextViewportGroup.append("g").attr("class", "frontline-labels-layer");
   }
-  frontlineLabelsGroup
+  rendererSurfaceHost.setFrontlineLabelsGroup(nextFrontlineLabelsGroup);
+  nextFrontlineLabelsGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Strategic frontline labels")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  operationalLinesGroup = viewportGroup.select("g.operational-lines-layer");
-  if (operationalLinesGroup.empty()) {
-    operationalLinesGroup = viewportGroup.append("g").attr("class", "operational-lines-layer");
+  let nextOperationalLinesGroup = nextViewportGroup.select("g.operational-lines-layer");
+  if (nextOperationalLinesGroup.empty()) {
+    nextOperationalLinesGroup = nextViewportGroup.append("g").attr("class", "operational-lines-layer");
   }
-  operationalLinesGroup
+  rendererSurfaceHost.setOperationalLinesGroup(nextOperationalLinesGroup);
+  nextOperationalLinesGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Operational lines")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  operationGraphicsGroup = viewportGroup.select("g.operation-graphics-layer");
-  if (operationGraphicsGroup.empty()) {
-    operationGraphicsGroup = viewportGroup.append("g").attr("class", "operation-graphics-layer");
+  let nextOperationGraphicsGroup = nextViewportGroup.select("g.operation-graphics-layer");
+  if (nextOperationGraphicsGroup.empty()) {
+    nextOperationGraphicsGroup = nextViewportGroup.append("g").attr("class", "operation-graphics-layer");
   }
-  operationGraphicsGroup
+  rendererSurfaceHost.setOperationGraphicsGroup(nextOperationGraphicsGroup);
+  nextOperationGraphicsGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Strategic operation graphics")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  operationGraphicsEditorGroup = viewportGroup.select("g.operation-graphics-editor-layer");
-  if (operationGraphicsEditorGroup.empty()) {
-    operationGraphicsEditorGroup = viewportGroup.append("g").attr("class", "operation-graphics-editor-layer");
+  let nextOperationGraphicsEditorGroup = nextViewportGroup.select("g.operation-graphics-editor-layer");
+  if (nextOperationGraphicsEditorGroup.empty()) {
+    nextOperationGraphicsEditorGroup = nextViewportGroup.append("g").attr("class", "operation-graphics-editor-layer");
   }
-  operationGraphicsEditorGroup
+  rendererSurfaceHost.setOperationGraphicsEditorGroup(nextOperationGraphicsEditorGroup);
+  nextOperationGraphicsEditorGroup
     .style("pointer-events", "all")
     .attr("role", "img")
     .attr("aria-label", "Strategic operation graphics editor")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  unitCountersGroup = viewportGroup.select("g.unit-counters-layer");
-  if (unitCountersGroup.empty()) {
-    unitCountersGroup = viewportGroup.append("g").attr("class", "unit-counters-layer");
+  let nextUnitCountersGroup = nextViewportGroup.select("g.unit-counters-layer");
+  if (nextUnitCountersGroup.empty()) {
+    nextUnitCountersGroup = nextViewportGroup.append("g").attr("class", "unit-counters-layer");
   }
-  unitCountersGroup
+  rendererSurfaceHost.setUnitCountersGroup(nextUnitCountersGroup);
+  nextUnitCountersGroup
     .style("pointer-events", "all")
     .attr("role", "img")
     .attr("aria-label", "Strategic unit counters")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  specialZonesGroup = viewportGroup.select("g.special-zones-layer");
-  if (specialZonesGroup.empty()) {
-    specialZonesGroup = viewportGroup.append("g").attr("class", "special-zones-layer");
+  let nextSpecialZonesGroup = nextViewportGroup.select("g.special-zones-layer");
+  if (nextSpecialZonesGroup.empty()) {
+    nextSpecialZonesGroup = nextViewportGroup.append("g").attr("class", "special-zones-layer");
   }
-  specialZonesGroup
+  rendererSurfaceHost.setSpecialZonesGroup(nextSpecialZonesGroup);
+  nextSpecialZonesGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Special zones overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  specialZoneEditorGroup = viewportGroup.select("g.special-zone-editor-layer");
-  if (specialZoneEditorGroup.empty()) {
-    specialZoneEditorGroup = viewportGroup.append("g").attr("class", "special-zone-editor-layer");
+  let nextSpecialZoneEditorGroup = nextViewportGroup.select("g.special-zone-editor-layer");
+  if (nextSpecialZoneEditorGroup.empty()) {
+    nextSpecialZoneEditorGroup = nextViewportGroup.append("g").attr("class", "special-zone-editor-layer");
   }
-  specialZoneEditorGroup
+  rendererSurfaceHost.setSpecialZoneEditorGroup(nextSpecialZoneEditorGroup);
+  nextSpecialZoneEditorGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Special zone drawing overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  hoverGroup = viewportGroup.select("g.hover-layer");
-  if (hoverGroup.empty()) {
-    hoverGroup = viewportGroup.append("g").attr("class", "hover-layer");
+  let nextHoverGroup = nextViewportGroup.select("g.hover-layer");
+  if (nextHoverGroup.empty()) {
+    nextHoverGroup = nextViewportGroup.append("g").attr("class", "hover-layer");
   }
-  hoverGroup
+  rendererSurfaceHost.setHoverGroup(nextHoverGroup);
+  nextHoverGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Hovered region outline overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  devSelectionGroup = viewportGroup.select("g.dev-selection-layer");
-  if (devSelectionGroup.empty()) {
-    devSelectionGroup = viewportGroup.append("g").attr("class", "dev-selection-layer");
+  let nextDevSelectionGroup = nextViewportGroup.select("g.dev-selection-layer");
+  if (nextDevSelectionGroup.empty()) {
+    nextDevSelectionGroup = nextViewportGroup.append("g").attr("class", "dev-selection-layer");
   }
-  devSelectionGroup
+  rendererSurfaceHost.setDevSelectionGroup(nextDevSelectionGroup);
+  nextDevSelectionGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Development selection overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  inspectorHighlightGroup = viewportGroup.select("g.inspector-highlight-layer");
-  if (inspectorHighlightGroup.empty()) {
-    inspectorHighlightGroup = viewportGroup.append("g").attr("class", "inspector-highlight-layer");
+  let nextInspectorHighlightGroup = nextViewportGroup.select("g.inspector-highlight-layer");
+  if (nextInspectorHighlightGroup.empty()) {
+    nextInspectorHighlightGroup = nextViewportGroup.append("g").attr("class", "inspector-highlight-layer");
   }
-  inspectorHighlightGroup
+  rendererSurfaceHost.setInspectorHighlightGroup(nextInspectorHighlightGroup);
+  nextInspectorHighlightGroup
     .style("pointer-events", "none")
     .attr("role", "img")
     .attr("aria-label", "Inspector highlight overlay")
     .attr("aria-hidden", "true")
     .attr("focusable", "false");
 
-  intensityFieldPreviewGroup = svg.select("g.intensity-field-preview-layer");
-  if (intensityFieldPreviewGroup.empty()) {
-    intensityFieldPreviewGroup = svg.append("g").attr("class", "intensity-field-preview-layer");
+  let nextIntensityFieldPreviewGroup = svg.select("g.intensity-field-preview-layer");
+  if (nextIntensityFieldPreviewGroup.empty()) {
+    nextIntensityFieldPreviewGroup = svg.append("g").attr("class", "intensity-field-preview-layer");
   }
-  intensityFieldPreviewGroup
+  rendererSurfaceHost.setIntensityFieldPreviewGroup(nextIntensityFieldPreviewGroup);
+  nextIntensityFieldPreviewGroup
     .style("pointer-events", "none")
     .attr("aria-hidden", "true")
     .attr("focusable", "false")
@@ -7882,14 +7417,15 @@ function ensureHybridLayers() {
   svg.select("g.legend-group").remove();
   ensureLegendControlElement();
 
-  interactionRect = svg.select("rect.interaction-layer");
-  if (interactionRect.empty()) {
-    interactionRect = svg
+  let nextInteractionRect = svg.select("rect.interaction-layer");
+  if (nextInteractionRect.empty()) {
+    nextInteractionRect = svg
       .append("rect")
       .attr("class", "interaction-layer")
       .attr("fill", "transparent");
   }
-  interactionRect
+  rendererSurfaceHost.setInteractionRect(nextInteractionRect);
+  nextInteractionRect
     .style("pointer-events", "all")
     // Keep the global hit surface behind editor overlays so midpoint/vertex handles can win hit-testing.
     .lower();
@@ -7902,16 +7438,16 @@ function setCanvasSize({
   targetPassesOnCanvasResize = null,
   forceDprInvalidation = false,
 } = {}) {
-  if (!mapCanvas || !mapSvg) return false;
+  if (!rendererSurfaceHost.getMapCanvas() || !rendererSurfaceHost.getMapSvg()) return false;
 
   const previousWidth = Number(runtimeState.width || 0);
   const previousHeight = Number(runtimeState.height || 0);
   const previousDpr = Number(runtimeState.dpr || 1);
   const deviceDpr = Math.max(Number(globalThis.devicePixelRatio || 1), 1);
   runtimeState.dpr = Math.min(deviceDpr, getMaxDprForProfile(runtimeState.renderProfile));
-  const rect = mapContainer?.getBoundingClientRect?.();
-  const measuredWidth = rect?.width || mapContainer?.clientWidth || globalThis.innerWidth;
-  const measuredHeight = rect?.height || mapContainer?.clientHeight || globalThis.innerHeight;
+  const rect = rendererSurfaceHost.getMapContainer()?.getBoundingClientRect?.();
+  const measuredWidth = rect?.width || rendererSurfaceHost.getMapContainer()?.clientWidth || globalThis.innerWidth;
+  const measuredHeight = rect?.height || rendererSurfaceHost.getMapContainer()?.clientHeight || globalThis.innerHeight;
 
   runtimeState.width = Math.round(measuredWidth);
   runtimeState.height = Math.round(measuredHeight);
@@ -7927,14 +7463,14 @@ function setCanvasSize({
     return false;
   }
 
-  resizeCanvasLayers(canvasLayers, {
+  resizeCanvasLayers(rendererSurfaceHost.getCanvasLayers(), {
     width: runtimeState.width,
     height: runtimeState.height,
     dpr: runtimeState.dpr,
   });
-  if (hitCanvas) {
-    hitCanvas.width = scaledW;
-    hitCanvas.height = scaledH;
+  if (rendererSurfaceHost.getHitCanvas()) {
+    rendererSurfaceHost.getHitCanvas().width = scaledW;
+    rendererSurfaceHost.getHitCanvas().height = scaledH;
   }
   const resizeInvalidationPasses = Array.isArray(targetPassesOnResize) && targetPassesOnResize.length
     ? targetPassesOnResize
@@ -7960,9 +7496,9 @@ function setCanvasSize({
     clearRenderPassReferenceTransforms(dprInvalidationPasses);
   }
 
-  const svg = globalThis.d3.select(mapSvg);
+  const svg = globalThis.d3.select(rendererSurfaceHost.getMapSvg());
   svg.attr("width", runtimeState.width).attr("height", runtimeState.height);
-  interactionRect.attr("x", 0).attr("y", 0).attr("width", runtimeState.width).attr("height", runtimeState.height);
+  rendererSurfaceHost.getInteractionRect().attr("x", 0).attr("y", 0).attr("width", runtimeState.width).attr("height", runtimeState.height);
   return true;
 }
 
@@ -7982,7 +7518,7 @@ function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
     runtimeState.dynamicBordersDirtyReason = String(reason);
   }
   rebuildDynamicBorders();
-  if (renderNow && context) {
+  if (renderNow && rendererSurfaceHost.getContext()) {
     render();
   }
   return true;
@@ -7990,7 +7526,7 @@ function recomputeDynamicBordersNow({ renderNow = true, reason = "" } = {}) {
 
 function refreshScenarioOpeningOwnerBorders({ renderNow = false, reason = "" } = {}) {
   const built = getBorderMeshOwner().refreshScenarioOpeningOwnerBorders(reason);
-  if (renderNow && context) {
+  if (renderNow && rendererSurfaceHost.getContext()) {
     render();
   }
   return built;
@@ -9079,15 +8615,15 @@ function hitColorToKey(pixel) {
 }
 
 function drawHitCanvas() {
-  if (!hitContext || !pathHitCanvas || !runtimeState.landData?.features?.length) {
+  if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.landData?.features?.length) {
     runtimeState.hitCanvasDirty = false;
     runtimeState.hitCanvasTopologyRevision = 0;
     lastHitCanvasBuildStats = null;
     return false;
   }
 
-  const width = hitCanvas?.width || 0;
-  const height = hitCanvas?.height || 0;
+  const width = rendererSurfaceHost.getHitCanvas()?.width || 0;
+  const height = rendererSurfaceHost.getHitCanvas()?.height || 0;
   if (width <= 0 || height <= 0) {
     runtimeState.hitCanvasDirty = false;
     runtimeState.hitCanvasTopologyRevision = 0;
@@ -9098,22 +8634,22 @@ function drawHitCanvas() {
   const t = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
   const k = Math.max(0.0001, t.k || 1);
 
-  hitContext.save();
-  hitContext.setTransform(1, 0, 0, 1, 0, 0);
-  hitContext.clearRect(0, 0, width, height);
-  hitContext.globalCompositeOperation = "source-over";
-  hitContext.globalAlpha = 1;
-  hitContext.filter = "none";
-  hitContext.shadowBlur = 0;
-  hitContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
-  hitContext.translate(t.x, t.y);
-  hitContext.scale(k, k);
+  rendererSurfaceHost.getHitContext().save();
+  rendererSurfaceHost.getHitContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getHitContext().clearRect(0, 0, width, height);
+  rendererSurfaceHost.getHitContext().globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getHitContext().globalAlpha = 1;
+  rendererSurfaceHost.getHitContext().filter = "none";
+  rendererSurfaceHost.getHitContext().shadowBlur = 0;
+  rendererSurfaceHost.getHitContext().setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
+  rendererSurfaceHost.getHitContext().translate(t.x, t.y);
+  rendererSurfaceHost.getHitContext().scale(k, k);
 
   const visibleSpatialItemsResult = collectVisibleLandSpatialItemsWithStats({
     overscanPx: HIT_CANVAS_VIEWPORT_OVERSCAN_PX,
   });
   if (visibleSpatialItemsResult === null) {
-    hitContext.restore();
+    rendererSurfaceHost.getHitContext().restore();
     runtimeState.hitCanvasDirty = true;
     lastHitCanvasBuildStats = null;
     recordRenderPerfMetric("hitCanvasSpatialIndexUnavailable", 0, {
@@ -9128,14 +8664,14 @@ function drawHitCanvas() {
     const key = runtimeState.idToKey.get(item.id);
     if (!key || !item?.feature) return;
     if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
-    hitContext.beginPath();
-    pathHitCanvas(item.feature);
-    hitContext.fillStyle = keyToHitColor(key);
-    hitContext.fill();
+    rendererSurfaceHost.getHitContext().beginPath();
+    rendererSurfaceHost.getPathHitCanvas()(item.feature);
+    rendererSurfaceHost.getHitContext().fillStyle = keyToHitColor(key);
+    rendererSurfaceHost.getHitContext().fill();
     drawnItemCount += 1;
   });
 
-  hitContext.restore();
+  rendererSurfaceHost.getHitContext().restore();
   runtimeState.hitCanvasDirty = false;
   runtimeState.hitCanvasTopologyRevision = Number(runtimeState.topologyRevision || 0);
   lastHitCanvasBuildStats = {
@@ -9190,7 +8726,7 @@ function recordDeferredFullHitCanvasMetric({ reason = "deferred-full", keepReady
 }
 
 function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
-  if (!hitContext || !pathHitCanvas || !runtimeState.hitCanvasDirty) return false;
+  if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return false;
   if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
     return false;
   }
@@ -9199,7 +8735,7 @@ function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
   }
   runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork(() => {
     runtimeState.hitCanvasBuildScheduled = null;
-    if (!hitContext || !pathHitCanvas || !runtimeState.hitCanvasDirty) return;
+    if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return;
     if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) return;
     drawHitCanvasWithMetric({
       mode: "deferred",
@@ -9213,7 +8749,7 @@ function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
 }
 
 function ensureHitCanvasUpToDate({ force = false } = {}) {
-  if (!hitContext || !pathHitCanvas) return false;
+  if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas()) return false;
   if (!force && !runtimeState.hitCanvasDirty) return true;
   if (!force) {
     scheduleHitCanvasBuildIfNeeded({ reason: "lazy-hit-validation" });
@@ -9246,20 +8782,20 @@ function isHitCanvasCurrent() {
 }
 
 function getHitResultFromCanvas(event) {
-  if (!mapSvg || !hitContext || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
+  if (!rendererSurfaceHost.getMapSvg() || !rendererSurfaceHost.getHitContext() || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
     return createHitResult();
   }
-  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  const [sx, sy] = globalThis.d3.pointer(event, rendererSurfaceHost.getMapSvg());
   if (![sx, sy].every(Number.isFinite)) return createHitResult();
   const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
     ? Number(runtimeState.dpr)
     : 1;
-  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * dpr)));
-  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * dpr)));
+  const px = Math.max(0, Math.min((rendererSurfaceHost.getHitCanvas()?.width || 1) - 1, Math.round(sx * dpr)));
+  const py = Math.max(0, Math.min((rendererSurfaceHost.getHitCanvas()?.height || 1) - 1, Math.round(sy * dpr)));
 
   let pixel = null;
   try {
-    pixel = hitContext.getImageData(px, py, 1, 1).data;
+    pixel = rendererSurfaceHost.getHitContext().getImageData(px, py, 1, 1).data;
   } catch (_error) {
     return createHitResult();
   }
@@ -9292,11 +8828,11 @@ function getHitResultFromCanvas(event) {
 }
 
 function getDirtyHitCanvasPointProbeHit(event) {
-  if (!mapSvg || !hitContext || !pathHitCanvas || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
+  if (!rendererSurfaceHost.getMapSvg() || !rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.keyToId?.size || !globalThis.d3?.pointer) {
     return createHitResult();
   }
   const startedAt = nowMs();
-  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  const [sx, sy] = globalThis.d3.pointer(event, rendererSurfaceHost.getMapSvg());
   if (![sx, sy].every(Number.isFinite)) return createHitResult();
   const t = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
   const k = Math.max(0.0001, Number(t.k) || 1);
@@ -9308,36 +8844,36 @@ function getDirtyHitCanvasPointProbeHit(event) {
   const dpr = Number.isFinite(Number(runtimeState.dpr)) && Number(runtimeState.dpr) > 0
     ? Number(runtimeState.dpr)
     : 1;
-  const px = Math.max(0, Math.min((hitCanvas?.width || 1) - 1, Math.round(sx * dpr)));
-  const py = Math.max(0, Math.min((hitCanvas?.height || 1) - 1, Math.round(sy * dpr)));
+  const px = Math.max(0, Math.min((rendererSurfaceHost.getHitCanvas()?.width || 1) - 1, Math.round(sx * dpr)));
+  const py = Math.max(0, Math.min((rendererSurfaceHost.getHitCanvas()?.height || 1) - 1, Math.round(sy * dpr)));
   let drawnItemCount = 0;
   let hit = createHitResult();
   try {
-    hitContext.save();
-    hitContext.setTransform(1, 0, 0, 1, 0, 0);
-    hitContext.clearRect(px - 1, py - 1, 3, 3);
-    hitContext.beginPath();
-    hitContext.rect(px - 1, py - 1, 3, 3);
-    hitContext.clip();
-    hitContext.globalCompositeOperation = "source-over";
-    hitContext.globalAlpha = 1;
-    hitContext.filter = "none";
-    hitContext.shadowBlur = 0;
-    hitContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    hitContext.translate(t.x, t.y);
-    hitContext.scale(k, k);
+    rendererSurfaceHost.getHitContext().save();
+    rendererSurfaceHost.getHitContext().setTransform(1, 0, 0, 1, 0, 0);
+    rendererSurfaceHost.getHitContext().clearRect(px - 1, py - 1, 3, 3);
+    rendererSurfaceHost.getHitContext().beginPath();
+    rendererSurfaceHost.getHitContext().rect(px - 1, py - 1, 3, 3);
+    rendererSurfaceHost.getHitContext().clip();
+    rendererSurfaceHost.getHitContext().globalCompositeOperation = "source-over";
+    rendererSurfaceHost.getHitContext().globalAlpha = 1;
+    rendererSurfaceHost.getHitContext().filter = "none";
+    rendererSurfaceHost.getHitContext().shadowBlur = 0;
+    rendererSurfaceHost.getHitContext().setTransform(dpr, 0, 0, dpr, 0, 0);
+    rendererSurfaceHost.getHitContext().translate(t.x, t.y);
+    rendererSurfaceHost.getHitContext().scale(k, k);
     candidates.forEach(({ item }) => {
       const key = runtimeState.idToKey.get(item?.id);
       if (!key || !item?.feature) return;
       if (shouldExcludePoliticalInteractionFeature(item.feature, item.id)) return;
-      hitContext.beginPath();
-      pathHitCanvas(item.feature);
-      hitContext.fillStyle = keyToHitColor(key);
-      hitContext.fill();
+      rendererSurfaceHost.getHitContext().beginPath();
+      rendererSurfaceHost.getPathHitCanvas()(item.feature);
+      rendererSurfaceHost.getHitContext().fillStyle = keyToHitColor(key);
+      rendererSurfaceHost.getHitContext().fill();
       drawnItemCount += 1;
     });
-    hitContext.restore();
-    const pixel = hitContext.getImageData(px, py, 1, 1).data;
+    rendererSurfaceHost.getHitContext().restore();
+    const pixel = rendererSurfaceHost.getHitContext().getImageData(px, py, 1, 1).data;
     const key = hitColorToKey(pixel);
     const id = key ? runtimeState.keyToId.get(key) : "";
     const feature = id ? runtimeState.landIndex.get(id) : null;
@@ -9363,7 +8899,7 @@ function getDirtyHitCanvasPointProbeHit(event) {
     }
   } catch (_error) {
     try {
-      hitContext.restore();
+      rendererSurfaceHost.getHitContext().restore();
     } catch (_restoreError) {
       // Already restored.
     }
@@ -9519,14 +9055,14 @@ function findFirstContainingCandidate(candidates, lonLat, { eventType = "hover",
 }
 
 function getPointerProjectionPosition(event) {
-  if (!mapSvg || !projection || !globalThis.d3) return null;
-  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  if (!rendererSurfaceHost.getMapSvg() || !rendererSurfaceHost.getProjection() || !globalThis.d3) return null;
+  const [sx, sy] = globalThis.d3.pointer(event, rendererSurfaceHost.getMapSvg());
   const transform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
   const zoomK = Math.max(0.0001, transform?.k || 1);
   const px = (sx - (transform?.x || 0)) / zoomK;
   const py = (sy - (transform?.y || 0)) / zoomK;
   if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
-  const lonLat = projection.invert([px, py]);
+  const lonLat = rendererSurfaceHost.getProjection().invert([px, py]);
   if (!lonLat) return null;
   return {
     px,
@@ -10667,7 +10203,7 @@ function clamp(value, min, max) {
 
 function getProjectedLineDensityStats(line) {
   const sanitized = sanitizePolyline(line);
-  if (sanitized.length < 2 || !projection) {
+  if (sanitized.length < 2 || !rendererSurfaceHost.getProjection()) {
     return { pointCount: 0, bboxArea: Infinity, density: 0 };
   }
   let minX = Infinity;
@@ -10676,7 +10212,7 @@ function getProjectedLineDensityStats(line) {
   let maxY = -Infinity;
   let pointCount = 0;
   sanitized.forEach((point) => {
-    const projected = projection(point);
+    const projected = rendererSurfaceHost.getProjection()(point);
     if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return;
     pointCount += 1;
     minX = Math.min(minX, projected[0]);
@@ -10778,9 +10314,9 @@ function getWaterRegionDefaultFillColorById(id) {
 }
 
 function getPathBounds(shape) {
-  if (!pathCanvas || !shape) return null;
+  if (!rendererSurfaceHost.getPathCanvas() || !shape) return null;
   try {
-    const bounds = pathCanvas.bounds(shape);
+    const bounds = rendererSurfaceHost.getPathCanvas().bounds(shape);
     if (!bounds || bounds.length !== 2) return null;
     const minX = bounds[0][0];
     const minY = bounds[0][1];
@@ -10976,7 +10512,7 @@ async function loadBathymetryTopology(url, { slot = "global" } = {}) {
   bathymetryTopologyCacheByUrl.set(normalizedUrl, entry);
   applyResolvedBathymetryEntry(slot, normalizedUrl, entry);
   invalidateOceanVisualState(`bathymetry-loaded:${slot}`);
-  if (context) {
+  if (rendererSurfaceHost.getContext()) {
     render();
   }
   return entry;
@@ -11361,18 +10897,18 @@ function getScenarioCoastalAccentOverlayVisualConfig(feature, k, { interactive =
 
 function clipOutAtlantropaAccentRegions() {
   const suppressionFeatures = getAtlantropaAccentSuppressionFeatures();
-  if (!suppressionFeatures.length || !context) return false;
-  const canvasWidth = Number(runtimeState.width) || context.canvas?.width || 0;
-  const canvasHeight = Number(runtimeState.height) || context.canvas?.height || 0;
+  if (!suppressionFeatures.length || !rendererSurfaceHost.getContext()) return false;
+  const canvasWidth = Number(runtimeState.width) || rendererSurfaceHost.getContext().canvas?.width || 0;
+  const canvasHeight = Number(runtimeState.height) || rendererSurfaceHost.getContext().canvas?.height || 0;
   if (!(canvasWidth > 0) || !(canvasHeight > 0)) return false;
-  context.beginPath();
-  context.rect(0, 0, canvasWidth, canvasHeight);
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getContext().rect(0, 0, canvasWidth, canvasHeight);
   suppressionFeatures.forEach((feature) => {
     if (!feature?.geometry) return;
-    pathCanvas(feature);
+    rendererSurfaceHost.getPathCanvas()(feature);
   });
   try {
-    context.clip("evenodd");
+    rendererSurfaceHost.getContext().clip("evenodd");
     return true;
   } catch (_) {
     return false;
@@ -11415,10 +10951,10 @@ function resolveOceanMask() {
 
 function applyOceanClipMask(maskMode) {
   const startedAt = nowMs();
-  context.beginPath();
+  rendererSurfaceHost.getContext().beginPath();
   if (maskMode === OCEAN_MASK_MODE_TOPOLOGY && runtimeState.oceanData) {
-    pathCanvas(runtimeState.oceanData);
-    context.clip();
+    rendererSurfaceHost.getPathCanvas()(runtimeState.oceanData);
+    rendererSurfaceHost.getContext().clip();
     recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
       applied: true,
       maskMode,
@@ -11429,16 +10965,16 @@ function applyOceanClipMask(maskMode) {
     return;
   }
 
-  pathCanvas({ type: "Sphere" });
+  rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
   const maskInfo = getPhysicalLandMaskInfo();
   const landMask = maskInfo.collection;
 
   if (landMask) {
-    pathCanvas(landMask);
+    rendererSurfaceHost.getPathCanvas()(landMask);
     try {
-      context.clip("evenodd");
+      rendererSurfaceHost.getContext().clip("evenodd");
     } catch (error) {
-      context.clip();
+      rendererSurfaceHost.getContext().clip();
     }
     recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
       applied: true,
@@ -11451,9 +10987,9 @@ function applyOceanClipMask(maskMode) {
   }
 
   if (runtimeState.oceanData) {
-    context.beginPath();
-    pathCanvas(runtimeState.oceanData);
-    context.clip();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(runtimeState.oceanData);
+    rendererSurfaceHost.getContext().clip();
     recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
       applied: true,
       maskMode,
@@ -11465,7 +11001,7 @@ function applyOceanClipMask(maskMode) {
     return;
   }
 
-  context.clip();
+  rendererSurfaceHost.getContext().clip();
   recordRenderPerfMetric("applyOceanClipMask", nowMs() - startedAt, {
     applied: true,
     maskMode,
@@ -11477,13 +11013,13 @@ function applyOceanClipMask(maskMode) {
 
 function applyBathymetryCoverageExclusionMask(coverageCollection) {
   if (!Array.isArray(coverageCollection?.features) || !coverageCollection.features.length) return;
-  context.beginPath();
-  pathCanvas({ type: "Sphere" });
-  pathCanvas(coverageCollection);
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+  rendererSurfaceHost.getPathCanvas()(coverageCollection);
   try {
-    context.clip("evenodd");
+    rendererSurfaceHost.getContext().clip("evenodd");
   } catch (error) {
-    context.clip();
+    rendererSurfaceHost.getContext().clip();
   }
 }
 
@@ -11875,7 +11411,7 @@ function getPhysicalLandClipPath(maskInfo, landMask) {
     };
   }
   try {
-    const pathString = globalThis.d3.geoPath(projection).pointRadius(PATH_POINT_RADIUS)(landMask);
+    const pathString = globalThis.d3.geoPath(rendererSurfaceHost.getProjection()).pointRadius(PATH_POINT_RADIUS)(landMask);
     if (!pathString) {
       return { path: null, cacheHit: false, cacheKey, pathType: "canvas-path" };
     }
@@ -11909,11 +11445,11 @@ function applyPhysicalLandClipMask() {
   }
   const clipPath = getPhysicalLandClipPath(maskInfo, landMask);
   if (clipPath.path) {
-    context.clip(clipPath.path);
+    rendererSurfaceHost.getContext().clip(clipPath.path);
   } else {
-    context.beginPath();
-    pathCanvas(landMask);
-    context.clip();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(landMask);
+    rendererSurfaceHost.getContext().clip();
   }
   collectContextMetric("applyPhysicalLandClipMask", nowMs() - startedAt, {
     applied: true,
@@ -11963,12 +11499,12 @@ function getUrbanGlowFeatureMultiplier(feature) {
 }
 
 function getProjectedDegreeRadiusPx(lon, lat, radiusDeg) {
-  const center = projection([lon, lat]);
+  const center = rendererSurfaceHost.getProjection()([lon, lat]);
   if (!Array.isArray(center) || center.length < 2) return 0;
   const eastLon = lon >= 179 ? lon - 1 : lon + 1;
   const northLat = clamp(lat + 1, -90, 90);
-  const east = projection([eastLon, lat]);
-  const north = projection([lon, northLat]);
+  const east = rendererSurfaceHost.getProjection()([eastLon, lat]);
+  const north = rendererSurfaceHost.getProjection()([lon, northLat]);
   const eastDistance = Array.isArray(east) ? Math.hypot(east[0] - center[0], east[1] - center[1]) : 0;
   const northDistance = Array.isArray(north) ? Math.hypot(north[0] - center[0], north[1] - center[1]) : 0;
   return clamp(Math.max(eastDistance, northDistance, 0) * clamp(radiusDeg, 0.25, 30), 6, 160);
@@ -12186,8 +11722,8 @@ function drawUrbanLayer(k, { interactive = false } = {}) {
     : "source-over";
   const strokeWidth = clamp(0.85 / Math.max(Math.sqrt(Math.max(Number(k) || 1, 1)), 1), 0.3, 0.85);
 
-  context.save();
-  context.globalCompositeOperation = blendMode;
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().globalCompositeOperation = blendMode;
   runtimeState.urbanData.features.forEach((feature) => {
     if (estimateProjectedAreaPx(feature, k) < minAreaPx) return;
     if (!pathBoundsInScreen(feature)) return;
@@ -12196,20 +11732,20 @@ function drawUrbanLayer(k, { interactive = false } = {}) {
     const outlineColor = getSafeCanvasColor(adaptivePaint?.strokeColor, null);
     const glowMultiplier = getUrbanGlowFeatureMultiplier(feature);
     if (!fillColor) return;
-    context.beginPath();
-    pathCanvas(feature);
-    context.fillStyle = fillColor;
-    context.globalAlpha = clamp((interactive ? Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier, 0, 1);
-    context.fill();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(feature);
+    rendererSurfaceHost.getContext().fillStyle = fillColor;
+    rendererSurfaceHost.getContext().globalAlpha = clamp((interactive ? Math.min(fillOpacity, 0.15) : fillOpacity) * glowMultiplier, 0, 1);
+    rendererSurfaceHost.getContext().fill();
     if (effectiveMode === "adaptive" && outlineColor) {
-      context.strokeStyle = outlineColor;
-      context.lineWidth = strokeWidth;
-      context.globalAlpha = clamp((interactive ? Math.min(strokeOpacity, 0.18) : strokeOpacity) * glowMultiplier, 0, 1);
-      context.stroke();
+      rendererSurfaceHost.getContext().strokeStyle = outlineColor;
+      rendererSurfaceHost.getContext().lineWidth = strokeWidth;
+      rendererSurfaceHost.getContext().globalAlpha = clamp((interactive ? Math.min(strokeOpacity, 0.18) : strokeOpacity) * glowMultiplier, 0, 1);
+      rendererSurfaceHost.getContext().stroke();
     }
   });
 
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
   collectContextMetric("drawUrbanLayer", nowMs() - startedAt, {
     featureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
     interactive: !!interactive,
@@ -13136,7 +12672,7 @@ const buildCityRevealPlan = (...args) => getUrbanCityPolicyOwner().buildCityReve
 const getEffectiveCityCollection = (...args) => getUrbanCityPolicyOwner().getEffectiveCityCollection(...args);
 
 function getCityAnchor(feature) {
-  if (!feature || !projection) return null;
+  if (!feature || !rendererSurfaceHost.getProjection()) return null;
   const cached = cityAnchorCache.get(feature);
   if (cached !== undefined) {
     return cached;
@@ -13145,13 +12681,13 @@ function getCityAnchor(feature) {
   let anchor = null;
   const geometry = feature.geometry;
   if (geometry?.type === "Point" && Array.isArray(geometry.coordinates) && geometry.coordinates.length >= 2) {
-    const projected = projection(geometry.coordinates);
+    const projected = rendererSurfaceHost.getProjection()(geometry.coordinates);
     if (Array.isArray(projected) && projected.every((value) => Number.isFinite(Number(value)))) {
       anchor = projected;
     }
   } else if (geometry?.type === "MultiPoint" && Array.isArray(geometry.coordinates) && geometry.coordinates.length) {
     const projectedPoints = geometry.coordinates
-      .map((coords) => projection(coords))
+      .map((coords) => rendererSurfaceHost.getProjection()(coords))
       .filter((point) => Array.isArray(point) && point.every((value) => Number.isFinite(Number(value))));
     if (projectedPoints.length) {
       const [sumX, sumY] = projectedPoints.reduce(
@@ -13162,8 +12698,8 @@ function getCityAnchor(feature) {
     }
   }
 
-  if (!anchor && pathCanvas?.centroid) {
-    const centroid = pathCanvas.centroid(feature);
+  if (!anchor && rendererSurfaceHost.getPathCanvas()?.centroid) {
+    const centroid = rendererSurfaceHost.getPathCanvas().centroid(feature);
     if (Array.isArray(centroid) && centroid.every((value) => Number.isFinite(Number(value)))) {
       anchor = centroid;
     }
@@ -13171,7 +12707,7 @@ function getCityAnchor(feature) {
 
   if (!anchor && globalThis.d3?.geoCentroid) {
     const geoCentroid = globalThis.d3.geoCentroid(feature);
-    const projected = Array.isArray(geoCentroid) ? projection(geoCentroid) : null;
+    const projected = Array.isArray(geoCentroid) ? rendererSurfaceHost.getProjection()(geoCentroid) : null;
     if (Array.isArray(projected) && projected.every((value) => Number.isFinite(Number(value)))) {
       anchor = projected;
     }
@@ -13601,7 +13137,7 @@ function getFacilityHoverRadiusPx(entry) {
 function getHoveredFacilityEntryFromEvent(event) {
   const startedAt = nowMs();
   const eventType = String(event?.type || "hover").toLowerCase() === "mousemove" ? "hover" : String(event?.type || "unknown").toLowerCase();
-  if (!mapSvg || !globalThis.d3?.pointer) {
+  if (!rendererSurfaceHost.getMapSvg() || !globalThis.d3?.pointer) {
     recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
       eventType,
       entryCount: 0,
@@ -13620,7 +13156,7 @@ function getHoveredFacilityEntryFromEvent(event) {
     });
     return null;
   }
-  const [sx, sy] = globalThis.d3.pointer(event, mapSvg);
+  const [sx, sy] = globalThis.d3.pointer(event, rendererSurfaceHost.getMapSvg());
   if (![sx, sy].every(Number.isFinite)) {
     recordInteractionDurationMetric("interactionHoverFacilityProbeDuration", nowMs() - startedAt, {
       eventType,
@@ -13698,8 +13234,8 @@ function applyFacilityInfoCardState(entry, anchor = null) {
 }
 
 function setMapInteractionCursor(nextCursor = "") {
-  if (!interactionRect) return;
-  interactionRect.style("cursor", nextCursor || null);
+  if (!rendererSurfaceHost.getInteractionRect()) return;
+  rendererSurfaceHost.getInteractionRect().style("cursor", nextCursor || null);
 }
 
 function getActiveFacilityHighlightEntry() {
@@ -13707,10 +13243,10 @@ function getActiveFacilityHighlightEntry() {
 }
 
 function zoomToFacilityEntry(entry, { targetScale = 4.8, durationMs = 420 } = {}) {
-  if (!entry?.coordinates || !projection || !interactionRect || !zoomBehavior || !globalThis.d3) {
+  if (!entry?.coordinates || !rendererSurfaceHost.getProjection() || !rendererSurfaceHost.getInteractionRect() || !rendererSurfaceHost.getZoomBehavior() || !globalThis.d3) {
     return;
   }
-  const projected = projection(entry.coordinates);
+  const projected = rendererSurfaceHost.getProjection()(entry.coordinates);
   if (!Array.isArray(projected) || !projected.every(Number.isFinite)) {
     return;
   }
@@ -13720,10 +13256,10 @@ function zoomToFacilityEntry(entry, { targetScale = 4.8, durationMs = 420 } = {}
     .scale(nextScale)
     .translate(-projected[0], -projected[1]);
   globalThis.d3
-    .select(interactionRect.node())
+    .select(rendererSurfaceHost.getInteractionRect().node())
     .transition()
     .duration(durationMs)
-    .call(zoomBehavior.transform, nextTransform);
+    .call(rendererSurfaceHost.getZoomBehavior().transform, nextTransform);
 }
 
 function syncFacilityInfoCardVisibility() {
@@ -13826,7 +13362,7 @@ function getStrategicResourceMarkerLayerState(k) {
   if (!payload || typeof payload !== "object") {
     return { skipped: true, reason: "no-data", featureCount: 0, markerEntries: [] };
   }
-  if (!projection) {
+  if (!rendererSurfaceHost.getProjection()) {
     return { skipped: true, reason: "no-projection", featureCount, markerEntries: [] };
   }
   if (!isScenarioStrategicValuesUsable(payload)) {
@@ -13842,7 +13378,7 @@ function getStrategicResourceMarkerLayerState(k) {
     showResourceMarkers: true,
     zoom: scale,
   }).map((entry) => {
-    const anchor = projection([entry.lon, entry.lat]);
+    const anchor = rendererSurfaceHost.getProjection()([entry.lon, entry.lat]);
     if (!Array.isArray(anchor) || !anchor.every(Number.isFinite)) return null;
     return { ...entry, anchor };
   }).filter(Boolean);
@@ -13857,13 +13393,13 @@ function drawStrategicResourceMarkerSymbol(entry, scale) {
   const radius = Math.max(1.6 / scale, Number(entry.radiusPx || 4) / scale);
   const strokeWidth = Math.max(0.75 / scale, 1.35 / scale);
   const fillColor = STRATEGIC_RESOURCE_MARKER_COLORS[entry.resource] || "#475569";
-  context.beginPath();
-  context.arc(entry.anchor[0], entry.anchor[1], radius, 0, Math.PI * 2);
-  context.fillStyle = fillColor;
-  context.fill();
-  context.lineWidth = strokeWidth;
-  context.strokeStyle = STRATEGIC_RESOURCE_MARKER_STROKE;
-  context.stroke();
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getContext().arc(entry.anchor[0], entry.anchor[1], radius, 0, Math.PI * 2);
+  rendererSurfaceHost.getContext().fillStyle = fillColor;
+  rendererSurfaceHost.getContext().fill();
+  rendererSurfaceHost.getContext().lineWidth = strokeWidth;
+  rendererSurfaceHost.getContext().strokeStyle = STRATEGIC_RESOURCE_MARKER_STROKE;
+  rendererSurfaceHost.getContext().stroke();
 }
 
 function drawStrategicResourceMarkersLayer(k, { interactive = false } = {}) {
@@ -13880,11 +13416,11 @@ function drawStrategicResourceMarkersLayer(k, { interactive = false } = {}) {
     return;
   }
 
-  context.save();
-  context.globalCompositeOperation = "source-over";
-  context.globalAlpha = interactive ? 0.82 : 0.9;
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getContext().globalAlpha = interactive ? 0.82 : 0.9;
   renderState.markerEntries.forEach((entry) => drawStrategicResourceMarkerSymbol(entry, renderState.scale));
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
   collectContextMetric("drawStrategicResourceMarkersLayer", nowMs() - startedAt, {
     featureCount: renderState.featureCount,
     visibleFeatureCount: renderState.markerEntries.length,
@@ -13904,7 +13440,7 @@ function getTextureStyleConfig() {
 function requestTextureRerender() {
   requestRendererRender("texture-rerender", {
     fallback: () => {
-      if (context) {
+      if (rendererSurfaceHost.getContext()) {
         drawCanvas();
       }
     },
@@ -14058,31 +13594,31 @@ function drawDayNightShadowLayer(_k, config, solarState) {
   const coreRadius = clamp(90 - Number(config.twilightWidthDeg || 10), 56, 89);
   const nightCore = buildNightHemisphereFeature(solarState, coreRadius);
 
-  context.save();
-  context.globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
 
-  context.fillStyle = "#24374c";
-  context.globalAlpha = clamp(config.shadowOpacity * 0.5, 0, 0.5);
-  context.beginPath();
-  pathCanvas(twilightBand);
-  context.fill();
+  rendererSurfaceHost.getContext().fillStyle = "#24374c";
+  rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity * 0.5, 0, 0.5);
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getPathCanvas()(twilightBand);
+  rendererSurfaceHost.getContext().fill();
 
   if (nightCore) {
-    context.fillStyle = "#081423";
-    context.globalAlpha = clamp(config.shadowOpacity, 0, 0.85);
-    context.beginPath();
-    pathCanvas(nightCore);
-    context.fill();
+    rendererSurfaceHost.getContext().fillStyle = "#081423";
+    rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity, 0, 0.85);
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(nightCore);
+    rendererSurfaceHost.getContext().fill();
   }
 
-  context.strokeStyle = "#8aa1ba";
-  context.globalAlpha = clamp(config.shadowOpacity * 0.28, 0, 0.24);
-  context.lineWidth = 1.1 / Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
-  context.beginPath();
-  pathCanvas(twilightBand);
-  context.stroke();
+  rendererSurfaceHost.getContext().strokeStyle = "#8aa1ba";
+  rendererSurfaceHost.getContext().globalAlpha = clamp(config.shadowOpacity * 0.28, 0, 0.24);
+  rendererSurfaceHost.getContext().lineWidth = 1.1 / Math.max(0.0001, Number(runtimeState.zoomTransform?.k || 1));
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getPathCanvas()(twilightBand);
+  rendererSurfaceHost.getContext().stroke();
 
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
 }
 
 function drawNightLightsLayer(k, config, solarState) {
@@ -14126,7 +13662,7 @@ function requestDayNightClockRender(reason) {
   invalidateRenderPasses("dayNight", reason);
   requestRendererRender(reason, {
     fallback: () => {
-      if (context) {
+      if (rendererSurfaceHost.getContext()) {
         render();
       }
     },
@@ -14247,13 +13783,13 @@ function createSeededRandom(seedInput) {
 }
 
 function getTexturePattern(source, cacheKey, scale = 1) {
-  if (!context || !source || !cacheKey) return null;
+  if (!rendererSurfaceHost.getContext() || !source || !cacheKey) return null;
   const normalizedScale = clamp(Number(scale) || 1, 0.25, 4);
   const key = `${cacheKey}|${normalizedScale.toFixed(3)}`;
   const cached = texturePatternCache.get(key);
   if (cached) return cached;
 
-  const pattern = context.createPattern(source, "repeat");
+  const pattern = rendererSurfaceHost.getContext().createPattern(source, "repeat");
   if (!pattern) return null;
   if (pattern.setTransform && globalThis.DOMMatrix) {
     const matrix = new globalThis.DOMMatrix();
@@ -14332,15 +13868,15 @@ function getPaperNoiseTile(paperConfig) {
 }
 
 function withTextureSphereClip(shouldClip, drawFn) {
-  if (!context || !pathCanvas || typeof drawFn !== "function") return;
-  context.save();
+  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getPathCanvas() || typeof drawFn !== "function") return;
+  rendererSurfaceHost.getContext().save();
   if (shouldClip) {
-    context.beginPath();
-    pathCanvas({ type: "Sphere" });
-    context.clip();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+    rendererSurfaceHost.getContext().clip();
   }
   drawFn();
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
 }
 
 function buildTextureAxisValues(limit, step) {
@@ -14447,13 +13983,13 @@ function buildTextureGraticuleGeometry(cacheKey, {
 }
 
 function getTextureLineAnchor(line) {
-  if (!projection || !Array.isArray(line?.geometry?.coordinates)) return null;
+  if (!rendererSurfaceHost.getProjection() || !Array.isArray(line?.geometry?.coordinates)) return null;
   let topMost = null;
   let bottomMost = null;
   let leftMost = null;
   let rightMost = null;
   line.geometry.coordinates.forEach((coordinate) => {
-    const projected = projection(coordinate);
+    const projected = rendererSurfaceHost.getProjection()(coordinate);
     if (!projected || projected.length < 2 || !projected.every(Number.isFinite)) return;
     const [x, y] = projected;
     if (line.kind === "meridian") {
@@ -14481,20 +14017,20 @@ function getTextureLineAnchor(line) {
 }
 
 function drawTextureLabels(lines, config, k, opacity) {
-  if (!context || !Array.isArray(lines) || !lines.length) return;
+  if (!rendererSurfaceHost.getContext() || !Array.isArray(lines) || !lines.length) return;
   const occupied = [];
   const minDistance = 56 / Math.max(0.8, k);
   const fontSize = clamp((Number(config.labelSize) || 12) / Math.max(0.75, k), 9, 20);
   const labelOpacity = clamp(opacity, 0, 0.92);
 
-  context.save();
-  context.lineJoin = "round";
-  context.miterLimit = 2;
-  context.strokeStyle = "rgba(248, 250, 252, 0.92)";
-  context.lineWidth = 3.2 / Math.max(0.85, k);
-  context.fillStyle = getSafeCanvasColor(config.labelColor, "#475569");
-  context.globalAlpha = labelOpacity;
-  context.font = `${fontSize}px ${TEXTURE_LABEL_SERIF_STACK}`;
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().lineJoin = "round";
+  rendererSurfaceHost.getContext().miterLimit = 2;
+  rendererSurfaceHost.getContext().strokeStyle = "rgba(248, 250, 252, 0.92)";
+  rendererSurfaceHost.getContext().lineWidth = 3.2 / Math.max(0.85, k);
+  rendererSurfaceHost.getContext().fillStyle = getSafeCanvasColor(config.labelColor, "#475569");
+  rendererSurfaceHost.getContext().globalAlpha = labelOpacity;
+  rendererSurfaceHost.getContext().font = `${fontSize}px ${TEXTURE_LABEL_SERIF_STACK}`;
 
   lines.forEach((line) => {
     if (!line?.label) return;
@@ -14505,22 +14041,22 @@ function drawTextureLabels(lines, config, k, opacity) {
     const overlaps = occupied.some((point) => Math.hypot(point.x - x, point.y - y) < minDistance);
     if (overlaps) return;
     occupied.push({ x, y });
-    context.textAlign = anchor.align;
-    context.textBaseline = anchor.baseline;
-    context.strokeText(line.label, x, y);
-    context.fillText(line.label, x, y);
+    rendererSurfaceHost.getContext().textAlign = anchor.align;
+    rendererSurfaceHost.getContext().textBaseline = anchor.baseline;
+    rendererSurfaceHost.getContext().strokeText(line.label, x, y);
+    rendererSurfaceHost.getContext().fillText(line.label, x, y);
   });
 
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
 }
 
 function drawOldPaperTexture(k, { interactive = false } = {}) {
-  if (!context || !pathCanvas || !pathSVG) return;
+  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getPathCanvas() || !rendererSurfaceHost.getPathSvg()) return;
   const texture = getTextureStyleConfig();
   const paper = texture.paper || {};
   const assetImage = ensureTextureAssetImage(paper.assetId);
   const noiseTile = getPaperNoiseTile(paper);
-  const sphereBounds = pathSVG.bounds({ type: "Sphere" });
+  const sphereBounds = rendererSurfaceHost.getPathSvg().bounds({ type: "Sphere" });
   const minX = sphereBounds?.[0]?.[0] || 0;
   const minY = sphereBounds?.[0]?.[1] || 0;
   const maxX = sphereBounds?.[1]?.[0] || runtimeState.width;
@@ -14530,23 +14066,23 @@ function drawOldPaperTexture(k, { interactive = false } = {}) {
   const radius = Math.max(maxX - minX, maxY - minY) * 0.58;
 
   withTextureSphereClip(texture.sphereClip, () => {
-    context.save();
-    context.globalCompositeOperation = "multiply";
-    context.globalAlpha = clamp(texture.opacity * (0.24 + paper.warmth * 0.22), 0, interactive ? 0.28 : 0.42);
-    context.fillStyle = `rgba(205, 182, 138, ${0.42 + paper.warmth * 0.18})`;
-    context.beginPath();
-    pathCanvas({ type: "Sphere" });
-    context.fill();
+    rendererSurfaceHost.getContext().save();
+    rendererSurfaceHost.getContext().globalCompositeOperation = "multiply";
+    rendererSurfaceHost.getContext().globalAlpha = clamp(texture.opacity * (0.24 + paper.warmth * 0.22), 0, interactive ? 0.28 : 0.42);
+    rendererSurfaceHost.getContext().fillStyle = `rgba(205, 182, 138, ${0.42 + paper.warmth * 0.18})`;
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+    rendererSurfaceHost.getContext().fill();
 
     if (assetImage) {
       const assetPattern = getTexturePattern(assetImage, `paper-asset:${paper.assetId}`, paper.scale);
       if (assetPattern) {
-        context.globalCompositeOperation = getSafeBlendMode(paper.blendMode, "multiply");
-        context.globalAlpha = clamp(texture.opacity * (interactive ? 0.15 : 0.34), 0, 0.42);
-        context.fillStyle = assetPattern;
-        context.beginPath();
-        pathCanvas({ type: "Sphere" });
-        context.fill();
+        rendererSurfaceHost.getContext().globalCompositeOperation = getSafeBlendMode(paper.blendMode, "multiply");
+        rendererSurfaceHost.getContext().globalAlpha = clamp(texture.opacity * (interactive ? 0.15 : 0.34), 0, 0.42);
+        rendererSurfaceHost.getContext().fillStyle = assetPattern;
+        rendererSurfaceHost.getContext().beginPath();
+        rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+        rendererSurfaceHost.getContext().fill();
       }
     }
 
@@ -14557,16 +14093,16 @@ function drawOldPaperTexture(k, { interactive = false } = {}) {
         paper.scale * 0.88
       );
       if (noisePattern) {
-        context.globalCompositeOperation = "multiply";
-        context.globalAlpha = clamp(texture.opacity * (0.22 + paper.grain * 0.3 + paper.wear * 0.22), 0, interactive ? 0.24 : 0.48);
-        context.fillStyle = noisePattern;
-        context.beginPath();
-        pathCanvas({ type: "Sphere" });
-        context.fill();
+        rendererSurfaceHost.getContext().globalCompositeOperation = "multiply";
+        rendererSurfaceHost.getContext().globalAlpha = clamp(texture.opacity * (0.22 + paper.grain * 0.3 + paper.wear * 0.22), 0, interactive ? 0.24 : 0.48);
+        rendererSurfaceHost.getContext().fillStyle = noisePattern;
+        rendererSurfaceHost.getContext().beginPath();
+        rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+        rendererSurfaceHost.getContext().fill();
       }
     }
 
-    const vignette = context.createRadialGradient(
+    const vignette = rendererSurfaceHost.getContext().createRadialGradient(
       centerX,
       centerY,
       radius * 0.24,
@@ -14576,11 +14112,11 @@ function drawOldPaperTexture(k, { interactive = false } = {}) {
     );
     vignette.addColorStop(0, "rgba(88, 62, 34, 0)");
     vignette.addColorStop(1, `rgba(88, 62, 34, ${0.18 + paper.vignette * 0.42})`);
-    context.globalCompositeOperation = "multiply";
-    context.globalAlpha = clamp(texture.opacity * (0.14 + paper.vignette * 0.65), 0, 0.32);
-    context.fillStyle = vignette;
-    context.fillRect(minX - 24, minY - 24, maxX - minX + 48, maxY - minY + 48);
-    context.restore();
+    rendererSurfaceHost.getContext().globalCompositeOperation = "multiply";
+    rendererSurfaceHost.getContext().globalAlpha = clamp(texture.opacity * (0.14 + paper.vignette * 0.65), 0, 0.32);
+    rendererSurfaceHost.getContext().fillStyle = vignette;
+    rendererSurfaceHost.getContext().fillRect(minX - 24, minY - 24, maxX - minX + 48, maxY - minY + 48);
+    rendererSurfaceHost.getContext().restore();
   });
 }
 
@@ -14591,19 +14127,19 @@ function drawProjectedTextureLines(lines, {
   dash = [],
   k = 1,
 } = {}) {
-  if (!context || !pathCanvas || !Array.isArray(lines) || !lines.length) return;
-  context.save();
-  context.strokeStyle = getSafeCanvasColor(color, "#64748b");
-  context.globalAlpha = clamp(opacity, 0, 1);
-  context.lineWidth = clamp(Number(width) || 1, 0.1, 4) / Math.max(0.0001, k);
-  context.setLineDash(Array.isArray(dash) ? dash : []);
+  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getPathCanvas() || !Array.isArray(lines) || !lines.length) return;
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().strokeStyle = getSafeCanvasColor(color, "#64748b");
+  rendererSurfaceHost.getContext().globalAlpha = clamp(opacity, 0, 1);
+  rendererSurfaceHost.getContext().lineWidth = clamp(Number(width) || 1, 0.1, 4) / Math.max(0.0001, k);
+  rendererSurfaceHost.getContext().setLineDash(Array.isArray(dash) ? dash : []);
   lines.forEach((line) => {
     if (!line?.geometry) return;
-    context.beginPath();
-    pathCanvas(line.geometry);
-    context.stroke();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(line.geometry);
+    rendererSurfaceHost.getContext().stroke();
   });
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
 }
 
 function getGraticuleTextureGeometry(config) {
@@ -14852,26 +14388,26 @@ function drawPoliticalBackgroundFillsFromGroups(groups = []) {
     if (!groupEntries.length && !mergedPath) {
       return;
     }
-    context.fillStyle = fillColor;
+    rendererSurfaceHost.getContext().fillStyle = fillColor;
     if (mergedPath) {
-      context.fill(mergedPath);
+      rendererSurfaceHost.getContext().fill(mergedPath);
       groupCount += 1;
       return;
     }
     if (groupEntries.length && groupEntries.every((entry) => entry?.path)) {
       groupEntries.forEach((entry) => {
-        context.fill(entry.path);
+        rendererSurfaceHost.getContext().fill(entry.path);
       });
       groupCount += 1;
       return;
     }
-    context.beginPath();
+    rendererSurfaceHost.getContext().beginPath();
     groupEntries.forEach((entry) => {
       if (entry?.feature) {
-        pathCanvas(entry.feature);
+        rendererSurfaceHost.getPathCanvas()(entry.feature);
       }
     });
-    context.fill();
+    rendererSurfaceHost.getContext().fill();
     groupCount += 1;
   });
   return groupCount;
@@ -15314,7 +14850,7 @@ function runScenarioPoliticalBackgroundDeferredFullCacheSlice(deadline = null) {
   const repaintRequested = requestRendererRender("progressive-political-full-cache-ready", {
     flush: false,
     fallback: () => {
-      if (context) render();
+      if (rendererSurfaceHost.getContext()) render();
     },
   });
   recordRenderPerfMetric("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest", 0, {
@@ -15706,8 +15242,8 @@ function drawAdmin0BackgroundFills({
     }
     const fillColor = getAdmin0BackgroundFillColor(code);
 
-    context.beginPath();
-    pathCanvas(mergedFeature || {
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(mergedFeature || {
       type: "Feature",
       properties: {
         id: `admin0-background-${code}`,
@@ -15715,21 +15251,21 @@ function drawAdmin0BackgroundFills({
       },
       geometry: mergedShape,
     });
-    context.fillStyle = fillColor;
-    context.fill();
+    rendererSurfaceHost.getContext().fillStyle = fillColor;
+    rendererSurfaceHost.getContext().fill();
   });
 }
 
 function drawOceanDepthMaskLayer() {
-  if (!context || !projection) return null;
+  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getProjection()) return null;
   const intensityFields = normalizeIntensityFieldsState(runtimeState.intensityFields);
   runtimeState.intensityFields = intensityFields;
   const channel = intensityFields.channels.oceanDepth;
   if (!channel?.enabled) return null;
 
   const layout = getRenderPassLayout("background");
-  const widthPx = Number(layout?.pixelWidth || context.canvas?.width || 0);
-  const heightPx = Number(layout?.pixelHeight || context.canvas?.height || 0);
+  const widthPx = Number(layout?.pixelWidth || rendererSurfaceHost.getContext().canvas?.width || 0);
+  const heightPx = Number(layout?.pixelHeight || rendererSurfaceHost.getContext().canvas?.height || 0);
   const startedAt = nowMs();
   const maskResult = getIntensityFieldMaskOwner().getMaskCanvas("oceanDepth", {
     transform: runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
@@ -15753,13 +15289,13 @@ function drawOceanDepthMaskLayer() {
     return maskResult || null;
   }
 
-  context.save();
+  rendererSurfaceHost.getContext().save();
   applyOceanClipMask(runtimeState.oceanMaskMode || OCEAN_MASK_MODE_TOPOLOGY);
-  context.globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE;
-  context.globalAlpha = 1;
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.drawImage(maskResult.canvas, 0, 0);
-  context.restore();
+  rendererSurfaceHost.getContext().globalCompositeOperation = OCEAN_DEPTH_MASK_BLEND_MODE;
+  rendererSurfaceHost.getContext().globalAlpha = 1;
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().drawImage(maskResult.canvas, 0, 0);
+  rendererSurfaceHost.getContext().restore();
 
   recordRenderPerfMetric("drawOceanDepthMaskLayer", nowMs() - startedAt, {
     drawn: true,
@@ -15773,16 +15309,16 @@ function drawOceanDepthMaskLayer() {
 
 function drawBackgroundPass() {
   const oceanFillColor = getOceanBaseFillColor();
-  context.fillStyle = oceanFillColor;
-  context.beginPath();
-  pathCanvas({ type: "Sphere" });
-  context.fill();
+  rendererSurfaceHost.getContext().fillStyle = oceanFillColor;
+  rendererSurfaceHost.getContext().beginPath();
+  rendererSurfaceHost.getPathCanvas()({ type: "Sphere" });
+  rendererSurfaceHost.getContext().fill();
 
   if (runtimeState.oceanData) {
-    context.fillStyle = oceanFillColor;
-    context.beginPath();
-    pathCanvas(runtimeState.oceanData);
-    context.fill();
+    rendererSurfaceHost.getContext().fillStyle = oceanFillColor;
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(runtimeState.oceanData);
+    rendererSurfaceHost.getContext().fill();
   }
   drawOceanStyle();
   drawOceanDepthMaskLayer();
@@ -16054,7 +15590,7 @@ function getPoliticalFeatureFillColor(feature, id, index, canvasWidth = 0) {
   }
   if (debugMode === "GEOMETRY") return index % 2 === 0 ? "pink" : "lightgreen";
   if (debugMode === "ARTIFACTS") {
-    const bounds = pathCanvas.bounds(feature);
+    const bounds = rendererSurfaceHost.getPathCanvas().bounds(feature);
     let featureWidth = 0;
     if (bounds && bounds.length === 2) {
       const minX = bounds[0][0];
@@ -16070,8 +15606,8 @@ function getPoliticalFeatureFillColor(feature, id, index, canvasWidth = 0) {
 }
 
 function projectCoordinateToWorkerPixel(point, transform, dpr) {
-  if (!Array.isArray(point) || point.length < 2 || !projection) return null;
-  const projected = projection([Number(point[0]), Number(point[1])]);
+  if (!Array.isArray(point) || point.length < 2 || !rendererSurfaceHost.getProjection()) return null;
+  const projected = rendererSurfaceHost.getProjection()([Number(point[0]), Number(point[1])]);
   if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return null;
   const x = (Number(transform?.x || 0) + projected[0] * Number(transform?.k || 1)) * dpr;
   const y = (Number(transform?.y || 0) + projected[1] * Number(transform?.k || 1)) * dpr;
@@ -16086,7 +15622,7 @@ function buildPoliticalRasterWorkerPacket({
   canvasHeight = 0,
 } = {}) {
   const startedAt = nowMs();
-  if (debugMode !== "PROD" || !projection) {
+  if (debugMode !== "PROD" || !rendererSurfaceHost.getProjection()) {
     return { packet: null, packetBuildMs: Math.max(0, nowMs() - startedAt), reason: "debug-mode" };
   }
   const dpr = Math.max(0.1, Number(runtimeState.dpr || 1));
@@ -16135,14 +15671,14 @@ function buildPoliticalRasterWorkerPacket({
 }
 
 function drawPoliticalWorkerBitmapResult(result, workerIdentity) {
-  if (!result?.bitmap || !context?.canvas) return false;
+  if (!result?.bitmap || !rendererSurfaceHost.getContext()?.canvas) return false;
   const startedAt = nowMs();
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.globalCompositeOperation = "source-over";
-  context.globalAlpha = 1;
-  context.drawImage(result.bitmap, 0, 0, context.canvas.width, context.canvas.height);
-  context.restore();
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getContext().globalAlpha = 1;
+  rendererSurfaceHost.getContext().drawImage(result.bitmap, 0, 0, rendererSurfaceHost.getContext().canvas.width, rendererSurfaceHost.getContext().canvas.height);
+  rendererSurfaceHost.getContext().restore();
   const metrics = ensurePoliticalRasterWorkerMetrics(globalThis);
   metrics.blitMs = Math.max(0, nowMs() - startedAt);
   recordRenderPerfMetric("politicalRasterWorker.blitMs", metrics.blitMs, {
@@ -16208,31 +15744,31 @@ function drawPoliticalFeature(
       })?.path
       : null)
     || null;
-  context.fillStyle = fillColor;
+  rendererSurfaceHost.getContext().fillStyle = fillColor;
   const fillStartedAt = metricsCollector ? nowMs() : 0;
   if (cachedPath) {
-    context.fill(cachedPath);
+    rendererSurfaceHost.getContext().fill(cachedPath);
   } else {
-    context.beginPath();
-    pathCanvas(feature);
-    context.fill();
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(feature);
+    rendererSurfaceHost.getContext().fill();
   }
   if (metricsCollector) {
     metricsCollector.fillMs = Number(metricsCollector.fillMs || 0) + Math.max(0, nowMs() - fillStartedAt);
   }
 
   if (debugMode === "PROD") {
-    context.strokeStyle = isAtlantropaSea
+    rendererSurfaceHost.getContext().strokeStyle = isAtlantropaSea
       ? getAtlantropaSeaPoliticalStrokeColor()
       : fillColor;
-    context.lineWidth = 0.75 / Math.max(0.0001, k);
-    context.lineJoin = "round";
-    context.lineCap = "round";
+    rendererSurfaceHost.getContext().lineWidth = 0.75 / Math.max(0.0001, k);
+    rendererSurfaceHost.getContext().lineJoin = "round";
+    rendererSurfaceHost.getContext().lineCap = "round";
     const strokeStartedAt = metricsCollector ? nowMs() : 0;
     if (cachedPath) {
-      context.stroke(cachedPath);
+      rendererSurfaceHost.getContext().stroke(cachedPath);
     } else {
-      context.stroke();
+      rendererSurfaceHost.getContext().stroke();
     }
     if (metricsCollector) {
       metricsCollector.strokeMs = Number(metricsCollector.strokeMs || 0) + Math.max(0, nowMs() - strokeStartedAt);
@@ -16875,11 +16411,11 @@ function drawCachedContextScenarioLayer(layerName, currentTransform) {
   if (layerCanvas.width !== layout.pixelWidth || layerCanvas.height !== layout.pixelHeight) {
     return false;
   }
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
   if (areZoomTransformsEquivalent(referenceTransform, currentTransform)) {
-    context.drawImage(layerCanvas, 0, 0);
-    context.restore();
+    rendererSurfaceHost.getContext().drawImage(layerCanvas, 0, 0);
+    rendererSurfaceHost.getContext().restore();
     return true;
   }
   const current = cloneZoomTransform(currentTransform);
@@ -16888,13 +16424,13 @@ function drawCachedContextScenarioLayer(layerName, currentTransform) {
   const dy = current.y - (referenceTransform.y * scaleRatio);
   const offsetX = Number(layout?.offsetX || 0);
   const offsetY = Number(layout?.offsetY || 0);
-  context.translate(
+  rendererSurfaceHost.getContext().translate(
     (dx + offsetX * (1 - scaleRatio)) * runtimeState.dpr,
     (dy + offsetY * (1 - scaleRatio)) * runtimeState.dpr,
   );
-  context.scale(scaleRatio, scaleRatio);
-  context.drawImage(layerCanvas, 0, 0);
-  context.restore();
+  rendererSurfaceHost.getContext().scale(scaleRatio, scaleRatio);
+  rendererSurfaceHost.getContext().drawImage(layerCanvas, 0, 0);
+  rendererSurfaceHost.getContext().restore();
   return true;
 }
 
@@ -16924,33 +16460,33 @@ function drawScenarioWaterFillLayer(k, { waterFeatures = [] } = {}) {
       visibleParts.push(part);
     });
     if (!visibleParts.length) return;
-    context.save();
-    context.globalAlpha = fillOpacity;
-    context.fillStyle = getWaterRegionColor(id, feature);
+    rendererSurfaceHost.getContext().save();
+    rendererSurfaceHost.getContext().globalAlpha = fillOpacity;
+    rendererSurfaceHost.getContext().fillStyle = getWaterRegionColor(id, feature);
     const waterPath = visibleParts.length === parts.length
       ? getScenarioWaterFeaturePath(feature, parts)
       : null;
     if (waterPath) {
-      context.fill(waterPath);
+      rendererSurfaceHost.getContext().fill(waterPath);
     } else if (globalThis.Path2D) {
       visibleParts.forEach((part) => {
         const partPath = getScenarioWaterPartPath(part);
         if (partPath) {
-          context.fill(partPath);
-        } else if (pathCanvas) {
-          context.beginPath();
-          pathCanvas(part);
-          context.fill();
+          rendererSurfaceHost.getContext().fill(partPath);
+        } else if (rendererSurfaceHost.getPathCanvas()) {
+          rendererSurfaceHost.getContext().beginPath();
+          rendererSurfaceHost.getPathCanvas()(part);
+          rendererSurfaceHost.getContext().fill();
         }
       });
     } else {
-      context.beginPath();
+      rendererSurfaceHost.getContext().beginPath();
       visibleParts.forEach((part) => {
-        if (pathCanvas) pathCanvas(part);
+        if (rendererSurfaceHost.getPathCanvas()) rendererSurfaceHost.getPathCanvas()(part);
       });
-      context.fill();
+      rendererSurfaceHost.getContext().fill();
     }
-    context.restore();
+    rendererSurfaceHost.getContext().restore();
     renderedWaterCount += 1;
   });
   collectContextMetric("drawScenarioWaterFillLayer", nowMs() - startedAt, {
@@ -16998,17 +16534,17 @@ function drawScenarioAtlantropaLandLikeOverlayLayer(k) {
       allowBuild: true,
       countBuild: false,
     })?.path || null;
-    context.save();
-    context.globalAlpha = 1;
-    context.fillStyle = fillColor;
+    rendererSurfaceHost.getContext().save();
+    rendererSurfaceHost.getContext().globalAlpha = 1;
+    rendererSurfaceHost.getContext().fillStyle = fillColor;
     if (cachedPath) {
-      context.fill(cachedPath);
+      rendererSurfaceHost.getContext().fill(cachedPath);
     } else {
-      context.beginPath();
-      pathCanvas(feature);
-      context.fill();
+      rendererSurfaceHost.getContext().beginPath();
+      rendererSurfaceHost.getPathCanvas()(feature);
+      rendererSurfaceHost.getContext().fill();
     }
-    context.restore();
+    rendererSurfaceHost.getContext().restore();
     renderedCount += 1;
   });
   collectContextMetric("drawScenarioAtlantropaLandLikeOverlayLayer", nowMs() - startedAt, {
@@ -17043,7 +16579,7 @@ function renderScenarioWaterFillLayerToCache(currentTransform, waterFeatures) {
 }
 
 function getScenarioWaterPartPath(part) {
-  if (!part || typeof part !== "object" || !globalThis.Path2D || typeof pathSVG !== "function") {
+  if (!part || typeof part !== "object" || !globalThis.Path2D || typeof rendererSurfaceHost.getPathSvg() !== "function") {
     return null;
   }
   if (scenarioWaterPartPathCache.has(part)) {
@@ -17051,7 +16587,7 @@ function getScenarioWaterPartPath(part) {
   }
   let path = null;
   try {
-    const pathString = pathSVG(part);
+    const pathString = rendererSurfaceHost.getPathSvg()(part);
     path = pathString ? new globalThis.Path2D(pathString) : null;
   } catch (_error) {
     path = null;
@@ -17092,22 +16628,22 @@ function drawScenarioWaterHighlightLayer(k) {
     const parts = collectSafeWaterRegionGeometryParts(feature);
     if (!parts.length) return;
     const isMacroOcean = isMacroOceanWaterRegion(feature);
-    context.beginPath();
+    rendererSurfaceHost.getContext().beginPath();
     let visiblePartCount = 0;
     parts.forEach((part) => {
       if (!projectedGeoBoundsInScreen(computeProjectedGeoBounds(part))) return;
-      if (!pathCanvas) return;
-      pathCanvas(part);
+      if (!rendererSurfaceHost.getPathCanvas()) return;
+      rendererSurfaceHost.getPathCanvas()(part);
       visiblePartCount += 1;
     });
     if (!visiblePartCount) return;
-    context.save();
-    context.globalAlpha = isMacroOcean ? 0.92 : 1;
-    context.strokeStyle = "#f1c40f";
-    context.lineWidth = (isMacroOcean ? 1.15 : 0.9) / Math.max(0.0001, k);
-    context.lineJoin = "round";
-    context.stroke();
-    context.restore();
+    rendererSurfaceHost.getContext().save();
+    rendererSurfaceHost.getContext().globalAlpha = isMacroOcean ? 0.92 : 1;
+    rendererSurfaceHost.getContext().strokeStyle = "#f1c40f";
+    rendererSurfaceHost.getContext().lineWidth = (isMacroOcean ? 1.15 : 0.9) / Math.max(0.0001, k);
+    rendererSurfaceHost.getContext().lineJoin = "round";
+    rendererSurfaceHost.getContext().stroke();
+    rendererSurfaceHost.getContext().restore();
     highlightedCount += 1;
   });
   return highlightedCount;
@@ -17130,19 +16666,19 @@ function drawScenarioSpecialRegionOverlaysLayer(k, { specialFeatures = [] } = {}
     const renderAsBase = isBaseGeographyScenarioFeature(feature);
     if (!isSpecialRegionEnabled(feature)) return;
     if (!pathBoundsInScreen(feature)) return;
-    context.beginPath();
-    pathCanvas(feature);
-    context.save();
-    context.globalAlpha = renderAsBase
+    rendererSurfaceHost.getContext().beginPath();
+    rendererSurfaceHost.getPathCanvas()(feature);
+    rendererSurfaceHost.getContext().save();
+    rendererSurfaceHost.getContext().globalAlpha = renderAsBase
       ? Math.max(getSpecialRegionOpacity(feature, id), 0.94)
       : getSpecialRegionOpacity(feature, id);
-    context.fillStyle = getSpecialRegionColor(id, feature);
-    context.fill();
-    context.restore();
-    context.strokeStyle = getSpecialRegionStrokeColor(feature);
-    context.lineWidth = 1 / Math.max(0.0001, k);
-    context.lineJoin = "round";
-    context.stroke();
+    rendererSurfaceHost.getContext().fillStyle = getSpecialRegionColor(id, feature);
+    rendererSurfaceHost.getContext().fill();
+    rendererSurfaceHost.getContext().restore();
+    rendererSurfaceHost.getContext().strokeStyle = getSpecialRegionStrokeColor(feature);
+    rendererSurfaceHost.getContext().lineWidth = 1 / Math.max(0.0001, k);
+    rendererSurfaceHost.getContext().lineJoin = "round";
+    rendererSurfaceHost.getContext().stroke();
     renderedSpecialCount += 1;
   });
   collectContextMetric("drawScenarioSpecialRegionOverlaysLayer", nowMs() - startedAt, {
@@ -17644,7 +17180,7 @@ function drawBlankFeatureLabelsPass(k, { interactive = false } = {}) {
   if (normalizeMapSemanticMode(runtimeState.mapSemanticMode) !== "blank") return;
   if (String(runtimeState.activeScenarioId || "") !== "blank_base") return;
   if (!runtimeState.showBlankFeatureLabels) return;
-  if (!runtimeState.landData?.features?.length || !context || typeof pathCanvas?.centroid !== "function") return;
+  if (!runtimeState.landData?.features?.length || !rendererSurfaceHost.getContext() || typeof rendererSurfaceHost.getPathCanvas()?.centroid !== "function") return;
   const visibleItems = collectVisibleLandSpatialItems();
   const items = Array.isArray(visibleItems) && visibleItems.length
     ? visibleItems
@@ -17655,25 +17191,25 @@ function drawBlankFeatureLabelsPass(k, { interactive = false } = {}) {
   const maxLabels = Math.max(24, Math.min(140, Math.round(44 * Math.max(1, Number(k) || 1))));
   const step = Math.max(1, Math.ceil(items.length / maxLabels));
   const fontSize = Math.max(7, Math.min(12, 11 / Math.max(0.75, Number(k) || 1)));
-  context.save();
-  context.font = `${fontSize}px system-ui, sans-serif`;
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.lineWidth = Math.max(1.8 / Math.max(0.75, Number(k) || 1), 0.7);
-  context.strokeStyle = "rgba(248, 250, 252, 0.82)";
-  context.fillStyle = "rgba(31, 41, 55, 0.86)";
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().font = `${fontSize}px system-ui, sans-serif`;
+  rendererSurfaceHost.getContext().textAlign = "center";
+  rendererSurfaceHost.getContext().textBaseline = "middle";
+  rendererSurfaceHost.getContext().lineWidth = Math.max(1.8 / Math.max(0.75, Number(k) || 1), 0.7);
+  rendererSurfaceHost.getContext().strokeStyle = "rgba(248, 250, 252, 0.82)";
+  rendererSurfaceHost.getContext().fillStyle = "rgba(31, 41, 55, 0.86)";
   for (let index = 0; index < items.length; index += step) {
     const item = items[index];
     const feature = item?.feature || item;
     const id = item?.id || getFeatureId(feature) || "";
     const label = getBlankFeatureLabel(feature, id);
     if (!label) continue;
-    const centroid = pathCanvas.centroid(feature);
+    const centroid = rendererSurfaceHost.getPathCanvas().centroid(feature);
     if (!centroid || !Number.isFinite(centroid[0]) || !Number.isFinite(centroid[1])) continue;
-    context.strokeText(label, centroid[0], centroid[1]);
-    context.fillText(label, centroid[0], centroid[1]);
+    rendererSurfaceHost.getContext().strokeText(label, centroid[0], centroid[1]);
+    rendererSurfaceHost.getContext().fillText(label, centroid[0], centroid[1]);
   }
-  context.restore();
+  rendererSurfaceHost.getContext().restore();
 }
 
 function drawLabelsPass(k, { interactive = false } = {}) {
@@ -17754,8 +17290,8 @@ function resetCanvasContext(targetContext, width, height) {
 }
 
 function resetMainCanvas() {
-  if (!context?.canvas) return;
-  resetCanvasContext(context, context.canvas.width, context.canvas.height);
+  if (!rendererSurfaceHost.getContext()?.canvas) return;
+  resetCanvasContext(rendererSurfaceHost.getContext(), rendererSurfaceHost.getContext().canvas.width, rendererSurfaceHost.getContext().canvas.height);
 }
 
 function areZoomTransformsEquivalent(a, b, epsilon = 0.01) {
@@ -17769,18 +17305,18 @@ function areZoomTransformsEquivalent(a, b, epsilon = 0.01) {
 }
 
 function blitCompositeBufferToMain(bufferCanvas) {
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.globalCompositeOperation = "source-over";
-  context.globalAlpha = 1;
-  context.shadowBlur = 0;
-  context.filter = "none";
-  context.globalCompositeOperation = "copy";
-  context.drawImage(bufferCanvas, 0, 0);
-  context.globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
+  rendererSurfaceHost.getContext().globalAlpha = 1;
+  rendererSurfaceHost.getContext().shadowBlur = 0;
+  rendererSurfaceHost.getContext().filter = "none";
+  rendererSurfaceHost.getContext().globalCompositeOperation = "copy";
+  rendererSurfaceHost.getContext().drawImage(bufferCanvas, 0, 0);
+  rendererSurfaceHost.getContext().globalCompositeOperation = "source-over";
 }
 
 function composeCachedPasses(passNames, currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity) {
-  if (!context?.canvas) return false;
+  if (!rendererSurfaceHost.getContext()?.canvas) return false;
   const bufferCanvas = ensureCompositeBufferCanvas();
   const bufferContext = bufferCanvas.getContext("2d");
   if (!bufferContext) return false;
@@ -17820,7 +17356,7 @@ function canBuildInteractionComposite(cache = getRenderPassCacheState()) {
 }
 
 function buildInteractionComposite(currentTransform, timings) {
-  if (!context?.canvas || !canBuildInteractionComposite(getRenderPassCacheState())) return false;
+  if (!rendererSurfaceHost.getContext()?.canvas || !canBuildInteractionComposite(getRenderPassCacheState())) return false;
   const cache = getRenderPassCacheState();
   const compositeCanvas = ensureInteractionCompositeCanvas();
   const compositeContext = compositeCanvas.getContext("2d");
@@ -17897,12 +17433,12 @@ function drawInteractionComposite(
     };
     publishRenderDiagnostics();
   }
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
-  context.scale(scaleRatio, scaleRatio);
-  context.drawImage(composite.canvas, 0, 0);
-  context.restore();
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().translate(dx * runtimeState.dpr, dy * runtimeState.dpr);
+  rendererSurfaceHost.getContext().scale(scaleRatio, scaleRatio);
+  rendererSurfaceHost.getContext().drawImage(composite.canvas, 0, 0);
+  rendererSurfaceHost.getContext().restore();
   incrementPerfCounter("interactionCompositeReuses");
   if (reuseDecision.mode === "continuity") {
     incrementPerfCounter("interactionCompositeContinuityReuses");
@@ -17947,15 +17483,15 @@ function drawTransformedPass(passName, currentTransform, referenceTransform = nu
     };
     publishRenderDiagnostics();
   }
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.translate(
+  rendererSurfaceHost.getContext().save();
+  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
+  rendererSurfaceHost.getContext().translate(
     (dx - Number(layout?.offsetX || 0) * scaleRatio) * runtimeState.dpr,
     (dy - Number(layout?.offsetY || 0) * scaleRatio) * runtimeState.dpr,
   );
-  context.scale(scaleRatio, scaleRatio);
-  context.drawImage(passCanvas, 0, 0);
-  context.restore();
+  rendererSurfaceHost.getContext().scale(scaleRatio, scaleRatio);
+  rendererSurfaceHost.getContext().drawImage(passCanvas, 0, 0);
+  rendererSurfaceHost.getContext().restore();
   return true;
 }
 
@@ -18257,7 +17793,7 @@ function promoteDeferredColorRenderToIdle() {
 }
 
 function drawCanvas() {
-  if (!context || !pathCanvas) return;
+  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getPathCanvas()) return;
   ensureLayerDataFromTopology();
   incrementPerfCounter("drawCanvas");
   clearPoliticalPatchOverlayIfStale("drawCanvas-stale-overlay");
@@ -18533,14 +18069,14 @@ function syncSpecialZonePatternTransformDuringZoom() {
 }
 
 function renderSpecialZoneEditorOverlay() {
-  if (!specialZoneEditorGroup || !pathSVG) return;
+  if (!rendererSurfaceHost.getSpecialZoneEditorGroup() || !rendererSurfaceHost.getPathSvg()) return;
   ensureSpecialZoneEditorState();
 
   const vertices = runtimeState.specialZoneEditor.vertices || [];
   const isActive = !!runtimeState.specialZoneEditor.active;
 
   if (!isActive || vertices.length === 0) {
-    specialZoneEditorGroup.selectAll("*").remove();
+    rendererSurfaceHost.getSpecialZoneEditorGroup().selectAll("*").remove();
     return;
   }
 
@@ -18571,7 +18107,7 @@ function renderSpecialZoneEditorOverlay() {
   if (polygonFeature) paths.push({ id: "draw-poly", feature: polygonFeature, fill: true });
   paths.push({ id: "draw-line", feature: lineFeature, fill: false });
 
-  const pathSelection = specialZoneEditorGroup
+  const pathSelection = rendererSurfaceHost.getSpecialZoneEditorGroup()
     .selectAll("path.special-zone-editor-path")
     .data(paths, (d) => d.id);
 
@@ -18583,7 +18119,7 @@ function renderSpecialZoneEditorOverlay() {
     .attr("aria-hidden", "true")
     .attr("vector-effect", "non-scaling-stroke")
     .merge(pathSelection)
-    .attr("d", (d) => pathSVG(d.feature))
+    .attr("d", (d) => rendererSurfaceHost.getPathSvg()(d.feature))
     .attr("fill", (d) => (d.fill ? style.fill : "none"))
     .attr("fill-opacity", (d) => (d.fill ? Math.min(style.fillOpacity * 0.85, 0.6) : 0))
     .attr("stroke", style.stroke)
@@ -18593,7 +18129,7 @@ function renderSpecialZoneEditorOverlay() {
   pathSelection.exit().remove();
 
   const points = vertices.map((coord, index) => ({ coord, key: `v-${index}` }));
-  const pointSelection = specialZoneEditorGroup
+  const pointSelection = rendererSurfaceHost.getSpecialZoneEditorGroup()
     .selectAll("circle.special-zone-editor-point")
     .data(points, (d) => d.key);
 
@@ -18605,8 +18141,8 @@ function renderSpecialZoneEditorOverlay() {
     .attr("aria-hidden", "true")
     .merge(pointSelection)
     .attr("r", 3.4)
-    .attr("cx", (d) => projection(d.coord)?.[0] ?? -9999)
-    .attr("cy", (d) => projection(d.coord)?.[1] ?? -9999)
+    .attr("cx", (d) => rendererSurfaceHost.getProjection()(d.coord)?.[0] ?? -9999)
+    .attr("cy", (d) => rendererSurfaceHost.getProjection()(d.coord)?.[1] ?? -9999)
     .attr("fill", "#ffffff")
     .attr("stroke", style.stroke)
     .attr("stroke-width", 1.3);
@@ -18829,7 +18365,7 @@ function resetUnitCounterEditorState({ preserveSelection = false, preserveCounte
 }
 
 function getProjectedPoint(coord) {
-  const projected = projection?.(coord);
+  const projected = rendererSurfaceHost.getProjection()?.(coord);
   if (!Array.isArray(projected) || projected.length < 2) return null;
   const x = Number(projected[0]);
   const y = Number(projected[1]);
@@ -18970,7 +18506,7 @@ function getFrontlineLabelAnchors() {
 }
 
 function renderStrategicDefs() {
-  if (!strategicDefs) return;
+  if (!rendererSurfaceHost.getStrategicDefs()) return;
   const defs = [
     {
       id: "strategic-arrow-attack",
@@ -19002,7 +18538,7 @@ function renderStrategicDefs() {
     },
   ];
 
-  const selection = strategicDefs.selectAll("marker.strategic-marker").data(defs, (d) => d.id);
+  const selection = rendererSurfaceHost.getStrategicDefs().selectAll("marker.strategic-marker").data(defs, (d) => d.id);
   const enter = selection
     .enter()
     .append("marker")
@@ -19297,32 +18833,32 @@ function getLandFeatureIdFromEvent(event, eventType = "unit-counter-hit") {
 }
 
 function renderFrontlineOverlay() {
-  if (!frontlineOverlayGroup || !frontlineLabelsGroup || !pathSVG) return;
+  if (!rendererSurfaceHost.getFrontlineOverlayGroup() || !rendererSurfaceHost.getFrontlineLabelsGroup() || !rendererSurfaceHost.getPathSvg()) return;
   if (!runtimeState.annotationView?.frontlineEnabled) {
     runtimeState.cachedFrontlineMesh = null;
     runtimeState.cachedFrontlineMeshHash = "";
     runtimeState.cachedFrontlineLabelAnchors = [];
     runtimeState.cachedFrontlineLabelAnchorsHash = "";
-    frontlineOverlayGroup.selectAll("*").remove();
-    frontlineLabelsGroup.selectAll("*").remove();
-    frontlineOverlayGroup.attr("aria-hidden", "true");
-    frontlineLabelsGroup.attr("aria-hidden", "true");
+    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
+    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
+    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
+    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
     return;
   }
   const mesh = getBorderMeshOwner().getFrontlineMesh();
   const hasMesh = !!mesh && Array.isArray(mesh.coordinates) && mesh.coordinates.length > 0;
   if (!hasMesh) {
-    frontlineOverlayGroup.selectAll("*").remove();
-    frontlineLabelsGroup.selectAll("*").remove();
-    frontlineOverlayGroup.attr("aria-hidden", "true");
-    frontlineLabelsGroup.attr("aria-hidden", "true");
+    rendererSurfaceHost.getFrontlineOverlayGroup().selectAll("*").remove();
+    rendererSurfaceHost.getFrontlineLabelsGroup().selectAll("*").remove();
+    rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "true");
+    rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", "true");
     return;
   }
 
   const style = String(runtimeState.annotationView?.frontlineStyle || "clean");
   const zoomK = Math.max(0.1, Number(runtimeState.zoomTransform?.k || 1));
   const widthScale = zoomK >= 5 ? 1.18 : zoomK >= 2.4 ? 1.04 : zoomK >= 1.2 ? 0.92 : 0.82;
-  const pathValue = pathSVG(mesh);
+  const pathValue = rendererSurfaceHost.getPathSvg()(mesh);
   const layers = style === "dual-rail"
     ? [
       { key: "base", stroke: "rgba(17, 24, 39, 0.78)", width: 4.2 * widthScale, dasharray: null },
@@ -19339,7 +18875,7 @@ function renderFrontlineOverlay() {
         { key: "inner", stroke: "rgba(236, 232, 223, 0.9)", width: 1.7 * widthScale, dasharray: null },
       ];
 
-  const selection = frontlineOverlayGroup
+  const selection = rendererSurfaceHost.getFrontlineOverlayGroup()
     .selectAll("path.frontline-path")
     .data(layers, (d) => d.key);
 
@@ -19360,10 +18896,10 @@ function renderFrontlineOverlay() {
     .attr("stroke-dasharray", (d) => d.dasharray || null);
 
   selection.exit().remove();
-  frontlineOverlayGroup.attr("aria-hidden", "false");
+  rendererSurfaceHost.getFrontlineOverlayGroup().attr("aria-hidden", "false");
 
   const labels = runtimeState.annotationView?.showFrontlineLabels ? getFrontlineLabelAnchors() : [];
-  const labelSelection = frontlineLabelsGroup
+  const labelSelection = rendererSurfaceHost.getFrontlineLabelsGroup()
     .selectAll("g.frontline-label")
     .data(labels, (d) => d.key);
 
@@ -19400,31 +18936,31 @@ function renderFrontlineOverlay() {
     });
 
   labelSelection.exit().remove();
-  frontlineLabelsGroup.attr("aria-hidden", labels.length ? "false" : "true");
+  rendererSurfaceHost.getFrontlineLabelsGroup().attr("aria-hidden", labels.length ? "false" : "true");
 }
 
 function syncInteractionLayerPointerEvents() {
-  if (!interactionRect) return;
+  if (!rendererSurfaceHost.getInteractionRect()) return;
   const operationGraphicEditor = runtimeState.operationGraphicsEditor || {};
   const hasEditableOperationGraphic = !operationGraphicEditor.active
     && String(operationGraphicEditor.mode || "") === "edit"
     && !!String(operationGraphicEditor.selectedId || "").trim()
     && Array.isArray(operationGraphicEditor.points)
     && operationGraphicEditor.points.length > 0;
-  interactionRect
+  rendererSurfaceHost.getInteractionRect()
     .style("pointer-events", hasEditableOperationGraphic ? "none" : "all")
     .lower();
 }
 
 function renderOperationGraphicsEditorOverlay() {
-  if (!operationGraphicsEditorGroup) return;
+  if (!rendererSurfaceHost.getOperationGraphicsEditorGroup()) return;
   ensureOperationGraphicsEditorState();
   const editorModel = getOperationGraphicEditorModel();
   const points = Array.isArray(editorModel?.points) ? editorModel.points : [];
   const isDrawing = editorModel?.mode === "draw";
   if (!editorModel || points.length === 0) {
-    operationGraphicsEditorGroup.selectAll("*").remove();
-    operationGraphicsEditorGroup.attr("aria-hidden", "true");
+    rendererSurfaceHost.getOperationGraphicsEditorGroup().selectAll("*").remove();
+    rendererSurfaceHost.getOperationGraphicsEditorGroup().attr("aria-hidden", "true");
     syncInteractionLayerPointerEvents();
     return;
   }
@@ -19435,7 +18971,7 @@ function renderOperationGraphicsEditorOverlay() {
     curved: true,
   });
   const previewData = previewPath ? [{ id: "preview", d: previewPath, closed: !!geometryPreset.closed && points.length >= 3 }] : [];
-  const pathSelection = operationGraphicsEditorGroup
+  const pathSelection = rendererSurfaceHost.getOperationGraphicsEditorGroup()
     .selectAll("path.operation-graphics-editor-path")
     .data(previewData, (d) => d.id);
 
@@ -19459,7 +18995,7 @@ function renderOperationGraphicsEditorOverlay() {
 
   pathSelection.exit().remove();
 
-  const pointSelection = operationGraphicsEditorGroup
+  const pointSelection = rendererSurfaceHost.getOperationGraphicsEditorGroup()
     .selectAll("circle.operation-graphics-editor-point")
     .data(points.map((coord, index) => ({ coord, index, id: `opg-point-${index}` })), (d) => d.id);
 
@@ -19514,7 +19050,7 @@ function renderOperationGraphicsEditorOverlay() {
   const midpointData = !isDrawing
     ? getOperationGraphicEditorMidpoints(points, { closed: !!geometryPreset.closed && points.length >= 3 })
     : [];
-  const midpointSelection = operationGraphicsEditorGroup
+  const midpointSelection = rendererSurfaceHost.getOperationGraphicsEditorGroup()
     .selectAll("circle.operation-graphics-editor-midpoint")
     .data(midpointData, (d) => d.id);
 
@@ -19549,7 +19085,7 @@ function renderOperationGraphicsEditorOverlay() {
       getStrategicOverlayRuntimeOwner().insertOperationGraphicVertex(datum.insertIndex, datum.coord);
     });
 
-  const midpointVisualSelection = operationGraphicsEditorGroup
+  const midpointVisualSelection = rendererSurfaceHost.getOperationGraphicsEditorGroup()
     .selectAll("circle.operation-graphics-editor-midpoint-visual")
     .data(midpointData, (d) => d.id);
 
@@ -19569,11 +19105,11 @@ function renderOperationGraphicsEditorOverlay() {
     .attr("stroke-width", 1)
     .attr("pointer-events", "none");
 
-  operationGraphicsEditorGroup.selectAll("circle.operation-graphics-editor-point").raise();
+  rendererSurfaceHost.getOperationGraphicsEditorGroup().selectAll("circle.operation-graphics-editor-point").raise();
 
   midpointSelection.exit().remove();
   midpointVisualSelection.exit().remove();
-  operationGraphicsEditorGroup.attr("aria-hidden", "false");
+  rendererSurfaceHost.getOperationGraphicsEditorGroup().attr("aria-hidden", "false");
   syncInteractionLayerPointerEvents();
 }
 
@@ -19796,8 +19332,8 @@ function renderUnitCountersOverlay() {
 }
 
 function bindUnitCounterOverlayInteractions() {
-  if (!unitCountersGroup) return;
-  const merged = unitCountersGroup.selectAll("g.unit-counter");
+  if (!rendererSurfaceHost.getUnitCountersGroup()) return;
+  const merged = rendererSurfaceHost.getUnitCountersGroup().selectAll("g.unit-counter");
   if (globalThis.d3?.drag) {
     if (!bindUnitCounterOverlayInteractions.dragBehavior) {
       bindUnitCounterOverlayInteractions.dragBehavior = globalThis.d3.drag()
@@ -19831,12 +19367,12 @@ function bindUnitCounterOverlayInteractions() {
 }
 
 function renderHoverOverlay() {
-  if (!hoverGroup || !pathSVG) return;
+  if (!rendererSurfaceHost.getHoverGroup() || !rendererSurfaceHost.getPathSvg()) return;
 
   if (runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    hoverGroup.selectAll("path.hovered-feature").remove();
-    hoverGroup.selectAll("path.hovered-facility-marker").remove();
-    hoverGroup.attr("aria-hidden", "true");
+    rendererSurfaceHost.getHoverGroup().selectAll("path.hovered-feature").remove();
+    rendererSurfaceHost.getHoverGroup().selectAll("path.hovered-facility-marker").remove();
+    rendererSurfaceHost.getHoverGroup().attr("aria-hidden", "true");
     return;
   }
 
@@ -19850,7 +19386,7 @@ function renderHoverOverlay() {
     && (!runtimeState.hoveredWaterRegionId || isWaterRegionEnabled(feature))
   ) ? [feature] : [];
 
-  const selection = hoverGroup
+  const selection = rendererSurfaceHost.getHoverGroup()
     .selectAll("path.hovered-feature")
     .data(data, (d) => getFeatureId(d) || "hover");
 
@@ -19862,7 +19398,7 @@ function renderHoverOverlay() {
     .attr("aria-hidden", "true")
     .attr("vector-effect", "non-scaling-stroke")
     .merge(selection)
-    .attr("d", pathSVG)
+    .attr("d", rendererSurfaceHost.getPathSvg())
     .attr("fill", "none")
     .attr("stroke", "#f1c40f")
     .attr("stroke-linejoin", "round")
@@ -19873,7 +19409,7 @@ function renderHoverOverlay() {
 
   const activeFacilityEntry = getActiveFacilityHighlightEntry();
   const facilityMarkerData = activeFacilityEntry?.projectedPoint?.length >= 2 ? [activeFacilityEntry] : [];
-  const facilitySelection = hoverGroup
+  const facilitySelection = rendererSurfaceHost.getHoverGroup()
     .selectAll("path.hovered-facility-marker")
     .data(facilityMarkerData, (datum) => buildFacilityEntryKey(datum) || "hovered-facility");
 
@@ -19902,18 +19438,18 @@ function renderHoverOverlay() {
     .attr("stroke-width", 2.1);
 
   facilitySelection.exit().remove();
-  hoverGroup.attr("aria-hidden", data.length || facilityMarkerData.length ? "false" : "true");
+  rendererSurfaceHost.getHoverGroup().attr("aria-hidden", data.length || facilityMarkerData.length ? "false" : "true");
 }
 
 function renderInspectorHighlightOverlay() {
-  if (!inspectorHighlightGroup || !pathSVG) return;
+  if (!rendererSurfaceHost.getInspectorHighlightGroup() || !rendererSurfaceHost.getPathSvg()) return;
   const featureIds = Array.isArray(runtimeState.inspectorHighlightFeatureIds)
     ? Array.from(new Set(runtimeState.inspectorHighlightFeatureIds.map((id) => String(id || "").trim()).filter(Boolean)))
     : [];
   const code = String(runtimeState.inspectorHighlightCountryCode || "").trim().toUpperCase();
   if (!featureIds.length && !code) {
-    inspectorHighlightGroup.selectAll("path.inspector-highlight").remove();
-    inspectorHighlightGroup.attr("aria-hidden", "true");
+    rendererSurfaceHost.getInspectorHighlightGroup().selectAll("path.inspector-highlight").remove();
+    rendererSurfaceHost.getInspectorHighlightGroup().attr("aria-hidden", "true");
     return;
   }
   const landFeatures = runtimeState.landData?.features || [];
@@ -19933,7 +19469,7 @@ function renderInspectorHighlightOverlay() {
       inspectorHighlightKey: `group:${featureIds.join("|")}`,
     }]
     : data;
-  const selection = inspectorHighlightGroup
+  const selection = rendererSurfaceHost.getInspectorHighlightGroup()
     .selectAll("path.inspector-highlight")
     .data(overlayData, (d, index) => d?.inspectorHighlightKey || getFeatureId(d) || `${code}-${index}`);
 
@@ -19945,13 +19481,13 @@ function renderInspectorHighlightOverlay() {
     .attr("aria-hidden", "true")
     .attr("vector-effect", "non-scaling-stroke")
     .merge(selection)
-    .attr("d", pathSVG)
+    .attr("d", rendererSurfaceHost.getPathSvg())
     .attr("fill", "none")
     .attr("stroke", "rgba(0, 47, 167, 0.6)")
     .attr("stroke-width", 2.4);
 
   selection.exit().remove();
-  inspectorHighlightGroup
+  rendererSurfaceHost.getInspectorHighlightGroup()
     .attr("aria-hidden", data.length ? "false" : "true")
     .attr("aria-label", data.length
       ? `Inspector highlight overlay for ${runtimeState.inspectorHighlightLabel || code || "feature group"}`
@@ -20005,8 +19541,8 @@ function setLegendControlButtonIcon(button, icon, label) {
 }
 
 function getLegendControlBounds(element = legendControlElement) {
-  const width = Math.max(1, mapContainer?.clientWidth || runtimeState.width || 1);
-  const height = Math.max(1, mapContainer?.clientHeight || runtimeState.height || 1);
+  const width = Math.max(1, rendererSurfaceHost.getMapContainer()?.clientWidth || runtimeState.width || 1);
+  const height = Math.max(1, rendererSurfaceHost.getMapContainer()?.clientHeight || runtimeState.height || 1);
   const elementWidth = Math.max(1, element?.offsetWidth || 180);
   const elementHeight = Math.max(1, element?.offsetHeight || 120);
   const padding = 8;
@@ -20085,7 +19621,7 @@ function storeLegendControlSize(width, height) {
   if (!legendControlElement) return LegendManager.getControlState(state);
   const limits = getLegendControlLimits();
   const rect = legendControlElement.getBoundingClientRect();
-  const containerRect = mapContainer?.getBoundingClientRect?.() || { right: window.innerWidth || rect.right, bottom: window.innerHeight || rect.bottom };
+  const containerRect = rendererSurfaceHost.getMapContainer()?.getBoundingClientRect?.() || { right: window.innerWidth || rect.right, bottom: window.innerHeight || rect.bottom };
   const currentLeft = rect.left - (containerRect.left || 0);
   const currentTop = rect.top - (containerRect.top || 0);
   const viewportMaxWidth = Math.max(limits.minWidth, containerRect.right - rect.left - 8);
@@ -20183,7 +19719,7 @@ function startLegendDrag(event) {
   ) return;
   event.preventDefault();
   event.stopPropagation();
-  const containerRect = mapContainer?.getBoundingClientRect?.() || { left: 0, top: 0 };
+  const containerRect = rendererSurfaceHost.getMapContainer()?.getBoundingClientRect?.() || { left: 0, top: 0 };
   const rect = legendControlElement.getBoundingClientRect();
   legendDragSession = {
     clientX: event.clientX,
@@ -20198,8 +19734,8 @@ function startLegendDrag(event) {
 }
 
 function ensureLegendControlElement() {
-  if (!mapContainer || typeof document === "undefined") return null;
-  if (legendControlElement && mapContainer.contains(legendControlElement)) return legendControlElement;
+  if (!rendererSurfaceHost.getMapContainer() || typeof document === "undefined") return null;
+  if (legendControlElement && rendererSurfaceHost.getMapContainer().contains(legendControlElement)) return legendControlElement;
 
   const element = document.createElement("section");
   element.id = "mapLegendControl";
@@ -20302,7 +19838,7 @@ function ensureLegendControlElement() {
   element.append(header, body, opacityPanel, resizeEast, resizeSouth, resizeCorner);
   element.addEventListener("click", (event) => event.stopPropagation());
   element.addEventListener("pointerleave", hideLegendOpacityPanel);
-  mapContainer.appendChild(element);
+  rendererSurfaceHost.getMapContainer().appendChild(element);
 
   legendControlElement = element;
   legendControlHeaderElement = header;
@@ -20446,8 +19982,8 @@ export function renderLegend(uniqueColors = null, labels = null) {
 
 function ensurePerfOverlayElement() {
   const cache = getRenderPassCacheState();
-  if (!cache.perfOverlayEnabled || !mapContainer) return null;
-  if (cache.overlayElement && mapContainer.contains(cache.overlayElement)) {
+  if (!cache.perfOverlayEnabled || !rendererSurfaceHost.getMapContainer()) return null;
+  if (cache.overlayElement && rendererSurfaceHost.getMapContainer().contains(cache.overlayElement)) {
     return cache.overlayElement;
   }
   const element = document.createElement("pre");
@@ -20466,7 +20002,7 @@ function ensurePerfOverlayElement() {
   element.style.whiteSpace = "pre-wrap";
   element.style.pointerEvents = "none";
   element.style.boxShadow = "0 8px 30px rgba(15, 23, 42, 0.28)";
-  mapContainer.appendChild(element);
+  rendererSurfaceHost.getMapContainer().appendChild(element);
   cache.overlayElement = element;
   return element;
 }
@@ -20734,20 +20270,20 @@ function autoFillMap(mode = "region", { recordHistory = true, styleUpdates = nul
   } else if (typeof runtimeState.renderCountryListFn === "function") {
     runtimeState.renderCountryListFn();
   }
-  if (context) {
+  if (rendererSurfaceHost.getContext()) {
     render();
   }
 }
 
 function getMapLonLatFromEvent(event) {
-  if (!projection || !interactionRect?.node || !globalThis.d3?.pointer) return null;
-  const [sx, sy] = globalThis.d3.pointer(event, interactionRect.node());
+  if (!rendererSurfaceHost.getProjection() || !rendererSurfaceHost.getInteractionRect()?.node || !globalThis.d3?.pointer) return null;
+  const [sx, sy] = globalThis.d3.pointer(event, rendererSurfaceHost.getInteractionRect().node());
   if (![sx, sy].every(Number.isFinite)) return null;
   const t = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
   const k = Math.max(0.0001, t.k || 1);
   const mapX = (sx - t.x) / k;
   const mapY = (sy - t.y) / k;
-  const lonLat = projection.invert([mapX, mapY]);
+  const lonLat = rendererSurfaceHost.getProjection().invert([mapX, mapY]);
   if (!Array.isArray(lonLat) || lonLat.length < 2) return null;
   const lon = Number(lonLat[0]);
   const lat = Number(lonLat[1]);
@@ -20786,8 +20322,8 @@ function refreshPhysicalIntensityUi() {
 }
 
 function projectGeoToScreen(lon, lat) {
-  if (!projection) return null;
-  const projected = projection([lon, lat]);
+  if (!rendererSurfaceHost.getProjection()) return null;
+  const projected = rendererSurfaceHost.getProjection()([lon, lat]);
   if (!Array.isArray(projected) || projected.length < 2) return null;
   const t = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
   return [
@@ -20798,13 +20334,13 @@ function projectGeoToScreen(lon, lat) {
 
 function hidePhysicalIntensityBrushPreview() {
   physicalIntensityPreviewLonLat = null;
-  if (intensityFieldPreviewGroup) {
-    intensityFieldPreviewGroup.style("display", "none");
+  if (rendererSurfaceHost.getIntensityFieldPreviewGroup()) {
+    rendererSurfaceHost.getIntensityFieldPreviewGroup().style("display", "none");
   }
 }
 
 function renderPhysicalIntensityBrushPreview(lonLat = physicalIntensityPreviewLonLat) {
-  if (!intensityFieldPreviewGroup || !globalThis.d3) return false;
+  if (!rendererSurfaceHost.getIntensityFieldPreviewGroup() || !globalThis.d3) return false;
   const tool = getIntensityFieldTool();
   if (!tool.active || !Array.isArray(lonLat) || lonLat.length < 2) {
     hidePhysicalIntensityBrushPreview();
@@ -20821,8 +20357,8 @@ function renderPhysicalIntensityBrushPreview(lonLat = physicalIntensityPreviewLo
     return false;
   }
   physicalIntensityPreviewLonLat = [lonLat[0], lonLat[1]];
-  intensityFieldPreviewGroup.style("display", null);
-  const preview = intensityFieldPreviewGroup
+  rendererSurfaceHost.getIntensityFieldPreviewGroup().style("display", null);
+  const preview = rendererSurfaceHost.getIntensityFieldPreviewGroup()
     .selectAll("circle.intensity-field-brush-preview")
     .data([{
       x: screenPoint[0],
@@ -20888,9 +20424,9 @@ function commitPhysicalIntensitySession(reason = "physical-intensity-field") {
   const current = physicalIntensityDragSession;
   physicalIntensityDragSession = null;
   if (!current) return false;
-  if (interactionRect?.node && current.pointerId !== undefined) {
+  if (rendererSurfaceHost.getInteractionRect()?.node && current.pointerId !== undefined) {
     try {
-      interactionRect.node().releasePointerCapture(current.pointerId);
+      rendererSurfaceHost.getInteractionRect().node().releasePointerCapture(current.pointerId);
     } catch (_error) {
       // Pointer capture may already be released by the browser.
     }
@@ -20974,9 +20510,9 @@ function handlePhysicalIntensityPointerDown(event) {
   if (!lonLat) return true;
   renderPhysicalIntensityBrushPreview(lonLat);
   if (event?.preventDefault) event.preventDefault();
-  if (interactionRect?.node && event.pointerId !== undefined) {
+  if (rendererSurfaceHost.getInteractionRect()?.node && event.pointerId !== undefined) {
     try {
-      interactionRect.node().setPointerCapture(event.pointerId);
+      rendererSurfaceHost.getInteractionRect().node().setPointerCapture(event.pointerId);
     } catch (_error) {
       // Pointer capture is best-effort across browser targets.
     }
@@ -21169,7 +20705,7 @@ function handleMouseMove(event) {
   }
   updateDevHoverHit(id ? hit : null);
 
-  if (!tooltip) return;
+  if (!rendererSurfaceHost.getTooltip()) return;
   const hoveredFacility = getHoveredFacilityEntryFromEvent(event);
   const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;
   const nextFacilityKey = buildFacilityEntryKey(hoveredFacility);
@@ -21502,7 +21038,7 @@ function requestInteractionRender(reason = "interaction") {
   return requestRendererRender(reason, {
     flush: false,
     fallback: () => {
-      if (context) render();
+      if (rendererSurfaceHost.getContext()) render();
     },
   });
 }
@@ -21763,7 +21299,7 @@ function eraseVisualOverridesForIds(targetIds, { kind, dirtyReason } = {}) {
       featureIds: resolvedIds,
     }),
   });
-  if (context) {
+  if (rendererSurfaceHost.getContext()) {
     render();
   }
   refreshSidebarAfterPaint({ featureIds: resolvedIds });
@@ -21798,7 +21334,7 @@ function applySovereigntyFillToIds(targetIds, { kind, dirtyReason, recomputeReas
       }),
       affectsSovereignty: true,
     });
-    if (context) {
+    if (rendererSurfaceHost.getContext()) {
       render();
     }
     refreshSidebarAfterPaint({ featureIds: resolvedIds });
@@ -21828,7 +21364,7 @@ function eraseSovereigntyForIds(targetIds, { kind, dirtyReason, recomputeReason 
       }),
       affectsSovereignty: true,
     });
-    if (context) {
+    if (rendererSurfaceHost.getContext()) {
       render();
     }
     refreshSidebarAfterPaint({ featureIds: resolvedIds });
@@ -22013,6 +21549,12 @@ function shouldAllowZoomEvent(event) {
     return isBrushNavigationModifier(event);
   }
   return true;
+}
+
+function dismissOnboardingHint() {
+  if (typeof runtimeState.dismissOnboardingHintFn === "function") {
+    runtimeState.dismissOnboardingHintFn();
+  }
 }
 
 function resolveParentGroupKey(feature, featureId) {
@@ -22493,7 +22035,7 @@ function handleBrushPointerMove(event) {
     eventType: "brush",
   });
   if (!hit?.id) return;
-  if (applyBrushHit(hit) && context) {
+  if (applyBrushHit(hit) && rendererSurfaceHost.getContext()) {
     requestInteractionRender("brush-preview");
   }
 }
@@ -22510,9 +22052,7 @@ async function handleClick(event, _interactionContext = null) {
     suppressNextClickAfterBrush = false;
     return;
   }
-  if (typeof runtimeState.dismissOnboardingHintFn === "function") {
-    runtimeState.dismissOnboardingHintFn();
-  }
+  dismissOnboardingHint();
   if (getIntensityFieldTool().active) {
     return;
   }
@@ -22972,109 +22512,15 @@ async function handleDoubleClick(event, _interactionContext = null) {
 }
 
 function calculatePanExtent() {
-  const fallback = [
-    [-MAP_PAN_PADDING_PX, -MAP_PAN_PADDING_PX],
-    [runtimeState.width + MAP_PAN_PADDING_PX, runtimeState.height + MAP_PAN_PADDING_PX],
-  ];
-
-  if (isHgoRuntimePreviewReady()) {
-    const bounds = getProjectedHgoRuntimePreviewBounds();
-    if (!bounds) return fallback;
-    return [
-      [bounds.minX - MAP_PAN_PADDING_PX, bounds.minY - MAP_PAN_PADDING_PX],
-      [bounds.maxX + MAP_PAN_PADDING_PX, bounds.maxY + MAP_PAN_PADDING_PX],
-    ];
-  }
-
-  if (!pathSVG || !runtimeState.landData || !runtimeState.landData.features?.length) return fallback;
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-
-  for (const feature of runtimeState.landData.features) {
-    if (shouldSkipFeature(feature, canvasWidth, canvasHeight, { forceProd: true })) continue;
-    const featureId = getFeatureId(feature);
-    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
-      || getProjectedFeatureBounds(feature, { featureId });
-    if (!bounds) continue;
-
-    const featureMinX = bounds.minX;
-    const featureMinY = bounds.minY;
-    const featureMaxX = bounds.maxX;
-    const featureMaxY = bounds.maxY;
-
-    minX = Math.min(minX, featureMinX);
-    minY = Math.min(minY, featureMinY);
-    maxX = Math.max(maxX, featureMaxX);
-    maxY = Math.max(maxY, featureMaxY);
-  }
-
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) return fallback;
-
-  return [
-    [minX - MAP_PAN_PADDING_PX, minY - MAP_PAN_PADDING_PX],
-    [maxX + MAP_PAN_PADDING_PX, maxY + MAP_PAN_PADDING_PX],
-  ];
+  return getViewportReadModelOwner().calculatePanExtent();
 }
 
 function updateZoomTranslateExtent() {
-  if (!zoomBehavior || runtimeState.width <= 0 || runtimeState.height <= 0) return;
-  zoomBehavior.scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE]);
-  zoomBehavior.extent([[0, 0], [runtimeState.width, runtimeState.height]]);
-  zoomBehavior.translateExtent(calculatePanExtent());
+  return getViewportCommandOwner().updateZoomTranslateExtent();
 }
 
 function getViewportGeoBounds() {
-  if (!projection || typeof projection.invert !== "function") {
-    return [-180, -90, 180, 90];
-  }
-  const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity || { x: 0, y: 0, k: 1 };
-  const width = Math.max(1, Number(runtimeState.width || 1));
-  const height = Math.max(1, Number(runtimeState.height || 1));
-  const insetX = Math.min(width * 0.12, 160);
-  const insetY = Math.min(height * 0.12, 120);
-  const samplePoints = [
-    [insetX, insetY],
-    [width * 0.5, insetY],
-    [Math.max(insetX, width - insetX), insetY],
-    [insetX, height * 0.5],
-    [width * 0.5, height * 0.5],
-    [Math.max(insetX, width - insetX), height * 0.5],
-    [insetX, Math.max(insetY, height - insetY)],
-    [width * 0.5, Math.max(insetY, height - insetY)],
-    [Math.max(insetX, width - insetX), Math.max(insetY, height - insetY)],
-  ];
-  const longitudes = [];
-  const latitudes = [];
-  samplePoints.forEach(([screenX, screenY]) => {
-    try {
-      const mapX = (Number(screenX || 0) - Number(transform.x || 0)) / Math.max(0.0001, Number(transform.k || 1));
-      const mapY = (Number(screenY || 0) - Number(transform.y || 0)) / Math.max(0.0001, Number(transform.k || 1));
-      const inverted = projection.invert([mapX, mapY]);
-      if (!Array.isArray(inverted) || inverted.length < 2) return;
-      const [lon, lat] = inverted.map((value) => Number(value));
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
-      longitudes.push(Math.max(-180, Math.min(180, lon)));
-      latitudes.push(Math.max(-90, Math.min(90, lat)));
-    } catch (_error) {
-      // Ignore failed projection inversion and continue.
-    }
-  });
-  if (!longitudes.length || !latitudes.length) {
-    return [-180, -90, 180, 90];
-  }
-  const sortedLongitudes = [...longitudes].sort((left, right) => left - right);
-  const sortedLatitudes = [...latitudes].sort((left, right) => left - right);
-  const trimCount = sortedLongitudes.length >= 7 && sortedLatitudes.length >= 7 ? 1 : 0;
-  return [
-    sortedLongitudes[trimCount],
-    sortedLatitudes[trimCount],
-    sortedLongitudes[sortedLongitudes.length - 1 - trimCount],
-    sortedLatitudes[sortedLatitudes.length - 1 - trimCount],
-  ];
+  return getViewportReadModelOwner().getViewportGeoBounds();
 }
 
 function updateMap(transform) {
@@ -23083,8 +22529,8 @@ function updateMap(transform) {
   if (typeof runtimeState.updateZoomUIFn === "function") {
     runtimeState.updateZoomUIFn();
   }
-  if (viewportGroup) {
-    viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+  if (rendererSurfaceHost.getViewportGroup()) {
+    rendererSurfaceHost.getViewportGroup().attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
   }
   renderPhysicalIntensityBrushPreview();
   getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();
@@ -23097,94 +22543,31 @@ function getProjectedHgoRuntimePreviewBounds() {
 }
 
 function getProjectedRenderableContentBounds() {
-  if (isHgoRuntimePreviewReady()) {
-    return getProjectedHgoRuntimePreviewBounds();
-  }
-  if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
-    return null;
-  }
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-  const renderableFeatures = getRenderableLandFeatures(canvasWidth, canvasHeight, {
-    forceProd: true,
-  });
-  const features = renderableFeatures.length ? renderableFeatures : runtimeState.landData.features;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const feature of features) {
-    const featureId = getFeatureId(feature);
-    const bounds = getProjectedFeatureBounds(feature, { featureId, allowCompute: false })
-      || getProjectedFeatureBounds(feature, { featureId });
-    if (!bounds) continue;
-    minX = Math.min(minX, Number(bounds.minX));
-    minY = Math.min(minY, Number(bounds.minY));
-    maxX = Math.max(maxX, Number(bounds.maxX));
-    maxY = Math.max(maxY, Number(bounds.maxY));
-  }
-  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
-    return null;
-  }
-  return {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: Math.max(0, maxX - minX),
-    height: Math.max(0, maxY - minY),
-  };
+  return getViewportReadModelOwner().getProjectedRenderableContentBounds();
 }
 
 function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {}) {
-  const identity = globalThis.d3?.zoomIdentity;
-  if (!identity) return null;
-  const bounds = getProjectedRenderableContentBounds();
-  if (!bounds) return identity;
-  const viewportWidth = Math.max(1, Number(runtimeState.width || 1));
-  const viewportHeight = Math.max(1, Number(runtimeState.height || 1));
-  const nextX = centerX && bounds.width < viewportWidth
-    ? ((viewportWidth - bounds.width) / 2) - bounds.minX
-    : 0;
-  const nextY = centerY && bounds.height < viewportHeight
-    ? ((viewportHeight - bounds.height) / 2) - bounds.minY
-    : 0;
-  return identity.translate(nextX, nextY);
+  return getViewportReadModelOwner().getCenteredFitZoomTransform({ centerX, centerY });
 }
 
 function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {}) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  updateZoomTranslateExtent();
-  const transform = centerContent
-    ? (getCenteredFitZoomTransform({ centerX, centerY }) || globalThis.d3.zoomIdentity)
-    : globalThis.d3.zoomIdentity;
-  runtimeState.zoomTransform = transform;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.transform, transform);
+  return getViewportCommandOwner().resetZoomToFit({ centerContent, centerX, centerY });
 }
 
 function zoomByStep(direction = 1) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  const factor = Number(direction) >= 0 ? 1.2 : 1 / 1.2;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleBy, factor);
+  return getViewportCommandOwner().zoomByStep(direction);
 }
 
 function setZoomPercent(percent) {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  const rawPercent = typeof percent === "string"
-    ? Number(String(percent).trim().replace(/%/g, ""))
-    : Number(percent);
-  if (!Number.isFinite(rawPercent)) return;
-  const nextScale = Math.min(MAX_ZOOM_SCALE, Math.max(MIN_ZOOM_SCALE, rawPercent / 100));
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.scaleTo, nextScale);
+  return getViewportCommandOwner().setZoomPercent(percent);
 }
 
 function getZoomPercent() {
-  const scale = Math.max(0.01, Number(runtimeState.zoomTransform?.k) || 1);
-  return `${Math.round(scale * 100)}%`;
+  return getViewportReadModelOwner().getZoomPercent();
 }
 
 function enforceZoomConstraints() {
-  if (!zoomBehavior || !interactionRect || !globalThis.d3) return;
-  globalThis.d3.select(interactionRect.node()).call(zoomBehavior.translateBy, 0, 0);
+  return getViewportCommandOwner().enforceZoomConstraints();
 }
 
 function fitProjection({ skipSpatialIndex = false } = {}) {
@@ -23201,7 +22584,7 @@ function fitProjection({ skipSpatialIndex = false } = {}) {
   const fitTarget = renderableFeatures.length
     ? { type: "FeatureCollection", features: renderableFeatures }
     : runtimeState.landData;
-  projection.fitExtent([[padding, padding], [x1, y1]], fitTarget);
+  rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);
   cityAnchorCache = new WeakMap();
   rebuildProjectedBoundsCache();
   if (!skipSpatialIndex) {
@@ -23215,310 +22598,80 @@ function fitProjection({ skipSpatialIndex = false } = {}) {
 }
 
 function getResizeReason(reason, fallback = "resize") {
-  return typeof reason === "string" && reason.trim() ? reason.trim() : fallback;
+  return getViewportResizeLifecycleOwner().getResizeReason(reason, fallback);
 }
 
 function isInteractiveLayoutResize(reason) {
-  return reason === "map-container-resize" || reason === "sidebar-layout-refresh";
+  return getViewportResizeLifecycleOwner().isInteractiveLayoutResize(reason);
 }
 
 function scheduleResizeSpatialRefresh(reason = "resize") {
-  cancelDeferredWork(resizeSpatialRefreshHandle);
-  resizeSpatialRefreshHandle = scheduleDeferredWork(() => {
-    resizeSpatialRefreshHandle = null;
-    if (!runtimeState.landData?.features?.length) return;
-    const startedAt = nowMs();
-    buildSpatialIndex();
-    runtimeState.hitCanvasDirty = true;
-    scheduleHitCanvasBuildIfNeeded({ reason: "resize-spatial-refresh" });
-    recordRenderPerfMetric("resizeSpatialRefresh", nowMs() - startedAt, {
-      reason: getResizeReason(reason),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }, {
-    timeout: 360,
-  });
+  return getViewportResizeLifecycleOwner().scheduleResizeSpatialRefresh(reason);
 }
 
 function shouldPreferFullResizeReason(currentReason, nextReason) {
-  return currentReason === "browser-dpr-change" && nextReason !== "browser-dpr-change";
+  return getViewportResizeLifecycleOwner().shouldPreferFullResizeReason(currentReason, nextReason);
 }
 
 function requestMapContainerResizeSync(reason = "map-container-resize") {
-  const resizeReason = getResizeReason(reason, "map-container-resize");
-  if (resizeReason === "browser-dpr-change") {
-    if (mapContainerResizeFrame) {
-      pendingMapResizeReason = pendingMapResizeReason || resizeReason;
-      return;
-    }
-    pendingMapResizeReason = resizeReason;
-    const requestFrame = typeof globalThis.requestAnimationFrame === "function"
-      ? globalThis.requestAnimationFrame
-      : (callback) => globalThis.setTimeout(callback, 0);
-    mapContainerResizeFrame = requestFrame(() => {
-      mapContainerResizeFrame = 0;
-      const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-      pendingMapResizeReason = "";
-      if (pendingReason === "browser-dpr-change") {
-        handleBrowserPixelRatioRefresh(pendingReason);
-      } else {
-        handleResize(pendingReason);
-      }
-    });
-    return;
-  }
-  if (resizeReason === "map-container-resize") {
-    if (mapContainerResizeTimer) {
-      globalThis.clearTimeout(mapContainerResizeTimer);
-    }
-    mapContainerResizeTimer = globalThis.setTimeout(() => {
-      mapContainerResizeTimer = 0;
-      handleResize(resizeReason);
-    }, 120);
-    return;
-  }
-  if (mapContainerResizeFrame) {
-    if (shouldPreferFullResizeReason(pendingMapResizeReason, resizeReason)) {
-      pendingMapResizeReason = resizeReason;
-    }
-    return;
-  }
-  pendingMapResizeReason = resizeReason;
-  const requestFrame = typeof globalThis.requestAnimationFrame === "function"
-    ? globalThis.requestAnimationFrame
-    : (callback) => globalThis.setTimeout(callback, 0);
-  mapContainerResizeFrame = requestFrame(() => {
-    mapContainerResizeFrame = 0;
-    const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-    pendingMapResizeReason = "";
-    handleResize(pendingReason);
-  });
+  return getViewportResizeLifecycleOwner().requestMapContainerResizeSync(reason);
 }
 
 function bindMapContainerResizeObserver() {
-  if (!mapContainer || typeof globalThis.ResizeObserver !== "function") return;
-  if (mapContainerResizeObserver) {
-    mapContainerResizeObserver.disconnect();
-  }
-  mapContainerResizeObserver = new globalThis.ResizeObserver((entries = []) => {
-    const entry = entries[0] || null;
-    const width = Math.round(Number(entry?.contentRect?.width || mapContainer.clientWidth || 0));
-    const height = Math.round(Number(entry?.contentRect?.height || mapContainer.clientHeight || 0));
-    if (width <= 0 || height <= 0) return;
-    if (width === Number(runtimeState.width || 0) && height === Number(runtimeState.height || 0)) return;
-    requestMapContainerResizeSync("map-container-resize");
-  });
-  mapContainerResizeObserver.observe(mapContainer);
+  return getViewportResizeLifecycleOwner().bindMapContainerResizeObserver();
 }
 
 function getDevicePixelRatioMediaQuery() {
-  const dpr = Math.max(1, Number(globalThis.devicePixelRatio || 1));
-  return `(resolution: ${dpr}dppx)`;
+  return getViewportResizeLifecycleOwner().getDevicePixelRatioMediaQuery();
 }
 
 function unbindBrowserPixelRatioObserver() {
-  if (!browserPixelRatioMediaQuery || !browserPixelRatioMediaQueryHandler) {
-    browserPixelRatioMediaQuery = null;
-    browserPixelRatioMediaQueryHandler = null;
-    return;
-  }
-  if (typeof browserPixelRatioMediaQuery.removeEventListener === "function") {
-    browserPixelRatioMediaQuery.removeEventListener("change", browserPixelRatioMediaQueryHandler);
-  } else if (typeof browserPixelRatioMediaQuery.removeListener === "function") {
-    browserPixelRatioMediaQuery.removeListener(browserPixelRatioMediaQueryHandler);
-  }
-  browserPixelRatioMediaQuery = null;
-  browserPixelRatioMediaQueryHandler = null;
+  return getViewportResizeLifecycleOwner().unbindBrowserPixelRatioObserver();
 }
 
 function bindBrowserPixelRatioObserver() {
-  if (typeof globalThis.matchMedia !== "function") return;
-  unbindBrowserPixelRatioObserver();
-  const mediaQuery = globalThis.matchMedia(getDevicePixelRatioMediaQuery());
-  const handleBrowserPixelRatioChange = () => {
-    requestMapContainerResizeSync("browser-dpr-change");
-    bindBrowserPixelRatioObserver();
-  };
-  if (typeof mediaQuery.addEventListener === "function") {
-    mediaQuery.addEventListener("change", handleBrowserPixelRatioChange);
-  } else if (typeof mediaQuery.addListener === "function") {
-    mediaQuery.addListener(handleBrowserPixelRatioChange);
-  } else {
-    return;
-  }
-  browserPixelRatioMediaQuery = mediaQuery;
-  browserPixelRatioMediaQueryHandler = handleBrowserPixelRatioChange;
+  return getViewportResizeLifecycleOwner().bindBrowserPixelRatioObserver();
 }
 
 function bindVisualViewportResizeObserver() {
-  const viewport = globalThis.visualViewport;
-  if (!viewport || typeof viewport.addEventListener !== "function") return;
-  if (visualViewportResizeHandler && typeof viewport.removeEventListener === "function") {
-    viewport.removeEventListener("resize", visualViewportResizeHandler);
-  }
-  visualViewportResizeHandler = () => requestMapContainerResizeSync("visual-viewport-resize");
-  viewport.addEventListener("resize", visualViewportResizeHandler, { passive: true });
+  return getViewportResizeLifecycleOwner().bindVisualViewportResizeObserver();
 }
 
 function bindBrowserZoomObservers() {
-  bindBrowserPixelRatioObserver();
-  bindVisualViewportResizeObserver();
+  return getViewportResizeLifecycleOwner().bindBrowserZoomObservers();
 }
 
 function handleBrowserPixelRatioRefresh(reason = "browser-dpr-change") {
-  const resizeReason = getResizeReason(reason, "browser-dpr-change");
-  const canvasSizeChanged = setCanvasSize({
-    reason: resizeReason,
-    forceDprInvalidation: true,
-  });
-  if (!canvasSizeChanged) return;
-  markAllOverlaysDirty();
-  render();
+  return getViewportResizeLifecycleOwner().handleBrowserPixelRatioRefresh(reason);
 }
 
 function handleResize(reason = "resize") {
-  const resizeReason = getResizeReason(reason);
-  const interactiveLayoutResize = isInteractiveLayoutResize(resizeReason);
-  const previousViewport = {
-    width: Number(runtimeState.width || 0),
-    height: Number(runtimeState.height || 0),
-  };
-  if (interactiveLayoutResize) {
-    setRenderPhase(RENDER_PHASE_INTERACTING);
-  }
-  const canvasSizeChanged = setCanvasSize({ reason: resizeReason });
-  const layoutSizeChangedDuringPhase = interactiveLayoutResize && (
-    previousViewport.width !== Number(runtimeState.width || 0)
-    || previousViewport.height !== Number(runtimeState.height || 0)
-  );
-  if (!canvasSizeChanged && !layoutSizeChangedDuringPhase) {
-    if (interactiveLayoutResize) {
-      scheduleRenderPhaseIdle();
-    }
-    return;
-  }
-  fitProjection({ skipSpatialIndex: interactiveLayoutResize });
-  resetZoomToFit({
-    centerContent: interactiveLayoutResize,
-    centerX: true,
-    centerY: false,
-  });
-  if (!interactiveLayoutResize) {
-    enforceZoomConstraints();
-  }
-  markAllOverlaysDirty();
-  render();
-  if (interactiveLayoutResize) {
-    scheduleResizeSpatialRefresh(resizeReason);
-    scheduleRenderPhaseIdle();
-  }
+  return getViewportResizeLifecycleOwner().handleResize(reason);
 }
 
 function handleSidebarLayoutStart() {
-  setRenderPhase(RENDER_PHASE_INTERACTING);
-  scheduleRenderPhaseIdle();
+  return getViewportResizeLifecycleOwner().handleSidebarLayoutStart();
 }
 
 function initZoom() {
-  zoomBehavior = globalThis.d3
-    .zoom()
-    .scaleExtent([MIN_ZOOM_SCALE, MAX_ZOOM_SCALE])
-    .extent([[0, 0], [runtimeState.width, runtimeState.height]])
-    .filter((event) => shouldAllowZoomEvent(event))
-    .on("start", () => {
-      clearRenderPhaseTimer();
-      cancelExactAfterSettleRefresh();
-      runtimeState.zoomGestureStartTransform = cloneZoomTransform(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      runtimeState.zoomGestureScaleDelta = 0;
-      runtimeState.pendingExactPoliticalFastFrame = false;
-      setRenderPhase(RENDER_PHASE_INTERACTING);
-      captureInteractionBorderSnapshot(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      renderHoverOverlayIfNeeded({ force: true, eventType: "zoom-start" });
-      if (typeof runtimeState.dismissOnboardingHintFn === "function") {
-        runtimeState.dismissOnboardingHintFn();
-      }
-    })
-    .on("zoom", (event) => {
-      runtimeState.pendingZoomTransform = event.transform;
-      if (runtimeState.zoomRenderScheduled) return;
-      runtimeState.zoomRenderScheduled = true;
-      const flushLatestZoomTransform = () => {
-        const nextTransform = runtimeState.pendingZoomTransform;
-        runtimeState.pendingZoomTransform = null;
-        if (nextTransform) {
-          updateMap(nextTransform);
-        }
-        if (runtimeState.pendingZoomTransform) {
-          requestAnimationFrame(flushLatestZoomTransform);
-          return;
-        }
-        runtimeState.zoomRenderScheduled = false;
-      };
-      requestAnimationFrame(flushLatestZoomTransform);
-    })
-    .on("end", (event) => {
-      setRenderPhase(RENDER_PHASE_SETTLING);
-      runtimeState.pendingZoomTransform = null;
-      updateMap(event.transform);
-      const startK = Math.max(0.0001, Number(runtimeState.zoomGestureStartTransform?.k || event.transform?.k || 1));
-      const endK = Math.max(0.0001, Number(event.transform?.k || startK));
-      runtimeState.zoomGestureScaleDelta = Math.abs(Math.log2(endK / startK));
-      runtimeState.zoomGestureEndedAt = nowMs();
-      runtimeState.pendingExactPoliticalFastFrame = true;
-      if (typeof runtimeState.scheduleScenarioChunkRefreshFn === "function") {
-        runtimeState.scheduleScenarioChunkRefreshFn({
-          reason: "zoom-end",
-          delayMs: 0,
-        });
-      }
-      scheduleRenderPhaseIdle();
-    });
+  return getZoomInteractionLifecycleOwner().initZoom();
+}
 
-  updateZoomTranslateExtent();
-  const zoomTarget = globalThis.d3.select(interactionRect.node());
-  zoomTarget.call(zoomBehavior);
-  zoomTarget.on("dblclick.zoom", null);
-  resetZoomToFit();
-  enforceZoomConstraints();
+function handleMapMouseLeave() {
+  runtimeState.hoveredId = null;
+  runtimeState.hoveredWaterRegionId = null;
+  runtimeState.hoveredSpecialRegionId = null;
+  hoveredFacilityEntry = null;
+  updateDevHoverHit(null);
+  runtimeState.hoverOverlayDirty = true;
+  renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
+  queueTooltipUpdate({ visible: false });
+  setMapInteractionCursor("");
+  hidePhysicalIntensityBrushPreview();
 }
 
 function bindEvents() {
-  if (!interactionRect) return;
-  bindInteractionFunnel({
-    mapClick: handleClick,
-    mapDoubleClick: handleDoubleClick,
-  });
-  interactionRect.on("mousemove", handleMouseMove);
-  interactionRect.on("pointerdown.fieldTool", handlePhysicalIntensityPointerDown);
-  interactionRect.on("pointermove.fieldTool", handlePhysicalIntensityPointerMove);
-  interactionRect.on("mousedown.brush", handleBrushPointerDown);
-  interactionRect.on("mousemove.brush", handleBrushPointerMove);
-  interactionRect.on("mouseleave", () => {
-    runtimeState.hoveredId = null;
-    runtimeState.hoveredWaterRegionId = null;
-    runtimeState.hoveredSpecialRegionId = null;
-    hoveredFacilityEntry = null;
-    updateDevHoverHit(null);
-    runtimeState.hoverOverlayDirty = true;
-    renderHoverOverlayIfNeeded({ eventType: "mouseleave" });
-    queueTooltipUpdate({ visible: false });
-    setMapInteractionCursor("");
-    hidePhysicalIntensityBrushPreview();
-  });
-  interactionRect.on("click", dispatchMapClick);
-  interactionRect.on("dblclick", dispatchMapDoubleClick);
-  window.addEventListener("mouseup", () => {
-    flushSpecialZoneMembershipDragSession();
-    flushBrushSession();
-  });
-  window.addEventListener("pointerup", handlePhysicalIntensityPointerEnd);
-  window.addEventListener("pointercancel", handlePhysicalIntensityPointerEnd);
-  interactionRect.node()?.addEventListener?.("lostpointercapture", handlePhysicalIntensityPointerEnd);
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("mapcreator:sidebar-layout-start", handleSidebarLayoutStart);
-  window.addEventListener("mapcreator:sidebar-layout-refresh", () => handleResize("sidebar-layout-refresh"));
-  bindMapContainerResizeObserver();
-  bindBrowserZoomObservers();
+  return getMapInteractionEventBindingOwner().bindEvents();
 }
 
 function initMap({
@@ -23532,8 +22685,8 @@ function initMap({
     return;
   }
 
-  mapContainer = document.getElementById(containerId);
-  tooltip = document.getElementById("tooltip");
+  rendererSurfaceHost.setMapContainer(document.getElementById(containerId));
+  rendererSurfaceHost.setTooltip(document.getElementById("tooltip"));
   facilityInfoCard = document.getElementById("facilityInfoCard");
   facilityInfoCardTitle = document.getElementById("facilityInfoCardTitle");
   facilityInfoCardBody = document.getElementById("facilityInfoCardBody");
@@ -23544,7 +22697,7 @@ function initMap({
   runtimeState.recomputeDynamicBordersNowFn = recomputeDynamicBordersNow;
   runtimeState.resolveSpecialZoneParentGroupTargetIdsFn = resolveSpecialZoneParentGroupTargetIds;
 
-  if (!mapContainer) {
+  if (!rendererSurfaceHost.getMapContainer()) {
     console.error("Map container not found.");
     return;
   }
@@ -23583,28 +22736,28 @@ function initMap({
 
   ensureHybridLayers();
 
-  if (!hitCanvas) {
-    hitCanvas = createHitCanvasElement();
+  if (!rendererSurfaceHost.getHitCanvas()) {
+    rendererSurfaceHost.setHitCanvas(createHitCanvasElement());
   }
 
-  context = mapCanvas.getContext("2d");
-  if (!context) {
+  rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext("2d"));
+  if (!rendererSurfaceHost.getContext()) {
     console.error("Canvas 2D context unavailable.");
     return;
   }
-  politicalPatchContext = politicalPatchCanvas?.getContext?.("2d") || null;
-  interactionOverlayContext = interactionOverlayCanvas?.getContext?.("2d") || null;
-  hitContext = hitCanvas.getContext("2d", { willReadFrequently: true });
-  if (!hitContext) {
+  rendererSurfaceHost.setPoliticalPatchContext(rendererSurfaceHost.getPoliticalPatchCanvas()?.getContext?.("2d") || null);
+  rendererSurfaceHost.setInteractionOverlayContext(rendererSurfaceHost.getInteractionOverlayCanvas()?.getContext?.("2d") || null);
+  rendererSurfaceHost.setHitContext(rendererSurfaceHost.getHitCanvas().getContext("2d", { willReadFrequently: true }));
+  if (!rendererSurfaceHost.getHitContext()) {
     console.error("Hit canvas 2D context unavailable.");
     return;
   }
 
-  projection = globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION);
-  projection.clipExtent(null);
-  pathSVG = globalThis.d3.geoPath(projection).pointRadius(PATH_POINT_RADIUS);
-  pathCanvas = globalThis.d3.geoPath(projection, context).pointRadius(PATH_POINT_RADIUS);
-  pathHitCanvas = globalThis.d3.geoPath(projection, hitContext).pointRadius(PATH_POINT_RADIUS);
+  const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));
+  nextProjection.clipExtent(null);
+  rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS));
+  rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));
+  rendererSurfaceHost.setPathHitCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getHitContext()).pointRadius(PATH_POINT_RADIUS));
   layerResolverCache.primaryRef = null;
   layerResolverCache.detailRef = null;
   layerResolverCache.bundleMode = null;
@@ -23613,31 +22766,28 @@ function initMap({
   resetExactRefreshOptimizationState();
   runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
   runtimeState.hitCanvasTopologyRevision = 0;
-  const renderPassCache = getRenderPassCacheState();
   clearPendingPoliticalColorEdit({
     force: true,
     resetReason: "init-map",
     paintSource: "init-map",
   });
-  renderPassCache.referenceTransform = null;
-  renderPassCache.referenceTransforms = {};
-  renderPassCache.fullReferenceTransforms = {};
-  renderPassCache.contextScenarioLayerCache = {};
+  clearRenderPassReferenceTransforms();
   clearLastGoodFrame("init-map");
   invalidateInteractionComposite("init-map");
   resetFirstVisibleFramePainted("init-map");
+  const renderPassCache = getRenderPassCacheState();
   renderPassCache.perfOverlayEnabled = isPerfOverlayEnabled();
   ensureLayerDataFromTopology();
   rebuildPoliticalLandCollections();
 
-  runtimeState.colorCanvas = mapCanvas;
-  runtimeState.canvasLayers = canvasLayers;
+  runtimeState.colorCanvas = rendererSurfaceHost.getMapCanvas();
+  runtimeState.canvasLayers = rendererSurfaceHost.getCanvasLayers();
   runtimeState.lineCanvas = null;
-  runtimeState.colorCtx = context;
-  runtimeState.politicalPatchCanvas = politicalPatchCanvas;
-  runtimeState.politicalPatchCtx = politicalPatchContext;
-  runtimeState.interactionOverlayCanvas = interactionOverlayCanvas;
-  runtimeState.interactionOverlayCtx = interactionOverlayContext;
+  runtimeState.colorCtx = rendererSurfaceHost.getContext();
+  runtimeState.politicalPatchCanvas = rendererSurfaceHost.getPoliticalPatchCanvas();
+  runtimeState.politicalPatchCtx = rendererSurfaceHost.getPoliticalPatchContext();
+  runtimeState.interactionOverlayCanvas = rendererSurfaceHost.getInteractionOverlayCanvas();
+  runtimeState.interactionOverlayCtx = rendererSurfaceHost.getInteractionOverlayContext();
   runtimeState.lineCtx = null;
   migrateLegacyColorState();
   ensureSovereigntyState();
@@ -23667,15 +22817,15 @@ function initMap({
   runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;
   syncDayNightClockTimer();
 
-  mapCanvas.style.pointerEvents = "none";
-  mapCanvas.style.touchAction = "none";
-  if (politicalPatchCanvas) {
-    politicalPatchCanvas.style.pointerEvents = "none";
-    politicalPatchCanvas.style.touchAction = "none";
+  rendererSurfaceHost.getMapCanvas().style.pointerEvents = "none";
+  rendererSurfaceHost.getMapCanvas().style.touchAction = "none";
+  if (rendererSurfaceHost.getPoliticalPatchCanvas()) {
+    rendererSurfaceHost.getPoliticalPatchCanvas().style.pointerEvents = "none";
+    rendererSurfaceHost.getPoliticalPatchCanvas().style.touchAction = "none";
   }
-  if (interactionOverlayCanvas) {
-    interactionOverlayCanvas.style.pointerEvents = "none";
-    interactionOverlayCanvas.style.touchAction = "none";
+  if (rendererSurfaceHost.getInteractionOverlayCanvas()) {
+    rendererSurfaceHost.getInteractionOverlayCanvas().style.pointerEvents = "none";
+    rendererSurfaceHost.getInteractionOverlayCanvas().style.touchAction = "none";
   }
 
   const shouldDeferInteractionInfrastructure =
@@ -23763,16 +22913,12 @@ function setMapData({
     cancelHoverOverlayRender: true,
     cancelSecondarySpatialBuild: true,
   });
-  const renderPassCache = getRenderPassCacheState();
   clearPendingPoliticalColorEdit({
     force: true,
     resetReason: "set-map-data",
     paintSource: "set-map-data",
   });
-  renderPassCache.referenceTransform = null;
-  renderPassCache.referenceTransforms = {};
-  renderPassCache.fullReferenceTransforms = {};
-  renderPassCache.contextScenarioLayerCache = {};
+  clearRenderPassReferenceTransforms();
   clearLastGoodFrame("set-map-data");
   invalidateInteractionComposite("set-map-data");
   resetFirstVisibleFramePainted("set-map-data");
@@ -24009,6 +23155,8 @@ function refreshMapDataForScenarioApply(options = {}) {
 // Batch 5 facade note:
 // 1) 生产代码侧尽量只用 named imports，避免 namespace import 把 donor surface 继续放大。
 // 2) 这里按 consumer lane 分组公开 stable facade，owner-backed 细节继续留在模块内部。
+export { RENDER_PASS_NAMES } from "./map_renderer/render_pass_catalog.js";
+
 export {
   // Core render lifecycle facade.
   initMap,

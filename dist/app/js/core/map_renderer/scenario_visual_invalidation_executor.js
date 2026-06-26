@@ -1,4 +1,7 @@
-const DEFAULT_RENDER_INVALIDATION_PASSES = ["political", "borders", "labels"];
+import {
+  DEFAULT_RENDER_INVALIDATION_PASSES,
+  UNSUPPORTED_RENDER_PASS_INPUT_KEYS as RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS,
+} from "./render_invalidation_catalog.js";
 
 const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([
   "clearLastGoodFrame",
@@ -10,11 +13,6 @@ const REQUIRED_RENDERER_EFFECT_NAMES = Object.freeze([
   "markAllOverlaysDirty",
   "updateZoomTranslateExtent",
   "render",
-]);
-
-const RETIRED_VISUAL_INVALIDATION_PASS_INPUT_KEYS = Object.freeze([
-  "targetPasses",
-  "legacyTargetPasses",
 ]);
 
 function normalizeStringList(values = []) {

@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-26 19:53 UTC
+Last updated: 2026-06-26 21:06 UTC
 
 ## Integration Owner
 
@@ -20,6 +20,7 @@ Last updated: 2026-06-26 19:53 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p24-renderer-surface-host-impl` | branch `codex/p24-renderer-surface-host-impl`; HEAD from `origin/main@56f22e73` plus local P24 changes | `origin/main@56f22e7380416429d6cc5e2ce58fd8472cae8542` | in-progress; implementation and first static gates passed, full validation pending | core: `js/core/renderer/renderer_surface_host.js`, `js/core/map_renderer.js`; tests/tooling/docs: `tests/renderer_surface_host_behavior.test.mjs`, `tests/renderer_surface_host_inventory_boundary.test.mjs`, `tools/check_architecture_boundaries.mjs`, `package.json`, `docs/active/renderer-surface-host-phase24-20260626/*`, registry. Hot files: renderer host, shared `map_renderer.js`, package scripts, architecture boundary. | P24 adds a getter-first surface handle registry and routes old module-scope DOM/canvas/SVG/projection/path/zoom handles through `rendererSurfaceHost`; canvas manager, DOM/SVG setup, projection/path lifecycle, zoom lifecycle, render/update/hit/selection/scenario/strategic overlay behavior stay in `map_renderer.js`. Passed so far: surface host behavior test; combined surface host test 12/12; host and renderer `node --check`; architecture boundary direct run. | Yellow with any future renderer extraction touching `js/core/map_renderer.js`, `package.json`, `tools/check_architecture_boundaries.mjs`, or `tests/renderer_surface_host_inventory_boundary.test.mjs`; green with parent docs/archive WIP and `dist/app/**` so far. | Finish required Node/static/Pages/E2E validation, run final review, then merge as P24 and leave P25 lifecycle movement as a separate phase. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main` carries the pushed renderer extraction line through the latest P23 review-fix closeout | parent is behind remote by renderer extraction commits plus closeouts through P23 | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, and parent `git status --short`. | Yellow for docs/archive cleanup; green for P23 because implementation stayed in isolated worktrees. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches

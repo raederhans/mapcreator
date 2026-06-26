@@ -1,0 +1,15 @@
+export const IDLE_RENDER_PASS_DEFINITIONS = [
+  { passName: "background", drawKey: "drawBackgroundPass" },
+  { passName: "physicalBase", drawKey: "drawPhysicalBasePass" },
+  { passName: "political", drawKey: "drawPoliticalPass" },
+  { passName: "hgoPreview", drawKey: "drawHgoPreviewPass" },
+  { passName: "contextBase", drawKey: "drawContextBasePass" },
+  { passName: "contextScenario", drawKey: "drawContextScenarioPass" },
+  { passName: "effects", drawKey: "drawEffectsPass" },
+  { passName: "lineEffects", drawKey: "drawLineEffectsPass" },
+  { passName: "dayNight", drawKey: "drawDayNightPass" },
+  { passName: "borders", drawKey: "drawBordersPass" },
+  { passName: "contextMarkers", drawKey: "drawContextMarkersPass" },
+  { passName: "textureLabels", drawKey: "drawTextureLabelEffectsPass" },
+  { passName: "labels", drawKey: "drawLabelsPass" },
+];
