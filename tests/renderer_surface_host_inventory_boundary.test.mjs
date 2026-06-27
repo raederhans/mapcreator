@@ -159,6 +159,11 @@ test("map_renderer delegates surface handle storage to the host", () => {
     'import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";',
     "map_renderer must import the surface host",
   );
+  assertIncludes(
+    rendererSource,
+    'import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";',
+    "map_renderer must import the surface lifecycle owner",
+  );
   assertIncludes(rendererSource, "const rendererSurfaceHost = createRendererSurfaceHost();", "map_renderer must instantiate one surface host");
 
   for (const sourcePath of listProjectSourceFiles("js")) {
@@ -171,16 +176,15 @@ test("map_renderer delegates surface handle storage to the host", () => {
     assertExcludes(rendererSource, token, "top-level surface handle storage must move out of map_renderer");
   }
   for (const token of [
-    "rendererSurfaceHost.setMapContainer(document.getElementById(containerId))",
-    "rendererSurfaceHost.setTooltip(document.getElementById(\"tooltip\"))",
-    "rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {",
-    "rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext(\"2d\"))",
-    "rendererSurfaceHost.setHitContext(rendererSurfaceHost.getHitCanvas().getContext(\"2d\", { willReadFrequently: true }))",
+    "getRendererSurfaceLifecycleOwner().resolveDomHandles({ containerId });",
+    "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
+    "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
+    "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
     "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION))",
     "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS))",
     "rendererSurfaceHost.setZoomBehavior(nextZoomBehavior)",
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must write surface handles through the host");
+    assertIncludes(rendererSource, token, "map_renderer must compose surface handle writes through the host and lifecycle owner");
   }
 });
 
@@ -267,7 +271,7 @@ test("owner getters read surface handles through rendererSurfaceHost", () => {
   );
 });
 
-test("canvas layer manager calls remain in map_renderer", () => {
+test("canvas layer manager helpers remain injected through map_renderer", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   for (const token of [
     "CANVAS_LAYER_NAMES",
@@ -275,14 +279,15 @@ test("canvas layer manager calls remain in map_renderer", () => {
     "ensureCanvasLayers",
     "getCanvasLayer",
     "resizeCanvasLayers",
-    "rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {",
-    "rendererSurfaceHost.setMapCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.composite)?.canvas || null);",
-    "rendererSurfaceHost.setPoliticalPatchCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.politicalPatch)?.canvas || null);",
-    "rendererSurfaceHost.setInteractionOverlayCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null);",
+    "canvasLayerManager: {",
+    "CANVAS_LAYER_NAMES,",
+    "ensureCanvasLayers,",
+    "getCanvasLayer,",
+    "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
     "resizeCanvasLayers(rendererSurfaceHost.getCanvasLayers(), {",
     "clearCanvasLayer(getCanvasLayer(rendererSurfaceHost.getCanvasLayers(), CANVAS_LAYER_NAMES.politicalPatch))",
   ]) {
-    assertIncludes(rendererSource, token, "canvas layer manager surface bridge must stay visible in map_renderer.js");
+    assertIncludes(rendererSource, token, "canvas layer manager surface bridge must stay visible through map_renderer composition");
   }
 });
 

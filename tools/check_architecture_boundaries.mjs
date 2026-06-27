@@ -23,6 +23,7 @@ const FILES = Object.freeze({
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
   rendererSurfaceHost: "js/core/renderer/renderer_surface_host.js",
+  rendererSurfaceLifecycleOwner: "js/core/renderer/renderer_surface_lifecycle_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -50,6 +51,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
   [FILES.rendererSurfaceHost]: 120,
+  [FILES.rendererSurfaceLifecycleOwner]: 220,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -129,6 +131,7 @@ function collectFailures() {
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
   const rendererSurfaceHost = readProjectFile(FILES.rendererSurfaceHost);
+  const rendererSurfaceLifecycleOwner = readProjectFile(FILES.rendererSurfaceLifecycleOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -157,6 +160,7 @@ function collectFailures() {
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
     [FILES.rendererSurfaceHost]: rendererSurfaceHost,
+    [FILES.rendererSurfaceLifecycleOwner]: rendererSurfaceLifecycleOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -216,14 +220,61 @@ function collectFailures() {
     }
   }
 
+  for (const token of [
+    "export function createRendererSurfaceLifecycleOwner({",
+    "function resolveDomHandles({",
+    "function ensureCanvasLayerHandles({",
+    "function ensureHitCanvasHandle()",
+    "function acquireCanvasContexts()",
+    "getDocument",
+    "createHitCanvasElement",
+    "ensureCanvasLayers",
+    "getCanvasLayer",
+    "CANVAS_LAYER_NAMES",
+    "willReadFrequently: true",
+  ]) {
+    if (!rendererSurfaceLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceLifecycleOwner} must own mechanical lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "from \"../state.js\"",
+    "from \"./state.js\"",
+    "map_renderer.js",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "applyDevSelectionFill",
+    "refreshMapDataForScenarioChunkPromotion",
+    "exactAfterSettle",
+    "setMapData",
+    "fitProjection",
+    "initZoom",
+    "bindEvents",
+    "updateMap",
+    "renderLegend",
+    "renderExportPassesToCanvas",
+  ]) {
+    if (rendererSurfaceLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.rendererSurfaceLifecycleOwner} must not own renderer semantic token: ${token}`);
+    }
+  }
+
   if (!renderer.includes('from "./renderer/renderer_surface_host.js";')) {
     failures.push(`${FILES.renderer} must import ${FILES.rendererSurfaceHost}.`);
+  }
+  if (!renderer.includes('from "./renderer/renderer_surface_lifecycle_owner.js";')) {
+    failures.push(`${FILES.renderer} must import ${FILES.rendererSurfaceLifecycleOwner}.`);
   }
   for (const sourcePath of listProjectSourceFiles("js")) {
     if (sourcePath === FILES.renderer) continue;
     const source = readProjectFile(sourcePath);
     if (source.includes("renderer_surface_host.js")) {
       failures.push(`${sourcePath} must not import renderer_surface_host.js directly; use ${FILES.renderer} as the composition root.`);
+    }
+    if (source.includes("renderer_surface_lifecycle_owner.js")) {
+      failures.push(`${sourcePath} must not import renderer_surface_lifecycle_owner.js directly; use ${FILES.renderer} as the composition root.`);
     }
   }
   if (!renderer.includes("const rendererSurfaceHost = createRendererSurfaceHost();")) {
@@ -272,7 +323,8 @@ function collectFailures() {
     "getProjection: () => rendererSurfaceHost.getProjection()",
     "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior()",
     "getMapContainer: () => rendererSurfaceHost.getMapContainer()",
-    "rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {",
+    "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
+    "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
   ]) {
     if (!rendererSurfaceHostInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
@@ -315,15 +367,16 @@ function collectFailures() {
     }
   }
   for (const token of [
-    "const P26_ALLOWED_FIRST_MOVE_TOKENS = Object.freeze([",
+    "const LIFECYCLE_OWNER_SEMANTIC_BLACKLIST = Object.freeze([",
+    "const LIFECYCLE_OWNER_REQUIRED_TOKENS = Object.freeze([",
     "const P26_FORBIDDEN_REGION_TOKENS = Object.freeze([",
     "const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([",
     "renderer_surface_lifecycle_owner.js",
-    "DOM/canvas/SVG surface lifecycle wrapper",
-    "projection/path/zoom/event/render semantics are not yet moved",
+    "createRendererSurfaceLifecycleOwner({",
+    "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
     "renderer_render_lifecycle_owner.js",
     "assertNoRendererOwnerImportsMapRenderer",
-    "P25 must lock current runtimeState bridge writes without adding a test-file state writer",
+    "P26 must keep current runtimeState bridge writes in map_renderer without adding a test-file state writer",
   ]) {
     if (!rendererSurfaceLifecycleInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceLifecycleInventoryTest} must lock P26 lifecycle inventory token: ${token}`);
@@ -340,7 +393,7 @@ function collectFailures() {
   }
   const rendererSourceFiles = listProjectSourceFiles("js/core/renderer");
   if (rendererSourceFiles.includes("js/core/renderer/renderer_render_lifecycle_owner.js")) {
-    failures.push("P25 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
+    failures.push("P26 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
   }
   for (const sourcePath of rendererSourceFiles.filter(isRendererOwnerPath)) {
     const source = readProjectFile(sourcePath);
@@ -354,6 +407,7 @@ function collectFailures() {
     "./renderer/canvas_color_helpers.js",
     "./map_renderer/exact_after_settle_scheduler.js",
     "./map_renderer/hgo_runtime_preview_render_owner.js",
+    "./renderer/renderer_surface_lifecycle_owner.js",
   ];
   for (const importPath of requiredImports) {
     if (!includesImport(renderer, importPath)) {
@@ -378,6 +432,7 @@ function collectFailures() {
     FILES.zoomInteractionLifecycleOwner,
     FILES.mapInteractionEventBindingOwner,
     FILES.rendererSurfaceHost,
+    FILES.rendererSurfaceLifecycleOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -685,6 +740,46 @@ function collectFailures() {
   }
 
   const ownershipRules = [
+    {
+      ownerPath: FILES.rendererSurfaceLifecycleOwner,
+      ownerTokens: [
+        "export function createRendererSurfaceLifecycleOwner({",
+        "function resolveDomHandles({",
+        "function ensureCanvasLayerHandles({",
+        "function ensureHitCanvasHandle()",
+        "function acquireCanvasContexts()",
+        "createHitCanvasElement",
+        "ensureCanvasLayers",
+        "getCanvasLayer",
+        "CANVAS_LAYER_NAMES",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/renderer_surface_lifecycle_owner.js\";",
+        "let rendererSurfaceLifecycleOwner = null;",
+        "function getRendererSurfaceLifecycleOwner()",
+        "createRendererSurfaceLifecycleOwner({",
+        "surfaceHost: rendererSurfaceHost",
+        "getDocument: () => document",
+        "createHitCanvasElement,",
+        "CANVAS_LAYER_NAMES,",
+        "ensureCanvasLayers,",
+        "getCanvasLayer,",
+        "getRendererSurfaceLifecycleOwner().resolveDomHandles({ containerId });",
+        "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
+        "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
+        "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
+      ],
+      rendererForbiddenTokens: [
+        "rendererSurfaceHost.setMapContainer(document.getElementById(containerId))",
+        "rendererSurfaceHost.setTooltip(document.getElementById(\"tooltip\"))",
+        "rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {",
+        "rendererSurfaceHost.setMapCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.composite)?.canvas || null);",
+        "rendererSurfaceHost.setPoliticalPatchCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.politicalPatch)?.canvas || null);",
+        "rendererSurfaceHost.setInteractionOverlayCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null);",
+        "rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext(\"2d\"))",
+        "rendererSurfaceHost.setHitContext(rendererSurfaceHost.getHitCanvas().getContext(\"2d\", { willReadFrequently: true }))",
+      ],
+    },
     {
       ownerPath: FILES.canvasColorHelpers,
       ownerTokens: [

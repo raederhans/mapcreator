@@ -202,6 +202,7 @@ import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_c
 import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
 import { createMapInteractionEventBindingOwner } from "./renderer/map_interaction_event_binding_owner.js";
 import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";
+import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -971,10 +972,32 @@ let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
+let rendererSurfaceLifecycleOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
+function getRendererSurfaceLifecycleOwner() {
+  if (rendererSurfaceLifecycleOwner) {
+    return rendererSurfaceLifecycleOwner;
+  }
+  rendererSurfaceLifecycleOwner = createRendererSurfaceLifecycleOwner({
+    surfaceHost: rendererSurfaceHost,
+    getters: {
+      getDocument: () => document,
+    },
+    helpers: {
+      createHitCanvasElement,
+    },
+    canvasLayerManager: {
+      CANVAS_LAYER_NAMES,
+      ensureCanvasLayers,
+      getCanvasLayer,
+    },
+  });
+  return rendererSurfaceLifecycleOwner;
+}
+
 function getStrategicOverlayHelpersOwner() {
   if (strategicOverlayHelpersOwner) {
     return strategicOverlayHelpersOwner;
@@ -7230,12 +7253,9 @@ function ensureHybridLayers() {
   const legacyColorCanvas = document.getElementById("colorCanvas");
   const legacyLineCanvas = document.getElementById("lineCanvas");
 
-  const nextCanvasLayers = rendererSurfaceHost.setCanvasLayers(ensureCanvasLayers(rendererSurfaceHost.getMapContainer(), {
+  const { mapCanvas: nextMapCanvas } = getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({
     before: legacyColorCanvas || legacyLineCanvas || null,
-  }));
-  const nextMapCanvas = rendererSurfaceHost.setMapCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.composite)?.canvas || null);
-  rendererSurfaceHost.setPoliticalPatchCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.politicalPatch)?.canvas || null);
-  rendererSurfaceHost.setInteractionOverlayCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null);
+  });
 
   if (legacyColorCanvas && legacyColorCanvas !== nextMapCanvas) {
     legacyColorCanvas.style.display = "none";
@@ -22685,8 +22705,7 @@ function initMap({
     return;
   }
 
-  rendererSurfaceHost.setMapContainer(document.getElementById(containerId));
-  rendererSurfaceHost.setTooltip(document.getElementById("tooltip"));
+  getRendererSurfaceLifecycleOwner().resolveDomHandles({ containerId });
   facilityInfoCard = document.getElementById("facilityInfoCard");
   facilityInfoCardTitle = document.getElementById("facilityInfoCardTitle");
   facilityInfoCardBody = document.getElementById("facilityInfoCardBody");
@@ -22736,18 +22755,13 @@ function initMap({
 
   ensureHybridLayers();
 
-  if (!rendererSurfaceHost.getHitCanvas()) {
-    rendererSurfaceHost.setHitCanvas(createHitCanvasElement());
-  }
+  getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();
 
-  rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext("2d"));
+  getRendererSurfaceLifecycleOwner().acquireCanvasContexts();
   if (!rendererSurfaceHost.getContext()) {
     console.error("Canvas 2D context unavailable.");
     return;
   }
-  rendererSurfaceHost.setPoliticalPatchContext(rendererSurfaceHost.getPoliticalPatchCanvas()?.getContext?.("2d") || null);
-  rendererSurfaceHost.setInteractionOverlayContext(rendererSurfaceHost.getInteractionOverlayCanvas()?.getContext?.("2d") || null);
-  rendererSurfaceHost.setHitContext(rendererSurfaceHost.getHitCanvas().getContext("2d", { willReadFrequently: true }));
   if (!rendererSurfaceHost.getHitContext()) {
     console.error("Hit canvas 2D context unavailable.");
     return;

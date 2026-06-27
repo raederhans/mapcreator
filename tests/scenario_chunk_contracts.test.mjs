@@ -1344,7 +1344,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function render\(\) \{[\s\S]*?ensureResolvedColorsReadyForStableVisibleFrame\("render"\);[\s\S]*?drawCanvas\(\);/.test(rendererSource),
     politicalFeatureFillUsesExplicitSafeFallback:
       /function getPoliticalFeatureFillColor\(feature, id, index, canvasWidth = 0\) \{[\s\S]*?getSafeCanvasColor\(runtimeState\.colors\[id\], null\)[\s\S]*?getSafeCanvasColor\(getResolvedFeatureColor\(feature, id\), null\)[\s\S]*?\|\| LAND_FILL_COLOR/.test(rendererSource)
-      && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?context\.fillStyle = fillColor;/.test(rendererSource),
+      && /function drawPoliticalFeature\([\s\S]*?let fillColor = getPoliticalFeatureFillColor\(feature, id, index, canvasWidth\);[\s\S]*?rendererSurfaceHost\.getContext\(\)\.fillStyle = fillColor;/.test(rendererSource),
     colorRefreshUsesPartialPoliticalInvalidation:
       /function refreshResolvedColorsForFeatures[\s\S]*?const pendingRenderIds = new Set\(\);[\s\S]*?normalizePoliticalColorEditIds\(cache\.pendingPoliticalColorEditIds\)[\s\S]*?pendingRenderIds\.add\(pendingId\);[\s\S]*?cache\.partialPoliticalDirtyIds\.add\(id\);[\s\S]*?pendingRenderIds\.add\(id\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?markPendingPoliticalColorEdit\(Array\.from\(pendingRenderIds\), \{[\s\S]*?startedAt: inputStartedAt,[\s\S]*?inputLabel,[\s\S]*?\}\)[\s\S]*?clearPendingPoliticalColorEdit\(\{ force: true \}\);[\s\S]*?invalidateRenderPasses\("political", "refresh-colors"\);/.test(rendererSource)
       && rendererSource.includes('invalidateRenderPasses(["contextMarkers", "labels"], "refresh-colors-collateral");')
@@ -1482,7 +1482,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes("globalCount")
       && spatialQueryIndexSource.includes("cellSpan"),
     dirtyHitCanvasUsesPointProbeBeforeDeferredFullBuild:
-      /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?collectGridCandidates\(projectedX, projectedY, 0\)[\s\S]*?hitContext\.rect\(px - 1, py - 1, 3, 3\);[\s\S]*?hitContext\.clip\(\);[\s\S]*?recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource)
+      /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?collectGridCandidates\(projectedX, projectedY, 0\)[\s\S]*?rendererSurfaceHost\.getHitContext\(\)\.rect\(px - 1, py - 1, 3, 3\);[\s\S]*?rendererSurfaceHost\.getHitContext\(\)\.clip\(\);[\s\S]*?recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource)
       && /function getValidatedCanvasHit\(event, strictIds = null, \{ forceBuild = false \} = \{\}\) \{[\s\S]*?if \(isHitCanvasCurrent\(\)\) \{[\s\S]*?getHitResultFromCanvas\(event\)[\s\S]*?\} else \{[\s\S]*?scheduleHitCanvasBuildIfNeeded\(\{ reason: forceBuild \? "dirty-point-probe-click" : "dirty-point-probe-hover" \}\);[\s\S]*?getDirtyHitCanvasPointProbeHit\(event\);/.test(rendererSource),
     startupHitCanvasFullBuildIsDeferred:
       /function recordDeferredFullHitCanvasMetric\(\{ reason = "deferred-full", keepReady = false \} = \{\}\) \{[\s\S]*?mode: "deferred-full"[\s\S]*?reason,[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "deferred-full"/.test(rendererSource)
@@ -1498,7 +1498,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /recordRenderPerfMetric\("hitCanvasPointProbe"[\s\S]*?recordRenderPerfMetric\("hitCanvasViewportProfile"[\s\S]*?profile: "point-probe"/.test(rendererSource),
     hitCanvasPixelReadsUseFiniteDpr:
       /function getHitResultFromCanvas\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?Math\.round\(sy \* dpr\)/.test(rendererSource)
-      && /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?hitContext\.setTransform\(dpr, 0, 0, dpr, 0, 0\);/.test(rendererSource),
+      && /function getDirtyHitCanvasPointProbeHit\(event\) \{[\s\S]*?const dpr = Number\.isFinite\(Number\(runtimeState\.dpr\)\) && Number\(runtimeState\.dpr\) > 0[\s\S]*?Math\.round\(sx \* dpr\)[\s\S]*?rendererSurfaceHost\.getHitContext\(\)\.setTransform\(dpr, 0, 0, dpr, 0, 0\);/.test(rendererSource),
     chunkPromotionReportsPrimaryAndDeferredStageMetrics:
       scenarioRefreshRuntimeSource.includes('recordRenderPerfMetric("chunkPromotionPrimaryRefreshMs"')
       && scenarioRefreshRuntimeSource.includes('recordRenderPerfMetric("chunkPromotionDeferredInfraMs"')
@@ -1603,7 +1603,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     exactComposeUsesCompositeBuffer:
       /function ensureCompositeBufferCanvas\(\) \{[\s\S]*?cache\.compositeBuffer\.canvas = canvas;/.test(renderCacheOwnerSource)
       && /function composeCachedPasses[\s\S]*?const bufferCanvas = ensureCompositeBufferCanvas\(\);[\s\S]*?composeRenderPassesToTarget\(bufferContext, passNames, currentTransform,[\s\S]*?requireAllPasses: true[\s\S]*?blitCompositeBufferToMain\(bufferCanvas\);/.test(rendererSource)
-      && /function blitCompositeBufferToMain\(bufferCanvas\) \{[\s\S]*?context\.globalCompositeOperation = "copy";[\s\S]*?context\.drawImage\(bufferCanvas, 0, 0\);[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(rendererSource),
+      && /function blitCompositeBufferToMain\(bufferCanvas\) \{[\s\S]*?rendererSurfaceHost\.getContext\(\)\.globalCompositeOperation = "copy";[\s\S]*?rendererSurfaceHost\.getContext\(\)\.drawImage\(bufferCanvas, 0, 0\);[\s\S]*?rendererSurfaceHost\.getContext\(\)\.globalCompositeOperation = "source-over";/.test(rendererSource),
     coarsePrewarmDoesNotOverwriteActiveDetailChunks:
       /function hasDetailScenarioChunkIds\(chunkIds = \[\]\) \{[\s\S]*?String\(chunkId \|\| ""\)\.includes\("\.detail\."\)/.test(chunkRuntimeSource)
       && /const SCENARIO_CHUNK_FULL_WORLD_BBOX = Object\.freeze\(\[-180, -90, 180, 90\]\);/.test(chunkRuntimeSource)
@@ -1807,7 +1807,7 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     progressiveFullCacheReadyRequestsPoliticalRepaint:
       (() => {
         const body = rendererSource.match(/function runScenarioPoliticalBackgroundDeferredFullCacheSlice\([\s\S]*?\r?\n\}\r?\n\r?\nfunction scheduleScenarioPoliticalBackgroundDeferredFullCache/)?.[0] || "";
-        return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(context\) render\(\);[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
+        return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(rendererSurfaceHost\.getContext\(\)\) render\(\);[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
       })(),
     chunkedRuntimeSkipsBlockingDetailPromotion:
       /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
@@ -2022,12 +2022,12 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /function sanitizeWaterRegionFeatures\(features = \[\]\) \{[\s\S]*?recordRenderPerfMetric\("waterSphericalSanitization"/.test(projectedGeometryBoundsOwnerSource)
       && /function sanitizeWaterRegionFeatures\(features = \[\]\) \{[\s\S]*?return getProjectedGeometryBoundsOwner\(\)\.sanitizeWaterRegionFeatures\(features\);/.test(rendererSource),
     waterDrawAndHighlightUseSafeParts:
-      /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?pathCanvas\(part\)/.test(rendererSource)
-      && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?pathCanvas\(part\)/.test(rendererSource),
+      /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?rendererSurfaceHost\.getPathCanvas\(\)\(part\)/.test(rendererSource)
+      && /function drawScenarioWaterHighlightLayer\(k\) \{[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?rendererSurfaceHost\.getPathCanvas\(\)\(part\)/.test(rendererSource),
     waterFillUsesProjectionPathCacheBeforeCanvasFallback:
       /let scenarioWaterPartPathCache = new WeakMap\(\);[\s\S]*?let scenarioWaterFeaturePathCache = new WeakMap\(\);/.test(rendererSource)
       && /function getScenarioWaterFeaturePath\(feature, parts\) \{[\s\S]*?scenarioWaterFeaturePathCache\.has\(feature\)[\s\S]*?combinedPath\.addPath\(partPath\)[\s\S]*?scenarioWaterFeaturePathCache\.set\(feature, path\);/.test(rendererSource)
-      && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?const waterPath = visibleParts\.length === parts\.length[\s\S]*?getScenarioWaterFeaturePath\(feature, parts\)[\s\S]*?context\.fill\(waterPath\);[\s\S]*?getScenarioWaterPartPath\(part\)[\s\S]*?context\.fill\(partPath\)[\s\S]*?pathCanvas\(part\);/.test(rendererSource),
+      && /function drawScenarioWaterFillLayer\(k, \{ waterFeatures = \[\] \} = \{\}\) \{[\s\S]*?const waterPath = visibleParts\.length === parts\.length[\s\S]*?getScenarioWaterFeaturePath\(feature, parts\)[\s\S]*?rendererSurfaceHost\.getContext\(\)\.fill\(waterPath\);[\s\S]*?getScenarioWaterPartPath\(part\)[\s\S]*?rendererSurfaceHost\.getContext\(\)\.fill\(partPath\)[\s\S]*?rendererSurfaceHost\.getPathCanvas\(\)\(part\);/.test(rendererSource),
     waterCoverageUsesSafeParts:
       /function getScreenBounds\(part\) \{[\s\S]*?const bounds = computeProjectedGeoBounds\(part\);/.test(scenarioWaterCachePolicyOwnerSource)
       && /function getScenarioWaterVisibleCoverageRatioLegacy\(waterFeatures = \[\]\) \{[\s\S]*?if \(!isWaterRegionRenderable\(feature\)\) continue;[\s\S]*?collectSafeWaterRegionGeometryParts\(feature\)[\s\S]*?getScreenBounds\(part\)/.test(scenarioWaterCachePolicyOwnerSource)
@@ -2253,7 +2253,7 @@ test("Atlantropa field-driven interaction contracts preserve explicit render and
       && /function shouldExcludeWaterHitGeometry\(hitGeometry, _feature = null\) \{[\s\S]*?return isSphericalGeometryUnsafe\(hitGeometry\);[\s\S]*?\}/.test(projectedGeometryBoundsOwnerSource)
       && /function getUnifiedWaterBaseStyle\(feature\) \{[\s\S]*?isAtlantropaSeaFeature\(feature\)[\s\S]*?getAtlantropaSeaPoliticalFillColor\(\)/.test(rendererSource)
       && /function getWaterRegionColor\(id, feature = null\) \{[\s\S]*?const defaultStyleFeature = feature \|\| runtimeState\.waterRegionsById\?\.get\(resolvedId\);/.test(rendererSource)
-      && /context\.fillStyle = getWaterRegionColor\(id, feature\);/.test(rendererSource)
+      && /rendererSurfaceHost\.getContext\(\)\.fillStyle = getWaterRegionColor\(id, feature\);/.test(rendererSource)
       && /function getScenarioWaterVisualRevisionToken\(\) \{[\s\S]*?water-atlantropa:\$\{getScenarioAtlantropaRevisionToken\(\)\}/.test(rendererSource)
       && /const bounds = computeProjectedGeoBounds\(hitGeometry\) \|\| computeProjectedGeoBounds\(feature\);/.test(spatialBuilderSource)
       && !rendererSource.includes("atl_water_projection")

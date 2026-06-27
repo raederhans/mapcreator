@@ -15,8 +15,19 @@ const REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS = Object.freeze([
   "function fitProjection({",
   "function initZoom()",
   "function bindEvents()",
+  "function getRendererSurfaceLifecycleOwner()",
+  "createRendererSurfaceLifecycleOwner({",
+  "surfaceHost: rendererSurfaceHost",
+  "getDocument: () => document",
+  "createHitCanvasElement,",
+  "CANVAS_LAYER_NAMES,",
+  "ensureCanvasLayers,",
+  "getCanvasLayer,",
+  "getRendererSurfaceLifecycleOwner().resolveDomHandles({ containerId });",
   "ensureHybridLayers();",
-  "rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext(\"2d\"))",
+  "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
+  "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
+  "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
   "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION))",
   "rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS))",
   "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS))",
@@ -29,7 +40,12 @@ const REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS = Object.freeze([
 
 const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([
   ["runtimeState.", "colorCanvas = rendererSurfaceHost.getMapCanvas()"],
+  ["runtimeState.", "canvasLayers = rendererSurfaceHost.getCanvasLayers()"],
   ["runtimeState.", "colorCtx = rendererSurfaceHost.getContext()"],
+  ["runtimeState.", "politicalPatchCanvas = rendererSurfaceHost.getPoliticalPatchCanvas()"],
+  ["runtimeState.", "politicalPatchCtx = rendererSurfaceHost.getPoliticalPatchContext()"],
+  ["runtimeState.", "interactionOverlayCanvas = rendererSurfaceHost.getInteractionOverlayCanvas()"],
+  ["runtimeState.", "interactionOverlayCtx = rendererSurfaceHost.getInteractionOverlayContext()"],
 ]);
 
 const SURFACE_HOST_SEMANTIC_BLACKLIST = Object.freeze([
@@ -58,6 +74,40 @@ const SURFACE_HOST_SEMANTIC_BLACKLIST = Object.freeze([
   "setCanvasSize",
 ]);
 
+const LIFECYCLE_OWNER_SEMANTIC_BLACKLIST = Object.freeze([
+  "runtimeState",
+  "from \"../state.js\"",
+  "from \"./state.js\"",
+  "map_renderer.js",
+  "drawCanvas",
+  "renderPassToCache",
+  "buildHitCanvas",
+  "applyDevSelectionFill",
+  "refreshMapDataForScenarioChunkPromotion",
+  "exactAfterSettle",
+  "initZoom",
+  "bindEvents",
+  "fitProjection",
+  "updateMap",
+  "setMapData",
+  "renderLegend",
+  "renderExportPassesToCanvas",
+]);
+
+const LIFECYCLE_OWNER_REQUIRED_TOKENS = Object.freeze([
+  "export function createRendererSurfaceLifecycleOwner({",
+  "function resolveDomHandles({",
+  "function ensureCanvasLayerHandles({",
+  "function ensureHitCanvasHandle()",
+  "function acquireCanvasContexts()",
+  "getDocument",
+  "createHitCanvasElement",
+  "ensureCanvasLayers",
+  "getCanvasLayer",
+  "CANVAS_LAYER_NAMES",
+  "willReadFrequently: true",
+]);
+
 const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
   "## Scope and guardrails",
   "## Current P24 surface host state",
@@ -76,16 +126,6 @@ const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
 
 const P26_SCOPE_STATEMENT =
   "P26 candidate extraction is limited to DOM/canvas/SVG surface lifecycle wrapper; projection/path/zoom/event/render semantics are not yet moved.";
-
-const P26_ALLOWED_FIRST_MOVE_TOKENS = Object.freeze([
-  "P26 may add `js/core/renderer/renderer_surface_lifecycle_owner.js`.",
-  "Map container and tooltip lookup.",
-  "Named canvas layer ensure/get bridge.",
-  "Hit canvas creation bridge if implemented as an injected helper.",
-  "Map canvas, political patch canvas, and interaction overlay canvas registration into `rendererSurfaceHost`.",
-  "2D context acquisition into `rendererSurfaceHost`.",
-  "SVG root/group creation if and only if `ensureHybridLayers()` can be moved without changing ordering.",
-]);
 
 const P26_FORBIDDEN_REGION_TOKENS = Object.freeze([
   "Projection/path creation.",
@@ -156,7 +196,7 @@ function assertNoRendererOwnerImportsMapRenderer(sourcePath, source) {
   );
 }
 
-test("renderer surface host exists and remains registry-only", () => {
+test("renderer surface host remains registry-only", () => {
   const hostSource = readRepoFile("js", "core", "renderer", "renderer_surface_host.js");
 
   for (const token of [
@@ -175,7 +215,18 @@ test("renderer surface host exists and remains registry-only", () => {
   }
 });
 
-test("map_renderer remains the only production importer of renderer_surface_host", () => {
+test("renderer surface lifecycle owner exists and remains mechanical-only", () => {
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_surface_lifecycle_owner.js");
+
+  for (const token of LIFECYCLE_OWNER_REQUIRED_TOKENS) {
+    assertIncludes(ownerSource, token, "P26 lifecycle owner must own mechanical surface lifecycle token");
+  }
+  for (const token of LIFECYCLE_OWNER_SEMANTIC_BLACKLIST) {
+    assertExcludes(ownerSource, token, "P26 lifecycle owner must avoid renderer semantic token");
+  }
+});
+
+test("map_renderer remains the composition root for surface modules", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
 
   assertIncludes(
@@ -185,53 +236,68 @@ test("map_renderer remains the only production importer of renderer_surface_host
   );
   assertIncludes(
     rendererSource,
+    'import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";',
+    "map_renderer must import the lifecycle owner",
+  );
+  assertIncludes(
+    rendererSource,
     "const rendererSurfaceHost = createRendererSurfaceHost();",
     "map_renderer must instantiate the surface host",
   );
 
   for (const sourcePath of listProjectSourceFiles("js")) {
-    if (sourcePath === "js/core/map_renderer.js") continue;
     const source = readRepoFile(sourcePath);
-    assertExcludes(source, "renderer_surface_host.js", "only map_renderer may import the production surface host");
+    if (sourcePath !== "js/core/map_renderer.js") {
+      assertExcludes(source, "renderer_surface_host.js", "only map_renderer may import the production surface host");
+      assertExcludes(source, "renderer_surface_lifecycle_owner.js", "only map_renderer may import the production lifecycle owner");
+    }
   }
 });
 
-test("map_renderer still owns current initMap surface lifecycle anchors", () => {
+test("map_renderer still owns current initMap lifecycle ordering and forbidden semantic regions", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
 
   for (const token of REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS) {
-    assertIncludes(rendererSource, token, "P25 must lock the current P24 surface lifecycle map");
+    assertIncludes(rendererSource, token, "P26 must preserve the surface lifecycle call order");
   }
   for (const tokenParts of RUNTIME_STATE_BRIDGE_ANCHORS) {
     assertIncludes(
       rendererSource,
       tokenParts.join(""),
-      "P25 must lock current runtimeState bridge writes without adding a test-file state writer",
+      "P26 must keep current runtimeState bridge writes in map_renderer without adding a test-file state writer",
     );
+  }
+  for (const token of [
+    "function updateMap(transform)",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "function applyDevSelectionFill()",
+    "function refreshMapDataForScenarioChunkPromotion(options = {})",
+    "function setMapData({",
+    "async function buildHitCanvasAfterStartup(",
+  ]) {
+    assertIncludes(rendererSource, token, "P26 must leave existing renderer semantics in their current owner");
   }
 });
 
-test("P26 candidate extraction is limited to DOM canvas and SVG lifecycle mechanics", () => {
+test("P25 preflight continues to define P26 boundary and forbidden regions", () => {
   const preflightDoc = readRepoFile("docs", "active", "renderer-surface-lifecycle-preflight-20260626.md");
 
   for (const heading of REQUIRED_PREFLIGHT_HEADINGS) {
     assertIncludes(preflightDoc, heading, "P25 preflight doc must keep required heading");
   }
   assertIncludes(preflightDoc, P26_SCOPE_STATEMENT, "P25 doc must state the P26 extraction boundary");
-  for (const token of P26_ALLOWED_FIRST_MOVE_TOKENS) {
-    assertIncludes(preflightDoc, token, "P25 doc must lock the P26 allowed first move");
-  }
   for (const token of P26_FORBIDDEN_REGION_TOKENS) {
     assertIncludes(preflightDoc, token, "P25 doc must lock P26 forbidden renderer regions");
   }
 });
 
-test("P25 forbids render lifecycle owners and renderer owner back-imports", () => {
+test("P26 forbids render lifecycle owners and renderer owner back-imports", () => {
   const sourcePaths = listProjectSourceFiles("js");
   assert.equal(
     sourcePaths.includes("js/core/renderer/renderer_render_lifecycle_owner.js"),
     false,
-    "P25 must not introduce a render lifecycle owner during surface lifecycle preflight",
+    "P26 must not introduce a render lifecycle owner during surface lifecycle extraction",
   );
 
   for (const sourcePath of sourcePaths.filter(isRendererOwnerPath)) {
@@ -239,11 +305,16 @@ test("P25 forbids render lifecycle owners and renderer owner back-imports", () =
   }
 });
 
-test("package exposes the lifecycle inventory script without requiring P26 implementation", () => {
+test("package exposes lifecycle owner and inventory scripts", () => {
   const packageSource = readRepoFile("package.json");
   assertIncludes(
     packageSource,
+    '"test:node:renderer-surface-lifecycle-owner": "node --test tests/renderer_surface_lifecycle_owner_behavior.test.mjs"',
+    "package.json must expose the P26 lifecycle owner behavior test",
+  );
+  assertIncludes(
+    packageSource,
     '"test:node:renderer-surface-lifecycle-inventory": "node --test tests/renderer_surface_lifecycle_inventory_boundary.test.mjs"',
-    "package.json must expose the P25 lifecycle inventory test",
+    "package.json must keep the P25/P26 lifecycle inventory test",
   );
 });

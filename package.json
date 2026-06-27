@@ -121,6 +121,8 @@
     "test:node:renderer-surface-host": "node --test tests/renderer_surface_host_behavior.test.mjs tests/renderer_surface_host_inventory_boundary.test.mjs",
     "test:node:renderer-surface-host-inventory": "node --test tests/renderer_surface_host_inventory_boundary.test.mjs",
     "test:node:renderer-surface-lifecycle-inventory": "node --test tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
+    "test:node:renderer-surface-lifecycle-owner": "node --test tests/renderer_surface_lifecycle_owner_behavior.test.mjs",
+    "test:node:renderer-surface-lifecycle": "node --test tests/renderer_surface_lifecycle_owner_behavior.test.mjs tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
     "test:node:render-cache-owner": "node --test tests/render_cache_owner_invalidation_behavior.test.mjs",
     "test:node:render-transform-reuse-policy-owner": "node --test tests/render_transform_reuse_policy_owner_behavior.test.mjs",
     "test:node:projected-geometry-bounds-owner": "node --test tests/projected_geometry_bounds_owner_behavior.test.mjs",
