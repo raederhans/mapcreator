@@ -178,6 +178,14 @@ function assertExcludes(source, token, message) {
   assert.equal(source.includes(token), false, `${message}: unexpected token ${JSON.stringify(token)}`);
 }
 
+function sliceBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  assert.notEqual(start, -1, `Expected source to contain start marker ${JSON.stringify(startMarker)}`);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `Expected source to contain end marker ${JSON.stringify(endMarker)}`);
+  return source.slice(start, end);
+}
+
 function hasMapRendererImport(source) {
   return /from\s+["'][^"']*map_renderer\.js["']/.test(source)
     || /import\s*\(\s*["'][^"']*map_renderer\.js["']\s*\)/.test(source);
@@ -252,6 +260,16 @@ test("projection/path consumers receive handles through getters without importin
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const projectedBoundsSource = readRepoFile("js", "core", "renderer", "projected_geometry_bounds_owner.js");
   const viewportReadModelSource = readRepoFile("js", "core", "renderer", "viewport_read_model_owner.js");
+  const projectedBoundsFactorySource = sliceBetween(
+    rendererSource,
+    "function getProjectedGeometryBoundsOwner()",
+    "function getViewportReadModelOwner()",
+  );
+  const viewportReadModelFactorySource = sliceBetween(
+    rendererSource,
+    "function getViewportReadModelOwner()",
+    "function getViewportCommandOwner()",
+  );
 
   assert.equal(hasMapRendererImport(projectedBoundsSource), false, "projected geometry bounds owner must not import map_renderer");
   assert.equal(hasMapRendererImport(viewportReadModelSource), false, "viewport read model owner must not import map_renderer");
@@ -261,7 +279,7 @@ test("projection/path consumers receive handles through getters without importin
     "getPathCanvas: () => rendererSurfaceHost.getPathCanvas()",
     "getPathSvg: () => rendererSurfaceHost.getPathSvg()",
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must inject projection/path getters into projected geometry bounds owner");
+    assertIncludes(projectedBoundsFactorySource, token, "map_renderer must inject projection/path getters into projected geometry bounds owner factory");
   }
   for (const token of [
     "getProjection: () => rendererSurfaceHost.getProjection()",
@@ -269,7 +287,7 @@ test("projection/path consumers receive handles through getters without importin
     "getZoomIdentity: () => globalThis.d3?.zoomIdentity",
     "getProjectedFeatureBounds",
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must inject projection/path read-model dependencies");
+    assertIncludes(viewportReadModelFactorySource, token, "map_renderer must inject projection/path read-model dependencies into viewport read model owner factory");
   }
   for (const token of [
     "getProjection = () => null",
