@@ -33,6 +33,8 @@ const FILES = Object.freeze({
   rendererSurfaceHostInventoryTest: "tests/renderer_surface_host_inventory_boundary.test.mjs",
   rendererSurfaceLifecyclePreflightDoc: "docs/active/renderer-surface-lifecycle-preflight-20260626.md",
   rendererSurfaceLifecycleInventoryTest: "tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
+  rendererProjectionPathPreflightDoc: "docs/active/renderer-projection-path-lifecycle-preflight-20260627.md",
+  rendererProjectionPathLifecycleInventoryTest: "tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -141,6 +143,8 @@ function collectFailures() {
   const rendererSurfaceHostInventoryTest = readProjectFile(FILES.rendererSurfaceHostInventoryTest);
   const rendererSurfaceLifecyclePreflightDoc = readProjectFile(FILES.rendererSurfaceLifecyclePreflightDoc);
   const rendererSurfaceLifecycleInventoryTest = readProjectFile(FILES.rendererSurfaceLifecycleInventoryTest);
+  const rendererProjectionPathPreflightDoc = readProjectFile(FILES.rendererProjectionPathPreflightDoc);
+  const rendererProjectionPathLifecycleInventoryTest = readProjectFile(FILES.rendererProjectionPathLifecycleInventoryTest);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -170,6 +174,8 @@ function collectFailures() {
     [FILES.rendererSurfaceHostInventoryTest]: rendererSurfaceHostInventoryTest,
     [FILES.rendererSurfaceLifecyclePreflightDoc]: rendererSurfaceLifecyclePreflightDoc,
     [FILES.rendererSurfaceLifecycleInventoryTest]: rendererSurfaceLifecycleInventoryTest,
+    [FILES.rendererProjectionPathPreflightDoc]: rendererProjectionPathPreflightDoc,
+    [FILES.rendererProjectionPathLifecycleInventoryTest]: rendererProjectionPathLifecycleInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -395,10 +401,74 @@ function collectFailures() {
   if (rendererSourceFiles.includes("js/core/renderer/renderer_render_lifecycle_owner.js")) {
     failures.push("P26 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
   }
+  if (rendererSourceFiles.includes("js/core/renderer/renderer_projection_path_owner.js")) {
+    failures.push("P27 must reserve js/core/renderer/renderer_projection_path_owner.js for P28.");
+  }
   for (const sourcePath of rendererSourceFiles.filter(isRendererOwnerPath)) {
     const source = readProjectFile(sourcePath);
     if (hasMapRendererImport(source)) {
       failures.push(`${sourcePath} must not import js/core/map_renderer.js; keep ${FILES.renderer} as the composition root.`);
+    }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P26 surface lifecycle state",
+    "## Current projection/path creation order",
+    "## Projection/path handle inventory",
+    "## Projection/path consumer inventory",
+    "## fitProjection side-effect inventory",
+    "## Projected bounds and viewport dependency map",
+    "## P28 allowed first move",
+    "## P28 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererProjectionPathPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererProjectionPathPreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P28 may add `js/core/renderer/renderer_projection_path_owner.js`.",
+    "P28 may move only projection/path handle creation and registration:",
+    "Register `projection`, `pathSVG`, `pathCanvas`, and `pathHitCanvas` into `rendererSurfaceHost`.",
+    "Preserve `initMap` ordering by calling the owner exactly where projection/path creation currently happens.",
+    "P28 must not move `fitProjection`.",
+    "P28 must not add `projection.fitExtent` to `js/core/renderer/renderer_projection_path_owner.js`.",
+    "Direct runtimeState writes.",
+    "`setCanvasSize`.",
+    "`updateMap`.",
+    "`drawCanvas`.",
+    "`renderPassToCache`.",
+    "Hit canvas build.",
+    "Selection/fill.",
+    "Scenario refresh/chunk.",
+    "Exact-after-settle.",
+    "Strategic overlay runtime.",
+    "Render lifecycle owner work.",
+  ]) {
+    if (!rendererProjectionPathPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererProjectionPathPreflightDoc} must lock P28 projection/path boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const PROJECTION_PATH_OWNER_PATH = \"js/core/renderer/renderer_projection_path_owner.js\";",
+    "const PROJECTION_PATH_CREATION_ANCHORS = Object.freeze([",
+    "const FIT_PROJECTION_ANCHORS = Object.freeze([",
+    "const RENDERER_SEMANTIC_REGION_ANCHORS = Object.freeze([",
+    "const SURFACE_LIFECYCLE_FORBIDDEN_TOKENS = Object.freeze([",
+    "const P28_ALLOWED_TOKENS = Object.freeze([",
+    "const P28_FORBIDDEN_TOKENS = Object.freeze([",
+    "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
+    "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));",
+    "rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);",
+    "P28 may move only projection/path handle creation and registration:",
+    "P28 must not move `fitProjection`.",
+    "P28 must not add `projection.fitExtent` to `js/core/renderer/renderer_projection_path_owner.js`.",
+    "Direct runtimeState writes.",
+    "Render lifecycle owner work.",
+  ]) {
+    if (!rendererProjectionPathLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererProjectionPathLifecycleInventoryTest} must lock P27/P28 projection-path inventory token: ${token}`);
     }
   }
 

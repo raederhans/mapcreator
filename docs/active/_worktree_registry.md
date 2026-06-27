@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-27 01:09 UTC
+Last updated: 2026-06-27 01:35 UTC
 
 ## Integration Owner
 
@@ -20,6 +20,7 @@ Last updated: 2026-06-27 01:09 UTC
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p27-renderer-projection-path-preflight` | branch `codex/p27-renderer-projection-path-preflight`; functional commit pending | `origin/main@47cd14e5`, with P26 surface lifecycle owner functional commit `fc87a218` integrated | ready-for-integration after P27 validation | docs/test/tooling/package only: `docs/active/renderer-projection-path-lifecycle-preflight-20260627.md`, `tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs`, `tools/check_architecture_boundaries.mjs`, `package.json`, and registry. Untouched: production renderer runtime files, `dist/app/**`, and `tools/eslint-rules/state-writer-allowlist.json`. | Delivery: P27 documents the current P26 projection/path lifecycle map, locks `map_renderer.js` ownership of projection/path creation and `fitProjection`, keeps the surface lifecycle owner mechanical-only, reserves `renderer_projection_path_owner.js` for P28, and limits P28 to projection/path handle creation plus registration. Validation passed: syntax checks for the new test and architecture tool; projection/path lifecycle inventory 8/8; surface lifecycle 13/13; surface host 12/12; renderer host inventory 7/7; projected geometry bounds 12/12; viewport read model 12/12; architecture boundaries; state-write allowlist 115 tracked files; test import graph 49 specs; `git diff --check`; optional Node confidence checks for runtime state 10/10, canvas layer 4/4, viewport command 8/8, viewport resize 12/12, and zoom lifecycle 6/6. Browser E2E was not run in this clean worktree because `node_modules/@playwright/test` is absent and P27 has no runtime diff. | Green for production runtime and dist; yellow only for future P28 touching `js/core/map_renderer.js`, `package.json`, architecture boundary, and renderer projection/path inventory tests. | Commit, push to `origin/main`, then update this row to integrated and clean the worktree. |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@383a626a`; remote `origin/main` carries the pushed renderer extraction line through P25 surface lifecycle preflight | parent is behind remote by renderer extraction commits plus closeouts through P25 | parent checkout has unrelated docs/archive deletion WIP and is preserved | dirty files are `docs/archive/**` deletions from a separate cleanup lane plus `lessons learned.md`; renderer extraction source is not edited in the parent checkout. | Direct probes on 2026-06-26: `git worktree list`, `git rev-parse HEAD`, `git rev-parse origin/main`, parent `git status --short`, and P25 worktree push evidence. | Yellow for docs/archive cleanup; green for P25 because implementation stayed in an isolated worktree. | Keep untouched; sync parent main only after preserving or resolving the separate cleanup WIP. |
 
 ## Recent Integrated Branches
