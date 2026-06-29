@@ -721,6 +721,29 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 build_pages_dist.iter_dist_files = previous_iter_dist_files
                 build_pages_dist.time.sleep = previous_sleep
 
+    def test_pages_dist_manifest_scan_uses_posix_path_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_root = Path(tmpdir)
+            for relative_path in (
+                Path("app") / "data" / "hgo_catalogs" / "flags_png" / "medium" / "AD" / "ADN_communism.png",
+                Path("app") / "data" / "hgo_catalogs" / "flags_png" / "medium" / "AD" / "ADN_ENG.png",
+            ):
+                path = tmp_root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"flag")
+            previous_dist_root = build_pages_dist.DIST_ROOT
+            build_pages_dist.DIST_ROOT = tmp_root
+            try:
+                self.assertEqual(
+                    [path.relative_to(tmp_root).as_posix() for path in build_pages_dist.iter_dist_files()],
+                    [
+                        "app/data/hgo_catalogs/flags_png/medium/AD/ADN_ENG.png",
+                        "app/data/hgo_catalogs/flags_png/medium/AD/ADN_communism.png",
+                    ],
+                )
+            finally:
+                build_pages_dist.DIST_ROOT = previous_dist_root
+
     def test_landing_source_keeps_landing_contract(self) -> None:
         html = LANDING_INDEX.read_text(encoding="utf-8")
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

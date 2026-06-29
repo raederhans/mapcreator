@@ -1076,9 +1076,12 @@ def write_nojekyll() -> None:
 
 def iter_dist_files() -> list[Path]:
     return sorted(
-        path
-        for path in DIST_ROOT.rglob("*")
-        if path.is_file() and not should_skip_disposable_dist_path(path.relative_to(DIST_ROOT))
+        (
+            path
+            for path in DIST_ROOT.rglob("*")
+            if path.is_file() and not should_skip_disposable_dist_path(path.relative_to(DIST_ROOT))
+        ),
+        key=lambda path: path.relative_to(DIST_ROOT).as_posix(),
     )
 
 
