@@ -102,6 +102,20 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("PLAYWRIGHT_TEST_BASE_URL: ${{ steps.deployment.outputs.page_url }}", workflow)
         self.assertIn("npm run test:e2e:pages-public-release-gate", workflow)
 
+    def test_scenario_contract_matrix_pushes_create_a_real_skip_job(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "scenario-contract-matrix.yml").read_text(encoding="utf-8")
+
+        self.assertIn("  push:", workflow)
+        self.assertIn("      - main", workflow)
+        self.assertIn('event_name="${{ github.event_name }}"', workflow)
+        self.assertIn('if [ "$event_name" = "workflow_dispatch" ]; then', workflow)
+        self.assertIn('elif [ "$event_name" = "push" ]; then', workflow)
+        self.assertIn('base_sha="${{ github.event.before }}"', workflow)
+        self.assertIn('git diff --name-only "$base_sha..$head_sha"', workflow)
+        self.assertIn('cache: "pip"', workflow)
+        self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow)
+        self.assertIn("Fast success for scenario-unrelated changes", workflow)
+
     def test_console_allowlist_decay_passes(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
         self.assert_command_ok(result)
