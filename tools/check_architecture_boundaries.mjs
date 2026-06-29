@@ -37,6 +37,8 @@ const FILES = Object.freeze({
   rendererProjectionPathPreflightDoc: "docs/active/renderer-projection-path-lifecycle-preflight-20260627.md",
   rendererProjectionPathOwnerDoc: "docs/active/renderer-projection-path-owner-p28-20260628.md",
   rendererProjectionPathLifecycleInventoryTest: "tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
+  rendererSvgSurfaceLifecyclePreflightDoc: "docs/active/renderer-svg-surface-lifecycle-preflight-20260629.md",
+  rendererSvgSurfaceLifecycleInventoryTest: "tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -150,6 +152,8 @@ function collectFailures() {
   const rendererProjectionPathPreflightDoc = readProjectFile(FILES.rendererProjectionPathPreflightDoc);
   const rendererProjectionPathOwnerDoc = readProjectFile(FILES.rendererProjectionPathOwnerDoc);
   const rendererProjectionPathLifecycleInventoryTest = readProjectFile(FILES.rendererProjectionPathLifecycleInventoryTest);
+  const rendererSvgSurfaceLifecyclePreflightDoc = readProjectFile(FILES.rendererSvgSurfaceLifecyclePreflightDoc);
+  const rendererSvgSurfaceLifecycleInventoryTest = readProjectFile(FILES.rendererSvgSurfaceLifecycleInventoryTest);
   const sources = {
     [FILES.renderer]: renderer,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -183,6 +187,8 @@ function collectFailures() {
     [FILES.rendererProjectionPathPreflightDoc]: rendererProjectionPathPreflightDoc,
     [FILES.rendererProjectionPathOwnerDoc]: rendererProjectionPathOwnerDoc,
     [FILES.rendererProjectionPathLifecycleInventoryTest]: rendererProjectionPathLifecycleInventoryTest,
+    [FILES.rendererSvgSurfaceLifecyclePreflightDoc]: rendererSvgSurfaceLifecyclePreflightDoc,
+    [FILES.rendererSvgSurfaceLifecycleInventoryTest]: rendererSvgSurfaceLifecycleInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -572,6 +578,87 @@ function collectFailures() {
   ]) {
     if (!rendererProjectionPathLifecycleInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererProjectionPathLifecycleInventoryTest} must lock P27/P28 projection-path inventory token: ${token}`);
+    }
+  }
+
+  if (rendererSourceFiles.includes("js/core/renderer/renderer_svg_surface_lifecycle_owner.js")) {
+    failures.push("P29 must not introduce js/core/renderer/renderer_svg_surface_lifecycle_owner.js.");
+  }
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current surface/projection lifecycle baseline",
+    "## ensureHybridLayers responsibility map",
+    "## SVG root lifecycle inventory",
+    "## SVG group ordering inventory",
+    "## Interaction rect layering inventory",
+    "## Legend and legacy SVG cleanup inventory",
+    "## Strategic overlay group boundary",
+    "## P30 allowed first move",
+    "## P30 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererSvgSurfaceLifecyclePreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererSvgSurfaceLifecyclePreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P30 may add `js/core/renderer/renderer_svg_surface_lifecycle_owner.js`.",
+    "P30 may move only SVG root and static group creation/registration.",
+    "Preserve group ordering and interaction rect layering.",
+    "Keep `js/core/map_renderer.js` as the composition root.",
+    "Keep strategic overlay rendering and editor rendering outside the owner.",
+    "`drawCanvas`.",
+    "`renderPassToCache`.",
+    "Hit canvas build.",
+    "Selection/fill.",
+    "Scenario refresh/chunk.",
+    "Exact-after-settle.",
+    "Strategic overlay runtime.",
+    "Projection/path creation.",
+    "`fitProjection`.",
+    "`updateMap`.",
+    "`initZoom` or `bindEvents`.",
+    "Direct runtimeState writes.",
+  ]) {
+    if (!rendererSvgSurfaceLifecyclePreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererSvgSurfaceLifecyclePreflightDoc} must lock P30 SVG lifecycle boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const SVG_SURFACE_OWNER_PATH = \"js/core/renderer/renderer_svg_surface_lifecycle_owner.js\";",
+    "const ENSURE_HYBRID_LAYERS_ROOT_TOKENS = Object.freeze([",
+    "const SVG_GROUP_ORDER_TOKENS = Object.freeze([",
+    "const SVG_GROUP_REGISTRATION_TOKENS = Object.freeze([",
+    "const INTERACTION_RECT_TOKENS = Object.freeze([",
+    "const LEGEND_AND_LEGACY_TOKENS = Object.freeze([",
+    "const SVG_LIFECYCLE_TOKENS = Object.freeze([",
+    "const RENDER_SEMANTIC_ANCHORS = Object.freeze([",
+    "const P30_ALLOWED_TOKENS = Object.freeze([",
+    "const P30_FORBIDDEN_TOKENS = Object.freeze([",
+    "function ensureHybridLayers()",
+    "function createSvgElement()",
+    "renderer_svg_surface_lifecycle_owner.js",
+    "renderer_surface_lifecycle_owner.js",
+    "renderer_projection_path_owner.js",
+    "function renderFrontlineOverlay()",
+    "renderOperationalLinesIfNeeded",
+    "renderOperationGraphicsIfNeeded",
+    "renderUnitCountersIfNeeded",
+    "renderSpecialZonesIfNeeded",
+    "renderDevSelectionOverlayIfNeeded",
+    "renderInspectorHighlightOverlayIfNeeded",
+    "renderHoverOverlayIfNeeded",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "buildHitCanvas",
+    "P30 may add `js/core/renderer/renderer_svg_surface_lifecycle_owner.js`.",
+    "P30 may move only SVG root and static group creation/registration.",
+    "Strategic overlay runtime.",
+    "Projection/path creation.",
+    "Direct runtimeState writes.",
+  ]) {
+    if (!rendererSvgSurfaceLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererSvgSurfaceLifecycleInventoryTest} must lock P29/P30 SVG lifecycle inventory token: ${token}`);
     }
   }
 
