@@ -3,6 +3,120 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
+const PUBLIC_SCENARIO_IDS = [
+  "blank_base",
+  "modern_world",
+  "hoi4_1936",
+  "hoi4_1939",
+  "tno_1962",
+];
+
+function readJsonAsset(relativePath) {
+  return JSON.parse(readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8"));
+}
+
+function resolveMarkerPath(value, expression) {
+  let current = value;
+  for (const segment of expression.split(".")) {
+    if (segment === "length") {
+      assert.ok(
+        typeof current === "string" || Array.isArray(current),
+        `marker segment length requires an array or string for ${expression}`,
+      );
+      current = current.length;
+      continue;
+    }
+    assert.ok(current && Object.hasOwn(current, segment), `marker segment missing: ${expression}`);
+    current = current[segment];
+  }
+  return current;
+}
+
+function resolveStatMarker(marker) {
+  const [assetPath, expression] = marker.split(":");
+  assert.ok(assetPath && expression, `invalid stat marker: ${marker}`);
+  const asset = readJsonAsset(assetPath);
+  return expression
+    .split("+")
+    .map((part) => resolveMarkerPath(asset, part))
+    .reduce((total, value) => total + Number(value), 0);
+}
+
+function parseAttributes(source) {
+  const attributes = new Map();
+  const attributePattern = /\s([a-zA-Z0-9:-]+)="([^"]*)"/g;
+  for (const match of source.matchAll(attributePattern)) {
+    attributes.set(match[1], match[2]);
+  }
+  return attributes;
+}
+
+function extractLandingStats(html) {
+  const stats = new Map();
+  const statPattern = /<span\b([^>]*\bclass="stat-card__value"[^>]*)>([^<]*)<\/span>/g;
+  for (const match of html.matchAll(statPattern)) {
+    const attributes = parseAttributes(match[1]);
+    const statId = attributes.get("data-stat-id");
+    if (!statId) continue;
+    stats.set(statId, {
+      source: attributes.get("data-stat-source"),
+      text: match[2].trim(),
+      value: Number(attributes.get("data-stat-value")),
+    });
+  }
+  return stats;
+}
+
+function getExpectedLandingStats() {
+  const scenarioIndex = readJsonAsset("data/scenarios/index.json");
+  const scenarioIds = new Set((scenarioIndex.scenarios || []).map((scenario) => scenario.scenario_id));
+  assert.deepEqual(scenarioIndex.public_baseline_ids, PUBLIC_SCENARIO_IDS);
+  for (const scenarioId of PUBLIC_SCENARIO_IDS) {
+    assert.ok(scenarioIds.has(scenarioId), `missing public scenario baseline: ${scenarioId}`);
+  }
+  assert.deepEqual(scenarioIndex.developer_preview_ids, ["hgo_1936"]);
+  assert.ok(scenarioIds.has("hgo_1936"), "HGO 1936 should stay available as a developer/local preview");
+
+  return new Map([
+    [
+      "public-baselines",
+      {
+        source: "data/scenarios/index.json:public_baseline_ids.length",
+      },
+    ],
+    [
+      "world-city-points",
+      {
+        source: "data/world_cities.geojson:features.length",
+      },
+    ],
+    [
+      "city-aliases",
+      {
+        source: "data/city_aliases.json:alias_count",
+      },
+    ],
+    [
+      "catalog-assets",
+      {
+        source: "data/CATALOG.json:counts.entries",
+      },
+    ],
+    [
+      "japan-transport-features",
+      {
+        source: "landing/assets/japan-preview.json:counts.road_source_features+counts.rail_source_features",
+      },
+    ],
+  ].map(([statId, expected]) => [
+    statId,
+    {
+      ...expected,
+      value: resolveStatMarker(expected.source),
+    },
+  ]));
+}
+
 class TestClassList {
   toggle() {}
   add() {}
@@ -232,6 +346,22 @@ test("landing local asset references exist", () => {
   for (const assetPath of referencedAssets) {
     const assetUrl = new URL(`../landing/${assetPath.slice(2)}`, import.meta.url);
     assert.ok(existsSync(assetUrl), `missing landing asset referenced by HTML/JS: ${assetPath}`);
+  }
+});
+
+test("landing stat cards stay aligned with source data", () => {
+  const expectedStats = getExpectedLandingStats();
+  for (const assetRoot of ["landing", "dist"]) {
+    const html = readFileSync(new URL(`../${assetRoot}/index.html`, import.meta.url), "utf8");
+    const actualStats = extractLandingStats(html);
+
+    assert.deepEqual([...actualStats.keys()].sort(), [...expectedStats.keys()].sort(), `${assetRoot} stat ids drifted`);
+    for (const [statId, expected] of expectedStats) {
+      const actual = actualStats.get(statId);
+      assert.equal(actual.source, expected.source, `${assetRoot}/${statId} source marker drifted`);
+      assert.equal(actual.value, expected.value, `${assetRoot}/${statId} data-stat-value drifted`);
+      assert.equal(actual.text, String(expected.value), `${assetRoot}/${statId} visible value drifted`);
+    }
   }
 });
 

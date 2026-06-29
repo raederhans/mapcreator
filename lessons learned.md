@@ -486,3 +486,6 @@
 
 ### Projection/path owner 要保留注册后的调用顺序
 - 抽 projection/path handle creation 时，`setProjection` 之后再对 registered projection 调 `clipExtent(null)` 是行为合同；把 `clipExtent` 做成可选或放到注册前会隐藏坏 projection，并改变原有 fail-fast 路径。
+
+### Pages 超限 manifest 要保留可审计事实
+- Pages payload 超过发布上限时，builder 可以先写有效 manifest，再用 size gate 退出红灯；测试应校验 `size_gate`、最大文件和目录汇总，避免超限状态被空 manifest 或模糊失败信息遮住。

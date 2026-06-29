@@ -109,23 +109,23 @@
 
         <section id="stats" class="stats-strip" aria-label="Scenario Forge product statistics" data-i18n-aria-label="statsLabel">
           <article class="stat-card" data-reveal>
-            <span class="stat-card__value" data-stat-value="5">5</span>
-            <span class="stat-card__label" data-i18n="statScenarios">built-in scenarios</span>
+            <span class="stat-card__value" data-stat-id="public-baselines" data-stat-source="data/scenarios/index.json:public_baseline_ids.length" data-stat-value="5">5</span>
+            <span class="stat-card__label" data-i18n="statScenarios">public baselines</span>
           </article>
           <article class="stat-card" data-reveal>
-            <span class="stat-card__value" data-stat-value="21338">21338</span>
+            <span class="stat-card__value" data-stat-id="world-city-points" data-stat-source="data/world_cities.geojson:features.length" data-stat-value="21338">21338</span>
             <span class="stat-card__label" data-i18n="statCities">world city points</span>
           </article>
           <article class="stat-card" data-reveal>
-            <span class="stat-card__value" data-stat-value="189269">189269</span>
+            <span class="stat-card__value" data-stat-id="city-aliases" data-stat-source="data/city_aliases.json:alias_count" data-stat-value="189269">189269</span>
             <span class="stat-card__label" data-i18n="statAliases">city aliases</span>
           </article>
           <article class="stat-card" data-reveal>
-            <span class="stat-card__value" data-stat-value="658">658</span>
+            <span class="stat-card__value" data-stat-id="catalog-assets" data-stat-source="data/CATALOG.json:counts.entries" data-stat-value="658">658</span>
             <span class="stat-card__label" data-i18n="statCatalog">map-ready data assets</span>
           </article>
           <article class="stat-card" data-reveal>
-            <span class="stat-card__value" data-stat-value="5899">5899</span>
+            <span class="stat-card__value" data-stat-id="japan-transport-features" data-stat-source="landing/assets/japan-preview.json:counts.road_source_features+counts.rail_source_features" data-stat-value="5899">5899</span>
             <span class="stat-card__label" data-i18n="statJapan">Japan transport map features</span>
           </article>
         </section>
@@ -356,7 +356,7 @@
             <article class="step-card" data-reveal>
               <span class="step-card__index">01</span>
               <h3 data-i18n="stepOneTitle">Start from a world state</h3>
-              <p data-i18n="stepOneBody">Use built-in baselines like Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962 to begin from an explicit scenario frame.</p>
+              <p data-i18n="stepOneBody">Use the five public baselines like Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962 to begin from an explicit scenario frame.</p>
             </article>
             <article class="step-card" data-reveal>
               <span class="step-card__index">02</span>
@@ -413,9 +413,9 @@
                 <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg>
               </span>
               <h3 data-i18n="featureGroupFourTitle">Transport and infrastructure</h3>
-              <p data-i18n="featureGroupFourBody">Roads and rail are already visible in the Japan preview, with airports, ports, energy, industry, and resources forming the next infrastructure views.</p>
+              <p data-i18n="featureGroupFourBody">Roads and rail are the strongest public transport map paths. Airports and ports feed overview context, while energy, industry, logistics, and resources remain workbench preview families.</p>
               <ul class="feature-points">
-                <li data-i18n="featurePointTransport">Japan roads, rail, airports, ports, energy, industry, logistics, and resource families.</li>
+                <li data-i18n="featurePointTransport">Japan roads and rail, plus airport, port, energy, industry, logistics, and resource preview families.</li>
                 <li data-i18n="featurePointAudits">Source links help reviewers understand where infrastructure layers come from.</li>
               </ul>
             </article>
@@ -455,7 +455,7 @@
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="templatesEyebrow">Scenario templates</p>
             <h2 data-i18n="templatesTitle">Start from a real world state.</h2>
-            <p data-i18n="templatesBody">The first action can be choosing the political universe, not rebuilding a base map.</p>
+            <p data-i18n="templatesBody">The first action can be choosing one of five public baselines. HGO 1936 stays available as a developer/local preview.</p>
           </div>
           <div class="template-grid">
             <article class="template-card template-card--blank" data-reveal>
@@ -502,7 +502,7 @@
             <article class="data-card" data-reveal>
               <span class="data-card__tag" data-i18n="dataCardThreeTag">Infrastructure</span>
               <h3 data-i18n="dataCardThreeTitle">Transport layers you can inspect</h3>
-              <p data-i18n="dataCardThreeBody">Japan roads and railways already appear as visible map layers. More infrastructure views can grow from the same product pattern.</p>
+              <p data-i18n="dataCardThreeBody">Japan roads and railways appear as visible map layers. Airports and ports feed overview context; more infrastructure views can grow from the same product pattern.</p>
             </article>
             <article class="data-card" data-reveal>
               <span class="data-card__tag" data-i18n="dataCardFourTag">Governance</span>
@@ -522,7 +522,7 @@
             <article class="edition-card" data-reveal>
               <span class="status-badge" data-i18n="editionOneBadge">Available now</span>
               <h3 data-i18n="editionOneTitle">Live demo</h3>
-              <p data-i18n="editionOneBody">Open the browser workbench, explore built-in scenarios, tune layers, and export presentation snapshots.</p>
+              <p data-i18n="editionOneBody">Open the browser workbench, explore public baselines, tune layers, and export presentation snapshots.</p>
             </article>
             <article class="edition-card" data-reveal>
               <span class="status-badge" data-i18n="editionTwoBadge">Local creator workflow</span>
@@ -587,7 +587,7 @@
             </details>
             <details>
               <summary data-i18n="faqFiveQuestion">How mature are the transport layers?</summary>
-              <p data-i18n="faqFiveAnswer">Japan roads and railways are the clearest current transport view. Other infrastructure families are shown as upcoming product areas.</p>
+              <p data-i18n="faqFiveAnswer">Japan roads and railways are the clearest current transport view. Airports, ports, energy, industry, logistics, and resources are workbench/preview families.</p>
             </details>
             <details>
             <summary data-i18n="faqSixQuestion">What is the license model?</summary>
@@ -617,7 +617,7 @@
             <article class="roadmap-item" data-reveal>
               <span class="status-badge" data-i18n="roadmapStatusThree">Shell stage</span>
               <h3 data-i18n="roadmapThreeTitle">Rail and other infrastructure families</h3>
-              <p data-i18n="roadmapThreeBody">Rail, airport, port, energy, industry, logistics, and resource views are expanding from the same map-layer pattern.</p>
+              <p data-i18n="roadmapThreeBody">Road and rail stay the strongest public transport paths while airport, port, energy, industry, logistics, and resource views expand from the same map-layer pattern.</p>
             </article>
           </div>
         </section>

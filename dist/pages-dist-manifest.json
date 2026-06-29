@@ -39857,7 +39857,7 @@
     },
     {
       "path": "app/data/scenarios/index.json",
-      "size_bytes": 952,
+      "size_bytes": 1120,
       "source_kind": "generated_ignored"
     },
     {
@@ -47087,7 +47087,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 68605,
+      "size_bytes": 68983,
       "source_kind": "dist"
     },
     {
@@ -47347,12 +47347,12 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 49678,
+      "size_bytes": 50385,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1461931,
+      "size_bytes": 1465881,
       "source_kind": "dist"
     },
     {
@@ -47361,7 +47361,109 @@
       "source_kind": "dist"
     }
   ],
-  "max_allowed_bytes": 1155530752,
+  "largest_files": [
+    {
+      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
+      "size_bytes": 55095698,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/hgo_runtime/provinces.bmp",
+      "size_bytes": 39321654,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
+      "size_bytes": 30443516,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/city_aliases.json",
+      "size_bytes": 30194842,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hgo_1936/runtime_topology.topo.json",
+      "size_bytes": 30079615,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1936/chunks/political.detail.country.sov.json",
+      "size_bytes": 29157059,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1939/chunks/political.detail.country.sov.json",
+      "size_bytes": 29157059,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1939/chunks/political.detail.country.ru.json",
+      "size_bytes": 26065294,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/world_cities.geojson",
+      "size_bytes": 24981098,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c1.json",
+      "size_bytes": 22689481,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/global_contours.minor.topo.json",
+      "size_bytes": 20712299,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
+      "size_bytes": 20696026,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/europe_topology.na_v2.json",
+      "size_bytes": 19326019,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/water_regions.geojson",
+      "size_bytes": 18641675,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
+      "size_bytes": 18641674,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c3.json",
+      "size_bytes": 15943961,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1936/chunks/political.coarse.r0c0.json",
+      "size_bytes": 15123722,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/hoi4_1939/chunks/political.coarse.r0c0.json",
+      "size_bytes": 15123722,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/europe_topology.runtime_political_v1.json",
+      "size_bytes": 14128976,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 11645797,
+      "source_kind": "generated_ignored"
+    }
+  ],
+  "max_allowed_bytes": 1073741824,
   "required_files": [
     "index.html",
     "app/index.html",
@@ -47371,5 +47473,46 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155312458
+  "size_gate": {
+    "over_by_bytes": 81575837,
+    "status": "over_limit"
+  },
+  "top_level_directories": [
+    {
+      "file_count": 9416,
+      "path": "app",
+      "size_bytes": 1148829314
+    },
+    {
+      "file_count": 51,
+      "path": "assets",
+      "size_bytes": 4865877
+    },
+    {
+      "file_count": 1,
+      "path": "pages-dist-manifest.json",
+      "size_bytes": 1465881
+    },
+    {
+      "file_count": 1,
+      "path": "app.js",
+      "size_bytes": 68983
+    },
+    {
+      "file_count": 1,
+      "path": "index.html",
+      "size_bytes": 50385
+    },
+    {
+      "file_count": 1,
+      "path": "styles.css",
+      "size_bytes": 37221
+    },
+    {
+      "file_count": 1,
+      "path": ".nojekyll",
+      "size_bytes": 0
+    }
+  ],
+  "total_bytes": 1155317661
 }

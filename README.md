@@ -29,11 +29,11 @@
 
 Scenario Forge gives creators one place to choose a world state, edit political control, tune the map's visual style, add strategic overlays, inspect transport layers, and export a polished map image or reusable project file.
 
-- **Scenario baselines:** start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962.
+- **Scenario baselines:** start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. HGO 1936 ships as a developer/local preview and appears separately from the five public baselines.
 - **Political editing:** repaint ownership and controller state, inspect split ownership, and switch between ownership, controller, and frontline views.
 - **Map appearance:** tune oceans, borders, parent borders, terrain, urban areas, city points, rivers, textures, day-night shading, and reference images.
 - **Strategic markup:** add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays.
-- **Transport workbench:** inspect roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer order.
+- **Transport workbench:** inspect roads and rail as the strongest public transport layers, with airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer order available through overview or workbench previews.
 - **Bilingual export workflow:** use English or Simplified Chinese, save editable project files, and export PNG/JPG presentation snapshots at 1x-4x scale.
 
 ## See It In Action
@@ -134,7 +134,7 @@ The main editor path is ready for normal map creation: scenario switching, polit
 Some larger systems are available as previews:
 
 - **Cloud Saves and community:** available through the local backend preview.
-- **Transport workbench:** source-backed and cached transport data is available across multiple categories. Roads, rail, airports, and ports currently connect most consistently to the main map; broader global coverage continues growing.
+- **Transport workbench:** source-backed and cached transport data is available across multiple categories. Roads and rail are the strongest public map paths; airports and ports feed overview context; mineral resources, energy, industry, and logistics remain workbench/preview families while coverage grows.
 - **HGO runtime preview:** a developer/local preview for country identity, palette, flag, and raster-render validation.
 
 <details>
@@ -142,11 +142,11 @@ Some larger systems are available as previews:
 
 | Area | What you can do |
 | --- | --- |
-| Scenario maps | Start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. |
+| Scenario maps | Start from Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962. HGO 1936 appears as a developer/local preview. |
 | Political editing | Repaint ownership and controller state, inspect split ownership, and work across ownership, controller, and frontline views. |
 | Visual style | Tune oceans, borders, parent borders, physical regions, urban areas, city points, rivers, textures, day-night shading, and reference images. |
 | Strategic presentation | Add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays. |
-| Transport context | Explore roads, rail, airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through the Transport workbench. |
+| Transport context | Explore roads and rail as the strongest public layers, plus airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer ordering through overview or workbench previews. |
 | Export workflow | Export PNG/JPG presentation snapshots at 1x-4x scale, adjust image brightness/contrast/saturation, and manage layer order. |
 | Project files | Save an editable project JSON with scenario, appearance, transport, strategic annotations, reference alignment, and export settings. |
 | Community preview | In local backend mode, test account sessions, Cloud Saves, publishing, community downloads, comments, reports, and admin review tools. |

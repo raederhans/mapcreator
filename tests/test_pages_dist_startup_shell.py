@@ -87,6 +87,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             DIST_MANIFEST.exists(),
             "dist/pages-dist-manifest.json is a checked-in Pages dist contract",
         )
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(payload.get("schema_version"), 1)
+        self.assertIsInstance(payload.get("files"), list)
+        self.assertGreater(len(payload.get("files", [])), 0)
+        for field_name in ("total_bytes", "max_allowed_bytes", "size_gate", "required_files"):
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, payload)
 
     def test_pages_dist_drift_guard_covers_tracked_dist_outputs(self) -> None:
         try:
@@ -1294,9 +1301,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(payload.get("schema_version"), 1)
+        self.assertIsInstance(payload.get("files"), list)
+        self.assertGreater(len(payload["files"]), 0)
         paths = {record["path"] for record in payload["files"]}
         records_by_path = {record["path"]: record for record in payload["files"]}
         required_files = set(payload.get("required_files", []))
+        size_gate = payload.get("size_gate", {})
+        largest_files = payload.get("largest_files", [])
+        top_level_directories = payload.get("top_level_directories", [])
 
         for record in payload["files"]:
             manifest_path = record["path"]
@@ -1311,11 +1324,42 @@ class PagesDistStartupShellTest(unittest.TestCase):
             payload["total_bytes"],
             sum((REPO_ROOT / "dist" / record["path"]).stat().st_size for record in payload["files"]),
         )
-        self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
         self.assertEqual(payload["max_allowed_bytes"], build_pages_dist.MAX_PAGES_DIST_BYTES)
+        self.assertEqual(build_pages_dist.MAX_PAGES_DIST_BYTES, build_pages_dist.GITHUB_PAGES_HARD_MAX_BYTES)
+        self.assertEqual(payload["max_allowed_bytes"], 1024 * 1024 * 1024)
+        self.assertLessEqual(payload["max_allowed_bytes"], 1024 * 1024 * 1024)
+        expected_over_by_bytes = max(payload["total_bytes"] - payload["max_allowed_bytes"], 0)
+        expected_status = "over_limit" if expected_over_by_bytes else "within_limit"
+        self.assertEqual(size_gate.get("status"), expected_status)
+        self.assertEqual(size_gate.get("over_by_bytes"), expected_over_by_bytes)
         self.assertEqual(
             records_by_path["pages-dist-manifest.json"]["size_bytes"],
             DIST_MANIFEST.stat().st_size,
+        )
+        self.assertIsInstance(largest_files, list)
+        self.assertGreater(len(largest_files), 0)
+        self.assertLessEqual(len(largest_files), build_pages_dist.DIST_MANIFEST_LARGEST_FILE_LIMIT)
+        self.assertEqual(
+            largest_files,
+            sorted(largest_files, key=lambda record: (-int(record["size_bytes"]), str(record["path"]))),
+        )
+        self.assertEqual(
+            largest_files[0],
+            sorted(payload["files"], key=lambda record: (-int(record["size_bytes"]), str(record["path"])))[0],
+        )
+        self.assertIsInstance(top_level_directories, list)
+        self.assertGreater(len(top_level_directories), 0)
+        self.assertEqual(
+            payload["total_bytes"],
+            sum(record["size_bytes"] for record in top_level_directories),
+        )
+        self.assertEqual(
+            len(payload["files"]),
+            sum(record["file_count"] for record in top_level_directories),
+        )
+        self.assertEqual(
+            top_level_directories,
+            sorted(top_level_directories, key=lambda record: (-int(record["size_bytes"]), str(record["path"]))),
         )
         self.assertIn("app/data/CATALOG.json", required_files)
         expected_hgo_runtime_paths = tuple(

@@ -508,6 +508,21 @@ test("phase 03 support surfaces restore the guide view from URL", async ({ page 
   await expect(page.locator("#scenarioGuideSectionTools")).toBeVisible();
 });
 
+test("phase 03 direct guide URL opens from the default app path", async ({ page }) => {
+  test.setTimeout(240_000);
+  await gotoApp(page, "/?view=guide", { waitUntil: "domcontentloaded" });
+  await waitForAppInteractive(page);
+  await expect(page.locator("#scenarioGuideBackdrop")).toBeVisible();
+  await expect(page.locator("#scenarioGuidePopover")).toBeVisible();
+  await expect(page.locator("body")).toHaveClass(/scenario-guide-open/);
+  await expect(page.locator("#scenarioGuideBtn")).toHaveAttribute("aria-expanded", "true");
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#scenarioGuideBackdrop")).toBeHidden();
+  await expect(page.locator("#scenarioGuidePopover")).toBeHidden();
+  await expect(page.locator("#scenarioGuideBtn")).toBeFocused();
+});
+
 test("phase 03 guide URL restore returns focus to visible topbar trigger on compact viewport", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1024, height: 900 });

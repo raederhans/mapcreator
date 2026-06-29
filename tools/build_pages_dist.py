@@ -20,9 +20,9 @@ from tools.app_entry_resolver import (
 DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
-# TNO water refinements and the independent HGO runtime now publish large
-# checked-in runtime assets; the cap stays close to the measured Pages payload.
-MAX_PAGES_DIST_BYTES = 1102 * 1024 * 1024
+GITHUB_PAGES_HARD_MAX_BYTES = 1024 * 1024 * 1024
+MAX_PAGES_DIST_BYTES = GITHUB_PAGES_HARD_MAX_BYTES
+DIST_MANIFEST_LARGEST_FILE_LIMIT = 20
 ROOT_PUBLIC_FILES = (
     ".nojekyll",
     "CNAME",
@@ -781,6 +781,30 @@ def get_dist_file_records() -> tuple[list[dict[str, int | str]], int]:
     raise RuntimeError("Pages dist manifest scan did not complete")
 
 
+def get_largest_dist_files(records: list[dict[str, int | str]]) -> list[dict[str, int | str]]:
+    sorted_records = sorted(records, key=lambda record: (-int(record["size_bytes"]), str(record["path"])))
+    return [dict(record) for record in sorted_records[:DIST_MANIFEST_LARGEST_FILE_LIMIT]]
+
+
+def get_top_level_directory_records(records: list[dict[str, int | str]]) -> list[dict[str, int | str]]:
+    totals: dict[str, dict[str, int | str]] = {}
+    for record in records:
+        record_path = str(record["path"])
+        top_level_path = record_path.split("/", 1)[0]
+        total = totals.setdefault(top_level_path, {"path": top_level_path, "size_bytes": 0, "file_count": 0})
+        total["size_bytes"] = int(total["size_bytes"]) + int(record["size_bytes"])
+        total["file_count"] = int(total["file_count"]) + 1
+    return sorted(totals.values(), key=lambda record: (-int(record["size_bytes"]), str(record["path"])))
+
+
+def get_dist_size_gate(total_bytes: int) -> dict[str, int | str]:
+    over_by_bytes = max(total_bytes - MAX_PAGES_DIST_BYTES, 0)
+    return {
+        "status": "over_limit" if over_by_bytes else "within_limit",
+        "over_by_bytes": over_by_bytes,
+    }
+
+
 def validate_required_dist_files() -> None:
     missing_files = [relative_path for relative_path in REQUIRED_DIST_FILES if not (DIST_ROOT / relative_path).is_file()]
     if missing_files:
@@ -798,7 +822,10 @@ def write_dist_manifest() -> int:
             "schema_version": 1,
             "total_bytes": total_bytes,
             "max_allowed_bytes": MAX_PAGES_DIST_BYTES,
+            "size_gate": get_dist_size_gate(total_bytes),
             "required_files": list(REQUIRED_DIST_FILES),
+            "largest_files": get_largest_dist_files(records),
+            "top_level_directories": get_top_level_directory_records(records),
             "files": records,
         }
         manifest_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
@@ -815,9 +842,11 @@ def enforce_dist_size(total_bytes: int) -> None:
     if total_bytes > MAX_PAGES_DIST_BYTES:
         total_mib = total_bytes / (1024 * 1024)
         limit_mib = MAX_PAGES_DIST_BYTES / (1024 * 1024)
+        over_by_mib = (total_bytes - MAX_PAGES_DIST_BYTES) / (1024 * 1024)
         raise SystemExit(
-            f"Pages dist size gate failed: {total_mib:.2f} MiB exceeds {limit_mib:.2f} MiB. "
-            "Update the runtime allowlist before publishing."
+            f"Pages dist size gate failed: {total_mib:.2f} MiB exceeds {limit_mib:.2f} MiB "
+            f"by {over_by_mib:.2f} MiB. "
+            "Review dist/pages-dist-manifest.json largest_files and top_level_directories before publishing."
         )
 
 

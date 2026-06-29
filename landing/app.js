@@ -42,7 +42,7 @@ const translations = {
     chipHoi41936: "HOI4 1936",
     chipHoi41939: "HOI4 1939",
     chipTno1962: "TNO 1962",
-    statScenarios: "built-in scenarios",
+    statScenarios: "public baselines",
     statCities: "world city points",
     statAliases: "city aliases",
     statCatalog: "map-ready data assets",
@@ -154,7 +154,7 @@ const translations = {
     workflowTitle: "A short path from baseline to story-ready map.",
     stepOneTitle: "Start from a world state",
     stepOneBody:
-      "Use built-in baselines like Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962 to begin from an explicit scenario frame.",
+      "Use the five public baselines like Blank Map, Modern World, HOI4 1936, HOI4 1939, or TNO 1962 to begin from an explicit scenario frame.",
     stepTwoTitle: "Repaint control and ownership",
     stepTwoBody:
       "Shift who owns what, who controls what, and how the map should read politically without rebuilding the whole surface from scratch.",
@@ -182,9 +182,9 @@ const translations = {
       "Boundaries, settlements, hierarchy data, physical context, and source links that help maps stay readable and trustworthy.",
     featureGroupFourTitle: "Transport and infrastructure",
     featureGroupFourBody:
-      "Roads and rail are already visible in the Japan preview, with airports, ports, energy, industry, and resources forming the next infrastructure views.",
+      "Roads and rail are the strongest public transport map paths. Airports and ports feed overview context, while energy, industry, logistics, and resources remain workbench preview families.",
     featurePointTransport:
-      "Japan roads, rail, airports, ports, energy, industry, logistics, and resource families.",
+      "Japan roads and rail, plus airport, port, energy, industry, logistics, and resource preview families.",
     featurePointAudits:
       "Source links help reviewers understand where infrastructure layers come from.",
     featureGroupFiveTitle: "Imagery and context layers",
@@ -203,7 +203,7 @@ const translations = {
     templatesEyebrow: "Scenario templates",
     templatesTitle: "Start from a real world state.",
     templatesBody:
-      "The first action can be choosing the political universe, not rebuilding a base map.",
+      "The first action can be choosing one of five public baselines. HGO 1936 stays available as a developer/local preview.",
     templateBlankTag: "Clean base",
     templateBlankTitle: "Blank Map",
     templateModernTag: "Current world",
@@ -231,7 +231,7 @@ const translations = {
     dataCardThreeTag: "Infrastructure",
     dataCardThreeTitle: "Transport layers you can inspect",
     dataCardThreeBody:
-      "Japan roads and railways already appear as visible map layers. More infrastructure views can grow from the same product pattern.",
+      "Japan roads and railways appear as visible map layers. Airports and ports feed overview context; more infrastructure views can grow from the same product pattern.",
     dataCardFourTag: "Governance",
     dataCardFourTitle: "Traceable from source to map",
     dataCardFourBody:
@@ -242,7 +242,7 @@ const translations = {
     editionOneBadge: "Available now",
     editionOneTitle: "Live demo",
     editionOneBody:
-      "Open the browser workbench, explore built-in scenarios, tune layers, and export presentation snapshots.",
+      "Open the browser workbench, explore public baselines, tune layers, and export presentation snapshots.",
     editionTwoBadge: "Local creator workflow",
     editionTwoTitle: "Project files and traceable data",
     editionTwoBody:
@@ -281,7 +281,7 @@ const translations = {
       "The editor supports presentation snapshots such as PNG and JPG, with layer styling kept close to the map workspace.",
     faqFiveQuestion: "How mature are the transport layers?",
     faqFiveAnswer:
-      "Japan roads and railways are the clearest current transport view. Other infrastructure families are shown as upcoming product areas.",
+      "Japan roads and railways are the clearest current transport view. Airports, ports, energy, industry, logistics, and resources are workbench/preview families.",
     faqSixQuestion: "What is the license model?",
     faqSixAnswer:
       "The current public surface is a live demo and repository. Creator, team, and cloud packaging are future product directions.",
@@ -299,7 +299,7 @@ const translations = {
     roadmapStatusThree: "Shell stage",
     roadmapThreeTitle: "Rail and other infrastructure families",
     roadmapThreeBody:
-      "Rail, airport, port, energy, industry, logistics, and resource views are expanding from the same map-layer pattern.",
+      "Road and rail stay the strongest public transport paths while airport, port, energy, industry, logistics, and resource views expand from the same map-layer pattern.",
     updatesEyebrow: "What’s new",
     updatesTitle: "A product surface that keeps moving.",
     updateOneDate: "May 31, 2026",
@@ -371,7 +371,7 @@ const translations = {
     chipHoi41936: "HOI4 1936",
     chipHoi41939: "HOI4 1939",
     chipTno1962: "TNO 1962",
-    statScenarios: "内置场景",
+    statScenarios: "公开基线",
     statCities: "世界城市点",
     statAliases: "城市别名",
     statCatalog: "地图数据资源",
@@ -457,7 +457,7 @@ const translations = {
     workflowEyebrow: "工作流程",
     workflowTitle: "从场景基线到展示地图，流程更短。",
     stepOneTitle: "选一个世界状态",
-    stepOneBody: "用 Blank Map、Modern World、HOI4 1936、HOI4 1939 或 TNO 1962 这样的基线，把工作起点放到明确场景里。",
+    stepOneBody: "用 Blank Map、Modern World、HOI4 1936、HOI4 1939 或 TNO 1962 这 5 个公开基线，把工作起点放到明确场景里。",
     stepTwoTitle: "调整控制和归属",
     stepTwoBody: "直接调整谁拥有什么、谁控制什么，以及地图的政治阅读方式。",
     stepThreeTitle: "叠加图层并导出",
@@ -476,8 +476,8 @@ const translations = {
     featureGroupThreeTitle: "空间数据与分析",
     featureGroupThreeBody: "边界、聚落、层级数据、物理上下文和来源链接，让地图更清楚，也更容易被信任。",
     featureGroupFourTitle: "交通与基础设施",
-    featureGroupFourBody: "日本预览已经能看到道路和铁路，机场、港口、能源、工业和资源会继续扩展成新的基础设施视图。",
-    featurePointTransport: "日本道路、铁路、机场、港口、能源、工业、物流和资源数据族。",
+    featureGroupFourBody: "道路与铁路是公开面最成熟的交通地图路径。机场和港口进入总览上下文，能源、工业、物流和资源继续作为工作台预览数据族。",
+    featurePointTransport: "日本道路与铁路，以及机场、港口、能源、工业、物流和资源预览数据族。",
     featurePointAudits: "来源链接帮助审阅者理解基础设施图层来自哪里。",
     featureGroupFiveTitle: "影像与上下文图层",
     featureGroupFiveBody: "地形、水深、等高线、河流、夜光、城市区域和物理语义，让地图具备更完整的地理背景。",
@@ -492,7 +492,7 @@ const translations = {
     audienceFive: "研究者与展示者",
     templatesEyebrow: "场景模板",
     templatesTitle: "从现成世界状态开始制作。",
-    templatesBody: "第一步先选择政治宇宙，再在这个基础上继续编辑和展示。",
+    templatesBody: "第一步先选择 5 个公开基线之一。HGO 1936 继续作为开发/本地预览提供。",
     templateBlankTag: "干净基线",
     templateBlankTitle: "Blank Map",
     templateModernTag: "当代世界",
@@ -516,7 +516,7 @@ const translations = {
     dataCardTwoBody: "NOAA ETOPO、水深包、等高线、河流和物理语义，让地图更接近真实地理空间。",
     dataCardThreeTag: "基础设施",
     dataCardThreeTitle: "可以查看的交通图层",
-    dataCardThreeBody: "日本道路和铁路已经作为可见地图图层展示，更多基础设施视图可以沿用这套产品表达。",
+    dataCardThreeBody: "日本道路和铁路已经作为可见地图图层展示。机场和港口进入总览上下文，更多基础设施视图可以沿用这套产品表达。",
     dataCardFourTag: "治理",
     dataCardFourTitle: "从来源到地图都能追溯",
     dataCardFourBody: "每个公开来源按钮都会指向真实数据族，让数据基础更容易被评估。",
@@ -524,7 +524,7 @@ const translations = {
     editionsTitle: "当前试用方式与后续扩展方向。",
     editionOneBadge: "现在可用",
     editionOneTitle: "在线 Demo",
-    editionOneBody: "打开浏览器工作台，探索内置场景，调整图层，并导出展示截图。",
+    editionOneBody: "打开浏览器工作台，探索公开基线，调整图层，并导出展示截图。",
     editionTwoBadge: "本地创作者流程",
     editionTwoTitle: "本地项目和可追溯数据",
     editionTwoBody: "将场景工作保存在本地，检查地图图层，并在需要说明来源时查看来源链接。",
@@ -553,7 +553,7 @@ const translations = {
     faqFourQuestion: "可以导出什么？",
     faqFourAnswer: "编辑器支持 PNG、JPG 这类展示截图，并把图层样式保留在地图工作台附近。",
     faqFiveQuestion: "交通图层成熟度如何？",
-    faqFiveAnswer: "日本道路和铁路是当前最清楚的交通视图。其他基础设施族会作为后续产品区域继续展示。",
+    faqFiveAnswer: "日本道路和铁路是当前最清楚的交通视图。机场、港口、能源、工业、物流和资源属于工作台/预览数据族。",
     faqSixQuestion: "许可模式是什么？",
     faqSixAnswer: "当前公开入口是在线演示和仓库。创作者版、团队版和云端包装属于后续产品方向。",
     roadmapEyebrow: "进行中",
@@ -567,7 +567,7 @@ const translations = {
     roadmapTwoBody: "这是目前交通相关能力里最清晰的预览。",
     roadmapStatusThree: "框架阶段",
     roadmapThreeTitle: "铁路和其他基础设施族",
-    roadmapThreeBody: "铁路、机场、港口、能源、工业、物流和资源视图会从同一套地图图层模式继续扩展。",
+    roadmapThreeBody: "道路与铁路保持公开面最成熟的交通路径；机场、港口、能源、工业、物流和资源视图会从同一套地图图层模式继续扩展。",
     updatesEyebrow: "最近更新",
     updatesTitle: "产品持续迭代中。",
     updateOneDate: "2026 年 5 月 31 日",
