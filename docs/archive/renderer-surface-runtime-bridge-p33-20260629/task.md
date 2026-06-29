@@ -13,7 +13,9 @@
 - [x] Run required validation commands.
 - [x] Run independent code-review and QA/self-check.
 - [x] Commit and rebase over current `origin/main`.
-- [ ] Push to `main`, archive docs, and clean the P33 worktree when safe.
+- [x] Push functional commit to `main`.
+- [x] Archive P33 docs during closeout.
+- [ ] Clean the P33 worktree after closeout push.
 
 ## Delivery Package
 
@@ -45,7 +47,7 @@ Diff summary before final rebase:
 - Dist: 3 generated files changed, 31 insertions, 13 deletions.
 
 Commit status:
-- Functional commit exists on `codex/p33-renderer-surface-runtime-bridge`; final validation and push are pending.
+- Functional commit `882fff6c` is pushed to `origin/main`; this closeout commit archives docs and records cleanup.
 
 Base divergence:
 - Worktree implemented on `origin/main@2f78a9cffda64ea69378b789a735f7aa1ae8c426`.
@@ -79,7 +81,7 @@ Review passed:
 - Architect: `Architectural Status: CLEAR`, `verdict: approve`.
 
 Remaining risk:
-- Rerun the final minimum gate set before push.
+- Worktree cleanup follows after the closeout commit is pushed.
 
 Recommended next action:
-- Rerun minimum gates, push `HEAD:main`, then archive this task folder and remove the P33 worktree.
+- Push the closeout commit, verify remote contains it, then remove the P33 worktree.
