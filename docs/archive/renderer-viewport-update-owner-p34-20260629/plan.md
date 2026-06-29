@@ -13,7 +13,7 @@ Complex renderer ownership change. It touches the core renderer composition root
 - [x] Extend architecture boundary and package scripts.
 - [x] Run required verification gates and browser confidence checks when available.
 - [x] Run code review and architecture review, then fix accepted findings.
-- [ ] Sync closeout docs, commit, push, merge to main, and clean the worktree.
+- [x] Sync closeout docs and prepare archive/cleanup package.
 
 ## Review Fix
 - Independent architect review found that `zoom_interaction_lifecycle_owner.js` still treated `effects.updateMap` as optional.
@@ -26,3 +26,8 @@ Complex renderer ownership change. It touches the core renderer composition root
 - Existing zoom, viewport, resize, fit projection, runtime state, and strategic overlay tests pass.
 - Architecture and dist gates pass.
 - Worktree is integrated and recoverable via branch/commit history.
+
+## Closeout Note
+- Functional commit: `d0a9fd67`.
+- Rebased base: `origin/main@13457c54`.
+- The closeout commit archives these docs and records the post-rebase validation gap: scenario chunk runtime full-suite runs remained unstable around `pendingInfraPromotion`, while the focused failing test passed once.

@@ -3,7 +3,7 @@
 ## 2026-06-29
 - Worktree created at `C:\Users\raede\.codex\worktrees\mapcreator-p34-renderer-viewport-update-owner`.
 - Branch `codex/p34-renderer-viewport-update-owner` tracks `origin/main`.
-- Base commit is `fef1d059`.
+- Initial base commit was `fef1d059`; final rebase base is `origin/main@13457c54`.
 - P33 is present on base through `65bae7ed` and `882fff6c`.
 - `applyRendererSurfaceBridgeState` exists in `js/core/state/renderer_runtime_state.js` and is imported by `js/core/map_renderer.js`.
 - Parent checkout is dirty and behind, so all P34 edits stay in the isolated worktree.
@@ -38,7 +38,11 @@
 - `npm run verify:dist-drift` passed after staging generated dist.
 - `npm run test:e2e:dev:tno-ready-state` passed 5/5 after linking the parent `node_modules` dependency directory for the isolated worktree.
 - `npm run test:e2e:smoke` passed 4/4 with an explicit local base URL.
-- `npm run test:e2e:dev:scenario-chunk-runtime` passed 8/8 through the default project Playwright webServer path.
+- Before the final rebase, `npm run test:e2e:dev:scenario-chunk-runtime` passed 8/8 through the default project Playwright webServer path.
+- After rebase onto `origin/main@13457c54`, the required source/static/dist/browser gates passed again, but scenario chunk runtime full-suite remained unstable: full runs returned 7/8, 6/8, and 7/8. The recurring failures were the existing TNO post-edit probe around `FR_ARR_18002`, with either `target-feature-missing`, exact-after-settle invalidation timeout, or `pendingInfraPromotion` still set while the resolved override color was already present.
+- A focused rerun of `tno post-edit keeps political detail fill before progressive recovery skip` passed 1/1 after the first full-suite failure.
+- P34 does not modify `tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js`; `git diff -- tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js` was empty after rebase.
+- Stale `.runtime/dev/active_server.json` pointed to stopped port 8810 after Playwright cleanup; HTTP probing timed out and the metadata was removed before closeout.
 
 ## Review Evidence
 - Independent code-reviewer first reported core code CLEAR with one LOW documentation/registry metadata issue; docs and registry were updated.

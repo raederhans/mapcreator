@@ -500,3 +500,6 @@
 
 ### 场景合同哈希按文本语义收口
 - `data/scenarios` 的 JSON/GeoJSON 文本合同要同时用 `.gitattributes eol=lf` 和 checker 端 LF 归一化锁住；gzip/二进制 sidecar 继续 byte-exact，并用跨 chunk 测试覆盖流式归一化边界。
+
+### Playwright 服务元数据要先验活
+- E2E 失败后 `.runtime/dev/active_server.json` 可能保留已停止端口；重跑前先 HTTP 探测端口，再清理 stale metadata，可减少 scenario chunk 这类长用例的误判。
