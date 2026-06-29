@@ -48,6 +48,7 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertTrue(baseline_node.startswith("v22."), baseline_node)
         self.assertIn("runs-on: windows-latest", workflow_content)
         self.assertRegex(workflow_content, r'node-version:\s*[\"\']22[\"\']')
+        self.assertRegex(workflow_content, r'python-version:\s*[\"\']3\.12[\"\']')
         self.assertIn("cache: 'pip'", workflow_content)
         self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow_content)
         self.assertIn("npx playwright install chromium", workflow_content)
