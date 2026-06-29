@@ -3,6 +3,14 @@ const DEFAULT_MAX_ZOOM_SCALE = 50;
 const DEFAULT_RENDER_PHASE_INTERACTING = "interacting";
 const DEFAULT_RENDER_PHASE_SETTLING = "settling";
 
+function requireFunction(owner, name, ownerName) {
+  const value = owner?.[name];
+  if (typeof value !== "function") {
+    throw new TypeError(`Zoom interaction lifecycle owner requires ${ownerName}.${name}.`);
+  }
+  return value;
+}
+
 export function createZoomInteractionLifecycleOwner({
   state = {},
   constants = {},
@@ -19,6 +27,7 @@ export function createZoomInteractionLifecycleOwner({
   } = constants;
 
   let currentZoomBehavior = null;
+  const updateMap = requireFunction(effects, "updateMap", "effects");
 
   function getD3() {
     return typeof getters.getD3 === "function" ? getters.getD3() : null;
@@ -116,7 +125,7 @@ export function createZoomInteractionLifecycleOwner({
     const nextTransform = getPendingZoomTransform();
     effects.setPendingZoomTransform?.(null);
     if (nextTransform) {
-      effects.updateMap?.(nextTransform);
+      updateMap(nextTransform);
     }
     if (getPendingZoomTransform()) {
       scheduleLatestZoomTransformFlush();
@@ -129,7 +138,7 @@ export function createZoomInteractionLifecycleOwner({
     const endTransform = event.transform;
     effects.setRenderPhase?.(renderPhaseSettling);
     effects.setPendingZoomTransform?.(null);
-    effects.updateMap?.(endTransform);
+    updateMap(endTransform);
     const startK = Math.max(0.0001, Number(getZoomGestureStartTransform()?.k || endTransform?.k || 1));
     const endK = Math.max(0.0001, Number(endTransform?.k || startK));
     effects.setZoomGestureScaleDelta?.(Math.abs(Math.log2(endK / startK)));

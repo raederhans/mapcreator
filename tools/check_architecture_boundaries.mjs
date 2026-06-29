@@ -21,6 +21,7 @@ const FILES = Object.freeze({
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
+  rendererViewportUpdateOwner: "js/core/renderer/renderer_viewport_update_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
@@ -47,6 +48,7 @@ const FILES = Object.freeze({
   rendererFitProjectionLifecyclePreflightDoc: "docs/active/renderer-fit-projection-lifecycle-preflight-20260629.md",
   rendererFitProjectionOwnerTest: "tests/renderer_fit_projection_owner_behavior.test.mjs",
   rendererFitProjectionLifecycleInventoryTest: "tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
+  rendererViewportUpdateOwnerTest: "tests/renderer_viewport_update_owner_behavior.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -61,6 +63,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
+  [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
@@ -146,6 +149,7 @@ function collectFailures() {
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
   const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
+  const rendererViewportUpdateOwner = readProjectFile(FILES.rendererViewportUpdateOwner);
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
@@ -172,6 +176,7 @@ function collectFailures() {
   const rendererFitProjectionLifecyclePreflightDoc = readProjectFile(FILES.rendererFitProjectionLifecyclePreflightDoc);
   const rendererFitProjectionOwnerTest = readProjectFile(FILES.rendererFitProjectionOwnerTest);
   const rendererFitProjectionLifecycleInventoryTest = readProjectFile(FILES.rendererFitProjectionLifecycleInventoryTest);
+  const rendererViewportUpdateOwnerTest = readProjectFile(FILES.rendererViewportUpdateOwnerTest);
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.renderer]: renderer,
@@ -189,6 +194,7 @@ function collectFailures() {
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
     [FILES.viewportCommandOwner]: viewportCommandOwner,
+    [FILES.rendererViewportUpdateOwner]: rendererViewportUpdateOwner,
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
@@ -215,6 +221,7 @@ function collectFailures() {
     [FILES.rendererFitProjectionLifecyclePreflightDoc]: rendererFitProjectionLifecyclePreflightDoc,
     [FILES.rendererFitProjectionOwnerTest]: rendererFitProjectionOwnerTest,
     [FILES.rendererFitProjectionLifecycleInventoryTest]: rendererFitProjectionLifecycleInventoryTest,
+    [FILES.rendererViewportUpdateOwnerTest]: rendererViewportUpdateOwnerTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -856,6 +863,9 @@ function collectFailures() {
   if (!rendererSourceFiles.includes(FILES.rendererFitProjectionOwner)) {
     failures.push("P32 must add js/core/renderer/renderer_fit_projection_owner.js.");
   }
+  if (!rendererSourceFiles.includes(FILES.rendererViewportUpdateOwner)) {
+    failures.push(`P34 must add ${FILES.rendererViewportUpdateOwner}.`);
+  }
   for (const heading of [
     "## Scope and guardrails",
     "## Current P30 surface/projection/svg lifecycle baseline",
@@ -1035,6 +1045,9 @@ function collectFailures() {
   if (!packageJson.includes("\"test:node:renderer-fit-projection-lifecycle\": \"node --test tests/renderer_fit_projection_owner_behavior.test.mjs tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P32 fitProjection lifecycle script.`);
   }
+  if (!packageJson.includes("\"test:node:renderer-viewport-update-owner\": \"node --test tests/renderer_viewport_update_owner_behavior.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P34 renderer viewport update owner behavior script.`);
+  }
 
   const requiredImports = [
     "./map_renderer/scenario_refresh_runtime.js",
@@ -1045,6 +1058,7 @@ function collectFailures() {
     "./renderer/renderer_projection_path_owner.js",
     "./renderer/renderer_svg_surface_lifecycle_owner.js",
     "./renderer/renderer_fit_projection_owner.js",
+    "./renderer/renderer_viewport_update_owner.js",
   ];
   for (const importPath of requiredImports) {
     if (!includesImport(renderer, importPath)) {
@@ -1065,6 +1079,7 @@ function collectFailures() {
     FILES.projectedGeometryBoundsOwner,
     FILES.viewportReadModelOwner,
     FILES.viewportCommandOwner,
+    FILES.rendererViewportUpdateOwner,
     FILES.viewportResizeLifecycleOwner,
     FILES.zoomInteractionLifecycleOwner,
     FILES.mapInteractionEventBindingOwner,
@@ -1304,6 +1319,59 @@ function collectFailures() {
   ]) {
     if (viewportCommandOwner.includes(token)) {
       failures.push(`${FILES.viewportCommandOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "../map_renderer.js",
+    "./map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "setMapData",
+    "fitProjection",
+    "exactAfterSettle",
+    "refreshMapDataForScenarioChunkPromotion",
+    "strategicOverlayRuntime",
+    "applyDevSelectionFill",
+  ]) {
+    if (rendererViewportUpdateOwner.includes(token)) {
+      failures.push(`${FILES.rendererViewportUpdateOwner} must not touch renderer lifecycle token: ${token}`);
+    }
+  }
+  if (rendererViewportUpdateOwner.includes("getters.")) {
+    failures.push(`${FILES.rendererViewportUpdateOwner} must keep P34 as effects-only orchestration.`);
+  }
+  const viewportUpdateWrapperSource = sliceBetween(
+    renderer,
+    "function updateMap(transform)",
+    "function getProjectedHgoRuntimePreviewBounds()",
+  );
+  const zoomInteractionLifecycleFactorySource = sliceBetween(
+    renderer,
+    "function getZoomInteractionLifecycleOwner()",
+    "function getMapInteractionEventBindingOwner()",
+  );
+  if (!viewportUpdateWrapperSource.includes("return getRendererViewportUpdateOwner().updateMap(transform);")) {
+    failures.push(`${FILES.renderer} updateMap wrapper must delegate to ${FILES.rendererViewportUpdateOwner}.`);
+  }
+  if (!zoomInteractionLifecycleFactorySource.includes("updateMap,")) {
+    failures.push(`${FILES.renderer} zoom interaction lifecycle must keep updateMap injected as an effect.`);
+  }
+  if (!zoomInteractionLifecycleOwner.includes("const updateMap = requireFunction(effects, \"updateMap\", \"effects\");")) {
+    failures.push(`${FILES.zoomInteractionLifecycleOwner} must require updateMap as a runtime effect.`);
+  }
+  if (zoomInteractionLifecycleOwner.includes("effects.updateMap?.(")) {
+    failures.push(`${FILES.zoomInteractionLifecycleOwner} must call required updateMap directly.`);
+  }
+  for (const token of [
+    "renderPhysicalIntensityBrushPreview();",
+    "getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();",
+    "syncSpecialZonePatternTransformDuringZoom();",
+    "drawCanvas();",
+  ]) {
+    if (viewportUpdateWrapperSource.includes(token)) {
+      failures.push(`${FILES.renderer} updateMap wrapper must not keep raw viewport update token: ${token}`);
     }
   }
   for (const token of [
@@ -1745,6 +1813,35 @@ function collectFailures() {
       ],
     },
     {
+      ownerPath: FILES.rendererViewportUpdateOwner,
+      ownerTokens: [
+        "export function createRendererViewportUpdateOwner(",
+        "getters = {},",
+        "void getters;",
+        "function updateMap(transform)",
+        "const setZoomTransform = requireFunction(effects, \"setZoomTransform\", \"effects\");",
+        "const setHitCanvasDirty = requireFunction(effects, \"setHitCanvasDirty\", \"effects\");",
+        "const updateZoomUi = requireFunction(effects, \"updateZoomUi\", \"effects\");",
+        "const applyViewportTransform = requireFunction(effects, \"applyViewportTransform\", \"effects\");",
+        "const drawFrame = requireFunction(effects, \"drawFrame\", \"effects\");",
+        "setZoomTransform(transform);",
+        "setHitCanvasDirty();",
+        "updateZoomUi();",
+        "applyViewportTransform(transform);",
+        "renderPhysicalIntensityBrushPreview();",
+        "syncUnitCounterScalesDuringZoom();",
+        "syncSpecialZonePatternTransformDuringZoom();",
+        "drawFrame();",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/renderer_viewport_update_owner.js\";",
+        "let rendererViewportUpdateOwner = null;",
+        "function getRendererViewportUpdateOwner()",
+        "rendererViewportUpdateOwner = createRendererViewportUpdateOwner({",
+        "return getRendererViewportUpdateOwner().updateMap(transform);",
+      ],
+    },
+    {
       ownerPath: FILES.viewportResizeLifecycleOwner,
       ownerTokens: [
         "export function createViewportResizeLifecycleOwner(",
@@ -1777,6 +1874,7 @@ function collectFailures() {
       ownerPath: FILES.zoomInteractionLifecycleOwner,
       ownerTokens: [
         "export function createZoomInteractionLifecycleOwner(",
+        "const updateMap = requireFunction(effects, \"updateMap\", \"effects\");",
         "function initZoom(",
         "function flushLatestZoomTransform(",
       ],

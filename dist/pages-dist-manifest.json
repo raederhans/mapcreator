@@ -45757,7 +45757,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 886077,
+      "size_bytes": 886880,
       "source_kind": "dist"
     },
     {
@@ -46051,6 +46051,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/renderer/renderer_viewport_update_owner.js",
+      "size_bytes": 1523,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/renderer/river_layer_render_owner.js",
       "size_bytes": 8239,
       "source_kind": "dist"
@@ -46197,7 +46202,7 @@
     },
     {
       "path": "app/js/core/renderer/zoom_interaction_lifecycle_owner.js",
-      "size_bytes": 6038,
+      "size_bytes": 6322,
       "source_kind": "dist"
     },
     {
@@ -47287,7 +47292,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1463880,
+      "size_bytes": 1464019,
       "source_kind": "dist"
     },
     {
@@ -47414,9 +47419,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9403,
+      "file_count": 9404,
       "path": "app",
-      "size_bytes": 965444248
+      "size_bytes": 965446858
     },
     {
       "file_count": 51,
@@ -47426,7 +47431,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1463880
+      "size_bytes": 1464019
     },
     {
       "file_count": 1,
@@ -47449,5 +47454,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 971930594
+  "total_bytes": 971933343
 }

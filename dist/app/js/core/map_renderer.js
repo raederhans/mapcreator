@@ -198,6 +198,7 @@ import { createRenderTransformReusePolicyOwner } from "./renderer/render_transfo
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
 import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
+import { createRendererViewportUpdateOwner } from "./renderer/renderer_viewport_update_owner.js";
 import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
@@ -972,6 +973,7 @@ let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
 let viewportCommandOwner = null;
+let rendererViewportUpdateOwner = null;
 let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
@@ -1951,6 +1953,41 @@ function getViewportCommandOwner() {
     },
   });
   return viewportCommandOwner;
+}
+
+function getRendererViewportUpdateOwner() {
+  if (rendererViewportUpdateOwner) {
+    return rendererViewportUpdateOwner;
+  }
+  rendererViewportUpdateOwner = createRendererViewportUpdateOwner({
+    effects: {
+      setZoomTransform: (transform) => {
+        runtimeState.zoomTransform = transform;
+      },
+      setHitCanvasDirty: () => {
+        runtimeState.hitCanvasDirty = true;
+      },
+      updateZoomUi: () => {
+        if (typeof runtimeState.updateZoomUIFn === "function") {
+          runtimeState.updateZoomUIFn();
+        }
+      },
+      applyViewportTransform: (transform) => {
+        if (rendererSurfaceHost.getViewportGroup()) {
+          rendererSurfaceHost.getViewportGroup().attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        }
+      },
+      renderPhysicalIntensityBrushPreview,
+      syncUnitCounterScalesDuringZoom: () => {
+        getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();
+      },
+      syncSpecialZonePatternTransformDuringZoom,
+      drawFrame: () => {
+        drawCanvas();
+      },
+    },
+  });
+  return rendererViewportUpdateOwner;
 }
 
 function getViewportResizeLifecycleOwner() {
@@ -22438,18 +22475,7 @@ function getViewportGeoBounds() {
 }
 
 function updateMap(transform) {
-  runtimeState.zoomTransform = transform;
-  runtimeState.hitCanvasDirty = true;
-  if (typeof runtimeState.updateZoomUIFn === "function") {
-    runtimeState.updateZoomUIFn();
-  }
-  if (rendererSurfaceHost.getViewportGroup()) {
-    rendererSurfaceHost.getViewportGroup().attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
-  }
-  renderPhysicalIntensityBrushPreview();
-  getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();
-  syncSpecialZonePatternTransformDuringZoom();
-  drawCanvas();
+  return getRendererViewportUpdateOwner().updateMap(transform);
 }
 
 function getProjectedHgoRuntimePreviewBounds() {

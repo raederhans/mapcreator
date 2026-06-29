@@ -62,6 +62,7 @@ function createFakeD3(calls, handlers) {
 function createHarness({
   includeD3 = true,
   includeInteractionRect = true,
+  includeUpdateMap = true,
   runtimeOverrides = null,
   state: stateOverrides = {},
   updateMapHook = null,
@@ -106,6 +107,62 @@ function createHarness({
   const interactionNode = { id: "interaction-rect" };
   let exposedZoomBehavior = null;
 
+  const effects = {
+    setZoomBehavior: (nextZoomBehavior) => {
+      exposedZoomBehavior = nextZoomBehavior;
+      calls.setZoomBehavior.push(nextZoomBehavior);
+      calls.order.push("setZoomBehavior");
+    },
+    setZoomGestureStartTransform: (transform) => {
+      writeState("zoomGestureStartTransform", transform);
+    },
+    setZoomGestureScaleDelta: (scaleDelta) => {
+      writeState("zoomGestureScaleDelta", scaleDelta);
+    },
+    setPendingExactPoliticalFastFrame: (pending) => {
+      writeState("pendingExactPoliticalFastFrame", pending);
+    },
+    setPendingZoomTransform: (transform) => {
+      writeState("pendingZoomTransform", transform);
+    },
+    setZoomRenderScheduled: (scheduled) => {
+      writeState("zoomRenderScheduled", scheduled);
+    },
+    setZoomGestureEndedAt: (endedAtMs) => {
+      writeState("zoomGestureEndedAt", endedAtMs);
+    },
+    clearRenderPhaseTimer: () => calls.order.push("clearRenderPhaseTimer"),
+    cancelExactAfterSettleRefresh: () => calls.order.push("cancelExactAfterSettleRefresh"),
+    setRenderPhase: (phase) => {
+      calls.phases.push(phase);
+      calls.order.push(`setRenderPhase:${phase}`);
+    },
+    captureInteractionBorderSnapshot: (transform) => {
+      calls.snapshots.push(transform);
+      calls.order.push("captureInteractionBorderSnapshot");
+    },
+    renderHoverOverlayIfNeeded: (options) => {
+      calls.hover.push(options);
+      calls.order.push("renderHoverOverlayIfNeeded");
+    },
+    dismissOnboardingHint: () => calls.order.push("dismissOnboardingHint"),
+    scheduleScenarioChunkRefresh: (options) => {
+      calls.chunkRefresh.push(options);
+      calls.order.push("scheduleScenarioChunkRefresh");
+    },
+    scheduleRenderPhaseIdle: () => calls.order.push("scheduleRenderPhaseIdle"),
+    updateZoomTranslateExtent: () => calls.order.push("updateZoomTranslateExtent"),
+    resetZoomToFit: () => calls.order.push("resetZoomToFit"),
+    enforceZoomConstraints: () => calls.order.push("enforceZoomConstraints"),
+  };
+  if (includeUpdateMap) {
+    effects.updateMap = (transform) => {
+      calls.updateMap.push(transform);
+      calls.order.push(`updateMap:${transform?.label || ""}`);
+      updateMapHook?.({ calls, readState, writeState, transform });
+    };
+  }
+
   const owner = createZoomInteractionLifecycleOwner({
     constants: {
       minZoomScale: 0.5,
@@ -140,59 +197,7 @@ function createHarness({
         return `raf-${rafCallbacks.length}`;
       },
     },
-    effects: {
-      setZoomBehavior: (nextZoomBehavior) => {
-        exposedZoomBehavior = nextZoomBehavior;
-        calls.setZoomBehavior.push(nextZoomBehavior);
-        calls.order.push("setZoomBehavior");
-      },
-      setZoomGestureStartTransform: (transform) => {
-        writeState("zoomGestureStartTransform", transform);
-      },
-      setZoomGestureScaleDelta: (scaleDelta) => {
-        writeState("zoomGestureScaleDelta", scaleDelta);
-      },
-      setPendingExactPoliticalFastFrame: (pending) => {
-        writeState("pendingExactPoliticalFastFrame", pending);
-      },
-      setPendingZoomTransform: (transform) => {
-        writeState("pendingZoomTransform", transform);
-      },
-      setZoomRenderScheduled: (scheduled) => {
-        writeState("zoomRenderScheduled", scheduled);
-      },
-      setZoomGestureEndedAt: (endedAtMs) => {
-        writeState("zoomGestureEndedAt", endedAtMs);
-      },
-      clearRenderPhaseTimer: () => calls.order.push("clearRenderPhaseTimer"),
-      cancelExactAfterSettleRefresh: () => calls.order.push("cancelExactAfterSettleRefresh"),
-      setRenderPhase: (phase) => {
-        calls.phases.push(phase);
-        calls.order.push(`setRenderPhase:${phase}`);
-      },
-      captureInteractionBorderSnapshot: (transform) => {
-        calls.snapshots.push(transform);
-        calls.order.push("captureInteractionBorderSnapshot");
-      },
-      renderHoverOverlayIfNeeded: (options) => {
-        calls.hover.push(options);
-        calls.order.push("renderHoverOverlayIfNeeded");
-      },
-      dismissOnboardingHint: () => calls.order.push("dismissOnboardingHint"),
-      updateMap: (transform) => {
-        calls.updateMap.push(transform);
-        calls.order.push(`updateMap:${transform?.label || ""}`);
-        updateMapHook?.({ calls, readState, writeState, transform });
-      },
-      scheduleScenarioChunkRefresh: (options) => {
-        calls.chunkRefresh.push(options);
-        calls.order.push("scheduleScenarioChunkRefresh");
-      },
-      scheduleRenderPhaseIdle: () => calls.order.push("scheduleRenderPhaseIdle"),
-      updateZoomTranslateExtent: () => calls.order.push("updateZoomTranslateExtent"),
-      resetZoomToFit: () => calls.order.push("resetZoomToFit"),
-      enforceZoomConstraints: () => calls.order.push("enforceZoomConstraints"),
-    },
+    effects,
   });
 
   function flushRaf(index = 0) {
@@ -352,4 +357,11 @@ test("initZoom reports missing d3 or interaction rect", () => {
   assert.throws(() => missingSelect.owner.initZoom(), /requires d3\.select/);
   assert.equal(missingSelect.calls.zoom, 0);
   assert.deepEqual(missingSelect.calls.setZoomBehavior, []);
+});
+
+test("owner reports missing required update map effect", () => {
+  assert.throws(
+    () => createHarness({ includeUpdateMap: false }),
+    /requires effects\.updateMap/,
+  );
 });
