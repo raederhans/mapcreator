@@ -24,6 +24,7 @@ const FILES = Object.freeze({
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
   rendererSurfaceHost: "js/core/renderer/renderer_surface_host.js",
   rendererSurfaceLifecycleOwner: "js/core/renderer/renderer_surface_lifecycle_owner.js",
+  rendererProjectionPathOwner: "js/core/renderer/renderer_projection_path_owner.js",
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
@@ -34,6 +35,7 @@ const FILES = Object.freeze({
   rendererSurfaceLifecyclePreflightDoc: "docs/active/renderer-surface-lifecycle-preflight-20260626.md",
   rendererSurfaceLifecycleInventoryTest: "tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
   rendererProjectionPathPreflightDoc: "docs/active/renderer-projection-path-lifecycle-preflight-20260627.md",
+  rendererProjectionPathOwnerDoc: "docs/active/renderer-projection-path-owner-p28-20260628.md",
   rendererProjectionPathLifecycleInventoryTest: "tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs",
 });
 
@@ -54,6 +56,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.mapInteractionEventBindingOwner]: 220,
   [FILES.rendererSurfaceHost]: 120,
   [FILES.rendererSurfaceLifecycleOwner]: 220,
+  [FILES.rendererProjectionPathOwner]: 180,
   [FILES.scenarioWaterCachePolicyOwner]: 260,
   [FILES.renderPipelineCatalog]: 120,
   [FILES.renderPassCatalog]: 80,
@@ -134,6 +137,7 @@ function collectFailures() {
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
   const rendererSurfaceHost = readProjectFile(FILES.rendererSurfaceHost);
   const rendererSurfaceLifecycleOwner = readProjectFile(FILES.rendererSurfaceLifecycleOwner);
+  const rendererProjectionPathOwner = readProjectFile(FILES.rendererProjectionPathOwner);
   const scenarioWaterCachePolicyOwner = readProjectFile(FILES.scenarioWaterCachePolicyOwner);
   const renderPipelinePasses = readProjectFile(FILES.renderPipelinePasses);
   const renderPipelineCatalog = readProjectFile(FILES.renderPipelineCatalog);
@@ -144,6 +148,7 @@ function collectFailures() {
   const rendererSurfaceLifecyclePreflightDoc = readProjectFile(FILES.rendererSurfaceLifecyclePreflightDoc);
   const rendererSurfaceLifecycleInventoryTest = readProjectFile(FILES.rendererSurfaceLifecycleInventoryTest);
   const rendererProjectionPathPreflightDoc = readProjectFile(FILES.rendererProjectionPathPreflightDoc);
+  const rendererProjectionPathOwnerDoc = readProjectFile(FILES.rendererProjectionPathOwnerDoc);
   const rendererProjectionPathLifecycleInventoryTest = readProjectFile(FILES.rendererProjectionPathLifecycleInventoryTest);
   const sources = {
     [FILES.renderer]: renderer,
@@ -165,6 +170,7 @@ function collectFailures() {
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
     [FILES.rendererSurfaceHost]: rendererSurfaceHost,
     [FILES.rendererSurfaceLifecycleOwner]: rendererSurfaceLifecycleOwner,
+    [FILES.rendererProjectionPathOwner]: rendererProjectionPathOwner,
     [FILES.scenarioWaterCachePolicyOwner]: scenarioWaterCachePolicyOwner,
     [FILES.renderPipelinePasses]: renderPipelinePasses,
     [FILES.renderPipelineCatalog]: renderPipelineCatalog,
@@ -175,6 +181,7 @@ function collectFailures() {
     [FILES.rendererSurfaceLifecyclePreflightDoc]: rendererSurfaceLifecyclePreflightDoc,
     [FILES.rendererSurfaceLifecycleInventoryTest]: rendererSurfaceLifecycleInventoryTest,
     [FILES.rendererProjectionPathPreflightDoc]: rendererProjectionPathPreflightDoc,
+    [FILES.rendererProjectionPathOwnerDoc]: rendererProjectionPathOwnerDoc,
     [FILES.rendererProjectionPathLifecycleInventoryTest]: rendererProjectionPathLifecycleInventoryTest,
   };
 
@@ -267,11 +274,64 @@ function collectFailures() {
     }
   }
 
+  for (const token of [
+    "export function createRendererProjectionPathOwner({",
+    "function initializeProjectionPaths()",
+    "const getD3 = requireFunction(getters, \"getD3\", \"getters\");",
+    "getContext: requireFunction(host, \"getContext\", \"surfaceHost\")",
+    "getHitContext: requireFunction(host, \"getHitContext\", \"surfaceHost\")",
+    "setProjection: requireFunction(host, \"setProjection\", \"surfaceHost\")",
+    "setPathSvg: requireFunction(host, \"setPathSvg\", \"surfaceHost\")",
+    "setPathCanvas: requireFunction(host, \"setPathCanvas\", \"surfaceHost\")",
+    "setPathHitCanvas: requireFunction(host, \"setPathHitCanvas\", \"surfaceHost\")",
+    "requireFunction(d3, \"geoEqualEarth\", \"d3\")",
+    "requireFunction(d3, \"geoPath\", \"d3\")",
+    "requireFunction(rawProjection, \"precision\", \"d3.geoEqualEarth()\")",
+    "const nextProjection = hostApi.setProjection(projection);",
+    "requireFunction(nextProjection, \"clipExtent\", \"surfaceHost.setProjection(projection)\")(null);",
+    "const pathSvg = hostApi.setPathSvg(createPath({",
+    "const pathCanvas = hostApi.setPathCanvas(createPath({",
+    "const pathHitCanvas = hostApi.setPathHitCanvas(createPath({",
+  ]) {
+    if (!rendererProjectionPathOwner.includes(token)) {
+      failures.push(`${FILES.rendererProjectionPathOwner} must own projection/path lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "from \"../state.js\"",
+    "from \"./state.js\"",
+    "map_renderer.js",
+    "fitProjection",
+    "fitExtent",
+    "setCanvasSize",
+    "buildSpatialIndex",
+    "rebuildProjectedBoundsCache",
+    "updateZoomTranslateExtent",
+    "markAllOverlaysDirty",
+    "updateMap",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "applyDevSelectionFill",
+    "setMapData",
+    "exactAfterSettle",
+    "refreshMapDataForScenarioChunkPromotion",
+    "strategicOverlayRuntime",
+  ]) {
+    if (rendererProjectionPathOwner.includes(token)) {
+      failures.push(`${FILES.rendererProjectionPathOwner} must not own renderer semantic token: ${token}`);
+    }
+  }
+
   if (!renderer.includes('from "./renderer/renderer_surface_host.js";')) {
     failures.push(`${FILES.renderer} must import ${FILES.rendererSurfaceHost}.`);
   }
   if (!renderer.includes('from "./renderer/renderer_surface_lifecycle_owner.js";')) {
     failures.push(`${FILES.renderer} must import ${FILES.rendererSurfaceLifecycleOwner}.`);
+  }
+  if (!renderer.includes('from "./renderer/renderer_projection_path_owner.js";')) {
+    failures.push(`${FILES.renderer} must import ${FILES.rendererProjectionPathOwner}.`);
   }
   for (const sourcePath of listProjectSourceFiles("js")) {
     if (sourcePath === FILES.renderer) continue;
@@ -281,6 +341,9 @@ function collectFailures() {
     }
     if (source.includes("renderer_surface_lifecycle_owner.js")) {
       failures.push(`${sourcePath} must not import renderer_surface_lifecycle_owner.js directly; use ${FILES.renderer} as the composition root.`);
+    }
+    if (source.includes("renderer_projection_path_owner.js")) {
+      failures.push(`${sourcePath} must not import renderer_projection_path_owner.js directly; use ${FILES.renderer} as the composition root.`);
     }
   }
   if (!renderer.includes("const rendererSurfaceHost = createRendererSurfaceHost();")) {
@@ -331,6 +394,7 @@ function collectFailures() {
     "getMapContainer: () => rendererSurfaceHost.getMapContainer()",
     "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
     "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
   ]) {
     if (!rendererSurfaceHostInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceHostInventoryTest} must lock token: ${token}`);
@@ -378,8 +442,11 @@ function collectFailures() {
     "const P26_FORBIDDEN_REGION_TOKENS = Object.freeze([",
     "const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([",
     "renderer_surface_lifecycle_owner.js",
+    "renderer_projection_path_owner.js",
     "createRendererSurfaceLifecycleOwner({",
+    "createRendererProjectionPathOwner({",
     "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
     "renderer_render_lifecycle_owner.js",
     "assertNoRendererOwnerImportsMapRenderer",
     "P26 must keep current runtimeState bridge writes in map_renderer without adding a test-file state writer",
@@ -401,8 +468,8 @@ function collectFailures() {
   if (rendererSourceFiles.includes("js/core/renderer/renderer_render_lifecycle_owner.js")) {
     failures.push("P26 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
   }
-  if (rendererSourceFiles.includes("js/core/renderer/renderer_projection_path_owner.js")) {
-    failures.push("P27 must reserve js/core/renderer/renderer_projection_path_owner.js for P28.");
+  if (!rendererSourceFiles.includes(FILES.rendererProjectionPathOwner)) {
+    failures.push(`P28 must introduce ${FILES.rendererProjectionPathOwner}.`);
   }
   for (const sourcePath of rendererSourceFiles.filter(isRendererOwnerPath)) {
     const source = readProjectFile(sourcePath);
@@ -450,9 +517,36 @@ function collectFailures() {
       failures.push(`${FILES.rendererProjectionPathPreflightDoc} must lock P28 projection/path boundary token: ${token}`);
     }
   }
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current implementation state",
+    "## initMap ordering",
+    "## Owner responsibilities",
+    "## Forbidden areas",
+    "## Validation commands",
+    "## P29 handoff",
+  ]) {
+    if (!rendererProjectionPathOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.rendererProjectionPathOwnerDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P28 adds `js/core/renderer/renderer_projection_path_owner.js`.",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
+    "`fitProjection` or `projection.fitExtent`.",
+    "direct `runtimeState` writes.",
+    "P29 should treat projection/path creation as owned by `renderer_projection_path_owner.js`",
+  ]) {
+    if (!rendererProjectionPathOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererProjectionPathOwnerDoc} must lock P28 owner handoff token: ${token}`);
+    }
+  }
   for (const token of [
     "const PROJECTION_PATH_OWNER_PATH = \"js/core/renderer/renderer_projection_path_owner.js\";",
-    "const PROJECTION_PATH_CREATION_ANCHORS = Object.freeze([",
+    "const PROJECTION_PATH_OWNER_WIRING_ANCHORS = Object.freeze([",
+    "const RAW_INIT_MAP_PROJECTION_PATH_TOKENS = Object.freeze([",
+    "const PROJECTION_PATH_OWNER_REQUIRED_TOKENS = Object.freeze([",
+    "const PROJECTION_PATH_OWNER_FORBIDDEN_TOKENS = Object.freeze([",
     "const FIT_PROJECTION_ANCHORS = Object.freeze([",
     "const RENDERER_SEMANTIC_REGION_ANCHORS = Object.freeze([",
     "const SURFACE_LIFECYCLE_FORBIDDEN_TOKENS = Object.freeze([",
@@ -461,7 +555,11 @@ function collectFailures() {
     "function sliceBetween(source, startMarker, endMarker)",
     "const projectedBoundsFactorySource = sliceBetween(",
     "const viewportReadModelFactorySource = sliceBetween(",
-    "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
+    "repoFileExists(PROJECTION_PATH_OWNER_PATH)",
+    "createRendererProjectionPathOwner({",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
+    "assertExcludes(initMapSource, token, \"initMap must delegate raw projection/path creation to the owner\");",
+    "const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
     "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));",
     "rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);",
     "map_renderer must inject projection/path getters into projected geometry bounds owner factory",
@@ -483,6 +581,7 @@ function collectFailures() {
     "./map_renderer/exact_after_settle_scheduler.js",
     "./map_renderer/hgo_runtime_preview_render_owner.js",
     "./renderer/renderer_surface_lifecycle_owner.js",
+    "./renderer/renderer_projection_path_owner.js",
   ];
   for (const importPath of requiredImports) {
     if (!includesImport(renderer, importPath)) {
@@ -508,6 +607,7 @@ function collectFailures() {
     FILES.mapInteractionEventBindingOwner,
     FILES.rendererSurfaceHost,
     FILES.rendererSurfaceLifecycleOwner,
+    FILES.rendererProjectionPathOwner,
     FILES.scenarioWaterCachePolicyOwner,
     FILES.renderPipelinePasses,
     FILES.renderPipelineCatalog,
@@ -853,6 +953,40 @@ function collectFailures() {
         "rendererSurfaceHost.setInteractionOverlayCanvas(getCanvasLayer(nextCanvasLayers, CANVAS_LAYER_NAMES.interactionOverlay)?.canvas || null);",
         "rendererSurfaceHost.setContext(rendererSurfaceHost.getMapCanvas().getContext(\"2d\"))",
         "rendererSurfaceHost.setHitContext(rendererSurfaceHost.getHitCanvas().getContext(\"2d\", { willReadFrequently: true }))",
+      ],
+    },
+    {
+      ownerPath: FILES.rendererProjectionPathOwner,
+      ownerTokens: [
+        "export function createRendererProjectionPathOwner({",
+        "function initializeProjectionPaths()",
+        "const getD3 = requireFunction(getters, \"getD3\", \"getters\");",
+        "getContext: requireFunction(host, \"getContext\", \"surfaceHost\")",
+        "getHitContext: requireFunction(host, \"getHitContext\", \"surfaceHost\")",
+        "setProjection: requireFunction(host, \"setProjection\", \"surfaceHost\")",
+        "setPathSvg: requireFunction(host, \"setPathSvg\", \"surfaceHost\")",
+        "setPathCanvas: requireFunction(host, \"setPathCanvas\", \"surfaceHost\")",
+        "setPathHitCanvas: requireFunction(host, \"setPathHitCanvas\", \"surfaceHost\")",
+        "const nextProjection = hostApi.setProjection(projection);",
+        "requireFunction(nextProjection, \"clipExtent\", \"surfaceHost.setProjection(projection)\")(null);",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/renderer_projection_path_owner.js\";",
+        "let rendererProjectionPathOwner = null;",
+        "function getRendererProjectionPathOwner()",
+        "createRendererProjectionPathOwner({",
+        "surfaceHost: rendererSurfaceHost",
+        "getD3: () => globalThis.d3",
+        "projectionPrecision: PROJECTION_PRECISION",
+        "pathPointRadius: PATH_POINT_RADIUS",
+        "getRendererProjectionPathOwner().initializeProjectionPaths();",
+      ],
+      rendererForbiddenTokens: [
+        "const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
+        "nextProjection.clipExtent(null);",
+        "rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS));",
+        "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));",
+        "rendererSurfaceHost.setPathHitCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getHitContext()).pointRadius(PATH_POINT_RADIUS));",
       ],
     },
     {

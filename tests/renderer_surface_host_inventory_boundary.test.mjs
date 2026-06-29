@@ -164,6 +164,11 @@ test("map_renderer delegates surface handle storage to the host", () => {
     'import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";',
     "map_renderer must import the surface lifecycle owner",
   );
+  assertIncludes(
+    rendererSource,
+    'import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";',
+    "map_renderer must import the projection/path owner",
+  );
   assertIncludes(rendererSource, "const rendererSurfaceHost = createRendererSurfaceHost();", "map_renderer must instantiate one surface host");
 
   for (const sourcePath of listProjectSourceFiles("js")) {
@@ -180,8 +185,7 @@ test("map_renderer delegates surface handle storage to the host", () => {
     "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
     "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
     "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
-    "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION))",
-    "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS))",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
     "rendererSurfaceHost.setZoomBehavior(nextZoomBehavior)",
   ]) {
     assertIncludes(rendererSource, token, "map_renderer must compose surface handle writes through the host and lifecycle owner");

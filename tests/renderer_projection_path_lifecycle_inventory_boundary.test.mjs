@@ -23,13 +23,68 @@ const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
   "## Required validation commands",
 ]);
 
-const PROJECTION_PATH_CREATION_ANCHORS = Object.freeze([
+const PROJECTION_PATH_OWNER_WIRING_ANCHORS = Object.freeze([
   "function initMap({",
+  'import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";',
+  "let rendererProjectionPathOwner = null;",
+  "function getRendererProjectionPathOwner()",
+  "rendererProjectionPathOwner = createRendererProjectionPathOwner({",
+  "surfaceHost: rendererSurfaceHost",
+  "getD3: () => globalThis.d3",
+  "projectionPrecision: PROJECTION_PRECISION",
+  "pathPointRadius: PATH_POINT_RADIUS",
+  "getRendererProjectionPathOwner().initializeProjectionPaths();",
+]);
+
+const RAW_INIT_MAP_PROJECTION_PATH_TOKENS = Object.freeze([
   "const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));",
   "nextProjection.clipExtent(null);",
   "rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS));",
   "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));",
   "rendererSurfaceHost.setPathHitCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getHitContext()).pointRadius(PATH_POINT_RADIUS));",
+]);
+
+const PROJECTION_PATH_OWNER_REQUIRED_TOKENS = Object.freeze([
+  "export function createRendererProjectionPathOwner({",
+  "function initializeProjectionPaths()",
+  "const getD3 = requireFunction(getters, \"getD3\", \"getters\");",
+  "getContext: requireFunction(host, \"getContext\", \"surfaceHost\")",
+  "getHitContext: requireFunction(host, \"getHitContext\", \"surfaceHost\")",
+  "setProjection: requireFunction(host, \"setProjection\", \"surfaceHost\")",
+  "setPathSvg: requireFunction(host, \"setPathSvg\", \"surfaceHost\")",
+  "setPathCanvas: requireFunction(host, \"setPathCanvas\", \"surfaceHost\")",
+  "setPathHitCanvas: requireFunction(host, \"setPathHitCanvas\", \"surfaceHost\")",
+  "requireFunction(d3, \"geoEqualEarth\", \"d3\")",
+  "requireFunction(d3, \"geoPath\", \"d3\")",
+  "requireFunction(rawProjection, \"precision\", \"d3.geoEqualEarth()\")",
+  "const nextProjection = hostApi.setProjection(projection);",
+  "requireFunction(nextProjection, \"clipExtent\", \"surfaceHost.setProjection(projection)\")(null);",
+  "const pathSvg = hostApi.setPathSvg(createPath({",
+  "const pathCanvas = hostApi.setPathCanvas(createPath({",
+  "const pathHitCanvas = hostApi.setPathHitCanvas(createPath({",
+]);
+
+const PROJECTION_PATH_OWNER_FORBIDDEN_TOKENS = Object.freeze([
+  "runtimeState",
+  "from \"../state.js\"",
+  "from \"./state.js\"",
+  "map_renderer.js",
+  "fitProjection",
+  "fitExtent",
+  "setCanvasSize",
+  "buildSpatialIndex",
+  "rebuildProjectedBoundsCache",
+  "updateZoomTranslateExtent",
+  "markAllOverlaysDirty",
+  "updateMap",
+  "drawCanvas",
+  "renderPassToCache",
+  "buildHitCanvas",
+  "applyDevSelectionFill",
+  "setMapData",
+  "exactAfterSettle",
+  "refreshMapDataForScenarioChunkPromotion",
+  "strategicOverlayRuntime",
 ]);
 
 const FIT_PROJECTION_ANCHORS = Object.freeze([
@@ -197,19 +252,32 @@ function isRendererOwnerPath(sourcePath) {
     && (baseName.endsWith("_owner.js") || baseName === "renderer_surface_lifecycle_owner.js");
 }
 
-test("P27 reserves projection/path owner for P28", () => {
+test("P28 projection/path owner exists and remains scoped to handle initialization", () => {
   assert.equal(
     repoFileExists(PROJECTION_PATH_OWNER_PATH),
-    false,
-    "P27 preflight must not add the projection/path owner implementation",
+    true,
+    "P28 must add the projection/path owner implementation",
   );
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_projection_path_owner.js");
+
+  for (const token of PROJECTION_PATH_OWNER_REQUIRED_TOKENS) {
+    assertIncludes(ownerSource, token, "projection/path owner must own handle creation and registration token");
+  }
+  for (const token of PROJECTION_PATH_OWNER_FORBIDDEN_TOKENS) {
+    assertExcludes(ownerSource, token, "projection/path owner must avoid renderer semantic token");
+  }
+  assert.equal(hasMapRendererImport(ownerSource), false, "projection/path owner must not import map_renderer");
 });
 
-test("map_renderer still owns projection/path creation and fitting", () => {
+test("map_renderer wires projection/path owner and still owns fitting", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const initMapSource = sliceBetween(rendererSource, "function initMap({", "function setMapData({");
 
-  for (const token of PROJECTION_PATH_CREATION_ANCHORS) {
-    assertIncludes(rendererSource, token, "map_renderer must keep current projection/path creation anchor");
+  for (const token of PROJECTION_PATH_OWNER_WIRING_ANCHORS) {
+    assertIncludes(rendererSource, token, "map_renderer must compose projection/path owner through initMap");
+  }
+  for (const token of RAW_INIT_MAP_PROJECTION_PATH_TOKENS) {
+    assertExcludes(initMapSource, token, "initMap must delegate raw projection/path creation to the owner");
   }
   for (const token of FIT_PROJECTION_ANCHORS) {
     assertIncludes(rendererSource, token, "map_renderer must keep current fitProjection side-effect anchor");
@@ -336,7 +404,17 @@ test("package exposes projection/path lifecycle inventory script", () => {
   const packageSource = readRepoFile("package.json");
   assertIncludes(
     packageSource,
+    "\"test:node:renderer-projection-path-owner\": \"node --test tests/renderer_projection_path_owner_behavior.test.mjs\"",
+    "package.json must expose the P28 projection/path owner behavior test",
+  );
+  assertIncludes(
+    packageSource,
     "\"test:node:renderer-projection-path-lifecycle-inventory\": \"node --test tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs\"",
     "package.json must expose the P27 projection/path lifecycle inventory test",
+  );
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-projection-path-lifecycle\": \"node --test tests/renderer_projection_path_owner_behavior.test.mjs tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs\"",
+    "package.json must expose the combined P28 projection/path lifecycle test",
   );
 });

@@ -16,9 +16,12 @@ const REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS = Object.freeze([
   "function initZoom()",
   "function bindEvents()",
   "function getRendererSurfaceLifecycleOwner()",
+  "function getRendererProjectionPathOwner()",
   "createRendererSurfaceLifecycleOwner({",
+  "createRendererProjectionPathOwner({",
   "surfaceHost: rendererSurfaceHost",
   "getDocument: () => document",
+  "getD3: () => globalThis.d3",
   "createHitCanvasElement,",
   "CANVAS_LAYER_NAMES,",
   "ensureCanvasLayers,",
@@ -28,10 +31,7 @@ const REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS = Object.freeze([
   "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
   "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
   "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
-  "rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION))",
-  "rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS))",
-  "rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS))",
-  "rendererSurfaceHost.setPathHitCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getHitContext()).pointRadius(PATH_POINT_RADIUS))",
+  "getRendererProjectionPathOwner().initializeProjectionPaths();",
   "setCanvasSize();",
   "fitProjection({",
   "initZoom();",
@@ -241,6 +241,11 @@ test("map_renderer remains the composition root for surface modules", () => {
   );
   assertIncludes(
     rendererSource,
+    'import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";',
+    "map_renderer must import the projection/path owner",
+  );
+  assertIncludes(
+    rendererSource,
     "const rendererSurfaceHost = createRendererSurfaceHost();",
     "map_renderer must instantiate the surface host",
   );
@@ -250,6 +255,7 @@ test("map_renderer remains the composition root for surface modules", () => {
     if (sourcePath !== "js/core/map_renderer.js") {
       assertExcludes(source, "renderer_surface_host.js", "only map_renderer may import the production surface host");
       assertExcludes(source, "renderer_surface_lifecycle_owner.js", "only map_renderer may import the production lifecycle owner");
+      assertExcludes(source, "renderer_projection_path_owner.js", "only map_renderer may import the production projection/path owner");
     }
   }
 });

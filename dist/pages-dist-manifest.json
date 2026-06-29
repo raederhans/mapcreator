@@ -45907,7 +45907,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 892971,
+      "size_bytes": 893072,
       "source_kind": "dist"
     },
     {
@@ -46088,6 +46088,11 @@
     {
       "path": "app/js/core/renderer/render_transform_reuse_policy_owner.js",
       "size_bytes": 9299,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/renderer_projection_path_owner.js",
+      "size_bytes": 3610,
       "source_kind": "dist"
     },
     {
@@ -47342,7 +47347,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1461647,
+      "size_bytes": 1461786,
       "source_kind": "dist"
     },
     {
@@ -47361,5 +47366,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155306554
+  "total_bytes": 1155310404
 }

@@ -203,6 +203,7 @@ import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction
 import { createMapInteractionEventBindingOwner } from "./renderer/map_interaction_event_binding_owner.js";
 import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";
 import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";
+import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -973,6 +974,7 @@ let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
 let rendererSurfaceLifecycleOwner = null;
+let rendererProjectionPathOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -996,6 +998,23 @@ function getRendererSurfaceLifecycleOwner() {
     },
   });
   return rendererSurfaceLifecycleOwner;
+}
+
+function getRendererProjectionPathOwner() {
+  if (rendererProjectionPathOwner) {
+    return rendererProjectionPathOwner;
+  }
+  rendererProjectionPathOwner = createRendererProjectionPathOwner({
+    surfaceHost: rendererSurfaceHost,
+    getters: {
+      getD3: () => globalThis.d3,
+    },
+    constants: {
+      projectionPrecision: PROJECTION_PRECISION,
+      pathPointRadius: PATH_POINT_RADIUS,
+    },
+  });
+  return rendererProjectionPathOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -22767,11 +22786,7 @@ function initMap({
     return;
   }
 
-  const nextProjection = rendererSurfaceHost.setProjection(globalThis.d3.geoEqualEarth().precision(PROJECTION_PRECISION));
-  nextProjection.clipExtent(null);
-  rendererSurfaceHost.setPathSvg(globalThis.d3.geoPath(nextProjection).pointRadius(PATH_POINT_RADIUS));
-  rendererSurfaceHost.setPathCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getContext()).pointRadius(PATH_POINT_RADIUS));
-  rendererSurfaceHost.setPathHitCanvas(globalThis.d3.geoPath(nextProjection, rendererSurfaceHost.getHitContext()).pointRadius(PATH_POINT_RADIUS));
+  getRendererProjectionPathOwner().initializeProjectionPaths();
   layerResolverCache.primaryRef = null;
   layerResolverCache.detailRef = null;
   layerResolverCache.bundleMode = null;

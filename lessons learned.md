@@ -483,3 +483,6 @@
 
 ### 收尾文档避免记录同提交自哈希
 - 如果交付包会被 amend 进同一个功能提交，文档里不要写该提交的精确 hash；先写 branch HEAD 或 recovery branch，等归档/closeout 提交再记录稳定功能 hash。
+
+### Projection/path owner 要保留注册后的调用顺序
+- 抽 projection/path handle creation 时，`setProjection` 之后再对 registered projection 调 `clipExtent(null)` 是行为合同；把 `clipExtent` 做成可选或放到注册前会隐藏坏 projection，并改变原有 fail-fast 路径。
