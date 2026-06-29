@@ -223,10 +223,15 @@ jobs:
         if: steps.classify.outputs.should_run_perf == 'true'
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install Node dependencies
         if: steps.classify.outputs.should_run_perf == 'true'
         run: npm ci
+
+      - name: Install Python dev dependencies
+        if: steps.classify.outputs.should_run_perf == 'true'
+        run: python -m pip install -r requirements-dev.lock.txt
 
       - name: Cache Playwright Chromium
         if: steps.classify.outputs.should_run_perf == 'true'

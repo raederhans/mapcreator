@@ -40,6 +40,8 @@ STARTUP_LOCALE_FILES = [
 PACK_RESOLVER_JS = REPO_ROOT / "js" / "core" / "transport_pack_resolver.js"
 ROAD_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_road_preview.js"
 RAIL_PREVIEW_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_rail_preview.js"
+ROAD_PREVIEW_DOM_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_road_preview_dom.js"
+RAIL_PREVIEW_DOM_JS = REPO_ROOT / "js" / "ui" / "transport_workbench_rail_preview_dom.js"
 
 
 class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
@@ -58,6 +60,8 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
         shared_content = LINE_RUNTIME_SHARED_JS.read_text(encoding="utf-8")
         road_content = ROAD_PREVIEW_JS.read_text(encoding="utf-8")
         rail_content = RAIL_PREVIEW_JS.read_text(encoding="utf-8")
+        road_dom_content = ROAD_PREVIEW_DOM_JS.read_text(encoding="utf-8")
+        rail_dom_content = RAIL_PREVIEW_DOM_JS.read_text(encoding="utf-8")
 
         for export_name in (
             "createTransportWorkbenchSvgNode",
@@ -71,18 +75,20 @@ class TransportWorkbenchManifestRuntimeContractTest(unittest.TestCase):
             self.assertIn(f"export function {export_name}", shared_content)
         for preview_content in (road_content, rail_content):
             self.assertIn("transport_workbench_line_runtime_shared.js", preview_content)
-            self.assertIn("createTransportWorkbenchSvgNode as createSvgNode", preview_content)
             self.assertIn("normalizeTransportWorkbenchNumber as normalizeNumber", preview_content)
             self.assertIn("createTransportWorkbenchLinePathD as createPathD", preview_content)
             self.assertIn("measureTransportWorkbenchProjectedLineLength as measureProjectedLength", preview_content)
             self.assertIn("findTransportWorkbenchDatasetNode as findDatasetNode", preview_content)
-            self.assertIn("syncTransportWorkbenchSvgGroupOrder as syncGroupOrder", preview_content)
-            self.assertNotRegex(preview_content, r"(?m)^function createSvgNode\(")
             self.assertNotRegex(preview_content, r"(?m)^function normalizeNumber\(")
             self.assertNotRegex(preview_content, r"(?m)^function createPathD\(")
             self.assertNotRegex(preview_content, r"(?m)^function measureProjectedLength\(")
             self.assertNotRegex(preview_content, r"(?m)^function findDatasetNode\(")
-            self.assertNotRegex(preview_content, r"(?m)^function syncGroupOrder\(")
+        for dom_content in (road_dom_content, rail_dom_content):
+            self.assertIn("transport_workbench_line_runtime_shared.js", dom_content)
+            self.assertIn("createTransportWorkbenchSvgNode as createSvgNode", dom_content)
+            self.assertIn("syncTransportWorkbenchSvgGroupOrder as syncGroupOrder", dom_content)
+            self.assertNotRegex(dom_content, r"(?m)^function createSvgNode\(")
+            self.assertNotRegex(dom_content, r"(?m)^function syncGroupOrder\(")
         self.assertIn("buildTransportWorkbenchProjectedLines as buildProjectedLines", road_content)
 
     def test_port_preview_uses_shared_variant_contract_only(self) -> None:
