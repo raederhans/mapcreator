@@ -120,7 +120,8 @@ jobs:
 
       - name: Fast success for scenario-unrelated changes
         if: steps.classify.outputs.should_run != 'true'
-        run: echo "Scenario contract matrix skipped: ${{ steps.classify.outputs.reason }}"
+        run: |
+          echo "Scenario contract matrix skipped: ${{ steps.classify.outputs.reason }}"
 
       - name: Upload strict contract report (${{ matrix.scenario_id }})
         if: always() && steps.classify.outputs.should_run == 'true'

@@ -83,4 +83,5 @@ jobs:
 
       - name: Fast success for transport-unrelated changes
         if: steps.classify.outputs.should_run != 'true'
-        run: echo "Transport contract skipped: ${{ steps.classify.outputs.reason }}"
+        run: |
+          echo "Transport contract skipped: ${{ steps.classify.outputs.reason }}"

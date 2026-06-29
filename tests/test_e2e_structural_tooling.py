@@ -119,7 +119,8 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn('git diff --name-only "$base_sha..$head_sha"', workflow)
         self.assertIn('cache: "pip"', workflow)
         self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow)
-        self.assertIn("Fast success for scenario-unrelated changes", workflow)
+        self.assertIn('run: |\n          echo "Scenario contract matrix skipped:', workflow)
+        self.assertIn('run: |\n          echo "Transport contract skipped:', transport_workflow)
 
     def test_console_allowlist_decay_passes(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
