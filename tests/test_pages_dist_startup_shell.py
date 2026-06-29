@@ -584,6 +584,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn("LF_NORMALIZED_ROOT_DIST_PATHS", source)
         self.assertIn("LF_NORMALIZED_ROOT_ASSET_SUFFIXES", source)
         self.assertIn('".css"', source)
+        self.assertIn('".geojson"', source)
         self.assertIn('".svg"', source)
         self.assertIn('".md"', source)
         self.assertIn('".txt"', source)
@@ -624,6 +625,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
                 self.assertEqual(root_asset_path.read_bytes(), b'{\n  "ok": true\n}\n')
                 for relative_path in (
                     Path("app") / "css" / "style.css",
+                    Path("app") / "data" / "world_cities.geojson",
                     Path("app") / "index.html",
                     Path("app") / "vendor" / "textures" / "README.md",
                     Path("app") / "vendor" / "textures" / "paper_vintage_01.svg",

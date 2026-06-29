@@ -32,7 +32,7 @@
     },
     {
       "path": "app/data/europe_physical.geojson",
-      "size_bytes": 242758,
+      "size_bytes": 242646,
       "source_kind": "generated_ignored"
     },
     {
@@ -37217,7 +37217,7 @@
     },
     {
       "path": "app/data/ru_city_overrides.geojson",
-      "size_bytes": 209642,
+      "size_bytes": 209631,
       "source_kind": "generated_ignored"
     },
     {
@@ -41897,7 +41897,7 @@
     },
     {
       "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18641675,
+      "size_bytes": 18641674,
       "source_kind": "generated_ignored"
     },
     {
@@ -42432,12 +42432,12 @@
     },
     {
       "path": "app/data/transport_layers/global_airport/airports.geojson",
-      "size_bytes": 464267,
+      "size_bytes": 464266,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/global_airport/airports.preview.geojson",
-      "size_bytes": 460844,
+      "size_bytes": 460843,
       "source_kind": "generated_ignored"
     },
     {
@@ -42462,12 +42462,12 @@
     },
     {
       "path": "app/data/transport_layers/global_port/ports.geojson",
-      "size_bytes": 490486,
+      "size_bytes": 490485,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/global_port/ports.preview.geojson",
-      "size_bytes": 373302,
+      "size_bytes": 373301,
       "source_kind": "generated_ignored"
     },
     {
@@ -42487,7 +42487,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e010_e035/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42507,7 +42507,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_e035_e065/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42527,7 +42527,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/africa_middle_east/shards/ame_w020_e010/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42547,7 +42547,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e095_e115/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42567,7 +42567,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e115_e130/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42587,7 +42587,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/east_asia/shards/ea_e130_e150/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42607,7 +42607,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e010_e025/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42627,7 +42627,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_e025_e045/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42647,7 +42647,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/europe/shards/eu_w012_e010/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42667,7 +42667,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/japan/shards/jp_e128_e147/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42687,7 +42687,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w080_w050/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42707,7 +42707,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w110_w080/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42727,7 +42727,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w140_w110/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42747,7 +42747,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/north_america/shards/na_w170_w140/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42767,7 +42767,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e030_e060/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42787,7 +42787,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e060_e090/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42807,7 +42807,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e090_e120/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42827,7 +42827,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e120_e150/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42847,7 +42847,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/russia/shards/ru_e150_e180/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42867,7 +42867,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w058_w034/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42887,7 +42887,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42907,7 +42907,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e065_e095/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42927,7 +42927,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e095_e125/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42947,7 +42947,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e125_e155/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -42967,7 +42967,7 @@
     },
     {
       "path": "app/data/transport_layers/global_rail/regions/south_southeast_asia_oceania/shards/ssea_e155_e180/rail_stations_major.preview.geojson",
-      "size_bytes": 54,
+      "size_bytes": 51,
       "source_kind": "generated_ignored"
     },
     {
@@ -43907,12 +43907,12 @@
     },
     {
       "path": "app/data/transport_layers/japan_airport/airports.geojson",
-      "size_bytes": 103867,
+      "size_bytes": 100638,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_airport/airports.preview.geojson",
-      "size_bytes": 94339,
+      "size_bytes": 91411,
       "source_kind": "generated_ignored"
     },
     {
@@ -43947,7 +43947,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_energy_facilities/energy_facilities.preview.geojson",
-      "size_bytes": 359927,
+      "size_bytes": 348163,
       "source_kind": "generated_ignored"
     },
     {
@@ -43982,7 +43982,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_logistics_hubs/logistics_hubs.preview.geojson",
-      "size_bytes": 6220201,
+      "size_bytes": 6025653,
       "source_kind": "generated_ignored"
     },
     {
@@ -44002,7 +44002,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
-      "size_bytes": 11645797,
+      "size_bytes": 11303757,
       "source_kind": "generated_ignored"
     },
     {
@@ -44022,32 +44022,32 @@
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.core.geojson",
-      "size_bytes": 15148,
+      "size_bytes": 14676,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.core.preview.geojson",
-      "size_bytes": 15148,
+      "size_bytes": 14676,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.expanded.geojson",
-      "size_bytes": 356042,
+      "size_bytes": 344533,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.expanded.preview.geojson",
-      "size_bytes": 356042,
+      "size_bytes": 344533,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.geojson",
-      "size_bytes": 382651,
+      "size_bytes": 370284,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/transport_layers/japan_port/ports.preview.geojson",
-      "size_bytes": 382651,
+      "size_bytes": 370284,
       "source_kind": "generated_ignored"
     },
     {
@@ -44072,7 +44072,7 @@
     },
     {
       "path": "app/data/transport_layers/japan_rail/rail_stations_major.preview.geojson",
-      "size_bytes": 25307,
+      "size_bytes": 24316,
       "source_kind": "generated_ignored"
     },
     {
@@ -47338,12 +47338,12 @@
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/scenarios/tno_1962/water_regions.geojson",
-      "size_bytes": 18641675,
+      "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
+      "size_bytes": 18641674,
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/scenarios/tno_1962/chunks/water.coarse.r0c0.json",
+      "path": "app/data/scenarios/tno_1962/water_regions.geojson",
       "size_bytes": 18641674,
       "source_kind": "generated_ignored"
     },
@@ -47368,13 +47368,13 @@
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
-      "size_bytes": 11645797,
+      "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
+      "size_bytes": 11435737,
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
-      "size_bytes": 11435737,
+      "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
+      "size_bytes": 11303757,
       "source_kind": "generated_ignored"
     },
     {
@@ -47416,7 +47416,7 @@
     {
       "file_count": 9403,
       "path": "app",
-      "size_bytes": 966047730
+      "size_bytes": 965443331
     },
     {
       "file_count": 51,
@@ -47449,5 +47449,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972534076
+  "total_bytes": 971929677
 }

@@ -140,7 +140,7 @@ LF_NORMALIZED_ROOT_DIST_PATHS = {
     Path("styles.css"),
 }
 LF_NORMALIZED_ROOT_ASSET_SUFFIXES = {".json"}
-LF_NORMALIZED_APP_SUFFIXES = {".css", ".html", ".js", ".json", ".md", ".svg", ".txt"}
+LF_NORMALIZED_APP_SUFFIXES = {".css", ".geojson", ".html", ".js", ".json", ".md", ".svg", ".txt"}
 BYTE_EXACT_APP_DATA_PATHS = {
     Path("app") / "data" / "hgo_runtime" / file_name
     for file_name in PAGES_HGO_RUNTIME_FILES
