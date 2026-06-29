@@ -2,53 +2,53 @@
   "schemaVersion": 1,
   "graphMode": "artifact-only",
   "summary": {
-    "specCount": 49,
-    "nodeCount": 61,
-    "reverseIndexKeyCount": 83,
+    "specCount": 50,
+    "nodeCount": 62,
+    "reverseIndexKeyCount": 84,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "js/core/map_renderer.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "js/core/scenario_dispatcher.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "js/core/state.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "js/ui/sidebar.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-app-paths.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-app.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-frontline-panel.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-project-import.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-web-server.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/startup-paths.js",
-        "specCount": 49
+        "specCount": 50
       },
       {
         "dependency": "tests/e2e/support/playwright-selectors.js",
@@ -685,6 +685,32 @@
         "js/core/map_renderer.js",
         "js/core/scenario_dispatcher.js",
         "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/release/pages_public_release_gate.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
         "js/core/state.js",
         "js/ui/sidebar.js"
       ]
@@ -1601,6 +1627,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -1652,6 +1679,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -1711,6 +1739,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -1784,6 +1813,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -1852,6 +1882,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -1955,6 +1986,9 @@
     "tests/e2e/project_save_load_roundtrip.spec.js": [
       "tests/e2e/project_save_load_roundtrip.spec.js"
     ],
+    "tests/e2e/release/pages_public_release_gate.spec.js": [
+      "tests/e2e/release/pages_public_release_gate.spec.js"
+    ],
     "tests/e2e/review_regressions.spec.js": [
       "tests/e2e/review_regressions.spec.js"
     ],
@@ -2039,6 +2073,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -2090,6 +2125,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -2141,6 +2177,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -2192,6 +2229,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -2254,6 +2292,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
@@ -2309,6 +2348,7 @@
       "tests/e2e/physical_layer_regression.spec.js",
       "tests/e2e/physical_layer_runtime_contract.spec.js",
       "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",

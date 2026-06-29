@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from tools import build_pages_dist
+from tools.scenario_contract_paths import TNO_COVERAGE_REPORT_PATHS
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -34,14 +35,6 @@ HERO_SCENARIO_ASSETS = (
     ("hoi4-1939", "hoi4_1939", "hero-hoi4-1939.svg", "hero-hoi4-1939.json"),
     ("tno-1962", "tno_1962", "hero-tno-1962.svg", "hero-tno-1962.json"),
 )
-TNO_COVERAGE_REPORT_PATHS = {
-    "strict": ".runtime/reports/generated/tno_1962.strict_contract_report.json",
-    "coverage_ledger": ".runtime/reports/generated/tno_1962.coverage_ledger_report.json",
-    "atlantropa": ".runtime/reports/generated/tno_1962.atlantropa_coverage_report.json",
-    "polar": ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
-}
-
-
 def import_landing_builder(module_name: str):
     try:
         module = __import__(f"tools.{module_name}", fromlist=[module_name])

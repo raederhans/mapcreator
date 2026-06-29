@@ -6,13 +6,26 @@ const {
   writeFailureContextArtifact,
 } = require("../support/playwright-app");
 
+// JUSTIFY: public Pages deploy smoke waits for CDN network idle plus full TNO startup and export UI readiness.
 test.setTimeout(180000);
 
-const PUBLIC_BASE_URL = String(
+const DEFAULT_DEPLOYED_PAGES_URL = "https://raederhans.github.io/scenario-forge/";
+const EXPLICIT_PUBLIC_BASE_URL = String(
   process.env.SCENARIO_FORGE_PAGES_URL
   || process.env.PLAYWRIGHT_TEST_BASE_URL
-  || "https://raederhans.github.io/scenario-forge/"
+  || ""
 ).trim();
+const ALLOW_DEFAULT_DEPLOYED_URL = process.env.SCENARIO_FORGE_ALLOW_DEFAULT_PAGES_URL === "1"
+  || process.env.npm_lifecycle_event === "test:e2e:pages-public-release-gate:deployed";
+const PUBLIC_BASE_URL = EXPLICIT_PUBLIC_BASE_URL
+  || (ALLOW_DEFAULT_DEPLOYED_URL ? DEFAULT_DEPLOYED_PAGES_URL : "");
+
+if (!PUBLIC_BASE_URL) {
+  throw new Error(
+    "Set SCENARIO_FORGE_PAGES_URL or PLAYWRIGHT_TEST_BASE_URL before running the Pages release gate. "
+    + "Use npm run test:e2e:pages-public-release-gate:deployed to validate the default deployed Pages URL."
+  );
+}
 
 function publicUrl(pathname = "") {
   const baseUrl = PUBLIC_BASE_URL.endsWith("/") ? PUBLIC_BASE_URL : `${PUBLIC_BASE_URL}/`;

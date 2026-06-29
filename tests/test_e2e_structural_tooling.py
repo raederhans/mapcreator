@@ -71,6 +71,34 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertTrue(summary_json.exists())
         self.assertTrue(summary_md.exists())
 
+    def test_pages_public_release_gate_requires_explicit_candidate_url(self) -> None:
+        package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+        scripts = package_json["scripts"]
+        spec = (REPO_ROOT / "tests" / "e2e" / "release" / "pages_public_release_gate.spec.js").read_text(encoding="utf-8")
+
+        self.assertIn("test:e2e:pages-public-release-gate", scripts)
+        self.assertIn("test:e2e:pages-public-release-gate:deployed", scripts)
+        self.assertIn("SCENARIO_FORGE_PAGES_URL", spec)
+        self.assertIn("PLAYWRIGHT_TEST_BASE_URL", spec)
+        self.assertIn("SCENARIO_FORGE_ALLOW_DEFAULT_PAGES_URL", spec)
+        self.assertIn('npm_lifecycle_event === "test:e2e:pages-public-release-gate:deployed"', spec)
+        self.assertIn("Set SCENARIO_FORGE_PAGES_URL or PLAYWRIGHT_TEST_BASE_URL", spec)
+
+    def test_deploy_workflow_smokes_deployed_pages_url(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+
+        deployment_step = "uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4"
+        smoke_step = "name: Smoke deployed Pages URL"
+        self.assertIn(deployment_step, workflow)
+        self.assertIn(smoke_step, workflow)
+        self.assertGreater(workflow.index(smoke_step), workflow.index(deployment_step))
+        self.assertIn("PLAYWRIGHT_BROWSERS_PATH: .runtime/browser/ms-playwright", workflow)
+        self.assertIn("uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4", workflow)
+        self.assertIn("uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4", workflow)
+        self.assertIn("npx playwright install chromium", workflow)
+        self.assertIn("SCENARIO_FORGE_PAGES_URL: ${{ steps.deployment.outputs.page_url }}", workflow)
+        self.assertIn("npm run test:e2e:pages-public-release-gate", workflow)
+
     def test_console_allowlist_decay_passes(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
         self.assert_command_ok(result)

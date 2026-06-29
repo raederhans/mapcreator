@@ -41,6 +41,13 @@ from map_builder.contracts import (
 from map_builder.io.writers import write_json_atomic
 from tools.build_startup_bootstrap_assets import build_startup_bootstrap_assets
 from tools.build_startup_bundle import build_startup_bundles
+from tools.scenario_contract_paths import (
+    TNO_ATLANTROPA_DONOR_LEDGER_FILENAME,
+    TNO_COVERAGE_DERIVED_DIRNAME,
+    TNO_COVERAGE_LEDGER_FILENAMES,
+    TNO_COVERAGE_REPORT_PATHS,
+    TNO_GEOMETRY_DROP_AUDIT_FILENAME,
+)
 from tools.scenario_chunk_assets import build_and_write_scenario_chunk_assets
 
 DEFAULT_SCENARIOS_ROOT = PROJECT_ROOT / "data/scenarios"
@@ -97,19 +104,6 @@ ATLANTROPA_PREFIX_FIELD_RULES = (
     ("ATLWLD_", "land", "owner"),
     ("ATLSHL_", "shoal", "shoal_pattern"),
 )
-TNO_COVERAGE_DERIVED_DIRNAME = "derived"
-TNO_ATLANTROPA_DONOR_LEDGER_FILENAME = "atlantropa_donor_ledger.json"
-TNO_GEOMETRY_DROP_AUDIT_FILENAME = "geometry_drop_audit.json"
-TNO_COVERAGE_LEDGER_FILENAMES = (
-    f"{TNO_COVERAGE_DERIVED_DIRNAME}/{TNO_ATLANTROPA_DONOR_LEDGER_FILENAME}",
-    f"{TNO_COVERAGE_DERIVED_DIRNAME}/{TNO_GEOMETRY_DROP_AUDIT_FILENAME}",
-)
-TNO_COVERAGE_REPORT_PATHS = {
-    "strict": ".runtime/reports/generated/tno_1962.strict_contract_report.json",
-    "coverage_ledger": ".runtime/reports/generated/tno_1962.coverage_ledger_report.json",
-    "atlantropa": ".runtime/reports/generated/tno_1962.atlantropa_coverage_report.json",
-    "polar": ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
-}
 TNO_PROTECTED_COVERAGE_PREFIXES = (
     "RU_ARCTIC_FB_",
     "ATLSEA_FILL_",
