@@ -306,6 +306,18 @@ async function ensureServerBaseUrl() {
   throw new Error(`Dev server did not become ready within ${Math.round(DEV_SERVER_READY_TIMEOUT_MS / 1000)} seconds.`);
 }
 
+async function ensureMeasurementServer(serverLease) {
+  if (
+    serverLease?.baseUrl
+    && (!serverLease.serverOwner || isProcessIdRunning(serverLease.serverOwner.child.pid))
+    && await probeUrl(serverLease.baseUrl)
+  ) {
+    return serverLease;
+  }
+  await stopServer(serverLease?.serverOwner || null);
+  return ensureServerBaseUrl();
+}
+
 async function stopServer(serverOwner) {
   if (!serverOwner) {
     return;
@@ -601,32 +613,36 @@ async function readScenarioManifestIdentity(scenarioId) {
   };
 }
 
+async function readPerfRuntimeState(page) {
+  return page.evaluate(() => {
+    const snapshot = typeof globalThis.__mapcreator__?.snapshot === "function"
+      ? globalThis.__mapcreator__.snapshot()
+      : null;
+    const mainLoadStatus = snapshot?.loadStatus?.providers?.main_runtime || {};
+    const mainVersion = snapshot?.version?.providers?.main_runtime || {};
+    const boot = mainLoadStatus.boot || {};
+    const startup = mainLoadStatus.startup || {};
+    return {
+      bootPhase: String(boot.phase || mainVersion.bootPhase || ""),
+      bootBlocking: boot.blocking === false ? false : !!boot.blocking,
+      startupReadonly: !!boot.readonly,
+      startupReadonlyUnlockInFlight: !!boot.readonlyUnlockInFlight,
+      scenarioApplyInFlight: !!boot.scenarioApplyInFlight,
+      activeScenarioId: String(startup.activeScenarioId || mainVersion.activeScenarioId || ""),
+      startupInteractionMode: String(boot.interactionMode || ""),
+      bootError: String(boot.error || ""),
+      snapshotAvailable: !!snapshot,
+    };
+  });
+}
+
 async function collectPerfBrowserRuntimeSnapshot(page) {
   try {
-    return await page.evaluate(async () => {
+    const domSnapshot = await page.evaluate(() => {
       const overlay = document.querySelector("#bootOverlay");
       const moduleScripts = Array.from(document.querySelectorAll('script[type="module"]'))
         .map((script) => script.getAttribute("src") || "")
         .filter(Boolean);
-      let stateSnapshot = null;
-      let stateImportError = "";
-      try {
-        const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
-        const stateModule = await import(stateModuleUrl);
-        const state = stateModule?.state || null;
-        stateSnapshot = {
-          bootPhase: String(state?.bootPhase || ""),
-          bootBlocking: state?.bootBlocking === false ? false : !!state?.bootBlocking,
-          startupReadonly: !!state?.startupReadonly,
-          startupReadonlyUnlockInFlight: !!state?.startupReadonlyUnlockInFlight,
-          scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
-          activeScenarioId: String(state?.activeScenarioId || ""),
-          startupInteractionMode: String(state?.startupInteractionMode || ""),
-          bootError: String(state?.bootError || ""),
-        };
-      } catch (error) {
-        stateImportError = String(error?.stack || error?.message || error || "");
-      }
       return {
         href: String(globalThis.location?.href || ""),
         readyState: String(document.readyState || ""),
@@ -634,16 +650,18 @@ async function collectPerfBrowserRuntimeSnapshot(page) {
         bodyClassName: String(document.body?.className || ""),
         moduleScripts,
         perfSnapshotAvailable: typeof globalThis.__mc_perf__?.snapshot === "function",
-        mapcreatorRuntimeKeys: Object.keys(globalThis.__mapcreatorRuntime || {}).sort(),
+        mapcreatorSnapshotAvailable: typeof globalThis.__mapcreator__?.snapshot === "function",
         bootOverlay: {
           present: !!overlay,
           hidden: !!overlay?.classList?.contains("hidden"),
           text: String(overlay?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 800),
         },
-        state: stateSnapshot,
-        stateImportError,
       };
     });
+    return {
+      ...domSnapshot,
+      state: await readPerfRuntimeState(page),
+    };
   } catch (error) {
     return {
       evaluationError: String(error?.stack || error?.message || error || ""),
@@ -745,11 +763,7 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
     if (!snapshot) {
       throw new Error("window.__mc_perf__.snapshot() returned null.");
     }
-    const activeScenarioId = await page.evaluate(async () => {
-      const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
-      const stateModule = await import(stateModuleUrl);
-      return String(stateModule?.state?.activeScenarioId || "").trim();
-    });
+    const activeScenarioId = String((await readPerfRuntimeState(page)).activeScenarioId || "").trim();
     if (activeScenarioId !== normalizeScenarioId(scenarioId)) {
       throw new Error(
         `[perf-baseline] Scenario activation mismatch for ${scenarioId}: activeScenarioId=${activeScenarioId || "<empty>"}`
@@ -783,18 +797,7 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
 async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    const snapshot = await page.evaluate(async () => {
-      const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
-      const stateModule = await import(stateModuleUrl);
-      const state = stateModule?.state || null;
-      return {
-        bootPhase: String(state?.bootPhase || ""),
-        bootBlocking: state?.bootBlocking === false ? false : !!state?.bootBlocking,
-        startupReadonlyUnlockInFlight: !!state?.startupReadonlyUnlockInFlight,
-        scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
-        bootError: String(state?.bootError || ""),
-      };
-    });
+    const snapshot = await readPerfRuntimeState(page);
     if (snapshot.bootError) {
       throw new Error(`[perf-baseline] bootError=${snapshot.bootError}`);
     }
@@ -808,45 +811,45 @@ async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
     }
     await page.waitForTimeout(500);
   }
-  const finalSnapshot = await page.evaluate(async () => {
+  const finalDomSnapshot = await page.evaluate(() => {
     const overlay = document.querySelector("#bootOverlay");
-    const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
-    const stateModule = await import(stateModuleUrl);
-    const state = stateModule?.state || null;
     return {
       href: String(globalThis.location?.href || ""),
       readyState: String(document.readyState || ""),
-      bootPhase: String(state?.bootPhase || ""),
-      bootBlocking: state?.bootBlocking === false ? false : !!state?.bootBlocking,
-      startupReadonly: !!state?.startupReadonly,
-      startupReadonlyUnlockInFlight: !!state?.startupReadonlyUnlockInFlight,
-      scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
-      activeScenarioId: String(state?.activeScenarioId || ""),
       overlayHidden: !!overlay?.classList?.contains("hidden"),
-      bootError: String(state?.bootError || ""),
     };
   });
+  const finalSnapshot = {
+    ...finalDomSnapshot,
+    ...await readPerfRuntimeState(page),
+  };
   throw new Error(`[perf-baseline] app did not reach ready state in ${timeoutMs}ms: ${JSON.stringify(finalSnapshot)}`);
 }
 
-async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
+async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
   const manifestIdentity = await readScenarioManifestIdentity(scenarioId);
   const featureCount = finiteNumber(manifestIdentity.featureCount);
   const scenarioDir = path.join(options.rawDir, scenarioId);
   await ensureDir(scenarioDir);
   const warmups = [];
   for (let index = 0; index < options.warmups; index += 1) {
+    serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
+    const baseUrl = serverLeaseRef.current.baseUrl;
     const run = await measureOneRun(browser, baseUrl, scenarioId, {
       ...options,
       runLabel: `warmup-${String(index + 1).padStart(2, "0")}`,
+      urlQuery: options.urlQuery,
     });
     warmups.push(run.summary);
   }
   const runs = [];
   for (let index = 0; index < options.runs; index += 1) {
+    serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
+    const baseUrl = serverLeaseRef.current.baseUrl;
     const run = await measureOneRun(browser, baseUrl, scenarioId, {
       ...options,
       runLabel: `run-${String(index + 1).padStart(2, "0")}`,
+      urlQuery: options.urlQuery,
     });
     const filePath = path.join(scenarioDir, `run-${String(index + 1).padStart(2, "0")}.json`);
     await writeJson(filePath, run);
@@ -855,11 +858,12 @@ async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
       rawPath: path.relative(REPO_ROOT, filePath).replaceAll("\\", "/"),
     });
   }
+  const lastBaseUrl = serverLeaseRef.current?.baseUrl || "";
   return {
     scenarioId,
     sampleRole: getScenarioSampleRole(scenarioId),
     featureCount,
-    workloadIdentity: buildScenarioWorkloadIdentity(manifestIdentity, options, baseUrl),
+    workloadIdentity: buildScenarioWorkloadIdentity(manifestIdentity, options, lastBaseUrl),
     warmups,
     runs,
     summary: aggregateRuns(runs),
@@ -959,17 +963,19 @@ async function resolveGitHead() {
 }
 
 async function runMeasurements(options) {
-  const { baseUrl, serverOwner } = await ensureServerBaseUrl();
+  const serverLeaseRef = {
+    current: await ensureServerBaseUrl(),
+  };
   const browser = await chromium.launch({ headless: true });
   try {
     const scenarios = {};
     for (const scenarioId of options.scenarios) {
-      scenarios[scenarioId] = await runScenarioSeries(browser, baseUrl, scenarioId, options);
+      scenarios[scenarioId] = await runScenarioSeries(browser, serverLeaseRef, scenarioId, options);
     }
-    return { baseUrl, scenarios };
+    return { baseUrl: serverLeaseRef.current?.baseUrl || "", scenarios };
   } finally {
     await browser.close();
-    await stopServer(serverOwner);
+    await stopServer(serverLeaseRef.current?.serverOwner || null);
   }
 }
 

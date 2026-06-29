@@ -12,7 +12,11 @@ function createCompleteState() {
   return {
     bootPhase: "ready",
     startupInteractionMode: "full",
+    bootBlocking: false,
     startupReadonly: true,
+    startupReadonlyUnlockInFlight: false,
+    scenarioApplyInFlight: true,
+    bootError: "startup warning",
     bootProgressPhase: "interactive",
     activeScenarioId: "tno_1962",
     topologyBundleMode: "chunked",
@@ -56,7 +60,11 @@ test("buildMainRuntimeLoadStatusSnapshot preserves the full loadStatus schema", 
     boot: {
       phase: "ready",
       interactionMode: "full",
+      blocking: false,
       readonly: true,
+      readonlyUnlockInFlight: false,
+      scenarioApplyInFlight: true,
+      error: "startup warning",
       bootProgressPhase: "interactive",
     },
     startup: {

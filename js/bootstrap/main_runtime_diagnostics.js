@@ -28,7 +28,11 @@ export function buildMainRuntimeLoadStatusSnapshot(targetState) {
     boot: {
       phase: String(state.bootPhase || ""),
       interactionMode: String(state.startupInteractionMode || ""),
+      blocking: state.bootBlocking === false ? false : !!state.bootBlocking,
       readonly: !!state.startupReadonly,
+      readonlyUnlockInFlight: !!state.startupReadonlyUnlockInFlight,
+      scenarioApplyInFlight: !!state.scenarioApplyInFlight,
+      error: String(state.bootError || ""),
       bootProgressPhase: String(state.bootProgressPhase || ""),
     },
     startup: {
