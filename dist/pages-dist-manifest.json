@@ -46242,7 +46242,7 @@
     },
     {
       "path": "app/js/core/renderer/viewport_resize_lifecycle_owner.js",
-      "size_bytes": 12477,
+      "size_bytes": 12923,
       "source_kind": "dist"
     },
     {
@@ -47361,5 +47361,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155306108
+  "total_bytes": 1155306554
 }

@@ -7,6 +7,7 @@ function createHarness({
   mapContainer = { clientWidth: 800, clientHeight: 600 },
   includeResizeObserver = true,
   canvasSizeResults = [true],
+  canvasSizeStateUpdates = [],
   hasLandFeatures = true,
 } = {}) {
   const modelState = {
@@ -159,7 +160,16 @@ function createHarness({
       setCanvasSize(options) {
         calls.setCanvasSize.push(options);
         calls.order.push("setCanvasSize");
-        const result = canvasSizeResults[Math.min(canvasSizeCallIndex, canvasSizeResults.length - 1)];
+        const callIndex = canvasSizeCallIndex;
+        const stateUpdate = canvasSizeStateUpdates.length
+          ? canvasSizeStateUpdates[Math.min(callIndex, canvasSizeStateUpdates.length - 1)]
+          : null;
+        if (typeof stateUpdate === "function") {
+          Object.assign(modelState, stateUpdate(options, modelState) || {});
+        } else if (stateUpdate && typeof stateUpdate === "object") {
+          Object.assign(modelState, stateUpdate);
+        }
+        const result = canvasSizeResults[Math.min(callIndex, canvasSizeResults.length - 1)];
         canvasSizeCallIndex += 1;
         return result;
       },
@@ -279,12 +289,33 @@ test("requestMapContainerResizeSync preserves DPR frame timeout and full-resize 
   visual.flushRaf();
   assert.equal(visual.calls.setCanvasSize.at(-1).reason, "visual-viewport-resize");
 
-  const preferred = createHarness();
+  const preferred = createHarness({
+    canvasSizeResults: [true, false],
+    canvasSizeStateUpdates: [{ width: 900, height: 650, dpr: 0.8 }],
+  });
   preferred.owner.requestMapContainerResizeSync("browser-dpr-change");
   preferred.owner.requestMapContainerResizeSync("visual-viewport-resize");
   preferred.flushRaf();
-  assert.equal(preferred.calls.setCanvasSize.at(-1).reason, "visual-viewport-resize");
-  assert.equal(preferred.calls.setCanvasSize.at(-1).forceDprInvalidation, undefined);
+  assert.deepEqual(preferred.calls.setCanvasSize, [{
+    reason: "visual-viewport-resize",
+    forceDprInvalidation: true,
+  }]);
+  assert.deepEqual(preferred.calls.fitProjection, [{ skipSpatialIndex: false }]);
+  assert.deepEqual(preferred.calls.resetZoomToFit, [{
+    centerContent: false,
+    centerX: true,
+    centerY: false,
+  }]);
+  assert.equal(preferred.calls.enforceZoomConstraints, 1);
+
+  const dprAfterVisual = createHarness();
+  dprAfterVisual.owner.requestMapContainerResizeSync("visual-viewport-resize");
+  dprAfterVisual.owner.requestMapContainerResizeSync("browser-dpr-change");
+  dprAfterVisual.flushRaf();
+  assert.deepEqual(dprAfterVisual.calls.setCanvasSize, [{
+    reason: "visual-viewport-resize",
+    forceDprInvalidation: true,
+  }]);
 });
 
 test("bindMapContainerResizeObserver observes changed dimensions and ignores empty or unchanged entries", () => {
@@ -315,6 +346,9 @@ test("browser DPR observer attaches rebinding change handler and unbind removes 
   const harness = createHarness();
 
   assert.equal(harness.owner.getDevicePixelRatioMediaQuery(), "(resolution: 1dppx)");
+  Object.assign(harness.fakeGlobal, { devicePixelRatio: 0.8 });
+  assert.equal(harness.owner.getDevicePixelRatioMediaQuery(), "(resolution: 0.8dppx)");
+  Object.assign(harness.fakeGlobal, { devicePixelRatio: 1 });
   harness.owner.bindBrowserPixelRatioObserver();
   assert.equal(harness.mediaQueries[0].query, "(resolution: 1dppx)");
   assert.equal(harness.mediaQueries[0].listeners.length, 1);
@@ -357,6 +391,7 @@ test("handleBrowserPixelRatioRefresh renders only after dpr invalidation changes
 
   const changed = createHarness({ canvasSizeResults: [true] });
   changed.owner.handleBrowserPixelRatioRefresh();
+  assert.deepEqual(changed.calls.fitProjection, []);
   assert.equal(changed.calls.markAllOverlaysDirty, 1);
   assert.equal(changed.calls.render, 1);
 });

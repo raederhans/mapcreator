@@ -17,6 +17,7 @@ export function createViewportResizeLifecycleOwner({
   let mapContainerResizeFrame = 0;
   let mapContainerResizeTimer = 0;
   let pendingMapResizeReason = "";
+  let pendingBrowserPixelRatioRefresh = false;
   let browserPixelRatioMediaQuery = null;
   let browserPixelRatioMediaQueryHandler = null;
   let visualViewportResizeHandler = null;
@@ -116,20 +117,14 @@ export function createViewportResizeLifecycleOwner({
   function requestMapContainerResizeSync(reason = "map-container-resize") {
     const resizeReason = getResizeReason(reason, "map-container-resize");
     if (resizeReason === "browser-dpr-change") {
+      pendingBrowserPixelRatioRefresh = true;
       if (mapContainerResizeFrame) {
         pendingMapResizeReason = pendingMapResizeReason || resizeReason;
         return;
       }
       pendingMapResizeReason = resizeReason;
       mapContainerResizeFrame = requestFrame(() => {
-        mapContainerResizeFrame = 0;
-        const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-        pendingMapResizeReason = "";
-        if (pendingReason === "browser-dpr-change") {
-          handleBrowserPixelRatioRefresh(pendingReason);
-        } else {
-          handleResize(pendingReason);
-        }
+        flushPendingMapResizeFrame(resizeReason);
       });
       return;
     }
@@ -152,10 +147,7 @@ export function createViewportResizeLifecycleOwner({
     }
     pendingMapResizeReason = resizeReason;
     mapContainerResizeFrame = requestFrame(() => {
-      mapContainerResizeFrame = 0;
-      const pendingReason = getResizeReason(pendingMapResizeReason, resizeReason);
-      pendingMapResizeReason = "";
-      handleResize(pendingReason);
+      flushPendingMapResizeFrame(resizeReason);
     });
   }
 
@@ -182,7 +174,8 @@ export function createViewportResizeLifecycleOwner({
     const rawDpr = typeof getters.getDevicePixelRatio === "function"
       ? getters.getDevicePixelRatio()
       : runtimeGlobal.devicePixelRatio;
-    const dpr = Math.max(1, Number(rawDpr || 1));
+    const numericDpr = Number(rawDpr);
+    const dpr = Number.isFinite(numericDpr) && numericDpr > 0 ? numericDpr : 1;
     return `(resolution: ${dpr}dppx)`;
   }
 
@@ -237,20 +230,23 @@ export function createViewportResizeLifecycleOwner({
     bindVisualViewportResizeObserver();
   }
 
-  function handleBrowserPixelRatioRefresh(reason = "browser-dpr-change") {
-    const resizeReason = getResizeReason(reason, "browser-dpr-change");
-    const canvasSizeChanged = effects.setCanvasSize?.({
-      reason: resizeReason,
-      forceDprInvalidation: true,
-    });
-    if (!canvasSizeChanged) return;
-    effects.markAllOverlaysDirty?.();
-    effects.render?.();
-    effects.handleCanvasDprRefreshComplete?.({ reason: resizeReason });
+  function flushPendingMapResizeFrame(defaultReason = "resize") {
+    mapContainerResizeFrame = 0;
+    const pendingReason = getResizeReason(pendingMapResizeReason, defaultReason);
+    const forceDprInvalidation = pendingBrowserPixelRatioRefresh || pendingReason === "browser-dpr-change";
+    pendingMapResizeReason = "";
+    pendingBrowserPixelRatioRefresh = false;
+    handleResize(pendingReason, { forceDprInvalidation });
   }
 
-  function handleResize(reason = "resize") {
+  function handleBrowserPixelRatioRefresh(reason = "browser-dpr-change") {
+    handleResize(reason, { forceDprInvalidation: true });
+  }
+
+  function handleResize(reason = "resize", options = {}) {
     const resizeReason = getResizeReason(reason);
+    const forceDprInvalidation = Boolean(options.forceDprInvalidation);
+    const browserDprOnlyResize = resizeReason === "browser-dpr-change";
     const interactiveLayoutResize = isInteractiveLayoutResize(resizeReason);
     const previousViewport = {
       width: Number(state.width || 0),
@@ -259,7 +255,10 @@ export function createViewportResizeLifecycleOwner({
     if (interactiveLayoutResize) {
       effects.setRenderPhaseInteracting?.();
     }
-    const canvasSizeChanged = effects.setCanvasSize?.({ reason: resizeReason });
+    const canvasSizeChanged = effects.setCanvasSize?.({
+      reason: resizeReason,
+      ...(forceDprInvalidation ? { forceDprInvalidation: true } : {}),
+    });
     const layoutSizeChangedDuringPhase = interactiveLayoutResize && (
       previousViewport.width !== Number(state.width || 0)
       || previousViewport.height !== Number(state.height || 0)
@@ -268,6 +267,12 @@ export function createViewportResizeLifecycleOwner({
       if (interactiveLayoutResize) {
         effects.scheduleRenderPhaseIdle?.();
       }
+      return;
+    }
+    if (browserDprOnlyResize) {
+      effects.markAllOverlaysDirty?.();
+      effects.render?.();
+      effects.handleCanvasDprRefreshComplete?.({ reason: resizeReason });
       return;
     }
     effects.fitProjection?.({ skipSpatialIndex: interactiveLayoutResize });
@@ -281,6 +286,9 @@ export function createViewportResizeLifecycleOwner({
     }
     effects.markAllOverlaysDirty?.();
     effects.render?.();
+    if (forceDprInvalidation) {
+      effects.handleCanvasDprRefreshComplete?.({ reason: resizeReason });
+    }
     if (interactiveLayoutResize) {
       scheduleResizeSpatialRefresh(resizeReason);
       effects.scheduleRenderPhaseIdle?.();
@@ -304,6 +312,7 @@ export function createViewportResizeLifecycleOwner({
       mapContainerResizeTimer = 0;
     }
     pendingMapResizeReason = "";
+    pendingBrowserPixelRatioRefresh = false;
     unbindBrowserPixelRatioObserver();
     if (visualViewportResizeHandler && typeof visualViewportResizeTarget?.removeEventListener === "function") {
       visualViewportResizeTarget.removeEventListener("resize", visualViewportResizeHandler);

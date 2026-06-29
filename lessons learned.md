@@ -143,6 +143,7 @@
 ### 浏览器原生 zoom 是独立渲染输入
 - `devicePixelRatio` 可能降到 1 以下且被 runtime DPR 上限/下限钳住；监听到 browser zoom 时仍要强制失效 overlay/texture pass。
 - DPR 监听用 `matchMedia("(resolution: ...dppx)")` 后，每次 change 都重新绑定当前 DPR 查询。
+- DPR change 和 visualViewport resize 同帧到达时，要保留独立的 DPR 失效标记，再处理布局 resize；只用单一 pending reason 合并会丢掉强制 overlay/texture invalidation。
 - 侧栏 resize 期间 `setRenderPhase("interacting")` 可能先更新 canvas size；后续 resize handler 仍要识别这次尺寸变化并继续执行 projection fit / zoom reset。
 
 ### 异步闭环和加载状态机要锁真实事务
