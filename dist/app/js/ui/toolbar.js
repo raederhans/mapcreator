@@ -2430,7 +2430,7 @@ function initToolbar({ render } = {}) {
       return resolveExportPassSequence({
         ...exportUi,
         visibility,
-      }).filter((passName) => textVisibility["render-labels"] !== false || passName !== "labels");
+      }, RENDER_PASS_NAMES).filter((passName) => textVisibility["render-labels"] !== false || passName !== "labels");
     }
     return [];
   };
@@ -2439,7 +2439,7 @@ function initToolbar({ render } = {}) {
     const passNames = resolveExportPassSequence({
       ...exportUi,
       visibility: exportUi.visibility,
-    }).filter((passName) => exportUi.textVisibility?.["render-labels"] || passName !== "labels");
+    }, RENDER_PASS_NAMES).filter((passName) => exportUi.textVisibility?.["render-labels"] || passName !== "labels");
     const compositeCanvas = renderExportPassesToCanvas(passNames);
     if (!compositeCanvas) {
       throw createExportError("invalid-params", "Composite export canvas unavailable.");

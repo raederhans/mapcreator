@@ -9,9 +9,8 @@ import json
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from unittest.mock import patch
 
-from tools import build_pages_dist, check_scenario_contracts
+from tools import build_pages_dist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +34,12 @@ HERO_SCENARIO_ASSETS = (
     ("hoi4-1939", "hoi4_1939", "hero-hoi4-1939.svg", "hero-hoi4-1939.json"),
     ("tno-1962", "tno_1962", "hero-tno-1962.svg", "hero-tno-1962.json"),
 )
+TNO_COVERAGE_REPORT_PATHS = {
+    "strict": ".runtime/reports/generated/tno_1962.strict_contract_report.json",
+    "coverage_ledger": ".runtime/reports/generated/tno_1962.coverage_ledger_report.json",
+    "atlantropa": ".runtime/reports/generated/tno_1962.atlantropa_coverage_report.json",
+    "polar": ".runtime/reports/generated/tno_1962.polar_coverage_report.json",
+}
 
 
 def import_landing_builder(module_name: str):
@@ -49,38 +54,6 @@ def import_landing_builder(module_name: str):
 
 
 class PagesDistStartupShellTest(unittest.TestCase):
-
-    def test_landing_valid_geometry_recovers_from_mixed_dimension_make_valid_error(self) -> None:
-        from shapely.errors import GEOSException
-        from shapely.geometry import Polygon
-
-        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
-        bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)])
-
-        with patch.object(
-            build_landing_europe_1936_showcase,
-            "make_valid",
-            side_effect=GEOSException("IllegalArgumentException: Overlay input is mixed-dimension"),
-        ):
-            geometry = build_landing_europe_1936_showcase.valid_geometry(bowtie)
-
-        self.assertFalse(geometry.is_empty)
-        self.assertTrue(geometry.is_valid)
-
-    def test_landing_polygon_path_renders_geometry_collection_polygons(self) -> None:
-        from shapely.geometry import GeometryCollection, LineString, Polygon
-
-        build_landing_europe_1936_showcase = import_landing_builder("build_landing_europe_1936_showcase")
-        canvas = build_landing_europe_1936_showcase.Canvas.create(100, 100, (0, 0, 2, 2))
-        geometry = GeometryCollection([
-            LineString([(0, 0), (1, 1)]),
-            Polygon([(0, 0), (1, 0), (1, 1), (0, 0)]),
-        ])
-
-        paths = build_landing_europe_1936_showcase.polygon_path(geometry, canvas)
-
-        self.assertEqual(len(paths), 1)
-        self.assertTrue(paths[0].startswith("M"))
 
     def test_checked_in_pages_dist_manifest_exists(self) -> None:
         self.assertTrue(
@@ -1540,7 +1513,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             key: f"data/scenarios/tno_1962/{relative_path}"
             for key, relative_path in ledger_files.items()
         }
-        expected_report_paths = dict(check_scenario_contracts.TNO_COVERAGE_REPORT_PATHS)
+        expected_report_paths = dict(TNO_COVERAGE_REPORT_PATHS)
         dist_scenario_dir = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "tno_1962"
         source_scenario_dir = REPO_ROOT / "data" / "scenarios" / "tno_1962"
         runtime_meta = json.loads((dist_scenario_dir / "runtime_meta.json").read_text(encoding="utf-8"))

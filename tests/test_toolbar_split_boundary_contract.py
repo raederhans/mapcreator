@@ -219,6 +219,7 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn("const bakePassNames = getBakePassNamesForLayer(normalizedLayerId, exportUi);", toolbar_content)
         self.assertIn("const compositeCanvas = await buildCompositeSourceCanvas(exportUi);", toolbar_content)
         self.assertIn("const passCanvas = renderExportPassesToCanvas(bakePassNames);", toolbar_content)
+        self.assertEqual(toolbar_content.count("}, RENDER_PASS_NAMES).filter((passName) =>"), 2)
 
     def test_svg_annotation_export_uses_strategic_annotation_layers_only(self):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
