@@ -97,6 +97,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await page.goto(publicUrl(""), { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
     await expect.poll(async () => page.locator("a[href*='app']").count()).toBeGreaterThan(0);
+    await page.waitForLoadState("networkidle", { timeout: 30000 });
 
     await page.goto(publicUrl("app/?view=guide"), { waitUntil: "domcontentloaded" });
     await waitForShellReady(page, { timeout: 120000, requireCanvas: true });

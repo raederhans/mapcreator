@@ -135,6 +135,7 @@
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
 - `dist/pages-dist-manifest.json`、`data/manifest.json`、根 `dist/assets/*.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash；生成脚本和 `dist/app` 文本产物都要在 `.gitattributes` 固定 LF。
+- Pages manifest 扫描文件时按 repo-relative POSIX path 排序；直接排序 `Path` 对象会让 Windows 和 Linux 对 mixed-case 发布路径产出不同记录顺序。
 - 覆盖类合同可以用 bbox 作为候选预筛，最终通过条件必须绑定真实 geometry 命中，并用跨 bbox 但不相交的反例测试锁住。
 - Marine Regions source snapshot 接近 GitHub 100MiB 限制时，要把简化规则写进 source spec/provenance，比如 `snapshot_simplify_tolerance`；只压最终 water feature 会留下不可推送的大 snapshot。
 - 只改 water layer 时，优先在现有 `runtime_topology.topo.json` 上替换 `scenario_water`；从 political/land/context 反提再重建会丢失独立的 `scenario_atlantropa` 对象。
