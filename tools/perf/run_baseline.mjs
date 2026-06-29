@@ -202,6 +202,20 @@ function shouldReuseActiveServer() {
   return /^(1|true|yes|on)$/i.test(String(process.env.PERF_REUSE_ACTIVE_SERVER || "").trim());
 }
 
+function resolveDevServerPythonCommand() {
+  const setupPythonRoot = process.env.pythonLocation || process.env.Python_ROOT_DIR || process.env.Python3_ROOT_DIR;
+  if (setupPythonRoot) {
+    return {
+      command: path.join(setupPythonRoot, process.platform === "win32" ? "python.exe" : "bin/python"),
+      args: ["tools/dev_server.py"],
+    };
+  }
+  if (process.platform === "win32") {
+    return { command: "py", args: ["-3", "tools/dev_server.py"] };
+  }
+  return { command: "python3", args: ["tools/dev_server.py"] };
+}
+
 function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {}) {
   const metadataCwd = String(metadata?.cwd || "").trim();
   const metadataPid = Number(metadata?.pid);
@@ -226,8 +240,7 @@ async function resolveExistingServerBaseUrl(activeServerPath, options = {}) {
 }
 
 function spawnDevServer() {
-  const command = process.platform === "win32" ? "py" : "python3";
-  const args = process.platform === "win32" ? ["-3", "tools/dev_server.py"] : ["tools/dev_server.py"];
+  const { command, args } = resolveDevServerPythonCommand();
   const env = {
     ...process.env,
     MAPCREATOR_OPEN_BROWSER: "0",
