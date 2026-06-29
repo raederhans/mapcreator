@@ -16,7 +16,7 @@ Reduce the Pages `dist/` payload below the 1 GiB hard cap while keeping local so
 - [x] Complete independent architect lane.
 - [x] Commit and push.
 - [x] Integrate to `main`.
-- [ ] Clean integrated worktree.
+- [x] Clean integrated worktree after closeout remote verification.
 
 ## Delivery Notes
 
@@ -38,7 +38,7 @@ Reduce the Pages `dist/` payload below the 1 GiB hard cap while keeping local so
 - Core files: `tools/build_pages_dist.py`, `js/core/runtime_asset_registry.js`, `js/core/hgo_runtime_asset_loader.js`, `js/ui/scenario_controls.js`, `js/core/i18n_catalog.js`.
 - Tests: `tests/test_pages_dist_startup_shell.py`, `tests/test_toolbar_split_boundary_contract.py`.
 - Generated dist mirrors: `dist/app/js/core/runtime_asset_registry.js`, `dist/app/js/core/hgo_runtime_asset_loader.js`, `dist/app/js/ui/scenario_controls.js`, `dist/app/js/core/i18n_catalog.js`, `dist/pages-dist-manifest.json`.
-- Docs: `docs/active/_worktree_registry.md`, `docs/active/pages-payload-slimming-phase2a-20260629/{plan.md,context.md,task.md}`.
+- Docs: `docs/active/_worktree_registry.md`, `docs/archive/pages-payload-slimming-phase2a-20260629/{plan.md,context.md,task.md}`.
 - Temporary files: none outside ignored runtime outputs.
 
 ## Diff Summary
@@ -55,7 +55,7 @@ Reduce the Pages `dist/` payload below the 1 GiB hard cap while keeping local so
 
 ## Verification
 
-- `npm run verify:pages-dist`: passed; total `972533254` bytes / `927.48 MiB`.
+- `npm run verify:pages-dist`: passed; total `972529969` bytes / `927.48 MiB`.
 - `npm run verify:toolbar-split-boundary`: passed, 53 tests.
 - `node --test tests/hgo_raster_renderer.node.test.mjs tests/hgo_runtime_preview.node.test.mjs tests/hgo_runtime_preview_toolbar.node.test.mjs`: passed, 41 tests; existing Node module-type warnings printed.
 - `py -3 -m unittest tests.test_scenario_contracts -q`: passed, 41 tests; expected risky fixture diagnostic printed with exit code 0.
