@@ -1101,6 +1101,53 @@ class ScenarioContractTest(unittest.TestCase):
             self.assertIn("startup.bundle.en.json.gz", hashes)
             self.assertIn("startup.bundle.zh.json.gz", hashes)
 
+    def test_contract_hash_normalizes_crlf_for_text_scenario_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            lf_payload = b'{\n  "type": "FeatureCollection",\n  "features": []\n}\n'
+            for filename in ("manifest.json", "water_regions.geojson", "runtime_topology.topo.json"):
+                lf_path = tmp_root / f"lf-{filename}"
+                crlf_path = tmp_root / f"crlf-{filename}"
+                lf_path.write_bytes(lf_payload)
+                crlf_path.write_bytes(lf_payload.replace(b"\n", b"\r\n"))
+
+                self.assertEqual(
+                    check_scenario_contracts._sha256_path(crlf_path),
+                    check_scenario_contracts._sha256_path(lf_path),
+                )
+                self.assertEqual(
+                    check_scenario_contracts._sha256_path(crlf_path),
+                    hashlib.sha256(lf_payload).hexdigest(),
+                )
+
+    def test_contract_hash_normalizes_crlf_across_read_chunk_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "water_regions.geojson"
+            chunk_edge_prefix = b"a" * (1024 * 1024 - 1)
+            path.write_bytes(chunk_edge_prefix + b"\r\n")
+
+            self.assertEqual(
+                check_scenario_contracts._sha256_path(path),
+                hashlib.sha256(chunk_edge_prefix + b"\n").hexdigest(),
+            )
+
+    def test_contract_hash_keeps_gzip_sidecars_byte_exact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            lf_path = tmp_root / "startup.bundle.en.json.gz"
+            crlf_path = tmp_root / "startup.bundle.zh.json.gz"
+            lf_path.write_bytes(b"gzip\nsidecar\n")
+            crlf_path.write_bytes(b"gzip\r\nsidecar\r\n")
+
+            self.assertNotEqual(
+                check_scenario_contracts._sha256_path(crlf_path),
+                check_scenario_contracts._sha256_path(lf_path),
+            )
+            self.assertEqual(
+                check_scenario_contracts._sha256_path(crlf_path),
+                hashlib.sha256(b"gzip\r\nsidecar\r\n").hexdigest(),
+            )
+
     def test_build_snapshot_fingerprint_changes_when_water_regions_payload_drifts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_root = Path(tmp_dir)

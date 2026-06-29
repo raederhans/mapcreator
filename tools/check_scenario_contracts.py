@@ -1695,11 +1695,43 @@ def _load_required_local_json(path: Path, errors: list[str]) -> dict | None:
 def _sha256_path(path: Path) -> str:
     import hashlib
 
+    if _uses_text_sha_normalization(path):
+        return _sha256_text_path_normalized_lf(path)
+
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _sha256_text_path_normalized_lf(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    pending_cr = False
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            if pending_cr:
+                if chunk.startswith(b"\n"):
+                    digest.update(b"\n")
+                    chunk = chunk[1:]
+                else:
+                    digest.update(b"\r")
+                pending_cr = False
+            if chunk.endswith(b"\r"):
+                pending_cr = True
+                chunk = chunk[:-1]
+            digest.update(chunk.replace(b"\r\n", b"\n"))
+    if pending_cr:
+        digest.update(b"\r")
+    return digest.hexdigest()
+
+
+def _uses_text_sha_normalization(path: Path) -> bool:
+    if path.suffix == ".gz":
+        return False
+    return path.suffix in {".json", ".geojson"}
 
 
 def _resolve_scenario_url(target_dir: Path, url: object, errors: list[str], field_name: str) -> Path | None:

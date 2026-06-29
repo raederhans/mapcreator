@@ -15,6 +15,8 @@ data/hgo_runtime/*.json text eol=lf
 data/hgo_runtime/*.bmp binary
 data/thematic_layers/**/*.json text eol=lf
 data/scenarios/index.json text eol=lf
+data/scenarios/**/*.json text eol=lf
+data/scenarios/**/*.geojson text eol=lf
 data/scenarios/**/chunks/*.json text eol=lf
 data/scenarios/**/detail_chunks.manifest.json text eol=lf
 data/scenarios/**/context_lod.manifest.json text eol=lf

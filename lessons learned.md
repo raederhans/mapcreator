@@ -496,3 +496,6 @@
 ### Pages release smoke 目标 URL 要显式
 - 候选 release gate 必须从 `SCENARIO_FORGE_PAGES_URL` 或 `PLAYWRIGHT_TEST_BASE_URL` 读取显式目标；默认公开 URL 只属于 deployed-site 验证入口。
 - GitHub Pages deploy job 要在 `actions/deploy-pages` 后用 `steps.deployment.outputs.page_url` 跑 smoke；独立脚本也要有 workflow owner。
+
+### 场景合同哈希按文本语义收口
+- `data/scenarios` 的 JSON/GeoJSON 文本合同要同时用 `.gitattributes eol=lf` 和 checker 端 LF 归一化锁住；gzip/二进制 sidecar 继续 byte-exact，并用跨 chunk 测试覆盖流式归一化边界。
