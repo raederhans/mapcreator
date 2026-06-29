@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          event_name="${{ github.event_name }}"
+          event_name="$GITHUB_EVENT_NAME"
           mkdir -p .runtime/tmp
           changed_files_path=".runtime/tmp/scenario-contract-changed-files.txt"
 
@@ -43,8 +43,14 @@ jobs:
           fi
 
           if [ "$event_name" = "pull_request" ]; then
-            base_sha="${{ github.event.pull_request.base.sha }}"
-            head_sha="${{ github.event.pull_request.head.sha }}"
+            read -r base_sha head_sha < <(python - <<'PY'
+          import json
+          import os
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as handle:
+              payload = json.load(handle)
+          print(payload["pull_request"]["base"]["sha"], payload["pull_request"]["head"]["sha"])
+          PY
+            )
             git fetch --no-tags --depth=50 origin "$base_sha" || true
             if git diff --name-only "$base_sha...$head_sha" > "$changed_files_path" 2>/dev/null; then
               :
@@ -52,8 +58,14 @@ jobs:
               git diff --name-only HEAD^ HEAD > "$changed_files_path" 2>/dev/null || true
             fi
           elif [ "$event_name" = "push" ]; then
-            base_sha="${{ github.event.before }}"
-            head_sha="${{ github.sha }}"
+            read -r base_sha head_sha < <(python - <<'PY'
+          import json
+          import os
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as handle:
+              payload = json.load(handle)
+          print(payload.get("before") or "", payload.get("after") or os.environ.get("GITHUB_SHA", ""))
+          PY
+            )
             if [ -n "$base_sha" ] && [ "$base_sha" != "0000000000000000000000000000000000000000" ]; then
               git fetch --no-tags --depth=50 origin "$base_sha" || true
               if git diff --name-only "$base_sha..$head_sha" > "$changed_files_path" 2>/dev/null; then

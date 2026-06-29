@@ -22,14 +22,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "reason=main push or manual transport verification" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          head_sha="${{ github.event.pull_request.head.sha }}"
+          read -r base_sha head_sha < <(python - <<'PY'
+          import json
+          import os
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as handle:
+              payload = json.load(handle)
+          print(payload["pull_request"]["base"]["sha"], payload["pull_request"]["head"]["sha"])
+          PY
+          )
           git fetch --no-tags --depth=50 origin "$base_sha" || true
           mkdir -p .runtime/tmp
           changed_files_path=".runtime/tmp/transport-contract-changed-files.txt"

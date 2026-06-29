@@ -104,13 +104,18 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
 
     def test_scenario_contract_matrix_pushes_create_a_real_skip_job(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "scenario-contract-matrix.yml").read_text(encoding="utf-8")
+        transport_workflow = (REPO_ROOT / ".github" / "workflows" / "transport-contract-required.yml").read_text(encoding="utf-8")
 
         self.assertIn("  push:", workflow)
         self.assertIn("      - main", workflow)
-        self.assertIn('event_name="${{ github.event_name }}"', workflow)
+        self.assertIn('event_name="$GITHUB_EVENT_NAME"', workflow)
+        self.assertNotIn("github.event.pull_request", workflow)
+        self.assertNotIn("github.event.pull_request", transport_workflow)
+        self.assertIn("GITHUB_EVENT_PATH", workflow)
+        self.assertIn("GITHUB_EVENT_PATH", transport_workflow)
         self.assertIn('if [ "$event_name" = "workflow_dispatch" ]; then', workflow)
         self.assertIn('elif [ "$event_name" = "push" ]; then', workflow)
-        self.assertIn('base_sha="${{ github.event.before }}"', workflow)
+        self.assertIn('payload.get("before")', workflow)
         self.assertIn('git diff --name-only "$base_sha..$head_sha"', workflow)
         self.assertIn('cache: "pip"', workflow)
         self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow)
