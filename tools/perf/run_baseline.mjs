@@ -20,6 +20,8 @@ const PERF_SERVER_RUNTIME_ROOT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-b
 const PERF_SERVER_ACTIVE_SERVER_PATH = path.join(PERF_SERVER_RUNTIME_ROOT, "dev", "active_server.json");
 const DEV_SERVER_OUT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-dev-server.out.log");
 const DEV_SERVER_ERR = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-dev-server.err.log");
+const PERF_BROWSER_DIAGNOSTICS_DIR = path.join(REPO_ROOT, ".runtime", "tests", "playwright", "perf-baseline");
+const PERF_BROWSER_DIAGNOSTICS_EVENT_LIMIT = 120;
 const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
   45_000,
   Number.parseInt(process.env.PERF_DEV_SERVER_READY_TIMEOUT_MS || "45000", 10) || 45_000
@@ -157,6 +159,19 @@ async function readJsonStrict(filePath, label = "json payload") {
 async function writeJson(filePath, payload) {
   await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function truncateDiagnosticText(value, maxLength = 2_000) {
+  const text = String(value ?? "");
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...<truncated>` : text;
+}
+
+function sanitizeDiagnosticPathPart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "unknown";
 }
 
 async function pathExists(filePath) {
@@ -586,11 +601,143 @@ async function readScenarioManifestIdentity(scenarioId) {
   };
 }
 
+async function collectPerfBrowserRuntimeSnapshot(page) {
+  try {
+    return await page.evaluate(async () => {
+      const overlay = document.querySelector("#bootOverlay");
+      const moduleScripts = Array.from(document.querySelectorAll('script[type="module"]'))
+        .map((script) => script.getAttribute("src") || "")
+        .filter(Boolean);
+      let stateSnapshot = null;
+      let stateImportError = "";
+      try {
+        const stateModuleUrl = new URL("./js/core/state.js", globalThis.location.href).toString();
+        const stateModule = await import(stateModuleUrl);
+        const state = stateModule?.state || null;
+        stateSnapshot = {
+          bootPhase: String(state?.bootPhase || ""),
+          bootBlocking: state?.bootBlocking === false ? false : !!state?.bootBlocking,
+          startupReadonly: !!state?.startupReadonly,
+          startupReadonlyUnlockInFlight: !!state?.startupReadonlyUnlockInFlight,
+          scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
+          activeScenarioId: String(state?.activeScenarioId || ""),
+          startupInteractionMode: String(state?.startupInteractionMode || ""),
+          bootError: String(state?.bootError || ""),
+        };
+      } catch (error) {
+        stateImportError = String(error?.stack || error?.message || error || "");
+      }
+      return {
+        href: String(globalThis.location?.href || ""),
+        readyState: String(document.readyState || ""),
+        title: String(document.title || ""),
+        bodyClassName: String(document.body?.className || ""),
+        moduleScripts,
+        perfSnapshotAvailable: typeof globalThis.__mc_perf__?.snapshot === "function",
+        mapcreatorRuntimeKeys: Object.keys(globalThis.__mapcreatorRuntime || {}).sort(),
+        bootOverlay: {
+          present: !!overlay,
+          hidden: !!overlay?.classList?.contains("hidden"),
+          text: String(overlay?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 800),
+        },
+        state: stateSnapshot,
+        stateImportError,
+      };
+    });
+  } catch (error) {
+    return {
+      evaluationError: String(error?.stack || error?.message || error || ""),
+    };
+  }
+}
+
+function createPerfBrowserDiagnostics(page, { scenarioId, runLabel, targetUrl } = {}) {
+  const events = [];
+  const pushEvent = (event) => {
+    events.push({
+      at: new Date().toISOString(),
+      ...event,
+    });
+    while (events.length > PERF_BROWSER_DIAGNOSTICS_EVENT_LIMIT) {
+      events.shift();
+    }
+  };
+  page.on("console", (message) => {
+    pushEvent({
+      kind: "console",
+      type: message.type(),
+      text: truncateDiagnosticText(message.text()),
+      location: message.location(),
+    });
+  });
+  page.on("pageerror", (error) => {
+    pushEvent({
+      kind: "pageerror",
+      message: truncateDiagnosticText(error?.message || error),
+      stack: truncateDiagnosticText(error?.stack || ""),
+    });
+  });
+  page.on("requestfailed", (request) => {
+    pushEvent({
+      kind: "requestfailed",
+      method: request.method(),
+      resourceType: request.resourceType(),
+      url: truncateDiagnosticText(request.url()),
+      failure: truncateDiagnosticText(request.failure()?.errorText || ""),
+    });
+  });
+  page.on("response", (response) => {
+    const status = response.status();
+    if (status < 400) {
+      return;
+    }
+    pushEvent({
+      kind: "http-error",
+      status,
+      statusText: response.statusText(),
+      resourceType: response.request().resourceType(),
+      url: truncateDiagnosticText(response.url()),
+    });
+  });
+  page.on("crash", () => {
+    pushEvent({ kind: "page-crash" });
+  });
+  return {
+    async write(error) {
+      const diagnosticScenarioId = sanitizeDiagnosticPathPart(scenarioId);
+      const diagnosticRunLabel = sanitizeDiagnosticPathPart(runLabel || "run");
+      const filePath = path.join(
+        PERF_BROWSER_DIAGNOSTICS_DIR,
+        `${diagnosticScenarioId}-${diagnosticRunLabel}-${Date.now()}.json`
+      );
+      await writeJson(filePath, {
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        scenarioId,
+        runLabel,
+        targetUrl,
+        error: {
+          message: truncateDiagnosticText(error?.message || error),
+          stack: truncateDiagnosticText(error?.stack || ""),
+        },
+        runtimeSnapshot: await collectPerfBrowserRuntimeSnapshot(page),
+        events,
+      });
+      return filePath;
+    },
+  };
+}
+
 async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
+  const targetUrl = buildScenarioUrl(baseUrl, scenarioId, options.urlQuery);
+  const diagnostics = createPerfBrowserDiagnostics(page, {
+    scenarioId,
+    runLabel: options.runLabel || "run",
+    targetUrl,
+  });
   try {
-    const targetUrl = buildScenarioUrl(baseUrl, scenarioId, options.urlQuery);
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
     await waitForPerfSnapshotReady(page, { timeoutMs: 120_000 });
     await page.waitForTimeout(300);
@@ -614,6 +761,20 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
       snapshot,
       summary: summarizeSnapshot(snapshot),
     };
+  } catch (error) {
+    try {
+      const diagnosticsPath = await diagnostics.write(error);
+      const relativeDiagnosticsPath = path.relative(REPO_ROOT, diagnosticsPath).replaceAll("\\", "/");
+      if (error && typeof error === "object" && "message" in error) {
+        error.message = `${error.message}\n[perf-baseline] Browser diagnostics: ${relativeDiagnosticsPath}`;
+      }
+    } catch (diagnosticsError) {
+      console.warn(
+        "[perf-baseline] Failed to write browser diagnostics:",
+        diagnosticsError?.stack || diagnosticsError?.message || diagnosticsError
+      );
+    }
+    throw error;
   } finally {
     await context.close();
   }
@@ -653,8 +814,11 @@ async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
     const stateModule = await import(stateModuleUrl);
     const state = stateModule?.state || null;
     return {
+      href: String(globalThis.location?.href || ""),
+      readyState: String(document.readyState || ""),
       bootPhase: String(state?.bootPhase || ""),
       bootBlocking: state?.bootBlocking === false ? false : !!state?.bootBlocking,
+      startupReadonly: !!state?.startupReadonly,
       startupReadonlyUnlockInFlight: !!state?.startupReadonlyUnlockInFlight,
       scenarioApplyInFlight: !!state?.scenarioApplyInFlight,
       activeScenarioId: String(state?.activeScenarioId || ""),
@@ -672,12 +836,18 @@ async function runScenarioSeries(browser, baseUrl, scenarioId, options) {
   await ensureDir(scenarioDir);
   const warmups = [];
   for (let index = 0; index < options.warmups; index += 1) {
-    const run = await measureOneRun(browser, baseUrl, scenarioId, options);
+    const run = await measureOneRun(browser, baseUrl, scenarioId, {
+      ...options,
+      runLabel: `warmup-${String(index + 1).padStart(2, "0")}`,
+    });
     warmups.push(run.summary);
   }
   const runs = [];
   for (let index = 0; index < options.runs; index += 1) {
-    const run = await measureOneRun(browser, baseUrl, scenarioId, options);
+    const run = await measureOneRun(browser, baseUrl, scenarioId, {
+      ...options,
+      runLabel: `run-${String(index + 1).padStart(2, "0")}`,
+    });
     const filePath = path.join(scenarioDir, `run-${String(index + 1).padStart(2, "0")}.json`);
     await writeJson(filePath, run);
     runs.push({
