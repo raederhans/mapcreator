@@ -4,6 +4,7 @@
   <h1>Scenario Forge</h1>
 
   Scenario Forge 是一个以世界场景为核心的地图创作工作台，适合架空历史、策略游戏 Mod、地缘政治叙事和地图展示。
+  打开公开 Demo 就能进入编辑器，按引导从 TNO 1962 开始，最后导出 PNG/JPG 截图或可编辑项目文件。HGO 1936 属于开发/本地预览，Cloud Saves 和社区系统属于本地后端预览。
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge" alt="MIT License"></a>
@@ -35,6 +36,25 @@ Scenario Forge 把场景选择、政治编辑、地图外观、战略标注、�
 - **战略标注：** 添加图例、战线、作战线、作战图形、标签和兵棋单位标记。
 - **交通工作台：** 检查公开面最成熟的道路与铁路图层，并通过总览或工作台预览查看机场、港口、矿产、能源设施、工业区、物流节点和图层顺序。
 - **双语导出流程：** 使用英文或简体中文界面，保存可编辑项目文件，并导出 1x-4x 比例的 PNG/JPG 展示截图。
+
+## 用 5 步跑通公开 Demo
+
+1. 打开 [在线体验](https://raederhans.github.io/scenario-forge/)。
+2. 从首页进入编辑器/Demo 工作区。
+3. 也可以直接打开引导入口 [`/app/?view=guide`](https://raederhans.github.io/scenario-forge/app/?view=guide)。
+4. 按默认公开路径使用 TNO 1962，或在 Blank Map、Modern World、HOI4 1936、HOI4 1939、TNO 1962 这 5 个公开基线之间切换。
+5. 打开 Project / Export，下载 PNG/JPG 截图，或保存可继续编辑的项目 JSON。
+
+## 当前公开能力边界
+
+| 能力面 | 公开 Demo 状态 | 本地/开发边界 |
+| --- | --- | --- |
+| 公开场景基线 | 在线可用：Blank Map、Modern World、HOI4 1936、HOI4 1939、TNO 1962。 | HGO 1936 保持开发/本地预览身份，并与 5 个公开基线分开展示。 |
+| HGO 运行预览 | 仅限开发/本地。 | 用于检查 HOI4 风格国家身份、配色库、旗帜和栅格渲染效果。 |
+| 交通工作台 | 在线提供总览/工作台能力；道路和铁路是公开面最成熟的路径，机场和港口提供总览上下文。 | 矿产、能源、工业和物流继续作为预览/工作台数据族推进。 |
+| 导出工作台 | 在线可用。 | 支持 1x-4x PNG/JPG 截图导出，也可以保存可编辑项目 JSON。 |
+| Cloud Saves 和社区 | 本地后端预览。 | 运行 `start_backend_preview.bat` 后，可试用登录状态、Cloud Saves、帖子、下载、评论、举报和管理员审核。 |
+| 数据溯源 | 基于真实来源并有记录。 | 详细记录在 `data/source_ledger.json`、`data/` 下的 `.provenance.json`、`data/transport_layers/` 下的交通配方，以及生成资产的来源记录中。 |
 
 ## 看它实际长什么样
 
@@ -82,6 +102,7 @@ Scenario Forge 把场景选择、政治编辑、地图外观、战略标注、�
 - https://raederhans.github.io/scenario-forge/
 
 在线版本适合体验场景编辑、外观调整、项目文件和导出流程。
+想快速确认公开 Demo 能跑通时，按上面的 5 步路径操作即可。
 
 ### 本地编辑器
 

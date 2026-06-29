@@ -4,6 +4,7 @@
   <h1>Scenario Forge</h1>
 
   Scenario Forge is a scenario-first map creation workbench for alternate history, strategy modding, and geopolitical storytelling.
+  Open the public demo to launch the editor, follow the guide, start from TNO 1962, and export a PNG/JPG or editable project snapshot. HGO 1936 is a developer/local preview, and Cloud Saves/community are local backend previews.
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-111111?style=for-the-badge" alt="MIT License"></a>
@@ -35,6 +36,25 @@ Scenario Forge gives creators one place to choose a world state, edit political 
 - **Strategic markup:** add legends, frontlines, operational lines, operation graphics, labels, and unit-counter style overlays.
 - **Transport workbench:** inspect roads and rail as the strongest public transport layers, with airports, ports, mineral resources, energy facilities, industrial land, logistics hubs, and layer order available through overview or workbench previews.
 - **Bilingual export workflow:** use English or Simplified Chinese, save editable project files, and export PNG/JPG presentation snapshots at 1x-4x scale.
+
+## Try the Public Demo in 5 Steps
+
+1. Open the [Live Demo](https://raederhans.github.io/scenario-forge/).
+2. From the landing page, enter the editor/demo workspace.
+3. Open the guided path directly at [`/app/?view=guide`](https://raederhans.github.io/scenario-forge/app/?view=guide).
+4. TNO 1962 is the default public scenario path; you can also switch among Blank Map, Modern World, HOI4 1936, HOI4 1939, and TNO 1962.
+5. Open Project / Export and download a PNG/JPG snapshot or save an editable project JSON.
+
+## Current Public Surface
+
+| Surface | Public demo status | Local/developer boundary |
+| --- | --- | --- |
+| Public scenario baselines | Online: Blank Map, Modern World, HOI4 1936, HOI4 1939, and TNO 1962. | HGO 1936 remains a developer/local preview and appears separately from the five public baselines. |
+| HGO runtime preview | Developer/local only. | Used for HOI4-style country identity, palette, flag, and raster-render validation. |
+| Transport workbench | Online overview/workbench: roads and rail are the strongest public paths; airports and ports provide overview context. | Mineral resources, energy, industry, and logistics remain preview/workbench families while coverage grows. |
+| Export workbench | Online. | Exports PNG/JPG snapshots at 1x-4x scale and saves editable project JSON. |
+| Cloud Saves/community | Local backend preview. | Start `start_backend_preview.bat` to try account sessions, Cloud Saves, posts, downloads, comments, reports, and admin moderation flows. |
+| Data provenance | Source-backed and documented. | Detailed records live in `data/source_ledger.json`, `.provenance.json` files under `data/`, transport recipes under `data/transport_layers/`, and generated asset source records. |
 
 ## See It In Action
 
@@ -82,6 +102,7 @@ Open the live build:
 - https://raederhans.github.io/scenario-forge/
 
 The online version is the best starting point for scenario editing, appearance tuning, project files, and exports.
+Use the 5-step path above when you want a quick public-demo success run.
 
 ### Local Editor
 

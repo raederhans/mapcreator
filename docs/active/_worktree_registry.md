@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-29 22:10 UTC
+Last updated: 2026-06-29 22:16 UTC
 
 ## Integration Owner
 
@@ -28,8 +28,18 @@ Current rows reflect `git worktree list --porcelain` after P33 reached `origin/m
 | `C:\Users\raede\.codex\worktrees\mapcreator-p29-renderer-svg-surface-lifecycle-preflight` | branch `codex/p29-renderer-svg-surface-lifecycle-preflight@f0000344` | historical P29 preflight base | integrated-clean, still present | Clean; historical hot files were SVG lifecycle docs/tests, architecture boundary, package scripts, and registry. | Direct `git status --short --branch` returned clean. Recovery commit `f0000344`. | Green for this Pages audit; yellow for future SVG lifecycle inventory edits. | Safe to remove in a broader integrated-worktree cleanup after recovery commit is retained. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-p30-renderer-svg-surface-lifecycle-owner-current` | branch `codex/p30-renderer-svg-surface-lifecycle-owner-current@6cc83150`; tracking `origin/main`, behind by 14 commits | historical P30 current-main closeout base | integrated-clean, still present | Clean; historical hot files were P30 docs/registry/lesson closeout. | Direct `git status --short --branch` returned clean. Recovery commit `6cc83150`. | Green for this Pages audit; yellow for future registry and renderer SVG lifecycle edits. | Safe to remove in a broader integrated-worktree cleanup after recovery commit is retained. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-p31-fit-projection-lifecycle-preflight` | branch `codex/p31-fit-projection-lifecycle-preflight@7fb3ade5`; tracking `origin/main`, behind by 12 commits | historical P31 preflight base | integrated-clean, still present | Clean; historical hot files were fitProjection preflight docs/tests/package/architecture registry. | Direct `git status --short --branch` returned clean. Recovery commit `7fb3ade5`. | Green for this Pages audit; yellow for future fitProjection inventory and registry edits. | Safe to remove in a broader integrated-worktree cleanup after recovery commit is retained. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-phase3a-public-narrative` | branch `codex/phase3a-public-narrative`; base `origin/main@fef1d059` | `origin/main@fef1d059`; latest full CI remains `65bae7ed` because `fef1d059` used `[skip ci]` | ready-for-integration | Docs-only scope: `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, and this registry. Runtime, build policy, data, scenario manifests, and `dist/**` are outside this owner. | Preflight: current remote main is `fef1d059`; GitHub Actions for `65bae7ed` passed Build and Deploy Scenario Forge `28405572524`, Scenario Contract Matrix `28405572346`, perf-pr-gate `28405572365`, and Transport Contract Required `28405572360`. Local docs validation passed for this owner. | Green for runtime/render/data/Pages policy; yellow for README/release narrative and registry overlap. | Push the Phase 3A docs commit through main, then keep/remove this recovery worktree according to the broader integrated-worktree cleanup pass. |
 
 ## Ready Delivery Packages
+
+### Phase 3A Public Product Narrative 2026-06-29
+
+1. Added a top-level public-demo success path to `README.md` and `README.zh-CN.md`, including Live Demo, editor entry, `/app/?view=guide`, TNO 1962 default path, and Project / Export snapshot download.
+2. Added matching public-surface tables that separate online baselines, HGO developer/local preview, transport workbench maturity, export workbench, local backend preview, and data provenance records.
+3. Added `docs/releases/v0.1-public-demo-draft.md` with demo URL, five public baselines, HGO local preview policy, Pages size status, deployed release smoke coverage, local-only systems, data/source families, known limitations, and GitHub About/topics recommendation.
+4. Preserved runtime, map rendering, Pages build policy, data payloads, scenario manifests, and `dist/**`.
+
+Files: core docs `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`; coordination docs `docs/active/_worktree_registry.md`. Diff summary: docs-only README opening flow, public demo path, surface tables, release draft, and registry row/package. Commit status: final Phase 3A commit follows this delivery package. Base commit is `origin/main@fef1d059`; latest full CI baseline remains `origin/main@65bae7ed` because `fef1d059` used `[skip ci]`. Potential conflicts: yellow for future README/release/registry edits; green for runtime/render/data/Pages policy. Validation passed: no README/markdown lint script exists in `package.json`; `git diff --check`; `py -3 -m unittest tests.test_app_entry_resolver -q` 4/4; docs fact matrix verified headings, five public baselines, TNO default path, HGO local boundary, local backend boundary, Pages size status, release smoke facts, GitHub About recommendation, and changed-file scope. Not run: broad app, browser, Pages dist, and deployment smoke because this is a docs-only narrative pass with no runtime/build/data changes. Recommendation: push the docs commit to `origin/main`, then leave local integrated-worktree cleanup to the broader cleanup pass.
 
 ### Audit Final CI Gate Closeout 2026-06-29
 
