@@ -42,6 +42,8 @@ const FILES = Object.freeze({
   rendererSvgSurfaceLifecyclePreflightDoc: "docs/active/renderer-svg-surface-lifecycle-preflight-20260629.md",
   rendererSvgSurfaceLifecycleOwnerDoc: "docs/active/renderer-svg-surface-lifecycle-owner-p30-20260629.md",
   rendererSvgSurfaceLifecycleInventoryTest: "tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs",
+  rendererFitProjectionLifecyclePreflightDoc: "docs/active/renderer-fit-projection-lifecycle-preflight-20260629.md",
+  rendererFitProjectionLifecycleInventoryTest: "tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -161,6 +163,8 @@ function collectFailures() {
   const rendererSvgSurfaceLifecyclePreflightDoc = readProjectFile(FILES.rendererSvgSurfaceLifecyclePreflightDoc);
   const rendererSvgSurfaceLifecycleOwnerDoc = readProjectFile(FILES.rendererSvgSurfaceLifecycleOwnerDoc);
   const rendererSvgSurfaceLifecycleInventoryTest = readProjectFile(FILES.rendererSvgSurfaceLifecycleInventoryTest);
+  const rendererFitProjectionLifecyclePreflightDoc = readProjectFile(FILES.rendererFitProjectionLifecyclePreflightDoc);
+  const rendererFitProjectionLifecycleInventoryTest = readProjectFile(FILES.rendererFitProjectionLifecycleInventoryTest);
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.renderer]: renderer,
@@ -199,6 +203,8 @@ function collectFailures() {
     [FILES.rendererSvgSurfaceLifecyclePreflightDoc]: rendererSvgSurfaceLifecyclePreflightDoc,
     [FILES.rendererSvgSurfaceLifecycleOwnerDoc]: rendererSvgSurfaceLifecycleOwnerDoc,
     [FILES.rendererSvgSurfaceLifecycleInventoryTest]: rendererSvgSurfaceLifecycleInventoryTest,
+    [FILES.rendererFitProjectionLifecyclePreflightDoc]: rendererFitProjectionLifecyclePreflightDoc,
+    [FILES.rendererFitProjectionLifecycleInventoryTest]: rendererFitProjectionLifecycleInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -781,6 +787,104 @@ function collectFailures() {
     if (!packageJson.includes(token)) {
       failures.push(`${FILES.packageJson} must expose P30 validation script: ${token}`);
     }
+  }
+
+  if (rendererSourceFiles.includes("js/core/renderer/renderer_fit_projection_owner.js")) {
+    failures.push("P31 must reserve js/core/renderer/renderer_fit_projection_owner.js for P32.");
+  }
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P30 surface/projection/svg lifecycle baseline",
+    "## Current fitProjection call sites",
+    "## fitProjection input inventory",
+    "## fitProjection side-effect inventory",
+    "## Projected bounds dependency map",
+    "## Spatial index and hit-canvas dependency map",
+    "## Special zone and overlay dependency map",
+    "## Viewport command/resize dependency map",
+    "## P32 allowed first move",
+    "## P32 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererFitProjectionLifecyclePreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererFitProjectionLifecyclePreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P31 is preflight only.",
+    "P32 may add `js/core/renderer/renderer_fit_projection_owner.js`.",
+    "P32 may only move fitProjection orchestration through dependency-injected getters and effects.",
+    "`js/core/map_renderer.js` remains the composition root.",
+    "runtimeState.landData",
+    "runtimeState.width",
+    "runtimeState.height",
+    "PROJECTION_FIT_PADDING_RATIO",
+    "getLogicalCanvasDimensions()",
+    "getRenderableLandFeatures(canvasWidth, canvasHeight, { forceProd: true })",
+    "rendererSurfaceHost.getProjection()",
+    "projection.fitExtent",
+    "cityAnchorCache = new WeakMap();",
+    "rebuildProjectedBoundsCache();",
+    "buildSpatialIndex();",
+    "runtimeState.hitCanvasDirty = true;",
+    "updateSpecialZonesPaths();",
+    "renderSpecialZoneEditorOverlay();",
+    "updateZoomTranslateExtent();",
+    "markAllOverlaysDirty();",
+    "projected_geometry_bounds_owner.js` owns projected bounds calculations and cache rebuild helpers through injected getters and effects.",
+    "viewport_read_model_owner.js` owns read-model calculations",
+    "viewport_command_owner.js` owns zoom command effects",
+    "viewport_resize_lifecycle_owner.js` currently calls fitProjection as an injected effect",
+    "Render pass execution is not part of P32.",
+    "Direct `runtimeState` writes.",
+    "Import of `js/core/map_renderer.js`.",
+    "`drawCanvas`.",
+    "`renderPassToCache`.",
+    "Hit canvas build.",
+    "Selection/fill.",
+    "Scenario refresh/chunk.",
+    "Exact-after-settle.",
+    "Strategic overlay runtime.",
+    "Render lifecycle owner.",
+    "`setMapData` migration.",
+    "`initZoom` or `bindEvents` migration.",
+    "Renderer public facade change.",
+  ]) {
+    if (!rendererFitProjectionLifecyclePreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererFitProjectionLifecyclePreflightDoc} must lock P31/P32 fitProjection lifecycle token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const FIT_PROJECTION_OWNER_PATH = \"js/core/renderer/renderer_fit_projection_owner.js\";",
+    "const FIT_PROJECTION_REQUIRED_TOKENS = Object.freeze([",
+    "const FIT_PROJECTION_STATE_WRITE_TOKEN_PARTS = Object.freeze([",
+    "const MAP_RENDERER_WRAPPER_TOKENS = Object.freeze([",
+    "const VIEWPORT_RESIZE_FIT_PROJECTION_TOKENS = Object.freeze([",
+    "const RENDER_SEMANTIC_ANCHORS = Object.freeze([",
+    "const P32_ALLOWED_TOKENS = Object.freeze([",
+    "const P32_FORBIDDEN_TOKENS = Object.freeze([",
+    "repoFileExists(FIT_PROJECTION_OWNER_PATH)",
+    "function fitProjection({ skipSpatialIndex = false } = {})",
+    "rendererSurfaceHost.getProjection().fitExtent",
+    "effects.fitProjection?.({ skipSpatialIndex: interactiveLayoutResize });",
+    "renderer_projection_path_owner.js",
+    "renderer_svg_surface_lifecycle_owner.js",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createExactAfterSettleScheduler({",
+    "createScenarioRefreshRuntime({",
+    "createStrategicOverlayRuntimeOwner({",
+    "P32 may add `js/core/renderer/renderer_fit_projection_owner.js`.",
+    "Direct `runtimeState` writes.",
+    "Renderer public facade change.",
+  ]) {
+    if (!rendererFitProjectionLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererFitProjectionLifecycleInventoryTest} must lock P31 fitProjection inventory token: ${token}`);
+    }
+  }
+  if (!packageJson.includes("\"test:node:renderer-fit-projection-lifecycle-inventory\": \"node --test tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P31 fitProjection lifecycle inventory script.`);
   }
 
   const requiredImports = [
