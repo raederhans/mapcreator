@@ -492,3 +492,7 @@
 
 ### Pages 超限 manifest 要保留可审计事实
 - Pages payload 超过发布上限时，builder 可以先写有效 manifest，再用 size gate 退出红灯；测试应校验 `size_gate`、最大文件和目录汇总，避免超限状态被空 manifest 或模糊失败信息遮住。
+
+### Pages release smoke 目标 URL 要显式
+- 候选 release gate 必须从 `SCENARIO_FORGE_PAGES_URL` 或 `PLAYWRIGHT_TEST_BASE_URL` 读取显式目标；默认公开 URL 只属于 deployed-site 验证入口。
+- GitHub Pages deploy job 要在 `actions/deploy-pages` 后用 `steps.deployment.outputs.page_url` 跑 smoke；独立脚本也要有 workflow owner。
