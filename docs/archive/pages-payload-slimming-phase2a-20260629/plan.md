@@ -21,9 +21,23 @@ Branch: `codex/phase2a-pages-payload-slimming`
 - [x] Patch build policy and affected metadata/tests.
 - [x] Rebuild `dist/` and validate size gate.
 - [x] Run targeted Node/Python/static verification.
-- [x] Run independent code review and architect verification.
-- [ ] Commit, push, merge into `main`, update registry, and clean the worktree after verification.
+- [x] Run independent code-review lane.
+- [x] Complete independent architect verification.
+- [x] Commit, push, merge into `main`, and update registry after verification.
 
 ## Live Process Ownership
 
 Main agent owns all build/test/dev-server/browser live processes. Subagents may inspect source files and completed outputs only.
+
+## Current Evidence
+
+- `npm run verify:pages-dist`: passed; total `972533254` bytes / `927.48 MiB`; `size_gate.status == "within_limit"`.
+- `npm run verify:toolbar-split-boundary`: passed, 53 tests.
+- `node --test tests/hgo_raster_renderer.node.test.mjs tests/hgo_runtime_preview.node.test.mjs tests/hgo_runtime_preview_toolbar.node.test.mjs`: passed, 41 tests; Node emitted existing module-type warnings.
+- `py -3 -m unittest tests.test_scenario_contracts -q`: passed, 41 tests; expected risky fixture diagnostic printed with exit code 0.
+- `py -3 -m unittest tests.test_data_catalog_contract -q`: passed, 18 tests.
+- `py -3 -m unittest tests.test_transport_manifest_contracts -q`: passed, 18 tests.
+- `npm run verify:architecture-boundaries`: passed.
+- `npm run verify:test-import-graph`: passed, 49 specs.
+- Architect review: APPROVED after replacing the positional alias cap with semantic stable-key priority.
+- `git diff --check`: passed with CRLF normalization warnings only.
