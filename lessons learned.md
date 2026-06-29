@@ -78,6 +78,7 @@
 - post-ready task 可能晚于 startup benchmark 快照；渲染 warmup 必须先确认指标能进入采样窗口，再判断是否有优化价值。
 - full hit canvas 从 startup/recovery 同步路径移到 idle 后，先结合 `mode`、`reason` 和 `hitCanvasViewportProfile.profile` 判断它是否还压在启动热路径上。
 - editor performance benchmark 默认使用当前 worktree 的 runtime root 和 active server URL；显式复用 server 时同步校验 `active_server.json` 里的 `pid`、`cwd` 和 URL，避免命中旧 worktree 服务或默认端口漂移页。
+- perf runner 等待 ready 状态时读取应用集中诊断快照；每个 warmup/run 前探测自管 dev server，可避免动态 import 轮询在服务抖动时变成新的失败源。
 - 黑帧、长任务、wheel idle、最终 sharpness、真正首屏完成时间分别记录。
 
 ## UI、交互与文案
