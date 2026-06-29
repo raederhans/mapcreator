@@ -41,8 +41,8 @@
 - Passed: `npm run test:node:renderer-projection-path-lifecycle` (14/14) after updating its older raw-fitExtent expectation for the P32 owner boundary.
 - Passed required neighbor suites: viewport read-model 12/12, viewport command 8/8, viewport resize lifecycle 12/12, projected geometry bounds 12/12, renderer SVG surface lifecycle 12/12, runtime state behavior 10/10, render transaction diagnostics 21/21, scenario refresh plans 24/24, exact-after-settle refresh plans 9/9, scenario chunk contracts 57/57.
 - Passed: `npm run verify:architecture-boundaries`, `npm run verify:state-write-allowlist`, `npm run verify:test-import-graph`, and `git diff --check`.
-- Partial: `npm run verify:pages-dist` generated the dist mirror, then failed only the Pages size gate: `1101.80 MiB exceeds 1024.00 MiB by 77.80 MiB`.
-- Source/dist owner mirror check passed after review fix: both `js/core/renderer/renderer_fit_projection_owner.js` and `dist/app/js/core/renderer/renderer_fit_projection_owner.js` have SHA256 `555C318CF81EEF21B72A68E97E5750414D83635C4E469453726A8185AC9305C2`.
+- Passed after rebase over Phase 2A Pages slimming: `npm run verify:pages-dist` with builder total size `927.48 MiB`, startup shell 42/42, and landing showcase 9/9.
+- Source/dist owner mirror check passed after rebase with normalized line endings. `git ls-files --eol` reports source working copy `w/crlf` and dist `w/lf`; normalized content matches.
 - Skipped: browser smoke, because `node_modules/@playwright/test/cli.js` is absent in this clean worktree.
 
 ## Review closeout
@@ -55,5 +55,6 @@
 ## Integration state
 
 - This branch started from `origin/main@7fb3ade5`.
-- During P32 verification, `origin/main` advanced to `0254d766`; the branch must rebase over current main before final integration.
-- Current overlap risk is red for `dist/pages-dist-manifest.json` with the Pages slimming closeout line, yellow for `package.json`, `tools/check_architecture_boundaries.mjs`, and renderer lifecycle tests, and green for unrelated parent checkout WIP.
+- The branch rebased over `origin/main@d86462aa` and functional commit `59924ec7` was pushed to `origin/main`.
+- Pages manifest conflict was resolved by regenerating from the Phase 2A slimmed baseline; final manifest reports `size_gate.status=within_limit` and `total_bytes=972534038`.
+- Current overlap risk is green after functional push; remaining closeout work is registry truth only.
