@@ -35,6 +35,21 @@ HERO_SCENARIO_ASSETS = (
     ("hoi4-1939", "hoi4_1939", "hero-hoi4-1939.svg", "hero-hoi4-1939.json"),
     ("tno-1962", "tno_1962", "hero-tno-1962.svg", "hero-tno-1962.json"),
 )
+
+
+def assert_css_block_avoids_viewport_font_scaling(
+    test_case: unittest.TestCase,
+    styles_css: str,
+    selector: str,
+) -> None:
+    match = re.search(rf"{re.escape(selector)}\s*\{{(?P<body>[^}}]*)\}}", styles_css, re.S)
+    test_case.assertIsNotNone(match)
+    body = match.group("body")
+    test_case.assertIn("font-size:", body)
+    test_case.assertNotIn("clamp(", body)
+    test_case.assertNotIn("vw", body)
+
+
 def import_landing_builder(module_name: str):
     try:
         module = __import__(f"tools.{module_name}", fromlist=[module_name])
@@ -823,6 +838,18 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="workOneAlt"',
             'data-i18n-alt="workTwoAlt"',
             'data-i18n-alt="workThreeAlt"',
+            'id="story"',
+            'data-story-root',
+            'data-story-stage-image',
+            'data-story-step-button="baseline"',
+            'data-story-step-button="scenario"',
+            'data-story-step-button="transport"',
+            'data-story-step-button="evidence"',
+            'data-story-step-button="export"',
+            'data-story-compare="hoi4-1939"',
+            'data-story-evidence-source="data/scenarios/index.json:public_baseline_ids.length"',
+            'data-i18n="storyEyebrow"',
+            'data-i18n-aria-label="storyStageLabel"',
             'data-i18n="chipBlank"',
             'data-i18n="chipHoi41936"',
             'data-i18n="chipHoi41939"',
@@ -876,6 +903,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "initHeroMap",
             "DEFAULT_HERO_MODE",
             "HERO_SCENARIO_ASSETS",
+            "initProductStory",
+            "PRODUCT_STORY_STEPS",
+            "PRODUCT_STORY_COMPARISON_ASSETS",
+            "storyStageTitleBaseline",
+            "storyStageTitleExport",
+            "syncProductStoryFromDom",
             "hero-hoi4-1936.json",
             "hero-hoi4-1939.webp",
             "hero-tno-1962.webp",
@@ -929,6 +962,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
+        self.assertIn(".product-story__grid", styles_css)
+        self.assertIn(".story-stage", styles_css)
+        self.assertIn("position: sticky", styles_css)
+        self.assertIn(".story-evidence", styles_css)
+        self.assertIn('.story-step[aria-pressed="true"]', styles_css)
+        for selector in (".story-stage__hud strong", ".story-step__copy strong"):
+            with self.subTest(story_font_selector=selector):
+                assert_css_block_avoids_viewport_font_scaling(self, styles_css, selector)
         self.assertIn("[data-showcase-object]", app_js)
         self.assertNotIn("SHOWCASE_LAYER_COPY_KEYS[layer] || SHOWCASE_LAYER_COPY_KEYS.political", app_js)
         self.assertIn("height: 44px", styles_css)
@@ -1022,6 +1063,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewZoomIn:",
             "previewZoomOut:",
             "previewZoomReset:",
+            "storyTitle:",
+            "storyStepBaselineTitle:",
+            "storyStepExportProof:",
+            "storyStageTitleExport:",
             "chipHoi41936:",
             "chipHoi41939:",
             "chipTno1962:",
@@ -1055,6 +1100,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "showcaseLayerRailTitle:",
             "showcaseLayerCitiesTitle:",
             "showcaseLayerDayNightTitle:",
+            "storyTitle:",
+            "storyStepBaselineTitle:",
+            "storyStepExportProof:",
+            "storyStageTitleExport:",
             "chipHoi41936:",
             "chipHoi41939:",
             "chipTno1962:",
@@ -1211,7 +1260,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewDragging",
             "initPreviewTabs",
             "initHeroMap",
+            "initProductStory",
             "initMetricCountUp",
+            "PRODUCT_STORY_STEPS",
+            "PRODUCT_STORY_COMPARISON_ASSETS",
+            "storyStageTitleBaseline",
+            "storyStageTitleExport",
+            "syncProductStoryFromDom",
             "previewPanelTransportTitle",
             "dataCardOneTitle",
             "faqOneQuestion",
@@ -1262,6 +1317,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
+        self.assertIn(".product-story__grid", styles_css)
+        self.assertIn(".story-stage", styles_css)
+        self.assertIn("position: sticky", styles_css)
+        self.assertIn(".story-evidence", styles_css)
+        self.assertIn('.story-step[aria-pressed="true"]', styles_css)
+        for selector in (".story-stage__hud strong", ".story-step__copy strong"):
+            with self.subTest(story_font_selector=selector):
+                assert_css_block_avoids_viewport_font_scaling(self, styles_css, selector)
         self.assertIn(".showcase-map__viewport", styles_css)
         self.assertIn(".showcase-map__viewport::after", styles_css)
         self.assertIn("radial-gradient(ellipse at center", styles_css)
@@ -1327,13 +1390,21 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(payload["max_allowed_bytes"], build_pages_dist.MAX_PAGES_DIST_BYTES)
         self.assertEqual(build_pages_dist.MAX_PAGES_DIST_BYTES, build_pages_dist.GITHUB_PAGES_HARD_MAX_BYTES)
         self.assertEqual(payload["max_allowed_bytes"], 1024 * 1024 * 1024)
+        self.assertEqual(build_pages_dist.PAGES_DIST_WARNING_BYTES, 950 * 1024 * 1024)
         self.assertLessEqual(payload["max_allowed_bytes"], 1024 * 1024 * 1024)
         expected_over_by_bytes = max(payload["total_bytes"] - payload["max_allowed_bytes"], 0)
         expected_status = "over_limit" if expected_over_by_bytes else "within_limit"
+        expected_warning_over_by_bytes = max(payload["total_bytes"] - build_pages_dist.PAGES_DIST_WARNING_BYTES, 0)
+        expected_warning_status = "over_warning" if expected_warning_over_by_bytes else "within_warning"
         self.assertEqual(size_gate.get("status"), expected_status)
         self.assertEqual(size_gate.get("over_by_bytes"), expected_over_by_bytes)
+        self.assertEqual(size_gate.get("warning_bytes"), build_pages_dist.PAGES_DIST_WARNING_BYTES)
+        self.assertEqual(size_gate.get("warning_status"), expected_warning_status)
+        self.assertEqual(size_gate.get("warning_over_by_bytes"), expected_warning_over_by_bytes)
         self.assertEqual(size_gate.get("status"), "within_limit")
         self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
+        self.assertEqual(size_gate.get("warning_status"), "within_warning")
+        self.assertLess(payload["total_bytes"], build_pages_dist.PAGES_DIST_WARNING_BYTES)
         self.assertEqual(
             records_by_path["pages-dist-manifest.json"]["size_bytes"],
             DIST_MANIFEST.stat().st_size,

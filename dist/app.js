@@ -67,6 +67,65 @@ const translations = {
     workThreeTitle: "Turn workbench layers into a finished corridor map.",
     workThreeBody:
       "Combine roads, rail, stations, city lights, rivers, and terrain into a compact output that feels ready to publish.",
+    storyEyebrow: "Product story",
+    storyTitle: "From world state to export-ready map.",
+    storyBody:
+      "Follow the same path a creator takes: choose a baseline, switch the scenario state, add context, inspect evidence, and export a finished map.",
+    storyStageLabel: "Interactive product story map stage",
+    storyStageChrome: "Scenario Forge story stage",
+    storyComparisonLabel: "Scenario state comparison",
+    storyCompare1936: "1936",
+    storyCompare1939: "1939",
+    storyCompareTno: "TNO 1962",
+    storyEvidenceSummary: "Source-backed evidence",
+    storyEvidenceBaselinesLabel: "public baselines",
+    storyEvidenceScenarioLabel: "Europe political features",
+    storyEvidenceTransportLabel: "Japan road + rail source features",
+    storyEvidenceCatalogLabel: "cataloged assets",
+    storyEvidenceExportLabel: "corridor output marks",
+    storyStepsLabel: "Product story steps",
+    storyAltBaseline: "Generated HOI4 1936 baseline map.",
+    storyAltScenario: "Generated scenario comparison map for HOI4 and TNO baselines.",
+    storyAltTransport: "Generated Japan transport preview map.",
+    storyAltEvidence: "Generated Europe showcase map with source-backed layers.",
+    storyAltExport: "Generated Japan corridor atlas output map.",
+    storyStageBadgeBaseline: "Baseline selected",
+    storyStageTitleBaseline: "Start from a named public baseline.",
+    storyStageBodyBaseline:
+      "The map begins from a scenario frame with known ownership and geography.",
+    storyStageBadgeScenario: "Scenario switched",
+    storyStageTitleScenario: "Scrub between bookmarks without losing the map.",
+    storyStageBodyScenario:
+      "The comparison control swaps generated views so the same region can carry different world states.",
+    storyStageBadgeTransport: "Context added",
+    storyStageTitleTransport: "Transport and geography turn the map into a readable place.",
+    storyStageBodyTransport:
+      "Roads, rail, city anchors, terrain, rivers, and night context build a richer output from existing data.",
+    storyStageBadgeEvidence: "Evidence visible",
+    storyStageTitleEvidence: "Provenance stays close to the visual result.",
+    storyStageBodyEvidence:
+      "Counts and source markers are pulled from checked-in scenario, catalog, and landing metadata.",
+    storyStageBadgeExport: "Export-ready",
+    storyStageTitleExport: "The finished map can leave the workbench as a compact story asset.",
+    storyStageBodyExport:
+      "The corridor output combines transport, cities, lights, terrain, and rivers into one presentation view.",
+    storyStepBaselineTitle: "Choose baseline",
+    storyStepBaselineBody: "Begin with a named public world state before opening the design surface.",
+    storyStepBaselineProof: "5 public baselines are registered.",
+    storyStepScenarioTitle: "Switch scenario state",
+    storyStepScenarioBody: "Scrub between bookmarks so political change reads as geography.",
+    storyStepScenarioProof: "1936, 1939, and TNO views reuse existing generated maps.",
+    storyStepTransportTitle: "Add transport/context",
+    storyStepTransportBody:
+      "Layer roads, rail, cities, terrain, rivers, and night context onto the same map story.",
+    storyStepTransportProof: "Japan preview metadata keeps the transport counts visible.",
+    storyStepEvidenceTitle: "Inspect source-backed evidence",
+    storyStepEvidenceBody: "Keep provenance close to the map so a viewer can trust the output.",
+    storyStepEvidenceProof: "The catalog tracks the checked-in data surface.",
+    storyStepExportTitle: "Export the result",
+    storyStepExportBody: "Turn the layered workbench view into a compact presentation map.",
+    storyStepExportProof:
+      "The Japan corridor output combines roads, rail, stations, city lights, cities, terrain, and rivers.",
     showcaseEyebrow: "Cartography showcase",
     showcaseTitle:
       "A scenario page should look like it already knows how maps behave.",
@@ -391,6 +450,57 @@ const translations = {
     workThreeLabel: "Atlas 风格输出",
     workThreeTitle: "把工作台图层整理成走廊成图。",
     workThreeBody: "把道路、铁路、车站、城市夜光、河流和地形合成一张紧凑、可发布的地图。",
+    storyEyebrow: "产品叙事",
+    storyTitle: "从世界状态到可导出的成图。",
+    storyBody: "沿着创作者的真实路径阅读：选基线、切换场景状态、叠加上下文、查看证据，再导出成图。",
+    storyStageLabel: "可交互产品叙事地图舞台",
+    storyStageChrome: "Scenario Forge 叙事舞台",
+    storyComparisonLabel: "场景状态对比",
+    storyCompare1936: "1936",
+    storyCompare1939: "1939",
+    storyCompareTno: "TNO 1962",
+    storyEvidenceSummary: "来源证据",
+    storyEvidenceBaselinesLabel: "公开基线",
+    storyEvidenceScenarioLabel: "欧洲政治要素",
+    storyEvidenceTransportLabel: "日本道路 + 铁路源要素",
+    storyEvidenceCatalogLabel: "入库资产",
+    storyEvidenceExportLabel: "走廊成图标记",
+    storyStepsLabel: "产品叙事步骤",
+    storyAltBaseline: "生成式 HOI4 1936 基线地图。",
+    storyAltScenario: "生成式 HOI4 与 TNO 场景对比地图。",
+    storyAltTransport: "生成式日本交通预览地图。",
+    storyAltEvidence: "带来源图层的生成式欧洲展示地图。",
+    storyAltExport: "生成式日本走廊图集成图。",
+    storyStageBadgeBaseline: "已选择基线",
+    storyStageTitleBaseline: "从命名公开基线开始。",
+    storyStageBodyBaseline: "地图先落在一套明确的场景框架里，归属和地理都有来源。",
+    storyStageBadgeScenario: "已切换场景",
+    storyStageTitleScenario: "在不同书签之间切换，地图仍保持同一套阅读方式。",
+    storyStageBodyScenario: "对比控件切换已有生成视图，让同一区域承载不同世界状态。",
+    storyStageBadgeTransport: "已叠加上下文",
+    storyStageTitleTransport: "交通和地理上下文让地图变成可阅读的地方。",
+    storyStageBodyTransport: "道路、铁路、城市锚点、地形、河流和夜光上下文共同支撑成图。",
+    storyStageBadgeEvidence: "证据可见",
+    storyStageTitleEvidence: "来源信息贴近最终视觉结果。",
+    storyStageBodyEvidence: "计数和来源标记来自已签入的场景、目录和 landing metadata。",
+    storyStageBadgeExport: "可导出",
+    storyStageTitleExport: "完成后的地图可以作为紧凑的叙事资产离开工作台。",
+    storyStageBodyExport: "走廊成图把交通、城市、夜光、地形和河流合成到同一个展示视图。",
+    storyStepBaselineTitle: "选择基线",
+    storyStepBaselineBody: "从一个命名公开世界状态开始，再进入设计界面。",
+    storyStepBaselineProof: "已登记 5 个公开基线。",
+    storyStepScenarioTitle: "切换场景状态",
+    storyStepScenarioBody: "在书签之间切换，让政治变化成为可读的地理差异。",
+    storyStepScenarioProof: "1936、1939 和 TNO 视图复用已有生成地图。",
+    storyStepTransportTitle: "叠加交通与上下文",
+    storyStepTransportBody: "把道路、铁路、城市、地形、河流和夜光上下文叠到同一条地图叙事里。",
+    storyStepTransportProof: "日本预览 metadata 保留了交通计数。",
+    storyStepEvidenceTitle: "查看来源证据",
+    storyStepEvidenceBody: "来源信息贴近地图，观看者更容易判断成图可信度。",
+    storyStepEvidenceProof: "目录记录了已签入的数据表面。",
+    storyStepExportTitle: "导出结果",
+    storyStepExportBody: "把工作台里的图层组合导出成紧凑展示地图。",
+    storyStepExportProof: "日本走廊成图组合了道路、铁路、车站、城市夜光、城市、地形和河流。",
     showcaseEyebrow: "制图展示",
     showcaseTitle: "场景页面应该一眼看起来就懂地图。",
     showcaseBody: "这张欧洲视图由场景、拓扑、首都和铁路数据生成，和地图工作台使用同一批数据来源。",
@@ -648,6 +758,59 @@ const HERO_SCENARIO_ASSETS = {
     altKey: "heroAltTno1962",
   },
 };
+const DEFAULT_PRODUCT_STORY_STEP = "baseline";
+const DEFAULT_PRODUCT_STORY_COMPARISON = "hoi4-1936";
+const PRODUCT_STORY_COMPARISON_ASSETS = {
+  "hoi4-1936": {
+    src: "./assets/hero-hoi4-1936.webp",
+    altKey: "storyAltBaseline",
+  },
+  "hoi4-1939": {
+    src: "./assets/hero-hoi4-1939.webp",
+    altKey: "storyAltScenario",
+  },
+  "tno-1962": {
+    src: "./assets/hero-tno-1962.webp",
+    altKey: "storyAltScenario",
+  },
+};
+const PRODUCT_STORY_STEPS = {
+  baseline: {
+    src: "./assets/hero-hoi4-1936.webp",
+    altKey: "storyAltBaseline",
+    badgeKey: "storyStageBadgeBaseline",
+    titleKey: "storyStageTitleBaseline",
+    bodyKey: "storyStageBodyBaseline",
+  },
+  scenario: {
+    comparisonDriven: true,
+    altKey: "storyAltScenario",
+    badgeKey: "storyStageBadgeScenario",
+    titleKey: "storyStageTitleScenario",
+    bodyKey: "storyStageBodyScenario",
+  },
+  transport: {
+    src: "./assets/japan-preview-transport.webp",
+    altKey: "storyAltTransport",
+    badgeKey: "storyStageBadgeTransport",
+    titleKey: "storyStageTitleTransport",
+    bodyKey: "storyStageBodyTransport",
+  },
+  evidence: {
+    src: "./assets/europe-1936-showcase.svg",
+    altKey: "storyAltEvidence",
+    badgeKey: "storyStageBadgeEvidence",
+    titleKey: "storyStageTitleEvidence",
+    bodyKey: "storyStageBodyEvidence",
+  },
+  export: {
+    src: "./assets/work-atlas-japan-corridor.webp",
+    altKey: "storyAltExport",
+    badgeKey: "storyStageBadgeExport",
+    titleKey: "storyStageTitleExport",
+    bodyKey: "storyStageBodyExport",
+  },
+};
 
 function getStoredLanguage() {
   try {
@@ -698,6 +861,7 @@ function applyLanguage(language) {
   if (twitterTitle) twitterTitle.setAttribute("content", copy.metaTitle);
   formatMetricNumbers(language);
   updateShowcaseLayerCopy(language);
+  syncProductStoryFromDom();
   syncHeroMapFromDom();
 
   try {
@@ -900,6 +1064,146 @@ function initHeroMap() {
       syncHeroMap(root, nextMode, { animate: !motionQuery?.matches });
     });
   });
+}
+
+function resolveProductStoryStep(root, stepId) {
+  if (Object.prototype.hasOwnProperty.call(PRODUCT_STORY_STEPS, stepId)) {
+    delete root.dataset.storyError;
+    return stepId;
+  }
+  root.dataset.storyError = stepId || "missing";
+  return DEFAULT_PRODUCT_STORY_STEP;
+}
+
+function resolveProductStoryComparison(comparisonId) {
+  return Object.prototype.hasOwnProperty.call(PRODUCT_STORY_COMPARISON_ASSETS, comparisonId)
+    ? comparisonId
+    : DEFAULT_PRODUCT_STORY_COMPARISON;
+}
+
+function getProductStoryAsset(root, stepId) {
+  const step = PRODUCT_STORY_STEPS[stepId] || PRODUCT_STORY_STEPS[DEFAULT_PRODUCT_STORY_STEP];
+  if (!step.comparisonDriven) return step;
+  const comparisonId = resolveProductStoryComparison(root.dataset.storyComparison || DEFAULT_PRODUCT_STORY_COMPARISON);
+  return {
+    ...step,
+    ...PRODUCT_STORY_COMPARISON_ASSETS[comparisonId],
+  };
+}
+
+function updateProductStoryStage(root, language = getActiveLanguage()) {
+  const copy = translations[language] || translations.en;
+  const stepId = resolveProductStoryStep(root, root.dataset.storyStep || DEFAULT_PRODUCT_STORY_STEP);
+  const asset = getProductStoryAsset(root, stepId);
+  const image = root.querySelector("[data-story-stage-image]");
+  const badge = root.querySelector("[data-story-stage-badge]");
+  const title = root.querySelector("[data-story-stage-title]");
+  const body = root.querySelector("[data-story-stage-body]");
+
+  root.dataset.storyStep = stepId;
+  root.dataset.storyComparison = resolveProductStoryComparison(root.dataset.storyComparison || DEFAULT_PRODUCT_STORY_COMPARISON);
+  root.dataset.storyStageAsset = asset.src;
+
+  if (image) {
+    image.src = asset.src;
+    image.alt = copy[asset.altKey] || "";
+    image.setAttribute("src", asset.src);
+    image.setAttribute("data-i18n-alt", asset.altKey);
+  }
+  if (badge) badge.textContent = copy[asset.badgeKey] || "";
+  if (title) title.textContent = copy[asset.titleKey] || "";
+  if (body) body.textContent = copy[asset.bodyKey] || "";
+
+  root.querySelectorAll("[data-story-step-button]").forEach((button) => {
+    const active = button.getAttribute("data-story-step-button") === stepId;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    if (active) {
+      button.setAttribute("aria-current", "step");
+    } else {
+      button.removeAttribute?.("aria-current");
+    }
+  });
+
+  root.querySelectorAll("[data-story-compare]").forEach((button) => {
+    const active = button.getAttribute("data-story-compare") === root.dataset.storyComparison;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  root.querySelectorAll("[data-story-evidence]").forEach((item) => {
+    item.dataset.storyEvidenceActive = item.getAttribute("data-story-evidence") === stepId ? "true" : "false";
+  });
+}
+
+function syncProductStoryFromDom() {
+  const root = document.querySelector("[data-story-root]");
+  if (!root) return;
+  updateProductStoryStage(root);
+}
+
+function initProductStory() {
+  const root = document.querySelector("[data-story-root]");
+  if (!root) return;
+
+  const stepButtons = Array.from(root.querySelectorAll("[data-story-step-button]"));
+  const compareButtons = Array.from(root.querySelectorAll("[data-story-compare]"));
+  if (!stepButtons.length) return;
+
+  const selectStep = (stepId, options = {}) => {
+    root.dataset.storyStep = resolveProductStoryStep(root, stepId);
+    updateProductStoryStage(root);
+    if (options.focus) {
+      stepButtons.find((button) => button.getAttribute("data-story-step-button") === root.dataset.storyStep)?.focus();
+    }
+  };
+
+  stepButtons.forEach((button, index) => {
+    button.addEventListener("click", () => selectStep(button.getAttribute("data-story-step-button")));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let nextIndex = index;
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (index + 1) % stepButtons.length;
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") nextIndex = (index - 1 + stepButtons.length) % stepButtons.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = stepButtons.length - 1;
+      selectStep(stepButtons[nextIndex].getAttribute("data-story-step-button"), { focus: true });
+    });
+  });
+
+  compareButtons.forEach((button, index) => {
+    button.addEventListener("click", () => {
+      root.dataset.storyComparison = resolveProductStoryComparison(button.getAttribute("data-story-compare"));
+      selectStep("scenario");
+    });
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let nextIndex = index;
+      if (event.key === "ArrowRight") nextIndex = (index + 1) % compareButtons.length;
+      if (event.key === "ArrowLeft") nextIndex = (index - 1 + compareButtons.length) % compareButtons.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = compareButtons.length - 1;
+      compareButtons[nextIndex].focus();
+      root.dataset.storyComparison = resolveProductStoryComparison(compareButtons[nextIndex].getAttribute("data-story-compare"));
+      selectStep("scenario");
+    });
+  });
+
+  if (!isReducedMotionPreferred() && "IntersectionObserver" in globalThis) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const stepId = visibleEntry?.target?.getAttribute?.("data-story-step-button");
+        if (stepId) selectStep(stepId);
+      },
+      { threshold: [0.42, 0.62], rootMargin: "-18% 0px -34% 0px" },
+    );
+    stepButtons.forEach((button) => observer.observe(button));
+  }
+
+  updateProductStoryStage(root);
 }
 
 function initTopbarState() {
@@ -1459,6 +1763,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   initPreviewTabs();
   initPreviewView();
+  initProductStory();
   initShowcaseLayers();
   initShowcaseView();
   initHeroMap();

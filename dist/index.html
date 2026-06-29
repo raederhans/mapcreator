@@ -223,6 +223,119 @@
           </div>
         </section>
 
+        <section id="story" class="section product-story" data-story-root data-story-step="baseline" data-story-comparison="hoi4-1936">
+          <div class="section-heading" data-reveal>
+            <p class="eyebrow" data-i18n="storyEyebrow">Product story</p>
+            <h2 data-i18n="storyTitle">From world state to export-ready map.</h2>
+            <p data-i18n="storyBody">
+              Follow the same path a creator takes: choose a baseline, switch the scenario state, add context, inspect evidence, and export a finished map.
+            </p>
+          </div>
+
+          <div class="product-story__grid">
+            <figure class="story-stage" aria-label="Interactive product story map stage" data-i18n-aria-label="storyStageLabel" data-story-stage data-reveal>
+              <div class="story-stage__bar" aria-hidden="true">
+                <span></span><span></span><span></span>
+                <strong data-i18n="storyStageChrome">Scenario Forge story stage</strong>
+              </div>
+              <div class="story-stage__media">
+                <img src="./assets/hero-hoi4-1936.webp" alt="Generated HOI4 1936 baseline map." data-story-stage-image data-i18n-alt="storyAltBaseline" width="980" height="680" loading="lazy" />
+                <div class="story-stage__hud" aria-live="polite">
+                  <span data-story-stage-badge data-i18n="storyStageBadgeBaseline">Baseline selected</span>
+                  <strong data-story-stage-title data-i18n="storyStageTitleBaseline">Start from a named public baseline.</strong>
+                  <p data-story-stage-body data-i18n="storyStageBodyBaseline">The map begins from a scenario frame with known ownership and geography.</p>
+                </div>
+              </div>
+
+              <figcaption class="story-stage__caption">
+                <div class="story-compare" role="group" aria-label="Scenario state comparison" data-i18n-aria-label="storyComparisonLabel">
+                  <button type="button" data-story-compare="hoi4-1936" aria-pressed="true" data-i18n="storyCompare1936">1936</button>
+                  <button type="button" data-story-compare="hoi4-1939" aria-pressed="false" data-i18n="storyCompare1939">1939</button>
+                  <button type="button" data-story-compare="tno-1962" aria-pressed="false" data-i18n="storyCompareTno">TNO 1962</button>
+                </div>
+                <details class="story-evidence" open>
+                  <summary data-i18n="storyEvidenceSummary">Source-backed evidence</summary>
+                  <dl>
+                    <div data-story-evidence="baseline" data-story-evidence-source="data/scenarios/index.json:public_baseline_ids.length">
+                      <dt data-i18n="storyEvidenceBaselinesLabel">public baselines</dt>
+                      <dd data-story-evidence-value="5">5</dd>
+                    </div>
+                    <div data-story-evidence="scenario" data-story-evidence-source="landing/assets/europe-1936-showcase.json:counts.political_features">
+                      <dt data-i18n="storyEvidenceScenarioLabel">Europe political features</dt>
+                      <dd data-story-evidence-value="7177">7177</dd>
+                    </div>
+                    <div data-story-evidence="transport" data-story-evidence-source="landing/assets/japan-preview.json:counts.road_source_features+counts.rail_source_features">
+                      <dt data-i18n="storyEvidenceTransportLabel">Japan road + rail source features</dt>
+                      <dd data-story-evidence-value="5899">5899</dd>
+                    </div>
+                    <div data-story-evidence="evidence" data-story-evidence-source="data/CATALOG.json:counts.entries">
+                      <dt data-i18n="storyEvidenceCatalogLabel">cataloged assets</dt>
+                      <dd data-story-evidence-value="658">658</dd>
+                    </div>
+                    <div data-story-evidence="export" data-story-evidence-source="landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines+counts.major_stations">
+                      <dt data-i18n="storyEvidenceExportLabel">corridor output marks</dt>
+                      <dd data-story-evidence-value="183">183</dd>
+                    </div>
+                  </dl>
+                </details>
+              </figcaption>
+            </figure>
+
+            <ol class="story-steps" aria-label="Product story steps" data-i18n-aria-label="storyStepsLabel" data-reveal>
+              <li>
+                <button type="button" class="story-step" data-story-step-button="baseline" aria-pressed="true" aria-current="step">
+                  <span class="story-step__index">01</span>
+                  <span class="story-step__copy">
+                    <strong data-i18n="storyStepBaselineTitle">Choose baseline</strong>
+                    <span data-i18n="storyStepBaselineBody">Begin with a named public world state before opening the design surface.</span>
+                    <em data-i18n="storyStepBaselineProof">5 public baselines are registered.</em>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="story-step" data-story-step-button="scenario" aria-pressed="false">
+                  <span class="story-step__index">02</span>
+                  <span class="story-step__copy">
+                    <strong data-i18n="storyStepScenarioTitle">Switch scenario state</strong>
+                    <span data-i18n="storyStepScenarioBody">Scrub between bookmarks so political change reads as geography.</span>
+                    <em data-i18n="storyStepScenarioProof">1936, 1939, and TNO views reuse existing generated maps.</em>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="story-step" data-story-step-button="transport" aria-pressed="false">
+                  <span class="story-step__index">03</span>
+                  <span class="story-step__copy">
+                    <strong data-i18n="storyStepTransportTitle">Add transport/context</strong>
+                    <span data-i18n="storyStepTransportBody">Layer roads, rail, cities, terrain, rivers, and night context onto the same map story.</span>
+                    <em data-i18n="storyStepTransportProof">Japan preview metadata keeps the transport counts visible.</em>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="story-step" data-story-step-button="evidence" aria-pressed="false">
+                  <span class="story-step__index">04</span>
+                  <span class="story-step__copy">
+                    <strong data-i18n="storyStepEvidenceTitle">Inspect source-backed evidence</strong>
+                    <span data-i18n="storyStepEvidenceBody">Keep provenance close to the map so a viewer can trust the output.</span>
+                    <em data-i18n="storyStepEvidenceProof">The catalog tracks the checked-in data surface.</em>
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="story-step" data-story-step-button="export" aria-pressed="false">
+                  <span class="story-step__index">05</span>
+                  <span class="story-step__copy">
+                    <strong data-i18n="storyStepExportTitle">Export the result</strong>
+                    <span data-i18n="storyStepExportBody">Turn the layered workbench view into a compact presentation map.</span>
+                    <em data-i18n="storyStepExportProof">The Japan corridor output combines roads, rail, stations, city lights, cities, terrain, and rivers.</em>
+                  </span>
+                </button>
+              </li>
+            </ol>
+          </div>
+        </section>
+
         <section id="showcase" class="section showcase-section section--dark" data-showcase-root data-showcase-layer="political">
           <div class="showcase-section__copy" data-reveal>
             <p class="eyebrow eyebrow--dark" data-i18n="showcaseEyebrow">Cartography showcase</p>

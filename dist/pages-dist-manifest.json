@@ -7,7 +7,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 68983,
+      "size_bytes": 83941,
       "source_kind": "dist"
     },
     {
@@ -47287,17 +47287,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 50385,
+      "size_bytes": 58284,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1464019,
+      "size_bytes": 1464123,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 37221,
+      "size_bytes": 43903,
       "source_kind": "dist"
     }
   ],
@@ -47415,7 +47415,10 @@
   "schema_version": 1,
   "size_gate": {
     "over_by_bytes": 0,
-    "status": "within_limit"
+    "status": "within_limit",
+    "warning_bytes": 996147200,
+    "warning_over_by_bytes": 0,
+    "warning_status": "within_warning"
   },
   "top_level_directories": [
     {
@@ -47431,22 +47434,22 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1464019
+      "size_bytes": 1464123
     },
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 68983
+      "size_bytes": 83941
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 50385
+      "size_bytes": 58284
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 37221
+      "size_bytes": 43903
     },
     {
       "file_count": 1,
@@ -47454,5 +47457,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 971933343
+  "total_bytes": 971962986
 }

@@ -67,6 +67,24 @@ function extractLandingStats(html) {
   return stats;
 }
 
+function extractStoryEvidence(html) {
+  const evidence = new Map();
+  const evidencePattern =
+    /<div\b([^>]*\bdata-story-evidence="[^"]+"[^>]*)>\s*<dt\b[^>]*>[^<]*<\/dt>\s*<dd\b([^>]*)>([^<]*)<\/dd>/g;
+  for (const match of html.matchAll(evidencePattern)) {
+    const itemAttributes = parseAttributes(match[1]);
+    const valueAttributes = parseAttributes(match[2]);
+    const evidenceId = itemAttributes.get("data-story-evidence");
+    if (!evidenceId) continue;
+    evidence.set(evidenceId, {
+      source: itemAttributes.get("data-story-evidence-source"),
+      text: match[3].trim(),
+      value: Number(valueAttributes.get("data-story-evidence-value")),
+    });
+  }
+  return evidence;
+}
+
 function getExpectedLandingStats() {
   const scenarioIndex = readJsonAsset("data/scenarios/index.json");
   const scenarioIds = new Set((scenarioIndex.scenarios || []).map((scenario) => scenario.scenario_id));
@@ -156,6 +174,10 @@ class TestNode {
     this.attributes[name] = String(value);
   }
 
+  removeAttribute(name) {
+    delete this.attributes[name];
+  }
+
   focus() {
     this.focused = true;
   }
@@ -206,6 +228,34 @@ class PreviewRoot extends TestNode {
 
   querySelectorAll(selector) {
     if (selector === "[data-preview-zoom]") return this.zoomButtons;
+    return [];
+  }
+}
+
+class ProductStoryRoot extends TestNode {
+  constructor({ stageImage, badge, title, body, stepButtons, compareButtons, evidenceItems }) {
+    super();
+    this.stageImage = stageImage;
+    this.badge = badge;
+    this.title = title;
+    this.body = body;
+    this.stepButtons = stepButtons;
+    this.compareButtons = compareButtons;
+    this.evidenceItems = evidenceItems;
+  }
+
+  querySelector(selector) {
+    if (selector === "[data-story-stage-image]") return this.stageImage;
+    if (selector === "[data-story-stage-badge]") return this.badge;
+    if (selector === "[data-story-stage-title]") return this.title;
+    if (selector === "[data-story-stage-body]") return this.body;
+    return null;
+  }
+
+  querySelectorAll(selector) {
+    if (selector === "[data-story-step-button]") return this.stepButtons;
+    if (selector === "[data-story-compare]") return this.compareButtons;
+    if (selector === "[data-story-evidence]") return this.evidenceItems;
     return [];
   }
 }
@@ -330,6 +380,71 @@ function createShowcaseHarness({ reducedMotion = true } = {}) {
   };
 }
 
+function createProductStoryHarness({ reducedMotion = true } = {}) {
+  const domContentLoaded = [];
+  const stageImage = new TestNode();
+  const badge = new TestNode();
+  const title = new TestNode();
+  const body = new TestNode();
+  const stepButtons = ["baseline", "scenario", "transport", "evidence", "export"].map((stepId, index) => {
+    const button = new TestNode();
+    button.setAttribute("data-story-step-button", stepId);
+    button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+    return button;
+  });
+  const compareButtons = ["hoi4-1936", "hoi4-1939", "tno-1962"].map((comparisonId, index) => {
+    const button = new TestNode();
+    button.setAttribute("data-story-compare", comparisonId);
+    button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+    return button;
+  });
+  const evidenceItems = ["baseline", "scenario", "transport", "evidence", "export"].map((stepId) => {
+    const item = new TestNode();
+    item.setAttribute("data-story-evidence", stepId);
+    return item;
+  });
+  const root = new ProductStoryRoot({ stageImage, badge, title, body, stepButtons, compareButtons, evidenceItems });
+  root.dataset.storyStep = "baseline";
+  root.dataset.storyComparison = "hoi4-1936";
+
+  const document = {
+    documentElement: { lang: "en", dataset: {} },
+    title: "",
+    addEventListener(name, callback) {
+      if (name === "DOMContentLoaded") domContentLoaded.push(callback);
+    },
+    querySelector(selector) {
+      if (selector === "[data-story-root]") return root;
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+
+  return {
+    context: {
+      console,
+      document,
+      Intl,
+      localStorage: {
+        getItem: () => "en",
+        setItem: () => {},
+      },
+      matchMedia: () => ({ matches: reducedMotion }),
+    },
+    badge,
+    body,
+    compareButtons,
+    domContentLoaded,
+    evidenceItems,
+    root,
+    stageImage,
+    stepButtons,
+    title,
+  };
+}
+
 test("landing local asset references exist", () => {
   const html = readFileSync(new URL("../landing/index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
@@ -363,6 +478,100 @@ test("landing stat cards stay aligned with source data", () => {
       assert.equal(actual.text, String(expected.value), `${assetRoot}/${statId} visible value drifted`);
     }
   }
+});
+
+test("landing product story evidence markers resolve to checked-in metadata", () => {
+  const expectedEvidence = new Map([
+    ["baseline", "data/scenarios/index.json:public_baseline_ids.length"],
+    ["scenario", "landing/assets/europe-1936-showcase.json:counts.political_features"],
+    ["transport", "landing/assets/japan-preview.json:counts.road_source_features+counts.rail_source_features"],
+    ["evidence", "data/CATALOG.json:counts.entries"],
+    ["export", "landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines+counts.major_stations"],
+  ]);
+
+  for (const assetRoot of ["landing", "dist"]) {
+    const html = readFileSync(new URL(`../${assetRoot}/index.html`, import.meta.url), "utf8");
+    const actualEvidence = extractStoryEvidence(html);
+
+    assert.deepEqual([...actualEvidence.keys()].sort(), [...expectedEvidence.keys()].sort(), `${assetRoot} story evidence ids drifted`);
+    for (const [evidenceId, expectedSource] of expectedEvidence) {
+      const actual = actualEvidence.get(evidenceId);
+      const expectedValue = resolveStatMarker(expectedSource);
+      assert.equal(actual.source, expectedSource, `${assetRoot}/${evidenceId} source marker drifted`);
+      assert.equal(actual.value, expectedValue, `${assetRoot}/${evidenceId} data-story-evidence-value drifted`);
+      assert.equal(actual.text, String(expectedValue), `${assetRoot}/${evidenceId} visible value drifted`);
+    }
+  }
+});
+
+test("landing product story controls initialize and change stage state", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createProductStoryHarness();
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+
+  assert.equal(harness.domContentLoaded.length, 1);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.root.dataset.storyStep, "baseline");
+  assert.equal(harness.root.dataset.storyComparison, "hoi4-1936");
+  assert.equal(harness.stageImage.attributes.src, "./assets/hero-hoi4-1936.webp");
+  assert.equal(harness.stageImage.alt, "Generated HOI4 1936 baseline map.");
+  assert.equal(harness.evidenceItems[0].dataset.storyEvidenceActive, "true");
+
+  harness.stepButtons.find((button) => button.getAttribute("data-story-step-button") === "transport").dispatchEvent("click");
+  assert.equal(harness.root.dataset.storyStep, "transport");
+  assert.equal(harness.stageImage.attributes.src, "./assets/japan-preview-transport.webp");
+  assert.equal(harness.title.textContent, "Transport and geography turn the map into a readable place.");
+  assert.equal(harness.evidenceItems[2].dataset.storyEvidenceActive, "true");
+
+  harness.compareButtons.find((button) => button.getAttribute("data-story-compare") === "hoi4-1939").dispatchEvent("click");
+  assert.equal(harness.root.dataset.storyStep, "scenario");
+  assert.equal(harness.root.dataset.storyComparison, "hoi4-1939");
+  assert.equal(harness.stageImage.attributes.src, "./assets/hero-hoi4-1939.webp");
+  assert.equal(harness.stepButtons[1].attributes["aria-current"], "step");
+  assert.equal(harness.compareButtons[1].attributes["aria-pressed"], "true");
+  assert.equal(harness.evidenceItems[1].dataset.storyEvidenceActive, "true");
+});
+
+test("landing product story keyboard navigation works", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createProductStoryHarness();
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  const nextStepEvent = createEvent({ key: "ArrowRight" });
+  harness.stepButtons[0].dispatchEvent("keydown", nextStepEvent);
+  assert.equal(nextStepEvent.defaultPrevented, true);
+  assert.equal(harness.root.dataset.storyStep, "scenario");
+  assert.equal(harness.stepButtons[1].focused, true);
+
+  harness.stepButtons[1].dispatchEvent("keydown", createEvent({ key: "End" }));
+  assert.equal(harness.root.dataset.storyStep, "export");
+  assert.equal(harness.stepButtons[4].focused, true);
+  assert.equal(harness.stageImage.attributes.src, "./assets/work-atlas-japan-corridor.webp");
+
+  const nextComparisonEvent = createEvent({ key: "ArrowRight" });
+  harness.compareButtons[0].dispatchEvent("keydown", nextComparisonEvent);
+  assert.equal(nextComparisonEvent.defaultPrevented, true);
+  assert.equal(harness.root.dataset.storyStep, "scenario");
+  assert.equal(harness.root.dataset.storyComparison, "hoi4-1939");
+  assert.equal(harness.compareButtons[1].focused, true);
+  assert.equal(harness.stageImage.attributes.src, "./assets/hero-hoi4-1939.webp");
+});
+
+test("landing product story reduced-motion path does not require observer animation", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createProductStoryHarness({ reducedMotion: true });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  harness.stepButtons.find((button) => button.getAttribute("data-story-step-button") === "export").dispatchEvent("click");
+  assert.equal(harness.root.dataset.storyStep, "export");
+  assert.equal(harness.stageImage.attributes.src, "./assets/work-atlas-japan-corridor.webp");
+  assert.equal(harness.evidenceItems[4].dataset.storyEvidenceActive, "true");
 });
 
 test("landing work-card maps expose source-backed metadata", () => {

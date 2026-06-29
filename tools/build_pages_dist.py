@@ -22,6 +22,7 @@ DIST_ROOT = ROOT / "dist"
 APP_DIST_ROOT = DIST_ROOT / "app"
 DIST_MANIFEST_PATH = DIST_ROOT / "pages-dist-manifest.json"
 GITHUB_PAGES_HARD_MAX_BYTES = 1024 * 1024 * 1024
+PAGES_DIST_WARNING_BYTES = 950 * 1024 * 1024
 MAX_PAGES_DIST_BYTES = GITHUB_PAGES_HARD_MAX_BYTES
 DIST_MANIFEST_LARGEST_FILE_LIMIT = 20
 ROOT_PUBLIC_FILES = (
@@ -1136,9 +1137,13 @@ def get_top_level_directory_records(records: list[dict[str, int | str]]) -> list
 
 def get_dist_size_gate(total_bytes: int) -> dict[str, int | str]:
     over_by_bytes = max(total_bytes - MAX_PAGES_DIST_BYTES, 0)
+    warning_over_by_bytes = max(total_bytes - PAGES_DIST_WARNING_BYTES, 0)
     return {
         "status": "over_limit" if over_by_bytes else "within_limit",
         "over_by_bytes": over_by_bytes,
+        "warning_status": "over_warning" if warning_over_by_bytes else "within_warning",
+        "warning_bytes": PAGES_DIST_WARNING_BYTES,
+        "warning_over_by_bytes": warning_over_by_bytes,
     }
 
 
