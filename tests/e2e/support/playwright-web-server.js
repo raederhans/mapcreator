@@ -24,7 +24,8 @@ function shouldReuseExistingServer() {
 
 function getWebServerConfig() {
   if (
-    process.env.PLAYWRIGHT_TEST_BASE_URL
+    process.env.SCENARIO_FORGE_PAGES_URL
+    || process.env.PLAYWRIGHT_TEST_BASE_URL
     || process.env.MAPCREATOR_BASE_URL
     || process.env.MAPCREATOR_APP_URL
   ) {

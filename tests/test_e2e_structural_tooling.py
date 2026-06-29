@@ -75,11 +75,13 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
         scripts = package_json["scripts"]
         spec = (REPO_ROOT / "tests" / "e2e" / "release" / "pages_public_release_gate.spec.js").read_text(encoding="utf-8")
+        web_server = (REPO_ROOT / "tests" / "e2e" / "support" / "playwright-web-server.js").read_text(encoding="utf-8")
 
         self.assertIn("test:e2e:pages-public-release-gate", scripts)
         self.assertIn("test:e2e:pages-public-release-gate:deployed", scripts)
         self.assertIn("SCENARIO_FORGE_PAGES_URL", spec)
         self.assertIn("PLAYWRIGHT_TEST_BASE_URL", spec)
+        self.assertIn("process.env.SCENARIO_FORGE_PAGES_URL", web_server)
         self.assertIn("SCENARIO_FORGE_ALLOW_DEFAULT_PAGES_URL", spec)
         self.assertIn('npm_lifecycle_event === "test:e2e:pages-public-release-gate:deployed"', spec)
         self.assertIn("Set SCENARIO_FORGE_PAGES_URL or PLAYWRIGHT_TEST_BASE_URL", spec)
@@ -97,6 +99,7 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4", workflow)
         self.assertIn("npx playwright install chromium", workflow)
         self.assertIn("SCENARIO_FORGE_PAGES_URL: ${{ steps.deployment.outputs.page_url }}", workflow)
+        self.assertIn("PLAYWRIGHT_TEST_BASE_URL: ${{ steps.deployment.outputs.page_url }}", workflow)
         self.assertIn("npm run test:e2e:pages-public-release-gate", workflow)
 
     def test_console_allowlist_decay_passes(self) -> None:

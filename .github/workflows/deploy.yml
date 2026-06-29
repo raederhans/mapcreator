@@ -106,4 +106,5 @@ jobs:
       - name: Smoke deployed Pages URL
         env:
           SCENARIO_FORGE_PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.deployment.outputs.page_url }}
         run: npm run test:e2e:pages-public-release-gate
