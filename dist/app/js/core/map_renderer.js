@@ -204,6 +204,7 @@ import { createMapInteractionEventBindingOwner } from "./renderer/map_interactio
 import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";
 import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";
 import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";
+import { createRendererSvgSurfaceLifecycleOwner } from "./renderer/renderer_svg_surface_lifecycle_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -975,6 +976,7 @@ let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
 let rendererSurfaceLifecycleOwner = null;
 let rendererProjectionPathOwner = null;
+let rendererSvgSurfaceLifecycleOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1015,6 +1017,22 @@ function getRendererProjectionPathOwner() {
     },
   });
   return rendererProjectionPathOwner;
+}
+
+function getRendererSvgSurfaceLifecycleOwner() {
+  if (rendererSvgSurfaceLifecycleOwner) {
+    return rendererSvgSurfaceLifecycleOwner;
+  }
+  rendererSvgSurfaceLifecycleOwner = createRendererSvgSurfaceLifecycleOwner({
+    surfaceHost: rendererSurfaceHost,
+    getters: {
+      getD3: () => globalThis.d3,
+    },
+    helpers: {
+      createSvgElement,
+    },
+  });
+  return rendererSvgSurfaceLifecycleOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -7285,189 +7303,11 @@ function ensureHybridLayers() {
     legacyLineCanvas.style.pointerEvents = "none";
   }
 
-  let nextMapSvg = rendererSurfaceHost.getMapContainer().querySelector("#map-svg");
-  if (!nextMapSvg) {
-    nextMapSvg = createSvgElement();
-    rendererSurfaceHost.getMapContainer().appendChild(nextMapSvg);
-  }
-  rendererSurfaceHost.setMapSvg(nextMapSvg);
-  nextMapSvg.style.display = "block";
-  nextMapSvg.style.zIndex = "3";
-
-  const svg = globalThis.d3.select(nextMapSvg);
-  svg.style("pointer-events", "none");
-
-  let nextViewportGroup = svg.select("g.viewport-layer");
-  if (nextViewportGroup.empty()) {
-    nextViewportGroup = svg.append("g").attr("class", "viewport-layer");
-  }
-  rendererSurfaceHost.setViewportGroup(nextViewportGroup);
-  nextViewportGroup.style("pointer-events", "none");
-
-  let nextStrategicDefs = svg.select("defs.strategic-overlay-defs");
-  if (nextStrategicDefs.empty()) {
-    nextStrategicDefs = svg.append("defs").attr("class", "strategic-overlay-defs");
-  }
-  rendererSurfaceHost.setStrategicDefs(nextStrategicDefs);
-
-  let nextFrontlineOverlayGroup = nextViewportGroup.select("g.frontline-overlay-layer");
-  if (nextFrontlineOverlayGroup.empty()) {
-    nextFrontlineOverlayGroup = nextViewportGroup.append("g").attr("class", "frontline-overlay-layer");
-  }
-  rendererSurfaceHost.setFrontlineOverlayGroup(nextFrontlineOverlayGroup);
-  nextFrontlineOverlayGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Strategic frontline overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextFrontlineLabelsGroup = nextViewportGroup.select("g.frontline-labels-layer");
-  if (nextFrontlineLabelsGroup.empty()) {
-    nextFrontlineLabelsGroup = nextViewportGroup.append("g").attr("class", "frontline-labels-layer");
-  }
-  rendererSurfaceHost.setFrontlineLabelsGroup(nextFrontlineLabelsGroup);
-  nextFrontlineLabelsGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Strategic frontline labels")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextOperationalLinesGroup = nextViewportGroup.select("g.operational-lines-layer");
-  if (nextOperationalLinesGroup.empty()) {
-    nextOperationalLinesGroup = nextViewportGroup.append("g").attr("class", "operational-lines-layer");
-  }
-  rendererSurfaceHost.setOperationalLinesGroup(nextOperationalLinesGroup);
-  nextOperationalLinesGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Operational lines")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextOperationGraphicsGroup = nextViewportGroup.select("g.operation-graphics-layer");
-  if (nextOperationGraphicsGroup.empty()) {
-    nextOperationGraphicsGroup = nextViewportGroup.append("g").attr("class", "operation-graphics-layer");
-  }
-  rendererSurfaceHost.setOperationGraphicsGroup(nextOperationGraphicsGroup);
-  nextOperationGraphicsGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Strategic operation graphics")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextOperationGraphicsEditorGroup = nextViewportGroup.select("g.operation-graphics-editor-layer");
-  if (nextOperationGraphicsEditorGroup.empty()) {
-    nextOperationGraphicsEditorGroup = nextViewportGroup.append("g").attr("class", "operation-graphics-editor-layer");
-  }
-  rendererSurfaceHost.setOperationGraphicsEditorGroup(nextOperationGraphicsEditorGroup);
-  nextOperationGraphicsEditorGroup
-    .style("pointer-events", "all")
-    .attr("role", "img")
-    .attr("aria-label", "Strategic operation graphics editor")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextUnitCountersGroup = nextViewportGroup.select("g.unit-counters-layer");
-  if (nextUnitCountersGroup.empty()) {
-    nextUnitCountersGroup = nextViewportGroup.append("g").attr("class", "unit-counters-layer");
-  }
-  rendererSurfaceHost.setUnitCountersGroup(nextUnitCountersGroup);
-  nextUnitCountersGroup
-    .style("pointer-events", "all")
-    .attr("role", "img")
-    .attr("aria-label", "Strategic unit counters")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextSpecialZonesGroup = nextViewportGroup.select("g.special-zones-layer");
-  if (nextSpecialZonesGroup.empty()) {
-    nextSpecialZonesGroup = nextViewportGroup.append("g").attr("class", "special-zones-layer");
-  }
-  rendererSurfaceHost.setSpecialZonesGroup(nextSpecialZonesGroup);
-  nextSpecialZonesGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Special zones overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextSpecialZoneEditorGroup = nextViewportGroup.select("g.special-zone-editor-layer");
-  if (nextSpecialZoneEditorGroup.empty()) {
-    nextSpecialZoneEditorGroup = nextViewportGroup.append("g").attr("class", "special-zone-editor-layer");
-  }
-  rendererSurfaceHost.setSpecialZoneEditorGroup(nextSpecialZoneEditorGroup);
-  nextSpecialZoneEditorGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Special zone drawing overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextHoverGroup = nextViewportGroup.select("g.hover-layer");
-  if (nextHoverGroup.empty()) {
-    nextHoverGroup = nextViewportGroup.append("g").attr("class", "hover-layer");
-  }
-  rendererSurfaceHost.setHoverGroup(nextHoverGroup);
-  nextHoverGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Hovered region outline overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextDevSelectionGroup = nextViewportGroup.select("g.dev-selection-layer");
-  if (nextDevSelectionGroup.empty()) {
-    nextDevSelectionGroup = nextViewportGroup.append("g").attr("class", "dev-selection-layer");
-  }
-  rendererSurfaceHost.setDevSelectionGroup(nextDevSelectionGroup);
-  nextDevSelectionGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Development selection overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextInspectorHighlightGroup = nextViewportGroup.select("g.inspector-highlight-layer");
-  if (nextInspectorHighlightGroup.empty()) {
-    nextInspectorHighlightGroup = nextViewportGroup.append("g").attr("class", "inspector-highlight-layer");
-  }
-  rendererSurfaceHost.setInspectorHighlightGroup(nextInspectorHighlightGroup);
-  nextInspectorHighlightGroup
-    .style("pointer-events", "none")
-    .attr("role", "img")
-    .attr("aria-label", "Inspector highlight overlay")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false");
-
-  let nextIntensityFieldPreviewGroup = svg.select("g.intensity-field-preview-layer");
-  if (nextIntensityFieldPreviewGroup.empty()) {
-    nextIntensityFieldPreviewGroup = svg.append("g").attr("class", "intensity-field-preview-layer");
-  }
-  rendererSurfaceHost.setIntensityFieldPreviewGroup(nextIntensityFieldPreviewGroup);
-  nextIntensityFieldPreviewGroup
-    .style("pointer-events", "none")
-    .attr("aria-hidden", "true")
-    .attr("focusable", "false")
-    .style("display", "none");
+  const { mapSvg } = getRendererSvgSurfaceLifecycleOwner().ensureSvgSurface();
+  const svg = globalThis.d3.select(mapSvg);
 
   svg.select("g.legend-group").remove();
   ensureLegendControlElement();
-
-  let nextInteractionRect = svg.select("rect.interaction-layer");
-  if (nextInteractionRect.empty()) {
-    nextInteractionRect = svg
-      .append("rect")
-      .attr("class", "interaction-layer")
-      .attr("fill", "transparent");
-  }
-  rendererSurfaceHost.setInteractionRect(nextInteractionRect);
-  nextInteractionRect
-    .style("pointer-events", "all")
-    // Keep the global hit surface behind editor overlays so midpoint/vertex handles can win hit-testing.
-    .lower();
 }
 
 function setCanvasSize({

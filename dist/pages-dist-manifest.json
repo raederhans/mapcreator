@@ -45907,7 +45907,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 893072,
+      "size_bytes": 886150,
       "source_kind": "dist"
     },
     {
@@ -46103,6 +46103,11 @@
     {
       "path": "app/js/core/renderer/renderer_surface_lifecycle_owner.js",
       "size_bytes": 5652,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/renderer_svg_surface_lifecycle_owner.js",
+      "size_bytes": 8831,
       "source_kind": "dist"
     },
     {
@@ -47347,7 +47352,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1461786,
+      "size_bytes": 1461931,
       "source_kind": "dist"
     },
     {
@@ -47366,5 +47371,5 @@
     "app/data/scenarios/index.json"
   ],
   "schema_version": 1,
-  "total_bytes": 1155310404
+  "total_bytes": 1155312458
 }

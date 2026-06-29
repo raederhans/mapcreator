@@ -24,67 +24,82 @@ const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
   "## Required validation commands",
 ]);
 
-const ENSURE_HYBRID_LAYERS_ROOT_TOKENS = Object.freeze([
-  "function ensureHybridLayers()",
-  "const legacySpecialZones = document.getElementById(\"specialZonesSvg\");",
-  "const legacyLegend = document.getElementById(\"legendSvg\");",
-  "const legacyColorCanvas = document.getElementById(\"colorCanvas\");",
-  "const legacyLineCanvas = document.getElementById(\"lineCanvas\");",
-  "getRendererSurfaceLifecycleOwner().ensureCanvasLayerHandles({",
+const SVG_OWNER_REQUIRED_TOKENS = Object.freeze([
+  "export function createRendererSvgSurfaceLifecycleOwner({",
+  "function ensureSvgSurface()",
+  "const getD3 = requireFunction(getters, \"getD3\", \"getters\");",
+  "getMapContainer: requireFunction(host, \"getMapContainer\", \"surfaceHost\")",
+  "setMapSvg: requireFunction(host, \"setMapSvg\", \"surfaceHost\")",
+  "setViewportGroup: requireFunction(host, \"setViewportGroup\", \"surfaceHost\")",
+  "setStrategicDefs: requireFunction(host, \"setStrategicDefs\", \"surfaceHost\")",
+  "setFrontlineOverlayGroup: requireFunction(host, \"setFrontlineOverlayGroup\", \"surfaceHost\")",
+  "setFrontlineLabelsGroup: requireFunction(host, \"setFrontlineLabelsGroup\", \"surfaceHost\")",
+  "setOperationalLinesGroup: requireFunction(host, \"setOperationalLinesGroup\", \"surfaceHost\")",
+  "setOperationGraphicsGroup: requireFunction(host, \"setOperationGraphicsGroup\", \"surfaceHost\")",
+  "setOperationGraphicsEditorGroup: requireFunction(host, \"setOperationGraphicsEditorGroup\", \"surfaceHost\")",
+  "setUnitCountersGroup: requireFunction(host, \"setUnitCountersGroup\", \"surfaceHost\")",
+  "setSpecialZonesGroup: requireFunction(host, \"setSpecialZonesGroup\", \"surfaceHost\")",
+  "setSpecialZoneEditorGroup: requireFunction(host, \"setSpecialZoneEditorGroup\", \"surfaceHost\")",
+  "setHoverGroup: requireFunction(host, \"setHoverGroup\", \"surfaceHost\")",
+  "setDevSelectionGroup: requireFunction(host, \"setDevSelectionGroup\", \"surfaceHost\")",
+  "setInspectorHighlightGroup: requireFunction(host, \"setInspectorHighlightGroup\", \"surfaceHost\")",
+  "setIntensityFieldPreviewGroup: requireFunction(host, \"setIntensityFieldPreviewGroup\", \"surfaceHost\")",
+  "setInteractionRect: requireFunction(host, \"setInteractionRect\", \"surfaceHost\")",
+  "mapContainer.querySelector(\"#map-svg\")",
+  "createSvgElement(mapContainer)",
+  "mapContainer.appendChild(nextMapSvg)",
+  "applySvgRootProps(nextMapSvg)",
+  "getRequiredD3Select(getD3)(mapSvg)",
+  "selectOrAppend(svg, \"g.viewport-layer\", \"g\", \"viewport-layer\")",
+  "selectOrAppend(svg, \"defs.strategic-overlay-defs\", \"defs\", \"strategic-overlay-defs\")",
+  "selectOrAppend(svg, \"g.intensity-field-preview-layer\", \"g\", \"intensity-field-preview-layer\")",
+  "svg.select(\"rect.interaction-layer\")",
+  ".attr(\"fill\", \"transparent\")",
+  ".lower();",
+]);
+
+const SVG_GROUP_ORDER_TOKENS = Object.freeze([
+  "selector: \"g.frontline-overlay-layer\"",
+  "selector: \"g.frontline-labels-layer\"",
+  "selector: \"g.operational-lines-layer\"",
+  "selector: \"g.operation-graphics-layer\"",
+  "selector: \"g.operation-graphics-editor-layer\"",
+  "selector: \"g.unit-counters-layer\"",
+  "selector: \"g.special-zones-layer\"",
+  "selector: \"g.special-zone-editor-layer\"",
+  "selector: \"g.hover-layer\"",
+  "selector: \"g.dev-selection-layer\"",
+  "selector: \"g.inspector-highlight-layer\"",
+]);
+
+const MAP_RENDERER_WRAPPER_TOKENS = Object.freeze([
+  "from \"./renderer/renderer_svg_surface_lifecycle_owner.js\";",
+  "let rendererSvgSurfaceLifecycleOwner = null;",
+  "function getRendererSvgSurfaceLifecycleOwner()",
+  "createRendererSvgSurfaceLifecycleOwner({",
+  "surfaceHost: rendererSurfaceHost",
+  "getD3: () => globalThis.d3",
+  "createSvgElement,",
+  "const { mapSvg } = getRendererSvgSurfaceLifecycleOwner().ensureSvgSurface();",
+  "const svg = globalThis.d3.select(mapSvg);",
+  "svg.select(\"g.legend-group\").remove();",
+  "ensureLegendControlElement();",
+]);
+
+const ENSURE_HYBRID_LAYERS_FORBIDDEN_TOKENS = Object.freeze([
   "let nextMapSvg = rendererSurfaceHost.getMapContainer().querySelector(\"#map-svg\");",
   "nextMapSvg = createSvgElement();",
   "rendererSurfaceHost.getMapContainer().appendChild(nextMapSvg);",
   "rendererSurfaceHost.setMapSvg(nextMapSvg);",
-  "const svg = globalThis.d3.select(nextMapSvg);",
   "let nextViewportGroup = svg.select(\"g.viewport-layer\");",
   "rendererSurfaceHost.setViewportGroup(nextViewportGroup);",
   "let nextStrategicDefs = svg.select(\"defs.strategic-overlay-defs\");",
   "rendererSurfaceHost.setStrategicDefs(nextStrategicDefs);",
-]);
-
-const SVG_GROUP_ORDER_TOKENS = Object.freeze([
-  "nextViewportGroup = svg.append(\"g\").attr(\"class\", \"viewport-layer\");",
-  "nextStrategicDefs = svg.append(\"defs\").attr(\"class\", \"strategic-overlay-defs\");",
-  "nextFrontlineOverlayGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"frontline-overlay-layer\");",
-  "nextFrontlineLabelsGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"frontline-labels-layer\");",
-  "nextOperationalLinesGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"operational-lines-layer\");",
-  "nextOperationGraphicsGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"operation-graphics-layer\");",
-  "nextOperationGraphicsEditorGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"operation-graphics-editor-layer\");",
-  "nextUnitCountersGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"unit-counters-layer\");",
-  "nextSpecialZonesGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"special-zones-layer\");",
-  "nextSpecialZoneEditorGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"special-zone-editor-layer\");",
-  "nextHoverGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"hover-layer\");",
-  "nextDevSelectionGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"dev-selection-layer\");",
-  "nextInspectorHighlightGroup = nextViewportGroup.append(\"g\").attr(\"class\", \"inspector-highlight-layer\");",
-  "nextIntensityFieldPreviewGroup = svg.append(\"g\").attr(\"class\", \"intensity-field-preview-layer\");",
-  "let nextInteractionRect = svg.select(\"rect.interaction-layer\");",
-]);
-
-const SVG_GROUP_REGISTRATION_TOKENS = Object.freeze([
   "rendererSurfaceHost.setFrontlineOverlayGroup(nextFrontlineOverlayGroup);",
-  "rendererSurfaceHost.setFrontlineLabelsGroup(nextFrontlineLabelsGroup);",
-  "rendererSurfaceHost.setOperationalLinesGroup(nextOperationalLinesGroup);",
-  "rendererSurfaceHost.setOperationGraphicsGroup(nextOperationGraphicsGroup);",
   "rendererSurfaceHost.setOperationGraphicsEditorGroup(nextOperationGraphicsEditorGroup);",
-  "rendererSurfaceHost.setUnitCountersGroup(nextUnitCountersGroup);",
-  "rendererSurfaceHost.setSpecialZonesGroup(nextSpecialZonesGroup);",
-  "rendererSurfaceHost.setSpecialZoneEditorGroup(nextSpecialZoneEditorGroup);",
-  "rendererSurfaceHost.setHoverGroup(nextHoverGroup);",
-  "rendererSurfaceHost.setDevSelectionGroup(nextDevSelectionGroup);",
-  "rendererSurfaceHost.setInspectorHighlightGroup(nextInspectorHighlightGroup);",
   "rendererSurfaceHost.setIntensityFieldPreviewGroup(nextIntensityFieldPreviewGroup);",
-  "rendererSurfaceHost.setInteractionRect(nextInteractionRect);",
-]);
-
-const INTERACTION_RECT_TOKENS = Object.freeze([
   "let nextInteractionRect = svg.select(\"rect.interaction-layer\");",
-  ".append(\"rect\")",
-  ".attr(\"class\", \"interaction-layer\")",
-  ".attr(\"fill\", \"transparent\")",
   "rendererSurfaceHost.setInteractionRect(nextInteractionRect);",
-  ".style(\"pointer-events\", \"all\")",
-  "Keep the global hit surface behind editor overlays so midpoint/vertex handles can win hit-testing.",
-  ".lower();",
 ]);
 
 const LEGEND_AND_LEGACY_TOKENS = Object.freeze([
@@ -101,7 +116,6 @@ const LEGEND_AND_LEGACY_TOKENS = Object.freeze([
 ]);
 
 const SVG_LIFECYCLE_TOKENS = Object.freeze([
-  "createSvgElement",
   "map-svg",
   "viewport-layer",
   "strategic-overlay-defs",
@@ -158,6 +172,36 @@ const RENDER_SEMANTIC_ANCHORS = Object.freeze([
   "function renderPassToCache(",
   "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \"startup-deferred-hit-canvas\" } = {})",
   "buildHitCanvas",
+]);
+
+const SVG_OWNER_FORBIDDEN_TOKENS = Object.freeze([
+  "runtimeState",
+  "from \"../state.js\"",
+  "from \"./state.js\"",
+  "map_renderer.js",
+  "drawCanvas",
+  "renderPassToCache",
+  "buildHitCanvas",
+  "applyDevSelectionFill",
+  "refreshMapDataForScenarioChunkPromotion",
+  "exactAfterSettle",
+  "strategicOverlayRuntime",
+  "renderFrontlineOverlay",
+  "renderOperationalLinesIfNeeded",
+  "renderOperationGraphicsIfNeeded",
+  "renderUnitCountersIfNeeded",
+  "renderSpecialZonesIfNeeded",
+  "renderDevSelectionOverlayIfNeeded",
+  "renderInspectorHighlightOverlayIfNeeded",
+  "renderHoverOverlayIfNeeded",
+  "geoEqualEarth",
+  "geoPath",
+  "fitProjection",
+  "updateMap",
+  "initZoom",
+  "bindEvents",
+  "renderLegend",
+  "LegendManager",
 ]);
 
 const P30_ALLOWED_TOKENS = Object.freeze([
@@ -247,53 +291,46 @@ function isRendererOwnerPath(sourcePath) {
     && (baseName.endsWith("_owner.js") || baseName === "renderer_surface_lifecycle_owner.js");
 }
 
-test("P29 reserves the future SVG lifecycle owner file", () => {
+test("P30 introduces the SVG lifecycle owner file", () => {
   assert.equal(
     repoFileExists(SVG_SURFACE_OWNER_PATH),
-    false,
-    "P29 must keep renderer_svg_surface_lifecycle_owner.js reserved for P30",
+    true,
+    "P30 must add renderer_svg_surface_lifecycle_owner.js",
   );
   assert.equal(
     listProjectSourceFiles("js/core/renderer").includes(SVG_SURFACE_OWNER_PATH),
-    false,
-    "P29 must not add the future SVG lifecycle owner implementation",
+    true,
+    "P30 must keep the SVG lifecycle owner under js/core/renderer",
   );
 });
 
-test("map_renderer still owns ensureHybridLayers and SVG root lifecycle", () => {
+test("map_renderer keeps ensureHybridLayers as the orchestration wrapper", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const ensureHybridLayersSource = sliceBetween(rendererSource, "function ensureHybridLayers()", "function setCanvasSize({");
 
-  assertIncludes(rendererSource, "function createSvgElement()", "map_renderer must keep current SVG root factory");
-  for (const token of ENSURE_HYBRID_LAYERS_ROOT_TOKENS) {
-    assertIncludes(ensureHybridLayersSource, token, "ensureHybridLayers must keep current SVG root lifecycle token");
-  }
-});
-
-test("ensureHybridLayers still owns static SVG group ordering and registration", () => {
-  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
-  const ensureHybridLayersSource = sliceBetween(rendererSource, "function ensureHybridLayers()", "function setCanvasSize({");
-
-  assertIncludesInOrder(
-    ensureHybridLayersSource,
-    SVG_GROUP_ORDER_TOKENS,
-    "ensureHybridLayers must preserve current SVG group creation order",
-  );
-  for (const token of SVG_GROUP_REGISTRATION_TOKENS) {
-    assertIncludes(ensureHybridLayersSource, token, "ensureHybridLayers must register SVG handles into rendererSurfaceHost");
-  }
-});
-
-test("ensureHybridLayers keeps interaction rect layering and legacy cleanup", () => {
-  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
-  const ensureHybridLayersSource = sliceBetween(rendererSource, "function ensureHybridLayers()", "function setCanvasSize({");
-
-  for (const token of INTERACTION_RECT_TOKENS) {
-    assertIncludes(ensureHybridLayersSource, token, "ensureHybridLayers must preserve interaction rect layering token");
+  assertIncludes(rendererSource, "function createSvgElement()", "map_renderer must keep SVG root factory injection");
+  for (const token of MAP_RENDERER_WRAPPER_TOKENS) {
+    assertIncludes(rendererSource, token, "map_renderer must keep SVG lifecycle owner wiring");
   }
   for (const token of LEGEND_AND_LEGACY_TOKENS) {
     assertIncludes(ensureHybridLayersSource, token, "ensureHybridLayers must preserve legend and legacy cleanup token");
   }
+  for (const token of ENSURE_HYBRID_LAYERS_FORBIDDEN_TOKENS) {
+    assertExcludes(ensureHybridLayersSource, token, "ensureHybridLayers must delegate raw SVG lifecycle work to the owner");
+  }
+});
+
+test("SVG lifecycle owner owns static SVG root group ordering and registration", () => {
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_svg_surface_lifecycle_owner.js");
+
+  for (const token of SVG_OWNER_REQUIRED_TOKENS) {
+    assertIncludes(ownerSource, token, "SVG lifecycle owner must own mechanical SVG lifecycle token");
+  }
+  assertIncludesInOrder(
+    ownerSource,
+    SVG_GROUP_ORDER_TOKENS,
+    "SVG lifecycle owner must preserve viewport group declaration order",
+  );
 });
 
 test("surface and projection owners remain outside SVG surface lifecycle", () => {
@@ -312,19 +349,24 @@ test("surface and projection owners remain outside SVG surface lifecycle", () =>
   }
 });
 
-test("render semantics remain outside the SVG lifecycle preflight", () => {
+test("render semantics remain outside the SVG lifecycle owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const surfaceOwnerSource = readRepoFile("js", "core", "renderer", "renderer_surface_lifecycle_owner.js");
   const projectionOwnerSource = readRepoFile("js", "core", "renderer", "renderer_projection_path_owner.js");
+  const svgOwnerSource = readRepoFile("js", "core", "renderer", "renderer_svg_surface_lifecycle_owner.js");
 
   for (const token of RENDER_SEMANTIC_ANCHORS) {
-    assertIncludes(rendererSource, token, "map_renderer must keep current render semantic anchor during P29");
+    assertIncludes(rendererSource, token, "map_renderer must keep current render semantic anchor during P30");
     assertExcludes(surfaceOwnerSource, token, "surface lifecycle owner must stay outside render semantics");
     assertExcludes(projectionOwnerSource, token, "projection/path owner must stay outside render semantics");
+    assertExcludes(svgOwnerSource, token, "SVG lifecycle owner must stay outside render semantics");
+  }
+  for (const token of SVG_OWNER_FORBIDDEN_TOKENS) {
+    assertExcludes(svgOwnerSource, token, "SVG lifecycle owner must avoid forbidden P30 region");
   }
 });
 
-test("future SVG lifecycle owner must keep map_renderer import direction", () => {
+test("SVG lifecycle owner keeps map_renderer import direction", () => {
   for (const sourcePath of listProjectSourceFiles("js/core/renderer").filter(isRendererOwnerPath)) {
     const source = readRepoFile(sourcePath);
     assert.equal(
@@ -335,7 +377,7 @@ test("future SVG lifecycle owner must keep map_renderer import direction", () =>
   }
 });
 
-test("P29 preflight document locks P30 allowed first move and forbidden areas", () => {
+test("P29 preflight document keeps P30 allowed first move and forbidden areas", () => {
   const docSource = readRepoFile("docs", "active", "renderer-svg-surface-lifecycle-preflight-20260629.md");
 
   for (const heading of REQUIRED_PREFLIGHT_HEADINGS) {
@@ -349,11 +391,21 @@ test("P29 preflight document locks P30 allowed first move and forbidden areas", 
   }
 });
 
-test("package exposes SVG surface lifecycle inventory script", () => {
+test("package exposes SVG surface lifecycle scripts", () => {
   const packageSource = readRepoFile("package.json");
   assertIncludes(
     packageSource,
+    "\"test:node:renderer-svg-surface-lifecycle-owner\": \"node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs\"",
+    "package.json must expose the P30 SVG surface lifecycle owner behavior test",
+  );
+  assertIncludes(
+    packageSource,
     "\"test:node:renderer-svg-surface-lifecycle-inventory\": \"node --test tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs\"",
-    "package.json must expose the P29 SVG surface lifecycle inventory test",
+    "package.json must expose the SVG surface lifecycle inventory test",
+  );
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-svg-surface-lifecycle\": \"node --test tests/renderer_svg_surface_lifecycle_owner_behavior.test.mjs tests/renderer_svg_surface_lifecycle_inventory_boundary.test.mjs\"",
+    "package.json must expose the combined SVG surface lifecycle suite",
   );
 });
