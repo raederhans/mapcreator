@@ -205,6 +205,7 @@ import { createRendererSurfaceHost } from "./renderer/renderer_surface_host.js";
 import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface_lifecycle_owner.js";
 import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";
 import { createRendererSvgSurfaceLifecycleOwner } from "./renderer/renderer_svg_surface_lifecycle_owner.js";
+import { createRendererFitProjectionOwner } from "./renderer/renderer_fit_projection_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -977,6 +978,7 @@ let mapInteractionEventBindingOwner = null;
 let rendererSurfaceLifecycleOwner = null;
 let rendererProjectionPathOwner = null;
 let rendererSvgSurfaceLifecycleOwner = null;
+let rendererFitProjectionOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1033,6 +1035,38 @@ function getRendererSvgSurfaceLifecycleOwner() {
     },
   });
   return rendererSvgSurfaceLifecycleOwner;
+}
+
+function getRendererFitProjectionOwner() {
+  if (rendererFitProjectionOwner) {
+    return rendererFitProjectionOwner;
+  }
+  rendererFitProjectionOwner = createRendererFitProjectionOwner({
+    surfaceHost: rendererSurfaceHost,
+    state,
+    constants: {
+      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+    },
+    getters: {
+      getLogicalCanvasDimensions,
+      getRenderableLandFeatures,
+    },
+    effects: {
+      resetCityAnchorCache: () => {
+        cityAnchorCache = new WeakMap();
+      },
+      rebuildProjectedBoundsCache,
+      buildSpatialIndex,
+      setHitCanvasDirty: () => {
+        runtimeState.hitCanvasDirty = true;
+      },
+      updateSpecialZonesPaths,
+      renderSpecialZoneEditorOverlay,
+      updateZoomTranslateExtent,
+      markAllOverlaysDirty,
+    },
+  });
+  return rendererFitProjectionOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -22450,30 +22484,7 @@ function enforceZoomConstraints() {
 }
 
 function fitProjection({ skipSpatialIndex = false } = {}) {
-  if (!runtimeState.landData?.features?.length || runtimeState.width <= 0 || runtimeState.height <= 0) {
-    return;
-  }
-  const padding = Math.max(16, Math.round(Math.min(runtimeState.width, runtimeState.height) * PROJECTION_FIT_PADDING_RATIO));
-  const x1 = Math.max(padding + 1, runtimeState.width - padding);
-  const y1 = Math.max(padding + 1, runtimeState.height - padding);
-  const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
-  const renderableFeatures = getRenderableLandFeatures(canvasWidth, canvasHeight, {
-    forceProd: true,
-  });
-  const fitTarget = renderableFeatures.length
-    ? { type: "FeatureCollection", features: renderableFeatures }
-    : runtimeState.landData;
-  rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);
-  cityAnchorCache = new WeakMap();
-  rebuildProjectedBoundsCache();
-  if (!skipSpatialIndex) {
-    buildSpatialIndex();
-  }
-  runtimeState.hitCanvasDirty = true;
-  updateSpecialZonesPaths();
-  renderSpecialZoneEditorOverlay();
-  updateZoomTranslateExtent();
-  markAllOverlaysDirty();
+  return getRendererFitProjectionOwner().fitProjection({ skipSpatialIndex });
 }
 
 function getResizeReason(reason, fallback = "resize") {

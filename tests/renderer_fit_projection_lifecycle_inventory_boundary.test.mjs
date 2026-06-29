@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const FIT_PROJECTION_OWNER_PATH = "js/core/renderer/renderer_fit_projection_owner.js";
+const FIT_PROJECTION_OWNER_TEST_PATH = "tests/renderer_fit_projection_owner_behavior.test.mjs";
 const FIT_PROJECTION_PREFLIGHT_DOC_PATH = "docs/active/renderer-fit-projection-lifecycle-preflight-20260629.md";
 
 const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
@@ -26,42 +27,93 @@ const REQUIRED_PREFLIGHT_HEADINGS = Object.freeze([
   "## Required validation commands",
 ]);
 
-const FIT_PROJECTION_REQUIRED_TOKENS = Object.freeze([
-  "function fitProjection({ skipSpatialIndex = false } = {})",
-  "runtimeState.landData",
-  "runtimeState.width",
-  "runtimeState.height",
-  "PROJECTION_FIT_PADDING_RATIO",
-  "getLogicalCanvasDimensions()",
-  "getRenderableLandFeatures(canvasWidth, canvasHeight, {",
-  "rendererSurfaceHost.getProjection().fitExtent",
+const MAP_RENDERER_WIRING_TOKENS = Object.freeze([
+  "import { createRendererFitProjectionOwner } from \"./renderer/renderer_fit_projection_owner.js\";",
+  "let rendererFitProjectionOwner = null;",
+  "function getRendererFitProjectionOwner()",
+  "rendererFitProjectionOwner = createRendererFitProjectionOwner({",
+  "surfaceHost: rendererSurfaceHost",
+  "state,",
+  "projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO",
+  "getLogicalCanvasDimensions,",
+  "getRenderableLandFeatures,",
+  "resetCityAnchorCache: () => {",
   "cityAnchorCache = new WeakMap();",
+  "rebuildProjectedBoundsCache,",
+  "buildSpatialIndex,",
+  "setHitCanvasDirty: () => {",
+  "updateSpecialZonesPaths,",
+  "renderSpecialZoneEditorOverlay,",
+  "updateZoomTranslateExtent,",
+  "markAllOverlaysDirty,",
+]);
+
+const FIT_PROJECTION_WRAPPER_TOKENS = Object.freeze([
+  "function fitProjection({ skipSpatialIndex = false } = {})",
+  "return getRendererFitProjectionOwner().fitProjection({ skipSpatialIndex });",
+]);
+
+const OWNER_REQUIRED_TOKENS = Object.freeze([
+  "export function createRendererFitProjectionOwner({",
+  "surfaceHost,",
+  "state = {},",
+  "constants = {},",
+  "getters = {},",
+  "effects = {},",
+  "function requireFiniteNumber(owner, name, ownerName)",
+  "renderer fit projection owner requires ${ownerName}.${name}",
+  "renderer fit projection owner requires finite ${ownerName}.${name}",
+  "function fitProjection({ skipSpatialIndex = false } = {})",
+  "state?.landData?.features",
+  "projectionFitPaddingRatio",
+  "const getLogicalCanvasDimensions = requireFunction(",
+  "const getRenderableLandFeatures = requireFunction(",
+  "const resetCityAnchorCache = requireFunction(effects, \"resetCityAnchorCache\", \"effects\");",
+  "const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();",
+  "getRenderableLandFeatures,",
+  "const features = getRenderableLandFeatures(canvasWidth, canvasHeight, {",
+  "forceProd: true",
+  "type: \"FeatureCollection\"",
+  "fitExtent([[padding, padding], [x1, y1]], fitTarget);",
+  "resetCityAnchorCache();",
   "rebuildProjectedBoundsCache();",
   "buildSpatialIndex();",
+  "setHitCanvasDirty();",
   "updateSpecialZonesPaths();",
   "renderSpecialZoneEditorOverlay();",
   "updateZoomTranslateExtent();",
   "markAllOverlaysDirty();",
 ]);
 
+const OWNER_FORBIDDEN_TOKENS = Object.freeze([
+  "map_renderer.js",
+  "runtimeState",
+  "drawCanvas",
+  "renderPassToCache",
+  "buildHitCanvas",
+  "applyDevSelectionFill",
+  "refreshMapDataForScenarioChunkPromotion",
+  "exactAfterSettle",
+  "strategicOverlayRuntime",
+  "renderFrontlineOverlay",
+  "renderSpecialZones",
+  "renderHoverOverlay",
+  "setMapData",
+  "initZoom",
+  "bindEvents",
+  "requestRender",
+  "flushRenderBoundary",
+]);
+
+const MAP_RENDERER_RAW_BODY_TOKENS = Object.freeze([
+  "const padding = Math.max(16, Math.round(Math.min(runtimeState.width, runtimeState.height) * PROJECTION_FIT_PADDING_RATIO));",
+  "const x1 = Math.max(padding + 1, runtimeState.width - padding);",
+  "const y1 = Math.max(padding + 1, runtimeState.height - padding);",
+  "rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);",
+]);
+
 const FIT_PROJECTION_STATE_WRITE_TOKEN_PARTS = Object.freeze([
   ["runtimeState.", "hitCanvasDirty = true;"],
-]);
-
-const MAP_RENDERER_WRAPPER_TOKENS = Object.freeze([
-  "function calculatePanExtent()",
-  "function updateZoomTranslateExtent()",
-  "function getViewportGeoBounds()",
-  "function getProjectedRenderableContentBounds()",
-  "function getCenteredFitZoomTransform({ centerX = true, centerY = false } = {})",
-  "function resetZoomToFit({ centerContent = false, centerX = true, centerY = false } = {})",
-  "function enforceZoomConstraints()",
-]);
-
-const VIEWPORT_RESIZE_FIT_PROJECTION_TOKENS = Object.freeze([
-  "createViewportResizeLifecycleOwner({",
-  "fitProjection,",
-  "effects.fitProjection?.({ skipSpatialIndex: interactiveLayoutResize });",
 ]);
 
 const RENDER_SEMANTIC_ANCHORS = Object.freeze([
@@ -74,56 +126,16 @@ const RENDER_SEMANTIC_ANCHORS = Object.freeze([
   "createStrategicOverlayRuntimeOwner({",
 ]);
 
-const P32_ALLOWED_TOKENS = Object.freeze([
+const P32_DOC_TOKENS = Object.freeze([
   "P32 may add `js/core/renderer/renderer_fit_projection_owner.js`.",
   "P32 may move fitProjection orchestration into the owner only through injected getters and effects",
   "Preserve `js/core/map_renderer.js` as the composition root.",
   "Preserve the existing `fitProjection` wrapper name in `js/core/map_renderer.js`.",
   "Keep viewport resize lifecycle using the same fitProjection wrapper/effect.",
-]);
-
-const P32_FORBIDDEN_TOKENS = Object.freeze([
   "Direct `runtimeState` writes.",
   "Import of `js/core/map_renderer.js`.",
-  "`drawCanvas`.",
-  "`renderPassToCache`.",
-  "Hit canvas build.",
-  "Selection/fill.",
-  "Scenario refresh/chunk.",
-  "Exact-after-settle.",
-  "Strategic overlay runtime.",
-  "Render lifecycle owner.",
-  "`setMapData` migration.",
-  "`initZoom` or `bindEvents` migration.",
-  "Renderer public facade change.",
-]);
-
-const DOC_INVENTORY_TOKENS = Object.freeze([
-  "P31 is preflight only.",
-  "renderer_surface_host.js` is registry-only",
-  "renderer_surface_lifecycle_owner.js` owns DOM lookup, canvas layer registration, hit canvas handle creation, and 2D context acquisition.",
-  "renderer_projection_path_owner.js` owns Equal Earth projection creation and SVG/canvas/hit path creation plus registration.",
-  "renderer_svg_surface_lifecycle_owner.js` owns SVG root, static viewport groups, strategic defs, preview group, and interaction rect creation plus registration.",
-  "runtimeState.landData",
-  "runtimeState.width",
-  "runtimeState.height",
-  "PROJECTION_FIT_PADDING_RATIO",
-  "getLogicalCanvasDimensions()",
-  "getRenderableLandFeatures(canvasWidth, canvasHeight, { forceProd: true })",
-  "rendererSurfaceHost.getProjection()",
-  "projection.fitExtent",
-  "cityAnchorCache = new WeakMap();",
-  "rebuildProjectedBoundsCache();",
-  "buildSpatialIndex();",
-  "updateSpecialZonesPaths();",
-  "renderSpecialZoneEditorOverlay();",
-  "updateZoomTranslateExtent();",
-  "markAllOverlaysDirty();",
-  "projected_geometry_bounds_owner.js` owns projected bounds calculations and cache rebuild helpers through injected getters and effects.",
-  "viewport_read_model_owner.js` owns read-model calculations",
-  "viewport_command_owner.js` owns zoom command effects",
-  "viewport_resize_lifecycle_owner.js` currently calls fitProjection as an injected effect",
   "Render pass execution is not part of P32.",
+  "Renderer public facade change.",
 ]);
 
 function readRepoFile(...parts) {
@@ -181,20 +193,32 @@ function isRendererOwnerPath(sourcePath) {
     && (baseName.endsWith("_owner.js") || baseName === "renderer_surface_lifecycle_owner.js");
 }
 
-test("P31 reserves fitProjection owner implementation for P32", () => {
-  assert.equal(
-    repoFileExists(FIT_PROJECTION_OWNER_PATH),
-    false,
-    "P31 must not add renderer_fit_projection_owner.js",
-  );
+test("P32 adds fitProjection owner implementation and behavior test", () => {
+  assert.equal(repoFileExists(FIT_PROJECTION_OWNER_PATH), true);
+  assert.equal(repoFileExists(FIT_PROJECTION_OWNER_TEST_PATH), true);
   assert.equal(
     listProjectSourceFiles("js/core/renderer").includes(FIT_PROJECTION_OWNER_PATH),
-    false,
-    "P31 must keep renderer_fit_projection_owner.js absent from js/core/renderer",
+    true,
+    "P32 must add renderer_fit_projection_owner.js to js/core/renderer",
   );
 });
 
-test("map_renderer still owns fitProjection inputs and side effects", () => {
+test("map_renderer imports and wires fitProjection owner", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+
+  for (const token of MAP_RENDERER_WIRING_TOKENS) {
+    assertIncludes(rendererSource, token, "map_renderer must wire fitProjection owner");
+  }
+  for (const tokenParts of FIT_PROJECTION_STATE_WRITE_TOKEN_PARTS) {
+    assertIncludes(
+      rendererSource,
+      tokenParts.join(""),
+      "map_renderer must keep hit-canvas dirty write as injected effect",
+    );
+  }
+});
+
+test("map_renderer keeps stable fitProjection wrapper and moves raw body into owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const fitProjectionSource = sliceBetween(
     rendererSource,
@@ -202,23 +226,27 @@ test("map_renderer still owns fitProjection inputs and side effects", () => {
     "function getResizeReason(reason, fallback = \"resize\")",
   );
 
-  for (const token of FIT_PROJECTION_REQUIRED_TOKENS) {
-    assertIncludes(fitProjectionSource, token, "fitProjection must keep current input/side-effect inventory");
+  for (const token of FIT_PROJECTION_WRAPPER_TOKENS) {
+    assertIncludes(fitProjectionSource, token, "fitProjection wrapper must remain stable");
   }
-  for (const tokenParts of FIT_PROJECTION_STATE_WRITE_TOKEN_PARTS) {
-    assertIncludes(
-      fitProjectionSource,
-      tokenParts.join(""),
-      "fitProjection must keep current hit-canvas dirty side-effect inventory",
-    );
+  for (const token of MAP_RENDERER_RAW_BODY_TOKENS) {
+    assertExcludes(fitProjectionSource, token, "fitProjection wrapper must delegate raw body to owner");
   }
 });
 
-test("map_renderer keeps viewport wrapper names around fitProjection dependencies", () => {
-  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+test("fitProjection owner locks injected inputs and ordered effects", () => {
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_fit_projection_owner.js");
 
-  for (const token of MAP_RENDERER_WRAPPER_TOKENS) {
-    assertIncludes(rendererSource, token, "map_renderer must keep current viewport wrapper");
+  for (const token of OWNER_REQUIRED_TOKENS) {
+    assertIncludes(ownerSource, token, "fitProjection owner must keep injected behavior token");
+  }
+});
+
+test("fitProjection owner avoids forbidden renderer semantics", () => {
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_fit_projection_owner.js");
+
+  for (const token of OWNER_FORBIDDEN_TOKENS) {
+    assertExcludes(ownerSource, token, "fitProjection owner must avoid forbidden semantic token");
   }
 });
 
@@ -231,9 +259,13 @@ test("viewport resize lifecycle still receives fitProjection as an injected effe
     "function getScenarioWaterCachePolicyOwner()",
   );
 
-  assertIncludes(resizeFactorySource, VIEWPORT_RESIZE_FIT_PROJECTION_TOKENS[0], "map_renderer must create viewport resize owner");
-  assertIncludes(resizeFactorySource, VIEWPORT_RESIZE_FIT_PROJECTION_TOKENS[1], "map_renderer must inject fitProjection into viewport resize owner");
-  assertIncludes(resizeOwnerSource, VIEWPORT_RESIZE_FIT_PROJECTION_TOKENS[2], "viewport resize owner must call injected fitProjection effect");
+  assertIncludes(resizeFactorySource, "createViewportResizeLifecycleOwner({", "map_renderer must create viewport resize owner");
+  assertIncludes(resizeFactorySource, "fitProjection,", "map_renderer must inject fitProjection into viewport resize owner");
+  assertIncludes(
+    resizeOwnerSource,
+    "effects.fitProjection?.({ skipSpatialIndex: interactiveLayoutResize });",
+    "viewport resize owner must call injected fitProjection effect",
+  );
 });
 
 test("projection and SVG owners remain outside fitProjection fitting", () => {
@@ -246,15 +278,17 @@ test("projection and SVG owners remain outside fitProjection fitting", () => {
   }
 });
 
-test("render semantic anchors remain out of P31 fitProjection scope", () => {
+test("render semantic anchors remain outside fitProjection owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_fit_projection_owner.js");
 
   for (const token of RENDER_SEMANTIC_ANCHORS) {
-    assertIncludes(rendererSource, token, "map_renderer must keep render semantic anchor out of P31 scope");
+    assertIncludes(rendererSource, token, "map_renderer must keep render semantic anchor");
+    assertExcludes(ownerSource, token, "fitProjection owner must not import render semantic anchor");
   }
 });
 
-test("renderer owners keep map_renderer import direction before P32", () => {
+test("renderer owners keep map_renderer import direction", () => {
   for (const sourcePath of listProjectSourceFiles("js/core/renderer").filter(isRendererOwnerPath)) {
     const source = readRepoFile(sourcePath);
     assert.equal(
@@ -265,35 +299,27 @@ test("renderer owners keep map_renderer import direction before P32", () => {
   }
 });
 
-test("P31 preflight document locks P32 allowed first move and forbidden areas", () => {
+test("P31 preflight document still locks P32 allowed move and forbidden areas", () => {
   const docSource = readRepoFile(...FIT_PROJECTION_PREFLIGHT_DOC_PATH.split("/"));
 
   for (const heading of REQUIRED_PREFLIGHT_HEADINGS) {
     assertIncludes(docSource, heading, "P31 preflight doc must keep required heading");
   }
-  for (const token of DOC_INVENTORY_TOKENS) {
-    assertIncludes(docSource, token, "P31 doc must inventory current fitProjection dependency");
-  }
-  for (const tokenParts of FIT_PROJECTION_STATE_WRITE_TOKEN_PARTS) {
-    assertIncludes(
-      docSource,
-      tokenParts.join(""),
-      "P31 doc must inventory current hit-canvas dirty side effect",
-    );
-  }
-  for (const token of P32_ALLOWED_TOKENS) {
-    assertIncludes(docSource, token, "P31 doc must lock P32 allowed first move");
-  }
-  for (const token of P32_FORBIDDEN_TOKENS) {
-    assertIncludes(docSource, token, "P31 doc must lock P32 forbidden area");
+  for (const token of P32_DOC_TOKENS) {
+    assertIncludes(docSource, token, "P31 doc must keep P32 guardrail token");
   }
 });
 
-test("package exposes fitProjection lifecycle inventory script", () => {
+test("package exposes fitProjection owner and lifecycle scripts", () => {
   const packageSource = readRepoFile("package.json");
   assertIncludes(
     packageSource,
-    "\"test:node:renderer-fit-projection-lifecycle-inventory\": \"node --test tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs\"",
-    "package.json must expose the P31 fitProjection lifecycle inventory test",
+    "\"test:node:renderer-fit-projection-owner\": \"node --test tests/renderer_fit_projection_owner_behavior.test.mjs\"",
+    "package.json must expose the P32 fitProjection owner test",
+  );
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-fit-projection-lifecycle\": \"node --test tests/renderer_fit_projection_owner_behavior.test.mjs tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs\"",
+    "package.json must expose combined P32 fitProjection lifecycle script",
   );
 });

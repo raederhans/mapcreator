@@ -87,16 +87,29 @@ const PROJECTION_PATH_OWNER_FORBIDDEN_TOKENS = Object.freeze([
   "strategicOverlayRuntime",
 ]);
 
-const FIT_PROJECTION_ANCHORS = Object.freeze([
+const FIT_PROJECTION_RENDERER_ANCHORS = Object.freeze([
+  'import { createRendererFitProjectionOwner } from "./renderer/renderer_fit_projection_owner.js";',
+  "function getRendererFitProjectionOwner()",
   "function fitProjection({ skipSpatialIndex = false } = {})",
-  "rendererSurfaceHost.getProjection().fitExtent([[padding, padding], [x1, y1]], fitTarget);",
+  "return getRendererFitProjectionOwner().fitProjection({ skipSpatialIndex });",
+]);
+
+const FIT_PROJECTION_WIRING_ANCHORS = Object.freeze([
+  "rendererFitProjectionOwner = createRendererFitProjectionOwner({",
+  "surfaceHost: rendererSurfaceHost",
+  "state,",
+  "projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO",
+  "getLogicalCanvasDimensions,",
+  "getRenderableLandFeatures,",
+  "resetCityAnchorCache: () => {",
   "cityAnchorCache = new WeakMap();",
-  "rebuildProjectedBoundsCache();",
-  "buildSpatialIndex();",
-  "updateSpecialZonesPaths();",
-  "renderSpecialZoneEditorOverlay();",
-  "updateZoomTranslateExtent();",
-  "markAllOverlaysDirty();",
+  "rebuildProjectedBoundsCache,",
+  "buildSpatialIndex,",
+  "setHitCanvasDirty: () => {",
+  "updateSpecialZonesPaths,",
+  "renderSpecialZoneEditorOverlay,",
+  "updateZoomTranslateExtent,",
+  "markAllOverlaysDirty,",
 ]);
 
 const FIT_PROJECTION_ANCHOR_PARTS = Object.freeze([
@@ -269,9 +282,14 @@ test("P28 projection/path owner exists and remains scoped to handle initializati
   assert.equal(hasMapRendererImport(ownerSource), false, "projection/path owner must not import map_renderer");
 });
 
-test("map_renderer wires projection/path owner and still owns fitting", () => {
+test("map_renderer wires projection/path owner and keeps fitting composition outside projection/path owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const initMapSource = sliceBetween(rendererSource, "function initMap({", "function setMapData({");
+  const fitProjectionOwnerSource = sliceBetween(
+    rendererSource,
+    "function getRendererFitProjectionOwner()",
+    "function getStrategicOverlayHelpersOwner()",
+  );
 
   for (const token of PROJECTION_PATH_OWNER_WIRING_ANCHORS) {
     assertIncludes(rendererSource, token, "map_renderer must compose projection/path owner through initMap");
@@ -279,12 +297,19 @@ test("map_renderer wires projection/path owner and still owns fitting", () => {
   for (const token of RAW_INIT_MAP_PROJECTION_PATH_TOKENS) {
     assertExcludes(initMapSource, token, "initMap must delegate raw projection/path creation to the owner");
   }
-  for (const token of FIT_PROJECTION_ANCHORS) {
-    assertIncludes(rendererSource, token, "map_renderer must keep current fitProjection side-effect anchor");
+  for (const token of FIT_PROJECTION_RENDERER_ANCHORS) {
+    assertIncludes(rendererSource, token, "map_renderer must keep fitProjection owner and wrapper anchor");
+  }
+  for (const token of FIT_PROJECTION_WIRING_ANCHORS) {
+    assertIncludes(
+      fitProjectionOwnerSource,
+      token,
+      "map_renderer must keep fitProjection injected side-effect anchor",
+    );
   }
   for (const tokenParts of FIT_PROJECTION_ANCHOR_PARTS) {
     assertIncludes(
-      rendererSource,
+      fitProjectionOwnerSource,
       tokenParts.join(""),
       "map_renderer must keep current fitProjection state-dirty side-effect anchor",
     );
