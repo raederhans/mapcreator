@@ -241,6 +241,7 @@
 - 通过 palette registry 或 runtime asset registry 暴露的新数据入口，要同步写入 artifact contract，并刷新 `data/manifest.json` 的 size/hash。
 - 新增浏览器直接读取的 `runtime_asset_registry` key 后，要同步 `tools/build_pages_dist.py` allowlist、`tests.test_pages_dist_startup_shell`，以及 `dist/pages-dist-manifest.json` 里的发布记录。
 - runtime manifest 如果继续暴露二级资源 URL，Pages 合同要遍历这些 URL，确认每个发布 URL 都被真正发布。
+- Pages 裁掉本地专用资产时，要同步裁 `dist/app/data/manifest.json` 的 outputs 和内嵌 runtime registry，避免在线元数据继续声明未发布文件。
 
 ### 子海域拆分要锁 sibling 合同
 - 新增 source-backed child waters 时，除了父水域 subtraction，还要给 sibling non-overlap 和 detail `water_type` 加 focused contract，避免相邻子海域或类型语义在后续批次漂移。

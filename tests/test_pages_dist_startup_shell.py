@@ -661,11 +661,20 @@ class PagesDistStartupShellTest(unittest.TestCase):
                     app_dist_path.write_bytes(b"line 1\r\nline 2\r\n")
                     build_pages_dist.normalize_dist_text_file_lf(app_dist_path)
                     self.assertEqual(app_dist_path.read_bytes(), b"line 1\nline 2\n")
-                exact_json_path = Path(tmpdir) / "app" / "data" / "hgo_runtime" / "manifest.json"
-                exact_json_path.parent.mkdir(parents=True, exist_ok=True)
-                exact_json_path.write_bytes(b"{\r\n}\r\n")
-                build_pages_dist.normalize_dist_text_file_lf(exact_json_path)
-                self.assertEqual(exact_json_path.read_bytes(), b"{\r\n}\r\n")
+                if build_pages_dist.BYTE_EXACT_APP_DATA_PATHS:
+                    for relative_path in build_pages_dist.BYTE_EXACT_APP_DATA_PATHS:
+                        with self.subTest(relative_path=relative_path.as_posix()):
+                            exact_json_path = Path(tmpdir) / relative_path
+                            exact_json_path.parent.mkdir(parents=True, exist_ok=True)
+                            exact_json_path.write_bytes(b"{\r\n}\r\n")
+                            build_pages_dist.normalize_dist_text_file_lf(exact_json_path)
+                            self.assertEqual(exact_json_path.read_bytes(), b"{\r\n}\r\n")
+                else:
+                    generated_json_path = Path(tmpdir) / "app" / "data" / "generated.json"
+                    generated_json_path.parent.mkdir(parents=True, exist_ok=True)
+                    generated_json_path.write_bytes(b"{\r\n}\r\n")
+                    build_pages_dist.normalize_dist_text_file_lf(generated_json_path)
+                    self.assertEqual(generated_json_path.read_bytes(), b"{\n}\n")
             finally:
                 build_pages_dist.DIST_ROOT = original_dist_root
 
@@ -1332,10 +1341,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
         expected_status = "over_limit" if expected_over_by_bytes else "within_limit"
         self.assertEqual(size_gate.get("status"), expected_status)
         self.assertEqual(size_gate.get("over_by_bytes"), expected_over_by_bytes)
+        self.assertEqual(size_gate.get("status"), "within_limit")
+        self.assertLessEqual(payload["total_bytes"], payload["max_allowed_bytes"])
         self.assertEqual(
             records_by_path["pages-dist-manifest.json"]["size_bytes"],
             DIST_MANIFEST.stat().st_size,
         )
+        for manifest_section in (size_gate, largest_files, top_level_directories):
+            self.assertIsInstance(json.dumps(manifest_section, sort_keys=True), str)
         self.assertIsInstance(largest_files, list)
         self.assertGreater(len(largest_files), 0)
         self.assertLessEqual(len(largest_files), build_pages_dist.DIST_MANIFEST_LARGEST_FILE_LIMIT)
@@ -1363,7 +1376,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
         )
         self.assertIn("app/data/CATALOG.json", required_files)
         expected_hgo_runtime_paths = tuple(
-            f"app/data/hgo_runtime/{file_name}" for file_name in build_pages_dist.HGO_RUNTIME_FILES
+            f"app/data/hgo_runtime/{file_name}" for file_name in build_pages_dist.PAGES_HGO_RUNTIME_FILES
         )
         expected_landing_asset_paths = (
             "assets/hero-cartography.svg",
@@ -1458,7 +1471,6 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/global_contours.minor.topo.json",
             "app/data/global_rivers.geojson",
             "app/data/global_bathymetry.topo.json",
-            "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
         ):
             with self.subTest(expected_path=expected_path):
                 self.assertIn(expected_path, paths)
@@ -1498,6 +1510,13 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "app/data/transport_layers/global_rail/regions/south_america/shards/sa_w082_w058/railways.topo.json",
             "app/data/transport_layers/japan_road/roads.topo.json",
             "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.geojson",
+            "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
+            "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
+            "app/data/hgo_runtime/manifest.json",
+            "app/data/hgo_runtime/seed.json",
+            "app/data/hgo_runtime/provinces.bmp",
+            "app/data/scenarios/hgo_1936/manifest.json",
+            "app/data/scenarios/hgo_1936/runtime_topology.topo.json",
             "app/data/hgo_catalogs/hgo_flags.index.json",
             "app/data/hgo_catalogs/flags_png/full/AB/ABK.png",
             "app/data/europe_topology.highres.json",
@@ -1592,30 +1611,75 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertEqual(set(hgo_manifest["tags"].keys()), expected_published_tags)
         self.assertEqual(set(source_hgo_manifest["tags"].keys()) - set(hgo_manifest["tags"].keys()), full_only_tags)
 
-    def test_dist_hgo_runtime_registry_references_only_published_files(self) -> None:
+    def test_dist_hgo_runtime_registry_excludes_local_preview_payload(self) -> None:
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
         payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
         dist_paths = {record["path"] for record in payload["files"]}
         registry_path = REPO_ROOT / "dist" / "app" / "data" / "runtime_asset_registry.json"
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
-        expected = {
+        data_manifest = json.loads((REPO_ROOT / "dist" / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
+        local_preview_assets = {
             "hgo_runtime_manifest": "data/hgo_runtime/manifest.json",
             "hgo_runtime_seed": "data/hgo_runtime/seed.json",
             "hgo_runtime_provinces_bmp": "data/hgo_runtime/provinces.bmp",
         }
+        local_preview_outputs = {
+            "hgo_runtime/manifest.json",
+            "hgo_runtime/provinces.bmp",
+            "hgo_runtime/seed.json",
+        }
 
-        for key, url in expected.items():
+        for key, url in local_preview_assets.items():
             with self.subTest(key=key):
-                self.assertEqual(registry.get("assets", {}).get(key, {}).get("url"), url)
-                self.assertIn(f"app/{url}", dist_paths)
-                self.assertTrue((REPO_ROOT / "dist" / "app" / url).is_file())
+                self.assertNotIn(key, registry.get("assets", {}))
+                self.assertNotIn(key, data_manifest.get("runtime_asset_registry", {}).get("assets", {}))
+                self.assertNotIn(f"app/{url}", dist_paths)
+                self.assertFalse((REPO_ROOT / "dist" / "app" / url).exists())
+
+        self.assertEqual(
+            registry.get("pages_dist_policy", {}).get("removed_unpublished_asset_keys"),
+            sorted(local_preview_assets),
+        )
+        self.assertEqual(
+            data_manifest.get("runtime_asset_registry", {}).get("pages_dist_policy", {}).get("removed_unpublished_asset_keys"),
+            sorted(local_preview_assets),
+        )
+        for output_key in local_preview_outputs:
+            with self.subTest(output_key=output_key):
+                self.assertNotIn(output_key, data_manifest.get("outputs", {}))
+        self.assertTrue(
+            local_preview_outputs.issubset(
+                set(data_manifest.get("pages_dist_policy", {}).get("removed_unpublished_output_keys", []))
+            )
+        )
 
         catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
         catalog_entries = {entry["key"]: entry for entry in catalog.get("entries") or []}
-        for key, url in expected.items():
+        for key in local_preview_assets:
             with self.subTest(catalog_key=key):
-                self.assertEqual(catalog_entries.get(key, {}).get("url"), url)
+                self.assertNotIn(key, catalog_entries)
+
+    def test_dist_data_manifest_outputs_reference_only_published_files(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        data_manifest = json.loads((REPO_ROOT / "dist" / "app" / "data" / "manifest.json").read_text(encoding="utf-8"))
+        missing = []
+
+        for output_key in data_manifest.get("outputs", {}):
+            relative_path = Path(str(output_key).replace("\\", "/"))
+            if relative_path.is_absolute() or ".." in relative_path.parts:
+                missing.append(f"{output_key} -> invalid path")
+                continue
+            dist_path = (
+                REPO_ROOT / "dist" / "app" / relative_path
+                if relative_path.parts and relative_path.parts[0] == "js"
+                else REPO_ROOT / "dist" / "app" / "data" / relative_path
+            )
+            if not dist_path.is_file():
+                missing.append(f"{output_key} -> {dist_path.relative_to(REPO_ROOT)}")
+
+        self.assertFalse(missing[:20], missing[:20])
 
     def test_dist_runtime_registry_references_only_published_files(self) -> None:
         if not DIST_MANIFEST.exists():
@@ -1635,20 +1699,106 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         self.assertFalse(missing[:20], missing[:20])
 
-    def test_dist_hgo_runtime_manifest_hashes_match_published_files(self) -> None:
+    def test_dist_city_aliases_uses_reduced_pages_subset(self) -> None:
         if not DIST_MANIFEST.exists():
             self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
-        hgo_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "hgo_runtime" / "manifest.json"
-        hgo_manifest = json.loads(hgo_manifest_path.read_text(encoding="utf-8"))
-        assets = hgo_manifest.get("assets") or {}
+        source_path = REPO_ROOT / "data" / "city_aliases.json"
+        dist_path = REPO_ROOT / "dist" / "app" / "data" / "city_aliases.json"
+        source_payload = json.loads(source_path.read_text(encoding="utf-8"))
+        dist_payload = json.loads(dist_path.read_text(encoding="utf-8"))
+        policy = dist_payload.get("pages_dist_policy", {})
+        source_alias_map = source_payload.get("alias_to_stable_key", {})
+        dist_alias_map = dist_payload.get("alias_to_stable_key", {})
+        source_stable_keys = {
+            str(entry.get("stable_key") or entry.get("locale_key") or entry.get("city_id") or "").strip()
+            for entry in source_payload.get("entries", [])
+            if isinstance(entry, dict)
+        }
+        source_stable_keys.discard("")
 
-        for key in ("hgo_runtime_seed", "hgo_runtime_provinces_bmp"):
-            with self.subTest(key=key):
-                metadata = assets.get(key) or {}
-                dist_asset_path = REPO_ROOT / "dist" / "app" / str(metadata.get("url") or "")
-                self.assertTrue(dist_asset_path.is_file())
-                self.assertEqual(metadata.get("size_bytes"), dist_asset_path.stat().st_size)
-                self.assertEqual(metadata.get("sha256"), hashlib.sha256(dist_asset_path.read_bytes()).hexdigest())
+        self.assertTrue(dist_path.is_file())
+        self.assertLess(dist_path.stat().st_size, source_path.stat().st_size)
+        self.assertLess(dist_path.stat().st_size, 5 * 1024 * 1024)
+        self.assertEqual(policy.get("policy"), "reduced_alias_subset")
+        self.assertEqual(
+            policy.get("alias_mapping_source"),
+            "source_alias_to_stable_key_filtered_by_selected_stable_keys",
+        )
+        self.assertEqual(policy.get("entry_alias_generation"), "disabled")
+        self.assertEqual(policy.get("priority_source"), "data/world_cities.geojson")
+        self.assertEqual(
+            policy.get("stable_key_selection"),
+            "world_city_capital_tier_population_priority",
+        )
+        self.assertEqual(policy.get("stable_key_limit"), build_pages_dist.PAGES_CITY_ALIAS_STABLE_KEY_LIMIT)
+        self.assertEqual(policy.get("source_entry_count"), source_payload.get("entry_count"))
+        self.assertEqual(policy.get("source_alias_count"), source_payload.get("alias_count"))
+        self.assertEqual(policy.get("source_stable_key_count"), len(source_stable_keys))
+        self.assertGreaterEqual(policy.get("priority_stable_key_count"), policy.get("selected_stable_key_count"))
+        self.assertEqual(
+            policy.get("selected_stable_key_count"),
+            build_pages_dist.PAGES_CITY_ALIAS_STABLE_KEY_LIMIT,
+        )
+        self.assertEqual(dist_payload.get("entries"), [])
+        self.assertEqual(dist_payload.get("entry_count"), len(dist_payload.get("entries") or []))
+        self.assertLess(dist_payload.get("alias_count"), source_payload.get("alias_count"))
+        self.assertEqual(dist_payload.get("alias_count"), len(dist_alias_map))
+        self.assertIsInstance(dist_alias_map, dict)
+        self.assertGreater(len(dist_alias_map), 0)
+        for expected_alias in ("Tokyo", "Shanghai", "New York", "Berlin"):
+            with self.subTest(expected_alias=expected_alias):
+                self.assertEqual(dist_alias_map.get(expected_alias), source_alias_map.get(expected_alias))
+                self.assertIn(dist_alias_map[expected_alias], dist_payload.get("geo", {}))
+        data_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "manifest.json"
+        data_manifest = json.loads(data_manifest_path.read_text(encoding="utf-8"))
+        city_manifest_record = data_manifest.get("outputs", {}).get("city_aliases.json", {})
+        dist_bytes = dist_path.read_bytes()
+        self.assertEqual(city_manifest_record.get("size_bytes"), len(dist_bytes))
+        self.assertEqual(city_manifest_record.get("sha256"), hashlib.sha256(dist_bytes).hexdigest())
+        self.assertEqual(city_manifest_record.get("entry_count"), dist_payload.get("entry_count"))
+        self.assertEqual(city_manifest_record.get("alias_count"), dist_payload.get("alias_count"))
+        self.assertEqual(
+            city_manifest_record.get("ambiguous_alias_count"),
+            dist_payload.get("ambiguous_alias_count"),
+        )
+        self.assertEqual(city_manifest_record.get("pages_dist_policy"), policy)
+        catalog = json.loads((REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json").read_text(encoding="utf-8"))
+        city_catalog_entry = next(
+            entry
+            for entry in catalog.get("entries", [])
+            if entry.get("url") == "data/city_aliases.json"
+        )
+        self.assertEqual(
+            city_catalog_entry.get("hashRef"),
+            "data/manifest.json::outputs::city_aliases.json::sha256",
+        )
+        for ambiguous_alias in ("Khanabad", "Hrazdan", "25 de Mayo"):
+            with self.subTest(ambiguous_alias=ambiguous_alias):
+                self.assertNotIn(ambiguous_alias, source_alias_map)
+                self.assertNotIn(ambiguous_alias, dist_alias_map)
+
+    def test_dist_pages_scenario_index_keeps_public_policy_without_hgo_manifest(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        index_path = REPO_ROOT / "dist" / "app" / "data" / "scenarios" / "index.json"
+        scenario_index = json.loads(index_path.read_text(encoding="utf-8"))
+        public_baseline_ids = ["blank_base", "modern_world", "hoi4_1936", "hoi4_1939", "tno_1962"]
+        scenario_ids = [entry.get("scenario_id") for entry in scenario_index.get("scenarios", [])]
+
+        self.assertEqual(scenario_index.get("public_baseline_ids"), public_baseline_ids)
+        self.assertEqual(scenario_index.get("developer_preview_ids"), ["hgo_1936"])
+        self.assertEqual(sorted(scenario_ids), sorted(public_baseline_ids))
+        self.assertNotIn("hgo_1936", scenario_ids)
+        self.assertEqual(
+            scenario_index.get("pages_dist_policy", {}).get("local_preview_scenario_ids"),
+            ["hgo_1936"],
+        )
+        for entry in scenario_index.get("scenarios", []):
+            manifest_url = entry.get("manifest_url")
+            with self.subTest(scenario_id=entry.get("scenario_id")):
+                self.assertIn(f"app/{manifest_url}", dist_paths)
 
     def test_dist_manifest_keeps_japan_point_workbench_full_pack_targets(self) -> None:
         if not DIST_MANIFEST.exists():
@@ -1703,6 +1853,42 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
         self.assertFalse(missing[:20], missing[:20])
 
+    def test_dist_japan_industrial_manifest_prunes_local_preview_payload(self) -> None:
+        if not DIST_MANIFEST.exists():
+            self.skipTest("dist/pages-dist-manifest.json is only available after build_pages_dist runs")
+        payload = json.loads(DIST_MANIFEST.read_text(encoding="utf-8"))
+        dist_paths = {record["path"] for record in payload["files"]}
+        source_manifest_path = REPO_ROOT / "data" / "transport_layers" / "japan_industrial_zones" / "manifest.json"
+        dist_manifest_path = REPO_ROOT / "dist" / "app" / "data" / "transport_layers" / "japan_industrial_zones" / "manifest.json"
+        source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+        dist_manifest = json.loads(dist_manifest_path.read_text(encoding="utf-8"))
+        local_preview_paths = {
+            "data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
+            "data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
+        }
+
+        self.assertTrue(local_preview_paths.issubset({
+            source_manifest.get("paths", {}).get("preview", {}).get("industrial_zones"),
+            source_manifest.get("variants", {}).get("open", {}).get("paths", {}).get("preview", {}).get("industrial_zones"),
+        }))
+        for runtime_path in local_preview_paths:
+            with self.subTest(runtime_path=runtime_path):
+                self.assertNotIn(f"app/{runtime_path}", dist_paths)
+                self.assertFalse((REPO_ROOT / "dist" / "app" / runtime_path).exists())
+
+        path_sections = [dist_manifest.get("paths", {})]
+        variants = dist_manifest.get("variants", {})
+        if isinstance(variants, dict):
+            path_sections.extend(
+                variant.get("paths", {}) for variant in variants.values() if isinstance(variant, dict)
+            )
+        for path_section in path_sections:
+            if not isinstance(path_section, dict):
+                continue
+            preview_paths = path_section.get("preview")
+            if isinstance(preview_paths, dict):
+                self.assertNotIn("industrial_zones", preview_paths)
+
     def test_dist_catalog_references_only_published_files(self) -> None:
         catalog_path = REPO_ROOT / "dist" / "app" / "data" / "CATALOG.json"
         if not catalog_path.exists():
@@ -1714,7 +1900,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             runtime_path = entry.get("url") if isinstance(entry, dict) else None
             if isinstance(runtime_path, str) and runtime_path.startswith("data/"):
                 if not (REPO_ROOT / "dist" / "app" / runtime_path).is_file():
-                    missing.append(runtime_path)
+                    missing.append(f"{entry.get('key', '<unknown>')} -> {runtime_path}")
 
         self.assertEqual(payload.get("counts", {}).get("entries"), len(entries))
         self.assertFalse(missing[:20], missing[:20])

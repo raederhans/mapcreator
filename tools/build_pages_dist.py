@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import os
 import shutil
@@ -97,7 +98,11 @@ HGO_RUNTIME_FILES = (
     "seed.json",
     "provinces.bmp",
 )
+PAGES_HGO_RUNTIME_FILES: tuple[str, ...] = ()
 HGO_IDENTITY_FLAG_TIERS = ("small", "medium")
+PAGES_CITY_ALIAS_STABLE_KEY_LIMIT = 2500
+PAGES_CITY_ALIAS_ENTRY_LIMIT = PAGES_CITY_ALIAS_STABLE_KEY_LIMIT
+PAGES_LOCAL_PREVIEW_SCENARIO_IDS = {"hgo_1936"}
 SCENARIO_EXCLUDED_DIR_NAMES = {"derived"}
 SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES = {
     Path("tno_1962") / "derived" / "atlantropa_donor_ledger.json",
@@ -123,6 +128,10 @@ TRANSPORT_SMALL_DIRECT_RUNTIME_FILES = {
     "data/transport_layers/japan_port/ports.expanded.geojson",
     "data/transport_layers/japan_port/ports.geojson",
 }
+TRANSPORT_LOCAL_ONLY_PREVIEW_FILES = {
+    Path("japan_industrial_zones") / "industrial_zones.internal.preview.geojson",
+    Path("japan_industrial_zones") / "industrial_zones.open.preview.geojson",
+}
 DISPOSABLE_DIST_NAMES = {"__pycache__"}
 DISPOSABLE_DIST_SUFFIXES = {".pyc", ".pyo"}
 LF_NORMALIZED_ROOT_DIST_PATHS = {
@@ -133,8 +142,9 @@ LF_NORMALIZED_ROOT_DIST_PATHS = {
 LF_NORMALIZED_ROOT_ASSET_SUFFIXES = {".json"}
 LF_NORMALIZED_APP_SUFFIXES = {".css", ".html", ".js", ".json", ".md", ".svg", ".txt"}
 BYTE_EXACT_APP_DATA_PATHS = {
-    Path("app") / "data" / "hgo_runtime" / "manifest.json",
-    Path("app") / "data" / "hgo_runtime" / "seed.json",
+    Path("app") / "data" / "hgo_runtime" / file_name
+    for file_name in PAGES_HGO_RUNTIME_FILES
+    if file_name.endswith(".json")
 }
 GENERATED_IGNORED_DIST_DIRS = (
     Path("app") / "data",
@@ -345,6 +355,8 @@ def copy_scenario_runtime_data() -> None:
             chunked_full_topology_excludes.add(manifest_path.parent.relative_to(source_dir) / "runtime_topology.topo.json")
 
     def should_copy_file(relative_path: Path, _source_file: Path) -> bool:
+        if relative_path.parts and relative_path.parts[0] in PAGES_LOCAL_PREVIEW_SCENARIO_IDS:
+            return False
         if relative_path in SCENARIO_PUBLISHED_DERIVED_RELATIVE_FILES:
             return True
         parts = set(relative_path.parts)
@@ -396,9 +408,17 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
         if isinstance(payload, dict):
             scenarios = payload.get("scenarios")
             if isinstance(scenarios, list):
+                published_scenarios = []
                 for scenario in scenarios:
                     if isinstance(scenario, dict):
                         scenario.pop("audit_url", None)
+                        if str(scenario.get("scenario_id") or "").strip() in PAGES_LOCAL_PREVIEW_SCENARIO_IDS:
+                            continue
+                    published_scenarios.append(scenario)
+                payload["scenarios"] = published_scenarios
+            policy = dict(payload.get("pages_dist_policy") or {})
+            policy["local_preview_scenario_ids"] = sorted(PAGES_LOCAL_PREVIEW_SCENARIO_IDS)
+            payload["pages_dist_policy"] = policy
             payload.pop("audit_url", None)
             write_text_lf(index_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
@@ -408,6 +428,8 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
             write_text_lf(manifest_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     for bundle_path in scenarios_dir.glob("*/startup.bundle.*.json"):
+        if not bundle_path.is_file():
+            continue
         payload = json.loads(bundle_path.read_text(encoding="utf-8"))
         manifest_subset = payload.get("manifest_subset") if isinstance(payload, dict) else None
         if not isinstance(manifest_subset, dict):
@@ -517,6 +539,8 @@ def copy_transport_runtime_data() -> None:
     def should_copy_file(relative_path: Path, source_file: Path) -> bool:
         # transport dist 只发布主运行时所需的小直载资产、metadata、preview 和 overrides。
         # 这样 Pages 既能保留 workbench/overview 所需最小面，又不会把全量 builder 中间产物带上去。
+        if relative_path in TRANSPORT_LOCAL_ONLY_PREVIEW_FILES:
+            return False
         repo_relative = source_file.relative_to(ROOT).as_posix()
         if repo_relative in TRANSPORT_SMALL_DIRECT_RUNTIME_FILES:
             return True
@@ -637,6 +661,93 @@ def prune_dist_catalog_to_published_files() -> None:
     write_text_lf(catalog_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
+def prune_dist_runtime_asset_registry_to_published_files() -> None:
+    registry_path = APP_DIST_ROOT / "data" / "runtime_asset_registry.json"
+    if not registry_path.is_file():
+        return
+    payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    assets = payload.get("assets")
+    if not isinstance(assets, dict):
+        return
+    published_assets = {}
+    removed_keys = []
+    for asset_key, asset in assets.items():
+        runtime_url = asset.get("url") if isinstance(asset, dict) else None
+        if isinstance(runtime_url, str) and runtime_url.startswith("data/") and not (APP_DIST_ROOT / runtime_url).is_file():
+            removed_keys.append(asset_key)
+            continue
+        published_assets[asset_key] = asset
+    if not removed_keys:
+        return
+    payload["assets"] = published_assets
+    policy = dict(payload.get("pages_dist_policy") or {})
+    policy["removed_unpublished_asset_keys"] = sorted(removed_keys)
+    payload["pages_dist_policy"] = policy
+    write_text_lf(registry_path, json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+
+def resolve_dist_data_manifest_output_path(output_key: str) -> Path | None:
+    normalized_key = str(output_key or "").replace("\\", "/").strip("/")
+    if not normalized_key:
+        return None
+    relative_path = Path(normalized_key)
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return None
+    if relative_path.parts and relative_path.parts[0] == "js":
+        return APP_DIST_ROOT / relative_path
+    return APP_DIST_ROOT / "data" / relative_path
+
+
+def prune_dist_data_manifest_to_published_files() -> None:
+    manifest_path = APP_DIST_ROOT / "data" / "manifest.json"
+    if not manifest_path.is_file():
+        return
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    changed = False
+
+    outputs = payload.get("outputs")
+    if isinstance(outputs, dict):
+        published_outputs = {}
+        removed_output_keys = []
+        for output_key, output_record in outputs.items():
+            output_path = resolve_dist_data_manifest_output_path(output_key)
+            if output_path is None or not output_path.is_file():
+                removed_output_keys.append(output_key)
+                continue
+            published_outputs[output_key] = output_record
+        if removed_output_keys:
+            payload["outputs"] = published_outputs
+            policy = dict(payload.get("pages_dist_policy") or {})
+            policy["removed_unpublished_output_keys"] = sorted(removed_output_keys)
+            payload["pages_dist_policy"] = policy
+            changed = True
+
+    embedded_registry = payload.get("runtime_asset_registry")
+    embedded_assets = (
+        embedded_registry.get("assets")
+        if isinstance(embedded_registry, dict) and isinstance(embedded_registry.get("assets"), dict)
+        else None
+    )
+    if isinstance(embedded_assets, dict):
+        published_assets = {}
+        removed_asset_keys = []
+        for asset_key, asset in embedded_assets.items():
+            runtime_url = asset.get("url") if isinstance(asset, dict) else None
+            if isinstance(runtime_url, str) and runtime_url.startswith("data/") and not (APP_DIST_ROOT / runtime_url).is_file():
+                removed_asset_keys.append(asset_key)
+                continue
+            published_assets[asset_key] = asset
+        if removed_asset_keys:
+            embedded_registry["assets"] = published_assets
+            policy = dict(embedded_registry.get("pages_dist_policy") or {})
+            policy["removed_unpublished_asset_keys"] = sorted(removed_asset_keys)
+            embedded_registry["pages_dist_policy"] = policy
+            changed = True
+
+    if changed:
+        write_text_lf(manifest_path, json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+
 def filter_hgo_png_manifest_for_pages(payload: dict) -> dict:
     allowed_tiers = set(HGO_IDENTITY_FLAG_TIERS)
     next_payload = dict(payload)
@@ -706,6 +817,224 @@ def write_pages_hgo_png_manifest(source_path: Path, destination_path: Path) -> N
     )
 
 
+def normalize_city_alias_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def parse_city_alias_int(value: object) -> int:
+    try:
+        return int(float(str(value or "0").replace(",", "")))
+    except (TypeError, ValueError):
+        return 0
+
+
+def parse_city_alias_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().casefold() in {"1", "true", "yes", "y"}
+
+
+def city_alias_capital_score(capital_kind: object) -> int:
+    value = normalize_city_alias_text(capital_kind)
+    if value == "country_capital":
+        return 3
+    if value == "admin_capital":
+        return 2
+    return 1
+
+
+def city_alias_tier_score(base_tier: object) -> int:
+    value = normalize_city_alias_text(base_tier)
+    if value == "major":
+        return 3
+    if value == "regional":
+        return 2
+    return 1
+
+
+def load_pages_city_alias_priority() -> dict[str, dict[str, object]]:
+    world_cities_path = ROOT / "data" / "world_cities.geojson"
+    if not world_cities_path.is_file():
+        return {}
+    payload = json.loads(world_cities_path.read_text(encoding="utf-8"))
+    features = payload.get("features")
+    if not isinstance(features, list):
+        return {}
+
+    priority: dict[str, dict[str, object]] = {}
+    source_rank = {"merged": 0, "natural_earth": 1, "geonames": 2}
+    for feature in features:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict):
+            continue
+        city_id = normalize_city_alias_text(properties.get("city_id") or properties.get("id"))
+        stable_key = normalize_city_alias_text(properties.get("stable_key"))
+        if not stable_key and city_id:
+            stable_key = f"id::{city_id}"
+        if not stable_key:
+            continue
+        source = normalize_city_alias_text(properties.get("source"))
+        priority[stable_key] = {
+            "stable_key": stable_key,
+            "country_code": normalize_city_alias_text(properties.get("country_code")),
+            "name": normalize_city_alias_text(
+                properties.get("name_ascii")
+                or properties.get("name_en")
+                or properties.get("name")
+            ),
+            "population": parse_city_alias_int(properties.get("population")),
+            "capital_score": city_alias_capital_score(properties.get("capital_kind")),
+            "is_world_city": parse_city_alias_bool(properties.get("is_world_city")),
+            "tier_score": city_alias_tier_score(properties.get("base_tier")),
+            "source_rank": source_rank.get(source, 9),
+        }
+    return priority
+
+
+def city_alias_priority_sort_key(
+    stable_key: str,
+    entry: dict[str, object],
+    priority: dict[str, dict[str, object]],
+) -> tuple[object, ...]:
+    row = priority.get(stable_key) or {}
+    entry_aliases = entry.get("aliases")
+    alias_count = len(entry_aliases) if isinstance(entry_aliases, list) else 0
+    country_code = normalize_city_alias_text(row.get("country_code") or entry.get("country_code"))
+    name = normalize_city_alias_text(
+        row.get("name")
+        or entry.get("name_ascii")
+        or entry.get("name_en")
+        or entry.get("primary_name")
+        or entry.get("name")
+    )
+    return (
+        -int(bool(row.get("is_world_city"))),
+        -parse_city_alias_int(row.get("capital_score")),
+        -parse_city_alias_int(row.get("tier_score")),
+        -parse_city_alias_int(row.get("population")),
+        parse_city_alias_int(row.get("source_rank")),
+        -alias_count,
+        country_code.casefold(),
+        name.casefold(),
+        stable_key.casefold(),
+    )
+
+
+def build_pages_city_aliases_subset(payload: dict) -> dict:
+    entries = payload.get("entries")
+    source_entries = entries if isinstance(entries, list) else []
+    source_entries_by_stable_key = {
+        stable_key: entry
+        for entry in source_entries
+        if isinstance(entry, dict)
+        for stable_key in [
+            normalize_city_alias_text(entry.get("stable_key") or entry.get("locale_key") or entry.get("city_id"))
+        ]
+        if stable_key
+    }
+    priority = load_pages_city_alias_priority()
+    prioritized_stable_keys = sorted(
+        source_entries_by_stable_key,
+        key=lambda stable_key: city_alias_priority_sort_key(
+            stable_key,
+            source_entries_by_stable_key[stable_key],
+            priority,
+        ),
+    )
+    selected_stable_keys = set(prioritized_stable_keys[:PAGES_CITY_ALIAS_STABLE_KEY_LIMIT])
+    source_geo = payload.get("geo") if isinstance(payload.get("geo"), dict) else {}
+    source_alias_to_stable_key = (
+        payload.get("alias_to_stable_key")
+        if isinstance(payload.get("alias_to_stable_key"), dict)
+        else {}
+    )
+    source_alias_to_city_id = (
+        payload.get("alias_to_city_id")
+        if isinstance(payload.get("alias_to_city_id"), dict)
+        else {}
+    )
+    geo = {
+        stable_key: source_geo[stable_key]
+        for stable_key in sorted(selected_stable_keys)
+        if stable_key in source_geo
+    }
+    alias_to_stable_key = {
+        normalize_city_alias_text(alias): stable_key
+        for alias, raw_stable_key in source_alias_to_stable_key.items()
+        for stable_key in [normalize_city_alias_text(raw_stable_key)]
+        if normalize_city_alias_text(alias) and stable_key in selected_stable_keys
+    }
+    alias_to_city_id = {
+        alias: normalize_city_alias_text(source_alias_to_city_id.get(alias))
+        for alias in alias_to_stable_key
+        if normalize_city_alias_text(source_alias_to_city_id.get(alias))
+    }
+
+    next_payload = dict(payload)
+    next_payload["entries"] = []
+    next_payload["geo"] = geo
+    next_payload["alias_to_city_id"] = dict(sorted(alias_to_city_id.items()))
+    next_payload["alias_to_stable_key"] = dict(sorted(alias_to_stable_key.items()))
+    next_payload["entry_count"] = 0
+    next_payload["alias_count"] = len(alias_to_stable_key)
+    next_payload["ambiguous_alias_count"] = 0
+    next_payload["conflict_count"] = 0
+    next_payload["conflicts"] = []
+    next_payload["ambiguous_aliases_sample"] = []
+    next_payload["pages_dist_policy"] = {
+        "policy": "reduced_alias_subset",
+        "alias_mapping_source": "source_alias_to_stable_key_filtered_by_selected_stable_keys",
+        "entry_alias_generation": "disabled",
+        "priority_source": "data/world_cities.geojson",
+        "stable_key_selection": "world_city_capital_tier_population_priority",
+        "stable_key_limit": PAGES_CITY_ALIAS_STABLE_KEY_LIMIT,
+        "source_entry_count": len(source_entries),
+        "source_alias_count": int(payload.get("alias_count") or 0),
+        "source_stable_key_count": len(source_entries_by_stable_key),
+        "priority_stable_key_count": len(priority),
+        "selected_stable_key_count": len(selected_stable_keys),
+    }
+    return next_payload
+
+
+def update_pages_city_aliases_manifest_record(city_aliases_payload: dict, city_aliases_path: Path) -> None:
+    manifest_path = APP_DIST_ROOT / "data" / "manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError("Pages city aliases subset requires dist app/data/manifest.json")
+    manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    outputs = manifest_payload.get("outputs")
+    if not isinstance(outputs, dict):
+        raise ValueError("Pages dist data manifest is missing outputs")
+    manifest_record = dict(outputs.get("city_aliases.json") or {})
+    city_aliases_bytes = city_aliases_path.read_bytes()
+    manifest_record["size_bytes"] = len(city_aliases_bytes)
+    manifest_record["sha256"] = hashlib.sha256(city_aliases_bytes).hexdigest()
+    manifest_record["entry_count"] = int(city_aliases_payload.get("entry_count") or 0)
+    manifest_record["alias_count"] = int(city_aliases_payload.get("alias_count") or 0)
+    manifest_record["ambiguous_alias_count"] = int(city_aliases_payload.get("ambiguous_alias_count") or 0)
+    manifest_record["conflict_count"] = int(city_aliases_payload.get("conflict_count") or 0)
+    pages_policy = city_aliases_payload.get("pages_dist_policy")
+    if isinstance(pages_policy, dict):
+        manifest_record["pages_dist_policy"] = dict(pages_policy)
+    outputs["city_aliases.json"] = manifest_record
+    write_text_lf(manifest_path, json.dumps(manifest_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+
+def write_pages_city_aliases_subset() -> None:
+    source_path = ROOT / "data" / "city_aliases.json"
+    destination_path = APP_DIST_ROOT / "data" / "city_aliases.json"
+    if not source_path.is_file():
+        return
+    payload = json.loads(source_path.read_text(encoding="utf-8"))
+    city_aliases_payload = build_pages_city_aliases_subset(payload)
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    write_text_lf(
+        destination_path,
+        json.dumps(city_aliases_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
+    update_pages_city_aliases_manifest_record(city_aliases_payload, destination_path)
+
+
 def copy_hgo_identity_runtime_data() -> None:
     source_dir = ROOT / "data" / "hgo_catalogs"
     destination_dir = APP_DIST_ROOT / "data" / "hgo_catalogs"
@@ -720,19 +1049,24 @@ def copy_hgo_identity_runtime_data() -> None:
 
 
 def copy_hgo_runtime_data() -> None:
-    for file_name in HGO_RUNTIME_FILES:
+    for file_name in PAGES_HGO_RUNTIME_FILES:
         copy_relative_file(f"data/hgo_runtime/{file_name}")
 
 
 def copy_runtime_data() -> None:
     for relative_file in DATA_RUNTIME_FILES:
-        copy_relative_file(f"data/{relative_file}")
+        if relative_file == "city_aliases.json":
+            write_pages_city_aliases_subset()
+        else:
+            copy_relative_file(f"data/{relative_file}")
     for directory_name in DATA_RUNTIME_DIRS:
         copy_tree_contents(ROOT / "data" / directory_name, APP_DIST_ROOT / "data" / directory_name)
     copy_hgo_identity_runtime_data()
     copy_hgo_runtime_data()
     copy_scenario_runtime_data()
     copy_transport_runtime_data()
+    prune_dist_data_manifest_to_published_files()
+    prune_dist_runtime_asset_registry_to_published_files()
     validate_dist_scenario_startup_urls()
 
 

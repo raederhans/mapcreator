@@ -1,4 +1,4 @@
-import { resolveDataAssetUrl } from "./runtime_asset_registry.js";
+import { hasRuntimeAssetUrl, resolveDataAssetUrl } from "./runtime_asset_registry.js";
 
 const HGO_RUNTIME_ASSET_KEYS = Object.freeze({
   manifest: "hgo_runtime_manifest",
@@ -142,7 +142,21 @@ async function loadHgoRuntimeRaster({
   return decodeHgoProvinceBmp(await response.arrayBuffer());
 }
 
+function areHgoRuntimePreviewAssetsAvailable() {
+  return Object.values(HGO_RUNTIME_ASSET_KEYS).every((assetKey) => hasRuntimeAssetUrl(assetKey));
+}
+
 function createHgoRuntimePreviewLoaders(options = {}) {
+  const hasExplicitRuntimeUrls = ["manifestUrl", "seedUrl", "rasterUrl"]
+    .every((fieldName) => typeof options[fieldName] === "string" && options[fieldName].trim());
+  if (!hasExplicitRuntimeUrls && !areHgoRuntimePreviewAssetsAvailable()) {
+    return Object.freeze({
+      available: false,
+      loadManifest: null,
+      loadSeed: null,
+      loadRaster: null,
+    });
+  }
   const {
     d3Client = globalThis.d3,
     fetchImpl = globalThis.fetch,
@@ -151,6 +165,7 @@ function createHgoRuntimePreviewLoaders(options = {}) {
     rasterUrl = resolveDataAssetUrl(HGO_RUNTIME_ASSET_KEYS.provincesBmp),
   } = options;
   return Object.freeze({
+    available: true,
     loadManifest: () => loadHgoRuntimeManifest({ d3Client, fetchImpl, manifestUrl }),
     loadSeed: () => loadHgoRuntimeSeed({ d3Client, fetchImpl, seedUrl }),
     loadRaster: () => loadHgoRuntimeRaster({ fetchImpl, rasterUrl }),
@@ -159,6 +174,7 @@ function createHgoRuntimePreviewLoaders(options = {}) {
 
 export {
   HGO_RUNTIME_ASSET_KEYS,
+  areHgoRuntimePreviewAssetsAvailable,
   createHgoRuntimePreviewLoaders,
   decodeHgoProvinceBmp,
   loadHgoRuntimeManifest,

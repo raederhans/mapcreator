@@ -12,12 +12,12 @@
     },
     {
       "path": "app/data/CATALOG.json",
-      "size_bytes": 302354,
+      "size_bytes": 299447,
       "source_kind": "generated_ignored"
     },
     {
       "path": "app/data/city_aliases.json",
-      "size_bytes": 30194842,
+      "size_bytes": 3619854,
       "source_kind": "generated_ignored"
     },
     {
@@ -37061,21 +37061,6 @@
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/hgo_runtime/manifest.json",
-      "size_bytes": 2403,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/hgo_runtime/provinces.bmp",
-      "size_bytes": 39321654,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/hgo_runtime/seed.json",
-      "size_bytes": 9678303,
-      "source_kind": "generated_ignored"
-    },
-    {
       "path": "app/data/hierarchy.json",
       "size_bytes": 480987,
       "source_kind": "generated_ignored"
@@ -37092,7 +37077,7 @@
     },
     {
       "path": "app/data/manifest.json",
-      "size_bytes": 60406,
+      "size_bytes": 57732,
       "source_kind": "generated_ignored"
     },
     {
@@ -37237,7 +37222,7 @@
     },
     {
       "path": "app/data/runtime_asset_registry.json",
-      "size_bytes": 26947,
+      "size_bytes": 26681,
       "source_kind": "generated_ignored"
     },
     {
@@ -37348,51 +37333,6 @@
     {
       "path": "app/data/scenarios/expectations/tno_1962.expectation.json",
       "size_bytes": 1546,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/build_snapshot.json",
-      "size_bytes": 1143,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/capital_hints.json",
-      "size_bytes": 65,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/city_overrides.json",
-      "size_bytes": 1578,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/cores.by_feature.json",
-      "size_bytes": 452966,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/countries.json",
-      "size_bytes": 586987,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/manifest.json",
-      "size_bytes": 2821,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/owners.by_feature.json",
-      "size_bytes": 286451,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/runtime_topology.topo.json",
-      "size_bytes": 30079615,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/special_zone_layers.json",
-      "size_bytes": 108,
       "source_kind": "generated_ignored"
     },
     {
@@ -39857,7 +39797,7 @@
     },
     {
       "path": "app/data/scenarios/index.json",
-      "size_bytes": 1120,
+      "size_bytes": 1067,
       "source_kind": "generated_ignored"
     },
     {
@@ -44031,18 +43971,8 @@
       "source_kind": "generated_ignored"
     },
     {
-      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
-      "size_bytes": 20696026,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
-      "size_bytes": 55095698,
-      "source_kind": "generated_ignored"
-    },
-    {
       "path": "app/data/transport_layers/japan_industrial_zones/manifest.json",
-      "size_bytes": 14263,
+      "size_bytes": 13610,
       "source_kind": "generated_ignored"
     },
     {
@@ -45752,7 +45682,7 @@
     },
     {
       "path": "app/js/core/hgo_runtime_asset_loader.js",
-      "size_bytes": 5858,
+      "size_bytes": 6467,
       "source_kind": "dist"
     },
     {
@@ -45777,7 +45707,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 93245,
+      "size_bytes": 93500,
       "source_kind": "dist"
     },
     {
@@ -46262,7 +46192,7 @@
     },
     {
       "path": "app/js/core/runtime_asset_registry.js",
-      "size_bytes": 3189,
+      "size_bytes": 3296,
       "source_kind": "dist"
     },
     {
@@ -46642,7 +46572,7 @@
     },
     {
       "path": "app/js/ui/scenario_controls.js",
-      "size_bytes": 13892,
+      "size_bytes": 14727,
       "source_kind": "dist"
     },
     {
@@ -47352,7 +47282,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465881,
+      "size_bytes": 1463742,
       "source_kind": "dist"
     },
     {
@@ -47363,28 +47293,8 @@
   ],
   "largest_files": [
     {
-      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.open.preview.geojson",
-      "size_bytes": 55095698,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/hgo_runtime/provinces.bmp",
-      "size_bytes": 39321654,
-      "source_kind": "generated_ignored"
-    },
-    {
       "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c2.json",
       "size_bytes": 30443516,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/city_aliases.json",
-      "size_bytes": 30194842,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/scenarios/hgo_1936/runtime_topology.topo.json",
-      "size_bytes": 30079615,
       "source_kind": "generated_ignored"
     },
     {
@@ -47415,11 +47325,6 @@
     {
       "path": "app/data/global_contours.minor.topo.json",
       "size_bytes": 20712299,
-      "source_kind": "generated_ignored"
-    },
-    {
-      "path": "app/data/transport_layers/japan_industrial_zones/industrial_zones.internal.preview.geojson",
-      "size_bytes": 20696026,
       "source_kind": "generated_ignored"
     },
     {
@@ -47461,6 +47366,31 @@
       "path": "app/data/transport_layers/japan_mineral_resources/mineral_resources.preview.geojson",
       "size_bytes": 11645797,
       "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/political.coarse.r0c0.json",
+      "size_bytes": 11435737,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r1c0.json",
+      "size_bytes": 11040958,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/scenarios/tno_1962/chunks/water.detail.r0c3.json",
+      "size_bytes": 10229641,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/geo_aliases.json",
+      "size_bytes": 9827487,
+      "source_kind": "generated_ignored"
+    },
+    {
+      "path": "app/data/transport_layers/uk_road/roads.preview.topo.json",
+      "size_bytes": 9653698,
+      "source_kind": "generated_ignored"
     }
   ],
   "max_allowed_bytes": 1073741824,
@@ -47474,14 +47404,14 @@
   ],
   "schema_version": 1,
   "size_gate": {
-    "over_by_bytes": 81575837,
-    "status": "over_limit"
+    "over_by_bytes": 0,
+    "status": "within_limit"
   },
   "top_level_directories": [
     {
-      "file_count": 9416,
+      "file_count": 9402,
       "path": "app",
-      "size_bytes": 1148829314
+      "size_bytes": 966043761
     },
     {
       "file_count": 51,
@@ -47491,7 +47421,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465881
+      "size_bytes": 1463742
     },
     {
       "file_count": 1,
@@ -47514,5 +47444,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 1155317661
+  "total_bytes": 972529969
 }

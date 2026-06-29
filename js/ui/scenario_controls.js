@@ -18,6 +18,7 @@ import {
 } from "../core/scenario_recovery.js";
 import { loadScenarioRegistry } from "../core/scenario_resources.js";
 import { resetZoomToFit } from "../core/map_renderer/public.js";
+import { areHgoRuntimePreviewAssetsAvailable } from "../core/hgo_runtime_asset_loader.js";
 import { t } from "./i18n.js";
 import { showToast } from "./toast.js";
 const state = runtimeState;
@@ -30,6 +31,11 @@ const normalizeScenarioSelectionValue = (value) => (
 );
 
 const isHgoRuntimePreviewActive = () => !!runtimeState.hgoRuntimePreview?.enabled;
+
+const buildHgoRuntimePreviewOptionPayload = () => ({
+  value: HGO_RUNTIME_PREVIEW_OPTION_VALUE,
+  label: t("HGO Preview", "ui"),
+});
 
 export function initScenarioControls() {
   const scenarioSelect = document.getElementById("scenarioSelect");
@@ -60,9 +66,10 @@ export function initScenarioControls() {
     scenarioSelectButton.title = scenarioSelect?.title || "";
     scenarioSelectMenu.replaceChildren();
 
+    const hgoPreviewAvailable = areHgoRuntimePreviewAssetsAvailable() || isHgoRuntimePreviewActive();
     const optionPayloads = [
       { value: "", label: t("None", "ui") },
-      { value: HGO_RUNTIME_PREVIEW_OPTION_VALUE, label: t("HGO Preview", "ui") },
+      ...(hgoPreviewAvailable ? [buildHgoRuntimePreviewOptionPayload()] : []),
       ...entries.map((entry) => ({
         value: normalizeScenarioId(entry.scenario_id),
         label: getScenarioDisplayName(entry, entry.scenario_id),
@@ -99,7 +106,7 @@ export function initScenarioControls() {
       const activeValue = normalizeScenarioId(runtimeState.activeScenarioId);
       const hasPendingOption = !!pendingScenarioId
         && (
-          isHgoRuntimePreviewSelected(pendingScenarioId)
+          (areHgoRuntimePreviewAssetsAvailable() && isHgoRuntimePreviewSelected(pendingScenarioId))
           || entries.some((entry) => normalizeScenarioId(entry.scenario_id) === pendingScenarioId)
         );
       const hgoPreviewActive = isHgoRuntimePreviewActive();
@@ -110,10 +117,12 @@ export function initScenarioControls() {
       emptyOption.value = "";
       emptyOption.textContent = t("None", "ui");
       scenarioSelect.appendChild(emptyOption);
-      const hgoOption = document.createElement("option");
-      hgoOption.value = HGO_RUNTIME_PREVIEW_OPTION_VALUE;
-      hgoOption.textContent = t("HGO Preview", "ui");
-      scenarioSelect.appendChild(hgoOption);
+      if (areHgoRuntimePreviewAssetsAvailable() || hgoPreviewActive) {
+        const hgoOption = document.createElement("option");
+        hgoOption.value = HGO_RUNTIME_PREVIEW_OPTION_VALUE;
+        hgoOption.textContent = t("HGO Preview", "ui");
+        scenarioSelect.appendChild(hgoOption);
+      }
       entries.forEach((entry) => {
         const option = document.createElement("option");
         option.value = normalizeScenarioId(entry.scenario_id);
@@ -219,6 +228,16 @@ export function initScenarioControls() {
       if (!scenarioId) return;
       try {
         if (isHgoRuntimePreviewSelected(scenarioId)) {
+          if (!areHgoRuntimePreviewAssetsAvailable()) {
+            showToast(t("HGO Preview is available in local developer builds.", "ui"), {
+              title: t("Scenario unavailable", "ui"),
+              tone: "warning",
+              duration: 4200,
+            });
+            pendingScenarioId = "";
+            renderScenarioControls();
+            return;
+          }
           if (runtimeState.activeScenarioId) {
             clearActiveScenarioCommand({
               renderMode: "request",

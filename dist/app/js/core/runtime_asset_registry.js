@@ -36,6 +36,10 @@ export function resolveDataAssetUrl(key) {
   return url;
 }
 
+export function hasRuntimeAssetUrl(key) {
+  return !!RUNTIME_ASSET_URLS[normalizeRuntimeAssetKey(key)];
+}
+
 export function resolveScenarioRegistryUrl() {
   const scenarioRegistryKey = normalizeRuntimeAssetKey(RUNTIME_ASSET_REGISTRY?.scenario_registry_key || "scenario_registry");
   return resolveDataAssetUrl(scenarioRegistryKey);

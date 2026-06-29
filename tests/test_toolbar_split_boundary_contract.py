@@ -401,7 +401,8 @@ class ToolbarSplitBoundaryContractTest(unittest.TestCase):
         toolbar = TOOLBAR_JS.read_text(encoding="utf-8")
 
         self.assertIn('const HGO_RUNTIME_PREVIEW_OPTION_VALUE = "__hgo_runtime_preview__";', scenario_controls)
-        self.assertIn('{ value: HGO_RUNTIME_PREVIEW_OPTION_VALUE, label: t("HGO Preview", "ui") }', scenario_controls)
+        self.assertIn("areHgoRuntimePreviewAssetsAvailable", scenario_controls)
+        self.assertIn("buildHgoRuntimePreviewOptionPayload", scenario_controls)
         self.assertIn('"setHgoRuntimePreviewEnabledFn"', scenario_controls)
         self.assertIn("clearActiveScenarioCommand({", scenario_controls)
         self.assertIn('markDirtyReason: ""', scenario_controls)
