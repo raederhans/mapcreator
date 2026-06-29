@@ -40,7 +40,7 @@ Implement Phase 1: public display trust sync and deploy health hardening.
    - Dist was rebuilt after source changes; manifest reports current over-limit state.
 
 4. Commit status:
-   - This delivery package is ready for one functional commit on branch `codex/phase1-public-trust-sync`.
+   - Functional commit `a77cb051` was pushed to `origin/main`; registry closeout follows as a separate integration-truth commit.
 
 5. Base divergence:
    - Worktree was created from `origin/main@c59bb7d7eb26799195f7d5dc9a1d5cc29ea3ff13`, rebased onto `origin/main@f0000344cb64175f18d07e3ab50339d5b0aba9a7`, and rebased again onto `origin/main@e0bd74b989b79184c0c25c14fdfbcf233238b559`.
@@ -65,9 +65,9 @@ Implement Phase 1: public display trust sync and deploy health hardening.
    - The existing `locales.json` manifest drift needs a separate data-manifest owner.
 
 9. Recommended next step:
-   - Merge this branch as Phase 1 health hardening after review, because it makes public truth testable and turns Pages overage into a clear deploy blocker.
+   - Treat Phase 1 as integrated. Continue with payload slimming before enabling Pages deploy, because the manifest still reports `size_gate.status=over_limit`.
    - Start Phase 2 on payload slimming, using `dist/pages-dist-manifest.json` largest files and directory totals as the first evidence source.
 
 10. Integration stance:
-   - Can integrate as a safety/contract branch.
+   - Integrated as a safety/contract branch.
    - Do not deploy Pages from the resulting tree until `size_gate.status` returns to `within_limit`.

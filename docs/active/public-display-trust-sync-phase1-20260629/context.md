@@ -38,3 +38,8 @@
 - EXPECTED FAIL: `npm run python -- tools/build_pages_dist.py` -> `Pages dist size gate failed: 1101.80 MiB exceeds 1024.00 MiB by 77.80 MiB`.
 - EXPECTED FAIL: `npm run verify:pages-dist` -> same 1 GiB size gate failure before downstream checks.
 - EXTRA CHECK FAIL: `npm run python -- -m unittest tests.test_data_catalog_contract tests.test_data_manifest_contract -q` failed on `locales.json: size/hash drift`. `git status` shows no `data/locales.json` or `data/manifest.json` changes in this worktree, so this is recorded as an existing manifest drift outside the Phase 1 patch scope.
+
+## 2026-06-29 Main Integration
+
+- Functional commit `a77cb05157db3d200ee824a9110db1a2ea0a9336` was fast-forward pushed to `origin/main`.
+- Registry closeout marks this worktree integrated while keeping Pages deploy blocked by `size_gate.status=over_limit`.

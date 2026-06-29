@@ -28,7 +28,7 @@ Use the existing product maturity model: 5 public baselines plus 1 HGO developer
 - [x] Run required verification.
 - [x] Run final review/bug/first-principles self-check and independent review lanes.
 - [x] Update registry delivery package.
-- [ ] Commit and push branch after final staged review.
+- [x] Commit and push Phase 1 into `origin/main`.
 - [ ] Clean worktree after integration is confirmed.
 
 ## Validation Plan
