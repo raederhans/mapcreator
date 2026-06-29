@@ -7,6 +7,7 @@ const REPO_ROOT = process.cwd();
 const FILES = Object.freeze({
   packageJson: "package.json",
   renderer: "js/core/map_renderer.js",
+  rendererRuntimeState: "js/core/state/renderer_runtime_state.js",
   canvasColorHelpers: "js/core/renderer/canvas_color_helpers.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
   scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
@@ -131,6 +132,7 @@ function collectFailures() {
   const failures = [];
   const packageJson = readProjectFile(FILES.packageJson);
   const renderer = readProjectFile(FILES.renderer);
+  const rendererRuntimeState = readProjectFile(FILES.rendererRuntimeState);
   const canvasColorHelpers = readProjectFile(FILES.canvasColorHelpers);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
   const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
@@ -173,6 +175,7 @@ function collectFailures() {
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.renderer]: renderer,
+    [FILES.rendererRuntimeState]: rendererRuntimeState,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
     [FILES.scenarioRefreshPlans]: scenarioRefreshPlans,
@@ -542,7 +545,8 @@ function collectFailures() {
     "const LIFECYCLE_OWNER_SEMANTIC_BLACKLIST = Object.freeze([",
     "const LIFECYCLE_OWNER_REQUIRED_TOKENS = Object.freeze([",
     "const P26_FORBIDDEN_REGION_TOKENS = Object.freeze([",
-    "const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([",
+    "const RUNTIME_STATE_BRIDGE_HELPER_TOKENS = Object.freeze([",
+    "const FORBIDDEN_RUNTIME_STATE_BRIDGE_WRITE_PARTS = Object.freeze([",
     "renderer_surface_lifecycle_owner.js",
     "renderer_projection_path_owner.js",
     "createRendererSurfaceLifecycleOwner({",
@@ -551,20 +555,71 @@ function collectFailures() {
     "getRendererProjectionPathOwner().initializeProjectionPaths();",
     "renderer_render_lifecycle_owner.js",
     "assertNoRendererOwnerImportsMapRenderer",
-    "P26 must keep current runtimeState bridge writes in map_renderer without adding a test-file state writer",
+    "P33 must keep surface bridge state writes behind applyRendererSurfaceBridgeState",
+    "P33 bridge call must stay between rebuildPoliticalLandCollections and migrateLegacyColorState",
   ]) {
     if (!rendererSurfaceLifecycleInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererSurfaceLifecycleInventoryTest} must lock P26 lifecycle inventory token: ${token}`);
     }
   }
+  for (const token of [
+    "export function applyRendererSurfaceBridgeState(target, handles = {})",
+    "target.colorCanvas = source.mapCanvas ?? null;",
+    "target.canvasLayers = source.canvasLayers ?? null;",
+    "target.lineCanvas = null;",
+    "target.colorCtx = source.context ?? null;",
+    "target.politicalPatchCanvas = source.politicalPatchCanvas ?? null;",
+    "target.politicalPatchCtx = source.politicalPatchContext ?? null;",
+    "target.interactionOverlayCanvas = source.interactionOverlayCanvas ?? null;",
+    "target.interactionOverlayCtx = source.interactionOverlayContext ?? null;",
+    "target.lineCtx = null;",
+    "return target;",
+  ]) {
+    if (!rendererRuntimeState.includes(token)) {
+      failures.push(`${FILES.rendererRuntimeState} must own P33 surface bridge state token: ${token}`);
+    }
+  }
+  if (rendererRuntimeState.includes("renderer_surface_host.js")) {
+    failures.push(`${FILES.rendererRuntimeState} must not import ${FILES.rendererSurfaceHost}; pass plain handles from map_renderer.`);
+  }
+  for (const token of [
+    "applyRendererSurfaceBridgeState,",
+    "applyRendererSurfaceBridgeState(runtimeState, {",
+    "mapCanvas: rendererSurfaceHost.getMapCanvas(),",
+    "canvasLayers: rendererSurfaceHost.getCanvasLayers(),",
+    "context: rendererSurfaceHost.getContext(),",
+    "politicalPatchCanvas: rendererSurfaceHost.getPoliticalPatchCanvas(),",
+    "politicalPatchContext: rendererSurfaceHost.getPoliticalPatchContext(),",
+    "interactionOverlayCanvas: rendererSurfaceHost.getInteractionOverlayCanvas(),",
+    "interactionOverlayContext: rendererSurfaceHost.getInteractionOverlayContext(),",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must route P33 surface bridge state through applyRendererSurfaceBridgeState token: ${token}`);
+    }
+  }
   for (const tokenParts of [
     ["runtimeState.", "colorCanvas = rendererSurfaceHost.getMapCanvas()"],
+    ["runtimeState.", "canvasLayers = rendererSurfaceHost.getCanvasLayers()"],
+    ["runtimeState.", "lineCanvas = null"],
     ["runtimeState.", "colorCtx = rendererSurfaceHost.getContext()"],
+    ["runtimeState.", "politicalPatchCanvas = rendererSurfaceHost.getPoliticalPatchCanvas()"],
+    ["runtimeState.", "politicalPatchCtx = rendererSurfaceHost.getPoliticalPatchContext()"],
+    ["runtimeState.", "interactionOverlayCanvas = rendererSurfaceHost.getInteractionOverlayCanvas()"],
+    ["runtimeState.", "interactionOverlayCtx = rendererSurfaceHost.getInteractionOverlayContext()"],
+    ["runtimeState.", "lineCtx = null"],
   ]) {
-    if (!rendererSurfaceLifecycleInventoryTest.includes(tokenParts[0])
-      || !rendererSurfaceLifecycleInventoryTest.includes(tokenParts[1])) {
-      failures.push(`${FILES.rendererSurfaceLifecycleInventoryTest} must lock runtimeState bridge token fragments: ${tokenParts.join("")}`);
+    if (renderer.includes(tokenParts.join(""))) {
+      failures.push(`${FILES.renderer} must not keep direct P33 surface bridge write: ${tokenParts.join("")}`);
     }
+  }
+  const bridgeIndex = renderer.indexOf("applyRendererSurfaceBridgeState(runtimeState, {");
+  const rebuildIndex = renderer.lastIndexOf("rebuildPoliticalLandCollections();", bridgeIndex);
+  const migrateIndex = renderer.indexOf("migrateLegacyColorState();", bridgeIndex);
+  if (rebuildIndex < 0 || bridgeIndex < 0 || migrateIndex < 0 || !(rebuildIndex < bridgeIndex && bridgeIndex < migrateIndex)) {
+    failures.push(`${FILES.renderer} must call applyRendererSurfaceBridgeState between rebuildPoliticalLandCollections and migrateLegacyColorState.`);
+  }
+  if (!packageJson.includes('"test:node:renderer-surface-runtime-bridge-state": "node --test tests/renderer_surface_runtime_bridge_state_behavior.test.mjs"')) {
+    failures.push(`${FILES.packageJson} must expose test:node:renderer-surface-runtime-bridge-state.`);
   }
   const rendererSourceFiles = listProjectSourceFiles("js/core/renderer");
   if (rendererSourceFiles.includes("js/core/renderer/renderer_render_lifecycle_owner.js")) {

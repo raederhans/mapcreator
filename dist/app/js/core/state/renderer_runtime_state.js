@@ -365,6 +365,23 @@ export function createDefaultRendererTransientRuntimeState() {
   };
 }
 
+export function applyRendererSurfaceBridgeState(target, handles = {}) {
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+  const source = handles && typeof handles === "object" ? handles : {};
+  target.colorCanvas = source.mapCanvas ?? null;
+  target.canvasLayers = source.canvasLayers ?? null;
+  target.lineCanvas = null;
+  target.colorCtx = source.context ?? null;
+  target.politicalPatchCanvas = source.politicalPatchCanvas ?? null;
+  target.politicalPatchCtx = source.politicalPatchContext ?? null;
+  target.interactionOverlayCanvas = source.interactionOverlayCanvas ?? null;
+  target.interactionOverlayCtx = source.interactionOverlayContext ?? null;
+  target.lineCtx = null;
+  return target;
+}
+
 export function ensureRenderPassCacheState(
   target,
   {

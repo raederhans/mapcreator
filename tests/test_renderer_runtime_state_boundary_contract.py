@@ -29,6 +29,7 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("resetProjectedBoundsCacheState", owner_content)
         self.assertIn("ensureSphericalFeatureDiagnosticsCache", owner_content)
         self.assertIn("setInteractionInfrastructureStateFields", owner_content)
+        self.assertIn("applyRendererSurfaceBridgeState", owner_content)
 
     def test_map_renderer_reuses_renderer_runtime_factories(self):
         content = MAP_RENDERER_JS.read_text(encoding="utf-8")
@@ -47,6 +48,10 @@ class RendererRuntimeStateBoundaryContractTest(unittest.TestCase):
         self.assertIn("setInteractionInfrastructureStateFields(state, stage,", content)
         self.assertIn("ensureSceneSnapshotState(runtimeState)", content)
         self.assertIn("bumpSceneGenerationState(runtimeState", content)
+        self.assertIn("applyRendererSurfaceBridgeState(runtimeState, {", content)
+        self.assertNotIn("runtimeState.colorCanvas = rendererSurfaceHost.getMapCanvas()", content)
+        self.assertNotIn("runtimeState.lineCanvas = null", content)
+        self.assertNotIn("runtimeState.lineCtx = null", content)
 
     def test_dev_selection_overlay_merges_selected_feature_boundary(self):
         content = MAP_RENDERER_JS.read_text(encoding="utf-8")

@@ -120,6 +120,7 @@
     "test:node:renderer-host-inventory": "node --test tests/renderer_host_inventory_boundary.test.mjs",
     "test:node:renderer-surface-host": "node --test tests/renderer_surface_host_behavior.test.mjs tests/renderer_surface_host_inventory_boundary.test.mjs",
     "test:node:renderer-surface-host-inventory": "node --test tests/renderer_surface_host_inventory_boundary.test.mjs",
+    "test:node:renderer-surface-runtime-bridge-state": "node --test tests/renderer_surface_runtime_bridge_state_behavior.test.mjs",
     "test:node:renderer-surface-lifecycle-inventory": "node --test tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-surface-lifecycle-owner": "node --test tests/renderer_surface_lifecycle_owner_behavior.test.mjs",
     "test:node:renderer-surface-lifecycle": "node --test tests/renderer_surface_lifecycle_owner_behavior.test.mjs tests/renderer_surface_lifecycle_inventory_boundary.test.mjs",

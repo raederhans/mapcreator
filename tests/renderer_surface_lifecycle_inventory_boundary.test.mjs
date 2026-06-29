@@ -38,14 +38,28 @@ const REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS = Object.freeze([
   "bindEvents();",
 ]);
 
-const RUNTIME_STATE_BRIDGE_ANCHORS = Object.freeze([
+const RUNTIME_STATE_BRIDGE_HELPER_TOKENS = Object.freeze([
+  "applyRendererSurfaceBridgeState,",
+  "applyRendererSurfaceBridgeState(runtimeState, {",
+  "mapCanvas: rendererSurfaceHost.getMapCanvas(),",
+  "canvasLayers: rendererSurfaceHost.getCanvasLayers(),",
+  "context: rendererSurfaceHost.getContext(),",
+  "politicalPatchCanvas: rendererSurfaceHost.getPoliticalPatchCanvas(),",
+  "politicalPatchContext: rendererSurfaceHost.getPoliticalPatchContext(),",
+  "interactionOverlayCanvas: rendererSurfaceHost.getInteractionOverlayCanvas(),",
+  "interactionOverlayContext: rendererSurfaceHost.getInteractionOverlayContext(),",
+]);
+
+const FORBIDDEN_RUNTIME_STATE_BRIDGE_WRITE_PARTS = Object.freeze([
   ["runtimeState.", "colorCanvas = rendererSurfaceHost.getMapCanvas()"],
   ["runtimeState.", "canvasLayers = rendererSurfaceHost.getCanvasLayers()"],
+  ["runtimeState.", "lineCanvas = null"],
   ["runtimeState.", "colorCtx = rendererSurfaceHost.getContext()"],
   ["runtimeState.", "politicalPatchCanvas = rendererSurfaceHost.getPoliticalPatchCanvas()"],
   ["runtimeState.", "politicalPatchCtx = rendererSurfaceHost.getPoliticalPatchContext()"],
   ["runtimeState.", "interactionOverlayCanvas = rendererSurfaceHost.getInteractionOverlayCanvas()"],
   ["runtimeState.", "interactionOverlayCtx = rendererSurfaceHost.getInteractionOverlayContext()"],
+  ["runtimeState.", "lineCtx = null"],
 ]);
 
 const SURFACE_HOST_SEMANTIC_BLACKLIST = Object.freeze([
@@ -262,15 +276,63 @@ test("map_renderer remains the composition root for surface modules", () => {
 
 test("map_renderer still owns current initMap lifecycle ordering and forbidden semantic regions", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const runtimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
 
   for (const token of REQUIRED_MAP_RENDERER_LIFECYCLE_TOKENS) {
     assertIncludes(rendererSource, token, "P26 must preserve the surface lifecycle call order");
   }
-  for (const tokenParts of RUNTIME_STATE_BRIDGE_ANCHORS) {
+  for (const token of RUNTIME_STATE_BRIDGE_HELPER_TOKENS) {
     assertIncludes(
       rendererSource,
+      token,
+      "P33 must keep surface bridge state writes behind applyRendererSurfaceBridgeState",
+    );
+  }
+  for (const tokenParts of FORBIDDEN_RUNTIME_STATE_BRIDGE_WRITE_PARTS) {
+    assertExcludes(
+      rendererSource,
       tokenParts.join(""),
-      "P26 must keep current runtimeState bridge writes in map_renderer without adding a test-file state writer",
+      "P33 must keep direct surface bridge writes out of map_renderer",
+    );
+  }
+  const rebuildIndex = rendererSource.lastIndexOf(
+    "rebuildPoliticalLandCollections();",
+    rendererSource.indexOf("applyRendererSurfaceBridgeState(runtimeState, {"),
+  );
+  const bridgeIndex = rendererSource.indexOf("applyRendererSurfaceBridgeState(runtimeState, {");
+  const migrateIndex = rendererSource.indexOf("migrateLegacyColorState();", bridgeIndex);
+  assert.ok(rebuildIndex >= 0, "P33 bridge call must follow rebuildPoliticalLandCollections");
+  assert.ok(bridgeIndex >= 0, "P33 bridge call must exist in initMap");
+  assert.ok(migrateIndex >= 0, "P33 bridge call must precede migrateLegacyColorState");
+  assert.ok(
+    rebuildIndex < bridgeIndex && bridgeIndex < migrateIndex,
+    "P33 bridge call must stay between rebuildPoliticalLandCollections and migrateLegacyColorState",
+  );
+  assertIncludes(
+    runtimeStateSource,
+    "export function applyRendererSurfaceBridgeState(target, handles = {})",
+    "renderer_runtime_state must own the surface bridge state op",
+  );
+  assertExcludes(
+    runtimeStateSource,
+    "renderer_surface_host.js",
+    "renderer_runtime_state must not import the surface host",
+  );
+  for (const token of [
+    "target.colorCanvas = source.mapCanvas ?? null;",
+    "target.canvasLayers = source.canvasLayers ?? null;",
+    "target.lineCanvas = null;",
+    "target.colorCtx = source.context ?? null;",
+    "target.politicalPatchCanvas = source.politicalPatchCanvas ?? null;",
+    "target.politicalPatchCtx = source.politicalPatchContext ?? null;",
+    "target.interactionOverlayCanvas = source.interactionOverlayCanvas ?? null;",
+    "target.interactionOverlayCtx = source.interactionOverlayContext ?? null;",
+    "target.lineCtx = null;",
+  ]) {
+    assertIncludes(
+      runtimeStateSource,
+      token,
+      "renderer_runtime_state must preserve the surface bridge field mapping",
     );
   }
   for (const token of [

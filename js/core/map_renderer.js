@@ -36,6 +36,7 @@ import {
   createDefaultProjectedBoundsCacheState,
   createDefaultProjectedBoundsDiagnostics,
   createDefaultIntensityFieldToolState,
+  applyRendererSurfaceBridgeState,
   ensureRenderPassCacheState,
   ensureSceneSnapshotState,
   ensureSidebarPerfState,
@@ -22660,15 +22661,15 @@ function initMap({
   ensureLayerDataFromTopology();
   rebuildPoliticalLandCollections();
 
-  runtimeState.colorCanvas = rendererSurfaceHost.getMapCanvas();
-  runtimeState.canvasLayers = rendererSurfaceHost.getCanvasLayers();
-  runtimeState.lineCanvas = null;
-  runtimeState.colorCtx = rendererSurfaceHost.getContext();
-  runtimeState.politicalPatchCanvas = rendererSurfaceHost.getPoliticalPatchCanvas();
-  runtimeState.politicalPatchCtx = rendererSurfaceHost.getPoliticalPatchContext();
-  runtimeState.interactionOverlayCanvas = rendererSurfaceHost.getInteractionOverlayCanvas();
-  runtimeState.interactionOverlayCtx = rendererSurfaceHost.getInteractionOverlayContext();
-  runtimeState.lineCtx = null;
+  applyRendererSurfaceBridgeState(runtimeState, {
+    mapCanvas: rendererSurfaceHost.getMapCanvas(),
+    canvasLayers: rendererSurfaceHost.getCanvasLayers(),
+    context: rendererSurfaceHost.getContext(),
+    politicalPatchCanvas: rendererSurfaceHost.getPoliticalPatchCanvas(),
+    politicalPatchContext: rendererSurfaceHost.getPoliticalPatchContext(),
+    interactionOverlayCanvas: rendererSurfaceHost.getInteractionOverlayCanvas(),
+    interactionOverlayContext: rendererSurfaceHost.getInteractionOverlayContext(),
+  });
   migrateLegacyColorState();
   ensureSovereigntyState();
   normalizeColorStateForRender(state, {
