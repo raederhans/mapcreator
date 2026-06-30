@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const SET_MAP_DATA_TRANSACTION_OWNER_PATH = "js/core/map_renderer/set_map_data_transaction_owner.js";
+const SET_MAP_DATA_TRANSACTION_OWNER_TEST_PATH = "tests/renderer_set_map_data_transaction_owner_behavior.test.mjs";
 const RENDER_LIFECYCLE_OWNER_PATH = "js/core/renderer/renderer_render_lifecycle_owner.js";
 const PREFLIGHT_DOC_PATH = "docs/active/renderer-set-map-data-transaction-preflight-20260630.md";
 const RUNTIME_STATE_TOKEN = ["runtime", "State"].join("");
@@ -22,56 +23,103 @@ const SET_MAP_DATA_SIGNATURE_TOKENS = Object.freeze([
   "deferInteractionInfrastructure = false",
 ]);
 
-const SET_MAP_DATA_BODY_TOKENS = Object.freeze([
-  "resetRendererTransactionState({",
-  "clearPendingPoliticalColorEdit({",
-  "resetReason: \"set-map-data\"",
-  "paintSource: \"set-map-data\"",
-  "clearRenderPassReferenceTransforms()",
-  "clearLastGoodFrame(\"set-map-data\")",
-  "invalidateInteractionComposite(\"set-map-data\")",
-  "resetFirstVisibleFramePainted(\"set-map-data\")",
-  "invalidateAllRenderPasses(\"set-map-data\")",
-  "markAllOverlaysDirty()",
-  "queueTooltipUpdate({ visible: false })",
-  "rebuildPrimaryPoliticalCollections()",
-  "Composite coverage",
-  "Composite country coverage detail/primary",
-  "sanitizeCountryColorMap",
-  "sanitizeColorMap",
-  "migrateLegacyColorState()",
-  "setCanvasSize()",
-  "buildRuntimePoliticalMeta()",
-  "islandNeighborsCache = {",
-  "ensureSphericalFeatureDiagnosticsCache().clear()",
-  "shouldDeferInteractionInfrastructure",
-  "buildIndex()",
-  "ensureSovereigntyState()",
-  "setInteractionInfrastructureState(\"deferred-startup\"",
-  "rebuildProjectedBoundsCache()",
-  "rebuildStaticMeshes()",
-  "invalidateBorderCache()",
-  "updateDynamicBorderStatusUI()",
-  "rebuildResolvedColors()",
-  "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure })",
-  "buildSpatialIndex()",
-  "updateSpecialZonesPaths()",
-  "renderSpecialZoneEditorOverlay()",
-  "updateZoomTranslateExtent()",
-  "resetZoomToFit()",
-  "enforceZoomConstraints()",
-  "beginStagedMapDataWarmup(startedAt)",
-  "render()",
-  "recordRenderPerfMetric(\"setMapDataFirstPaint\"",
-  "recordRenderPerfMetric(\"setMapData\"",
-  "setInteractionInfrastructureState(\"ready\"",
+const SET_MAP_DATA_WRAPPER_TOKENS = Object.freeze([
+  "return getSetMapDataTransactionOwner().runSetMapDataTransaction({",
+  "refitProjection,",
+  "resetZoom,",
+  "suppressRender,",
+  "interactionLevel,",
+  "deferInteractionInfrastructure,",
 ]);
 
-const SET_MAP_DATA_STATE_WRITE_TOKEN_PARTS = Object.freeze([
+const SET_MAP_DATA_OWNER_ORDER_TOKENS = Object.freeze(`
+runEffect("resetRendererTransactionState", {
+runEffect("clearPendingPoliticalColorEdit", {
+resetReason: SET_MAP_DATA_REASON
+paintSource: SET_MAP_DATA_REASON
+runEffect("clearRenderPassReferenceTransforms")
+runEffect("clearLastGoodFrame", SET_MAP_DATA_REASON)
+runEffect("invalidateInteractionComposite", SET_MAP_DATA_REASON)
+runEffect("resetFirstVisibleFramePainted", SET_MAP_DATA_REASON)
+runEffect("invalidateAllRenderPasses", SET_MAP_DATA_REASON)
+runEffect("markAllOverlaysDirty")
+runEffect("queueTooltipUpdate", { visible: false })
+runEffect("rebuildPrimaryPoliticalCollections")
+runEffect("recordCompositeCoverageDiagnostics", politicalCollections)
+runEffect("sanitizeSetMapDataColorState")
+runEffect("migrateLegacyColorState")
+runEffect("setCanvasSize")
+runEffect("buildRuntimePoliticalMeta")
+runEffect("resetSovereigntyInitialized")
+runEffect("resetIslandNeighborsCache")
+runEffect("clearSphericalFeatureDiagnosticsCache")
+shouldDeferInteractionInfrastructure
+runEffect("buildIndex")
+runEffect("ensureSovereigntyState")
+runEffect("setDeferHitCanvasBuild", true)
+runEffect("setInteractionInfrastructureState", "deferred-startup"
+runEffect("rebuildProjectedBoundsCache")
+runEffect("rebuildStaticMeshes")
+runEffect("invalidateBorderCache")
+runEffect("updateDynamicBorderStatusUI")
+runEffect("rebuildResolvedColors")
+runEffect("fitProjection", { skipSpatialIndex: summary.shouldDeferInteractionInfrastructure })
+runEffect("buildSpatialIndex")
+runEffect("updateSpecialZonesPaths")
+runEffect("renderSpecialZoneEditorOverlay")
+runEffect("updateZoomTranslateExtent")
+runEffect("resetZoomToFit")
+runEffect("enforceZoomConstraints")
+runEffect("setHitCanvasDirty", true)
+runEffect("beginStagedMapDataWarmup", startedAt)
+runEffect("render")
+runEffect("recordRenderPerfMetric", "setMapDataFirstPaint"
+runEffect("recordRenderPerfMetric", "setMapData"
+runEffect("setInteractionInfrastructureState", "ready"
+`.trim().split("\n"));
+
+const MAP_RENDERER_WIRING_TOKENS = Object.freeze([
+  "import { createSetMapDataTransactionOwner } from \"./map_renderer/set_map_data_transaction_owner.js\";",
+  "let setMapDataTransactionOwner = null;",
+  "function getSetMapDataTransactionOwner()",
+  "setMapDataTransactionOwner = createSetMapDataTransactionOwner({",
+  "nowMs,",
+  "getActiveScenarioId: () => runtimeState.activeScenarioId",
+  "getLandFeatureCount: () => Array.isArray(runtimeState.landData?.features)",
+  "getRenderProfile: () => runtimeState.renderProfile",
+  "recordCompositeCoverageDiagnostics: ({",
+  "Composite coverage",
+  "Composite country coverage detail/primary",
+  "sanitizeSetMapDataColorState: () => {",
+  "resetSovereigntyInitialized: () => {",
+  "resetIslandNeighborsCache: () => {",
+  "clearSphericalFeatureDiagnosticsCache: () => {",
+  "setDeferHitCanvasBuild: (deferred) => {",
+  "setHitCanvasDirty: (dirty) => {",
+]);
+
+const MAP_RENDERER_STATE_WRITE_TOKEN_PARTS = Object.freeze([
+  [RUNTIME_STATE_TOKEN, ".countryBaseColors = sanitizeCountryColorMap"],
+  [RUNTIME_STATE_TOKEN, ".featureOverrides = sanitizeColorMap"],
+  [RUNTIME_STATE_TOKEN, ".waterRegionOverrides = sanitizeColorMap"],
   [RUNTIME_STATE_TOKEN, ".specialRegionOverrides = {};"],
   [RUNTIME_STATE_TOKEN, ".sovereigntyInitialized = false;"],
-  [RUNTIME_STATE_TOKEN, ".deferHitCanvasBuild = true;"],
-  [RUNTIME_STATE_TOKEN, ".hitCanvasDirty = true;"],
+  ["islandNeighborsCache = {"],
+  ["ensureSphericalFeatureDiagnosticsCache().clear();"],
+  [RUNTIME_STATE_TOKEN, ".deferHitCanvasBuild = Boolean(deferred);"],
+  [RUNTIME_STATE_TOKEN, ".hitCanvasDirty = Boolean(dirty);"],
+]);
+
+const OWNER_FORBIDDEN_TOKEN_PARTS = Object.freeze([
+  ["map_", "renderer.js"],
+  ["runtime", "State"],
+  ["draw", "Canvas"],
+  ["renderPass", "ToCache"],
+  ["build", "HitCanvas"],
+  ["createScenario", "RefreshRuntime"],
+  ["createExact", "AfterSettleScheduler"],
+  ["createStrategicOverlay", "RuntimeOwner"],
+  ["renderer_render", "_lifecycle_owner"],
 ]);
 
 const P38_OUT_OF_SCOPE_ANCHORS = Object.freeze([
@@ -167,62 +215,89 @@ function getSetMapDataSource(rendererSource) {
   );
 }
 
-test("P37 keeps setMapData transaction owner files absent", () => {
+test("P38 requires setMapData transaction owner files and keeps render lifecycle owner absent", () => {
   assert.equal(
     repoFileExists(SET_MAP_DATA_TRANSACTION_OWNER_PATH),
-    false,
-    "P37 must not add set_map_data_transaction_owner.js",
+    true,
+    "P38 must add set_map_data_transaction_owner.js",
+  );
+  assert.equal(
+    repoFileExists(SET_MAP_DATA_TRANSACTION_OWNER_TEST_PATH),
+    true,
+    "P38 must add setMapData transaction owner behavior coverage",
   );
   assert.equal(
     repoFileExists(RENDER_LIFECYCLE_OWNER_PATH),
     false,
-    "P37 must not add renderer_render_lifecycle_owner.js",
+    "P38 must keep renderer_render_lifecycle_owner.js absent",
   );
 });
 
-test("setMapData remains in map_renderer and keeps current transaction anchors", () => {
+test("setMapData remains stable wrapper and delegates to transaction owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const setMapDataSource = getSetMapDataSource(rendererSource);
 
   for (const token of SET_MAP_DATA_SIGNATURE_TOKENS) {
     assertIncludes(setMapDataSource, token, "setMapData must keep current signature/default token");
   }
-  for (const token of SET_MAP_DATA_BODY_TOKENS) {
-    assertIncludes(setMapDataSource, token, "setMapData must keep current transaction token");
+  for (const token of SET_MAP_DATA_WRAPPER_TOKENS) {
+    assertIncludes(setMapDataSource, token, "setMapData wrapper must delegate normalized options");
   }
-  for (const tokenParts of SET_MAP_DATA_STATE_WRITE_TOKEN_PARTS) {
-    assertIncludes(
-      setMapDataSource,
-      tokenParts.join(""),
-      "setMapData must keep current state write in the map_renderer composition root",
-    );
+
+  for (const token of [
+    "resetRendererTransactionState({",
+    "clearPendingPoliticalColorEdit({",
+    "rebuildPrimaryPoliticalCollections()",
+    "recordRenderPerfMetric(\"setMapDataFirstPaint\"",
+    "recordRenderPerfMetric(\"setMapData\"",
+  ]) {
+    assertExcludes(setMapDataSource, token, "setMapData wrapper must leave transaction work in the owner");
+  }
+});
+
+test("setMapData transaction owner keeps current transaction anchors and order", () => {
+  const ownerSource = readRepoFile(...SET_MAP_DATA_TRANSACTION_OWNER_PATH.split("/"));
+
+  for (const token of SET_MAP_DATA_OWNER_ORDER_TOKENS) {
+    assertIncludes(ownerSource, token, "setMapData owner must keep current transaction token");
   }
   assertTokensInOrder(
-    setMapDataSource,
-    [
-      "resetRendererTransactionState({",
-      "clearPendingPoliticalColorEdit({",
-      "clearRenderPassReferenceTransforms()",
-      "rebuildPrimaryPoliticalCollections()",
-      "migrateLegacyColorState()",
-      "setCanvasSize()",
-      "buildRuntimePoliticalMeta()",
-      "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure })",
-      "beginStagedMapDataWarmup(startedAt)",
-      "render()",
-      "recordRenderPerfMetric(\"setMapDataFirstPaint\"",
-      "recordRenderPerfMetric(\"setMapData\"",
-      "setInteractionInfrastructureState(\"ready\"",
-    ],
+    ownerSource,
+    SET_MAP_DATA_OWNER_ORDER_TOKENS,
     "setMapData must preserve high-level transaction order",
   );
+  for (const tokenParts of OWNER_FORBIDDEN_TOKEN_PARTS) {
+    assertExcludes(ownerSource, tokenParts.join(""), "setMapData owner must avoid out-of-bound token");
+  }
+});
+
+test("map_renderer wires setMapData owner effects and keeps state writes injected", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const ownerFactorySource = sliceBetween(
+    rendererSource,
+    "function getSetMapDataTransactionOwner()",
+    "function getStrategicOverlayHelpersOwner()",
+  );
+
+  for (const token of MAP_RENDERER_WIRING_TOKENS) {
+    assertIncludes(rendererSource, token, "map_renderer must wire setMapData transaction owner");
+  }
+  for (const tokenParts of MAP_RENDERER_STATE_WRITE_TOKEN_PARTS) {
+    assertIncludes(
+      ownerFactorySource,
+      tokenParts.join(""),
+      "map_renderer owner wiring must keep concrete state writes injected",
+    );
+  }
 });
 
 test("render hit scenario exact and strategic anchors remain outside P38 first move", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const ownerSource = readRepoFile(...SET_MAP_DATA_TRANSACTION_OWNER_PATH.split("/"));
 
   for (const token of P38_OUT_OF_SCOPE_ANCHORS) {
-    assertIncludes(rendererSource, token, "P37 must leave P38 out-of-scope anchor in map_renderer");
+    assertIncludes(rendererSource, token, "P38 must leave out-of-scope anchor in map_renderer");
+    assertExcludes(ownerSource, token, "P38 owner must not absorb out-of-scope anchor");
   }
 });
 
@@ -290,18 +365,18 @@ test("public facade keeps stable setMapData export", () => {
   assertIncludes(publicFacadeSource, "from \"../map_renderer.js\";", "public facade must keep current renderer bridge");
 });
 
-test("package exposes P37 inventory script only", () => {
+test("package exposes P38 owner and inventory scripts", () => {
   const packageSource = readRepoFile("package.json");
 
   assertIncludes(
     packageSource,
-    "\"test:node:renderer-set-map-data-transaction-inventory\": \"node --test tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs\"",
-    "package.json must expose the P37 setMapData transaction inventory test",
+    "\"test:node:renderer-set-map-data-transaction-owner\": \"node --test tests/renderer_set_map_data_transaction_owner_behavior.test.mjs\"",
+    "package.json must expose the P38 setMapData transaction owner behavior test",
   );
-  assertExcludes(
+  assertIncludes(
     packageSource,
-    "\"test:node:renderer-set-map-data-transaction-owner\"",
-    "P37 must not expose a P38 owner behavior script",
+    "\"test:node:renderer-set-map-data-transaction-inventory\": \"node --test tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs\"",
+    "package.json must keep the setMapData transaction inventory test",
   );
 });
 

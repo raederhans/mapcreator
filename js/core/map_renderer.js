@@ -163,6 +163,7 @@ import {
   collectVisibleSpatialItemsWithStats,
 } from "./renderer/spatial_query_index.js";
 import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_preview_render_owner.js";
+import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_transaction_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -984,6 +985,7 @@ let rendererSurfaceLifecycleOwner = null;
 let rendererProjectionPathOwner = null;
 let rendererSvgSurfaceLifecycleOwner = null;
 let rendererFitProjectionOwner = null;
+let setMapDataTransactionOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1169,6 +1171,111 @@ function getRendererStartupTransactionOwner() {
     },
   });
   return rendererStartupTransactionOwner;
+}
+
+function getSetMapDataTransactionOwner() {
+  if (setMapDataTransactionOwner) {
+    return setMapDataTransactionOwner;
+  }
+  setMapDataTransactionOwner = createSetMapDataTransactionOwner({
+    state,
+    getters: {
+      nowMs,
+      getActiveScenarioId: () => runtimeState.activeScenarioId,
+      getLandFeatureCount: () => Array.isArray(runtimeState.landData?.features)
+        ? runtimeState.landData.features.length
+        : 0,
+      getRenderProfile: () => runtimeState.renderProfile,
+    },
+    effects: {
+      resetRendererTransactionState,
+      clearPendingPoliticalColorEdit,
+      clearRenderPassReferenceTransforms,
+      clearLastGoodFrame,
+      invalidateInteractionComposite,
+      resetFirstVisibleFramePainted,
+      invalidateAllRenderPasses,
+      markAllOverlaysDirty,
+      queueTooltipUpdate,
+      rebuildPrimaryPoliticalCollections,
+      recordCompositeCoverageDiagnostics: ({
+        fullCollection,
+        interactiveCollection,
+      } = {}) => {
+        if (runtimeState.topologyBundleMode === "composite" && Array.isArray(fullCollection?.features)) {
+          const coverage = runtimeState.debugCountryCoverage || collectCountryCoverageStats(fullCollection.features);
+          const interactiveFeatureCount = Array.isArray(interactiveCollection?.features)
+            ? interactiveCollection.features.length
+            : 0;
+          console.info(
+            `[map_renderer] Composite coverage: countries detail=${coverage.detailCountries}, primaryFallback=${coverage.primaryCountries}, total=${coverage.totalCountries}; features detail=${coverage.detailFeatures}, primary=${coverage.primaryFeatures}, total=${coverage.totalFeatures}.`
+            + ` interactive=${interactiveFeatureCount}.`
+          );
+          console.info("[map_renderer] Composite country coverage detail/primary", {
+            summary: {
+              totalCountries: coverage.totalCountries,
+              detailCountries: coverage.detailCountries,
+              primaryCountries: coverage.primaryCountries,
+              totalFeatures: coverage.totalFeatures,
+              detailFeatures: coverage.detailFeatures,
+              primaryFeatures: coverage.primaryFeatures,
+            },
+            priorityCountryGaps: coverage.priorityCountryGaps,
+            detailCountries: coverage.detailCountryList,
+            primaryCountries: coverage.primaryCountryList,
+          });
+        }
+      },
+      sanitizeSetMapDataColorState: () => {
+        runtimeState.countryBaseColors = sanitizeCountryColorMap(runtimeState.countryBaseColors);
+        runtimeState.featureOverrides = sanitizeColorMap(runtimeState.featureOverrides);
+        runtimeState.waterRegionOverrides = sanitizeColorMap(runtimeState.waterRegionOverrides);
+        runtimeState.specialRegionOverrides = {};
+      },
+      migrateLegacyColorState,
+      setCanvasSize,
+      buildRuntimePoliticalMeta,
+      resetSovereigntyInitialized: () => {
+        runtimeState.sovereigntyInitialized = false;
+      },
+      resetIslandNeighborsCache: () => {
+        islandNeighborsCache = {
+          topologyRef: null,
+          objectRef: null,
+          count: 0,
+          neighbors: [],
+        };
+      },
+      clearSphericalFeatureDiagnosticsCache: () => {
+        ensureSphericalFeatureDiagnosticsCache().clear();
+      },
+      buildIndex,
+      ensureSovereigntyState,
+      setDeferHitCanvasBuild: (deferred) => {
+        runtimeState.deferHitCanvasBuild = Boolean(deferred);
+      },
+      setInteractionInfrastructureState,
+      rebuildProjectedBoundsCache,
+      rebuildStaticMeshes,
+      invalidateBorderCache,
+      updateDynamicBorderStatusUI,
+      rebuildResolvedColors,
+      fitProjection,
+      buildSpatialIndex,
+      updateSpecialZonesPaths,
+      renderSpecialZoneEditorOverlay,
+      updateZoomTranslateExtent,
+      resetZoomToFit,
+      enforceZoomConstraints,
+      setHitCanvasDirty: (dirty) => {
+        runtimeState.hitCanvasDirty = Boolean(dirty);
+      },
+      beginStagedMapDataWarmup,
+      render,
+      recordRenderPerfMetric,
+    },
+  });
+  return setMapDataTransactionOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -22857,122 +22964,13 @@ function setMapData({
   interactionLevel = "full",
   deferInteractionInfrastructure = false,
 } = {}) {
-  const startedAt = nowMs();
-  resetRendererTransactionState({
-    cancelHoverOverlayRender: true,
-    cancelSecondarySpatialBuild: true,
+  return getSetMapDataTransactionOwner().runSetMapDataTransaction({
+    refitProjection,
+    resetZoom,
+    suppressRender,
+    interactionLevel,
+    deferInteractionInfrastructure,
   });
-  clearPendingPoliticalColorEdit({
-    force: true,
-    resetReason: "set-map-data",
-    paintSource: "set-map-data",
-  });
-  clearRenderPassReferenceTransforms();
-  clearLastGoodFrame("set-map-data");
-  invalidateInteractionComposite("set-map-data");
-  resetFirstVisibleFramePainted("set-map-data");
-  invalidateAllRenderPasses("set-map-data");
-  markAllOverlaysDirty();
-  queueTooltipUpdate({ visible: false });
-  const { fullCollection, interactiveCollection } = rebuildPrimaryPoliticalCollections();
-
-  if (runtimeState.topologyBundleMode === "composite" && Array.isArray(fullCollection?.features)) {
-    const coverage = runtimeState.debugCountryCoverage || collectCountryCoverageStats(fullCollection.features);
-    const interactiveFeatureCount = Array.isArray(interactiveCollection?.features)
-      ? interactiveCollection.features.length
-      : 0;
-    console.info(
-      `[map_renderer] Composite coverage: countries detail=${coverage.detailCountries}, primaryFallback=${coverage.primaryCountries}, total=${coverage.totalCountries}; features detail=${coverage.detailFeatures}, primary=${coverage.primaryFeatures}, total=${coverage.totalFeatures}.`
-      + ` interactive=${interactiveFeatureCount}.`
-    );
-    console.info("[map_renderer] Composite country coverage detail/primary", {
-      summary: {
-        totalCountries: coverage.totalCountries,
-        detailCountries: coverage.detailCountries,
-        primaryCountries: coverage.primaryCountries,
-        totalFeatures: coverage.totalFeatures,
-        detailFeatures: coverage.detailFeatures,
-        primaryFeatures: coverage.primaryFeatures,
-      },
-      priorityCountryGaps: coverage.priorityCountryGaps,
-      detailCountries: coverage.detailCountryList,
-      primaryCountries: coverage.primaryCountryList,
-    });
-  }
-
-  runtimeState.countryBaseColors = sanitizeCountryColorMap(runtimeState.countryBaseColors);
-  runtimeState.featureOverrides = sanitizeColorMap(runtimeState.featureOverrides);
-  runtimeState.waterRegionOverrides = sanitizeColorMap(runtimeState.waterRegionOverrides);
-  runtimeState.specialRegionOverrides = {};
-  migrateLegacyColorState();
-  setCanvasSize();
-  buildRuntimePoliticalMeta();
-  runtimeState.sovereigntyInitialized = false;
-  islandNeighborsCache = {
-    topologyRef: null,
-    objectRef: null,
-    count: 0,
-    neighbors: [],
-  };
-  ensureSphericalFeatureDiagnosticsCache().clear();
-  const shouldDeferInteractionInfrastructure =
-    deferInteractionInfrastructure || interactionLevel === "readonly-startup";
-  if (!shouldDeferInteractionInfrastructure) {
-    buildIndex();
-    ensureSovereigntyState();
-  } else {
-    runtimeState.deferHitCanvasBuild = true;
-    setInteractionInfrastructureState("deferred-startup", {
-      ready: false,
-      inFlight: false,
-    });
-  }
-  if (!refitProjection) {
-    rebuildProjectedBoundsCache();
-  }
-  rebuildStaticMeshes();
-  invalidateBorderCache();
-  updateDynamicBorderStatusUI();
-  rebuildResolvedColors();
-  if (refitProjection) {
-    fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });
-  } else {
-    if (!shouldDeferInteractionInfrastructure) {
-      buildSpatialIndex();
-    }
-    updateSpecialZonesPaths();
-    renderSpecialZoneEditorOverlay();
-    updateZoomTranslateExtent();
-  }
-  if (resetZoom) {
-    resetZoomToFit();
-    enforceZoomConstraints();
-  } else {
-    runtimeState.hitCanvasDirty = true;
-  }
-  let stagedApply = false;
-  if (!suppressRender) {
-    stagedApply = beginStagedMapDataWarmup(startedAt);
-    render();
-    recordRenderPerfMetric("setMapDataFirstPaint", nowMs() - startedAt, {
-      staged: stagedApply,
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }
-  recordRenderPerfMetric("setMapData", nowMs() - startedAt, {
-    refitProjection: !!refitProjection,
-    resetZoom: !!resetZoom,
-    suppressRender: !!suppressRender,
-    landCount: Array.isArray(runtimeState.landData?.features) ? runtimeState.landData.features.length : 0,
-    renderProfile: String(runtimeState.renderProfile || "auto"),
-    staged: stagedApply,
-  });
-  if (!shouldDeferInteractionInfrastructure) {
-    setInteractionInfrastructureState("ready", {
-      ready: true,
-      inFlight: false,
-    });
-  }
 }
 
 function resetRendererRefreshTransactionState({
