@@ -134,6 +134,7 @@
     "test:node:renderer-fit-projection-lifecycle-inventory": "node --test tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-fit-projection-lifecycle": "node --test tests/renderer_fit_projection_owner_behavior.test.mjs tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
     "test:node:renderer-viewport-update-owner": "node --test tests/renderer_viewport_update_owner_behavior.test.mjs",
+    "test:node:renderer-startup-transaction-inventory": "node --test tests/renderer_startup_transaction_inventory_boundary.test.mjs",
     "test:node:render-cache-owner": "node --test tests/render_cache_owner_invalidation_behavior.test.mjs",
     "test:node:render-transform-reuse-policy-owner": "node --test tests/render_transform_reuse_policy_owner_behavior.test.mjs",
     "test:node:projected-geometry-bounds-owner": "node --test tests/projected_geometry_bounds_owner_behavior.test.mjs",

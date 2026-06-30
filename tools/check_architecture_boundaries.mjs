@@ -49,6 +49,8 @@ const FILES = Object.freeze({
   rendererFitProjectionOwnerTest: "tests/renderer_fit_projection_owner_behavior.test.mjs",
   rendererFitProjectionLifecycleInventoryTest: "tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
   rendererViewportUpdateOwnerTest: "tests/renderer_viewport_update_owner_behavior.test.mjs",
+  rendererStartupTransactionPreflightDoc: "docs/active/renderer-startup-transaction-preflight-20260629.md",
+  rendererStartupTransactionInventoryTest: "tests/renderer_startup_transaction_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -177,6 +179,8 @@ function collectFailures() {
   const rendererFitProjectionOwnerTest = readProjectFile(FILES.rendererFitProjectionOwnerTest);
   const rendererFitProjectionLifecycleInventoryTest = readProjectFile(FILES.rendererFitProjectionLifecycleInventoryTest);
   const rendererViewportUpdateOwnerTest = readProjectFile(FILES.rendererViewportUpdateOwnerTest);
+  const rendererStartupTransactionPreflightDoc = readProjectFile(FILES.rendererStartupTransactionPreflightDoc);
+  const rendererStartupTransactionInventoryTest = readProjectFile(FILES.rendererStartupTransactionInventoryTest);
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.renderer]: renderer,
@@ -222,6 +226,8 @@ function collectFailures() {
     [FILES.rendererFitProjectionOwnerTest]: rendererFitProjectionOwnerTest,
     [FILES.rendererFitProjectionLifecycleInventoryTest]: rendererFitProjectionLifecycleInventoryTest,
     [FILES.rendererViewportUpdateOwnerTest]: rendererViewportUpdateOwnerTest,
+    [FILES.rendererStartupTransactionPreflightDoc]: rendererStartupTransactionPreflightDoc,
+    [FILES.rendererStartupTransactionInventoryTest]: rendererStartupTransactionInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -1047,6 +1053,82 @@ function collectFailures() {
   }
   if (!packageJson.includes("\"test:node:renderer-viewport-update-owner\": \"node --test tests/renderer_viewport_update_owner_behavior.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P34 renderer viewport update owner behavior script.`);
+  }
+  if (!packageJson.includes("\"test:node:renderer-startup-transaction-inventory\": \"node --test tests/renderer_startup_transaction_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P35 startup transaction inventory script.`);
+  }
+  if (rendererSourceFiles.includes("js/core/renderer/renderer_startup_transaction_owner.js")) {
+    failures.push("P35 must not add js/core/renderer/renderer_startup_transaction_owner.js; reserve it for P36.");
+  }
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P34 renderer lifecycle baseline",
+    "## initMap owned sequence after surface/projection setup",
+    "## Cache and topology reset inventory",
+    "## Render pass and visible-frame reset inventory",
+    "## Runtime phase and deferred-flag reset inventory",
+    "## Day-night and canvas pointer style inventory",
+    "## Interaction infrastructure startup branch",
+    "## P36 allowed first move",
+    "## P36 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererStartupTransactionPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererStartupTransactionPreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P35 is preflight only.",
+    "P36 may add `js/core/renderer/renderer_startup_transaction_owner.js`.",
+    "P36 may only move the `initMap` reset/startup transaction after projection/path creation through injected getters and effects.",
+    "P36 must keep `initMap` as the composition root and must preserve the public wrapper in `js/core/map_renderer.js`.",
+    "P36 must keep state writes as injected effects from `map_renderer.js` or existing state ops.",
+    "P36 must preserve `applyRendererSurfaceBridgeState(runtimeState, { ... })` call location relative to `rebuildPoliticalLandCollections()` and `migrateLegacyColorState()`.",
+    "render lifecycle owner",
+    "`drawCanvas`",
+    "`renderPassToCache`",
+    "hit canvas build",
+    "`setMapData` migration",
+    "scenario refresh/chunk migration",
+    "exact-after-settle scheduler migration",
+    "strategic overlay runtime migration",
+    "`initZoom` or `bindEvents` migration",
+    "renderer public facade change",
+    "direct `runtimeState` writes inside the new owner",
+    "import of `js/core/map_renderer.js` from the new owner",
+  ]) {
+    if (!rendererStartupTransactionPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererStartupTransactionPreflightDoc} must lock P35/P36 startup transaction token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const STARTUP_OWNER_PATH = \"js/core/renderer/renderer_startup_transaction_owner.js\";",
+    "const PREFLIGHT_DOC_PATH = \"docs/active/renderer-startup-transaction-preflight-20260629.md\";",
+    "const OWNERIZED_INIT_MAP_TOKENS = Object.freeze([",
+    "const RESET_TRANSACTION_TOKENS = Object.freeze([",
+    "const LATER_STARTUP_BRANCH_TOKENS = Object.freeze([",
+    "const RENDER_SEMANTIC_ANCHORS = Object.freeze([",
+    "const P36_ALLOWED_DOC_TOKENS = Object.freeze([",
+    "const P36_FORBIDDEN_DOC_TOKENS = Object.freeze([",
+    "repoFileExists(STARTUP_OWNER_PATH)",
+    "getRendererProjectionPathOwner().initializeProjectionPaths();",
+    "applyRendererSurfaceBridgeState(runtimeState, {",
+    "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });",
+    "initZoom();",
+    "bindEvents();",
+    "function render()",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createScenarioRefreshRuntime({",
+    "createExactAfterSettleScheduler({",
+    "createStrategicOverlayRuntimeOwner({",
+    "viewport owner must stay effects-only",
+    "fitProjection owner must not own initMap transaction token",
+  ]) {
+    if (!rendererStartupTransactionInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererStartupTransactionInventoryTest} must lock P35 startup transaction inventory token: ${token}`);
+    }
   }
 
   const requiredImports = [
