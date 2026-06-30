@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 22,
+  "scenario": {
+    "id": "tno_1962",
+    "version": 2,
+    "baselineHash": "8bc3944a1541906667240bb56570c13ed1db1206efae92afaf989282c5c4a556",
+    "viewMode": "ownership"
+  },
+  "mapSemanticMode": "ownership",
+  "paintMode": "visual",
+  "interactionGranularity": "subdivision",
+  "batchFillScope": "parent",
+  "activePaletteId": "hoi4_vanilla",
+  "legendLabels": {
+    "#4b5563": "Political owners",
+    "#b6a27a": "Atlantropa basin",
+    "#5a7d99": "Water regions",
+    "#f0b84f": "City anchors"
+  },
+  "legendConfig": {
+    "mode": "direct-area",
+    "maxItems": 14
+  },
+  "legendControl": {
+    "visible": true,
+    "collapsed": false,
+    "xRatio": 0.68,
+    "yRatio": 0.16,
+    "width": 290,
+    "height": 190
+  },
+  "layerVisibility": {
+    "showWaterRegions": true,
+    "showScenarioSpecialRegions": true,
+    "showScenarioAtlantropa": true,
+    "showScenarioReliefOverlays": true,
+    "showCityPoints": true,
+    "showUrban": false,
+    "showPhysical": true,
+    "showRivers": true,
+    "showTransport": false,
+    "showSpecialZones": false
+  },
+  "styleConfig": {
+    "ocean": {
+      "fillColor": "#385873"
+    },
+    "physical": {
+      "preset": "balanced",
+      "mode": "atlas_and_contours",
+      "opacity": 0.5
+    }
+  },
+  "exportWorkbenchUi": {
+    "target": "composite",
+    "format": "png",
+    "scale": "2",
+    "previewMode": "main"
+  },
+  "timestamp": 1782835200000
+}

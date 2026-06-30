@@ -7,7 +7,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 90558,
+      "size_bytes": 91786,
       "source_kind": "dist"
     },
     {
@@ -47181,6 +47181,36 @@
       "source_kind": "dist"
     },
     {
+      "path": "assets/sample-projects/blank-base-starter.project.json",
+      "size_bytes": 1244,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/sample-projects/hoi4-1936-europe-briefing.project.json",
+      "size_bytes": 1278,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/sample-projects/hoi4-1939-europe-switch.project.json",
+      "size_bytes": 1299,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/sample-projects/modern-world-japan-corridor.project.json",
+      "size_bytes": 1700,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      "size_bytes": 1417,
+      "source_kind": "dist"
+    },
+    {
+      "path": "assets/sample-runs.json",
+      "size_bytes": 4256,
+      "source_kind": "dist"
+    },
+    {
       "path": "assets/showcase-final-map.svg",
       "size_bytes": 31074,
       "source_kind": "dist"
@@ -47292,17 +47322,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 67094,
+      "size_bytes": 71383,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1464266,
+      "size_bytes": 1465100,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 48660,
+      "size_bytes": 51296,
       "source_kind": "dist"
     }
   ],
@@ -47432,29 +47462,29 @@
       "size_bytes": 965452121
     },
     {
-      "file_count": 51,
+      "file_count": 57,
       "path": "assets",
-      "size_bytes": 4865877
+      "size_bytes": 4877071
     },
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1464266
+      "size_bytes": 1465100
     },
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 90558
+      "size_bytes": 91786
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 67094
+      "size_bytes": 71383
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 48660
+      "size_bytes": 51296
     },
     {
       "file_count": 1,
@@ -47462,5 +47492,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 971988576
+  "total_bytes": 972008757
 }

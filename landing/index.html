@@ -178,12 +178,12 @@
           </div>
         </section>
 
-        <section id="sample-runs" class="section sample-runs" data-sample-runs-root data-sample-filter="all">
+        <section id="sample-runs" class="section sample-runs" data-sample-runs-root data-sample-runs-manifest="./assets/sample-runs.json" data-sample-filter="all">
           <div class="section-heading" data-reveal>
             <p class="eyebrow" data-i18n="worksEyebrow">Sample runs</p>
             <h2 data-i18n="worksTitle">Reproducible maps, with the recipe still attached.</h2>
             <p data-i18n="worksBody">
-              Each run pairs the final output with its scenario, layer stack, source markers, and a public path back to the demo.
+              Each run pairs the final output with its scenario, layer stack, source markers, a downloadable project JSON, and a public path back to the demo.
             </p>
           </div>
 
@@ -195,8 +195,37 @@
             <button type="button" class="sample-run-filter" aria-pressed="false" tabindex="-1" data-sample-run-filter="evidence" aria-controls="sample-runs-panel" data-i18n="sampleFilterEvidence">Evidence-backed</button>
           </div>
 
+          <div class="sample-project-downloads" data-sample-project-downloads data-reveal>
+            <div class="sample-project-downloads__header">
+              <h3 data-i18n="sampleProjectDownloadsTitle">All sample project downloads</h3>
+              <p data-i18n="sampleProjectDownloadsBody">Choose any public baseline and import the JSON from Project / Import.</p>
+            </div>
+            <div class="sample-project-downloads__grid" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+              <a href="./assets/sample-projects/blank-base-starter.project.json" download data-sample-project-list-link data-sample-project-id="blank-base-starter" data-sample-scenario="blank_base">
+                <span data-i18n="sampleProjectBlank">Blank Map starter</span>
+                <strong>blank_base</strong>
+              </a>
+              <a href="./assets/sample-projects/modern-world-japan-corridor.project.json" download data-sample-project-list-link data-sample-project-id="modern-world-japan-corridor" data-sample-scenario="modern_world">
+                <span data-i18n="sampleProjectModern">Modern World Japan corridor</span>
+                <strong>modern_world</strong>
+              </a>
+              <a href="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1936-europe-briefing" data-sample-scenario="hoi4_1936">
+                <span data-i18n="sampleProjectHoi41936">HOI4 1936 Europe briefing</span>
+                <strong>hoi4_1936</strong>
+              </a>
+              <a href="./assets/sample-projects/hoi4-1939-europe-switch.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1939-europe-switch" data-sample-scenario="hoi4_1939">
+                <span data-i18n="sampleProjectHoi41939">HOI4 1939 Europe switch</span>
+                <strong>hoi4_1939</strong>
+              </a>
+              <a href="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" download data-sample-project-list-link data-sample-project-id="tno-1962-atlantropa-briefing" data-sample-scenario="tno_1962">
+                <span data-i18n="sampleProjectTno">TNO 1962 Atlantropa briefing</span>
+                <strong>tno_1962</strong>
+              </a>
+            </div>
+          </div>
+
           <div id="sample-runs-panel" class="works-grid works-grid--bento sample-runs__panel" role="region" aria-label="Sample run gallery" data-i18n-aria-label="sampleRunsPanelLabel">
-            <article class="work-card work-card--tall sample-run-card" data-reveal data-sample-run-card data-sample-run-id="tno-atlantropa-mediterranean" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-alt-history-med.json">
+            <article class="work-card work-card--tall sample-run-card" data-reveal data-sample-run-card data-sample-run-id="tno-atlantropa-mediterranean" data-sample-scenario="tno_1962" data-sample-project="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-alt-history-med.json">
               <div class="work-card__media work-card__media--workspace">
                 <img src="./assets/work-alt-history-med.webp" alt="Generated TNO 1962 Atlantropa Mediterranean map with political context, salt basins, shoals, and water regions." data-i18n-alt="workOneAlt" loading="lazy" width="560" height="360" />
               </div>
@@ -217,6 +246,10 @@
                     <span data-i18n="sampleExportLabel">Export target</span>
                     <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
                   </div>
+                </div>
+                <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
+                  <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>
                 <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
                   <span data-i18n="sampleRecipeLabel">Layer recipe</span>
@@ -243,7 +276,7 @@
               </div>
             </article>
 
-            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="hoi4-europe-comparison" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-scenario-switch-europe.json">
+            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="hoi4-europe-comparison" data-sample-scenario="hoi4_1936" data-sample-project="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-scenario-switch-europe.json">
               <div class="work-card__media">
                 <img src="./assets/work-scenario-switch-europe.webp" alt="Generated HOI4 1936 and 1939 Central Europe comparison map." data-i18n-alt="workTwoAlt" loading="lazy" width="680" height="440" />
               </div>
@@ -264,6 +297,10 @@
                     <span data-i18n="sampleExportLabel">Export target</span>
                     <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
                   </div>
+                </div>
+                <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
+                  <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>
                 <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
                   <span data-i18n="sampleRecipeLabel">Layer recipe</span>
@@ -289,7 +326,7 @@
               </div>
             </article>
 
-            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="japan-tokaido-corridor" data-sample-tags="transport atlas evidence" data-sample-metadata="./assets/work-atlas-japan-corridor.json">
+            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="japan-tokaido-corridor" data-sample-scenario="modern_world" data-sample-project="./assets/sample-projects/modern-world-japan-corridor.project.json" data-sample-tags="transport atlas evidence" data-sample-metadata="./assets/work-atlas-japan-corridor.json">
               <div class="work-card__media">
                 <img src="./assets/work-atlas-japan-corridor.webp" alt="Generated Japan Tokaido corridor atlas map with roads, rail, city lights, stations, and terrain." data-i18n-alt="workThreeAlt" loading="lazy" width="680" height="440" />
               </div>
@@ -310,6 +347,10 @@
                     <span data-i18n="sampleExportLabel">Export target</span>
                     <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
                   </div>
+                </div>
+                <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./assets/sample-projects/modern-world-japan-corridor.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
+                  <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>
                 <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
                   <span data-i18n="sampleRecipeLabel">Layer recipe</span>

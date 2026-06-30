@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-30",
+  "project_schema_version": 22,
+  "public_scenario_ids": [
+    "blank_base",
+    "modern_world",
+    "hoi4_1936",
+    "hoi4_1939",
+    "tno_1962"
+  ],
+  "developer_preview_exclusions": [
+    "hgo_1936"
+  ],
+  "sample_projects": [
+    {
+      "id": "blank-base-starter",
+      "title": "Blank base starter",
+      "scenario_id": "blank_base",
+      "project_url": "./assets/sample-projects/blank-base-starter.project.json",
+      "recipe": [
+        "Neutral public baseline",
+        "Water regions visible",
+        "Clean export target"
+      ]
+    },
+    {
+      "id": "modern-world-japan-corridor",
+      "title": "Modern World Japan corridor",
+      "scenario_id": "modern_world",
+      "project_url": "./assets/sample-projects/modern-world-japan-corridor.project.json",
+      "recipe": [
+        "Modern public baseline",
+        "Road and rail overview",
+        "Cities, terrain, rivers, and ports"
+      ]
+    },
+    {
+      "id": "hoi4-1936-europe-briefing",
+      "title": "HOI4 1936 Europe briefing",
+      "scenario_id": "hoi4_1936",
+      "project_url": "./assets/sample-projects/hoi4-1936-europe-briefing.project.json",
+      "recipe": [
+        "1936 ownership layer",
+        "City anchors",
+        "Rivers and political export"
+      ]
+    },
+    {
+      "id": "hoi4-1939-europe-switch",
+      "title": "HOI4 1939 Europe switch",
+      "scenario_id": "hoi4_1939",
+      "project_url": "./assets/sample-projects/hoi4-1939-europe-switch.project.json",
+      "recipe": [
+        "1939 ownership layer",
+        "Shared comparison viewport",
+        "Rivers and political export"
+      ]
+    },
+    {
+      "id": "tno-1962-atlantropa-briefing",
+      "title": "TNO 1962 Atlantropa briefing",
+      "scenario_id": "tno_1962",
+      "project_url": "./assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      "recipe": [
+        "TNO political owners",
+        "Atlantropa basins",
+        "Coastline detail",
+        "Mediterranean labels"
+      ]
+    }
+  ],
+  "featured_runs": [
+    {
+      "id": "tno-atlantropa-mediterranean",
+      "project_id": "tno-1962-atlantropa-briefing",
+      "scenario_id": "tno_1962",
+      "image_url": "./assets/work-alt-history-med.webp",
+      "metadata_url": "./assets/work-alt-history-med.json",
+      "project_url": "./assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      "demo_path": "./app/?view=guide",
+      "export_targets": [
+        "project-json",
+        "webp-snapshot",
+        "svg-source"
+      ],
+      "evidence_markers": [
+        "landing/assets/work-alt-history-med.json:counts.rendered_atlantropa_features",
+        "landing/assets/work-alt-history-med.json:counts.dissolved_country_owners"
+      ]
+    },
+    {
+      "id": "hoi4-europe-comparison",
+      "project_id": "hoi4-1936-europe-briefing",
+      "scenario_id": "hoi4_1936",
+      "related_scenario_ids": [
+        "hoi4_1939"
+      ],
+      "image_url": "./assets/work-scenario-switch-europe.webp",
+      "metadata_url": "./assets/work-scenario-switch-europe.json",
+      "project_url": "./assets/sample-projects/hoi4-1936-europe-briefing.project.json",
+      "demo_path": "./app/?view=guide",
+      "export_targets": [
+        "project-json",
+        "webp-snapshot",
+        "svg-source"
+      ],
+      "evidence_markers": [
+        "landing/assets/work-scenario-switch-europe.json:counts.hoi4_1936_political_features",
+        "landing/assets/work-scenario-switch-europe.json:counts.hoi4_1939_political_features"
+      ]
+    },
+    {
+      "id": "japan-tokaido-corridor",
+      "project_id": "modern-world-japan-corridor",
+      "scenario_id": "modern_world",
+      "image_url": "./assets/work-atlas-japan-corridor.webp",
+      "metadata_url": "./assets/work-atlas-japan-corridor.json",
+      "project_url": "./assets/sample-projects/modern-world-japan-corridor.project.json",
+      "demo_path": "./app/?view=guide",
+      "export_targets": [
+        "project-json",
+        "webp-snapshot",
+        "svg-source"
+      ],
+      "evidence_markers": [
+        "landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines",
+        "landing/assets/work-atlas-japan-corridor.json:counts.major_stations"
+      ]
+    }
+  ]
+}

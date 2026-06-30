@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 16:06 UTC
+Last updated: 2026-06-30 17:05 UTC
 
 ## Integration Owner
 
@@ -23,8 +23,18 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main` fast-forwarded through Phase4B commit `36dbcb1a`, ahead of `origin/main@59e4e7b3` | local main fast-forwarded from `1c3a9766` to `59e4e7b3`, then Phase4B | in-progress Phase5A preflight | Parent docs WIP preserved in stash `preserve main docs WIP before phase4b integration 2026-06-30`; no uncommitted production code before this registry closeout. | Direct probes: `git worktree list`; `git status --short --branch`; Phase4B fast-forward merge output. | Yellow for future Phase5A landing/docs/tests and Pages dist edits; green for renderer/backend/HGO runtime code. | Commit this integration registry closeout, push `main`, then create the Phase 5A worktree from updated main. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-phase4b-output-gallery` | `codex/phase4b-output-gallery-sample-runs@36dbcb1a` | `origin/main@12890fc6`; rebased over `origin/main@59e4e7b3` | integrated into local main | Hot files integrated: `landing/index.html`, `landing/app.js`, `landing/styles.css`, `tests/landing_showcase_view_behavior.test.mjs`, `tests/test_pages_dist_startup_shell.py`, generated `dist/index.html`, `dist/app.js`, `dist/styles.css`, `dist/pages-dist-manifest.json`, this registry, and `docs/active/landing-output-gallery-phase4b-20260630/**`. | Adds a source-backed sample-runs gallery for TNO Atlantropa, HOI4 1936/1939 Europe, and Japan Tokaido corridor. Post-rebase validation passed: `npm run verify:pages-dist` with startup shell 41/41, landing Node 18/18, Pages dist `971988576` bytes / `926.96 MiB`; `npm run test:node:landing-showcase-view` 18/18; `npm run verify:dist-drift` rerun; and `git diff --check`. Main integration was a fast-forward merge. | Yellow for Phase5A landing/docs/tests and generated Pages dist; green for editor runtime, scenario runtime data, HGO payload, backend, and renderer core. | Push main with the registry closeout, then remove this worktree after Phase4B remote confirmation. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@52c2d873`, synced with `origin/main@52c2d873` | pushed main | clean integration owner | Parent docs WIP preserved in stash `preserve main docs WIP before phase4b integration 2026-06-30`; no active Phase5A edits in main. | Direct probes: `git worktree list`; `git status --short --branch`; `git log --oneline --decorate --graph --max-count=12 --all`. | Yellow for registry/docs coordination only; green for Phase5A implementation files because they live in the isolated worktree. | Keep main clean until Phase5A is ready to merge. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-phase5a-sample-projects` | `codex/phase5a-sample-projects@52c2d873` | `main@52c2d873` | ready-for-integration | Hot files: `landing/index.html`, `landing/app.js`, `landing/styles.css`, `landing/assets/sample-runs.json`, `landing/assets/sample-projects/**`, `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, `tests/landing_showcase_view_behavior.test.mjs`, `tests/sample_project_contracts.test.mjs`, `tests/test_pages_dist_startup_shell.py`, `package.json`, generated `dist/**`, this registry, and `docs/active/phase5a-sample-projects-20260630/**`. | Phase4B precondition is integrated and pushed; Phase5A adds five downloadable public sample projects, manifest metadata, visible landing links for all five samples, and reproducible demo recipes. Validation passed `npm run verify:pages-dist`, `npm run verify:dist-drift`, `npm run verify:test-import-graph`, `npm run verify:architecture-boundaries`, and diff checks; follow-up code review APPROVE and architecture review CLEAR. | Yellow with future landing/Pages dist/docs/tests work; green for renderer/backend/HGO runtime code. | Commit, push branch, fast-forward merge to main, archive docs, and clean worktree after remote confirmation. |
+
+## Integrated Worktree Closeout 2026-06-30
+
+### Phase4B Output Gallery
+
+- Worktree `C:\Users\raede\.codex\worktrees\scenario-forge-phase4b-output-gallery` was fast-forwarded into main at commit `36dbcb1a`.
+- Integration registry closeout commit `865d58ac` was pushed to `origin/main`.
+- Post-rebase validation before merge passed `npm run verify:pages-dist`, `npm run test:node:landing-showcase-view`, `npm run verify:dist-drift`, and `git diff --check`.
+- Post-merge main validation passed `npm run test:node:landing-showcase-view` 18/18.
+- The Phase4B worktree was removed after remote confirmation; recovery remains through commits `36dbcb1a` and `865d58ac`.
 
 ## Local/Remote Sync Closeout 2026-06-30
 

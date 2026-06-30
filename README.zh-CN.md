@@ -45,6 +45,16 @@ Scenario Forge 把场景选择、政治编辑、地图外观、战略标注、�
 4. 按默认公开路径使用 TNO 1962，或在 Blank Map、Modern World、HOI4 1936、HOI4 1939、TNO 1962 这 5 个公开基线之间切换。
 5. 打开 Project / Export，下载 PNG/JPG 截图，或保存可继续编辑的项目 JSON。
 
+## 下载样例项目 JSON
+
+首页已经为公开基线接入可下载的起步项目。样例清单位于 [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json)，其中的项目文件放在 [`landing/assets/sample-projects/`](landing/assets/sample-projects/)。
+
+- TNO 1962 Atlantropa briefing：[`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
+- HOI4 1936 Europe briefing：[`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)
+- HOI4 1939 Europe switch：[`hoi4-1939-europe-switch.project.json`](landing/assets/sample-projects/hoi4-1939-europe-switch.project.json)
+- Modern World Japan corridor：[`modern-world-japan-corridor.project.json`](landing/assets/sample-projects/modern-world-japan-corridor.project.json)
+- Blank Map starter：[`blank-base-starter.project.json`](landing/assets/sample-projects/blank-base-starter.project.json)
+
 ## 当前公开能力边界
 
 | 能力面 | 公开 Demo 状态 | 本地/开发边界 |

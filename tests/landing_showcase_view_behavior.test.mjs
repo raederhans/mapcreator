@@ -95,6 +95,8 @@ function extractSampleRuns(html) {
 
     const imageMatch = match[2].match(/<img\b([^>]*)>/);
     const imageAttributes = parseAttributes(imageMatch?.[1] || "");
+    const projectLinkMatch = match[2].match(/<a\b([^>]*\bdata-sample-project-link\b[^>]*)>/);
+    const manifestLinkMatch = match[2].match(/<a\b([^>]*\bdata-sample-manifest-link\b[^>]*)>/);
     const evidence = new Map();
     const evidencePattern =
       /<div\b([^>]*\bdata-sample-evidence="[^"]+"[^>]*)>\s*<dt\b[^>]*>[^<]*<\/dt>\s*<dd\b([^>]*)>([^<]*)<\/dd>/g;
@@ -113,11 +115,36 @@ function extractSampleRuns(html) {
     runs.set(runId, {
       evidence,
       image: imageAttributes.get("src"),
+      manifestLink: parseAttributes(manifestLinkMatch?.[1] || "").get("href"),
       metadata: cardAttributes.get("data-sample-metadata"),
+      project: cardAttributes.get("data-sample-project"),
+      projectLink: parseAttributes(projectLinkMatch?.[1] || "").get("href"),
+      scenario: cardAttributes.get("data-sample-scenario"),
       tags: String(cardAttributes.get("data-sample-tags") || "").split(/\s+/).filter(Boolean),
     });
   }
   return runs;
+}
+
+function extractSampleRunsManifestUrl(html) {
+  const sectionMatch = html.match(/<section\b([^>]*\bid="sample-runs"[^>]*)>/);
+  const attributes = parseAttributes(sectionMatch?.[1] || "");
+  return attributes.get("data-sample-runs-manifest");
+}
+
+function extractSampleProjectListLinks(html) {
+  const links = new Map();
+  const linkPattern = /<a\b([^>]*\bdata-sample-project-list-link\b[^>]*)>/g;
+  for (const match of html.matchAll(linkPattern)) {
+    const attributes = parseAttributes(match[1]);
+    const href = attributes.get("href");
+    if (!href) continue;
+    links.set(href, {
+      id: attributes.get("data-sample-project-id"),
+      scenario: attributes.get("data-sample-scenario"),
+    });
+  }
+  return links;
 }
 
 function getExpectedLandingStats() {
@@ -684,6 +711,8 @@ test("landing sample runs resolve checked-in assets and evidence markers", () =>
       {
         image: "./assets/work-alt-history-med.webp",
         metadata: "./assets/work-alt-history-med.json",
+        project: "./assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+        scenario: "tno_1962",
         tags: ["scenario", "evidence"],
         evidence: new Map([
           ["tno-atlantropa-features", "landing/assets/work-alt-history-med.json:counts.rendered_atlantropa_features"],
@@ -696,6 +725,8 @@ test("landing sample runs resolve checked-in assets and evidence markers", () =>
       {
         image: "./assets/work-scenario-switch-europe.webp",
         metadata: "./assets/work-scenario-switch-europe.json",
+        project: "./assets/sample-projects/hoi4-1936-europe-briefing.project.json",
+        scenario: "hoi4_1936",
         tags: ["scenario", "evidence"],
         evidence: new Map([
           ["hoi4-1936-features", "landing/assets/work-scenario-switch-europe.json:counts.hoi4_1936_political_features"],
@@ -708,6 +739,8 @@ test("landing sample runs resolve checked-in assets and evidence markers", () =>
       {
         image: "./assets/work-atlas-japan-corridor.webp",
         metadata: "./assets/work-atlas-japan-corridor.json",
+        project: "./assets/sample-projects/modern-world-japan-corridor.project.json",
+        scenario: "modern_world",
         tags: ["transport", "atlas", "evidence"],
         evidence: new Map([
           ["japan-transport-lines", "landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines"],
@@ -720,18 +753,57 @@ test("landing sample runs resolve checked-in assets and evidence markers", () =>
   for (const assetRoot of ["landing", "dist"]) {
     const html = readFileSync(new URL(`../${assetRoot}/index.html`, import.meta.url), "utf8");
     const actualRuns = extractSampleRuns(html);
+    const sampleRunsManifestUrl = extractSampleRunsManifestUrl(html);
+    const sampleRunsManifestPath = new URL(`../${assetRoot}/${sampleRunsManifestUrl.slice(2)}`, import.meta.url);
+    assert.equal(sampleRunsManifestUrl, "./assets/sample-runs.json", `${assetRoot} sample manifest URL drifted`);
+    assert.ok(existsSync(sampleRunsManifestPath), `missing ${assetRoot} sample-runs manifest`);
+    const sampleRunsManifest = JSON.parse(readFileSync(sampleRunsManifestPath, "utf8"));
+    const manifestRuns = new Map(sampleRunsManifest.featured_runs.map((run) => [run.id, run]));
+    const sampleProjects = new Map(sampleRunsManifest.sample_projects.map((project) => [project.project_url, project]));
+    const sampleProjectListLinks = extractSampleProjectListLinks(html);
+    assert.deepEqual(sampleRunsManifest.public_scenario_ids, PUBLIC_SCENARIO_IDS);
+    assert.deepEqual(sampleRunsManifest.developer_preview_exclusions, ["hgo_1936"]);
+    assert.equal(sampleRunsManifest.project_schema_version, 22);
+    assert.deepEqual(
+      [...sampleProjectListLinks.keys()].sort(),
+      [...sampleProjects.keys()].sort(),
+      `${assetRoot} sample project list links drifted from manifest`,
+    );
+    for (const [projectUrl, project] of sampleProjects) {
+      const listLink = sampleProjectListLinks.get(projectUrl);
+      assert.equal(listLink.id, project.id, `${assetRoot}/${project.id} project list id drifted`);
+      assert.equal(listLink.scenario, project.scenario_id, `${assetRoot}/${project.id} project list scenario drifted`);
+      assert.ok(existsSync(new URL(`../${assetRoot}/${projectUrl.slice(2)}`, import.meta.url)), `missing ${assetRoot}/${project.id} list project`);
+    }
 
     assert.deepEqual([...actualRuns.keys()].sort(), [...expectedRuns.keys()].sort(), `${assetRoot} sample run ids drifted`);
     for (const [runId, expected] of expectedRuns) {
       const actual = actualRuns.get(runId);
       assert.equal(actual.image, expected.image, `${assetRoot}/${runId} image drifted`);
       assert.equal(actual.metadata, expected.metadata, `${assetRoot}/${runId} metadata drifted`);
+      assert.equal(actual.project, expected.project, `${assetRoot}/${runId} project attribute drifted`);
+      assert.equal(actual.projectLink, expected.project, `${assetRoot}/${runId} project download link drifted`);
+      assert.equal(actual.manifestLink, "./assets/sample-runs.json", `${assetRoot}/${runId} manifest link drifted`);
+      assert.equal(actual.scenario, expected.scenario, `${assetRoot}/${runId} scenario attribute drifted`);
       assert.deepEqual(actual.tags, expected.tags, `${assetRoot}/${runId} tags drifted`);
 
       const imageUrl = new URL(`../${assetRoot}/${expected.image.slice(2)}`, import.meta.url);
       const metadataUrl = new URL(`../${assetRoot}/${expected.metadata.slice(2)}`, import.meta.url);
+      const projectUrl = new URL(`../${assetRoot}/${expected.project.slice(2)}`, import.meta.url);
       assert.ok(existsSync(imageUrl), `missing ${assetRoot}/${runId} image`);
       assert.ok(existsSync(metadataUrl), `missing ${assetRoot}/${runId} metadata`);
+      assert.ok(existsSync(projectUrl), `missing ${assetRoot}/${runId} sample project`);
+
+      const manifestRun = manifestRuns.get(runId);
+      assert.equal(manifestRun?.image_url, expected.image, `${assetRoot}/${runId} manifest image drifted`);
+      assert.equal(manifestRun?.metadata_url, expected.metadata, `${assetRoot}/${runId} manifest metadata drifted`);
+      assert.equal(manifestRun?.project_url, expected.project, `${assetRoot}/${runId} manifest project drifted`);
+      assert.equal(manifestRun?.scenario_id, expected.scenario, `${assetRoot}/${runId} manifest scenario drifted`);
+      assert.equal(
+        sampleProjects.get(expected.project)?.scenario_id,
+        expected.scenario,
+        `${assetRoot}/${runId} sample project manifest scenario drifted`,
+      );
 
       assert.deepEqual([...actual.evidence.keys()].sort(), [...expected.evidence.keys()].sort(), `${assetRoot}/${runId} evidence ids drifted`);
       for (const [evidenceId, expectedSource] of expected.evidence) {
@@ -819,6 +891,16 @@ test("landing sample runs bilingual keys exist", () => {
     "sampleFilterEvidence",
     "sampleRecipeLabel",
     "sampleEvidenceLabel",
+    "sampleProjectActionsLabel",
+    "sampleProjectDownload",
+    "sampleRecipeManifest",
+    "sampleProjectDownloadsTitle",
+    "sampleProjectDownloadsBody",
+    "sampleProjectBlank",
+    "sampleProjectModern",
+    "sampleProjectHoi41936",
+    "sampleProjectHoi41939",
+    "sampleProjectTno",
     "workOneScenario",
     "workTwoScenario",
     "workThreeScenario",

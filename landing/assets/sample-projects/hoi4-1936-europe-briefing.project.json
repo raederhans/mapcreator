@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 22,
+  "scenario": {
+    "id": "hoi4_1936",
+    "version": 2,
+    "baselineHash": "027d74242b917f66fa5efbeb5bafd54acb7926a2c018bc34b9941f6423b77aa3",
+    "viewMode": "ownership"
+  },
+  "mapSemanticMode": "ownership",
+  "paintMode": "visual",
+  "interactionGranularity": "subdivision",
+  "batchFillScope": "parent",
+  "activePaletteId": "hoi4_vanilla",
+  "legendLabels": {
+    "#525a5e": "Germany",
+    "#2f5f9f": "France",
+    "#a84c3d": "Italy",
+    "#b7a86c": "Poland"
+  },
+  "legendConfig": {
+    "mode": "direct-area",
+    "maxItems": 14
+  },
+  "legendControl": {
+    "visible": true,
+    "collapsed": false,
+    "xRatio": 0.7,
+    "yRatio": 0.12,
+    "width": 280,
+    "height": 180
+  },
+  "layerVisibility": {
+    "showWaterRegions": true,
+    "showScenarioSpecialRegions": false,
+    "showScenarioAtlantropa": false,
+    "showScenarioReliefOverlays": false,
+    "showCityPoints": true,
+    "showUrban": false,
+    "showPhysical": false,
+    "showRivers": true,
+    "showTransport": false,
+    "showSpecialZones": false
+  },
+  "styleConfig": {
+    "ocean": {
+      "fillColor": "#29415f"
+    }
+  },
+  "exportWorkbenchUi": {
+    "target": "composite",
+    "format": "png",
+    "scale": "2",
+    "previewMode": "main"
+  },
+  "timestamp": 1782835200000
+}

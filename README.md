@@ -45,6 +45,16 @@ Scenario Forge gives creators one place to choose a world state, edit political 
 4. TNO 1962 is the default public scenario path; you can also switch among Blank Map, Modern World, HOI4 1936, HOI4 1939, and TNO 1962.
 5. Open Project / Export and download a PNG/JPG snapshot or save an editable project JSON.
 
+## Download Sample Project JSONs
+
+The landing page links checked-in starter projects for the public baselines. The sample manifest lives at [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) and points to editable project JSON files under [`landing/assets/sample-projects/`](landing/assets/sample-projects/).
+
+- TNO 1962 Atlantropa briefing: [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
+- HOI4 1936 Europe briefing: [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)
+- HOI4 1939 Europe switch: [`hoi4-1939-europe-switch.project.json`](landing/assets/sample-projects/hoi4-1939-europe-switch.project.json)
+- Modern World Japan corridor: [`modern-world-japan-corridor.project.json`](landing/assets/sample-projects/modern-world-japan-corridor.project.json)
+- Blank Map starter: [`blank-base-starter.project.json`](landing/assets/sample-projects/blank-base-starter.project.json)
+
 ## Current Public Surface
 
 | Surface | Public demo status | Local/developer boundary |

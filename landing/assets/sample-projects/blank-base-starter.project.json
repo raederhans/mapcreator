@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 22,
+  "scenario": {
+    "id": "blank_base",
+    "version": 2,
+    "baselineHash": "c120ba87ebdb2c02072278b5135adede583e4c26babedcd2afdd3f97452badea",
+    "viewMode": "ownership"
+  },
+  "mapSemanticMode": "ownership",
+  "paintMode": "visual",
+  "interactionGranularity": "subdivision",
+  "batchFillScope": "parent",
+  "activePaletteId": "hoi4_vanilla",
+  "legendLabels": {
+    "#d8dee9": "Unassigned land",
+    "#406080": "Open water"
+  },
+  "legendConfig": {
+    "mode": "direct-area",
+    "maxItems": 8
+  },
+  "legendControl": {
+    "visible": true,
+    "collapsed": false,
+    "xRatio": 0.72,
+    "yRatio": 0.12,
+    "width": 260,
+    "height": 160
+  },
+  "layerVisibility": {
+    "showWaterRegions": true,
+    "showScenarioSpecialRegions": false,
+    "showScenarioAtlantropa": false,
+    "showScenarioReliefOverlays": false,
+    "showCityPoints": false,
+    "showUrban": false,
+    "showPhysical": false,
+    "showRivers": false,
+    "showTransport": false,
+    "showSpecialZones": false
+  },
+  "styleConfig": {
+    "ocean": {
+      "fillColor": "#406080"
+    }
+  },
+  "exportWorkbenchUi": {
+    "target": "composite",
+    "format": "png",
+    "scale": "2",
+    "previewMode": "main"
+  },
+  "timestamp": 1782835200000
+}
