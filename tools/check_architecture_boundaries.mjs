@@ -23,6 +23,8 @@ const FILES = Object.freeze({
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
   rendererViewportUpdateOwner: "js/core/renderer/renderer_viewport_update_owner.js",
   rendererStartupTransactionOwner: "js/core/renderer/renderer_startup_transaction_owner.js",
+  setMapDataTransactionOwner: "js/core/map_renderer/set_map_data_transaction_owner.js",
+  rendererRenderLifecycleOwner: "js/core/renderer/renderer_render_lifecycle_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
@@ -53,6 +55,8 @@ const FILES = Object.freeze({
   rendererStartupTransactionOwnerTest: "tests/renderer_startup_transaction_owner_behavior.test.mjs",
   rendererStartupTransactionPreflightDoc: "docs/active/renderer-startup-transaction-preflight-20260629.md",
   rendererStartupTransactionInventoryTest: "tests/renderer_startup_transaction_inventory_boundary.test.mjs",
+  rendererSetMapDataTransactionPreflightDoc: "docs/active/renderer-set-map-data-transaction-preflight-20260630.md",
+  rendererSetMapDataTransactionInventoryTest: "tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs",
 });
 
 const LINE_BUDGETS = Object.freeze({
@@ -185,6 +189,8 @@ function collectFailures() {
   const rendererViewportUpdateOwnerTest = readProjectFile(FILES.rendererViewportUpdateOwnerTest);
   const rendererStartupTransactionPreflightDoc = readProjectFile(FILES.rendererStartupTransactionPreflightDoc);
   const rendererStartupTransactionInventoryTest = readProjectFile(FILES.rendererStartupTransactionInventoryTest);
+  const rendererSetMapDataTransactionPreflightDoc = readProjectFile(FILES.rendererSetMapDataTransactionPreflightDoc);
+  const rendererSetMapDataTransactionInventoryTest = readProjectFile(FILES.rendererSetMapDataTransactionInventoryTest);
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.renderer]: renderer,
@@ -233,6 +239,8 @@ function collectFailures() {
     [FILES.rendererViewportUpdateOwnerTest]: rendererViewportUpdateOwnerTest,
     [FILES.rendererStartupTransactionPreflightDoc]: rendererStartupTransactionPreflightDoc,
     [FILES.rendererStartupTransactionInventoryTest]: rendererStartupTransactionInventoryTest,
+    [FILES.rendererSetMapDataTransactionPreflightDoc]: rendererSetMapDataTransactionPreflightDoc,
+    [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -1174,6 +1182,210 @@ function collectFailures() {
   ]) {
     if (!rendererStartupTransactionInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererStartupTransactionInventoryTest} must lock P35 startup transaction inventory token: ${token}`);
+    }
+  }
+
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.setMapDataTransactionOwner))) {
+    failures.push("P37 must not introduce js/core/map_renderer/set_map_data_transaction_owner.js.");
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("P37 must not introduce js/core/renderer/renderer_render_lifecycle_owner.js.");
+  }
+  const setMapDataSource = sliceBetween(
+    renderer,
+    "function setMapData({",
+    "function resetRendererRefreshTransactionState({",
+  );
+  if (!setMapDataSource) {
+    failures.push(`${FILES.renderer} must keep function setMapData({ before P38 owner extraction.`);
+  }
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P36 renderer lifecycle baseline",
+    "## setMapData transaction overview",
+    "## Pre-reset and render frame invalidation inventory",
+    "## Political collection rebuild and coverage logging inventory",
+    "## Color and scenario state sanitation inventory",
+    "## Canvas, runtime meta, and interaction infrastructure branch",
+    "## Projection, spatial index, special zone, and zoom branch",
+    "## Staged warmup, render, and perf metrics branch",
+    "## P38 allowed first move",
+    "## P38 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererSetMapDataTransactionPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererSetMapDataTransactionPreflightDoc} must keep heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P37 is preflight only.",
+    "P37 must keep `js/core/map_renderer/set_map_data_transaction_owner.js` absent.",
+    "P36 startup transaction owner: `js/core/renderer/renderer_startup_transaction_owner.js` owns the `initMap` reset transaction after projection/path initialization.",
+    "P34 viewport update owner: `js/core/renderer/renderer_viewport_update_owner.js` remains effects-only and owns `updateMap` orchestration.",
+    "P32 fitProjection owner: `js/core/renderer/renderer_fit_projection_owner.js` owns `fitProjection` through injected getters and effects.",
+    "`js/core/map_renderer.js` remains the composition root and still contains `function setMapData({`.",
+    "resetRendererTransactionState({",
+    "clearPendingPoliticalColorEdit({",
+    "clearRenderPassReferenceTransforms()",
+    "clearLastGoodFrame(\"set-map-data\")",
+    "invalidateInteractionComposite(\"set-map-data\")",
+    "resetFirstVisibleFramePainted(\"set-map-data\")",
+    "invalidateAllRenderPasses(\"set-map-data\")",
+    "markAllOverlaysDirty()",
+    "queueTooltipUpdate({ visible: false })",
+    "rebuildPrimaryPoliticalCollections()",
+    "Composite coverage",
+    "Composite country coverage detail/primary",
+    "sanitizeCountryColorMap",
+    "sanitizeColorMap",
+    "runtimeState.specialRegionOverrides = {}",
+    "migrateLegacyColorState()",
+    "setCanvasSize()",
+    "buildRuntimePoliticalMeta()",
+    "runtimeState.sovereigntyInitialized = false",
+    "islandNeighborsCache = {",
+    "ensureSphericalFeatureDiagnosticsCache().clear()",
+    "shouldDeferInteractionInfrastructure",
+    "buildIndex()",
+    "ensureSovereigntyState()",
+    "runtimeState.deferHitCanvasBuild = true",
+    "setInteractionInfrastructureState(\"deferred-startup\"",
+    "rebuildProjectedBoundsCache()",
+    "rebuildStaticMeshes()",
+    "invalidateBorderCache()",
+    "updateDynamicBorderStatusUI()",
+    "rebuildResolvedColors()",
+    "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure })",
+    "buildSpatialIndex()",
+    "updateSpecialZonesPaths()",
+    "renderSpecialZoneEditorOverlay()",
+    "updateZoomTranslateExtent()",
+    "resetZoomToFit()",
+    "enforceZoomConstraints()",
+    "runtimeState.hitCanvasDirty = true",
+    "beginStagedMapDataWarmup(startedAt)",
+    "render()",
+    "recordRenderPerfMetric(\"setMapDataFirstPaint\"",
+    "recordRenderPerfMetric(\"setMapData\"",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createScenarioRefreshRuntime({",
+    "createExactAfterSettleScheduler({",
+    "createStrategicOverlayRuntimeOwner({",
+    "Add `js/core/map_renderer/set_map_data_transaction_owner.js`.",
+    "Move setMapData orchestration into owner through injected getters/effects.",
+    "Keep public setMapData wrapper in `js/core/map_renderer.js` stable.",
+    "Keep scenario refresh runtime separate.",
+    "Keep `render()`, `drawCanvas()`, `renderPassToCache()`, hit canvas build, exact-after-settle scheduler, strategic overlay runtime out of the owner.",
+    "Keep direct state writes either in map_renderer injected effects or existing state ops.",
+    "Do not add a new state-write allowlist entry unless explicitly justified.",
+    "Preserve `recordRenderPerfMetric` semantics and ordering.",
+    "No `renderer_render_lifecycle_owner.js`.",
+    "No drawCanvas migration.",
+    "No renderPassToCache migration.",
+    "No hit canvas build migration.",
+    "No scenario refresh runtime migration.",
+    "No exact-after-settle scheduler migration.",
+    "No strategic overlay runtime migration.",
+    "No public facade changes.",
+    "No owner importing `js/core/map_renderer.js`.",
+    "No broad state-write allowlist expansion.",
+  ]) {
+    if (!rendererSetMapDataTransactionPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererSetMapDataTransactionPreflightDoc} must lock P37/P38 setMapData transaction token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const SET_MAP_DATA_TRANSACTION_OWNER_PATH = \"js/core/map_renderer/set_map_data_transaction_owner.js\";",
+    "const RENDER_LIFECYCLE_OWNER_PATH = \"js/core/renderer/renderer_render_lifecycle_owner.js\";",
+    "const PREFLIGHT_DOC_PATH = \"docs/active/renderer-set-map-data-transaction-preflight-20260630.md\";",
+    "const SET_MAP_DATA_SIGNATURE_TOKENS = Object.freeze([",
+    "const SET_MAP_DATA_BODY_TOKENS = Object.freeze([",
+    "const SET_MAP_DATA_STATE_WRITE_TOKEN_PARTS = Object.freeze([",
+    "[RUNTIME_STATE_TOKEN, \".specialRegionOverrides = {};\"],",
+    "[RUNTIME_STATE_TOKEN, \".sovereigntyInitialized = false;\"],",
+    "[RUNTIME_STATE_TOKEN, \".deferHitCanvasBuild = true;\"],",
+    "[RUNTIME_STATE_TOKEN, \".hitCanvasDirty = true;\"],",
+    "const P38_OUT_OF_SCOPE_ANCHORS = Object.freeze([",
+    "const P38_ALLOWED_DOC_TOKENS = Object.freeze([",
+    "const P38_FORBIDDEN_DOC_TOKENS = Object.freeze([",
+    "repoFileExists(SET_MAP_DATA_TRANSACTION_OWNER_PATH)",
+    "repoFileExists(RENDER_LIFECYCLE_OWNER_PATH)",
+    "function getSetMapDataSource(rendererSource)",
+    "function setMapData({",
+    "resetRendererTransactionState({",
+    "clearPendingPoliticalColorEdit({",
+    "clearRenderPassReferenceTransforms()",
+    "clearLastGoodFrame(\\\"set-map-data\\\")",
+    "invalidateInteractionComposite(\\\"set-map-data\\\")",
+    "resetFirstVisibleFramePainted(\\\"set-map-data\\\")",
+    "invalidateAllRenderPasses(\\\"set-map-data\\\")",
+    "markAllOverlaysDirty()",
+    "queueTooltipUpdate({ visible: false })",
+    "rebuildPrimaryPoliticalCollections()",
+    "Composite coverage",
+    "Composite country coverage detail/primary",
+    "sanitizeCountryColorMap",
+    "sanitizeColorMap",
+    "migrateLegacyColorState()",
+    "setCanvasSize()",
+    "buildRuntimePoliticalMeta()",
+    "islandNeighborsCache = {",
+    "ensureSphericalFeatureDiagnosticsCache().clear()",
+    "shouldDeferInteractionInfrastructure",
+    "buildIndex()",
+    "ensureSovereigntyState()",
+    "setInteractionInfrastructureState(\\\"deferred-startup\\\"",
+    "rebuildProjectedBoundsCache()",
+    "rebuildStaticMeshes()",
+    "invalidateBorderCache()",
+    "updateDynamicBorderStatusUI()",
+    "rebuildResolvedColors()",
+    "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure })",
+    "buildSpatialIndex()",
+    "updateSpecialZonesPaths()",
+    "renderSpecialZoneEditorOverlay()",
+    "updateZoomTranslateExtent()",
+    "resetZoomToFit()",
+    "enforceZoomConstraints()",
+    "beginStagedMapDataWarmup(startedAt)",
+    "render()",
+    "recordRenderPerfMetric(\\\"setMapDataFirstPaint\\\"",
+    "recordRenderPerfMetric(\\\"setMapData\\\"",
+    "setInteractionInfrastructureState(\\\"ready\\\"",
+    "function render()",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createScenarioRefreshRuntime({",
+    "createExactAfterSettleScheduler({",
+    "createStrategicOverlayRuntimeOwner({",
+    "startup transaction owner must avoid setMapData scope",
+    "viewport owner must stay effects-only",
+    "fitProjection owner must avoid setMapData transaction scope",
+    "public facade must keep setMapData export",
+  ]) {
+    if (!rendererSetMapDataTransactionInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererSetMapDataTransactionInventoryTest} must lock P37 setMapData inventory token: ${token}`);
+    }
+  }
+  if (!packageJson.includes("\"test:node:renderer-set-map-data-transaction-inventory\": \"node --test tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P37 setMapData transaction inventory script.`);
+  }
+  for (const token of [
+    "resetRendererTransactionState({",
+    "clearPendingPoliticalColorEdit({",
+    "clearRenderPassReferenceTransforms()",
+    "rebuildPrimaryPoliticalCollections()",
+    "migrateLegacyColorState()",
+    "runtimeState.deferHitCanvasBuild = true",
+    "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure })",
+    "beginStagedMapDataWarmup(startedAt)",
+    "recordRenderPerfMetric(\"setMapData\"",
+  ]) {
+    if (!setMapDataSource.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P37 setMapData source token: ${token}`);
     }
   }
 
