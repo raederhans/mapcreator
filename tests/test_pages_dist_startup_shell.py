@@ -766,6 +766,7 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n="productStageLabel"',
             'class="brandmark__logo"',
             './assets/favicon.svg',
+            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
             './assets/hero-hoi4-1936.webp',
             'data-hero-map',
             'data-hero-chip="blank"',
@@ -838,6 +839,26 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="workOneAlt"',
             'data-i18n-alt="workTwoAlt"',
             'data-i18n-alt="workThreeAlt"',
+            'id="sample-runs"',
+            'data-sample-runs-root',
+            'data-sample-run-filter="scenario"',
+            'data-sample-run-filter="transport"',
+            'data-sample-run-filter="atlas"',
+            'data-sample-run-filter="evidence"',
+            'data-sample-run-card',
+            'data-sample-run-id="tno-atlantropa-mediterranean"',
+            'data-sample-run-id="hoi4-europe-comparison"',
+            'data-sample-run-id="japan-tokaido-corridor"',
+            'data-sample-metadata="./assets/work-alt-history-med.json"',
+            'data-sample-evidence-source="landing/assets/work-alt-history-med.json:counts.rendered_atlantropa_features"',
+            'data-sample-evidence-source="landing/assets/work-scenario-switch-europe.json:counts.hoi4_1936_political_features"',
+            'data-sample-evidence-source="landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines"',
+            'data-i18n="sampleFilterScenario"',
+            'data-i18n="sampleRecipeLabel"',
+            'data-i18n="sampleEvidenceLabel"',
+            './assets/work-alt-history-med.webp',
+            './assets/work-scenario-switch-europe.webp',
+            './assets/work-atlas-japan-corridor.webp',
             'id="story"',
             'data-story-root',
             'data-story-stage-image',
@@ -903,6 +924,12 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "initHeroMap",
             "DEFAULT_HERO_MODE",
             "HERO_SCENARIO_ASSETS",
+            "initSampleRunsGallery",
+            "SAMPLE_RUN_FILTERS",
+            "resolveSampleRunFilter",
+            "syncSampleRunsFromDom",
+            "sampleFilterScenario",
+            "sampleEvidenceLabel",
             "initProductStory",
             "PRODUCT_STORY_STEPS",
             "PRODUCT_STORY_COMPARISON_ASSETS",
@@ -963,6 +990,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
         self.assertIn(".product-story__grid", styles_css)
+        self.assertIn(".sample-runs__filters", styles_css)
+        self.assertIn(".sample-run-filter[aria-pressed=\"true\"]", styles_css)
+        self.assertIn(".sample-run-card__recipe", styles_css)
+        self.assertIn(".sample-run-card__proof", styles_css)
         self.assertIn(".story-stage", styles_css)
         self.assertIn("position: sticky", styles_css)
         self.assertIn(".story-evidence", styles_css)
@@ -1219,6 +1250,15 @@ class PagesDistStartupShellTest(unittest.TestCase):
             'data-i18n-alt="productPreviewAlt"',
             'data-i18n-alt="workOneAlt"',
             'data-i18n="workOneTitle"',
+            '<a href="#sample-runs" data-i18n="navWorks">Runs</a>',
+            'id="sample-runs"',
+            'data-sample-runs-root',
+            'data-sample-run-filter="scenario"',
+            'data-sample-run-card',
+            'data-sample-run-id="japan-tokaido-corridor"',
+            'data-sample-evidence-source="landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines"',
+            'data-i18n="sampleFilterEvidence"',
+            'data-i18n="sampleEvidenceLabel"',
             'data-i18n="ctaPrimary"',
             "data-reveal",
         ):
@@ -1260,6 +1300,11 @@ class PagesDistStartupShellTest(unittest.TestCase):
             "previewDragging",
             "initPreviewTabs",
             "initHeroMap",
+            "initSampleRunsGallery",
+            "SAMPLE_RUN_FILTERS",
+            "syncSampleRunsFromDom",
+            "sampleFilterScenario",
+            "sampleEvidenceLabel",
             "initProductStory",
             "initMetricCountUp",
             "PRODUCT_STORY_STEPS",
@@ -1317,6 +1362,10 @@ class PagesDistStartupShellTest(unittest.TestCase):
         self.assertIn('[data-hero-mode="tno-1962"]', styles_css)
         self.assertIn(".showcase-layer-tabs", styles_css)
         self.assertIn('[data-showcase-view-zoomed="true"]', styles_css)
+        self.assertIn(".sample-runs__filters", styles_css)
+        self.assertIn(".sample-run-filter[aria-pressed=\"true\"]", styles_css)
+        self.assertIn(".sample-run-card__recipe", styles_css)
+        self.assertIn(".sample-run-card__proof", styles_css)
         self.assertIn(".product-story__grid", styles_css)
         self.assertIn(".story-stage", styles_css)
         self.assertIn("position: sticky", styles_css)

@@ -52,7 +52,7 @@
         </a>
 
         <nav class="topnav" aria-label="Primary" data-i18n-aria-label="primaryNavLabel">
-          <a href="#works" data-i18n="navWorks">Works</a>
+          <a href="#sample-runs" data-i18n="navWorks">Runs</a>
           <a href="#product" data-i18n="navProduct">Product</a>
           <a href="#features" data-i18n="navFeatures">Features</a>
           <a href="#data" data-i18n="navData">Data</a>
@@ -178,46 +178,161 @@
           </div>
         </section>
 
-        <section id="works" class="section">
+        <section id="sample-runs" class="section sample-runs" data-sample-runs-root data-sample-filter="all">
           <div class="section-heading" data-reveal>
-            <p class="eyebrow" data-i18n="worksEyebrow">Selected works</p>
-            <h2 data-i18n="worksTitle">Show the result first.</h2>
+            <p class="eyebrow" data-i18n="worksEyebrow">Sample runs</p>
+            <h2 data-i18n="worksTitle">Reproducible maps, with the recipe still attached.</h2>
             <p data-i18n="worksBody">
-              Scenario Forge is easiest to understand when you see the maps it can produce, not when you read a wall of feature names.
+              Each run pairs the final output with its scenario, layer stack, source markers, and a public path back to the demo.
             </p>
           </div>
 
-          <div class="works-grid works-grid--bento">
-            <article class="work-card work-card--tall" data-reveal>
+          <div class="sample-runs__filters" role="group" aria-label="Sample run filters" data-i18n-aria-label="sampleFiltersLabel" data-reveal>
+            <button type="button" class="sample-run-filter" aria-pressed="true" tabindex="0" data-sample-run-filter="all" aria-controls="sample-runs-panel" data-i18n="sampleFilterAll">All</button>
+            <button type="button" class="sample-run-filter" aria-pressed="false" tabindex="-1" data-sample-run-filter="scenario" aria-controls="sample-runs-panel" data-i18n="sampleFilterScenario">Scenario</button>
+            <button type="button" class="sample-run-filter" aria-pressed="false" tabindex="-1" data-sample-run-filter="transport" aria-controls="sample-runs-panel" data-i18n="sampleFilterTransport">Transport</button>
+            <button type="button" class="sample-run-filter" aria-pressed="false" tabindex="-1" data-sample-run-filter="atlas" aria-controls="sample-runs-panel" data-i18n="sampleFilterAtlas">Atlas output</button>
+            <button type="button" class="sample-run-filter" aria-pressed="false" tabindex="-1" data-sample-run-filter="evidence" aria-controls="sample-runs-panel" data-i18n="sampleFilterEvidence">Evidence-backed</button>
+          </div>
+
+          <div id="sample-runs-panel" class="works-grid works-grid--bento sample-runs__panel" role="region" aria-label="Sample run gallery" data-i18n-aria-label="sampleRunsPanelLabel">
+            <article class="work-card work-card--tall sample-run-card" data-reveal data-sample-run-card data-sample-run-id="tno-atlantropa-mediterranean" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-alt-history-med.json">
               <div class="work-card__media work-card__media--workspace">
                 <img src="./assets/work-alt-history-med.webp" alt="Generated TNO 1962 Atlantropa Mediterranean map with political context, salt basins, shoals, and water regions." data-i18n-alt="workOneAlt" loading="lazy" width="560" height="360" />
               </div>
               <div class="work-card__copy">
-                <p class="work-card__label" data-i18n="workOneLabel">Alternate history baseline</p>
-                <h3 data-i18n="workOneTitle">Start from a world that already changed.</h3>
-                <p data-i18n="workOneBody">Use scenario geography like Atlantropa as the baseline, then keep ownership and physical context visible in the same frame.</p>
+                <p class="work-card__label" data-i18n="workOneLabel">TNO 1962 briefing map</p>
+                <h3 data-i18n="workOneTitle">Atlantropa Mediterranean, with political and physical context.</h3>
+                <p data-i18n="workOneBody">A generated briefing map for the TNO 1962 Mediterranean: ownership, clipped coastline detail, salt basins, shoals, and water regions share one frame.</p>
+                <div class="sample-run-card__meta">
+                  <div>
+                    <span data-i18n="sampleScenarioLabel">Scenario / baseline</span>
+                    <strong data-i18n="workOneScenario">TNO 1962 Europe</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="samplePathLabel">Demo path</span>
+                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                  </div>
+                  <div>
+                    <span data-i18n="sampleExportLabel">Export target</span>
+                    <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
+                  </div>
+                </div>
+                <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
+                  <span data-i18n="sampleRecipeLabel">Layer recipe</span>
+                  <ul>
+                    <li data-i18n="workOneRecipeOne">TNO political owners</li>
+                    <li data-i18n="workOneRecipeTwo">Atlantropa basins</li>
+                    <li data-i18n="workOneRecipeThree">Coastline detail</li>
+                    <li data-i18n="workOneRecipeFour">Mediterranean labels</li>
+                  </ul>
+                </div>
+                <details class="sample-run-card__proof" open>
+                  <summary data-i18n="sampleEvidenceLabel">Source-backed evidence</summary>
+                  <dl>
+                    <div data-sample-evidence="tno-atlantropa-features" data-sample-evidence-source="landing/assets/work-alt-history-med.json:counts.rendered_atlantropa_features">
+                      <dt data-i18n="workOneEvidenceOne">Atlantropa features rendered</dt>
+                      <dd data-sample-evidence-value="896">896</dd>
+                    </div>
+                    <div data-sample-evidence="tno-owner-count" data-sample-evidence-source="landing/assets/work-alt-history-med.json:counts.dissolved_country_owners">
+                      <dt data-i18n="workOneEvidenceTwo">dissolved owners</dt>
+                      <dd data-sample-evidence-value="47">47</dd>
+                    </div>
+                  </dl>
+                </details>
               </div>
             </article>
 
-            <article class="work-card" data-reveal>
+            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="hoi4-europe-comparison" data-sample-tags="scenario evidence" data-sample-metadata="./assets/work-scenario-switch-europe.json">
               <div class="work-card__media">
                 <img src="./assets/work-scenario-switch-europe.webp" alt="Generated HOI4 1936 and 1939 Central Europe comparison map." data-i18n-alt="workTwoAlt" loading="lazy" width="680" height="440" />
               </div>
               <div class="work-card__copy">
-                <p class="work-card__label" data-i18n="workTwoLabel">Scenario state switch</p>
-                <h3 data-i18n="workTwoTitle">Compare the same region across bookmarks.</h3>
-                <p data-i18n="workTwoBody">Put 1936 and 1939 ownership side by side so political change reads as geography, not just a list of tags.</p>
+                <p class="work-card__label" data-i18n="workTwoLabel">HOI4 comparison run</p>
+                <h3 data-i18n="workTwoTitle">1936 and 1939 Europe, aligned as one scenario switch.</h3>
+                <p data-i18n="workTwoBody">The same Central Europe frame shows two HOI4 baselines side by side, so political change reads as a map comparison.</p>
+                <div class="sample-run-card__meta">
+                  <div>
+                    <span data-i18n="sampleScenarioLabel">Scenario / baseline</span>
+                    <strong data-i18n="workTwoScenario">HOI4 1936 / HOI4 1939</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="samplePathLabel">Demo path</span>
+                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                  </div>
+                  <div>
+                    <span data-i18n="sampleExportLabel">Export target</span>
+                    <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
+                  </div>
+                </div>
+                <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
+                  <span data-i18n="sampleRecipeLabel">Layer recipe</span>
+                  <ul>
+                    <li data-i18n="workTwoRecipeOne">1936 ownership layer</li>
+                    <li data-i18n="workTwoRecipeTwo">1939 ownership layer</li>
+                    <li data-i18n="workTwoRecipeThree">Shared comparison viewport</li>
+                  </ul>
+                </div>
+                <details class="sample-run-card__proof" open>
+                  <summary data-i18n="sampleEvidenceLabel">Source-backed evidence</summary>
+                  <dl>
+                    <div data-sample-evidence="hoi4-1936-features" data-sample-evidence-source="landing/assets/work-scenario-switch-europe.json:counts.hoi4_1936_political_features">
+                      <dt data-i18n="workTwoEvidenceOne">1936 political features</dt>
+                      <dd data-sample-evidence-value="90">90</dd>
+                    </div>
+                    <div data-sample-evidence="hoi4-1939-features" data-sample-evidence-source="landing/assets/work-scenario-switch-europe.json:counts.hoi4_1939_political_features">
+                      <dt data-i18n="workTwoEvidenceTwo">1939 political features</dt>
+                      <dd data-sample-evidence-value="90">90</dd>
+                    </div>
+                  </dl>
+                </details>
               </div>
             </article>
 
-            <article class="work-card" data-reveal>
+            <article class="work-card sample-run-card" data-reveal data-sample-run-card data-sample-run-id="japan-tokaido-corridor" data-sample-tags="transport atlas evidence" data-sample-metadata="./assets/work-atlas-japan-corridor.json">
               <div class="work-card__media">
                 <img src="./assets/work-atlas-japan-corridor.webp" alt="Generated Japan Tokaido corridor atlas map with roads, rail, city lights, stations, and terrain." data-i18n-alt="workThreeAlt" loading="lazy" width="680" height="440" />
               </div>
               <div class="work-card__copy">
-                <p class="work-card__label" data-i18n="workThreeLabel">Atlas-style output</p>
-                <h3 data-i18n="workThreeTitle">Turn workbench layers into a finished corridor map.</h3>
-                <p data-i18n="workThreeBody">Combine roads, rail, stations, city lights, rivers, and terrain into a compact output that feels ready to publish.</p>
+                <p class="work-card__label" data-i18n="workThreeLabel">Japan corridor atlas</p>
+                <h3 data-i18n="workThreeTitle">Tokaido transport context as a finished atlas output.</h3>
+                <p data-i18n="workThreeBody">Roads, rail, stations, city lights, rivers, and terrain are composed into a compact corridor map ready for publication.</p>
+                <div class="sample-run-card__meta">
+                  <div>
+                    <span data-i18n="sampleScenarioLabel">Scenario / baseline</span>
+                    <strong data-i18n="workThreeScenario">Japan Tokaido corridor</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="samplePathLabel">Demo path</span>
+                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                  </div>
+                  <div>
+                    <span data-i18n="sampleExportLabel">Export target</span>
+                    <strong data-i18n="sampleSnapshotTarget">Published WebP snapshot + checked-in SVG source</strong>
+                  </div>
+                </div>
+                <div class="sample-run-card__recipe" aria-label="Layer recipe" data-i18n-aria-label="sampleRecipeAriaLabel">
+                  <span data-i18n="sampleRecipeLabel">Layer recipe</span>
+                  <ul>
+                    <li data-i18n="workThreeRecipeOne">Road lines</li>
+                    <li data-i18n="workThreeRecipeTwo">Rail lines</li>
+                    <li data-i18n="workThreeRecipeThree">Major stations</li>
+                    <li data-i18n="workThreeRecipeFour">Lights, terrain, and rivers</li>
+                  </ul>
+                </div>
+                <details class="sample-run-card__proof" open>
+                  <summary data-i18n="sampleEvidenceLabel">Source-backed evidence</summary>
+                  <dl>
+                    <div data-sample-evidence="japan-transport-lines" data-sample-evidence-source="landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines">
+                      <dt data-i18n="workThreeEvidenceOne">road + rail lines</dt>
+                      <dd data-sample-evidence-value="165">165</dd>
+                    </div>
+                    <div data-sample-evidence="japan-stations" data-sample-evidence-source="landing/assets/work-atlas-japan-corridor.json:counts.major_stations">
+                      <dt data-i18n="workThreeEvidenceTwo">major stations</dt>
+                      <dd data-sample-evidence-value="18">18</dd>
+                    </div>
+                  </dl>
+                </details>
               </div>
             </article>
           </div>

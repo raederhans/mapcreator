@@ -85,6 +85,41 @@ function extractStoryEvidence(html) {
   return evidence;
 }
 
+function extractSampleRuns(html) {
+  const runs = new Map();
+  const cardPattern = /<article\b([^>]*\bdata-sample-run-card\b[^>]*)>([\s\S]*?)<\/article>/g;
+  for (const match of html.matchAll(cardPattern)) {
+    const cardAttributes = parseAttributes(match[1]);
+    const runId = cardAttributes.get("data-sample-run-id");
+    if (!runId) continue;
+
+    const imageMatch = match[2].match(/<img\b([^>]*)>/);
+    const imageAttributes = parseAttributes(imageMatch?.[1] || "");
+    const evidence = new Map();
+    const evidencePattern =
+      /<div\b([^>]*\bdata-sample-evidence="[^"]+"[^>]*)>\s*<dt\b[^>]*>[^<]*<\/dt>\s*<dd\b([^>]*)>([^<]*)<\/dd>/g;
+    for (const evidenceMatch of match[2].matchAll(evidencePattern)) {
+      const evidenceAttributes = parseAttributes(evidenceMatch[1]);
+      const valueAttributes = parseAttributes(evidenceMatch[2]);
+      const evidenceId = evidenceAttributes.get("data-sample-evidence");
+      if (!evidenceId) continue;
+      evidence.set(evidenceId, {
+        source: evidenceAttributes.get("data-sample-evidence-source"),
+        text: evidenceMatch[3].trim(),
+        value: Number(valueAttributes.get("data-sample-evidence-value")),
+      });
+    }
+
+    runs.set(runId, {
+      evidence,
+      image: imageAttributes.get("src"),
+      metadata: cardAttributes.get("data-sample-metadata"),
+      tags: String(cardAttributes.get("data-sample-tags") || "").split(/\s+/).filter(Boolean),
+    });
+  }
+  return runs;
+}
+
 function getExpectedLandingStats() {
   const scenarioIndex = readJsonAsset("data/scenarios/index.json");
   const scenarioIds = new Set((scenarioIndex.scenarios || []).map((scenario) => scenario.scenario_id));
@@ -256,6 +291,20 @@ class ProductStoryRoot extends TestNode {
     if (selector === "[data-story-step-button]") return this.stepButtons;
     if (selector === "[data-story-compare]") return this.compareButtons;
     if (selector === "[data-story-evidence]") return this.evidenceItems;
+    return [];
+  }
+}
+
+class SampleRunsRoot extends TestNode {
+  constructor(filterButtons, cards) {
+    super();
+    this.filterButtons = filterButtons;
+    this.cards = cards;
+  }
+
+  querySelectorAll(selector) {
+    if (selector === "[data-sample-run-filter]") return this.filterButtons;
+    if (selector === "[data-sample-run-card]") return this.cards;
     return [];
   }
 }
@@ -445,6 +494,60 @@ function createProductStoryHarness({ reducedMotion = true } = {}) {
   };
 }
 
+function createSampleRunsGalleryHarness({ reducedMotion = true } = {}) {
+  const domContentLoaded = [];
+  const filterButtons = ["all", "scenario", "transport", "atlas", "evidence"].map((filter, index) => {
+    const button = new TestNode();
+    button.setAttribute("data-sample-run-filter", filter);
+    button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+    return button;
+  });
+  const cards = [
+    ["tno-atlantropa-mediterranean", "scenario evidence"],
+    ["hoi4-europe-comparison", "scenario evidence"],
+    ["japan-tokaido-corridor", "transport atlas evidence"],
+  ].map(([id, tags]) => {
+    const card = new TestNode();
+    card.setAttribute("data-sample-run-id", id);
+    card.setAttribute("data-sample-tags", tags);
+    return card;
+  });
+  const root = new SampleRunsRoot(filterButtons, cards);
+  root.dataset.sampleFilter = "all";
+
+  const document = {
+    documentElement: { lang: "en", dataset: {} },
+    title: "",
+    addEventListener(name, callback) {
+      if (name === "DOMContentLoaded") domContentLoaded.push(callback);
+    },
+    querySelector(selector) {
+      if (selector === "[data-sample-runs-root]") return root;
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+  };
+
+  return {
+    cards,
+    context: {
+      console,
+      document,
+      Intl,
+      localStorage: {
+        getItem: () => "en",
+        setItem: () => {},
+      },
+      matchMedia: () => ({ matches: reducedMotion }),
+    },
+    domContentLoaded,
+    filterButtons,
+    root,
+  };
+}
+
 test("landing local asset references exist", () => {
   const html = readFileSync(new URL("../landing/index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
@@ -572,6 +675,158 @@ test("landing product story reduced-motion path does not require observer animat
   assert.equal(harness.root.dataset.storyStep, "export");
   assert.equal(harness.stageImage.attributes.src, "./assets/work-atlas-japan-corridor.webp");
   assert.equal(harness.evidenceItems[4].dataset.storyEvidenceActive, "true");
+});
+
+test("landing sample runs resolve checked-in assets and evidence markers", () => {
+  const expectedRuns = new Map([
+    [
+      "tno-atlantropa-mediterranean",
+      {
+        image: "./assets/work-alt-history-med.webp",
+        metadata: "./assets/work-alt-history-med.json",
+        tags: ["scenario", "evidence"],
+        evidence: new Map([
+          ["tno-atlantropa-features", "landing/assets/work-alt-history-med.json:counts.rendered_atlantropa_features"],
+          ["tno-owner-count", "landing/assets/work-alt-history-med.json:counts.dissolved_country_owners"],
+        ]),
+      },
+    ],
+    [
+      "hoi4-europe-comparison",
+      {
+        image: "./assets/work-scenario-switch-europe.webp",
+        metadata: "./assets/work-scenario-switch-europe.json",
+        tags: ["scenario", "evidence"],
+        evidence: new Map([
+          ["hoi4-1936-features", "landing/assets/work-scenario-switch-europe.json:counts.hoi4_1936_political_features"],
+          ["hoi4-1939-features", "landing/assets/work-scenario-switch-europe.json:counts.hoi4_1939_political_features"],
+        ]),
+      },
+    ],
+    [
+      "japan-tokaido-corridor",
+      {
+        image: "./assets/work-atlas-japan-corridor.webp",
+        metadata: "./assets/work-atlas-japan-corridor.json",
+        tags: ["transport", "atlas", "evidence"],
+        evidence: new Map([
+          ["japan-transport-lines", "landing/assets/work-atlas-japan-corridor.json:counts.road_lines+counts.rail_lines"],
+          ["japan-stations", "landing/assets/work-atlas-japan-corridor.json:counts.major_stations"],
+        ]),
+      },
+    ],
+  ]);
+
+  for (const assetRoot of ["landing", "dist"]) {
+    const html = readFileSync(new URL(`../${assetRoot}/index.html`, import.meta.url), "utf8");
+    const actualRuns = extractSampleRuns(html);
+
+    assert.deepEqual([...actualRuns.keys()].sort(), [...expectedRuns.keys()].sort(), `${assetRoot} sample run ids drifted`);
+    for (const [runId, expected] of expectedRuns) {
+      const actual = actualRuns.get(runId);
+      assert.equal(actual.image, expected.image, `${assetRoot}/${runId} image drifted`);
+      assert.equal(actual.metadata, expected.metadata, `${assetRoot}/${runId} metadata drifted`);
+      assert.deepEqual(actual.tags, expected.tags, `${assetRoot}/${runId} tags drifted`);
+
+      const imageUrl = new URL(`../${assetRoot}/${expected.image.slice(2)}`, import.meta.url);
+      const metadataUrl = new URL(`../${assetRoot}/${expected.metadata.slice(2)}`, import.meta.url);
+      assert.ok(existsSync(imageUrl), `missing ${assetRoot}/${runId} image`);
+      assert.ok(existsSync(metadataUrl), `missing ${assetRoot}/${runId} metadata`);
+
+      assert.deepEqual([...actual.evidence.keys()].sort(), [...expected.evidence.keys()].sort(), `${assetRoot}/${runId} evidence ids drifted`);
+      for (const [evidenceId, expectedSource] of expected.evidence) {
+        const actualEvidence = actual.evidence.get(evidenceId);
+        const expectedValue = resolveStatMarker(expectedSource);
+        assert.equal(actualEvidence.source, expectedSource, `${assetRoot}/${runId}/${evidenceId} source marker drifted`);
+        assert.equal(actualEvidence.value, expectedValue, `${assetRoot}/${runId}/${evidenceId} data value drifted`);
+        assert.equal(actualEvidence.text, String(expectedValue), `${assetRoot}/${runId}/${evidenceId} visible value drifted`);
+      }
+    }
+  }
+});
+
+test("landing sample runs gallery filters cards and updates active state", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createSampleRunsGalleryHarness();
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.root.dataset.sampleFilter, "all");
+  assert.equal(harness.filterButtons[0].attributes["aria-pressed"], "true");
+  assert.equal(harness.cards.every((card) => card.hidden === false), true);
+  assert.equal(harness.cards[0].dataset.sampleFeatured, "true");
+
+  harness.filterButtons.find((button) => button.getAttribute("data-sample-run-filter") === "transport").dispatchEvent("click");
+  assert.equal(harness.root.dataset.sampleFilter, "transport");
+  assert.equal(harness.filterButtons[2].attributes["aria-pressed"], "true");
+  assert.equal(harness.filterButtons[0].attributes["tabindex"], "-1");
+  assert.equal(harness.filterButtons[2].attributes["tabindex"], "0");
+  assert.equal(harness.cards[0].hidden, true);
+  assert.equal(harness.cards[1].hidden, true);
+  assert.equal(harness.cards[2].hidden, false);
+  assert.equal(harness.cards[2].dataset.sampleActive, "true");
+});
+
+test("landing sample runs gallery keyboard navigation changes filter focus", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createSampleRunsGalleryHarness();
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  const nextFilterEvent = createEvent({ key: "ArrowRight" });
+  harness.filterButtons[0].dispatchEvent("keydown", nextFilterEvent);
+  assert.equal(nextFilterEvent.defaultPrevented, true);
+  assert.equal(harness.root.dataset.sampleFilter, "scenario");
+  assert.equal(harness.filterButtons[1].focused, true);
+  assert.equal(harness.cards[0].hidden, false);
+  assert.equal(harness.cards[1].hidden, false);
+  assert.equal(harness.cards[2].hidden, true);
+
+  harness.filterButtons[1].dispatchEvent("keydown", createEvent({ key: "End" }));
+  assert.equal(harness.root.dataset.sampleFilter, "evidence");
+  assert.equal(harness.filterButtons[4].focused, true);
+  assert.equal(harness.cards.every((card) => card.hidden === false), true);
+
+  harness.filterButtons[4].dispatchEvent("keydown", createEvent({ key: "Home" }));
+  assert.equal(harness.root.dataset.sampleFilter, "all");
+  assert.equal(harness.filterButtons[0].focused, true);
+});
+
+test("landing sample runs gallery reduced-motion path is state-only", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  const harness = createSampleRunsGalleryHarness({ reducedMotion: true });
+  vm.createContext(harness.context);
+  vm.runInContext(source, harness.context);
+  harness.domContentLoaded[0]();
+
+  assert.equal(harness.root.dataset.sampleMotion, "reduced");
+  harness.filterButtons.find((button) => button.getAttribute("data-sample-run-filter") === "atlas").dispatchEvent("click");
+  assert.equal(harness.root.dataset.sampleFilter, "atlas");
+  assert.equal(harness.cards[0].hidden, true);
+  assert.equal(harness.cards[1].hidden, true);
+  assert.equal(harness.cards[2].hidden, false);
+});
+
+test("landing sample runs bilingual keys exist", () => {
+  const source = readFileSync(new URL("../landing/app.js", import.meta.url), "utf8");
+  for (const key of [
+    "sampleFiltersLabel",
+    "sampleFilterScenario",
+    "sampleFilterTransport",
+    "sampleFilterAtlas",
+    "sampleFilterEvidence",
+    "sampleRecipeLabel",
+    "sampleEvidenceLabel",
+    "workOneScenario",
+    "workTwoScenario",
+    "workThreeScenario",
+  ]) {
+    const occurrences = source.match(new RegExp(`\\b${key}:`, "g")) || [];
+    assert.equal(occurrences.length, 2, `missing English/Chinese translation pair for ${key}`);
+  }
+  assert.ok(source.includes('worksEyebrow: "示例运行"'), "missing Simplified Chinese sample-runs copy");
 });
 
 test("landing work-card maps expose source-backed metadata", () => {

@@ -7,7 +7,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 83941,
+      "size_bytes": 90558,
       "source_kind": "dist"
     },
     {
@@ -47292,7 +47292,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 58284,
+      "size_bytes": 67094,
       "source_kind": "dist"
     },
     {
@@ -47302,7 +47302,7 @@
     },
     {
       "path": "styles.css",
-      "size_bytes": 43903,
+      "size_bytes": 48660,
       "source_kind": "dist"
     }
   ],
@@ -47444,17 +47444,17 @@
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 83941
+      "size_bytes": 90558
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 58284
+      "size_bytes": 67094
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 43903
+      "size_bytes": 48660
     },
     {
       "file_count": 1,
@@ -47462,5 +47462,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 971968392
+  "total_bytes": 971988576
 }

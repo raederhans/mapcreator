@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 15:20 UTC
+Last updated: 2026-06-30 16:05 UTC
 
 ## Integration Owner
 
@@ -24,7 +24,7 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@1c3a9766`, behind `origin/main@c4d489d9` before this audit closeout | local main before P35/P36 fast-forward | in-progress local docs WIP | Dirty docs only: registry plus archived P34/Phase4A closeout docs. No uncommitted production code observed. | Direct probes: `git worktree list --porcelain`; `git status --short --branch` in parent checkout. | Yellow for registry/archive docs only; green for P36 production files. | Preserve parent WIP. Recover or sync the docs WIP in a separate cleanup pass. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-phase4b-output-gallery` | `codex/phase4b-output-gallery-sample-runs@12890fc6` plus uncommitted landing/gallery diff; behind `origin/main` by 2 before this audit closeout | `origin/main@12890fc6`; remote now includes P36 `084f8fd8` and closeout `c4d489d9` | in-progress | Dirty landing, dist, Pages manifest, registry, docs, and landing tests. | Direct probes: `git status --short --branch` in Phase4B worktree. | Yellow for registry and Pages manifest; semantic scope is landing/gallery rather than renderer startup. | Refresh over latest main, rerun Pages dist and registry checks, then close out Phase4B. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-phase4b-output-gallery` | `codex/phase4b-output-gallery-sample-runs`, one commit ahead of `origin/main@59e4e7b3` | `origin/main@12890fc6`; rebased over `origin/main@59e4e7b3` | ready-for-integration | Hot files: `landing/index.html`, `landing/app.js`, `landing/styles.css`, `tests/landing_showcase_view_behavior.test.mjs`, `tests/test_pages_dist_startup_shell.py`, generated `dist/index.html`, `dist/app.js`, `dist/styles.css`, `dist/pages-dist-manifest.json`, this registry, and `docs/active/landing-output-gallery-phase4b-20260630/**`. Parent checkout has unrelated docs WIP. | Adds a source-backed sample-runs gallery for TNO Atlantropa, HOI4 1936/1939 Europe, and Japan Tokaido corridor. Post-rebase validation passed: `npm run verify:pages-dist` with startup shell 41/41, landing Node 18/18, Pages dist `971988576` bytes / `926.96 MiB`; `npm run test:node:landing-showcase-view` 18/18; `npm run verify:dist-drift` rerun; and `git diff --check`. The first post-amend drift run correctly exposed the stale manifest total and was resolved by committing the regenerated manifest. | Yellow for landing/Pages dist/startup-shell/registry edits; green for editor runtime, scenario runtime data, HGO payload, backend, and renderer core. | Preserve parent docs WIP, fast-forward parent main to `origin/main@59e4e7b3`, fast-forward merge this branch, then start Phase 5A. |
 
 ## Local/Remote Sync Closeout 2026-06-30
 

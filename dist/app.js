@@ -3,7 +3,7 @@ const STORAGE_KEY = "scenario_forge_landing_lang";
 const translations = {
   en: {
     skipLink: "Skip to content",
-    navWorks: "Works",
+    navWorks: "Runs",
     navWorkflow: "Workflow",
     navProduct: "Product",
     navFeatures: "Features",
@@ -51,22 +51,57 @@ const translations = {
     sourcesTitle: "Built on recognizable map data families.",
     sourcesBody:
       "Open any source button to see the public dataset or repository behind the maps.",
-    worksEyebrow: "Selected works",
-    worksTitle: "Show the result first.",
+    worksEyebrow: "Sample runs",
+    worksTitle: "Reproducible maps, with the recipe still attached.",
     worksBody:
-      "Scenario Forge is easiest to understand when you see the maps it can produce, not when you read a wall of feature names.",
-    workOneLabel: "Alternate history baseline",
-    workOneTitle: "Start from a world that already changed.",
+      "Each run pairs the final output with its scenario, layer stack, source markers, and a public path back to the demo.",
+    sampleFiltersLabel: "Sample run filters",
+    sampleRunsPanelLabel: "Sample run gallery",
+    sampleFilterAll: "All",
+    sampleFilterScenario: "Scenario",
+    sampleFilterTransport: "Transport",
+    sampleFilterAtlas: "Atlas output",
+    sampleFilterEvidence: "Evidence-backed",
+    sampleScenarioLabel: "Scenario / baseline",
+    samplePathLabel: "Demo path",
+    sampleExportLabel: "Export target",
+    sampleDemoPath: "Open demo guide",
+    sampleSnapshotTarget: "Published WebP snapshot + checked-in SVG source",
+    sampleRecipeLabel: "Layer recipe",
+    sampleRecipeAriaLabel: "Layer recipe",
+    sampleEvidenceLabel: "Source-backed evidence",
+    workOneLabel: "TNO 1962 briefing map",
+    workOneTitle: "Atlantropa Mediterranean, with political and physical context.",
     workOneBody:
-      "Use scenario geography like Atlantropa as the baseline, then keep ownership and physical context visible in the same frame.",
-    workTwoLabel: "Scenario state switch",
-    workTwoTitle: "Compare the same region across bookmarks.",
+      "A generated briefing map for the TNO 1962 Mediterranean: ownership, clipped coastline detail, salt basins, shoals, and water regions share one frame.",
+    workOneScenario: "TNO 1962 Europe",
+    workOneRecipeOne: "TNO political owners",
+    workOneRecipeTwo: "Atlantropa basins",
+    workOneRecipeThree: "Coastline detail",
+    workOneRecipeFour: "Mediterranean labels",
+    workOneEvidenceOne: "Atlantropa features rendered",
+    workOneEvidenceTwo: "dissolved owners",
+    workTwoLabel: "HOI4 comparison run",
+    workTwoTitle: "1936 and 1939 Europe, aligned as one scenario switch.",
     workTwoBody:
-      "Put 1936 and 1939 ownership side by side so political change reads as geography, not just a list of tags.",
-    workThreeLabel: "Atlas-style output",
-    workThreeTitle: "Turn workbench layers into a finished corridor map.",
+      "The same Central Europe frame shows two HOI4 baselines side by side, so political change reads as a map comparison.",
+    workTwoScenario: "HOI4 1936 / HOI4 1939",
+    workTwoRecipeOne: "1936 ownership layer",
+    workTwoRecipeTwo: "1939 ownership layer",
+    workTwoRecipeThree: "Shared comparison viewport",
+    workTwoEvidenceOne: "1936 political features",
+    workTwoEvidenceTwo: "1939 political features",
+    workThreeLabel: "Japan corridor atlas",
+    workThreeTitle: "Tokaido transport context as a finished atlas output.",
     workThreeBody:
-      "Combine roads, rail, stations, city lights, rivers, and terrain into a compact output that feels ready to publish.",
+      "Roads, rail, stations, city lights, rivers, and terrain are composed into a compact corridor map ready for publication.",
+    workThreeScenario: "Japan Tokaido corridor",
+    workThreeRecipeOne: "Road lines",
+    workThreeRecipeTwo: "Rail lines",
+    workThreeRecipeThree: "Major stations",
+    workThreeRecipeFour: "Lights, terrain, and rivers",
+    workThreeEvidenceOne: "road + rail lines",
+    workThreeEvidenceTwo: "major stations",
     storyEyebrow: "Product story",
     storyTitle: "From world state to export-ready map.",
     storyBody:
@@ -393,7 +428,7 @@ const translations = {
   },
   zh: {
     skipLink: "跳到正文",
-    navWorks: "作品",
+    navWorks: "示例",
     navWorkflow: "流程",
     navProduct: "产品",
     navFeatures: "能力",
@@ -438,18 +473,53 @@ const translations = {
     sourcesEyebrow: "数据来源",
     sourcesTitle: "数据来源清晰，可追溯。",
     sourcesBody: "点击任意来源按钮，就能查看地图背后的公开数据集或仓库。",
-    worksEyebrow: "作品预览",
-    worksTitle: "先看成图效果。",
-    worksBody: "成图效果更能说明 Scenario Forge 适合哪些制图任务。",
-    workOneLabel: "架空历史基线",
-    workOneTitle: "从一个已经改变的世界开始。",
-    workOneBody: "把 Atlantropa 这样的剧本地理改造当成基线，同时保留政治归属和实体地理语境。",
-    workTwoLabel: "剧本状态切换",
-    workTwoTitle: "对比同一地区在不同时间点的变化。",
-    workTwoBody: "把 1936 和 1939 的归属并排展示，让政治变化变成能看懂的地理差异。",
-    workThreeLabel: "Atlas 风格输出",
-    workThreeTitle: "把工作台图层整理成走廊成图。",
-    workThreeBody: "把道路、铁路、车站、城市夜光、河流和地形合成一张紧凑、可发布的地图。",
+    worksEyebrow: "示例运行",
+    worksTitle: "成图、配方和证据放在一起看。",
+    worksBody: "每个示例都保留最终成图、场景基线、图层组合、来源标记和公开演示入口。",
+    sampleFiltersLabel: "示例运行筛选",
+    sampleRunsPanelLabel: "示例运行图库",
+    sampleFilterAll: "全部",
+    sampleFilterScenario: "场景",
+    sampleFilterTransport: "交通",
+    sampleFilterAtlas: "图集输出",
+    sampleFilterEvidence: "来源证据",
+    sampleScenarioLabel: "场景 / 基线",
+    samplePathLabel: "演示路径",
+    sampleExportLabel: "导出目标",
+    sampleDemoPath: "打开演示指南",
+    sampleSnapshotTarget: "已发布 WebP 快照 + 已签入 SVG 源图",
+    sampleRecipeLabel: "图层配方",
+    sampleRecipeAriaLabel: "图层配方",
+    sampleEvidenceLabel: "来源证据",
+    workOneLabel: "TNO 1962 简报图",
+    workOneTitle: "Atlantropa 地中海，政治和实体地理同屏呈现。",
+    workOneBody: "这张 TNO 1962 地中海简报图把归属、海岸线细节、盐盆、浅滩和水域放在同一个画面里。",
+    workOneScenario: "TNO 1962 欧洲",
+    workOneRecipeOne: "TNO 政治归属",
+    workOneRecipeTwo: "Atlantropa 盆地",
+    workOneRecipeThree: "海岸线细节",
+    workOneRecipeFour: "地中海标签",
+    workOneEvidenceOne: "已渲染 Atlantropa 要素",
+    workOneEvidenceTwo: "合并后的归属方",
+    workTwoLabel: "HOI4 对比运行",
+    workTwoTitle: "把 1936 和 1939 欧洲对齐为一次场景切换。",
+    workTwoBody: "同一张中欧视图并排展示两套 HOI4 基线，让政治变化成为可读的地图对比。",
+    workTwoScenario: "HOI4 1936 / HOI4 1939",
+    workTwoRecipeOne: "1936 归属图层",
+    workTwoRecipeTwo: "1939 归属图层",
+    workTwoRecipeThree: "共享对比视口",
+    workTwoEvidenceOne: "1936 政治要素",
+    workTwoEvidenceTwo: "1939 政治要素",
+    workThreeLabel: "日本走廊图集",
+    workThreeTitle: "把东海道交通上下文整理成图集成图。",
+    workThreeBody: "道路、铁路、车站、城市夜光、河流和地形被合成一张紧凑、可发布的走廊地图。",
+    workThreeScenario: "日本东海道走廊",
+    workThreeRecipeOne: "道路线",
+    workThreeRecipeTwo: "铁路线",
+    workThreeRecipeThree: "主要车站",
+    workThreeRecipeFour: "夜光、地形和河流",
+    workThreeEvidenceOne: "道路 + 铁路线",
+    workThreeEvidenceTwo: "主要车站",
     storyEyebrow: "产品叙事",
     storyTitle: "从世界状态到可导出的成图。",
     storyBody: "沿着创作者的真实路径阅读：选基线、切换场景状态、叠加上下文、查看证据，再导出成图。",
@@ -811,6 +881,8 @@ const PRODUCT_STORY_STEPS = {
     bodyKey: "storyStageBodyExport",
   },
 };
+const DEFAULT_SAMPLE_RUN_FILTER = "all";
+const SAMPLE_RUN_FILTERS = new Set(["all", "scenario", "transport", "atlas", "evidence"]);
 
 function getStoredLanguage() {
   try {
@@ -861,6 +933,7 @@ function applyLanguage(language) {
   if (twitterTitle) twitterTitle.setAttribute("content", copy.metaTitle);
   formatMetricNumbers(language);
   updateShowcaseLayerCopy(language);
+  syncSampleRunsFromDom();
   syncProductStoryFromDom();
   syncHeroMapFromDom();
 
@@ -1089,6 +1162,92 @@ function getProductStoryAsset(root, stepId) {
     ...step,
     ...PRODUCT_STORY_COMPARISON_ASSETS[comparisonId],
   };
+}
+
+function resolveSampleRunFilter(root, filter) {
+  if (SAMPLE_RUN_FILTERS.has(filter)) {
+    delete root.dataset.sampleFilterError;
+    return filter;
+  }
+  root.dataset.sampleFilterError = filter || "missing";
+  return DEFAULT_SAMPLE_RUN_FILTER;
+}
+
+function sampleRunCardMatches(card, filter) {
+  if (filter === DEFAULT_SAMPLE_RUN_FILTER) return true;
+  return String(card.getAttribute("data-sample-tags") || "")
+    .split(/\s+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .includes(filter);
+}
+
+function updateSampleRunsGallery(root) {
+  const filter = resolveSampleRunFilter(root, root.dataset.sampleFilter || DEFAULT_SAMPLE_RUN_FILTER);
+  const buttons = Array.from(root.querySelectorAll("[data-sample-run-filter]"));
+  const cards = Array.from(root.querySelectorAll("[data-sample-run-card]"));
+  let featuredAssigned = false;
+
+  root.dataset.sampleFilter = filter;
+  root.dataset.sampleMotion = isReducedMotionPreferred() ? "reduced" : "standard";
+
+  buttons.forEach((button) => {
+    const active = button.getAttribute("data-sample-run-filter") === filter;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("tabindex", active ? "0" : "-1");
+  });
+
+  cards.forEach((card) => {
+    const visible = sampleRunCardMatches(card, filter);
+    card.hidden = !visible;
+    card.dataset.sampleActive = visible ? "true" : "false";
+    card.dataset.sampleFeatured = visible && !featuredAssigned ? "true" : "false";
+    if (visible) featuredAssigned = true;
+  });
+
+  if (featuredAssigned) {
+    delete root.dataset.sampleRunEmpty;
+  } else {
+    root.dataset.sampleRunEmpty = "true";
+  }
+}
+
+function syncSampleRunsFromDom() {
+  const root = document.querySelector("[data-sample-runs-root]");
+  if (!root) return;
+  updateSampleRunsGallery(root);
+}
+
+function initSampleRunsGallery() {
+  const root = document.querySelector("[data-sample-runs-root]");
+  if (!root) return;
+
+  const buttons = Array.from(root.querySelectorAll("[data-sample-run-filter]"));
+  if (!buttons.length) return;
+
+  const selectFilter = (filter, options = {}) => {
+    root.dataset.sampleFilter = resolveSampleRunFilter(root, filter);
+    updateSampleRunsGallery(root);
+    if (options.focus) {
+      buttons.find((button) => button.getAttribute("data-sample-run-filter") === root.dataset.sampleFilter)?.focus();
+    }
+  };
+
+  buttons.forEach((button, index) => {
+    button.addEventListener("click", () => selectFilter(button.getAttribute("data-sample-run-filter")));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let nextIndex = index;
+      if (event.key === "ArrowRight") nextIndex = (index + 1) % buttons.length;
+      if (event.key === "ArrowLeft") nextIndex = (index - 1 + buttons.length) % buttons.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = buttons.length - 1;
+      selectFilter(buttons[nextIndex].getAttribute("data-sample-run-filter"), { focus: true });
+    });
+  });
+
+  updateSampleRunsGallery(root);
 }
 
 function updateProductStoryStage(root, language = getActiveLanguage()) {
@@ -1763,6 +1922,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   initPreviewTabs();
   initPreviewView();
+  initSampleRunsGallery();
   initProductStory();
   initShowcaseLayers();
   initShowcaseView();
