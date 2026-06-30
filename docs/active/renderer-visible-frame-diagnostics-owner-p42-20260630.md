@@ -8,7 +8,7 @@
 
 `render_transaction_diagnostics.js` keeps visible-frame snapshot, warning, and identity-only recording ownership.
 
-`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, state-write allowlist, and `dist/app/**` stay out of scope.
+`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, and state-write allowlist stay out of scope; `dist/app/**` is the checked-in generated Pages mirror and must stay synchronized when P42 ships.
 
 Metric names, reason strings, paintSource values, blockReason values, and payload keys remain compatible with the pre-P42 wrappers.
 
@@ -33,23 +33,24 @@ Metric names, reason strings, paintSource values, blockReason values, and payloa
 2. Kept visible-frame render facts, draw paths, cache/canvas behavior, and public facade in their existing files.
 3. Preserved first-visible accepted, blocked, reset, and transaction metric payload shapes through injected effects/getters.
 4. Added behavior and inventory coverage for P42 boundaries.
-5. Left `dist/app/**`, state-write allowlist, scenario refresh runtime, exact-after-settle scheduler, strategic runtime, `drawCanvas()`, `renderPassToCache()`, and hit canvas build unchanged.
+5. Left state-write allowlist, scenario refresh runtime, exact-after-settle scheduler, strategic runtime, `drawCanvas()`, `renderPassToCache()`, and hit canvas build unchanged, then synchronized the generated `dist/app/**` mirror.
 
 Files:
 
 - Core: `js/core/renderer/visible_frame_diagnostics_owner.js`, `js/core/map_renderer.js`.
 - Tests: `tests/visible_frame_diagnostics_owner_behavior.test.mjs`, `tests/visible_frame_diagnostics_owner_inventory.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`.
 - Tooling/package: `tools/check_architecture_boundaries.mjs`, `package.json`.
+- Generated Pages mirror: `dist/app/js/core/map_renderer.js`, `dist/app/js/core/renderer/visible_frame_diagnostics_owner.js`, `dist/pages-dist-manifest.json`.
 - Docs: `docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md`, `docs/active/_worktree_registry.md`.
 - Temporary files: none.
 
 Diff summary: `map_renderer.js` now delegates visible-frame transaction, blocked, first-paint, and reset wrappers to an injected diagnostics owner. The new owner records the same visible-frame transaction diagnostics, render perf metrics, counters, first-visible hook payload, paint source, reason, block reason, committed identity, and commit-key signature through explicit effects/getters. Static contracts were updated to follow the current P38/P41/P42 owner boundaries instead of old inline anchors, and the P42 architecture checker now scopes old inline forbidden-token checks to the migrated wrapper slice.
 
-Commit status: this package is intended to be included in the P42 functional Lore commit from branch `codex/p42-visible-frame-diagnostics-owner`; no self-hash is recorded inside the same commit.
+Commit status: P42 functional Lore commit is `ab4d90f9`; the review follow-up that syncs Pages dist and strengthens the blocked-path test is recorded in the follow-up commit.
 
 Base divergence: the P42 worktree started from `origin/main@419c6ba0`, then rebased cleanly onto `origin/main@74bc91ff` before final validation. Parent `main@74bc91ff` is aligned with `origin/main@74bc91ff`.
 
-Potential conflicts: yellow for future edits to `js/core/map_renderer.js`, `tools/check_architecture_boundaries.mjs`, `package.json`, `tests/scenario_chunk_contracts.test.mjs`, or this registry. Green by path against the integrated Phase6A/public-sample source and generated dist.
+Potential conflicts: yellow for future edits to `js/core/map_renderer.js`, generated `dist/app/**`, `dist/pages-dist-manifest.json`, `tools/check_architecture_boundaries.mjs`, `package.json`, `tests/scenario_chunk_contracts.test.mjs`, or this registry. Green by path against the integrated Phase6A/public-sample source.
 
 Validation passed:
 
@@ -71,9 +72,10 @@ Validation passed:
 - `npm run verify:test-import-graph` (`50` specs)
 - `npm run verify:state-write-allowlist` (`115` tracked files)
 - `git diff --check` with Windows LF-to-CRLF warnings only.
+- Review follow-up: `npm run verify:pages-dist` passed with startup shell `41/41`, landing showcase `18/18`, and sample contracts `9/9`; `npm run test:node:visible-frame-diagnostics` passed `9/9` owner behavior and `5/5` inventory; `npm run verify:architecture-boundaries` passed; `git diff --check` passed with Windows LF-to-CRLF warnings only.
 
-Not run: browser/dev-server/E2E smoke. P42 only moves Node/static visible-frame diagnostics orchestration behind injected effects and does not touch `dist/app/**`, Pages assets, browser entrypoints, or live runtime startup paths.
+Not run: browser/dev-server/E2E smoke. P42 moves Node/static visible-frame diagnostics orchestration behind injected effects and syncs the checked-in Pages mirror, with no live runtime startup path change.
 
-Review fixes: staged-new-file reminder accepted for final commit discipline; behavior tests now cover cache `lastAction` reason fallback and explicit details overriding identity/frame-state fields; architecture-boundary P42 forbidden-token checks are scoped through the migrated wrapper slice.
+Review fixes: staged-new-file reminder accepted for final commit discipline; behavior tests now cover cache `lastAction` reason fallback, explicit details overriding identity/frame-state fields, and blocked first-visible paths that must not set painted state; architecture-boundary P42 forbidden-token checks are scoped through the migrated wrapper slice; Pages dist mirror drift was fixed by regenerating `dist/app/**`.
 
-Recommended next step: commit P42, push to `origin/main`, fast-forward the parent main checkout when safe, write final registry closeout, then remove the temporary P42 worktree after remote state is confirmed.
+Recommended next step: keep future P42-adjacent renderer changes paired with Pages mirror generation when they affect checked-in app source.

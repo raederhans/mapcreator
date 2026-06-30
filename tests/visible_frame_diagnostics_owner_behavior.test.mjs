@@ -286,14 +286,16 @@ test("markFirstVisibleFramePainted records accepted payload once and keeps hook 
 });
 
 test("markFirstVisibleFramePainted records blocked payload without accepting the frame", () => {
-  const { owner, calls, cache, painted } = createHarness({ blockReason: "dirty-political-pass" });
+  const harness = createHarness({ blockReason: "dirty-political-pass" });
+  const { owner, calls, cache } = harness;
 
   const summary = owner.markFirstVisibleFramePainted("exact-frame");
 
   assert.equal(summary.firstVisibleAction, "blocked");
   assert.equal(summary.status, "blocked");
   assert.equal(summary.blockReason, "dirty-political-pass");
-  assert.equal(painted, false);
+  assert.equal(harness.painted, false);
+  assert.equal(findCalls(calls, "setFirstVisibleFramePainted").length, 0);
   assert.deepEqual(cache.counters, {
     visibleFrameTransactionCount: 1,
     visibleFrameBlockedCount: 1,

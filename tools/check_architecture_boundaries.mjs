@@ -2405,7 +2405,7 @@ function collectFailures() {
   for (const token of [
     "`visible_frame_diagnostics_owner.js` owns visible-frame diagnostic payload and metric ordering only.",
     "`map_renderer.js` remains the composition root and keeps first-visible wrapper names stable.",
-    "`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, state-write allowlist, and `dist/app/**` stay out of scope.",
+    "`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, and state-write allowlist stay out of scope; `dist/app/**` is the checked-in generated Pages mirror and must stay synchronized when P42 ships.",
     "Metric names, reason strings, paintSource values, blockReason values, and payload keys remain compatible with the pre-P42 wrappers.",
   ]) {
     if (!visibleFrameDiagnosticsOwnerDoc.includes(token)) {
