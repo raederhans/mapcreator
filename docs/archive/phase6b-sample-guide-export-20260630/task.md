@@ -50,6 +50,8 @@ Out of scope:
   - `dist/app/js/core/i18n_catalog.js`
   - `dist/app/js/ui/toolbar.js`
   - `dist/app/js/ui/toolbar/sample_project_banner_controller.js`
+  - `dist/app/js/core/map_renderer.js`
+  - `dist/app/js/core/map_renderer/render_phase_lifecycle_owner.js`
   - `dist/pages-dist-manifest.json`
 - Diff summary:
   - Guide quick path now renders a compact sample helper card when sample deeplink state is success or error. Success exposes export and original JSON download; error exposes a safe continue action. Release smoke now checks the Guide card before Project banner coverage.
@@ -71,6 +73,7 @@ Out of scope:
   - `npm run verify:test-import-graph` passed after regenerating `tests/e2e/test-import-graph.json`.
   - `git diff --check` passed with Windows LF-to-CRLF warnings only.
   - Final code-reviewer returned CLEAR.
+  - Final `npm run verify:dist-drift` exposed and then drove synchronization of the P43 generated Pages mirror after rebase.
 - Remaining risks:
   - Remote deployed Pages smoke has not been run in this closeout; local generated `/dist/` release gate passed.
   - P43 will need a package/registry merge decision after this commit lands.

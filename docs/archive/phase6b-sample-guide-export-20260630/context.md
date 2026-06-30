@@ -33,6 +33,7 @@
 - `npm run verify:architecture-boundaries` passed.
 - `git diff --check` passed with Windows LF-to-CRLF warnings only.
 - `npm run verify:test-import-graph` first reported a stale graph after the new E2E spec; `node tools/build_test_import_graph.mjs` updated it to 51 specs, and the second `npm run verify:test-import-graph` passed.
+- After rebasing over P43, final `npm run verify:dist-drift` exposed that P43 source had not yet been mirrored into `dist/app`; the closeout regenerated and staged `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/render_phase_lifecycle_owner.js`, and `dist/pages-dist-manifest.json`.
 
 ## First-Principles Review
 - State source remains `runtimeState.sampleProjectDeeplink`; Guide UI derives from the same sample state as the Project banner.

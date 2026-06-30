@@ -165,6 +165,7 @@ import {
 import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_preview_render_owner.js";
 import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_transaction_owner.js";
 import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
+import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -989,6 +990,7 @@ let rendererSvgSurfaceLifecycleOwner = null;
 let rendererFitProjectionOwner = null;
 let setMapDataTransactionOwner = null;
 let renderRequestBoundaryOwner = null;
+let renderPhaseLifecycleOwner = null;
 let visibleFrameDiagnosticsOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
@@ -1146,11 +1148,7 @@ function getRendererStartupTransactionOwner() {
       },
       resetRenderDiagnostics,
       clearRenderPhaseTimer,
-      resetRenderPhaseState: () => {
-        runtimeState.renderPhase = RENDER_PHASE_IDLE;
-        runtimeState.phaseEnteredAt = nowMs();
-        runtimeState.renderPhaseTimerId = null;
-      },
+      resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState("init-map"),
       resetTooltipState: () => {
         runtimeState.tooltipPendingState = { visible: false };
         runtimeState.tooltipRafHandle = null;
@@ -1297,6 +1295,66 @@ function getRenderRequestBoundaryOwner() {
     },
   });
   return renderRequestBoundaryOwner;
+}
+
+function getRenderPhaseLifecycleOwner() {
+  if (renderPhaseLifecycleOwner) {
+    return renderPhaseLifecycleOwner;
+  }
+  renderPhaseLifecycleOwner = createRenderPhaseLifecycleOwner({
+    state: {
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+    },
+    getters: {
+      getRenderPhase: () => runtimeState.renderPhase,
+      getRenderPhaseTimerId: () => runtimeState.renderPhaseTimerId,
+      nowMs,
+      getAdaptiveSettleProfile,
+      hasPendingDayNightRefresh: () => Boolean(runtimeState.pendingDayNightRefresh),
+      shouldStartExactAfterSettleFastPath,
+    },
+    effects: {
+      clearTimeout: (timerId) => globalThis.clearTimeout(timerId),
+      setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
+      setRenderPhaseTimerId: (timerId) => {
+        runtimeState.renderPhaseTimerId = timerId;
+      },
+      setRenderPhaseValue: (phase) => {
+        runtimeState.renderPhase = phase;
+      },
+      setPhaseEnteredAt: (enteredAtMs) => {
+        runtimeState.phaseEnteredAt = enteredAtMs;
+      },
+      setIsInteracting: (isInteracting) => {
+        runtimeState.isInteracting = Boolean(isInteracting);
+      },
+      cancelPoliticalPathWarmup,
+      setHoverOverlayDirty: (dirty) => {
+        runtimeState.hoverOverlayDirty = Boolean(dirty);
+      },
+      setPendingDayNightRefresh: (pending) => {
+        runtimeState.pendingDayNightRefresh = Boolean(pending);
+      },
+      invalidateRenderPasses,
+      updateDprStage,
+      setCanvasSize,
+      setAdaptiveSettleProfile: (settleProfile) => {
+        runtimeState.adaptiveSettleProfile = settleProfile;
+      },
+      scheduleScenarioChunkRefresh: (options) => (
+        typeof runtimeState.scheduleScenarioChunkRefreshFn === "function"
+          ? runtimeState.scheduleScenarioChunkRefreshFn(options)
+          : "noop"
+      ),
+      setDeferExactAfterSettle: (deferred) => {
+        runtimeState.deferExactAfterSettle = Boolean(deferred);
+      },
+      render,
+      scheduleExactAfterSettleRefresh,
+    },
+  });
+  return renderPhaseLifecycleOwner;
 }
 
 function getVisibleFrameDiagnosticsOwner() {
@@ -6299,10 +6357,7 @@ function rebuildPoliticalLandCollections() {
 }
 
 function clearRenderPhaseTimer() {
-  if (runtimeState.renderPhaseTimerId) {
-    globalThis.clearTimeout(runtimeState.renderPhaseTimerId);
-    runtimeState.renderPhaseTimerId = null;
-  }
+  getRenderPhaseLifecycleOwner().clearRenderPhaseTimer();
 }
 
 function clamp01(value) {
@@ -6329,29 +6384,7 @@ function getAdaptiveSettleProfile(scaleDelta = Number(runtimeState.zoomGestureSc
 }
 
 function setRenderPhase(phase) {
-  const previousPhase = runtimeState.renderPhase;
-  runtimeState.renderPhase = phase;
-  runtimeState.phaseEnteredAt = nowMs();
-  runtimeState.isInteracting = phase === RENDER_PHASE_INTERACTING;
-  if (phase !== RENDER_PHASE_IDLE) {
-    cancelPoliticalPathWarmup(`phase-${phase}`);
-  }
-  if (previousPhase !== phase && (previousPhase === RENDER_PHASE_IDLE || phase === RENDER_PHASE_IDLE)) {
-    runtimeState.hoverOverlayDirty = true;
-  }
-  if (phase === RENDER_PHASE_IDLE && runtimeState.pendingDayNightRefresh) {
-    runtimeState.pendingDayNightRefresh = false;
-    invalidateRenderPasses("dayNight", "day-night-clock-deferred");
-  }
-  const dprStageChanged = phase === RENDER_PHASE_INTERACTING
-    ? updateDprStage("interactive")
-    : updateDprStage("idle");
-  if (dprStageChanged) {
-    setCanvasSize({
-      reason: `phase-${phase}-dpr-stage`,
-      targetPassesOnDprChange: ["political", "contextBase", "borders"],
-    });
-  }
+  getRenderPhaseLifecycleOwner().setRenderPhase(phase);
 }
 
 function isInteractionRecoveryBlocked() {
@@ -6696,39 +6729,7 @@ function queueTooltipUpdate(nextState = null) {
 }
 
 function scheduleRenderPhaseIdle() {
-  clearRenderPhaseTimer();
-  const settleProfile = getAdaptiveSettleProfile();
-  runtimeState.adaptiveSettleProfile = settleProfile;
-  runtimeState.renderPhaseTimerId = globalThis.setTimeout(() => {
-    runtimeState.renderPhaseTimerId = null;
-    setRenderPhase(RENDER_PHASE_IDLE);
-    const pendingChunkRefreshStatus = typeof runtimeState.scheduleScenarioChunkRefreshFn === "function"
-      ? runtimeState.scheduleScenarioChunkRefreshFn({
-        reason: "render-phase-idle",
-        delayMs: 0,
-        flushPending: true,
-      })
-      : "noop";
-    const promotionWorkActive = [
-      "promotion-committed",
-      "promotion-commit-started",
-      "promotion-commit-in-flight",
-      "promotion-started",
-      "promotion-in-flight",
-      "promotion-scheduled",
-      "refresh-started",
-    ].includes(String(pendingChunkRefreshStatus || ""));
-    if (shouldStartExactAfterSettleFastPath()) {
-      if (promotionWorkActive) {
-        return;
-      }
-      runtimeState.deferExactAfterSettle = true;
-      render();
-      scheduleExactAfterSettleRefresh(settleProfile);
-      return;
-    }
-    render();
-  }, settleProfile.settleDurationMs);
+  getRenderPhaseLifecycleOwner().scheduleRenderPhaseIdle();
 }
 
 function flushPendingScenarioChunkRefreshAfterExact(reason = "exact-after-settle") {

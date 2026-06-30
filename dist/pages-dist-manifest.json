@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 884945,
+      "size_bytes": 885029,
       "source_kind": "dist"
     },
     {
@@ -45833,6 +45833,11 @@
     {
       "path": "app/js/core/map_renderer/render_pass_catalog.js",
       "size_bytes": 1083,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/render_phase_lifecycle_owner.js",
+      "size_bytes": 7446,
       "source_kind": "dist"
     },
     {
@@ -47357,7 +47362,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465924,
+      "size_bytes": 1466065,
       "source_kind": "dist"
     },
     {
@@ -47487,9 +47492,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9411,
+      "file_count": 9412,
       "path": "app",
-      "size_bytes": 965511596
+      "size_bytes": 965519126
     },
     {
       "file_count": 57,
@@ -47499,7 +47504,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465924
+      "size_bytes": 1466065
     },
     {
       "file_count": 1,
@@ -47522,5 +47527,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972073584
+  "total_bytes": 972081255
 }
