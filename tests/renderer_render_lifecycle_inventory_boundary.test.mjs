@@ -11,6 +11,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const P40_DOC_PATH = "docs/active/renderer-render-lifecycle-preflight-20260630.md";
 const RENDER_LIFECYCLE_OWNER_PATH = "js/core/renderer/renderer_render_lifecycle_owner.js";
 const MAP_RENDERER_LIFECYCLE_OWNER_PATH = "js/core/map_renderer/render_lifecycle_owner.js";
+const RENDER_PHASE_LIFECYCLE_OWNER_PATH = "js/core/map_renderer/render_phase_lifecycle_owner.js";
 
 const P40_DOC_HEADINGS = Object.freeze([
   "## Scope and guardrails",
@@ -124,6 +125,9 @@ function listRepoSourceFiles(rootRelativePath) {
 
 function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === RENDER_PHASE_LIFECYCLE_OWNER_PATH) {
+    return false;
+  }
   if (!normalized.startsWith("js/core/map_renderer/") && !normalized.startsWith("js/core/renderer/")) {
     return false;
   }
@@ -199,6 +203,7 @@ test("P40 keeps production render lifecycle owner absent", () => {
     "js/core/renderer/renderer_svg_surface_lifecycle_owner.js",
     "js/core/renderer/renderer_startup_transaction_owner.js",
     "js/core/renderer/render_cache_owner.js",
+    RENDER_PHASE_LIFECYCLE_OWNER_PATH,
   ]) {
     assert.equal(
       isForbiddenRenderLifecycleOwnerPath(fixturePath),

@@ -27,6 +27,7 @@ const FILES = Object.freeze({
   rendererStartupTransactionOwner: "js/core/renderer/renderer_startup_transaction_owner.js",
   setMapDataTransactionOwner: "js/core/map_renderer/set_map_data_transaction_owner.js",
   renderRequestBoundaryOwner: "js/core/map_renderer/render_request_boundary_owner.js",
+  renderPhaseLifecycleOwner: "js/core/map_renderer/render_phase_lifecycle_owner.js",
   visibleFrameDiagnosticsOwner: "js/core/renderer/visible_frame_diagnostics_owner.js",
   rendererRenderLifecycleOwner: "js/core/renderer/renderer_render_lifecycle_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
@@ -69,6 +70,9 @@ const FILES = Object.freeze({
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
+  rendererRenderPhaseLifecycleOwnerDoc: "docs/active/renderer-render-phase-lifecycle-owner-p43-20260630.md",
+  rendererRenderPhaseLifecycleOwnerTest: "tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs",
+  rendererRenderPhaseLifecycleInventoryTest: "tests/renderer_render_phase_lifecycle_inventory.test.mjs",
   visibleFrameDiagnosticsOwnerDoc: "docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md",
   visibleFrameDiagnosticsOwnerTest: "tests/visible_frame_diagnostics_owner_behavior.test.mjs",
   visibleFrameDiagnosticsInventoryTest: "tests/visible_frame_diagnostics_owner_inventory.test.mjs",
@@ -117,6 +121,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
   [FILES.renderRequestBoundaryOwner]: 160,
+  [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
@@ -190,6 +195,9 @@ function isForbiddenTransactionResetHelperPath(sourcePath) {
 
 function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === FILES.renderPhaseLifecycleOwner) {
+    return false;
+  }
   if (!normalized.startsWith("js/core/map_renderer/") && !normalized.startsWith("js/core/renderer/")) {
     return false;
   }
@@ -273,6 +281,7 @@ function collectFailures() {
   const rendererSetMapDataTransactionOwnerTest = readProjectFile(FILES.rendererSetMapDataTransactionOwnerTest);
   const rendererSetMapDataTransactionInventoryTest = readProjectFile(FILES.rendererSetMapDataTransactionInventoryTest);
   const renderRequestBoundaryOwner = readProjectFile(FILES.renderRequestBoundaryOwner);
+  const renderPhaseLifecycleOwner = readProjectFile(FILES.renderPhaseLifecycleOwner);
   const visibleFrameDiagnosticsOwner = readProjectFile(FILES.visibleFrameDiagnosticsOwner);
   const rendererTransactionResetHardeningPreflightDoc = readProjectFile(
     FILES.rendererTransactionResetHardeningPreflightDoc,
@@ -286,6 +295,11 @@ function collectFailures() {
   const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
     FILES.rendererRenderRequestBoundaryInventoryTest,
+  );
+  const rendererRenderPhaseLifecycleOwnerDoc = readProjectFile(FILES.rendererRenderPhaseLifecycleOwnerDoc);
+  const rendererRenderPhaseLifecycleOwnerTest = readProjectFile(FILES.rendererRenderPhaseLifecycleOwnerTest);
+  const rendererRenderPhaseLifecycleInventoryTest = readProjectFile(
+    FILES.rendererRenderPhaseLifecycleInventoryTest,
   );
   const visibleFrameDiagnosticsOwnerDoc = readProjectFile(FILES.visibleFrameDiagnosticsOwnerDoc);
   const visibleFrameDiagnosticsOwnerTest = readProjectFile(FILES.visibleFrameDiagnosticsOwnerTest);
@@ -345,6 +359,7 @@ function collectFailures() {
     [FILES.rendererSetMapDataTransactionOwnerTest]: rendererSetMapDataTransactionOwnerTest,
     [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
     [FILES.renderRequestBoundaryOwner]: renderRequestBoundaryOwner,
+    [FILES.renderPhaseLifecycleOwner]: renderPhaseLifecycleOwner,
     [FILES.visibleFrameDiagnosticsOwner]: visibleFrameDiagnosticsOwner,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
     [FILES.rendererTransactionResetHardeningInventoryTest]: rendererTransactionResetHardeningInventoryTest,
@@ -353,6 +368,9 @@ function collectFailures() {
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
+    [FILES.rendererRenderPhaseLifecycleOwnerDoc]: rendererRenderPhaseLifecycleOwnerDoc,
+    [FILES.rendererRenderPhaseLifecycleOwnerTest]: rendererRenderPhaseLifecycleOwnerTest,
+    [FILES.rendererRenderPhaseLifecycleInventoryTest]: rendererRenderPhaseLifecycleInventoryTest,
     [FILES.visibleFrameDiagnosticsOwnerDoc]: visibleFrameDiagnosticsOwnerDoc,
     [FILES.visibleFrameDiagnosticsOwnerTest]: visibleFrameDiagnosticsOwnerTest,
     [FILES.visibleFrameDiagnosticsInventoryTest]: visibleFrameDiagnosticsInventoryTest,
@@ -782,7 +800,7 @@ function collectFailures() {
     "applyRendererSurfaceBridgeState(runtimeState, {",
     "normalizeColorStateForRender(state, {",
     "runtimeState.debugMode = nextDebugMode;",
-    "runtimeState.renderPhase = RENDER_PHASE_IDLE;",
+    "resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState(\"init-map\"),",
     "runtimeState.tooltipPendingState = { visible: false };",
     "runtimeState.deferContextBasePass = false;",
     "runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;",
@@ -2413,9 +2431,203 @@ function collectFailures() {
     }
   }
 
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.renderPhaseLifecycleOwner))) {
+    failures.push(`${FILES.renderPhaseLifecycleOwner} must exist for P43.`);
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("P43 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  for (const token of [
+    "export function createRenderPhaseLifecycleOwner({",
+    "const REQUIRED_EFFECT_NAMES = Object.freeze([",
+    "const REQUIRED_GETTER_NAMES = Object.freeze([",
+    "function clearRenderPhaseTimer(",
+    "function setRenderPhase(",
+    "function scheduleRenderPhaseIdle(",
+    "function resetRenderPhaseState(",
+    "getAdaptiveSettleProfile",
+    "PROMOTION_ACTIVE_STATUSES",
+    "createSummary({",
+    "effectOrder",
+    "getterOrder",
+    "Object.freeze({",
+  ]) {
+    if (!renderPhaseLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.renderPhaseLifecycleOwner} must keep P43 owner token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "map_renderer.js",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "createScenarioRefreshRuntime",
+    "createExactAfterSettleScheduler",
+    "createStrategicOverlayRuntimeOwner",
+    "renderer_render_lifecycle_owner",
+  ]) {
+    if (renderPhaseLifecycleOwner.includes(token)) {
+      failures.push(`${FILES.renderPhaseLifecycleOwner} must avoid P43 forbidden token: ${token}`);
+    }
+  }
+  if (hasMapRendererImport(renderPhaseLifecycleOwner)) {
+    failures.push(`${FILES.renderPhaseLifecycleOwner} must not import map_renderer.js.`);
+  }
+  for (const token of [
+    "from \"./map_renderer/render_phase_lifecycle_owner.js\";",
+    "let renderPhaseLifecycleOwner = null;",
+    "function getRenderPhaseLifecycleOwner()",
+    "renderPhaseLifecycleOwner = createRenderPhaseLifecycleOwner({",
+    "getRenderPhase: () => runtimeState.renderPhase",
+    "getRenderPhaseTimerId: () => runtimeState.renderPhaseTimerId",
+    "hasPendingDayNightRefresh: () => Boolean(runtimeState.pendingDayNightRefresh)",
+    "shouldStartExactAfterSettleFastPath",
+    "clearTimeout: (timerId) => globalThis.clearTimeout(timerId)",
+    "setTimeout: (callback, delayMs) => globalThis.setTimeout(callback, delayMs)",
+    "setRenderPhaseTimerId: (timerId) => {",
+    "setRenderPhaseValue: (phase) => {",
+    "setPhaseEnteredAt: (enteredAtMs) => {",
+    "setIsInteracting: (isInteracting) => {",
+    "cancelPoliticalPathWarmup",
+    "setHoverOverlayDirty: (dirty) => {",
+    "setPendingDayNightRefresh: (pending) => {",
+    "invalidateRenderPasses",
+    "updateDprStage",
+    "setCanvasSize",
+    "setAdaptiveSettleProfile: (settleProfile) => {",
+    "scheduleScenarioChunkRefresh: (options) => (",
+    "setDeferExactAfterSettle: (deferred) => {",
+    "render,",
+    "scheduleExactAfterSettleRefresh",
+    "resetRenderPhaseState: () => getRenderPhaseLifecycleOwner().resetRenderPhaseState(\"init-map\")",
+    "getRenderPhaseLifecycleOwner().clearRenderPhaseTimer();",
+    "getRenderPhaseLifecycleOwner().setRenderPhase(phase);",
+    "getRenderPhaseLifecycleOwner().scheduleRenderPhaseIdle();",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P43 render phase lifecycle wrapper token: ${token}`);
+    }
+  }
+  const clearPhaseTimerWrapperSource = sliceBetween(
+    renderer,
+    "function clearRenderPhaseTimer()",
+    "function clamp01",
+  );
+  const setRenderPhaseWrapperSource = sliceBetween(
+    renderer,
+    "function setRenderPhase(phase)",
+    "function isInteractionRecoveryBlocked",
+  );
+  const scheduleRenderPhaseIdleWrapperSource = sliceBetween(
+    renderer,
+    "function scheduleRenderPhaseIdle()",
+    "function flushPendingScenarioChunkRefreshAfterExact",
+  );
+  for (const [label, source, tokens] of [
+    ["clearRenderPhaseTimer", clearPhaseTimerWrapperSource, [
+      "globalThis.clearTimeout",
+      "runtimeState.renderPhaseTimerId = null",
+    ]],
+    ["setRenderPhase", setRenderPhaseWrapperSource, [
+      "runtimeState.renderPhase = phase",
+      "runtimeState.phaseEnteredAt = nowMs()",
+      "runtimeState.isInteracting = phase === RENDER_PHASE_INTERACTING",
+      "cancelPoliticalPathWarmup(`phase-${phase}`)",
+      "runtimeState.pendingDayNightRefresh = false",
+    ]],
+    ["scheduleRenderPhaseIdle", scheduleRenderPhaseIdleWrapperSource, [
+      "runtimeState.adaptiveSettleProfile = settleProfile",
+      "globalThis.setTimeout",
+      "runtimeState.deferExactAfterSettle = true",
+      "scheduleExactAfterSettleRefresh(settleProfile)",
+    ]],
+  ]) {
+    if (!source) {
+      failures.push(`${FILES.renderer} must keep ${label} wrapper for P43.`);
+    }
+    for (const token of tokens) {
+      if (source.includes(token)) {
+        failures.push(`${FILES.renderer} P43 ${label} wrapper must delegate old inline token: ${token}`);
+      }
+    }
+  }
+  for (const [relativePath, source] of [
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+    ["js/core/renderer/strategic_overlay_runtime_owner.js", readProjectFile("js/core/renderer/strategic_overlay_runtime_owner.js")],
+  ]) {
+    if (source.includes("render_phase_lifecycle_owner")) {
+      failures.push(`${relativePath} must not import P43 render phase lifecycle owner.`);
+    }
+  }
+  if (readProjectFile("js/core/map_renderer/public.js").includes("render_phase_lifecycle_owner")) {
+    failures.push("js/core/map_renderer/public.js must not expose P43 render phase lifecycle owner.");
+  }
+  if (stateWriteAllowlist.includes("render_phase_lifecycle_owner")) {
+    failures.push(`${FILES.stateWriteAllowlist} must not include P43 render phase lifecycle owner.`);
+  }
+  for (const token of [
+    "\"test:node:renderer-render-phase-lifecycle-owner\": \"node --test tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs\"",
+    "\"test:node:renderer-render-phase-lifecycle-inventory\": \"node --test tests/renderer_render_phase_lifecycle_inventory.test.mjs\"",
+    "\"test:node:renderer-render-phase-lifecycle\": \"npm run test:node:renderer-render-phase-lifecycle-owner && npm run test:node:renderer-render-phase-lifecycle-inventory\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P43 render phase lifecycle script: ${token}`);
+    }
+  }
+  for (const token of [
+    "clearRenderPhaseTimer clears an active timer handle and returns a frozen summary",
+    "setRenderPhase enters interacting with exact write and effect order",
+    "setRenderPhase enters idle and flushes pending day-night refresh",
+    "scheduleRenderPhaseIdle clears old timer and stores a new adaptive timer",
+    "scheduleRenderPhaseIdle callback starts exact fast path when quiet",
+    "resetRenderPhaseState restores idle phase timer fields through injected effects",
+    "createRenderPhaseLifecycleOwner fails fast for missing dependencies",
+    "render phase lifecycle owner stays outside broad render internals",
+  ]) {
+    if (!rendererRenderPhaseLifecycleOwnerTest.includes(token)) {
+      failures.push(`${FILES.rendererRenderPhaseLifecycleOwnerTest} must cover P43 behavior token: ${token}`);
+    }
+  }
+  for (const token of [
+    "P43 render phase lifecycle owner files and package scripts are registered",
+    "P43 owner owns render phase and timer lifecycle only",
+    "map_renderer delegates phase lifecycle wrappers while keeping render anchors",
+    "P41 and P42 owners remain narrow after P43",
+    "scenario exact strategic public facade and state-write boundaries stay unchanged",
+    "P43 leaves dist app mirror untouched",
+  ]) {
+    if (!rendererRenderPhaseLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererRenderPhaseLifecycleInventoryTest} must cover P43 inventory token: ${token}`);
+    }
+  }
+  for (const heading of [
+    "# Renderer Render Phase Lifecycle Owner P43",
+    "## Scope",
+    "## Implementation Plan",
+    "## Validation Plan",
+    "## Delivery Package",
+  ]) {
+    if (!rendererRenderPhaseLifecycleOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.rendererRenderPhaseLifecycleOwnerDoc} must keep P43 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "`render_phase_lifecycle_owner.js` owns render phase value writes, phase-enter timestamps, phase timer clearing, phase idle scheduling, and reset phase state only.",
+    "`map_renderer.js` remains the composition root and keeps `clearRenderPhaseTimer()`, `setRenderPhase()`, and `scheduleRenderPhaseIdle()` wrapper names stable.",
+    "`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh runtime, exact-after-settle scheduler, strategic overlay runtime, `public.js`, state-write allowlist, and `dist/app/**` stay out of scope.",
+    "P41 request boundary and P42 visible-frame diagnostics owners remain narrow and do not import P43.",
+  ]) {
+    if (!rendererRenderPhaseLifecycleOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererRenderPhaseLifecycleOwnerDoc} must lock P43 boundary token: ${token}`);
+    }
+  }
+
   const requiredImports = [
     "./map_renderer/set_map_data_transaction_owner.js",
     "./map_renderer/render_request_boundary_owner.js",
+    "./map_renderer/render_phase_lifecycle_owner.js",
     "./renderer/visible_frame_diagnostics_owner.js",
     "./map_renderer/scenario_refresh_runtime.js",
     "./renderer/canvas_color_helpers.js",
@@ -2438,6 +2650,7 @@ function collectFailures() {
     FILES.scenarioRefreshRuntime,
     FILES.canvasColorHelpers,
     FILES.scenarioVisualInvalidationExecutor,
+    FILES.renderPhaseLifecycleOwner,
     FILES.exactAfterSettleScheduler,
     FILES.exactAfterSettleRefreshPlans,
     FILES.exactAfterSettlePassCatalog,
@@ -2839,6 +3052,39 @@ function collectFailures() {
         "getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;",
         "getRenderRequestBoundaryOwner().flushInteractionRenderBoundary(reason).completed;",
         "getRenderRequestBoundaryOwner().requestRendererRenderBoundary(reason, {",
+      ],
+    },
+    {
+      ownerPath: FILES.renderPhaseLifecycleOwner,
+      ownerTokens: [
+        "export function createRenderPhaseLifecycleOwner({",
+        "function clearRenderPhaseTimer(",
+        "function setRenderPhase(",
+        "function scheduleRenderPhaseIdle(",
+        "function resetRenderPhaseState(",
+        "clearRenderPhaseTimerCore(trace)",
+        "setRenderPhase(renderPhaseIdle",
+        "scheduleExactAfterSettleRefresh",
+      ],
+      rendererRequiredTokens: [
+        "from \"./map_renderer/render_phase_lifecycle_owner.js\";",
+        "let renderPhaseLifecycleOwner = null;",
+        "function getRenderPhaseLifecycleOwner()",
+        "renderPhaseLifecycleOwner = createRenderPhaseLifecycleOwner({",
+        "setRenderPhaseTimerId: (timerId) => {",
+        "setRenderPhaseValue: (phase) => {",
+        "setPhaseEnteredAt: (enteredAtMs) => {",
+        "setIsInteracting: (isInteracting) => {",
+        "cancelPoliticalPathWarmup",
+        "setHoverOverlayDirty: (dirty) => {",
+        "setPendingDayNightRefresh: (pending) => {",
+        "invalidateRenderPasses",
+        "updateDprStage",
+        "setCanvasSize",
+        "setAdaptiveSettleProfile: (settleProfile) => {",
+        "getRenderPhaseLifecycleOwner().clearRenderPhaseTimer();",
+        "getRenderPhaseLifecycleOwner().setRenderPhase(phase);",
+        "getRenderPhaseLifecycleOwner().scheduleRenderPhaseIdle();",
       ],
     },
     {

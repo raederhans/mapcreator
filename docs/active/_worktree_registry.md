@@ -1,14 +1,14 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 22:14 UTC
+Last updated: 2026-06-30 22:48 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Latest functional baseline is `3e2ffe25`, the P42 review follow-up that restores Pages dist parity and strengthens blocked-path coverage. The registry closeout that follows it is docs-only.
-- Active renderer handoff: P42 visible-frame diagnostics owner is integrated and the temporary P42 worktree has been removed. Future renderer work should start from the P40/P41/P42 guardrails and keep render/draw/pass/hit/scenario/exact/strategic/public/state-write migration behind a separate preflight.
+- Active renderer handoff: P43 render phase lifecycle owner is ready-for-integration in `C:\Users\raede\.codex\worktrees\scenario-forge-p43-render-phase-lifecycle-owner`. It starts from the P40/P41/P42 guardrails and keeps render/draw/pass/hit/scenario/exact/strategic/public/state-write/dist migration out of scope.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, P40 render lifecycle preflight, P41 render request boundary owner, and P42 visible-frame diagnostics owner.
-- Live test/build owner: no active live process owner after the P42 review follow-up. Browser/dev-server/live E2E remain idle for this lane; Pages dist generation and post-commit drift verification were owned by the main agent and completed.
+- Live test/build owner: main agent owns all P43 test/build command execution. Browser/dev-server/live E2E and Pages dist generation remain idle for this lane unless the owner explicitly starts them.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
@@ -19,15 +19,34 @@ Last updated: 2026-06-30 22:14 UTC
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-list --left-right --count HEAD...origin/main`, and `git worktree list` on 2026-06-30 after the P42 review follow-up registry closeout.
+Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list` on 2026-06-30 after P43 worktree creation.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` aligned with `origin/main` | `origin/main` | clean / only worktree | No dirty files after closeout push. | Review found source/dist drift in pushed P42; follow-up commit `3e2ffe25` is pushed. Validation passed `npm run verify:pages-dist`, `npm run test:node:visible-frame-diagnostics`, `npm run verify:architecture-boundaries`, `git diff --check`, `git diff --cached --check`, and post-commit `npm run verify:dist-drift`. Final probes showed `git status --short --branch` clean, rev-list ahead/behind `0 0`, and `git worktree list` only this main checkout. | Green. | No integration action remains. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at `fc59d527` | `origin/main` | clean / parent checkout | No dirty files before P43 branch creation. | `git worktree list` now shows this parent checkout plus the P43 worktree. | Green as integration target after P43 validation. | Keep clean until P43 is ready to merge. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-p43-render-phase-lifecycle-owner` | `codex/p43-render-phase-lifecycle-owner` at `fc59d527` plus validated working diff | `origin/main@fc59d527` | ready-for-integration | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/render_phase_lifecycle_owner.js`, P43 tests, synced inventory tests, `package.json`, `tools/check_architecture_boundaries.mjs`, this registry, P43 doc, and `lessons learned.md`. | P43 validation passed: behavior `11/11`, inventory `6/6`, P41 `13/13`, P42 `14/14`, P40 `8/8`, P38 `18/18`, P39 `8/8`, diagnostics `21/21`, exact `9/9`, scenario `24/24`, architecture, import graph, state-write, diff, and forbidden-path gates. | Yellow with any concurrent renderer extraction touching `map_renderer.js`, package scripts, architecture checker, or registry. Green for public/state-write/dist/scenario/exact/strategic files. | Commit as functional Lore commit, fast-forward merge to `main`, run focused post-merge gates, push, then remove this temporary worktree. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Renderer Render Phase Lifecycle Owner P43 2026-06-30
+
+1. Added `createRenderPhaseLifecycleOwner({ state, effects, getters })` to own render phase value writes, phase-enter timestamp writes, phase timer clearing, adaptive idle scheduling, and reset phase state.
+2. Delegated `clearRenderPhaseTimer()`, `setRenderPhase()`, and `scheduleRenderPhaseIdle()` from `map_renderer.js` while keeping the wrapper names stable.
+3. Preserved old idle callback behavior for chunk refresh flush, promotion-active wait, exact fast path, render, and exact-after-settle scheduling through injected effects.
+4. Added P43 behavior/inventory tests plus architecture-boundary coverage for owner narrowness, full DI wiring, P41/P42 boundary preservation, and `dist/app/**` no-change proof.
+5. Kept `drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh runtime, exact scheduler, strategic runtime, public facade, state-write allowlist, and `dist/app/**` unchanged.
+
+Files: core `js/core/map_renderer.js`, `js/core/map_renderer/render_phase_lifecycle_owner.js`; tests `tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs`, `tests/renderer_render_phase_lifecycle_inventory.test.mjs`, `tests/renderer_render_lifecycle_inventory_boundary.test.mjs`, `tests/renderer_startup_transaction_inventory_boundary.test.mjs`; tooling/docs `package.json`, `tools/check_architecture_boundaries.mjs`, `docs/active/renderer-render-phase-lifecycle-owner-p43-20260630.md`, this registry, and `lessons learned.md`; temporary files none.
+
+Diff summary: `map_renderer.js` remains the composition root and injects all runtime writes/effects into the new owner. The owner keeps the phase/timer lifecycle order and returns frozen summaries. Startup/reset and render-lifecycle inventory tests now point to the owner delegation contract. The architecture checker registers the P43 owner/doc/tests/scripts, rejects broad lifecycle-owner creation, locks full DI wiring, and keeps public/state/scenario/exact/strategic/dist boundaries closed.
+
+Commit status: not committed at delivery-package write time; this worktree is ready for a functional Lore commit. Base divergence: branch started at `origin/main@fc59d527`, and parent `main` was clean at worktree creation. Potential conflicts: yellow with future changes to `js/core/map_renderer.js`, `package.json`, `tools/check_architecture_boundaries.mjs`, renderer inventory tests, or this registry; green with `public.js`, state-write allowlist, `dist/app/**`, scenario refresh runtime, exact scheduler, setMapData owner, request owner, and visible-frame diagnostics owner.
+
+Validation passed: `node --check` for owner, renderer, P43 tests, and architecture checker; package JSON parse; P43 behavior `11/11`; P43 inventory `6/6`; P41 request boundary `13/13`; P42 visible-frame diagnostics `14/14`; P40 render lifecycle inventory `8/8`; P38 setMapData transaction `18/18`; P39 reset-hardening inventory `8/8`; render transaction diagnostics `21/21`; exact-after-settle refresh plans `9/9`; scenario refresh plans `24/24`; architecture boundaries; test import graph `50` specs; state-write allowlist `115` tracked files; `git diff --check` with Windows LF-to-CRLF warnings only; forbidden-path diff scan returned empty for `dist/app`, `public.js`, scenario/exact/setMapData/request/visible-frame owner files, and state-write allowlist.
+
+Review fixes: reset now clears an active phase timer inside `resetRenderPhaseState()`; P43 tests and checker now lock the complete DI effect/getter set; P43 inventory now guards `dist/app/**` as untouched because the P43 attachment explicitly forbids dist changes. Not run: optional browser/E2E smoke, because targeted Node/static gates cover this narrow renderer phase lifecycle extraction. Recommended next step: commit, fast-forward merge into `main`, run focused post-merge gates, push, then clean this temporary worktree.
 
 ### Renderer Visible Frame Diagnostics Owner P42 2026-06-30
 

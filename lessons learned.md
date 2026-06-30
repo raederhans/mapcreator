@@ -512,3 +512,6 @@
 
 ### 并行 registry 刷新别无限 rebase
 - 如果另一个 owner 持续提交 registry-only 状态快照，功能分支反复 rebase 会形成活锁；确认新提交只改 registry 后，用一次 merge 保留状态历史，并在 merge 冲突里写最终整合事实。
+
+### 分阶段 renderer owner 按附件决定 dist 策略
+- 如果当前阶段明确禁止 `dist/app/**` 改动，把 dist parity review 建议转成 `git diff --name-only HEAD -- dist/app` guard；等专门的 Pages dist 同步阶段再生成镜像。
