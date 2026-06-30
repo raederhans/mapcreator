@@ -132,7 +132,7 @@ async function importProjectPayload(payload, observerHooks = {}) {
   };
 
   try {
-    FileManager.importProject(
+    await FileManager.importProject(
       {
         name: "map_project.json",
         text: JSON.stringify(payload),
@@ -151,11 +151,44 @@ async function importProjectPayload(payload, observerHooks = {}) {
         },
       }
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
     return { callbacks, successes, errors };
   } finally {
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
+  }
+}
+
+async function importProjectTextPayload(payload, observerHooks = {}) {
+  const previousDocument = globalThis.document;
+  const callbacks = [];
+  const successes = [];
+  const errors = [];
+
+  globalThis.document = {
+    getElementById: () => null,
+  };
+
+  try {
+    const imported = await FileManager.importProjectText(
+      JSON.stringify(payload),
+      async (data) => {
+        callbacks.push(data);
+      },
+      {
+        onSuccess: (data) => {
+          successes.push(data);
+          observerHooks.onSuccess?.(data);
+        },
+        onError: (error) => {
+          errors.push(error);
+          observerHooks.onError?.(error);
+        },
+      },
+    );
+
+    return { callbacks, errors, imported, successes };
+  } finally {
+    globalThis.document = previousDocument;
   }
 }
 
@@ -181,6 +214,47 @@ function createTransportOverviewImportPayload(layerVisibility = {}) {
     waterRegionOverrides: {},
   };
 }
+
+test("file and text project imports share normalized callback payloads", async () => {
+  const legacyPayload = {
+    schemaVersion: 1,
+    colors: {
+      legacyFeature: "#123456",
+    },
+    layerVisibility: {
+      showWaterRegions: false,
+    },
+    styleConfig: {
+      specialZones: {
+        legacy: true,
+      },
+    },
+  };
+
+  const fileResult = await importProjectPayload(legacyPayload);
+  const textResult = await importProjectTextPayload(legacyPayload);
+
+  assert.equal(fileResult.errors.length, 0);
+  assert.equal(textResult.errors.length, 0);
+  assert.equal(textResult.imported, true);
+  assert.equal(fileResult.callbacks.length, 1);
+  assert.equal(textResult.callbacks.length, 1);
+
+  const fileData = fileResult.callbacks[0];
+  const textData = textResult.callbacks[0];
+  for (const field of [
+    "featureOverrides",
+    "countryBaseColors",
+    "visualOverrides",
+    "waterRegionOverrides",
+    "specialRegionOverrides",
+    "specialZoneLayers",
+    "styleConfig",
+    "layerVisibility",
+  ]) {
+    assert.deepEqual(textData[field], fileData[field], `${field} should share import normalization`);
+  }
+});
 
 async function importProjectThroughFunnelPayload(payload, { captureIntensityFields = false } = {}) {
   const previousDocument = globalThis.document;

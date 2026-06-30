@@ -208,6 +208,7 @@ class StateSplitBoundaryContractTest(unittest.TestCase):
         owner_content = STATE_BOOT_JS.read_text(encoding="utf-8")
 
         self.assertIn("export function createDefaultStartupBootCacheState()", owner_content)
+        self.assertIn("export function createDefaultSampleProjectDeeplinkState()", owner_content)
         self.assertIn("export function createDefaultBootState()", owner_content)
         self.assertIn('export function setStartupInteractionMode(target, mode = "readonly")', owner_content)
         self.assertIn("export function setStartupBootCacheState(target, nextState = null)", owner_content)
@@ -216,8 +217,10 @@ class StateSplitBoundaryContractTest(unittest.TestCase):
         self.assertIn('bootPhase: "shell",', owner_content)
         self.assertIn('startupInteractionMode: "readonly",', owner_content)
         self.assertIn("startupBootCacheState: createDefaultStartupBootCacheState(),", owner_content)
+        self.assertIn("sampleProjectDeeplink: createDefaultSampleProjectDeeplinkState(),", owner_content)
         self.assertIn("...createDefaultBootState(),", donor_content)
         self.assertIsNone(re.search(r'bootPhase:\s*"shell",', donor_content))
+        self.assertIsNone(re.search(r'sampleProjectDeeplink:\s*\{', donor_content))
 
     def test_bus_owner_holds_runtime_hook_bus_state(self):
         donor_content = STATE_JS.read_text(encoding="utf-8")

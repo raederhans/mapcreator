@@ -45,6 +45,11 @@ async function readPublicReleaseGateState(page) {
       optionValues: Array.from(scenarioSelect?.options || []).map((option) => option.value),
       hgoPreviewEnabled: !!state.hgoRuntimePreview?.enabled,
       hasHgoRuntimeAssets: !!state.dataManifest?.assets?.hgo_runtime_manifest,
+      sampleProjectDeeplink: {
+        status: String(state.sampleProjectDeeplink?.status || ""),
+        sampleId: String(state.sampleProjectDeeplink?.sampleId || ""),
+        scenarioId: String(state.sampleProjectDeeplink?.scenarioId || ""),
+      },
     };
   });
 }
@@ -112,7 +117,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await expect.poll(async () => page.locator("a[href*='app']").count()).toBeGreaterThan(0);
     await page.waitForLoadState("networkidle", { timeout: 30000 });
 
-    await page.goto(publicUrl("app/?view=guide"), { waitUntil: "domcontentloaded" });
+    await page.goto(publicUrl("app/?sample=tno-1962-atlantropa-briefing&view=guide"), { waitUntil: "domcontentloaded" });
     await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
     await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
     await expect(page.locator("#scenarioGuideTitle")).toContainText(/Scenario Quick Start/i);
@@ -122,6 +127,11 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await expect.poll(() => readPublicReleaseGateState(page), { timeout: 30000 }).toMatchObject({
       activeScenarioId: "tno_1962",
       scenarioApplyInFlight: false,
+      sampleProjectDeeplink: {
+        status: "success",
+        sampleId: "tno-1962-atlantropa-briefing",
+        scenarioId: "tno_1962",
+      },
     });
 
     const releaseState = await readPublicReleaseGateState(page);
@@ -158,6 +168,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     console.log(JSON.stringify({
       baseUrl: PUBLIC_BASE_URL,
       activeScenarioId: releaseState.activeScenarioId,
+      sampleProjectDeeplink: releaseState.sampleProjectDeeplink,
       optionValues: releaseState.optionValues,
       hgoPreviewEnabled: releaseState.hgoPreviewEnabled,
       hasHgoRuntimeAssets: releaseState.hasHgoRuntimeAssets,

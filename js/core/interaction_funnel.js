@@ -409,6 +409,34 @@ export function importProjectThroughFunnel(file, options = {}) {
   return true;
 }
 
+export async function importProjectTextThroughFunnel(text, options = {}) {
+  const ui = resolveUi(options.ui);
+  const hooks = resolveHooks(options.hooks);
+  const importOptions =
+    options.importOptions && typeof options.importOptions === "object" ? options.importOptions : {};
+  debugState.importStartCount += 1;
+  debugState.importPhase = "text-read";
+  debugState.lastImportError = "";
+  debugState.lastImportFileName = String(options.fileName || "");
+  return FileManager.importProjectText(
+    text,
+    async (data) => {
+      try {
+        await applyImportedProjectState(data, { ui, hooks });
+      } catch (error) {
+        debugState.importPhase = "error";
+        debugState.lastImportError = String(error?.message || error || "");
+        throw error;
+      }
+    },
+    {
+      onSuccess: () => hooks.onProjectImportComplete?.(),
+      onError: () => hooks.onProjectImportError?.(),
+    },
+    importOptions,
+  );
+}
+
 export function getInteractionFunnelDebugState() {
   return {
     ...debugState,

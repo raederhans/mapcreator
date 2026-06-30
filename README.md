@@ -45,15 +45,15 @@ Scenario Forge gives creators one place to choose a world state, edit political 
 4. TNO 1962 is the default public scenario path; you can also switch among Blank Map, Modern World, HOI4 1936, HOI4 1939, and TNO 1962.
 5. Open Project / Export and download a PNG/JPG snapshot or save an editable project JSON.
 
-## Download Sample Project JSONs
+## Open or Download Sample Projects
 
-The landing page links checked-in starter projects for the public baselines. The sample manifest lives at [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) and points to editable project JSON files under [`landing/assets/sample-projects/`](landing/assets/sample-projects/).
+The landing page links checked-in starter projects for the public baselines. Use `/app/?sample=<sample-id>&view=guide` to open one directly in the editor, or download the editable project JSON files listed in [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json).
 
-- TNO 1962 Atlantropa briefing: [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
-- HOI4 1936 Europe briefing: [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)
-- HOI4 1939 Europe switch: [`hoi4-1939-europe-switch.project.json`](landing/assets/sample-projects/hoi4-1939-europe-switch.project.json)
-- Modern World Japan corridor: [`modern-world-japan-corridor.project.json`](landing/assets/sample-projects/modern-world-japan-corridor.project.json)
-- Blank Map starter: [`blank-base-starter.project.json`](landing/assets/sample-projects/blank-base-starter.project.json)
+- TNO 1962 Atlantropa briefing: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=tno-1962-atlantropa-briefing&view=guide) · [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
+- HOI4 1936 Europe briefing: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=hoi4-1936-europe-briefing&view=guide) · [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)
+- HOI4 1939 Europe switch: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=hoi4-1939-europe-switch&view=guide) · [`hoi4-1939-europe-switch.project.json`](landing/assets/sample-projects/hoi4-1939-europe-switch.project.json)
+- Modern World Japan corridor: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=modern-world-japan-corridor&view=guide) · [`modern-world-japan-corridor.project.json`](landing/assets/sample-projects/modern-world-japan-corridor.project.json)
+- Blank Map starter: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=blank-base-starter&view=guide) · [`blank-base-starter.project.json`](landing/assets/sample-projects/blank-base-starter.project.json)
 
 ## Current Public Surface
 

@@ -7,7 +7,7 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 91786,
+      "size_bytes": 91930,
       "source_kind": "dist"
     },
     {
@@ -45581,6 +45581,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
+      "size_bytes": 4735,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/bootstrap/startup_scenario_boot.js",
       "size_bytes": 6262,
       "source_kind": "dist"
@@ -45662,7 +45667,7 @@
     },
     {
       "path": "app/js/core/file_manager.js",
-      "size_bytes": 46404,
+      "size_bytes": 46326,
       "source_kind": "dist"
     },
     {
@@ -45722,7 +45727,7 @@
     },
     {
       "path": "app/js/core/interaction_funnel.js",
-      "size_bytes": 17260,
+      "size_bytes": 18193,
       "source_kind": "dist"
     },
     {
@@ -45757,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 888295,
+      "size_bytes": 888362,
       "source_kind": "dist"
     },
     {
@@ -45843,6 +45848,11 @@
     {
       "path": "app/js/core/map_renderer/scenario_visual_invalidation_executor.js",
       "size_bytes": 4302,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/set_map_data_transaction_owner.js",
+      "size_bytes": 6641,
       "source_kind": "dist"
     },
     {
@@ -46216,6 +46226,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/sample_project_registry.js",
+      "size_bytes": 6536,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/scenario/bundle_loader.js",
       "size_bytes": 44656,
       "source_kind": "dist"
@@ -46402,7 +46417,7 @@
     },
     {
       "path": "app/js/core/state/boot_state.js",
-      "size_bytes": 4350,
+      "size_bytes": 4736,
       "source_kind": "dist"
     },
     {
@@ -46532,7 +46547,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 22596,
+      "size_bytes": 23389,
       "source_kind": "dist"
     },
     {
@@ -47207,7 +47222,7 @@
     },
     {
       "path": "assets/sample-runs.json",
-      "size_bytes": 4256,
+      "size_bytes": 4360,
       "source_kind": "dist"
     },
     {
@@ -47322,17 +47337,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 71383,
+      "size_bytes": 74432,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465100,
+      "size_bytes": 1465502,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 51296,
+      "size_bytes": 52106,
       "source_kind": "dist"
     }
   ],
@@ -47457,34 +47472,34 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9405,
+      "file_count": 9408,
       "path": "app",
-      "size_bytes": 965452121
+      "size_bytes": 965472134
     },
     {
       "file_count": 57,
       "path": "assets",
-      "size_bytes": 4877071
+      "size_bytes": 4877175
     },
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465100
+      "size_bytes": 1465502
     },
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 91786
+      "size_bytes": 91930
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 71383
+      "size_bytes": 74432
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 51296
+      "size_bytes": 52106
     },
     {
       "file_count": 1,
@@ -47492,5 +47507,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972008757
+  "total_bytes": 972033279
 }

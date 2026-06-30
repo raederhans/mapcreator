@@ -198,29 +198,49 @@
           <div class="sample-project-downloads" data-sample-project-downloads data-reveal>
             <div class="sample-project-downloads__header">
               <h3 data-i18n="sampleProjectDownloadsTitle">All sample project downloads</h3>
-              <p data-i18n="sampleProjectDownloadsBody">Choose any public baseline and import the JSON from Project / Import.</p>
+              <p data-i18n="sampleProjectDownloadsBody">Choose any public baseline, open it in the editor, or download the JSON for local import.</p>
             </div>
             <div class="sample-project-downloads__grid" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
-              <a href="./assets/sample-projects/blank-base-starter.project.json" download data-sample-project-list-link data-sample-project-id="blank-base-starter" data-sample-scenario="blank_base">
+              <article class="sample-project-downloads__card" data-sample-project-id="blank-base-starter" data-sample-scenario="blank_base">
                 <span data-i18n="sampleProjectBlank">Blank Map starter</span>
                 <strong>blank_base</strong>
-              </a>
-              <a href="./assets/sample-projects/modern-world-japan-corridor.project.json" download data-sample-project-list-link data-sample-project-id="modern-world-japan-corridor" data-sample-scenario="modern_world">
+                <div class="sample-project-downloads__actions">
+                  <a href="./app/?sample=blank-base-starter&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
+                  <a href="./assets/sample-projects/blank-base-starter.project.json" download data-sample-project-list-link data-sample-project-id="blank-base-starter" data-sample-scenario="blank_base" data-i18n="sampleProjectDownload">Download project JSON</a>
+                </div>
+              </article>
+              <article class="sample-project-downloads__card" data-sample-project-id="modern-world-japan-corridor" data-sample-scenario="modern_world">
                 <span data-i18n="sampleProjectModern">Modern World Japan corridor</span>
                 <strong>modern_world</strong>
-              </a>
-              <a href="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1936-europe-briefing" data-sample-scenario="hoi4_1936">
+                <div class="sample-project-downloads__actions">
+                  <a href="./app/?sample=modern-world-japan-corridor&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
+                  <a href="./assets/sample-projects/modern-world-japan-corridor.project.json" download data-sample-project-list-link data-sample-project-id="modern-world-japan-corridor" data-sample-scenario="modern_world" data-i18n="sampleProjectDownload">Download project JSON</a>
+                </div>
+              </article>
+              <article class="sample-project-downloads__card" data-sample-project-id="hoi4-1936-europe-briefing" data-sample-scenario="hoi4_1936">
                 <span data-i18n="sampleProjectHoi41936">HOI4 1936 Europe briefing</span>
                 <strong>hoi4_1936</strong>
-              </a>
-              <a href="./assets/sample-projects/hoi4-1939-europe-switch.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1939-europe-switch" data-sample-scenario="hoi4_1939">
+                <div class="sample-project-downloads__actions">
+                  <a href="./app/?sample=hoi4-1936-europe-briefing&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
+                  <a href="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1936-europe-briefing" data-sample-scenario="hoi4_1936" data-i18n="sampleProjectDownload">Download project JSON</a>
+                </div>
+              </article>
+              <article class="sample-project-downloads__card" data-sample-project-id="hoi4-1939-europe-switch" data-sample-scenario="hoi4_1939">
                 <span data-i18n="sampleProjectHoi41939">HOI4 1939 Europe switch</span>
                 <strong>hoi4_1939</strong>
-              </a>
-              <a href="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" download data-sample-project-list-link data-sample-project-id="tno-1962-atlantropa-briefing" data-sample-scenario="tno_1962">
+                <div class="sample-project-downloads__actions">
+                  <a href="./app/?sample=hoi4-1939-europe-switch&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
+                  <a href="./assets/sample-projects/hoi4-1939-europe-switch.project.json" download data-sample-project-list-link data-sample-project-id="hoi4-1939-europe-switch" data-sample-scenario="hoi4_1939" data-i18n="sampleProjectDownload">Download project JSON</a>
+                </div>
+              </article>
+              <article class="sample-project-downloads__card" data-sample-project-id="tno-1962-atlantropa-briefing" data-sample-scenario="tno_1962">
                 <span data-i18n="sampleProjectTno">TNO 1962 Atlantropa briefing</span>
                 <strong>tno_1962</strong>
-              </a>
+                <div class="sample-project-downloads__actions">
+                  <a href="./app/?sample=tno-1962-atlantropa-briefing&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
+                  <a href="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" download data-sample-project-list-link data-sample-project-id="tno-1962-atlantropa-briefing" data-sample-scenario="tno_1962" data-i18n="sampleProjectDownload">Download project JSON</a>
+                </div>
+              </article>
             </div>
           </div>
 
@@ -240,7 +260,7 @@
                   </div>
                   <div>
                     <span data-i18n="samplePathLabel">Demo path</span>
-                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                    <a href="./app/?sample=tno-1962-atlantropa-briefing&view=guide" data-sample-project-open-link data-i18n="sampleDemoPath">Open demo guide</a>
                   </div>
                   <div>
                     <span data-i18n="sampleExportLabel">Export target</span>
@@ -248,6 +268,7 @@
                   </div>
                 </div>
                 <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./app/?sample=tno-1962-atlantropa-briefing&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
                   <a href="./assets/sample-projects/tno-1962-atlantropa-briefing.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
                   <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>
@@ -291,7 +312,7 @@
                   </div>
                   <div>
                     <span data-i18n="samplePathLabel">Demo path</span>
-                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                    <a href="./app/?sample=hoi4-1936-europe-briefing&view=guide" data-sample-project-open-link data-i18n="sampleDemoPath">Open demo guide</a>
                   </div>
                   <div>
                     <span data-i18n="sampleExportLabel">Export target</span>
@@ -299,6 +320,7 @@
                   </div>
                 </div>
                 <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./app/?sample=hoi4-1936-europe-briefing&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
                   <a href="./assets/sample-projects/hoi4-1936-europe-briefing.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
                   <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>
@@ -341,7 +363,7 @@
                   </div>
                   <div>
                     <span data-i18n="samplePathLabel">Demo path</span>
-                    <a href="./app/?view=guide" data-i18n="sampleDemoPath">Open demo guide</a>
+                    <a href="./app/?sample=modern-world-japan-corridor&view=guide" data-sample-project-open-link data-i18n="sampleDemoPath">Open demo guide</a>
                   </div>
                   <div>
                     <span data-i18n="sampleExportLabel">Export target</span>
@@ -349,6 +371,7 @@
                   </div>
                 </div>
                 <div class="sample-run-card__actions" aria-label="Sample project downloads" data-i18n-aria-label="sampleProjectActionsLabel">
+                  <a href="./app/?sample=modern-world-japan-corridor&view=guide" data-sample-project-open-link data-i18n="sampleProjectOpen">Open sample in editor</a>
                   <a href="./assets/sample-projects/modern-world-japan-corridor.project.json" download data-sample-project-link data-i18n="sampleProjectDownload">Download project JSON</a>
                   <a href="./assets/sample-runs.json" data-sample-manifest-link data-i18n="sampleRecipeManifest">View recipe manifest</a>
                 </div>

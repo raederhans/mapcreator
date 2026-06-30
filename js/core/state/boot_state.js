@@ -11,6 +11,23 @@ export function createDefaultStartupBootCacheState() {
   };
 }
 
+export function createDefaultSampleProjectDeeplinkState() {
+  return {
+    status: "idle",
+    sampleId: "",
+    scenarioId: "",
+    projectUrl: "",
+    appProjectUrl: "",
+    fileName: "",
+    title: "",
+    manifestVersion: 0,
+    errorCode: "",
+    errorMessage: "",
+    updatedAt: 0,
+    completedAt: 0,
+  };
+}
+
 export function createDefaultBootState() {
   return {
     bootPhase: "shell",
@@ -27,6 +44,7 @@ export function createDefaultBootState() {
     startupReadonlySince: 0,
     bootMetrics: {},
     startupBootCacheState: createDefaultStartupBootCacheState(),
+    sampleProjectDeeplink: createDefaultSampleProjectDeeplinkState(),
   };
 }
 

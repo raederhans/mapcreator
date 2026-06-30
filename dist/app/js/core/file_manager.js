@@ -63,6 +63,47 @@ function showToast(message, options = {}) {
   callRuntimeHook(null, "showToastFn", message, options);
 }
 
+function notifyProjectImportObserver(observer, payload, phase) {
+  try {
+    const result = observer(payload);
+    if (result && typeof result.catch === "function") {
+      result.catch((error) => {
+        console.error(`[project-import] ${phase} observer failed:`, error);
+      });
+    }
+  } catch (error) {
+    console.error(`[project-import] ${phase} observer failed:`, error);
+  }
+}
+
+function resolveProjectImportObservers(observers = {}) {
+  return {
+    notifySuccess: typeof observers.onSuccess === "function" ? observers.onSuccess : () => {},
+    notifyError: typeof observers.onError === "function" ? observers.onError : () => {},
+  };
+}
+
+function showProjectImportFailure(error) {
+  const tone = String(error?.toastTone || "error");
+  const title = String(error?.toastTitle || t("Import failed", "ui"));
+  const message = String(
+    error?.userMessage || t("Invalid project file. Please select a valid map_project.json.", "ui")
+  );
+  showToast(message, {
+    title,
+    tone,
+    duration: 4200,
+  });
+}
+
+function showProjectReadFailure(error) {
+  showToast(String(error?.message || t("Unable to read the selected file.", "ui")), {
+    title: t("Import failed", "ui"),
+    tone: "error",
+    duration: 4200,
+  });
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -718,273 +759,253 @@ class FileManager {
     return true;
   }
 
-  static importProject(file, callback, observers = {}) {
-    if (!file) return;
-    const notifySuccess = typeof observers.onSuccess === "function" ? observers.onSuccess : () => {};
-    const notifyError = typeof observers.onError === "function" ? observers.onError : () => {};
-    const notifyObserver = (observer, payload, phase) => {
-      try {
-        const result = observer(payload);
-        if (result && typeof result.catch === "function") {
-          result.catch((error) => {
-            console.error(`[project-import] ${phase} observer failed:`, error);
-          });
-        }
-      } catch (error) {
-        console.error(`[project-import] ${phase} observer failed:`, error);
+  static normalizeImportedProjectData(rawData) {
+    if (!rawData || typeof rawData !== "object") {
+      throw new Error("Invalid project file");
+    }
+    let data = migrateImportedProjectData(rawData);
+
+    // import 是旧 schema、缺省字段和 UI/场景派生状态重新归一化的唯一入口。
+    // 回调拿到的必须已经是可直接进入运行时的稳定形态，避免把兼容判断分散到各个调用点。
+    // Backward compatibility: v1 only had `colors`.
+    if (data.colors && !data.featureOverrides && !data.countryBaseColors) {
+      data.featureOverrides = data.colors;
+      data.countryBaseColors = {};
+    }
+
+    if (!data.featureOverrides || typeof data.featureOverrides !== "object") {
+      data.featureOverrides = {};
+    }
+    if (!data.countryBaseColors || typeof data.countryBaseColors !== "object") {
+      data.countryBaseColors = {};
+    }
+    if (!data.visualOverrides || typeof data.visualOverrides !== "object") {
+      data.visualOverrides = data.featureOverrides;
+    }
+    if (!data.waterRegionOverrides || typeof data.waterRegionOverrides !== "object") {
+      data.waterRegionOverrides = {};
+    }
+    // special zone 的历史项目文件曾分散在 manualSpecialZones / specialRegionOverrides / specialZoneLayers。
+    // 导入时一次性合并回 canonical `specialZoneLayers`，后续运行时只认这一条主状态。
+    data.specialZoneLayers = normalizeSpecialZoneLayersState({
+      ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
+      manualSpecialZones: data.manualSpecialZones,
+      specialRegionOverrides: data.specialRegionOverrides,
+    }, {
+      defaultSource: "project",
+      topologyFingerprint: String(data.scenario?.baselineHash || "").trim(),
+    });
+    data.specialRegionOverrides = {};
+    if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
+      data.sovereignBaseColors = data.countryBaseColors;
+    }
+    if (!data.sovereigntyByFeatureId || typeof data.sovereigntyByFeatureId !== "object") {
+      data.sovereigntyByFeatureId = {};
+    }
+    delete data.scenarioControllersByFeatureId;
+    data.mapSemanticMode = normalizeMapSemanticMode(data.mapSemanticMode);
+    data.interactionGranularity = normalizeInteractionGranularity(data.interactionGranularity);
+    data.batchFillScope = normalizeBatchFillScope(data.batchFillScope);
+    data.activePaletteId = normalizeActivePaletteId(data.activePaletteId);
+    data.dynamicBordersDirty = !!data.dynamicBordersDirty;
+    data.dynamicBordersDirtyReason = String(data.dynamicBordersDirtyReason || "");
+    data.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
+    if (!data.customPresets || typeof data.customPresets !== "object") {
+      data.customPresets = {};
+    }
+    data.referenceImageState = normalizeReferenceImageState(data.referenceImageState);
+    data.recentColors = normalizeRecentColors(data.recentColors);
+    data.legendLabels = LegendManager.normalizeLabels(data.legendLabels);
+    data.legendConfig = LegendManager.normalizeConfig(data.legendConfig);
+    data.legendControl = LegendManager.normalizeControl(data.legendControl);
+    data.parentBordersVisible = data.parentBordersVisible !== false;
+    if (!data.parentBorderEnabledByCountry || typeof data.parentBorderEnabledByCountry !== "object") {
+      data.parentBorderEnabledByCountry = {};
+    }
+    if (!data.styleConfig || typeof data.styleConfig !== "object") {
+      data.styleConfig = {};
+    }
+    if (!data.styleConfig.internalBorders || typeof data.styleConfig.internalBorders !== "object") {
+      data.styleConfig.internalBorders = null;
+    }
+    if (!data.styleConfig.empireBorders || typeof data.styleConfig.empireBorders !== "object") {
+      data.styleConfig.empireBorders = null;
+    }
+    if (!data.styleConfig.coastlines || typeof data.styleConfig.coastlines !== "object") {
+      data.styleConfig.coastlines = null;
+    }
+    if (!data.styleConfig.parentBorders || typeof data.styleConfig.parentBorders !== "object") {
+      data.styleConfig.parentBorders = null;
+    }
+    if (!data.styleConfig.ocean || typeof data.styleConfig.ocean !== "object") {
+      data.styleConfig.ocean = null;
+    }
+    data.styleConfig.lakes = normalizeLakeStyleConfig(data.styleConfig.lakes);
+    data.styleConfig.cityPoints = normalizeCityLayerStyleConfig(data.styleConfig.cityPoints);
+    data.styleConfig.urban = normalizeUrbanStyleConfig(data.styleConfig.urban);
+    data.styleConfig.physical = normalizePhysicalStyleConfig(data.styleConfig.physical);
+    data.intensityFields = migrateLegacyPhysicalIntensityField(
+      normalizeIntensityFieldsState(data.intensityFields),
+      data.physicalIntensityField,
+    );
+    delete data.physicalIntensityField;
+    data.appearancePresets = normalizeAppearancePresetsState(data.appearancePresets);
+    data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
+    data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
+    if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {
+      console.info("[project-import] Legacy styleConfig.specialZones ignored; specialZoneLayers is the canonical model.");
+    }
+    data.styleConfig.specialZones = null;
+    data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
+    data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
+    data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
+    data.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(data.transportWorkbenchPointDeltas);
+    // 导入后只恢复主图已应用 overlay 的 family->pack 映射；
+    // 具体 collection 仍由运行时按 manifest/source gate 重新加载。
+    data.transportCountryOverlayState = normalizeTransportCountryOverlayProjectState(data.transportCountryOverlayState);
+    data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
+    data.manualSpecialZones = { type: "FeatureCollection", features: [] };
+    data.annotationView = normalizeAnnotationView(data.annotationView);
+    data.operationalLines = normalizeOperationalLines(data.operationalLines);
+    data.operationGraphics = normalizeOperationGraphics(data.operationGraphics);
+    data.unitCounters = normalizeUnitCounters(data.unitCounters);
+    if (!data.layerVisibility || typeof data.layerVisibility !== "object") {
+      data.layerVisibility = {};
+    }
+    // `scenario` 是项目文件和当前场景资产之间的桥。
+    // 这里只保留可稳定序列化的识别信息，把运行时派生态留给后续 scenario apply 重新建立。
+    if (!data.scenario || typeof data.scenario !== "object") {
+      data.scenario = null;
+    } else {
+      data.scenario = {
+        id: String(data.scenario.id || "").trim(),
+        version: Number(data.scenario.version || 1) || 1,
+        baselineHash: String(data.scenario.baselineHash || "").trim(),
+        viewMode: String(data.scenario.viewMode || "ownership").trim().toLowerCase() === "frontline"
+          ? "frontline"
+          : "ownership",
+        importAudit: normalizeScenarioImportAudit(data.scenario.importAudit, {
+          scenarioId: data.scenario.id,
+          savedVersion: data.scenario.version,
+          currentVersion: data.scenario.version,
+          currentBaselineHash: data.scenario.baselineHash,
+        }),
+      };
+      if (!data.scenario.id) {
+        data.scenario = null;
       }
-    };
+    }
+    data.exportHandoff = data.exportHandoff && typeof data.exportHandoff === "object"
+      ? buildExportArtifactManifest({
+        artifactKind: data.exportHandoff.artifactKind || "project-json",
+        generatedAt: data.exportHandoff.generatedAt || new Date().toISOString(),
+        scenario: data.scenario,
+        project: data.exportHandoff.project && typeof data.exportHandoff.project === "object"
+          ? {
+            schemaVersion: Number(data.exportHandoff.project.schemaVersion || data.schemaVersion || 21) || 21,
+            timestamp: Number(data.exportHandoff.project.timestamp || data.timestamp || 0) || 0,
+          }
+          : {
+            schemaVersion: Number(data.schemaVersion || 21) || 21,
+            timestamp: Number(data.timestamp || 0) || 0,
+          },
+        exportUi: data.exportWorkbenchUi,
+        files: Array.isArray(data.exportHandoff.files) ? data.exportHandoff.files : [],
+      })
+      : null;
+    data.releasableBoundaryVariantByTag = normalizeBoundaryVariantSelectionMap(data.releasableBoundaryVariantByTag);
+    if (!data.transportWorkbenchUi || typeof data.transportWorkbenchUi !== "object") {
+      data.transportWorkbenchUi = null;
+    }
+    if (!data.exportWorkbenchUi || typeof data.exportWorkbenchUi !== "object") {
+      data.exportWorkbenchUi = null;
+    }
+    data.layerVisibility.showWaterRegions =
+      data.layerVisibility.showWaterRegions === undefined ? true : !!data.layerVisibility.showWaterRegions;
+    Object.assign(data.layerVisibility, normalizeOpenOceanLayerVisibility(data.layerVisibility));
+    data.layerVisibility.showScenarioSpecialRegions =
+      data.layerVisibility.showScenarioSpecialRegions === undefined
+        ? true
+        : !!data.layerVisibility.showScenarioSpecialRegions;
+    data.layerVisibility.showScenarioAtlantropa =
+      data.layerVisibility.showScenarioAtlantropa === undefined
+        ? true
+        : !!data.layerVisibility.showScenarioAtlantropa;
+    data.layerVisibility.showScenarioReliefOverlays =
+      data.layerVisibility.showScenarioReliefOverlays === undefined
+        ? true
+        : !!data.layerVisibility.showScenarioReliefOverlays;
+    data.layerVisibility.showCityPoints =
+      data.layerVisibility.showCityPoints === undefined ? true : !!data.layerVisibility.showCityPoints;
+    data.layerVisibility.showStrategicResourceMarkers =
+      data.layerVisibility.showStrategicResourceMarkers === undefined
+        ? false
+        : !!data.layerVisibility.showStrategicResourceMarkers;
+    data.layerVisibility.strategicChoroplethMetric = String(data.layerVisibility.strategicChoroplethMetric || "");
+    data.layerVisibility.showUrban =
+      data.layerVisibility.showUrban === undefined ? true : !!data.layerVisibility.showUrban;
+    data.layerVisibility.showPhysical =
+      data.layerVisibility.showPhysical === undefined ? true : !!data.layerVisibility.showPhysical;
+    data.layerVisibility.showRivers =
+      data.layerVisibility.showRivers === undefined ? true : !!data.layerVisibility.showRivers;
+    data.layerVisibility.showTransport =
+      data.layerVisibility.showTransport === undefined ? true : !!data.layerVisibility.showTransport;
+    normalizeTransportOverviewLayerVisibility(data.layerVisibility);
+    data.layerVisibility.showSpecialZones =
+      data.layerVisibility.showSpecialZones === undefined
+        ? false
+        : !!data.layerVisibility.showSpecialZones;
+    return data;
+  }
+
+  static async importProjectText(text, callback, observers = {}, options = {}) {
+    const { notifySuccess, notifyError } = resolveProjectImportObservers(observers);
+    try {
+      const data = FileManager.normalizeImportedProjectData(JSON.parse(String(text || "")));
+      if (typeof callback === "function") {
+        // callback 负责把归一化后的项目状态真正接到运行时；
+        // 只有 callback 完整成功，才把这次导入视为成功并清掉 dirty / 弹成功提示。
+        await callback(data);
+      }
+      clearDirty("project-import");
+      showToast(t(options.successMessage || "Project file loaded successfully.", "ui"), {
+        title: t(options.successTitle || "Project imported", "ui"),
+        tone: "success",
+      });
+      notifyProjectImportObserver(notifySuccess, data, "success");
+      return true;
+    } catch (error) {
+      console.error("Failed to import project:", error);
+      showProjectImportFailure(error);
+      notifyProjectImportObserver(notifyError, error, "error");
+      return false;
+    }
+  }
+
+  static importProject(file, callback, observers = {}, options = {}) {
+    if (!file) return false;
+    const { notifyError } = resolveProjectImportObservers(observers);
     const reader = new FileReader();
 
-    reader.onload = async () => {
-      try {
-        const text = typeof reader.result === "string" ? reader.result : "";
-        let data = JSON.parse(text);
-        if (!data || typeof data !== "object") {
-          throw new Error("Invalid project file");
-        }
-        data = migrateImportedProjectData(data);
-
-        // import 是旧 schema、缺省字段和 UI/场景派生状态重新归一化的唯一入口。
-        // 回调拿到的必须已经是可直接进入运行时的稳定形态，避免把兼容判断分散到各个调用点。
-        // Backward compatibility: v1 only had `colors`.
-        if (data.colors && !data.featureOverrides && !data.countryBaseColors) {
-          data.featureOverrides = data.colors;
-          data.countryBaseColors = {};
-        }
-
-        if (!data.featureOverrides || typeof data.featureOverrides !== "object") {
-          data.featureOverrides = {};
-        }
-        if (!data.countryBaseColors || typeof data.countryBaseColors !== "object") {
-          data.countryBaseColors = {};
-        }
-        if (!data.visualOverrides || typeof data.visualOverrides !== "object") {
-          data.visualOverrides = data.featureOverrides;
-        }
-        if (!data.waterRegionOverrides || typeof data.waterRegionOverrides !== "object") {
-          data.waterRegionOverrides = {};
-        }
-        // special zone 的历史项目文件曾分散在 manualSpecialZones / specialRegionOverrides / specialZoneLayers。
-        // 导入时一次性合并回 canonical `specialZoneLayers`，后续运行时只认这一条主状态。
-        data.specialZoneLayers = normalizeSpecialZoneLayersState({
-          ...(data.specialZoneLayers && typeof data.specialZoneLayers === "object" ? data.specialZoneLayers : {}),
-          manualSpecialZones: data.manualSpecialZones,
-          specialRegionOverrides: data.specialRegionOverrides,
-        }, {
-          defaultSource: "project",
-          topologyFingerprint: String(data.scenario?.baselineHash || "").trim(),
-        });
-        data.specialRegionOverrides = {};
-        if (!data.sovereignBaseColors || typeof data.sovereignBaseColors !== "object") {
-          data.sovereignBaseColors = data.countryBaseColors;
-        }
-        if (!data.sovereigntyByFeatureId || typeof data.sovereigntyByFeatureId !== "object") {
-          data.sovereigntyByFeatureId = {};
-        }
-        delete data.scenarioControllersByFeatureId;
-        data.mapSemanticMode = normalizeMapSemanticMode(data.mapSemanticMode);
-        data.interactionGranularity = normalizeInteractionGranularity(data.interactionGranularity);
-        data.batchFillScope = normalizeBatchFillScope(data.batchFillScope);
-        data.activePaletteId = normalizeActivePaletteId(data.activePaletteId);
-        data.dynamicBordersDirty = !!data.dynamicBordersDirty;
-        data.dynamicBordersDirtyReason = String(data.dynamicBordersDirtyReason || "");
-        data.specialZoneMembershipBrushMode = normalizeSpecialZoneMembershipBrushModeState(data.specialZoneMembershipBrushMode);
-        if (!data.customPresets || typeof data.customPresets !== "object") {
-          data.customPresets = {};
-        }
-        data.referenceImageState = normalizeReferenceImageState(data.referenceImageState);
-        data.recentColors = normalizeRecentColors(data.recentColors);
-        data.legendLabels = LegendManager.normalizeLabels(data.legendLabels);
-        data.legendConfig = LegendManager.normalizeConfig(data.legendConfig);
-        data.legendControl = LegendManager.normalizeControl(data.legendControl);
-        data.parentBordersVisible = data.parentBordersVisible !== false;
-        if (!data.parentBorderEnabledByCountry || typeof data.parentBorderEnabledByCountry !== "object") {
-          data.parentBorderEnabledByCountry = {};
-        }
-        if (!data.styleConfig || typeof data.styleConfig !== "object") {
-          data.styleConfig = {};
-        }
-        if (!data.styleConfig.internalBorders || typeof data.styleConfig.internalBorders !== "object") {
-          data.styleConfig.internalBorders = null;
-        }
-        if (!data.styleConfig.empireBorders || typeof data.styleConfig.empireBorders !== "object") {
-          data.styleConfig.empireBorders = null;
-        }
-        if (!data.styleConfig.coastlines || typeof data.styleConfig.coastlines !== "object") {
-          data.styleConfig.coastlines = null;
-        }
-        if (!data.styleConfig.parentBorders || typeof data.styleConfig.parentBorders !== "object") {
-          data.styleConfig.parentBorders = null;
-        }
-        if (!data.styleConfig.ocean || typeof data.styleConfig.ocean !== "object") {
-          data.styleConfig.ocean = null;
-        }
-        data.styleConfig.lakes = normalizeLakeStyleConfig(data.styleConfig.lakes);
-        data.styleConfig.cityPoints = normalizeCityLayerStyleConfig(data.styleConfig.cityPoints);
-        data.styleConfig.urban = normalizeUrbanStyleConfig(data.styleConfig.urban);
-        data.styleConfig.physical = normalizePhysicalStyleConfig(data.styleConfig.physical);
-        data.intensityFields = migrateLegacyPhysicalIntensityField(
-          normalizeIntensityFieldsState(data.intensityFields),
-          data.physicalIntensityField,
-        );
-        delete data.physicalIntensityField;
-        data.appearancePresets = normalizeAppearancePresetsState(data.appearancePresets);
-        data.styleConfig.transportOverview = normalizeTransportOverviewStyleConfig(data.styleConfig.transportOverview);
-        data.styleConfig.rivers = normalizeRiversStyleConfig(data.styleConfig.rivers);
-        if (data.styleConfig.specialZones && typeof data.styleConfig.specialZones === "object") {
-          console.info("[project-import] Legacy styleConfig.specialZones ignored; specialZoneLayers is the canonical model.");
-        }
-        data.styleConfig.specialZones = null;
-        data.styleConfig.texture = normalizeTextureStyleConfig(data.styleConfig.texture);
-        data.styleConfig.dayNight = normalizeDayNightStyleConfig(data.styleConfig.dayNight);
-        data.transportWorkbenchUi = normalizeTransportWorkbenchUiState(data.transportWorkbenchUi);
-        data.transportWorkbenchPointDeltas = normalizeTransportWorkbenchPointDeltas(data.transportWorkbenchPointDeltas);
-        // 导入后只恢复主图已应用 overlay 的 family->pack 映射；
-        // 具体 collection 仍由运行时按 manifest/source gate 重新加载。
-        data.transportCountryOverlayState = normalizeTransportCountryOverlayProjectState(data.transportCountryOverlayState);
-        data.exportWorkbenchUi = normalizeExportWorkbenchUiState(data.exportWorkbenchUi);
-        data.manualSpecialZones = { type: "FeatureCollection", features: [] };
-        data.annotationView = normalizeAnnotationView(data.annotationView);
-        data.operationalLines = normalizeOperationalLines(data.operationalLines);
-        data.operationGraphics = normalizeOperationGraphics(data.operationGraphics);
-        data.unitCounters = normalizeUnitCounters(data.unitCounters);
-        if (!data.layerVisibility || typeof data.layerVisibility !== "object") {
-          data.layerVisibility = {};
-        }
-        // `scenario` 是项目文件和当前场景资产之间的桥。
-        // 这里只保留可稳定序列化的识别信息，把运行时派生态留给后续 scenario apply 重新建立。
-        if (!data.scenario || typeof data.scenario !== "object") {
-          data.scenario = null;
-        } else {
-          data.scenario = {
-            id: String(data.scenario.id || "").trim(),
-            version: Number(data.scenario.version || 1) || 1,
-            baselineHash: String(data.scenario.baselineHash || "").trim(),
-            viewMode: String(data.scenario.viewMode || "ownership").trim().toLowerCase() === "frontline"
-              ? "frontline"
-              : "ownership",
-            importAudit: normalizeScenarioImportAudit(data.scenario.importAudit, {
-              scenarioId: data.scenario.id,
-              savedVersion: data.scenario.version,
-              currentVersion: data.scenario.version,
-              currentBaselineHash: data.scenario.baselineHash,
-            }),
-          };
-          if (!data.scenario.id) {
-            data.scenario = null;
-          }
-        }
-        data.exportHandoff = data.exportHandoff && typeof data.exportHandoff === "object"
-          ? buildExportArtifactManifest({
-            artifactKind: data.exportHandoff.artifactKind || "project-json",
-            generatedAt: data.exportHandoff.generatedAt || new Date().toISOString(),
-            scenario: data.scenario,
-            project: data.exportHandoff.project && typeof data.exportHandoff.project === "object"
-              ? {
-                schemaVersion: Number(data.exportHandoff.project.schemaVersion || data.schemaVersion || 21) || 21,
-                timestamp: Number(data.exportHandoff.project.timestamp || data.timestamp || 0) || 0,
-              }
-              : {
-                schemaVersion: Number(data.schemaVersion || 21) || 21,
-                timestamp: Number(data.timestamp || 0) || 0,
-              },
-            exportUi: data.exportWorkbenchUi,
-            files: Array.isArray(data.exportHandoff.files) ? data.exportHandoff.files : [],
-          })
-          : null;
-        data.releasableBoundaryVariantByTag = normalizeBoundaryVariantSelectionMap(data.releasableBoundaryVariantByTag);
-        if (!data.transportWorkbenchUi || typeof data.transportWorkbenchUi !== "object") {
-          data.transportWorkbenchUi = null;
-        }
-        if (!data.exportWorkbenchUi || typeof data.exportWorkbenchUi !== "object") {
-          data.exportWorkbenchUi = null;
-        }
-        data.layerVisibility.showWaterRegions =
-          data.layerVisibility.showWaterRegions === undefined ? true : !!data.layerVisibility.showWaterRegions;
-        Object.assign(data.layerVisibility, normalizeOpenOceanLayerVisibility(data.layerVisibility));
-        data.layerVisibility.showScenarioSpecialRegions =
-          data.layerVisibility.showScenarioSpecialRegions === undefined
-            ? true
-            : !!data.layerVisibility.showScenarioSpecialRegions;
-        data.layerVisibility.showScenarioAtlantropa =
-          data.layerVisibility.showScenarioAtlantropa === undefined
-            ? true
-            : !!data.layerVisibility.showScenarioAtlantropa;
-        data.layerVisibility.showScenarioReliefOverlays =
-          data.layerVisibility.showScenarioReliefOverlays === undefined
-            ? true
-            : !!data.layerVisibility.showScenarioReliefOverlays;
-        data.layerVisibility.showCityPoints =
-          data.layerVisibility.showCityPoints === undefined ? true : !!data.layerVisibility.showCityPoints;
-        data.layerVisibility.showStrategicResourceMarkers =
-          data.layerVisibility.showStrategicResourceMarkers === undefined
-            ? false
-            : !!data.layerVisibility.showStrategicResourceMarkers;
-        data.layerVisibility.strategicChoroplethMetric = String(data.layerVisibility.strategicChoroplethMetric || "");
-        data.layerVisibility.showUrban =
-          data.layerVisibility.showUrban === undefined ? true : !!data.layerVisibility.showUrban;
-        data.layerVisibility.showPhysical =
-          data.layerVisibility.showPhysical === undefined ? true : !!data.layerVisibility.showPhysical;
-        data.layerVisibility.showRivers =
-          data.layerVisibility.showRivers === undefined ? true : !!data.layerVisibility.showRivers;
-        data.layerVisibility.showTransport =
-          data.layerVisibility.showTransport === undefined ? true : !!data.layerVisibility.showTransport;
-        normalizeTransportOverviewLayerVisibility(data.layerVisibility);
-        data.layerVisibility.showSpecialZones =
-          data.layerVisibility.showSpecialZones === undefined
-            ? false
-            : !!data.layerVisibility.showSpecialZones;
-
-        if (typeof callback === "function") {
-          // callback 负责把归一化后的项目状态真正接到运行时；
-          // 只有 callback 完整成功，才把这次导入视为成功并清掉 dirty / 弹成功提示。
-          await callback(data);
-        }
-        clearDirty("project-import");
-        showToast(t("Project file loaded successfully.", "ui"), {
-          title: t("Project imported", "ui"),
-          tone: "success",
-        });
-        notifyObserver(notifySuccess, data, "success");
-      } catch (error) {
-        console.error("Failed to import project:", error);
-        const tone = String(error?.toastTone || "error");
-        const title = String(error?.toastTitle || t("Import failed", "ui"));
-        const message = String(
-          error?.userMessage || t("Invalid project file. Please select a valid map_project.json.", "ui")
-        );
-        showToast(message, {
-          title,
-          tone,
-          duration: 4200,
-        });
-        notifyObserver(notifyError, error, "error");
-      }
-    };
-
-    reader.onerror = () => {
-      console.error("Failed to read project file:", reader.error);
-      showToast(t("Unable to read the selected file.", "ui"), {
-        title: t("Import failed", "ui"),
-        tone: "error",
-        duration: 4200,
-      });
-      notifyObserver(notifyError, reader.error, "read-error");
-    };
-
-    prepareProjectImportFile(file)
-      .then(({ file: importFile }) => {
+    return prepareProjectImportFile(file)
+      .then(({ file: importFile }) => new Promise((resolve) => {
+        reader.onload = async () => {
+          const text = typeof reader.result === "string" ? reader.result : "";
+          resolve(await FileManager.importProjectText(text, callback, observers, options));
+        };
+        reader.onerror = () => {
+          console.error("Failed to read project file:", reader.error);
+          showProjectReadFailure(reader.error);
+          notifyProjectImportObserver(notifyError, reader.error, "read-error");
+          resolve(false);
+        };
         reader.readAsText(importFile);
-      })
+      }))
       .catch((error) => {
         console.error("Failed to read project package:", error);
-        showToast(String(error?.message || t("Unable to read the selected file.", "ui")), {
-          title: t("Import failed", "ui"),
-          tone: "error",
-          duration: 4200,
-        });
-        notifyObserver(notifyError, error, "read-error");
+        showProjectReadFailure(error);
+        notifyProjectImportObserver(notifyError, error, "read-error");
+        return false;
       });
   }
 }

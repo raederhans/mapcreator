@@ -78,7 +78,7 @@
       "image_url": "./assets/work-alt-history-med.webp",
       "metadata_url": "./assets/work-alt-history-med.json",
       "project_url": "./assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
-      "demo_path": "./app/?view=guide",
+      "demo_path": "./app/?sample=tno-1962-atlantropa-briefing&view=guide",
       "export_targets": [
         "project-json",
         "webp-snapshot",
@@ -99,7 +99,7 @@
       "image_url": "./assets/work-scenario-switch-europe.webp",
       "metadata_url": "./assets/work-scenario-switch-europe.json",
       "project_url": "./assets/sample-projects/hoi4-1936-europe-briefing.project.json",
-      "demo_path": "./app/?view=guide",
+      "demo_path": "./app/?sample=hoi4-1936-europe-briefing&view=guide",
       "export_targets": [
         "project-json",
         "webp-snapshot",
@@ -117,7 +117,7 @@
       "image_url": "./assets/work-atlas-japan-corridor.webp",
       "metadata_url": "./assets/work-atlas-japan-corridor.json",
       "project_url": "./assets/sample-projects/modern-world-japan-corridor.project.json",
-      "demo_path": "./app/?view=guide",
+      "demo_path": "./app/?sample=modern-world-japan-corridor&view=guide",
       "export_targets": [
         "project-json",
         "webp-snapshot",

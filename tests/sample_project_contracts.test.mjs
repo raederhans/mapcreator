@@ -3,6 +3,12 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { FileManager } from "../js/core/file_manager.js";
+import { scheduleStartupSampleProjectDeeplink } from "../js/bootstrap/startup_sample_project_deeplink.js";
+import {
+  loadSampleProjectText,
+  resolveSampleProjectFromManifest,
+  SampleProjectLoadError,
+} from "../js/core/sample_project_registry.js";
 
 const SAMPLE_RUNS_PATH = "landing/assets/sample-runs.json";
 const PUBLIC_SCENARIO_IDS = [
@@ -76,7 +82,7 @@ async function importProjectPayload(payload) {
   };
 
   try {
-    FileManager.importProject(
+    await FileManager.importProject(
       {
         name: "map_project.json",
         text: JSON.stringify(payload),
@@ -89,12 +95,34 @@ async function importProjectPayload(payload) {
         onError: (error) => errors.push(error),
       },
     );
-    await new Promise((resolve) => setTimeout(resolve, 0));
     return { callbacks, errors, successes };
   } finally {
     globalThis.document = previousDocument;
     globalThis.FileReader = previousFileReader;
   }
+}
+
+function assertSampleProjectError(callback, expectedCode) {
+  assert.throws(
+    callback,
+    (error) => error instanceof SampleProjectLoadError && error.code === expectedCode,
+  );
+}
+
+function cloneWithSampleProject(manifest, projectPatch) {
+  return {
+    ...manifest,
+    sample_projects: [
+      ...manifest.sample_projects,
+      {
+        id: "unsafe-sample",
+        title: "Unsafe sample",
+        scenario_id: "blank_base",
+        project_url: "./assets/sample-projects/blank-base-starter.project.json",
+        ...projectPatch,
+      },
+    ],
+  };
 }
 
 test("sample runs manifest exposes only public scenario project downloads", () => {
@@ -144,6 +172,156 @@ test("sample project JSON files match current scenario baselines and import clea
       `${project.id} imported baseline hash drifted`,
     );
   }
+});
+
+test("sample project registry resolves only public checked-in project assets", () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+
+  for (const project of manifest.sample_projects) {
+    const resolved = resolveSampleProjectFromManifest(manifest, project.id);
+    assert.equal(resolved.id, project.id);
+    assert.equal(resolved.scenarioId, project.scenario_id);
+    assert.equal(resolved.projectUrl, project.project_url);
+    assert.match(resolved.fileName, /^[a-z0-9-]+\.project\.json$/);
+    assert.equal(resolved.appProjectUrl, `../assets/sample-projects/${resolved.fileName}`);
+  }
+
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(manifest, "missing-public-sample"),
+    "unknown-sample-id",
+  );
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(manifest, "hgo_1936"),
+    "invalid-sample-id",
+  );
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(
+      cloneWithSampleProject(manifest, { id: "hgo-preview", scenario_id: "hgo_1936" }),
+      "hgo-preview",
+    ),
+    "private-sample-scenario",
+  );
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(
+      cloneWithSampleProject(manifest, { project_url: "https://example.test/map.project.json" }),
+      "unsafe-sample",
+    ),
+    "unsafe-project-url",
+  );
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(
+      cloneWithSampleProject(manifest, { project_url: "./assets/sample-projects/../hgo_1936.project.json" }),
+      "unsafe-sample",
+    ),
+    "unsafe-project-file",
+  );
+});
+
+test("sample project loader fetches manifest before checked-in project JSON", async () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+  const project = manifest.sample_projects.find((entry) => entry.id === "tno-1962-atlantropa-briefing");
+  const payloadText = JSON.stringify(readLandingUrlJson(project.project_url));
+  const fetchCalls = [];
+  const fetchImpl = async (url) => {
+    fetchCalls.push(url);
+    if (url === "../assets/sample-runs.json") {
+      return { ok: true, json: async () => manifest };
+    }
+    if (url === "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json") {
+      return { ok: true, text: async () => payloadText };
+    }
+    return { ok: false };
+  };
+
+  const { sampleProject, text } = await loadSampleProjectText("tno-1962-atlantropa-briefing", { fetchImpl });
+  assert.equal(sampleProject.id, "tno-1962-atlantropa-briefing");
+  assert.equal(sampleProject.scenarioId, "tno_1962");
+  assert.deepEqual(fetchCalls, [
+    "../assets/sample-runs.json",
+    "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+  ]);
+
+  const callbacks = [];
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    getElementById: () => null,
+  };
+  try {
+    const importResult = await FileManager.importProjectText(text, async (data) => {
+      callbacks.push(data);
+    });
+    assert.equal(importResult, true);
+    assert.equal(callbacks.length, 1);
+    assert.equal(callbacks[0].scenario?.id, "tno_1962");
+  } finally {
+    globalThis.document = previousDocument;
+  }
+
+  const unknownFetchCalls = [];
+  await assert.rejects(
+    () => loadSampleProjectText("missing-public-sample", {
+      fetchImpl: async (url) => {
+        unknownFetchCalls.push(url);
+        return { ok: true, json: async () => manifest };
+      },
+    }),
+    (error) => error instanceof SampleProjectLoadError && error.code === "unknown-sample-id",
+  );
+  assert.deepEqual(unknownFetchCalls, ["../assets/sample-runs.json"]);
+
+  const invalidFetchCalls = [];
+  await assert.rejects(
+    () => loadSampleProjectText("hgo_1936", {
+      fetchImpl: async (url) => {
+        invalidFetchCalls.push(url);
+        return { ok: false };
+      },
+    }),
+    (error) => error instanceof SampleProjectLoadError && error.code === "invalid-sample-id",
+  );
+  assert.deepEqual(invalidFetchCalls, []);
+});
+
+test("sample startup import failures record state without duplicate sample toast", async () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+  const scheduledTasks = [];
+  const helperToasts = [];
+  const targetState = {};
+  const didSchedule = scheduleStartupSampleProjectDeeplink({
+    targetState,
+    postReadyScheduler: {
+      scheduleTask: (key, callback, options) => {
+        scheduledTasks.push({ key, callback, options });
+      },
+    },
+    helpers: {
+      search: "?sample=tno-1962-atlantropa-briefing&view=guide",
+      fetchImpl: async (url) => {
+        if (url === "../assets/sample-runs.json") {
+          return { ok: true, json: async () => manifest };
+        }
+        if (url === "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json") {
+          return { ok: true, text: async () => "{" };
+        }
+        return { ok: false };
+      },
+      showToast: (message, options) => {
+        helperToasts.push({ message, options });
+      },
+    },
+  });
+
+  assert.equal(didSchedule, true);
+  assert.equal(scheduledTasks.length, 1);
+  assert.equal(targetState.sampleProjectDeeplink.status, "pending");
+
+  await scheduledTasks[0].callback();
+
+  assert.equal(helperToasts.length, 0);
+  assert.equal(targetState.sampleProjectDeeplink.status, "error");
+  assert.equal(targetState.sampleProjectDeeplink.sampleId, "tno-1962-atlantropa-briefing");
+  assert.equal(targetState.sampleProjectDeeplink.scenarioId, "tno_1962");
+  assert.equal(targetState.sampleProjectDeeplink.errorCode, "sample-project-import-failed");
 });
 
 test("featured sample runs point at checked-in evidence and matching projects", () => {

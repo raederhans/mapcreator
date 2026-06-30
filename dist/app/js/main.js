@@ -17,6 +17,7 @@ import { isUiShellDebugMode, runUiShellDebugBoot } from "./bootstrap/ui_shell_bo
 import { createDeferredMilsymbolLoader } from "./bootstrap/deferred_vendor_loader.js";
 import { createDeferredUiBootstrapper } from "./bootstrap/deferred_ui_bootstrap.js";
 import { createStartupScenarioBootOwner } from "./bootstrap/startup_scenario_boot.js";
+import { scheduleStartupSampleProjectDeeplink } from "./bootstrap/startup_sample_project_deeplink.js";
 import {
   configureStartupSupportKeyUsageAudit,
   getBootLanguage,
@@ -35,8 +36,9 @@ import {
   setMapData,
 } from "./core/map_renderer/public.js";
 import { flushRenderBoundary, requestRender } from "./core/render_boundary.js";
-import { registerRuntimeHook } from "./core/state/index.js";
+import { callRuntimeHook, registerRuntimeHook } from "./core/state/index.js";
 import { runPostScenarioUiReplay } from "./core/scenario_post_apply_effects.js";
+import { t } from "./core/i18n.js";
 import {
   applyUiShellDebugTerritorySeed,
   revealUiShellDebugTerritoryPanels,
@@ -563,6 +565,22 @@ async function bootstrap() {
 
     // Phase: 触发 detail promotion | Input: 当前 scenario/state/renderDispatcher | Output: ready state 或 readonly 解锁调度。
     await finalizeReadyState(renderDispatcher);
+    scheduleStartupSampleProjectDeeplink({
+      targetState: state,
+      postReadyScheduler,
+      helpers: {
+        fetchImpl: typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null,
+        ui: {
+          t,
+          showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
+          showAppDialog: async () => false,
+        },
+        hooks: {
+          refreshColorState: (options) => callRuntimeHook(state, "refreshColorStateFn", options),
+        },
+        showToast: (message, options) => callRuntimeHook(state, "showToastFn", message, options),
+      },
+    });
     void postStartupSupportKeyUsageReport({
       scenarioId: String(runtimeState.activeScenarioId || defaultScenarioBundle?.manifest?.scenario_id || "").trim(),
       source: scenarioBundleSource,
