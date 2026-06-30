@@ -36,7 +36,7 @@ Complex. The work touches app UI, landing copy, sample contracts, release smoke,
 - [x] Regenerate Pages dist and verify release behavior.
 - [x] Run independent code-review and architect lanes.
 - [x] Run QA gate or record a justified skip with evidence.
-- [ ] Commit, push, update registry, and archive this task folder after final validation.
+- [x] Commit, push, update registry, and archive this task folder after final validation.
 
 ## Implementation Design
 

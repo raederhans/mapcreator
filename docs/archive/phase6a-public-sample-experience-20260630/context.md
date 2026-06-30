@@ -85,7 +85,8 @@ Main Codex agent owns all live commands for this task. Current live process: non
 - Local Pages release gate passed at `http://127.0.0.1:4173/`: `sampleProjectDeeplink.status=success`, sample `tno-1962-atlantropa-briefing`, scenario `tno_1962`, Project banner visible, export workbench visible.
 - `git diff --check` passed with Windows LF-to-CRLF warnings only.
 - Final QA verifier returned WATCH/ready-for-integration and highlighted only staging/post-commit dist-drift follow-ups.
-- `npm run verify:dist-drift` before commit reported the expected Phase6A `dist/**` diff. It must be rerun after the Phase6A commit, because that script compares generated dist to `HEAD`.
+- `npm run verify:dist-drift` before commit reported the expected Phase6A `dist/**` diff.
+- `npm run verify:dist-drift` after functional commit `690b1997` passed and confirmed generated Pages dist was aligned with `HEAD`.
 
 ## P41 Dist Boundary
 
