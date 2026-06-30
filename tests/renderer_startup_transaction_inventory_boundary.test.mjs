@@ -321,6 +321,11 @@ test("map_renderer wires startup transaction owner effects at the composition ro
   for (const token of [
     "import { createRendererStartupTransactionOwner } from \"./renderer/renderer_startup_transaction_owner.js\";",
     "let rendererStartupTransactionOwner = null;",
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must wire startup transaction owner at top level");
+  }
+
+  for (const token of [
     "rendererStartupTransactionOwner = createRendererStartupTransactionOwner({",
     "resetLayerResolverCache: () => {",
     "layerResolverCache.primaryRef = null;",
@@ -335,7 +340,7 @@ test("map_renderer wires startup transaction owner effects at the composition ro
     `${RUNTIME_STATE_TOKEN}.deferContextBasePass = false;`,
     `${RUNTIME_STATE_TOKEN}.syncDayNightClockTimerFn = syncDayNightClockTimer;`,
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must wire startup transaction owner effect");
+    assertIncludes(ownerFactorySource, token, "map_renderer must wire startup transaction owner effect");
   }
   assertIncludes(
     ownerFactorySource,

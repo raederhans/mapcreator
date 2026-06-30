@@ -649,6 +649,26 @@ function collectFailures() {
   if (!startupOwnerFactorySource.includes("applyRendererSurfaceBridgeState(runtimeState, {")) {
     failures.push(`${FILES.renderer} must inject applyRendererSurfaceBridgeState into the startup transaction owner.`);
   }
+  for (const token of [
+    "rendererStartupTransactionOwner = createRendererStartupTransactionOwner({",
+    "resetLayerResolverCache: () => {",
+    "layerResolverCache.primaryRef = null;",
+    "runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;",
+    "runtimeState.hitCanvasTopologyRevision = 0;",
+    "getRenderPassCacheState().perfOverlayEnabled = enabled;",
+    "applyRendererSurfaceBridgeState(runtimeState, {",
+    "normalizeColorStateForRender(state, {",
+    "runtimeState.debugMode = nextDebugMode;",
+    "runtimeState.renderPhase = RENDER_PHASE_IDLE;",
+    "runtimeState.tooltipPendingState = { visible: false };",
+    "runtimeState.deferContextBasePass = false;",
+    "runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;",
+    "syncDayNightClockTimer();",
+  ]) {
+    if (!startupOwnerFactorySource.includes(token)) {
+      failures.push(`${FILES.renderer} must wire P36 startup transaction owner factory token: ${token}`);
+    }
+  }
   if (!packageJson.includes('"test:node:renderer-surface-runtime-bridge-state": "node --test tests/renderer_surface_runtime_bridge_state_behavior.test.mjs"')) {
     failures.push(`${FILES.packageJson} must expose test:node:renderer-surface-runtime-bridge-state.`);
   }
