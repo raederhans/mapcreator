@@ -6,6 +6,7 @@ const REPO_ROOT = process.cwd();
 
 const FILES = Object.freeze({
   packageJson: "package.json",
+  stateWriteAllowlist: "tools/eslint-rules/state-writer-allowlist.json",
   renderer: "js/core/map_renderer.js",
   rendererRuntimeState: "js/core/state/renderer_runtime_state.js",
   canvasColorHelpers: "js/core/renderer/canvas_color_helpers.js",
@@ -60,6 +61,8 @@ const FILES = Object.freeze({
   rendererSetMapDataTransactionInventoryTest: "tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs",
   rendererTransactionResetHardeningPreflightDoc: "docs/active/renderer-transaction-reset-hardening-preflight-20260630.md",
   rendererTransactionResetHardeningInventoryTest: "tests/renderer_transaction_reset_hardening_inventory_boundary.test.mjs",
+  rendererRenderLifecyclePreflightDoc: "docs/active/renderer-render-lifecycle-preflight-20260630.md",
+  rendererRenderLifecycleInventoryTest: "tests/renderer_render_lifecycle_inventory_boundary.test.mjs",
 });
 
 const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
@@ -174,6 +177,22 @@ function isForbiddenTransactionResetHelperPath(sourcePath) {
     && /(?:^|_)(?:owner|helper|controller)(?:_|$)/.test(stem);
 }
 
+function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (!normalized.startsWith("js/core/map_renderer/") && !normalized.startsWith("js/core/renderer/")) {
+    return false;
+  }
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) {
+    return false;
+  }
+  const stem = baseName.replace(/\.m?js$/, "");
+  const parts = stem.split("_").filter(Boolean);
+  return parts.includes("render")
+    && parts.includes("lifecycle")
+    && parts.some((part) => ["owner", "helper", "controller"].includes(part));
+}
+
 function isRendererOwnerPath(sourcePath) {
   const baseName = path.basename(sourcePath);
   return sourcePath.startsWith("js/core/renderer/")
@@ -190,6 +209,7 @@ function sliceBetween(source, startMarker, endMarker) {
 function collectFailures() {
   const failures = [];
   const packageJson = readProjectFile(FILES.packageJson);
+  const stateWriteAllowlist = readProjectFile(FILES.stateWriteAllowlist);
   const renderer = readProjectFile(FILES.renderer);
   const rendererRuntimeState = readProjectFile(FILES.rendererRuntimeState);
   const canvasColorHelpers = readProjectFile(FILES.canvasColorHelpers);
@@ -246,8 +266,11 @@ function collectFailures() {
   const rendererTransactionResetHardeningInventoryTest = readProjectFile(
     FILES.rendererTransactionResetHardeningInventoryTest,
   );
+  const rendererRenderLifecyclePreflightDoc = readProjectFile(FILES.rendererRenderLifecyclePreflightDoc);
+  const rendererRenderLifecycleInventoryTest = readProjectFile(FILES.rendererRenderLifecycleInventoryTest);
   const sources = {
     [FILES.packageJson]: packageJson,
+    [FILES.stateWriteAllowlist]: stateWriteAllowlist,
     [FILES.renderer]: renderer,
     [FILES.rendererRuntimeState]: rendererRuntimeState,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
@@ -300,6 +323,8 @@ function collectFailures() {
     [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
     [FILES.rendererTransactionResetHardeningInventoryTest]: rendererTransactionResetHardeningInventoryTest,
+    [FILES.rendererRenderLifecyclePreflightDoc]: rendererRenderLifecyclePreflightDoc,
+    [FILES.rendererRenderLifecycleInventoryTest]: rendererRenderLifecycleInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -1875,6 +1900,203 @@ function collectFailures() {
     if (exactAfterSettleScheduler.includes(token)) {
       failures.push(`${FILES.exactAfterSettleScheduler} must keep P39 reset helper import absent: ${token}`);
     }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P38/P39 renderer transaction baseline",
+    "## Current render facade and scheduler entry inventory",
+    "## Current drawCanvas lifecycle inventory",
+    "## Current renderPassToCache lifecycle inventory",
+    "## Current hit canvas build inventory",
+    "## Current render cache and pass catalog boundary",
+    "## Current exact-after-settle render boundary",
+    "## Current scenario refresh render boundary",
+    "## Current strategic overlay render boundary",
+    "## Current public facade and export boundary",
+    "## P41 allowed first move candidates",
+    "## P41 forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererRenderLifecyclePreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererRenderLifecyclePreflightDoc} must keep P40 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P40 is preflight only.",
+    "No production runtime behavior changes.",
+    "P40 does not add `renderer_render_lifecycle_owner.js`.",
+    "No state-write allowlist changes.",
+    "P40 does not migrate `render()`, `drawCanvas()`, `renderPassToCache()`, hit canvas build",
+    "P40 does not migrate scenario refresh runtime behavior.",
+    "P40 does not migrate exact-after-settle scheduler behavior.",
+    "P40 does not migrate strategic overlay runtime or render behavior.",
+    "P40 makes no public facade changes.",
+    "`render_cache_owner.js` owns render cache invalidation authority.",
+    "`render_pipeline_passes.js` and `render_pipeline_catalog.js` own pass definitions/catalog.",
+    "`render_invalidation_catalog.js` owns invalidation vocabulary.",
+    "`render_transform_reuse_policy_owner.js` owns transform reuse policy.",
+    "`exact_after_settle_scheduler.js` owns exact-after-settle scheduling.",
+    "`scenario_refresh_runtime.js` owns scenario refresh/chunk visual/infra flow.",
+    "`set_map_data_transaction_owner.js` owns only setMapData transaction order.",
+    "`renderer_startup_transaction_owner.js` owns only initMap startup reset order.",
+    "P41 may choose one small first move after P40 review.",
+    "P41 must not begin with `drawCanvas` or `renderPassToCache` migration.",
+  ]) {
+    if (!rendererRenderLifecyclePreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererRenderLifecyclePreflightDoc} must lock P40 boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const P40_DOC_PATH = \"docs/active/renderer-render-lifecycle-preflight-20260630.md\";",
+    "function isForbiddenRenderLifecycleOwnerPath(sourcePath)",
+    "parts.includes(\"render\")",
+    "parts.includes(\"lifecycle\")",
+    "renderer_render_lifecycle_owner.js",
+    "function render()",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createExactAfterSettleScheduler({",
+    "createScenarioRefreshRuntime({",
+    "createStrategicOverlayRuntimeOwner({",
+    "export { RENDER_PASS_NAMES } from \\\"./map_renderer/render_pass_catalog.js\\\";",
+    "from \\\"../map_renderer.js\\\";",
+    "render cache owner must not import map_renderer",
+    "render pipeline passes owner must not import map_renderer",
+    "transform reuse policy owner must avoid render lifecycle host token",
+    "package.json must expose the P40 render lifecycle inventory test",
+  ]) {
+    if (!rendererRenderLifecycleInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererRenderLifecycleInventoryTest} must lock P40 inventory token: ${token}`);
+    }
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecyclePreflightDoc))) {
+    failures.push(`${FILES.rendererRenderLifecyclePreflightDoc} must exist for P40.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleInventoryTest))) {
+    failures.push(`${FILES.rendererRenderLifecycleInventoryTest} must exist for P40.`);
+  }
+  if (!packageJson.includes("\"test:node:renderer-render-lifecycle-inventory\": \"node --test tests/renderer_render_lifecycle_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P40 render lifecycle inventory script.`);
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("P40 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  for (const sourcePath of listProjectSourceFiles("js/core")) {
+    if (isForbiddenRenderLifecycleOwnerPath(sourcePath)) {
+      failures.push(`P40 must keep production render lifecycle owner/helper absent: ${sourcePath}`);
+    }
+  }
+  for (const fixturePath of [
+    "js/core/renderer/renderer_render_lifecycle_owner.js",
+    "js/core/renderer/render_lifecycle_helper.js",
+    "js/core/map_renderer/render_lifecycle_owner.mjs",
+    "js/core/map_renderer/shared_render_lifecycle_controller.js",
+  ]) {
+    if (!isForbiddenRenderLifecycleOwnerPath(fixturePath)) {
+      failures.push(`${FILES.packageJson} P40 render lifecycle detector must catch renamed owner path: ${fixturePath}`);
+    }
+  }
+  for (const fixturePath of [
+    "js/core/renderer/renderer_surface_lifecycle_owner.js",
+    "js/core/renderer/renderer_svg_surface_lifecycle_owner.js",
+    "js/core/renderer/renderer_startup_transaction_owner.js",
+    "js/core/renderer/render_cache_owner.js",
+  ]) {
+    if (isForbiddenRenderLifecycleOwnerPath(fixturePath)) {
+      failures.push(`${FILES.packageJson} P40 render lifecycle detector must allow existing owner path: ${fixturePath}`);
+    }
+  }
+  for (const token of [
+    "function render()",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "async function buildHitCanvasAfterStartup",
+    "createExactAfterSettleScheduler({",
+    "createScenarioRefreshRuntime({",
+    "createStrategicOverlayRuntimeOwner({",
+    "export { RENDER_PASS_NAMES } from \"./map_renderer/render_pass_catalog.js\";",
+    "render,",
+    "setMapData,",
+    "initMap,",
+    "renderExportPassesToCanvas,",
+    "export function renderLegend",
+    "requestInteractionRender,",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P40 render lifecycle/facade token: ${token}`);
+    }
+  }
+  for (const token of [
+    "render,",
+    "setMapData,",
+    "initMap,",
+    "RENDER_PASS_NAMES,",
+    "from \"../map_renderer.js\";",
+  ]) {
+    const publicFacade = readProjectFile("js/core/map_renderer/public.js");
+    if (!publicFacade.includes(token)) {
+      failures.push(`js/core/map_renderer/public.js must keep P40 public facade token: ${token}`);
+    }
+  }
+  for (const token of [
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "createScenarioRefreshRuntime",
+    "createExactAfterSettleScheduler",
+    "createStrategicOverlayRuntimeOwner",
+  ]) {
+    if (setMapDataTransactionOwner.includes(token)) {
+      failures.push(`${FILES.setMapDataTransactionOwner} must keep P40 render lifecycle token absent: ${token}`);
+    }
+  }
+  for (const token of [
+    "setMapData",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+  ]) {
+    if (rendererStartupTransactionOwner.includes(token)) {
+      failures.push(`${FILES.rendererStartupTransactionOwner} must keep P40 render lifecycle/setMapData token absent: ${token}`);
+    }
+  }
+  if (hasMapRendererImport(renderCacheOwner)) {
+    failures.push(`${FILES.renderCacheOwner} must not import js/core/map_renderer.js for P40.`);
+  }
+  if (hasMapRendererImport(renderPipelinePasses)) {
+    failures.push(`${FILES.renderPipelinePasses} must not import js/core/map_renderer.js for P40.`);
+  }
+  for (const token of [
+    "document",
+    "window",
+    "globalThis.d3",
+    "projection",
+    "zoomBehavior",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "runtimeState",
+  ]) {
+    if (renderTransformReusePolicyOwner.includes(token)) {
+      failures.push(`${FILES.renderTransformReusePolicyOwner} must not touch P40 render lifecycle host token: ${token}`);
+    }
+  }
+  for (const [relativePath, source] of [
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+    ["js/core/renderer/strategic_overlay_runtime_owner.js", readProjectFile("js/core/renderer/strategic_overlay_runtime_owner.js")],
+  ]) {
+    for (const token of ["renderer_render_lifecycle_owner.js", "render_lifecycle_owner.js"]) {
+      if (source.includes(token)) {
+        failures.push(`${relativePath} must not import P40 render lifecycle owner: ${token}`);
+      }
+    }
+  }
+  if (stateWriteAllowlist.includes("renderer_render_lifecycle_owner")
+    || stateWriteAllowlist.includes("render_lifecycle_owner")) {
+    failures.push(`${FILES.stateWriteAllowlist} must not include a P40 render lifecycle owner.`);
   }
 
   const requiredImports = [
