@@ -1,14 +1,14 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 22:48 UTC
+Last updated: 2026-06-30 22:53 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest functional baseline is `952af9d2`, the P43 render phase lifecycle owner functional commit. The integration closeout that follows it is docs-only.
-- Active renderer handoff: P43 render phase lifecycle owner is integrated in clean worktree `C:\Users\raede\.codex\worktrees\scenario-forge-p43-main-integration`; parent checkout WIP was preserved untouched. P43 starts from the P40/P41/P42 guardrails and keeps render/draw/pass/hit/scenario/exact/strategic/public/state-write/dist migration out of scope.
+- Latest functional baseline is `81f2f30e`, the Phase6B sample Guide export delivery commit rebased on top of the P43 mainline integration.
+- Active renderer handoff: P43 render phase lifecycle owner is integrated on `origin/main` through functional commit `952af9d2` and registry closeout `473cd389`; the P43 implementation and integration worktrees have been removed. P43 starts from the P40/P41/P42 guardrails and keeps render/draw/pass/hit/scenario/exact/strategic/public/state-write/dist migration out of scope.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, P40 render lifecycle preflight, P41 render request boundary owner, P42 visible-frame diagnostics owner, and P43 render phase lifecycle owner.
-- Live test/build owner: main agent owns all P43 test/build command execution. Browser/dev-server/live E2E and Pages dist generation remain idle for this lane unless the owner explicitly starts them.
+- Live test/build owner: no active live process remains after Phase6B validation. The temporary local release-smoke dev server on port `8810` was stopped after validation.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
@@ -19,17 +19,32 @@ Last updated: 2026-06-30 22:48 UTC
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list` on 2026-06-30 after P43 clean integration.
+Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list` on 2026-06-30 after Phase6B was rebased onto the P43 integration.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at `fc59d527` | `origin/main@fc59d527` | dirty / parent checkout preserved | Unrelated Phase6B/sample-guide WIP touches README, CSS, i18n, dist mirror, registry, package, sample tests, and new sample-guide docs/tests. | Parent checkout was skipped as merge target to avoid overwriting local WIP. | Yellow because parent WIP overlaps `package.json` and this registry; unrelated to P43 production renderer files. | Preserve untouched; later reconcile parent WIP with pushed `origin/main`. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-p43-render-phase-lifecycle-owner` | `codex/p43-render-phase-lifecycle-owner` at `952af9d2` | `origin/main@fc59d527` | integrated / clean implementation worktree | No dirty files after functional commit. | Functional Lore commit `952af9d2` contains P43 implementation, tests, docs, and registry delivery package. | Yellow only for future renderer/package/checker/registry edits. | Remove after `HEAD:main` push confirms remote integration. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-p43-main-integration` | `codex/p43-main-integration` at `952af9d2` plus docs-only closeout diff | `origin/main@fc59d527` | integration-closeout | Hot files for closeout: `docs/active/_worktree_registry.md` and `docs/active/renderer-render-phase-lifecycle-owner-p43-20260630.md`. | P43 fast-forward merge succeeded in a clean integration worktree because parent `main` had unrelated WIP. | Green for production code; yellow for registry closeout until pushed. | Commit docs-only closeout, run focused post-merge gates, push `HEAD:main`, then remove this temporary integration worktree. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at `81f2f30e` plus docs closeout WIP | `origin/main@473cd389` | Phase6B functional commit ready; registry/archive closeout pending | Dirty hot files for closeout only: `docs/active/_worktree_registry.md` and `docs/archive/phase6b-sample-guide-export-20260630/*`. | Phase6B functional commit `81f2f30e` rebased cleanly on P43; validation passed changed-file `node --check`, sample contracts `11/11`, i18n audit, sample Guide E2E `2/2`, Pages dist `927.04 MiB`, local `/dist/` release gate `1/1`, architecture boundaries, test import graph after regeneration, dist drift, and final code-reviewer CLEAR. | Green for production paths after P43 rebase; registry closeout is the only dirty overlap. | Commit docs closeout and push `main`. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-hit-canvas-scheduling-preflight` | `codex/hit-canvas-scheduling-preflight` at `473cd389` | `origin/main@473cd389` | clean sibling worktree | No dirty files in read-only sample. | `git status --short --branch` clean and ahead/behind `0 0` before Phase6B docs closeout. | Green against Phase6B paths; future use should refresh after Phase6B push. | Keep for its owning task; rebase or refresh before further edits after Phase6B lands. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Phase6B Sample Guide Export 2026-06-30
+
+1. Added a compact sample-aware card at the top of the Guide quick path for loaded or failed sample project deeplinks.
+2. Added `resolveSampleProjectGuideContext(...)` and `createSampleProjectGuideCardController(...)` in the existing sample banner controller module, sharing sample state and public error copy.
+3. Wired Guide actions to the existing export workbench, original sample JSON download, and default quick-guide continuation.
+4. Added English and Simplified Chinese strings, release docs, focused Node tests, a focused Playwright sample Guide spec, and release-gate assertions.
+5. Regenerated Pages dist and updated `tests/e2e/test-import-graph.json` to include the new E2E spec.
+
+Files: core `js/ui/toolbar/sample_project_banner_controller.js`, `js/ui/toolbar.js`, `index.html`, `css/style.css`, `js/core/i18n_catalog.js`, `data/locales.json`; tests `tests/sample_project_contracts.test.mjs`, `tests/e2e/sample_guide_deeplink.spec.js`, `tests/e2e/release/pages_public_release_gate.spec.js`, `tests/e2e/test-import-graph.json`; docs `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, `docs/archive/phase6b-sample-guide-export-20260630/*`, this registry; generated Pages mirror `dist/app/index.html`, `dist/app/css/style.css`, `dist/app/js/core/i18n_catalog.js`, `dist/app/js/ui/toolbar.js`, `dist/app/js/ui/toolbar/sample_project_banner_controller.js`, `dist/pages-dist-manifest.json`; temporary runtime files under `.runtime/dev/` only.
+
+Diff summary: the Guide quick path now derives a card from `runtimeState.sampleProjectDeeplink`. Success shows sample title, export, and original JSON download. Error shows public error copy and keeps the default Guide path available. The Project sample banner remains on the same refresh hook, and release smoke checks the Guide card before the Project banner.
+
+Commit status: functional Lore commit `81f2f30e`, rebased cleanly on P43 commits `952af9d2` and `473cd389`; this registry/archive closeout is docs-only. Base divergence: Phase6B started from `main@fc59d527` aligned with `origin/main@fc59d527`, then rebase integrated P43 from `origin/main@473cd389`. Potential conflicts: resolved with P43 on `package.json`; yellow for future sample helper, Guide UI, release smoke, and Pages dist edits.
+
+Validation passed: changed-file `node --check`; `npm run test:node:sample-project-contracts` `11/11`; `py -3 tools/i18n_audit.py` with `ui_missing=0` and `ui_english_fallback=0`; `npm run test:e2e:sample-guide` `2/2`; `npm run verify:pages-dist` with size `927.04 MiB`; local public mirror release gate `PLAYWRIGHT_TEST_BASE_URL=http://127.0.0.1:8810/dist/ npm run test:e2e:pages-public-release-gate` `1/1`; `npm run verify:architecture-boundaries`; `npm run verify:test-import-graph` after regenerating 51 specs; `git diff --check`; `git diff --cached --check`; `npm run verify:dist-drift`; final code-reviewer CLEAR. Not run: remote deployed Pages smoke. Recommended next step: commit this docs-only closeout and push `main`.
 
 ### Renderer Render Phase Lifecycle Owner P43 2026-06-30
 
@@ -47,7 +62,7 @@ Commit status: functional Lore commit `952af9d2`; fast-forward merged into clean
 
 Validation passed: `node --check` for owner, renderer, P43 tests, and architecture checker; package JSON parse; P43 behavior `11/11`; P43 inventory `6/6`; P41 request boundary `13/13`; P42 visible-frame diagnostics `14/14`; P40 render lifecycle inventory `8/8`; P38 setMapData transaction `18/18`; P39 reset-hardening inventory `8/8`; render transaction diagnostics `21/21`; exact-after-settle refresh plans `9/9`; scenario refresh plans `24/24`; architecture boundaries; test import graph `50` specs; state-write allowlist `115` tracked files; `git diff --check` with Windows LF-to-CRLF warnings only; forbidden-path diff scan returned empty for `dist/app`, `public.js`, scenario/exact/setMapData/request/visible-frame owner files, and state-write allowlist.
 
-Review fixes: reset now clears an active phase timer inside `resetRenderPhaseState()`; P43 tests and checker now lock the complete DI effect/getter set; P43 inventory now guards `dist/app/**` as untouched because the P43 attachment explicitly forbids dist changes. Not run: optional browser/E2E smoke, because targeted Node/static gates cover this narrow renderer phase lifecycle extraction. Recommended next step: commit this docs-only closeout, run focused post-merge gates on `codex/p43-main-integration`, push `HEAD:main`, then clean the temporary P43 worktrees.
+Review fixes: reset now clears an active phase timer inside `resetRenderPhaseState()`; P43 tests and checker now lock the complete DI effect/getter set; P43 inventory now guards `dist/app/**` as untouched because the P43 attachment explicitly forbids dist changes. Not run: optional browser/E2E smoke, because targeted Node/static gates cover this narrow renderer phase lifecycle extraction. Recommended next step: no P43 action remains; P43 implementation and integration worktrees were removed before Phase6B closeout. Future renderer work should refresh from `origin/main` after Phase6B lands.
 
 ### Renderer Visible Frame Diagnostics Owner P42 2026-06-30
 
