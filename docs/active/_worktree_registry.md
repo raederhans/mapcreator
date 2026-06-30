@@ -1,11 +1,11 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 22:13 UTC
+Last updated: 2026-06-30 22:14 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed baseline is `origin/main@3e2ffe25`, the P42 review follow-up that restores Pages dist parity and strengthens blocked-path coverage.
+- Latest functional baseline is `3e2ffe25`, the P42 review follow-up that restores Pages dist parity and strengthens blocked-path coverage. The registry closeout that follows it is docs-only.
 - Active renderer handoff: P42 visible-frame diagnostics owner is integrated and the temporary P42 worktree has been removed. Future renderer work should start from the P40/P41/P42 guardrails and keep render/draw/pass/hit/scenario/exact/strategic/public/state-write migration behind a separate preflight.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, P40 render lifecycle preflight, P41 render request boundary owner, and P42 visible-frame diagnostics owner.
 - Live test/build owner: no active live process owner after the P42 review follow-up. Browser/dev-server/live E2E remain idle for this lane; Pages dist generation and post-commit drift verification were owned by the main agent and completed.
@@ -19,11 +19,11 @@ Last updated: 2026-06-30 22:13 UTC
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-list --left-right --count HEAD...origin/main`, and `git worktree list` on 2026-06-30 after the P42 review follow-up push.
+Current rows reflect `git status --short --branch`, `git rev-list --left-right --count HEAD...origin/main`, and `git worktree list` on 2026-06-30 after the P42 review follow-up registry closeout.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@3e2ffe25` | `origin/main@3e2ffe25` | registry-closeout / only worktree | Dirty files: this registry only for post-push closeout. | Review found source/dist drift in pushed P42; follow-up commit `3e2ffe25` is pushed. Validation passed `npm run verify:pages-dist`, `npm run test:node:visible-frame-diagnostics`, `npm run verify:architecture-boundaries`, `git diff --check`, `git diff --cached --check`, and post-commit `npm run verify:dist-drift`. | Green for P42 review fix; yellow only for this registry closeout until pushed. | Commit and push this registry closeout, then keep main as the integration truth. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main` aligned with `origin/main` | `origin/main` | clean / only worktree | No dirty files after closeout push. | Review found source/dist drift in pushed P42; follow-up commit `3e2ffe25` is pushed. Validation passed `npm run verify:pages-dist`, `npm run test:node:visible-frame-diagnostics`, `npm run verify:architecture-boundaries`, `git diff --check`, `git diff --cached --check`, and post-commit `npm run verify:dist-drift`. Final probes showed `git status --short --branch` clean, rev-list ahead/behind `0 0`, and `git worktree list` only this main checkout. | Green. | No integration action remains. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
