@@ -199,6 +199,7 @@ import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometr
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
 import { createViewportCommandOwner } from "./renderer/viewport_command_owner.js";
 import { createRendererViewportUpdateOwner } from "./renderer/renderer_viewport_update_owner.js";
+import { createRendererStartupTransactionOwner } from "./renderer/renderer_startup_transaction_owner.js";
 import { createViewportResizeLifecycleOwner } from "./renderer/viewport_resize_lifecycle_owner.js";
 import { createScenarioWaterCachePolicyOwner } from "./renderer/scenario_water_cache_policy_owner.js";
 import { createZoomInteractionLifecycleOwner } from "./renderer/zoom_interaction_lifecycle_owner.js";
@@ -974,6 +975,7 @@ let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
 let viewportCommandOwner = null;
 let rendererViewportUpdateOwner = null;
+let rendererStartupTransactionOwner = null;
 let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
@@ -1070,6 +1072,103 @@ function getRendererFitProjectionOwner() {
     },
   });
   return rendererFitProjectionOwner;
+}
+
+function getRendererStartupTransactionOwner() {
+  if (rendererStartupTransactionOwner) {
+    return rendererStartupTransactionOwner;
+  }
+  rendererStartupTransactionOwner = createRendererStartupTransactionOwner({
+    state,
+    getters: {
+      isPerfOverlayEnabled,
+    },
+    effects: {
+      resetLayerResolverCache: () => {
+        layerResolverCache.primaryRef = null;
+        layerResolverCache.detailRef = null;
+        layerResolverCache.bundleMode = null;
+        layerResolverCache.contextRevision = 0;
+      },
+      resetPhysicalLandClipPathCache,
+      resetExactRefreshOptimizationState,
+      bumpTopologyRevision: () => {
+        runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+      },
+      resetHitCanvasTopologyRevision: () => {
+        runtimeState.hitCanvasTopologyRevision = 0;
+      },
+      clearPendingPoliticalColorEdit,
+      clearRenderPassReferenceTransforms,
+      clearLastGoodFrame,
+      invalidateInteractionComposite,
+      resetFirstVisibleFramePainted,
+      setRenderPassPerfOverlayEnabled: (enabled) => {
+        getRenderPassCacheState().perfOverlayEnabled = enabled;
+      },
+      ensureLayerDataFromTopology: () => {
+        ensureLayerDataFromTopology();
+      },
+      rebuildPoliticalLandCollections: () => {
+        rebuildPoliticalLandCollections();
+      },
+      applyRendererSurfaceBridgeState: () => {
+        applyRendererSurfaceBridgeState(runtimeState, {
+          mapCanvas: rendererSurfaceHost.getMapCanvas(),
+          canvasLayers: rendererSurfaceHost.getCanvasLayers(),
+          context: rendererSurfaceHost.getContext(),
+          politicalPatchCanvas: rendererSurfaceHost.getPoliticalPatchCanvas(),
+          politicalPatchContext: rendererSurfaceHost.getPoliticalPatchContext(),
+          interactionOverlayCanvas: rendererSurfaceHost.getInteractionOverlayCanvas(),
+          interactionOverlayContext: rendererSurfaceHost.getInteractionOverlayContext(),
+        });
+      },
+      migrateLegacyColorState: () => {
+        migrateLegacyColorState();
+      },
+      ensureSovereigntyState: () => {
+        ensureSovereigntyState();
+      },
+      normalizeColorStateForRender: () => {
+        normalizeColorStateForRender(state, {
+          sanitizeColorMap,
+          sanitizeCountryColorMap,
+        });
+      },
+      setDebugMode: (nextDebugMode) => {
+        runtimeState.debugMode = nextDebugMode;
+      },
+      resetRenderDiagnostics,
+      clearRenderPhaseTimer,
+      resetRenderPhaseState: () => {
+        runtimeState.renderPhase = RENDER_PHASE_IDLE;
+        runtimeState.phaseEnteredAt = nowMs();
+        runtimeState.renderPhaseTimerId = null;
+      },
+      resetTooltipState: () => {
+        runtimeState.tooltipPendingState = { visible: false };
+        runtimeState.tooltipRafHandle = null;
+      },
+      cancelScheduledHoverOverlayRender,
+      markAllOverlaysDirty,
+      clearStagedMapDataTasks,
+      cancelExactAfterSettleRefresh,
+      cancelPendingIndexUiRefresh,
+      resetDeferredRenderFlags: () => {
+        runtimeState.deferContextBasePass = false;
+        runtimeState.deferHitCanvasBuild = false;
+        runtimeState.deferExactAfterSettle = false;
+        runtimeState.hitCanvasBuildScheduled = null;
+      },
+      resetProjectedBoundsCacheState,
+      invalidateAllRenderPasses,
+      syncDayNightClockTimerBridge: () => {
+        runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;
+        syncDayNightClockTimer();
+      },
+    },
+  });
+  return rendererStartupTransactionOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -22665,64 +22764,7 @@ function initMap({
   }
 
   getRendererProjectionPathOwner().initializeProjectionPaths();
-  layerResolverCache.primaryRef = null;
-  layerResolverCache.detailRef = null;
-  layerResolverCache.bundleMode = null;
-  layerResolverCache.contextRevision = 0;
-  resetPhysicalLandClipPathCache();
-  resetExactRefreshOptimizationState();
-  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
-  runtimeState.hitCanvasTopologyRevision = 0;
-  clearPendingPoliticalColorEdit({
-    force: true,
-    resetReason: "init-map",
-    paintSource: "init-map",
-  });
-  clearRenderPassReferenceTransforms();
-  clearLastGoodFrame("init-map");
-  invalidateInteractionComposite("init-map");
-  resetFirstVisibleFramePainted("init-map");
-  const renderPassCache = getRenderPassCacheState();
-  renderPassCache.perfOverlayEnabled = isPerfOverlayEnabled();
-  ensureLayerDataFromTopology();
-  rebuildPoliticalLandCollections();
-
-  applyRendererSurfaceBridgeState(runtimeState, {
-    mapCanvas: rendererSurfaceHost.getMapCanvas(),
-    canvasLayers: rendererSurfaceHost.getCanvasLayers(),
-    context: rendererSurfaceHost.getContext(),
-    politicalPatchCanvas: rendererSurfaceHost.getPoliticalPatchCanvas(),
-    politicalPatchContext: rendererSurfaceHost.getPoliticalPatchContext(),
-    interactionOverlayCanvas: rendererSurfaceHost.getInteractionOverlayCanvas(),
-    interactionOverlayContext: rendererSurfaceHost.getInteractionOverlayContext(),
-  });
-  migrateLegacyColorState();
-  ensureSovereigntyState();
-  normalizeColorStateForRender(state, {
-    sanitizeColorMap,
-    sanitizeCountryColorMap,
-  });
-  runtimeState.debugMode = debugMode;
-  resetRenderDiagnostics();
-  clearRenderPhaseTimer();
-  runtimeState.renderPhase = RENDER_PHASE_IDLE;
-  runtimeState.phaseEnteredAt = nowMs();
-  runtimeState.renderPhaseTimerId = null;
-  runtimeState.tooltipPendingState = { visible: false };
-  runtimeState.tooltipRafHandle = null;
-  cancelScheduledHoverOverlayRender();
-  markAllOverlaysDirty();
-  clearStagedMapDataTasks();
-  cancelExactAfterSettleRefresh();
-  cancelPendingIndexUiRefresh();
-  runtimeState.deferContextBasePass = false;
-  runtimeState.deferHitCanvasBuild = false;
-  runtimeState.deferExactAfterSettle = false;
-  runtimeState.hitCanvasBuildScheduled = null;
-  resetProjectedBoundsCacheState();
-  invalidateAllRenderPasses("init-map");
-  runtimeState.syncDayNightClockTimerFn = syncDayNightClockTimer;
-  syncDayNightClockTimer();
+  getRendererStartupTransactionOwner().runInitMapResetTransaction({ debugMode });
 
   rendererSurfaceHost.getMapCanvas().style.pointerEvents = "none";
   rendererSurfaceHost.getMapCanvas().style.touchAction = "none";

@@ -9,14 +9,15 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const STARTUP_OWNER_PATH = "js/core/renderer/renderer_startup_transaction_owner.js";
+const STARTUP_OWNER_TEST_PATH = "tests/renderer_startup_transaction_owner_behavior.test.mjs";
 const PREFLIGHT_DOC_PATH = "docs/active/renderer-startup-transaction-preflight-20260629.md";
+const RUNTIME_STATE_TOKEN = ["runtime", "State"].join("");
 
 const OWNERIZED_INIT_MAP_TOKENS = Object.freeze([
   "ensureHybridLayers();",
   "getRendererSurfaceLifecycleOwner().ensureHitCanvasHandle();",
   "getRendererSurfaceLifecycleOwner().acquireCanvasContexts();",
   "getRendererProjectionPathOwner().initializeProjectionPaths();",
-  "applyRendererSurfaceBridgeState(runtimeState, {",
   "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });",
   "initZoom();",
   "bindEvents();",
@@ -29,8 +30,8 @@ const RESET_TRANSACTION_TOKENS = Object.freeze([
   "layerResolverCache.contextRevision = 0;",
   "resetPhysicalLandClipPathCache();",
   "resetExactRefreshOptimizationState();",
-  "runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;",
-  "runtimeState.hitCanvasTopologyRevision = 0;",
+  `${RUNTIME_STATE_TOKEN}.topologyRevision = Number(${RUNTIME_STATE_TOKEN}.topologyRevision || 0) + 1;`,
+  `${RUNTIME_STATE_TOKEN}.hitCanvasTopologyRevision = 0;`,
   "clearPendingPoliticalColorEdit({",
   "resetReason: \"init-map\",",
   "clearRenderPassReferenceTransforms();",
@@ -44,26 +45,60 @@ const RESET_TRANSACTION_TOKENS = Object.freeze([
   "migrateLegacyColorState();",
   "ensureSovereigntyState();",
   "normalizeColorStateForRender(state, {",
-  "runtimeState.debugMode = debugMode;",
+  `${RUNTIME_STATE_TOKEN}.debugMode = debugMode;`,
   "resetRenderDiagnostics();",
   "clearRenderPhaseTimer();",
-  "runtimeState.renderPhase = RENDER_PHASE_IDLE;",
-  "runtimeState.phaseEnteredAt = nowMs();",
-  "runtimeState.renderPhaseTimerId = null;",
-  "runtimeState.tooltipPendingState = { visible: false };",
-  "runtimeState.tooltipRafHandle = null;",
+  `${RUNTIME_STATE_TOKEN}.renderPhase = RENDER_PHASE_IDLE;`,
+  `${RUNTIME_STATE_TOKEN}.phaseEnteredAt = nowMs();`,
+  `${RUNTIME_STATE_TOKEN}.renderPhaseTimerId = null;`,
+  `${RUNTIME_STATE_TOKEN}.tooltipPendingState = { visible: false };`,
+  `${RUNTIME_STATE_TOKEN}.tooltipRafHandle = null;`,
   "cancelScheduledHoverOverlayRender();",
   "markAllOverlaysDirty();",
   "clearStagedMapDataTasks();",
   "cancelExactAfterSettleRefresh();",
   "cancelPendingIndexUiRefresh();",
-  "runtimeState.deferContextBasePass = false;",
-  "runtimeState.deferHitCanvasBuild = false;",
-  "runtimeState.deferExactAfterSettle = false;",
-  "runtimeState.hitCanvasBuildScheduled = null;",
+  `${RUNTIME_STATE_TOKEN}.deferContextBasePass = false;`,
+  `${RUNTIME_STATE_TOKEN}.deferHitCanvasBuild = false;`,
+  `${RUNTIME_STATE_TOKEN}.deferExactAfterSettle = false;`,
+  `${RUNTIME_STATE_TOKEN}.hitCanvasBuildScheduled = null;`,
   "resetProjectedBoundsCacheState();",
   "invalidateAllRenderPasses(\"init-map\");",
   "syncDayNightClockTimer();",
+]);
+
+const OWNER_EFFECT_TOKENS = Object.freeze([
+  "resetLayerResolverCache",
+  "resetPhysicalLandClipPathCache",
+  "resetExactRefreshOptimizationState",
+  "bumpTopologyRevision",
+  "resetHitCanvasTopologyRevision",
+  "clearPendingPoliticalColorEdit",
+  "clearRenderPassReferenceTransforms",
+  "clearLastGoodFrame",
+  "invalidateInteractionComposite",
+  "resetFirstVisibleFramePainted",
+  "setRenderPassPerfOverlayEnabled",
+  "ensureLayerDataFromTopology",
+  "rebuildPoliticalLandCollections",
+  "applyRendererSurfaceBridgeState",
+  "migrateLegacyColorState",
+  "ensureSovereigntyState",
+  "normalizeColorStateForRender",
+  "setDebugMode",
+  "resetRenderDiagnostics",
+  "clearRenderPhaseTimer",
+  "resetRenderPhaseState",
+  "resetTooltipState",
+  "cancelScheduledHoverOverlayRender",
+  "markAllOverlaysDirty",
+  "clearStagedMapDataTasks",
+  "cancelExactAfterSettleRefresh",
+  "cancelPendingIndexUiRefresh",
+  "resetDeferredRenderFlags",
+  "resetProjectedBoundsCacheState",
+  "invalidateAllRenderPasses",
+  "syncDayNightClockTimerBridge",
 ]);
 
 const LATER_STARTUP_BRANCH_TOKENS = Object.freeze([
@@ -79,7 +114,7 @@ const LATER_STARTUP_BRANCH_TOKENS = Object.freeze([
   "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });",
   "initZoom();",
   "bindEvents();",
-  "runtimeState.getViewportGeoBoundsFn = getViewportGeoBounds;",
+  `${RUNTIME_STATE_TOKEN}.getViewportGeoBoundsFn = getViewportGeoBounds;`,
   "setInteractionInfrastructureState(\"ready\", {",
   "render();",
 ]);
@@ -158,15 +193,20 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test("P35 does not add a startup transaction owner yet", () => {
+test("P36 adds a startup transaction owner and behavior test", () => {
   assert.equal(
     repoFileExists(STARTUP_OWNER_PATH),
-    false,
-    "P35 reserves renderer_startup_transaction_owner.js for P36",
+    true,
+    "P36 must add renderer_startup_transaction_owner.js",
+  );
+  assert.equal(
+    repoFileExists(STARTUP_OWNER_TEST_PATH),
+    true,
+    "P36 must add startup transaction owner behavior tests",
   );
 });
 
-test("initMap still owns ownerized startup calls and reset transaction ordering", () => {
+test("initMap delegates only reset transaction ordering after projection/path initialization", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const initMapSource = sliceBetween(
     rendererSource,
@@ -177,22 +217,24 @@ test("initMap still owns ownerized startup calls and reset transaction ordering"
   for (const token of OWNERIZED_INIT_MAP_TOKENS) {
     assertIncludes(initMapSource, token, "initMap must keep current ownerized startup call");
   }
-  for (const token of RESET_TRANSACTION_TOKENS) {
-    assertIncludes(initMapSource, token, "initMap must keep reset transaction token");
-  }
   for (const token of LATER_STARTUP_BRANCH_TOKENS) {
     assertIncludes(initMapSource, token, "initMap must keep later startup branch token");
   }
+  assertIncludes(
+    initMapSource,
+    "getRendererStartupTransactionOwner().runInitMapResetTransaction({ debugMode });",
+    "initMap must delegate reset transaction through P36 owner",
+  );
+  for (const token of RESET_TRANSACTION_TOKENS) {
+    assertExcludes(initMapSource, token, "initMap must move raw reset transaction token into P36 owner wiring");
+  }
 
   const projectionIndex = initMapSource.indexOf("getRendererProjectionPathOwner().initializeProjectionPaths();");
-  const layerResetIndex = initMapSource.indexOf("layerResolverCache.primaryRef = null;");
-  const bridgeIndex = initMapSource.indexOf("applyRendererSurfaceBridgeState(runtimeState, {");
-  const rebuildIndex = initMapSource.indexOf("rebuildPoliticalLandCollections();");
-  const migrateIndex = initMapSource.indexOf("migrateLegacyColorState();");
+  const transactionOwnerIndex = initMapSource.indexOf("getRendererStartupTransactionOwner().runInitMapResetTransaction({ debugMode });");
+  const pointerStyleIndex = initMapSource.indexOf("rendererSurfaceHost.getMapCanvas().style.pointerEvents = \"none\";");
 
-  assert.ok(projectionIndex < layerResetIndex, "reset transaction must start after projection/path initialization");
-  assert.ok(rebuildIndex < bridgeIndex, "surface bridge state must follow political collection rebuild");
-  assert.ok(bridgeIndex < migrateIndex, "surface bridge state must precede legacy color migration");
+  assert.ok(projectionIndex < transactionOwnerIndex, "reset transaction owner call must follow projection/path initialization");
+  assert.ok(transactionOwnerIndex < pointerStyleIndex, "reset transaction owner call must precede later startup branch");
 });
 
 test("render semantic anchors remain in map_renderer and outside P36 first move", () => {
@@ -234,8 +276,81 @@ test("fitProjection owner remains effects-only and outside initMap transaction o
   }
 });
 
-test("package exposes startup transaction inventory script", () => {
+test("startup transaction owner owns ordering tokens and stays import-safe", () => {
+  const ownerSource = readRepoFile("js", "core", "renderer", "renderer_startup_transaction_owner.js");
+
+  assertIncludes(
+    ownerSource,
+    "export function createRendererStartupTransactionOwner({",
+    "startup transaction owner must expose factory",
+  );
+  assertIncludes(
+    ownerSource,
+    "function runInitMapResetTransaction({ debugMode } = {})",
+    "startup transaction owner must expose initMap reset transaction method",
+  );
+  for (const token of OWNER_EFFECT_TOKENS) {
+    assertIncludes(ownerSource, token, "startup transaction owner must own ordered effect token");
+  }
+  for (const token of [
+    "map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "setMapData",
+    "scenario refresh",
+    "scenario chunk",
+    "exactAfterSettle",
+    "strategicOverlayRuntime",
+    "initZoom",
+    "bindEvents",
+  ]) {
+    assertExcludes(ownerSource, token, "startup transaction owner must avoid forbidden renderer semantic token");
+  }
+});
+
+test("map_renderer wires startup transaction owner effects at the composition root", () => {
+  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const ownerFactorySource = sliceBetween(
+    rendererSource,
+    "function getRendererStartupTransactionOwner()",
+    "function getStrategicOverlayHelpersOwner()",
+  );
+
+  for (const token of [
+    "import { createRendererStartupTransactionOwner } from \"./renderer/renderer_startup_transaction_owner.js\";",
+    "let rendererStartupTransactionOwner = null;",
+    "rendererStartupTransactionOwner = createRendererStartupTransactionOwner({",
+    "resetLayerResolverCache: () => {",
+    "layerResolverCache.primaryRef = null;",
+    `${RUNTIME_STATE_TOKEN}.topologyRevision = Number(${RUNTIME_STATE_TOKEN}.topologyRevision || 0) + 1;`,
+    `${RUNTIME_STATE_TOKEN}.hitCanvasTopologyRevision = 0;`,
+    "getRenderPassCacheState().perfOverlayEnabled = enabled;",
+    "applyRendererSurfaceBridgeState(runtimeState, {",
+    "normalizeColorStateForRender(state, {",
+    `${RUNTIME_STATE_TOKEN}.debugMode = nextDebugMode;`,
+    `${RUNTIME_STATE_TOKEN}.renderPhase = RENDER_PHASE_IDLE;`,
+    `${RUNTIME_STATE_TOKEN}.tooltipPendingState = { visible: false };`,
+    `${RUNTIME_STATE_TOKEN}.deferContextBasePass = false;`,
+    `${RUNTIME_STATE_TOKEN}.syncDayNightClockTimerFn = syncDayNightClockTimer;`,
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must wire startup transaction owner effect");
+  }
+  assertIncludes(
+    ownerFactorySource,
+    "syncDayNightClockTimer();",
+    "map_renderer effect must preserve day-night timer sync",
+  );
+});
+
+test("package exposes startup transaction owner and inventory scripts", () => {
   const packageSource = readRepoFile("package.json");
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-startup-transaction-owner\": \"node --test tests/renderer_startup_transaction_owner_behavior.test.mjs\"",
+    "package.json must expose the P36 startup transaction owner behavior test",
+  );
   assertIncludes(
     packageSource,
     "\"test:node:renderer-startup-transaction-inventory\": \"node --test tests/renderer_startup_transaction_inventory_boundary.test.mjs\"",

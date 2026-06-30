@@ -22,6 +22,7 @@ const FILES = Object.freeze({
   viewportReadModelOwner: "js/core/renderer/viewport_read_model_owner.js",
   viewportCommandOwner: "js/core/renderer/viewport_command_owner.js",
   rendererViewportUpdateOwner: "js/core/renderer/renderer_viewport_update_owner.js",
+  rendererStartupTransactionOwner: "js/core/renderer/renderer_startup_transaction_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
@@ -49,6 +50,7 @@ const FILES = Object.freeze({
   rendererFitProjectionOwnerTest: "tests/renderer_fit_projection_owner_behavior.test.mjs",
   rendererFitProjectionLifecycleInventoryTest: "tests/renderer_fit_projection_lifecycle_inventory_boundary.test.mjs",
   rendererViewportUpdateOwnerTest: "tests/renderer_viewport_update_owner_behavior.test.mjs",
+  rendererStartupTransactionOwnerTest: "tests/renderer_startup_transaction_owner_behavior.test.mjs",
   rendererStartupTransactionPreflightDoc: "docs/active/renderer-startup-transaction-preflight-20260629.md",
   rendererStartupTransactionInventoryTest: "tests/renderer_startup_transaction_inventory_boundary.test.mjs",
 });
@@ -66,6 +68,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
   [FILES.rendererViewportUpdateOwner]: 220,
+  [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
@@ -152,6 +155,7 @@ function collectFailures() {
   const viewportReadModelOwner = readProjectFile(FILES.viewportReadModelOwner);
   const viewportCommandOwner = readProjectFile(FILES.viewportCommandOwner);
   const rendererViewportUpdateOwner = readProjectFile(FILES.rendererViewportUpdateOwner);
+  const rendererStartupTransactionOwner = readProjectFile(FILES.rendererStartupTransactionOwner);
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
@@ -199,6 +203,7 @@ function collectFailures() {
     [FILES.viewportReadModelOwner]: viewportReadModelOwner,
     [FILES.viewportCommandOwner]: viewportCommandOwner,
     [FILES.rendererViewportUpdateOwner]: rendererViewportUpdateOwner,
+    [FILES.rendererStartupTransactionOwner]: rendererStartupTransactionOwner,
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
@@ -625,11 +630,24 @@ function collectFailures() {
       failures.push(`${FILES.renderer} must not keep direct P33 surface bridge write: ${tokenParts.join("")}`);
     }
   }
-  const bridgeIndex = renderer.indexOf("applyRendererSurfaceBridgeState(runtimeState, {");
-  const rebuildIndex = renderer.lastIndexOf("rebuildPoliticalLandCollections();", bridgeIndex);
-  const migrateIndex = renderer.indexOf("migrateLegacyColorState();", bridgeIndex);
-  if (rebuildIndex < 0 || bridgeIndex < 0 || migrateIndex < 0 || !(rebuildIndex < bridgeIndex && bridgeIndex < migrateIndex)) {
-    failures.push(`${FILES.renderer} must call applyRendererSurfaceBridgeState between rebuildPoliticalLandCollections and migrateLegacyColorState.`);
+  const startupOwnerRebuildIndex = rendererStartupTransactionOwner.indexOf("\"rebuildPoliticalLandCollections\"");
+  const startupOwnerBridgeIndex = rendererStartupTransactionOwner.indexOf("\"applyRendererSurfaceBridgeState\"");
+  const startupOwnerMigrateIndex = rendererStartupTransactionOwner.indexOf("\"migrateLegacyColorState\"");
+  if (
+    startupOwnerRebuildIndex < 0
+    || startupOwnerBridgeIndex < 0
+    || startupOwnerMigrateIndex < 0
+    || !(startupOwnerRebuildIndex < startupOwnerBridgeIndex && startupOwnerBridgeIndex < startupOwnerMigrateIndex)
+  ) {
+    failures.push(`${FILES.rendererStartupTransactionOwner} must order applyRendererSurfaceBridgeState between rebuildPoliticalLandCollections and migrateLegacyColorState.`);
+  }
+  const startupOwnerFactorySource = sliceBetween(
+    renderer,
+    "function getRendererStartupTransactionOwner()",
+    "function getStrategicOverlayHelpersOwner()",
+  );
+  if (!startupOwnerFactorySource.includes("applyRendererSurfaceBridgeState(runtimeState, {")) {
+    failures.push(`${FILES.renderer} must inject applyRendererSurfaceBridgeState into the startup transaction owner.`);
   }
   if (!packageJson.includes('"test:node:renderer-surface-runtime-bridge-state": "node --test tests/renderer_surface_runtime_bridge_state_behavior.test.mjs"')) {
     failures.push(`${FILES.packageJson} must expose test:node:renderer-surface-runtime-bridge-state.`);
@@ -1054,11 +1072,14 @@ function collectFailures() {
   if (!packageJson.includes("\"test:node:renderer-viewport-update-owner\": \"node --test tests/renderer_viewport_update_owner_behavior.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P34 renderer viewport update owner behavior script.`);
   }
+  if (!packageJson.includes("\"test:node:renderer-startup-transaction-owner\": \"node --test tests/renderer_startup_transaction_owner_behavior.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P36 startup transaction owner behavior script.`);
+  }
   if (!packageJson.includes("\"test:node:renderer-startup-transaction-inventory\": \"node --test tests/renderer_startup_transaction_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P35 startup transaction inventory script.`);
   }
-  if (rendererSourceFiles.includes("js/core/renderer/renderer_startup_transaction_owner.js")) {
-    failures.push("P35 must not add js/core/renderer/renderer_startup_transaction_owner.js; reserve it for P36.");
+  if (!rendererSourceFiles.includes("js/core/renderer/renderer_startup_transaction_owner.js")) {
+    failures.push("P36 must add js/core/renderer/renderer_startup_transaction_owner.js.");
   }
   for (const heading of [
     "## Scope and guardrails",
@@ -1103,16 +1124,19 @@ function collectFailures() {
   }
   for (const token of [
     "const STARTUP_OWNER_PATH = \"js/core/renderer/renderer_startup_transaction_owner.js\";",
+    "const STARTUP_OWNER_TEST_PATH = \"tests/renderer_startup_transaction_owner_behavior.test.mjs\";",
     "const PREFLIGHT_DOC_PATH = \"docs/active/renderer-startup-transaction-preflight-20260629.md\";",
     "const OWNERIZED_INIT_MAP_TOKENS = Object.freeze([",
     "const RESET_TRANSACTION_TOKENS = Object.freeze([",
+    "const OWNER_EFFECT_TOKENS = Object.freeze([",
     "const LATER_STARTUP_BRANCH_TOKENS = Object.freeze([",
     "const RENDER_SEMANTIC_ANCHORS = Object.freeze([",
     "const P36_ALLOWED_DOC_TOKENS = Object.freeze([",
     "const P36_FORBIDDEN_DOC_TOKENS = Object.freeze([",
     "repoFileExists(STARTUP_OWNER_PATH)",
+    "repoFileExists(STARTUP_OWNER_TEST_PATH)",
     "getRendererProjectionPathOwner().initializeProjectionPaths();",
-    "applyRendererSurfaceBridgeState(runtimeState, {",
+    "getRendererStartupTransactionOwner().runInitMapResetTransaction({ debugMode });",
     "fitProjection({ skipSpatialIndex: shouldDeferInteractionInfrastructure });",
     "initZoom();",
     "bindEvents();",
@@ -1125,6 +1149,8 @@ function collectFailures() {
     "createStrategicOverlayRuntimeOwner({",
     "viewport owner must stay effects-only",
     "fitProjection owner must not own initMap transaction token",
+    "startup transaction owner must expose initMap reset transaction method",
+    "map_renderer must wire startup transaction owner effect",
   ]) {
     if (!rendererStartupTransactionInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererStartupTransactionInventoryTest} must lock P35 startup transaction inventory token: ${token}`);
@@ -1141,6 +1167,7 @@ function collectFailures() {
     "./renderer/renderer_svg_surface_lifecycle_owner.js",
     "./renderer/renderer_fit_projection_owner.js",
     "./renderer/renderer_viewport_update_owner.js",
+    "./renderer/renderer_startup_transaction_owner.js",
   ];
   for (const importPath of requiredImports) {
     if (!includesImport(renderer, importPath)) {
@@ -1162,6 +1189,7 @@ function collectFailures() {
     FILES.viewportReadModelOwner,
     FILES.viewportCommandOwner,
     FILES.rendererViewportUpdateOwner,
+    FILES.rendererStartupTransactionOwner,
     FILES.viewportResizeLifecycleOwner,
     FILES.zoomInteractionLifecycleOwner,
     FILES.mapInteractionEventBindingOwner,
