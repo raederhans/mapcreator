@@ -2,7 +2,7 @@
 
 ## Current Status
 
-ready-for-integration
+integrated
 
 ## Acceptance
 
@@ -67,7 +67,7 @@ Tooling/docs: `tools/check_architecture_boundaries.mjs`, `package.json`, `docs/a
 
 Diff summary: the reset transaction sequence after projection/path initialization moved into an effects-only owner; concrete runtime state writes remain injected from `map_renderer.js`; P36 tests and architecture gates now lock the owner boundary and dist mirrors are synced.
 
-Commit status: ready for a P36 Lore commit on `codex/p36-renderer-startup-transaction-owner`; base is `origin/main@12890fc6`.
+Commit status: functional Lore commit `084f8fd8` is pushed to `origin/main` and `origin/codex/p36-renderer-startup-transaction-owner`; base is `origin/main@12890fc6`.
 
 Current main divergence: local parent checkout has unrelated dirty docs, so P36 was completed in an isolated worktree based on current `origin/main`.
 
@@ -75,4 +75,4 @@ Potential conflicts: yellow with future renderer extraction lanes touching `js/c
 
 Unverified risk: older P33 bridge-order inventory test naming still reflects the pre-P36 boundary. The new P36 behavior test and architecture boundary now own the precise startup reset ordering.
 
-Recommended next step: commit this branch, push it, fast-forward `origin/main` from the P36 branch after confirming remote still equals `12890fc6`, then clean the isolated worktree after remote confirmation.
+Recommended next step: push the registry closeout, then clean the isolated P36 worktree after remote confirmation.
