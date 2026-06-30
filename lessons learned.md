@@ -503,3 +503,6 @@
 
 ### Playwright 服务元数据要先验活
 - E2E 失败后 `.runtime/dev/active_server.json` 可能保留已停止端口；重跑前先 HTTP 探测端口，再清理 stale metadata，可减少 scenario chunk 这类长用例的误判。
+
+### 静态边界 gate 要锁语义分类
+- 禁止新增 helper/owner/controller 时，只列当前候选文件名会漏掉改名变体；checker 和 inventory test 要用同一套文件名分类器锁住语义，例如 `reset + transaction + owner/helper/controller`。
