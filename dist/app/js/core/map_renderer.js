@@ -164,6 +164,7 @@ import {
 } from "./renderer/spatial_query_index.js";
 import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_preview_render_owner.js";
 import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_transaction_owner.js";
+import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -986,6 +987,7 @@ let rendererProjectionPathOwner = null;
 let rendererSvgSurfaceLifecycleOwner = null;
 let rendererFitProjectionOwner = null;
 let setMapDataTransactionOwner = null;
+let renderRequestBoundaryOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1276,6 +1278,23 @@ function getSetMapDataTransactionOwner() {
     },
   });
   return setMapDataTransactionOwner;
+}
+
+function getRenderRequestBoundaryOwner() {
+  if (renderRequestBoundaryOwner) {
+    return renderRequestBoundaryOwner;
+  }
+  renderRequestBoundaryOwner = createRenderRequestBoundaryOwner({
+    effects: {
+      requestRender,
+      flushRenderBoundary,
+      render,
+    },
+    getters: {
+      hasInteractionRenderContext: () => Boolean(rendererSurfaceHost.getContext()),
+    },
+  });
+  return renderRequestBoundaryOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -21192,28 +21211,18 @@ function refreshSidebarAfterPaint({
 }
 
 function requestInteractionRender(reason = "interaction") {
-  return requestRendererRender(reason, {
-    flush: false,
-    fallback: () => {
-      if (rendererSurfaceHost.getContext()) render();
-    },
-  });
+  return getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;
 }
 
 function flushInteractionRender(reason = "interaction") {
-  return flushRenderBoundary(reason);
+  return getRenderRequestBoundaryOwner().flushInteractionRenderBoundary(reason).completed;
 }
 
 function requestRendererRender(reason = "renderer", { flush = false, fallback = null } = {}) {
-  const requested = flush ? flushRenderBoundary(reason) : requestRender(reason);
-  if (requested) {
-    return true;
-  }
-  if (typeof fallback === "function") {
-    fallback();
-    return true;
-  }
-  return false;
+  return getRenderRequestBoundaryOwner().requestRendererRenderBoundary(reason, {
+    flush,
+    fallback,
+  }).completed;
 }
 
 function normalizeDevInteractionHit(hit = null) {

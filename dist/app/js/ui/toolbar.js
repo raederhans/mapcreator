@@ -71,6 +71,7 @@ import { createPaletteLibraryPanelController } from "./toolbar/palette_library_p
 import { createAppearanceControlsController } from "./toolbar/appearance_controls_controller.js";
 import { createScenarioContextBarController } from "./toolbar/scenario_context_bar_controller.js";
 import { createScenarioGuidePopoverController } from "./toolbar/scenario_guide_popover.js";
+import { createSampleProjectBannerController } from "./toolbar/sample_project_banner_controller.js";
 import { createSpecialZoneEditorController } from "./toolbar/special_zone_editor.js";
 import { createSpecialZonesWorkbenchController } from "./toolbar/special_zones_workbench_controller.js";
 import {
@@ -233,6 +234,12 @@ function initToolbar({ render } = {}) {
   const dockConfigGroup = document.getElementById("dockConfigGroup");
   const dockReferenceBtn = document.getElementById("dockReferenceBtn");
   const dockExportBtn = document.getElementById("dockExportBtn");
+  const sampleProjectBanner = document.getElementById("sampleProjectBanner");
+  const sampleProjectBannerTitle = document.getElementById("sampleProjectBannerTitle");
+  const sampleProjectBannerBody = document.getElementById("sampleProjectBannerBody");
+  const sampleProjectBannerOpenExportBtn = document.getElementById("sampleProjectBannerOpenExportBtn");
+  const sampleProjectBannerDownloadOriginalLink = document.getElementById("sampleProjectBannerDownloadOriginalLink");
+  const sampleProjectBannerDismissBtn = document.getElementById("sampleProjectBannerDismissBtn");
   const dockEditPopoverBtn = document.getElementById("dockEditPopoverBtn");
   const dockReferencePopover = document.getElementById("dockReferencePopover");
   const dockEditPopover = document.getElementById("dockEditPopover");
@@ -792,6 +799,23 @@ function initToolbar({ render } = {}) {
     setExportWorkbenchState(false, { restoreFocus });
     return false;
   });
+
+  const sampleProjectBannerController = createSampleProjectBannerController({
+    runtimeState,
+    root: sampleProjectBanner,
+    titleNode: sampleProjectBannerTitle,
+    bodyNode: sampleProjectBannerBody,
+    openExportButton: sampleProjectBannerOpenExportBtn,
+    downloadOriginalLink: sampleProjectBannerDownloadOriginalLink,
+    dismissButton: sampleProjectBannerDismissBtn,
+    t,
+    openExportWorkbench: (trigger = sampleProjectBannerOpenExportBtn) => (
+      runtimeState.openExportWorkbenchFn?.(trigger)
+    ),
+  });
+  sampleProjectBannerController.bindEvents();
+  registerRuntimeHook(state, "refreshSampleProjectBannerFn", () => sampleProjectBannerController.render());
+  sampleProjectBannerController.render();
 
   registerRuntimeHook(state, "openTransportWorkbenchFn", (trigger = null) => openTransportWorkbench(trigger));
   registerRuntimeHook(state, "closeTransportWorkbenchFn", ({ restoreFocus = true } = {}) => (

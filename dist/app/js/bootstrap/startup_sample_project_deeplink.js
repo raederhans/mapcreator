@@ -4,6 +4,7 @@ import {
   loadSampleProjectText,
   SampleProjectLoadError,
 } from "../core/sample_project_registry.js";
+import { callRuntimeHook } from "../core/state/index.js";
 
 export const STARTUP_SAMPLE_PROJECT_TASK_KEY = "startup-sample-project-import";
 
@@ -19,6 +20,7 @@ function writeSampleProjectState(targetState, patch = {}) {
     ...patch,
     updatedAt: getNow(),
   };
+  callRuntimeHook(targetState, "refreshSampleProjectBannerFn", targetState.sampleProjectDeeplink);
   return targetState.sampleProjectDeeplink;
 }
 
@@ -33,13 +35,22 @@ function resolveSampleError(error) {
   );
 }
 
+function translateSampleUiText(value, helpers = {}) {
+  const translate = typeof helpers.t === "function"
+    ? helpers.t
+    : (typeof helpers.ui?.t === "function" ? helpers.ui.t : null);
+  return typeof translate === "function"
+    ? translate(String(value || ""), "ui")
+    : String(value || "");
+}
+
 function showSampleProjectError(error, helpers = {}) {
   const resolvedError = resolveSampleError(error);
   if (typeof helpers.showToast === "function") {
     helpers.showToast(
-      resolvedError.userMessage,
+      translateSampleUiText(resolvedError.userMessage, helpers),
       {
-        title: resolvedError.toastTitle,
+        title: translateSampleUiText(resolvedError.toastTitle, helpers),
         tone: resolvedError.toastTone,
         duration: 4200,
       },

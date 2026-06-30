@@ -144,9 +144,17 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await page.keyboard.press("Escape");
     await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
     const projectTab = page.locator("#inspectorSidebarTabProject");
-    if (await projectTab.isVisible()) {
-      await projectTab.click();
-    }
+    await expect(projectTab).toBeVisible({ timeout: 30000 });
+    await projectTab.click();
+    await expect(projectTab).toHaveAttribute("aria-selected", "true", { timeout: 30000 });
+    const sampleProjectBanner = page.locator("#sampleProjectBanner");
+    await expect(sampleProjectBanner).toBeVisible({ timeout: 30000 });
+    await expect(sampleProjectBanner).toContainText(/Sample loaded: TNO 1962 Atlantropa briefing/i);
+    await expect(sampleProjectBanner).toContainText(/export your own image/i);
+    await expect(page.locator("#sampleProjectBannerDownloadOriginalLink")).toHaveAttribute(
+      "href",
+      /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
+    );
     await page.locator("#exportProjectSection").evaluate((section) => {
       if (section instanceof HTMLDetailsElement) section.open = true;
     });
@@ -180,6 +188,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     const snapshot = await readSmokeFailureSnapshot(page, [
       "body",
       "#scenarioGuidePopover",
+      "#sampleProjectBanner",
       "#scenarioStatus",
       "#scenarioSelect",
       "#exportWorkbenchOverlay",

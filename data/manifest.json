@@ -243,11 +243,11 @@
       "artifact_class": "publish",
       "owner": "init_map_data.hierarchy_locales",
       "description": "Published locale bundle for UI and geo labels.",
-      "size_bytes": 8459711,
-      "sha256": "8827eb20eff63d8b99b9951a217211328434a877f217ea51bbb4b9496ec82fb2",
+      "size_bytes": 8463198,
+      "sha256": "08a080618db3144b12992b22570c86d03bf06390e8468e2ba3b04e38fe0cdc56",
       "type": "locales",
-      "geo_entry_count": 73680,
-      "ui_entry_count": 1805
+      "geo_entry_count": 73684,
+      "ui_entry_count": 1847
     },
     "country_feature_policies.json": {
       "role": "country_feature_policies",

@@ -7,12 +7,12 @@
     },
     {
       "path": "app.js",
-      "size_bytes": 91930,
+      "size_bytes": 92180,
       "source_kind": "dist"
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 285425,
+      "size_bytes": 287141,
       "source_kind": "dist"
     },
     {
@@ -37077,7 +37077,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8460173,
+      "size_bytes": 8463198,
       "source_kind": "generated_ignored"
     },
     {
@@ -45517,7 +45517,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 265255,
+      "size_bytes": 266919,
       "source_kind": "dist"
     },
     {
@@ -45582,7 +45582,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
-      "size_bytes": 4735,
+      "size_bytes": 5259,
       "source_kind": "dist"
     },
     {
@@ -45717,7 +45717,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 93500,
+      "size_bytes": 96228,
       "source_kind": "dist"
     },
     {
@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 888362,
+      "size_bytes": 888831,
       "source_kind": "dist"
     },
     {
@@ -45833,6 +45833,11 @@
     {
       "path": "app/js/core/map_renderer/render_pass_catalog.js",
       "size_bytes": 1083,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/render_request_boundary_owner.js",
+      "size_bytes": 3595,
       "source_kind": "dist"
     },
     {
@@ -46437,7 +46442,7 @@
     },
     {
       "path": "app/js/core/state/config.js",
-      "size_bytes": 8135,
+      "size_bytes": 8292,
       "source_kind": "dist"
     },
     {
@@ -46597,7 +46602,7 @@
     },
     {
       "path": "app/js/ui/i18n.js",
-      "size_bytes": 33633,
+      "size_bytes": 33741,
       "source_kind": "dist"
     },
     {
@@ -46672,7 +46677,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 125392,
+      "size_bytes": 126789,
       "source_kind": "dist"
     },
     {
@@ -46768,6 +46773,11 @@
     {
       "path": "app/js/ui/toolbar/palette_library_panel.js",
       "size_bytes": 29729,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/ui/toolbar/sample_project_banner_controller.js",
+      "size_bytes": 6558,
       "source_kind": "dist"
     },
     {
@@ -47337,17 +47347,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 74432,
+      "size_bytes": 74544,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465502,
+      "size_bytes": 1465782,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 52106,
+      "size_bytes": 52165,
       "source_kind": "dist"
     }
   ],
@@ -47472,9 +47482,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9408,
+      "file_count": 9410,
       "path": "app",
-      "size_bytes": 965472134
+      "size_bytes": 965494075
     },
     {
       "file_count": 57,
@@ -47484,22 +47494,22 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465502
+      "size_bytes": 1465782
     },
     {
       "file_count": 1,
       "path": "app.js",
-      "size_bytes": 91930
+      "size_bytes": 92180
     },
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 74432
+      "size_bytes": 74544
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 52106
+      "size_bytes": 52165
     },
     {
       "file_count": 1,
@@ -47507,5 +47517,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972033279
+  "total_bytes": 972055921
 }

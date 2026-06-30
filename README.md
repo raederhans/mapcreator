@@ -47,7 +47,7 @@ Scenario Forge gives creators one place to choose a world state, edit political 
 
 ## Open or Download Sample Projects
 
-The landing page links checked-in starter projects for the public baselines. Use `/app/?sample=<sample-id>&view=guide` to open one directly in the editor, or download the editable project JSON files listed in [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json).
+The landing page links checked-in starter projects for the public baselines. Use `/app/?sample=<sample-id>&view=guide` to open one directly in the editor with the Guide panel. The Project tab confirms the sample load and links the export workbench plus the original JSON download. The editable project JSON files are listed in [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json).
 
 - TNO 1962 Atlantropa briefing: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=tno-1962-atlantropa-briefing&view=guide) · [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
 - HOI4 1936 Europe briefing: [open in editor](https://raederhans.github.io/scenario-forge/app/?sample=hoi4-1936-europe-briefing&view=guide) · [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)

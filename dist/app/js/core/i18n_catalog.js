@@ -548,6 +548,58 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Frontlines and strategic annotations workspace.": { zh: "前线与战略标注工作区。", en: "Frontlines and strategic annotations workspace." },
   "Publishable map tools": { zh: "发布级地图工具", en: "Publishable map tools" },
   "Project Management": { zh: "项目管理", en: "Project Management" },
+  "Sample project actions": { zh: "示例项目操作", en: "Sample project actions" },
+  "Sample loaded": { zh: "示例已加载", en: "Sample loaded" },
+  "Sample unavailable": { zh: "示例不可用", en: "Sample unavailable" },
+  "selected sample": { zh: "所选示例", en: "selected sample" },
+  "Open export workbench": { zh: "打开导出工作台", en: "Open export workbench" },
+  "Download original JSON": { zh: "下载原始 JSON", en: "Download original JSON" },
+  "Dismiss sample message": { zh: "关闭示例消息", en: "Dismiss sample message" },
+  "Edit this starter map, then export your own image or download the original sample JSON.": {
+    zh: "编辑这个起步地图，然后导出自己的图片，或下载原始示例 JSON。",
+    en: "Edit this starter map, then export your own image or download the original sample JSON.",
+  },
+  "This sample link is not valid.": { zh: "这个示例链接无效。", en: "This sample link is not valid." },
+  "This sample project is not in the public sample list.": {
+    zh: "这个示例项目不在公开示例列表中。",
+    en: "This sample project is not in the public sample list.",
+  },
+  "This sample project is not available in the public demo.": {
+    zh: "这个示例项目不在公开 demo 中提供。",
+    en: "This sample project is not available in the public demo.",
+  },
+  "This sample link points outside the public sample project list.": {
+    zh: "这个示例链接指向公开示例项目列表之外。",
+    en: "This sample link points outside the public sample project list.",
+  },
+  "This sample project file is not available.": {
+    zh: "这个示例项目文件不可用。",
+    en: "This sample project file is not available.",
+  },
+  "Sample projects cannot be opened in this browser session.": {
+    zh: "当前浏览器会话无法打开示例项目。",
+    en: "Sample projects cannot be opened in this browser session.",
+  },
+  "The sample project list could not be loaded.": {
+    zh: "示例项目列表无法加载。",
+    en: "The sample project list could not be loaded.",
+  },
+  "The sample project list is not valid.": {
+    zh: "示例项目列表无效。",
+    en: "The sample project list is not valid.",
+  },
+  "The selected sample project could not be loaded.": {
+    zh: "所选示例项目无法加载。",
+    en: "The selected sample project could not be loaded.",
+  },
+  "The sample project file could not be imported.": {
+    zh: "示例项目文件无法导入。",
+    en: "The sample project file could not be imported.",
+  },
+  "The selected sample project could not be opened.": {
+    zh: "所选示例项目无法打开。",
+    en: "The selected sample project could not be opened.",
+  },
   Legend: { zh: "图例", en: "Legend" },
   "Manage project files, loading choices, and account-backed saves.": {
     zh: "管理项目文件、加载选择和账号保存。",

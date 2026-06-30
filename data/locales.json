@@ -299230,6 +299230,82 @@
       "en": "Project Management",
       "zh": "项目管理"
     },
+    "Sample project actions": {
+      "en": "Sample project actions",
+      "zh": "示例项目操作"
+    },
+    "Sample loaded": {
+      "en": "Sample loaded",
+      "zh": "示例已加载"
+    },
+    "Sample unavailable": {
+      "en": "Sample unavailable",
+      "zh": "示例不可用"
+    },
+    "selected sample": {
+      "en": "selected sample",
+      "zh": "所选示例"
+    },
+    "Open export workbench": {
+      "en": "Open export workbench",
+      "zh": "打开导出工作台"
+    },
+    "Download original JSON": {
+      "en": "Download original JSON",
+      "zh": "下载原始 JSON"
+    },
+    "Dismiss sample message": {
+      "en": "Dismiss sample message",
+      "zh": "关闭示例消息"
+    },
+    "Edit this starter map, then export your own image or download the original sample JSON.": {
+      "en": "Edit this starter map, then export your own image or download the original sample JSON.",
+      "zh": "编辑这个起步地图，然后导出自己的图片，或下载原始示例 JSON。"
+    },
+    "This sample link is not valid.": {
+      "en": "This sample link is not valid.",
+      "zh": "这个示例链接无效。"
+    },
+    "This sample project is not in the public sample list.": {
+      "en": "This sample project is not in the public sample list.",
+      "zh": "这个示例项目不在公开示例列表中。"
+    },
+    "This sample project is not available in the public demo.": {
+      "en": "This sample project is not available in the public demo.",
+      "zh": "这个示例项目不在公开 demo 中提供。"
+    },
+    "This sample link points outside the public sample project list.": {
+      "en": "This sample link points outside the public sample project list.",
+      "zh": "这个示例链接指向公开示例项目列表之外。"
+    },
+    "This sample project file is not available.": {
+      "en": "This sample project file is not available.",
+      "zh": "这个示例项目文件不可用。"
+    },
+    "Sample projects cannot be opened in this browser session.": {
+      "en": "Sample projects cannot be opened in this browser session.",
+      "zh": "当前浏览器会话无法打开示例项目。"
+    },
+    "The sample project list could not be loaded.": {
+      "en": "The sample project list could not be loaded.",
+      "zh": "示例项目列表无法加载。"
+    },
+    "The sample project list is not valid.": {
+      "en": "The sample project list is not valid.",
+      "zh": "示例项目列表无效。"
+    },
+    "The selected sample project could not be loaded.": {
+      "en": "The selected sample project could not be loaded.",
+      "zh": "所选示例项目无法加载。"
+    },
+    "The sample project file could not be imported.": {
+      "en": "The sample project file could not be imported.",
+      "zh": "示例项目文件无法导入。"
+    },
+    "The selected sample project could not be opened.": {
+      "en": "The selected sample project could not be opened.",
+      "zh": "所选示例项目无法打开。"
+    },
     "Project exported. Appearance and transport settings are saved in the selected project file.": {
       "en": "Project exported. Appearance and transport settings are saved in the selected project file.",
       "zh": "项目已导出。外观和交通设置已保存在所选项目文件中。"

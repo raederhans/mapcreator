@@ -519,6 +519,7 @@ function updateUIText() {
     "updateToolbarInputsFn",
     "updateTransportAppearanceUIFn",
     "updateFacilityInfoCardUiFn",
+    "refreshSampleProjectBannerFn",
     "syncDeveloperModeUiFn",
   ]);
 
@@ -641,6 +642,7 @@ function updateUIText() {
     "updatePaintModeUIFn",
     "updateWorkspaceStatusFn",
     "refreshTransportWorkbenchUiFn",
+    "refreshSampleProjectBannerFn",
     "updatePaletteLibraryUIFn",
     "updateScenarioUIFn",
     "renderScenarioAuditPanelFn",
@@ -673,6 +675,7 @@ async function toggleLanguage() {
     "updateParentBorderCountryListFn",
     "updatePaintModeUIFn",
     "updateDevWorkspaceUIFn",
+    "refreshSampleProjectBannerFn",
     "updateSpecialZoneEditorUIFn",
   ]);
   try {

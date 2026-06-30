@@ -904,6 +904,10 @@ a.button {
   line-height: 1.45;
 }
 
+.sample-project-downloads__note {
+  font-size: 0.86rem;
+}
+
 .sample-project-downloads__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

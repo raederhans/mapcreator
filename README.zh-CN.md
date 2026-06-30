@@ -47,7 +47,7 @@ Scenario Forge 把场景选择、政治编辑、地图外观、战略标注、�
 
 ## 打开或下载样例项目
 
-首页已经为公开基线接入可打开和可下载的起步项目。使用 `/app/?sample=<sample-id>&view=guide` 可以直接在编辑器中打开样例，也可以从 [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) 里下载对应项目 JSON。
+首页已经为公开基线接入可打开和可下载的起步项目。使用 `/app/?sample=<sample-id>&view=guide` 可以直接打开带 Guide 面板的编辑器。Project 标签页会确认样例已加载，并提供导出工作台和原始 JSON 下载入口。对应项目 JSON 记录在 [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) 里。
 
 - TNO 1962 Atlantropa briefing：[在编辑器中打开](https://raederhans.github.io/scenario-forge/app/?sample=tno-1962-atlantropa-briefing&view=guide) · [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
 - HOI4 1936 Europe briefing：[在编辑器中打开](https://raederhans.github.io/scenario-forge/app/?sample=hoi4-1936-europe-briefing&view=guide) · [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)

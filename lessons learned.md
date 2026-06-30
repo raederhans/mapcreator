@@ -133,6 +133,7 @@
 
 ### source/dist 同步先看漂移范围
 - 如果源码和 `dist/app` 已有历史漂移，共享大文件优先做 scoped patch。
+- Pages dist 生成会按当前源码树同步所有镜像文件；如果某个已提交源码此前没有同步到 `dist/app`，本轮构建会带出相邻 dist 变化，先用 HEAD 源文件确认归属再判断是否越界。
 - 重建拓扑产物时先确认非目标 layer 合同是否能过；如果 full builder 被旧 layer 元数据挡住，targeted rebuild 只能替换本轮 owned layer，并要补数据级验收。
 - 被 strict 合同按字节 hash 的 scenario JSON 必须在 `.gitattributes` 明确 `eol=lf`，否则 Windows checkout 会让本地 strict 误报指纹漂移。
 - `dist/pages-dist-manifest.json`、`data/manifest.json`、根 `dist/assets/*.json` 这类字节合同文件，修改后要同时复核自引用尺寸/hash；生成脚本和 `dist/app` 文本产物都要在 `.gitattributes` 固定 LF。

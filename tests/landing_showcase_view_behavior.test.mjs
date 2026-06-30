@@ -778,6 +778,13 @@ test("landing sample runs resolve checked-in assets and evidence markers", () =>
     const sampleProjects = new Map(sampleRunsManifest.sample_projects.map((project) => [project.project_url, project]));
     const sampleProjectListLinks = extractSampleProjectListLinks(html);
     const sampleProjectOpenLinks = extractSampleProjectOpenLinks(html);
+    assert.ok(html.includes("Open editable sample"), `${assetRoot} editable sample CTA copy missing`);
+    assert.ok(html.includes("Download JSON"), `${assetRoot} short download CTA copy missing`);
+    assert.ok(html.includes("View recipe"), `${assetRoot} recipe CTA copy missing`);
+    assert.ok(
+      html.includes("Editor links open the sample with the Guide panel"),
+      `${assetRoot} sample guide note missing`,
+    );
     assert.deepEqual(sampleRunsManifest.public_scenario_ids, PUBLIC_SCENARIO_IDS);
     assert.deepEqual(sampleRunsManifest.developer_preview_exclusions, ["hgo_1936"]);
     assert.equal(sampleRunsManifest.project_schema_version, 22);
@@ -916,6 +923,7 @@ test("landing sample runs bilingual keys exist", () => {
     "sampleProjectOpen",
     "sampleProjectDownload",
     "sampleRecipeManifest",
+    "sampleProjectGuideNote",
     "sampleProjectDownloadsTitle",
     "sampleProjectDownloadsBody",
     "sampleProjectBlank",
