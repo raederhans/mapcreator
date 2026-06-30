@@ -45,7 +45,7 @@ P41 request boundary and P42 visible-frame diagnostics owners remain narrow and 
 
 ## Delivery Package
 
-Status: ready-for-integration.
+Status: integrated in clean main-integration worktree.
 
 Changed summary:
 
@@ -64,9 +64,9 @@ Files changed:
 
 Diff summary: `map_renderer.js` now imports and lazily constructs the narrow owner, while keeping concrete runtime writes in injected effects at the composition root. The new owner contains the former phase/timer ordering and returns frozen summaries. P40/P36 inventory tests were synchronized to the new reset/delegation contract. The architecture checker now registers P43 files/scripts, checks full DI wiring, keeps the broad render lifecycle owner absent, and locks the public/state/scenario/exact/strategic/dist boundaries.
 
-Commit status: not committed at the moment this delivery package is written; validation and review fixes are complete, and the next action is a functional Lore commit on branch `codex/p43-render-phase-lifecycle-owner`.
+Commit status: functional Lore commit `952af9d2` on branch `codex/p43-render-phase-lifecycle-owner`; fast-forward merged into clean integration branch `codex/p43-main-integration`.
 
-Base divergence: worktree started from `origin/main@fc59d527`; no upstream divergence was detected before final validation.
+Base divergence: worktree started from `origin/main@fc59d527`; `origin/main` was still `fc59d527` at integration time.
 
 Conflict risk: yellow with future work touching `js/core/map_renderer.js`, `package.json`, `tools/check_architecture_boundaries.mjs`, renderer inventory tests, or this registry. Green against `public.js`, state-write allowlist, `dist/app/**`, scenario refresh runtime, exact scheduler, setMapData owner, request owner, and visible-frame diagnostics owner because this diff leaves those files unchanged.
 
@@ -76,4 +76,4 @@ Review fixes: reset now clears an active timer inside `resetRenderPhaseState()` 
 
 Not run: optional browser/E2E smoke. P43 is a narrow Node/static renderer phase lifecycle extraction, and the required behavior, inventory, architecture, import graph, state-write, and forbidden-path gates passed.
 
-Recommended next step: commit this branch, fast-forward merge into `main`, run the P43 combined test and architecture boundary gate on `main`, push, then remove the temporary worktree.
+Recommended next step: run focused post-merge gates on the integration worktree, push `HEAD:main`, then remove the temporary P43 implementation and integration worktrees.
