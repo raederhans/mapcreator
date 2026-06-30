@@ -1206,6 +1206,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const visibleFrameDiagnosticsOwnerSource = readRepoFile("js", "core", "renderer", "visible_frame_diagnostics_owner.js");
   const setMapDataTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "set_map_data_transaction_owner.js");
   const renderRequestBoundaryOwnerSource = readRepoFile("js", "core", "map_renderer", "render_request_boundary_owner.js");
+  const renderPhaseLifecycleOwnerSource = readRepoFile("js", "core", "map_renderer", "render_phase_lifecycle_owner.js");
   const zoomInteractionLifecycleOwnerSource = readRepoFile("js", "core", "renderer", "zoom_interaction_lifecycle_owner.js");
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
@@ -1470,7 +1471,12 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function enqueueExactAfterSettleSegment\(generation, label, task\) \{[\s\S]*?enqueueFrameTask/.test(exactSchedulerSource)
       && /scheduleExactAfterSettleRefresh[\s\S]*?enqueueExactAfterSettleSegment\(generation, "Prepare"[\s\S]*?enqueueExactAfterSettleSegment\(generation, "Apply"/.test(exactSchedulerSource),
     exactAfterSettleWaitsForRefreshStartedChunkWork:
-      /const promotionWorkActive = \[[\s\S]*?"promotion-scheduled",[\s\S]*?"refresh-started",[\s\S]*?\]\.includes\(String\(pendingChunkRefreshStatus \|\| ""\)\);/.test(rendererSource),
+      renderPhaseLifecycleOwnerSource.includes("const PROMOTION_ACTIVE_STATUSES = Object.freeze([")
+      && renderPhaseLifecycleOwnerSource.includes("\"promotion-scheduled\"")
+      && renderPhaseLifecycleOwnerSource.includes("\"refresh-started\"")
+      && /const pendingChunkRefreshStatus = runEffect\([\s\S]*?"scheduleScenarioChunkRefresh", \{/.test(renderPhaseLifecycleOwnerSource)
+      && /const promotionWorkActive = PROMOTION_ACTIVE_STATUSES\.includes\(String\(pendingChunkRefreshStatus \|\| ""\)\);/.test(renderPhaseLifecycleOwnerSource)
+      && /if \(promotionWorkActive\) return;/.test(renderPhaseLifecycleOwnerSource),
     frameSchedulerQueueMetricsReportedPerPriority:
       frameSchedulerSource.includes("HIGH_PRIORITY_MIN_PER_DRAIN = 1")
       && frameSchedulerSource.includes("byLabelGeneration = false")

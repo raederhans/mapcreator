@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 22:53 UTC
+Last updated: 2026-06-30 23:13 UTC
 
 ## Integration Owner
 
@@ -19,16 +19,28 @@ Last updated: 2026-06-30 22:53 UTC
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list` on 2026-06-30 after Phase6B was rebased onto the P43 integration.
+Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list` on 2026-06-30 after Phase6B was rebased onto the P43 integration and the hit-canvas scheduling preflight worktree refreshed onto `origin/main@bd2c0b67`.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main` contains Phase6B functional commit `81f2f30e` plus closeout WIP | `origin/main@473cd389` | Phase6B closeout pending final generated dist sync | Hot files after final drift check: P43 generated Pages mirror `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/render_phase_lifecycle_owner.js`, `dist/pages-dist-manifest.json`, and this registry note. | Phase6B functional commit `81f2f30e` rebased cleanly on P43; final `verify:dist-drift` exposed the expected P43 source-to-dist mirror gap, and the generated mirror was synchronized in this closeout. | Green for production paths; generated dist sync is deterministic output from current source. | Commit final dist/registry closeout and push `main`. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-hit-canvas-scheduling-preflight` | `codex/hit-canvas-scheduling-preflight` at `473cd389` | `origin/main@473cd389` | clean sibling worktree | No dirty files in read-only sample. | `git status --short --branch` clean and ahead/behind `0 0` before Phase6B docs closeout. | Green against Phase6B paths; future use should refresh after Phase6B push. | Keep for its owning task; rebase or refresh before further edits after Phase6B lands. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-hit-canvas-scheduling-preflight` | `codex/hit-canvas-scheduling-preflight` at `bd2c0b67` plus docs/tests/tooling diff | `origin/main@bd2c0b67` | ready-for-integration / validation complete | Hot files: `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md`, `tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/sample_project_contracts.test.mjs`, `tools/check_architecture_boundaries.mjs`, `package.json`, and this registry. | Rebased onto Phase6B final closeout `bd2c0b67`; final inventory passed `9/9`, P40/P41/P42/interaction/scenario gates passed, architecture review gaps were fixed by broad `hit_canvas` production-module detection plus scenario-refresh ownership-token exclusions, and state-write allowlist passed after a test-local sample runtime rename. | Yellow for package/checker/scenario-contract/sample-contract/registry edits; green for production runtime because `js/core/map_renderer.js`, hit canvas owners, public facade, state-write allowlist, exact scheduler, scenario refresh runtime, spatial owner, interaction owners, and `dist/**` are unchanged. | Commit with Lore message, push `HEAD:main` if main remains fast-forwardable, then clean this worktree after remote confirmation. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Renderer Hit Canvas Scheduling Preflight 2026-06-30
+
+1. Added the hit canvas scheduling preflight doc with explicit docs/tests/tooling-only guardrails and P45/P47 first-move recommendation.
+2. Added `tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs` to lock current hit canvas build, scheduling, dirty/topology, cancellation, scenario-refresh injection, spatial-owner, interaction-candidate, public-facade, state-write, and forbidden-owner boundaries.
+3. Added `test:node:renderer-hit-canvas-scheduling-inventory` and architecture-boundary coverage for the new preflight line, including broad `hit_canvas` production-module detection.
+4. Updated `tests/scenario_chunk_contracts.test.mjs` so the existing exact-after-settle promotion-wait contract follows the P43 owner location in `render_phase_lifecycle_owner.js`.
+5. Kept production runtime, hit canvas owner files, spatial index runtime owner, interaction funnel/event binding owner, scenario refresh runtime, exact scheduler, public facade, state-write allowlist, and `dist/**` unchanged.
+
+Files: core production files none; tests `tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/sample_project_contracts.test.mjs`; docs `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md` and this registry; tooling/package `tools/check_architecture_boundaries.mjs`, `package.json`; temporary files none. Diff summary: new inventory test and checker additions lock `buildHitCanvasAfterStartup`, `scheduleHitCanvasBuildIfNeeded`, hit canvas dirty/topology/scheduled-handle tokens, reset cancellation, scenario-refresh injected scheduling, the current scenario-refresh topology reset, spatial and interaction owner boundaries, no production `hit_canvas` module, no broad render lifecycle owner, and closed public/state-write boundaries. `scenario_chunk_contracts` now reads the P43 render phase lifecycle owner for the promotion-active wait contract. `sample_project_contracts` renames a local test model so state-write scanning stays focused on real `runtimeState` writers. Commit status: ready for Lore commit from this validated diff. Base divergence: no divergence after rebase; dirty diff is local docs/tests/tooling only. Potential conflicts: yellow with future package/checker/scenario-contract/sample-contract/registry edits; green with production renderer runtime, public facade, generated dist, spatial owner, scenario refresh runtime, exact scheduler, and interaction owner paths.
+
+Validation passed: `node --check tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs`; `node --check tools/check_architecture_boundaries.mjs`; package JSON parse; `npm run test:node:renderer-hit-canvas-scheduling-inventory` `9/9`; `npm run test:node:renderer-render-lifecycle-inventory` `8/8`; `npm run test:node:renderer-render-request-boundary` `13/13`; `npm run test:node:visible-frame-diagnostics` `14/14`; `npm run test:node:interaction-hit-candidates` `5/5`; `node --check tests/scenario_chunk_contracts.test.mjs`; `npm run test:node:scenario-chunk-contracts` `57/57`; `npm run test:node:sample-project-contracts` `11/11`; `npm run verify:architecture-boundaries`; `npm run verify:test-import-graph` `51` specs; `npm run verify:state-write-allowlist` `115` tracked files; `git diff --check` with Windows LF-to-CRLF warnings only; forbidden production/public/dist/state-write diff scan returned empty. Not run: browser/dev-server/E2E smoke, Pages dist generation, or production runtime smoke because this preflight only changes docs/tests/tooling and explicitly excludes production runtime/dist. Recommended next step: implement a narrow hit canvas scheduling owner first, limited to scheduled-handle lifecycle, duplicate scheduling guard, idle/defer gating, and cancellation; leave draw/build/point-probe/dirty-source/topology writes in `map_renderer.js`.
 
 ### Phase6B Sample Guide Export 2026-06-30
 

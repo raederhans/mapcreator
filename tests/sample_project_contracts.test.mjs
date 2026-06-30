@@ -490,7 +490,7 @@ test("sample guide helper view exposes loaded sample context and public error me
 });
 
 test("sample project banner controller opens export and dismisses current message", () => {
-  const runtimeState = {
+  const sampleRuntime = {
     sampleProjectDeeplink: {
       status: "success",
       sampleId: "tno-1962-atlantropa-briefing",
@@ -507,7 +507,7 @@ test("sample project banner controller opens export and dismisses current messag
   const dismissButton = new SampleBannerTestElement();
   const exportTriggers = [];
   const controller = createSampleProjectBannerController({
-    runtimeState,
+    runtimeState: sampleRuntime,
     root,
     titleNode,
     bodyNode,
@@ -539,7 +539,7 @@ test("sample project banner controller opens export and dismisses current messag
 });
 
 test("sample guide card controller opens export and keeps error path usable", () => {
-  const runtimeState = {
+  const sampleRuntime = {
     sampleProjectDeeplink: {
       status: "success",
       sampleId: "tno-1962-atlantropa-briefing",
@@ -557,7 +557,7 @@ test("sample guide card controller opens export and keeps error path usable", ()
   const exportTriggers = [];
   const continueTriggers = [];
   const controller = createSampleProjectGuideCardController({
-    runtimeState,
+    runtimeState: sampleRuntime,
     root,
     titleNode,
     bodyNode,
@@ -587,7 +587,7 @@ test("sample guide card controller opens export and keeps error path usable", ()
   openExportButton.click();
   assert.deepEqual(exportTriggers, [openExportButton]);
 
-  runtimeState.sampleProjectDeeplink = {
+  sampleRuntime.sampleProjectDeeplink = {
     status: "error",
     sampleId: "not-a-real-sample",
     errorCode: "unknown-sample-id",

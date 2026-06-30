@@ -8,9 +8,11 @@ const FILES = Object.freeze({
   packageJson: "package.json",
   stateWriteAllowlist: "tools/eslint-rules/state-writer-allowlist.json",
   renderer: "js/core/map_renderer.js",
+  publicFacade: "js/core/map_renderer/public.js",
   rendererRuntimeState: "js/core/state/renderer_runtime_state.js",
   canvasColorHelpers: "js/core/renderer/canvas_color_helpers.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
+  interactionHitCandidates: "js/core/map_renderer/interaction_hit_candidates.js",
   scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
@@ -33,6 +35,7 @@ const FILES = Object.freeze({
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
   mapInteractionEventBindingOwner: "js/core/renderer/map_interaction_event_binding_owner.js",
+  spatialIndexRuntimeOwner: "js/core/renderer/spatial_index_runtime_owner.js",
   rendererSurfaceHost: "js/core/renderer/renderer_surface_host.js",
   rendererSurfaceLifecycleOwner: "js/core/renderer/renderer_surface_lifecycle_owner.js",
   rendererProjectionPathOwner: "js/core/renderer/renderer_projection_path_owner.js",
@@ -73,6 +76,8 @@ const FILES = Object.freeze({
   rendererRenderPhaseLifecycleOwnerDoc: "docs/active/renderer-render-phase-lifecycle-owner-p43-20260630.md",
   rendererRenderPhaseLifecycleOwnerTest: "tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs",
   rendererRenderPhaseLifecycleInventoryTest: "tests/renderer_render_phase_lifecycle_inventory.test.mjs",
+  rendererHitCanvasSchedulingPreflightDoc: "docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md",
+  rendererHitCanvasSchedulingInventoryTest: "tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
   visibleFrameDiagnosticsOwnerDoc: "docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md",
   visibleFrameDiagnosticsOwnerTest: "tests/visible_frame_diagnostics_owner_behavior.test.mjs",
   visibleFrameDiagnosticsInventoryTest: "tests/visible_frame_diagnostics_owner_inventory.test.mjs",
@@ -212,6 +217,27 @@ function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
     && parts.some((part) => ["owner", "helper", "controller"].includes(part));
 }
 
+function hasHitCanvasOwnerImport(source) {
+  const importPattern = /\bfrom\s+["']([^"']+)["']|import\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
+  return Array.from(source.matchAll(importPattern)).some((match) => {
+    const specifier = match[1] || match[2] || match[3] || "";
+    return specifier.toLowerCase().replace(/[_/-]/g, "").includes("hitcanvas");
+  });
+}
+
+function isForbiddenHitCanvasOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (!normalized.startsWith("js/core/")) {
+    return false;
+  }
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) {
+    return false;
+  }
+  const stem = baseName.replace(/\.m?js$/, "");
+  return stem.toLowerCase().replace(/[_-]/g, "").includes("hitcanvas");
+}
+
 function isRendererOwnerPath(sourcePath) {
   const baseName = path.basename(sourcePath);
   return sourcePath.startsWith("js/core/renderer/")
@@ -225,14 +251,20 @@ function sliceBetween(source, startMarker, endMarker) {
   return end < 0 ? source.slice(start) : source.slice(start, end);
 }
 
+function countToken(source, token) {
+  return source.split(token).length - 1;
+}
+
 function collectFailures() {
   const failures = [];
   const packageJson = readProjectFile(FILES.packageJson);
   const stateWriteAllowlist = readProjectFile(FILES.stateWriteAllowlist);
   const renderer = readProjectFile(FILES.renderer);
+  const publicFacadeSource = readProjectFile(FILES.publicFacade);
   const rendererRuntimeState = readProjectFile(FILES.rendererRuntimeState);
   const canvasColorHelpers = readProjectFile(FILES.canvasColorHelpers);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
+  const interactionHitCandidates = readProjectFile(FILES.interactionHitCandidates);
   const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
@@ -250,6 +282,7 @@ function collectFailures() {
   const viewportResizeLifecycleOwner = readProjectFile(FILES.viewportResizeLifecycleOwner);
   const zoomInteractionLifecycleOwner = readProjectFile(FILES.zoomInteractionLifecycleOwner);
   const mapInteractionEventBindingOwner = readProjectFile(FILES.mapInteractionEventBindingOwner);
+  const spatialIndexRuntimeOwner = readProjectFile(FILES.spatialIndexRuntimeOwner);
   const rendererSurfaceHost = readProjectFile(FILES.rendererSurfaceHost);
   const rendererSurfaceLifecycleOwner = readProjectFile(FILES.rendererSurfaceLifecycleOwner);
   const rendererProjectionPathOwner = readProjectFile(FILES.rendererProjectionPathOwner);
@@ -301,6 +334,8 @@ function collectFailures() {
   const rendererRenderPhaseLifecycleInventoryTest = readProjectFile(
     FILES.rendererRenderPhaseLifecycleInventoryTest,
   );
+  const rendererHitCanvasSchedulingPreflightDoc = readProjectFile(FILES.rendererHitCanvasSchedulingPreflightDoc);
+  const rendererHitCanvasSchedulingInventoryTest = readProjectFile(FILES.rendererHitCanvasSchedulingInventoryTest);
   const visibleFrameDiagnosticsOwnerDoc = readProjectFile(FILES.visibleFrameDiagnosticsOwnerDoc);
   const visibleFrameDiagnosticsOwnerTest = readProjectFile(FILES.visibleFrameDiagnosticsOwnerTest);
   const visibleFrameDiagnosticsInventoryTest = readProjectFile(FILES.visibleFrameDiagnosticsInventoryTest);
@@ -308,9 +343,11 @@ function collectFailures() {
     [FILES.packageJson]: packageJson,
     [FILES.stateWriteAllowlist]: stateWriteAllowlist,
     [FILES.renderer]: renderer,
+    [FILES.publicFacade]: publicFacadeSource,
     [FILES.rendererRuntimeState]: rendererRuntimeState,
     [FILES.canvasColorHelpers]: canvasColorHelpers,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
+    [FILES.interactionHitCandidates]: interactionHitCandidates,
     [FILES.scenarioRefreshPlans]: scenarioRefreshPlans,
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
@@ -328,6 +365,7 @@ function collectFailures() {
     [FILES.viewportResizeLifecycleOwner]: viewportResizeLifecycleOwner,
     [FILES.zoomInteractionLifecycleOwner]: zoomInteractionLifecycleOwner,
     [FILES.mapInteractionEventBindingOwner]: mapInteractionEventBindingOwner,
+    [FILES.spatialIndexRuntimeOwner]: spatialIndexRuntimeOwner,
     [FILES.rendererSurfaceHost]: rendererSurfaceHost,
     [FILES.rendererSurfaceLifecycleOwner]: rendererSurfaceLifecycleOwner,
     [FILES.rendererProjectionPathOwner]: rendererProjectionPathOwner,
@@ -371,6 +409,8 @@ function collectFailures() {
     [FILES.rendererRenderPhaseLifecycleOwnerDoc]: rendererRenderPhaseLifecycleOwnerDoc,
     [FILES.rendererRenderPhaseLifecycleOwnerTest]: rendererRenderPhaseLifecycleOwnerTest,
     [FILES.rendererRenderPhaseLifecycleInventoryTest]: rendererRenderPhaseLifecycleInventoryTest,
+    [FILES.rendererHitCanvasSchedulingPreflightDoc]: rendererHitCanvasSchedulingPreflightDoc,
+    [FILES.rendererHitCanvasSchedulingInventoryTest]: rendererHitCanvasSchedulingInventoryTest,
     [FILES.visibleFrameDiagnosticsOwnerDoc]: visibleFrameDiagnosticsOwnerDoc,
     [FILES.visibleFrameDiagnosticsOwnerTest]: visibleFrameDiagnosticsOwnerTest,
     [FILES.visibleFrameDiagnosticsInventoryTest]: visibleFrameDiagnosticsInventoryTest,
@@ -2621,6 +2661,261 @@ function collectFailures() {
   ]) {
     if (!rendererRenderPhaseLifecycleOwnerDoc.includes(token)) {
       failures.push(`${FILES.rendererRenderPhaseLifecycleOwnerDoc} must lock P43 boundary token: ${token}`);
+    }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P42 renderer lifecycle baseline",
+    "## Hit canvas build entry inventory",
+    "## Hit canvas dirty and topology revision inventory",
+    "## Hit canvas scheduling/cancel handle inventory",
+    "## Deferred startup and interaction infrastructure boundary",
+    "## Spatial index dependency boundary",
+    "## Scenario refresh and chunk promotion boundary",
+    "## Interaction hit candidate boundary",
+    "## P45/P47 allowed first move",
+    "## Forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererHitCanvasSchedulingPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererHitCanvasSchedulingPreflightDoc} must keep hit canvas preflight heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "This preflight is docs, tests, and tooling only.",
+    "No production runtime edits in `js/core/map_renderer.js`.",
+    "No `hit_canvas_*` owner, helper, controller, or scheduler.",
+    "No migration of `buildHitCanvasAfterStartup`.",
+    "Recommended next implementation: hit canvas scheduling owner.",
+    "any new production `js/core/**` module whose filename contains `hit_canvas` or `hitCanvas`",
+    "Keep `drawHitCanvas()`, `drawHitCanvasWithMetric()`, `recordDeferredFullHitCanvasMetric()`, `buildHitCanvasAfterStartup()`, point probe, dirty-source writes, and topology revision writes in `map_renderer.js`.",
+  ]) {
+    if (!rendererHitCanvasSchedulingPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererHitCanvasSchedulingPreflightDoc} must lock hit canvas preflight token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const DOC_PATH = \"docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md\";",
+    "const MAP_RENDERER_PATH = \"js/core/map_renderer.js\";",
+    "const SCENARIO_REFRESH_RUNTIME_PATH = \"js/core/map_renderer/scenario_refresh_runtime.js\";",
+    "const SPATIAL_INDEX_RUNTIME_OWNER_PATH = \"js/core/renderer/spatial_index_runtime_owner.js\";",
+    "const INTERACTION_HIT_CANDIDATES_PATH = \"js/core/map_renderer/interaction_hit_candidates.js\";",
+    "const MAP_INTERACTION_EVENT_BINDING_OWNER_PATH = \"js/core/renderer/map_interaction_event_binding_owner.js\";",
+    "const PUBLIC_FACADE_PATH = \"js/core/map_renderer/public.js\";",
+    "const STATE_WRITE_ALLOWLIST_PATH = \"tools/eslint-rules/state-writer-allowlist.json\";",
+    "function isForbiddenHitCanvasOwnerPath(sourcePath)",
+    "async function buildHitCanvasAfterStartup",
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \\\"idle-render\\\" } = {})",
+    "countToken(rendererSource, \"scheduleHitCanvasBuildIfNeeded\"), 8",
+    "countToken(rendererSource, \"buildHitCanvasAfterStartup\"), 3",
+    "countToken(rendererSource, runtimeToken(\"hitCanvasDirty\")), 24",
+    "countToken(rendererSource, runtimeToken(\"hitCanvasTopologyRevision\")), 6",
+    "countToken(rendererSource, runtimeToken(\"hitCanvasBuildScheduled\")), 9",
+    "cancelDeferredWork(\" + runtimeToken(\"hitCanvasBuildScheduled\") + \")",
+    "scenario refresh runtime must keep injected hit canvas scheduling boundary",
+    "countToken(runtimeSource, runtimeToken(\"hitCanvasTopologyRevision\")), 1",
+    "scenario refresh runtime must avoid direct hit canvas build/scheduling ownership",
+    "hit_canvas.js",
+    "hit_canvas_schedule_owner.js",
+    "spatial index runtime owner must not import map_renderer",
+    "interaction hit candidates must keep pure candidate helper export",
+    "public facade text content must remain unchanged for this preflight",
+  ]) {
+    if (!rendererHitCanvasSchedulingInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererHitCanvasSchedulingInventoryTest} must lock hit canvas inventory token: ${token}`);
+    }
+  }
+  if (!packageJson.includes("\"test:node:renderer-hit-canvas-scheduling-inventory\": \"node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose hit canvas scheduling inventory script.`);
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("Hit canvas scheduling preflight must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  for (const sourcePath of listProjectSourceFiles("js/core")) {
+    if (isForbiddenHitCanvasOwnerPath(sourcePath)) {
+      failures.push(`Hit canvas scheduling preflight must not add production hit canvas owner/helper/controller/scheduler: ${sourcePath}`);
+    }
+  }
+  for (const fixturePath of [
+    "js/core/map_renderer/hit_canvas.js",
+    "js/core/map_renderer/hit_canvas_scheduling_owner.js",
+    "js/core/map_renderer/hit_canvas_schedule_owner.js",
+    "js/core/map_renderer/hit_canvas_owner.mjs",
+    "js/core/renderer/renderer_hit_canvas_helper.js",
+    "js/core/renderer/hitCanvasDiagnostics.js",
+    "js/core/renderer/shared_hit_canvas_controller.js",
+    "js/core/renderer/hit_canvas_scheduler.js",
+  ]) {
+    if (!isForbiddenHitCanvasOwnerPath(fixturePath)) {
+      failures.push(`${FILES.packageJson} hit canvas owner detector must catch forbidden production path: ${fixturePath}`);
+    }
+  }
+  for (const fixturePath of [
+    "js/core/renderer/canvas_color_helpers.js",
+    "js/core/map_renderer/interaction_hit_candidates.js",
+    "js/core/renderer/renderer_surface_lifecycle_owner.js",
+    "js/core/renderer/spatial_index_runtime_owner.js",
+  ]) {
+    if (isForbiddenHitCanvasOwnerPath(fixturePath)) {
+      failures.push(`${FILES.packageJson} hit canvas owner detector must allow existing non-hit-canvas path: ${fixturePath}`);
+    }
+  }
+  for (const token of [
+    "function drawHitCanvas()",
+    "function drawHitCanvasWithMetric(details = {})",
+    "function recordDeferredFullHitCanvasMetric({ reason = \"deferred-full\", keepReady = false } = {})",
+    "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \"startup-deferred-hit-canvas\" } = {})",
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \"idle-render\" } = {})",
+    "function ensureHitCanvasUpToDate({ force = false } = {})",
+    "function getDirtyHitCanvasPointProbeHit(event)",
+    "function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } = {})",
+    "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
+    "cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep hit canvas scheduling preflight token: ${token}`);
+    }
+  }
+  for (const [token, expectedCount] of [
+    ["runtimeState.hitCanvasDirty", 24],
+    ["runtimeState.hitCanvasTopologyRevision", 6],
+    ["runtimeState.hitCanvasBuildScheduled", 9],
+    ["scheduleHitCanvasBuildIfNeeded", 8],
+    ["buildHitCanvasAfterStartup", 3],
+    ["cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)", 2],
+  ]) {
+    const actualCount = countToken(renderer, token);
+    if (actualCount !== expectedCount) {
+      failures.push(`${FILES.renderer} must keep ${token} count ${expectedCount}; found ${actualCount}.`);
+    }
+  }
+  const hitCanvasScheduleSource = sliceBetween(
+    renderer,
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \"idle-render\" } = {})",
+    "function ensureHitCanvasUpToDate({ force = false } = {})",
+  );
+  for (const token of [
+    "if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return false;",
+    "if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {",
+    "if (runtimeState.hitCanvasBuildScheduled) {",
+    "runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork(() => {",
+    "drawHitCanvasWithMetric({",
+  ]) {
+    if (!hitCanvasScheduleSource.includes(token)) {
+      failures.push(`${FILES.renderer} must keep hit canvas schedule wrapper token: ${token}`);
+    }
+  }
+  const hitCanvasResetSource = sliceBetween(
+    renderer,
+    "function resetRendererRefreshTransactionState({",
+    "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
+  );
+  for (const token of [
+    "cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);",
+    "runtimeState.hitCanvasBuildScheduled = null;",
+  ]) {
+    if (!hitCanvasResetSource.includes(token)) {
+      failures.push(`${FILES.renderer} reset path must keep hit canvas scheduled-work cancellation token: ${token}`);
+    }
+  }
+  if (!scenarioRefreshRuntime.includes("setInteractionInfrastructureState, scheduleSecondarySpatialIndexBuild, scheduleHitCanvasBuildIfNeeded,")) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must keep scheduleHitCanvasBuildIfNeeded injected dependency.`);
+  }
+  if (countToken(scenarioRefreshRuntime, "scheduleHitCanvasBuildIfNeeded") !== 3) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must keep three scheduleHitCanvasBuildIfNeeded references.`);
+  }
+  if (countToken(scenarioRefreshRuntime, "runtimeState.hitCanvasTopologyRevision") !== 1) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must keep current single runtimeState.hitCanvasTopologyRevision reset.`);
+  }
+  if (hasHitCanvasOwnerImport(scenarioRefreshRuntime)) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must not import hit canvas modules.`);
+  }
+  for (const token of [
+    "buildHitCanvasAfterStartup",
+    "drawHitCanvas",
+    "runtimeState.hitCanvasBuildScheduled",
+  ]) {
+    if (scenarioRefreshRuntime.includes(token)) {
+      failures.push(`${FILES.scenarioRefreshRuntime} must avoid direct hit canvas build/scheduling ownership token: ${token}`);
+    }
+  }
+  if (hasMapRendererImport(spatialIndexRuntimeOwner)) {
+    failures.push(`${FILES.spatialIndexRuntimeOwner} must not import map_renderer.js.`);
+  }
+  if (countToken(spatialIndexRuntimeOwner, "state.hitCanvasDirty") !== 2) {
+    failures.push(`${FILES.spatialIndexRuntimeOwner} must keep exactly two state.hitCanvasDirty markers.`);
+  }
+  for (const token of [
+    "scheduleHitCanvasBuildIfNeeded",
+    "buildHitCanvasAfterStartup",
+    "drawHitCanvas",
+    "hitCanvasBuildScheduled",
+    "hit_canvas",
+  ]) {
+    if (spatialIndexRuntimeOwner.includes(token)) {
+      failures.push(`${FILES.spatialIndexRuntimeOwner} must avoid hit canvas scheduling/build ownership token: ${token}`);
+    }
+  }
+  for (const [relativePath, source] of [
+    [FILES.interactionHitCandidates, interactionHitCandidates],
+    [FILES.mapInteractionEventBindingOwner, mapInteractionEventBindingOwner],
+  ]) {
+    if (hasMapRendererImport(source)) {
+      failures.push(`${relativePath} must not import map_renderer.js for hit canvas scheduling preflight.`);
+    }
+    if (hasHitCanvasOwnerImport(source)) {
+      failures.push(`${relativePath} must not import hit canvas owner/helper/controller/scheduler.`);
+    }
+    for (const token of [
+      "buildHitCanvasAfterStartup",
+      "drawHitCanvas",
+      "scheduleHitCanvasBuildIfNeeded",
+      "hitCanvasBuildScheduled",
+      "hitCanvasTopologyRevision",
+    ]) {
+      if (source.includes(token)) {
+        failures.push(`${relativePath} must avoid hit canvas build/scheduling token: ${token}`);
+      }
+    }
+  }
+  for (const token of [
+    "function collectSpatialGridCandidates",
+    "function rankCandidates",
+    "function findFirstContainingCandidate",
+    "function toHitResult",
+    "function shouldPreferWaterHit",
+    "export {",
+  ]) {
+    if (!interactionHitCandidates.includes(token)) {
+      failures.push(`${FILES.interactionHitCandidates} must keep pure hit-candidate export: ${token}`);
+    }
+  }
+  if (interactionHitCandidates.includes("runtimeState")) {
+    failures.push(`${FILES.interactionHitCandidates} must remain runtimeState-free.`);
+  }
+  for (const token of [
+    "render,",
+    "setMapData,",
+    "initMap,",
+    "RENDER_PASS_NAMES,",
+    "from \"../map_renderer.js\";",
+  ]) {
+    if (!publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must keep public facade token: ${token}`);
+    }
+  }
+  for (const token of [
+    "hit_canvas",
+    "hitCanvasScheduling",
+    "renderer_render_lifecycle_owner",
+    "render_lifecycle_owner",
+  ]) {
+    if (publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must not expose hit canvas scheduling preflight token: ${token}`);
+    }
+    if (stateWriteAllowlist.includes(token)) {
+      failures.push(`${FILES.stateWriteAllowlist} must not add hit canvas scheduling preflight token: ${token}`);
     }
   }
 
