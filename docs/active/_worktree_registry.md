@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 17:05 UTC
+Last updated: 2026-06-30 17:14 UTC
 
 ## Integration Owner
 
@@ -23,8 +23,8 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@52c2d873`, synced with `origin/main@52c2d873` | pushed main | clean integration owner | Parent docs WIP preserved in stash `preserve main docs WIP before phase4b integration 2026-06-30`; no active Phase5A edits in main. | Direct probes: `git worktree list`; `git status --short --branch`; `git log --oneline --decorate --graph --max-count=12 --all`. | Yellow for registry/docs coordination only; green for Phase5A implementation files because they live in the isolated worktree. | Keep main clean until Phase5A is ready to merge. |
-| `C:\Users\raede\.codex\worktrees\scenario-forge-phase5a-sample-projects` | `codex/phase5a-sample-projects@52c2d873` | `main@52c2d873` | ready-for-integration | Hot files: `landing/index.html`, `landing/app.js`, `landing/styles.css`, `landing/assets/sample-runs.json`, `landing/assets/sample-projects/**`, `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, `tests/landing_showcase_view_behavior.test.mjs`, `tests/sample_project_contracts.test.mjs`, `tests/test_pages_dist_startup_shell.py`, `package.json`, generated `dist/**`, this registry, and `docs/active/phase5a-sample-projects-20260630/**`. | Phase4B precondition is integrated and pushed; Phase5A adds five downloadable public sample projects, manifest metadata, visible landing links for all five samples, and reproducible demo recipes. Validation passed `npm run verify:pages-dist`, `npm run verify:dist-drift`, `npm run verify:test-import-graph`, `npm run verify:architecture-boundaries`, and diff checks; follow-up code review APPROVE and architecture review CLEAR. | Yellow with future landing/Pages dist/docs/tests work; green for renderer/backend/HGO runtime code. | Commit, push branch, fast-forward merge to main, archive docs, and clean worktree after remote confirmation. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@78f101b2`, ahead of `origin/main@52c2d873` before closeout push | pushed main plus local Phase5A merge | clean integration owner | Parent docs WIP preserved in stash `preserve main docs WIP before phase5a integration 2026-06-30`; Phase5A docs archived under `docs/archive/phase5a-sample-projects-20260630/`. | Direct probes: `git worktree list --porcelain`; `git status --short --branch`; `git rev-parse HEAD origin/main codex/phase5a-sample-projects origin/codex/phase5a-sample-projects`; post-merge validation commands below. | Yellow for registry/docs coordination only; green for Phase5A production files after fast-forward merge. | Commit and push this closeout, then clean the Phase5A worktree after remote confirmation. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-phase5a-sample-projects` | `codex/phase5a-sample-projects@78f101b2`, pushed to `origin/codex/phase5a-sample-projects@78f101b2` | `main@52c2d873` | integrated, pushed branch, cleanup pending main closeout push | Hot files resolved: `landing/index.html`, `landing/app.js`, `landing/styles.css`, `landing/assets/sample-runs.json`, `landing/assets/sample-projects/**`, `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, `tests/landing_showcase_view_behavior.test.mjs`, `tests/sample_project_contracts.test.mjs`, `tests/test_pages_dist_startup_shell.py`, `package.json`, generated `dist/**`, registry, and archived task docs. | Functional commit `78f101b2` adds five downloadable public sample projects, manifest metadata, visible landing links for all five samples, and reproducible demo recipes. Pre-merge validation passed `npm run verify:pages-dist`, `npm run verify:dist-drift`, `npm run verify:test-import-graph`, `npm run verify:architecture-boundaries`, diff checks, code-reviewer APPROVE, and architect CLEAR. Post-merge main validation passed `npm run test:node:sample-project-contracts`, `npm run test:node:landing-showcase-view`, and `npm run verify:dist-drift`. | Green after integration; yellow only for future landing/Pages dist/docs/tests work. | Push main closeout, remove worktree, then record cleanup truth. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
@@ -35,6 +35,17 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 - Post-rebase validation before merge passed `npm run verify:pages-dist`, `npm run test:node:landing-showcase-view`, `npm run verify:dist-drift`, and `git diff --check`.
 - Post-merge main validation passed `npm run test:node:landing-showcase-view` 18/18.
 - The Phase4B worktree was removed after remote confirmation; recovery remains through commits `36dbcb1a` and `865d58ac`.
+
+### Phase5A Sample Projects
+
+- Worktree `C:\Users\raede\.codex\worktrees\scenario-forge-phase5a-sample-projects` was fast-forwarded into local main at functional commit `78f101b2`.
+- Branch `codex/phase5a-sample-projects` is pushed to `origin/codex/phase5a-sample-projects@78f101b2`.
+- Pre-merge validation passed `npm run verify:pages-dist`, `npm run verify:dist-drift`, `npm run verify:test-import-graph`, `npm run verify:architecture-boundaries`, `git diff --check`, and `git diff --cached --check`.
+- Follow-up code review returned APPROVE after the five-project public-download coverage fix; follow-up architecture review returned CLEAR.
+- Post-merge main validation passed `npm run test:node:sample-project-contracts` 3/3, `npm run test:node:landing-showcase-view` 18/18, and `npm run verify:dist-drift`.
+- The parent main docs WIP was preserved in stash `preserve main docs WIP before phase5a integration 2026-06-30`.
+- Task docs are archived under `docs/archive/phase5a-sample-projects-20260630/`.
+- Cleanup remains pending until this closeout is pushed to `origin/main`.
 
 ## Local/Remote Sync Closeout 2026-06-30
 
