@@ -1203,6 +1203,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
   const renderTransformReusePolicyOwnerSource = readRepoFile("js", "core", "renderer", "render_transform_reuse_policy_owner.js");
+  const visibleFrameDiagnosticsOwnerSource = readRepoFile("js", "core", "renderer", "visible_frame_diagnostics_owner.js");
+  const setMapDataTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "set_map_data_transaction_owner.js");
+  const renderRequestBoundaryOwnerSource = readRepoFile("js", "core", "map_renderer", "render_request_boundary_owner.js");
   const zoomInteractionLifecycleOwnerSource = readRepoFile("js", "core", "renderer", "zoom_interaction_lifecycle_owner.js");
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
@@ -1261,7 +1264,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function recordLastGoodFrameInvalidationSummary\(summary = \{\}\) \{[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
       && /if \(runtimeState\.renderPhase === RENDER_PHASE_INTERACTING && runtimeState\.firstVisibleFramePainted\) \{[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(rendererSource)
       && rendererSource.includes('recordRenderPerfMetric("continuityFrameStaleAgeMs"')
-      && rendererSource.includes('recordRenderPerfMetric("visibleFrameTransaction"')
+      && visibleFrameDiagnosticsOwnerSource.includes('"visibleFrameTransaction"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameCount"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameSkippedDuringInteraction"')
       && /const staleSince = frame\.stale && Number\(frame\.invalidatedAt \|\| 0\) > 0[\s\S]*?Number\(frame\.invalidatedAt \|\| 0\)[\s\S]*?Number\(frame\.capturedAt \|\| 0\);[\s\S]*?const staleAgeMs = Math\.max\(0, Date\.now\(\) - staleSince\);/.test(rendererSource)
@@ -1270,10 +1273,15 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('continuityFrameRelaxedReuse'),
     firstVisibleScenarioRequiresCurrentPoliticalExactFrame:
       /function getFirstVisiblePoliticalFrameBlockReason\(reason = "visible-frame"\) \{[\s\S]*?base-visible-fallback[\s\S]*?normalizedReason !== "exact-frame"[\s\S]*?dirty-political-pass[\s\S]*?stale-ocean-fill[\s\S]*?stale-political-signature[\s\S]*?stale-political-reference-transform[\s\S]*?politicalPassDataStage[\s\S]*?politicalPassFineCacheReady[\s\S]*?stale-political-full-reference-transform/.test(rendererSource)
-      && /function noteFirstVisibleFrameBlocked\(reason = "visible-frame", blockReason = "unknown"\) \{[\s\S]*?recordRenderPerfMetric\("firstVisibleFrameBlocked"[\s\S]*?topologyBundleMode:[\s\S]*?oceanFill: getOceanBaseFillColor\(\)/.test(rendererSource)
-      && /function recordVisibleFrameTransactionMetric\(status, details = \{\}\) \{[\s\S]*?visibleFrameTransactionCount[\s\S]*?recordRenderPerfMetric\("visibleFrameTransaction"/.test(rendererSource)
-      && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?const blockReason = getFirstVisiblePoliticalFrameBlockReason\(reason\);[\s\S]*?if \(blockReason\) \{[\s\S]*?noteFirstVisibleFrameBlocked\(reason, blockReason\);[\s\S]*?return;/.test(rendererSource)
-      && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?runtimeState\.firstVisibleFramePainted = true;[\s\S]*?recordRenderPerfMetric\("firstVisibleFramePainted"[\s\S]*?callRuntimeHook\(runtimeState, "noteFirstVisibleFramePaintedFn"/.test(rendererSource),
+      && /function noteFirstVisibleFrameBlocked\(reason = "visible-frame", blockReason = "unknown"\) \{[\s\S]*?getVisibleFrameDiagnosticsOwner\(\)\.recordFirstVisibleFrameBlocked\(reason, blockReason\);/.test(rendererSource)
+      && /function recordVisibleFrameTransactionMetric\(status, details = \{\}\) \{[\s\S]*?getVisibleFrameDiagnosticsOwner\(\)\.recordVisibleFrameTransaction\(status, details\)\.metricEntry;/.test(rendererSource)
+      && /function markFirstVisibleFramePainted\(reason = "visible-frame"\) \{[\s\S]*?getVisibleFrameDiagnosticsOwner\(\)\.markFirstVisibleFramePainted\(reason\);/.test(rendererSource)
+      && visibleFrameDiagnosticsOwnerSource.includes('"visibleFrameTransactionCount"')
+      && visibleFrameDiagnosticsOwnerSource.includes('"firstVisibleFrameBlocked"')
+      && visibleFrameDiagnosticsOwnerSource.includes('"firstVisibleFramePainted"')
+      && visibleFrameDiagnosticsOwnerSource.includes('"callFirstVisibleFramePaintedHook"')
+      && visibleFrameDiagnosticsOwnerSource.includes("topologyBundleMode")
+      && visibleFrameDiagnosticsOwnerSource.includes("oceanFill"),
     oceanBackgroundInvalidationCoversPoliticalSignatureDependents:
       /function invalidateOceanBackgroundVisualState\(reason = "ocean-background"\) \{[\s\S]*?cancelExactAfterSettleRefresh\(\{ clearDefer: true \}\);[\s\S]*?invalidateRenderPasses\(\["background", "physicalBase", "political", "contextBase", "contextScenario"\], reason\);[\s\S]*?clearRenderPassReferenceTransforms\(\["background", "physicalBase", "political", "contextBase", "contextScenario"\]\);/.test(rendererSource)
       && /function getPoliticalPassStaticSignature[\s\S]*?`ocean-fill:\$\{getOceanBaseFillColor\(\)\}`/.test(rendererSource)
@@ -1371,7 +1379,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && !/pendingPoliticalColorEditIds\.clear\(\)/.test(applyRenderPassInvalidationEffectsBody)
       && /function rebuildResolvedColors\(\) \{[\s\S]*?const previousColorRevision = Number\(runtimeState\.colorRevision \|\| 0\);[\s\S]*?bumpColorRevision\(state\);[\s\S]*?retargetPendingPoliticalColorEditRevisionAfterColorRebuild\(previousColorRevision\);[\s\S]*?invalidateRenderPasses\(\["physicalBase", "political", "contextBase"\], "rebuild-colors"\);/.test(rendererSource)
       && /function retargetPendingPoliticalColorEditRevisionAfterColorRebuild\(previousColorRevision\) \{[\s\S]*?pendingScenarioId && pendingScenarioId !== activeScenarioId[\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?force: true,[\s\S]*?resetReason: "stale-scenario-color-rebuild",[\s\S]*?paintSource: "color-rebuild",[\s\S]*?\}\);[\s\S]*?cache\.pendingPoliticalColorEditRevision = currentRevision;/.test(rendererSource)
-      && /function setMapData\([\s\S]*?clearPendingPoliticalColorEdit\(\{[\s\S]*?force: true,[\s\S]*?resetReason: "set-map-data",[\s\S]*?paintSource: "set-map-data",[\s\S]*?\}\);[\s\S]*?clearRenderPassReferenceTransforms\(\);[\s\S]*?clearLastGoodFrame\("set-map-data"\);/.test(rendererSource),
+      && /function setMapData\(\{[\s\S]*?return getSetMapDataTransactionOwner\(\)\.runSetMapDataTransaction\(\{/.test(rendererSource)
+      && /function runSetMapDataTransaction\(options = \{\}\) \{[\s\S]*?runEffect\("clearPendingPoliticalColorEdit", \{[\s\S]*?force: true,[\s\S]*?resetReason: SET_MAP_DATA_REASON,[\s\S]*?paintSource: SET_MAP_DATA_REASON,[\s\S]*?\}\);[\s\S]*?runEffect\("clearRenderPassReferenceTransforms"\);[\s\S]*?runEffect\("clearLastGoodFrame", SET_MAP_DATA_REASON\);/.test(setMapDataTransactionOwnerSource),
     politicalFullReferenceOnlyWrittenByFullPass:
       (() => {
         const body = rendererSource.match(/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";
@@ -1407,7 +1416,10 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       ].every((snippet) => rendererSource.includes(snippet))
       && /function ensureRenderPassCanvas\(passName\) \{[\s\S]*?resizeRenderPassCanvases\(\[passName\]\);[\s\S]*?return cache\.canvases\[passName\];/.test(renderCacheOwnerSource),
     firstBatchInteractionWritesUseRafRenderBoundary:
-      /function requestInteractionRender\(reason = "interaction"\) \{[\s\S]*?requestRendererRender\(reason,[\s\S]*?flush: false/.test(rendererSource)
+      /function requestInteractionRender\(reason = "interaction"\) \{[\s\S]*?getRenderRequestBoundaryOwner\(\)\.requestInteractionRenderBoundary\(reason\)\.completed;/.test(rendererSource)
+      && renderRequestBoundaryOwnerSource.includes("requestInteractionRenderBoundary")
+      && renderRequestBoundaryOwnerSource.includes("effectApi.requestRender(normalizedReason)")
+      && renderRequestBoundaryOwnerSource.includes("options: { flush: false, interaction: true }")
       && !scenarioOwnershipEditorSource.includes("flushRenderBoundary")
       && /function requestScenarioOwnershipRender\(reason = "scenario-ownership"\) \{[\s\S]*?requestInteractionRender\(reason\);/.test(scenarioOwnershipEditorSource)
       && scenarioOwnershipEditorSource.includes('requestScenarioOwnershipRender("scenario-ownership-apply-owner");')
@@ -1553,7 +1565,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes("function getCommittedFrameKeySignature")
       && /function getVisibleFrameIdentity[\s\S]*?selectionVersion: getRuntimeChunkSelectionVersion\(\)[\s\S]*?contextFlagSignature: getVisibleContextFlagSignature\(\)/.test(rendererSource)
       && /function getCommittedFrameIdentity[\s\S]*?const commitKey = \{[\s\S]*?scenarioId: identity\.scenarioId[\s\S]*?sceneGeneration: identity\.sceneGeneration[\s\S]*?scenarioDataGeneration: identity\.scenarioDataGeneration[\s\S]*?selectionVersion: identity\.selectionVersion[\s\S]*?topologyRevision: identity\.topologyRevision[\s\S]*?colorRevision: identity\.colorRevision[\s\S]*?contextFlagSignature: identity\.contextFlagSignature[\s\S]*?pixelWidth: identity\.pixelWidth[\s\S]*?pixelHeight: identity\.pixelHeight/.test(rendererSource)
-      && /function recordVisibleFrameTransactionMetric[\s\S]*?committedFrameIdentity: providedCommittedFrameIdentity[\s\S]*?getCommittedFrameIdentity\(transform[\s\S]*?commitKey: getCommittedFrameKeySignature\(committedFrameIdentity\.commitKey\)[\s\S]*?committedFrameIdentity/.test(rendererSource)
+      && /function recordVisibleFrameTransactionMetric\(status, details = \{\}\) \{[\s\S]*?getVisibleFrameDiagnosticsOwner\(\)\.recordVisibleFrameTransaction\(status, details\)\.metricEntry;/.test(rendererSource)
+      && /function recordVisibleFrameTransactionCore[\s\S]*?committedFrameIdentity: providedCommittedFrameIdentity[\s\S]*?getCommittedFrameIdentity[\s\S]*?getCommittedFrameKeySignature[\s\S]*?commitKey: visibleFrameCommitKey[\s\S]*?committedFrameIdentity/.test(visibleFrameDiagnosticsOwnerSource)
       && /function getInteractionCompositeMismatchReasons[\s\S]*?selection-version-mismatch[\s\S]*?context-flag-mismatch[\s\S]*?color-revision-mismatch/.test(renderCacheOwnerSource)
       && /function getInteractionCompositeReuseDecision[\s\S]*?allowSelectionTopologyContinuity[\s\S]*?continuityReasons\.has\(reason\)/.test(renderCacheOwnerSource)
       && /function captureLastGoodFrame[\s\S]*?cache\.lastGoodFrame\.commitKeySignature = getCommittedFrameKeySignature\(identity\)[\s\S]*?cache\.lastGoodFrame\.colorRevision = identity\.colorRevision/.test(rendererSource)

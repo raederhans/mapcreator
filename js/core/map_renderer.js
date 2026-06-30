@@ -211,6 +211,7 @@ import { createRendererSurfaceLifecycleOwner } from "./renderer/renderer_surface
 import { createRendererProjectionPathOwner } from "./renderer/renderer_projection_path_owner.js";
 import { createRendererSvgSurfaceLifecycleOwner } from "./renderer/renderer_svg_surface_lifecycle_owner.js";
 import { createRendererFitProjectionOwner } from "./renderer/renderer_fit_projection_owner.js";
+import { createVisibleFrameDiagnosticsOwner } from "./renderer/visible_frame_diagnostics_owner.js";
 import { recordColorRebuildDiagnostics, recordPartialColorRefreshDiagnostics, recordPendingPoliticalColorEditClearDiagnostics, recordPoliticalPatchOverlayPaintDiagnostics, recordProgressivePoliticalFullCacheReadyDiagnostics, recordRenderPassInvalidationDiagnostics, recordVisibleFrameTransactionDiagnostics } from "./renderer/render_transaction_diagnostics.js";
 import { createIntensityFieldMaskOwner } from "./renderer/intensity_field_mask_owner.js";
 import {
@@ -988,6 +989,7 @@ let rendererSvgSurfaceLifecycleOwner = null;
 let rendererFitProjectionOwner = null;
 let setMapDataTransactionOwner = null;
 let renderRequestBoundaryOwner = null;
+let visibleFrameDiagnosticsOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
@@ -1295,6 +1297,45 @@ function getRenderRequestBoundaryOwner() {
     },
   });
   return renderRequestBoundaryOwner;
+}
+
+function getVisibleFrameDiagnosticsOwner() {
+  if (visibleFrameDiagnosticsOwner) {
+    return visibleFrameDiagnosticsOwner;
+  }
+  visibleFrameDiagnosticsOwner = createVisibleFrameDiagnosticsOwner({
+    effects: {
+      incrementPerfCounter,
+      recordVisibleFrameTransactionDiagnostics: (payload) => recordVisibleFrameTransactionDiagnostics(runtimeState, payload),
+      recordRenderPerfMetric,
+      setFirstVisibleFramePainted: (painted) => {
+        runtimeState.firstVisibleFramePainted = Boolean(painted);
+      },
+      callFirstVisibleFramePaintedHook: (payload) => {
+        callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", payload);
+      },
+    },
+    getters: {
+      getRenderPassCacheState,
+      getDefaultTransform: () => runtimeState.zoomTransform || globalThis.d3?.zoomIdentity,
+      getCommittedFrameIdentity,
+      getCommittedFrameKeySignature,
+      getFrameStateSnapshot: () => ({
+        activeScenarioId: runtimeState.activeScenarioId,
+        sceneGeneration: runtimeState.sceneGeneration,
+        scenarioDataGeneration: runtimeState.scenarioDataGeneration,
+        topologyRevision: runtimeState.topologyRevision,
+        colorRevision: runtimeState.colorRevision,
+        selectionVersion: runtimeState.selectionVersion,
+        renderPhase: runtimeState.renderPhase,
+        topologyBundleMode: runtimeState.topologyBundleMode,
+      }),
+      getFirstVisiblePoliticalFrameBlockReason,
+      getOceanBaseFillColor,
+      hasFirstVisibleFramePainted: () => Boolean(runtimeState.firstVisibleFramePainted),
+    },
+  });
+  return visibleFrameDiagnosticsOwner;
 }
 
 function getStrategicOverlayHelpersOwner() {
@@ -2763,64 +2804,7 @@ function recordInteractionDurationMetric(name, durationMs, details = {}) {
 }
 
 function recordVisibleFrameTransactionMetric(status, details = {}) {
-  const normalizedStatus = String(status || "").trim() || "unknown";
-  const cache = getRenderPassCacheState();
-  incrementPerfCounter("visibleFrameTransactionCount");
-  if (normalizedStatus === "committed") incrementPerfCounter("visibleFrameCommittedCount");
-  if (normalizedStatus === "reused") incrementPerfCounter("visibleFrameReusedCount");
-  if (normalizedStatus === "rejected") incrementPerfCounter("visibleFrameRejectedCount");
-  if (normalizedStatus === "missing") incrementPerfCounter("visibleFrameMissingCount");
-  if (normalizedStatus === "blocked") incrementPerfCounter("visibleFrameBlockedCount");
-  const {
-    transform: metricTransform,
-    durationMs: metricDurationMs,
-    committedFrameIdentity: providedCommittedFrameIdentity,
-    ...publicDetails
-  } = details;
-  const transform = metricTransform || runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
-  const committedFrameIdentity = providedCommittedFrameIdentity || getCommittedFrameIdentity(transform, {
-    status: normalizedStatus,
-    reason: String(details.reason || cache.lastAction || "visible-frame"),
-    paintSource: String(details.paintSource || ""),
-    blockReason: String(details.blockReason || ""),
-  });
-  const identity = {
-    ...(committedFrameIdentity.commitKey || {}),
-    ...(committedFrameIdentity.metadata || {}),
-  };
-  const reason = String(details.reason || cache.lastAction || "visible-frame");
-  recordVisibleFrameTransactionDiagnostics(runtimeState, {
-    status: normalizedStatus, reason, details, identity, committedFrameIdentity,
-    visibleFrameCommitKey: getCommittedFrameKeySignature(committedFrameIdentity.commitKey), durationMs: Number(metricDurationMs || 0),
-  });
-  return recordRenderPerfMetric("visibleFrameTransaction", Number(metricDurationMs || 0), {
-    ...publicDetails,
-    status: normalizedStatus,
-    reason,
-    paintSource: String(details.paintSource || ""),
-    accepted: normalizedStatus === "committed" || normalizedStatus === "reused",
-    blockReason: String(details.blockReason || ""),
-    activeScenarioId: String(details.activeScenarioId || identity.scenarioId || runtimeState.activeScenarioId || ""),
-    sceneGeneration: Number(details.sceneGeneration ?? identity.sceneGeneration ?? runtimeState.sceneGeneration ?? 0),
-    scenarioDataGeneration: Number(details.scenarioDataGeneration ?? identity.scenarioDataGeneration ?? runtimeState.scenarioDataGeneration ?? 0),
-    topologyRevision: Number(details.topologyRevision ?? identity.topologyRevision ?? runtimeState.topologyRevision ?? 0),
-    colorRevision: Number(details.colorRevision ?? identity.colorRevision ?? runtimeState.colorRevision ?? 0),
-    selectionVersion: Number(details.selectionVersion ?? identity.selectionVersion ?? runtimeState.selectionVersion ?? 0),
-    politicalDataStage: String(details.politicalDataStage || identity.politicalDataStage || ""),
-    fullPoliticalReady: !!(details.fullPoliticalReady ?? identity.fullPoliticalReady),
-    finePoliticalCacheReady: !!(details.finePoliticalCacheReady ?? identity.finePoliticalCacheReady),
-    phase: String(details.phase || runtimeState.renderPhase || ""),
-    count: Number(cache.counters.visibleFrameTransactionCount || 0),
-    committedCount: Number(cache.counters.visibleFrameCommittedCount || 0),
-    reusedCount: Number(cache.counters.visibleFrameReusedCount || 0),
-    rejectedCount: Number(cache.counters.visibleFrameRejectedCount || 0),
-    missingCount: Number(cache.counters.visibleFrameMissingCount || 0),
-    blockedCount: Number(cache.counters.visibleFrameBlockedCount || 0),
-    staleAgeMs: Math.max(0, Number(details.staleAgeMs || 0)),
-    dirtyFeatureCount: Math.max(0, Number(details.dirtyFeatureCount || 0)),
-    commitKey: getCommittedFrameKeySignature(committedFrameIdentity.commitKey),
-    committedFrameIdentity,
-  });
+  return getVisibleFrameDiagnosticsOwner().recordVisibleFrameTransaction(status, details).metricEntry;
 }
 
 function recordUiRefreshMetric(name, details = {}) {
@@ -3472,59 +3456,15 @@ function getFirstVisiblePoliticalFrameBlockReason(reason = "visible-frame") {
 }
 
 function noteFirstVisibleFrameBlocked(reason = "visible-frame", blockReason = "unknown") {
-  recordRenderPerfMetric("firstVisibleFrameBlocked", 0, {
-    reason: String(reason || "visible-frame"),
-    blockReason: String(blockReason || "unknown"),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    topologyRevision: Number(runtimeState.topologyRevision || 0),
-    colorRevision: Number(runtimeState.colorRevision || 0),
-    topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
-    oceanFill: getOceanBaseFillColor(),
-  });
-  recordVisibleFrameTransactionMetric("blocked", {
-    reason: String(reason || "visible-frame"),
-    blockReason: String(blockReason || "unknown"),
-    paintSource: "first-visible-frame",
-  });
+  getVisibleFrameDiagnosticsOwner().recordFirstVisibleFrameBlocked(reason, blockReason);
 }
 
 function markFirstVisibleFramePainted(reason = "visible-frame") {
-  if (runtimeState.firstVisibleFramePainted) return;
-  const blockReason = getFirstVisiblePoliticalFrameBlockReason(reason);
-  if (blockReason) {
-    noteFirstVisibleFrameBlocked(reason, blockReason);
-    return;
-  }
-  runtimeState.firstVisibleFramePainted = true;
-  recordRenderPerfMetric("firstVisibleFramePainted", 0, {
-    reason: String(reason || "visible-frame"),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    topologyRevision: Number(runtimeState.topologyRevision || 0),
-    colorRevision: Number(runtimeState.colorRevision || 0),
-    topologyBundleMode: String(runtimeState.topologyBundleMode || "single"),
-    oceanFill: getOceanBaseFillColor(),
-  });
-  recordVisibleFrameTransactionMetric("committed", {
-    reason: String(reason || "visible-frame"),
-    paintSource: "first-visible-frame",
-    committedFrameIdentity: getCommittedFrameIdentity(runtimeState.zoomTransform || globalThis.d3?.zoomIdentity, {
-      status: "committed",
-      reason: String(reason || "visible-frame"),
-      paintSource: "first-visible-frame",
-    }),
-  });
-  callRuntimeHook(runtimeState, "noteFirstVisibleFramePaintedFn", {
-    reason: String(reason || "visible-frame"),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-  });
+  getVisibleFrameDiagnosticsOwner().markFirstVisibleFramePainted(reason);
 }
 
 function resetFirstVisibleFramePainted(reason = "visible-frame-reset") {
-  runtimeState.firstVisibleFramePainted = false;
-  recordRenderPerfMetric("firstVisibleFramePaintedReset", 0, {
-    reason: String(reason || "visible-frame-reset"),
-    activeScenarioId: String(runtimeState.activeScenarioId || ""),
-  });
+  getVisibleFrameDiagnosticsOwner().resetFirstVisibleFramePainted(reason);
 }
 
 function canDrawBaseVisibleFrameFallback() {

@@ -17,6 +17,7 @@ const FILES = Object.freeze({
   exactAfterSettleRefreshPlans: "js/core/map_renderer/exact_after_settle_refresh_plans.js",
   exactAfterSettlePassCatalog: "js/core/renderer/exact_after_settle_pass_catalog.js",
   hgoPreviewRenderOwner: "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+  renderTransactionDiagnostics: "js/core/renderer/render_transaction_diagnostics.js",
   renderCacheOwner: "js/core/renderer/render_cache_owner.js",
   renderTransformReusePolicyOwner: "js/core/renderer/render_transform_reuse_policy_owner.js",
   projectedGeometryBoundsOwner: "js/core/renderer/projected_geometry_bounds_owner.js",
@@ -26,6 +27,7 @@ const FILES = Object.freeze({
   rendererStartupTransactionOwner: "js/core/renderer/renderer_startup_transaction_owner.js",
   setMapDataTransactionOwner: "js/core/map_renderer/set_map_data_transaction_owner.js",
   renderRequestBoundaryOwner: "js/core/map_renderer/render_request_boundary_owner.js",
+  visibleFrameDiagnosticsOwner: "js/core/renderer/visible_frame_diagnostics_owner.js",
   rendererRenderLifecycleOwner: "js/core/renderer/renderer_render_lifecycle_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
@@ -67,6 +69,9 @@ const FILES = Object.freeze({
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
+  visibleFrameDiagnosticsOwnerDoc: "docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md",
+  visibleFrameDiagnosticsOwnerTest: "tests/visible_frame_diagnostics_owner_behavior.test.mjs",
+  visibleFrameDiagnosticsInventoryTest: "tests/visible_frame_diagnostics_owner_inventory.test.mjs",
 });
 
 const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
@@ -112,6 +117,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
   [FILES.renderRequestBoundaryOwner]: 160,
+  [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
@@ -225,6 +231,7 @@ function collectFailures() {
   const exactAfterSettleRefreshPlans = readProjectFile(FILES.exactAfterSettleRefreshPlans);
   const exactAfterSettlePassCatalog = readProjectFile(FILES.exactAfterSettlePassCatalog);
   const hgoPreviewRenderOwner = readProjectFile(FILES.hgoPreviewRenderOwner);
+  const renderTransactionDiagnostics = readProjectFile(FILES.renderTransactionDiagnostics);
   const renderCacheOwner = readProjectFile(FILES.renderCacheOwner);
   const renderTransformReusePolicyOwner = readProjectFile(FILES.renderTransformReusePolicyOwner);
   const projectedGeometryBoundsOwner = readProjectFile(FILES.projectedGeometryBoundsOwner);
@@ -266,6 +273,7 @@ function collectFailures() {
   const rendererSetMapDataTransactionOwnerTest = readProjectFile(FILES.rendererSetMapDataTransactionOwnerTest);
   const rendererSetMapDataTransactionInventoryTest = readProjectFile(FILES.rendererSetMapDataTransactionInventoryTest);
   const renderRequestBoundaryOwner = readProjectFile(FILES.renderRequestBoundaryOwner);
+  const visibleFrameDiagnosticsOwner = readProjectFile(FILES.visibleFrameDiagnosticsOwner);
   const rendererTransactionResetHardeningPreflightDoc = readProjectFile(
     FILES.rendererTransactionResetHardeningPreflightDoc,
   );
@@ -279,6 +287,9 @@ function collectFailures() {
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
     FILES.rendererRenderRequestBoundaryInventoryTest,
   );
+  const visibleFrameDiagnosticsOwnerDoc = readProjectFile(FILES.visibleFrameDiagnosticsOwnerDoc);
+  const visibleFrameDiagnosticsOwnerTest = readProjectFile(FILES.visibleFrameDiagnosticsOwnerTest);
+  const visibleFrameDiagnosticsInventoryTest = readProjectFile(FILES.visibleFrameDiagnosticsInventoryTest);
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.stateWriteAllowlist]: stateWriteAllowlist,
@@ -292,6 +303,7 @@ function collectFailures() {
     [FILES.exactAfterSettleRefreshPlans]: exactAfterSettleRefreshPlans,
     [FILES.exactAfterSettlePassCatalog]: exactAfterSettlePassCatalog,
     [FILES.hgoPreviewRenderOwner]: hgoPreviewRenderOwner,
+    [FILES.renderTransactionDiagnostics]: renderTransactionDiagnostics,
     [FILES.renderCacheOwner]: renderCacheOwner,
     [FILES.renderTransformReusePolicyOwner]: renderTransformReusePolicyOwner,
     [FILES.projectedGeometryBoundsOwner]: projectedGeometryBoundsOwner,
@@ -333,6 +345,7 @@ function collectFailures() {
     [FILES.rendererSetMapDataTransactionOwnerTest]: rendererSetMapDataTransactionOwnerTest,
     [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
     [FILES.renderRequestBoundaryOwner]: renderRequestBoundaryOwner,
+    [FILES.visibleFrameDiagnosticsOwner]: visibleFrameDiagnosticsOwner,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
     [FILES.rendererTransactionResetHardeningInventoryTest]: rendererTransactionResetHardeningInventoryTest,
     [FILES.rendererRenderLifecyclePreflightDoc]: rendererRenderLifecyclePreflightDoc,
@@ -340,6 +353,9 @@ function collectFailures() {
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
+    [FILES.visibleFrameDiagnosticsOwnerDoc]: visibleFrameDiagnosticsOwnerDoc,
+    [FILES.visibleFrameDiagnosticsOwnerTest]: visibleFrameDiagnosticsOwnerTest,
+    [FILES.visibleFrameDiagnosticsInventoryTest]: visibleFrameDiagnosticsInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -2239,9 +2255,168 @@ function collectFailures() {
     }
   }
 
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.visibleFrameDiagnosticsOwner))) {
+    failures.push(`${FILES.visibleFrameDiagnosticsOwner} must exist for P42.`);
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("P42 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  for (const token of [
+    "export function createVisibleFrameDiagnosticsOwner({",
+    "const REQUIRED_EFFECT_NAMES = Object.freeze([",
+    "const REQUIRED_GETTER_NAMES = Object.freeze([",
+    "recordVisibleFrameTransaction",
+    "recordFirstVisibleFrameBlocked",
+    "markFirstVisibleFramePainted",
+    "resetFirstVisibleFramePainted",
+    "createSummary({",
+    "effectOrder",
+    "getterOrder",
+    "counterOrder",
+    "Object.freeze({",
+  ]) {
+    if (!visibleFrameDiagnosticsOwner.includes(token)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsOwner} must keep P42 owner token: ${token}`);
+    }
+  }
+  for (const token of [
+    "map_renderer.js",
+    "runtimeState =",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "createScenarioRefreshRuntime",
+    "createExactAfterSettleScheduler",
+    "createStrategicOverlayRuntimeOwner",
+    "renderer_render_lifecycle_owner",
+  ]) {
+    if (visibleFrameDiagnosticsOwner.includes(token)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsOwner} must avoid P42 forbidden token: ${token}`);
+    }
+  }
+  if (hasMapRendererImport(visibleFrameDiagnosticsOwner)) {
+    failures.push(`${FILES.visibleFrameDiagnosticsOwner} must not import map_renderer.js.`);
+  }
+  for (const token of [
+    "from \"./renderer/visible_frame_diagnostics_owner.js\";",
+    "let visibleFrameDiagnosticsOwner = null;",
+    "function getVisibleFrameDiagnosticsOwner()",
+    "visibleFrameDiagnosticsOwner = createVisibleFrameDiagnosticsOwner({",
+    "recordVisibleFrameTransactionDiagnostics: (payload) => recordVisibleFrameTransactionDiagnostics(runtimeState, payload)",
+    "hasFirstVisibleFramePainted: () => Boolean(runtimeState.firstVisibleFramePainted)",
+    "return getVisibleFrameDiagnosticsOwner().recordVisibleFrameTransaction(status, details).metricEntry;",
+    "getVisibleFrameDiagnosticsOwner().recordFirstVisibleFrameBlocked(reason, blockReason);",
+    "getVisibleFrameDiagnosticsOwner().markFirstVisibleFramePainted(reason);",
+    "getVisibleFrameDiagnosticsOwner().resetFirstVisibleFramePainted(reason);",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P42 visible-frame diagnostics wrapper token: ${token}`);
+    }
+  }
+  const visibleFrameWrapperStart = renderer.indexOf("function recordVisibleFrameTransactionMetric");
+  const visibleFrameWrapperEnd = renderer.indexOf("function recordUiRefreshMetric");
+  const visibleFrameWrapperSource = visibleFrameWrapperStart >= 0 && visibleFrameWrapperEnd > visibleFrameWrapperStart
+    ? renderer.slice(visibleFrameWrapperStart, visibleFrameWrapperEnd)
+    : "";
+  if (!visibleFrameWrapperSource) {
+    failures.push(`${FILES.renderer} must keep recordVisibleFrameTransactionMetric wrapper.`);
+  }
+  for (const token of [
+    "incrementPerfCounter(\"visibleFrameTransactionCount\")",
+    "if (normalizedStatus === \"committed\")",
+    "recordVisibleFrameTransactionDiagnostics(runtimeState, {",
+    "return recordRenderPerfMetric(\"visibleFrameTransaction\"",
+  ]) {
+    if (visibleFrameWrapperSource.includes(token)) {
+      failures.push(`${FILES.renderer} P42 wrapper must delegate old inline token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function recordVisibleFrameTransactionDiagnostics",
+    "function recordRenderTransactionIdentitySnapshot",
+    "export function recordRenderTransactionSnapshot",
+    "function detectSnapshotWarnings",
+    "lastAcceptedFrameIdentity",
+    "renderReuseAcrossDataGeneration",
+    "visibleFrameStatus",
+  ]) {
+    if (!renderTransactionDiagnostics.includes(token)) {
+      failures.push(`${FILES.renderTransactionDiagnostics} must keep P42 diagnostics token: ${token}`);
+    }
+  }
+  const publicFacade = readProjectFile("js/core/map_renderer/public.js");
+  if (publicFacade.includes("visible_frame_diagnostics_owner")) {
+    failures.push("js/core/map_renderer/public.js must not expose P42 visible-frame diagnostics owner.");
+  }
+  for (const [relativePath, source] of [
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+  ]) {
+    if (source.includes("visible_frame_diagnostics_owner")) {
+      failures.push(`${relativePath} must not import P42 visible-frame diagnostics owner.`);
+    }
+  }
+  if (stateWriteAllowlist.includes("visible_frame_diagnostics_owner")) {
+    failures.push(`${FILES.stateWriteAllowlist} must not include P42 visible-frame diagnostics owner.`);
+  }
+  for (const token of [
+    "\"test:node:visible-frame-diagnostics-owner\": \"node --test tests/visible_frame_diagnostics_owner_behavior.test.mjs\"",
+    "\"test:node:visible-frame-diagnostics-inventory\": \"node --test tests/visible_frame_diagnostics_owner_inventory.test.mjs\"",
+    "\"test:node:visible-frame-diagnostics\": \"npm run test:node:visible-frame-diagnostics-owner && npm run test:node:visible-frame-diagnostics-inventory\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P42 visible-frame diagnostics script: ${token}`);
+    }
+  }
+  for (const token of [
+    "recordVisibleFrameTransaction preserves committed diagnostic and metric payload",
+    "markFirstVisibleFramePainted records accepted payload once and keeps hook payload",
+    "markFirstVisibleFramePainted records blocked payload without accepting the frame",
+    "visible frame status counters preserve missing reused rejected and blocked buckets",
+    "createVisibleFrameDiagnosticsOwner fails fast for missing dependencies",
+    "visible frame diagnostics owner returns frozen summaries and stays outside render lifecycle internals",
+  ]) {
+    if (!visibleFrameDiagnosticsOwnerTest.includes(token)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsOwnerTest} must cover P42 behavior token: ${token}`);
+    }
+  }
+  for (const token of [
+    "P42 visible frame diagnostics owner files and package scripts are registered",
+    "P42 owner owns diagnostics payload orchestration only",
+    "map_renderer delegates visible frame diagnostics while keeping render lifecycle anchors",
+    "render transaction diagnostics keeps visible frame snapshot ownership",
+    "P42 keeps public facade scenario exact and state-write boundaries unchanged",
+  ]) {
+    if (!visibleFrameDiagnosticsInventoryTest.includes(token)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsInventoryTest} must cover P42 inventory token: ${token}`);
+    }
+  }
+  for (const heading of [
+    "# Renderer Visible Frame Diagnostics Owner P42",
+    "## Scope",
+    "## Implementation Plan",
+    "## Validation Plan",
+    "## Delivery Package",
+  ]) {
+    if (!visibleFrameDiagnosticsOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsOwnerDoc} must keep P42 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "`visible_frame_diagnostics_owner.js` owns visible-frame diagnostic payload and metric ordering only.",
+    "`map_renderer.js` remains the composition root and keeps first-visible wrapper names stable.",
+    "`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, state-write allowlist, and `dist/app/**` stay out of scope.",
+    "Metric names, reason strings, paintSource values, blockReason values, and payload keys remain compatible with the pre-P42 wrappers.",
+  ]) {
+    if (!visibleFrameDiagnosticsOwnerDoc.includes(token)) {
+      failures.push(`${FILES.visibleFrameDiagnosticsOwnerDoc} must lock P42 boundary token: ${token}`);
+    }
+  }
+
   const requiredImports = [
     "./map_renderer/set_map_data_transaction_owner.js",
     "./map_renderer/render_request_boundary_owner.js",
+    "./renderer/visible_frame_diagnostics_owner.js",
     "./map_renderer/scenario_refresh_runtime.js",
     "./renderer/canvas_color_helpers.js",
     "./map_renderer/exact_after_settle_scheduler.js",
@@ -2664,6 +2839,25 @@ function collectFailures() {
         "getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;",
         "getRenderRequestBoundaryOwner().flushInteractionRenderBoundary(reason).completed;",
         "getRenderRequestBoundaryOwner().requestRendererRenderBoundary(reason, {",
+      ],
+    },
+    {
+      ownerPath: FILES.visibleFrameDiagnosticsOwner,
+      ownerTokens: [
+        "export function createVisibleFrameDiagnosticsOwner({",
+        "function recordVisibleFrameTransaction(",
+        "function recordFirstVisibleFrameBlocked(",
+        "function markFirstVisibleFramePainted(",
+        "function resetFirstVisibleFramePainted(",
+        "counterOrder",
+        "recordVisibleFrameTransactionCore(",
+      ],
+      rendererRequiredTokens: [
+        "from \"./renderer/visible_frame_diagnostics_owner.js\";",
+        "let visibleFrameDiagnosticsOwner = null;",
+        "function getVisibleFrameDiagnosticsOwner()",
+        "visibleFrameDiagnosticsOwner = createVisibleFrameDiagnosticsOwner({",
+        "return getVisibleFrameDiagnosticsOwner().recordVisibleFrameTransaction(status, details).metricEntry;",
       ],
     },
     {

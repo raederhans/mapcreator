@@ -1,14 +1,14 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 21:34 UTC
+Last updated: 2026-06-30 21:44 UTC
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest synced functional baseline is `origin/main@419c6ba0`, the pushed P41 integration truth closeout.
-- Active renderer handoff: P41 render request boundary owner is integrated. Future renderer work should start from the P40/P41 guardrails and keep render/draw/pass/hit/scenario/exact/strategic/public/state-write migration behind a separate preflight.
+- Latest synced functional baseline is `origin/main@74bc91ff`, the pushed Phase6A public-sample closeout that also carries the P41 dist sync.
+- Active renderer handoff: P42 visible frame diagnostics owner is ready for integration in isolated worktree `C:\Users\raede\.codex\worktrees\scenario-forge-p42-visible-frame-diagnostics-owner`. P41 render request boundary owner is integrated. Future renderer work should start from the P40/P41/P42 guardrails and keep render/draw/pass/hit/scenario/exact/strategic/public/state-write migration behind a separate preflight.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, and P40 render lifecycle preflight.
-- Live test/build owner: main thread owns P41 Node/static validation. Browser/dev-server/live E2E remain idle for this P41 lane; Pages dist generation and release smoke stay with feature lanes that actually touch dist or browser runtime.
+- Live test/build owner: main thread owns P42 Node/static validation. Browser/dev-server/live E2E remain idle for this P42 lane; Pages dist generation and release smoke stay with feature lanes that actually touch dist or browser runtime.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
@@ -19,15 +19,32 @@ Last updated: 2026-06-30 21:34 UTC
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list`, `git status --short --branch`, and `git rev-list --left-right --count HEAD...origin/main` on 2026-06-30 during Phase6A closeout.
+Current rows reflect `git worktree list`, `git status --short --branch`, and `git rev-list --left-right --count HEAD...origin/main` on 2026-06-30 during P42 implementation.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@690b1997` | `origin/main@419c6ba0` | active-main-dirty / Phase6A archive closeout | Dirty checkout has only Phase6A archive closeout docs after functional commit `690b1997`. P41 source is integrated and pushed; Pages regeneration refreshed stale P41 dist mirrors in the functional commit. | Direct probes during Phase6A closeout: `verify:pages-dist` passed, local Pages release gate passed at `http://127.0.0.1:4173/`, `git diff --check` passed, final QA returned WATCH/ready-for-integration, and post-functional `verify:dist-drift` passed. | Green for product code and integrated P41 source; yellow only for final registry/archive doc commit until pushed. | Commit this archive closeout, rerun final-head dist drift, then push main. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@74bc91ff` | `origin/main@74bc91ff` | clean / integration target | No dirty files. | Direct probes: `git status --short --branch` shows `## main...origin/main`; `git worktree list` shows this main checkout plus the P42 worktree; rev-list ahead/behind is `0 0`. | Green for current P42 integration; Phase6A/public-sample work is already pushed. | Fast-forward after P42 push if needed, then keep main as the integration truth. |
+| `C:\Users\raede\.codex\worktrees\scenario-forge-p42-visible-frame-diagnostics-owner` | `codex/p42-visible-frame-diagnostics-owner@74bc91ff` | `origin/main@74bc91ff` | ready-for-integration / uncommitted P42 diff | Dirty files: `js/core/map_renderer.js`, `js/core/renderer/visible_frame_diagnostics_owner.js`, `tests/visible_frame_diagnostics_owner_behavior.test.mjs`, `tests/visible_frame_diagnostics_owner_inventory.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tools/check_architecture_boundaries.mjs`, `package.json`, `docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md`, and this registry. Hot files: renderer wrapper, architecture checker, package scripts, scenario static contract. | P42 validation passed on `origin/main@74bc91ff`: owner behavior `9/9`, inventory `5/5`, scenario chunk contracts `57/57`, P40 inventory `8/8`, render transaction diagnostics `21/21`, P38 setMapData `18/18`, P39 reset-hardening `8/8`, exact plans `9/9`, scenario refresh plans `24/24`, architecture boundaries, test import graph `50` specs, state-write allowlist `115` tracked files, and `git diff --check`. | Yellow for future renderer/package/checker/static-contract edits; green against current main product/sample/dist files. | Stage all P42 files, commit with Lore protocol, push to `origin/main`, then write final registry closeout and remove this worktree after remote confirmation. |
 
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Renderer Visible Frame Diagnostics Owner P42 2026-06-30
+
+1. Added `createVisibleFrameDiagnosticsOwner({ effects, getters })` to own visible-frame diagnostic payload, counter, and metric ordering.
+2. Delegated `recordVisibleFrameTransactionMetric()`, `noteFirstVisibleFrameBlocked()`, `markFirstVisibleFramePainted()`, and `resetFirstVisibleFramePainted()` from `map_renderer.js`.
+3. Preserved metric names, status buckets, reason/blockReason/paintSource fields, committed identity payload, commit-key signature, first-visible hook payload, and reset/blocked semantics.
+4. Added P42 behavior/inventory tests and architecture-boundary gates, including cache `lastAction` reason fallback and explicit detail-field override coverage.
+5. Kept `drawCanvas()`, `renderPassToCache()`, hit canvas build, scenario refresh runtime, exact scheduler, strategic runtime, public facade, state-write allowlist, and `dist/app/**` unchanged.
+
+Files: core `js/core/renderer/visible_frame_diagnostics_owner.js`, `js/core/map_renderer.js`; tests `tests/visible_frame_diagnostics_owner_behavior.test.mjs`, `tests/visible_frame_diagnostics_owner_inventory.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`; tooling/package `tools/check_architecture_boundaries.mjs`, `package.json`; docs `docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md` and this registry; temporary files none.
+
+Diff summary: `map_renderer.js` now keeps stable wrappers and effect/getter injection while the new owner builds visible-frame diagnostics and metrics. `tests/scenario_chunk_contracts.test.mjs` follows the current P38/P41/P42 owner shape instead of old inline anchors. `tools/check_architecture_boundaries.mjs` registers P42 files/scripts and scopes migrated inline-token checks to the wrapper slice.
+
+Commit status: this package is intended to be included in the P42 functional Lore commit; no self-hash is recorded inside the same commit. Base divergence: started from `origin/main@419c6ba0`, rebased cleanly onto `origin/main@74bc91ff`, and final validation ran on the latest baseline. Potential conflicts: yellow with future edits to `js/core/map_renderer.js`, `tools/check_architecture_boundaries.mjs`, `package.json`, `tests/scenario_chunk_contracts.test.mjs`, or this registry; green against integrated Phase6A/public-sample files and generated dist.
+
+Validation passed: `node --check` for owner, renderer, new tests, scenario contract, and architecture checker; package JSON parse; P42 owner behavior `9/9`; P42 inventory `5/5`; scenario chunk contracts `57/57`; P40 lifecycle inventory `8/8`; render transaction diagnostics `21/21`; P38 setMapData transaction `18/18`; P39 reset-hardening inventory `8/8`; exact-after-settle refresh plans `9/9`; scenario refresh plans `24/24`; architecture boundaries; test import graph `50` specs; state-write allowlist `115` tracked files; `git diff --check` with Windows LF-to-CRLF warning only. Review fixes: all new files will be staged with the functional commit; the P42 architecture checker no longer full-file scans ordinary visible-frame tokens; payload tests cover reason fallback and explicit details overrides. Not run: browser/dev-server/E2E smoke because P42 is Node/static diagnostics-owner extraction with no Pages/dist/browser entrypoint change. Recommended next step: stage all P42 files, commit, push to `origin/main`, write final registry closeout, and remove the P42 worktree after remote confirmation.
 
 ### Phase6A Public Sample Experience Polish 2026-06-30
 
