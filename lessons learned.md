@@ -506,6 +506,7 @@
 
 ### 静态边界 gate 要锁语义分类
 - 禁止新增 helper/owner/controller 时，只列当前候选文件名会漏掉改名变体；checker 和 inventory test 要用同一套文件名分类器锁住语义，例如 `reset + transaction + owner/helper/controller`。
+- 迁移大文件里的单个 wrapper 时，旧 inline token 的禁止检查要限定到被迁移函数片段；全文件扫描会把其它合法旧路径误报成回归。
 
 ### 并行 registry 刷新别无限 rebase
 - 如果另一个 owner 持续提交 registry-only 状态快照，功能分支反复 rebase 会形成活锁；确认新提交只改 registry 后，用一次 merge 保留状态历史，并在 merge 冲突里写最终整合事实。

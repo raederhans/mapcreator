@@ -25,6 +25,7 @@ const FILES = Object.freeze({
   rendererViewportUpdateOwner: "js/core/renderer/renderer_viewport_update_owner.js",
   rendererStartupTransactionOwner: "js/core/renderer/renderer_startup_transaction_owner.js",
   setMapDataTransactionOwner: "js/core/map_renderer/set_map_data_transaction_owner.js",
+  renderRequestBoundaryOwner: "js/core/map_renderer/render_request_boundary_owner.js",
   rendererRenderLifecycleOwner: "js/core/renderer/renderer_render_lifecycle_owner.js",
   viewportResizeLifecycleOwner: "js/core/renderer/viewport_resize_lifecycle_owner.js",
   zoomInteractionLifecycleOwner: "js/core/renderer/zoom_interaction_lifecycle_owner.js",
@@ -63,6 +64,9 @@ const FILES = Object.freeze({
   rendererTransactionResetHardeningInventoryTest: "tests/renderer_transaction_reset_hardening_inventory_boundary.test.mjs",
   rendererRenderLifecyclePreflightDoc: "docs/active/renderer-render-lifecycle-preflight-20260630.md",
   rendererRenderLifecycleInventoryTest: "tests/renderer_render_lifecycle_inventory_boundary.test.mjs",
+  rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
+  rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
+  rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
 });
 
 const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
@@ -93,7 +97,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 24109,
+  [FILES.renderer]: 24120,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -107,6 +111,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
+  [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
   [FILES.mapInteractionEventBindingOwner]: 220,
@@ -260,6 +265,7 @@ function collectFailures() {
   const setMapDataTransactionOwner = readProjectFile(FILES.setMapDataTransactionOwner);
   const rendererSetMapDataTransactionOwnerTest = readProjectFile(FILES.rendererSetMapDataTransactionOwnerTest);
   const rendererSetMapDataTransactionInventoryTest = readProjectFile(FILES.rendererSetMapDataTransactionInventoryTest);
+  const renderRequestBoundaryOwner = readProjectFile(FILES.renderRequestBoundaryOwner);
   const rendererTransactionResetHardeningPreflightDoc = readProjectFile(
     FILES.rendererTransactionResetHardeningPreflightDoc,
   );
@@ -268,6 +274,11 @@ function collectFailures() {
   );
   const rendererRenderLifecyclePreflightDoc = readProjectFile(FILES.rendererRenderLifecyclePreflightDoc);
   const rendererRenderLifecycleInventoryTest = readProjectFile(FILES.rendererRenderLifecycleInventoryTest);
+  const rendererRenderRequestBoundaryOwnerDoc = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerDoc);
+  const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
+  const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
+    FILES.rendererRenderRequestBoundaryInventoryTest,
+  );
   const sources = {
     [FILES.packageJson]: packageJson,
     [FILES.stateWriteAllowlist]: stateWriteAllowlist,
@@ -321,10 +332,14 @@ function collectFailures() {
     [FILES.setMapDataTransactionOwner]: setMapDataTransactionOwner,
     [FILES.rendererSetMapDataTransactionOwnerTest]: rendererSetMapDataTransactionOwnerTest,
     [FILES.rendererSetMapDataTransactionInventoryTest]: rendererSetMapDataTransactionInventoryTest,
+    [FILES.renderRequestBoundaryOwner]: renderRequestBoundaryOwner,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
     [FILES.rendererTransactionResetHardeningInventoryTest]: rendererTransactionResetHardeningInventoryTest,
     [FILES.rendererRenderLifecyclePreflightDoc]: rendererRenderLifecyclePreflightDoc,
     [FILES.rendererRenderLifecycleInventoryTest]: rendererRenderLifecycleInventoryTest,
+    [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
+    [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
+    [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
   };
 
   for (const [relativePath, budget] of Object.entries(LINE_BUDGETS)) {
@@ -2099,8 +2114,134 @@ function collectFailures() {
     failures.push(`${FILES.stateWriteAllowlist} must not include a P40 render lifecycle owner.`);
   }
 
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.renderRequestBoundaryOwner))) {
+    failures.push(`${FILES.renderRequestBoundaryOwner} must exist for P41.`);
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
+    failures.push("P41 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  for (const token of [
+    "export function createRenderRequestBoundaryOwner({",
+    "const REQUIRED_EFFECT_NAMES = Object.freeze([",
+    "const REQUIRED_GETTER_NAMES = Object.freeze([",
+    "requestRendererRenderBoundary",
+    "requestInteractionRenderBoundary",
+    "flushInteractionRenderBoundary",
+    "createSummary({",
+    "effectOrder",
+    "getterOrder",
+  ]) {
+    if (!renderRequestBoundaryOwner.includes(token)) {
+      failures.push(`${FILES.renderRequestBoundaryOwner} must keep P41 owner token: ${token}`);
+    }
+  }
+  for (const token of [
+    "map_renderer.js",
+    "runtimeState",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "createScenarioRefreshRuntime",
+    "createExactAfterSettleScheduler",
+    "createStrategicOverlayRuntimeOwner",
+    "renderer_render_lifecycle_owner",
+  ]) {
+    if (renderRequestBoundaryOwner.includes(token)) {
+      failures.push(`${FILES.renderRequestBoundaryOwner} must avoid P41 forbidden token: ${token}`);
+    }
+  }
+  if (renderRequestBoundaryOwner.includes("fallback({ effectApi")) {
+    failures.push(`${FILES.renderRequestBoundaryOwner} must keep external fallback callbacks narrow.`);
+  }
+  if (hasMapRendererImport(renderRequestBoundaryOwner)) {
+    failures.push(`${FILES.renderRequestBoundaryOwner} must not import map_renderer.js.`);
+  }
+  for (const token of [
+    "from \"./map_renderer/render_request_boundary_owner.js\";",
+    "let renderRequestBoundaryOwner = null;",
+    "function getRenderRequestBoundaryOwner()",
+    "renderRequestBoundaryOwner = createRenderRequestBoundaryOwner({",
+    "requestRender,",
+    "flushRenderBoundary,",
+    "render,",
+    "hasInteractionRenderContext: () => Boolean(rendererSurfaceHost.getContext())",
+    "getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;",
+    "getRenderRequestBoundaryOwner().flushInteractionRenderBoundary(reason).completed;",
+    "getRenderRequestBoundaryOwner().requestRendererRenderBoundary(reason, {",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P41 render request wrapper token: ${token}`);
+    }
+  }
+  const renderRequestWrapperStart = renderer.indexOf("function requestInteractionRender");
+  const renderRequestWrapperEnd = renderer.indexOf("function normalizeDevInteractionHit");
+  const renderRequestWrapperSource = renderRequestWrapperStart >= 0 && renderRequestWrapperEnd > renderRequestWrapperStart
+    ? renderer.slice(renderRequestWrapperStart, renderRequestWrapperEnd)
+    : "";
+  for (const token of [
+    "const requested = flush ? flushRenderBoundary(reason) : requestRender(reason);",
+    "if (rendererSurfaceHost.getContext()) render();",
+  ]) {
+    if (renderRequestWrapperSource.includes(token)) {
+      failures.push(`${FILES.renderer} P41 wrapper must delegate old inline token: ${token}`);
+    }
+  }
+  for (const token of [
+    "\"test:node:renderer-render-request-boundary-owner\": \"node --test tests/renderer_render_request_boundary_owner_behavior.test.mjs\"",
+    "\"test:node:renderer-render-request-boundary-inventory\": \"node --test tests/renderer_render_request_boundary_inventory.test.mjs\"",
+    "\"test:node:renderer-render-request-boundary\": \"npm run test:node:renderer-render-request-boundary-owner && npm run test:node:renderer-render-request-boundary-inventory\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P41 render request boundary script: ${token}`);
+    }
+  }
+  for (const token of [
+    "requestRendererRenderBoundary returns a frozen default request summary",
+    "requestRendererRenderBoundary preserves fallback completion after request miss",
+    "requestInteractionRenderBoundary keeps request then context render fallback order",
+    "flushInteractionRenderBoundary uses flush boundary effect only",
+    "createRenderRequestBoundaryOwner fails fast for missing dependencies",
+    "render request boundary owner stays outside render lifecycle internals",
+  ]) {
+    if (!rendererRenderRequestBoundaryOwnerTest.includes(token)) {
+      failures.push(`${FILES.rendererRenderRequestBoundaryOwnerTest} must cover P41 behavior token: ${token}`);
+    }
+  }
+  for (const token of [
+    "P41 render request boundary owner files and package scripts are registered",
+    "P41 owner keeps the render request boundary narrow",
+    "P41 map renderer only delegates existing request wrappers",
+    "P41 keeps render lifecycle and public facade boundaries in place",
+  ]) {
+    if (!rendererRenderRequestBoundaryInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererRenderRequestBoundaryInventoryTest} must cover P41 inventory token: ${token}`);
+    }
+  }
+  for (const heading of [
+    "# Renderer Render Request Boundary Owner P41",
+    "## Scope",
+    "## Implementation Plan",
+    "## Validation Plan",
+    "## Delivery Package",
+  ]) {
+    if (!rendererRenderRequestBoundaryOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.rendererRenderRequestBoundaryOwnerDoc} must keep P41 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "`render_request_boundary_owner.js` owns request/flush/fallback ordering only.",
+    "`map_renderer.js` remains the composition root and keeps public wrapper names stable.",
+    "`setRenderPhase()` and `scheduleRenderPhaseIdle()` stay in `map_renderer.js` for P41.",
+    "`drawCanvas()`, `renderPassToCache()`, hit canvas, scenario refresh, exact scheduler, strategic owners, `public.js`, state-write allowlist, and `dist/app/**` stay out of scope.",
+  ]) {
+    if (!rendererRenderRequestBoundaryOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererRenderRequestBoundaryOwnerDoc} must lock P41 boundary token: ${token}`);
+    }
+  }
+
   const requiredImports = [
     "./map_renderer/set_map_data_transaction_owner.js",
+    "./map_renderer/render_request_boundary_owner.js",
     "./map_renderer/scenario_refresh_runtime.js",
     "./renderer/canvas_color_helpers.js",
     "./map_renderer/exact_after_settle_scheduler.js",
@@ -2500,6 +2641,31 @@ function collectFailures() {
   }
 
   const ownershipRules = [
+    {
+      ownerPath: FILES.renderRequestBoundaryOwner,
+      ownerTokens: [
+        "export function createRenderRequestBoundaryOwner({",
+        "function requestRendererRenderBoundary(",
+        "function requestInteractionRenderBoundary(",
+        "function flushInteractionRenderBoundary(",
+        "effectOrder.push(requestEffectName);",
+        "fallback();",
+        "effectApi.flushRenderBoundary(normalizedReason)",
+      ],
+      rendererRequiredTokens: [
+        "from \"./map_renderer/render_request_boundary_owner.js\";",
+        "let renderRequestBoundaryOwner = null;",
+        "function getRenderRequestBoundaryOwner()",
+        "renderRequestBoundaryOwner = createRenderRequestBoundaryOwner({",
+        "requestRender,",
+        "flushRenderBoundary,",
+        "render,",
+        "hasInteractionRenderContext: () => Boolean(rendererSurfaceHost.getContext())",
+        "getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;",
+        "getRenderRequestBoundaryOwner().flushInteractionRenderBoundary(reason).completed;",
+        "getRenderRequestBoundaryOwner().requestRendererRenderBoundary(reason, {",
+      ],
+    },
     {
       ownerPath: FILES.rendererSurfaceLifecycleOwner,
       ownerTokens: [
