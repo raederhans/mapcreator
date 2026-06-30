@@ -552,9 +552,16 @@ export const UI_COPY_CATALOG = Object.freeze({
   "Sample loaded": { zh: "示例已加载", en: "Sample loaded" },
   "Sample unavailable": { zh: "示例不可用", en: "Sample unavailable" },
   "selected sample": { zh: "所选示例", en: "selected sample" },
+  "Sample guide actions": { zh: "示例引导操作", en: "Sample guide actions" },
+  "Open export": { zh: "打开导出", en: "Open export" },
   "Open export workbench": { zh: "打开导出工作台", en: "Open export workbench" },
   "Download original JSON": { zh: "下载原始 JSON", en: "Download original JSON" },
+  "Continue with default guide": { zh: "继续使用默认引导", en: "Continue with default guide" },
   "Dismiss sample message": { zh: "关闭示例消息", en: "Dismiss sample message" },
+  "This is an editable sample project. Export an image or save your own project copy when you are ready.": {
+    zh: "这是可编辑的示例项目。准备好后，导出图片或保存你自己的项目副本。",
+    en: "This is an editable sample project. Export an image or save your own project copy when you are ready.",
+  },
   "Edit this starter map, then export your own image or download the original sample JSON.": {
     zh: "编辑这个起步地图，然后导出自己的图片，或下载原始示例 JSON。",
     en: "Edit this starter map, then export your own image or download the original sample JSON.",

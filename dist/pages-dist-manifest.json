@@ -12,7 +12,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 287141,
+      "size_bytes": 288121,
       "source_kind": "dist"
     },
     {
@@ -37077,7 +37077,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8463198,
+      "size_bytes": 8463858,
       "source_kind": "generated_ignored"
     },
     {
@@ -45517,7 +45517,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 266919,
+      "size_bytes": 268855,
       "source_kind": "dist"
     },
     {
@@ -45717,7 +45717,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 96228,
+      "size_bytes": 96811,
       "source_kind": "dist"
     },
     {
@@ -46682,7 +46682,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 126789,
+      "size_bytes": 128494,
       "source_kind": "dist"
     },
     {
@@ -46782,7 +46782,7 @@
     },
     {
       "path": "app/js/ui/toolbar/sample_project_banner_controller.js",
-      "size_bytes": 6558,
+      "size_bytes": 10977,
       "source_kind": "dist"
     },
     {
@@ -47357,7 +47357,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465923,
+      "size_bytes": 1465924,
       "source_kind": "dist"
     },
     {
@@ -47489,7 +47489,7 @@
     {
       "file_count": 9411,
       "path": "app",
-      "size_bytes": 965501313
+      "size_bytes": 965511596
     },
     {
       "file_count": 57,
@@ -47499,7 +47499,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1465923
+      "size_bytes": 1465924
     },
     {
       "file_count": 1,
@@ -47522,5 +47522,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972063300
+  "total_bytes": 972073584
 }

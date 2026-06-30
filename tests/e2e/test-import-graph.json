@@ -2,53 +2,53 @@
   "schemaVersion": 1,
   "graphMode": "artifact-only",
   "summary": {
-    "specCount": 50,
-    "nodeCount": 62,
-    "reverseIndexKeyCount": 84,
+    "specCount": 51,
+    "nodeCount": 63,
+    "reverseIndexKeyCount": 85,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "js/core/map_renderer.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "js/core/scenario_dispatcher.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "js/core/state.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "js/ui/sidebar.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-app-paths.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-app.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-frontline-panel.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-project-import.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-web-server.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/startup-paths.js",
-        "specCount": 50
+        "specCount": 51
       },
       {
         "dependency": "tests/e2e/support/playwright-selectors.js",
@@ -761,6 +761,32 @@
         "js/core/state.js",
         "js/ui/sidebar.js",
         "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/sample_guide_deeplink.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
         "tests/e2e/support/playwright-app-paths.js",
         "tests/e2e/support/playwright-app.js",
         "tests/e2e/support/playwright-frontline-panel.js",
@@ -1630,6 +1656,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -1682,6 +1709,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -1742,6 +1770,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -1816,6 +1845,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -1885,6 +1915,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -1995,6 +2026,9 @@
     "tests/e2e/river_layer_regression.spec.js": [
       "tests/e2e/river_layer_regression.spec.js"
     ],
+    "tests/e2e/sample_guide_deeplink.spec.js": [
+      "tests/e2e/sample_guide_deeplink.spec.js"
+    ],
     "tests/e2e/scenario_apply_concurrency.spec.js": [
       "tests/e2e/scenario_apply_concurrency.spec.js"
     ],
@@ -2076,6 +2110,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -2128,6 +2163,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -2180,6 +2216,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -2232,6 +2269,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -2295,6 +2333,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",
@@ -2351,6 +2390,7 @@
       "tests/e2e/release/pages_public_release_gate.spec.js",
       "tests/e2e/review_regressions.spec.js",
       "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
       "tests/e2e/scenario_apply_concurrency.spec.js",
       "tests/e2e/scenario_apply_resilience.spec.js",
       "tests/e2e/scenario_blank_exit.spec.js",

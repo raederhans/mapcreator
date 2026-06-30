@@ -9049,6 +9049,57 @@ body.counter-editor-modal-open {
   line-height: 1.5;
 }
 
+.scenario-guide-sample-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(31, 79, 126, 0.16);
+  border-radius: 8px;
+  background: rgba(231, 244, 255, 0.78);
+}
+
+.scenario-guide-sample-card.hidden,
+.scenario-guide-sample-card[hidden] {
+  display: none;
+}
+
+.scenario-guide-sample-card[data-sample-guide-tone="error"] {
+  border-color: rgba(176, 68, 58, 0.22);
+  background: rgba(255, 239, 236, 0.82);
+}
+
+.scenario-guide-sample-card__copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.scenario-guide-sample-card__title {
+  margin: 0;
+  color: var(--text-primary);
+  font: 700 0.84rem/1.35 var(--font-body);
+}
+
+.scenario-guide-sample-card__body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.scenario-guide-sample-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scenario-guide-sample-card__action {
+  min-height: 32px;
+  padding: 7px 10px;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
 .scenario-guide-bilingual-copy {
   display: flex;
   flex-direction: column;

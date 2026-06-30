@@ -71,7 +71,10 @@ import { createPaletteLibraryPanelController } from "./toolbar/palette_library_p
 import { createAppearanceControlsController } from "./toolbar/appearance_controls_controller.js";
 import { createScenarioContextBarController } from "./toolbar/scenario_context_bar_controller.js";
 import { createScenarioGuidePopoverController } from "./toolbar/scenario_guide_popover.js";
-import { createSampleProjectBannerController } from "./toolbar/sample_project_banner_controller.js";
+import {
+  createSampleProjectBannerController,
+  createSampleProjectGuideCardController,
+} from "./toolbar/sample_project_banner_controller.js";
 import { createSpecialZoneEditorController } from "./toolbar/special_zone_editor.js";
 import { createSpecialZonesWorkbenchController } from "./toolbar/special_zones_workbench_controller.js";
 import {
@@ -231,6 +234,12 @@ function initToolbar({ render } = {}) {
   const scenarioGuideCloseBtn = document.getElementById("scenarioGuideCloseBtn");
   const scenarioGuideNavButtons = Array.from(document.querySelectorAll(".scenario-guide-nav-btn"));
   const scenarioGuidePanels = Array.from(document.querySelectorAll("[data-guide-panel]"));
+  const scenarioGuideSampleProjectCard = document.getElementById("scenarioGuideSampleProjectCard");
+  const scenarioGuideSampleProjectTitle = document.getElementById("scenarioGuideSampleProjectTitle");
+  const scenarioGuideSampleProjectBody = document.getElementById("scenarioGuideSampleProjectBody");
+  const scenarioGuideSampleProjectOpenExportBtn = document.getElementById("scenarioGuideSampleProjectOpenExportBtn");
+  const scenarioGuideSampleProjectDownloadOriginalLink = document.getElementById("scenarioGuideSampleProjectDownloadOriginalLink");
+  const scenarioGuideSampleProjectContinueBtn = document.getElementById("scenarioGuideSampleProjectContinueBtn");
   const dockConfigGroup = document.getElementById("dockConfigGroup");
   const dockReferenceBtn = document.getElementById("dockReferenceBtn");
   const dockExportBtn = document.getElementById("dockExportBtn");
@@ -813,9 +822,32 @@ function initToolbar({ render } = {}) {
       runtimeState.openExportWorkbenchFn?.(trigger)
     ),
   });
+  const sampleProjectGuideCardController = createSampleProjectGuideCardController({
+    runtimeState,
+    root: scenarioGuideSampleProjectCard,
+    titleNode: scenarioGuideSampleProjectTitle,
+    bodyNode: scenarioGuideSampleProjectBody,
+    openExportButton: scenarioGuideSampleProjectOpenExportBtn,
+    downloadOriginalLink: scenarioGuideSampleProjectDownloadOriginalLink,
+    continueButton: scenarioGuideSampleProjectContinueBtn,
+    t,
+    openExportWorkbench: (trigger = scenarioGuideSampleProjectOpenExportBtn) => (
+      runtimeState.openExportWorkbenchFn?.(trigger)
+    ),
+    continueWithDefaultGuide: () => {
+      renderScenarioGuideSection("quick");
+      document.getElementById("scenarioGuideStepApply")?.scrollIntoView?.({ block: "nearest" });
+    },
+  });
   sampleProjectBannerController.bindEvents();
-  registerRuntimeHook(state, "refreshSampleProjectBannerFn", () => sampleProjectBannerController.render());
+  sampleProjectGuideCardController.bindEvents();
+  const refreshSampleProjectSurfaces = () => {
+    sampleProjectBannerController.render();
+    sampleProjectGuideCardController.render();
+  };
+  registerRuntimeHook(state, "refreshSampleProjectBannerFn", refreshSampleProjectSurfaces);
   sampleProjectBannerController.render();
+  sampleProjectGuideCardController.render();
 
   registerRuntimeHook(state, "openTransportWorkbenchFn", (trigger = null) => openTransportWorkbench(trigger));
   registerRuntimeHook(state, "closeTransportWorkbenchFn", ({ restoreFocus = true } = {}) => (

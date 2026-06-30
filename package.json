@@ -193,6 +193,7 @@
     "test:e2e:city-rendering": "node node_modules/@playwright/test/cli.js test tests/e2e/city_label_i18n_redraw.spec.js tests/e2e/city_lights_layer_regression.spec.js tests/e2e/city_marker_visibility_regression.spec.js tests/e2e/city_points_urban_runtime.spec.js tests/e2e/city_reveal_plan_regression.spec.js tests/e2e/city_urban_rendering_regression.spec.js --workers=1 --retries=0",
     "test:e2e:water-rendering": "node node_modules/@playwright/test/cli.js test tests/e2e/river_layer_regression.spec.js tests/e2e/tno_named_water_rendering.spec.js tests/e2e/tno_open_ocean_rendering.spec.js tests/e2e/water_cache_strategy_regression.spec.js --workers=1 --retries=0",
     "test:e2e:tno-contracts": "node node_modules/@playwright/test/cli.js test tests/e2e/tno_startup_visible_context_layers_contract.spec.js tests/e2e/tno_1962_ui_smoke.spec.js --workers=1 --retries=0",
+    "test:e2e:sample-guide": "node node_modules/@playwright/test/cli.js test tests/e2e/sample_guide_deeplink.spec.js --workers=1 --retries=0",
     "test:e2e:pages-public-release-gate": "node node_modules/@playwright/test/cli.js test tests/e2e/release/pages_public_release_gate.spec.js --workers=1 --retries=0",
     "test:e2e:pages-public-release-gate:deployed": "node node_modules/@playwright/test/cli.js test tests/e2e/release/pages_public_release_gate.spec.js --workers=1 --retries=0",
     "test:e2e:layer:smoke": "node tools/e2e_layering.mjs run smoke",

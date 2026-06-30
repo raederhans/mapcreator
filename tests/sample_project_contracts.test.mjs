@@ -12,7 +12,9 @@ import {
 } from "../js/core/sample_project_registry.js";
 import {
   createSampleProjectBannerController,
+  createSampleProjectGuideCardController,
   resolveSampleProjectBannerView,
+  resolveSampleProjectGuideContext,
 } from "../js/ui/toolbar/sample_project_banner_controller.js";
 
 const SAMPLE_RUNS_PATH = "landing/assets/sample-runs.json";
@@ -435,6 +437,58 @@ test("sample project banner view exposes success actions and public error messag
   assert.equal(resolveSampleProjectBannerView({ status: "loading", sampleId: "blank-base-starter" }), null);
 });
 
+test("sample guide helper view exposes loaded sample context and public error messages", () => {
+  const successView = resolveSampleProjectGuideContext({
+    sampleProjectDeeplink: {
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      scenarioId: "tno_1962",
+      title: "TNO 1962 Atlantropa briefing",
+      projectUrl: "./assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      appProjectUrl: "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      fileName: "tno-1962-atlantropa-briefing.project.json",
+    },
+  });
+  assert.equal(successView.tone, "success");
+  assert.equal(successView.status, "success");
+  assert.equal(successView.sampleId, "tno-1962-atlantropa-briefing");
+  assert.equal(successView.scenarioId, "tno_1962");
+  assert.equal(successView.title, "Sample loaded: TNO 1962 Atlantropa briefing");
+  assert.match(successView.body, /editable sample project/);
+  assert.equal(successView.openExportLabel, "Open export");
+  assert.equal(successView.canOpenExport, true);
+  assert.equal(successView.canDownloadOriginal, true);
+  assert.equal(successView.canContinue, false);
+  assert.equal(
+    successView.downloadHref,
+    "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+  );
+  assert.equal(successView.downloadName, "tno-1962-atlantropa-briefing.project.json");
+
+  const errorView = resolveSampleProjectGuideContext({
+    sampleProjectDeeplink: {
+      status: "error",
+      sampleId: "not-a-real-sample",
+      errorCode: "unknown-sample-id",
+      errorMessage: "Unknown sample project id: not-a-real-sample",
+    },
+  });
+  assert.equal(errorView.tone, "error");
+  assert.equal(errorView.title, "Sample unavailable");
+  assert.equal(errorView.body, "This sample project is not in the public sample list.");
+  assert.equal(errorView.canOpenExport, false);
+  assert.equal(errorView.canDownloadOriginal, false);
+  assert.equal(errorView.canContinue, true);
+  assert.equal(errorView.continueLabel, "Continue with default guide");
+
+  assert.equal(
+    resolveSampleProjectGuideContext({
+      sampleProjectDeeplink: { status: "pending", sampleId: "blank-base-starter" },
+    }),
+    null,
+  );
+});
+
 test("sample project banner controller opens export and dismisses current message", () => {
   const runtimeState = {
     sampleProjectDeeplink: {
@@ -482,6 +536,75 @@ test("sample project banner controller opens export and dismisses current messag
   assert.equal(root.hidden, true);
   assert.equal(root.classList.contains("hidden"), true);
   assert.equal(controller.render(), null);
+});
+
+test("sample guide card controller opens export and keeps error path usable", () => {
+  const runtimeState = {
+    sampleProjectDeeplink: {
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      title: "TNO 1962 Atlantropa briefing",
+      appProjectUrl: "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+      fileName: "tno-1962-atlantropa-briefing.project.json",
+    },
+  };
+  const root = new SampleBannerTestElement();
+  const titleNode = new SampleBannerTestElement();
+  const bodyNode = new SampleBannerTestElement();
+  const openExportButton = new SampleBannerTestElement();
+  const downloadOriginalLink = new SampleBannerTestElement();
+  const continueButton = new SampleBannerTestElement();
+  const exportTriggers = [];
+  const continueTriggers = [];
+  const controller = createSampleProjectGuideCardController({
+    runtimeState,
+    root,
+    titleNode,
+    bodyNode,
+    openExportButton,
+    downloadOriginalLink,
+    continueButton,
+    openExportWorkbench: (trigger) => exportTriggers.push(trigger),
+    continueWithDefaultGuide: (trigger) => continueTriggers.push(trigger),
+  });
+
+  controller.bindEvents();
+  const successView = controller.render();
+
+  assert.equal(successView.status, "success");
+  assert.equal(root.hidden, false);
+  assert.equal(root.getAttribute("role"), "status");
+  assert.equal(root.dataset.sampleGuideStatus, "success");
+  assert.equal(titleNode.textContent, "Sample loaded: TNO 1962 Atlantropa briefing");
+  assert.match(bodyNode.textContent, /editable sample project/);
+  assert.equal(openExportButton.hidden, false);
+  assert.equal(continueButton.hidden, true);
+  assert.equal(
+    downloadOriginalLink.getAttribute("href"),
+    "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
+  );
+
+  openExportButton.click();
+  assert.deepEqual(exportTriggers, [openExportButton]);
+
+  runtimeState.sampleProjectDeeplink = {
+    status: "error",
+    sampleId: "not-a-real-sample",
+    errorCode: "unknown-sample-id",
+  };
+  const errorView = controller.render();
+
+  assert.equal(errorView.status, "error");
+  assert.equal(root.getAttribute("role"), "alert");
+  assert.equal(root.dataset.sampleGuideTone, "error");
+  assert.equal(titleNode.textContent, "Sample unavailable");
+  assert.equal(bodyNode.textContent, "This sample project is not in the public sample list.");
+  assert.equal(openExportButton.hidden, true);
+  assert.equal(downloadOriginalLink.hidden, true);
+  assert.equal(continueButton.hidden, false);
+
+  continueButton.click();
+  assert.deepEqual(continueTriggers, [continueButton]);
 });
 
 test("sample startup state writes notify banner refresh hook for bad links", async () => {

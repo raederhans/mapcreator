@@ -100,6 +100,62 @@ export function resolveSampleProjectBannerView(sampleState, { t = identityT } = 
   };
 }
 
+export function resolveSampleProjectGuideContext(runtimeState, { t = identityT } = {}) {
+  const sampleState = runtimeState?.sampleProjectDeeplink;
+  const status = normalizeText(sampleState?.status);
+  if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status)) {
+    return null;
+  }
+
+  const sampleId = normalizeText(sampleState?.sampleId);
+  const sampleTitle = normalizeText(sampleState?.title) || sampleId || localize(t, "selected sample");
+  const downloadHref = resolveOriginalDownloadUrl(sampleState);
+  if (status === "success") {
+    return {
+      status,
+      tone: "success",
+      sampleId,
+      scenarioId: normalizeText(sampleState?.scenarioId),
+      projectUrl: normalizeText(sampleState?.projectUrl),
+      appProjectUrl: normalizeText(sampleState?.appProjectUrl),
+      fileName: normalizeText(sampleState?.fileName),
+      title: `${localize(t, "Sample loaded")}: ${sampleTitle}`,
+      body: localize(
+        t,
+        "This is an editable sample project. Export an image or save your own project copy when you are ready.",
+      ),
+      openExportLabel: localize(t, "Open export"),
+      downloadOriginalLabel: localize(t, "Download original JSON"),
+      continueLabel: localize(t, "Continue with default guide"),
+      canOpenExport: true,
+      canDownloadOriginal: !!downloadHref,
+      canContinue: false,
+      downloadHref,
+      downloadName: normalizeText(sampleState?.fileName),
+    };
+  }
+
+  return {
+    status,
+    tone: "error",
+    sampleId,
+    scenarioId: normalizeText(sampleState?.scenarioId),
+    projectUrl: normalizeText(sampleState?.projectUrl),
+    appProjectUrl: normalizeText(sampleState?.appProjectUrl),
+    fileName: normalizeText(sampleState?.fileName),
+    title: localize(t, "Sample unavailable"),
+    body: resolveErrorMessage(sampleState, t),
+    openExportLabel: localize(t, "Open export"),
+    downloadOriginalLabel: localize(t, "Download original JSON"),
+    continueLabel: localize(t, "Continue with default guide"),
+    canOpenExport: false,
+    canDownloadOriginal: false,
+    canContinue: true,
+    downloadHref: "",
+    downloadName: "",
+  };
+}
+
 function setElementHidden(element, hidden) {
   if (!element) return;
   element.hidden = !!hidden;
@@ -182,6 +238,83 @@ export function createSampleProjectBannerController({
         const view = resolveSampleProjectBannerView(runtimeState?.sampleProjectDeeplink, { t });
         dismissedKey = view?.dismissKey || "";
         setElementHidden(root, true);
+      });
+    },
+  };
+
+  return controller;
+}
+
+export function createSampleProjectGuideCardController({
+  runtimeState,
+  root,
+  titleNode,
+  bodyNode,
+  openExportButton,
+  downloadOriginalLink,
+  continueButton,
+  t = identityT,
+  openExportWorkbench = null,
+  continueWithDefaultGuide = null,
+} = {}) {
+  let bound = false;
+
+  const controller = {
+    render() {
+      const view = resolveSampleProjectGuideContext(runtimeState, { t });
+      if (!root || !view) {
+        setElementHidden(root, true);
+        return null;
+      }
+
+      root.dataset.sampleGuideStatus = view.status;
+      root.dataset.sampleGuideTone = view.tone;
+      root.setAttribute("role", view.tone === "error" ? "alert" : "status");
+      root.setAttribute("aria-live", view.tone === "error" ? "assertive" : "polite");
+      if (titleNode) titleNode.textContent = view.title;
+      if (bodyNode) bodyNode.textContent = view.body;
+
+      if (openExportButton) {
+        openExportButton.textContent = view.openExportLabel;
+      }
+      setActionHidden(openExportButton, !view.canOpenExport);
+
+      if (downloadOriginalLink) {
+        downloadOriginalLink.textContent = view.downloadOriginalLabel;
+        if (view.canDownloadOriginal) {
+          downloadOriginalLink.setAttribute("href", view.downloadHref);
+          if (view.downloadName) {
+            downloadOriginalLink.setAttribute("download", view.downloadName);
+          } else {
+            downloadOriginalLink.setAttribute("download", "");
+          }
+        } else {
+          downloadOriginalLink.removeAttribute("href");
+        }
+      }
+      setActionHidden(downloadOriginalLink, !view.canDownloadOriginal);
+
+      if (continueButton) {
+        continueButton.textContent = view.continueLabel;
+      }
+      setActionHidden(continueButton, !view.canContinue);
+
+      setElementHidden(root, false);
+      return view;
+    },
+
+    bindEvents() {
+      if (bound) return;
+      bound = true;
+      openExportButton?.addEventListener("click", () => {
+        if (typeof openExportWorkbench === "function") {
+          openExportWorkbench(openExportButton);
+        }
+      });
+      continueButton?.addEventListener("click", () => {
+        if (typeof continueWithDefaultGuide === "function") {
+          continueWithDefaultGuide(continueButton);
+        }
       });
     },
   };

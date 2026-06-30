@@ -299246,6 +299246,14 @@
       "en": "selected sample",
       "zh": "所选示例"
     },
+    "Sample guide actions": {
+      "en": "Sample guide actions",
+      "zh": "示例引导操作"
+    },
+    "Open export": {
+      "en": "Open export",
+      "zh": "打开导出"
+    },
     "Open export workbench": {
       "en": "Open export workbench",
       "zh": "打开导出工作台"
@@ -299254,9 +299262,17 @@
       "en": "Download original JSON",
       "zh": "下载原始 JSON"
     },
+    "Continue with default guide": {
+      "en": "Continue with default guide",
+      "zh": "继续使用默认引导"
+    },
     "Dismiss sample message": {
       "en": "Dismiss sample message",
       "zh": "关闭示例消息"
+    },
+    "This is an editable sample project. Export an image or save your own project copy when you are ready.": {
+      "en": "This is an editable sample project. Export an image or save your own project copy when you are ready.",
+      "zh": "这是可编辑的示例项目。准备好后，导出图片或保存你自己的项目副本。"
     },
     "Edit this starter map, then export your own image or download the original sample JSON.": {
       "en": "Edit this starter map, then export your own image or download the original sample JSON.",

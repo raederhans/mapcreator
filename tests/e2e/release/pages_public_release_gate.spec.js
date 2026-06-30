@@ -141,7 +141,22 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     expect(releaseState.hgoPreviewEnabled).toBe(false);
     expect(releaseState.hasHgoRuntimeAssets).toBe(false);
 
-    await page.keyboard.press("Escape");
+    const sampleGuideCard = page.locator("[data-sample-guide-helper]");
+    await expect(sampleGuideCard).toBeVisible({ timeout: 30000 });
+    await expect(sampleGuideCard).toHaveAttribute("data-sample-guide-status", "success");
+    await expect(page.locator("[data-sample-guide-title]")).toContainText(/TNO 1962 Atlantropa briefing/i);
+    await expect(page.locator("[data-sample-guide-download-original]")).toHaveAttribute(
+      "href",
+      /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
+    );
+    await page.locator("[data-sample-guide-open-export]").click();
+    await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
+    await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
+    await expect(page.locator("#exportWorkbenchPanel")).toBeVisible();
+    await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
+    await page.locator("#exportWorkbenchCloseBtn").click();
+    await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
+
     await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
     const projectTab = page.locator("#inspectorSidebarTabProject");
     await expect(projectTab).toBeVisible({ timeout: 30000 });
@@ -155,14 +170,6 @@ test("public Pages release gate", async ({ page }, testInfo) => {
       "href",
       /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
     );
-    await page.locator("#exportProjectSection").evaluate((section) => {
-      if (section instanceof HTMLDetailsElement) section.open = true;
-    });
-    await expect(page.locator("#dockExportBtn")).toBeVisible({ timeout: 30000 });
-    await page.locator("#dockExportBtn").click();
-    await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
-    await expect(page.locator("#exportWorkbenchPanel")).toBeVisible();
-    await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
 
     const unexpectedNetworkFailures = networkFailures.filter((failure) => (
       !isExpectedAnonymousBackendProbe(failure)
