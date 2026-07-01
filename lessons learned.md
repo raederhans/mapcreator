@@ -518,3 +518,6 @@
 
 ### Guide 内触发确认弹窗要验层级
 - 从 popover 内触发全局确认弹窗时，E2E 要覆盖弹窗可见和可点击；`z-index` 低于 Guide popover 会让确认弹窗实际出现在后方，dirty confirm 路径会被误判成逻辑卡住。
+
+### 新增 E2E spec 要同步分层入口
+- 新增 `tests/e2e/*.spec.js` 时同步更新 `test-layer-manifest.json`、test list、timeout allowlist 和 selector mapping；仅有 `package.json` 脚本会让分层 gate 与变更选择器漏跑关键浏览器覆盖。
