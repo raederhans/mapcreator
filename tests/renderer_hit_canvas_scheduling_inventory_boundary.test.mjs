@@ -12,6 +12,7 @@ const DOC_PATH = "docs/active/renderer-hit-canvas-scheduling-owner-p47-20260701.
 const PREVIOUS_PREFLIGHT_DOC_PATH = "docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const OWNER_PATH = "js/core/map_renderer/hit_canvas_scheduling_owner.js";
+const RESET_OWNER_PATH = "js/core/map_renderer/renderer_transaction_reset_owner.js";
 const SCENARIO_REFRESH_RUNTIME_PATH = "js/core/map_renderer/scenario_refresh_runtime.js";
 const SPATIAL_INDEX_RUNTIME_OWNER_PATH = "js/core/renderer/spatial_index_runtime_owner.js";
 const INTERACTION_HIT_CANDIDATES_PATH = "js/core/map_renderer/interaction_hit_candidates.js";
@@ -174,15 +175,16 @@ test("hit canvas owner keeps scheduling body and excludes draw build probe owner
 
 test("forced validation and refresh reset cancel through owner", () => {
   const rendererSource = readRepoFile(...MAP_RENDERER_PATH.split("/"));
+  const resetOwnerSource = readRepoFile(...RESET_OWNER_PATH.split("/"));
   const forcedSource = sliceBetween(
     rendererSource,
     "function ensureHitCanvasUpToDate({ force = false } = {})",
     "function isHitCanvasCurrent()",
   );
-  const resetSource = sliceBetween(
+  const resetFactorySource = sliceBetween(
     rendererSource,
-    "function resetRendererRefreshTransactionState({",
-    "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
+    "function getRendererTransactionResetOwner()",
+    "function getMapHoverInteractionOwner()",
   );
 
   assertIncludes(
@@ -196,9 +198,14 @@ test("forced validation and refresh reset cancel through owner", () => {
     "strict validation must keep forced draw metric in map_renderer",
   );
   assertIncludes(
-    resetSource,
-    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"renderer-refresh-reset\" });",
-    "refresh reset must cancel through owner",
+    resetFactorySource,
+    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)",
+    "refresh reset must route cancellation through owner",
+  );
+  assertIncludes(
+    resetOwnerSource,
+    "reason: REFRESH_RESET_REASON",
+    "refresh reset must preserve cancellation reason",
   );
   assertExcludes(
     rendererSource,

@@ -9,6 +9,8 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const P39_DOC_PATH = "docs/active/renderer-transaction-reset-hardening-preflight-20260630.md";
+const P49_DOC_PATH = "docs/active/renderer-transaction-reset-owner-p49-20260701.md";
+const RESET_OWNER_PATH = "js/core/map_renderer/renderer_transaction_reset_owner.js";
 const SET_MAP_DATA_TRANSACTION_OWNER_PATH = "js/core/map_renderer/set_map_data_transaction_owner.js";
 const STARTUP_TRANSACTION_OWNER_PATH = "js/core/renderer/renderer_startup_transaction_owner.js";
 const SCENARIO_REFRESH_RUNTIME_PATH = "js/core/map_renderer/scenario_refresh_runtime.js";
@@ -17,7 +19,6 @@ const RENDER_LIFECYCLE_OWNER_PATH = "js/core/renderer/renderer_render_lifecycle_
 const RUNTIME_STATE_TOKEN = ["runtime", "State"].join("");
 
 const FORBIDDEN_RESET_HELPER_PATHS = Object.freeze([
-  "js/core/map_renderer/renderer_transaction_reset_owner.js",
   "js/core/map_renderer/renderer_transaction_reset_helper.js",
   "js/core/map_renderer/renderer_transaction_reset_controller.js",
   "js/core/map_renderer/shared_renderer_transaction_reset_owner.js",
@@ -64,48 +65,36 @@ const RESET_TRANSACTION_STATE_TOKENS = Object.freeze([
   "cancelSecondarySpatialBuild = false",
   "cancelHoverOverlayRender = false",
   "hitCanvasDirty = false",
-  "resetRendererRefreshTransactionState({",
-  "cancelHoverOverlay: cancelHoverOverlayRender",
-  "markRendererTopologyChanged({ hitCanvasDirty })",
+  "getRendererTransactionResetOwner().resetRendererTransactionState({",
 ]);
 
 const RESET_RENDERER_REFRESH_STATE_TOKENS = Object.freeze([
-  "clearPendingDynamicBorderTimer()",
-  "clearRenderPhaseTimer()",
-  "cancelPendingIndexUiRefresh()",
-  "cancelPendingSidebarRefresh()",
-  "cancelScheduledHoverOverlayRender()",
-  "setRenderPhase(RENDER_PHASE_IDLE)",
-  "resetRenderDiagnostics()",
-  "clearStagedMapDataTasks()",
-  "cancelExactAfterSettleRefresh()",
-  `cancelDeferredWork(${RUNTIME_STATE_TOKEN}.hitCanvasBuildScheduled)`,
-  `${RUNTIME_STATE_TOKEN}.hitCanvasBuildScheduled = null`,
-  "cancelDeferredWork(secondarySpatialBuildHandle)",
-  "pendingSecondarySpatialBuildReasons.clear()",
-  `${RUNTIME_STATE_TOKEN}.deferContextBasePass = false`,
-  `${RUNTIME_STATE_TOKEN}.deferHitCanvasBuild = false`,
-  `${RUNTIME_STATE_TOKEN}.deferExactAfterSettle = false`,
-  "layerResolverCache.primaryRef = null",
-  "layerResolverCache.detailRef = null",
-  "layerResolverCache.bundleMode = null",
-  "layerResolverCache.contextRevision = 0",
-  `${RUNTIME_STATE_TOKEN}.devHoverHit = null`,
-  `${RUNTIME_STATE_TOKEN}.devSelectedHit = null`,
-  `${RUNTIME_STATE_TOKEN}.devSelectionFeatureIds = new Set()`,
-  `${RUNTIME_STATE_TOKEN}.devSelectionOrder = []`,
-  `${RUNTIME_STATE_TOKEN}.devClipboardFallbackText = ""`,
-  `${RUNTIME_STATE_TOKEN}.devClipboardPreviewFormat = "names_with_ids"`,
-  "resetPhysicalLandClipPathCache()",
+  '"clearPendingDynamicBorderTimer"',
+  '"clearRenderPhaseTimer"',
+  '"cancelPendingIndexUiRefresh"',
+  '"cancelPendingSidebarRefresh"',
+  '"cancelScheduledHoverOverlayRender"',
+  '"setRenderPhaseIdle"',
+  '"resetRenderDiagnostics"',
+  '"clearStagedMapDataTasks"',
+  '"cancelExactAfterSettleRefresh"',
+  '"cancelScheduledHitCanvasBuild"',
+  '"cancelSecondarySpatialBuild"',
+  '"setDeferContextBasePass"',
+  '"setDeferHitCanvasBuild"',
+  '"setDeferExactAfterSettle"',
+  '"resetLayerResolverCache"',
+  '"resetDevInteractionState"',
+  '"resetDevClipboardState"',
+  '"resetPhysicalLandClipPathCache"',
 ]);
 
 const MARK_RENDERER_TOPOLOGY_CHANGED_TOKENS = Object.freeze([
-  "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
-  "resetExactRefreshOptimizationState()",
-  "resetVisibleInternalBorderMeshSignature()",
-  `${RUNTIME_STATE_TOKEN}.topologyRevision = Number(${RUNTIME_STATE_TOKEN}.topologyRevision || 0) + 1`,
-  `${RUNTIME_STATE_TOKEN}.hitCanvasDirty = true`,
-  `${RUNTIME_STATE_TOKEN}.hitCanvasTopologyRevision = 0`,
+  '"resetExactRefreshOptimizationState"',
+  '"resetVisibleInternalBorderMeshSignature"',
+  '"bumpTopologyRevision"',
+  '"setHitCanvasDirty"',
+  '"resetHitCanvasTopologyRevision"',
 ]);
 
 const SET_MAP_DATA_OWNER_RESET_TOKENS = Object.freeze([
@@ -161,6 +150,9 @@ function listRepoSourceFiles(rootRelativePath) {
 
 function isForbiddenResetHelperPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === RESET_OWNER_PATH) {
+    return false;
+  }
   if (!normalized.startsWith("js/core/")) {
     return false;
   }
@@ -219,15 +211,32 @@ test("P39 preflight doc exists and locks required headings", () => {
   }
 });
 
-test("P39 keeps production reset helper and render lifecycle owner absent", () => {
+test("P49 active doc records reset owner implementation scope", () => {
+  const docSource = readRepoFile(...P49_DOC_PATH.split("/"));
+
+  for (const token of [
+    "Renderer Transaction Reset Owner P49",
+    "`js/core/map_renderer/renderer_transaction_reset_owner.js`",
+    "resetRendererTransactionState",
+    "resetRendererRefreshTransactionState",
+    "markRendererTopologyChanged",
+    "P47 hit canvas scheduling owner",
+    "No public facade, state-write allowlist, dist, scenario refresh runtime, or exact scheduler migration",
+  ]) {
+    assertIncludes(docSource, token, "P49 doc must lock implementation scope");
+  }
+});
+
+test("P49 keeps exactly one bounded reset owner and render lifecycle owner absent", () => {
+  assert.equal(repoFileExists(RESET_OWNER_PATH), true, "P49 must add the bounded reset owner");
   for (const relativePath of FORBIDDEN_RESET_HELPER_PATHS) {
-    assert.equal(repoFileExists(relativePath), false, `P39 must not add production reset helper: ${relativePath}`);
+    assert.equal(repoFileExists(relativePath), false, `P49 must not add extra reset helper: ${relativePath}`);
   }
   for (const sourcePath of listRepoSourceFiles("js/core")) {
     assert.equal(
       isForbiddenResetHelperPath(sourcePath),
       false,
-      `P39 must not add renamed production reset helper: ${sourcePath}`,
+      `P49 must not add renamed reset helper: ${sourcePath}`,
     );
   }
   for (const fixturePath of [
@@ -244,6 +253,7 @@ test("P39 keeps production reset helper and render lifecycle owner absent", () =
   }
   for (const fixturePath of [
     "js/core/map_renderer/set_map_data_transaction_owner.js",
+    RESET_OWNER_PATH,
     "js/core/renderer/renderer_startup_transaction_owner.js",
   ]) {
     assert.equal(
@@ -259,48 +269,60 @@ test("P39 keeps production reset helper and render lifecycle owner absent", () =
   );
 });
 
-test("map_renderer keeps resetRendererTransactionState and topology reset inventory", () => {
+test("map_renderer keeps reset wrappers delegated to the P49 owner", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const resetSource = sliceBetween(
     rendererSource,
     "function markRendererTopologyChanged({",
     "function rebuildPrimaryPoliticalCollections()",
   );
-
-  for (const token of RESET_TRANSACTION_STATE_TOKENS) {
-    assertIncludes(resetSource, token, "map_renderer must keep resetRendererTransactionState token");
-  }
-  assertTokensInOrder(
-    resetSource,
-    RESET_TRANSACTION_STATE_TOKENS,
-    "resetRendererTransactionState must keep reset-before-topology order",
-  );
-  for (const token of MARK_RENDERER_TOPOLOGY_CHANGED_TOKENS) {
-    assertIncludes(resetSource, token, "map_renderer must keep markRendererTopologyChanged token");
-  }
-  assertTokensInOrder(
-    resetSource,
-    MARK_RENDERER_TOPOLOGY_CHANGED_TOKENS,
-    "markRendererTopologyChanged must keep topology reset order",
-  );
-});
-
-test("map_renderer keeps resetRendererRefreshTransactionState inventory", () => {
-  const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const resetRefreshSource = sliceBetween(
     rendererSource,
     "function resetRendererRefreshTransactionState({",
     "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
   );
 
+  for (const token of RESET_TRANSACTION_STATE_TOKENS) {
+    assertIncludes(resetSource, token, "map_renderer must keep resetRendererTransactionState token");
+  }
+  assertIncludes(
+    resetSource,
+    "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
+    "map_renderer must keep markRendererTopologyChanged wrapper signature",
+  );
+  assertIncludes(
+    resetSource,
+    "getRendererTransactionResetOwner().markRendererTopologyChanged({ hitCanvasDirty })",
+    "map_renderer must keep markRendererTopologyChanged wrapper delegated",
+  );
+  assertIncludes(
+    resetRefreshSource,
+    "getRendererTransactionResetOwner().resetRendererRefreshTransactionState({",
+    "map_renderer must keep resetRendererRefreshTransactionState wrapper delegated",
+  );
+});
+
+test("P49 reset owner keeps refresh and topology reset inventory", () => {
+  const resetOwnerSource = readRepoFile(...RESET_OWNER_PATH.split("/"));
+
   for (const token of RESET_RENDERER_REFRESH_STATE_TOKENS) {
-    assertIncludes(resetRefreshSource, token, "map_renderer must keep resetRendererRefreshTransactionState token");
+    assertIncludes(resetOwnerSource, token, "P49 owner must keep resetRendererRefreshTransactionState token");
   }
   assertTokensInOrder(
-    resetRefreshSource,
+    resetOwnerSource,
     RESET_RENDERER_REFRESH_STATE_TOKENS,
     "resetRendererRefreshTransactionState must keep reset order",
   );
+  for (const token of MARK_RENDERER_TOPOLOGY_CHANGED_TOKENS) {
+    assertIncludes(resetOwnerSource, token, "P49 owner must keep markRendererTopologyChanged token");
+  }
+  assertTokensInOrder(
+    resetOwnerSource,
+    MARK_RENDERER_TOPOLOGY_CHANGED_TOKENS,
+    "markRendererTopologyChanged must keep topology reset order",
+  );
+  assertExcludes(resetOwnerSource, RUNTIME_STATE_TOKEN, "P49 owner must keep state writes injected");
+  assertExcludes(resetOwnerSource, "map_renderer.js", "P49 owner must avoid composition-root import");
 });
 
 test("setMapData owner still calls injected reset and set-map-data prelude", () => {
@@ -365,6 +387,16 @@ test("scenario refresh and exact-after-settle boundaries stay separate", () => {
 test("package exposes P39 script and preserves P38 scripts", () => {
   const packageSource = readRepoFile("package.json");
 
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-transaction-reset-owner\": \"node --test tests/renderer_transaction_reset_owner_behavior.test.mjs\"",
+    "package.json must expose the P49 reset owner test",
+  );
+  assertIncludes(
+    packageSource,
+    "\"test:node:renderer-transaction-reset\": \"npm run test:node:renderer-transaction-reset-owner && npm run test:node:renderer-transaction-reset-hardening-inventory\"",
+    "package.json must expose the P49 combined reset suite",
+  );
   assertIncludes(
     packageSource,
     "\"test:node:renderer-transaction-reset-hardening-inventory\": \"node --test tests/renderer_transaction_reset_hardening_inventory_boundary.test.mjs\"",

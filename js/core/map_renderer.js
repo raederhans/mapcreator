@@ -168,6 +168,7 @@ import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
+import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -987,6 +988,7 @@ let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
 let mapHoverInteractionOwner = null;
+let rendererTransactionResetOwner = null;
 let rendererSurfaceLifecycleOwner = null;
 let rendererProjectionPathOwner = null;
 let rendererSvgSurfaceLifecycleOwner = null;
@@ -1388,6 +1390,75 @@ function getHitCanvasSchedulingOwner() {
     },
   });
   return hitCanvasSchedulingOwner;
+}
+
+function getRendererTransactionResetOwner() {
+  if (rendererTransactionResetOwner) {
+    return rendererTransactionResetOwner;
+  }
+  rendererTransactionResetOwner = createRendererTransactionResetOwner({
+    effects: {
+      clearPendingDynamicBorderTimer,
+      clearRenderPhaseTimer,
+      cancelPendingIndexUiRefresh,
+      cancelPendingSidebarRefresh,
+      cancelScheduledHoverOverlayRender,
+      setRenderPhaseIdle: () => setRenderPhase(RENDER_PHASE_IDLE),
+      resetRenderDiagnostics,
+      clearStagedMapDataTasks,
+      cancelExactAfterSettleRefresh,
+      cancelScheduledHitCanvasBuild: (options) => (
+        getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)
+      ),
+      cancelSecondarySpatialBuild: () => {
+        cancelDeferredWork(secondarySpatialBuildHandle);
+        secondarySpatialBuildHandle = null;
+        pendingSecondarySpatialBuildReasons.clear();
+        return true;
+      },
+      setDeferContextBasePass: (deferred) => {
+        runtimeState.deferContextBasePass = Boolean(deferred);
+      },
+      setDeferHitCanvasBuild: (deferred) => {
+        runtimeState.deferHitCanvasBuild = Boolean(deferred);
+      },
+      setDeferExactAfterSettle: (deferred) => {
+        runtimeState.deferExactAfterSettle = Boolean(deferred);
+      },
+      resetLayerResolverCache: () => {
+        layerResolverCache.primaryRef = null;
+        layerResolverCache.detailRef = null;
+        layerResolverCache.bundleMode = null;
+        layerResolverCache.contextRevision = 0;
+      },
+      resetDevInteractionState: () => {
+        runtimeState.devHoverHit = null;
+        runtimeState.devSelectedHit = null;
+        runtimeState.devSelectionFeatureIds = new Set();
+        runtimeState.devSelectionOrder = [];
+      },
+      resetDevClipboardState: () => {
+        runtimeState.devClipboardFallbackText = "";
+        runtimeState.devClipboardPreviewFormat = "names_with_ids";
+      },
+      resetPhysicalLandClipPathCache,
+      resetExactRefreshOptimizationState,
+      resetVisibleInternalBorderMeshSignature,
+      bumpTopologyRevision: () => {
+        runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
+        return runtimeState.topologyRevision;
+      },
+      setHitCanvasDirty: (dirty) => {
+        if (dirty) {
+          runtimeState.hitCanvasDirty = true;
+        }
+      },
+      resetHitCanvasTopologyRevision: () => {
+        runtimeState.hitCanvasTopologyRevision = 0;
+      },
+    },
+  });
+  return rendererTransactionResetOwner;
 }
 
 function getMapHoverInteractionOwner() {
@@ -22833,13 +22904,7 @@ function initMap({
 }
 
 function markRendererTopologyChanged({ hitCanvasDirty = false } = {}) {
-  resetExactRefreshOptimizationState();
-  resetVisibleInternalBorderMeshSignature();
-  runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1;
-  if (hitCanvasDirty) {
-    runtimeState.hitCanvasDirty = true;
-  }
-  runtimeState.hitCanvasTopologyRevision = 0;
+  return getRendererTransactionResetOwner().markRendererTopologyChanged({ hitCanvasDirty });
 }
 
 function resetRendererTransactionState({
@@ -22847,11 +22912,11 @@ function resetRendererTransactionState({
   cancelHoverOverlayRender = false,
   hitCanvasDirty = false,
 } = {}) {
-  resetRendererRefreshTransactionState({
-    cancelHoverOverlay: cancelHoverOverlayRender,
+  return getRendererTransactionResetOwner().resetRendererTransactionState({
     cancelSecondarySpatialBuild,
+    cancelHoverOverlayRender,
+    hitCanvasDirty,
   });
-  markRendererTopologyChanged({ hitCanvasDirty });
 }
 
 function rebuildPrimaryPoliticalCollections() {
@@ -22893,37 +22958,10 @@ function resetRendererRefreshTransactionState({
   cancelHoverOverlay = false,
   cancelSecondarySpatialBuild = false,
 } = {}) {
-  clearPendingDynamicBorderTimer();
-  clearRenderPhaseTimer();
-  cancelPendingIndexUiRefresh();
-  cancelPendingSidebarRefresh();
-  if (cancelHoverOverlay) {
-    cancelScheduledHoverOverlayRender();
-  }
-  setRenderPhase(RENDER_PHASE_IDLE);
-  resetRenderDiagnostics();
-  clearStagedMapDataTasks();
-  cancelExactAfterSettleRefresh();
-  getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: "renderer-refresh-reset" });
-  if (cancelSecondarySpatialBuild) {
-    cancelDeferredWork(secondarySpatialBuildHandle);
-    secondarySpatialBuildHandle = null;
-    pendingSecondarySpatialBuildReasons.clear();
-  }
-  runtimeState.deferContextBasePass = false;
-  runtimeState.deferHitCanvasBuild = false;
-  runtimeState.deferExactAfterSettle = false;
-  layerResolverCache.primaryRef = null;
-  layerResolverCache.detailRef = null;
-  layerResolverCache.bundleMode = null;
-  layerResolverCache.contextRevision = 0;
-  runtimeState.devHoverHit = null;
-  runtimeState.devSelectedHit = null;
-  runtimeState.devSelectionFeatureIds = new Set();
-  runtimeState.devSelectionOrder = [];
-  runtimeState.devClipboardFallbackText = "";
-  runtimeState.devClipboardPreviewFormat = "names_with_ids";
-  resetPhysicalLandClipPathCache();
+  return getRendererTransactionResetOwner().resetRendererRefreshTransactionState({
+    cancelHoverOverlay,
+    cancelSecondarySpatialBuild,
+  });
 }
 
 scenarioRefreshRuntime = createScenarioRefreshRuntime({

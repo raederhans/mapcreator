@@ -11,6 +11,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 
 const OWNER_PATH = "js/core/map_renderer/hit_canvas_scheduling_owner.js";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const RESET_OWNER_PATH = "js/core/map_renderer/renderer_transaction_reset_owner.js";
 const DOC_PATH = "docs/active/renderer-hit-canvas-scheduling-owner-p47-20260701.md";
 const SCENARIO_REFRESH_RUNTIME_PATH = "js/core/map_renderer/scenario_refresh_runtime.js";
 const SPATIAL_INDEX_RUNTIME_OWNER_PATH = "js/core/renderer/spatial_index_runtime_owner.js";
@@ -179,6 +180,7 @@ test("map_renderer wrapper delegates scheduling while keeping old false return",
 
 test("forced validation and reset cancellation go through the scheduling owner", () => {
   const rendererSource = readRepoFile(...MAP_RENDERER_PATH.split("/"));
+  const resetOwnerSource = readRepoFile(...RESET_OWNER_PATH.split("/"));
   const forcedSource = sliceBetween(
     rendererSource,
     "function ensureHitCanvasUpToDate({ force = false } = {})",
@@ -189,15 +191,20 @@ test("forced validation and reset cancellation go through the scheduling owner",
   assert.ok(forcedCancelIndex >= 0, "forced validation must cancel through owner");
   assert.ok(forcedDrawIndex > forcedCancelIndex, "forced validation must cancel before draw");
 
-  const resetSource = sliceBetween(
+  const resetFactorySource = sliceBetween(
     rendererSource,
-    "function resetRendererRefreshTransactionState({",
-    "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
+    "function getRendererTransactionResetOwner()",
+    "function getMapHoverInteractionOwner()",
   );
   assertIncludes(
-    resetSource,
-    `getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: "renderer-refresh-reset" });`,
-    "refresh reset must cancel through owner",
+    resetFactorySource,
+    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)",
+    "refresh reset must route cancellation through owner",
+  );
+  assertIncludes(
+    resetOwnerSource,
+    "reason: REFRESH_RESET_REASON",
+    "refresh reset must preserve cancellation reason",
   );
   assertExcludes(
     rendererSource,

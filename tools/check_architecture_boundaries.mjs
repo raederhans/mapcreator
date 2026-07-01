@@ -67,6 +67,9 @@ const FILES = Object.freeze({
   rendererSetMapDataTransactionOwnerTest: "tests/renderer_set_map_data_transaction_owner_behavior.test.mjs",
   rendererSetMapDataTransactionInventoryTest: "tests/renderer_set_map_data_transaction_inventory_boundary.test.mjs",
   rendererTransactionResetHardeningPreflightDoc: "docs/active/renderer-transaction-reset-hardening-preflight-20260630.md",
+  rendererTransactionResetOwnerDoc: "docs/active/renderer-transaction-reset-owner-p49-20260701.md",
+  rendererTransactionResetOwner: "js/core/map_renderer/renderer_transaction_reset_owner.js",
+  rendererTransactionResetOwnerTest: "tests/renderer_transaction_reset_owner_behavior.test.mjs",
   rendererTransactionResetHardeningInventoryTest: "tests/renderer_transaction_reset_hardening_inventory_boundary.test.mjs",
   rendererRenderLifecyclePreflightDoc: "docs/active/renderer-render-lifecycle-preflight-20260630.md",
   rendererRenderLifecycleInventoryTest: "tests/renderer_render_lifecycle_inventory_boundary.test.mjs",
@@ -92,7 +95,6 @@ const FILES = Object.freeze({
 });
 
 const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
-  "js/core/map_renderer/renderer_transaction_reset_owner.js",
   "js/core/map_renderer/renderer_transaction_reset_helper.js",
   "js/core/map_renderer/renderer_transaction_reset_controller.js",
   "js/core/map_renderer/shared_renderer_transaction_reset_owner.js",
@@ -137,6 +139,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
+  [FILES.rendererTransactionResetOwner]: 260,
   [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
@@ -195,6 +198,9 @@ function hasMapRendererImport(source) {
 
 function isForbiddenTransactionResetHelperPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === FILES.rendererTransactionResetOwner) {
+    return false;
+  }
   if (!normalized.startsWith("js/core/")) {
     return false;
   }
@@ -329,6 +335,9 @@ function collectFailures() {
   const rendererTransactionResetHardeningPreflightDoc = readProjectFile(
     FILES.rendererTransactionResetHardeningPreflightDoc,
   );
+  const rendererTransactionResetOwnerDoc = readProjectFile(FILES.rendererTransactionResetOwnerDoc);
+  const rendererTransactionResetOwner = readProjectFile(FILES.rendererTransactionResetOwner);
+  const rendererTransactionResetOwnerTest = readProjectFile(FILES.rendererTransactionResetOwnerTest);
   const rendererTransactionResetHardeningInventoryTest = readProjectFile(
     FILES.rendererTransactionResetHardeningInventoryTest,
   );
@@ -418,6 +427,9 @@ function collectFailures() {
     [FILES.renderPhaseLifecycleOwner]: renderPhaseLifecycleOwner,
     [FILES.visibleFrameDiagnosticsOwner]: visibleFrameDiagnosticsOwner,
     [FILES.rendererTransactionResetHardeningPreflightDoc]: rendererTransactionResetHardeningPreflightDoc,
+    [FILES.rendererTransactionResetOwnerDoc]: rendererTransactionResetOwnerDoc,
+    [FILES.rendererTransactionResetOwner]: rendererTransactionResetOwner,
+    [FILES.rendererTransactionResetOwnerTest]: rendererTransactionResetOwnerTest,
     [FILES.rendererTransactionResetHardeningInventoryTest]: rendererTransactionResetHardeningInventoryTest,
     [FILES.rendererRenderLifecyclePreflightDoc]: rendererRenderLifecyclePreflightDoc,
     [FILES.rendererRenderLifecycleInventoryTest]: rendererRenderLifecycleInventoryTest,
@@ -1788,6 +1800,8 @@ function collectFailures() {
 
   for (const token of [
     "const P39_DOC_PATH = \"docs/active/renderer-transaction-reset-hardening-preflight-20260630.md\";",
+    "const P49_DOC_PATH = \"docs/active/renderer-transaction-reset-owner-p49-20260701.md\";",
+    "const RESET_OWNER_PATH = \"js/core/map_renderer/renderer_transaction_reset_owner.js\";",
     "const FORBIDDEN_RESET_HELPER_PATHS = Object.freeze([",
     "const P39_DOC_HEADINGS = Object.freeze([",
     "const RESET_TRANSACTION_STATE_TOKENS = Object.freeze([",
@@ -1805,24 +1819,23 @@ function collectFailures() {
     "cancelSecondarySpatialBuild = false",
     "cancelHoverOverlayRender = false",
     "hitCanvasDirty = false",
-    "resetRendererRefreshTransactionState({",
-    "cancelHoverOverlay: cancelHoverOverlayRender",
-    "markRendererTopologyChanged({ hitCanvasDirty })",
-    "clearPendingDynamicBorderTimer()",
-    "clearRenderPhaseTimer()",
-    "cancelPendingIndexUiRefresh()",
-    "cancelPendingSidebarRefresh()",
-    "cancelScheduledHoverOverlayRender()",
-    "setRenderPhase(RENDER_PHASE_IDLE)",
-    "resetRenderDiagnostics()",
-    "clearStagedMapDataTasks()",
-    "cancelExactAfterSettleRefresh()",
-    "cancelDeferredWork(${RUNTIME_STATE_TOKEN}.hitCanvasBuildScheduled)",
-    "pendingSecondarySpatialBuildReasons.clear()",
-    "resetPhysicalLandClipPathCache()",
+    "getRendererTransactionResetOwner().resetRendererTransactionState({",
+    "\"clearPendingDynamicBorderTimer\"",
+    "\"clearRenderPhaseTimer\"",
+    "\"cancelPendingIndexUiRefresh\"",
+    "\"cancelPendingSidebarRefresh\"",
+    "\"cancelScheduledHoverOverlayRender\"",
+    "\"setRenderPhaseIdle\"",
+    "\"resetRenderDiagnostics\"",
+    "\"clearStagedMapDataTasks\"",
+    "\"cancelExactAfterSettleRefresh\"",
+    "\"cancelScheduledHitCanvasBuild\"",
+    "\"cancelSecondarySpatialBuild\"",
+    "\"resetPhysicalLandClipPathCache\"",
     "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
-    "resetExactRefreshOptimizationState()",
-    "resetVisibleInternalBorderMeshSignature()",
+    "getRendererTransactionResetOwner().markRendererTopologyChanged({ hitCanvasDirty })",
+    "\"resetExactRefreshOptimizationState\"",
+    "\"resetVisibleInternalBorderMeshSignature\"",
     "runEffect(\\\"resetRendererTransactionState\\\", {",
     "cancelHoverOverlayRender: true",
     "cancelSecondarySpatialBuild: true",
@@ -1834,6 +1847,7 @@ function collectFailures() {
     "runInitMapResetTransaction",
     "scenario refresh runtime must keep injected resetRendererTransactionState dependency",
     "exact-after-settle scheduler must keep reset boundary separate",
+    "package.json must expose the P49 reset owner test",
     "package.json must expose the P39 reset hardening inventory test",
   ]) {
     if (!rendererTransactionResetHardeningInventoryTest.includes(token)) {
@@ -1847,17 +1861,32 @@ function collectFailures() {
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererTransactionResetHardeningInventoryTest))) {
     failures.push(`${FILES.rendererTransactionResetHardeningInventoryTest} must exist for P39.`);
   }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererTransactionResetOwner))) {
+    failures.push(`${FILES.rendererTransactionResetOwner} must exist for P49.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererTransactionResetOwnerDoc))) {
+    failures.push(`${FILES.rendererTransactionResetOwnerDoc} must exist for P49.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererTransactionResetOwnerTest))) {
+    failures.push(`${FILES.rendererTransactionResetOwnerTest} must exist for P49.`);
+  }
   if (!packageJson.includes("\"test:node:renderer-transaction-reset-hardening-inventory\": \"node --test tests/renderer_transaction_reset_hardening_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P39 reset hardening inventory script.`);
   }
+  if (!packageJson.includes("\"test:node:renderer-transaction-reset-owner\": \"node --test tests/renderer_transaction_reset_owner_behavior.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P49 reset owner script.`);
+  }
+  if (!packageJson.includes("\"test:node:renderer-transaction-reset\": \"npm run test:node:renderer-transaction-reset-owner && npm run test:node:renderer-transaction-reset-hardening-inventory\"")) {
+    failures.push(`${FILES.packageJson} must expose P49 combined reset script.`);
+  }
   for (const relativePath of FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS) {
     if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
-      failures.push(`P39 must keep production reset helper absent: ${relativePath}`);
+      failures.push(`P49 must keep extra reset helper absent: ${relativePath}`);
     }
   }
   for (const sourcePath of listProjectSourceFiles("js/core")) {
     if (isForbiddenTransactionResetHelperPath(sourcePath)) {
-      failures.push(`P39 must keep production reset helper absent: ${sourcePath}`);
+      failures.push(`P49 must keep extra reset helper absent: ${sourcePath}`);
     }
   }
   for (const fixturePath of [
@@ -1872,6 +1901,7 @@ function collectFailures() {
   }
   for (const fixturePath of [
     "js/core/map_renderer/set_map_data_transaction_owner.js",
+    FILES.rendererTransactionResetOwner,
     "js/core/renderer/renderer_startup_transaction_owner.js",
   ]) {
     if (isForbiddenTransactionResetHelperPath(fixturePath)) {
@@ -1896,20 +1926,15 @@ function collectFailures() {
     "cancelSecondarySpatialBuild = false",
     "cancelHoverOverlayRender = false",
     "hitCanvasDirty = false",
-    "resetRendererRefreshTransactionState({",
-    "cancelHoverOverlay: cancelHoverOverlayRender",
-    "markRendererTopologyChanged({ hitCanvasDirty })",
     "function resetRendererRefreshTransactionState({",
-    "clearPendingDynamicBorderTimer()",
-    "clearRenderPhaseTimer()",
-    "cancelPendingIndexUiRefresh()",
-    "cancelPendingSidebarRefresh()",
-    "cancelScheduledHoverOverlayRender()",
-    "setRenderPhase(RENDER_PHASE_IDLE)",
-    "resetRenderDiagnostics()",
-    "clearStagedMapDataTasks()",
-    "cancelExactAfterSettleRefresh()",
-    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"renderer-refresh-reset\" });",
+    "getRendererTransactionResetOwner().resetRendererTransactionState({",
+    "getRendererTransactionResetOwner().resetRendererRefreshTransactionState({",
+    "getRendererTransactionResetOwner().markRendererTopologyChanged({ hitCanvasDirty })",
+    "function getRendererTransactionResetOwner()",
+    "createRendererTransactionResetOwner({",
+    "setRenderPhaseIdle: () => setRenderPhase(RENDER_PHASE_IDLE)",
+    "cancelScheduledHitCanvasBuild: (options) => (",
+    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)",
     "cancelDeferredWork(secondarySpatialBuildHandle)",
     "pendingSecondarySpatialBuildReasons.clear()",
     "runtimeState.deferContextBasePass = false",
@@ -1925,16 +1950,61 @@ function collectFailures() {
     "runtimeState.devSelectionOrder = []",
     "runtimeState.devClipboardFallbackText = \"\"",
     "runtimeState.devClipboardPreviewFormat = \"names_with_ids\"",
-    "resetPhysicalLandClipPathCache()",
     "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
-    "resetExactRefreshOptimizationState()",
-    "resetVisibleInternalBorderMeshSignature()",
     "runtimeState.topologyRevision = Number(runtimeState.topologyRevision || 0) + 1",
     "runtimeState.hitCanvasDirty = true",
     "runtimeState.hitCanvasTopologyRevision = 0",
   ]) {
     if (!renderer.includes(token)) {
       failures.push(`${FILES.renderer} must keep P39 reset/topology token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createRendererTransactionResetOwner",
+    "\"clearPendingDynamicBorderTimer\"",
+    "\"clearRenderPhaseTimer\"",
+    "\"cancelPendingIndexUiRefresh\"",
+    "\"cancelPendingSidebarRefresh\"",
+    "\"cancelScheduledHoverOverlayRender\"",
+    "\"setRenderPhaseIdle\"",
+    "\"resetRenderDiagnostics\"",
+    "\"clearStagedMapDataTasks\"",
+    "\"cancelExactAfterSettleRefresh\"",
+    "\"cancelScheduledHitCanvasBuild\"",
+    "reason: REFRESH_RESET_REASON",
+    "\"cancelSecondarySpatialBuild\"",
+    "\"setDeferContextBasePass\"",
+    "\"setDeferHitCanvasBuild\"",
+    "\"setDeferExactAfterSettle\"",
+    "\"resetLayerResolverCache\"",
+    "\"resetDevInteractionState\"",
+    "\"resetDevClipboardState\"",
+    "\"resetPhysicalLandClipPathCache\"",
+    "\"resetExactRefreshOptimizationState\"",
+    "\"resetVisibleInternalBorderMeshSignature\"",
+    "\"bumpTopologyRevision\"",
+    "\"setHitCanvasDirty\"",
+    "\"resetHitCanvasTopologyRevision\"",
+    "resetRendererRefreshTransactionState({",
+    "markRendererTopologyChanged({",
+  ]) {
+    if (!rendererTransactionResetOwner.includes(token)) {
+      failures.push(`${FILES.rendererTransactionResetOwner} must keep P49 reset owner token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "drawCanvas",
+    "renderPassToCache",
+    "buildHitCanvas",
+    "scheduleHitCanvasBuildIfNeeded",
+    "createScenarioRefreshRuntime",
+    "createExactAfterSettleScheduler",
+    "createStrategicOverlayRuntimeOwner",
+    "map_renderer.js",
+  ]) {
+    if (rendererTransactionResetOwner.includes(token)) {
+      failures.push(`${FILES.rendererTransactionResetOwner} must avoid forbidden token: ${token}`);
     }
   }
   for (const token of [
@@ -2872,13 +2942,16 @@ function collectFailures() {
   if (!hitCanvasForcedSource.includes("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"strict-validation\" });")) {
     failures.push(`${FILES.renderer} forced validation must cancel hit canvas scheduling through owner.`);
   }
-  const hitCanvasResetSource = sliceBetween(
+  const resetOwnerFactorySource = sliceBetween(
     renderer,
-    "function resetRendererRefreshTransactionState({",
-    "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
+    "function getRendererTransactionResetOwner()",
+    "function getMapHoverInteractionOwner()",
   );
-  if (!hitCanvasResetSource.includes("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"renderer-refresh-reset\" });")) {
-    failures.push(`${FILES.renderer} reset path must cancel hit canvas scheduling through owner.`);
+  if (!resetOwnerFactorySource.includes("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild(options)")) {
+    failures.push(`${FILES.renderer} reset path must route hit canvas scheduling cancellation through P47 owner.`);
+  }
+  if (!rendererTransactionResetOwner.includes("reason: REFRESH_RESET_REASON")) {
+    failures.push(`${FILES.rendererTransactionResetOwner} reset path must preserve renderer-refresh-reset cancellation reason.`);
   }
   if (renderer.includes("cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)")) {
     failures.push(`${FILES.renderer} must remove direct hit canvas scheduled-work cancellation after P47.`);
