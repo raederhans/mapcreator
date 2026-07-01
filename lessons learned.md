@@ -515,3 +515,6 @@
 
 ### 分阶段 renderer owner 按附件决定 dist 策略
 - 如果当前阶段明确禁止 `dist/app/**` 改动，把 dist parity review 建议转成 `git diff --name-only HEAD -- dist/app` guard；等专门的 Pages dist 同步阶段再生成镜像。
+
+### Guide 内触发确认弹窗要验层级
+- 从 popover 内触发全局确认弹窗时，E2E 要覆盖弹窗可见和可点击；`z-index` 低于 Guide popover 会让确认弹窗实际出现在后方，dirty confirm 路径会被误判成逻辑卡住。

@@ -28,9 +28,12 @@ async function writeSampleGuideFailureArtifact(page, testInfo) {
     "#scenarioGuidePopover",
     "[data-sample-guide-helper]",
     "[data-sample-guide-title]",
+    "[data-sample-guide-choice]",
+    "[data-sample-guide-status-message]",
     "[data-sample-guide-open-export]",
     "[data-sample-guide-download-original]",
     "[data-sample-guide-continue]",
+    "[data-app-dialog-overlay='true']",
     "#exportWorkbenchOverlay",
     "#scenarioStatus",
   ]);
@@ -63,10 +66,61 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
       /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
     );
 
+    const sampleChoices = page.locator("[data-sample-guide-choice]");
+    await expect(sampleChoices).toHaveCount(5, { timeout: 30000 });
+    await expect(page.locator("[data-sample-guide-choice='hgo-1936-atlas-preview']")).toHaveCount(0);
+    await expect(page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+
     await page.locator("[data-sample-guide-open-export]").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
     await expect(page.locator("#exportWorkbenchPanel")).toBeVisible();
     await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
+    await page.locator("#exportWorkbenchCloseBtn").click();
+    await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
+    if (await page.locator("#scenarioGuidePopover").isHidden()) {
+      await page.locator("#scenarioGuideBtn").click();
+      await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
+    }
+
+    await page.locator("[data-sample-guide-choice='modern-world-japan-corridor']").click();
+    await waitForScenarioApplyIdle(page, { scenarioId: "modern_world", timeout: 120000 });
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      activeScenarioId: "modern_world",
+      status: "success",
+      sampleId: "modern-world-japan-corridor",
+      scenarioId: "modern_world",
+    });
+    await expect(page).toHaveURL(/sample=modern-world-japan-corridor/);
+    await expect(page).toHaveURL(/view=guide/);
+    await expect(page.locator("[data-sample-guide-choice='modern-world-japan-corridor']")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+
+    await page.evaluate(async () => {
+      const { markDirty } = await import("/js/core/dirty_state.js");
+      markDirty("playwright-sample-switch-cancel");
+    });
+    if (await page.locator("#scenarioGuidePopover").isHidden()) {
+      await page.locator("#scenarioGuideBtn").click();
+      await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
+    }
+    await page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']").click();
+    const dirtyDialog = page.locator("[data-app-dialog-overlay='true']");
+    await expect(dirtyDialog).toBeVisible({ timeout: 30000 });
+    await expect(dirtyDialog.locator(".app-dialog-title")).toContainText(/Load another sample\?/i);
+    await dirtyDialog.locator("[data-dialog-cancel='true']").click();
+    await expect(dirtyDialog).toBeHidden({ timeout: 30000 });
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      activeScenarioId: "modern_world",
+      status: "success",
+      sampleId: "modern-world-japan-corridor",
+      scenarioId: "modern_world",
+    });
+    await expect(page).toHaveURL(/sample=modern-world-japan-corridor/);
   } catch (error) {
     await writeSampleGuideFailureArtifact(page, testInfo);
     throw error;

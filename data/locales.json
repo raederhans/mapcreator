@@ -299250,6 +299250,10 @@
       "en": "Sample guide actions",
       "zh": "示例引导操作"
     },
+    "Public starter samples": {
+      "en": "Public starter samples",
+      "zh": "公开起步示例"
+    },
     "Open export": {
       "en": "Open export",
       "zh": "打开导出"
@@ -299269,6 +299273,54 @@
     "Dismiss sample message": {
       "en": "Dismiss sample message",
       "zh": "关闭示例消息"
+    },
+    "Load another sample": {
+      "en": "Load another sample",
+      "zh": "加载另一个示例"
+    },
+    "Load a starter sample": {
+      "en": "Load a starter sample",
+      "zh": "加载起步示例"
+    },
+    "Load another sample?": {
+      "en": "Load another sample?",
+      "zh": "加载另一个示例？"
+    },
+    "Load Sample": {
+      "en": "Load Sample",
+      "zh": "加载示例"
+    },
+    "Keep Current Project": {
+      "en": "Keep Current Project",
+      "zh": "保留当前项目"
+    },
+    "Loading another sample replaces the current workspace.": {
+      "en": "Loading another sample replaces the current workspace.",
+      "zh": "加载另一个示例会替换当前工作区。"
+    },
+    "Export or save your current work before continuing if you want to keep it.": {
+      "en": "Export or save your current work before continuing if you want to keep it.",
+      "zh": "如需保留当前作品，继续前请先导出或保存。"
+    },
+    "Choose a checked-in public starter sample to open it in the editor.": {
+      "en": "Choose a checked-in public starter sample to open it in the editor.",
+      "zh": "选择一个已入库的公开起步示例，并在编辑器中打开。"
+    },
+    "Samples open from the public checked-in project list.": {
+      "en": "Samples open from the public checked-in project list.",
+      "zh": "示例来自已入库的公开项目列表。"
+    },
+    "Switching samples replaces the current workspace after confirmation when unsaved edits exist.": {
+      "en": "Switching samples replaces the current workspace after confirmation when unsaved edits exist.",
+      "zh": "存在未保存编辑时，切换示例会先请你确认，然后替换当前工作区。"
+    },
+    "Choose another checked-in public starter sample.": {
+      "en": "Choose another checked-in public starter sample.",
+      "zh": "选择另一个已入库的公开起步示例。"
+    },
+    "Loading selected sample...": {
+      "en": "Loading selected sample...",
+      "zh": "正在加载所选示例..."
     },
     "This is an editable sample project. Export an image or save your own project copy when you are ready.": {
       "en": "This is an editable sample project. Export an image or save your own project copy when you are ready.",

@@ -1,14 +1,14 @@
 # Worktree Registry
 
-Last updated: 2026-06-30 branch sync and cleanup pass
+Last updated: 2026-07-01 Phase 6C sample switcher staged closeout
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed baseline is `origin/main@88a9f5a3`, matching local `main@88a9f5a3`.
+- Latest fetched baseline is `origin/main@16abfd5f`, matching local parent `main@16abfd5f`.
 - Active renderer handoff: P43 render phase lifecycle owner is integrated on `origin/main` through functional commit `952af9d2` and registry closeout `473cd389`; the P43 implementation and integration worktrees have been removed. P43 starts from the P40/P41/P42 guardrails and keeps render/draw/pass/hit/scenario/exact/strategic/public/state-write/dist migration out of scope.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, P40 render lifecycle preflight, P41 render request boundary owner, P42 visible-frame diagnostics owner, and P43 render phase lifecycle owner.
-- Live test/build owner: no active live process remains after Phase6B validation. The temporary local release-smoke dev server on port `8810` was stopped after validation.
+- Live test/build owner: no active live process remains after Phase6C validation. Temporary local release-smoke dev servers on ports `8810` and `8811` were stopped after validation.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
@@ -19,11 +19,12 @@ Last updated: 2026-06-30 branch sync and cleanup pass
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, `git worktree list --porcelain`, `git branch -vv --all`, and `git fetch --all --prune` on 2026-06-30 after branch cleanup.
+Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list --porcelain` on 2026-07-01 during Phase6C closeout.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@88a9f5a3` | `origin/main@88a9f5a3` | clean / synced | Dirty files: none before this registry update. Hot files touched by cleanup: only this registry. | `git status --short --branch` returned `## main...origin/main`; `git worktree list --porcelain` shows only this worktree; `git branch -vv --all` after prune shows retained branches only. | Green for product code. Yellow for registry-only metadata because this file is the live coordination surface. | Commit and push this registry truth after final diff check. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | `origin/main@16abfd5f` | in-progress / unrelated WIP | Dirty files: `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md`, `docs/archive/phase6b-sample-guide-export-20260630/context.md`, `docs/archive/phase6b-sample-guide-export-20260630/task.md`, `landing/index.html`, `lessons learned.md`. | `git status --short --branch` returned `## main...origin/main` plus the listed WIP. | Yellow with Phase6C docs/landing/lessons if merged through parent; green for Phase6C product files because parent WIP is preserved and untouched. | Leave parent WIP untouched; integrate Phase6C through its isolated branch. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-phase6c-sample-switcher` | `codex/phase6c-sample-switcher` one commit ahead of base | `origin/main@16abfd5f` | ready-for-integration | Staged Phase6C source/test/docs/dist files plus active task docs. Shared hot files: `index.html`, `css/style.css`, `js/ui/toolbar.js`, `js/ui/toolbar/sample_project_banner_controller.js`, `js/core/sample_project_registry.js`, `tests/sample_project_contracts.test.mjs`, `tests/e2e/sample_guide_deeplink.spec.js`, `tests/e2e/release/pages_public_release_gate.spec.js`, `dist/app/**`. | Validation passed through sample contracts `15/15`, i18n audit, sample Guide E2E `2/2`, `verify:pages-dist`, local `/dist/` release gates `1/1` before and after review fix, architecture boundaries, import graph, code-review P2 fix, staged `verify:dist-drift`, and staged/unstaged diff checks. | Red with any concurrent sample Guide/import/toolbar/dist work; yellow with README/release copy and URL-state helper work; green with unrelated renderer-only lanes. | Push this branch; integrate into `main` only through a clean integration pass because parent checkout has unrelated WIP. |
 
 ## Branch Sync and Cleanup 2026-06-30
 
@@ -37,6 +38,23 @@ Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, `git w
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Phase6C Sample Switcher 2026-07-01
+
+1. Extracted startup and in-app sample loading into `js/core/sample_project_import_workflow.js`, so both paths reuse the same manifest/project fetch, FileManager import funnel, state writes, and public error handling.
+2. Added public sample-list resolution to `js/core/sample_project_registry.js`, keeping checked-in manifest validation separate from public display filtering and excluding developer-preview samples from the switcher.
+3. Added the Guide sample switcher, selected/loading/error UI states, dirty confirmation before replacement, success-only URL update, pending-state switcher lock, and a dialog stacking fix so confirmations appear above the Guide.
+4. Updated focused Node/E2E/release-smoke tests, i18n copy, README files, release notes, import graph, active task docs, and generated Pages dist.
+
+Files: core `js/core/sample_project_import_workflow.js`, `js/core/sample_project_registry.js`, `js/bootstrap/startup_sample_project_deeplink.js`, `js/ui/toolbar.js`, `js/ui/toolbar/sample_project_banner_controller.js`, `js/ui/ui_contract.js`, `js/ui/ui_surface_url_state.js`, `index.html`, `css/style.css`, `js/core/i18n_catalog.js`, `data/locales.json`; tests `tests/sample_project_contracts.test.mjs`, `tests/e2e/sample_guide_deeplink.spec.js`, `tests/e2e/release/pages_public_release_gate.spec.js`, `tests/e2e/test-import-graph.json`; docs `README.md`, `README.zh-CN.md`, `docs/releases/v0.1-public-demo-draft.md`, `lessons learned.md`, `docs/active/phase6c-sample-switcher-20260701/*`, this registry; generated Pages mirror `dist/app/**`, `dist/pages-dist-manifest.json`; temporary runtime files under `.runtime/**` only and local ignored `node_modules` junction.
+
+Diff summary: current functional diff removes the duplicated startup sample import implementation and adds a shared workflow, public list resolver, Guide switcher rendering/orchestration, dirty-confirm path, URL sample sync, i18n strings, pending in-flight lock, E2E/release assertions, docs, import graph, and Pages mirror. Current tracked stat before final staging is about 1,379 insertions and 337 deletions across 28 tracked files, plus new workflow/source docs and dist workflow mirror files.
+
+Commit status: functional Lore commit exists on `codex/phase6c-sample-switcher`; push remains. Base divergence: branch is one Phase 6C commit ahead of `origin/main@16abfd5f`; parent `main` remains untouched. Potential conflicts: red with future sample import, Guide card, toolbar orchestration, `index.html`, `css/style.css`, release smoke, sample contracts, and `dist/app/**`; yellow with docs/i18n/URL helper changes; green with renderer-only production lanes.
+
+Validation passed: changed-file `node --check`; `data/locales.json` JSON parse; `npm run test:node:sample-project-contracts` `15/15`; `py -3 tools/i18n_audit.py` with `ui_missing=0` and `ui_english_fallback=0`; `npm run test:e2e:sample-guide` `2/2`; `npm run verify:pages-dist` with size `927.07 MiB`, Pages startup shell `41/41`, landing showcase `18/18`, sample contracts `15/15`; local public mirror release gates `PLAYWRIGHT_TEST_BASE_URL=http://127.0.0.1:8810/dist/ npm run test:e2e:pages-public-release-gate` and post-review `http://127.0.0.1:8811/dist/`, both `1/1`; `npm run verify:architecture-boundaries`; `node tools/build_test_import_graph.mjs && npm run verify:test-import-graph` for 51 specs; code-review P2 fixed by adding `pending` to in-flight switcher states and rerunning sample contracts plus Pages dist; staged `npm run verify:dist-drift`; `git diff --check`; `git diff --cached --check`. Current validation gap: remote deployed Pages smoke after push.
+
+Recommended next step: push `codex/phase6c-sample-switcher`, then integrate into `main` after confirming parent WIP is still unrelated.
 
 ### Renderer Hit Canvas Scheduling Preflight 2026-06-30
 

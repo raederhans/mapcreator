@@ -3,13 +3,17 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { FileManager } from "../js/core/file_manager.js";
+import { loadPublicSampleProjectIntoRuntime } from "../js/core/sample_project_import_workflow.js";
 import { scheduleStartupSampleProjectDeeplink } from "../js/bootstrap/startup_sample_project_deeplink.js";
 import { registerRuntimeHook } from "../js/core/state/index.js";
 import {
+  loadPublicSampleProjectList,
   loadSampleProjectText,
+  resolvePublicSampleProjectListFromManifest,
   resolveSampleProjectFromManifest,
   SampleProjectLoadError,
 } from "../js/core/sample_project_registry.js";
+import { createUiSurfaceUrlState } from "../js/ui/ui_surface_url_state.js";
 import {
   createSampleProjectBannerController,
   createSampleProjectGuideCardController,
@@ -93,10 +97,13 @@ class SampleBannerTestElement {
   constructor() {
     this.attributes = new Map();
     this.classList = new SampleBannerTestClassList();
+    this.children = [];
     this.dataset = {};
+    this.disabled = false;
     this.hidden = false;
     this.listeners = new Map();
     this.textContent = "";
+    this.type = "";
   }
 
   setAttribute(name, value) {
@@ -113,6 +120,19 @@ class SampleBannerTestElement {
 
   addEventListener(name, handler) {
     this.listeners.set(name, handler);
+  }
+
+  append(...children) {
+    this.children.push(...children);
+  }
+
+  appendChild(child) {
+    this.children.push(child);
+    return child;
+  }
+
+  replaceChildren(...children) {
+    this.children = [...children];
   }
 
   click() {
@@ -278,6 +298,49 @@ test("sample project registry resolves only public checked-in project assets", (
   );
 });
 
+test("public sample list resolver keeps manifest validation separate from public display filtering", async () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+  const publicList = resolvePublicSampleProjectListFromManifest(manifest);
+
+  assert.equal(publicList.length, 5);
+  assert.deepEqual(publicList.map((entry) => entry.id), manifest.sample_projects.map((entry) => entry.id));
+  assert.equal(publicList.find((entry) => entry.id === "modern-world-japan-corridor").scenarioId, "modern_world");
+  assert.deepEqual(
+    publicList.find((entry) => entry.id === "tno-1962-atlantropa-briefing").recipe,
+    ["TNO political owners", "Atlantropa basins", "Coastline detail", "Mediterranean labels"],
+  );
+  assertNoDeveloperPreviewId(publicList, "public sample list");
+
+  const manifestWithHiddenHgo = cloneWithSampleProject(manifest, {
+    id: "hgo-preview-valid",
+    scenario_id: "hgo_1936",
+    project_url: "./assets/sample-projects/blank-base-starter.project.json",
+  });
+  const filteredList = resolvePublicSampleProjectListFromManifest(manifestWithHiddenHgo);
+  assert.equal(filteredList.some((entry) => entry.id === "hgo-preview-valid"), false);
+
+  assertSampleProjectError(
+    () => resolvePublicSampleProjectListFromManifest(
+      cloneWithSampleProject(manifest, {
+        id: "hgo-preview-unsafe",
+        scenario_id: "hgo_1936",
+        project_url: "https://example.test/hgo.project.json",
+      }),
+    ),
+    "unsafe-project-url",
+  );
+
+  const fetchCalls = [];
+  const loadedList = await loadPublicSampleProjectList({
+    fetchImpl: async (url) => {
+      fetchCalls.push(url);
+      return { ok: true, json: async () => manifest };
+    },
+  });
+  assert.deepEqual(fetchCalls, ["../assets/sample-runs.json"]);
+  assert.deepEqual(loadedList.map((entry) => entry.id), publicList.map((entry) => entry.id));
+});
+
 test("sample project loader fetches manifest before checked-in project JSON", async () => {
   const manifest = readJson(SAMPLE_RUNS_PATH);
   const project = manifest.sample_projects.find((entry) => entry.id === "tno-1962-atlantropa-briefing");
@@ -383,6 +446,55 @@ test("sample startup import failures record state without duplicate sample toast
   assert.equal(targetState.sampleProjectDeeplink.sampleId, "tno-1962-atlantropa-briefing");
   assert.equal(targetState.sampleProjectDeeplink.scenarioId, "tno_1962");
   assert.equal(targetState.sampleProjectDeeplink.errorCode, "sample-project-import-failed");
+});
+
+test("shared sample import workflow preserves committed sample during failed switch", async () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+  const targetState = {
+    sampleProjectDeeplink: {
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      scenarioId: "tno_1962",
+      title: "TNO 1962 Atlantropa briefing",
+    },
+  };
+  const refreshSnapshots = [];
+  registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", (sampleState) => {
+    refreshSnapshots.push({
+      status: sampleState.status,
+      sampleId: sampleState.sampleId,
+      previousSampleId: sampleState.previousSampleId,
+      errorCode: sampleState.errorCode,
+    });
+  });
+
+  try {
+    const result = await loadPublicSampleProjectIntoRuntime("modern-world-japan-corridor", {
+      targetState,
+      helpers: {
+        fetchImpl: async (url) => {
+          if (url === "../assets/sample-runs.json") {
+            return { ok: true, json: async () => manifest };
+          }
+          if (url === "../assets/sample-projects/modern-world-japan-corridor.project.json") {
+            return { ok: true, text: async () => "{" };
+          }
+          return { ok: false };
+        },
+      },
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(targetState.sampleProjectDeeplink.status, "error");
+    assert.equal(targetState.sampleProjectDeeplink.sampleId, "modern-world-japan-corridor");
+    assert.equal(targetState.sampleProjectDeeplink.previousSampleId, "tno-1962-atlantropa-briefing");
+    assert.deepEqual(
+      refreshSnapshots.map((snapshot) => snapshot.status),
+      ["loading", "importing", "error"],
+    );
+  } finally {
+    registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", null);
+  }
 });
 
 test("sample project banner view exposes success actions and public error messages", () => {
@@ -605,6 +717,117 @@ test("sample guide card controller opens export and keeps error path usable", ()
 
   continueButton.click();
   assert.deepEqual(continueTriggers, [continueButton]);
+});
+
+test("sample guide card renders public sample choices with selected and loading state", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => new SampleBannerTestElement(),
+  };
+  try {
+    const sampleRuntime = {
+      sampleProjectDeeplink: {
+        status: "success",
+        sampleId: "tno-1962-atlantropa-briefing",
+        scenarioId: "tno_1962",
+        title: "TNO 1962 Atlantropa briefing",
+      },
+    };
+    const root = new SampleBannerTestElement();
+    const titleNode = new SampleBannerTestElement();
+    const bodyNode = new SampleBannerTestElement();
+    const openExportButton = new SampleBannerTestElement();
+    const downloadOriginalLink = new SampleBannerTestElement();
+    const continueButton = new SampleBannerTestElement();
+    const sampleListNode = new SampleBannerTestElement();
+    const sampleListStatusNode = new SampleBannerTestElement();
+    const choices = [];
+    const controller = createSampleProjectGuideCardController({
+      runtimeState: sampleRuntime,
+      root,
+      titleNode,
+      bodyNode,
+      openExportButton,
+      downloadOriginalLink,
+      continueButton,
+      sampleListNode,
+      sampleListStatusNode,
+      onSampleChoice: (sampleId) => choices.push(sampleId),
+    });
+    controller.setSampleProjects([
+      { id: "tno-1962-atlantropa-briefing", title: "TNO 1962 Atlantropa briefing", scenarioId: "tno_1962" },
+      { id: "modern-world-japan-corridor", title: "Modern World Japan corridor", scenarioId: "modern_world" },
+    ]);
+
+    assert.equal(sampleListNode.children.length, 2);
+    assert.equal(sampleListNode.children[0].getAttribute("aria-current"), "true");
+    assert.equal(sampleListNode.children[1].getAttribute("aria-current"), "false");
+    sampleListNode.children[1].click();
+    assert.deepEqual(choices, ["modern-world-japan-corridor"]);
+
+    sampleRuntime.sampleProjectDeeplink = {
+      status: "loading",
+      sampleId: "modern-world-japan-corridor",
+      previousSampleId: "tno-1962-atlantropa-briefing",
+    };
+    controller.setSwitcherState({ status: "loading", activeSampleId: "modern-world-japan-corridor" });
+    assert.equal(sampleListNode.children[0].getAttribute("aria-current"), "true");
+    assert.equal(sampleListNode.children[1].disabled, true);
+    assert.equal(sampleListStatusNode.textContent, "Loading selected sample...");
+
+    sampleRuntime.sampleProjectDeeplink = {
+      status: "pending",
+      sampleId: "tno-1962-atlantropa-briefing",
+    };
+    controller.setSwitcherState({ status: "idle" });
+    assert.equal(sampleListNode.children[0].disabled, true);
+    assert.equal(sampleListNode.children[1].disabled, true);
+    sampleListNode.children[1].click();
+    assert.deepEqual(choices, ["modern-world-japan-corridor"]);
+    assert.equal(sampleListStatusNode.textContent, "Loading selected sample...");
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("sample URL helper updates sample only after caller reports success", () => {
+  const previousLocation = globalThis.location;
+  const previousHistory = globalThis.history;
+  const replacedUrls = [];
+  globalThis.location = {
+    pathname: "/app/",
+    search: "?sample=tno-1962-atlantropa-briefing&view=guide&guide_section=quick&foo=bar",
+    hash: "#map",
+  };
+  globalThis.history = {
+    state: { preserved: true },
+    replaceState: (state, unused, url) => {
+      replacedUrls.push({ state, unused, url });
+      globalThis.location.search = url.includes("?") ? `?${url.split("?")[1].split("#")[0]}` : "";
+    },
+  };
+
+  try {
+    const urlState = createUiSurfaceUrlState({
+      uiUrlStateKeys: {
+        sample: "sample",
+        legacySample: "sample_project",
+        view: "view",
+        guideSection: "guide_section",
+        section: "section",
+      },
+    });
+    assert.equal(replacedUrls.length, 0);
+    urlState.syncSampleProjectUrlState("modern-world-japan-corridor");
+    assert.equal(replacedUrls.length, 1);
+    assert.equal(
+      replacedUrls[0].url,
+      "/app/?sample=modern-world-japan-corridor&view=guide&guide_section=quick&foo=bar#map",
+    );
+  } finally {
+    globalThis.location = previousLocation;
+    globalThis.history = previousHistory;
+  }
 });
 
 test("sample startup state writes notify banner refresh hook for bad links", async () => {

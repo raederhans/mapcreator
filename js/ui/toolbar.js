@@ -39,6 +39,8 @@ import { markLegacyColorStateDirty, resetAllFeatureOwnersToCanonical } from "../
 import { showToast } from "./toast.js";
 import { showAppDialog } from "./app_dialog.js";
 import { createUiSurfaceUrlState } from "./ui_surface_url_state.js";
+import { loadPublicSampleProjectIntoRuntime } from "../core/sample_project_import_workflow.js";
+import { loadPublicSampleProjectList } from "../core/sample_project_registry.js";
 import {
   applyDialogContract,
   createFocusReturnRegistry,
@@ -240,6 +242,8 @@ function initToolbar({ render } = {}) {
   const scenarioGuideSampleProjectOpenExportBtn = document.getElementById("scenarioGuideSampleProjectOpenExportBtn");
   const scenarioGuideSampleProjectDownloadOriginalLink = document.getElementById("scenarioGuideSampleProjectDownloadOriginalLink");
   const scenarioGuideSampleProjectContinueBtn = document.getElementById("scenarioGuideSampleProjectContinueBtn");
+  const scenarioGuideSampleProjectChoices = document.getElementById("scenarioGuideSampleProjectChoices");
+  const scenarioGuideSampleProjectStatus = document.getElementById("scenarioGuideSampleProjectStatus");
   const dockConfigGroup = document.getElementById("dockConfigGroup");
   const dockReferenceBtn = document.getElementById("dockReferenceBtn");
   const dockExportBtn = document.getElementById("dockExportBtn");
@@ -408,6 +412,7 @@ function initToolbar({ render } = {}) {
   const {
     getScenarioGuideSectionFromUrl,
     getSupportSurfaceViewFromUrl,
+    syncSampleProjectUrlState,
     syncScenarioGuideSectionUrlState,
     syncSupportSurfaceUrlState,
   } = uiSurfaceUrlState;
@@ -809,6 +814,16 @@ function initToolbar({ render } = {}) {
     return false;
   });
 
+  const fetchForSampleProjects = typeof globalThis.fetch === "function"
+    ? globalThis.fetch.bind(globalThis)
+    : null;
+  const getCommittedSampleProjectId = () => {
+    const sampleState = runtimeState.sampleProjectDeeplink || {};
+    return String(sampleState.status || "") === "success"
+      ? String(sampleState.sampleId || "").trim()
+      : String(sampleState.previousSampleId || "").trim();
+  };
+
   const sampleProjectBannerController = createSampleProjectBannerController({
     runtimeState,
     root: sampleProjectBanner,
@@ -830,6 +845,8 @@ function initToolbar({ render } = {}) {
     openExportButton: scenarioGuideSampleProjectOpenExportBtn,
     downloadOriginalLink: scenarioGuideSampleProjectDownloadOriginalLink,
     continueButton: scenarioGuideSampleProjectContinueBtn,
+    sampleListNode: scenarioGuideSampleProjectChoices,
+    sampleListStatusNode: scenarioGuideSampleProjectStatus,
     t,
     openExportWorkbench: (trigger = scenarioGuideSampleProjectOpenExportBtn) => (
       runtimeState.openExportWorkbenchFn?.(trigger)
@@ -837,6 +854,60 @@ function initToolbar({ render } = {}) {
     continueWithDefaultGuide: () => {
       renderScenarioGuideSection("quick");
       document.getElementById("scenarioGuideStepApply")?.scrollIntoView?.({ block: "nearest" });
+    },
+    onSampleChoice: async (sampleId) => {
+      const normalizedSampleId = String(sampleId || "").trim();
+      if (!normalizedSampleId) return;
+      if (
+        String(runtimeState.sampleProjectDeeplink?.status || "") === "success"
+        && getCommittedSampleProjectId() === normalizedSampleId
+      ) {
+        return;
+      }
+      if (runtimeState.isDirty) {
+        const confirmed = await showAppDialog({
+          title: t("Load another sample?", "ui"),
+          message: t("Loading another sample replaces the current workspace.", "ui"),
+          details: t("Export or save your current work before continuing if you want to keep it.", "ui"),
+          confirmLabel: t("Load Sample", "ui"),
+          cancelLabel: t("Keep Current Project", "ui"),
+          tone: "warning",
+        });
+        if (!confirmed) {
+          sampleProjectGuideCardController.setSwitcherState({ status: "idle" });
+          return;
+        }
+      }
+      sampleProjectGuideCardController.setSwitcherState({
+        status: "loading",
+        activeSampleId: normalizedSampleId,
+      });
+      const result = await loadPublicSampleProjectIntoRuntime(normalizedSampleId, {
+        targetState: state,
+        helpers: {
+          fetchImpl: fetchForSampleProjects,
+          ui: {
+            t,
+            showToast,
+            showAppDialog,
+          },
+          hooks: {
+            refreshColorState,
+          },
+          showToast,
+        },
+      });
+      if (result?.ok) {
+        syncSampleProjectUrlState(result.sampleProject?.id || normalizedSampleId);
+        sampleProjectGuideCardController.setSwitcherState({ status: "idle" });
+        updateDirtyIndicator();
+        return;
+      }
+      sampleProjectGuideCardController.setSwitcherState({
+        status: "error",
+        message: t(result?.error?.userMessage || "The selected sample project could not be opened.", "ui"),
+      });
+      updateDirtyIndicator();
     },
   });
   sampleProjectBannerController.bindEvents();
@@ -848,6 +919,17 @@ function initToolbar({ render } = {}) {
   registerRuntimeHook(state, "refreshSampleProjectBannerFn", refreshSampleProjectSurfaces);
   sampleProjectBannerController.render();
   sampleProjectGuideCardController.render();
+  void loadPublicSampleProjectList({ fetchImpl: fetchForSampleProjects })
+    .then((sampleProjects) => {
+      sampleProjectGuideCardController.setSampleProjects(sampleProjects);
+    })
+    .catch((error) => {
+      console.warn("[sample-project] Unable to load public sample list.", error);
+      sampleProjectGuideCardController.setSwitcherState({
+        status: "error",
+        message: t("The sample project list could not be loaded.", "ui"),
+      });
+    });
 
   registerRuntimeHook(state, "openTransportWorkbenchFn", (trigger = null) => openTransportWorkbench(trigger));
   registerRuntimeHook(state, "closeTransportWorkbenchFn", ({ restoreFocus = true } = {}) => (

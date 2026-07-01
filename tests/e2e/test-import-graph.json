@@ -778,10 +778,12 @@
     },
     "tests/e2e/sample_guide_deeplink.spec.js": {
       "directDependencies": [
+        "js/core/dirty_state.js",
         "js/core/state.js",
         "tests/e2e/support/playwright-app.js"
       ],
       "transitiveDependencies": [
+        "js/core/dirty_state.js",
         "js/core/interaction_funnel.js",
         "js/core/map_renderer.js",
         "js/core/scenario_dispatcher.js",
@@ -795,6 +797,7 @@
         "tests/e2e/support/startup-paths.js"
       ],
       "repoImpact": [
+        "js/core/dirty_state.js",
         "js/core/interaction_funnel.js",
         "js/core/map_renderer.js",
         "js/core/scenario_dispatcher.js",
@@ -1624,7 +1627,8 @@
     ],
     "js/core/dirty_state.js": [
       "tests/e2e/city_lights_layer_regression.spec.js",
-      "tests/e2e/interaction_funnel_contract.spec.js"
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js"
     ],
     "js/core/feature_identity.js": [
       "tests/e2e/dev/full_visual_acceptance.dev.spec.js",

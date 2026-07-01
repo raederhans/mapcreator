@@ -149,6 +149,14 @@ test("public Pages release gate", async ({ page }, testInfo) => {
       "href",
       /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
     );
+    const sampleChoices = page.locator("[data-sample-guide-choice]");
+    await expect(sampleChoices).toHaveCount(5, { timeout: 30000 });
+    await expect(page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    await expect(page.locator("[data-sample-guide-choice='modern-world-japan-corridor']")).toBeVisible();
+    await expect(page.locator("[data-sample-guide-choice*='hgo']")).toHaveCount(0);
     await page.locator("[data-sample-guide-open-export]").click();
     await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
     await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
@@ -195,6 +203,8 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     const snapshot = await readSmokeFailureSnapshot(page, [
       "body",
       "#scenarioGuidePopover",
+      "[data-sample-guide-choice]",
+      "[data-sample-guide-status-message]",
       "#sampleProjectBanner",
       "#scenarioStatus",
       "#scenarioSelect",

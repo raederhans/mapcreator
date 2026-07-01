@@ -1,4 +1,5 @@
 const SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES = new Set(["success", "error"]);
+const SAMPLE_PROJECT_IN_FLIGHT_STATUSES = new Set(["pending", "loading", "importing"]);
 
 const ERROR_MESSAGE_BY_CODE = Object.freeze({
   "invalid-sample-id": "This sample link is not valid.",
@@ -26,6 +27,22 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizeSampleProjectEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => ({
+      id: normalizeText(entry?.id),
+      title: normalizeText(entry?.title),
+      scenarioId: normalizeText(entry?.scenarioId || entry?.scenario_id),
+      projectUrl: normalizeText(entry?.projectUrl || entry?.project_url),
+      appProjectUrl: normalizeText(entry?.appProjectUrl),
+      fileName: normalizeText(entry?.fileName),
+      recipe: Array.isArray(entry?.recipe)
+        ? entry.recipe.map((step) => normalizeText(step)).filter(Boolean)
+        : [],
+    }))
+    .filter((entry) => entry.id);
+}
+
 function resolveOriginalDownloadUrl(sampleState) {
   const appProjectUrl = normalizeText(sampleState?.appProjectUrl);
   if (appProjectUrl) return appProjectUrl;
@@ -51,6 +68,12 @@ function resolveErrorMessage(sampleState, t) {
   if (catalogMessage) return localize(t, catalogMessage);
   return normalizeText(sampleState?.errorMessage)
     || localize(t, "The selected sample project could not be opened.");
+}
+
+function resolveCommittedSampleId(sampleState) {
+  const status = normalizeText(sampleState?.status);
+  if (status === "success") return normalizeText(sampleState?.sampleId);
+  return normalizeText(sampleState?.previousSampleId);
 }
 
 export function resolveSampleProjectBannerView(sampleState, { t = identityT } = {}) {
@@ -100,14 +123,16 @@ export function resolveSampleProjectBannerView(sampleState, { t = identityT } = 
   };
 }
 
-export function resolveSampleProjectGuideContext(runtimeState, { t = identityT } = {}) {
+export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, sampleProjects = [] } = {}) {
   const sampleState = runtimeState?.sampleProjectDeeplink;
   const status = normalizeText(sampleState?.status);
-  if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status)) {
+  const publicSampleProjects = normalizeSampleProjectEntries(sampleProjects);
+  if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status) && !publicSampleProjects.length) {
     return null;
   }
 
   const sampleId = normalizeText(sampleState?.sampleId);
+  const selectedSampleId = resolveCommittedSampleId(sampleState);
   const sampleTitle = normalizeText(sampleState?.title) || sampleId || localize(t, "selected sample");
   const downloadHref = resolveOriginalDownloadUrl(sampleState);
   if (status === "success") {
@@ -127,11 +152,47 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT }
       openExportLabel: localize(t, "Open export"),
       downloadOriginalLabel: localize(t, "Download original JSON"),
       continueLabel: localize(t, "Continue with default guide"),
+      switcherTitle: localize(t, "Load another sample"),
+      switcherBody: localize(
+        t,
+        "Switching samples replaces the current workspace after confirmation when unsaved edits exist.",
+      ),
       canOpenExport: true,
       canDownloadOriginal: !!downloadHref,
       canContinue: false,
       downloadHref,
       downloadName: normalizeText(sampleState?.fileName),
+      selectedSampleId,
+      sampleProjects: publicSampleProjects,
+    };
+  }
+
+  if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status)) {
+    return {
+      status: "starter",
+      tone: "neutral",
+      sampleId: "",
+      scenarioId: "",
+      projectUrl: "",
+      appProjectUrl: "",
+      fileName: "",
+      title: localize(t, "Load a starter sample"),
+      body: localize(
+        t,
+        "Choose a checked-in public starter sample to open it in the editor.",
+      ),
+      openExportLabel: localize(t, "Open export"),
+      downloadOriginalLabel: localize(t, "Download original JSON"),
+      continueLabel: localize(t, "Continue with default guide"),
+      switcherTitle: localize(t, "Load a starter sample"),
+      switcherBody: localize(t, "Samples open from the public checked-in project list."),
+      canOpenExport: false,
+      canDownloadOriginal: false,
+      canContinue: false,
+      downloadHref: "",
+      downloadName: "",
+      selectedSampleId,
+      sampleProjects: publicSampleProjects,
     };
   }
 
@@ -148,11 +209,15 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT }
     openExportLabel: localize(t, "Open export"),
     downloadOriginalLabel: localize(t, "Download original JSON"),
     continueLabel: localize(t, "Continue with default guide"),
+    switcherTitle: localize(t, "Load another sample"),
+    switcherBody: localize(t, "Choose another checked-in public starter sample."),
     canOpenExport: false,
     canDownloadOriginal: false,
     canContinue: true,
     downloadHref: "",
     downloadName: "",
+    selectedSampleId,
+    sampleProjects: publicSampleProjects,
   };
 }
 
@@ -253,15 +318,102 @@ export function createSampleProjectGuideCardController({
   openExportButton,
   downloadOriginalLink,
   continueButton,
+  sampleListNode,
+  sampleListStatusNode,
   t = identityT,
   openExportWorkbench = null,
   continueWithDefaultGuide = null,
+  onSampleChoice = null,
 } = {}) {
   let bound = false;
+  let sampleProjects = [];
+  let switcherStatus = "idle";
+  let switcherMessage = "";
+  let activeChoiceId = "";
+
+  const setStatusMessage = (message = "") => {
+    if (!sampleListStatusNode) return;
+    const normalizedMessage = normalizeText(message);
+    sampleListStatusNode.textContent = normalizedMessage;
+    setElementHidden(sampleListStatusNode, !normalizedMessage);
+  };
+
+  const renderSampleChoices = (view) => {
+    if (!sampleListNode) return;
+    const choices = normalizeSampleProjectEntries(view?.sampleProjects);
+    const sampleState = runtimeState?.sampleProjectDeeplink || {};
+    const stateStatus = normalizeText(sampleState.status);
+    const busy = SAMPLE_PROJECT_IN_FLIGHT_STATUSES.has(stateStatus) || switcherStatus === "loading";
+    const activeBusyId = normalizeText(activeChoiceId || sampleState.sampleId);
+    if (typeof sampleListNode.replaceChildren === "function") {
+      sampleListNode.replaceChildren();
+    } else {
+      sampleListNode.children = [];
+    }
+    setElementHidden(sampleListNode, !choices.length);
+    choices.forEach((entry) => {
+      const selected = entry.id === view.selectedSampleId;
+      const choiceBusy = busy && entry.id === activeBusyId;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "scenario-guide-sample-choice";
+      button.dataset.sampleGuideChoice = entry.id;
+      button.disabled = busy;
+      button.setAttribute("aria-current", selected ? "true" : "false");
+      if (choiceBusy) {
+        button.setAttribute("aria-busy", "true");
+      } else {
+        button.removeAttribute("aria-busy");
+      }
+
+      const title = document.createElement("span");
+      title.className = "scenario-guide-sample-choice__title";
+      title.textContent = entry.title || entry.id;
+      const scenario = document.createElement("span");
+      scenario.className = "scenario-guide-sample-choice__scenario";
+      scenario.textContent = entry.scenarioId;
+      button.append(title, scenario);
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
+        if (typeof onSampleChoice === "function") {
+          onSampleChoice(entry.id, button);
+        }
+      });
+      if (typeof sampleListNode.appendChild === "function") {
+        sampleListNode.appendChild(button);
+      } else if (Array.isArray(sampleListNode.children)) {
+        sampleListNode.children.push(button);
+      }
+    });
+
+    if (switcherStatus === "error") {
+      setStatusMessage(switcherMessage || localize(t, "The selected sample project could not be opened."));
+    } else if (busy) {
+      setStatusMessage(localize(t, "Loading selected sample..."));
+    } else {
+      setStatusMessage("");
+    }
+  };
 
   const controller = {
+    setSampleProjects(nextSampleProjects = []) {
+      sampleProjects = normalizeSampleProjectEntries(nextSampleProjects);
+      return controller.render();
+    },
+
+    setSwitcherState({
+      status = "idle",
+      message = "",
+      activeSampleId = "",
+    } = {}) {
+      switcherStatus = normalizeText(status) || "idle";
+      switcherMessage = normalizeText(message);
+      activeChoiceId = normalizeText(activeSampleId);
+      return controller.render();
+    },
+
     render() {
-      const view = resolveSampleProjectGuideContext(runtimeState, { t });
+      const view = resolveSampleProjectGuideContext(runtimeState, { t, sampleProjects });
       if (!root || !view) {
         setElementHidden(root, true);
         return null;
@@ -299,6 +451,7 @@ export function createSampleProjectGuideCardController({
       }
       setActionHidden(continueButton, !view.canContinue);
 
+      renderSampleChoices(view);
       setElementHidden(root, false);
       return view;
     },

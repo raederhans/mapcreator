@@ -29,6 +29,16 @@ export function createUiSurfaceUrlState({
     });
   };
 
+  const syncSampleProjectUrlState = (sampleId = "") => {
+    const normalizedSampleId = String(sampleId || "").trim().toLowerCase();
+    if (!normalizedSampleId) return;
+    replaceUiUrlParams((params) => {
+      params.set(uiUrlStateKeys.sample, normalizedSampleId);
+      params.delete(uiUrlStateKeys.legacySample);
+      params.set(uiUrlStateKeys.view, "guide");
+    });
+  };
+
   const getSupportSurfaceViewFromUrl = () => {
     if (!globalThis.URLSearchParams || !globalThis.location) return "";
     const params = new globalThis.URLSearchParams(globalThis.location.search || "");
@@ -51,6 +61,7 @@ export function createUiSurfaceUrlState({
     getScenarioGuideSectionFromUrl,
     getSupportSurfaceViewFromUrl,
     replaceUiUrlParams,
+    syncSampleProjectUrlState,
     syncScenarioGuideSectionUrlState,
     syncSupportSurfaceUrlState,
   };

@@ -38,6 +38,12 @@ function assertSampleProjectId(sampleId) {
   return normalizedId;
 }
 
+function normalizeRecipeSteps(recipe) {
+  return (Array.isArray(recipe) ? recipe : [])
+    .map((step) => String(step || "").trim())
+    .filter(Boolean);
+}
+
 function normalizeStringSet(values) {
   return new Set(
     (Array.isArray(values) ? values : [])
@@ -112,12 +118,7 @@ export function resolveSampleProjectFileName(projectUrl) {
   return fileName;
 }
 
-export function resolveSampleProjectFromManifest(
-  manifest,
-  sampleId,
-  { projectBaseUrl = SAMPLE_PROJECT_ASSET_BASE_URL } = {},
-) {
-  const normalizedId = assertSampleProjectId(sampleId);
+function createSampleProjectManifestContext(manifest) {
   if (!manifest || typeof manifest !== "object") {
     throw createSampleProjectError(
       "invalid-manifest",
@@ -125,11 +126,64 @@ export function resolveSampleProjectFromManifest(
       { userMessage: "The sample project list is not valid." },
     );
   }
+  return {
+    publicScenarioIds: normalizeStringSet(manifest.public_scenario_ids),
+    excludedScenarioIds: normalizeStringSet(manifest.developer_preview_exclusions),
+    manifestVersion: Number(manifest.version || 0) || 0,
+    sampleProjects: Array.isArray(manifest.sample_projects) ? manifest.sample_projects : [],
+  };
+}
 
-  const publicScenarioIds = normalizeStringSet(manifest.public_scenario_ids);
-  const excludedScenarioIds = normalizeStringSet(manifest.developer_preview_exclusions);
-  const sampleProjects = Array.isArray(manifest.sample_projects) ? manifest.sample_projects : [];
-  const entry = sampleProjects.find((project) => normalizeSampleProjectId(project?.id) === normalizedId);
+function resolveSampleProjectEntry(entry, {
+  manifestVersion = 0,
+  publicScenarioIds,
+  excludedScenarioIds,
+  projectBaseUrl = SAMPLE_PROJECT_ASSET_BASE_URL,
+} = {}) {
+  const id = assertSampleProjectId(entry?.id);
+  const scenarioId = String(entry?.scenario_id || "").trim();
+  if (!scenarioId) {
+    throw createSampleProjectError(
+      "private-sample-scenario",
+      "Sample project scenario is not public: (empty)",
+      { userMessage: "This sample project is not available in the public demo." },
+    );
+  }
+
+  const fileName = resolveSampleProjectFileName(entry?.project_url);
+  const isDeveloperPreview = excludedScenarioIds?.has(scenarioId) || false;
+  const isPublicScenario = publicScenarioIds?.has(scenarioId) || false;
+  const isPublic = isPublicScenario && !isDeveloperPreview;
+  if (!isPublic && !isDeveloperPreview) {
+    throw createSampleProjectError(
+      "private-sample-scenario",
+      `Sample project scenario is not public: ${scenarioId}`,
+      { userMessage: "This sample project is not available in the public demo." },
+    );
+  }
+
+  return {
+    id,
+    title: String(entry?.title || id).trim(),
+    scenarioId,
+    projectUrl: String(entry?.project_url || "").trim(),
+    appProjectUrl: `${projectBaseUrl}${fileName}`,
+    fileName,
+    manifestVersion,
+    recipe: normalizeRecipeSteps(entry?.recipe),
+    isDeveloperPreview,
+    isPublic,
+  };
+}
+
+export function resolveSampleProjectFromManifest(
+  manifest,
+  sampleId,
+  { projectBaseUrl = SAMPLE_PROJECT_ASSET_BASE_URL } = {},
+) {
+  const normalizedId = assertSampleProjectId(sampleId);
+  const manifestContext = createSampleProjectManifestContext(manifest);
+  const entry = manifestContext.sampleProjects.find((project) => normalizeSampleProjectId(project?.id) === normalizedId);
   if (!entry) {
     throw createSampleProjectError(
       "unknown-sample-id",
@@ -138,25 +192,45 @@ export function resolveSampleProjectFromManifest(
     );
   }
 
-  const scenarioId = String(entry.scenario_id || "").trim();
-  if (!scenarioId || excludedScenarioIds.has(scenarioId) || !publicScenarioIds.has(scenarioId)) {
+  const sampleProject = resolveSampleProjectEntry(entry, { ...manifestContext, projectBaseUrl });
+  if (!sampleProject.isPublic) {
     throw createSampleProjectError(
       "private-sample-scenario",
-      `Sample project scenario is not public: ${scenarioId || "(empty)"}`,
+      `Sample project scenario is not public: ${sampleProject.scenarioId}`,
       { userMessage: "This sample project is not available in the public demo." },
     );
   }
 
-  const fileName = resolveSampleProjectFileName(entry.project_url);
   return {
-    id: normalizedId,
-    title: String(entry.title || normalizedId).trim(),
-    scenarioId,
-    projectUrl: String(entry.project_url || "").trim(),
-    appProjectUrl: `${projectBaseUrl}${fileName}`,
-    fileName,
-    manifestVersion: Number(manifest.version || 0) || 0,
+    id: sampleProject.id,
+    title: sampleProject.title,
+    scenarioId: sampleProject.scenarioId,
+    projectUrl: sampleProject.projectUrl,
+    appProjectUrl: sampleProject.appProjectUrl,
+    fileName: sampleProject.fileName,
+    manifestVersion: sampleProject.manifestVersion,
+    recipe: sampleProject.recipe,
   };
+}
+
+export function resolvePublicSampleProjectListFromManifest(
+  manifest,
+  { projectBaseUrl = SAMPLE_PROJECT_ASSET_BASE_URL } = {},
+) {
+  const manifestContext = createSampleProjectManifestContext(manifest);
+  return manifestContext.sampleProjects
+    .map((entry) => resolveSampleProjectEntry(entry, { ...manifestContext, projectBaseUrl }))
+    .filter((entry) => entry.isPublic)
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      scenarioId: entry.scenarioId,
+      projectUrl: entry.projectUrl,
+      appProjectUrl: entry.appProjectUrl,
+      fileName: entry.fileName,
+      manifestVersion: entry.manifestVersion,
+      recipe: entry.recipe,
+    }));
 }
 
 export async function fetchSampleProjectManifest({
@@ -179,4 +253,13 @@ export async function loadSampleProjectText(sampleId, {
     sampleProject,
     text,
   };
+}
+
+export async function loadPublicSampleProjectList({
+  fetchImpl = globalThis.fetch,
+  manifestUrl = SAMPLE_PROJECT_MANIFEST_URL,
+  projectBaseUrl = SAMPLE_PROJECT_ASSET_BASE_URL,
+} = {}) {
+  const manifest = await fetchSampleProjectManifest({ fetchImpl, manifestUrl });
+  return resolvePublicSampleProjectListFromManifest(manifest, { projectBaseUrl });
 }
