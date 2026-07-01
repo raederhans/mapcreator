@@ -64,6 +64,7 @@ Docs:
 - 2026-07-01: Noether static review returned WATCH and confirmed the owner boundary is viable while requesting old hover/facility contract tests follow the moved tokens. The two touched Python contract methods now pass directly.
 - 2026-07-01: State-write allowlist initially flagged the new tests because direct assignment tokens appeared inside test source and contract strings. The tests now use local closure variables and constructed state-write tokens.
 - 2026-07-01: Functional commit `f9b0a2691058cc7e3855cf49fade5c798c23530e` was pushed to `origin/codex/p48-map-hover-interaction-owner-20260701` and fast-forwarded to `origin/main`; `git merge-base --is-ancestor f9b0a2691058cc7e3855cf49fade5c798c23530e origin/main` returned success.
+- 2026-07-01: Registry closeout commit `22066cb859bc6687086cf1687dc9c872d22c3acb` was pushed to `origin/codex/p48-map-hover-interaction-owner-20260701` and fast-forwarded to `origin/main`.
 
 ## Validation Results
 
