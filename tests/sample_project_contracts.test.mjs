@@ -459,6 +459,7 @@ test("shared sample import workflow preserves committed sample during failed swi
     },
   };
   const refreshSnapshots = [];
+  // 这条测试锁住“切换失败仍保留上一个成功样例”的公共合同；Guide card 的 selectedSampleId 依赖 previousSampleId。
   registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", (sampleState) => {
     refreshSnapshots.push({
       status: sampleState.status,
@@ -775,6 +776,7 @@ test("sample guide card renders public sample choices with selected and loading 
     assert.equal(sampleListNode.children[1].disabled, true);
     assert.equal(sampleListStatusNode.textContent, "Loading selected sample...");
 
+    // pending 来自 startup deeplink 的 post-ready 队列；此时还没有 committed sample，列表继续保持禁用，避免二次点击覆盖排队任务。
     sampleRuntime.sampleProjectDeeplink = {
       status: "pending",
       sampleId: "tno-1962-atlantropa-briefing",

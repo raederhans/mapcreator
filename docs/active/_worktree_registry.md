@@ -1,14 +1,14 @@
 # Worktree Registry
 
-Last updated: 2026-07-01 Phase 6C sample switcher integration archive closeout
+Last updated: 2026-07-01 comment annotation automation closeout
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest fetched baseline is `origin/main@16abfd5f`, matching local parent `main@16abfd5f`.
+- Latest fetched baseline is `origin/main@a6a8105c`; local parent `main@16abfd5f` is behind by 2 commits and has unrelated WIP preserved.
 - Active renderer handoff: P43 render phase lifecycle owner is integrated on `origin/main` through functional commit `952af9d2` and registry closeout `473cd389`; the P43 implementation and integration worktrees have been removed. P43 starts from the P40/P41/P42 guardrails and keeps render/draw/pass/hit/scenario/exact/strategic/public/state-write/dist migration out of scope.
 - Latest integrated renderer platform baseline includes post-ready scheduler, main runtime diagnostics, render runtime binding, startup audit registry cleanup, startup failure recovery phase4, phase4.5 UI rework mainline layout gate recovery, phase5 UI shell debug boot, phase6 deferred bootstrap owners, phase7 bootstrap wiring boundary lock, phase8 startup ready handoff owner, renderer host/catalog P9-P10, render invalidation catalog P11, render cache invalidation authority P12, render pipeline pass definition catalog P13, exact-after-settle pass policy catalog P14, render transform reuse policy owner P15, projected geometry bounds owner P16, viewport read-model owner P17, scenario water cache policy owner P18, the startup hydration bridge audit fix, P19 viewport command owner, P20 viewport resize lifecycle owner, P21 zoom interaction lifecycle owner, P22 map interaction event binding owner, P23 renderer surface host preflight, the P23 review-fix guard cleanup, P24 renderer surface host first implementation, P25 surface lifecycle preflight, P26 surface lifecycle owner, P27 projection/path lifecycle preflight, P27 projection/path inventory hardening, the viewport resize browser zoom audit fix, P28 projection/path owner, P29 SVG lifecycle preflight guardrails, P30 SVG surface lifecycle owner, P31 fitProjection lifecycle preflight, P32 fitProjection owner, P33 surface runtime bridge state ownership, P34 renderer viewport update ownership, P35 renderer startup transaction preflight, P36 renderer startup transaction owner, P37 setMapData transaction preflight, P38 setMapData transaction owner, P39 reset-boundary hardening, Phase5B sample deep links, P40 render lifecycle preflight, P41 render request boundary owner, P42 visible-frame diagnostics owner, and P43 render phase lifecycle owner.
-- Live test/build owner: no active live process remains after Phase6C validation. Temporary local release-smoke dev servers on ports `8810` and `8811` were stopped after validation.
+- Live test/build owner: no active live process remains after comment annotation validation. This automation did not start a dev server or browser smoke.
 - Subagents: code-mapper/test-engineer/code-reviewer/architect lanes may inspect code and recommend fixes; no subagent owns browser/dev-server/live test processes.
 
 ## Recommended Order
@@ -19,13 +19,13 @@ Last updated: 2026-07-01 Phase 6C sample switcher integration archive closeout
 
 ## Current Worktrees
 
-Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `git worktree list --porcelain` on 2026-07-01 during Phase6C integration closeout.
+Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, `git rev-parse origin/main`, and `git worktree list --porcelain` on 2026-07-01 during the comment annotation automation.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | `origin/main@16abfd5f` | in-progress / unrelated WIP | Dirty files: `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md`, `docs/archive/phase6b-sample-guide-export-20260630/context.md`, `docs/archive/phase6b-sample-guide-export-20260630/task.md`, `landing/index.html`, `lessons learned.md`. | `git status --short --branch` returned `## main...origin/main` plus the listed WIP. | Yellow with Phase6C docs/landing/lessons if merged through parent; green for Phase6C product files because parent WIP is preserved and untouched. | Leave parent WIP untouched; integrate Phase6C through its isolated branch. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-phase6c-sample-switcher` | `codex/phase6c-sample-switcher@395238d8` | `origin/main@16abfd5f` | integrated into clean integration branch | Clean feature worktree; Phase6C hot files are now carried by the integration branch. | Functional branch pushed to `origin/codex/phase6c-sample-switcher`; validation passed through sample contracts `15/15`, i18n audit, sample Guide E2E `2/2`, `verify:pages-dist`, local `/dist/` release gates `1/1` before and after review fix, architecture boundaries, import graph, code-review P2 fix, staged `verify:dist-drift`, and staged/unstaged diff checks. | Red with any concurrent sample Guide/import/toolbar/dist work; yellow with README/release copy and URL-state helper work; green with unrelated renderer-only lanes. | Keep as recovery branch until `main` push is verified, then remove this feature worktree. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-phase6c-main-integration` | `codex/phase6c-main-integration` | `origin/main@16abfd5f` | integration-closeout in progress | Staged closeout only: active task docs moved to `docs/archive/phase6c-sample-switcher-20260701/` plus this registry. | Fast-forward merge from `origin/codex/phase6c-sample-switcher` completed without conflict; final post-archive gates remain below. | Yellow with parent `lessons learned.md` WIP by history; parent checkout remains untouched. | Commit closeout, run final gates, push this branch to `origin/main`, then remove Phase6C worktrees after remote verification. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | `origin/main@a6a8105c` | in-progress / unrelated WIP | Dirty summary: parent has registry/docs/archive move WIP, `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md`, `docs/archive/phase6b-sample-guide-export-20260630/{context.md,task.md}`, `docs/archive/thematic-admin-metrics-runtime-loader-v1/task.md`, `landing/index.html`, and `lessons learned.md`; full status includes deleted active docs and untracked archive directories. | `git status --short --branch` returned `## main...origin/main [behind 2]` with the dirty summary above; `git diff --name-status` confirms active-to-archive document moves plus listed modified files. | Yellow with registry/docs/landing/lessons work; green for this automation's source-comment files because parent WIP is untouched. | Leave parent WIP untouched; integrate this automation through its isolated worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260701-recent-samples` | `codex/audit-20260701-recent-samples@a6a8105c` | `origin/main@a6a8105c` | clean / audit scratch | Dirty files: none. | `git status --short --branch` returned only `## codex/audit-20260701-recent-samples...origin/main`; `git diff --name-only` returned empty. | Green for this automation because it has no dirty files; yellow only as a leftover branch/worktree needing owner confirmation before cleanup. | Preserve until its owner or integration owner confirms it can be removed. |
+| `C:\Users\raede\Desktop\dev\mapcreator-comment-automation-20260701` | `codex/comment-automation-20260701@a6a8105c` | `origin/main@a6a8105c` | ready-for-integration | Dirty files: comment-only edits in sample deeplink/import/Guide source and one sample contract test, plus this registry. Hot files avoided: `index.html`, `css/style.css`, `js/ui/toolbar.js`, `dist/app/**`. | `node --check` passed for 4 changed JS/MJS files; `npm run test:node:sample-project-contracts` passed `15/15`; `git diff` shows comment-only code/test changes. | Yellow with future sample Guide/import workflow edits and registry updates; green with appearance/transport shared hot files because they were avoided. | Commit and push as a narrow automation change, then remove the temporary worktree after remote confirmation. |
 
 ## Branch Sync and Cleanup 2026-06-30
 
@@ -39,6 +39,20 @@ Current rows reflect `git status --short --branch`, `git rev-parse HEAD`, and `g
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### Comment Annotation Automation 2026-07-01
+
+1. Added Chinese maintenance comments to the sample-project startup deeplink, shared import workflow, Guide sample card controller, and sample contract tests.
+2. Explained the post-ready sample import gate, failed-switch previous-sample snapshot, shared runtime refresh hook, Guide selected-sample model, and in-flight sample switcher lock.
+3. Kept runtime behavior unchanged and did not refactor, because the current source boundaries are already clear and helper extraction would broaden this maintenance pass.
+4. Avoided `index.html`, `css/style.css`, `js/ui/toolbar.js`, `dist/app/**`, README files, and parent dirty files.
+5. Refreshed this registry's live worktree truth for the automation handoff.
+
+Files: core `js/bootstrap/startup_sample_project_deeplink.js`, `js/core/sample_project_import_workflow.js`, `js/ui/toolbar/sample_project_banner_controller.js`; tests `tests/sample_project_contracts.test.mjs`; docs `docs/active/_worktree_registry.md`; temporary files none.
+
+Diff summary: comment-only source/test changes add 7 Chinese notes around sample deeplink scheduling, sample import state transitions, shared UI refresh, Guide card state derivation, switcher busy locking, and focused contract tests. Registry changes record the current parent checkout, the clean audit scratch worktree, this automation worktree, and the delivery package. Commit status: ready for Lore commit from branch `codex/comment-automation-20260701`. Base divergence: branch started from `origin/main@a6a8105c`; parent checkout remains at `main@16abfd5f` with unrelated WIP and is not used for integration. Potential conflicts: yellow with sample Guide/import workflow and registry edits; green with appearance/transport shared hot files, generated dist, and browser/runtime paths.
+
+Validation passed: `node --check js/bootstrap/startup_sample_project_deeplink.js js/core/sample_project_import_workflow.js js/ui/toolbar/sample_project_banner_controller.js tests/sample_project_contracts.test.mjs`; `npm run test:node:sample-project-contracts` `15/15`; `git diff` review confirmed code/test edits are comment-only. Not run: browser/dev-server/E2E, Pages dist, i18n audit, or architecture boundaries because this pass only adds comments to existing JS/MJS files and registry documentation. Recommended next step: commit and fast-forward push this isolated branch to `origin/main`, then remove the temporary worktree after remote confirmation.
 
 ### Phase6C Sample Switcher 2026-07-01
 

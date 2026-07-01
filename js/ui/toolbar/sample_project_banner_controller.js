@@ -135,6 +135,7 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
   const selectedSampleId = resolveCommittedSampleId(sampleState);
   const sampleTitle = normalizeText(sampleState?.title) || sampleId || localize(t, "selected sample");
   const downloadHref = resolveOriginalDownloadUrl(sampleState);
+  // Guide card 同时服务“已加载样例”“样例不可用”“可选择 starter”三种状态；selectedSampleId 绑定已提交样例，避免失败切换时高亮漂到未导入项目。
   if (status === "success") {
     return {
       status,
@@ -343,6 +344,7 @@ export function createSampleProjectGuideCardController({
     const choices = normalizeSampleProjectEntries(view?.sampleProjects);
     const sampleState = runtimeState?.sampleProjectDeeplink || {};
     const stateStatus = normalizeText(sampleState.status);
+    // pending/loading/importing 都算同一条切换事务，列表在事务内整体禁用，只用 aria-busy 标出当前请求项。
     const busy = SAMPLE_PROJECT_IN_FLIGHT_STATUSES.has(stateStatus) || switcherStatus === "loading";
     const activeBusyId = normalizeText(activeChoiceId || sampleState.sampleId);
     if (typeof sampleListNode.replaceChildren === "function") {
