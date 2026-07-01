@@ -77,6 +77,10 @@ const FILES = Object.freeze({
   rendererRenderPhaseLifecycleOwnerTest: "tests/renderer_render_phase_lifecycle_owner_behavior.test.mjs",
   rendererRenderPhaseLifecycleInventoryTest: "tests/renderer_render_phase_lifecycle_inventory.test.mjs",
   rendererHitCanvasSchedulingPreflightDoc: "docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md",
+  rendererHitCanvasSchedulingOwnerDoc: "docs/active/renderer-hit-canvas-scheduling-owner-p47-20260701.md",
+  hitCanvasSchedulingOwner: "js/core/map_renderer/hit_canvas_scheduling_owner.js",
+  hitCanvasSchedulingOwnerTest: "tests/hit_canvas_scheduling_owner_behavior.test.mjs",
+  hitCanvasSchedulingOwnerInventoryTest: "tests/hit_canvas_scheduling_owner_inventory.test.mjs",
   rendererHitCanvasSchedulingInventoryTest: "tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
   visibleFrameDiagnosticsOwnerDoc: "docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md",
   visibleFrameDiagnosticsOwnerTest: "tests/visible_frame_diagnostics_owner_behavior.test.mjs",
@@ -127,6 +131,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.setMapDataTransactionOwner]: 260,
   [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.renderPhaseLifecycleOwner]: 260,
+  [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
@@ -335,6 +340,10 @@ function collectFailures() {
     FILES.rendererRenderPhaseLifecycleInventoryTest,
   );
   const rendererHitCanvasSchedulingPreflightDoc = readProjectFile(FILES.rendererHitCanvasSchedulingPreflightDoc);
+  const rendererHitCanvasSchedulingOwnerDoc = readProjectFile(FILES.rendererHitCanvasSchedulingOwnerDoc);
+  const hitCanvasSchedulingOwner = readProjectFile(FILES.hitCanvasSchedulingOwner);
+  const hitCanvasSchedulingOwnerTest = readProjectFile(FILES.hitCanvasSchedulingOwnerTest);
+  const hitCanvasSchedulingOwnerInventoryTest = readProjectFile(FILES.hitCanvasSchedulingOwnerInventoryTest);
   const rendererHitCanvasSchedulingInventoryTest = readProjectFile(FILES.rendererHitCanvasSchedulingInventoryTest);
   const visibleFrameDiagnosticsOwnerDoc = readProjectFile(FILES.visibleFrameDiagnosticsOwnerDoc);
   const visibleFrameDiagnosticsOwnerTest = readProjectFile(FILES.visibleFrameDiagnosticsOwnerTest);
@@ -410,6 +419,10 @@ function collectFailures() {
     [FILES.rendererRenderPhaseLifecycleOwnerTest]: rendererRenderPhaseLifecycleOwnerTest,
     [FILES.rendererRenderPhaseLifecycleInventoryTest]: rendererRenderPhaseLifecycleInventoryTest,
     [FILES.rendererHitCanvasSchedulingPreflightDoc]: rendererHitCanvasSchedulingPreflightDoc,
+    [FILES.rendererHitCanvasSchedulingOwnerDoc]: rendererHitCanvasSchedulingOwnerDoc,
+    [FILES.hitCanvasSchedulingOwner]: hitCanvasSchedulingOwner,
+    [FILES.hitCanvasSchedulingOwnerTest]: hitCanvasSchedulingOwnerTest,
+    [FILES.hitCanvasSchedulingOwnerInventoryTest]: hitCanvasSchedulingOwnerInventoryTest,
     [FILES.rendererHitCanvasSchedulingInventoryTest]: rendererHitCanvasSchedulingInventoryTest,
     [FILES.visibleFrameDiagnosticsOwnerDoc]: visibleFrameDiagnosticsOwnerDoc,
     [FILES.visibleFrameDiagnosticsOwnerTest]: visibleFrameDiagnosticsOwnerTest,
@@ -1883,8 +1896,7 @@ function collectFailures() {
     "resetRenderDiagnostics()",
     "clearStagedMapDataTasks()",
     "cancelExactAfterSettleRefresh()",
-    "cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)",
-    "runtimeState.hitCanvasBuildScheduled = null",
+    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"renderer-refresh-reset\" });",
     "cancelDeferredWork(secondarySpatialBuildHandle)",
     "pendingSecondarySpatialBuildReasons.clear()",
     "runtimeState.deferContextBasePass = false",
@@ -2665,100 +2677,89 @@ function collectFailures() {
   }
 
   for (const heading of [
-    "## Scope and guardrails",
-    "## Current P42 renderer lifecycle baseline",
-    "## Hit canvas build entry inventory",
-    "## Hit canvas dirty and topology revision inventory",
-    "## Hit canvas scheduling/cancel handle inventory",
-    "## Deferred startup and interaction infrastructure boundary",
-    "## Spatial index dependency boundary",
-    "## Scenario refresh and chunk promotion boundary",
-    "## Interaction hit candidate boundary",
-    "## P45/P47 allowed first move",
-    "## Forbidden areas",
-    "## Required validation commands",
+    "## Objective",
+    "## First Principles",
+    "## P47 Acceptance Checklist",
+    "## Architecture Checker Target State",
+    "## Validation Owner",
   ]) {
-    if (!rendererHitCanvasSchedulingPreflightDoc.includes(heading)) {
-      failures.push(`${FILES.rendererHitCanvasSchedulingPreflightDoc} must keep hit canvas preflight heading: ${heading}`);
+    if (!rendererHitCanvasSchedulingOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.rendererHitCanvasSchedulingOwnerDoc} must keep P47 heading: ${heading}`);
     }
   }
   for (const token of [
-    "This preflight is docs, tests, and tooling only.",
-    "No production runtime edits in `js/core/map_renderer.js`.",
-    "No `hit_canvas_*` owner, helper, controller, or scheduler.",
-    "No migration of `buildHitCanvasAfterStartup`.",
-    "Recommended next implementation: hit canvas scheduling owner.",
-    "any new production `js/core/**` module whose filename contains `hit_canvas` or `hitCanvas`",
-    "Keep `drawHitCanvas()`, `drawHitCanvasWithMetric()`, `recordDeferredFullHitCanvasMetric()`, `buildHitCanvasAfterStartup()`, point probe, dirty-source writes, and topology revision writes in `map_renderer.js`.",
+    "Move only the hit canvas deferred scheduling and scheduled-handle cancellation lifecycle",
+    "The only production extraction is the scheduling owner.",
+    "The wrapper preserves the existing boolean behavior: it returns `false` after scheduling",
+    "mode: \"deferred\"",
+    "activeScenarioId: String(runtimeState.activeScenarioId || \"\")",
+    "Replace the preflight rule that forbids all production `hit_canvas` files with a unique-owner rule",
+    "Prefer behavior assertions and narrow owner-path assertions over broad brittle source-token counts.",
   ]) {
-    if (!rendererHitCanvasSchedulingPreflightDoc.includes(token)) {
-      failures.push(`${FILES.rendererHitCanvasSchedulingPreflightDoc} must lock hit canvas preflight token: ${token}`);
+    if (!rendererHitCanvasSchedulingOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererHitCanvasSchedulingOwnerDoc} must lock P47 token: ${token}`);
+    }
+  }
+  if (!rendererHitCanvasSchedulingPreflightDoc.includes("Recommended next implementation: hit canvas scheduling owner.")) {
+    failures.push(`${FILES.rendererHitCanvasSchedulingPreflightDoc} must keep historical P47 handoff token.`);
+  }
+  for (const token of [
+    "test(\"scheduled callback clears handle before drawing deferred hit canvas metric\"",
+    "mode: \"deferred\"",
+    "reason: \"custom-reason\"",
+    "activeScenarioId: \"scenario-b\"",
+    "test(\"cancel cancels an existing scheduled handle and clears it\"",
+    "test(\"createHitCanvasSchedulingOwner fails fast for missing dependencies\"",
+  ]) {
+    if (!hitCanvasSchedulingOwnerTest.includes(token)) {
+      failures.push(`${FILES.hitCanvasSchedulingOwnerTest} must cover P47 behavior token: ${token}`);
     }
   }
   for (const token of [
-    "const DOC_PATH = \"docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md\";",
-    "const MAP_RENDERER_PATH = \"js/core/map_renderer.js\";",
-    "const SCENARIO_REFRESH_RUNTIME_PATH = \"js/core/map_renderer/scenario_refresh_runtime.js\";",
-    "const SPATIAL_INDEX_RUNTIME_OWNER_PATH = \"js/core/renderer/spatial_index_runtime_owner.js\";",
-    "const INTERACTION_HIT_CANDIDATES_PATH = \"js/core/map_renderer/interaction_hit_candidates.js\";",
-    "const MAP_INTERACTION_EVENT_BINDING_OWNER_PATH = \"js/core/renderer/map_interaction_event_binding_owner.js\";",
-    "const PUBLIC_FACADE_PATH = \"js/core/map_renderer/public.js\";",
-    "const STATE_WRITE_ALLOWLIST_PATH = \"tools/eslint-rules/state-writer-allowlist.json\";",
-    "function isForbiddenHitCanvasOwnerPath(sourcePath)",
-    "async function buildHitCanvasAfterStartup",
-    "function scheduleHitCanvasBuildIfNeeded({ reason = \\\"idle-render\\\" } = {})",
-    "countToken(rendererSource, \"scheduleHitCanvasBuildIfNeeded\"), 8",
-    "countToken(rendererSource, \"buildHitCanvasAfterStartup\"), 3",
-    "countToken(rendererSource, runtimeToken(\"hitCanvasDirty\")), 24",
-    "countToken(rendererSource, runtimeToken(\"hitCanvasTopologyRevision\")), 6",
-    "countToken(rendererSource, runtimeToken(\"hitCanvasBuildScheduled\")), 9",
-    "cancelDeferredWork(\" + runtimeToken(\"hitCanvasBuildScheduled\") + \")",
+    "const OWNER_PATH = \"js/core/map_renderer/hit_canvas_scheduling_owner.js\";",
+    "function gitDiffNames(paths)",
+    "only the P47 production hit canvas scheduling owner exists",
+    "public facade state allowlist and dist remain untouched by P47",
+    "getHitCanvasSchedulingOwner().scheduleHitCanvasBuildIfNeeded({ reason });",
+    "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"strict-validation\" });",
+  ]) {
+    if (!hitCanvasSchedulingOwnerInventoryTest.includes(token)) {
+      failures.push(`${FILES.hitCanvasSchedulingOwnerInventoryTest} must lock P47 owner inventory token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const DOC_PATH = \"docs/active/renderer-hit-canvas-scheduling-owner-p47-20260701.md\";",
+    "only P47 production hit canvas scheduling owner and no broad render lifecycle owner exist",
+    "schedule wrapper must keep old falsy contract",
     "scenario refresh runtime must keep injected hit canvas scheduling boundary",
-    "countToken(runtimeSource, runtimeToken(\"hitCanvasTopologyRevision\")), 1",
-    "scenario refresh runtime must avoid direct hit canvas build/scheduling ownership",
-    "hit_canvas.js",
-    "hit_canvas_schedule_owner.js",
-    "spatial index runtime owner must not import map_renderer",
-    "interaction hit candidates must keep pure candidate helper export",
-    "public facade text content must remain unchanged for this preflight",
+    "package exposes P47 hit canvas scheduling scripts",
   ]) {
     if (!rendererHitCanvasSchedulingInventoryTest.includes(token)) {
-      failures.push(`${FILES.rendererHitCanvasSchedulingInventoryTest} must lock hit canvas inventory token: ${token}`);
+      failures.push(`${FILES.rendererHitCanvasSchedulingInventoryTest} must lock P47 scheduling inventory token: ${token}`);
     }
   }
-  if (!packageJson.includes("\"test:node:renderer-hit-canvas-scheduling-inventory\": \"node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"")) {
-    failures.push(`${FILES.packageJson} must expose hit canvas scheduling inventory script.`);
+  for (const token of [
+    "\"test:node:hit-canvas-scheduling-owner\": \"node --test tests/hit_canvas_scheduling_owner_behavior.test.mjs\"",
+    "\"test:node:hit-canvas-scheduling-owner-inventory\": \"node --test tests/hit_canvas_scheduling_owner_inventory.test.mjs\"",
+    "\"test:node:hit-canvas-scheduling-owner-suite\": \"npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory\"",
+    "\"test:node:renderer-hit-canvas-scheduling-inventory\": \"node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P47 hit canvas scheduling script: ${token}`);
+    }
   }
   if (fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderLifecycleOwner))) {
-    failures.push("Hit canvas scheduling preflight must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+    failures.push("P47 must keep js/core/renderer/renderer_render_lifecycle_owner.js absent.");
+  }
+  const hitCanvasSourceFiles = listProjectSourceFiles("js/core")
+    .filter((sourcePath) => /hit[_-]?canvas|hitCanvas/i.test(sourcePath))
+    .sort();
+  if (JSON.stringify(hitCanvasSourceFiles) !== JSON.stringify([FILES.hitCanvasSchedulingOwner])) {
+    failures.push(`P47 must allow exactly one production hit canvas source: ${FILES.hitCanvasSchedulingOwner}; found ${hitCanvasSourceFiles.join(", ") || "(none)"}.`);
   }
   for (const sourcePath of listProjectSourceFiles("js/core")) {
-    if (isForbiddenHitCanvasOwnerPath(sourcePath)) {
-      failures.push(`Hit canvas scheduling preflight must not add production hit canvas owner/helper/controller/scheduler: ${sourcePath}`);
-    }
-  }
-  for (const fixturePath of [
-    "js/core/map_renderer/hit_canvas.js",
-    "js/core/map_renderer/hit_canvas_scheduling_owner.js",
-    "js/core/map_renderer/hit_canvas_schedule_owner.js",
-    "js/core/map_renderer/hit_canvas_owner.mjs",
-    "js/core/renderer/renderer_hit_canvas_helper.js",
-    "js/core/renderer/hitCanvasDiagnostics.js",
-    "js/core/renderer/shared_hit_canvas_controller.js",
-    "js/core/renderer/hit_canvas_scheduler.js",
-  ]) {
-    if (!isForbiddenHitCanvasOwnerPath(fixturePath)) {
-      failures.push(`${FILES.packageJson} hit canvas owner detector must catch forbidden production path: ${fixturePath}`);
-    }
-  }
-  for (const fixturePath of [
-    "js/core/renderer/canvas_color_helpers.js",
-    "js/core/map_renderer/interaction_hit_candidates.js",
-    "js/core/renderer/renderer_surface_lifecycle_owner.js",
-    "js/core/renderer/spatial_index_runtime_owner.js",
-  ]) {
-    if (isForbiddenHitCanvasOwnerPath(fixturePath)) {
-      failures.push(`${FILES.packageJson} hit canvas owner detector must allow existing non-hit-canvas path: ${fixturePath}`);
+    if (isForbiddenHitCanvasOwnerPath(sourcePath) && sourcePath !== FILES.hitCanvasSchedulingOwner) {
+      failures.push(`P47 must not add extra production hit canvas owner/helper/controller/scheduler: ${sourcePath}`);
     }
   }
   for (const token of [
@@ -2771,23 +2772,61 @@ function collectFailures() {
     "function getDirtyHitCanvasPointProbeHit(event)",
     "function getValidatedCanvasHit(event, strictIds = null, { forceBuild = false } = {})",
     "function markRendererTopologyChanged({ hitCanvasDirty = false } = {})",
-    "cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)",
   ]) {
     if (!renderer.includes(token)) {
-      failures.push(`${FILES.renderer} must keep hit canvas scheduling preflight token: ${token}`);
+      failures.push(`${FILES.renderer} must keep P47 hit canvas anchor: ${token}`);
     }
   }
-  for (const [token, expectedCount] of [
-    ["runtimeState.hitCanvasDirty", 24],
-    ["runtimeState.hitCanvasTopologyRevision", 6],
-    ["runtimeState.hitCanvasBuildScheduled", 9],
-    ["scheduleHitCanvasBuildIfNeeded", 8],
-    ["buildHitCanvasAfterStartup", 3],
-    ["cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)", 2],
+  for (const token of [
+    "import { createHitCanvasSchedulingOwner } from \"./map_renderer/hit_canvas_scheduling_owner.js\";",
+    "let hitCanvasSchedulingOwner = null;",
+    "function getHitCanvasSchedulingOwner()",
+    "hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas())",
+    "isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty)",
+    "isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild)",
+    "getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled",
+    "setScheduledHitCanvasBuildHandle: (handle) => {",
+    "runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details)",
+    "function drawScheduledHitCanvasWithMetric(details = {})",
+    "mode: \"deferred\"",
   ]) {
-    const actualCount = countToken(renderer, token);
-    if (actualCount !== expectedCount) {
-      failures.push(`${FILES.renderer} must keep ${token} count ${expectedCount}; found ${actualCount}.`);
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must wire P47 scheduling owner token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createHitCanvasSchedulingOwner",
+    "\"scheduleDeferredWork\"",
+    "\"cancelDeferredWork\"",
+    "\"setScheduledHitCanvasBuildHandle\"",
+    "\"runScheduledHitCanvasBuild\"",
+    "\"hasHitCanvasRuntime\"",
+    "\"isHitCanvasDirty\"",
+    "\"isHitCanvasBuildDeferred\"",
+    "\"getRenderPhase\"",
+    "\"getScheduledHitCanvasBuildHandle\"",
+    "\"getActiveScenarioId\"",
+    "mode: \"deferred\"",
+    "activeScenarioId: String(getterApi.getActiveScenarioId() || \"\")",
+  ]) {
+    if (!hitCanvasSchedulingOwner.includes(token)) {
+      failures.push(`${FILES.hitCanvasSchedulingOwner} must lock scheduling token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "rendererSurfaceHost",
+    "drawHitCanvas",
+    "drawHitCanvasWithMetric",
+    "recordDeferredFullHitCanvasMetric",
+    "buildHitCanvasAfterStartup",
+    "getDirtyHitCanvasPointProbeHit",
+    "hitCanvasTopologyRevision",
+    "from \"../map_renderer.js\"",
+    "from \"./map_renderer.js\"",
+  ]) {
+    if (hitCanvasSchedulingOwner.includes(token)) {
+      failures.push(`${FILES.hitCanvasSchedulingOwner} must avoid renderer body token: ${token}`);
     }
   }
   const hitCanvasScheduleSource = sliceBetween(
@@ -2796,28 +2835,40 @@ function collectFailures() {
     "function ensureHitCanvasUpToDate({ force = false } = {})",
   );
   for (const token of [
-    "if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return false;",
-    "if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {",
-    "if (runtimeState.hitCanvasBuildScheduled) {",
-    "runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork(() => {",
-    "drawHitCanvasWithMetric({",
+    "getHitCanvasSchedulingOwner().scheduleHitCanvasBuildIfNeeded({ reason });",
+    "return false;",
   ]) {
     if (!hitCanvasScheduleSource.includes(token)) {
-      failures.push(`${FILES.renderer} must keep hit canvas schedule wrapper token: ${token}`);
+      failures.push(`${FILES.renderer} schedule wrapper must keep P47 token: ${token}`);
     }
+  }
+  for (const token of [
+    "scheduleDeferredWork(() =>",
+    "drawHitCanvasWithMetric({",
+    "runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork",
+  ]) {
+    if (hitCanvasScheduleSource.includes(token)) {
+      failures.push(`${FILES.renderer} schedule wrapper must not keep old scheduling body token: ${token}`);
+    }
+  }
+  const hitCanvasForcedSource = sliceBetween(
+    renderer,
+    "function ensureHitCanvasUpToDate({ force = false } = {})",
+    "function isHitCanvasCurrent()",
+  );
+  if (!hitCanvasForcedSource.includes("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"strict-validation\" });")) {
+    failures.push(`${FILES.renderer} forced validation must cancel hit canvas scheduling through owner.`);
   }
   const hitCanvasResetSource = sliceBetween(
     renderer,
     "function resetRendererRefreshTransactionState({",
     "scenarioRefreshRuntime = createScenarioRefreshRuntime({",
   );
-  for (const token of [
-    "cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);",
-    "runtimeState.hitCanvasBuildScheduled = null;",
-  ]) {
-    if (!hitCanvasResetSource.includes(token)) {
-      failures.push(`${FILES.renderer} reset path must keep hit canvas scheduled-work cancellation token: ${token}`);
-    }
+  if (!hitCanvasResetSource.includes("getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"renderer-refresh-reset\" });")) {
+    failures.push(`${FILES.renderer} reset path must cancel hit canvas scheduling through owner.`);
+  }
+  if (renderer.includes("cancelDeferredWork(runtimeState.hitCanvasBuildScheduled)")) {
+    failures.push(`${FILES.renderer} must remove direct hit canvas scheduled-work cancellation after P47.`);
   }
   if (!scenarioRefreshRuntime.includes("setInteractionInfrastructureState, scheduleSecondarySpatialIndexBuild, scheduleHitCanvasBuildIfNeeded,")) {
     failures.push(`${FILES.scenarioRefreshRuntime} must keep scheduleHitCanvasBuildIfNeeded injected dependency.`);
@@ -2923,6 +2974,7 @@ function collectFailures() {
     "./map_renderer/set_map_data_transaction_owner.js",
     "./map_renderer/render_request_boundary_owner.js",
     "./map_renderer/render_phase_lifecycle_owner.js",
+    "./map_renderer/hit_canvas_scheduling_owner.js",
     "./renderer/visible_frame_diagnostics_owner.js",
     "./map_renderer/scenario_refresh_runtime.js",
     "./renderer/canvas_color_helpers.js",
@@ -2946,6 +2998,7 @@ function collectFailures() {
     FILES.canvasColorHelpers,
     FILES.scenarioVisualInvalidationExecutor,
     FILES.renderPhaseLifecycleOwner,
+    FILES.hitCanvasSchedulingOwner,
     FILES.exactAfterSettleScheduler,
     FILES.exactAfterSettleRefreshPlans,
     FILES.exactAfterSettlePassCatalog,
