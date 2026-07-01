@@ -521,3 +521,6 @@
 
 ### 新增 E2E spec 要同步分层入口
 - 新增 `tests/e2e/*.spec.js` 时同步更新 `test-layer-manifest.json`、test list、timeout allowlist 和 selector mapping；仅有 `package.json` 脚本会让分层 gate 与变更选择器漏跑关键浏览器覆盖。
+
+### Sample 派生状态要绑定同一个 sample id
+- 导入失败路径保留 previous sample 时，推荐导出、Guide 和 Export Workbench 派生状态要同时校验 sample id，确保 attempted sample 元数据停留在失败上下文，previous committed sample 继续显示自己的推荐。
