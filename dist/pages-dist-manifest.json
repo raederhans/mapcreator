@@ -45582,7 +45582,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
-      "size_bytes": 1350,
+      "size_bytes": 1489,
       "source_kind": "dist"
     },
     {
@@ -45837,7 +45837,7 @@
     },
     {
       "path": "app/js/core/map_renderer/render_phase_lifecycle_owner.js",
-      "size_bytes": 7446,
+      "size_bytes": 7495,
       "source_kind": "dist"
     },
     {
@@ -46242,7 +46242,7 @@
     },
     {
       "path": "app/js/core/sample_project_import_workflow.js",
-      "size_bytes": 5545,
+      "size_bytes": 5990,
       "source_kind": "dist"
     },
     {
@@ -46792,7 +46792,7 @@
     },
     {
       "path": "app/js/ui/toolbar/sample_project_banner_controller.js",
-      "size_bytes": 16879,
+      "size_bytes": 17758,
       "source_kind": "dist"
     },
     {
@@ -47499,7 +47499,7 @@
     {
       "file_count": 9413,
       "path": "app",
-      "size_bytes": 965539913
+      "size_bytes": 965541425
     },
     {
       "file_count": 57,
@@ -47532,5 +47532,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972102172
+  "total_bytes": 972103684
 }

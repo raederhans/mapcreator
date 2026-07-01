@@ -12,6 +12,7 @@ const OWNER_PATH = "js/core/map_renderer/render_phase_lifecycle_owner.js";
 function createHarness({
   renderPhase = "idle",
   renderPhaseTimerId = null,
+  isInteracting = false,
   pendingDayNightRefresh = false,
   dprStageChanged = false,
   exactFastPath = false,
@@ -25,7 +26,7 @@ function createHarness({
     renderPhase,
     renderPhaseTimerId,
     phaseEnteredAt: 0,
-    isInteracting: false,
+    isInteracting,
     hoverOverlayDirty: false,
     pendingDayNightRefresh,
     adaptiveSettleProfile: null,
@@ -349,6 +350,7 @@ test("resetRenderPhaseState restores idle phase timer fields through injected ef
   const { owner, calls, state } = createHarness({
     renderPhase: "interacting",
     renderPhaseTimerId: "timer-live",
+    isInteracting: true,
     nowValues: [2222],
   });
 
@@ -362,9 +364,11 @@ test("resetRenderPhaseState restores idle phase timer fields through injected ef
     "nowMs",
     "setRenderPhaseValue",
     "setPhaseEnteredAt",
+    "setIsInteracting",
   ]);
   assert.equal(state.renderPhase, "idle");
   assert.equal(state.phaseEnteredAt, 2222);
+  assert.equal(state.isInteracting, false);
   assert.equal(state.renderPhaseTimerId, null);
   assert.equal(summary.timerCleared, true);
   assert.deepEqual(summary.effectOrder, [
@@ -372,6 +376,7 @@ test("resetRenderPhaseState restores idle phase timer fields through injected ef
     "setRenderPhaseTimerId",
     "setRenderPhaseValue",
     "setPhaseEnteredAt",
+    "setIsInteracting",
   ]);
 });
 

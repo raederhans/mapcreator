@@ -22,6 +22,19 @@ const BROWSER_SMOKE_STATIC_SUPPORT_FILES = new Set([
 const PERF_STATIC_SUPPORT_FILES = new Set([
   "ops/browser-mcp/editor-performance-benchmark.py",
 ]);
+const SAMPLE_GUIDE_RUNTIME_REFS = [
+  "js/bootstrap/startup_sample_project_deeplink.js",
+  "js/core/sample_project_import_workflow.js",
+  "js/core/sample_project_registry.js",
+  "js/ui/toolbar.js",
+  "js/ui/toolbar/sample_project_banner_controller.js",
+  "js/ui/ui_surface_url_state.js",
+  "landing/app.js",
+  "landing/assets/sample-projects",
+  "landing/assets/sample-runs.json",
+  "landing/index.html",
+  "landing/styles.css",
+];
 const GUIDANCE_ARRAY_FIELDS = ["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"];
 
 function parseArgs(argv) {
@@ -79,6 +92,16 @@ function isDirectRouteMatch(route, changedFile) {
     const looksLikeFile = /\.[^/]+$/.test(sourceRef);
     return !looksLikeFile && changedFile.startsWith(`${sourceRef.replace(/\/$/, "")}/`);
   });
+}
+
+function changedFileMatchesSourceRef(changedFile, sourceRef) {
+  if (sourceRef === changedFile) return true;
+  const looksLikeFile = /\.[^/]+$/.test(sourceRef);
+  return !looksLikeFile && changedFile.startsWith(`${sourceRef.replace(/\/$/, "")}/`);
+}
+
+function isSampleGuideRuntimeFile(changedFile) {
+  return SAMPLE_GUIDE_RUNTIME_REFS.some((sourceRef) => changedFileMatchesSourceRef(changedFile, sourceRef));
 }
 
 function readImportGraph() {
@@ -139,6 +162,11 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
 
   if (changedFile.startsWith("tests/") && changedFile.endsWith(".mjs")) {
     return route.id === "infra:verification-selector" || isDirectRouteMatch(route, changedFile);
+  }
+
+  if (isSampleGuideRuntimeFile(changedFile)) {
+    return route.id === "e2e:tests/e2e/sample_guide_deeplink.spec.js"
+      || route.commandRef === "test:node:sample-project-contracts";
   }
 
   if (changedFile.startsWith("js/bootstrap/")) {

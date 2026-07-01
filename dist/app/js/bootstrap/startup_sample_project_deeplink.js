@@ -23,6 +23,7 @@ export function scheduleStartupSampleProjectDeeplink({
   if (!sampleId) return false;
 
   const existingState = targetState.sampleProjectDeeplink;
+  // sample deeplink 只排进 post-ready 阶段；这里挡住同一个样例已在 loading/importing/success 阶段时的重复导入。
   if (
     existingState?.sampleId === sampleId
     && ["loading", "importing", "success"].includes(String(existingState.status || ""))

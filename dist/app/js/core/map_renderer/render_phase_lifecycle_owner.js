@@ -208,6 +208,7 @@ export function createRenderPhaseLifecycleOwner({ state = {}, effects = {}, gett
 
     runEffect(trace, "setRenderPhaseValue", renderPhaseIdle);
     runEffect(trace, "setPhaseEnteredAt", enteredAt);
+    runEffect(trace, "setIsInteracting", false);
     if (!timerCleared) {
       runEffect(trace, "setRenderPhaseTimerId", null);
     }

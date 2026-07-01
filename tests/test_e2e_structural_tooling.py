@@ -678,6 +678,19 @@ const lifecycleCommands = lifecycleReport.recommendedCommands.map((entry) => ent
 if (!lifecycleCommands.includes('test:node:scenario-lifecycle-runtime-behavior')) {
   throw new Error(`missing scenario lifecycle node behavior route: ${lifecycleCommands.join(', ')}`);
 }
+const sampleGuideReport = buildRecommendation(['js/core/sample_project_import_workflow.js']);
+const sampleGuideCommands = sampleGuideReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sampleGuideCommands.includes('test:node:sample-project-contracts')) {
+  throw new Error(`missing sample project node contract route: ${sampleGuideCommands.join(', ')}`);
+}
+if (!sampleGuideCommands.includes('node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js')) {
+  throw new Error(`missing sample guide E2E route: ${sampleGuideCommands.join(', ')}`);
+}
+const sampleAssetReport = buildRecommendation(['landing/assets/sample-runs.json']);
+const sampleAssetCommands = sampleAssetReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sampleAssetCommands.includes('test:node:sample-project-contracts')) {
+  throw new Error(`missing sample asset node contract route: ${sampleAssetCommands.join(', ')}`);
+}
 """
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)

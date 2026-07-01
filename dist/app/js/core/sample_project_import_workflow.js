@@ -14,6 +14,7 @@ function normalizeText(value) {
 }
 
 function resolvePreviousSampleState(currentState = {}, patch = {}) {
+  // Guide 切换失败时仍要展示上一个已成功导入的样例；success 会提交新样例并清掉 previous* 快照。
   if (String(patch.status || "") === "success") {
     return {
       previousSampleId: "",
@@ -48,6 +49,7 @@ export function writeSampleProjectState(targetState, patch = {}) {
     ...patch,
     updatedAt: getNow(),
   };
+  // runtime hook 是 Project banner 和 Guide sample card 的共同刷新入口；状态写入后立即广播，避免两个 UI 面板读到不同阶段。
   callRuntimeHook(targetState, "refreshSampleProjectBannerFn", targetState.sampleProjectDeeplink);
   return targetState.sampleProjectDeeplink;
 }
@@ -93,6 +95,7 @@ export async function loadPublicSampleProjectIntoRuntime(sampleId, {
 } = {}) {
   const requestedSampleId = normalizeText(sampleId).toLowerCase();
   try {
+    // 状态顺序是 UI 合同：loading 表示已接管请求，importing 表示项目文本已通过 allowlist 取回并开始进入通用导入漏斗。
     writeSampleProjectState(targetState, {
       status: "loading",
       sampleId: requestedSampleId,

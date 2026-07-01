@@ -17,6 +17,7 @@
     "tests/e2e/project_save_load_roundtrip.spec.js",
     "tests/e2e/review_regressions.spec.js",
     "tests/e2e/river_layer_regression.spec.js",
+    "tests/e2e/sample_guide_deeplink.spec.js",
     "tests/e2e/scenario_apply_concurrency.spec.js",
     "tests/e2e/scenario_apply_resilience.spec.js",
     "tests/e2e/scenario_blank_exit.spec.js",

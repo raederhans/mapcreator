@@ -123,6 +123,41 @@ export function resolveSampleProjectBannerView(sampleState, { t = identityT } = 
   };
 }
 
+function createStarterSampleProjectGuideContext({
+  t = identityT,
+  tone = "neutral",
+  body = "",
+  selectedSampleId = "",
+  sampleProjects = [],
+} = {}) {
+  return {
+    status: "starter",
+    tone,
+    sampleId: "",
+    scenarioId: "",
+    projectUrl: "",
+    appProjectUrl: "",
+    fileName: "",
+    title: localize(t, "Load a starter sample"),
+    body: normalizeText(body) || localize(
+      t,
+      "Choose a checked-in public starter sample to open it in the editor.",
+    ),
+    openExportLabel: localize(t, "Open export"),
+    downloadOriginalLabel: localize(t, "Download original JSON"),
+    continueLabel: localize(t, "Continue with default guide"),
+    switcherTitle: localize(t, "Load a starter sample"),
+    switcherBody: localize(t, "Samples open from the public checked-in project list."),
+    canOpenExport: false,
+    canDownloadOriginal: false,
+    canContinue: false,
+    downloadHref: "",
+    downloadName: "",
+    selectedSampleId,
+    sampleProjects: normalizeSampleProjectEntries(sampleProjects),
+  };
+}
+
 export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, sampleProjects = [] } = {}) {
   const sampleState = runtimeState?.sampleProjectDeeplink;
   const status = normalizeText(sampleState?.status);
@@ -169,32 +204,11 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
   }
 
   if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status)) {
-    return {
-      status: "starter",
-      tone: "neutral",
-      sampleId: "",
-      scenarioId: "",
-      projectUrl: "",
-      appProjectUrl: "",
-      fileName: "",
-      title: localize(t, "Load a starter sample"),
-      body: localize(
-        t,
-        "Choose a checked-in public starter sample to open it in the editor.",
-      ),
-      openExportLabel: localize(t, "Open export"),
-      downloadOriginalLabel: localize(t, "Download original JSON"),
-      continueLabel: localize(t, "Continue with default guide"),
-      switcherTitle: localize(t, "Load a starter sample"),
-      switcherBody: localize(t, "Samples open from the public checked-in project list."),
-      canOpenExport: false,
-      canDownloadOriginal: false,
-      canContinue: false,
-      downloadHref: "",
-      downloadName: "",
+    return createStarterSampleProjectGuideContext({
+      t,
       selectedSampleId,
       sampleProjects: publicSampleProjects,
-    };
+    });
   }
 
   return {
@@ -415,7 +429,14 @@ export function createSampleProjectGuideCardController({
     },
 
     render() {
-      const view = resolveSampleProjectGuideContext(runtimeState, { t, sampleProjects });
+      let view = resolveSampleProjectGuideContext(runtimeState, { t, sampleProjects });
+      if (!view && switcherStatus === "error") {
+        view = createStarterSampleProjectGuideContext({
+          t,
+          tone: "error",
+          body: switcherMessage || localize(t, "The sample project list could not be loaded."),
+        });
+      }
       if (!root || !view) {
         setElementHidden(root, true);
         return null;

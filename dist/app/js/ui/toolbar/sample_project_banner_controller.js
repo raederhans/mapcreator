@@ -123,6 +123,41 @@ export function resolveSampleProjectBannerView(sampleState, { t = identityT } = 
   };
 }
 
+function createStarterSampleProjectGuideContext({
+  t = identityT,
+  tone = "neutral",
+  body = "",
+  selectedSampleId = "",
+  sampleProjects = [],
+} = {}) {
+  return {
+    status: "starter",
+    tone,
+    sampleId: "",
+    scenarioId: "",
+    projectUrl: "",
+    appProjectUrl: "",
+    fileName: "",
+    title: localize(t, "Load a starter sample"),
+    body: normalizeText(body) || localize(
+      t,
+      "Choose a checked-in public starter sample to open it in the editor.",
+    ),
+    openExportLabel: localize(t, "Open export"),
+    downloadOriginalLabel: localize(t, "Download original JSON"),
+    continueLabel: localize(t, "Continue with default guide"),
+    switcherTitle: localize(t, "Load a starter sample"),
+    switcherBody: localize(t, "Samples open from the public checked-in project list."),
+    canOpenExport: false,
+    canDownloadOriginal: false,
+    canContinue: false,
+    downloadHref: "",
+    downloadName: "",
+    selectedSampleId,
+    sampleProjects: normalizeSampleProjectEntries(sampleProjects),
+  };
+}
+
 export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, sampleProjects = [] } = {}) {
   const sampleState = runtimeState?.sampleProjectDeeplink;
   const status = normalizeText(sampleState?.status);
@@ -135,6 +170,7 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
   const selectedSampleId = resolveCommittedSampleId(sampleState);
   const sampleTitle = normalizeText(sampleState?.title) || sampleId || localize(t, "selected sample");
   const downloadHref = resolveOriginalDownloadUrl(sampleState);
+  // Guide card 同时服务“已加载样例”“样例不可用”“可选择 starter”三种状态；selectedSampleId 绑定已提交样例，避免失败切换时高亮漂到未导入项目。
   if (status === "success") {
     return {
       status,
@@ -168,32 +204,11 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
   }
 
   if (!SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES.has(status)) {
-    return {
-      status: "starter",
-      tone: "neutral",
-      sampleId: "",
-      scenarioId: "",
-      projectUrl: "",
-      appProjectUrl: "",
-      fileName: "",
-      title: localize(t, "Load a starter sample"),
-      body: localize(
-        t,
-        "Choose a checked-in public starter sample to open it in the editor.",
-      ),
-      openExportLabel: localize(t, "Open export"),
-      downloadOriginalLabel: localize(t, "Download original JSON"),
-      continueLabel: localize(t, "Continue with default guide"),
-      switcherTitle: localize(t, "Load a starter sample"),
-      switcherBody: localize(t, "Samples open from the public checked-in project list."),
-      canOpenExport: false,
-      canDownloadOriginal: false,
-      canContinue: false,
-      downloadHref: "",
-      downloadName: "",
+    return createStarterSampleProjectGuideContext({
+      t,
       selectedSampleId,
       sampleProjects: publicSampleProjects,
-    };
+    });
   }
 
   return {
@@ -343,6 +358,7 @@ export function createSampleProjectGuideCardController({
     const choices = normalizeSampleProjectEntries(view?.sampleProjects);
     const sampleState = runtimeState?.sampleProjectDeeplink || {};
     const stateStatus = normalizeText(sampleState.status);
+    // pending/loading/importing 都算同一条切换事务，列表在事务内整体禁用，只用 aria-busy 标出当前请求项。
     const busy = SAMPLE_PROJECT_IN_FLIGHT_STATUSES.has(stateStatus) || switcherStatus === "loading";
     const activeBusyId = normalizeText(activeChoiceId || sampleState.sampleId);
     if (typeof sampleListNode.replaceChildren === "function") {
@@ -413,7 +429,14 @@ export function createSampleProjectGuideCardController({
     },
 
     render() {
-      const view = resolveSampleProjectGuideContext(runtimeState, { t, sampleProjects });
+      let view = resolveSampleProjectGuideContext(runtimeState, { t, sampleProjects });
+      if (!view && switcherStatus === "error") {
+        view = createStarterSampleProjectGuideContext({
+          t,
+          tone: "error",
+          body: switcherMessage || localize(t, "The sample project list could not be loaded."),
+        });
+      }
       if (!root || !view) {
         setElementHidden(root, true);
         return null;

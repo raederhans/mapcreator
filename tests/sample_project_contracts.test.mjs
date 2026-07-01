@@ -792,6 +792,49 @@ test("sample guide card renders public sample choices with selected and loading 
   }
 });
 
+test("sample guide card keeps public sample list load errors visible without choices", () => {
+  const sampleRuntime = {};
+  const root = new SampleBannerTestElement();
+  const titleNode = new SampleBannerTestElement();
+  const bodyNode = new SampleBannerTestElement();
+  const openExportButton = new SampleBannerTestElement();
+  const downloadOriginalLink = new SampleBannerTestElement();
+  const continueButton = new SampleBannerTestElement();
+  const sampleListNode = new SampleBannerTestElement();
+  const sampleListStatusNode = new SampleBannerTestElement();
+  const controller = createSampleProjectGuideCardController({
+    runtimeState: sampleRuntime,
+    root,
+    titleNode,
+    bodyNode,
+    openExportButton,
+    downloadOriginalLink,
+    continueButton,
+    sampleListNode,
+    sampleListStatusNode,
+  });
+
+  const view = controller.setSwitcherState({
+    status: "error",
+    message: "The sample project list could not be loaded.",
+  });
+
+  assert.equal(view.status, "starter");
+  assert.equal(view.tone, "error");
+  assert.equal(root.hidden, false);
+  assert.equal(root.getAttribute("role"), "alert");
+  assert.equal(root.dataset.sampleGuideStatus, "starter");
+  assert.equal(root.dataset.sampleGuideTone, "error");
+  assert.equal(titleNode.textContent, "Load a starter sample");
+  assert.equal(bodyNode.textContent, "The sample project list could not be loaded.");
+  assert.equal(openExportButton.hidden, true);
+  assert.equal(downloadOriginalLink.hidden, true);
+  assert.equal(continueButton.hidden, true);
+  assert.equal(sampleListNode.hidden, true);
+  assert.equal(sampleListStatusNode.hidden, false);
+  assert.equal(sampleListStatusNode.textContent, "The sample project list could not be loaded.");
+});
+
 test("sample URL helper updates sample only after caller reports success", () => {
   const previousLocation = globalThis.location;
   const previousHistory = globalThis.history;

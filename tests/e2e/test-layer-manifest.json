@@ -129,6 +129,13 @@
       "ownerHint": "map-runtime"
     },
     {
+      "specPath": "tests/e2e/sample_guide_deeplink.spec.js",
+      "primaryLayer": "feature",
+      "executionMode": "browser",
+      "domain": "public-sample",
+      "ownerHint": "sample-guide"
+    },
+    {
       "specPath": "tests/e2e/scenario_apply_concurrency.spec.js",
       "primaryLayer": "feature",
       "executionMode": "hybrid",
