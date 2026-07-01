@@ -232,6 +232,7 @@ export function createPostReadyScheduler({
     retryDelayMs,
     idleQuietMs,
     minIdleTimeRemainingMs,
+    allowChunkBacklog,
   } = {}) {
     scheduleTask(normalizedTaskKey, callback, {
       timeout,
@@ -239,6 +240,7 @@ export function createPostReadyScheduler({
       retryDelayMs,
       idleQuietMs,
       minIdleTimeRemainingMs,
+      allowChunkBacklog,
     });
   }
 
@@ -251,10 +253,12 @@ export function createPostReadyScheduler({
       retryDelayMs = 320,
       idleQuietMs = POST_READY_IDLE_QUIET_MS,
       minIdleTimeRemainingMs = POST_READY_IDLE_TIME_REMAINING_MS,
+      allowChunkBacklog = false,
     } = {}
   ) {
     const normalizedTaskKey = normalizeTaskKey(taskKey);
     if (!normalizedTaskKey) return;
+    const shouldAllowChunkBacklog = !!allowChunkBacklog;
     const timers = getTimerApi(globalScope);
     const previousDiagnostic = taskDiagnostics.get(normalizedTaskKey);
     clearTaskInternal(normalizedTaskKey, { recordDiagnostics: false });
@@ -267,6 +271,7 @@ export function createPostReadyScheduler({
       retryDelayMs,
       idleQuietMs,
       minIdleTimeRemainingMs,
+      allowChunkBacklog: shouldAllowChunkBacklog,
     });
     const scheduledEpoch = taskEpoch;
 
@@ -277,7 +282,7 @@ export function createPostReadyScheduler({
       }
       const blockReason = targetState.activePostReadyTaskKey
         ? "active-task"
-        : resolveIdleBlockReason({ quietMs: idleQuietMs });
+        : resolveIdleBlockReason({ quietMs: idleQuietMs, allowChunkBacklog: shouldAllowChunkBacklog });
       if (blockReason !== "ready") {
         markTaskRetry(normalizedTaskKey, blockReason);
         const retryId = timers.setTimeout(runWhenIdle, Math.max(120, retryDelayMs));
@@ -295,15 +300,15 @@ export function createPostReadyScheduler({
             : Number.POSITIVE_INFINITY;
           if (!deadline?.didTimeout && remainingMs < minIdleTimeRemainingMs) {
             markTaskRetry(normalizedTaskKey, "idle-time-remaining");
-            rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
+            rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs, allowChunkBacklog: shouldAllowChunkBacklog });
             return;
           }
           const idleBlockReason = targetState.activePostReadyTaskKey
             ? "active-task"
-            : resolveIdleBlockReason({ quietMs: idleQuietMs });
+            : resolveIdleBlockReason({ quietMs: idleQuietMs, allowChunkBacklog: shouldAllowChunkBacklog });
           if (idleBlockReason !== "ready") {
             markTaskRetry(normalizedTaskKey, idleBlockReason);
-            rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
+            rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs, allowChunkBacklog: shouldAllowChunkBacklog });
             return;
           }
           runTaskCallback(normalizedTaskKey, callback);
@@ -318,10 +323,10 @@ export function createPostReadyScheduler({
         }
         const timeoutBlockReason = targetState.activePostReadyTaskKey
           ? "active-task"
-          : resolveIdleBlockReason({ quietMs: idleQuietMs });
+          : resolveIdleBlockReason({ quietMs: idleQuietMs, allowChunkBacklog: shouldAllowChunkBacklog });
         if (timeoutBlockReason !== "ready") {
           markTaskRetry(normalizedTaskKey, timeoutBlockReason);
-          rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs });
+          rescheduleTask(normalizedTaskKey, callback, { timeout, retryDelayMs, idleQuietMs, minIdleTimeRemainingMs, allowChunkBacklog: shouldAllowChunkBacklog });
           return;
         }
         runTaskCallback(normalizedTaskKey, callback);

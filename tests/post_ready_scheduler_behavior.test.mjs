@@ -196,6 +196,37 @@ test("scheduleTask records pending diagnostics and runs through timeout fallback
   assert.deepEqual(targetState.postReadyTaskDiagnostics.pendingTaskKeys, []);
 });
 
+test("scheduleTask can run user-visible tasks through chunk backlog", async () => {
+  const targetState = createTargetState({
+    runtimeChunkLoadState: {
+      pendingInfraPromotion: true,
+    },
+  });
+  const globalScope = createTimerScope();
+  let runCount = 0;
+  const scheduler = createPostReadyScheduler({
+    targetState,
+    globalScope,
+    clock: () => 1000,
+  });
+
+  scheduler.scheduleTask("startup-sample-project-import", () => {
+    runCount += 1;
+  }, {
+    allowChunkBacklog: true,
+    idleQuietMs: 0,
+    minIdleTimeRemainingMs: 0,
+  });
+
+  globalScope.__test.runNextTimeout();
+  globalScope.__test.runNextTimeout();
+  await drainMicrotasks();
+
+  assert.equal(runCount, 1);
+  assert.equal(targetState.postReadyTaskDiagnostics.lastStartedTaskKey, "startup-sample-project-import");
+  assert.deepEqual(targetState.postReadyTaskDiagnostics.pendingTaskKeys, []);
+});
+
 test("scheduleTask warns and clears active task after synchronous and async failures", async () => {
   const warnings = [];
   const targetState = createTargetState();

@@ -71,6 +71,24 @@ function isExpectedNavigationAbort(failure) {
     && failure?.isNavigationRequest === true;
 }
 
+function isExpectedLandingImageAbort(failure) {
+  if (
+    failure?.status !== "failed"
+    || String(failure?.errorText || "") !== "net::ERR_ABORTED"
+    || failure?.resourceType !== "image"
+  ) {
+    return false;
+  }
+  try {
+    const failedUrl = new URL(String(failure?.url || ""));
+    const baseUrl = new URL(PUBLIC_BASE_URL.endsWith("/") ? PUBLIC_BASE_URL : `${PUBLIC_BASE_URL}/`);
+    return failedUrl.origin === baseUrl.origin
+      && failedUrl.pathname.startsWith(`${baseUrl.pathname.replace(/\/$/, "")}/assets/`.replace(/\/{2,}/g, "/"));
+  } catch {
+    return false;
+  }
+}
+
 function filterUnexpectedConsoleIssues(consoleIssues, { ignoredAnonymousBackendProbeCount }) {
   return consoleIssues.filter((issue) => {
     const text = String(issue?.text || "");
@@ -83,6 +101,45 @@ function filterUnexpectedConsoleIssues(consoleIssues, { ignoredAnonymousBackendP
       return false;
     }
     return true;
+  });
+}
+
+async function readLandingSampleDownloadState(page) {
+  return page.evaluate(() => {
+    const cards = Array.from(document.querySelectorAll("[data-sample-project-downloads] .sample-project-downloads__card[data-sample-project-id]"));
+    const openLinks = Array.from(document.querySelectorAll("[data-sample-project-downloads] [data-sample-project-open-link]"));
+    const downloadLinks = Array.from(document.querySelectorAll("[data-sample-project-downloads] [data-sample-project-list-link]"));
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const overflow = [
+      "[data-sample-project-downloads]",
+      ".sample-project-downloads__card",
+      ".sample-project-downloads__actions a",
+    ].flatMap((selector) => (
+      Array.from(document.querySelectorAll(selector)).map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          selector,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+          left: rect.left,
+          right: rect.right,
+          viewportWidth,
+        };
+      })
+    )).filter((entry) => (
+      entry.clientWidth > 0
+      && (
+        entry.scrollWidth > entry.clientWidth + 2
+        || entry.left < -2
+        || entry.right > entry.viewportWidth + 2
+      )
+    ));
+    return {
+      cardIds: cards.map((card) => String(card.getAttribute("data-sample-project-id") || "")),
+      openHrefs: openLinks.map((link) => String(link.getAttribute("href") || "")),
+      downloadHrefs: downloadLinks.map((link) => String(link.getAttribute("href") || "")),
+      overflow,
+    };
   });
 }
 
@@ -112,11 +169,33 @@ test("public Pages release gate", async ({ page }, testInfo) => {
   });
 
   try {
+    await page.setViewportSize({ width: 375, height: 760 });
     await page.goto(publicUrl(""), { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
     await expect.poll(async () => page.locator("a[href*='app']").count()).toBeGreaterThan(0);
     await page.waitForLoadState("networkidle", { timeout: 30000 });
+    await expect.poll(() => readLandingSampleDownloadState(page), { timeout: 30000 }).toMatchObject({
+      cardIds: [
+        "blank-base-starter",
+        "modern-world-japan-corridor",
+        "hoi4-1936-europe-briefing",
+        "hoi4-1939-europe-switch",
+        "tno-1962-atlantropa-briefing",
+      ],
+      overflow: [],
+    });
+    const landingSampleState = await readLandingSampleDownloadState(page);
+    expect(landingSampleState.cardIds.some((id) => /hgo/i.test(id))).toBe(false);
+    expect(landingSampleState.openHrefs).toHaveLength(5);
+    expect(landingSampleState.downloadHrefs).toHaveLength(5);
+    for (const href of landingSampleState.openHrefs) {
+      expect(href).toMatch(/\.\/app\/\?sample=[a-z0-9-]+&view=guide$/);
+    }
+    for (const href of landingSampleState.downloadHrefs) {
+      expect(href).toMatch(/\.\/assets\/sample-projects\/[a-z0-9-]+\.project\.json$/);
+    }
 
+    await page.setViewportSize({ width: 1366, height: 900 });
     await page.goto(publicUrl("app/?sample=tno-1962-atlantropa-briefing&view=guide"), { waitUntil: "domcontentloaded" });
     await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
     await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
@@ -186,6 +265,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     const unexpectedNetworkFailures = networkFailures.filter((failure) => (
       !isExpectedAnonymousBackendProbe(failure)
       && !isExpectedNavigationAbort(failure)
+      && !isExpectedLandingImageAbort(failure)
     ));
     const ignoredAnonymousBackendProbeCount = networkFailures.length - unexpectedNetworkFailures.length;
     const unexpectedConsoleIssues = filterUnexpectedConsoleIssues(consoleIssues, { ignoredAnonymousBackendProbeCount });

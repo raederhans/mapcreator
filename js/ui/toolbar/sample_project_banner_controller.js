@@ -390,6 +390,7 @@ export function createSampleProjectGuideCardController({
       button.dataset.sampleGuideChoice = entry.id;
       button.disabled = busy;
       button.setAttribute("aria-current", selected ? "true" : "false");
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
       if (choiceBusy) {
         button.setAttribute("aria-busy", "true");
       } else {

@@ -15,12 +15,102 @@ async function readSampleDeeplinkState(page) {
     const { state } = await import(stateModuleUrl);
     return {
       activeScenarioId: String(state.activeScenarioId || ""),
+      currentLanguage: String(state.currentLanguage || "en"),
       status: String(state.sampleProjectDeeplink?.status || ""),
       sampleId: String(state.sampleProjectDeeplink?.sampleId || ""),
       scenarioId: String(state.sampleProjectDeeplink?.scenarioId || ""),
       errorCode: String(state.sampleProjectDeeplink?.errorCode || ""),
     };
   });
+}
+
+async function readActiveElementSnapshot(page) {
+  return page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      id: String(active?.id || ""),
+      sampleChoice: String(active?.getAttribute?.("data-sample-guide-choice") || ""),
+      text: String(active?.textContent || "").trim(),
+    };
+  });
+}
+
+async function expectActiveElement(page, matcher) {
+  await expect.poll(() => readActiveElementSnapshot(page), { timeout: 10000 }).toMatchObject(matcher);
+}
+
+async function expectNoHorizontalOverflow(page, selectors) {
+  const overflow = await page.evaluate((targetSelectors) => {
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    return targetSelectors.flatMap((selector) => (
+      Array.from(document.querySelectorAll(selector)).map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          selector,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+          left: rect.left,
+          right: rect.right,
+          viewportWidth,
+        };
+      })
+    )).filter((entry) => (
+      entry.clientWidth > 0
+      && (
+        entry.scrollWidth > entry.clientWidth + 2
+        || entry.left < -2
+        || entry.right > entry.viewportWidth + 2
+      )
+    ));
+  }, selectors);
+  expect(overflow).toEqual([]);
+}
+
+async function isSelectorInViewport(page, selector) {
+  return page.evaluate((targetSelector) => {
+    const element = document.querySelector(targetSelector);
+    if (!(element instanceof HTMLElement)) return false;
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    return rect.width > 0
+      && rect.height > 0
+      && rect.right > 0
+      && rect.bottom > 0
+      && rect.left < viewportWidth
+      && rect.top < viewportHeight;
+  }, selector);
+}
+
+async function ensureProjectPanelVisible(page) {
+  if (!await isSelectorInViewport(page, "#inspectorSidebarTabProject")) {
+    await page.locator("#rightPanelToggle").click();
+    await expect.poll(() => isSelectorInViewport(page, "#inspectorSidebarTabProject"), { timeout: 30000 }).toBe(true);
+  }
+  const projectTab = page.locator("#inspectorSidebarTabProject");
+  if (await projectTab.getAttribute("aria-selected") !== "true") {
+    await projectTab.click();
+  }
+  await expect(projectTab).toHaveAttribute("aria-selected", "true", { timeout: 30000 });
+}
+
+async function expectStackingAboveGuide(page, overlaySelector) {
+  const zIndex = await page.evaluate((selector) => {
+    const overlay = document.querySelector(selector);
+    const guide = document.querySelector("#scenarioGuidePopover");
+    return {
+      overlay: Number.parseInt(window.getComputedStyle(overlay).zIndex || "0", 10),
+      guide: Number.parseInt(window.getComputedStyle(guide).zIndex || "0", 10),
+    };
+  }, overlaySelector);
+  expect(zIndex.overlay).toBeGreaterThan(zIndex.guide);
+}
+
+async function ensureGuideVisible(page) {
+  if (await page.locator("#scenarioGuidePopover").isHidden()) {
+    await page.locator("#scenarioGuideBtn").click();
+  }
+  await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
 }
 
 async function writeSampleGuideFailureArtifact(page, testInfo) {
@@ -44,6 +134,34 @@ async function writeSampleGuideFailureArtifact(page, testInfo) {
     attachmentName: "sample-guide-deeplink-failure-context",
   });
 }
+
+test("sample guide default route shows starter choices without sample state", async ({ page }, testInfo) => {
+  try {
+    await gotoApp(page, "/app/?view=guide", { waitUntil: "domcontentloaded" });
+    await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
+    await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
+
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      status: "idle",
+      sampleId: "",
+      scenarioId: "",
+    });
+
+    const guideCard = page.locator("[data-sample-guide-helper]");
+    await expect(guideCard).toBeVisible({ timeout: 30000 });
+    await expect(guideCard).toHaveAttribute("data-sample-guide-status", "starter");
+    await expect(page.locator("[data-sample-guide-title]")).toContainText(/Load a starter sample/i);
+    await expect(page.locator("[data-sample-guide-recommendation]")).toBeHidden();
+    await expect(page.locator("[data-sample-guide-open-export]")).toBeHidden();
+    await expect(page.locator("[data-sample-guide-download-original]")).toBeHidden();
+    await expect(page.locator("[data-sample-guide-choices]")).toHaveAttribute("role", "group");
+    await expect(page.locator("[data-sample-guide-choice]")).toHaveCount(5, { timeout: 30000 });
+    await expect(page.locator("[data-sample-guide-choice*='hgo']")).toHaveCount(0);
+  } catch (error) {
+    await writeSampleGuideFailureArtifact(page, testInfo);
+    throw error;
+  }
+});
 
 test("sample guide card opens export from the TNO sample deeplink", async ({ page }, testInfo) => {
   try {
@@ -76,6 +194,10 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
       "aria-current",
       "true",
     );
+    await expect(page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await page.locator("[data-sample-guide-open-export]").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
@@ -86,10 +208,8 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
     await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
     await page.locator("#exportWorkbenchCloseBtn").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
-    if (await page.locator("#scenarioGuidePopover").isHidden()) {
-      await page.locator("#scenarioGuideBtn").click();
-      await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
-    }
+    await expectActiveElement(page, { id: /^(scenarioGuideBtn|utilitiesGuideBtn)$/ });
+    await ensureGuideVisible(page);
 
     await page.locator("[data-sample-guide-choice='modern-world-japan-corridor']").click();
     await waitForScenarioApplyIdle(page, { scenarioId: "modern_world", timeout: 120000 });
@@ -105,18 +225,17 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
       "aria-current",
       "true",
     );
+    await expectActiveElement(page, { sampleChoice: "modern-world-japan-corridor" });
 
     await page.evaluate(async () => {
       const { markDirty } = await import("/js/core/dirty_state.js");
       markDirty("playwright-sample-switch-cancel");
     });
-    if (await page.locator("#scenarioGuidePopover").isHidden()) {
-      await page.locator("#scenarioGuideBtn").click();
-      await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
-    }
+    await ensureGuideVisible(page);
     await page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']").click();
     const dirtyDialog = page.locator("[data-app-dialog-overlay='true']");
     await expect(dirtyDialog).toBeVisible({ timeout: 30000 });
+    await expectStackingAboveGuide(page, "[data-app-dialog-overlay='true']");
     await expect(dirtyDialog.locator(".app-dialog-title")).toContainText(/Load another sample\?/i);
     await dirtyDialog.locator("[data-dialog-cancel='true']").click();
     await expect(dirtyDialog).toBeHidden({ timeout: 30000 });
@@ -127,6 +246,120 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
       scenarioId: "modern_world",
     });
     await expect(page).toHaveURL(/sample=modern-world-japan-corridor/);
+    await expectActiveElement(page, { sampleChoice: "modern-world-japan-corridor" });
+
+    await page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']").click();
+    const confirmDialog = page.locator("[data-app-dialog-overlay='true']");
+    await expect(confirmDialog).toBeVisible({ timeout: 30000 });
+    await confirmDialog.locator("[data-dialog-confirm='true']").click();
+    await waitForScenarioApplyIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      activeScenarioId: "tno_1962",
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      scenarioId: "tno_1962",
+    });
+    await expect(page).toHaveURL(/sample=tno-1962-atlantropa-briefing/);
+    await expect(page.locator("[data-sample-guide-choice='tno-1962-atlantropa-briefing']")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    await expectActiveElement(page, { sampleChoice: "tno-1962-atlantropa-briefing" });
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
+    await expectActiveElement(page, { id: /^(scenarioGuideBtn|utilitiesGuideBtn)$/ });
+  } catch (error) {
+    await writeSampleGuideFailureArtifact(page, testInfo);
+    throw error;
+  }
+});
+
+test("sample guide remains usable across public mobile and desktop widths", async ({ page }, testInfo) => {
+  try {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await gotoApp(page, "/app/?sample=tno-1962-atlantropa-briefing&view=guide", { waitUntil: "domcontentloaded" });
+    await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
+    await waitForScenarioApplyIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      scenarioId: "tno_1962",
+    });
+
+    for (const viewport of [
+      { width: 375, height: 760 },
+      { width: 768, height: 900 },
+      { width: 1366, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await ensureGuideVisible(page);
+      await expect(page.locator("[data-sample-guide-helper]")).toBeVisible({ timeout: 30000 });
+      await expect(page.locator("[data-sample-guide-choice]")).toHaveCount(5, { timeout: 30000 });
+      await expect(page.locator("[data-sample-guide-open-export]")).toBeVisible();
+      await expectNoHorizontalOverflow(page, [
+        "[data-sample-guide-helper]",
+        "[data-sample-guide-choices]",
+        "[data-sample-guide-choice]",
+        ".scenario-guide-sample-card__actions",
+      ]);
+
+      await page.locator("[data-sample-guide-open-export]").click();
+      await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
+      await expect(page.locator("[data-export-workbench-sample-context]")).toBeVisible();
+      await expectNoHorizontalOverflow(page, [
+        "#exportWorkbenchPanel",
+        "[data-export-workbench-sample-context]",
+      ]);
+      await page.locator("#exportWorkbenchCloseBtn").click();
+      await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
+
+      await ensureProjectPanelVisible(page);
+      const sampleProjectBanner = page.locator("#sampleProjectBanner");
+      await expect(sampleProjectBanner).toBeVisible({ timeout: 30000 });
+      await expect(page.locator("#sampleProjectBannerOpenExportBtn")).toBeVisible();
+      await expect(page.locator("#sampleProjectBannerDownloadOriginalLink")).toBeVisible();
+      await expectNoHorizontalOverflow(page, [
+        "#sampleProjectBanner",
+        "#sampleProjectBannerOpenExportBtn",
+        "#sampleProjectBannerDownloadOriginalLink",
+      ]);
+    }
+  } catch (error) {
+    await writeSampleGuideFailureArtifact(page, testInfo);
+    throw error;
+  }
+});
+
+test("sample guide and export context localize on the Chinese TNO path", async ({ page }, testInfo) => {
+  try {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("map_lang", "zh");
+    });
+    await gotoApp(page, "/app/?sample=tno-1962-atlantropa-briefing&view=guide", { waitUntil: "domcontentloaded" });
+    await waitForShellReady(page, { timeout: 120000, requireCanvas: true });
+    await waitForScenarioApplyIdle(page, { scenarioId: "tno_1962", timeout: 120000 });
+    await expect(page.locator("#scenarioGuidePopover")).toBeVisible({ timeout: 30000 });
+    await expect.poll(() => readSampleDeeplinkState(page), { timeout: 30000 }).toMatchObject({
+      activeScenarioId: "tno_1962",
+      currentLanguage: "zh",
+      status: "success",
+      sampleId: "tno-1962-atlantropa-briefing",
+      scenarioId: "tno_1962",
+    });
+
+    await expect(page.locator("[data-sample-guide-title]")).toContainText(/示例已加载/);
+    await expect(page.locator("[data-sample-guide-recommendation]")).toContainText(/推荐导出/);
+    await expect(page.locator(".scenario-guide-sample-card__switcher-title")).toContainText(/公开起步示例/);
+    await expect(page.locator("[data-sample-guide-open-export]")).toContainText(/打开导出/);
+    await expect(page.locator("[data-sample-guide-choice]")).toHaveCount(5, { timeout: 30000 });
+    await expect(page.locator("[data-sample-guide-choice*='hgo']")).toHaveCount(0);
+
+    await page.locator("[data-sample-guide-open-export]").click();
+    await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
+    await expect(page.locator("[data-export-workbench-sample-context]")).toBeVisible();
+    await expect(page.locator("[data-export-workbench-sample-title]")).toContainText(/正在导出示例/);
+    await expect(page.locator("[data-export-workbench-sample-recommendation]")).toContainText(/推荐/);
   } catch (error) {
     await writeSampleGuideFailureArtifact(page, testInfo);
     throw error;

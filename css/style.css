@@ -6854,6 +6854,11 @@ body.counter-editor-modal-open {
   line-height: 1.35;
 }
 
+.export-workbench-sample-context span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .export-workbench-sample-context.hidden,
 .export-workbench-sample-context[hidden] {
   display: none;
@@ -7230,6 +7235,25 @@ body.counter-editor-modal-open {
 
   .export-workbench-grid {
     grid-template-columns: minmax(0, 1fr);
+    flex: 0 0 auto;
+  }
+
+  .export-workbench-preview-controls,
+  .export-workbench-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .export-workbench-preview-canvas {
+    min-height: clamp(220px, calc(100vh - 320px), 320px);
+  }
+
+  .export-workbench-preview-select,
+  .export-workbench-format-select,
+  .export-workbench-snapshot-btn {
+    width: 100%;
+    min-width: 0;
   }
 
   .export-workbench-preview-header {
@@ -7238,7 +7262,6 @@ body.counter-editor-modal-open {
   }
 
   .export-workbench-footer {
-    flex-wrap: wrap;
     justify-content: flex-start;
   }
 }
@@ -7264,6 +7287,11 @@ body.counter-editor-modal-open {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .export-workbench-sample-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -7578,6 +7606,7 @@ body.counter-editor-modal-open {
 
 .sample-project-banner__copy {
   min-width: 0;
+  padding-right: 30px;
 }
 
 .sample-project-banner__title {
@@ -7630,6 +7659,11 @@ body.counter-editor-modal-open {
 .sample-project-banner__dismiss:hover {
   color: var(--text-heading);
   background: rgba(255, 255, 255, 0.96);
+}
+
+.sample-project-banner__dismiss:focus-visible {
+  outline: 3px solid rgba(31, 79, 126, 0.24);
+  outline-offset: 2px;
 }
 
 .project-management-actions {
@@ -9207,6 +9241,21 @@ body.counter-editor-modal-open {
   padding: 7px 10px;
   font-size: 0.74rem;
   line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  .scenario-guide-sample-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scenario-guide-sample-card__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scenario-guide-sample-card__action {
+    width: 100%;
+  }
 }
 
 .scenario-guide-bilingual-copy {

@@ -43,12 +43,20 @@ export function scheduleStartupSampleProjectDeeplink({
     errorMessage: "",
   });
 
+  const scheduleOptions = helpers.scheduleOptions && typeof helpers.scheduleOptions === "object"
+    ? helpers.scheduleOptions
+    : {};
   postReadyScheduler.scheduleTask(
     STARTUP_SAMPLE_PROJECT_TASK_KEY,
     async () => {
       await loadPublicSampleProjectIntoRuntime(sampleId, { targetState, helpers });
     },
-    helpers.scheduleOptions,
+    {
+      ...scheduleOptions,
+      allowChunkBacklog: true,
+      idleQuietMs: 0,
+      minIdleTimeRemainingMs: 0,
+    },
   );
   return true;
 }

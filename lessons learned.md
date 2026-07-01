@@ -524,3 +524,6 @@
 
 ### Sample 派生状态要绑定同一个 sample id
 - 导入失败路径保留 previous sample 时，推荐导出、Guide 和 Export Workbench 派生状态要同时校验 sample id，确保 attempted sample 元数据停留在失败上下文，previous committed sample 继续显示自己的推荐。
+
+### 用户可见 deeplink 任务可以穿过 chunk backlog
+- `/app/?sample=...&view=guide` 这类入口会直接影响首屏可达性；如果任务本身不依赖 chunk infra 完成，应在 post-ready scheduler 上显式声明可穿过 backlog，并用 E2E 锁住 `pending -> success`。

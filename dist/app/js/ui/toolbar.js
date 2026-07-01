@@ -546,6 +546,19 @@ function initToolbar({ render } = {}) {
   const restoreOverlayTriggerFocus = (overlay, explicitTrigger = null) => (
     restoreSurfaceTriggerFocus(overlayFocusReturnTargets, overlay, explicitTrigger)
   );
+  const isVisibleFocusTarget = (element) => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.hidden || element.getAttribute("aria-hidden") === "true") return false;
+    const style = globalThis.getComputedStyle?.(element);
+    if (!style || style.display === "none" || style.visibility === "hidden") return false;
+    const rect = element.getBoundingClientRect?.();
+    return !!rect && rect.width > 0 && rect.height > 0;
+  };
+  const focusElementIfVisible = (element) => {
+    if (!isVisibleFocusTarget(element) || typeof element.focus !== "function") return false;
+    element.focus({ preventScroll: true });
+    return true;
+  };
   const getExportBakeVisibilitySignature = (exportUi) => {
     const main = EXPORT_MAIN_LAYER_IDS
       .map((layerId) => `${layerId}:${exportUi?.visibility?.[layerId] === false ? "0" : "1"}`)
@@ -827,6 +840,55 @@ function initToolbar({ render } = {}) {
       ? String(sampleState.sampleId || "").trim()
       : String(sampleState.previousSampleId || "").trim();
   };
+  const resolveExportWorkbenchFocusReturnTrigger = (trigger) => {
+    if (!(trigger instanceof HTMLElement)) return trigger;
+    if (!trigger.closest?.("#scenarioGuidePopover")) return trigger;
+    if (isVisibleFocusTarget(utilitiesGuideBtn)) return utilitiesGuideBtn;
+    if (isVisibleFocusTarget(scenarioGuideBtn)) return scenarioGuideBtn;
+    return trigger;
+  };
+  const resolveScenarioGuideFocusReturnTrigger = (trigger) => {
+    if (isVisibleFocusTarget(trigger)) return trigger;
+    if (isVisibleFocusTarget(utilitiesGuideBtn)) return utilitiesGuideBtn;
+    if (isVisibleFocusTarget(scenarioGuideBtn)) return scenarioGuideBtn;
+    return trigger;
+  };
+  const focusCommittedSampleGuideChoice = (fallback = null) => {
+    const committedSampleId = getCommittedSampleProjectId();
+    const choices = Array.from(scenarioGuideSampleProjectChoices?.querySelectorAll?.("[data-sample-guide-choice]") || []);
+    const selectedChoice = choices.find((choice) => (
+      String(choice?.dataset?.sampleGuideChoice || "") === committedSampleId
+    ));
+    const focusTarget = selectedChoice || fallback || scenarioGuideSampleProjectOpenExportBtn || scenarioGuideCloseBtn;
+    focusElementIfVisible(focusTarget);
+  };
+  const scheduleSampleGuideChoiceFocusRestore = (fallback = null) => {
+    const restoreFocus = () => {
+      if (scenarioGuidePopover?.classList.contains("hidden")) {
+        toggleScenarioGuidePopover(resolveScenarioGuideFocusReturnTrigger(fallback));
+      }
+      renderScenarioGuideSection("quick");
+      focusCommittedSampleGuideChoice(fallback);
+    };
+    const runAfterFrame = () => {
+      if (typeof globalThis.setTimeout === "function") {
+        globalThis.setTimeout(restoreFocus, 0);
+        return;
+      }
+      restoreFocus();
+    };
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      globalThis.requestAnimationFrame(() => {
+        if (typeof globalThis.requestAnimationFrame === "function") {
+          globalThis.requestAnimationFrame(runAfterFrame);
+          return;
+        }
+        runAfterFrame();
+      });
+      return;
+    }
+    runAfterFrame();
+  };
 
   const sampleProjectBannerController = createSampleProjectBannerController({
     runtimeState,
@@ -838,7 +900,7 @@ function initToolbar({ render } = {}) {
     dismissButton: sampleProjectBannerDismissBtn,
     t,
     openExportWorkbench: (trigger = sampleProjectBannerOpenExportBtn) => (
-      runtimeState.openExportWorkbenchFn?.(trigger)
+      runtimeState.openExportWorkbenchFn?.(resolveExportWorkbenchFocusReturnTrigger(trigger))
     ),
   });
   const sampleProjectGuideCardController = createSampleProjectGuideCardController({
@@ -854,13 +916,13 @@ function initToolbar({ render } = {}) {
     sampleListStatusNode: scenarioGuideSampleProjectStatus,
     t,
     openExportWorkbench: (trigger = scenarioGuideSampleProjectOpenExportBtn) => (
-      runtimeState.openExportWorkbenchFn?.(trigger)
+      runtimeState.openExportWorkbenchFn?.(resolveExportWorkbenchFocusReturnTrigger(trigger))
     ),
     continueWithDefaultGuide: () => {
       renderScenarioGuideSection("quick");
       document.getElementById("scenarioGuideStepApply")?.scrollIntoView?.({ block: "nearest" });
     },
-    onSampleChoice: async (sampleId) => {
+    onSampleChoice: async (sampleId, trigger = null) => {
       const normalizedSampleId = String(sampleId || "").trim();
       if (!normalizedSampleId) return;
       if (
@@ -880,6 +942,7 @@ function initToolbar({ render } = {}) {
         });
         if (!confirmed) {
           sampleProjectGuideCardController.setSwitcherState({ status: "idle" });
+          scheduleSampleGuideChoiceFocusRestore(trigger);
           return;
         }
       }
@@ -906,6 +969,7 @@ function initToolbar({ render } = {}) {
         syncSampleProjectUrlState(result.sampleProject?.id || normalizedSampleId);
         sampleProjectGuideCardController.setSwitcherState({ status: "idle" });
         updateDirtyIndicator();
+        scheduleSampleGuideChoiceFocusRestore(trigger);
         return;
       }
       sampleProjectGuideCardController.setSwitcherState({
@@ -913,6 +977,7 @@ function initToolbar({ render } = {}) {
         message: t(result?.error?.userMessage || "The selected sample project could not be opened.", "ui"),
       });
       updateDirtyIndicator();
+      scheduleSampleGuideChoiceFocusRestore(trigger);
     },
   });
   sampleProjectBannerController.bindEvents();

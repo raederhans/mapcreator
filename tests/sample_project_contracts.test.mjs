@@ -474,11 +474,21 @@ test("sample startup import failures record state without duplicate sample toast
       showToast: (message, options) => {
         helperToasts.push({ message, options });
       },
+      scheduleOptions: {
+        allowChunkBacklog: false,
+        idleQuietMs: 999,
+        minIdleTimeRemainingMs: 999,
+        retryDelayMs: 5,
+      },
     },
   });
 
   assert.equal(didSchedule, true);
   assert.equal(scheduledTasks.length, 1);
+  assert.equal(scheduledTasks[0].options.allowChunkBacklog, true);
+  assert.equal(scheduledTasks[0].options.idleQuietMs, 0);
+  assert.equal(scheduledTasks[0].options.minIdleTimeRemainingMs, 0);
+  assert.equal(scheduledTasks[0].options.retryDelayMs, 5);
   assert.equal(targetState.sampleProjectDeeplink.status, "pending");
 
   await scheduledTasks[0].callback();
@@ -877,7 +887,9 @@ test("sample guide card renders public sample choices with selected and loading 
 
     assert.equal(sampleListNode.children.length, 2);
     assert.equal(sampleListNode.children[0].getAttribute("aria-current"), "true");
+    assert.equal(sampleListNode.children[0].getAttribute("aria-pressed"), "true");
     assert.equal(sampleListNode.children[1].getAttribute("aria-current"), "false");
+    assert.equal(sampleListNode.children[1].getAttribute("aria-pressed"), "false");
     sampleListNode.children[1].click();
     assert.deepEqual(choices, ["modern-world-japan-corridor"]);
 
@@ -1035,6 +1047,7 @@ test("sample startup state writes notify banner refresh hook for bad links", asy
 
     assert.equal(didSchedule, true);
     assert.equal(scheduledTasks.length, 1);
+    assert.equal(scheduledTasks[0].options.allowChunkBacklog, true);
     assert.equal(refreshSnapshots[0].status, "pending");
     assert.equal(refreshSnapshots[0].sampleId, "missing-public-sample");
 

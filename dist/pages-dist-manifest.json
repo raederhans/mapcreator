@@ -12,7 +12,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 290457,
+      "size_bytes": 291478,
       "source_kind": "dist"
     },
     {
@@ -45517,7 +45517,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 270530,
+      "size_bytes": 270585,
       "source_kind": "dist"
     },
     {
@@ -45547,7 +45547,7 @@
     },
     {
       "path": "app/js/bootstrap/post_ready_scheduler.js",
-      "size_bytes": 14048,
+      "size_bytes": 14500,
       "source_kind": "dist"
     },
     {
@@ -45582,7 +45582,7 @@
     },
     {
       "path": "app/js/bootstrap/startup_sample_project_deeplink.js",
-      "size_bytes": 1489,
+      "size_bytes": 1722,
       "source_kind": "dist"
     },
     {
@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 885029,
+      "size_bytes": 885069,
       "source_kind": "dist"
     },
     {
@@ -45811,8 +45811,18 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/hit_canvas_scheduling_owner.js",
+      "size_bytes": 4874,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/interaction_hit_candidates.js",
       "size_bytes": 8709,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/map_hover_interaction_owner.js",
+      "size_bytes": 8835,
       "source_kind": "dist"
     },
     {
@@ -45843,6 +45853,11 @@
     {
       "path": "app/js/core/map_renderer/render_request_boundary_owner.js",
       "size_bytes": 3595,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/renderer_transaction_reset_owner.js",
+      "size_bytes": 5948,
       "source_kind": "dist"
     },
     {
@@ -46697,7 +46712,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 132433,
+      "size_bytes": 135476,
       "source_kind": "dist"
     },
     {
@@ -46797,7 +46812,7 @@
     },
     {
       "path": "app/js/ui/toolbar/sample_project_banner_controller.js",
-      "size_bytes": 18560,
+      "size_bytes": 18632,
       "source_kind": "dist"
     },
     {
@@ -47367,17 +47382,17 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 74544,
+      "size_bytes": 74546,
       "source_kind": "dist"
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1466324,
+      "size_bytes": 1466749,
       "source_kind": "dist"
     },
     {
       "path": "styles.css",
-      "size_bytes": 52165,
+      "size_bytes": 52486,
       "source_kind": "dist"
     }
   ],
@@ -47502,9 +47517,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9414,
+      "file_count": 9417,
       "path": "app",
-      "size_bytes": 965554632
+      "size_bytes": 965579205
     },
     {
       "file_count": 57,
@@ -47514,7 +47529,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1466324
+      "size_bytes": 1466749
     },
     {
       "file_count": 1,
@@ -47524,12 +47539,12 @@
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 74544
+      "size_bytes": 74546
     },
     {
       "file_count": 1,
       "path": "styles.css",
-      "size_bytes": 52165
+      "size_bytes": 52486
     },
     {
       "file_count": 1,
@@ -47537,5 +47552,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972119002
+  "total_bytes": 972144323
 }

@@ -2258,6 +2258,23 @@ html[data-reveal="enabled"] [data-reveal].is-revealed {
     grid-template-columns: 1fr;
   }
 
+  .sample-run-card__proof dl {
+    grid-template-columns: 1fr;
+  }
+
+  .sample-project-downloads__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sample-project-downloads__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sample-project-downloads__actions a {
+    width: 100%;
+  }
+
   .steps-grid,
   .data-grid,
   .edition-grid,
