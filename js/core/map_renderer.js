@@ -167,6 +167,7 @@ import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_tr
 import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
+import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -985,6 +986,7 @@ let viewportResizeLifecycleOwner = null;
 let scenarioWaterCachePolicyOwner = null;
 let zoomInteractionLifecycleOwner = null;
 let mapInteractionEventBindingOwner = null;
+let mapHoverInteractionOwner = null;
 let rendererSurfaceLifecycleOwner = null;
 let rendererProjectionPathOwner = null;
 let rendererSvgSurfaceLifecycleOwner = null;
@@ -1386,6 +1388,76 @@ function getHitCanvasSchedulingOwner() {
     },
   });
   return hitCanvasSchedulingOwner;
+}
+
+function getMapHoverInteractionOwner() {
+  if (mapHoverInteractionOwner) {
+    return mapHoverInteractionOwner;
+  }
+  mapHoverInteractionOwner = createMapHoverInteractionOwner({
+    state: {
+      hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,
+    },
+    getters: {
+      nowMs: () => performance.now(),
+      getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,
+      getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,
+      hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData),
+      isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active),
+      inspectHgoRuntimePreviewFromEvent,
+      isReducedHoverPhase: () => (
+        runtimeState.renderPhase !== RENDER_PHASE_IDLE
+        || runtimeState.isInteracting
+        || runtimeState.scenarioApplyInFlight
+        || runtimeState.startupReadonly
+        || runtimeState.startupReadonlyUnlockInFlight
+      ),
+      getHoverIds: () => ({
+        landId: runtimeState.hoveredId,
+        waterId: runtimeState.hoveredWaterRegionId,
+        specialId: runtimeState.hoveredSpecialRegionId,
+      }),
+      getHitFromEvent,
+      hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip()),
+      getHoveredFacilityEntry: () => hoveredFacilityEntry,
+      getHoveredFacilityEntryFromEvent,
+      isFacilityDetailsSurfaceActive,
+      getHoveredCityTooltipEntry,
+      getFeatureForHit: (hit) => {
+        const id = hit?.id;
+        if (!id) return null;
+        if (hit.targetType === "special") return runtimeState.specialRegionsById?.get(id) || null;
+        if (hit.targetType === "water") return runtimeState.waterRegionsById?.get(id) || null;
+        return runtimeState.landIndex?.get(id) || null;
+      },
+      getTooltipTextForFeature: (feature) => getTooltipText(feature),
+    },
+    effects: {
+      setLastMouseMoveTime: (value) => {
+        runtimeState.lastMouseMoveTime = value;
+      },
+      setHoverIds: ({ landId = null, waterId = null, specialId = null } = {}) => {
+        runtimeState.hoveredId = landId;
+        runtimeState.hoveredWaterRegionId = waterId;
+        runtimeState.hoveredSpecialRegionId = specialId;
+      },
+      setHoveredFacilityEntry: (entry) => {
+        hoveredFacilityEntry = entry || null;
+      },
+      updateDevHoverHit,
+      markHoverOverlayDirty: () => {
+        runtimeState.hoverOverlayDirty = true;
+      },
+      scheduleHoverOverlayRender,
+      queueTooltipUpdate,
+      setMapInteractionCursor,
+      clearUnderlyingHoverForFacilityEntry,
+    },
+    helpers: {
+      getFacilityKey: buildFacilityEntryKey,
+    },
+  });
+  return mapHoverInteractionOwner;
 }
 
 function getVisibleFrameDiagnosticsOwner() {
@@ -20765,139 +20837,7 @@ function ensureUnitCounterCounter() {
 }
 
 function handleMouseMove(event) {
-  const now = performance.now();
-  if (now - runtimeState.lastMouseMoveTime < runtimeState.MOUSE_THROTTLE_MS) return;
-  runtimeState.lastMouseMoveTime = now;
-  if (!runtimeState.landData && !runtimeState.waterRegionsData && !runtimeState.scenarioSpecialRegionsData) return;
-  if (runtimeState.specialZoneEditor?.active) {
-    runtimeState.hoveredId = null;
-    runtimeState.hoveredWaterRegionId = null;
-    runtimeState.hoveredSpecialRegionId = null;
-    if (hoveredFacilityEntry) {
-      hoveredFacilityEntry = null;
-    }
-    updateDevHoverHit(null);
-    runtimeState.hoverOverlayDirty = true;
-    scheduleHoverOverlayRender();
-    queueTooltipUpdate({ visible: false });
-    setMapInteractionCursor("");
-    return;
-  }
-
-  const hgoRuntimeHover = inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });
-  if (hgoRuntimeHover.active) {
-    runtimeState.hoveredId = null;
-    runtimeState.hoveredWaterRegionId = null;
-    runtimeState.hoveredSpecialRegionId = null;
-    if (hoveredFacilityEntry) {
-      hoveredFacilityEntry = null;
-    }
-    updateDevHoverHit(hgoRuntimeHover.hit?.id ? hgoRuntimeHover.hit : null);
-    runtimeState.hoverOverlayDirty = true;
-    scheduleHoverOverlayRender();
-    queueTooltipUpdate({ visible: false });
-    setMapInteractionCursor(hgoRuntimeHover.hit?.id ? "pointer" : "");
-    return;
-  }
-
-  const reducedHoverPhase =
-    runtimeState.renderPhase !== RENDER_PHASE_IDLE
-    || runtimeState.isInteracting
-    || runtimeState.scenarioApplyInFlight
-    || runtimeState.startupReadonly
-    || runtimeState.startupReadonlyUnlockInFlight;
-  if (reducedHoverPhase) {
-    if (runtimeState.hoveredId || runtimeState.hoveredWaterRegionId || runtimeState.hoveredSpecialRegionId) {
-      runtimeState.hoveredId = null;
-      runtimeState.hoveredWaterRegionId = null;
-      runtimeState.hoveredSpecialRegionId = null;
-      runtimeState.hoverOverlayDirty = true;
-      scheduleHoverOverlayRender();
-    }
-    if (hoveredFacilityEntry) {
-      hoveredFacilityEntry = null;
-      runtimeState.hoverOverlayDirty = true;
-      scheduleHoverOverlayRender();
-    }
-    updateDevHoverHit(null);
-    queueTooltipUpdate({ visible: false });
-    setMapInteractionCursor("");
-    return;
-  }
-  const hit = getHitFromEvent(event, {
-    enableSnap: false,
-    snapPx: HIT_SNAP_RADIUS_HOVER_PX,
-    eventType: "hover",
-  });
-  const id = hit.id;
-  const nextHoveredSpecialId = hit.targetType === "special" ? id : null;
-  const nextHoveredLandId = hit.targetType === "land" ? id : null;
-  const nextHoveredWaterId = hit.targetType === "water" ? id : null;
-  if (
-    nextHoveredLandId !== runtimeState.hoveredId
-    || nextHoveredWaterId !== runtimeState.hoveredWaterRegionId
-    || nextHoveredSpecialId !== runtimeState.hoveredSpecialRegionId
-  ) {
-    runtimeState.hoveredId = nextHoveredLandId;
-    runtimeState.hoveredWaterRegionId = nextHoveredWaterId;
-    runtimeState.hoveredSpecialRegionId = nextHoveredSpecialId;
-    runtimeState.hoverOverlayDirty = true;
-    if (!reducedHoverPhase) {
-      scheduleHoverOverlayRender();
-    }
-  }
-  updateDevHoverHit(id ? hit : null);
-
-  if (!rendererSurfaceHost.getTooltip()) return;
-  const hoveredFacility = getHoveredFacilityEntryFromEvent(event);
-  const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;
-  const nextFacilityKey = buildFacilityEntryKey(hoveredFacility);
-  const previousFacilityKey = buildFacilityEntryKey(hoveredFacilityEntry);
-  if (nextFacilityKey !== previousFacilityKey) {
-    hoveredFacilityEntry = hoveredFacility || null;
-    runtimeState.hoverOverlayDirty = true;
-    scheduleHoverOverlayRender();
-  }
-  const blockedUnderlyingHover = hoveredFacility ? clearUnderlyingHoverForFacilityEntry(hoveredFacility) : false;
-  setMapInteractionCursor(facilityDetailsActive ? "pointer" : "");
-  if (hoveredFacility?.tooltipText) {
-    queueTooltipUpdate({
-      visible: true,
-      text: hoveredFacility.tooltipText,
-      x: event.clientX + 12,
-      y: event.clientY + 12,
-    });
-    return;
-  }
-  if (blockedUnderlyingHover) {
-    queueTooltipUpdate({ visible: false });
-    return;
-  }
-  const hoveredCityEntry = getHoveredCityTooltipEntry(event, hit);
-  if (hoveredCityEntry?.tooltipText) {
-    queueTooltipUpdate({
-      visible: true,
-      text: hoveredCityEntry.tooltipText,
-      x: event.clientX + 12,
-      y: event.clientY + 12,
-    });
-    return;
-  }
-  if (id && (runtimeState.landIndex.has(id) || runtimeState.waterRegionsById.has(id) || runtimeState.specialRegionsById.has(id))) {
-    const feature = hit.targetType === "special"
-      ? runtimeState.specialRegionsById.get(id)
-      : hit.targetType === "water"
-        ? runtimeState.waterRegionsById.get(id)
-        : runtimeState.landIndex.get(id);
-    queueTooltipUpdate({
-      visible: true,
-      text: getTooltipText(feature),
-      x: event.clientX + 12,
-      y: event.clientY + 12,
-    });
-  } else {
-    queueTooltipUpdate({ visible: false });
-  }
+  getMapHoverInteractionOwner().handleMouseMove(event);
 }
 
 function addRecentColor(color) {

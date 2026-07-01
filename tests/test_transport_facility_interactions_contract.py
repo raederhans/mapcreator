@@ -11,6 +11,7 @@ TRANSPORT_FACILITY_DISPLAY_POLICY_JS = REPO_ROOT / "js" / "core" / "renderer" / 
 TRANSPORT_FACILITY_ICONS_JS = REPO_ROOT / "js" / "core" / "renderer" / "transport_facility_icons.js"
 FACILITY_FACADE_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "facade_data_runtime.js"
 CITY_POINTS_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "city_points_render_owner.js"
+MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
 
 
 class TransportFacilityInteractionsContractTest(unittest.TestCase):
@@ -47,6 +48,7 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
 
     def test_map_renderer_wires_facility_hover_and_card_logic(self):
         content = (REPO_ROOT / "js" / "core" / "map_renderer.js").read_text(encoding="utf-8")
+        hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
         city_owner_content = CITY_POINTS_RENDER_OWNER_JS.read_text(encoding="utf-8")
         owner_content = FACILITY_SURFACE_JS.read_text(encoding="utf-8")
         transport_owner_content = TRANSPORT_OVERVIEW_OWNER_JS.read_text(encoding="utf-8")
@@ -56,10 +58,10 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
             'recordInteractionDurationMetric("interactionHoverFacilityProbeDuration"',
             "function applyFacilityInfoCardState",
             "function zoomToFacilityEntry",
-            "const facilityDetailsActive = hoveredFacility ? isFacilityDetailsSurfaceActive(hoveredFacility.familyId) : false;",
-            "const nextFacilityKey = buildFacilityEntryKey(hoveredFacility);",
-            "const previousFacilityKey = buildFacilityEntryKey(hoveredFacilityEntry);",
-            'setMapInteractionCursor(facilityDetailsActive ? "pointer" : "");',
+            "getHoveredFacilityEntryFromEvent,",
+            "getFacilityKey: buildFacilityEntryKey,",
+            "setHoveredFacilityEntry: (entry) => {",
+            "setMapInteractionCursor,",
             "if (clickedFacilityEntry && isFacilityDetailsSurfaceActive(clickedFacilityEntry.familyId)) {",
             'noteRenderAction("click-facility-info", actionStart);',
             "function shouldBlockUnderlyingSelectionForFacility",
@@ -70,6 +72,17 @@ class TransportFacilityInteractionsContractTest(unittest.TestCase):
         ]
         for token in required_tokens:
             self.assertIn(token, content)
+        hover_owner_required_tokens = [
+            "const facilityDetailsActive = hoveredFacility",
+            'runGetter(trace, "isFacilityDetailsSurfaceActive", hoveredFacility.familyId)',
+            "const nextFacilityKey = helperApi.getFacilityKey(hoveredFacility);",
+            "const previousFacilityKey = helperApi.getFacilityKey(runGetter(trace, \"getHoveredFacilityEntry\"));",
+            "runEffect(trace, \"setHoveredFacilityEntry\", hoveredFacility || null);",
+            'const cursor = facilityDetailsActive ? "pointer" : "";',
+            'runEffect(trace, "setMapInteractionCursor", cursor);',
+        ]
+        for token in hover_owner_required_tokens:
+            self.assertIn(token, hover_owner_content)
         self.assertIn('recordInteractionDurationMetric("interactionHoverCityProbeDuration"', city_owner_content)
         self.assertIn("readFacadeGetter('getFacilitySurfaceOwner')().buildFacilityTooltipText(entry);", facade_content)
         self.assertIn("getFacilitySurfaceOwner().applyFacilityInfoCardState(entry, {", content)

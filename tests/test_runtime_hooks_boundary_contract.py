@@ -13,6 +13,7 @@ STATE_BUS_JS = REPO_ROOT / "js" / "core" / "state" / "bus.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_RUNTIME_BINDING_JS = REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
+MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
 
 
 class RuntimeHooksBoundaryContractTest(unittest.TestCase):
@@ -96,6 +97,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
+        hover_owner_content = MAP_HOVER_INTERACTION_OWNER_JS.read_text(encoding="utf-8")
 
         for hook_name in [
             "setHgoRuntimePreviewEnabledFn",
@@ -155,11 +157,13 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertNotIn("preferLastGoodFrameForHgoPreview", draw_body)
 
         hover_start = renderer_content.index("function handleMouseMove(event) {")
-        hover_end = renderer_content.index("const reducedHoverPhase =", hover_start)
+        hover_end = renderer_content.index("function addRecentColor(color) {", hover_start)
         hover_body = renderer_content[hover_start:hover_end]
-        self.assertIn('inspectHgoRuntimePreviewFromEvent(event, { eventType: "hover" });', hover_body)
-        self.assertIn("if (hgoRuntimeHover.active) {", hover_body)
-        self.assertIn("updateDevHoverHit(hgoRuntimeHover.hit?.id ? hgoRuntimeHover.hit : null);", hover_body)
+        self.assertIn("getMapHoverInteractionOwner().handleMouseMove(event);", hover_body)
+        self.assertIn('"inspectHgoRuntimePreviewFromEvent"', hover_owner_content)
+        self.assertIn('runGetter(trace, "inspectHgoRuntimePreviewFromEvent", event, { eventType: "hover" });', hover_owner_content)
+        self.assertIn('if (hgoRuntimeHover?.active) {', hover_owner_content)
+        self.assertIn('return clearHoverForExclusiveMode(trace, "hgo-runtime-hover", hgoHit, hgoHit ? "pointer" : "");', hover_owner_content)
 
         click_start = renderer_content.index("async function handleClick(event, _interactionContext = null) {")
         click_end = renderer_content.index("const clickedFacilityEntry = getHoveredFacilityEntryFromEvent(event);", click_start)

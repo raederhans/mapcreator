@@ -82,6 +82,10 @@ const FILES = Object.freeze({
   hitCanvasSchedulingOwnerTest: "tests/hit_canvas_scheduling_owner_behavior.test.mjs",
   hitCanvasSchedulingOwnerInventoryTest: "tests/hit_canvas_scheduling_owner_inventory.test.mjs",
   rendererHitCanvasSchedulingInventoryTest: "tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
+  rendererMapHoverInteractionOwnerDoc: "docs/active/renderer-map-hover-interaction-owner-p48-20260701.md",
+  mapHoverInteractionOwner: "js/core/map_renderer/map_hover_interaction_owner.js",
+  mapHoverInteractionOwnerTest: "tests/map_hover_interaction_owner_behavior.test.mjs",
+  mapHoverInteractionOwnerInventoryTest: "tests/map_hover_interaction_owner_inventory.test.mjs",
   visibleFrameDiagnosticsOwnerDoc: "docs/active/renderer-visible-frame-diagnostics-owner-p42-20260630.md",
   visibleFrameDiagnosticsOwnerTest: "tests/visible_frame_diagnostics_owner_behavior.test.mjs",
   visibleFrameDiagnosticsInventoryTest: "tests/visible_frame_diagnostics_owner_inventory.test.mjs",
@@ -132,6 +136,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.hitCanvasSchedulingOwner]: 220,
+  [FILES.mapHoverInteractionOwner]: 260,
   [FILES.visibleFrameDiagnosticsOwner]: 320,
   [FILES.viewportResizeLifecycleOwner]: 360,
   [FILES.zoomInteractionLifecycleOwner]: 320,
@@ -345,6 +350,10 @@ function collectFailures() {
   const hitCanvasSchedulingOwnerTest = readProjectFile(FILES.hitCanvasSchedulingOwnerTest);
   const hitCanvasSchedulingOwnerInventoryTest = readProjectFile(FILES.hitCanvasSchedulingOwnerInventoryTest);
   const rendererHitCanvasSchedulingInventoryTest = readProjectFile(FILES.rendererHitCanvasSchedulingInventoryTest);
+  const rendererMapHoverInteractionOwnerDoc = readProjectFile(FILES.rendererMapHoverInteractionOwnerDoc);
+  const mapHoverInteractionOwner = readProjectFile(FILES.mapHoverInteractionOwner);
+  const mapHoverInteractionOwnerTest = readProjectFile(FILES.mapHoverInteractionOwnerTest);
+  const mapHoverInteractionOwnerInventoryTest = readProjectFile(FILES.mapHoverInteractionOwnerInventoryTest);
   const visibleFrameDiagnosticsOwnerDoc = readProjectFile(FILES.visibleFrameDiagnosticsOwnerDoc);
   const visibleFrameDiagnosticsOwnerTest = readProjectFile(FILES.visibleFrameDiagnosticsOwnerTest);
   const visibleFrameDiagnosticsInventoryTest = readProjectFile(FILES.visibleFrameDiagnosticsInventoryTest);
@@ -424,6 +433,10 @@ function collectFailures() {
     [FILES.hitCanvasSchedulingOwnerTest]: hitCanvasSchedulingOwnerTest,
     [FILES.hitCanvasSchedulingOwnerInventoryTest]: hitCanvasSchedulingOwnerInventoryTest,
     [FILES.rendererHitCanvasSchedulingInventoryTest]: rendererHitCanvasSchedulingInventoryTest,
+    [FILES.rendererMapHoverInteractionOwnerDoc]: rendererMapHoverInteractionOwnerDoc,
+    [FILES.mapHoverInteractionOwner]: mapHoverInteractionOwner,
+    [FILES.mapHoverInteractionOwnerTest]: mapHoverInteractionOwnerTest,
+    [FILES.mapHoverInteractionOwnerInventoryTest]: mapHoverInteractionOwnerInventoryTest,
     [FILES.visibleFrameDiagnosticsOwnerDoc]: visibleFrameDiagnosticsOwnerDoc,
     [FILES.visibleFrameDiagnosticsOwnerTest]: visibleFrameDiagnosticsOwnerTest,
     [FILES.visibleFrameDiagnosticsInventoryTest]: visibleFrameDiagnosticsInventoryTest,
@@ -2970,11 +2983,163 @@ function collectFailures() {
     }
   }
 
+  for (const heading of [
+    "## Objective",
+    "## First Principles",
+    "## Allowed Write Set",
+    "## Plan",
+    "## Validation Results",
+  ]) {
+    if (!rendererMapHoverInteractionOwnerDoc.includes(heading)) {
+      failures.push(`${FILES.rendererMapHoverInteractionOwnerDoc} must keep P48 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "Move only the `handleMouseMove(event)` hover, tooltip, cursor, and hover-overlay orchestration",
+    "Runtime writes remain in `map_renderer.js` through injected effects",
+    "Existing P47 hit canvas scheduling owner",
+    "click/double-click, selection/fill, brush/physical-intensity",
+  ]) {
+    if (!rendererMapHoverInteractionOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererMapHoverInteractionOwnerDoc} must lock P48 boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "test(\"special-zone editor branch clears hover targets and hides tooltip\"",
+    "test(\"HGO runtime hover branch clears map hover and uses pointer for runtime hits\"",
+    "test(\"reduced hover phase clears existing map and facility hover separately\"",
+    "test(\"facility tooltip takes priority and sets pointer when details are active\"",
+    "test(\"facility block hides underlying map tooltip before city and feature probes\"",
+    "test(\"feature tooltip supports special region hits\"",
+    "test(\"owner fails fast for missing explicit dependencies\"",
+  ]) {
+    if (!mapHoverInteractionOwnerTest.includes(token)) {
+      failures.push(`${FILES.mapHoverInteractionOwnerTest} must cover P48 behavior token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const OWNER_PATH = \"js/core/map_renderer/map_hover_interaction_owner.js\";",
+    "handleMouseMove wrapper must delegate to P48 owner",
+    "event binding owner must keep injected mousemove handler",
+    "interaction hit candidates must avoid hover owner ownership",
+    "public facade state-write allowlist P47 owner scenario runtime exact scheduler and dist remain untouched",
+    "package and architecture checker register P48 validation gates",
+  ]) {
+    if (!mapHoverInteractionOwnerInventoryTest.includes(token)) {
+      failures.push(`${FILES.mapHoverInteractionOwnerInventoryTest} must lock P48 inventory token: ${token}`);
+    }
+  }
+  for (const token of [
+    "\"test:node:map-hover-interaction-owner\": \"node --test tests/map_hover_interaction_owner_behavior.test.mjs\"",
+    "\"test:node:map-hover-interaction-inventory\": \"node --test tests/map_hover_interaction_owner_inventory.test.mjs\"",
+    "\"test:node:map-hover-interaction\": \"npm run test:node:map-hover-interaction-owner && npm run test:node:map-hover-interaction-inventory\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P48 map hover interaction script: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createMapHoverInteractionOwner",
+    "\"getHitFromEvent\"",
+    "\"queueTooltipUpdate\"",
+    "\"setMapInteractionCursor\"",
+    "\"clearUnderlyingHoverForFacilityEntry\"",
+    "function handleMouseMove(event)",
+    "eventType: \"hover\"",
+    "\"facility-tooltip\"",
+    "\"feature-tooltip\"",
+  ]) {
+    if (!mapHoverInteractionOwner.includes(token)) {
+      failures.push(`${FILES.mapHoverInteractionOwner} must lock P48 hover orchestration token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "rendererSurfaceHost",
+    "from \"../map_renderer.js\"",
+    "from \"./map_renderer.js\"",
+    "dispatchMapClick",
+    "dispatchMapDoubleClick",
+    "handleClick",
+    "handleDoubleClick",
+    "brushSession",
+    "physicalIntensity",
+    "drawHitCanvas",
+    "buildHitCanvasAfterStartup",
+    "scheduleHitCanvasBuildIfNeeded",
+    "scenarioRefreshRuntime",
+    "exactAfterSettle",
+    "strategicOverlayRuntime",
+  ]) {
+    if (mapHoverInteractionOwner.includes(token)) {
+      failures.push(`${FILES.mapHoverInteractionOwner} must avoid forbidden P48 migration token: ${token}`);
+    }
+  }
+  for (const token of [
+    "import { createMapHoverInteractionOwner } from \"./map_renderer/map_hover_interaction_owner.js\";",
+    "let mapHoverInteractionOwner = null;",
+    "function getMapHoverInteractionOwner()",
+    "mapHoverInteractionOwner = createMapHoverInteractionOwner({",
+    "runtimeState.hoveredId = landId;",
+    "runtimeState.hoveredWaterRegionId = waterId;",
+    "runtimeState.hoveredSpecialRegionId = specialId;",
+    "hoveredFacilityEntry = entry || null;",
+    "runtimeState.hoverOverlayDirty = true;",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P48 injected boundary token: ${token}`);
+    }
+  }
+  const hoverWrapperSource = sliceBetween(
+    renderer,
+    "function handleMouseMove(event) {",
+    "function addRecentColor(color) {",
+  );
+  if (!hoverWrapperSource.includes("getMapHoverInteractionOwner().handleMouseMove(event);")) {
+    failures.push(`${FILES.renderer} handleMouseMove wrapper must delegate to P48 owner.`);
+  }
+  for (const token of [
+    "queueTooltipUpdate({",
+    "setMapInteractionCursor(",
+    "getHitFromEvent(event,",
+    "runtimeState.hoveredId =",
+    "hoveredFacilityEntry =",
+    "inspectHgoRuntimePreviewFromEvent(event",
+  ]) {
+    if (hoverWrapperSource.includes(token)) {
+      failures.push(`${FILES.renderer} handleMouseMove wrapper must not keep old P48 hover body token: ${token}`);
+    }
+  }
+  if (!mapInteractionEventBindingOwner.includes("interactionRect.on(\"mousemove\", requireFunction(handlers, \"handleMouseMove\"));")) {
+    failures.push(`${FILES.mapInteractionEventBindingOwner} must keep handleMouseMove injected through event binding owner.`);
+  }
+  if (mapInteractionEventBindingOwner.includes("map_hover_interaction_owner")) {
+    failures.push(`${FILES.mapInteractionEventBindingOwner} must not import P48 hover owner.`);
+  }
+  for (const [relativePath, source] of [
+    [FILES.interactionHitCandidates, interactionHitCandidates],
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+  ]) {
+    if (source.includes("map_hover_interaction_owner") || source.includes("createMapHoverInteractionOwner")) {
+      failures.push(`${relativePath} must not import or own P48 hover interaction owner.`);
+    }
+  }
+  for (const token of ["map_hover_interaction_owner", "MapHoverInteraction"]) {
+    if (publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must not expose P48 hover owner token: ${token}`);
+    }
+    if (stateWriteAllowlist.includes(token)) {
+      failures.push(`${FILES.stateWriteAllowlist} must not add P48 hover owner token: ${token}`);
+    }
+  }
+
   const requiredImports = [
     "./map_renderer/set_map_data_transaction_owner.js",
     "./map_renderer/render_request_boundary_owner.js",
     "./map_renderer/render_phase_lifecycle_owner.js",
     "./map_renderer/hit_canvas_scheduling_owner.js",
+    "./map_renderer/map_hover_interaction_owner.js",
     "./renderer/visible_frame_diagnostics_owner.js",
     "./map_renderer/scenario_refresh_runtime.js",
     "./renderer/canvas_color_helpers.js",
