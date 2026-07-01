@@ -54,7 +54,7 @@ Docs:
 - [x] Register P48 in `tools/check_architecture_boundaries.mjs` and `package.json`.
 - [x] Run the required validation list.
 - [x] Run review/self-check.
-- [ ] Commit, integrate to default main, push, and record closeout truth.
+- [x] Commit, integrate to default main, push, and record closeout truth.
 
 ## Context Log
 
@@ -63,6 +63,7 @@ Docs:
 - 2026-07-01: Existing `handleMouseMove(event)` starts at `js/core/map_renderer.js:20767` and owns only mousemove hover/tooltip/cursor orchestration. Existing `getMapInteractionEventBindingOwner()` injects `handleMouseMove` into the binding owner at `js/core/map_renderer.js:2496`.
 - 2026-07-01: Noether static review returned WATCH and confirmed the owner boundary is viable while requesting old hover/facility contract tests follow the moved tokens. The two touched Python contract methods now pass directly.
 - 2026-07-01: State-write allowlist initially flagged the new tests because direct assignment tokens appeared inside test source and contract strings. The tests now use local closure variables and constructed state-write tokens.
+- 2026-07-01: Functional commit `f9b0a2691058cc7e3855cf49fade5c798c23530e` was pushed to `origin/codex/p48-map-hover-interaction-owner-20260701` and fast-forwarded to `origin/main`; `git merge-base --is-ancestor f9b0a2691058cc7e3855cf49fade5c798c23530e origin/main` returned success.
 
 ## Validation Results
 
