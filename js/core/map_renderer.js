@@ -166,6 +166,7 @@ import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_p
 import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_transaction_owner.js";
 import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
+import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
 import {
@@ -991,6 +992,7 @@ let rendererFitProjectionOwner = null;
 let setMapDataTransactionOwner = null;
 let renderRequestBoundaryOwner = null;
 let renderPhaseLifecycleOwner = null;
+let hitCanvasSchedulingOwner = null;
 let visibleFrameDiagnosticsOwner = null;
 let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
@@ -1355,6 +1357,35 @@ function getRenderPhaseLifecycleOwner() {
     },
   });
   return renderPhaseLifecycleOwner;
+}
+
+function getHitCanvasSchedulingOwner() {
+  if (hitCanvasSchedulingOwner) {
+    return hitCanvasSchedulingOwner;
+  }
+  hitCanvasSchedulingOwner = createHitCanvasSchedulingOwner({
+    state: {
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+      idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,
+    },
+    getters: {
+      hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),
+      isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
+      isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
+      getRenderPhase: () => runtimeState.renderPhase,
+      getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
+      getActiveScenarioId: () => runtimeState.activeScenarioId,
+    },
+    effects: {
+      scheduleDeferredWork,
+      cancelDeferredWork,
+      setScheduledHitCanvasBuildHandle: (handle) => {
+        runtimeState.hitCanvasBuildScheduled = handle;
+      },
+      runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details),
+    },
+  });
+  return hitCanvasSchedulingOwner;
 }
 
 function getVisibleFrameDiagnosticsOwner() {
@@ -8822,6 +8853,20 @@ function drawHitCanvasWithMetric(details = {}) {
   return built;
 }
 
+function drawScheduledHitCanvasWithMetric(details = {}) {
+  const {
+    reason = "idle-render",
+    activeScenarioId = String(runtimeState.activeScenarioId || ""),
+    ...metricDetails
+  } = details || {};
+  return drawHitCanvasWithMetric({
+    ...metricDetails,
+    mode: "deferred",
+    reason,
+    activeScenarioId,
+  });
+}
+
 function recordDeferredFullHitCanvasMetric({ reason = "deferred-full", keepReady = false } = {}) {
   const metricDetails = {
     built: false,
@@ -8843,25 +8888,7 @@ function recordDeferredFullHitCanvasMetric({ reason = "deferred-full", keepReady
 }
 
 function scheduleHitCanvasBuildIfNeeded({ reason = "idle-render" } = {}) {
-  if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return false;
-  if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) {
-    return false;
-  }
-  if (runtimeState.hitCanvasBuildScheduled) {
-    return false;
-  }
-  runtimeState.hitCanvasBuildScheduled = scheduleDeferredWork(() => {
-    runtimeState.hitCanvasBuildScheduled = null;
-    if (!rendererSurfaceHost.getHitContext() || !rendererSurfaceHost.getPathHitCanvas() || !runtimeState.hitCanvasDirty) return;
-    if (runtimeState.deferHitCanvasBuild || runtimeState.renderPhase !== RENDER_PHASE_IDLE) return;
-    drawHitCanvasWithMetric({
-      mode: "deferred",
-      reason,
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }, {
-    timeout: STAGED_HIT_CANVAS_TIMEOUT_MS,
-  });
+  getHitCanvasSchedulingOwner().scheduleHitCanvasBuildIfNeeded({ reason });
   return false;
 }
 
@@ -8882,8 +8909,7 @@ function ensureHitCanvasUpToDate({ force = false } = {}) {
     });
     return true;
   }
-  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
-  runtimeState.hitCanvasBuildScheduled = null;
+  getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: "strict-validation" });
   return drawHitCanvasWithMetric({
     mode: "forced",
     reason: "strict-validation",
@@ -22938,8 +22964,7 @@ function resetRendererRefreshTransactionState({
   resetRenderDiagnostics();
   clearStagedMapDataTasks();
   cancelExactAfterSettleRefresh();
-  cancelDeferredWork(runtimeState.hitCanvasBuildScheduled);
-  runtimeState.hitCanvasBuildScheduled = null;
+  getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: "renderer-refresh-reset" });
   if (cancelSecondarySpatialBuild) {
     cancelDeferredWork(secondarySpatialBuildHandle);
     secondarySpatialBuildHandle = null;
