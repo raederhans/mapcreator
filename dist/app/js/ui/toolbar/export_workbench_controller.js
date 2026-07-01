@@ -2,6 +2,7 @@
 // 这个模块负责 export workbench 的状态归一、列表渲染、预览、导出动作和面板内部事件绑定。
 // toolbar.js 继续保留 overlay 外壳、跨面板仲裁、URL/focus 协调和 open/close facade。
 
+import { resolveSampleExportRecommendationContext } from "../../core/sample_export_recommendation.js";
 import { replaceExportWorkbenchUiState } from "../../core/state/index.js";
 
 const EXPORT_MAIN_LAYER_VIEW_MODELS = Object.freeze([
@@ -33,6 +34,31 @@ const EXPORT_BAKE_OUTPUT_MODELS = Object.freeze([
   Object.freeze({ id: "composite", name: "Composite bake", summary: "Full packed export layer" }),
 ]);
 const EXPORT_BAKE_OUTPUT_MODEL_BY_ID = new Map(EXPORT_BAKE_OUTPUT_MODELS.map((item) => [item.id, item]));
+
+function identityT(key) {
+  return String(key || "");
+}
+
+function localize(t, key) {
+  return (typeof t === "function" ? t : identityT)(key, "ui");
+}
+
+function setElementHidden(element, hidden) {
+  if (!element) return;
+  element.hidden = !!hidden;
+  element.classList.toggle("hidden", !!hidden);
+  element.setAttribute("aria-hidden", hidden ? "true" : "false");
+}
+
+function resolveExportWorkbenchSampleContext(runtimeState, { t = identityT } = {}) {
+  const context = resolveSampleExportRecommendationContext(runtimeState);
+  if (!context) return null;
+  return {
+    sampleId: context.sampleId,
+    title: `${localize(t, "Exporting sample")}: ${context.sampleTitle}`,
+    recommendation: `${localize(t, "Recommended")}: ${context.recommendationSummary}`,
+  };
+}
 
 function normalizeExportWorkbenchLayerOrder(value) {
   const nextOrder = Array.isArray(value)
@@ -170,6 +196,9 @@ function createExportWorkbenchController({
   exportWorkbenchBakeVisibleBtn = null,
   exportWorkbenchClearBakeBtn = null,
   exportWorkbenchBakeArtifactList = null,
+  exportWorkbenchSampleContext = null,
+  exportWorkbenchSampleTitle = null,
+  exportWorkbenchSampleRecommendation = null,
   exportWorkbenchCloseBtn = null,
   dockExportBtn = null,
   exportSectionSummaryTarget = null,
@@ -260,6 +289,27 @@ function createExportWorkbenchController({
     if (exportSectionSummaryScale) {
       exportSectionSummaryScale.textContent = getExportScaleLabel(exportUi.scale);
     }
+  };
+
+  const renderExportWorkbenchSampleContext = () => {
+    const sampleContext = resolveExportWorkbenchSampleContext(state, { t });
+    if (!sampleContext) {
+      if (exportWorkbenchSampleTitle) exportWorkbenchSampleTitle.textContent = "";
+      if (exportWorkbenchSampleRecommendation) exportWorkbenchSampleRecommendation.textContent = "";
+      setElementHidden(exportWorkbenchSampleContext, true);
+      return null;
+    }
+    if (exportWorkbenchSampleTitle) {
+      exportWorkbenchSampleTitle.textContent = sampleContext.title;
+    }
+    if (exportWorkbenchSampleRecommendation) {
+      exportWorkbenchSampleRecommendation.textContent = sampleContext.recommendation;
+    }
+    if (exportWorkbenchSampleContext) {
+      exportWorkbenchSampleContext.dataset.sampleId = sampleContext.sampleId;
+    }
+    setElementHidden(exportWorkbenchSampleContext, false);
+    return sampleContext;
   };
 
   const renderExportWorkbenchLayerList = () => {
@@ -553,6 +603,7 @@ function createExportWorkbenchController({
     exportWorkbenchOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
     dockExportBtn?.classList.toggle("is-active", isOpen);
     dockExportBtn?.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    renderExportWorkbenchSampleContext();
     renderExportWorkbenchLayerList();
     renderExportWorkbenchTextElementList();
     renderExportWorkbenchBakeArtifactList();
@@ -758,6 +809,7 @@ function createExportWorkbenchController({
     renderExportWorkbenchBakeArtifactList,
     renderExportWorkbenchLayerList,
     renderExportWorkbenchPreview,
+    renderExportWorkbenchSampleContext,
     renderExportWorkbenchTextElementList,
     renderExportWorkbenchUi,
     resolveExportPassSequence: (exportWorkbenchUi) => resolveExportPassSequence(exportWorkbenchUi, renderPassNames),
@@ -779,5 +831,6 @@ export {
   normalizeExportWorkbenchLayerOrder,
   normalizeExportWorkbenchTextVisibility,
   normalizeExportWorkbenchVisibility,
+  resolveExportWorkbenchSampleContext,
   resolveExportPassSequence,
 };

@@ -239,6 +239,7 @@ function initToolbar({ render } = {}) {
   const scenarioGuideSampleProjectCard = document.getElementById("scenarioGuideSampleProjectCard");
   const scenarioGuideSampleProjectTitle = document.getElementById("scenarioGuideSampleProjectTitle");
   const scenarioGuideSampleProjectBody = document.getElementById("scenarioGuideSampleProjectBody");
+  const scenarioGuideSampleProjectRecommendation = document.getElementById("scenarioGuideSampleProjectRecommendation");
   const scenarioGuideSampleProjectOpenExportBtn = document.getElementById("scenarioGuideSampleProjectOpenExportBtn");
   const scenarioGuideSampleProjectDownloadOriginalLink = document.getElementById("scenarioGuideSampleProjectDownloadOriginalLink");
   const scenarioGuideSampleProjectContinueBtn = document.getElementById("scenarioGuideSampleProjectContinueBtn");
@@ -289,6 +290,9 @@ function initToolbar({ render } = {}) {
   const exportWorkbenchBakeVisibleBtn = document.getElementById("exportWorkbenchBakeVisibleBtn");
   const exportWorkbenchClearBakeBtn = document.getElementById("exportWorkbenchClearBakeBtn");
   const exportWorkbenchBakeArtifactList = document.getElementById("exportWorkbenchBakeArtifactList");
+  const exportWorkbenchSampleContext = document.getElementById("exportWorkbenchSampleContext");
+  const exportWorkbenchSampleTitle = document.getElementById("exportWorkbenchSampleTitle");
+  const exportWorkbenchSampleRecommendation = document.getElementById("exportWorkbenchSampleRecommendation");
   const transportWorkbenchInfoBtn = document.getElementById("transportWorkbenchInfoBtn");
   const transportWorkbenchInfoPopover = document.getElementById("transportWorkbenchInfoPopover");
   const transportWorkbenchInfoBody = document.getElementById("transportWorkbenchInfoBody");
@@ -842,6 +846,7 @@ function initToolbar({ render } = {}) {
     root: scenarioGuideSampleProjectCard,
     titleNode: scenarioGuideSampleProjectTitle,
     bodyNode: scenarioGuideSampleProjectBody,
+    recommendationNode: scenarioGuideSampleProjectRecommendation,
     openExportButton: scenarioGuideSampleProjectOpenExportBtn,
     downloadOriginalLink: scenarioGuideSampleProjectDownloadOriginalLink,
     continueButton: scenarioGuideSampleProjectContinueBtn,
@@ -1845,6 +1850,9 @@ function initToolbar({ render } = {}) {
     exportWorkbenchBakeVisibleBtn,
     exportWorkbenchClearBakeBtn,
     exportWorkbenchBakeArtifactList,
+    exportWorkbenchSampleContext,
+    exportWorkbenchSampleTitle,
+    exportWorkbenchSampleRecommendation,
     exportWorkbenchCloseBtn,
     dockExportBtn,
     exportSectionSummaryTarget,

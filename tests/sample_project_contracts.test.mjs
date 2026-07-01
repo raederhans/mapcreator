@@ -15,6 +15,13 @@ import {
 } from "../js/core/sample_project_registry.js";
 import { createUiSurfaceUrlState } from "../js/ui/ui_surface_url_state.js";
 import {
+  collectSampleExportRecommendationIssues,
+  resolveSampleExportRecommendationContext,
+} from "../js/core/sample_export_recommendation.js";
+import {
+  resolveExportWorkbenchSampleContext,
+} from "../js/ui/toolbar/export_workbench_controller.js";
+import {
   createSampleProjectBannerController,
   createSampleProjectGuideCardController,
   resolveSampleProjectBannerView,
@@ -226,6 +233,23 @@ test("sample runs manifest exposes only public scenario project downloads", () =
   }
 });
 
+test("public sample export recommendations are valid and stay public-only", () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+
+  for (const project of manifest.sample_projects) {
+    const issues = collectSampleExportRecommendationIssues(project.recommended_export);
+    assert.deepEqual(issues, [], `${project.id} recommended export should match export workbench options`);
+    assert.ok(project.recommended_export.label, `${project.id} recommended export label is required`);
+  }
+
+  const tnoProject = manifest.sample_projects.find((project) => project.id === "tno-1962-atlantropa-briefing");
+  assert.equal(tnoProject.recommended_export.label, "2x PNG briefing map");
+  assert.equal(tnoProject.recommended_export.target, "composite");
+  assert.equal(tnoProject.recommended_export.format, "png");
+  assert.equal(tnoProject.recommended_export.scale, "2");
+  assertNoDeveloperPreviewId(manifest.sample_projects, "sample export recommendations");
+});
+
 test("sample project JSON files match current scenario baselines and import cleanly", async () => {
   const manifest = readJson(SAMPLE_RUNS_PATH);
   const publicScenarioIds = new Set(manifest.public_scenario_ids);
@@ -295,6 +319,24 @@ test("sample project registry resolves only public checked-in project assets", (
       "unsafe-sample",
     ),
     "unsafe-project-file",
+  );
+  assertSampleProjectError(
+    () => resolveSampleProjectFromManifest(
+      cloneWithSampleProject(manifest, {
+        recommended_export: {
+          label: "Bad export",
+          target: "movie",
+          format: "gif",
+          scale: "3",
+          previewMode: "overview",
+          layerOrder: ["background"],
+          visibleLayers: ["background"],
+          textLayers: ["render-labels"],
+        },
+      }),
+      "unsafe-sample",
+    ),
+    "invalid-sample-recommendation",
   );
 });
 
@@ -450,12 +492,20 @@ test("sample startup import failures record state without duplicate sample toast
 
 test("shared sample import workflow preserves committed sample during failed switch", async () => {
   const manifest = readJson(SAMPLE_RUNS_PATH);
+  const publicSampleProjects = resolvePublicSampleProjectListFromManifest(manifest);
+  const tnoRecommendation = publicSampleProjects.find(
+    (entry) => entry.id === "tno-1962-atlantropa-briefing",
+  ).recommendedExport;
+  const modernRecommendation = publicSampleProjects.find(
+    (entry) => entry.id === "modern-world-japan-corridor",
+  ).recommendedExport;
   const targetState = {
     sampleProjectDeeplink: {
       status: "success",
       sampleId: "tno-1962-atlantropa-briefing",
       scenarioId: "tno_1962",
       title: "TNO 1962 Atlantropa briefing",
+      recommendedExport: tnoRecommendation,
     },
   };
   const refreshSnapshots = [];
@@ -489,6 +539,16 @@ test("shared sample import workflow preserves committed sample during failed swi
     assert.equal(targetState.sampleProjectDeeplink.status, "error");
     assert.equal(targetState.sampleProjectDeeplink.sampleId, "modern-world-japan-corridor");
     assert.equal(targetState.sampleProjectDeeplink.previousSampleId, "tno-1962-atlantropa-briefing");
+    assert.deepEqual(targetState.sampleProjectDeeplink.recommendedExport, modernRecommendation);
+    assert.deepEqual(targetState.sampleProjectDeeplink.previousRecommendedExport, tnoRecommendation);
+    assert.deepEqual(
+      resolveExportWorkbenchSampleContext(targetState),
+      {
+        sampleId: "tno-1962-atlantropa-briefing",
+        title: "Exporting sample: TNO 1962 Atlantropa briefing",
+        recommendation: "Recommended: PNG · 2x · Composite image",
+      },
+    );
     assert.deepEqual(
       refreshSnapshots.map((snapshot) => snapshot.status),
       ["loading", "importing", "error"],
@@ -551,6 +611,8 @@ test("sample project banner view exposes success actions and public error messag
 });
 
 test("sample guide helper view exposes loaded sample context and public error messages", () => {
+  const manifest = readJson(SAMPLE_RUNS_PATH);
+  const publicSampleProjects = resolvePublicSampleProjectListFromManifest(manifest);
   const successView = resolveSampleProjectGuideContext({
     sampleProjectDeeplink: {
       status: "success",
@@ -561,6 +623,8 @@ test("sample guide helper view exposes loaded sample context and public error me
       appProjectUrl: "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
       fileName: "tno-1962-atlantropa-briefing.project.json",
     },
+  }, {
+    sampleProjects: publicSampleProjects,
   });
   assert.equal(successView.tone, "success");
   assert.equal(successView.status, "success");
@@ -568,6 +632,7 @@ test("sample guide helper view exposes loaded sample context and public error me
   assert.equal(successView.scenarioId, "tno_1962");
   assert.equal(successView.title, "Sample loaded: TNO 1962 Atlantropa briefing");
   assert.match(successView.body, /editable sample project/);
+  assert.equal(successView.recommendedExportLabel, "Recommended export: 2x PNG briefing map");
   assert.equal(successView.openExportLabel, "Open export");
   assert.equal(successView.canOpenExport, true);
   assert.equal(successView.canDownloadOriginal, true);
@@ -577,6 +642,39 @@ test("sample guide helper view exposes loaded sample context and public error me
     "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
   );
   assert.equal(successView.downloadName, "tno-1962-atlantropa-briefing.project.json");
+  assert.deepEqual(
+    resolveSampleExportRecommendationContext({
+      sampleProjectDeeplink: {
+        status: "success",
+        sampleId: "tno-1962-atlantropa-briefing",
+        title: "TNO 1962 Atlantropa briefing",
+      },
+    }, {
+      sampleProjects: publicSampleProjects,
+    }),
+    {
+      sampleId: "tno-1962-atlantropa-briefing",
+      sampleTitle: "TNO 1962 Atlantropa briefing",
+      recommendationLabel: "2x PNG briefing map",
+      recommendationSummary: "PNG · 2x · Composite image",
+      recommendedExport: publicSampleProjects.find((project) => project.id === "tno-1962-atlantropa-briefing").recommendedExport,
+    },
+  );
+  assert.deepEqual(
+    resolveExportWorkbenchSampleContext({
+      sampleProjectDeeplink: {
+        status: "success",
+        sampleId: "tno-1962-atlantropa-briefing",
+        title: "TNO 1962 Atlantropa briefing",
+        recommendedExport: publicSampleProjects.find((project) => project.id === "tno-1962-atlantropa-briefing").recommendedExport,
+      },
+    }),
+    {
+      sampleId: "tno-1962-atlantropa-briefing",
+      title: "Exporting sample: TNO 1962 Atlantropa briefing",
+      recommendation: "Recommended: PNG · 2x · Composite image",
+    },
+  );
 
   const errorView = resolveSampleProjectGuideContext({
     sampleProjectDeeplink: {
@@ -589,6 +687,7 @@ test("sample guide helper view exposes loaded sample context and public error me
   assert.equal(errorView.tone, "error");
   assert.equal(errorView.title, "Sample unavailable");
   assert.equal(errorView.body, "This sample project is not in the public sample list.");
+  assert.equal(errorView.recommendedExportLabel, "");
   assert.equal(errorView.canOpenExport, false);
   assert.equal(errorView.canDownloadOriginal, false);
   assert.equal(errorView.canContinue, true);
@@ -659,11 +758,22 @@ test("sample guide card controller opens export and keeps error path usable", ()
       title: "TNO 1962 Atlantropa briefing",
       appProjectUrl: "../assets/sample-projects/tno-1962-atlantropa-briefing.project.json",
       fileName: "tno-1962-atlantropa-briefing.project.json",
+      recommendedExport: {
+        label: "2x PNG briefing map",
+        target: "composite",
+        format: "png",
+        scale: "2",
+        previewMode: "main",
+        layerOrder: ["background", "context", "political", "effects", "labels"],
+        visibleLayers: ["background", "context", "political", "effects", "labels"],
+        textLayers: ["render-labels", "svg-annotations"],
+      },
     },
   };
   const root = new SampleBannerTestElement();
   const titleNode = new SampleBannerTestElement();
   const bodyNode = new SampleBannerTestElement();
+  const recommendationNode = new SampleBannerTestElement();
   const openExportButton = new SampleBannerTestElement();
   const downloadOriginalLink = new SampleBannerTestElement();
   const continueButton = new SampleBannerTestElement();
@@ -674,6 +784,7 @@ test("sample guide card controller opens export and keeps error path usable", ()
     root,
     titleNode,
     bodyNode,
+    recommendationNode,
     openExportButton,
     downloadOriginalLink,
     continueButton,
@@ -690,6 +801,8 @@ test("sample guide card controller opens export and keeps error path usable", ()
   assert.equal(root.dataset.sampleGuideStatus, "success");
   assert.equal(titleNode.textContent, "Sample loaded: TNO 1962 Atlantropa briefing");
   assert.match(bodyNode.textContent, /editable sample project/);
+  assert.equal(recommendationNode.textContent, "Recommended export: 2x PNG briefing map");
+  assert.equal(recommendationNode.hidden, false);
   assert.equal(openExportButton.hidden, false);
   assert.equal(continueButton.hidden, true);
   assert.equal(
@@ -712,6 +825,8 @@ test("sample guide card controller opens export and keeps error path usable", ()
   assert.equal(root.dataset.sampleGuideTone, "error");
   assert.equal(titleNode.textContent, "Sample unavailable");
   assert.equal(bodyNode.textContent, "This sample project is not in the public sample list.");
+  assert.equal(recommendationNode.textContent, "");
+  assert.equal(recommendationNode.hidden, true);
   assert.equal(openExportButton.hidden, true);
   assert.equal(downloadOriginalLink.hidden, true);
   assert.equal(continueButton.hidden, false);

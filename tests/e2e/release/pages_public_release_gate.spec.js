@@ -145,6 +145,7 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await expect(sampleGuideCard).toBeVisible({ timeout: 30000 });
     await expect(sampleGuideCard).toHaveAttribute("data-sample-guide-status", "success");
     await expect(page.locator("[data-sample-guide-title]")).toContainText(/TNO 1962 Atlantropa briefing/i);
+    await expect(page.locator("[data-sample-guide-recommendation]")).toContainText(/Recommended export: 2x PNG briefing map/i);
     await expect(page.locator("[data-sample-guide-download-original]")).toHaveAttribute(
       "href",
       /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
@@ -161,6 +162,9 @@ test("public Pages release gate", async ({ page }, testInfo) => {
     await expect(page.locator("#scenarioGuidePopover")).toBeHidden({ timeout: 30000 });
     await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
     await expect(page.locator("#exportWorkbenchPanel")).toBeVisible();
+    await expect(page.locator("[data-export-workbench-sample-context]")).toBeVisible();
+    await expect(page.locator("[data-export-workbench-sample-title]")).toContainText(/Exporting sample: TNO 1962 Atlantropa briefing/i);
+    await expect(page.locator("[data-export-workbench-sample-recommendation]")).toContainText(/Recommended: PNG · 2x · Composite image/i);
     await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
     await page.locator("#exportWorkbenchCloseBtn").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
@@ -204,12 +208,14 @@ test("public Pages release gate", async ({ page }, testInfo) => {
       "body",
       "#scenarioGuidePopover",
       "[data-sample-guide-choice]",
+      "[data-sample-guide-recommendation]",
       "[data-sample-guide-status-message]",
       "#sampleProjectBanner",
       "#scenarioStatus",
       "#scenarioSelect",
       "#exportWorkbenchOverlay",
       "#exportWorkbenchPanel",
+      "[data-export-workbench-sample-context]",
     ]);
     await writeFailureContextArtifact(testInfo, snapshot, {
       fileName: "pages-public-release-gate-failure-context.json",

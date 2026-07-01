@@ -28,6 +28,7 @@ async function writeSampleGuideFailureArtifact(page, testInfo) {
     "#scenarioGuidePopover",
     "[data-sample-guide-helper]",
     "[data-sample-guide-title]",
+    "[data-sample-guide-recommendation]",
     "[data-sample-guide-choice]",
     "[data-sample-guide-status-message]",
     "[data-sample-guide-open-export]",
@@ -35,6 +36,7 @@ async function writeSampleGuideFailureArtifact(page, testInfo) {
     "[data-sample-guide-continue]",
     "[data-app-dialog-overlay='true']",
     "#exportWorkbenchOverlay",
+    "[data-export-workbench-sample-context]",
     "#scenarioStatus",
   ]);
   await writeFailureContextArtifact(testInfo, snapshot, {
@@ -61,6 +63,7 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
     await expect(guideCard).toBeVisible({ timeout: 30000 });
     await expect(guideCard).toHaveAttribute("data-sample-guide-status", "success");
     await expect(page.locator("[data-sample-guide-title]")).toContainText(/TNO 1962 Atlantropa briefing/i);
+    await expect(page.locator("[data-sample-guide-recommendation]")).toContainText(/Recommended export: 2x PNG briefing map/i);
     await expect(page.locator("[data-sample-guide-download-original]")).toHaveAttribute(
       "href",
       /\.\.\/assets\/sample-projects\/tno-1962-atlantropa-briefing\.project\.json$/,
@@ -77,6 +80,9 @@ test("sample guide card opens export from the TNO sample deeplink", async ({ pag
     await page.locator("[data-sample-guide-open-export]").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeVisible({ timeout: 30000 });
     await expect(page.locator("#exportWorkbenchPanel")).toBeVisible();
+    await expect(page.locator("[data-export-workbench-sample-context]")).toBeVisible();
+    await expect(page.locator("[data-export-workbench-sample-title]")).toContainText(/Exporting sample: TNO 1962 Atlantropa briefing/i);
+    await expect(page.locator("[data-export-workbench-sample-recommendation]")).toContainText(/Recommended: PNG · 2x · Composite image/i);
     await expect(page.locator("#exportWorkbenchSnapshotBtn")).toBeVisible();
     await page.locator("#exportWorkbenchCloseBtn").click();
     await expect(page.locator("#exportWorkbenchOverlay")).toBeHidden({ timeout: 30000 });
@@ -144,6 +150,7 @@ test("sample guide card shows a non-fatal error for a bad sample deeplink", asyn
     await expect(guideCard).toHaveAttribute("data-sample-guide-status", "error");
     await expect(page.locator("[data-sample-guide-title]")).toContainText(/Sample unavailable/i);
     await expect(guideCard).toContainText(/not in the public sample list/i);
+    await expect(page.locator("[data-sample-guide-recommendation]")).toBeHidden();
     await expect(page.locator("[data-sample-guide-open-export]")).toBeHidden();
     await expect(page.locator("[data-sample-guide-download-original]")).toBeHidden();
     await expect(page.locator("[data-sample-guide-continue]")).toBeVisible();

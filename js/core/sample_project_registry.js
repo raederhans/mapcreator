@@ -1,3 +1,8 @@
+import {
+  collectSampleExportRecommendationIssues,
+  normalizeSampleExportRecommendation,
+} from "./sample_export_recommendation.js";
+
 export const SAMPLE_PROJECT_QUERY_PARAM = "sample";
 export const LEGACY_SAMPLE_PROJECT_QUERY_PARAM = "sample_project";
 export const SAMPLE_PROJECT_MANIFEST_URL = "../assets/sample-runs.json";
@@ -154,11 +159,19 @@ function resolveSampleProjectEntry(entry, {
   const isDeveloperPreview = excludedScenarioIds?.has(scenarioId) || false;
   const isPublicScenario = publicScenarioIds?.has(scenarioId) || false;
   const isPublic = isPublicScenario && !isDeveloperPreview;
+  const recommendationIssues = collectSampleExportRecommendationIssues(entry?.recommended_export);
   if (!isPublic && !isDeveloperPreview) {
     throw createSampleProjectError(
       "private-sample-scenario",
       `Sample project scenario is not public: ${scenarioId}`,
       { userMessage: "This sample project is not available in the public demo." },
+    );
+  }
+  if (isPublic && recommendationIssues.length) {
+    throw createSampleProjectError(
+      "invalid-sample-recommendation",
+      `Sample project export recommendation is not valid: ${id}`,
+      { userMessage: "The sample project list is not valid." },
     );
   }
 
@@ -171,6 +184,9 @@ function resolveSampleProjectEntry(entry, {
     fileName,
     manifestVersion,
     recipe: normalizeRecipeSteps(entry?.recipe),
+    recommendedExport: recommendationIssues.length
+      ? null
+      : normalizeSampleExportRecommendation(entry?.recommended_export),
     isDeveloperPreview,
     isPublic,
   };
@@ -210,6 +226,7 @@ export function resolveSampleProjectFromManifest(
     fileName: sampleProject.fileName,
     manifestVersion: sampleProject.manifestVersion,
     recipe: sampleProject.recipe,
+    recommendedExport: sampleProject.recommendedExport,
   };
 }
 
@@ -230,6 +247,7 @@ export function resolvePublicSampleProjectListFromManifest(
       fileName: entry.fileName,
       manifestVersion: entry.manifestVersion,
       recipe: entry.recipe,
+      recommendedExport: entry.recommendedExport,
     }));
 }
 

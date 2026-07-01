@@ -299322,6 +299322,18 @@
       "en": "Loading selected sample...",
       "zh": "正在加载所选示例..."
     },
+    "Recommended export": {
+      "en": "Recommended export",
+      "zh": "推荐导出"
+    },
+    "Exporting sample": {
+      "en": "Exporting sample",
+      "zh": "正在导出示例"
+    },
+    "Recommended": {
+      "en": "Recommended",
+      "zh": "推荐"
+    },
     "This is an editable sample project. Export an image or save your own project copy when you are ready.": {
       "en": "This is an editable sample project. Export an image or save your own project copy when you are ready.",
       "zh": "这是可编辑的示例项目。准备好后，导出图片或保存你自己的项目副本。"

@@ -589,6 +589,9 @@ export const UI_COPY_CATALOG = Object.freeze({
     en: "Choose another checked-in public starter sample.",
   },
   "Loading selected sample...": { zh: "正在加载所选示例...", en: "Loading selected sample..." },
+  "Recommended export": { zh: "推荐导出", en: "Recommended export" },
+  "Exporting sample": { zh: "正在导出示例", en: "Exporting sample" },
+  Recommended: { zh: "推荐", en: "Recommended" },
   "This is an editable sample project. Export an image or save your own project copy when you are ready.": {
     zh: "这是可编辑的示例项目。准备好后，导出图片或保存你自己的项目副本。",
     en: "This is an editable sample project. Export an image or save your own project copy when you are ready.",

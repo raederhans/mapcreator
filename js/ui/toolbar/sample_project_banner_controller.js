@@ -1,3 +1,8 @@
+import {
+  normalizeSampleExportRecommendation,
+  resolveSampleExportRecommendationContext,
+} from "../../core/sample_export_recommendation.js";
+
 const SAMPLE_PROJECT_BANNER_VISIBLE_STATUSES = new Set(["success", "error"]);
 const SAMPLE_PROJECT_IN_FLIGHT_STATUSES = new Set(["pending", "loading", "importing"]);
 
@@ -39,6 +44,7 @@ function normalizeSampleProjectEntries(entries) {
       recipe: Array.isArray(entry?.recipe)
         ? entry.recipe.map((step) => normalizeText(step)).filter(Boolean)
         : [],
+      recommendedExport: normalizeSampleExportRecommendation(entry?.recommendedExport || entry?.recommended_export),
     }))
     .filter((entry) => entry.id);
 }
@@ -170,6 +176,9 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
   const selectedSampleId = resolveCommittedSampleId(sampleState);
   const sampleTitle = normalizeText(sampleState?.title) || sampleId || localize(t, "selected sample");
   const downloadHref = resolveOriginalDownloadUrl(sampleState);
+  const exportRecommendation = resolveSampleExportRecommendationContext(runtimeState, {
+    sampleProjects: publicSampleProjects,
+  });
   // Guide card 同时服务“已加载样例”“样例不可用”“可选择 starter”三种状态；selectedSampleId 绑定已提交样例，避免失败切换时高亮漂到未导入项目。
   if (status === "success") {
     return {
@@ -185,6 +194,9 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
         t,
         "This is an editable sample project. Export an image or save your own project copy when you are ready.",
       ),
+      recommendedExportLabel: exportRecommendation
+        ? `${localize(t, "Recommended export")}: ${exportRecommendation.recommendationLabel}`
+        : "",
       openExportLabel: localize(t, "Open export"),
       downloadOriginalLabel: localize(t, "Download original JSON"),
       continueLabel: localize(t, "Continue with default guide"),
@@ -221,6 +233,7 @@ export function resolveSampleProjectGuideContext(runtimeState, { t = identityT, 
     fileName: normalizeText(sampleState?.fileName),
     title: localize(t, "Sample unavailable"),
     body: resolveErrorMessage(sampleState, t),
+    recommendedExportLabel: "",
     openExportLabel: localize(t, "Open export"),
     downloadOriginalLabel: localize(t, "Download original JSON"),
     continueLabel: localize(t, "Continue with default guide"),
@@ -330,6 +343,7 @@ export function createSampleProjectGuideCardController({
   root,
   titleNode,
   bodyNode,
+  recommendationNode,
   openExportButton,
   downloadOriginalLink,
   continueButton,
@@ -448,6 +462,10 @@ export function createSampleProjectGuideCardController({
       root.setAttribute("aria-live", view.tone === "error" ? "assertive" : "polite");
       if (titleNode) titleNode.textContent = view.title;
       if (bodyNode) bodyNode.textContent = view.body;
+      if (recommendationNode) {
+        recommendationNode.textContent = view.recommendedExportLabel || "";
+      }
+      setElementHidden(recommendationNode, !view.recommendedExportLabel);
 
       if (openExportButton) {
         openExportButton.textContent = view.openExportLabel;

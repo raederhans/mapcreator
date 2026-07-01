@@ -22,7 +22,17 @@
         "Neutral public baseline",
         "Water regions visible",
         "Clean export target"
-      ]
+      ],
+      "recommended_export": {
+        "label": "2x PNG starter map",
+        "target": "composite",
+        "format": "png",
+        "scale": "2",
+        "previewMode": "main",
+        "layerOrder": ["background", "political", "context", "effects", "labels"],
+        "visibleLayers": ["background", "political", "effects", "labels"],
+        "textLayers": ["render-labels"]
+      }
     },
     {
       "id": "modern-world-japan-corridor",
@@ -33,7 +43,17 @@
         "Modern public baseline",
         "Road and rail overview",
         "Cities, terrain, rivers, and ports"
-      ]
+      ],
+      "recommended_export": {
+        "label": "2x PNG corridor map",
+        "target": "composite",
+        "format": "png",
+        "scale": "2",
+        "previewMode": "main",
+        "layerOrder": ["background", "context", "political", "effects", "labels"],
+        "visibleLayers": ["background", "context", "political", "effects", "labels"],
+        "textLayers": ["render-labels"]
+      }
     },
     {
       "id": "hoi4-1936-europe-briefing",
@@ -44,7 +64,17 @@
         "1936 ownership layer",
         "City anchors",
         "Rivers and political export"
-      ]
+      ],
+      "recommended_export": {
+        "label": "2x per-layer PNG briefing set",
+        "target": "per-layer",
+        "format": "png",
+        "scale": "2",
+        "previewMode": "main",
+        "layerOrder": ["background", "political", "effects", "labels", "context"],
+        "visibleLayers": ["background", "political", "effects", "labels"],
+        "textLayers": ["render-labels"]
+      }
     },
     {
       "id": "hoi4-1939-europe-switch",
@@ -55,7 +85,17 @@
         "1939 ownership layer",
         "Shared comparison viewport",
         "Rivers and political export"
-      ]
+      ],
+      "recommended_export": {
+        "label": "2x PNG comparison map",
+        "target": "composite",
+        "format": "png",
+        "scale": "2",
+        "previewMode": "main",
+        "layerOrder": ["background", "political", "effects", "labels", "context"],
+        "visibleLayers": ["background", "political", "effects", "labels"],
+        "textLayers": ["render-labels"]
+      }
     },
     {
       "id": "tno-1962-atlantropa-briefing",
@@ -67,7 +107,17 @@
         "Atlantropa basins",
         "Coastline detail",
         "Mediterranean labels"
-      ]
+      ],
+      "recommended_export": {
+        "label": "2x PNG briefing map",
+        "target": "composite",
+        "format": "png",
+        "scale": "2",
+        "previewMode": "main",
+        "layerOrder": ["background", "context", "political", "effects", "labels"],
+        "visibleLayers": ["background", "context", "political", "effects", "labels"],
+        "textLayers": ["render-labels", "svg-annotations"]
+      }
     }
   ],
   "featured_runs": [

@@ -47,7 +47,7 @@ Scenario Forge 把场景选择、政治编辑、地图外观、战略标注、�
 
 ## 打开或下载样例项目
 
-首页已经为公开基线接入可打开和可下载的起步项目。使用 `/app/?sample=<sample-id>&view=guide` 可以直接打开带 sample-aware Guide 的编辑器，Guide 会标出当前可编辑示例，列出 5 个公开起步样例，并提供导出和原始 JSON 下载入口。在 Guide 内切换样例会复用已入库清单；如果当前作品有未保存编辑，会先弹出确认；切换成功后，URL 会更新为所选 `sample`。Project 标签页也会确认样例已加载。对应项目 JSON 记录在 [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) 里。
+首页已经为公开基线接入可打开和可下载的起步项目。使用 `/app/?sample=<sample-id>&view=guide` 可以直接打开带 sample-aware Guide 的编辑器，Guide 会标出当前可编辑示例，列出 5 个公开起步样例，显示推荐导出路径，并提供导出和原始 JSON 下载入口。在 Guide 内切换样例会复用已入库清单；如果当前作品有未保存编辑，会先弹出确认；切换成功后，URL 会更新为所选 `sample`。Project 标签页也会确认样例已加载，Export Workbench 会重复显示当前样例和推荐输出。对应项目 JSON 与推荐导出 metadata 记录在 [`landing/assets/sample-runs.json`](landing/assets/sample-runs.json) 里。
 
 - TNO 1962 Atlantropa briefing：[在编辑器中打开](https://raederhans.github.io/scenario-forge/app/?sample=tno-1962-atlantropa-briefing&view=guide) · [`tno-1962-atlantropa-briefing.project.json`](landing/assets/sample-projects/tno-1962-atlantropa-briefing.project.json)
 - HOI4 1936 Europe briefing：[在编辑器中打开](https://raederhans.github.io/scenario-forge/app/?sample=hoi4-1936-europe-briefing&view=guide) · [`hoi4-1936-europe-briefing.project.json`](landing/assets/sample-projects/hoi4-1936-europe-briefing.project.json)

@@ -12,7 +12,7 @@
     },
     {
       "path": "app/css/style.css",
-      "size_bytes": 289771,
+      "size_bytes": 290457,
       "source_kind": "dist"
     },
     {
@@ -37077,7 +37077,7 @@
     },
     {
       "path": "app/data/locales.json",
-      "size_bytes": 8466039,
+      "size_bytes": 8466309,
       "source_kind": "generated_ignored"
     },
     {
@@ -45517,7 +45517,7 @@
     },
     {
       "path": "app/index.html",
-      "size_bytes": 269767,
+      "size_bytes": 270530,
       "source_kind": "dist"
     },
     {
@@ -45717,7 +45717,7 @@
     },
     {
       "path": "app/js/core/i18n_catalog.js",
-      "size_bytes": 98772,
+      "size_bytes": 98974,
       "source_kind": "dist"
     },
     {
@@ -46241,13 +46241,18 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/sample_export_recommendation.js",
+      "size_bytes": 6781,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/sample_project_import_workflow.js",
-      "size_bytes": 5990,
+      "size_bytes": 6358,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/sample_project_registry.js",
-      "size_bytes": 9268,
+      "size_bytes": 10010,
       "source_kind": "dist"
     },
     {
@@ -46692,7 +46697,7 @@
     },
     {
       "path": "app/js/ui/toolbar.js",
-      "size_bytes": 131842,
+      "size_bytes": 132433,
       "source_kind": "dist"
     },
     {
@@ -46757,7 +46762,7 @@
     },
     {
       "path": "app/js/ui/toolbar/export_workbench_controller.js",
-      "size_bytes": 32948,
+      "size_bytes": 34950,
       "source_kind": "dist"
     },
     {
@@ -46792,7 +46797,7 @@
     },
     {
       "path": "app/js/ui/toolbar/sample_project_banner_controller.js",
-      "size_bytes": 17758,
+      "size_bytes": 18560,
       "source_kind": "dist"
     },
     {
@@ -47247,7 +47252,7 @@
     },
     {
       "path": "assets/sample-runs.json",
-      "size_bytes": 4360,
+      "size_bytes": 6342,
       "source_kind": "dist"
     },
     {
@@ -47367,7 +47372,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1466195,
+      "size_bytes": 1466324,
       "source_kind": "dist"
     },
     {
@@ -47497,19 +47502,19 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9413,
+      "file_count": 9414,
       "path": "app",
-      "size_bytes": 965541425
+      "size_bytes": 965554632
     },
     {
       "file_count": 57,
       "path": "assets",
-      "size_bytes": 4877175
+      "size_bytes": 4879157
     },
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1466195
+      "size_bytes": 1466324
     },
     {
       "file_count": 1,
@@ -47532,5 +47537,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972103684
+  "total_bytes": 972119002
 }

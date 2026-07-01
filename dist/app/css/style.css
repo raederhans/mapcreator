@@ -6840,6 +6840,25 @@ body.counter-editor-modal-open {
   color: #6b4134;
 }
 
+.export-workbench-sample-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 9px 12px;
+  border: 1px solid rgba(31, 79, 126, 0.14);
+  border-radius: 8px;
+  background: rgba(231, 244, 255, 0.72);
+  color: #243345;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.export-workbench-sample-context.hidden,
+.export-workbench-sample-context[hidden] {
+  display: none;
+}
+
 .export-workbench-grid {
   flex: 1 1 auto;
   display: grid;
@@ -9085,6 +9104,19 @@ body.counter-editor-modal-open {
   color: var(--text-secondary);
   font-size: 0.76rem;
   line-height: 1.45;
+}
+
+.scenario-guide-sample-card__recommendation {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.scenario-guide-sample-card__recommendation.hidden,
+.scenario-guide-sample-card__recommendation[hidden] {
+  display: none;
 }
 
 .scenario-guide-sample-card__actions {

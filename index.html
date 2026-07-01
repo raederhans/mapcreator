@@ -3120,6 +3120,17 @@
               Close
             </button>
           </div>
+          <div
+            id="exportWorkbenchSampleContext"
+            class="export-workbench-sample-context hidden"
+            data-export-workbench-sample-context
+            aria-live="polite"
+            aria-hidden="true"
+            hidden
+          >
+            <span id="exportWorkbenchSampleTitle" data-export-workbench-sample-title></span>
+            <span id="exportWorkbenchSampleRecommendation" data-export-workbench-sample-recommendation></span>
+          </div>
           <div class="export-workbench-grid">
             <section class="export-workbench-column export-workbench-column-params" aria-labelledby="exportWorkbenchParamsTitle">
               <div class="export-workbench-column-kicker" data-i18n="Base image">Base image</div>
@@ -3298,6 +3309,13 @@
               <p
                 id="scenarioGuideSampleProjectBody"
                 class="scenario-guide-sample-card__body"
+              ></p>
+              <p
+                id="scenarioGuideSampleProjectRecommendation"
+                class="scenario-guide-sample-card__recommendation hidden"
+                data-sample-guide-recommendation
+                aria-hidden="true"
+                hidden
               ></p>
             </div>
             <div class="scenario-guide-sample-card__switcher">

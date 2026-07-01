@@ -20,6 +20,7 @@ function resolvePreviousSampleState(currentState = {}, patch = {}) {
       previousSampleId: "",
       previousScenarioId: "",
       previousTitle: "",
+      previousRecommendedExport: null,
     };
   }
   if (String(currentState?.status || "") === "success") {
@@ -27,12 +28,14 @@ function resolvePreviousSampleState(currentState = {}, patch = {}) {
       previousSampleId: normalizeText(currentState.sampleId),
       previousScenarioId: normalizeText(currentState.scenarioId),
       previousTitle: normalizeText(currentState.title),
+      previousRecommendedExport: currentState.recommendedExport || null,
     };
   }
   return {
     previousSampleId: normalizeText(currentState?.previousSampleId),
     previousScenarioId: normalizeText(currentState?.previousScenarioId),
     previousTitle: normalizeText(currentState?.previousTitle),
+    previousRecommendedExport: currentState?.previousRecommendedExport || null,
   };
 }
 
@@ -117,6 +120,7 @@ export async function loadPublicSampleProjectIntoRuntime(sampleId, {
       title: sampleProject.title,
       manifestVersion: sampleProject.manifestVersion,
       recipe: sampleProject.recipe,
+      recommendedExport: sampleProject.recommendedExport,
     });
 
     const imported = await importProjectTextThroughFunnel(text, {
@@ -138,6 +142,7 @@ export async function loadPublicSampleProjectIntoRuntime(sampleId, {
         appProjectUrl: sampleProject.appProjectUrl,
         fileName: sampleProject.fileName,
         title: sampleProject.title,
+        recommendedExport: sampleProject.recommendedExport,
         errorCode: "sample-project-import-failed",
         errorMessage: `Sample project import failed: ${sampleProject.id}`,
       });
@@ -153,6 +158,7 @@ export async function loadPublicSampleProjectIntoRuntime(sampleId, {
       title: sampleProject.title,
       manifestVersion: sampleProject.manifestVersion,
       recipe: sampleProject.recipe,
+      recommendedExport: sampleProject.recommendedExport,
       completedAt: getNow(),
     });
     return { ok: true, sampleProject };
