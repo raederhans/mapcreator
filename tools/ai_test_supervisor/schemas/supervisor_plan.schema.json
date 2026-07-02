@@ -16,6 +16,7 @@
     "ciOnlyCommands",
     "blockedCommands",
     "routeGaps",
+    "commandsToRun",
     "requiredArtifacts",
     "executionPolicy",
     "stopConditions",

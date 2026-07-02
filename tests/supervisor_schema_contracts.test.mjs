@@ -53,6 +53,7 @@ test("supervisor plan schema includes lane planning fields", () => {
     "mainThreadCommands",
     "ciOnlyCommands",
     "routeGaps",
+    "commandsToRun",
     "requiredArtifacts",
   ]);
 });
