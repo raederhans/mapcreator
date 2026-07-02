@@ -29,8 +29,8 @@
 ## Current Outcome
 
 - The Phase 6E UI fixes are narrow: semantics, focus return, mobile wrapping/layout, landing sample-card readability, and a user-visible startup deeplink scheduler path.
-- Pages dist regeneration is stable at `972144112` bytes / `927.11 MiB` after rebasing onto `origin/main@b76b782b`.
-- The branch is ready for integration review from `codex/phase6e-public-demo-qa-readiness`. Parent checkout WIP remains untouched.
+- Pages dist regeneration is stable at `972144112` bytes / `927.11 MiB` after rebasing onto `origin/main@58e3935b`.
+- The branch passed fresh post-`58e3935b` validation and is ready for integration from `codex/phase6e-public-demo-qa-readiness`. Parent checkout WIP remains untouched.
 
 ## Live Process Owner
 
@@ -64,3 +64,4 @@ Main Codex thread owns all live browser/test/build/server processes. Current sta
   - pre-rebase `npm run verify:test:e2e-layers` with 47 specs.
 - Dist mirror now includes the latest renderer changes through `dist/app/js/core/map_renderer.js` and the generated P47/P48/P49 owner mirrors.
 - Post-b76 validation passed: changed-file `node --check`; `npm run test:node:post-ready-scheduler` `11/11`; `npm run test:node:sample-project-contracts` `17/17`; `npm run verify:dist-drift` with Pages size `927.11 MiB`; `npm run verify:test-import-graph` with 51 specs; `npm run verify:test:e2e-layers` with 47 specs; `npm run verify:architecture-boundaries`.
+- Post-58e3935b validation passed after the renderer sweep rebase: changed-file `node --check`; `npm run test:node:post-ready-scheduler` `11/11`; `npm run test:node:sample-project-contracts` `17/17`; `py -3 tools\i18n_audit.py` with `ui_missing=0` and `ui_english_fallback=0`; `npm run verify:dist-drift` with Pages size `927.11 MiB`; `npm run verify:test-import-graph` with 51 specs; `npm run verify:test:e2e-layers` with 47 specs; `npm run verify:architecture-boundaries`; `git diff --check`; `npm run test:e2e:sample-guide` `5/5` from `.runtime\tests\phase6e-sample-guide-post-rebase-20260702.log`.

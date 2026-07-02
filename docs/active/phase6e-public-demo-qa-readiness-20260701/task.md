@@ -34,6 +34,6 @@
 
 ## Final Readiness Notes
 
-- Current branch has a Lore commit rebased onto `origin/main@b76b782b` and is ready to push as a feature branch.
-- Integration should happen after the parent `main` checkout WIP is either preserved or integrated by the integration owner.
+- Current branch has a Lore commit rebased onto `origin/main@58e3935b` and passed fresh post-rebase validation.
+- Integration can fast-forward through the isolated Phase 6E worktree while preserving the parent `main` checkout WIP.
 - Remote deployed Pages smoke remains a post-deploy gate.
