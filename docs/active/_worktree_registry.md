@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-02 recent platform audit selector fix and integrated renderer worktree cleanup recorded
+Last updated: 2026-07-02 P8A release-smoke propagation guard ready for integration
 
 ## Integration Owner
 
@@ -25,6 +25,7 @@ Current rows reflect `git worktree list`, per-worktree `git status --short --bra
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | `origin/main@2c72e17c` | in-progress / unrelated WIP | Dirty summary: parent has registry/docs/archive move WIP, `docs/active/renderer-hit-canvas-scheduling-preflight-20260630.md`, landing/lessons edits, deleted active docs, SF-ATS files, and untracked archive/test supervisor files. | Parent checkout was not modified; worktree list shows local `main@16abfd5f` while remote is `origin/main@2c72e17c`; parent is behind the P7 public demo release closeout. | Yellow with registry/docs/landing/lessons work; green for P7 runtime/product code because parent WIP is untouched. | Leave parent WIP untouched; refresh or clean it only in a separate task. |
+| `C:\Users\raede\Desktop\dev\mapcreator-p8a-release-smoke` | `codex/p8a-release-smoke-20260702@2354adb1` | `origin/main@2354adb1` | ready-for-integration | Dirty files ready to commit: release smoke spec/helper, helper test, package script, route registry, structural tooling, import graph, P8 docs, this registry. Hot files: `package.json`, `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`, release smoke Playwright gate. | Worktree created from latest fetched `origin/main@2354adb13940462335eafd1f383b45d80812466b`; planner/architect/critic completed, final critic approved implementation after route and adaptive dry-run plan fixes; targeted tests, `verify:pages-dist`, and local `/dist/` release gate passed. | Red with SF-ATS/test-routing work touching `package.json`, registry, selector, or structural tests; yellow with future Pages/release docs; green with runtime UI hot files because P8A does not touch `index.html`, `css/style.css`, or `js/ui/toolbar.js`. | Commit branch, then integrate with explicit conflict review against SF-ATS/test-routing lanes; parent main WIP stays untouched until a dedicated integration pass. |
 | `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp1` | `codex/sf-ats-wp1-clean-20260702@91c9923d` | `main@16abfd5f` | ready-for-integration / separate SF-ATS lane | Dirty files: none. Hot files: `AGENTS.md`, `package.json`, registry, new SF-ATS docs/tests/tooling. | `git status --short --branch` is clean against `origin/codex/sf-ats-wp1-clean-20260702`; branch contains commits `28537c02` and `91c9923d`; changed files are limited to agent contract docs, package/test entries, supervisor tests, and `tools/ai_test_supervisor/**`. | Red with future `package.json` or registry edits; yellow with test supervisor governance; green with Phase 6E sample Guide/export/landing/runtime files. | Keep separate from Phase 6E/P7; rebase over latest main in a dedicated SF-ATS integration pass. |
 
 ## Branch Sync and Cleanup 2026-06-30
@@ -39,6 +40,28 @@ Current rows reflect `git worktree list`, per-worktree `git status --short --bra
 ## Integrated Worktree Closeout 2026-06-30
 
 ## Ready Delivery Packages
+
+### P8A Release Smoke Propagation Guard 2026-07-02
+
+1. Added release-smoke preflight probes for the landing root, public sample manifest, and app shell entry.
+2. Added one 30-second retry for first-attempt landing preflight fetch/status failures, shell readiness failures, and scenario-apply idle failures.
+3. Kept product and telemetry failures final, including HGO exposure, wrong public sample manifest contents, missing export context, unexpected console issues, and unexpected network failures.
+4. Added helper-level regression tests plus SF-ATS route coverage for the helper and the direct local Pages release gate.
+5. Documented the P8A policy and closeout evidence in active docs.
+
+Files: core files `tests/e2e/release/pages_public_release_gate.spec.js`, `tests/e2e/support/release-smoke.js`, `tools/test_route_registry.mjs`, and `package.json`; tests `tests/release_smoke_retry_behavior.node.test.mjs`, `tests/test_e2e_structural_tooling.py`, and `tests/e2e/test-import-graph.json`; docs `docs/active/p8-public-demo-followups-20260702.md`, this registry, `docs/active/p8a-release-smoke-propagation-guard-20260702/**`, and `lessons learned.md`; temporary `.runtime/tmp/p8a-changed-files.txt` plus ignored Playwright/runtime outputs.
+
+Diff summary: release smoke now owns propagation classification inside the release gate instead of relying on broad Playwright retries. The helper centralizes phases, retry budget, preflight, and public sample manifest policy. The Playwright spec uses fresh browser contexts per attempt, writes retry-aware failure context, and blocks retry when unexpected console or network failures are present. The selector registry now maps the helper to a child-safe Node route and the local Pages release gate to a main-thread `release-smoke` direct E2E route with browser/runtime locks.
+
+Commit status: ready for branch commit on `codex/p8a-release-smoke-20260702`; base, branch HEAD, merge-base, and `origin/main` are all `2354adb13940462335eafd1f383b45d80812466b` before commit. Parent `main@16abfd5f` remains dirty and untouched.
+
+Potential conflicts: red with SF-ATS/test-routing edits to `package.json`, `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`, or this registry; yellow with future release-smoke/P8 docs; green with renderer/runtime/product UI files.
+
+Validation passed: syntax checks for the release spec, helper, helper test, and route registry; `npm run test:node:release-smoke-helper` with 8 tests; `py -3 -m unittest tests.test_e2e_structural_tooling -q`; `node tools/select_verification_targets.mjs --check`; changed-files selector JSON with import graph loaded and both release helper and release gate recommended; adaptive dry-run planning 157 commands; `npm run verify:test-import-graph`; `npm run verify:test:e2e-layers`; `npm run verify:pages-dist`; local `/dist/` release gate against `http://127.0.0.1:8892/dist/`; expected-failure release gate against dead port `http://127.0.0.1:8899/dist/` proving failure context retry/preflight metadata; second code-review and QA gates approved; `git diff --check`. The selector reported only `docs/active/**` files and `lessons learned.md` as unmatched.
+
+Not run: deployed GitHub Pages workflow on this branch; local `/dist/` and preflight coverage prove the release path, while external Pages propagation timing remains a deployed-site condition.
+
+Recommended next step: commit and push the branch, then integrate with explicit conflict review around package/selector/structural/registry files. Keep the worktree until the branch is merged or explicitly abandoned.
 
 ### Recent Platform Audit Selector Fix 2026-07-02
 

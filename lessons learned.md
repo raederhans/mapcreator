@@ -533,3 +533,6 @@
 
 ### Selector 路由要覆盖 checked-in dist 镜像
 - 新增 source owner 或公开样例入口后，同步检查 `dist/app/**` 和 `dist/pages-dist-manifest.json` 的 selector 路由；只改镜像文件时也要进入 `verify:pages-dist`，并带上 `dist` 与 `.runtime-output` 主线程锁。
+
+### 本地 Pages release gate 先生成 dist
+- 跑 `/dist/` release gate 前先执行 `verify:pages-dist`，再用 `tools/dev_server.py /dist/` 服务页面；裸 `http.server` 可能缺少项目路由语义，把未生成或未映射的 `dist/app/data/**` 误报成启动回归。

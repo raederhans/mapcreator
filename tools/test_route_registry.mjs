@@ -587,6 +587,7 @@ function collectFileDependencies(baseRepoPath) {
 
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
+  if (haystack.includes("release-smoke") || haystack.includes("release_smoke") || haystack.includes("pages_public_release_gate")) return "release-smoke";
   if (haystack.includes("backend")) return "backend-cloud-support";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
   if (haystack.includes("startup")) return "startup";
@@ -603,6 +604,27 @@ function resolveDevE2eDomain(specPaths) {
   if (haystack.includes("tno_ready_state")) return "tno-startup";
   if (haystack.includes("scenario_chunk")) return "scenario-runtime";
   return "dev-workspace";
+}
+
+function isDirectE2EScriptRoute(name) {
+  return name.startsWith("test:e2e:dev:")
+    || name === "test:e2e:pages-public-release-gate";
+}
+
+function resolveDirectE2eMetadata(scriptName, specPaths) {
+  if (scriptName === "test:e2e:pages-public-release-gate") {
+    return {
+      domain: "release-smoke",
+      ownerHint: "deploy-runtime",
+      ciProfile: "deploy-minimal",
+    };
+  }
+  const domain = resolveDevE2eDomain(specPaths);
+  return {
+    domain,
+    ownerHint: domain,
+    ciProfile: "full",
+  };
 }
 
 function moduleNameFromPythonPath(sourceRef) {
@@ -665,21 +687,21 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
 export function buildDirectE2EScriptRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
   const scripts = packageJson.scripts || {};
   return Object.entries(scripts)
-    .filter(([name]) => name.startsWith("test:e2e:dev:"))
+    .filter(([name]) => isDirectE2EScriptRoute(name))
     .map(([name, command]) => {
       const specPaths = extractCommandPaths(command, "spec\\.js");
-      const domain = resolveDevE2eDomain(specPaths);
+      const metadata = resolveDirectE2eMetadata(name, specPaths);
       return {
         id: `direct-e2e:${name}`,
         commandRef: name,
         sourceRef: specPaths.join(","),
-        domain,
-        ownerHint: domain,
+        domain: metadata.domain,
+        ownerHint: metadata.ownerHint,
         layer: "heavy",
         cost: "heavy",
         resourceLocks: ["browser-dev-server", "playwright-browser", ".runtime-output"],
         executionOwner: "main-thread",
-        ciProfile: "full",
+        ciProfile: metadata.ciProfile,
       };
     });
 }
