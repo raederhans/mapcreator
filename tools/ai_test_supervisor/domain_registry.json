@@ -10,7 +10,7 @@
         "tools/select_verification_targets.mjs",
         "tools/test_route_registry.mjs",
         "tools/e2e_layering.mjs",
-        "docs/active/**",
+        "docs/active/_worktree_registry.md",
         "docs/archive/sf-ats-wp2-supervisor-plan-20260702/**",
         "tests/e2e/test-layer-manifest.json"
       ],

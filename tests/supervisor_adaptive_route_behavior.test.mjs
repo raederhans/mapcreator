@@ -60,3 +60,13 @@ test("explicit SF-ATS route coverage leaves no unmatched files", () => {
     assert.ok(entry.matchedRouteIds.length > 0, `${changedFile} must have at least one matched route.`);
   }
 });
+
+test("SF-ATS docs route stays scoped to registry and work package docs", () => {
+  const registryReport = recommendationFor("docs/active/_worktree_registry.md");
+  const unrelatedActiveDocReport = recommendationFor("docs/active/unrelated-task/context.md");
+
+  assert.deepEqual(registryReport.unmatchedChangedFiles, []);
+  assert.ok(commandRefs(registryReport).includes("verify:supervisor-contracts"));
+  assert.deepEqual(unrelatedActiveDocReport.recommendedCommands, []);
+  assert.deepEqual(unrelatedActiveDocReport.unmatchedChangedFiles, ["docs/active/unrelated-task/context.md"]);
+});

@@ -130,7 +130,7 @@ function suggestedRouteFor(file) {
   if (file.startsWith("data/")) return "data-governance";
   if (file.startsWith("js/")) return "architecture-boundaries";
   if (file.startsWith("docs/testing/") || file === "AGENTS.md") return "test-routing";
-  if (file.startsWith("docs/")) return "documentation-route";
+  if (file.startsWith("docs/")) return "test-routing";
   return "test-routing";
 }
 
