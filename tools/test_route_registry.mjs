@@ -72,6 +72,40 @@ const INFRASTRUCTURE_ROUTES = [
     ciProfile: "pr-fast",
   },
   {
+    id: "infra:sf-ats-contracts",
+    commandRef: "verify:supervisor-contracts",
+    sourceRef: "AGENTS.md,docs/testing,tools/ai_test_supervisor,tests/supervisor_domain_registry_behavior.test.mjs,tests/supervisor_schema_contracts.test.mjs",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    guidance: {
+      taskEntry: ["SF-ATS contract and schema health gate"],
+      ownerFiles: [
+        "AGENTS.md",
+        "docs/testing/sf-ats-overview.md",
+        "tools/ai_test_supervisor",
+        "tests/supervisor_domain_registry_behavior.test.mjs",
+        "tests/supervisor_schema_contracts.test.mjs",
+      ],
+      commonChecks: ["npm run verify:supervisor-contracts"],
+      riskSignals: [
+        "SF-ATS contract drift",
+        "supervisor schema drift",
+        "domain registry drift",
+        "agent verification contract drift",
+      ],
+      diagnostics: [
+        ".runtime/reports/generated/test-adaptive-selection.json",
+        ".runtime/reports/generated/test-adaptive-selection.md",
+      ],
+      status: "active",
+    },
+  },
+  {
     id: "infra:test-import-graph",
     commandRef: "verify:test-import-graph",
     sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
@@ -587,6 +621,7 @@ function collectFileDependencies(baseRepoPath) {
 
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
+  if (haystack.includes("supervisor") || haystack.includes("ai_test_supervisor") || haystack.includes("sf-ats")) return "test-routing";
   if (haystack.includes("backend")) return "backend-cloud-support";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
   if (haystack.includes("startup")) return "startup";
@@ -652,7 +687,7 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
         commandRef: name,
         sourceRef: sourceRefs.join(","),
         domain,
-        ownerHint: domain,
+        ownerHint: domain === "test-routing" ? "test-infra" : domain,
         layer: "contract",
         cost: "fast",
         resourceLocks: [],
