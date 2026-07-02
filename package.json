@@ -209,6 +209,8 @@
     "verify:test-timeout-inventory": "node tools/test_timeout_inventory.mjs",
     "verify:test-import-graph": "node tools/check_test_import_graph.mjs",
     "verify:architecture-boundaries": "node tools/check_architecture_boundaries.mjs",
+    "verify:supervisor-schemas": "node tools/ai_test_supervisor/check_supervisor_schemas.mjs",
+    "test:node:supervisor-contracts": "node --test tests/supervisor_domain_registry_behavior.test.mjs tests/supervisor_schema_contracts.test.mjs",
     "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
     "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
     "verify:test-timing-summary": "node tools/test_timing_summary.mjs",

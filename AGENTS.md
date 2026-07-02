@@ -47,6 +47,21 @@ Prefer localhost-only browsing for this project unless the user explicitly asks 
 - Put temporary caches and scratch outputs under `.runtime/tmp/` or `.runtime/python/pycache/`.
 - Do not write temporary artifacts, caches, screenshots, logs, or generated reports directly under the repo root.
 
+## SF-ATS Verification Contract
+
+SF-ATS is the Scenario Forge Adaptive Test Supervisor contract for coding agents. Follow it for every code or test change.
+
+1. Identify touched Scenario Forge domains before edits and re-check the touched domains after edits.
+2. Run or dry-run adaptive selection before claiming completion.
+3. Run child-safe tests automatically when they match the touched domains and local dependencies are available.
+4. Reserve explicit lane ownership before running main-thread Playwright, browser, perf, dist, scenario-data, heavy-geo, or `.runtime` output-locking checks.
+5. Treat frontend visual impression as supporting context; completion evidence must come from deterministic checks.
+6. Prefer deterministic assertions, structured artifacts, Playwright traces, screenshots, failure-context files, runtime counters, scenario contract reports, generated supervisor reports, or CI artifacts as evidence.
+7. Add or update regression coverage for every real bug fix.
+8. If selector routing leaves a production file unmatched, add route coverage or document why the file is allowed to be unmatched.
+9. Final responses from coding agents must list files changed, commands run, exit status, artifacts written, checks intentionally skipped, main-thread or CI-only checks not run, route gaps found, regression coverage added or updated, and remaining risk.
+10. Do not broaden console allowlists, timeout allowlists, or route allowlists merely to make a failing check pass.
+
 # --- talk-normal BEGIN ---
 <!-- talk-normal 0.6.2 -->
 
