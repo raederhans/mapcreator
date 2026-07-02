@@ -527,3 +527,6 @@
 
 ### 用户可见 deeplink 任务可以穿过 chunk backlog
 - `/app/?sample=...&view=guide` 这类入口会直接影响首屏可达性；如果任务本身不依赖 chunk infra 完成，应在 post-ready scheduler 上显式声明可穿过 backlog，并用 E2E 锁住 `pending -> success`。
+
+### Pages 部署 smoke 先区分传播窗口
+- GitHub Pages 刚部署后 release smoke 如果停在 shell ready，先用公开 URL、关键资源 HTTP 探测和同 run rerun 验证传播窗口；资源稳定后仍失败，再按产品启动回归处理。

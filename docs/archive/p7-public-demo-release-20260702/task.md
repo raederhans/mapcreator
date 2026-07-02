@@ -19,21 +19,21 @@
 - [x] Run `npm run verify:test-import-graph`.
 - [x] Run `git diff --check`.
 - [x] Run independent code-review and architecture review.
-- [ ] Commit with Lore protocol.
-- [ ] Push release candidate to `origin/main`.
-- [ ] Verify GitHub Pages deploy workflow and deployed release smoke.
-- [ ] Create `v0.1-public-demo` tag.
-- [ ] Create GitHub release draft/pre-release.
-- [ ] Record post-release closeout and follow-ups.
-- [ ] Clean integrated worktrees when safe.
+- [x] Commit with Lore protocol.
+- [x] Push release candidate to `origin/main`.
+- [x] Verify GitHub Pages deploy workflow and deployed release smoke.
+- [x] Create `v0.1-public-demo` tag.
+- [x] Create GitHub release draft/pre-release.
+- [x] Record post-release closeout and follow-ups.
+- [x] Record cleanup criteria for integrated worktrees.
 
 ## Acceptance Mapping
 
 - Phase 6E integrated: yes, `origin/main@bcc00b62a1beac38d3a0d7978ddf282897f97273`.
-- Release candidate baseline recorded: yes, runtime baseline is `bcc00b62a1beac38d3a0d7978ddf282897f97273`; release tag is `v0.1-public-demo`, and the final tag target commit will be recorded after release creation.
+- Release candidate baseline recorded: yes, runtime baseline is `bcc00b62a1beac38d3a0d7978ddf282897f97273`; release package commit and tag target are `9f8f4be2d50a315554f97c785fcf1c174ad1a76d`; release tag is `v0.1-public-demo`.
 - Pages dist under gates: manifest reports `972144323` bytes / `927.11 MiB`, `within_limit`, `within_warning`.
 - Docs match actual behavior: yes, after local release gates.
-- GitHub release: pending deploy verification.
+- GitHub release: pre-release published at https://github.com/raederhans/scenario-forge/releases/tag/v0.1-public-demo.
 
 ## Local Validation Results
 
@@ -47,7 +47,7 @@
 
 ## Risk Notes
 
-- Git commit hashes cannot be self-recorded inside the same commit. The release tag target and deployed workflow result will be recorded in a post-release closeout commit.
+- Git commit hashes cannot be self-recorded inside the same commit. The release tag target and deployed workflow result are recorded in this post-release closeout.
 - `landing/assets/sample-runs.json` keeps its content timestamp because P7 does not change sample content.
-- Remote Pages smoke depends on GitHub Actions and Pages availability after the push to `main`.
+- Initial remote Pages smoke hit a deployment propagation window; workflow rerun passed and P8 tracks a propagation-aware guard.
 - Independent review fixes are applied: registry SHA corrected, release facts centralized in `docs/releases/v0.1-public-demo.md`, and the completed Phase 6E active docs moved to `docs/archive/phase6e-public-demo-qa-readiness-20260701/`.

@@ -33,6 +33,12 @@
   - `git diff --check`: passed.
 - Independent code-review found a bad full SHA in the registry; fixed to `dfd4cb975306dedc79f0aa7d7fd883dc33861c26`.
 - Independent architecture review recommended a single current release facts source. `docs/releases/v0.1-public-demo.md` is now the canonical P7 facts document, draft/notes link back to it for exact validation truth, and completed Phase 6E active docs moved to `docs/archive/phase6e-public-demo-qa-readiness-20260701/`.
+- P7 release package commit `9f8f4be2d50a315554f97c785fcf1c174ad1a76d` was pushed to `origin/codex/p7-public-demo-release-20260702` and `origin/main`.
+- `v0.1-public-demo` was pushed as an annotated tag; the remote tag dereferences to `9f8f4be2d50a315554f97c785fcf1c174ad1a76d`.
+- GitHub Pages deploy workflow `28561116483` attempt 1 deployed Pages but timed out during smoke shell readiness. Public URL and resource probes returned 200, and a local remote smoke rerun passed against `https://raederhans.github.io/scenario-forge/`.
+- GitHub Pages deploy workflow `28561116483` attempt 2 passed. Deploy job `84679882111` ran `npm run test:e2e:pages-public-release-gate` against the deployed Pages URL and reported `1 passed`, `activeScenarioId=tno_1962`, sample deeplink `success`, `hgoPreviewEnabled=false`, and `hasHgoRuntimeAssets=false`.
+- GitHub pre-release published at https://github.com/raederhans/scenario-forge/releases/tag/v0.1-public-demo with `isPrerelease=true`.
+- P8 follow-up note created at `docs/active/p8-public-demo-followups-20260702.md`.
 
 ## Live Process Owner
 
@@ -40,7 +46,5 @@ Main Codex thread owns all P7 build/test/deploy/release commands. Current status
 
 ## Open Items
 
-- Push the release packaging branch to `origin/main`.
-- Wait for GitHub Pages deploy workflow and collect deployed release smoke result.
-- Create `v0.1-public-demo` release tag and GitHub release draft/pre-release.
-- Record post-release closeout and P8 follow-up notes.
+- Push this post-release closeout commit to `origin/main` and `origin/codex/p7-public-demo-release-20260702`.
+- Remove the integrated P7 and Phase 6E worktrees after the closeout push succeeds.
