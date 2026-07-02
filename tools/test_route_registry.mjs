@@ -74,7 +74,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:sf-ats-contracts",
     commandRef: "verify:supervisor-contracts",
-    sourceRef: "AGENTS.md,docs/testing,tools/ai_test_supervisor,tests/supervisor_domain_registry_behavior.test.mjs,tests/supervisor_schema_contracts.test.mjs",
+    sourceRef: "AGENTS.md,docs/testing,docs/active,docs/archive/sf-ats-wp2-supervisor-plan-20260702,tools/ai_test_supervisor,tests/supervisor_domain_registry_behavior.test.mjs,tests/supervisor_schema_contracts.test.mjs",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -86,6 +86,7 @@ const INFRASTRUCTURE_ROUTES = [
       taskEntry: ["SF-ATS contract and schema health gate"],
       ownerFiles: [
         "AGENTS.md",
+        "docs/active",
         "docs/testing/sf-ats-overview.md",
         "tools/ai_test_supervisor",
         "tests/supervisor_domain_registry_behavior.test.mjs",

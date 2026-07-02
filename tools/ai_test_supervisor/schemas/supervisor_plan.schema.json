@@ -19,6 +19,7 @@
     "requiredArtifacts",
     "executionPolicy",
     "stopConditions",
+    "executionResults",
     "notes"
   ],
   "properties": {
@@ -36,7 +37,7 @@
     },
     "riskLevel": {
       "type": "string",
-      "enum": ["low", "medium", "high", "unknown"]
+      "enum": ["low", "medium", "high", "critical", "unknown"]
     },
     "changedFiles": {
       "type": "array",
@@ -89,8 +90,19 @@
           "reason": {
             "type": "string",
             "minLength": 1
+          },
+          "lane": {
+            "type": "string",
+            "minLength": 1
           }
         }
+      }
+    },
+    "commandsToRun": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "routeGaps": {
@@ -98,13 +110,21 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["file", "reason"],
+        "required": ["file", "severity", "reason", "suggestedRoute"],
         "properties": {
           "file": {
             "type": "string",
             "minLength": 1
           },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
           "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suggestedRoute": {
             "type": "string",
             "minLength": 1
           }
@@ -127,6 +147,23 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "executionResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["commandRef", "exitCode"],
+        "properties": {
+          "commandRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "exitCode": {
+            "type": "integer"
+          }
+        }
       }
     },
     "notes": {

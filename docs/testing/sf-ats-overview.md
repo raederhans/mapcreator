@@ -113,16 +113,57 @@ Work Package 1 只创建合同表面：
 
 Runtime supervisor、selector 行为改动、CI workflow 改动、新 E2E 测试、LLM API 调用和 evidence store 实现，都属于后续工作包。
 
-## Work Package 2 准备说明
+## Work Package 2 用法
 
-Work Package 1 有意只加入 SF-ATS 合同、schema、registry 和静态测试。当前 adaptive selector 还没有把这些合同文件作为独立 route 覆盖，所以 Work Package 2 应先补 route coverage，再实现运行时 supervisor。
+Work Package 2 增加 deterministic supervisor 层。它把 changed files 和 selector 输出整理成 change dossier、supervisor plan、Markdown plan，并且可以只执行 child-safe checks。
 
-Work Package 2 的第一步应覆盖这些路径：
+默认 dry-run：
 
-- `AGENTS.md`
-- `docs/testing/**`
-- `tools/ai_test_supervisor/**`
+```bash
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs
+```
 
-推荐在 `tools/test_route_registry.mjs` 增加显式 infrastructure route，例如 `infra:sf-ats-contracts`。该 route 应指向 `verify:supervisor-schemas`，或一个新的 `verify:supervisor-contracts` package script。selector 测试需要证明这些文件不会继续出现在 unmatched changed files 中。
+显式指定文件：
 
-只有 route coverage 稳定后，Work Package 2 才应继续添加 `build_change_dossier.mjs` 和 `supervise_adaptive_verification.mjs`。
+```bash
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file AGENTS.md
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-files tools/ai_test_supervisor/build_change_dossier.mjs,tests/supervisor_plan_behavior.test.mjs
+```
+
+执行 child-safe checks：
+
+```bash
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --execute
+```
+
+包含 main-thread checks：
+
+```bash
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --execute --include-main-thread
+```
+
+main-thread checks 默认进入 `blockedCommands`。只有在明确拥有 browser、Playwright、perf、dist、scenario-data、heavy-geo 或 `.runtime` 输出锁时，才使用 `--include-main-thread`。
+
+CI-only checks 默认进入 `blockedCommands`。需要本地临时纳入时使用 `--include-ci-only`，否则把它们记录为 CI 证据缺口。
+
+严格阻塞模式：
+
+```bash
+node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --strict-blocked
+```
+
+当 plan 里仍有 blocked commands 时，严格阻塞模式会在写出 artifacts 后返回 exit code 2。
+
+默认 artifacts：
+
+- `.runtime/reports/generated/supervisor-change-dossier.json`
+- `.runtime/reports/generated/supervisor-plan.json`
+- `.runtime/reports/generated/supervisor-plan.md`
+
+固定 package scripts：
+
+- `npm run test:node:supervisor-plan`
+- `npm run test:supervisor`
+- `npm run test:supervisor:execute`
+- `npm run test:supervisor:execute:main-thread`
+- `npm run verify:supervisor-plan`

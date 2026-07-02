@@ -54,6 +54,11 @@ export const REQUIRED_DOMAIN_FIELDS = [
 export const REQUIRED_PACKAGE_SCRIPTS = {
   "verify:supervisor-schemas": "node tools/ai_test_supervisor/check_supervisor_schemas.mjs",
   "test:node:supervisor-contracts": "node --test tests/supervisor_domain_registry_behavior.test.mjs tests/supervisor_schema_contracts.test.mjs",
+  "test:node:supervisor-plan": "node --test tests/supervisor_change_dossier_behavior.test.mjs tests/supervisor_plan_behavior.test.mjs",
+  "test:supervisor": "node tools/ai_test_supervisor/supervise_adaptive_verification.mjs",
+  "test:supervisor:execute": "node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --execute",
+  "test:supervisor:execute:main-thread": "node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --execute --include-main-thread",
+  "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
 };
 
 function toRepoPath(filePath) {
