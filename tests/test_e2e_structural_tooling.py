@@ -695,6 +695,34 @@ if (!sampleAssetCommands.includes('test:node:sample-project-contracts')) {
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_verification_selector_routes_pages_dist_mirrors_to_pages_dist_gate(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const report = buildRecommendation([
+  'dist/app/js/core/map_renderer/hit_canvas_scheduling_owner.js',
+  'dist/app/css/style.css',
+  'dist/pages-dist-manifest.json',
+]);
+const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+if (!commands.includes('verify:pages-dist')) {
+  throw new Error(`missing Pages dist verification route: ${commands.join(', ')}`);
+}
+if (report.unmatchedChangedFiles.length) {
+  throw new Error(`Pages dist mirror files should be matched: ${report.unmatchedChangedFiles.join(', ')}`);
+}
+const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === 'verify:pages-dist');
+if (!mainThreadEntry) {
+  throw new Error(`Pages dist verification must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
+}
+for (const lock of ['dist', '.runtime-output']) {
+  if (!mainThreadEntry.resourceLocks.includes(lock)) {
+    throw new Error(`Pages dist verification missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_shared_city_fixtures_pass_wait_timeout_as_playwright_option(self) -> None:
         script = """
 const fixtures = require('./tests/e2e/support/fixtures.js');

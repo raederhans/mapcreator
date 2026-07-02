@@ -104,6 +104,16 @@ function isSampleGuideRuntimeFile(changedFile) {
   return SAMPLE_GUIDE_RUNTIME_REFS.some((sourceRef) => changedFileMatchesSourceRef(changedFile, sourceRef));
 }
 
+function isCheckedInPagesDistFile(changedFile) {
+  return changedFile === "dist/.nojekyll"
+    || changedFile === "dist/app.js"
+    || changedFile === "dist/index.html"
+    || changedFile === "dist/styles.css"
+    || changedFile === "dist/pages-dist-manifest.json"
+    || changedFile.startsWith("dist/app/")
+    || changedFile.startsWith("dist/assets/");
+}
+
 function readImportGraph() {
   if (!fs.existsSync(IMPORT_GRAPH_PATH)) {
     return null;
@@ -125,6 +135,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
   if (PERF_STATIC_SUPPORT_FILES.has(changedFile)) {
     return route.domain === "perf";
+  }
+
+  if (isCheckedInPagesDistFile(changedFile)) {
+    return route.id === "infra:pages-dist";
   }
 
   if (isDirectRouteMatch(route, changedFile)) return true;

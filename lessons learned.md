@@ -530,3 +530,6 @@
 
 ### Pages 部署 smoke 先区分传播窗口
 - GitHub Pages 刚部署后 release smoke 如果停在 shell ready，先用公开 URL、关键资源 HTTP 探测和同 run rerun 验证传播窗口；资源稳定后仍失败，再按产品启动回归处理。
+
+### Selector 路由要覆盖 checked-in dist 镜像
+- 新增 source owner 或公开样例入口后，同步检查 `dist/app/**` 和 `dist/pages-dist-manifest.json` 的 selector 路由；只改镜像文件时也要进入 `verify:pages-dist`，并带上 `dist` 与 `.runtime-output` 主线程锁。
