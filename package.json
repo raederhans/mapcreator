@@ -150,6 +150,7 @@
     "test:node:render-pass-commit-accounting-owner": "node --test tests/render_pass_commit_accounting_owner_behavior.test.mjs",
     "test:node:render-pass-commit-accounting-inventory": "node --test tests/render_pass_commit_accounting_owner_inventory.test.mjs",
     "test:node:render-pass-commit-accounting-owner-suite": "npm run test:node:render-pass-commit-accounting-owner && npm run test:node:render-pass-commit-accounting-inventory",
+    "test:node:renderer-draw-canvas-orchestration-inventory": "node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
     "test:node:renderer-render-request-boundary-owner": "node --test tests/renderer_render_request_boundary_owner_behavior.test.mjs",
     "test:node:renderer-render-request-boundary-inventory": "node --test tests/renderer_render_request_boundary_inventory.test.mjs",
     "test:node:renderer-render-request-boundary": "npm run test:node:renderer-render-request-boundary-owner && npm run test:node:renderer-render-request-boundary-inventory",

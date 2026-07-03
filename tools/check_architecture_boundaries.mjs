@@ -83,6 +83,8 @@ const FILES = Object.freeze({
   renderPassCommitAccountingOwner: "js/core/map_renderer/render_pass_commit_accounting_owner.js",
   renderPassCommitAccountingOwnerTest: "tests/render_pass_commit_accounting_owner_behavior.test.mjs",
   renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
+  rendererDrawCanvasOrchestrationPreflightDoc: "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
+  rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
@@ -245,6 +247,22 @@ function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
     && parts.some((part) => ["owner", "helper", "controller"].includes(part));
 }
 
+function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (!normalized.startsWith("js/core/")) {
+    return false;
+  }
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) {
+    return false;
+  }
+  const stem = baseName.replace(/\.m?js$/, "").toLowerCase();
+  const compact = stem.replace(/[_-]/g, "");
+  return compact.includes("drawcanvas")
+    && (compact.includes("orchestration") || compact.includes("orchestrator"))
+    && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
+}
+
 function hasHitCanvasOwnerImport(source) {
   const importPattern = /\bfrom\s+["']([^"']+)["']|import\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
   return Array.from(source.matchAll(importPattern)).some((match) => {
@@ -373,6 +391,12 @@ function collectFailures() {
   const renderPassCommitAccountingOwnerInventoryTest = readProjectFile(
     FILES.renderPassCommitAccountingOwnerInventoryTest,
   );
+  const rendererDrawCanvasOrchestrationPreflightDoc = readProjectFile(
+    FILES.rendererDrawCanvasOrchestrationPreflightDoc,
+  );
+  const rendererDrawCanvasOrchestrationInventoryTest = readProjectFile(
+    FILES.rendererDrawCanvasOrchestrationInventoryTest,
+  );
   const rendererRenderRequestBoundaryOwnerDoc = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerDoc);
   const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
@@ -473,6 +497,8 @@ function collectFailures() {
     [FILES.renderPassCommitAccountingOwner]: renderPassCommitAccountingOwner,
     [FILES.renderPassCommitAccountingOwnerTest]: renderPassCommitAccountingOwnerTest,
     [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
+    [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
+    [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
@@ -2733,6 +2759,229 @@ function collectFailures() {
       if (source.includes(token)) {
         failures.push(`${relativePath} must not include P50 render pass cache host token: ${token}`);
       }
+    }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P52 render pass cache baseline",
+    "## drawCanvas entry and phase inventory",
+    "## Idle pass orchestration inventory",
+    "## Interactive/transformed frame pass inventory",
+    "## First visible frame and diagnostics boundary",
+    "## Hit canvas scheduling/build boundary",
+    "## Exact-after-settle boundary",
+    "## Scenario refresh/chunk boundary",
+    "## Strategic overlay render boundary",
+    "## P54/P55 allowed first move candidates",
+    "## Forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererDrawCanvasOrchestrationPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must keep P53 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P53 is preflight only.",
+    "No production runtime changes.",
+    "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
+    "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
+    "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
+    "`function drawCanvas()` remains in `js/core/map_renderer.js`.",
+    "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
+    "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
+    "`render_pass_catalog.js` remains authoritative for pass-name groups",
+    "`hit_canvas_scheduling_owner.js` owns only deferred hit canvas scheduling",
+    "`exact_after_settle_scheduler.js` remains the owner for exact-after-settle scheduling",
+    "`scenario_refresh_runtime.js` remains the owner for scenario apply refresh and scenario chunk promotion",
+    "`strategic_overlay_runtime_owner.js` owns runtime interaction/editing state.",
+    "`strategic_overlay_render_owner.js` owns strategic overlay render delegation.",
+    "Add a drawCanvas orchestration owner that only selects pass groups and delegates to existing pass functions/helpers.",
+    "Add a transformed-frame compositor adapter preflight.",
+    "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
+    "P54/P55 must not start by moving individual pass drawing functions.",
+    "No public facade, state-write allowlist, or `dist/**` changes.",
+    "No broad `renderer_render_lifecycle_owner`.",
+  ]) {
+    if (!rendererDrawCanvasOrchestrationPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must lock P53 boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const DOC_PATH = \"docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md\";",
+    "const P53_DOC_HEADINGS = Object.freeze([",
+    "function extractFunctionSource(source, functionName)",
+    "function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)",
+    "function drawCanvas()",
+    "function renderPassToCache(",
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawTransformedFrameFromCaches(frameTimings, {",
+    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
+    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
+    "markFirstVisibleFramePainted(usedLastGoodFallback ? \\\"last-good-frame\\\" : (useTransformedFrame ? \\\"fast-frame\\\" : \\\"exact-frame\\\"));",
+    "finalizePendingExactAfterSettleRefreshAfterPaint();",
+    "export function createRenderPipelinePassesOwner({",
+    "export const IDLE_RENDER_PASS_DEFINITIONS = [",
+    "export const TRANSFORMED_FRAME_PASS_NAMES = [",
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \\\"idle-render\\\" } = {})",
+    "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \\\"startup-deferred-hit-canvas\\\" } = {})",
+    "function refreshMapDataForScenarioChunkPromotion(options = {})",
+    "function refreshMapDataForScenarioApply(options = {})",
+    "createStrategicOverlayRuntimeOwner({",
+    "createStrategicOverlayRenderOwner({",
+    "P53 must not add production owner/helper",
+    "P53 must not modify production runtime, public facade, state allowlist, or dist",
+  ]) {
+    if (!rendererDrawCanvasOrchestrationInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must lock P53 inventory token: ${token}`);
+    }
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationPreflightDoc))) {
+    failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must exist for P53.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationInventoryTest))) {
+    failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must exist for P53.`);
+  }
+  if (!packageJson.includes("\"test:node:renderer-draw-canvas-orchestration-inventory\": \"node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P53 drawCanvas orchestration inventory script.`);
+  }
+  if (!renderer.includes("function drawCanvas()")) {
+    failures.push(`${FILES.renderer} must keep P53 drawCanvas anchor.`);
+  }
+  if (!renderer.includes("function renderPassToCache(")) {
+    failures.push(`${FILES.renderer} must keep P53 renderPassToCache wrapper anchor.`);
+  }
+  const drawCanvasSource = sliceBetween(
+    renderer,
+    "function drawCanvas()",
+    "function readRenderPerfMetricDuration(",
+  );
+  for (const token of [
+    "const useTransformedFrame =",
+    "drawTransformedFrameFromCaches(frameTimings, {",
+    "const activeRenderPassNames = getActiveRenderPassNames();",
+    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
+    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
+    "markFirstVisibleFramePainted(usedLastGoodFallback ? \"last-good-frame\" : (useTransformedFrame ? \"fast-frame\" : \"exact-frame\"));",
+    "finalizePendingExactAfterSettleRefreshAfterPaint();",
+    "incrementPerfCounter(\"frames\");",
+  ]) {
+    if (!drawCanvasSource.includes(token)) {
+      failures.push(`${FILES.renderer} drawCanvas must keep P53 orchestration token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P53 P51/P52 renderPassToCache wrapper token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createRenderPipelinePassesOwner({",
+    "function getIdleRenderPassDefinitions()",
+    "function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache = getRenderPassCacheState())",
+    "function ensureIdleRenderPasses(timings, passNames = null)",
+    "renderPassToCache(passName, drawFn, transform, timings);",
+  ]) {
+    if (!renderPipelinePasses.includes(token)) {
+      failures.push(`${FILES.renderPipelinePasses} must keep P53 pass orchestration token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export const IDLE_RENDER_PASS_DEFINITIONS = [",
+    "{ passName: \"background\", drawKey: \"drawBackgroundPass\" }",
+    "{ passName: \"labels\", drawKey: \"drawLabelsPass\" }",
+  ]) {
+    if (!renderPipelineCatalog.includes(token)) {
+      failures.push(`${FILES.renderPipelineCatalog} must keep P53 idle pass definition token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export const RENDER_PASS_NAMES = [",
+    "export const INTERACTION_COMPOSITE_PASS_NAMES = [",
+    "export const TRANSFORMED_FRAME_PASS_NAMES = [",
+  ]) {
+    if (!renderPassCatalog.includes(token)) {
+      failures.push(`${FILES.renderPassCatalog} must keep P53 pass group token: ${token}`);
+    }
+  }
+  for (const token of [
+    "function drawHitCanvas()",
+    "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \"startup-deferred-hit-canvas\" } = {})",
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \"idle-render\" } = {})",
+    "function refreshMapDataForScenarioChunkPromotion(options = {})",
+    "function refreshMapDataForScenarioApply(options = {})",
+    "createStrategicOverlayRuntimeOwner({",
+    "createStrategicOverlayRenderOwner({",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P53 adjacent boundary anchor: ${token}`);
+    }
+  }
+  for (const [relativePath, source] of [
+    [FILES.renderRequestBoundaryOwner, renderRequestBoundaryOwner],
+    [FILES.renderPhaseLifecycleOwner, renderPhaseLifecycleOwner],
+    [FILES.visibleFrameDiagnosticsOwner, visibleFrameDiagnosticsOwner],
+    [FILES.hitCanvasSchedulingOwner, hitCanvasSchedulingOwner],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    ["js/core/renderer/strategic_overlay_runtime_owner.js", readProjectFile("js/core/renderer/strategic_overlay_runtime_owner.js")],
+    ["js/core/renderer/strategic_overlay_render_owner.js", readProjectFile("js/core/renderer/strategic_overlay_render_owner.js")],
+  ]) {
+    if (source.includes("function drawCanvas()")) {
+      failures.push(`${relativePath} must not own P53 drawCanvas.`);
+    }
+    if (source.includes("renderPassToCache(passName")) {
+      failures.push(`${relativePath} must not call P53 renderPassToCache directly.`);
+    }
+  }
+  for (const token of [
+    "drawHitCanvas",
+    "drawHitCanvasWithMetric",
+    "buildHitCanvasAfterStartup",
+    "getDirtyHitCanvasPointProbeHit",
+  ]) {
+    if (hitCanvasSchedulingOwner.includes(token)) {
+      failures.push(`${FILES.hitCanvasSchedulingOwner} must avoid P53 hit canvas build/probe token: ${token}`);
+    }
+  }
+  if (!exactAfterSettleScheduler.includes("function scheduleExactAfterSettleRefresh(")) {
+    failures.push(`${FILES.exactAfterSettleScheduler} must keep P53 exact scheduler entry.`);
+  }
+  if (!scenarioRefreshRuntime.includes("function refreshMapDataForScenarioChunkPromotion(")) {
+    failures.push(`${FILES.scenarioRefreshRuntime} must keep P53 scenario chunk refresh entry.`);
+  }
+  for (const token of [
+    "draw_canvas_orchestration",
+    "renderer_draw_canvas_orchestration",
+    "drawCanvasOrchestration",
+  ]) {
+    if (publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must not expose P53 drawCanvas orchestration token: ${token}`);
+    }
+    if (stateWriteAllowlist.includes(token)) {
+      failures.push(`${FILES.stateWriteAllowlist} must not include P53 drawCanvas orchestration token: ${token}`);
+    }
+  }
+  for (const relativePath of [
+    FILES.rendererRenderLifecycleOwner,
+    "js/core/renderer/draw_canvas_orchestration_owner.js",
+    "js/core/renderer/draw_canvas_orchestration_helper.js",
+    "js/core/renderer/draw_canvas_orchestration_controller.js",
+    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+    "js/core/map_renderer/draw_canvas_orchestration_helper.js",
+    "js/core/map_renderer/draw_canvas_orchestration_controller.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`P53 must keep production owner/helper absent: ${relativePath}`);
+    }
+  }
+  for (const sourcePath of listProjectSourceFiles("js/core")) {
+    if (isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)) {
+      failures.push(`P53 must keep production drawCanvas orchestration owner/helper absent: ${sourcePath}`);
     }
   }
 

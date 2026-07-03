@@ -1,0 +1,409 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "..");
+
+const DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md";
+const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
+const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
+const RENDER_REQUEST_BOUNDARY_OWNER_PATH = "js/core/map_renderer/render_request_boundary_owner.js";
+const RENDER_PHASE_LIFECYCLE_OWNER_PATH = "js/core/map_renderer/render_phase_lifecycle_owner.js";
+const VISIBLE_FRAME_DIAGNOSTICS_OWNER_PATH = "js/core/renderer/visible_frame_diagnostics_owner.js";
+const HIT_CANVAS_SCHEDULING_OWNER_PATH = "js/core/map_renderer/hit_canvas_scheduling_owner.js";
+const RENDER_PIPELINE_PASSES_PATH = "js/core/renderer/render_pipeline_passes.js";
+const RENDER_PIPELINE_CATALOG_PATH = "js/core/renderer/render_pipeline_catalog.js";
+const RENDER_PASS_CATALOG_PATH = "js/core/map_renderer/render_pass_catalog.js";
+const EXACT_AFTER_SETTLE_SCHEDULER_PATH = "js/core/map_renderer/exact_after_settle_scheduler.js";
+const SCENARIO_REFRESH_RUNTIME_PATH = "js/core/map_renderer/scenario_refresh_runtime.js";
+const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
+const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
+const STRATEGIC_OVERLAY_RUNTIME_OWNER_PATH = "js/core/renderer/strategic_overlay_runtime_owner.js";
+const STRATEGIC_OVERLAY_RENDER_OWNER_PATH = "js/core/renderer/strategic_overlay_render_owner.js";
+
+const P53_DOC_HEADINGS = Object.freeze([
+  "## Scope and guardrails",
+  "## Current P52 render pass cache baseline",
+  "## drawCanvas entry and phase inventory",
+  "## Idle pass orchestration inventory",
+  "## Interactive/transformed frame pass inventory",
+  "## First visible frame and diagnostics boundary",
+  "## Hit canvas scheduling/build boundary",
+  "## Exact-after-settle boundary",
+  "## Scenario refresh/chunk boundary",
+  "## Strategic overlay render boundary",
+  "## P54/P55 allowed first move candidates",
+  "## Forbidden areas",
+  "## Required validation commands",
+]);
+
+function readRepoFile(relativePath) {
+  const absolutePath = path.join(REPO_ROOT, ...relativePath.split("/"));
+  assert.ok(fs.existsSync(absolutePath), `Expected repository file to exist: ${relativePath}`);
+  return fs.readFileSync(absolutePath, "utf8");
+}
+
+function repoFileExists(relativePath) {
+  return fs.existsSync(path.join(REPO_ROOT, ...relativePath.split("/")));
+}
+
+function listRepoSourceFiles(rootRelativePath) {
+  const root = path.join(REPO_ROOT, rootRelativePath);
+  const results = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(absolutePath);
+      } else if (entry.isFile() && /\.m?js$/.test(entry.name)) {
+        results.push(path.relative(REPO_ROOT, absolutePath).replaceAll(path.sep, "/"));
+      }
+    }
+  }
+  return results.sort();
+}
+
+function sliceBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  assert.notEqual(start, -1, `Expected start marker to exist: ${startMarker}`);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `Expected end marker to exist after ${startMarker}: ${endMarker}`);
+  return source.slice(start, end);
+}
+
+function extractFunctionSource(source, functionName) {
+  const marker = `function ${functionName}`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `Expected function to exist: ${functionName}`);
+  const openBrace = source.indexOf("{", start + marker.length);
+  assert.notEqual(openBrace, -1, `Expected function body to start: ${functionName}`);
+  let depth = 0;
+  for (let index = openBrace; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+  assert.fail(`Expected function body to close: ${functionName}`);
+}
+
+function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (!normalized.startsWith("js/core/")) {
+    return false;
+  }
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) {
+    return false;
+  }
+  const stem = baseName.replace(/\.m?js$/, "").toLowerCase();
+  const compact = stem.replace(/[_-]/g, "");
+  const hasDrawCanvas = compact.includes("drawcanvas");
+  const hasOrchestration = compact.includes("orchestration") || compact.includes("orchestrator");
+  const hasOwnerShape = /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
+  return hasDrawCanvas && hasOrchestration && hasOwnerShape;
+}
+
+function assertIncludes(source, token, message) {
+  assert.ok(source.includes(token), `${message}: missing ${JSON.stringify(token)}`);
+}
+
+function assertExcludes(source, token, message) {
+  assert.equal(source.includes(token), false, `${message}: unexpected ${JSON.stringify(token)}`);
+}
+
+test("P53 doc exists and locks required drawCanvas orchestration inventory headings", () => {
+  const docSource = readRepoFile(DOC_PATH);
+
+  for (const heading of P53_DOC_HEADINGS) {
+    assertIncludes(docSource, heading, "P53 doc must keep required heading");
+  }
+  for (const token of [
+    "P53 is preflight only.",
+    "No production runtime changes.",
+    "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
+    "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
+    "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
+    "`function drawCanvas()` remains in `js/core/map_renderer.js`.",
+    "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
+    "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
+    "`render_pass_catalog.js` remains authoritative for pass-name groups",
+    "`hit_canvas_scheduling_owner.js` owns only deferred hit canvas scheduling",
+    "`exact_after_settle_scheduler.js` remains the owner for exact-after-settle scheduling",
+    "`scenario_refresh_runtime.js` remains the owner for scenario apply refresh and scenario chunk promotion",
+    "`strategic_overlay_runtime_owner.js` owns runtime interaction/editing state.",
+    "`strategic_overlay_render_owner.js` owns strategic overlay render delegation.",
+    "Add a drawCanvas orchestration owner that only selects pass groups and delegates to existing pass functions/helpers.",
+    "Add a transformed-frame compositor adapter preflight.",
+    "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
+    "P54/P55 must not start by moving individual pass drawing functions.",
+    "No public facade, state-write allowlist, or `dist/**` changes.",
+    "No broad `renderer_render_lifecycle_owner`.",
+  ]) {
+    assertIncludes(docSource, token, "P53 doc must lock boundary token");
+  }
+});
+
+test("map_renderer keeps drawCanvas entry and renderPassToCache P51/P52 wrapper", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const renderPassToCacheSource = sliceBetween(
+    rendererSource,
+    "function renderPassToCache(",
+    "function resetCanvasContext(",
+  );
+  const drawCanvasSource = extractFunctionSource(rendererSource, "drawCanvas");
+
+  assertIncludes(rendererSource, "function drawCanvas()", "map_renderer must keep drawCanvas entry");
+  assertIncludes(rendererSource, "function renderPassToCache(", "map_renderer must keep renderPassToCache wrapper");
+  assertIncludes(
+    rendererSource,
+    "import { createRenderPassCacheHostOwner } from \"./map_renderer/render_pass_cache_host_owner.js\";",
+    "map_renderer must keep P51 host owner import",
+  );
+  assertIncludes(
+    rendererSource,
+    "import { createRenderPassCommitAccountingOwner } from \"./map_renderer/render_pass_commit_accounting_owner.js\";",
+    "map_renderer must keep P52 commit/accounting owner import",
+  );
+
+  for (const token of [
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "if (hostResult?.skipped) return;",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawResult: hostResult.drawResult,",
+    "hostSummary: hostResult,",
+  ]) {
+    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep P51/P52 delegation token");
+  }
+
+  for (const token of [
+    "const useTransformedFrame =",
+    "drawTransformedFrameFromCaches(frameTimings, {",
+    "const activeRenderPassNames = getActiveRenderPassNames();",
+    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
+    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
+    "markFirstVisibleFramePainted(usedLastGoodFallback ? \"last-good-frame\" : (useTransformedFrame ? \"fast-frame\" : \"exact-frame\"));",
+    "finalizePendingExactAfterSettleRefreshAfterPaint();",
+    "incrementPerfCounter(\"frames\");",
+  ]) {
+    assertIncludes(drawCanvasSource, token, "drawCanvas must keep orchestration token");
+  }
+});
+
+test("P51 and P52 owners remain bounded around renderPassToCache", () => {
+  const hostOwnerSource = readRepoFile(HOST_OWNER_PATH);
+  const commitOwnerSource = readRepoFile(COMMIT_OWNER_PATH);
+
+  for (const token of [
+    "export function createRenderPassCacheHostOwner({",
+    "function prepareRenderPassHost({",
+    "passCanvas.getContext(\"2d\")",
+    "runEffect(trace, \"prepareTargetContext\", passContext, transform, layout);",
+    "drawResult = drawFn(k);",
+  ]) {
+    assertIncludes(hostOwnerSource, token, "P51 host owner must keep host setup token");
+  }
+  for (const token of [
+    "cache.signatures",
+    "cache.dirty",
+    "recordRenderPerfMetric",
+    "recordPassTiming",
+    "schedulePoliticalPathWarmup",
+    "drawCanvas",
+    "buildHitCanvas",
+  ]) {
+    assertExcludes(hostOwnerSource, token, "P51 host owner must avoid commit/drawCanvas token");
+  }
+
+  for (const token of [
+    "export function createRenderPassCommitAccountingOwner({",
+    "function commitRenderPass({",
+    "cache.signatures[normalizedPassName] =",
+    "cache.dirty[normalizedPassName] = false;",
+    "runEffect(trace, \"recordPassTiming\", timings, normalizedPassName, passStart);",
+    "runGetter(trace, \"getPassCounterNames\", normalizedPassName)",
+    ".forEach((counterName) => runEffect(trace, \"incrementPerfCounter\", counterName));",
+  ]) {
+    assertIncludes(commitOwnerSource, token, "P52 commit/accounting owner must keep accounting token");
+  }
+  for (const token of [
+    "prepareRenderPassHost",
+    "passCanvas.getContext(\"2d\")",
+    "prepareTargetContext",
+    "withRenderTarget",
+    "drawCanvas",
+    "drawPoliticalPass",
+    "drawContextBasePass",
+    "buildHitCanvas",
+    "scenario_refresh",
+    "exact_after_settle",
+    "strategic_overlay",
+    "runtimeState",
+    "document",
+    "window",
+  ]) {
+    assertExcludes(commitOwnerSource, token, "P52 commit/accounting owner must avoid adjacent renderer token");
+  }
+});
+
+test("render pipeline passes and catalogs remain authoritative for pass definitions", () => {
+  const renderPipelinePassesSource = readRepoFile(RENDER_PIPELINE_PASSES_PATH);
+  const renderPipelineCatalogSource = readRepoFile(RENDER_PIPELINE_CATALOG_PATH);
+  const renderPassCatalogSource = readRepoFile(RENDER_PASS_CATALOG_PATH);
+
+  for (const token of [
+    "export function createRenderPipelinePassesOwner({",
+    "function getIdleRenderPassDefinitions()",
+    "function prepareIdleRenderPassDefinition(passName, drawFn, transform, timings, cache = getRenderPassCacheState())",
+    "function ensureIdleRenderPasses(timings, passNames = null)",
+    "renderPassToCache(passName, drawFn, transform, timings);",
+  ]) {
+    assertIncludes(renderPipelinePassesSource, token, "render_pipeline_passes must keep pass orchestration token");
+  }
+  for (const token of [
+    "export const IDLE_RENDER_PASS_DEFINITIONS = [",
+    "{ passName: \"background\", drawKey: \"drawBackgroundPass\" }",
+    "{ passName: \"labels\", drawKey: \"drawLabelsPass\" }",
+  ]) {
+    assertIncludes(renderPipelineCatalogSource, token, "render_pipeline_catalog must keep idle pass definition");
+  }
+  for (const token of [
+    "export const RENDER_PASS_NAMES = [",
+    "export const INTERACTION_COMPOSITE_PASS_NAMES = [",
+    "export const TRANSFORMED_FRAME_PASS_NAMES = [",
+  ]) {
+    assertIncludes(renderPassCatalogSource, token, "render_pass_catalog must keep pass group token");
+  }
+});
+
+test("adjacent lifecycle diagnostic hit exact scenario and strategic owners stay separate", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const requestBoundaryOwnerSource = readRepoFile(RENDER_REQUEST_BOUNDARY_OWNER_PATH);
+  const phaseLifecycleOwnerSource = readRepoFile(RENDER_PHASE_LIFECYCLE_OWNER_PATH);
+  const visibleFrameDiagnosticsOwnerSource = readRepoFile(VISIBLE_FRAME_DIAGNOSTICS_OWNER_PATH);
+  const hitCanvasSchedulingOwnerSource = readRepoFile(HIT_CANVAS_SCHEDULING_OWNER_PATH);
+  const exactAfterSettleSchedulerSource = readRepoFile(EXACT_AFTER_SETTLE_SCHEDULER_PATH);
+  const scenarioRefreshRuntimeSource = readRepoFile(SCENARIO_REFRESH_RUNTIME_PATH);
+  const strategicOverlayRuntimeOwnerSource = readRepoFile(STRATEGIC_OVERLAY_RUNTIME_OWNER_PATH);
+  const strategicOverlayRenderOwnerSource = readRepoFile(STRATEGIC_OVERLAY_RENDER_OWNER_PATH);
+
+  for (const token of [
+    "function markFirstVisibleFramePainted(reason = \"visible-frame\")",
+    "getVisibleFrameDiagnosticsOwner().markFirstVisibleFramePainted(reason);",
+    "function scheduleHitCanvasBuildIfNeeded({ reason = \"idle-render\" } = {})",
+    "function drawHitCanvas()",
+    "async function buildHitCanvasAfterStartup({ keepReady = false, reason = \"startup-deferred-hit-canvas\" } = {})",
+    "function refreshMapDataForScenarioChunkPromotion(options = {})",
+    "function refreshMapDataForScenarioApply(options = {})",
+    "createStrategicOverlayRuntimeOwner({",
+    "createStrategicOverlayRenderOwner({",
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must keep adjacent boundary wrapper/anchor");
+  }
+
+  for (const [relativePath, source] of [
+    [RENDER_REQUEST_BOUNDARY_OWNER_PATH, requestBoundaryOwnerSource],
+    [RENDER_PHASE_LIFECYCLE_OWNER_PATH, phaseLifecycleOwnerSource],
+    [VISIBLE_FRAME_DIAGNOSTICS_OWNER_PATH, visibleFrameDiagnosticsOwnerSource],
+    [HIT_CANVAS_SCHEDULING_OWNER_PATH, hitCanvasSchedulingOwnerSource],
+    [EXACT_AFTER_SETTLE_SCHEDULER_PATH, exactAfterSettleSchedulerSource],
+    [SCENARIO_REFRESH_RUNTIME_PATH, scenarioRefreshRuntimeSource],
+    [STRATEGIC_OVERLAY_RUNTIME_OWNER_PATH, strategicOverlayRuntimeOwnerSource],
+    [STRATEGIC_OVERLAY_RENDER_OWNER_PATH, strategicOverlayRenderOwnerSource],
+  ]) {
+    assertExcludes(source, "function drawCanvas()", `${relativePath} must not own drawCanvas`);
+    assertExcludes(source, "renderPassToCache(passName", `${relativePath} must not call renderPassToCache directly`);
+  }
+
+  for (const token of [
+    "drawHitCanvas",
+    "drawHitCanvasWithMetric",
+    "buildHitCanvasAfterStartup",
+    "getDirtyHitCanvasPointProbeHit",
+  ]) {
+    assertExcludes(hitCanvasSchedulingOwnerSource, token, "hit canvas scheduling owner must avoid build/probe token");
+  }
+  assertIncludes(exactAfterSettleSchedulerSource, "function scheduleExactAfterSettleRefresh(", "exact scheduler must keep scheduling entry");
+  assertIncludes(scenarioRefreshRuntimeSource, "function refreshMapDataForScenarioChunkPromotion(", "scenario runtime must keep chunk refresh entry");
+});
+
+test("P53 keeps public facade state allowlist dist and owner topology unchanged", () => {
+  const packageJsonSource = readRepoFile("package.json");
+  const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
+  const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
+
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:renderer-draw-canvas-orchestration-inventory\": \"node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs\"",
+    "package.json must expose P53 inventory script",
+  );
+
+  for (const token of [
+    "render,",
+    "setMapData,",
+    "initMap,",
+    "RENDER_PASS_NAMES,",
+    "from \"../map_renderer.js\";",
+  ]) {
+    assertIncludes(publicFacadeSource, token, "public facade must keep renderer facade token");
+  }
+  for (const token of [
+    "draw_canvas_orchestration",
+    "renderer_draw_canvas_orchestration",
+    "drawCanvasOrchestration",
+    "renderer_render_lifecycle_owner",
+  ]) {
+    assertExcludes(publicFacadeSource, token, "public facade must not expose P53/P40 forbidden owner token");
+    assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not include P53/P40 forbidden owner token");
+  }
+
+  for (const relativePath of [
+    "js/core/renderer/renderer_render_lifecycle_owner.js",
+    "js/core/renderer/draw_canvas_orchestration_owner.js",
+    "js/core/renderer/draw_canvas_orchestration_helper.js",
+    "js/core/renderer/draw_canvas_orchestration_controller.js",
+    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+    "js/core/map_renderer/draw_canvas_orchestration_helper.js",
+    "js/core/map_renderer/draw_canvas_orchestration_controller.js",
+  ]) {
+    assert.equal(repoFileExists(relativePath), false, `P53 must not add production owner/helper: ${relativePath}`);
+  }
+  for (const sourcePath of listRepoSourceFiles("js/core")) {
+    assert.equal(
+      isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath),
+      false,
+      `P53 must not add renamed production drawCanvas orchestration owner/helper: ${sourcePath}`,
+    );
+  }
+
+  const immutableDiff = execFileSync(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--",
+      "dist",
+      MAP_RENDERER_PATH,
+      PUBLIC_FACADE_PATH,
+      STATE_WRITE_ALLOWLIST_PATH,
+    ],
+    { cwd: REPO_ROOT, encoding: "utf8" },
+  )
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean);
+  assert.deepEqual(immutableDiff, [], "P53 must not modify production runtime, public facade, state allowlist, or dist");
+});
