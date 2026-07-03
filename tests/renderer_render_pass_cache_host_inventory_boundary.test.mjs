@@ -9,7 +9,10 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const P50_DOC_PATH = "docs/active/renderer-render-pass-cache-host-preflight-20260701.md";
+const P51_DOC_PATH = "docs/active/renderer-render-pass-cache-host-owner-p51-20260702.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const RENDER_PASS_CACHE_HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
+const WRONG_RENDER_PASS_CACHE_HOST_OWNER_PATH = "js/core/renderer/render_pass_cache_host_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
 const RENDER_CACHE_OWNER_PATH = "js/core/renderer/render_cache_owner.js";
@@ -65,17 +68,13 @@ const P50_DOC_TOKENS = Object.freeze([
 
 const RENDER_PASS_TO_CACHE_TOKENS = Object.freeze([
   "const cache = getRenderPassCacheState();",
-  "const passCanvas = ensureRenderPassCanvas(passName);",
-  "const passContext = passCanvas.getContext(\"2d\");",
-  "if (!passContext) return;",
-  "const passStart = nowMs();",
-  "const layout = getRenderPassLayout(passName);",
-  "let drawResult = null;",
-  "withRenderTarget(passContext, () => {",
-  "passName === \"hgoPreview\"",
-  "Math.max(0.0001, Number(transform?.k || 1))",
-  "prepareTargetContext(passContext, transform, layout)",
-  "drawResult = drawFn(k);",
+  "let passStart = 0;",
+  "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+  "drawFn,",
+  "onHostReady: () => {",
+  "passStart = nowMs();",
+  "if (hostResult?.skipped) return;",
+  "const drawResult = hostResult.drawResult;",
   "drawResult.committed === false",
   "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
   "setPassReferenceTransform(passName, transform);",
@@ -94,6 +93,28 @@ const RENDER_PASS_TO_CACHE_TOKENS = Object.freeze([
   "recordPassTiming(timings, passName, passStart);",
   "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
   "cache.counters.contextScenarioReuseCount = 0;",
+]);
+
+const RENDER_PASS_TO_CACHE_DELEGATED_TOKENS = Object.freeze([
+  "const passCanvas = ensureRenderPassCanvas(passName);",
+  "const passContext = passCanvas.getContext(\"2d\");",
+  "const layout = getRenderPassLayout(passName);",
+  "withRenderTarget(passContext, () => {",
+  "prepareTargetContext(passContext, transform, layout)",
+  "drawResult = drawFn(k);",
+]);
+
+const RENDER_PASS_CACHE_HOST_OWNER_TOKENS = Object.freeze([
+  "export function createRenderPassCacheHostOwner({",
+  "function prepareRenderPassHost({",
+  "\"ensureRenderPassCanvas\"",
+  "\"prepareTargetContext\"",
+  "\"withRenderTarget\"",
+  "\"getRenderPassLayout\"",
+  "passCanvas.getContext(\"2d\")",
+  "Math.max(0.0001, Number(transform?.k || 1))",
+  "drawResult = drawFn(k);",
+  "Object.freeze([...(trace?.effectOrder || [])])",
 ]);
 
 const TRANSFORM_REUSE_FORBIDDEN_TOKENS = Object.freeze([
@@ -151,7 +172,20 @@ test("P50 preflight doc exists and locks render pass host guardrails", () => {
   }
 });
 
-test("map_renderer keeps renderPassToCache and drawCanvas anchors", () => {
+test("P51 owner doc exists and records the narrow implementation boundary", () => {
+  const docSource = readRepoFile(...P51_DOC_PATH.split("/"));
+
+  for (const token of [
+    "P51 render pass cache host owner",
+    "`js/core/map_renderer/render_pass_cache_host_owner.js`",
+    "`renderPassToCache` remains the stable wrapper",
+    "Cache commit/accounting stays in `map_renderer.js`",
+  ]) {
+    assertIncludes(docSource, token, "P51 doc must lock owner boundary");
+  }
+});
+
+test("map_renderer keeps renderPassToCache wrapper and drawCanvas anchors", () => {
   const rendererSource = readRepoFile(...MAP_RENDERER_PATH.split("/"));
   const renderPassToCacheSource = sliceBetween(
     rendererSource,
@@ -163,7 +197,32 @@ test("map_renderer keeps renderPassToCache and drawCanvas anchors", () => {
   assertIncludes(rendererSource, "function drawCanvas()", "map_renderer must keep drawCanvas anchor");
 
   for (const token of RENDER_PASS_TO_CACHE_TOKENS) {
-    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep current host/cache/timing token");
+    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep P51 wrapper/cache/timing token");
+  }
+  for (const token of RENDER_PASS_TO_CACHE_DELEGATED_TOKENS) {
+    assertExcludes(renderPassToCacheSource, token, "renderPassToCache must delegate P51 host setup token");
+  }
+});
+
+test("P51 host owner owns only pass cache host setup", () => {
+  const ownerSource = readRepoFile(...RENDER_PASS_CACHE_HOST_OWNER_PATH.split("/"));
+
+  assert.equal(repoFileExists(RENDER_PASS_CACHE_HOST_OWNER_PATH), true, "P51 owner must exist in map_renderer namespace");
+  assert.equal(repoFileExists(WRONG_RENDER_PASS_CACHE_HOST_OWNER_PATH), false, "P51 owner must not live in renderer namespace");
+  for (const token of RENDER_PASS_CACHE_HOST_OWNER_TOKENS) {
+    assertIncludes(ownerSource, token, "P51 owner must keep host setup token");
+  }
+  for (const token of [
+    "setPassReferenceTransform",
+    "cache.signatures",
+    "cache.dirty",
+    "recordPassTiming",
+    "recordRenderPerfMetric",
+    "schedulePoliticalPathWarmup",
+    "drawCanvas",
+    "buildHitCanvas",
+  ]) {
+    assertExcludes(ownerSource, token, "P51 owner must avoid cache commit or broad lifecycle token");
   }
 });
 

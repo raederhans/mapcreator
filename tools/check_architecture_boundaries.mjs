@@ -75,6 +75,10 @@ const FILES = Object.freeze({
   rendererRenderLifecycleInventoryTest: "tests/renderer_render_lifecycle_inventory_boundary.test.mjs",
   rendererRenderPassCacheHostPreflightDoc: "docs/active/renderer-render-pass-cache-host-preflight-20260701.md",
   rendererRenderPassCacheHostInventoryTest: "tests/renderer_render_pass_cache_host_inventory_boundary.test.mjs",
+  rendererRenderPassCacheHostOwnerDoc: "docs/active/renderer-render-pass-cache-host-owner-p51-20260702.md",
+  renderPassCacheHostOwner: "js/core/map_renderer/render_pass_cache_host_owner.js",
+  renderPassCacheHostOwnerTest: "tests/render_pass_cache_host_owner_behavior.test.mjs",
+  renderPassCacheHostOwnerInventoryTest: "tests/render_pass_cache_host_owner_inventory.test.mjs",
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
@@ -139,6 +143,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.setMapDataTransactionOwner]: 260,
   [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.renderPhaseLifecycleOwner]: 260,
+  [FILES.renderPassCacheHostOwner]: 260,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
   [FILES.rendererTransactionResetOwner]: 260,
@@ -351,6 +356,10 @@ function collectFailures() {
   const rendererRenderPassCacheHostInventoryTest = readProjectFile(
     FILES.rendererRenderPassCacheHostInventoryTest,
   );
+  const rendererRenderPassCacheHostOwnerDoc = readProjectFile(FILES.rendererRenderPassCacheHostOwnerDoc);
+  const renderPassCacheHostOwner = readProjectFile(FILES.renderPassCacheHostOwner);
+  const renderPassCacheHostOwnerTest = readProjectFile(FILES.renderPassCacheHostOwnerTest);
+  const renderPassCacheHostOwnerInventoryTest = readProjectFile(FILES.renderPassCacheHostOwnerInventoryTest);
   const rendererRenderRequestBoundaryOwnerDoc = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerDoc);
   const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
@@ -443,6 +452,10 @@ function collectFailures() {
     [FILES.rendererRenderLifecycleInventoryTest]: rendererRenderLifecycleInventoryTest,
     [FILES.rendererRenderPassCacheHostPreflightDoc]: rendererRenderPassCacheHostPreflightDoc,
     [FILES.rendererRenderPassCacheHostInventoryTest]: rendererRenderPassCacheHostInventoryTest,
+    [FILES.rendererRenderPassCacheHostOwnerDoc]: rendererRenderPassCacheHostOwnerDoc,
+    [FILES.renderPassCacheHostOwner]: renderPassCacheHostOwner,
+    [FILES.renderPassCacheHostOwnerTest]: renderPassCacheHostOwnerTest,
+    [FILES.renderPassCacheHostOwnerInventoryTest]: renderPassCacheHostOwnerInventoryTest,
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
@@ -2335,18 +2348,31 @@ function collectFailures() {
     }
   }
   for (const token of [
+    "P51 render pass cache host owner",
+    "`js/core/map_renderer/render_pass_cache_host_owner.js`",
+    "`renderPassToCache` remains the stable wrapper",
+    "Cache commit/accounting stays in `map_renderer.js`",
+  ]) {
+    if (!rendererRenderPassCacheHostOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererRenderPassCacheHostOwnerDoc} must lock P51 owner boundary token: ${token}`);
+    }
+  }
+  for (const token of [
     "const P50_DOC_PATH = \"docs/active/renderer-render-pass-cache-host-preflight-20260701.md\";",
+    "const P51_DOC_PATH = \"docs/active/renderer-render-pass-cache-host-owner-p51-20260702.md\";",
+    "const RENDER_PASS_CACHE_HOST_OWNER_PATH = \"js/core/map_renderer/render_pass_cache_host_owner.js\";",
     "function renderPassToCache(",
     "function drawCanvas()",
-    "const passCanvas = ensureRenderPassCanvas(passName);",
-    "const passContext = passCanvas.getContext(\\\"2d\\\");",
-    "prepareTargetContext(passContext, transform, layout)",
-    "drawResult = drawFn(k);",
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "passStart = nowMs();",
+    "const drawResult = hostResult.drawResult;",
     "setPassReferenceTransform(passName, transform);",
     "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
     "cache.dirty[passName] = false;",
     "recordPassTiming(timings, passName, passStart);",
     "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
+    "P51 owner must keep host setup token",
+    "P51 owner must avoid cache commit or broad lifecycle token",
     "render cache owner must not import map_renderer",
     "render pipeline passes owner must not import map_renderer",
     "transform reuse policy owner must avoid render pass host token",
@@ -2362,8 +2388,27 @@ function collectFailures() {
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererRenderPassCacheHostInventoryTest))) {
     failures.push(`${FILES.rendererRenderPassCacheHostInventoryTest} must exist for P50.`);
   }
+  for (const relativePath of [
+    FILES.rendererRenderPassCacheHostOwnerDoc,
+    FILES.renderPassCacheHostOwner,
+    FILES.renderPassCacheHostOwnerTest,
+    FILES.renderPassCacheHostOwnerInventoryTest,
+  ]) {
+    if (!fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`${relativePath} must exist for P51 render pass cache host owner.`);
+    }
+  }
   if (!packageJson.includes("\"test:node:renderer-render-pass-cache-host-inventory\": \"node --test tests/renderer_render_pass_cache_host_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P50 render pass cache host inventory script.`);
+  }
+  for (const token of [
+    "\"test:node:render-pass-cache-host-owner\": \"node --test tests/render_pass_cache_host_owner_behavior.test.mjs\"",
+    "\"test:node:render-pass-cache-host-owner-inventory\": \"node --test tests/render_pass_cache_host_owner_inventory.test.mjs\"",
+    "\"test:node:render-pass-cache-host-owner-suite\": \"npm run test:node:render-pass-cache-host-owner && npm run test:node:render-pass-cache-host-owner-inventory && npm run test:node:renderer-render-pass-cache-host-inventory\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P51 render pass cache host owner script: ${token}`);
+    }
   }
   if (!renderer.includes("function renderPassToCache(")) {
     failures.push(`${FILES.renderer} must keep P50 renderPassToCache anchor.`);
@@ -2378,17 +2423,13 @@ function collectFailures() {
   );
   for (const token of [
     "const cache = getRenderPassCacheState();",
-    "const passCanvas = ensureRenderPassCanvas(passName);",
-    "const passContext = passCanvas.getContext(\"2d\");",
-    "if (!passContext) return;",
-    "const passStart = nowMs();",
-    "const layout = getRenderPassLayout(passName);",
-    "let drawResult = null;",
-    "withRenderTarget(passContext, () => {",
-    "passName === \"hgoPreview\"",
-    "Math.max(0.0001, Number(transform?.k || 1))",
-    "prepareTargetContext(passContext, transform, layout)",
-    "drawResult = drawFn(k);",
+    "let passStart = 0;",
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "drawFn,",
+    "onHostReady: () => {",
+    "passStart = nowMs();",
+    "if (hostResult?.skipped) return;",
+    "const drawResult = hostResult.drawResult;",
     "drawResult.committed === false",
     "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
     "setPassReferenceTransform(passName, transform);",
@@ -2409,8 +2450,61 @@ function collectFailures() {
     "cache.counters.contextScenarioReuseCount = 0;",
   ]) {
     if (!renderPassToCacheSource.includes(token)) {
-      failures.push(`${FILES.renderer} renderPassToCache must keep P50 token: ${token}`);
+      failures.push(`${FILES.renderer} renderPassToCache must keep P51 wrapper/cache token: ${token}`);
     }
+  }
+  for (const token of [
+    "const passCanvas = ensureRenderPassCanvas(passName);",
+    "const passContext = passCanvas.getContext(\"2d\");",
+    "const layout = getRenderPassLayout(passName);",
+    "withRenderTarget(passContext, () => {",
+    "prepareTargetContext(passContext, transform, layout)",
+    "drawResult = drawFn(k);",
+  ]) {
+    if (renderPassToCacheSource.includes(token)) {
+      failures.push(`${FILES.renderer} renderPassToCache must delegate P51 host setup token: ${token}`);
+    }
+  }
+  if (!renderer.includes("import { createRenderPassCacheHostOwner } from \"./map_renderer/render_pass_cache_host_owner.js\";")) {
+    failures.push(`${FILES.renderer} must import P51 render pass cache host owner from map_renderer namespace.`);
+  }
+  for (const token of [
+    "export function createRenderPassCacheHostOwner({",
+    "function prepareRenderPassHost({",
+    "\"ensureRenderPassCanvas\"",
+    "\"prepareTargetContext\"",
+    "\"withRenderTarget\"",
+    "\"getRenderPassLayout\"",
+    "passCanvas.getContext(\"2d\")",
+    "Math.max(0.0001, Number(transform?.k || 1))",
+    "drawResult = drawFn(k);",
+    "Object.freeze([...(trace?.effectOrder || [])])",
+  ]) {
+    if (!renderPassCacheHostOwner.includes(token)) {
+      failures.push(`${FILES.renderPassCacheHostOwner} must keep P51 host setup token: ${token}`);
+    }
+  }
+  for (const token of [
+    "setPassReferenceTransform",
+    "setPassFullReferenceTransform",
+    "clearPassFullReferenceTransforms",
+    "cache.signatures",
+    "cache.dirty",
+    "cache.partialPoliticalDirtyIds",
+    "schedulePoliticalPathWarmup",
+    "recordPassTiming",
+    "recordRenderPerfMetric",
+    "getPassCounterNames",
+    "incrementPerfCounter",
+    "drawCanvas",
+    "buildHitCanvas",
+  ]) {
+    if (renderPassCacheHostOwner.includes(token)) {
+      failures.push(`${FILES.renderPassCacheHostOwner} must avoid P51 cache commit or broad lifecycle token: ${token}`);
+    }
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, "js/core/renderer/render_pass_cache_host_owner.js"))) {
+    failures.push("P51 render pass cache host owner must stay under js/core/map_renderer, not js/core/renderer.");
   }
   for (const [relativePath, source] of [
     [FILES.renderCacheOwner, renderCacheOwner],

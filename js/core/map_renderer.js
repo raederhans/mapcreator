@@ -166,6 +166,7 @@ import { createHgoRuntimePreviewRenderOwner } from "./map_renderer/hgo_runtime_p
 import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_transaction_owner.js";
 import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
+import { createRenderPassCacheHostOwner } from "./map_renderer/render_pass_cache_host_owner.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
 import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
@@ -977,6 +978,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let renderPassCacheHostOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
@@ -2349,6 +2351,23 @@ function getRenderCacheOwner() {
     },
   });
   return renderCacheOwner;
+}
+
+function getRenderPassCacheHostOwner() {
+  if (renderPassCacheHostOwner) {
+    return renderPassCacheHostOwner;
+  }
+  renderPassCacheHostOwner = createRenderPassCacheHostOwner({
+    effects: {
+      ensureRenderPassCanvas,
+      prepareTargetContext,
+      withRenderTarget,
+    },
+    getters: {
+      getRenderPassLayout,
+    },
+  });
+  return renderPassCacheHostOwner;
 }
 
 function getRenderTransformReusePolicyOwner() {
@@ -17513,18 +17532,17 @@ function drawLabelsPass(k, { interactive = false } = {}) {
 
 function renderPassToCache(passName, drawFn, transform, timings) {
   const cache = getRenderPassCacheState();
-  const passCanvas = ensureRenderPassCanvas(passName);
-  const passContext = passCanvas.getContext("2d");
-  if (!passContext) return;
-  const passStart = nowMs();
-  const layout = getRenderPassLayout(passName);
-  let drawResult = null;
-  withRenderTarget(passContext, () => {
-    const k = passName === "hgoPreview"
-      ? Math.max(0.0001, Number(transform?.k || 1))
-      : prepareTargetContext(passContext, transform, layout);
-    drawResult = drawFn(k);
+  let passStart = 0;
+  const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({
+    passName,
+    transform,
+    drawFn,
+    onHostReady: () => {
+      passStart = nowMs();
+    },
   });
+  if (hostResult?.skipped) return;
+  const drawResult = hostResult.drawResult;
   if (drawResult && typeof drawResult === "object" && drawResult.committed === false) {
     recordRenderPerfMetric("renderPassCommitSkipped", nowMs() - passStart, {
       passName,
