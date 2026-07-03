@@ -114,6 +114,11 @@ function isCheckedInPagesDistFile(changedFile) {
     || changedFile.startsWith("dist/assets/");
 }
 
+function isPagesDistSourceMirrorFile(changedFile) {
+  return changedFile === "js/core/map_renderer.js"
+    || changedFile.startsWith("js/core/map_renderer/");
+}
+
 function readImportGraph() {
   if (!fs.existsSync(IMPORT_GRAPH_PATH)) {
     return null;
@@ -139,6 +144,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
 
   if (isCheckedInPagesDistFile(changedFile)) {
     return route.id === "infra:pages-dist";
+  }
+
+  if (isPagesDistSourceMirrorFile(changedFile)) {
+    return route.id === "infra:pages-dist" || isDirectRouteMatch(route, changedFile);
   }
 
   if (isDirectRouteMatch(route, changedFile)) return true;

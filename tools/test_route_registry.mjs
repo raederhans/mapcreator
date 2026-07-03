@@ -182,7 +182,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:pages-dist",
     commandRef: "verify:pages-dist",
-    sourceRef: "tools/build_pages_dist.py,tests/test_pages_dist_startup_shell.py,.github/workflows/verify-shared.yml",
+    sourceRef: "tools/build_pages_dist.py,tests/test_pages_dist_startup_shell.py,js/core/map_renderer.js,js/core/map_renderer,.github/workflows/verify-shared.yml",
     domain: "pages-dist",
     ownerHint: "deploy-runtime",
     layer: "heavy",

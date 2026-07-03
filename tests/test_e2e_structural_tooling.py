@@ -719,6 +719,19 @@ for (const lock of ['dist', '.runtime-output']) {
     throw new Error(`Pages dist verification missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
   }
 }
+const sourceReport = buildRecommendation([
+  'js/core/map_renderer.js',
+  'js/core/map_renderer/render_pass_cache_host_owner.js',
+]);
+const sourceCommands = sourceReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sourceCommands.includes('verify:pages-dist')) {
+  throw new Error(`missing Pages dist source mirror route: ${sourceCommands.join(', ')}`);
+}
+for (const filePath of ['js/core/map_renderer.js', 'js/core/map_renderer/render_pass_cache_host_owner.js']) {
+  if (sourceReport.unmatchedChangedFiles.includes(filePath)) {
+    throw new Error(`Pages dist source mirror file should be matched: ${filePath}`);
+  }
+}
 """
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
