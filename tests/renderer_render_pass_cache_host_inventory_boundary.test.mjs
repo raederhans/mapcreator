@@ -67,32 +67,15 @@ const P50_DOC_TOKENS = Object.freeze([
 ]);
 
 const RENDER_PASS_TO_CACHE_TOKENS = Object.freeze([
-  "const cache = getRenderPassCacheState();",
   "let passStart = 0;",
   "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
   "drawFn,",
   "onHostReady: () => {",
   "passStart = nowMs();",
   "if (hostResult?.skipped) return;",
-  "const drawResult = hostResult.drawResult;",
-  "drawResult.committed === false",
-  "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
-  "setPassReferenceTransform(passName, transform);",
-  "const identity = getVisibleFrameIdentity(transform);",
-  "cache.politicalPassSceneGeneration = Number(drawResult?.sceneGeneration ?? identity.sceneGeneration ?? 0);",
-  "cache.politicalPassScenarioDataGeneration = Number(drawResult?.scenarioDataGeneration ?? identity.scenarioDataGeneration ?? 0);",
-  "cache.politicalPassDataStage = politicalDataStage;",
-  "cache.politicalPassFullReady = fullPoliticalReady;",
-  "cache.politicalPassFineCacheReady = politicalFineCacheReady;",
-  "setPassFullReferenceTransform(passName, transform);",
-  "clearPassFullReferenceTransforms([passName]);",
-  "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
-  "cache.dirty[passName] = false;",
-  "cache.partialPoliticalDirtyIds.clear();",
-  "schedulePoliticalPathWarmup(transform);",
-  "recordPassTiming(timings, passName, passStart);",
-  "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
-  "cache.counters.contextScenarioReuseCount = 0;",
+  "getRenderPassCommitAccountingOwner().commitRenderPass({",
+  "drawResult: hostResult.drawResult,",
+  "hostSummary: hostResult,",
 ]);
 
 const RENDER_PASS_TO_CACHE_DELEGATED_TOKENS = Object.freeze([
@@ -102,6 +85,18 @@ const RENDER_PASS_TO_CACHE_DELEGATED_TOKENS = Object.freeze([
   "withRenderTarget(passContext, () => {",
   "prepareTargetContext(passContext, transform, layout)",
   "drawResult = drawFn(k);",
+  "const cache = getRenderPassCacheState();",
+  "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
+  "setPassReferenceTransform(passName, transform);",
+  "const identity = getVisibleFrameIdentity(transform);",
+  "cache.politicalPassSceneGeneration =",
+  "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
+  "cache.dirty[passName] = false;",
+  "cache.partialPoliticalDirtyIds.clear();",
+  "schedulePoliticalPathWarmup(transform);",
+  "recordPassTiming(timings, passName, passStart);",
+  "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
+  "cache.counters.contextScenarioReuseCount = 0;",
 ]);
 
 const RENDER_PASS_CACHE_HOST_OWNER_TOKENS = Object.freeze([
@@ -197,10 +192,10 @@ test("map_renderer keeps renderPassToCache wrapper and drawCanvas anchors", () =
   assertIncludes(rendererSource, "function drawCanvas()", "map_renderer must keep drawCanvas anchor");
 
   for (const token of RENDER_PASS_TO_CACHE_TOKENS) {
-    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep P51 wrapper/cache/timing token");
+    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep P51/P52 wrapper delegation token");
   }
   for (const token of RENDER_PASS_TO_CACHE_DELEGATED_TOKENS) {
-    assertExcludes(renderPassToCacheSource, token, "renderPassToCache must delegate P51 host setup token");
+    assertExcludes(renderPassToCacheSource, token, "renderPassToCache must delegate extracted host or commit token");
   }
 });
 

@@ -167,6 +167,7 @@ import { createSetMapDataTransactionOwner } from "./map_renderer/set_map_data_tr
 import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_boundary_owner.js";
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createRenderPassCacheHostOwner } from "./map_renderer/render_pass_cache_host_owner.js";
+import { createRenderPassCommitAccountingOwner } from "./map_renderer/render_pass_commit_accounting_owner.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
 import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
@@ -979,6 +980,7 @@ let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
 let renderPassCacheHostOwner = null;
+let renderPassCommitAccountingOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
@@ -2368,6 +2370,31 @@ function getRenderPassCacheHostOwner() {
     },
   });
   return renderPassCacheHostOwner;
+}
+
+function getRenderPassCommitAccountingOwner() {
+  if (renderPassCommitAccountingOwner) {
+    return renderPassCommitAccountingOwner;
+  }
+  renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({
+    effects: {
+      clearPassFullReferenceTransforms,
+      incrementPerfCounter,
+      recordPassTiming,
+      recordRenderPerfMetric,
+      schedulePoliticalPathWarmup,
+      setPassFullReferenceTransform,
+      setPassReferenceTransform,
+    },
+    getters: {
+      getPassCounterNames,
+      getRenderPassCacheState,
+      getRenderPassSignature,
+      getVisibleFrameIdentity,
+      nowMs,
+    },
+  });
+  return renderPassCommitAccountingOwner;
 }
 
 function getRenderTransformReusePolicyOwner() {
@@ -17531,7 +17558,6 @@ function drawLabelsPass(k, { interactive = false } = {}) {
 }
 
 function renderPassToCache(passName, drawFn, transform, timings) {
-  const cache = getRenderPassCacheState();
   let passStart = 0;
   const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({
     passName,
@@ -17542,44 +17568,14 @@ function renderPassToCache(passName, drawFn, transform, timings) {
     },
   });
   if (hostResult?.skipped) return;
-  const drawResult = hostResult.drawResult;
-  if (drawResult && typeof drawResult === "object" && drawResult.committed === false) {
-    recordRenderPerfMetric("renderPassCommitSkipped", nowMs() - passStart, {
-      passName,
-      reason: String(drawResult.reason || "draw-declined-commit"),
-    });
-    return;
-  }
-  setPassReferenceTransform(passName, transform);
-  let politicalFineCacheReady = false;
-  if (passName === "political") {
-    const identity = getVisibleFrameIdentity(transform);
-    const politicalDataStage = String(drawResult?.politicalDataStage || identity.politicalDataStage || "unknown");
-    const fullPoliticalReady = !!(drawResult?.fullPoliticalReady ?? identity.fullPoliticalReady);
-    politicalFineCacheReady = politicalDataStage === "fine"
-      && !!(drawResult?.finePoliticalCacheReady ?? identity.finePoliticalCacheReady);
-    cache.politicalPassSceneGeneration = Number(drawResult?.sceneGeneration ?? identity.sceneGeneration ?? 0);
-    cache.politicalPassScenarioDataGeneration = Number(drawResult?.scenarioDataGeneration ?? identity.scenarioDataGeneration ?? 0);
-    cache.politicalPassDataStage = politicalDataStage;
-    cache.politicalPassFullReady = fullPoliticalReady;
-    cache.politicalPassFineCacheReady = politicalFineCacheReady;
-    if (politicalFineCacheReady) {
-      setPassFullReferenceTransform(passName, transform);
-    } else {
-      clearPassFullReferenceTransforms([passName]);
-    }
-  }
-  cache.signatures[passName] = getRenderPassSignature(passName, transform);
-  cache.dirty[passName] = false;
-  if (passName === "political" && politicalFineCacheReady) {
-    cache.partialPoliticalDirtyIds.clear();
-    schedulePoliticalPathWarmup(transform);
-  }
-  recordPassTiming(timings, passName, passStart);
-  getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));
-  if (passName === "contextScenario") {
-    cache.counters.contextScenarioReuseCount = 0;
-  }
+  getRenderPassCommitAccountingOwner().commitRenderPass({
+    passName,
+    transform,
+    drawResult: hostResult.drawResult,
+    timings,
+    passStart,
+    hostSummary: hostResult,
+  });
 }
 
 

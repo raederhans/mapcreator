@@ -79,6 +79,10 @@ const FILES = Object.freeze({
   renderPassCacheHostOwner: "js/core/map_renderer/render_pass_cache_host_owner.js",
   renderPassCacheHostOwnerTest: "tests/render_pass_cache_host_owner_behavior.test.mjs",
   renderPassCacheHostOwnerInventoryTest: "tests/render_pass_cache_host_owner_inventory.test.mjs",
+  rendererRenderPassCommitAccountingOwnerDoc: "docs/active/renderer-render-pass-commit-accounting-owner-p52-20260702.md",
+  renderPassCommitAccountingOwner: "js/core/map_renderer/render_pass_commit_accounting_owner.js",
+  renderPassCommitAccountingOwnerTest: "tests/render_pass_commit_accounting_owner_behavior.test.mjs",
+  renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
@@ -144,6 +148,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderRequestBoundaryOwner]: 160,
   [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.renderPassCacheHostOwner]: 260,
+  [FILES.renderPassCommitAccountingOwner]: 260,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
   [FILES.rendererTransactionResetOwner]: 260,
@@ -360,6 +365,14 @@ function collectFailures() {
   const renderPassCacheHostOwner = readProjectFile(FILES.renderPassCacheHostOwner);
   const renderPassCacheHostOwnerTest = readProjectFile(FILES.renderPassCacheHostOwnerTest);
   const renderPassCacheHostOwnerInventoryTest = readProjectFile(FILES.renderPassCacheHostOwnerInventoryTest);
+  const rendererRenderPassCommitAccountingOwnerDoc = readProjectFile(
+    FILES.rendererRenderPassCommitAccountingOwnerDoc,
+  );
+  const renderPassCommitAccountingOwner = readProjectFile(FILES.renderPassCommitAccountingOwner);
+  const renderPassCommitAccountingOwnerTest = readProjectFile(FILES.renderPassCommitAccountingOwnerTest);
+  const renderPassCommitAccountingOwnerInventoryTest = readProjectFile(
+    FILES.renderPassCommitAccountingOwnerInventoryTest,
+  );
   const rendererRenderRequestBoundaryOwnerDoc = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerDoc);
   const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
@@ -456,6 +469,10 @@ function collectFailures() {
     [FILES.renderPassCacheHostOwner]: renderPassCacheHostOwner,
     [FILES.renderPassCacheHostOwnerTest]: renderPassCacheHostOwnerTest,
     [FILES.renderPassCacheHostOwnerInventoryTest]: renderPassCacheHostOwnerInventoryTest,
+    [FILES.rendererRenderPassCommitAccountingOwnerDoc]: rendererRenderPassCommitAccountingOwnerDoc,
+    [FILES.renderPassCommitAccountingOwner]: renderPassCommitAccountingOwner,
+    [FILES.renderPassCommitAccountingOwnerTest]: renderPassCommitAccountingOwnerTest,
+    [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
@@ -2365,12 +2382,9 @@ function collectFailures() {
     "function drawCanvas()",
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
     "passStart = nowMs();",
-    "const drawResult = hostResult.drawResult;",
-    "setPassReferenceTransform(passName, transform);",
-    "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
-    "cache.dirty[passName] = false;",
-    "recordPassTiming(timings, passName, passStart);",
-    "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawResult: hostResult.drawResult,",
+    "hostSummary: hostResult,",
     "P51 owner must keep host setup token",
     "P51 owner must avoid cache commit or broad lifecycle token",
     "render cache owner must not import map_renderer",
@@ -2422,35 +2436,18 @@ function collectFailures() {
     "function resetCanvasContext(",
   );
   for (const token of [
-    "const cache = getRenderPassCacheState();",
     "let passStart = 0;",
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
     "drawFn,",
     "onHostReady: () => {",
     "passStart = nowMs();",
     "if (hostResult?.skipped) return;",
-    "const drawResult = hostResult.drawResult;",
-    "drawResult.committed === false",
-    "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
-    "setPassReferenceTransform(passName, transform);",
-    "const identity = getVisibleFrameIdentity(transform);",
-    "cache.politicalPassSceneGeneration = Number(drawResult?.sceneGeneration ?? identity.sceneGeneration ?? 0);",
-    "cache.politicalPassScenarioDataGeneration = Number(drawResult?.scenarioDataGeneration ?? identity.scenarioDataGeneration ?? 0);",
-    "cache.politicalPassDataStage = politicalDataStage;",
-    "cache.politicalPassFullReady = fullPoliticalReady;",
-    "cache.politicalPassFineCacheReady = politicalFineCacheReady;",
-    "setPassFullReferenceTransform(passName, transform);",
-    "clearPassFullReferenceTransforms([passName]);",
-    "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
-    "cache.dirty[passName] = false;",
-    "cache.partialPoliticalDirtyIds.clear();",
-    "schedulePoliticalPathWarmup(transform);",
-    "recordPassTiming(timings, passName, passStart);",
-    "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
-    "cache.counters.contextScenarioReuseCount = 0;",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawResult: hostResult.drawResult,",
+    "hostSummary: hostResult,",
   ]) {
     if (!renderPassToCacheSource.includes(token)) {
-      failures.push(`${FILES.renderer} renderPassToCache must keep P51 wrapper/cache token: ${token}`);
+      failures.push(`${FILES.renderer} renderPassToCache must keep P51/P52 wrapper delegation token: ${token}`);
     }
   }
   for (const token of [
@@ -2460,9 +2457,21 @@ function collectFailures() {
     "withRenderTarget(passContext, () => {",
     "prepareTargetContext(passContext, transform, layout)",
     "drawResult = drawFn(k);",
+    "const cache = getRenderPassCacheState();",
+    "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
+    "setPassReferenceTransform(passName, transform);",
+    "const identity = getVisibleFrameIdentity(transform);",
+    "cache.politicalPassSceneGeneration =",
+    "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
+    "cache.dirty[passName] = false;",
+    "cache.partialPoliticalDirtyIds.clear();",
+    "schedulePoliticalPathWarmup(transform);",
+    "recordPassTiming(timings, passName, passStart);",
+    "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
+    "cache.counters.contextScenarioReuseCount = 0;",
   ]) {
     if (renderPassToCacheSource.includes(token)) {
-      failures.push(`${FILES.renderer} renderPassToCache must delegate P51 host setup token: ${token}`);
+      failures.push(`${FILES.renderer} renderPassToCache must delegate extracted host or commit token: ${token}`);
     }
   }
   if (!renderer.includes("import { createRenderPassCacheHostOwner } from \"./map_renderer/render_pass_cache_host_owner.js\";")) {
@@ -2533,6 +2542,133 @@ function collectFailures() {
   }
   if (!renderInvalidationCatalog.includes("export const PASS_RESOURCE_MAP")) {
     failures.push(`${FILES.renderInvalidationCatalog} must keep P50 invalidation catalog.`);
+  }
+  for (const token of [
+    "P52 render pass commit/accounting owner",
+    "`js/core/map_renderer/render_pass_commit_accounting_owner.js`",
+    "`renderPassToCache` remains the stable wrapper.",
+    "No `drawCanvas()` migration.",
+    "No public facade, state-write allowlist, or `dist/**` changes.",
+  ]) {
+    if (!rendererRenderPassCommitAccountingOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererRenderPassCommitAccountingOwnerDoc} must lock P52 boundary token: ${token}`);
+    }
+  }
+  for (const relativePath of [
+    FILES.rendererRenderPassCommitAccountingOwnerDoc,
+    FILES.renderPassCommitAccountingOwner,
+    FILES.renderPassCommitAccountingOwnerTest,
+    FILES.renderPassCommitAccountingOwnerInventoryTest,
+  ]) {
+    if (!fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`${relativePath} must exist for P52 render pass commit/accounting owner.`);
+    }
+  }
+  for (const token of [
+    "\"test:node:render-pass-commit-accounting-owner\": \"node --test tests/render_pass_commit_accounting_owner_behavior.test.mjs\"",
+    "\"test:node:render-pass-commit-accounting-inventory\": \"node --test tests/render_pass_commit_accounting_owner_inventory.test.mjs\"",
+  ]) {
+    if (!packageJson.includes(token)) {
+      failures.push(`${FILES.packageJson} must expose P52 render pass commit/accounting script: ${token}`);
+    }
+  }
+  if (!renderer.includes("import { createRenderPassCommitAccountingOwner } from \"./map_renderer/render_pass_commit_accounting_owner.js\";")) {
+    failures.push(`${FILES.renderer} must import P52 render pass commit/accounting owner from map_renderer namespace.`);
+  }
+  for (const token of [
+    "let renderPassCommitAccountingOwner = null;",
+    "function getRenderPassCommitAccountingOwner()",
+    "renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawResult: hostResult.drawResult,",
+    "hostSummary: hostResult,",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P52 commit/accounting wrapper token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createRenderPassCommitAccountingOwner({",
+    "function commitRenderPass({",
+    "\"getRenderPassCacheState\"",
+    "\"getVisibleFrameIdentity\"",
+    "\"getRenderPassSignature\"",
+    "\"getPassCounterNames\"",
+    "\"nowMs\"",
+    "\"recordRenderPerfMetric\"",
+    "\"setPassReferenceTransform\"",
+    "\"setPassFullReferenceTransform\"",
+    "\"clearPassFullReferenceTransforms\"",
+    "renderPassCommitSkipped",
+    "cache.politicalPassSceneGeneration =",
+    "cache.signatures[normalizedPassName] =",
+    "cache.dirty[normalizedPassName] = false;",
+    "cache.partialPoliticalDirtyIds.clear();",
+    "cache.counters.contextScenarioReuseCount = 0;",
+    "Object.freeze([...(trace?.effectOrder || [])])",
+  ]) {
+    if (!renderPassCommitAccountingOwner.includes(token)) {
+      failures.push(`${FILES.renderPassCommitAccountingOwner} must keep P52 commit/accounting token: ${token}`);
+    }
+  }
+  for (const token of [
+    "prepareRenderPassHost",
+    "ensureRenderPassCanvas",
+    "passCanvas.getContext(\"2d\")",
+    "getRenderPassLayout",
+    "prepareTargetContext",
+    "withRenderTarget",
+    "drawCanvas",
+    "drawPoliticalPass",
+    "drawContextBasePass",
+    "drawContextScenarioPass",
+    "buildHitCanvas",
+    "scenario_refresh",
+    "exact_after_settle",
+    "strategic_overlay",
+    "runtimeState",
+    "document",
+    "window",
+    "globalThis.d3",
+  ]) {
+    if (renderPassCommitAccountingOwner.includes(token)) {
+      failures.push(`${FILES.renderPassCommitAccountingOwner} must avoid P52 host setup or adjacent renderer token: ${token}`);
+    }
+  }
+  for (const token of [
+    "createRenderPassCommitAccountingOwner",
+    "commitRenderPass",
+    "cache.signatures",
+    "cache.dirty",
+    "recordRenderPerfMetric",
+    "recordPassTiming",
+    "schedulePoliticalPathWarmup",
+  ]) {
+    if (renderPassCacheHostOwner.includes(token)) {
+      failures.push(`${FILES.renderPassCacheHostOwner} must avoid P52 commit/accounting token: ${token}`);
+    }
+  }
+  if (fs.existsSync(path.join(REPO_ROOT, "js/core/renderer/render_pass_commit_accounting_owner.js"))) {
+    failures.push("P52 render pass commit/accounting owner must stay under js/core/map_renderer, not js/core/renderer.");
+  }
+  for (const [relativePath, source] of [
+    [FILES.publicFacade, publicFacadeSource],
+    [FILES.stateWriteAllowlist, stateWriteAllowlist],
+    [FILES.hitCanvasSchedulingOwner, hitCanvasSchedulingOwner],
+    [FILES.scenarioRefreshRuntime, scenarioRefreshRuntime],
+    [FILES.exactAfterSettleScheduler, exactAfterSettleScheduler],
+    ["js/core/renderer/strategic_overlay_runtime_owner.js", readProjectFile("js/core/renderer/strategic_overlay_runtime_owner.js")],
+    ["js/core/renderer/strategic_overlay_render_owner.js", readProjectFile("js/core/renderer/strategic_overlay_render_owner.js")],
+  ]) {
+    for (const token of [
+      "render_pass_commit_accounting",
+      "renderer_render_pass_commit_accounting",
+      "renderPassCommitAccounting",
+    ]) {
+      if (source.includes(token)) {
+        failures.push(`${relativePath} must not include P52 render pass commit/accounting token: ${token}`);
+      }
+    }
   }
   for (const token of [
     "document",

@@ -61,6 +61,11 @@ function createRenderPassToCacheHarness({
         return hostResult;
       },
     }),
+    getRenderPassCommitAccountingOwner: () => ({
+      commitRenderPass(options) {
+        calls.push(["commitRenderPass", options]);
+      },
+    }),
     recordRenderPerfMetric: (name, duration, metadata) => {
       calls.push(["recordRenderPerfMetric", name, duration, metadata]);
     },
@@ -364,17 +369,18 @@ test("renderPassToCache wrapper returns before cache commit when host skips", ()
   assert.deepEqual(calls, [["prepareRenderPassHost", "political", "function"]]);
 });
 
-test("renderPassToCache wrapper records declined commit and skips cache mutation", () => {
+test("renderPassToCache wrapper delegates declined commit accounting", () => {
   const timings = {};
   const transform = { k: 3 };
-  const { cache, calls, renderPassToCache } = createRenderPassToCacheHarness({
-    hostResult: {
-      skipped: false,
-      drawResult: {
-        committed: false,
-        reason: "draw-declined-for-test",
-      },
+  const hostResult = {
+    skipped: false,
+    drawResult: {
+      committed: false,
+      reason: "draw-declined-for-test",
     },
+  };
+  const { cache, calls, renderPassToCache } = createRenderPassToCacheHarness({
+    hostResult,
     nowValues: [500, 512],
   });
 
@@ -383,34 +389,34 @@ test("renderPassToCache wrapper records declined commit and skips cache mutation
   assert.deepEqual(timings, {});
   assert.deepEqual(cache.signatures, {});
   assert.deepEqual(cache.dirty, {});
-  assert.deepEqual(calls, [
-    ["prepareRenderPassHost", "contextBase", "function"],
-    [
-      "recordRenderPerfMetric",
-      "renderPassCommitSkipped",
-      12,
-      {
-        passName: "contextBase",
-        reason: "draw-declined-for-test",
-      },
-    ],
-  ]);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0], ["prepareRenderPassHost", "contextBase", "function"]);
+  assert.equal(calls[1][0], "commitRenderPass");
+  assert.deepEqual(calls[1][1], {
+    passName: "contextBase",
+    transform,
+    drawResult: hostResult.drawResult,
+    timings,
+    passStart: 500,
+    hostSummary: hostResult,
+  });
 });
 
-test("renderPassToCache wrapper keeps political cache commit accounting after host draw", () => {
+test("renderPassToCache wrapper delegates political cache commit accounting after host draw", () => {
   const timings = {};
   const transform = { k: 4 };
-  const { cache, calls, renderPassToCache } = createRenderPassToCacheHarness({
-    hostResult: {
-      skipped: false,
-      drawResult: {
-        politicalDataStage: "fine",
-        fullPoliticalReady: true,
-        finePoliticalCacheReady: true,
-        sceneGeneration: 7,
-        scenarioDataGeneration: 8,
-      },
+  const hostResult = {
+    skipped: false,
+    drawResult: {
+      politicalDataStage: "fine",
+      fullPoliticalReady: true,
+      finePoliticalCacheReady: true,
+      sceneGeneration: 7,
+      scenarioDataGeneration: 8,
     },
+  };
+  const { cache, calls, renderPassToCache } = createRenderPassToCacheHarness({
+    hostResult,
     nowValues: [700],
     signature: "political-signature",
     passCounterNames: ["politicalCounter"],
@@ -426,26 +432,21 @@ test("renderPassToCache wrapper keeps political cache commit accounting after ho
 
   renderPassToCache("political", () => ({ committed: true }), transform, timings);
 
-  assert.equal(cache.politicalPassSceneGeneration, 7);
-  assert.equal(cache.politicalPassScenarioDataGeneration, 8);
-  assert.equal(cache.politicalPassDataStage, "fine");
-  assert.equal(cache.politicalPassFullReady, true);
-  assert.equal(cache.politicalPassFineCacheReady, true);
-  assert.equal(cache.signatures.political, "political-signature");
-  assert.equal(cache.dirty.political, false);
-  assert.equal(cache.partialPoliticalDirtyIds.cleared, true);
-  assert.deepEqual(timings, { political: 1 });
-  assert.deepEqual(calls, [
-    ["prepareRenderPassHost", "political", "function"],
-    ["setPassReferenceTransform", "political", transform],
-    ["getVisibleFrameIdentity", transform],
-    ["setPassFullReferenceTransform", "political", transform],
-    ["getRenderPassSignature", "political", transform],
-    ["schedulePoliticalPathWarmup", transform],
-    ["recordPassTiming", "political", 700],
-    ["getPassCounterNames", "political"],
-    ["incrementPerfCounter", "politicalCounter"],
-  ]);
+  assert.equal(cache.signatures.political, undefined);
+  assert.equal(cache.dirty.political, true);
+  assert.equal(cache.partialPoliticalDirtyIds.cleared, false);
+  assert.deepEqual(timings, {});
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0], ["prepareRenderPassHost", "political", "function"]);
+  assert.equal(calls[1][0], "commitRenderPass");
+  assert.deepEqual(calls[1][1], {
+    passName: "political",
+    transform,
+    drawResult: hostResult.drawResult,
+    timings,
+    passStart: 700,
+    hostSummary: hostResult,
+  });
 });
 
 test("owner source excludes renderer lifecycle and cache commit work", () => {

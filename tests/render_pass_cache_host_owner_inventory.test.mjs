@@ -59,7 +59,7 @@ test("P51 host owner exists only in map_renderer owner namespace", () => {
   assert.equal(repoFileExists(WRONG_OWNER_PATH), false, "P51 owner must not live under js/core/renderer");
 });
 
-test("map_renderer keeps stable wrapper and cache commit accounting", () => {
+test("map_renderer keeps stable wrapper and delegates commit accounting", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
   const renderPassToCacheSource = sliceBetween(
     rendererSource,
@@ -75,22 +75,16 @@ test("map_renderer keeps stable wrapper and cache commit accounting", () => {
   );
 
   for (const token of [
-    "const cache = getRenderPassCacheState();",
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
     "drawFn,",
     "onHostReady: () => {",
     "passStart = nowMs();",
     "if (hostResult?.skipped) return;",
-    "const drawResult = hostResult.drawResult;",
-    "drawResult.committed === false",
-    "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
-    "setPassReferenceTransform(passName, transform);",
-    "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
-    "cache.dirty[passName] = false;",
-    "recordPassTiming(timings, passName, passStart);",
-    "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "drawResult: hostResult.drawResult,",
+    "hostSummary: hostResult,",
   ]) {
-    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep wrapper/accounting token");
+    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep wrapper/delegation token");
   }
 
   for (const token of [
@@ -100,8 +94,15 @@ test("map_renderer keeps stable wrapper and cache commit accounting", () => {
     "withRenderTarget(passContext, () => {",
     "prepareTargetContext(passContext, transform, layout)",
     "drawResult = drawFn(k);",
+    "const cache = getRenderPassCacheState();",
+    "recordRenderPerfMetric(\"renderPassCommitSkipped\"",
+    "setPassReferenceTransform(passName, transform);",
+    "cache.signatures[passName] = getRenderPassSignature(passName, transform);",
+    "cache.dirty[passName] = false;",
+    "recordPassTiming(timings, passName, passStart);",
+    "getPassCounterNames(passName).forEach((counterName) => incrementPerfCounter(counterName));",
   ]) {
-    assertExcludes(renderPassToCacheSource, token, "renderPassToCache must delegate P51 host token");
+    assertExcludes(renderPassToCacheSource, token, "renderPassToCache must delegate extracted token");
   }
 });
 
