@@ -13,6 +13,9 @@ const FILES = Object.freeze({
   canvasColorHelpers: "js/core/renderer/canvas_color_helpers.js",
   scenarioRefreshRuntime: "js/core/map_renderer/scenario_refresh_runtime.js",
   interactionHitCandidates: "js/core/map_renderer/interaction_hit_candidates.js",
+  interactionFunnel: "js/core/interaction_funnel.js",
+  historyManager: "js/core/history_manager.js",
+  dirtyState: "js/core/dirty_state.js",
   scenarioRefreshPlans: "js/core/map_renderer/scenario_refresh_plans.js",
   scenarioVisualInvalidationExecutor: "js/core/map_renderer/scenario_visual_invalidation_executor.js",
   exactAfterSettleScheduler: "js/core/map_renderer/exact_after_settle_scheduler.js",
@@ -85,6 +88,8 @@ const FILES = Object.freeze({
   renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
   rendererDrawCanvasOrchestrationPreflightDoc: "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
   rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
+  rendererClickSelectionTransactionPreflightDoc: "docs/active/renderer-click-selection-transaction-preflight-20260702.md",
+  rendererClickSelectionTransactionInventoryTest: "tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
   rendererRenderRequestBoundaryInventoryTest: "tests/renderer_render_request_boundary_inventory.test.mjs",
@@ -263,6 +268,24 @@ function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
     && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
 }
 
+function isForbiddenClickSelectionTransactionOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (!normalized.startsWith("js/core/")) {
+    return false;
+  }
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) {
+    return false;
+  }
+  const stem = baseName.replace(/\.m?js$/, "").toLowerCase();
+  const compact = stem.replace(/[_-]/g, "");
+  const hasClick = compact.includes("click") || compact.includes("mapclick");
+  const hasSelection = compact.includes("selection") || compact.includes("select");
+  const hasTransaction = compact.includes("transaction");
+  const hasOwnerShape = /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
+  return hasOwnerShape && hasClick && (hasSelection || hasTransaction);
+}
+
 function hasHitCanvasOwnerImport(source) {
   const importPattern = /\bfrom\s+["']([^"']+)["']|import\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)/g;
   return Array.from(source.matchAll(importPattern)).some((match) => {
@@ -311,6 +334,9 @@ function collectFailures() {
   const canvasColorHelpers = readProjectFile(FILES.canvasColorHelpers);
   const scenarioRefreshRuntime = readProjectFile(FILES.scenarioRefreshRuntime);
   const interactionHitCandidates = readProjectFile(FILES.interactionHitCandidates);
+  const interactionFunnel = readProjectFile(FILES.interactionFunnel);
+  const historyManager = readProjectFile(FILES.historyManager);
+  const dirtyState = readProjectFile(FILES.dirtyState);
   const scenarioRefreshPlans = readProjectFile(FILES.scenarioRefreshPlans);
   const scenarioVisualInvalidationExecutor = readProjectFile(FILES.scenarioVisualInvalidationExecutor);
   const exactAfterSettleScheduler = readProjectFile(FILES.exactAfterSettleScheduler);
@@ -397,6 +423,12 @@ function collectFailures() {
   const rendererDrawCanvasOrchestrationInventoryTest = readProjectFile(
     FILES.rendererDrawCanvasOrchestrationInventoryTest,
   );
+  const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
+    FILES.rendererClickSelectionTransactionPreflightDoc,
+  );
+  const rendererClickSelectionTransactionInventoryTest = readProjectFile(
+    FILES.rendererClickSelectionTransactionInventoryTest,
+  );
   const rendererRenderRequestBoundaryOwnerDoc = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerDoc);
   const rendererRenderRequestBoundaryOwnerTest = readProjectFile(FILES.rendererRenderRequestBoundaryOwnerTest);
   const rendererRenderRequestBoundaryInventoryTest = readProjectFile(
@@ -429,6 +461,9 @@ function collectFailures() {
     [FILES.canvasColorHelpers]: canvasColorHelpers,
     [FILES.scenarioRefreshRuntime]: scenarioRefreshRuntime,
     [FILES.interactionHitCandidates]: interactionHitCandidates,
+    [FILES.interactionFunnel]: interactionFunnel,
+    [FILES.historyManager]: historyManager,
+    [FILES.dirtyState]: dirtyState,
     [FILES.scenarioRefreshPlans]: scenarioRefreshPlans,
     [FILES.scenarioVisualInvalidationExecutor]: scenarioVisualInvalidationExecutor,
     [FILES.exactAfterSettleScheduler]: exactAfterSettleScheduler,
@@ -499,6 +534,8 @@ function collectFailures() {
     [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
     [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
     [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
+    [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
+    [FILES.rendererClickSelectionTransactionInventoryTest]: rendererClickSelectionTransactionInventoryTest,
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
     [FILES.rendererRenderRequestBoundaryInventoryTest]: rendererRenderRequestBoundaryInventoryTest,
@@ -2982,6 +3019,237 @@ function collectFailures() {
   for (const sourcePath of listProjectSourceFiles("js/core")) {
     if (isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)) {
       failures.push(`P53 must keep production drawCanvas orchestration owner/helper absent: ${sourcePath}`);
+    }
+  }
+
+  for (const heading of [
+    "## Scope and guardrails",
+    "## Current P48 hover interaction baseline",
+    "## Click entry and event binding inventory",
+    "## Land click transaction inventory",
+    "## Water click transaction inventory",
+    "## Special region click transaction inventory",
+    "## Dev selection and fill inventory",
+    "## History/dirty/render refresh inventory",
+    "## Scenario detail readiness boundary",
+    "## P55/P56 allowed first move",
+    "## Forbidden areas",
+    "## Required validation commands",
+  ]) {
+    if (!rendererClickSelectionTransactionPreflightDoc.includes(heading)) {
+      failures.push(`${FILES.rendererClickSelectionTransactionPreflightDoc} must keep P54 heading: ${heading}`);
+    }
+  }
+  for (const token of [
+    "P54 is preflight only.",
+    "No production runtime changes.",
+    "The click handler function remains in `js/core/map_renderer.js` as `async function handleClick(event, _interactionContext = null)`.",
+    "`js/core/renderer/map_interaction_event_binding_owner.js` remains a binding owner only.",
+    "`js/core/interaction_funnel.js` keeps the dispatch bridge.",
+    "Land click transaction logic remains in `map_renderer.js`.",
+    "Water click transaction logic remains in `map_renderer.js`.",
+    "Special region click transaction logic remains in `map_renderer.js`.",
+    "Dev selection and fill remain in `map_renderer.js` and existing UI owners.",
+    "Click and fill transactions currently call the existing history, dirty-state, and render refresh paths:",
+    "Detailed land interaction readiness remains inside `map_renderer.js`:",
+    "The first implementation should probably extract water/special selection clearing or the dev-selection click transaction only.",
+    "Do not combine land fill, sovereignty, water fill, special region, and dev selection in one owner.",
+    "Adding click-selection transaction owner/helper/controller/adapter files under `js/core/**`.",
+  ]) {
+    if (!rendererClickSelectionTransactionPreflightDoc.includes(token)) {
+      failures.push(`${FILES.rendererClickSelectionTransactionPreflightDoc} must lock P54 boundary token: ${token}`);
+    }
+  }
+  for (const token of [
+    "const DOC_PATH = \"docs/active/renderer-click-selection-transaction-preflight-20260702.md\";",
+    "const P54_DOC_HEADINGS = Object.freeze([",
+    "function extractFunctionSource(source, functionName)",
+    "function isForbiddenClickSelectionTransactionOwnerPath(sourcePath)",
+    "async function handleClick(event, _interactionContext = null)",
+    "mapClick: handleClick",
+    "interactionRect.on(\\\"click\\\", requireFunction(handlers, \\\"dispatchMapClick\\\"));",
+    "Land click transaction logic remains",
+    "Water click transaction logic remains",
+    "Special region click transaction logic remains",
+    "P54 must not add renamed production click selection transaction owner/helper",
+    "P54 must not modify production runtime, public facade, state allowlist, or dist",
+  ]) {
+    if (!rendererClickSelectionTransactionInventoryTest.includes(token)) {
+      failures.push(`${FILES.rendererClickSelectionTransactionInventoryTest} must lock P54 inventory token: ${token}`);
+    }
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererClickSelectionTransactionPreflightDoc))) {
+    failures.push(`${FILES.rendererClickSelectionTransactionPreflightDoc} must exist for P54.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererClickSelectionTransactionInventoryTest))) {
+    failures.push(`${FILES.rendererClickSelectionTransactionInventoryTest} must exist for P54.`);
+  }
+  if (!packageJson.includes("\"test:node:renderer-click-selection-transaction-inventory\": \"node --test tests/renderer_click_selection_transaction_inventory_boundary.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P54 click selection transaction inventory script.`);
+  }
+  if (!renderer.includes("async function handleClick(event, _interactionContext = null)")) {
+    failures.push(`${FILES.renderer} must keep P54 click handler anchor.`);
+  }
+  const handleClickSource = sliceBetween(
+    renderer,
+    "async function handleClick(event, _interactionContext = null)",
+    "async function handleDoubleClick(event, _interactionContext = null)",
+  );
+  for (const token of [
+    "getHitFromEvent(event, {",
+    "eventType: \"click\"",
+    "if (!id) {",
+    "requestInteractionRender(\"clear-water-selection-empty-click\")",
+    "requestInteractionRender(\"clear-special-selection-empty-click\")",
+    "if (hit.targetType === \"special\") {",
+    "runtimeState.selectedSpecialRegionId = id;",
+    "requestInteractionRender(\"select-special-region\")",
+    "if (hit.targetType === \"water\") {",
+    "const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);",
+    "requestInteractionRender(\"water-selection-toggle-off\")",
+    "requestInteractionRender(\"water-selection-toggle-on\")",
+    "requestInteractionRender(\"click-select-open-ocean\")",
+    "markDirty(\"erase-water-region-color\")",
+    "requestInteractionRender(\"click-erase-water\")",
+    "applyWaterRegionFill(id, runtimeState.selectedColor, {",
+    "requestInteractionRender(\"clear-water-selection-land-click\")",
+    "requestInteractionRender(\"clear-special-selection-land-click\")",
+    "const changedSelection = toggleFeatureInDevSelection(landId);",
+    "await ensureLeafDetailReady(countryCode, { announce: true })",
+    "markDirty(\"erase-sovereignty\")",
+    "markDirty(\"erase-country-color\")",
+    "markDirty(\"erase-feature-color\")",
+    "requestInteractionRender(\"click-erase\")",
+    "markDirty(\"fill-sovereignty\")",
+    "markDirty(\"fill-country-color\")",
+    "requestInteractionRender(\"click-fill\")",
+  ]) {
+    if (!handleClickSource.includes(token)) {
+      failures.push(`${FILES.renderer} handleClick must keep P54 transaction token: ${token}`);
+    }
+  }
+  for (const token of [
+    "mapClick: handleClick",
+    "mapDoubleClick: handleDoubleClick",
+    "dispatchMapClick",
+    "dispatchMapDoubleClick",
+    "function updateDevSelectedHit(hit = null)",
+    "function addFeatureToDevSelection(featureId)",
+    "function toggleFeatureInDevSelection(featureId)",
+    "function clearDevSelection()",
+    "function applyDevSelectionFill()",
+    "function requestInteractionRender(reason = \"interaction\")",
+    "getRenderRequestBoundaryOwner().requestInteractionRenderBoundary(reason).completed;",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P54 composition/dev/render token: ${token}`);
+    }
+  }
+  for (const token of [
+    "requireFunction(helpers, \"bindInteractionFunnel\")({",
+    "mapClick: requireFunction(handlers, \"mapClick\")",
+    "mapDoubleClick: requireFunction(handlers, \"mapDoubleClick\")",
+    "interactionRect.on(\"click\", requireFunction(handlers, \"dispatchMapClick\"));",
+    "interactionRect.on(\"dblclick\", requireFunction(handlers, \"dispatchMapDoubleClick\"));",
+  ]) {
+    if (!mapInteractionEventBindingOwner.includes(token)) {
+      failures.push(`${FILES.mapInteractionEventBindingOwner} must keep P54 injected event binding token: ${token}`);
+    }
+  }
+  for (const token of [
+    "let mapClickImpl = null;",
+    "export function bindInteractionFunnel({",
+    "mapClickImpl = typeof mapClick === \"function\" ? mapClick : null;",
+    "export function dispatchMapClick(event)",
+    "debugState.lastClickContext = buildMapInteractionContext(\"click\", event);",
+    "return mapClickImpl(event, debugState.lastClickContext);",
+  ]) {
+    if (!interactionFunnel.includes(token)) {
+      failures.push(`${FILES.interactionFunnel} must keep P54 click dispatch token: ${token}`);
+    }
+  }
+  for (const token of [
+    "runtimeState",
+    "state.",
+    "document",
+    "window",
+    "map_renderer.js",
+    "markDirty",
+    "captureHistoryState",
+    "pushHistoryEntry",
+    "commitHistoryEntry",
+    "requestInteractionRender",
+    "selectedWaterRegionId",
+    "selectedSpecialRegionId",
+  ]) {
+    if (interactionHitCandidates.includes(token)) {
+      failures.push(`${FILES.interactionHitCandidates} must remain pure for P54 and avoid token: ${token}`);
+    }
+  }
+  for (const token of [
+    "handleClick",
+    "dispatchMapClick",
+    "selectedWaterRegionId",
+    "selectedSpecialRegionId",
+    "toggleFeatureInDevSelection",
+    "applyWaterRegionFill",
+    "applyVisualSubdivisionFill",
+    "markDirty",
+    "commitHistoryEntry",
+    "pushHistoryEntry",
+  ]) {
+    if (mapHoverInteractionOwner.includes(token)) {
+      failures.push(`${FILES.mapHoverInteractionOwner} must remain hover-only for P54 and avoid token: ${token}`);
+    }
+  }
+  for (const token of [
+    "function captureHistoryState({",
+    "function pushHistoryEntry(entry)",
+    "function hasHistoryDelta(before, after)",
+  ]) {
+    if (!historyManager.includes(token)) {
+      failures.push(`${FILES.historyManager} must keep P54 history ownership token: ${token}`);
+    }
+  }
+  for (const token of [
+    "function markDirty(reason = \"\")",
+    "markDirtyState(runtimeState, reason);",
+    "updateDirtyIndicator();",
+  ]) {
+    if (!dirtyState.includes(token)) {
+      failures.push(`${FILES.dirtyState} must keep P54 dirty ownership token: ${token}`);
+    }
+  }
+  for (const token of [
+    "click_selection_transaction",
+    "renderer_click_selection_transaction",
+    "clickSelectionTransaction",
+    "mapClickSelection",
+  ]) {
+    if (publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must not expose P54 click selection transaction token: ${token}`);
+    }
+    if (stateWriteAllowlist.includes(token)) {
+      failures.push(`${FILES.stateWriteAllowlist} must not include P54 click selection transaction token: ${token}`);
+    }
+  }
+  for (const relativePath of [
+    "js/core/map_renderer/click_selection_transaction_owner.js",
+    "js/core/map_renderer/click_selection_transaction_helper.js",
+    "js/core/map_renderer/click_selection_transaction_controller.js",
+    "js/core/map_renderer/click_selection_transaction_adapter.js",
+    "js/core/renderer/click_selection_transaction_owner.js",
+    "js/core/renderer/click_selection_transaction_helper.js",
+    "js/core/renderer/click_selection_transaction_controller.js",
+    "js/core/renderer/click_selection_transaction_adapter.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`P54 must keep production click selection owner/helper absent: ${relativePath}`);
+    }
+  }
+  for (const sourcePath of listProjectSourceFiles("js/core")) {
+    if (isForbiddenClickSelectionTransactionOwnerPath(sourcePath)) {
+      failures.push(`P54 must keep production click selection transaction owner/helper absent: ${sourcePath}`);
     }
   }
 
