@@ -3,8 +3,8 @@
   "graphMode": "artifact-only",
   "summary": {
     "specCount": 51,
-    "nodeCount": 63,
-    "reverseIndexKeyCount": 85,
+    "nodeCount": 64,
+    "reverseIndexKeyCount": 86,
     "topSharedDependencies": [
       {
         "dependency": "js/core/interaction_funnel.js",
@@ -692,7 +692,8 @@
     "tests/e2e/release/pages_public_release_gate.spec.js": {
       "directDependencies": [
         "js/core/state.js",
-        "tests/e2e/support/playwright-app.js"
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/release-smoke.js"
       ],
       "transitiveDependencies": [
         "js/core/interaction_funnel.js",
@@ -705,6 +706,7 @@
         "tests/e2e/support/playwright-frontline-panel.js",
         "tests/e2e/support/playwright-project-import.js",
         "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/release-smoke.js",
         "tests/e2e/support/startup-paths.js"
       ],
       "repoImpact": [
@@ -2370,6 +2372,9 @@
     "tests/e2e/support/political-pixel-probe.js": [
       "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
       "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
+    ],
+    "tests/e2e/support/release-smoke.js": [
+      "tests/e2e/release/pages_public_release_gate.spec.js"
     ],
     "tests/e2e/support/startup-paths.js": [
       "tests/e2e/city_label_i18n_redraw.spec.js",

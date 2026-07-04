@@ -85,6 +85,13 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("SCENARIO_FORGE_ALLOW_DEFAULT_PAGES_URL", spec)
         self.assertIn('npm_lifecycle_event === "test:e2e:pages-public-release-gate:deployed"', spec)
         self.assertIn("Set SCENARIO_FORGE_PAGES_URL or PLAYWRIGHT_TEST_BASE_URL", spec)
+        self.assertIn("../support/release-smoke", spec)
+        self.assertIn("runReleaseSmokePreflight", spec)
+        self.assertIn("RELEASE_SMOKE_RETRY_DELAY_MS", spec)
+        self.assertIn("browser.newContext()", spec)
+        self.assertIn("issueSummary.unexpectedNetworkFailures.length > 0", spec)
+        self.assertIn("originalPhase", spec)
+        self.assertNotIn("withReleaseSmokePhase(RELEASE_SMOKE_PHASES.LANDING_PREFLIGHT", spec)
 
     def test_deploy_workflow_smokes_deployed_pages_url(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
@@ -339,6 +346,39 @@ if (
 for (const sourceRef of ['ops/browser-mcp/run-smoke-browser-inspection.sh', 'ops/browser-mcp/inspection-profile.toml', 'ops/browser-mcp/inspection-profile.schema.md', 'tools/browser_smoke_profile_contract.py']) {
   if (!browserSmokeRoute.sourceRef.includes(sourceRef)) {
     throw new Error(`browser smoke route must cover ${sourceRef}: ${browserSmokeRoute.sourceRef}`);
+  }
+}
+const releaseSmokeHelperRoute = routes.find((route) => route.id === 'node:test:node:release-smoke-helper');
+if (
+  !releaseSmokeHelperRoute
+  || releaseSmokeHelperRoute.domain !== 'release-smoke'
+  || releaseSmokeHelperRoute.ownerHint !== 'release-smoke'
+  || releaseSmokeHelperRoute.executionOwner !== 'child-safe'
+  || releaseSmokeHelperRoute.resourceLocks.length !== 0
+  || releaseSmokeHelperRoute.ciProfile !== 'pr-fast'
+) {
+  throw new Error(`release smoke helper route must stay child-safe and release-scoped: ${JSON.stringify(releaseSmokeHelperRoute)}`);
+}
+for (const sourceRef of ['tests/release_smoke_retry_behavior.node.test.mjs', 'tests/e2e/support/release-smoke.js']) {
+  if (!releaseSmokeHelperRoute.sourceRef.includes(sourceRef)) {
+    throw new Error(`release smoke helper route must cover ${sourceRef}: ${releaseSmokeHelperRoute.sourceRef}`);
+  }
+}
+const releaseGateRoute = routes.find((route) => route.id === 'direct-e2e:test:e2e:pages-public-release-gate');
+if (
+  !releaseGateRoute
+  || releaseGateRoute.commandRef !== 'test:e2e:pages-public-release-gate'
+  || releaseGateRoute.sourceRef !== 'tests/e2e/release/pages_public_release_gate.spec.js'
+  || releaseGateRoute.domain !== 'release-smoke'
+  || releaseGateRoute.ownerHint !== 'deploy-runtime'
+  || releaseGateRoute.executionOwner !== 'main-thread'
+  || releaseGateRoute.ciProfile !== 'deploy-minimal'
+) {
+  throw new Error(`release gate route must be explicit and main-thread owned: ${JSON.stringify(releaseGateRoute)}`);
+}
+for (const lock of ['browser-dev-server', 'playwright-browser', '.runtime-output']) {
+  if (!releaseGateRoute.resourceLocks.includes(lock)) {
+    throw new Error(`release gate route missing lock ${lock}: ${releaseGateRoute.resourceLocks.join(',')}`);
   }
 }
 const transportWorkbenchControllerRoute = routes.find((route) => route.id === 'node:test:node:transport-workbench-controller');
@@ -827,6 +867,25 @@ const page = {
         self.assert_command_ok(dev_chunk_result)
         dev_chunk_payload = json.loads(dev_chunk_result.stdout)
         self.assertIn("test:e2e:dev:scenario-chunk-runtime", [entry["commandRef"] for entry in dev_chunk_payload["recommendedCommands"]])
+
+        release_helper_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/release-smoke.js", "--json")
+        self.assert_command_ok(release_helper_result)
+        release_helper_payload = json.loads(release_helper_result.stdout)
+        release_helper_commands = [entry["commandRef"] for entry in release_helper_payload["recommendedCommands"]]
+        self.assertIn("test:node:release-smoke-helper", release_helper_commands)
+        self.assertIn("test:e2e:pages-public-release-gate", release_helper_commands)
+
+        release_spec_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/release/pages_public_release_gate.spec.js", "--json")
+        self.assert_command_ok(release_spec_result)
+        release_spec_payload = json.loads(release_spec_result.stdout)
+        release_spec_commands = [entry["commandRef"] for entry in release_spec_payload["recommendedCommands"]]
+        self.assertIn("test:e2e:pages-public-release-gate", release_spec_commands)
+
+        release_node_result = run_command("node", "tools/select_verification_targets.mjs", "tests/release_smoke_retry_behavior.node.test.mjs", "--json")
+        self.assert_command_ok(release_node_result)
+        release_node_payload = json.loads(release_node_result.stdout)
+        release_node_commands = [entry["commandRef"] for entry in release_node_payload["recommendedCommands"]]
+        self.assertIn("test:node:release-smoke-helper", release_node_commands)
 
         unknown_result = run_command("node", "tools/select_verification_targets.mjs", "explain", "docs/unknown-route-sentinel.txt")
         self.assertNotEqual(unknown_result.returncode, 0)
