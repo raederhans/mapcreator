@@ -82,7 +82,7 @@ export function discoverChangedFiles({
   return [...discovered].sort();
 }
 
-function commandToProcess(commandRef) {
+export function commandToProcess(commandRef) {
   const normalized = String(commandRef || "").trim();
   if (!normalized) return null;
   if (/^(node|python|npm)\b/.test(normalized)) {
