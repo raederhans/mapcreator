@@ -1,33 +1,60 @@
 # Worktree Registry
 
-Last updated: 2026-07-04 audit integration closeout for SF-ATS WP2 and P8A release smoke
+Last updated: 2026-07-05 audit follow-up for SF-ATS execute route gaps and release-smoke retry boundaries
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed default-main baseline for this closeout is `origin/main@874709ccb33c45e47edfa8d7a0e7537e0b53da5c`, based on `origin/main@defc90ba2f0768ff1948d4cfbf79af943080225b` before the audit integration push.
+- Latest pushed default-main baseline before this follow-up is `origin/main@874709ccb33c45e47edfa8d7a0e7537e0b53da5c`, based on `origin/main@defc90ba2f0768ff1948d4cfbf79af943080225b` before the audit integration push.
+- Current audit follow-up branch `codex/audit-20260705-uncommitted` starts from `origin/main@08d84f59ef92ea6a856b16a0e5c1dc27399fc1dd` and is intended to land directly on `origin/main`.
 - Integrated SF-ATS WP2 through merge commit `2cc626df2b37db7cfb6409334e210f728ce1ab25`, which contains WP1 and WP1.5 history.
 - Integrated P8A release smoke through merge commit `874709ccb33c45e47edfa8d7a0e7537e0b53da5c`.
 - Removed clean, contained worktrees `C:\Users\raede\Desktop\dev\mapcreator-p8a-release-smoke`, `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp1`, `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp15`, and `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp2` after `merge-base --is-ancestor <branch-head> origin/main` succeeded for each branch.
 - Recovery anchors: P8A `aac200dd74bfdff15cb5db19a46a1481694e5057`, SF-ATS WP1 `91c9923dd55e6b35beb7e5c127b18e493216e2da`, SF-ATS WP1.5 `33fea78ecb7f9160c2b528cad53ddef1d2696fc6`, and SF-ATS WP2 `eede488dd1594ddc6e5d8f7ca8606b7cd6618caa`.
 - Live test/build owner: main Codex thread owned all local Node/Python verification in this closeout. No live browser/dev-server process is running.
-- Subagents: code-reviewer, architect, and test-engineer reviewed SF-ATS integration; final code-reviewer returned READY for the combined `origin/main...HEAD` diff.
+- Subagents: code-reviewer and architect reviewed the recent SF-ATS/release-smoke commits; a final code-reviewer found a release-smoke retry overreach, which this follow-up fixed before commit.
 
 ## Recommended Order
 
-1. Treat `origin/main@874709cc` plus this closeout commit as the current test-supervisor and release-smoke baseline.
+1. Treat `origin/main@874709cc` plus the 2026-07-05 audit follow-up as the current test-supervisor and release-smoke baseline.
 2. Refresh the parent checkout in a separate task because `C:\Users\raede\Desktop\dev\mapcreator` still carries unrelated local WIP on old `main@16abfd5f`.
 3. Future selector domain additions should update `tools/test_route_registry.mjs`, `tools/ai_test_supervisor/domain_registry.json`, and the matching structural/supervisor coverage in the same lane.
 4. Future renderer extraction should keep `RENDER_PASS_NAMES` as the public/cache pass-name catalog and `IDLE_RENDER_PASS_DEFINITIONS` as the idle execution-order catalog.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list`, per-worktree `git status --short --branch`, and cleanup after the 2026-07-04 audit integration push. The temporary audit worktree is only retained long enough to push this registry closeout, then removed through the same cleanup rule.
+Current rows reflect `git worktree list` and per-worktree `git status --short --branch` during the 2026-07-05 audit follow-up. The temporary audit worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@874709cc` | in-progress / unrelated WIP | Dirty summary still includes AGENTS/docs/archive move WIP, landing/lessons/package edits, deleted active/archive docs, SF-ATS files, and untracked supervisor files from the parent checkout. | Parent checkout was not modified by this audit. | Red with future parent cleanup because it overlaps registry/package/docs/test-supervisor paths. | Leave parent WIP untouched; refresh or clean it only in a separate integration task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260704-sfats-p8a` | `codex/audit-20260704-sfats-p8a@874709cc` plus registry closeout | `origin/main@defc90ba` before integration | integrated / cleanup-pending | Hot files include `AGENTS.md`, `package.json`, `tools/test_route_registry.mjs`, `tools/ai_test_supervisor/**`, release-smoke tests, supervisor tests, and this registry. | Functional commits pushed to `origin/main`; registry closeout is the final local-only change before removal. | Green after closeout push because P8A and SF-ATS worktrees are removed and branch heads are contained in `origin/main`. | Push this registry closeout, then remove this temporary audit worktree and delete `codex/audit-20260704-sfats-p8a`. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260705-uncommitted` | `codex/audit-20260705-uncommitted@origin/main+fix` | `origin/main@08d84f59` | ready-for-integration | Hot files include `tools/run_adaptive_tests.mjs`, `tools/ai_test_supervisor/supervise_adaptive_verification.mjs`, `tools/test_route_registry.mjs`, `tests/e2e/release/pages_public_release_gate.spec.js`, `tests/supervisor_plan_behavior.test.mjs`, `tests/test_e2e_structural_tooling.py`, and this registry. | Local validation passed; no live browser/dev-server process was started. | Yellow with future release-smoke/SF-ATS lanes because it touches selector and release gate tests; green with product runtime UI files. | Commit and push to `origin/main`, then remove this temporary audit worktree and delete `codex/audit-20260705-uncommitted`. |
+
+## Audit Follow-up 2026-07-05
+
+1. Fixed `tools/run_adaptive_tests.mjs --execute` so unmatched changed files write the adaptive report and exit 2 before any command runs.
+2. Fixed `tools/ai_test_supervisor/supervise_adaptive_verification.mjs --execute` so route gaps leave execution results empty and exit through the existing strict route-gap path.
+3. Kept the deployed Pages release-gate script discoverable through `package.json`/structural tests while avoiding duplicate selector recommendations for the same spec.
+4. Narrowed Pages release-smoke retry phase tagging so only landing navigation/readiness/networkidle use `LANDING_PREFLIGHT`; sample card, HGO, href, and overflow assertions remain product assertions.
+5. Preserved the parent checkout WIP and performed all edits in the clean audit follow-up worktree.
+
+Core files: `tools/run_adaptive_tests.mjs`, `tools/ai_test_supervisor/supervise_adaptive_verification.mjs`, `tools/test_route_registry.mjs`, `tests/e2e/release/pages_public_release_gate.spec.js`.
+
+Test files: `tests/supervisor_plan_behavior.test.mjs`, `tests/test_e2e_structural_tooling.py`.
+
+Docs files: this registry.
+
+Diff summary: the follow-up changes six code/test files plus this registry. It adds route-gap pre-execution blocking in both SF-ATS runners, updates release gate phase boundaries, and locks the behavior with Node/Python structural tests. Product runtime files are unchanged.
+
+Commit status: ready for Lore commit on `codex/audit-20260705-uncommitted`, based on `origin/main@08d84f59ef92ea6a856b16a0e5c1dc27399fc1dd`. Parent checkout `main@16abfd5f` remains dirty and untouched.
+
+Conflict summary: yellow with future edits to `tools/test_route_registry.mjs`, `tests/test_e2e_structural_tooling.py`, release-smoke tests, supervisor tests, or this registry. No overlap with `index.html`, `css/style.css`, `js/ui/toolbar.js`, renderer runtime, appearance, or transport product files.
+
+Validation passed: `node --check` for changed JS/MJS files; `py -3 -m py_compile tests/test_e2e_structural_tooling.py`; targeted structural Python tests for release gate, route registry, selector, and adaptive unmatched execute behavior; `npm run -s test:node:release-smoke-helper`; `node tools/run_adaptive_tests.mjs --changed-file ...` with `unmatchedChangedFiles: []`; `node tools/select_verification_targets.mjs tests/e2e/release/pages_public_release_gate.spec.js --json` recommending only `test:e2e:pages-public-release-gate` as the main-thread release gate; `npm run -s verify:supervisor-contracts`; `npm run -s verify:supervisor-plan`; `npm run -s verify:test-import-graph`; `npm run -s verify:test:e2e-layers`; `node tools/select_verification_targets.mjs --check`; `git diff --check`.
+
+Checks skipped: live browser Pages release gate, `verify:pages-dist`, and `verify:dist-drift`, because this follow-up changes verification tooling and release-gate test semantics without source/dist product runtime edits. The selector marks `test:e2e:pages-public-release-gate` as a main-thread command requiring reserved browser/dev-server ownership.
+
+Recommendation: merge this follow-up directly into `origin/main`, then remove the temporary audit worktree. Refresh or clean the dirty parent checkout in a separate integration task.
 
 ## Audit Integration Closeout 2026-07-04
 

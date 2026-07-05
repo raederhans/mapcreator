@@ -207,6 +207,13 @@ export function executeSupervisorPlan(plan, {
   cwd = REPO_ROOT,
   now = () => new Date(),
 } = {}) {
+  if ((plan.routeGaps || []).length > 0) {
+    return {
+      ...plan,
+      executionResults: [],
+    };
+  }
+
   const executionResults = [];
   for (const commandRef of plan.commandsToRun || []) {
     const result = runCommand(commandRef, { runner, cwd, now });

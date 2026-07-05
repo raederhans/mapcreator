@@ -190,6 +190,15 @@ function main() {
     return;
   }
 
+  if ((report.unmatchedChangedFiles || []).length > 0) {
+    writeOutputs(report, args);
+    console.error(
+      `Adaptive selection found ${report.unmatchedChangedFiles.length} unmatched changed files. `
+      + "Add route coverage before running --execute.",
+    );
+    process.exit(2);
+  }
+
   const executionPlan = buildExecutionPlan(report, { includeMainThread: args.includeMainThread });
   if (executionPlan.blockedMainThreadCommands.length > 0) {
     writeOutputs(report, args, null, executionPlan);

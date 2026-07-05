@@ -284,11 +284,13 @@ async function readLandingSampleDownloadState(page) {
 }
 
 async function runPublicReleaseGateAttempt(page, { consoleIssues, networkFailures }) {
-  await page.setViewportSize({ width: 375, height: 760 });
-  await page.goto(publicUrl(""), { waitUntil: "domcontentloaded" });
-  await expect(page.locator("body")).toBeVisible();
-  await expect.poll(async () => page.locator("a[href*='app']").count()).toBeGreaterThan(0);
-  await page.waitForLoadState("networkidle", { timeout: 30000 });
+  await withReleaseSmokePhase(RELEASE_SMOKE_PHASES.LANDING_PREFLIGHT, async () => {
+    await page.setViewportSize({ width: 375, height: 760 });
+    await page.goto(publicUrl(""), { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).toBeVisible();
+    await expect.poll(async () => page.locator("a[href*='app']").count()).toBeGreaterThan(0);
+    await page.waitForLoadState("networkidle", { timeout: 30000 });
+  });
   await expect.poll(() => readLandingSampleDownloadState(page), { timeout: 30000 }).toMatchObject({
     cardIds: [
       "blank-base-starter",

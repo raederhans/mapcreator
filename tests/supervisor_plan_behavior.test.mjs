@@ -145,21 +145,31 @@ test("route gaps block execute and strict verification outcomes", () => {
         suggestedRoute: "test-routing",
       }],
       laneSummary: {
-        childSafeCommands: [],
+        childSafeCommands: [laneEntry("verify:supervisor-contracts", "child-safe")],
         mainThreadCommands: [],
         ciOnlyCommands: [],
         blockedCommands: [],
-        counts: { childSafe: 0, mainThread: 0, ciOnly: 0, blocked: 0, total: 0 },
+        counts: { childSafe: 1, mainThread: 0, ciOnly: 0, blocked: 0, total: 1 },
         resourceLocks: [],
-        executionOwners: [],
+        executionOwners: ["child-safe"],
       },
     }),
     execute: true,
     now: NOW,
   });
+  const calls = [];
+  const executed = executeSupervisorPlan(plan, {
+    runner(bin, args) {
+      calls.push({ bin, args });
+      return { status: 0 };
+    },
+    now: () => NOW,
+  });
 
-  assert.equal(supervisorExitCodeForPlan(plan, { strictRouteGaps: true }), 2);
-  assert.equal(supervisorExitCodeForPlan(plan, { strictRouteGaps: false }), 0);
+  assert.equal(calls.length, 0);
+  assert.deepEqual(executed.executionResults, []);
+  assert.equal(supervisorExitCodeForPlan(executed, { strictRouteGaps: true }), 2);
+  assert.equal(supervisorExitCodeForPlan(executed, { strictRouteGaps: false }), 0);
 });
 
 test("buildLaneSummary accepts legacy command fields", () => {

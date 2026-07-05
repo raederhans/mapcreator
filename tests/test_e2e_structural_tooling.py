@@ -91,7 +91,12 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("browser.newContext()", spec)
         self.assertIn("issueSummary.unexpectedNetworkFailures.length > 0", spec)
         self.assertIn("originalPhase", spec)
-        self.assertNotIn("withReleaseSmokePhase(RELEASE_SMOKE_PHASES.LANDING_PREFLIGHT", spec)
+        landing_phase_index = spec.index("await withReleaseSmokePhase(RELEASE_SMOKE_PHASES.LANDING_PREFLIGHT")
+        landing_assertion_index = spec.index("await expect.poll(() => readLandingSampleDownloadState(page)", landing_phase_index)
+        landing_phase_block = spec[landing_phase_index:landing_assertion_index]
+        self.assertIn('await page.goto(publicUrl(""), { waitUntil: "domcontentloaded" });', landing_phase_block)
+        self.assertIn('await page.waitForLoadState("networkidle", { timeout: 30000 });', landing_phase_block)
+        self.assertNotIn("const landingSampleState = await readLandingSampleDownloadState(page);", landing_phase_block)
 
     def test_deploy_workflow_smokes_deployed_pages_url(self) -> None:
         workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
@@ -273,6 +278,26 @@ if (!mainThreadPlan.commandsToRun.includes(tnoWaterCommand) || mainThreadPlan.bl
 """
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
+
+    def test_adaptive_execute_blocks_unmatched_files_before_running_commands(self) -> None:
+        result = run_command(
+            "node",
+            "tools/run_adaptive_tests.mjs",
+            "--execute",
+            "--changed-file",
+            "tools/ai_test_supervisor/supervise_adaptive_verification.mjs",
+            "--changed-file",
+            "docs/active/unrelated-task/context.md",
+            "--json-out",
+            ".runtime/reports/generated/test-adaptive-unmatched-execute.json",
+            "--md-out",
+            ".runtime/reports/generated/test-adaptive-unmatched-execute.md",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unmatched changed files", result.stderr)
+        payload = json.loads((REPO_ROOT / ".runtime/reports/generated/test-adaptive-unmatched-execute.json").read_text(encoding="utf-8"))
+        self.assertIn("docs/active/unrelated-task/context.md", payload["unmatchedChangedFiles"])
+        self.assertIsNone(payload["executionResults"])
 
     def test_route_registry_includes_every_package_test_node_script(self) -> None:
         script = """
