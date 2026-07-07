@@ -47392,7 +47392,7 @@
     },
     {
       "path": "index.html",
-      "size_bytes": 74546,
+      "size_bytes": 74538,
       "source_kind": "dist"
     },
     {
@@ -47549,7 +47549,7 @@
     {
       "file_count": 1,
       "path": "index.html",
-      "size_bytes": 74546
+      "size_bytes": 74538
     },
     {
       "file_count": 1,
@@ -47562,5 +47562,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972152959
+  "total_bytes": 972152951
 }
