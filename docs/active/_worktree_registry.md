@@ -1,34 +1,58 @@
 # Worktree Registry
 
-Last updated: 2026-07-05 audit follow-up for SF-ATS execute route gaps and release-smoke retry boundaries
+Last updated: 2026-07-07 audit follow-up for landing aria fallback alignment
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed default-main baseline before this follow-up is `origin/main@874709ccb33c45e47edfa8d7a0e7537e0b53da5c`, based on `origin/main@defc90ba2f0768ff1948d4cfbf79af943080225b` before the audit integration push.
-- Current audit follow-up branch `codex/audit-20260705-uncommitted` starts from `origin/main@08d84f59ef92ea6a856b16a0e5c1dc27399fc1dd` and is intended to land directly on `origin/main`.
-- Integrated SF-ATS WP2 through merge commit `2cc626df2b37db7cfb6409334e210f728ce1ab25`, which contains WP1 and WP1.5 history.
-- Integrated P8A release smoke through merge commit `874709ccb33c45e47edfa8d7a0e7537e0b53da5c`.
-- Removed clean, contained worktrees `C:\Users\raede\Desktop\dev\mapcreator-p8a-release-smoke`, `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp1`, `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp15`, and `C:\Users\raede\Desktop\dev\mapcreator-sfats-wp2` after `merge-base --is-ancestor <branch-head> origin/main` succeeded for each branch.
-- Recovery anchors: P8A `aac200dd74bfdff15cb5db19a46a1481694e5057`, SF-ATS WP1 `91c9923dd55e6b35beb7e5c127b18e493216e2da`, SF-ATS WP1.5 `33fea78ecb7f9160c2b528cad53ddef1d2696fc6`, and SF-ATS WP2 `eede488dd1594ddc6e5d8f7ca8606b7cd6618caa`.
-- Live test/build owner: main Codex thread owned all local Node/Python verification in this closeout. No live browser/dev-server process is running.
-- Subagents: code-reviewer and architect reviewed the recent SF-ATS/release-smoke commits; a final code-reviewer found a release-smoke retry overreach, which this follow-up fixed before commit.
+- Latest pushed default-main baseline at audit start is `origin/main@90c062a560efd7cb39af83551b6c1663769ea954`.
+- Current audit follow-up branch `codex/audit-20260707-landing-i18n` starts from `origin/main@90c062a560efd7cb39af83551b6c1663769ea954` and contains functional commit `0f499d7f`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 48 commits with broad local WIP. It was preserved untouched.
+- Audit result: recent `origin/main` had no new functional commits after the 2026-07-05 audit baseline. The confirmed safe repair was the parent WIP's landing aria-label fallback alignment, replayed on a clean current-main worktree.
+- Parent WIP review result: independent code-reviewer returned REQUEST CHANGES and architect returned BLOCK because the dirty checkout mixes governance, SF-ATS, renderer boundary, registry/archive, and landing edits and would regress current supervisor/release-smoke/renderer contracts if integrated as-is.
+- Live test/build owner: main Codex thread owned all local Node/Python/Pages dist verification in this closeout. Browser/dev-server E2E was not started.
 
 ## Recommended Order
 
-1. Treat `origin/main@874709cc` plus the 2026-07-05 audit follow-up as the current test-supervisor and release-smoke baseline.
-2. Refresh the parent checkout in a separate task because `C:\Users\raede\Desktop\dev\mapcreator` still carries unrelated local WIP on old `main@16abfd5f`.
-3. Future selector domain additions should update `tools/test_route_registry.mjs`, `tools/ai_test_supervisor/domain_registry.json`, and the matching structural/supervisor coverage in the same lane.
-4. Future renderer extraction should keep `RENDER_PASS_NAMES` as the public/cache pass-name catalog and `IDLE_RENDER_PASS_DEFINITIONS` as the idle execution-order catalog.
+1. Push `codex/audit-20260707-landing-i18n` to `origin/main`, then remove the temporary audit worktree and local branch after ancestry confirmation.
+2. Treat `origin/main@90c062a5` plus commit `0f499d7f` as the landing/static-i18n fallback baseline after push.
+3. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
+4. Keep browser sample-guide E2E as the remaining optional main-thread check for this static label repair if a later release lane already owns a browser/dev-server session.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list` and per-worktree `git status --short --branch` during the 2026-07-05 audit follow-up. The temporary audit worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` during the 2026-07-07 audit follow-up. The temporary audit worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@874709cc` | in-progress / unrelated WIP | Dirty summary still includes AGENTS/docs/archive move WIP, landing/lessons/package edits, deleted active/archive docs, SF-ATS files, and untracked supervisor files from the parent checkout. | Parent checkout was not modified by this audit. | Red with future parent cleanup because it overlaps registry/package/docs/test-supervisor paths. | Leave parent WIP untouched; refresh or clean it only in a separate integration task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260705-uncommitted` | `codex/audit-20260705-uncommitted@origin/main+fix` | `origin/main@08d84f59` | ready-for-integration | Hot files include `tools/run_adaptive_tests.mjs`, `tools/ai_test_supervisor/supervise_adaptive_verification.mjs`, `tools/test_route_registry.mjs`, `tests/e2e/release/pages_public_release_gate.spec.js`, `tests/supervisor_plan_behavior.test.mjs`, `tests/test_e2e_structural_tooling.py`, and this registry. | Local validation passed; no live browser/dev-server process was started. | Yellow with future release-smoke/SF-ATS lanes because it touches selector and release gate tests; green with product runtime UI files. | Commit and push to `origin/main`, then remove this temporary audit worktree and delete `codex/audit-20260705-uncommitted`. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@90c062a5` | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor files from the parent checkout. | Parent checkout was reviewed read-only and not modified by this audit. Code-reviewer REQUEST CHANGES; architect BLOCK. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, and archive truth surfaces and is 48 commits stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260707-landing-i18n` | `codex/audit-20260707-landing-i18n@0f499d7f` | `origin/main@90c062a5` | ready-for-integration | Hot files: `landing/index.html`, `dist/index.html`, `dist/pages-dist-manifest.json`, and this registry closeout. | Local validation passed; no browser/dev-server process was started. | Green for production runtime and renderer/platform files. Yellow for Pages dist and landing/static sample-guide surfaces. | Push functional commit plus this registry closeout to `origin/main`, then remove this temporary audit worktree and delete the local branch after ancestry confirmation. |
+
+## Audit Follow-up 2026-07-07
+
+1. Audited `origin/main` after the 2026-07-05 audit baseline and found no newer functional commit cluster to repair.
+2. Reviewed the stale parent checkout WIP. The direct-integration verdict is blocked because it is 48 commits behind and mixes unrelated governance, SF-ATS, renderer boundary, registry/archive, and landing edits.
+3. Replayed only the safe landing accessibility/i18n fix onto a clean current-main worktree.
+4. Aligned static `aria-label` fallback text with the existing `sampleProjectActionsLabel` / `Sample project actions` runtime translation key.
+5. Regenerated the checked-in Pages mirror and manifest so `dist/index.html` and `dist/pages-dist-manifest.json` match the landing source.
+
+Core files: none.
+
+UI/Pages files: `landing/index.html`, `dist/index.html`, `dist/pages-dist-manifest.json`.
+
+Docs files: this registry.
+
+Diff summary: functional commit `0f499d7f` changes four static labels in the landing source and mirrored `dist/index.html`; the Pages manifest `index.html` byte count and total size decrease by 8 bytes. Product runtime JS, CSS, renderer, transport, supervisor, and package scripts are unchanged.
+
+Commit status: functional commit `0f499d7f` is ready on branch `codex/audit-20260707-landing-i18n`; this registry closeout records integration truth before push. Parent checkout `main@16abfd5f` remains dirty and untouched.
+
+Conflict summary: green with appearance/transport platformization, renderer runtime, supervisor, package, and CSS/JS hot files because none are touched. Yellow with future landing/source-dist work and this live registry. Parent checkout WIP remains red for direct integration.
+
+Validation passed: `py -3 tools\i18n_audit.py` with `ui_missing=0`, `ui_english_fallback=0`, and `a11y_literals=0`; `node --test tests\landing_showcase_view_behavior.test.mjs` 18/18; `node --test tests\sample_project_contracts.test.mjs` 17/17; `py -3 tools\build_pages_dist.py` size `927.12 MiB`; `npm run -s verify:pages-dist` with 41 Python startup shell tests, landing 18/18, and sample contracts 17/17; `node tools\select_verification_targets.mjs --changed-file landing/index.html --changed-file dist/index.html --changed-file dist/pages-dist-manifest.json --json` with `unmatchedChangedFiles: []`; `git diff --check`; `git diff --cached --check`.
+
+Checks skipped: browser/dev-server sample-guide E2E recommended by selector as main-thread/browser-owned. It was intentionally not run because this repair only changes static fallback label text and deterministic i18n/Pages/Node contracts covered the changed surface.
+
+Recommendation: merge this follow-up directly into `origin/main`, then clean the temporary worktree. Keep parent checkout WIP as a separate split/rebase task.
 
 ## Audit Follow-up 2026-07-05
 
