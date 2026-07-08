@@ -156,6 +156,7 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   if (changedFile === "package.json" || changedFile === "package-lock.json") {
     return route.id.startsWith("node:")
       || route.id.startsWith("direct-e2e:")
+      || route.domain === "test-routing"
       || route.id === "infra:e2e-layer-manifest"
       || route.id === "infra:verification-selector"
       || route.id === "infra:playwright-observability"
@@ -172,6 +173,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
 
   if (changedFile === "tools/select_verification_targets.mjs" || changedFile === "tools/test_route_registry.mjs") {
+    return route.domain === "test-routing";
+  }
+
+  if (changedFile === "tools/run_core_verification.mjs" || changedFile === "docs/testing/verify-core.md") {
     return route.domain === "test-routing";
   }
 

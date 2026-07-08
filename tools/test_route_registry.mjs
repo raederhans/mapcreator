@@ -107,6 +107,18 @@ const INFRASTRUCTURE_ROUTES = [
     },
   },
   {
+    id: "infra:core-verification-runner",
+    commandRef: "test:node:verify-core-runner",
+    sourceRef: "tools/run_core_verification.mjs,tests/verify_core_runner_behavior.test.mjs,docs/testing/verify-core.md,package.json",
+    domain: "test-routing",
+    ownerHint: "test-infra",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+  },
+  {
     id: "infra:test-import-graph",
     commandRef: "verify:test-import-graph",
     sourceRef: "tools/build_test_import_graph.mjs,tools/check_test_import_graph.mjs,tests/e2e/test-import-graph.json,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
@@ -623,6 +635,11 @@ function collectFileDependencies(baseRepoPath) {
 function resolveNodeRouteDomain(scriptName, sourceRefs) {
   const haystack = `${scriptName},${sourceRefs.join(",")}`;
   if (haystack.includes("release-smoke") || haystack.includes("release_smoke") || haystack.includes("pages_public_release_gate")) return "release-smoke";
+  if (
+    haystack.includes("test:node:verify-core-runner")
+    || haystack.includes("verify_core_runner")
+    || haystack.includes("run_core_verification")
+  ) return "test-routing";
   if (haystack.includes("supervisor") || haystack.includes("ai_test_supervisor") || haystack.includes("sf-ats")) return "test-routing";
   if (haystack.includes("backend")) return "backend-cloud-support";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";

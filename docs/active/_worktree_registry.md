@@ -1,34 +1,64 @@
 # Worktree Registry
 
-Last updated: 2026-07-08 comment automation for SF-ATS and renderer pass owner notes
+Last updated: 2026-07-08 Scenario Forge P0.1 core verification integration
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed default-main baseline at audit start is `origin/main@90c062a560efd7cb39af83551b6c1663769ea954`.
-- Current audit follow-up branch `codex/audit-20260707-landing-i18n` starts from `origin/main@90c062a560efd7cb39af83551b6c1663769ea954` and contains functional commit `0f499d7f`.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 48 commits with broad local WIP. It was preserved untouched.
-- Comment automation branch `codex/comment-automation-20260708` starts from `origin/main@b3210be2cb0dfc4d93a3b0ebaeb9c7f62cab7072` and only adds maintenance comments plus this registry delivery package.
+- Latest pushed default-main baseline at P0.1 integration start is `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`.
+- Current P0.1 branch `codex/p0-1-verify-core-integration-20260708` starts from latest `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3` after a clean fast-forward from `origin/main@b3210be2cb0dfc4d93a3b0ebaeb9c7f62cab7072`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 51 commits with broad local WIP. It was preserved untouched.
+- Audit follow-up worktree `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` is clean, behind `origin/main` by 1 commit, and remains a separate audit lane.
 - Audit result: recent `origin/main` had no new functional commits after the 2026-07-05 audit baseline. The confirmed safe repair was the parent WIP's landing aria-label fallback alignment, replayed on a clean current-main worktree.
 - Parent WIP review result: independent code-reviewer returned REQUEST CHANGES and architect returned BLOCK because the dirty checkout mixes governance, SF-ATS, renderer boundary, registry/archive, and landing edits and would regress current supervisor/release-smoke/renderer contracts if integrated as-is.
-- Live test/build owner: main Codex thread owned all local Node/Python/Pages dist verification in this closeout. Browser/dev-server E2E was not started.
+- Live test/build owner: main Codex thread owned all local Node/SF-ATS verification in this P0.1 closeout. Browser/dev-server E2E and Pages dist were not started.
 
 ## Recommended Order
 
-1. Merge `codex/comment-automation-20260708` after review; it is comment-only and based on current `origin/main@b3210be2`.
-2. Treat `origin/main@b3210be2` as the current clean baseline for SF-ATS and renderer pass owner comment maintenance.
+1. Commit and push `codex/p0-1-verify-core-integration-20260708` to `origin/main`; it is based on current `origin/main@5b027772` and contains the P0.1 verification baseline plus this delivery package.
+2. Keep `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` as a separate clean audit lane until its owner refreshes or closes it.
 3. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
-4. Keep browser/dev-server and Pages dist verification reserved for their live-process owner; this comment pass only ran child-safe checks.
+4. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner; this P0.1 pass ran child-safe and dry-run checks.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` during the 2026-07-07 audit follow-up. The temporary audit worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` during the 2026-07-08 P0.1 integration closeout. The P0.1 worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@90c062a5` | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor files from the parent checkout. | Parent checkout was reviewed read-only and not modified by this audit. Code-reviewer REQUEST CHANGES; architect BLOCK. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, and archive truth surfaces and is 48 commits stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260707-landing-i18n` | `codex/audit-20260707-landing-i18n@0f499d7f` | `origin/main@90c062a5` | ready-for-integration | Hot files: `landing/index.html`, `dist/index.html`, `dist/pages-dist-manifest.json`, and this registry closeout. | Local validation passed; no browser/dev-server process was started. | Green for production runtime and renderer/platform files. Yellow for Pages dist and landing/static sample-guide surfaces. | Push functional commit plus this registry closeout to `origin/main`, then remove this temporary audit worktree and delete the local branch after ancestry confirmation. |
-| `C:\Users\raede\Desktop\dev\mapcreator-comment-automation-20260708` | `codex/comment-automation-20260708@b3210be2+comments` | `origin/main@b3210be2` | ready-for-integration | Hot files: `tools/ai_test_supervisor/*.mjs`, `tools/run_adaptive_tests.mjs`, `js/core/map_renderer/render_pass_*_owner.js`, and `tests/supervisor_plan_behavior.test.mjs`; no `index.html`, `css/style.css`, `js/ui/toolbar.js`, or `dist/app/**`. | Syntax, selector, supervisor, renderer owner, and structural tests passed; `verify:pages-dist` was selector-recommended as main-thread/dist locked and skipped. | Yellow with future SF-ATS tooling and renderer pass owner work; green with appearance/transport UI hot files. | Merge directly after review, then clean this temporary worktree after ancestry confirmation. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@5b027772` by 51 commits | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor/P0.1 files from the parent checkout. | Parent checkout was reviewed read-only for integration safety and preserved untouched. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, archive truth surfaces, and is stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` | `codex/audit-20260708-recent@b3210be2` | `origin/main@b3210be2` | clean / separate lane | No local dirty files. Behind `origin/main@5b027772` by 1 commit. | `git status --short --branch` reports clean and behind 1. | Yellow with future registry/SF-ATS owner docs because its baseline predates the latest owner safety commit. | Refresh or close separately; do not merge through the P0.1 lane. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` | `codex/p0-1-verify-core-integration-20260708@5b027772+P0.1` | `origin/main@5b027772` | ready-for-integration | Hot files: `package.json`, `tools/run_core_verification.mjs`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry closeout. | Node syntax checks, P0.1 runner tests, route schema check, `verify:core:list`, supervisor contracts, and SF-ATS dry-run passed. | Yellow with future SF-ATS routing/package edits; green for renderer runtime, landing, Pages dist, browser, appearance, and transport files. | Commit with Lore protocol, push to `origin/main`, verify local/remote equality, then clean this temporary worktree after ancestry confirmation. |
+
+## Scenario Forge P0.1 Core Verification 2026-07-08
+
+1. Added a unified `verify:core` runner that can list the core verification plan, execute child-safe default checks, and gate main-thread E2E behind `verify:core:main-thread`.
+2. Added runner behavior tests for route classification, default/main-thread plan shape, command filtering, Windows command process resolution, report writing, and failure stop behavior.
+3. Routed P0.1 tooling, docs, package script edits, and route registry edits into the `test-routing` domain so SF-ATS can audit future changes.
+4. Documented the core verification baseline in `docs/testing/verify-core.md`.
+5. Preserved current `origin/main` supervisor scripts and latest owner safety commit while replaying P0.1 from the dirty parent checkout into a clean integration worktree.
+
+Core files: `tools/run_core_verification.mjs`, `package.json`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`.
+
+Test files: `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/testing/verify-core.md`, this registry.
+
+Temporary files: `.runtime/reports/generated/verify-core.json` and `.runtime/reports/generated/supervisor-plan.json`, both ignored runtime evidence.
+
+Diff summary: P0.1 adds 4 package scripts, one core verification runner, one focused Node test file, one testing guide, one explicit infrastructure route, route-domain classification for the runner, and selector coverage so package/runner/docs edits hit `test-routing`.
+
+Commit status: uncommitted at delivery package creation; commit after final verification with Lore protocol. Base commit is latest `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`. Parent checkout `main@16abfd5f` remains dirty and untouched.
+
+Base divergence: P0.1 started from `origin/main@b3210be2`, then fast-forwarded to `origin/main@5b027772` before validation. Current P0.1 worktree has no commit divergence from remote before the P0.1 commit.
+
+Conflict summary: direct file overlap is yellow with future edits to `package.json`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, verification docs, or this registry. There is no overlap with renderer runtime, landing, Pages dist, browser tests, appearance, or transport product files.
+
+Validation passed: `node --check tools/run_core_verification.mjs`; `node --check tests/verify_core_runner_behavior.test.mjs`; `node --check tools/test_route_registry.mjs`; `npm run test:node:verify-core-runner` 8/8; `node tools/select_verification_targets.mjs --check` with 254 routes; `npm run verify:core:list` listed 36 commands and wrote `.runtime/reports/generated/verify-core.json`; `npm run verify:supervisor-contracts` passed schema/domain/route contracts; `node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file ...` wrote `.runtime/reports/generated/supervisor-plan.json` with `routeGaps: []`.
+
+Checks skipped: full `npm run verify:core`, `verify:core:main-thread`, browser/dev-server E2E, and Pages dist. These are heavier or main-thread/live-process lanes; P0.1 locks the executable baseline through deterministic runner tests, route checks, list-mode artifact generation, and supervisor dry-run.
+
+Recommendation: commit and push this branch directly to `origin/main`, confirm `HEAD` equals `origin/main`, then remove `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` after ancestry confirmation.
 
 ## Comment Automation 2026-07-08
 
