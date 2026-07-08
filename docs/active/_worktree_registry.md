@@ -1,34 +1,31 @@
 # Worktree Registry
 
-Last updated: 2026-07-08 Scenario Forge P0.1 core verification integration
+Last updated: 2026-07-08 Scenario Forge P0.1 core verification post-push truth
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Latest pushed default-main baseline at P0.1 integration start is `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`.
-- Current P0.1 branch `codex/p0-1-verify-core-integration-20260708` starts from latest `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3` after a clean fast-forward from `origin/main@b3210be2cb0dfc4d93a3b0ebaeb9c7f62cab7072`.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 51 commits with broad local WIP. It was preserved untouched.
-- Audit follow-up worktree `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` is clean, behind `origin/main` by 1 commit, and remains a separate audit lane.
+- P0.1 branch `codex/p0-1-verify-core-integration-20260708` is pushed as `origin/main@5465af2a1f81432152439a5711e9c813bcb94de7`, and the integration worktree is clean with `HEAD...origin/main` at `0 0`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 52 commits with broad local WIP. It was preserved untouched.
 - Audit result: recent `origin/main` had no new functional commits after the 2026-07-05 audit baseline. The confirmed safe repair was the parent WIP's landing aria-label fallback alignment, replayed on a clean current-main worktree.
 - Parent WIP review result: independent code-reviewer returned REQUEST CHANGES and architect returned BLOCK because the dirty checkout mixes governance, SF-ATS, renderer boundary, registry/archive, and landing edits and would regress current supervisor/release-smoke/renderer contracts if integrated as-is.
 - Live test/build owner: main Codex thread owned all local Node/SF-ATS verification in this P0.1 closeout. Browser/dev-server E2E and Pages dist were not started.
 
 ## Recommended Order
 
-1. Commit and push `codex/p0-1-verify-core-integration-20260708` to `origin/main`; it is based on current `origin/main@5b027772` and contains the P0.1 verification baseline plus this delivery package.
-2. Keep `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` as a separate clean audit lane until its owner refreshes or closes it.
-3. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
-4. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner; this P0.1 pass ran child-safe and dry-run checks.
+1. Treat `origin/main@5465af2a1f81432152439a5711e9c813bcb94de7` as the pushed P0.1 baseline.
+2. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
+3. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner; this P0.1 pass ran child-safe and dry-run checks.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` during the 2026-07-08 P0.1 integration closeout. The P0.1 worktree is retained only long enough to push this fix, then removed through the same cleanup rule.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P0.1 push on 2026-07-08. The P0.1 worktree is retained as the clean synced local copy for post-push audit because the parent checkout has broad WIP.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@5b027772` by 51 commits | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor/P0.1 files from the parent checkout. | Parent checkout was reviewed read-only for integration safety and preserved untouched. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, archive truth surfaces, and is stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260708-recent` | `codex/audit-20260708-recent@b3210be2` | `origin/main@b3210be2` | clean / separate lane | No local dirty files. Behind `origin/main@5b027772` by 1 commit. | `git status --short --branch` reports clean and behind 1. | Yellow with future registry/SF-ATS owner docs because its baseline predates the latest owner safety commit. | Refresh or close separately; do not merge through the P0.1 lane. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` | `codex/p0-1-verify-core-integration-20260708@5b027772+P0.1` | `origin/main@5b027772` | ready-for-integration | Hot files: `package.json`, `tools/run_core_verification.mjs`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry closeout. | Node syntax checks, P0.1 runner tests, route schema check, `verify:core:list`, supervisor contracts, and SF-ATS dry-run passed. | Yellow with future SF-ATS routing/package edits; green for renderer runtime, landing, Pages dist, browser, appearance, and transport files. | Commit with Lore protocol, push to `origin/main`, verify local/remote equality, then clean this temporary worktree after ancestry confirmation. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@5465af2a` by 52 commits | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor/P0.1 files from the parent checkout. | Parent checkout was reviewed read-only for integration safety and preserved untouched. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, archive truth surfaces, and is stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` | `codex/p0-1-verify-core-integration-20260708@5465af2a` | `origin/main@5465af2a` | synced / pushed | Clean after push. Hot files in pushed commit: `package.json`, `tools/run_core_verification.mjs`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry closeout. | Post-push `HEAD` equals `origin/main`; `HEAD...origin/main` is `0 0`. Validation listed in the delivery package passed before push. | Yellow with future SF-ATS routing/package edits; green for renderer runtime, landing, Pages dist, browser, appearance, and transport files. | Keep as the clean synced local audit copy until the parent WIP is reconciled, then remove through normal worktree cleanup. |
 
 ## Scenario Forge P0.1 Core Verification 2026-07-08
 
@@ -48,7 +45,7 @@ Temporary files: `.runtime/reports/generated/verify-core.json` and `.runtime/rep
 
 Diff summary: P0.1 adds 4 package scripts, one core verification runner, one focused Node test file, one testing guide, one explicit infrastructure route, route-domain classification for the runner, and selector coverage so package/runner/docs edits hit `test-routing`.
 
-Commit status: uncommitted at delivery package creation; commit after final verification with Lore protocol. Base commit is latest `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`. Parent checkout `main@16abfd5f` remains dirty and untouched.
+Commit status: functional P0.1 Lore commit `5465af2a1f81432152439a5711e9c813bcb94de7` is pushed to `origin/main`. Base commit is `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`. Parent checkout `main@16abfd5f` remains dirty and untouched.
 
 Base divergence: P0.1 started from `origin/main@b3210be2`, then fast-forwarded to `origin/main@5b027772` before validation. Current P0.1 worktree has no commit divergence from remote before the P0.1 commit.
 
@@ -58,7 +55,7 @@ Validation passed: `node --check tools/run_core_verification.mjs`; `node --check
 
 Checks skipped: full `npm run verify:core`, `verify:core:main-thread`, browser/dev-server E2E, and Pages dist. These are heavier or main-thread/live-process lanes; P0.1 locks the executable baseline through deterministic runner tests, route checks, list-mode artifact generation, and supervisor dry-run.
 
-Recommendation: commit and push this branch directly to `origin/main`, confirm `HEAD` equals `origin/main`, then remove `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` after ancestry confirmation.
+Recommendation: keep `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` as the clean synced local audit copy while the parent checkout WIP is unresolved. Reconcile or split the parent checkout in a separate task.
 
 ## Comment Automation 2026-07-08
 
