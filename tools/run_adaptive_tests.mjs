@@ -67,6 +67,7 @@ export function discoverChangedFiles({
   includeBranchHistory = false,
 } = {}) {
   const discovered = new Set();
+  // workspace 与 branch history 合并时只收集路径；实际 route 判定交给 selector，避免 Git 探测层携带业务语义。
   const commands = includeBranchHistory
     ? [...DEFAULT_DISCOVERY_COMMANDS, ...HISTORY_DISCOVERY_COMMANDS]
     : DEFAULT_DISCOVERY_COMMANDS;
@@ -111,6 +112,7 @@ export function commandToProcess(commandRef) {
 }
 
 export function buildExecutionPlan(report, { includeMainThread = false } = {}) {
+  // run_adaptive_tests 自身可能被 selector 推荐；这里过滤递归命令，避免执行模式套娃。
   const childSafeCommands = [...new Set((report.childAgentStaticTasks || []).map((entry) => entry.commandRef))]
     .filter((commandRef) => !commandRef.startsWith("node tools/run_adaptive_tests.mjs "));
   const mainThreadCommands = [...new Set((report.mainThreadSerialVerification || []).map((entry) => entry.commandRef))]

@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-07 audit follow-up for landing aria fallback alignment
+Last updated: 2026-07-08 comment automation for SF-ATS and renderer pass owner notes
 
 ## Integration Owner
 
@@ -8,16 +8,17 @@ Last updated: 2026-07-07 audit follow-up for landing aria fallback alignment
 - Latest pushed default-main baseline at audit start is `origin/main@90c062a560efd7cb39af83551b6c1663769ea954`.
 - Current audit follow-up branch `codex/audit-20260707-landing-i18n` starts from `origin/main@90c062a560efd7cb39af83551b6c1663769ea954` and contains functional commit `0f499d7f`.
 - Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` by 48 commits with broad local WIP. It was preserved untouched.
+- Comment automation branch `codex/comment-automation-20260708` starts from `origin/main@b3210be2cb0dfc4d93a3b0ebaeb9c7f62cab7072` and only adds maintenance comments plus this registry delivery package.
 - Audit result: recent `origin/main` had no new functional commits after the 2026-07-05 audit baseline. The confirmed safe repair was the parent WIP's landing aria-label fallback alignment, replayed on a clean current-main worktree.
 - Parent WIP review result: independent code-reviewer returned REQUEST CHANGES and architect returned BLOCK because the dirty checkout mixes governance, SF-ATS, renderer boundary, registry/archive, and landing edits and would regress current supervisor/release-smoke/renderer contracts if integrated as-is.
 - Live test/build owner: main Codex thread owned all local Node/Python/Pages dist verification in this closeout. Browser/dev-server E2E was not started.
 
 ## Recommended Order
 
-1. Push `codex/audit-20260707-landing-i18n` to `origin/main`, then remove the temporary audit worktree and local branch after ancestry confirmation.
-2. Treat `origin/main@90c062a5` plus commit `0f499d7f` as the landing/static-i18n fallback baseline after push.
+1. Merge `codex/comment-automation-20260708` after review; it is comment-only and based on current `origin/main@b3210be2`.
+2. Treat `origin/main@b3210be2` as the current clean baseline for SF-ATS and renderer pass owner comment maintenance.
 3. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
-4. Keep browser sample-guide E2E as the remaining optional main-thread check for this static label repair if a later release lane already owns a browser/dev-server session.
+4. Keep browser/dev-server and Pages dist verification reserved for their live-process owner; this comment pass only ran child-safe checks.
 
 ## Current Worktrees
 
@@ -27,6 +28,38 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind `origin/main@90c062a5` | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor files from the parent checkout. | Parent checkout was reviewed read-only and not modified by this audit. Code-reviewer REQUEST CHANGES; architect BLOCK. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, and archive truth surfaces and is 48 commits stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260707-landing-i18n` | `codex/audit-20260707-landing-i18n@0f499d7f` | `origin/main@90c062a5` | ready-for-integration | Hot files: `landing/index.html`, `dist/index.html`, `dist/pages-dist-manifest.json`, and this registry closeout. | Local validation passed; no browser/dev-server process was started. | Green for production runtime and renderer/platform files. Yellow for Pages dist and landing/static sample-guide surfaces. | Push functional commit plus this registry closeout to `origin/main`, then remove this temporary audit worktree and delete the local branch after ancestry confirmation. |
+| `C:\Users\raede\Desktop\dev\mapcreator-comment-automation-20260708` | `codex/comment-automation-20260708@b3210be2+comments` | `origin/main@b3210be2` | ready-for-integration | Hot files: `tools/ai_test_supervisor/*.mjs`, `tools/run_adaptive_tests.mjs`, `js/core/map_renderer/render_pass_*_owner.js`, and `tests/supervisor_plan_behavior.test.mjs`; no `index.html`, `css/style.css`, `js/ui/toolbar.js`, or `dist/app/**`. | Syntax, selector, supervisor, renderer owner, and structural tests passed; `verify:pages-dist` was selector-recommended as main-thread/dist locked and skipped. | Yellow with future SF-ATS tooling and renderer pass owner work; green with appearance/transport UI hot files. | Merge directly after review, then clean this temporary worktree after ancestry confirmation. |
+
+## Comment Automation 2026-07-08
+
+1. Added 11 Chinese maintenance comments across SF-ATS supervisor tooling, adaptive test runner, renderer pass host/commit owners, and the supervisor plan test.
+2. Kept the implementation comment-only after reviewing the current structure: selector, dossier, lane summary, plan execution, host setup, and commit/accounting boundaries are already separated cleanly.
+3. Avoided `index.html`, `css/style.css`, `js/ui/toolbar.js`, `dist/app/**`, README files, and the dirty parent checkout.
+4. Updated this registry with a ready-for-integration delivery package from the isolated worktree.
+
+Core files: `tools/ai_test_supervisor/command_lanes.mjs`, `tools/ai_test_supervisor/build_change_dossier.mjs`, `tools/ai_test_supervisor/supervise_adaptive_verification.mjs`, `tools/run_adaptive_tests.mjs`, `js/core/map_renderer/render_pass_cache_host_owner.js`, `js/core/map_renderer/render_pass_commit_accounting_owner.js`.
+
+Test files: `tests/supervisor_plan_behavior.test.mjs`.
+
+Docs files: this registry.
+
+Temporary files: none.
+
+Diff summary: 7 code/test files receive 11 explanatory Chinese comments, concentrated on route-gap hard stops, dry-run/execute plan safety, legacy selector compatibility, Git path discovery scope, recursive adaptive-run filtering, renderer host setup ownership, political fine-cache full-reference semantics, and the route-gap zero-execution contract. This registry receives the delivery package.
+
+Commit status: uncommitted at delivery package creation; commit after final review with Lore protocol. Base commit is `origin/main@b3210be2cb0dfc4d93a3b0ebaeb9c7f62cab7072`. The parent checkout is behind current `origin/main` and has unrelated WIP, so it was preserved untouched.
+
+Base divergence: the automation worktree is based on current `origin/main` and has only the comment/registry diff. Parent checkout `main@16abfd5f` remains stale and dirty.
+
+Conflict summary: direct file overlap is yellow with future edits to SF-ATS tooling, `tests/supervisor_plan_behavior.test.mjs`, renderer pass owner files, or this registry. There is no overlap with shared appearance/transport hot files.
+
+Validation passed: `node --check` for all 7 changed JS/MJS files; `node tools/select_verification_targets.mjs --check`; explicit selector dry-run for all changed files with `unmatchedChangedFiles: []`; `npm run -s test:node:supervisor-plan` 15/15; `npm run -s verify:supervisor-contracts` 16/16 across schema/domain/route tests; `npm run -s test:node:render-pass-cache-host-owner`; `npm run -s test:node:render-pass-cache-host-owner-suite`; `npm run -s test:node:render-pass-commit-accounting-owner`; `npm run -s test:node:render-pass-commit-accounting-owner-suite`; `NODE_PATH=C:\Users\raede\Desktop\dev\mapcreator\node_modules py -3 -m unittest tests.test_e2e_structural_tooling -q` 33/33; `git diff --check`.
+
+Validation notes: plain `python -m unittest tests.test_e2e_structural_tooling -q` could not run because `python` is not on PATH in this shell. `py -3` without `NODE_PATH` failed because the isolated worktree could not resolve `@playwright/test`; rerunning with the parent checkout `node_modules` passed.
+
+Checks skipped: `verify:pages-dist` was recommended by selector for renderer source mirror awareness, but it owns `dist` and `.runtime-output` locks and is disproportionate for comment-only source changes. Browser/dev-server tests were not started.
+
+Recommendation: merge directly after final review, then remove `C:\Users\raede\Desktop\dev\mapcreator-comment-automation-20260708` and delete `codex/comment-automation-20260708` after ancestry confirmation.
 
 ## Audit Follow-up 2026-07-07
 

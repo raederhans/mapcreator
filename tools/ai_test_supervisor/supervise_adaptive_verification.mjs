@@ -128,6 +128,7 @@ export function buildSupervisorPlan({
     blockedCommands: blockedFromLane(laneSummary.blockedCommands || []),
   };
   const executionList = buildExecutionCommandList(basePlan, { includeMainThread, includeCiOnly });
+  // 计划对象同时服务 dry-run 和 execute；commandsToRun 只包含当前 lane 已获准执行的命令。
   return {
     schemaVersion: 1,
     generatedAt: now.toISOString(),
@@ -207,6 +208,7 @@ export function executeSupervisorPlan(plan, {
   cwd = REPO_ROOT,
   now = () => new Date(),
 } = {}) {
+  // route gap 是执行前合同缺口，保留空结果能让报告说明“未执行”而非误报全绿。
   if ((plan.routeGaps || []).length > 0) {
     return {
       ...plan,

@@ -136,6 +136,7 @@ test("runCommand resolves npm script commands through the shared adaptive runner
 });
 
 test("route gaps block execute and strict verification outcomes", () => {
+  // 这个用例锁住“有 route gap 时零命令执行”的安全合同，防止 supervisor 报告假阳性。
   const plan = buildSupervisorPlan({
     dossier: dossier({
       routeGaps: [{

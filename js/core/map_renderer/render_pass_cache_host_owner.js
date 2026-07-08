@@ -120,6 +120,7 @@ export function createRenderPassCacheHostOwner({ effects = {}, getters = {} } = 
     let drawInvoked = false;
     let drawResult;
 
+    // host owner 只准备 canvas/context/scale，并把真实绘制交回 drawFn；提交与缓存 accounting 留给后续 owner。
     runEffect(trace, "withRenderTarget", passContext, () => {
       k = normalizedPassName === "hgoPreview"
         ? normalizeTransformScale(transform)

@@ -136,6 +136,7 @@ function reportCommandEntries(selectorReport) {
   if (directEntries.length > 0) {
     return directEntries;
   }
+  // 兼容旧 selector 报告：新版 preferred shape 是 recommendedCommands，旧字段在这里一次性补齐 lane 语义。
   return [
     ...asArray(selectorReport?.childAgentStaticTasks).map((entry) => ({
       ...entry,
@@ -171,6 +172,7 @@ export function buildLaneSummary(selectorReport = {}) {
     executionOwners: [],
   };
 
+  // lane 判定是 live-process 安全边界：先按 commandRef 去重，再把锁和 owner 汇总给 supervisor plan。
   for (const entry of dedupeCommandEntries(reportCommandEntries(selectorReport))) {
     const classified = classifyCommandEntry(entry);
     const laneEntry = withLane(classified);

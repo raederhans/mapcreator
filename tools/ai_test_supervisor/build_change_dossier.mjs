@@ -151,6 +151,7 @@ function suggestedRouteFor(file) {
 export function classifyRouteGap(filePath) {
   const file = toRepoPath(filePath);
   const suggestedRoute = suggestedRouteFor(file);
+  // route gap 的 severity 直接决定执行前是否硬停；生产、工具和数据入口默认按 critical 处理。
   if (
     file === "package.json"
     || file === "tools/run_adaptive_tests.mjs"
@@ -348,6 +349,7 @@ export function buildChangeDossier({
 } = {}) {
   const discovery = discoverSupervisorChangedFiles({ changedFiles, includeBranchHistory, runner });
   const normalizedChangedFiles = discovery.changedFiles;
+  // dossier 是 selector 输出的审计封套：后续 plan、markdown 和退出码都应从同一份快照派生。
   const selector = selectorReport || buildRecommendation(normalizedChangedFiles);
   const registry = domainRegistry || readDomainRegistry();
   const laneSummary = buildLaneSummary(selector);
