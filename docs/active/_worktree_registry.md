@@ -1,30 +1,64 @@
 # Worktree Registry
 
-Last updated: 2026-07-08 local/cloud sync and branch cleanup truth
+Last updated: 2026-07-09 P1.0 renderer runtime context foundation validated for main closeout
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`, matching `origin/main@1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main`; `git status --short --branch` reports `## main...origin/main`.
+- Default-main baseline is `main@6dc506f18632e104a39b4527b742392bc756a716`, matching `origin/main@6dc506f18632e104a39b4527b742392bc756a716`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` was clean on `main` before P1.0 edits; current staged changes are the validated P1.0 delivery.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- The P0.1 audit worktree `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` was removed after its HEAD matched `origin/main`.
-- Live test/build owner: main Codex thread owns any follow-up verification for this cleanup. Browser/dev-server E2E and Pages dist remained out of scope for this sync-only pass.
+- `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator`.
+- Live test/build owner: main Codex thread owns P1.0 verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
 
 ## Recommended Order
 
-1. Treat `main@1c7a56ac` / `origin/main@1c7a56ac` as the current synchronized baseline.
-2. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
-3. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-4. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner.
+1. Finish P1.0 on the current main checkout, keeping `map_renderer.js`, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
+2. Run the P1.0 child-safe validation set and changed-file selector dry-run before recommending P1.1.
+3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
+4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
+5. Keep browser/dev-server and `verify:core:main-thread` verification reserved for their live-process owner.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the 2026-07-08 sync cleanup.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P1.0 pre-edit check.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P0.1.1 delivery on `main` | base `origin/main@1c7a56ac` | P0.1.1 verification hardening delivery package | `tools/run_core_verification.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry are the delivery files. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`. | Yellow for verification tooling and this registry; green for product runtime, UI, CSS, scenario data, dist, and package scripts. | This registry entry travels with the P0.1.1 Lore commit; no worktree cleanup is needed because this is the main checkout. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.0 renderer runtime context foundation on `main` | base `origin/main@6dc506f18632e104a39b4527b742392bc756a716` | integrated | Delivered files: `js/core/map_renderer/renderer_runtime_context.js`, `tests/renderer_runtime_context_foundation_behavior.test.mjs`, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/renderer_render_phase_lifecycle_inventory.test.mjs`, `package.json`, P1.0 docs, this registry, and generated Pages mirror files under `dist/**`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `6dc506f18632e104a39b4527b742392bc756a716`; `verify:core` passed 41 commands after generated Pages mirror sync. | Yellow for future renderer runtime contract, verification routing, and generated Pages mirror edits; green for `map_renderer.js`, public facade, UI, CSS, scenario data, and production behavior. | Commit and push this validated main closeout; recommend P1.1 only after the pushed main baseline is current. |
+
+## Scenario Forge P1.0 Renderer Runtime Context Foundation 2026-07-09
+
+1. Added `js/core/map_renderer/renderer_runtime_context.js` as a pure renderer runtime context contract module with schema version, section ids, create/assert/describe helpers, fail-fast validation, frozen context shell, and safe diagnostics snapshots.
+2. Added `tests/renderer_runtime_context_foundation_behavior.test.mjs` to cover creation, missing dependency errors, shell freeze, mutable `runtimeState`, JSON-safe description, host snapshot diagnostics, reserved section ids, and no reverse imports.
+3. Added `test:node:renderer-runtime-context-foundation` and verification metadata entry `verify-core:test:node:renderer-runtime-context-foundation` in the `renderer-owner` default group.
+4. Added `docs/active/renderer-runtime-context-foundation-p1-0-20260709.md` with P1.0 scope, non-goals, reserved sections, risks, and verification commands.
+
+Core files: `js/core/map_renderer/renderer_runtime_context.js`.
+
+Test files: `tests/renderer_runtime_context_foundation_behavior.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/renderer_render_phase_lifecycle_inventory.test.mjs`.
+
+Docs files: `docs/active/renderer-runtime-context-foundation-p1-0-20260709.md`, `docs/active/_worktree_registry.md`.
+
+Metadata / package files: `tools/verification/verification_domains.mjs`, `package.json`.
+
+Generated Pages mirror files: `dist/app/js/core/map_renderer/renderer_runtime_context.js`, `dist/pages-dist-manifest.json`.
+
+Temporary files: verification wrote ignored reports under `.runtime/reports/generated/`, including `p1-0-final-selector.json`, `p1-0-final-selector.md`, and `verify-core.json`.
+
+Diff summary: P1.0 adds a context shell and its behavior test, adds one package script, adds one renderer-runtime metadata route into `verify:core`, records the preflight plan, and syncs the generated Pages mirror required by `verify:dist-drift`. It does not modify `js/core/map_renderer.js`, `js/core/map_renderer/public.js`, UI files, CSS, scenario data, or production renderer behavior.
+
+Commit status: this delivery is validated for the main closeout commit.
+
+Base divergence: base and pre-edit baseline are `main@6dc506f18632e104a39b4527b742392bc756a716` and `origin/main@6dc506f18632e104a39b4527b742392bc756a716`.
+
+Potential conflicts: yellow with future edits to `package.json`, verification metadata/tests, this registry, generated Pages mirrors, and future renderer runtime context work. Green with appearance/transport shared UI files because P1.0 does not touch `index.html`, CSS, or `js/ui/toolbar.js`.
+
+Validation passed: `node --check js/core/map_renderer/renderer_runtime_context.js`; `node --check tests/renderer_runtime_context_foundation_behavior.test.mjs`; `node --check dist/app/js/core/map_renderer/renderer_runtime_context.js`; source/dist `fc` showed no differences; `npm run test:node:renderer-runtime-context-foundation` 8/8; `npm run test:node:verification-metadata` 6/6; `npm run test:node:verify-core-runner` 8/8; `npm run verify:core:list` 41 commands; `node tools/select_verification_targets.mjs --check` 258 routes; `npm run verify:test-import-graph`; `npm run verify:architecture-boundaries`; `npm run verify:supervisor-contracts`; `npm run verify:supervisor-plan`; `npm run verify:state-write-allowlist`; `npm run verify:dist-drift`; `node --check tests/renderer_render_phase_lifecycle_inventory.test.mjs`; `npm run test:node:renderer-render-phase-lifecycle-inventory` 6/6; final changed-file selector dry-run wrote `.runtime/reports/generated/p1-0-final-selector.json` and `.runtime/reports/generated/p1-0-final-selector.md` with `unmatchedChangedFiles: []`; full `npm run verify:core` passed 41 commands and wrote `.runtime/reports/generated/verify-core.json`.
+
+Route gaps: none. Final changed-file selector dry-run covered the source module, new behavior test, metadata, package script, active docs, registry, generated Pages mirror, and the narrowed P43 inventory test with `unmatchedChangedFiles: []`.
+
+Recommendation: merge as the P1.0 main closeout, then proceed to P1.1 with a small runtime read-model or owner dependency wrap from the pushed main baseline.
 
 ## Local/Cloud Sync Cleanup 2026-07-08
 

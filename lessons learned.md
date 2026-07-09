@@ -546,3 +546,6 @@
 
 ### Full verify:core 要在 clean HEAD 收口
 - `verify:core` 里部分 inventory 会要求 checked-in dist 无 staged/unstaged diff，而 `verify:dist-drift` 会要求 builder 输出与 index 一致；生成 dist 同步后先提交，再在 clean HEAD 上跑 full gate，避免两个合同在脏 worktree 中互相卡住。
+
+### 阶段 inventory 的 dist guard 要收窄路径
+- 某个 renderer 阶段只想证明自己的镜像没变时，guard 应检查该阶段 owner 和主 renderer mirror 路径；全局锁 `dist/app/**` 会挡住后续阶段由 `verify:dist-drift` 要求的合法新增镜像。

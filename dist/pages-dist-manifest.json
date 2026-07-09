@@ -45866,6 +45866,11 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/map_renderer/renderer_runtime_context.js",
+      "size_bytes": 4703,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/map_renderer/renderer_transaction_reset_owner.js",
       "size_bytes": 5948,
       "source_kind": "dist"
@@ -47397,7 +47402,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467038,
+      "size_bytes": 1467175,
       "source_kind": "dist"
     },
     {
@@ -47527,9 +47532,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9419,
+      "file_count": 9420,
       "path": "app",
-      "size_bytes": 965587810
+      "size_bytes": 965592513
     },
     {
       "file_count": 57,
@@ -47539,7 +47544,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467038
+      "size_bytes": 1467175
     },
     {
       "file_count": 1,
@@ -47562,5 +47567,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972153209
+  "total_bytes": 972158049
 }

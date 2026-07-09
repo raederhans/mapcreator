@@ -120,3 +120,16 @@ test("metadata files route to test-routing without unmatched changed files", () 
   assert.ok(report.coveredDomains.includes("test-routing"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:verification-metadata"));
 });
+
+test("renderer runtime context foundation files route to renderer owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "tests/renderer_runtime_context_foundation_behavior.test.mjs",
+    "docs/active/renderer-runtime-context-foundation-p1-0-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-foundation"));
+});
