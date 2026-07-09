@@ -549,3 +549,6 @@
 
 ### 阶段 inventory 的 dist guard 要收窄路径
 - 某个 renderer 阶段只想证明自己的镜像没变时，guard 应检查该阶段 owner 和主 renderer mirror 路径；全局锁 `dist/app/**` 会挡住后续阶段由 `verify:dist-drift` 要求的合法新增镜像。
+
+### Python source-scan 合同要有真实入口
+- 把 Python boundary contract 放进 verification metadata 的 `sourceRefs` 只能帮助 selector 识别文件；还要同步 package script、route registry 和 verify-core plan 断言，确保该 contract 真实执行。

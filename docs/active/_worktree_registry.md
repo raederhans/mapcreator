@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.2 renderer runtime context render cache read model in progress
+Last updated: 2026-07-09 P1.2 renderer runtime context render cache read model integrated
 
 ## Integration Owner
 
@@ -25,7 +25,7 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.2 renderer runtime context render cache read model on `main` | base `origin/main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5` | in-progress | Hot files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, `tests/renderer_runtime_context_render_cache_behavior.test.mjs`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/test_map_renderer_render_cache_owner_boundary_contract.py`, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.2 docs, this registry, and possible generated Pages mirror files. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` reported `0614f9ae2cde1538440f24764bd4c9ee07cc14c5`. | Yellow for renderer runtime context, render cache owner receiver wiring, source-scan tests, verification routing, and generated Pages mirror sync. Green for public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` behavior by explicit non-goals. | Finish P1.2 implementation, run targeted gates, changed-file selector dry-run, `verify:dist-drift`, final `verify:core`, then commit and push. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.2 renderer runtime context render cache read model on `main@b80b73ea` | base `origin/main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5` | integrated | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, render cache context tests, Python boundary contract, verification routing, `package.json`, P1.2 docs, this registry, and generated Pages mirror files. | `git worktree list --porcelain` lists only this path; `npm run verify:core` passed 44 commands and wrote `.runtime/reports/generated/verify-core.json`; changed-file selector dry-run wrote `.runtime/reports/generated/p1-2-adaptive-selection-with-dist.json` with `unmatchedChangedFiles: []`. | Yellow with future renderer runtime context receiver work, verification routing, and generated Pages mirror sync. Green for public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` behavior by explicit non-goals. | P1.2 functional commit `b80b73ea` is integrated; proceed to P1.3 from `origin/main@b80b73ea` or newer. |
 
 ## Scenario Forge P1.2 RendererRuntimeContext Render Cache Read Model 2026-07-09
 
@@ -42,6 +42,42 @@ Non-goals: no `drawCanvas()` migration, no pass drawing migration, no `renderPas
 Live owner: main Codex thread owns P1.2 implementation, dist drift, and final `verify:core`. Browser/dev-server E2E and `verify:core:main-thread` are reserved Not-tested lanes unless ownership changes explicitly.
 
 Initial validation plan: syntax checks for changed JS/MJS; renderer runtime context foundation/receiver/render-cache tests; render cache owner and P51/P52 owner suites; Python render cache boundary contract; verification metadata; verify-core runner; architecture boundaries; state-write allowlist; test import graph; selector route check and changed-file dry-run; supervisor contracts/plan; `verify:dist-drift`; final `verify:core`.
+
+What changed:
+
+1. `RendererRuntimeContext` now exposes a `renderCache` read model with frozen constant/helper descriptors, live runtime/surface accessors, and a main context getter.
+2. The `surface` section now has a `getMainContext()` read accessor while preserving `surface.host`.
+3. `getRenderCacheOwner()` now receives runtime state, surface host, cache constants, helper functions, and main context through `RendererRuntimeContext`; `createRenderCacheOwner()` keeps its algorithm and API shape.
+4. Render cache context behavior tests, receiver migration tests, Python boundary contract, package scripts, verification metadata, and route coverage now lock the P1.2 contract.
+5. Checked-in Pages mirror files were regenerated only to satisfy `verify:dist-drift`.
+
+Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`.
+
+Test files: `tests/renderer_runtime_context_render_cache_behavior.test.mjs`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/test_map_renderer_render_cache_owner_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/active/renderer-runtime-context-render-cache-read-model-p1-2-20260709.md`, `docs/active/_worktree_registry.md`.
+
+Metadata / package files: `tools/verification/verification_domains.mjs`, `package.json`.
+
+Generated Pages mirror files: `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/renderer_runtime_context.js`, `dist/pages-dist-manifest.json`.
+
+Temporary files: ignored reports under `.runtime/reports/generated/`, including `p1-2-adaptive-selection.json`, `p1-2-adaptive-selection.md`, `p1-2-adaptive-selection-with-dist.json`, `p1-2-adaptive-selection-with-dist.md`, `supervisor-plan.json`, and `verify-core.json`.
+
+Diff summary: P1.2 extends the context contract and migrates only the render cache receiver wiring. It adds focused render cache context tests, strengthens source-scan and route coverage, and syncs the generated Pages mirror. It does not modify `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, click selection, public facade, UI, CSS, or scenario data.
+
+Commit status: functional Lore commit `b80b73ea` is validated and integrated; this registry closeout records integration truth.
+
+Base divergence: base and pre-edit baseline are `main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5` and `origin/main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5`.
+
+Potential conflicts: yellow with future edits to `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, render cache receiver tests, Python boundary scans, verification metadata, this registry, and generated Pages mirrors. Green with public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` because P1.2 did not touch those surfaces.
+
+Validation passed: syntax checks for changed JS/MJS; `test:node:renderer-runtime-context-foundation` 8/8; `test:node:renderer-runtime-context-receiver` 5/5; `test:node:renderer-runtime-context-render-cache` 9/9; `test:node:render-cache-owner` 6/6; P51/P52 owner suites 26/26 and 15/15; `test:python:map-renderer-render-cache-owner-boundary` 4/4; `test:node:verification-metadata` 8/8; `test:node:verify-core-runner` 8/8; `verify:architecture-boundaries`; `verify:state-write-allowlist`; `verify:test-import-graph`; changed-file selector dry-run with `unmatchedChangedFiles: []`; `verify:supervisor-contracts`; `verify:supervisor-plan`; `verify:dist-drift`; full `npm run verify:core` passed 44 commands and wrote `.runtime/reports/generated/verify-core.json`.
+
+Route gaps: none for P1.2. The Python source-scan contract now has a real package script and independent verification route in addition to metadata `sourceRefs`.
+
+Checks intentionally skipped: `verify:core:main-thread` remains an explicit browser/dev-server/Playwright lane outside this P1.2 delivery.
+
+Recommendation status: integrated after push; start P1.3 from `origin/main@b80b73ea` or newer.
 
 ## Scenario Forge P1.1 RendererRuntimeContext First Receiver 2026-07-09
 
