@@ -1,31 +1,48 @@
 # Worktree Registry
 
-Last updated: 2026-07-08 Scenario Forge P0.1 core verification post-push truth
+Last updated: 2026-07-08 local/cloud sync and branch cleanup truth
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Latest pushed default-main baseline at P0.1 integration start is `origin/main@5b027772f282aa8cc472e039367e9f653c2417e3`.
-- P0.1 branch `codex/p0-1-verify-core-integration-20260708` is pushed to `origin/main`, and the integration worktree is the clean synced local audit copy.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` remains `main@16abfd5f`, behind `origin/main` with broad local WIP. It was preserved untouched.
-- Audit result: recent `origin/main` had no new functional commits after the 2026-07-05 audit baseline. The confirmed safe repair was the parent WIP's landing aria-label fallback alignment, replayed on a clean current-main worktree.
-- Parent WIP review result: independent code-reviewer returned REQUEST CHANGES and architect returned BLOCK because the dirty checkout mixes governance, SF-ATS, renderer boundary, registry/archive, and landing edits and would regress current supervisor/release-smoke/renderer contracts if integrated as-is.
-- Live test/build owner: main Codex thread owned all local Node/SF-ATS verification in this P0.1 closeout. Browser/dev-server E2E and Pages dist were not started.
+- Default-main baseline is `main@7d7bd7a2ea3fd6b880204600ffb3915a43241438`, matching `origin/main@7d7bd7a2ea3fd6b880204600ffb3915a43241438`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main`; `git status --short --branch` reports `## main...origin/main`.
+- The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
+- The P0.1 audit worktree `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` was removed after its HEAD matched `origin/main`.
+- Live test/build owner: main Codex thread owns any follow-up verification for this cleanup. Browser/dev-server E2E and Pages dist remained out of scope for this sync-only pass.
 
 ## Recommended Order
 
-1. Treat the latest pushed `origin/main` as the P0.1 baseline and confirm exact hashes with `git rev-parse HEAD origin/main` during any future handoff.
-2. Refresh or split the parent checkout WIP in a separate integration task. Rebase any retained pieces onto current `origin/main`, with `AGENTS.md`, SF-ATS static contracts, renderer boundary docs/tests, and bulk archive cleanup as separate topics.
-3. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner; this P0.1 pass ran child-safe and dry-run checks.
+1. Treat `main@7d7bd7a2` / `origin/main@7d7bd7a2` as the current synchronized baseline.
+2. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
+3. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
+4. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P0.1 push on 2026-07-08. The P0.1 worktree is retained as the clean synced local copy for post-push audit because the parent checkout has broad WIP.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the 2026-07-08 sync cleanup.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@16abfd5f` | behind current `origin/main` | blocked / unrelated WIP | Dirty summary still includes `AGENTS.md`, registry/archive move WIP, landing/lessons/package edits, renderer boundary edits, SF-ATS files, and untracked supervisor/P0.1 files from the parent checkout. | Parent checkout was reviewed read-only for integration safety and preserved untouched. | Red with direct integration because it overlaps package, supervisor, renderer boundary, registry, archive truth surfaces, and is stale. | Leave parent WIP untouched. Split/rebase retained topics onto current `origin/main` in a separate integration task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` | `codex/p0-1-verify-core-integration-20260708` | current `origin/main` | synced / pushed | Clean after push. Hot files in pushed commit: `package.json`, `tools/run_core_verification.mjs`, `tools/select_verification_targets.mjs`, `tools/test_route_registry.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry closeout. | Post-push `HEAD` equals `origin/main`; `HEAD...origin/main` is `0 0`. Validation listed in the delivery package passed before push. | Yellow with future SF-ATS routing/package edits; green for renderer runtime, landing, Pages dist, browser, appearance, and transport files. | Keep as the clean synced local audit copy until the parent WIP is reconciled, then remove through normal worktree cleanup. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | `main@7d7bd7a2` | current `origin/main@7d7bd7a2` | synced / clean | No dirty files. | `git worktree list --porcelain` lists only this path; `git status --short --branch` reports `## main...origin/main`; `git rev-list --left-right --count main...origin/main` reports `0 0`. | Green for current cleanup state. Future feature work should create a fresh worktree. | Use as synchronized main checkout. |
+
+## Local/Cloud Sync Cleanup 2026-07-08
+
+1. Created recovery branch `codex/stale-main-wip-preserve-20260708` from stale local `main@16abfd5f` and split the old dirty checkout into three Lore commits:
+   - `a48faea3` docs/archive cleanup recovery.
+   - `4e5251aa` verification tooling recovery.
+   - `199828a2` coordination notes recovery.
+2. Pushed recovery branch to `origin/codex/stale-main-wip-preserve-20260708` for cloud backup.
+3. Fast-forwarded local `main` from `16abfd5f` to `origin/main@7d7bd7a2`.
+4. Removed clean synced worktree `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` and pruned worktree metadata.
+5. Deleted local branches already covered by `origin/main`: `codex/p0-1-verify-core-integration-20260708`, `codex/p7-public-demo-release-20260702`, `codex/phase6c-main-integration`, `codex/phase6c-sample-switcher`, `codex/phase6d-sample-export-proof`, `codex/phase6e-public-demo-qa-readiness`, and `codex/renderer-integration-sweep-p47-p50-20260701`.
+6. Deleted merged remote branches already covered by `origin/main`: `origin/codex/comment-automation-20260701`, `origin/codex/p48-map-hover-interaction-owner-20260701`, `origin/codex/p49-renderer-transaction-reset-owner-20260701`, `origin/codex/p50-render-pass-cache-host-preflight-20260701`, `origin/codex/p7-public-demo-release-20260702`, `origin/codex/p8a-release-smoke-20260702`, `origin/codex/phase6c-sample-switcher`, `origin/codex/phase6e-public-demo-qa-readiness`, `origin/codex/renderer-hit-canvas-scheduling-p47`, `origin/codex/renderer-integration-sweep-p47-p50-20260701`, `origin/codex/sf-ats-wp1-5-route-coverage-20260702`, `origin/codex/sf-ats-wp1-clean-20260702`, and `origin/codex/sf-ats-wp2-dossier-plan-20260702`.
+
+Retained local branches: `codex/hgo-preview-projection-base-replace@7a95e26c`, `codex/preserve-parent-wip-before-branch-cleanup-20260623@f64e3e62`, `codex/stale-main-wip-preserve-20260708@199828a2`, and `codex/wgi-post-push-truth-20260622@d802cfc8`.
+
+Retained remote branches: `origin/codex/hgo-preview-projection-base-replace@7a95e26c`, `origin/codex/stale-main-wip-preserve-20260708@199828a2`, and `origin/codex/tno-toponym-zh-audit@17de2d57`.
+
+Validation for the cleanup itself: `git fetch --all --prune`; `git worktree list --porcelain`; `git status --short --branch`; `git branch --merged origin/main`; `git branch -r --merged origin/main`. Product runtime tests were not run because this pass only changed git topology and registry truth after preserving stale WIP.
 
 ## Scenario Forge P0.1 Core Verification 2026-07-08
 
