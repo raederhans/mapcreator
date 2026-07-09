@@ -176,6 +176,10 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
     return route.domain === "test-routing";
   }
 
+  if (changedFile.startsWith("tools/verification/") || changedFile === "docs/testing/verification-metadata.md") {
+    return route.domain === "test-routing";
+  }
+
   if (changedFile === "tools/run_core_verification.mjs" || changedFile === "docs/testing/verify-core.md") {
     return route.domain === "test-routing";
   }

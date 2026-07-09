@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = REPO_ROOT / "js" / "main.js"
 DEFERRED_DETAIL_PROMOTION_JS = REPO_ROOT / "js" / "bootstrap" / "deferred_detail_promotion.js"
+STARTUP_READY_HANDOFF_JS = REPO_ROOT / "js" / "bootstrap" / "startup_ready_handoff.js"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 SCENARIO_REFRESH_RUNTIME_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "scenario_refresh_runtime.js"
 SCENARIO_CHUNK_PROMOTION_HELPERS_JS = REPO_ROOT / "js" / "core" / "renderer" / "scenario_chunk_promotion_helpers.js"
@@ -50,7 +51,7 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
 
     def test_detail_promotion_recolors_then_defers_political_reconcile(self):
         owner_content = DEFERRED_DETAIL_PROMOTION_JS.read_text(encoding="utf-8")
-        donor_content = MAIN_JS.read_text(encoding="utf-8")
+        startup_ready_handoff_content = STARTUP_READY_HANDOFF_JS.read_text(encoding="utf-8")
 
         self.assertIn(
             "refreshMapDataForScenarioApply({ suppressRender: true });",
@@ -104,20 +105,30 @@ class MainDeferredDetailPromotionBoundaryContractTest(unittest.TestCase):
             ),
         )
         self.assertIn(
-            'const POST_READY_DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";',
-            donor_content,
+            'const DETAIL_PROMOTION_POLITICAL_RECONCILE_TASK_KEY = "post-ready-detail-promotion-political-reconcile";',
+            startup_ready_handoff_content,
         )
         self.assertRegex(
-            donor_content,
+            startup_ready_handoff_content,
             re.compile(
                 r"function schedulePostReadyPoliticalReconcile\(reason = \"detail-promotion-political-reconcile\"\) \{[\s\S]*?"
-                r"if \(!runtimeState\.detailPromotionCompleted\) \{[\s\S]*?"
+                r"if \(!targetRuntime\.detailPromotionCompleted\) \{[\s\S]*?"
                 r"return false;[\s\S]*?"
                 r"return schedulePostReadyPoliticalReconcileTask\(reason\);",
                 re.S,
             ),
         )
-        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", donor_content)
+        self.assertRegex(
+            startup_ready_handoff_content,
+            re.compile(
+                r"function schedulePostReadyPoliticalReconcileTask\(reason = \"detail-promotion-political-reconcile\"\) \{[\s\S]*?"
+                r"if \(!targetRuntime\.detailPromotionCompleted\) \{[\s\S]*?"
+                r"schedulePostReadyPoliticalReconcileTask\(normalizedReason\);[\s\S]*?"
+                r"return false;",
+                re.S,
+            ),
+        )
+        self.assertIn("schedulePostReadyPoliticalReconcileTask(normalizedReason);", startup_ready_handoff_content)
 
     def test_main_keeps_wrappers_and_ready_state_facade(self):
         donor_content = MAIN_JS.read_text(encoding="utf-8")

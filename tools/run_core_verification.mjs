@@ -3,105 +3,19 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import {
+  buildVerifyCoreDefaultGroups,
+  buildVerifyCoreMainThreadGroup,
+  getVerifyCoreOptionalMainThreadCommands,
+} from "./verification/verification_metadata_helpers.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "verify-core.md");
 
-const DEFAULT_GROUPS = [
-  {
-    id: "infra",
-    title: "Infrastructure contracts",
-    commands: [
-      "verify:architecture-boundaries",
-      "verify:state-write-allowlist",
-      "verify:test-import-graph",
-      "verify:test:e2e-layers",
-      "verify:test-console-allowlist",
-      "verify:test-timeout-guardrails",
-      "node tools/select_verification_targets.mjs --check",
-      "verify:supervisor-contracts",
-      "verify:supervisor-plan",
-    ],
-  },
-  {
-    id: "python-quick",
-    title: "Quick Python contracts",
-    commands: [
-      "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
-    ],
-  },
-  {
-    id: "startup-node",
-    title: "Startup Node contracts",
-    commands: [
-      "test:node:post-ready-scheduler",
-      "test:node:main-runtime-diagnostics",
-      "test:node:render-runtime-binding",
-      "test:node:startup-failure-recovery",
-      "test:node:startup-ready-handoff",
-      "test:node:deferred-bootstrap",
-      "test:node:main-bootstrap-wiring",
-    ],
-  },
-  {
-    id: "renderer-owner",
-    title: "Renderer owner contracts",
-    commands: [
-      "test:node:render-pass-catalog",
-      "test:node:render-pipeline-catalog",
-      "test:node:renderer-render-request-boundary",
-      "test:node:renderer-render-phase-lifecycle",
-      "test:node:renderer-hit-canvas-scheduling-inventory",
-      "test:node:render-pass-cache-host-owner-suite",
-      "test:node:render-pass-commit-accounting-owner-suite",
-      "test:node:hit-canvas-scheduling-owner-suite",
-      "test:node:map-interaction-event-binding-owner",
-      "test:node:visible-frame-diagnostics",
-      "test:node:render-cache-owner",
-      "test:node:render-transform-reuse-policy-owner",
-      "test:node:viewport-read-model-owner",
-      "test:node:viewport-command-owner",
-    ],
-  },
-  {
-    id: "scenario-project-chunk",
-    title: "Scenario, project, and chunk contracts",
-    commands: [
-      "verify:scenario-contracts:strict",
-      "test:node:scenario-chunk-contracts",
-      "test:node:scenario-apply-transaction-ownership",
-      "test:node:scenario-lifecycle-runtime-behavior",
-      "test:node:scenario-runtime-state-behavior",
-      "test:node:annotation-productization",
-    ],
-  },
-  {
-    id: "pages",
-    title: "Pages contract checks",
-    commands: [
-      "verify:pages-dist",
-      "verify:dist-drift",
-    ],
-  },
-];
-
-const MAIN_THREAD_GROUP = {
-  id: "main-thread-e2e",
-  title: "Main-thread E2E checks",
-  commands: [
-    "test:e2e:smoke",
-    "test:e2e:scenario-apply-concurrency",
-    "test:e2e:project-save-load",
-    "test:e2e:interaction-funnel",
-  ],
-};
-
-const OPTIONAL_MAIN_THREAD_COMMANDS = [
-  "test:e2e:tno-contracts",
-  "test:e2e:water-rendering",
-  "test:e2e:city-rendering",
-];
+const DEFAULT_GROUPS = buildVerifyCoreDefaultGroups();
+const MAIN_THREAD_GROUP = buildVerifyCoreMainThreadGroup();
+const OPTIONAL_MAIN_THREAD_COMMANDS = getVerifyCoreOptionalMainThreadCommands();
 
 export function parseArgs(argv) {
   const args = {

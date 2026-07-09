@@ -1207,6 +1207,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const setMapDataTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "set_map_data_transaction_owner.js");
   const renderRequestBoundaryOwnerSource = readRepoFile("js", "core", "map_renderer", "render_request_boundary_owner.js");
   const renderPhaseLifecycleOwnerSource = readRepoFile("js", "core", "map_renderer", "render_phase_lifecycle_owner.js");
+  const renderPassCommitAccountingOwnerSource = readRepoFile("js", "core", "map_renderer", "render_pass_commit_accounting_owner.js");
   const zoomInteractionLifecycleOwnerSource = readRepoFile("js", "core", "renderer", "zoom_interaction_lifecycle_owner.js");
   const cityPointsRenderOwnerSource = readRepoFile("js", "core", "renderer", "city_points_render_owner.js");
   const interactionRecoveryBlockedBody =
@@ -1384,11 +1385,11 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function runSetMapDataTransaction\(options = \{\}\) \{[\s\S]*?runEffect\("clearPendingPoliticalColorEdit", \{[\s\S]*?force: true,[\s\S]*?resetReason: SET_MAP_DATA_REASON,[\s\S]*?paintSource: SET_MAP_DATA_REASON,[\s\S]*?\}\);[\s\S]*?runEffect\("clearRenderPassReferenceTransforms"\);[\s\S]*?runEffect\("clearLastGoodFrame", SET_MAP_DATA_REASON\);/.test(setMapDataTransactionOwnerSource),
     politicalFullReferenceOnlyWrittenByFullPass:
       (() => {
-        const body = rendererSource.match(/function renderPassToCache\(passName, drawFn, transform, timings\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";
-        return body.includes("setPassReferenceTransform(passName, transform);")
-          && /if \(passName === "political"\) \{[\s\S]*?setPassFullReferenceTransform\(passName, transform\);[\s\S]*?\}/.test(body)
-          && (body.match(/setPassFullReferenceTransform\(/g) || []).length === 1
-          && !/if \(passName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(body);
+        const body = renderPassCommitAccountingOwnerSource.match(/function commitRenderPass\(\{[\s\S]*?\r?\n  \}\r?\n\r?\n  return Object\.freeze/)?.[0] || "";
+        return body.includes("runEffect(trace, \"setPassReferenceTransform\", normalizedPassName, transform);")
+          && /if \(normalizedPassName === "political"\) \{[\s\S]*?if \(politicalFineCacheReady\) \{[\s\S]*?runEffect\(trace, "setPassFullReferenceTransform", normalizedPassName, transform\);[\s\S]*?\} else \{[\s\S]*?runEffect\(trace, "clearPassFullReferenceTransforms", \[normalizedPassName\]\);[\s\S]*?\}/.test(body)
+          && (body.match(/"setPassFullReferenceTransform"/g) || []).length === 1
+          && !/if \(normalizedPassName !== "political"\)[\s\S]*?setPassFullReferenceTransform/.test(body);
       })(),
     politicalPartialRequiresFullReferenceBaseline:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?hasPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("missing-full-reference-transform"\)[\s\S]*?getPassFullReferenceTransform\("political"\)[\s\S]*?fallback\("full-reference-transform-mismatch"\)/.test(rendererSource),

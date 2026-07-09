@@ -8,6 +8,7 @@
 - `npm run verify:core`：运行默认的确定性核心验证计划。
 - `npm run verify:core:main-thread`：在默认计划上追加显式的 main-thread E2E 组。
 - `npm run test:node:verify-core-runner`：验证 runner 自身行为。
+- `npm run test:node:verification-metadata`：验证 metadata、route registry、selector 和 verify:core plan 一致。
 
 默认报告路径：
 
@@ -24,6 +25,8 @@
 - `renderer-owner`
 - `scenario-project-chunk`
 - `pages`
+
+这些分组由 `tools/verification/verification_domains.mjs` 生成，`tools/run_core_verification.mjs` 只负责执行、报告和失败即停。修改命令归属时先更新 metadata，再运行 `npm run test:node:verification-metadata`。
 
 默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同，并默认保留 `pages` 分组：
 
@@ -50,6 +53,8 @@
 ## 路由覆盖
 
 SF-ATS route registry 会把 runner、runner 测试、package scripts 和这份文档都映射到 `test-routing`。如果改动涉及 `package.json`、`package-lock.json`、`tools/run_core_verification.mjs` 或 `docs/testing/verify-core.md`，selector 应该命中同一个 domain。
+
+验证 metadata 自身的 route 信息也来自同一份 metadata。改动 `tools/verification/**` 或 `docs/testing/verification-metadata.md` 时，selector 应该命中 `test-routing`，并推荐 `test:node:verification-metadata`。
 
 ## 失败排查
 

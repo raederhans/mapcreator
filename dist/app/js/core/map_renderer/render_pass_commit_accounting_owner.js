@@ -111,6 +111,7 @@ export function createRenderPassCommitAccountingOwner({ effects = {}, getters = 
       const identity = runGetter(trace, "getVisibleFrameIdentity", transform);
       const politicalDataStage = String(drawResult?.politicalDataStage || identity.politicalDataStage || "unknown");
       const fullPoliticalReady = !!(drawResult?.fullPoliticalReady ?? identity.fullPoliticalReady);
+      // political pass 的 full reference 只在 fine cache 可用时保留，避免 coarse 帧污染后续复用判断。
       politicalFineCacheReady = politicalDataStage === "fine"
         && !!(drawResult?.finePoliticalCacheReady ?? identity.finePoliticalCacheReady);
       cache.politicalPassSceneGeneration = Number(drawResult?.sceneGeneration ?? identity.sceneGeneration ?? 0);

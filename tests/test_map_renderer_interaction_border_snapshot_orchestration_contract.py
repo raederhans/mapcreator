@@ -5,23 +5,31 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+RENDER_CACHE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_cache_owner.js"
+ZOOM_INTERACTION_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "zoom_interaction_lifecycle_owner.js"
 
 
 class MapRendererInteractionBorderSnapshotOrchestrationContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        cls.render_cache_owner_content = RENDER_CACHE_OWNER_JS.read_text(encoding="utf-8")
+        cls.zoom_interaction_lifecycle_owner_content = ZOOM_INTERACTION_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
 
     def test_borders_invalidation_still_invalidates_interaction_snapshot(self):
-        self.assertIn('if (targetPassNames.includes("borders")) {', self.renderer_content)
+        self.assertIn('targetPassNames.includes("borders")', self.renderer_content)
+        self.assertIn("hostFollowUps.needsInteractionBorderSnapshotInvalidation", self.renderer_content)
         self.assertIn('invalidateInteractionBorderSnapshot(reason);', self.renderer_content)
 
     def test_clear_reference_transform_for_borders_still_invalidates_snapshot(self):
-        self.assertIn('invalidateInteractionBorderSnapshot("clear-reference-transform");', self.renderer_content)
+        self.assertIn('const needsInteractionBorderSnapshotInvalidation = targetPassNames.includes("borders");', self.render_cache_owner_content)
+        self.assertIn("clearPassFullReferenceTransforms(targetPassNames);", self.render_cache_owner_content)
+        self.assertIn('invalidateInteractionBorderSnapshot(mutation.reason || "clear-reference-transform");', self.renderer_content)
         self.assertRegex(
             self.renderer_content,
             re.compile(
-                r'if \(targetPassNames\.includes\("borders"\)\) \{\s*invalidateInteractionBorderSnapshot\("clear-reference-transform"\);',
+                r"if \(hostFollowUps\.needsInteractionBorderSnapshotInvalidation \|\| mutation\.interactionBorderSnapshotInvalidated\) \{\s*"
+                r'invalidateInteractionBorderSnapshot\(mutation\.reason \|\| "clear-reference-transform"\);',
                 re.S,
             ),
         )
@@ -39,10 +47,14 @@ class MapRendererInteractionBorderSnapshotOrchestrationContractTest(unittest.Tes
         self.assertIn(".scale(k, k);", body)
 
     def test_zoom_start_still_captures_interaction_border_snapshot(self):
+        self.assertIn("effects.captureInteractionBorderSnapshot?.(getCurrentTransform());", self.zoom_interaction_lifecycle_owner_content)
+        self.assertIn("captureInteractionBorderSnapshot,", self.renderer_content)
         self.assertRegex(
-            self.renderer_content,
+            self.zoom_interaction_lifecycle_owner_content,
             re.compile(
-                r'\.on\("start", \(\) => \{[\s\S]*?captureInteractionBorderSnapshot\(runtimeState\.zoomTransform \|\| globalThis\.d3\.zoomIdentity\);',
+                r"function handleZoomStart\(\) \{[\s\S]*?"
+                r"effects\.setRenderPhase\?\.\(renderPhaseInteracting\);[\s\S]*?"
+                r"effects\.captureInteractionBorderSnapshot\?\.\(getCurrentTransform\(\)\);",
                 re.S,
             ),
         )

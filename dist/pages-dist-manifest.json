@@ -45842,7 +45842,7 @@
     },
     {
       "path": "app/js/core/map_renderer/render_pass_cache_host_owner.js",
-      "size_bytes": 3733,
+      "size_bytes": 3867,
       "source_kind": "dist"
     },
     {
@@ -45852,7 +45852,7 @@
     },
     {
       "path": "app/js/core/map_renderer/render_pass_commit_accounting_owner.js",
-      "size_bytes": 5260,
+      "size_bytes": 5384,
       "source_kind": "dist"
     },
     {
@@ -47529,7 +47529,7 @@
     {
       "file_count": 9419,
       "path": "app",
-      "size_bytes": 965587552
+      "size_bytes": 965587810
     },
     {
       "file_count": 57,
@@ -47562,5 +47562,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972152951
+  "total_bytes": 972153209
 }

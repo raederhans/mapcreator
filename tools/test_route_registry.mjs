@@ -1,6 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+  buildVerificationMetadataRoutes,
+} from "./verification/verification_metadata_helpers.mjs";
+import {
+  VERIFICATION_CI_PROFILES,
+  VERIFICATION_COSTS,
+  VERIFICATION_EXECUTION_OWNERS,
+  VERIFICATION_LAYERS,
+  VERIFICATION_RESOURCE_LOCKS,
+} from "./verification/verification_domains.mjs";
 
 export const REPO_ROOT = process.cwd();
 export const E2E_MANIFEST_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-layer-manifest.json");
@@ -30,21 +40,11 @@ export const ROUTE_GUIDANCE_FIELDS = Object.freeze([
 ]);
 const ROUTE_GUIDANCE_ARRAY_FIELDS = new Set(["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"]);
 
-export const RESOURCE_LOCKS = Object.freeze([
-  "browser-dev-server",
-  "perf-dev-server",
-  "playwright-browser",
-  "dist",
-  ".runtime-output",
-  "scenario-data",
-  "heavy-geo",
-  "checkpoint-builder",
-]);
-
-export const EXECUTION_OWNERS = Object.freeze(["child-safe", "main-thread", "ci-only"]);
-export const COSTS = Object.freeze(["fast", "contract", "heavy"]);
-export const LAYERS = Object.freeze(["smoke", "contract", "regression", "feature", "heavy"]);
-export const CI_PROFILES = Object.freeze(["pr-fast", "pr-smoke", "full", "deploy-minimal", "perf-pr-gate", "scenario-contract-matrix"]);
+export const RESOURCE_LOCKS = VERIFICATION_RESOURCE_LOCKS;
+export const EXECUTION_OWNERS = VERIFICATION_EXECUTION_OWNERS;
+export const COSTS = VERIFICATION_COSTS;
+export const LAYERS = VERIFICATION_LAYERS;
+export const CI_PROFILES = VERIFICATION_CI_PROFILES;
 
 const INFRASTRUCTURE_ROUTES = [
   {
@@ -792,8 +792,11 @@ export function buildPythonRoutes() {
 }
 
 export function buildRouteIndex() {
+  const metadataRoutes = buildVerificationMetadataRoutes();
+  const metadataRouteIds = new Set(metadataRoutes.map((route) => route.id));
   return [
-    ...INFRASTRUCTURE_ROUTES,
+    ...metadataRoutes,
+    ...INFRASTRUCTURE_ROUTES.filter((route) => !metadataRouteIds.has(route.id)),
     ...buildE2eRoutes(),
     ...buildDirectE2EScriptRoutes(),
     ...buildNodeRoutes(),

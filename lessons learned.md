@@ -543,3 +543,6 @@
 
 ### Owner 迁移后同步源码扫描合同
 - Renderer owner extraction 完成后，同步检查 Python source-scan contract 是否仍锚定旧 `js/main.js` 或 `js/core/map_renderer.js` 文本形态；合同应指向当前 owner 文件或升级为行为测试，否则 `verify:core` 会在运行时代码无变更时被旧扫描规则阻塞。
+
+### Full verify:core 要在 clean HEAD 收口
+- `verify:core` 里部分 inventory 会要求 checked-in dist 无 staged/unstaged diff，而 `verify:dist-drift` 会要求 builder 输出与 index 一致；生成 dist 同步后先提交，再在 clean HEAD 上跑 full gate，避免两个合同在脏 worktree 中互相卡住。
