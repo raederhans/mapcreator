@@ -375,9 +375,9 @@ test("projection/path consumers receive handles through getters without importin
     assertIncludes(projectedBoundsFactorySource, token, "map_renderer must inject projection/path getters into projected geometry bounds owner factory");
   }
   for (const token of [
-    "getProjection: () => rendererSurfaceHost.getProjection()",
-    "getPathSvg: () => rendererSurfaceHost.getPathSvg()",
-    "getZoomIdentity: () => globalThis.d3?.zoomIdentity",
+    "getProjection: () => viewportContext.getProjection()",
+    "getPathSvg: () => viewportContext.getPathSvg()",
+    "getZoomIdentity: viewportHelpers.getZoomIdentity",
     "getProjectedFeatureBounds",
   ]) {
     assertIncludes(viewportReadModelFactorySource, token, "map_renderer must inject projection/path read-model dependencies into viewport read model owner factory");

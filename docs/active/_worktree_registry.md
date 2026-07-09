@@ -1,31 +1,83 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.2 renderer runtime context render cache read model integrated
+Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport validated, ready to commit
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@0614f9a`, matching `origin/main@0614f9a` after the P1.1 registry closeout push.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main` before P1.1 edits; `git status --short --branch` reports `## main...origin/main`.
+- Default-main baseline for P1.3 is `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` started clean on `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator`.
-- Live test/build owner: main Codex thread owns P1.2 implementation and deterministic verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
+- `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator` at HEAD `5d712c4b92ecb910a4aeb916ad11e195852d4e5f` on `refs/heads/main`.
+- Verification owner: main Codex thread owned P1.3 deterministic validation, Pages mirror sync, dist drift, and full `verify:core`. Browser/dev-server/Playwright and `verify:core:main-thread` were not run.
 
 ## Recommended Order
 
-1. Finish P1.2 on the current main checkout, keeping `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, click selection, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
-2. Run the P1.2 child-safe validation set, changed-file selector dry-run, `verify:dist-drift` if renderer source mirror changed, and full `verify:core` before recommending P1.3.
+1. Commit the validated P1.3 source/test/tooling/docs/Pages mirror patch from the current main checkout.
+2. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
 3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-5. Keep browser/dev-server and `verify:core:main-thread` verification reserved for their live-process owner.
+5. Keep browser/dev-server/Playwright and `verify:core:main-thread` as explicit not-run lanes for this deterministic P1.3 closeout.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P1.1 pre-edit check.
+Current rows reflect `git worktree list --porcelain` and current P1.3 validation state.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.2 renderer runtime context render cache read model on `main@b80b73ea` | base `origin/main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5` | integrated | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, render cache context tests, Python boundary contract, verification routing, `package.json`, P1.2 docs, this registry, and generated Pages mirror files. | `git worktree list --porcelain` lists only this path; `npm run verify:core` passed 44 commands and wrote `.runtime/reports/generated/verify-core.json`; changed-file selector dry-run wrote `.runtime/reports/generated/p1-2-adaptive-selection-with-dist.json` with `unmatchedChangedFiles: []`. | Yellow with future renderer runtime context receiver work, verification routing, and generated Pages mirror sync. Green for public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` behavior by explicit non-goals. | P1.2 functional commit `b80b73ea` is integrated; proceed to P1.3 from `origin/main@b80b73ea` or newer. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.3 renderer runtime context projection + viewport patch on `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | base `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | validated / ready to commit | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P1.3 context/receiver/static tests, two stale inventory assertion updates, verification routing, `package.json`, checked-in Pages mirrors, P1.3 docs, and this registry. No public facade, UI, CSS, scenario data, draw/pass/click-selection changes. | `git worktree list --porcelain` lists only this path at HEAD `5d712c4b92ecb910a4aeb916ad11e195852d4e5f`; changed-file selector dry-run for the complete staged P1.3 patch wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); `verify:pages-dist`, `verify:dist-drift`, supervisor contracts/plan, and full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`. | Green for active worktree overlap because only the main worktree exists. Yellow for future renderer runtime context, verification routing, inventory, and Pages mirror edits. | Ready to commit as P1.3; browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. |
+
+## Scenario Forge P1.3 RendererRuntimeContext Projection + Viewport Read Model 2026-07-09
+
+Planned change:
+
+1. Add real optional `projection` and `viewport` sections to `RendererRuntimeContext` with frozen constants/helpers/accessors and sanitized description output.
+2. Make projection constants finite, viewport constants finite, and require `minZoomScale < maxZoomScale`.
+3. Add `getProjectionReceiverContext()` and `getViewportReceiverContext()` as narrow read-model receivers.
+4. Make `getRendererProjectionPathOwner()`, `getViewportReadModelOwner()`, and `getViewportCommandOwner()` consume context sections while keeping owner APIs and algorithms unchanged.
+5. Add focused behavior/static tests, package scripts, verification metadata routes, and active docs.
+
+Non-goals: no public facade change, no `drawCanvas()` migration, no pass drawing migration, no `renderPassToCache()` behavior change, no render-order change, no click selection migration, no water/special/dev selection migration, no scenario/UI/CSS/data change, no package dependency change, no dev server, no Playwright, and no browser lane.
+
+Live owner: main thread owned deterministic P1.3 validation, Pages mirror sync, dist drift, and full `verify:core`. Browser/dev-server/Playwright and `verify:core:main-thread` were not run.
+
+What changed:
+
+1. `RendererRuntimeContext` now exposes optional `projection` and `viewport` read models with frozen wrapper objects and JSON-safe descriptions.
+2. `getRendererRuntimeContext()` now assembles projection and viewport descriptors from existing constants, helpers, and `rendererSurfaceHost` read accessors.
+3. `getRendererProjectionPathOwner()` now receives D3 and constants through `rendererContext.projection`, while setter access remains on `rendererContext.surface.host`.
+4. `getViewportReadModelOwner()` and `getViewportCommandOwner()` now receive runtime state, constants, helpers, and surface read access through `rendererContext.viewport`.
+5. P1.3 Node/Python tests and verification metadata routes now lock the context boundary.
+
+Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`.
+
+Test files: `tests/renderer_runtime_context_foundation_behavior.test.mjs`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/renderer_runtime_context_projection_viewport_behavior.test.mjs`, `tests/renderer_surface_host_inventory_boundary.test.mjs`, `tests/test_map_renderer_projection_viewport_context_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/active/renderer-runtime-context-projection-viewport-p1-3-20260709.md`, `docs/active/_worktree_registry.md`.
+
+Metadata / package files: `tools/verification/verification_domains.mjs`, `package.json`.
+
+Generated Pages mirror files: `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/renderer_runtime_context.js`, `dist/pages-dist-manifest.json`.
+
+Temporary files: ignored reports under `.runtime/reports/generated/`, including `p1-3-adaptive-selection.json`, `p1-3-adaptive-selection.md`, and `verify-core.json`.
+
+Diff summary: P1.3 extends the private runtime context contract, migrates three construction paths to context-derived reads, syncs checked-in Pages mirrors, and refreshes two stale inventory assertions. It does not modify owner modules, public facade, draw/pass functions, scenario/UI/CSS/data, or production dependencies.
+
+Commit status: not committed; current state is validated and ready to commit.
+
+Base divergence: base and HEAD starting point are `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`. Current local `main` is dirty with the validated P1.3 patch, and `git worktree list --porcelain` lists only `C:\Users\raede\Desktop\dev\mapcreator` on `main`.
+
+Potential conflicts: green for active worktree overlap because only the main worktree exists. Yellow with future edits to `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, runtime context tests, inventory tests, Python boundary scans, verification metadata, this registry, and generated Pages mirrors. Green with public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` because P1.3 does not touch those surfaces.
+
+Validation passed: syntax checks for changed JS/MJS; runtime context foundation, receiver, render-cache, and projection/viewport tests; projection path lifecycle, viewport read model, and viewport command owner tests; Python render-cache boundary plus P1.3 projection/viewport boundary; surface host inventory; verification metadata and verify-core runner; architecture boundaries, state-write allowlist, and test import graph; selector schema check; changed-file selector dry-run for 18 staged files wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6`; supervisor contracts and plan; `verify:pages-dist`; `verify:dist-drift`; full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`.
+
+Route gaps: none for P1.3. Routes were added for `test:node:renderer-runtime-context-projection-viewport` and `test:python:map-renderer-projection-viewport-context-boundary`; the complete staged patch selector dry-run covered 18 staged files and reported `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks).
+
+Review follow-ups: `tests/renderer_projection_path_lifecycle_inventory_boundary.test.mjs` now expects viewport context getter tokens; `tests/renderer_render_phase_lifecycle_inventory.test.mjs` P43 dist untouched check now scopes to the P43 owner mirror because shared `dist/app/js/core/map_renderer.js` changes when source `map_renderer.js` changes.
+
+Checks intentionally skipped: `verify:core:main-thread`, browser, dev-server, and Playwright lanes were not run. Deterministic core passed, and `verify:core` skipped explicit E2E main-thread commands by default.
+
+Recommendation status: validated / ready to commit as P1.3.
 
 ## Scenario Forge P1.2 RendererRuntimeContext Render Cache Read Model 2026-07-09
 

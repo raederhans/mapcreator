@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 887148,
+      "size_bytes": 891835,
       "source_kind": "dist"
     },
     {
@@ -45867,7 +45867,7 @@
     },
     {
       "path": "app/js/core/map_renderer/renderer_runtime_context.js",
-      "size_bytes": 11981,
+      "size_bytes": 21166,
       "source_kind": "dist"
     },
     {
@@ -47534,7 +47534,7 @@
     {
       "file_count": 9420,
       "path": "app",
-      "size_bytes": 965602516
+      "size_bytes": 965616388
     },
     {
       "file_count": 57,
@@ -47567,5 +47567,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972168053
+  "total_bytes": 972181925
 }

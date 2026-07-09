@@ -192,15 +192,15 @@ test("map_renderer delegates surface handle storage to the host", () => {
   }
 });
 
-test("owner getters read surface handles through rendererSurfaceHost", () => {
+test("owner getters read surface handles through rendererSurfaceHost or runtime context read models", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
 
   assertFunctionIncludes(
     rendererSource,
     "function getRenderCacheOwner() {",
     "function getProjectedGeometryBoundsOwner() {",
-    ["getContext: () => rendererSurfaceHost.getContext()"],
-    "render cache owner must receive the host drawing context",
+    ["getContext: () => renderCacheContext.getMainContext()"],
+    "render cache owner must receive the host drawing context through the runtime context",
   );
   assertFunctionIncludes(
     rendererSource,
@@ -218,21 +218,21 @@ test("owner getters read surface handles through rendererSurfaceHost", () => {
     "function getViewportReadModelOwner() {",
     "function getViewportCommandOwner() {",
     [
-      "getProjection: () => rendererSurfaceHost.getProjection()",
-      "getPathSvg: () => rendererSurfaceHost.getPathSvg()",
-      "getZoomIdentity: () => globalThis.d3?.zoomIdentity",
+      "getProjection: () => viewportContext.getProjection()",
+      "getPathSvg: () => viewportContext.getPathSvg()",
+      "getZoomIdentity: viewportHelpers.getZoomIdentity",
     ],
-    "viewport read model owner must receive projection/path/zoom identity getters",
+    "viewport read model owner must receive projection/path/zoom identity getters through the runtime context",
   );
   assertFunctionIncludes(
     rendererSource,
     "function getViewportCommandOwner() {",
     "function getViewportResizeLifecycleOwner() {",
     [
-      "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior()",
-      "getInteractionRect: () => rendererSurfaceHost.getInteractionRect()",
+      "getZoomBehavior: () => viewportContext.getZoomBehavior()",
+      "getInteractionRect: () => viewportContext.getInteractionRect()",
     ],
-    "viewport command owner must receive zoom and interaction rect handles",
+    "viewport command owner must receive zoom and interaction rect handles through the runtime context",
   );
   assertFunctionIncludes(
     rendererSource,

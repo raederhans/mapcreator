@@ -96,8 +96,71 @@ test("map_renderer lazily owns the private RendererRuntimeContext receiver", () 
     "RendererRuntimeContext.renderCache receiver is required.",
     "rendererContext.renderCache.getRuntimeState() !== runtimeState",
     "rendererContext.renderCache.getSurfaceHost() !== rendererSurfaceHost",
+    "function getProjectionReceiverContext()",
+    "const rendererContext = getRenderPassReceiverContext();",
+    "RendererRuntimeContext.projection receiver is required.",
+    "rendererContext.projection.getProjection() !== rendererSurfaceHost.getProjection()",
+    "rendererContext.projection.getPathSvg() !== rendererSurfaceHost.getPathSvg()",
+    "rendererContext.projection.getPathCanvas() !== rendererSurfaceHost.getPathCanvas()",
+    "rendererContext.projection.getPathHitCanvas() !== rendererSurfaceHost.getPathHitCanvas()",
+    "rendererContext.projection.getContext() !== rendererSurfaceHost.getContext()",
+    "rendererContext.projection.getHitContext() !== rendererSurfaceHost.getHitContext()",
+    "function getViewportReceiverContext()",
+    "RendererRuntimeContext.viewport receiver is required.",
+    "rendererContext.viewport.getRuntimeState() !== runtimeState",
+    "rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost",
   ]) {
     assertIncludes(receiverSource, token, "receiver helper must assert and describe the context contract");
+  }
+});
+
+test("projection and viewport descriptors are assembled in the private runtime context", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const helperSource = sliceBetween(
+    rendererSource,
+    "function getRendererRuntimeContext()",
+    "function getRenderPassReceiverContext()",
+  );
+
+  for (const token of [
+    "projection: {",
+    "projectionPrecision: PROJECTION_PRECISION,",
+    "pathPointRadius: PATH_POINT_RADIUS,",
+    "projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,",
+    "getD3: () => globalThis.d3,",
+    "getProjection: () => rendererSurfaceHost.getProjection(),",
+    "getPathSvg: () => rendererSurfaceHost.getPathSvg(),",
+    "getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),",
+    "getPathHitCanvas: () => rendererSurfaceHost.getPathHitCanvas(),",
+    "getContext: () => rendererSurfaceHost.getContext(),",
+    "getHitContext: () => rendererSurfaceHost.getHitContext(),",
+    "viewport: {",
+    "mapPanPaddingPx: MAP_PAN_PADDING_PX,",
+    "minZoomScale: MIN_ZOOM_SCALE,",
+    "maxZoomScale: MAX_ZOOM_SCALE,",
+    "getLogicalCanvasDimensions,",
+    "getRenderableLandFeatures,",
+    "getProjectedFeatureBounds,",
+    "shouldSkipFeature,",
+    "getFeatureId,",
+    "getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,",
+    "isHgoRuntimePreviewReady,",
+    "getZoomIdentity: () => globalThis.d3?.zoomIdentity,",
+    "getRuntimeState: () => runtimeState,",
+    "getSurfaceHost: () => rendererSurfaceHost,",
+    "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),",
+    "getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),",
+  ]) {
+    assertIncludes(helperSource, token, "getRendererRuntimeContext must assemble projection and viewport descriptors");
+  }
+
+  for (const token of [
+    "setProjection:",
+    "setPathSvg:",
+    "setPathCanvas:",
+    "setPathHitCanvas:",
+  ]) {
+    assertExcludes(helperSource, token, "read model descriptors must not expose surface setters");
   }
 });
 
@@ -138,6 +201,118 @@ test("render cache owner receives runtime, surface, constants, and helpers throu
   assertExcludes(renderCacheOwnerSource, "state,", "render cache owner must use context runtime instead of the local state alias");
   assertExcludes(renderCacheOwnerSource, "getContext: () => rendererSurfaceHost.getContext(),", "render cache owner must read surface through context");
   assertExcludes(renderCacheOwnerSource, "rendererRuntimeContext:", "render cache owner API must not receive a new context bag parameter");
+});
+
+test("projection owner receives constants and d3 through the projection context", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const projectionOwnerSource = sliceBetween(
+    rendererSource,
+    "function getRendererProjectionPathOwner()",
+    "function getRendererSvgSurfaceLifecycleOwner()",
+  );
+
+  const receiverIndex = projectionOwnerSource.indexOf("const rendererContext = getProjectionReceiverContext();");
+  const createIndex = projectionOwnerSource.indexOf("rendererProjectionPathOwner = createRendererProjectionPathOwner({");
+  assert.notEqual(receiverIndex, -1, "projection owner must request the projection receiver context");
+  assert.notEqual(createIndex, -1, "projection owner must keep its constructor call in map_renderer");
+  assert.ok(receiverIndex < createIndex, "projection receiver assertion must run before owner construction");
+
+  for (const token of [
+    "const projectionContext = rendererContext.projection;",
+    "surfaceHost: rendererContext.surface.host,",
+    "getD3: projectionContext.helpers.getD3,",
+    "projectionPrecision: projectionContext.constants.projectionPrecision,",
+    "pathPointRadius: projectionContext.constants.pathPointRadius,",
+  ]) {
+    assertIncludes(projectionOwnerSource, token, "projection owner must consume projection context tokens");
+  }
+
+  assertExcludes(projectionOwnerSource, "surfaceHost: rendererSurfaceHost,", "projection owner must use the context surface host");
+  assertExcludes(projectionOwnerSource, "getD3: () => globalThis.d3,", "projection owner must use the context helper");
+  assertExcludes(projectionOwnerSource, "projectionPrecision: PROJECTION_PRECISION,", "projection owner must use context constants");
+  assertExcludes(projectionOwnerSource, "pathPointRadius: PATH_POINT_RADIUS,", "projection owner must use context constants");
+});
+
+test("viewport owners receive runtime, constants, helpers, and accessors through the viewport context", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const readModelSource = sliceBetween(
+    rendererSource,
+    "function getViewportReadModelOwner()",
+    "function getViewportCommandOwner()",
+  );
+  const commandSource = sliceBetween(
+    rendererSource,
+    "function getViewportCommandOwner()",
+    "function getRendererViewportUpdateOwner()",
+  );
+  const viewportZoomWriteToken = ["runtime", "zoomTransform = transform;"].join(".");
+  const legacyRuntimeStateZoomWriteToken = ["runtimeState", "zoomTransform = transform;"].join(".");
+
+  for (const [ownerSource, createToken, label] of [
+    [readModelSource, "viewportReadModelOwner = createViewportReadModelOwner({", "viewport read model"],
+    [commandSource, "viewportCommandOwner = createViewportCommandOwner({", "viewport command"],
+  ]) {
+    const receiverIndex = ownerSource.indexOf("const rendererContext = getViewportReceiverContext();");
+    const createIndex = ownerSource.indexOf(createToken);
+    assert.notEqual(receiverIndex, -1, `${label} owner must request the viewport receiver context`);
+    assert.notEqual(createIndex, -1, `${label} owner must keep its constructor call`);
+    assert.ok(receiverIndex < createIndex, `${label} receiver assertion must run before owner construction`);
+  }
+
+  for (const token of [
+    "const viewportContext = rendererContext.viewport;",
+    "const viewportConstants = viewportContext.constants;",
+    "const viewportHelpers = viewportContext.helpers;",
+    "const runtime = viewportContext.getRuntimeState();",
+    "state: runtime,",
+    "mapPanPaddingPx: viewportConstants.mapPanPaddingPx,",
+    "projectionFitPaddingRatio: viewportConstants.projectionFitPaddingRatio,",
+    "getProjection: () => viewportContext.getProjection(),",
+    "getPathSvg: () => viewportContext.getPathSvg(),",
+    "getZoomIdentity: viewportHelpers.getZoomIdentity,",
+    "getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,",
+    "getLandFeatures: () => runtime.landData?.features || [],",
+    "getHgoRuntimePreviewBounds: viewportHelpers.getHgoRuntimePreviewBounds,",
+    "isHgoRuntimePreviewReady: viewportHelpers.isHgoRuntimePreviewReady,",
+    "getFeatureId: viewportHelpers.getFeatureId,",
+    "getProjectedFeatureBounds: viewportHelpers.getProjectedFeatureBounds,",
+    "shouldSkipFeature: viewportHelpers.shouldSkipFeature,",
+    "getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,",
+  ]) {
+    assertIncludes(readModelSource, token, "viewport read model owner must consume viewport context tokens");
+  }
+
+  for (const token of [
+    "const viewportContext = rendererContext.viewport;",
+    "const viewportConstants = viewportContext.constants;",
+    "const viewportHelpers = viewportContext.helpers;",
+    "const runtime = viewportContext.getRuntimeState();",
+    "state: runtime,",
+    "minZoomScale: viewportConstants.minZoomScale,",
+    "maxZoomScale: viewportConstants.maxZoomScale,",
+    "getZoomBehavior: () => viewportContext.getZoomBehavior(),",
+    "getInteractionRect: () => viewportContext.getInteractionRect(),",
+    "getD3: viewportHelpers.getD3,",
+    "calculatePanExtent,",
+    "getCenteredFitZoomTransform,",
+    viewportZoomWriteToken,
+  ]) {
+    assertIncludes(commandSource, token, "viewport command owner must consume viewport context tokens");
+  }
+
+  for (const token of [
+    "state,",
+    "MAP_PAN_PADDING_PX",
+    "MIN_ZOOM_SCALE",
+    "MAX_ZOOM_SCALE",
+    "getProjection: () => rendererSurfaceHost.getProjection(),",
+    "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),",
+    "getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),",
+    "getD3: () => globalThis.d3,",
+    legacyRuntimeStateZoomWriteToken,
+  ]) {
+    assertExcludes(`${readModelSource}\n${commandSource}`, token, "viewport owners must use context read-model tokens");
+  }
 });
 
 test("P51 and P52 owners are the first receivers without changing owner APIs", () => {

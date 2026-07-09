@@ -1019,6 +1019,51 @@ function getRendererRuntimeContext() {
   rendererRuntimeContext = createRendererRuntimeContext({
     runtimeState,
     rendererSurfaceHost,
+    projection: {
+      constants: {
+        projectionPrecision: PROJECTION_PRECISION,
+        pathPointRadius: PATH_POINT_RADIUS,
+        projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+      },
+      helpers: {
+        getD3: () => globalThis.d3,
+      },
+      accessors: {
+        getProjection: () => rendererSurfaceHost.getProjection(),
+        getPathSvg: () => rendererSurfaceHost.getPathSvg(),
+        getPathCanvas: () => rendererSurfaceHost.getPathCanvas(),
+        getPathHitCanvas: () => rendererSurfaceHost.getPathHitCanvas(),
+        getContext: () => rendererSurfaceHost.getContext(),
+        getHitContext: () => rendererSurfaceHost.getHitContext(),
+      },
+    },
+    viewport: {
+      constants: {
+        mapPanPaddingPx: MAP_PAN_PADDING_PX,
+        minZoomScale: MIN_ZOOM_SCALE,
+        maxZoomScale: MAX_ZOOM_SCALE,
+        projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+      },
+      helpers: {
+        getLogicalCanvasDimensions,
+        getRenderableLandFeatures,
+        getProjectedFeatureBounds,
+        shouldSkipFeature,
+        getFeatureId,
+        getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,
+        isHgoRuntimePreviewReady,
+        getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+        getD3: () => globalThis.d3,
+      },
+      accessors: {
+        getRuntimeState: () => runtimeState,
+        getSurfaceHost: () => rendererSurfaceHost,
+        getProjection: () => rendererSurfaceHost.getProjection(),
+        getPathSvg: () => rendererSurfaceHost.getPathSvg(),
+        getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+        getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      },
+    },
     renderCache: {
       constants: {
         interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
@@ -1062,6 +1107,46 @@ function getRenderCacheReceiverContext() {
   return rendererContext;
 }
 
+function getProjectionReceiverContext() {
+  const rendererContext = getRenderPassReceiverContext();
+  if (!rendererContext.projection) {
+    throw new TypeError("RendererRuntimeContext.projection receiver is required.");
+  }
+  if (rendererContext.projection.getProjection() !== rendererSurfaceHost.getProjection()) {
+    throw new TypeError("RendererRuntimeContext projection projection receiver mismatch.");
+  }
+  if (rendererContext.projection.getPathSvg() !== rendererSurfaceHost.getPathSvg()) {
+    throw new TypeError("RendererRuntimeContext projection pathSvg receiver mismatch.");
+  }
+  if (rendererContext.projection.getPathCanvas() !== rendererSurfaceHost.getPathCanvas()) {
+    throw new TypeError("RendererRuntimeContext projection pathCanvas receiver mismatch.");
+  }
+  if (rendererContext.projection.getPathHitCanvas() !== rendererSurfaceHost.getPathHitCanvas()) {
+    throw new TypeError("RendererRuntimeContext projection pathHitCanvas receiver mismatch.");
+  }
+  if (rendererContext.projection.getContext() !== rendererSurfaceHost.getContext()) {
+    throw new TypeError("RendererRuntimeContext projection context receiver mismatch.");
+  }
+  if (rendererContext.projection.getHitContext() !== rendererSurfaceHost.getHitContext()) {
+    throw new TypeError("RendererRuntimeContext projection hitContext receiver mismatch.");
+  }
+  return rendererContext;
+}
+
+function getViewportReceiverContext() {
+  const rendererContext = getRenderPassReceiverContext();
+  if (!rendererContext.viewport) {
+    throw new TypeError("RendererRuntimeContext.viewport receiver is required.");
+  }
+  if (rendererContext.viewport.getRuntimeState() !== runtimeState) {
+    throw new TypeError("RendererRuntimeContext viewport runtimeState receiver mismatch.");
+  }
+  if (rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost) {
+    throw new TypeError("RendererRuntimeContext viewport surface host receiver mismatch.");
+  }
+  return rendererContext;
+}
+
 function getRendererSurfaceLifecycleOwner() {
   if (rendererSurfaceLifecycleOwner) {
     return rendererSurfaceLifecycleOwner;
@@ -1087,14 +1172,16 @@ function getRendererProjectionPathOwner() {
   if (rendererProjectionPathOwner) {
     return rendererProjectionPathOwner;
   }
+  const rendererContext = getProjectionReceiverContext();
+  const projectionContext = rendererContext.projection;
   rendererProjectionPathOwner = createRendererProjectionPathOwner({
-    surfaceHost: rendererSurfaceHost,
+    surfaceHost: rendererContext.surface.host,
     getters: {
-      getD3: () => globalThis.d3,
+      getD3: projectionContext.helpers.getD3,
     },
     constants: {
-      projectionPrecision: PROJECTION_PRECISION,
-      pathPointRadius: PATH_POINT_RADIUS,
+      projectionPrecision: projectionContext.constants.projectionPrecision,
+      pathPointRadius: projectionContext.constants.pathPointRadius,
     },
   });
   return rendererProjectionPathOwner;
@@ -2515,26 +2602,31 @@ function getViewportReadModelOwner() {
   if (viewportReadModelOwner) {
     return viewportReadModelOwner;
   }
+  const rendererContext = getViewportReceiverContext();
+  const viewportContext = rendererContext.viewport;
+  const viewportConstants = viewportContext.constants;
+  const viewportHelpers = viewportContext.helpers;
+  const runtime = viewportContext.getRuntimeState();
   viewportReadModelOwner = createViewportReadModelOwner({
-    state,
+    state: runtime,
     constants: {
-      mapPanPaddingPx: MAP_PAN_PADDING_PX,
-      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+      mapPanPaddingPx: viewportConstants.mapPanPaddingPx,
+      projectionFitPaddingRatio: viewportConstants.projectionFitPaddingRatio,
     },
     getters: {
-      getProjection: () => rendererSurfaceHost.getProjection(),
-      getPathSvg: () => rendererSurfaceHost.getPathSvg(),
-      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
-      getLogicalCanvasDimensions,
-      getLandFeatures: () => runtimeState.landData?.features || [],
-      getHgoRuntimePreviewBounds: getProjectedHgoRuntimePreviewBounds,
-      isHgoRuntimePreviewReady,
+      getProjection: () => viewportContext.getProjection(),
+      getPathSvg: () => viewportContext.getPathSvg(),
+      getZoomIdentity: viewportHelpers.getZoomIdentity,
+      getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,
+      getLandFeatures: () => runtime.landData?.features || [],
+      getHgoRuntimePreviewBounds: viewportHelpers.getHgoRuntimePreviewBounds,
+      isHgoRuntimePreviewReady: viewportHelpers.isHgoRuntimePreviewReady,
     },
     helpers: {
-      getFeatureId,
-      getProjectedFeatureBounds,
-      shouldSkipFeature,
-      getRenderableLandFeatures,
+      getFeatureId: viewportHelpers.getFeatureId,
+      getProjectedFeatureBounds: viewportHelpers.getProjectedFeatureBounds,
+      shouldSkipFeature: viewportHelpers.shouldSkipFeature,
+      getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,
     },
   });
   return viewportReadModelOwner;
@@ -2544,22 +2636,27 @@ function getViewportCommandOwner() {
   if (viewportCommandOwner) {
     return viewportCommandOwner;
   }
+  const rendererContext = getViewportReceiverContext();
+  const viewportContext = rendererContext.viewport;
+  const viewportConstants = viewportContext.constants;
+  const viewportHelpers = viewportContext.helpers;
+  const runtime = viewportContext.getRuntimeState();
   viewportCommandOwner = createViewportCommandOwner({
-    state,
+    state: runtime,
     constants: {
-      minZoomScale: MIN_ZOOM_SCALE,
-      maxZoomScale: MAX_ZOOM_SCALE,
+      minZoomScale: viewportConstants.minZoomScale,
+      maxZoomScale: viewportConstants.maxZoomScale,
     },
     getters: {
-      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
-      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
-      getD3: () => globalThis.d3,
+      getZoomBehavior: () => viewportContext.getZoomBehavior(),
+      getInteractionRect: () => viewportContext.getInteractionRect(),
+      getD3: viewportHelpers.getD3,
       calculatePanExtent,
       getCenteredFitZoomTransform,
     },
     effects: {
       setZoomTransform: (transform) => {
-        runtimeState.zoomTransform = transform;
+        runtime.zoomTransform = transform;
       },
     },
   });

@@ -17,8 +17,8 @@ const SCENARIO_REFRESH_RUNTIME_PATH = "js/core/map_renderer/scenario_refresh_run
 const EXACT_SCHEDULER_PATH = "js/core/map_renderer/exact_after_settle_scheduler.js";
 const STRATEGIC_RUNTIME_OWNER_PATH = "js/core/renderer/strategic_overlay_runtime_owner.js";
 const BROAD_LIFECYCLE_OWNER_PATH = "js/core/renderer/renderer_render_lifecycle_owner.js";
-const P43_DIST_MIRROR_PATHS = Object.freeze([
-  "dist/app/js/core/map_renderer.js",
+const SHARED_RENDERER_DIST_MIRROR_PATH = "dist/app/js/core/map_renderer.js";
+const P43_OWNER_DIST_MIRROR_PATHS = Object.freeze([
   "dist/app/js/core/map_renderer/render_phase_lifecycle_owner.js",
 ]);
 
@@ -234,6 +234,7 @@ test("scenario exact strategic public facade and state-write boundaries stay unc
 });
 
 test("P43 leaves dist app mirror untouched", () => {
-  assert.equal(runGit(["status", "--porcelain", "--", ...P43_DIST_MIRROR_PATHS]), "");
-  assert.equal(runGit(["diff", "--name-only", "HEAD", "--", ...P43_DIST_MIRROR_PATHS]), "");
+  assert.equal(P43_OWNER_DIST_MIRROR_PATHS.includes(SHARED_RENDERER_DIST_MIRROR_PATH), false);
+  assert.equal(runGit(["status", "--porcelain", "--", ...P43_OWNER_DIST_MIRROR_PATHS]), "");
+  assert.equal(runGit(["diff", "--name-only", "HEAD", "--", ...P43_OWNER_DIST_MIRROR_PATHS]), "");
 });

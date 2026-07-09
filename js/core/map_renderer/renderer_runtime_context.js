@@ -4,6 +4,7 @@ export const RENDERER_RUNTIME_CONTEXT_SECTION_IDS = Object.freeze([
   "state",
   "surface",
   "projection",
+  "viewport",
   "renderCache",
   "interaction",
   "diagnostics",
@@ -20,6 +21,40 @@ const SURFACE_HOST_GETTER_NAMES = Object.freeze([
 const RENDER_CACHE_HELPER_NAMES = Object.freeze([
   "getTransformSignature",
   "getVisibleFrameIdentity",
+]);
+
+const PROJECTION_HELPER_NAMES = Object.freeze([
+  "getD3",
+]);
+
+const PROJECTION_ACCESSOR_NAMES = Object.freeze([
+  "getProjection",
+  "getPathSvg",
+  "getPathCanvas",
+  "getPathHitCanvas",
+  "getContext",
+  "getHitContext",
+]);
+
+const VIEWPORT_HELPER_NAMES = Object.freeze([
+  "getLogicalCanvasDimensions",
+  "getRenderableLandFeatures",
+  "getProjectedFeatureBounds",
+  "shouldSkipFeature",
+  "getFeatureId",
+  "getHgoRuntimePreviewBounds",
+  "isHgoRuntimePreviewReady",
+  "getZoomIdentity",
+  "getD3",
+]);
+
+const VIEWPORT_ACCESSOR_NAMES = Object.freeze([
+  "getRuntimeState",
+  "getSurfaceHost",
+  "getProjection",
+  "getPathSvg",
+  "getZoomBehavior",
+  "getInteractionRect",
 ]);
 
 function describeValue(value) {
@@ -118,6 +153,32 @@ function assertRenderCacheHelper(helpers, helperName) {
   }
 }
 
+function assertSectionFunction(sectionName, groupName, group, functionName) {
+  if (typeof group?.[functionName] !== "function") {
+    throw new TypeError(`RendererRuntimeContext.${sectionName}.${groupName}.${functionName} must be a function.`);
+  }
+}
+
+function readFiniteNumber(sectionName, name, value, { optional = false } = {}) {
+  if (optional && (value === null || value === undefined)) {
+    return undefined;
+  }
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    throw new TypeError(`RendererRuntimeContext.${sectionName}.constants.${name} must be a finite number.`);
+  }
+  return numberValue;
+}
+
+function createFunctionGroup(sectionName, groupName, source, functionNames) {
+  const group = {};
+  for (const functionName of functionNames) {
+    assertSectionFunction(sectionName, groupName, source, functionName);
+    group[functionName] = source[functionName];
+  }
+  return Object.freeze(group);
+}
+
 function createSurfaceReadModel(rendererSurfaceHost) {
   return Object.freeze({
     host: rendererSurfaceHost,
@@ -173,6 +234,85 @@ function createRenderCacheReadModel(renderCache, runtimeState, rendererSurfaceHo
   });
 }
 
+function createProjectionReadModel(projection) {
+  if (projection === null || projection === undefined) {
+    return null;
+  }
+  if (!projection || typeof projection !== "object") {
+    throw new TypeError("RendererRuntimeContext.projection must be an object when provided.");
+  }
+  const constants = projection.constants || {};
+  const helpers = projection.helpers || {};
+  const accessors = projection.accessors || {};
+  const projectionFitPaddingRatio = readFiniteNumber(
+    "projection",
+    "projectionFitPaddingRatio",
+    constants.projectionFitPaddingRatio,
+    { optional: true },
+  );
+  const projectionConstants = {
+    projectionPrecision: readFiniteNumber("projection", "projectionPrecision", constants.projectionPrecision),
+    pathPointRadius: readFiniteNumber("projection", "pathPointRadius", constants.pathPointRadius),
+  };
+  if (projectionFitPaddingRatio !== undefined) {
+    projectionConstants.projectionFitPaddingRatio = projectionFitPaddingRatio;
+  }
+  const projectionHelpers = createFunctionGroup("projection", "helpers", helpers, PROJECTION_HELPER_NAMES);
+  const projectionAccessors = createFunctionGroup("projection", "accessors", accessors, PROJECTION_ACCESSOR_NAMES);
+
+  return Object.freeze({
+    constants: Object.freeze(projectionConstants),
+    helpers: projectionHelpers,
+    getProjection: projectionAccessors.getProjection,
+    getPathSvg: projectionAccessors.getPathSvg,
+    getPathCanvas: projectionAccessors.getPathCanvas,
+    getPathHitCanvas: projectionAccessors.getPathHitCanvas,
+    getContext: projectionAccessors.getContext,
+    getHitContext: projectionAccessors.getHitContext,
+  });
+}
+
+function createViewportReadModel(viewport, runtimeState, rendererSurfaceHost) {
+  if (viewport === null || viewport === undefined) {
+    return null;
+  }
+  if (!viewport || typeof viewport !== "object") {
+    throw new TypeError("RendererRuntimeContext.viewport must be an object when provided.");
+  }
+  const constants = viewport.constants || {};
+  const helpers = viewport.helpers || {};
+  const accessors = viewport.accessors || {};
+  const mapPanPaddingPx = readFiniteNumber("viewport", "mapPanPaddingPx", constants.mapPanPaddingPx);
+  const minZoomScale = readFiniteNumber("viewport", "minZoomScale", constants.minZoomScale);
+  const maxZoomScale = readFiniteNumber("viewport", "maxZoomScale", constants.maxZoomScale);
+  const projectionFitPaddingRatio = readFiniteNumber(
+    "viewport",
+    "projectionFitPaddingRatio",
+    constants.projectionFitPaddingRatio,
+  );
+  if (minZoomScale >= maxZoomScale) {
+    throw new TypeError("RendererRuntimeContext.viewport.constants.minZoomScale must be less than maxZoomScale.");
+  }
+  const viewportHelpers = createFunctionGroup("viewport", "helpers", helpers, VIEWPORT_HELPER_NAMES);
+  const viewportAccessors = createFunctionGroup("viewport", "accessors", accessors, VIEWPORT_ACCESSOR_NAMES);
+
+  return Object.freeze({
+    constants: Object.freeze({
+      mapPanPaddingPx,
+      minZoomScale,
+      maxZoomScale,
+      projectionFitPaddingRatio,
+    }),
+    helpers: viewportHelpers,
+    getRuntimeState: viewportAccessors.getRuntimeState,
+    getSurfaceHost: viewportAccessors.getSurfaceHost,
+    getProjection: viewportAccessors.getProjection,
+    getPathSvg: viewportAccessors.getPathSvg,
+    getZoomBehavior: viewportAccessors.getZoomBehavior,
+    getInteractionRect: viewportAccessors.getInteractionRect,
+  });
+}
+
 function getCollectionCount(value) {
   if (Array.isArray(value)) return value.length;
   if (value && typeof value.size === "number") return value.size;
@@ -200,6 +340,45 @@ function describeRenderCacheContext(renderCache) {
       getSurfaceHost: describeValue(renderCache.getSurfaceHost),
       getMainContext: describeValue(renderCache.getMainContext),
     }),
+  });
+}
+
+function describeFunctionGroup(source, functionNames) {
+  return Object.freeze(Object.fromEntries(
+    functionNames.map((functionName) => [functionName, describeValue(source?.[functionName])]),
+  ));
+}
+
+function describeProjectionContext(projection) {
+  if (projection === null || projection === undefined) {
+    return Object.freeze({ present: false });
+  }
+  return Object.freeze({
+    present: true,
+    constants: Object.freeze({
+      projectionPrecision: projection.constants?.projectionPrecision,
+      pathPointRadius: projection.constants?.pathPointRadius,
+      projectionFitPaddingRatio: projection.constants?.projectionFitPaddingRatio,
+    }),
+    helpers: describeFunctionGroup(projection.helpers, PROJECTION_HELPER_NAMES),
+    accessors: describeFunctionGroup(projection, PROJECTION_ACCESSOR_NAMES),
+  });
+}
+
+function describeViewportContext(viewport) {
+  if (viewport === null || viewport === undefined) {
+    return Object.freeze({ present: false });
+  }
+  return Object.freeze({
+    present: true,
+    constants: Object.freeze({
+      mapPanPaddingPx: viewport.constants?.mapPanPaddingPx,
+      minZoomScale: viewport.constants?.minZoomScale,
+      maxZoomScale: viewport.constants?.maxZoomScale,
+      projectionFitPaddingRatio: viewport.constants?.projectionFitPaddingRatio,
+    }),
+    helpers: describeFunctionGroup(viewport.helpers, VIEWPORT_HELPER_NAMES),
+    accessors: describeFunctionGroup(viewport, VIEWPORT_ACCESSOR_NAMES),
   });
 }
 
@@ -244,10 +423,63 @@ function assertRenderCacheContext(renderCache) {
   }
 }
 
+function assertProjectionContext(projection) {
+  if (projection === null || projection === undefined) {
+    return;
+  }
+  if (!projection || typeof projection !== "object") {
+    throw new TypeError("RendererRuntimeContext.projection must be an object.");
+  }
+  if (!projection.constants || typeof projection.constants !== "object") {
+    throw new TypeError("RendererRuntimeContext.projection.constants is required.");
+  }
+  readFiniteNumber("projection", "projectionPrecision", projection.constants.projectionPrecision);
+  readFiniteNumber("projection", "pathPointRadius", projection.constants.pathPointRadius);
+  readFiniteNumber(
+    "projection",
+    "projectionFitPaddingRatio",
+    projection.constants.projectionFitPaddingRatio,
+    { optional: true },
+  );
+  for (const helperName of PROJECTION_HELPER_NAMES) {
+    assertSectionFunction("projection", "helpers", projection.helpers, helperName);
+  }
+  for (const accessorName of PROJECTION_ACCESSOR_NAMES) {
+    assertSectionFunction("projection", "accessors", projection, accessorName);
+  }
+}
+
+function assertViewportContext(viewport) {
+  if (viewport === null || viewport === undefined) {
+    return;
+  }
+  if (!viewport || typeof viewport !== "object") {
+    throw new TypeError("RendererRuntimeContext.viewport must be an object.");
+  }
+  if (!viewport.constants || typeof viewport.constants !== "object") {
+    throw new TypeError("RendererRuntimeContext.viewport.constants is required.");
+  }
+  const minZoomScale = readFiniteNumber("viewport", "minZoomScale", viewport.constants.minZoomScale);
+  const maxZoomScale = readFiniteNumber("viewport", "maxZoomScale", viewport.constants.maxZoomScale);
+  readFiniteNumber("viewport", "mapPanPaddingPx", viewport.constants.mapPanPaddingPx);
+  readFiniteNumber("viewport", "projectionFitPaddingRatio", viewport.constants.projectionFitPaddingRatio);
+  if (minZoomScale >= maxZoomScale) {
+    throw new TypeError("RendererRuntimeContext.viewport.constants.minZoomScale must be less than maxZoomScale.");
+  }
+  for (const helperName of VIEWPORT_HELPER_NAMES) {
+    assertSectionFunction("viewport", "helpers", viewport.helpers, helperName);
+  }
+  for (const accessorName of VIEWPORT_ACCESSOR_NAMES) {
+    assertSectionFunction("viewport", "accessors", viewport, accessorName);
+  }
+}
+
 export function createRendererRuntimeContext(options = {}) {
   const {
     runtimeState,
     rendererSurfaceHost,
+    projection = null,
+    viewport = null,
     renderCache = null,
     ownerTag = "map-renderer",
     createdAt = new Date().toISOString(),
@@ -264,6 +496,8 @@ export function createRendererRuntimeContext(options = {}) {
       runtimeState,
     }),
     surface: createSurfaceReadModel(rendererSurfaceHost),
+    projection: createProjectionReadModel(projection),
+    viewport: createViewportReadModel(viewport, runtimeState, rendererSurfaceHost),
     renderCache: createRenderCacheReadModel(renderCache, runtimeState, rendererSurfaceHost),
     diagnostics: Object.freeze({
       getSnapshot() {
@@ -296,6 +530,8 @@ export function assertRendererRuntimeContext(context) {
   if (typeof context.surface.getMainContext !== "function") {
     throw new TypeError("RendererRuntimeContext.surface.getMainContext() is required.");
   }
+  assertProjectionContext(context.projection);
+  assertViewportContext(context.viewport);
   assertRenderCacheContext(context.renderCache);
   if (!context.diagnostics || typeof context.diagnostics.getSnapshot !== "function") {
     throw new TypeError("RendererRuntimeContext.diagnostics.getSnapshot() is required.");
@@ -319,6 +555,8 @@ export function describeRendererRuntimeContext(context) {
         getMainContext: describeValue(context.surface.getMainContext),
         snapshot: sanitizeSurfaceSnapshot(context.diagnostics.getSnapshot()),
       }),
+      projection: describeProjectionContext(context.projection),
+      viewport: describeViewportContext(context.viewport),
       renderCache: describeRenderCacheContext(context.renderCache),
       diagnostics: Object.freeze({
         getSnapshot: describeValue(context.diagnostics.getSnapshot),

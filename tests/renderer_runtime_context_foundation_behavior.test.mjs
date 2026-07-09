@@ -18,6 +18,7 @@ const CONTEXT_MODULE_PATH = path.join(REPO_ROOT, "js", "core", "map_renderer", "
 
 const RESERVED_SECTION_IDS = Object.freeze([
   "projection",
+  "viewport",
   "renderCache",
   "interaction",
   "scheduling",

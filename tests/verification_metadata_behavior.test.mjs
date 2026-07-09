@@ -171,3 +171,27 @@ test("renderer runtime context render cache files route to renderer owner verifi
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-cache-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-render-cache-owner-boundary"));
 });
+
+test("renderer runtime context projection and viewport files route to renderer owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/renderer/renderer_projection_path_owner.js",
+    "js/core/renderer/viewport_read_model_owner.js",
+    "js/core/renderer/viewport_command_owner.js",
+    "tests/renderer_runtime_context_projection_viewport_behavior.test.mjs",
+    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
+    "tests/test_map_renderer_projection_viewport_context_boundary_contract.py",
+    "docs/active/renderer-runtime-context-projection-viewport-p1-3-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-projection-viewport"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-projection-viewport-context-boundary"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-projection-path-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-read-model-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-command-owner"));
+});
