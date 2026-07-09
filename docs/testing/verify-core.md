@@ -1,6 +1,6 @@
 # verify:core
 
-`verify:core` 是 Scenario Forge 的确定性核心验证通道。它会按顺序运行一组 package script，并在遇到第一个失败项时停止。
+`verify:core` 是 Scenario Forge 的 non-browser deterministic core lane。它会按顺序运行一组 package script，并在遇到第一个失败项时停止。
 
 ## 命令
 
@@ -25,7 +25,12 @@
 - `scenario-project-chunk`
 - `pages`
 
-默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同；涉及 Pages 共享输出的 dist 写入检查由主代理串行持有。
+默认范围是确定性的，不会启动 browser、dev server 或 Playwright。它覆盖 CLI/build 合同，并默认保留 `pages` 分组：
+
+- `verify:pages-dist`
+- `verify:dist-drift`
+
+`pages` 分组会写入或检查 Pages mirror、dist manifest 和 `.runtime` 报告，所以运行 `verify:core` 时，integration owner 需要持有 dist lane。这个默认范围适合做 non-browser 核心安全线；它具备 dist / runtime-output 资源语义。
 
 ## Main-thread 通道
 
@@ -45,6 +50,18 @@
 ## 路由覆盖
 
 SF-ATS route registry 会把 runner、runner 测试、package scripts 和这份文档都映射到 `test-routing`。如果改动涉及 `package.json`、`package-lock.json`、`tools/run_core_verification.mjs` 或 `docs/testing/verify-core.md`，selector 应该命中同一个 domain。
+
+## 失败排查
+
+`verify:core:list` 只产出 plan 和报告文件，不执行任何验证命令。`verify:core` 或 `verify:core:main-thread` 失败后，先查看：
+
+- `.runtime/reports/generated/verify-core.json`
+- `.runtime/reports/generated/verify-core.md`
+- 第一个失败的 `failing commandRef`
+- `verify:dist-drift` 的 dist drift 输出
+- selector 或 supervisor 报告里的 route gaps
+
+P0.1.1 后验收要求 full `npm run verify:core` 实际运行，并把通过结果或失败分类记录到 worktree registry。
 
 ## 有意跳过的项
 

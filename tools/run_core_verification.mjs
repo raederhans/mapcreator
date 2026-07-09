@@ -53,6 +53,9 @@ const DEFAULT_GROUPS = [
       "test:node:renderer-render-request-boundary",
       "test:node:renderer-render-phase-lifecycle",
       "test:node:renderer-hit-canvas-scheduling-inventory",
+      "test:node:render-pass-cache-host-owner-suite",
+      "test:node:render-pass-commit-accounting-owner-suite",
+      "test:node:hit-canvas-scheduling-owner-suite",
       "test:node:map-interaction-event-binding-owner",
       "test:node:visible-frame-diagnostics",
       "test:node:render-cache-owner",
@@ -215,9 +218,16 @@ export function buildCoreVerificationPlan({
     }
   }
 
+  const defaultIncludesPagesGroup = planGroups.some((group) => group.id === "pages" && group.commands.length > 0);
+
   return {
     schemaVersion: 1,
+    lane: includeMainThread
+      ? "non-browser deterministic core lane plus main-thread E2E"
+      : "non-browser deterministic core lane",
     includeMainThread,
+    startsBrowserDevServerOrPlaywright: includeMainThread,
+    requiresDistLaneOwner: defaultIncludesPagesGroup,
     groups: planGroups,
     commandsToRun: planGroups.flatMap((group) => group.commands),
     omittedCommands,
@@ -252,7 +262,10 @@ export function renderMarkdownReport(plan, results = []) {
     "# verify:core report",
     "",
     `- schemaVersion: ${plan.schemaVersion}`,
+    `- lane: ${plan.lane}`,
     `- includeMainThread: ${plan.includeMainThread}`,
+    `- startsBrowserDevServerOrPlaywright: ${plan.startsBrowserDevServerOrPlaywright}`,
+    `- requiresDistLaneOwner: ${plan.requiresDistLaneOwner}`,
     `- commandsToRun: ${plan.commandsToRun.length}`,
     "",
     "## Command groups",

@@ -5,7 +5,7 @@ Last updated: 2026-07-08 local/cloud sync and branch cleanup truth
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@7d7bd7a2ea3fd6b880204600ffb3915a43241438`, matching `origin/main@7d7bd7a2ea3fd6b880204600ffb3915a43241438`.
+- Default-main baseline is `main@1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`, matching `origin/main@1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`.
 - Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main`; `git status --short --branch` reports `## main...origin/main`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - The P0.1 audit worktree `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` was removed after its HEAD matched `origin/main`.
@@ -13,7 +13,7 @@ Last updated: 2026-07-08 local/cloud sync and branch cleanup truth
 
 ## Recommended Order
 
-1. Treat `main@7d7bd7a2` / `origin/main@7d7bd7a2` as the current synchronized baseline.
+1. Treat `main@1c7a56ac` / `origin/main@1c7a56ac` as the current synchronized baseline.
 2. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 3. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
 4. Keep browser/dev-server, Pages dist, and full `verify:core:main-thread` verification reserved for their live-process owner.
@@ -24,7 +24,7 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main@7d7bd7a2` | current `origin/main@7d7bd7a2` | synced / clean | No dirty files. | `git worktree list --porcelain` lists only this path; `git status --short --branch` reports `## main...origin/main`; `git rev-list --left-right --count main...origin/main` reports `0 0`. | Green for current cleanup state. Future feature work should create a fresh worktree. | Use as synchronized main checkout. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P0.1.1 delivery on `main` | base `origin/main@1c7a56ac` | P0.1.1 verification hardening delivery package | `tools/run_core_verification.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and this registry are the delivery files. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `1c7a56ac1edcb7d75f2cf773ff9cd4afe006844d`. | Yellow for verification tooling and this registry; green for product runtime, UI, CSS, scenario data, dist, and package scripts. | This registry entry travels with the P0.1.1 Lore commit; no worktree cleanup is needed because this is the main checkout. |
 
 ## Local/Cloud Sync Cleanup 2026-07-08
 
@@ -73,6 +73,45 @@ Validation passed: `node --check tools/run_core_verification.mjs`; `node --check
 Checks skipped: full `npm run verify:core`, `verify:core:main-thread`, browser/dev-server E2E, and Pages dist. These are heavier or main-thread/live-process lanes; P0.1 locks the executable baseline through deterministic runner tests, route checks, list-mode artifact generation, and supervisor dry-run.
 
 Recommendation: keep `C:\Users\raede\.codex\worktrees\mapcreator-p0-1-verify-core-integration-20260708` as the clean synced local audit copy while the parent checkout WIP is unresolved. Reconcile or split the parent checkout in a separate task.
+
+## Scenario Forge P0.1.1 verify:core Post-acceptance Hardening 2026-07-08
+
+1. Hardened the default `renderer-owner` group by adding the current P51/P52/P47 owner suite scripts: `test:node:render-pass-cache-host-owner-suite`, `test:node:render-pass-commit-accounting-owner-suite`, and `test:node:hit-canvas-scheduling-owner-suite`.
+2. Kept the default `pages` group inside `verify:core` and clarified the lane as `non-browser deterministic core lane` with dist / runtime-output ownership semantics.
+3. Updated runner behavior tests so missing package-script fixtures produce an explicit `omittedCommands` failure, while the key commandRef set is asserted directly.
+4. Ran full `npm run verify:core`; the runner stopped at the first failing command in `python-quick`, after infra commands passed and before startup-node, renderer-owner, scenario, and pages groups executed.
+
+Core files: `tools/run_core_verification.mjs`.
+
+Test files: `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/testing/verify-core.md`, this registry.
+
+Routing files: none.
+
+Package files: none.
+
+Temporary files: `.runtime/reports/generated/verify-core.json`, `.runtime/reports/generated/verify-core.md`, `.runtime/reports/generated/supervisor-plan.json`, and `tests/e2e/test-import-graph.json` regenerated by verification commands.
+
+Diff summary: the runner now plans 39 default commands instead of 36 because three renderer-owner suite commandRefs were added; the report schema now records `lane`, `startsBrowserDevServerOrPlaywright`, and `requiresDistLaneOwner`; docs now call out `verify:core:list`, failing commandRef lookup, dist drift, route gaps, and P0.1.1 full-run acceptance evidence.
+
+Commit status: this delivery package travels with the P0.1.1 Lore commit. Base commit and synchronized pre-edit baseline are `main@1c7a56ac` / `origin/main@1c7a56ac`.
+
+Base divergence: none before P0.1.1 edits; `git worktree list --porcelain` lists only the main checkout.
+
+Conflict summary: yellow with future edits to `tools/run_core_verification.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, or this registry. There is no overlap with `js/main.js`, `js/core/map_renderer.js`, `index.html`, CSS, UI interaction files, scenario data, dist artifacts, transport, or appearance runtime files.
+
+Validation passed: `node --check tools/run_core_verification.mjs`; `node --check tests/verify_core_runner_behavior.test.mjs`; `npm run test:node:verify-core-runner` 8/8; `npm run verify:core:list` wrote 39-command reports at `.runtime/reports/generated/verify-core.json` and `.runtime/reports/generated/verify-core.md`; `node tools/select_verification_targets.mjs --check` with 254 routes; `npm run verify:test-import-graph`; `npm run verify:supervisor-contracts` with 16/16 schema/domain/routing tests; `npm run verify:supervisor-plan` with 15/15 tests and supervisor plan report.
+
+Full `verify:core` result: `npm run verify:core` exited 1. The first failing `commandRef` is `npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q`. Classification: existing verification contract drift in Python source-scan tests after owner extraction. Evidence: `tests.test_main_deferred_detail_promotion_boundary_contract` still checks the post-ready reconcile constant/function in `js/main.js`, while current implementation owns it in `js/bootstrap/startup_ready_handoff.js`; `tests.test_scenario_chunk_refresh_contracts` still checks `promotionWorkActive` in `js/core/map_renderer.js`, while current implementation owns it in `js/core/map_renderer/render_phase_lifecycle_owner.js`; `tests.test_map_renderer_interaction_border_snapshot_orchestration_contract` still expects old exact string shapes in `js/core/map_renderer.js`, while current behavior is split across render cache/interaction snapshot owners.
+
+Checks not reached by `verify:core`: startup-node, renderer-owner, scenario-project-chunk, `verify:pages-dist`, and `verify:dist-drift`, because the runner stops on the first failing command. Dist drift status is therefore not evaluated by the full runner in this pass; no dist files are modified in the P0.1.1 diff.
+
+Not-tested: `verify:core:main-thread` was not run because the default core lane already failed in `python-quick`; running browser/dev-server/Playwright E2E before the non-browser core lane is green would add live-process noise without resolving the blocker.
+
+Route gaps: none. Final changed-file selector wrote `.runtime/reports/generated/p0-1-1-selector.json` and `.runtime/reports/generated/p0-1-1-selector.md`; it reported `unmatchedChangedFiles: []` and covered `test-routing` for `tools/run_core_verification.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `docs/testing/verify-core.md`, and `docs/active/_worktree_registry.md`.
+
+Recommendation: do not enter P0.2 yet. The next smallest unblock is a dedicated verification-contract repair for the stale Python source-scan tests, keeping product runtime unchanged and repointing each contract to the current owner files.
 
 ## Comment Automation 2026-07-08
 

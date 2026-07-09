@@ -38,6 +38,9 @@ const PACKAGE_SCRIPTS = {
   "test:node:render-pass-catalog": "node --test tests/render_pass_catalog_behavior.test.mjs",
   "test:node:render-pipeline-catalog": "node --test tests/render_pipeline_catalog_behavior.test.mjs",
   "test:node:renderer-hit-canvas-scheduling-inventory": "node --test tests/renderer_hit_canvas_scheduling_inventory_boundary.test.mjs",
+  "test:node:render-pass-cache-host-owner-suite": "npm run test:node:render-pass-cache-host-owner && npm run test:node:render-pass-cache-host-owner-inventory && npm run test:node:renderer-render-pass-cache-host-inventory",
+  "test:node:render-pass-commit-accounting-owner-suite": "npm run test:node:render-pass-commit-accounting-owner && npm run test:node:render-pass-commit-accounting-inventory",
+  "test:node:hit-canvas-scheduling-owner-suite": "npm run test:node:hit-canvas-scheduling-owner && npm run test:node:hit-canvas-scheduling-owner-inventory && npm run test:node:renderer-hit-canvas-scheduling-inventory",
   "test:node:map-interaction-event-binding-owner": "node --test tests/map_interaction_event_binding_owner_behavior.test.mjs",
   "test:node:visible-frame-diagnostics": "npm run test:node:visible-frame-diagnostics-owner && npm run test:node:visible-frame-diagnostics-inventory",
   "test:node:render-cache-owner": "node --test tests/render_cache_owner_invalidation_behavior.test.mjs",
@@ -60,6 +63,13 @@ const PACKAGE_SCRIPTS = {
 
 function commandRefs(plan) {
   return plan.commandsToRun.map((entry) => entry.commandRef);
+}
+
+function assertCommandRefsInclude(plan, expectedCommandRefs) {
+  const refs = new Set(commandRefs(plan));
+  for (const commandRef of expectedCommandRefs) {
+    assert.equal(refs.has(commandRef), true, `${commandRef} should be present in the verify:core plan`);
+  }
 }
 
 function assertNoRendererRuntimeSelection(report) {
@@ -92,11 +102,19 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
   const plan = buildCoreVerificationPlan({ packageScripts: PACKAGE_SCRIPTS });
 
   assert.equal(plan.includeMainThread, false);
-  assert.equal(commandRefs(plan).length, 36);
+  assert.equal(plan.startsBrowserDevServerOrPlaywright, false);
+  assert.equal(plan.requiresDistLaneOwner, true);
+  assert.deepEqual(plan.omittedCommands, []);
+  assert.deepEqual(plan.duplicateCommands, []);
   assert.equal(commandRefs(plan).some((commandRef) => commandRef.startsWith("test:e2e:")), false);
-  assert.ok(commandRefs(plan).includes("verify:state-write-allowlist"));
-  assert.ok(commandRefs(plan).includes("verify:pages-dist"));
-  assert.ok(commandRefs(plan).includes("verify:dist-drift"));
+  assertCommandRefsInclude(plan, [
+    "verify:state-write-allowlist",
+    "verify:pages-dist",
+    "verify:dist-drift",
+    "test:node:render-pass-cache-host-owner-suite",
+    "test:node:render-pass-commit-accounting-owner-suite",
+    "test:node:hit-canvas-scheduling-owner-suite",
+  ]);
   assert.ok(commandRefs(plan).includes(
     "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
   ));
@@ -117,10 +135,13 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
 test("includeMainThread adds explicit E2E group and keeps optional E2E skipped", () => {
   const plan = buildCoreVerificationPlan({ packageScripts: PACKAGE_SCRIPTS, includeMainThread: true });
 
-  assert.ok(commandRefs(plan).includes("test:e2e:smoke"));
-  assert.ok(commandRefs(plan).includes("test:e2e:scenario-apply-concurrency"));
-  assert.ok(commandRefs(plan).includes("test:e2e:project-save-load"));
-  assert.ok(commandRefs(plan).includes("test:e2e:interaction-funnel"));
+  assert.equal(plan.startsBrowserDevServerOrPlaywright, true);
+  assertCommandRefsInclude(plan, [
+    "test:e2e:smoke",
+    "test:e2e:scenario-apply-concurrency",
+    "test:e2e:project-save-load",
+    "test:e2e:interaction-funnel",
+  ]);
   assert.deepEqual(
     plan.skippedMainThreadCommands.map((entry) => entry.commandRef),
     ["test:e2e:tno-contracts", "test:e2e:water-rendering", "test:e2e:city-rendering"],
@@ -146,7 +167,10 @@ test("plan filters empty commandRef, duplicates, self-recursion, and missing pac
   });
 
   assert.deepEqual(commandRefs(plan), ["ok"]);
-  assert.deepEqual(plan.duplicateCommands.map((entry) => entry.commandRef), ["duplicate"]);
+  assert.deepEqual(
+    plan.duplicateCommands.map((entry) => [entry.commandRef, entry.duplicateOf, entry.command]),
+    [["duplicate", "ok", "node ok.mjs"]],
+  );
   assert.deepEqual(
     plan.omittedCommands.map((entry) => [entry.commandRef, entry.reason]),
     [
