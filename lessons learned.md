@@ -540,3 +540,6 @@
 
 ### 本地 Pages release gate 先生成 dist
 - 跑 `/dist/` release gate 前先执行 `verify:pages-dist`，再用 `tools/dev_server.py /dist/` 服务页面；裸 `http.server` 可能缺少项目路由语义，把未生成或未映射的 `dist/app/data/**` 误报成启动回归。
+
+### Owner 迁移后同步源码扫描合同
+- Renderer owner extraction 完成后，同步检查 Python source-scan contract 是否仍锚定旧 `js/main.js` 或 `js/core/map_renderer.js` 文本形态；合同应指向当前 owner 文件或升级为行为测试，否则 `verify:core` 会在运行时代码无变更时被旧扫描规则阻塞。
