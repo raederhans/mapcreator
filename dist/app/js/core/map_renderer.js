@@ -1019,6 +1019,18 @@ function getRendererRuntimeContext() {
   rendererRuntimeContext = createRendererRuntimeContext({
     runtimeState,
     rendererSurfaceHost,
+    renderCache: {
+      constants: {
+        interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
+        renderPassNames: RENDER_PASS_NAMES,
+        renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
+        transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
+      },
+      helpers: {
+        getTransformSignature,
+        getVisibleFrameIdentity,
+      },
+    },
     ownerTag: "map-renderer",
   });
   return rendererRuntimeContext;
@@ -1033,6 +1045,20 @@ function getRenderPassReceiverContext() {
     throw new TypeError("RendererRuntimeContext surface host receiver mismatch.");
   }
   describeRendererRuntimeContext(rendererContext);
+  return rendererContext;
+}
+
+function getRenderCacheReceiverContext() {
+  const rendererContext = getRenderPassReceiverContext();
+  if (!rendererContext.renderCache) {
+    throw new TypeError("RendererRuntimeContext.renderCache receiver is required.");
+  }
+  if (rendererContext.renderCache.getRuntimeState() !== runtimeState) {
+    throw new TypeError("RendererRuntimeContext renderCache runtimeState receiver mismatch.");
+  }
+  if (rendererContext.renderCache.getSurfaceHost() !== rendererSurfaceHost) {
+    throw new TypeError("RendererRuntimeContext renderCache surface host receiver mismatch.");
+  }
   return rendererContext;
 }
 
@@ -2364,22 +2390,31 @@ function getRenderCacheOwner() {
   if (renderCacheOwner) {
     return renderCacheOwner;
   }
+  const rendererContext = getRenderCacheReceiverContext();
+  const runtime = rendererContext.state.runtimeState;
+  const surfaceHost = rendererContext.surface.host;
+  const renderCacheContext = rendererContext.renderCache;
+  if (surfaceHost !== renderCacheContext.getSurfaceHost()) {
+    throw new TypeError("RendererRuntimeContext renderCache surface read model mismatch.");
+  }
+  const renderCacheConstants = renderCacheContext.constants;
+  const renderCacheHelpers = renderCacheContext.helpers;
   renderCacheOwner = createRenderCacheOwner({
-    state,
+    state: runtime,
     constants: {
-      interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
-      renderPassNames: RENDER_PASS_NAMES,
-      renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,
-      transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,
+      interactionCompositePassNames: renderCacheConstants.interactionCompositePassNames,
+      renderPassNames: renderCacheConstants.renderPassNames,
+      renderPassOverscanRatioPerSide: renderCacheConstants.renderPassOverscanRatioPerSide,
+      transformedFramePassNames: renderCacheConstants.transformedFramePassNames,
     },
     getters: {
-      getContext: () => rendererSurfaceHost.getContext(),
+      getContext: () => renderCacheContext.getMainContext(),
     },
     helpers: {
       cloneZoomTransform,
       ensureRenderPassCacheState,
-      getTransformSignature,
-      getVisibleFrameIdentity,
+      getTransformSignature: renderCacheHelpers.getTransformSignature,
+      getVisibleFrameIdentity: renderCacheHelpers.getVisibleFrameIdentity,
     },
   });
   return renderCacheOwner;

@@ -151,3 +151,23 @@ test("renderer runtime context receiver files route to renderer owner verificati
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-cache-host-owner-suite"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-commit-accounting-owner-suite"));
 });
+
+test("renderer runtime context render cache files route to renderer owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/renderer/render_cache_owner.js",
+    "tests/renderer_runtime_context_render_cache_behavior.test.mjs",
+    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
+    "tests/test_map_renderer_render_cache_owner_boundary_contract.py",
+    "docs/active/renderer-runtime-context-render-cache-read-model-p1-2-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-render-cache"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-cache-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-render-cache-owner-boundary"));
+});

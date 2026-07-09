@@ -73,6 +73,13 @@ test("map_renderer lazily owns the private RendererRuntimeContext receiver", () 
     "return rendererRuntimeContext;",
     "runtimeState,",
     "rendererSurfaceHost,",
+    "renderCache: {",
+    "interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,",
+    "renderPassNames: RENDER_PASS_NAMES,",
+    "renderPassOverscanRatioPerSide: RENDER_PASS_OVERSCAN_RATIO_PER_SIDE,",
+    "transformedFramePassNames: TRANSFORM_REUSED_RENDER_PASS_NAMES,",
+    "getTransformSignature,",
+    "getVisibleFrameIdentity,",
     "ownerTag: \"map-renderer\",",
   ]) {
     assertIncludes(helperSource, token, "getRendererRuntimeContext must keep lazy construction token");
@@ -84,9 +91,53 @@ test("map_renderer lazily owns the private RendererRuntimeContext receiver", () 
     "rendererContext.surface.host !== rendererSurfaceHost",
     "describeRendererRuntimeContext(rendererContext);",
     "return rendererContext;",
+    "function getRenderCacheReceiverContext()",
+    "const rendererContext = getRenderPassReceiverContext();",
+    "RendererRuntimeContext.renderCache receiver is required.",
+    "rendererContext.renderCache.getRuntimeState() !== runtimeState",
+    "rendererContext.renderCache.getSurfaceHost() !== rendererSurfaceHost",
   ]) {
     assertIncludes(receiverSource, token, "receiver helper must assert and describe the context contract");
   }
+});
+
+test("render cache owner receives runtime, surface, constants, and helpers through the context", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const renderCacheOwnerSource = sliceBetween(
+    rendererSource,
+    "function getRenderCacheOwner()",
+    "function getRenderPassCacheHostOwner()",
+  );
+
+  const receiverIndex = renderCacheOwnerSource.indexOf("const rendererContext = getRenderCacheReceiverContext();");
+  const createIndex = renderCacheOwnerSource.indexOf("renderCacheOwner = createRenderCacheOwner({");
+  assert.notEqual(receiverIndex, -1, "render cache owner must request the runtime context receiver");
+  assert.notEqual(createIndex, -1, "render cache owner must keep its constructor call in map_renderer");
+  assert.ok(receiverIndex < createIndex, "render cache receiver assertion must run before owner construction");
+
+  for (const token of [
+    "const runtime = rendererContext.state.runtimeState;",
+    "const surfaceHost = rendererContext.surface.host;",
+    "const renderCacheContext = rendererContext.renderCache;",
+    "surfaceHost !== renderCacheContext.getSurfaceHost()",
+    "RendererRuntimeContext renderCache surface read model mismatch.",
+    "const renderCacheConstants = renderCacheContext.constants;",
+    "const renderCacheHelpers = renderCacheContext.helpers;",
+    "state: runtime,",
+    "interactionCompositePassNames: renderCacheConstants.interactionCompositePassNames,",
+    "renderPassNames: renderCacheConstants.renderPassNames,",
+    "renderPassOverscanRatioPerSide: renderCacheConstants.renderPassOverscanRatioPerSide,",
+    "transformedFramePassNames: renderCacheConstants.transformedFramePassNames,",
+    "getContext: () => renderCacheContext.getMainContext(),",
+    "getTransformSignature: renderCacheHelpers.getTransformSignature,",
+    "getVisibleFrameIdentity: renderCacheHelpers.getVisibleFrameIdentity,",
+  ]) {
+    assertIncludes(renderCacheOwnerSource, token, "render cache owner must consume context read-model tokens");
+  }
+
+  assertExcludes(renderCacheOwnerSource, "state,", "render cache owner must use context runtime instead of the local state alias");
+  assertExcludes(renderCacheOwnerSource, "getContext: () => rendererSurfaceHost.getContext(),", "render cache owner must read surface through context");
+  assertExcludes(renderCacheOwnerSource, "rendererRuntimeContext:", "render cache owner API must not receive a new context bag parameter");
 });
 
 test("P51 and P52 owners are the first receivers without changing owner APIs", () => {
@@ -164,7 +215,7 @@ test("render wrapper drawing and public boundaries remain stable", () => {
   assertExcludes(stateWriteAllowlistSource, "renderer_runtime_context", "state-write allowlist must not add a context module exception");
 });
 
-test("RendererRuntimeContext module remains the small P1.0 contract surface", () => {
+test("RendererRuntimeContext module remains a small import-free contract surface", () => {
   const contextSource = readRepoFile(CONTEXT_PATH);
 
   for (const token of [
@@ -173,10 +224,11 @@ test("RendererRuntimeContext module remains the small P1.0 contract surface", ()
     "export function describeRendererRuntimeContext(context)",
     "Object.freeze({",
     "schemaVersion: RENDERER_RUNTIME_CONTEXT_SCHEMA_VERSION",
-    "surface: Object.freeze({",
+    "surface: createSurfaceReadModel(rendererSurfaceHost),",
+    "renderCache: createRenderCacheReadModel(renderCache, runtimeState, rendererSurfaceHost),",
     "diagnostics: Object.freeze({",
   ]) {
-    assertIncludes(contextSource, token, "runtime context contract must keep P1.0 exports and shape");
+    assertIncludes(contextSource, token, "runtime context contract must keep exports and read-model shape");
   }
 
   for (const token of [

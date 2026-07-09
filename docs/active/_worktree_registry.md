@@ -1,20 +1,20 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.1 renderer runtime context first receiver pushed
+Last updated: 2026-07-09 P1.2 renderer runtime context render cache read model in progress
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@35bbcde6`, matching `origin/main@35bbcde6` after P1.1 push.
+- Default-main baseline is `main@0614f9a`, matching `origin/main@0614f9a` after the P1.1 registry closeout push.
 - Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main` before P1.1 edits; `git status --short --branch` reports `## main...origin/main`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator`.
-- Live test/build owner: main Codex thread owns P1.1 verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
+- Live test/build owner: main Codex thread owns P1.2 implementation and deterministic verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
 
 ## Recommended Order
 
-1. Finish P1.1 on the current main checkout, keeping `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, click selection, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
-2. Run the P1.1 child-safe validation set, changed-file selector dry-run, `verify:dist-drift` if renderer source mirror changed, and full `verify:core` before recommending P1.2.
+1. Finish P1.2 on the current main checkout, keeping `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, click selection, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
+2. Run the P1.2 child-safe validation set, changed-file selector dry-run, `verify:dist-drift` if renderer source mirror changed, and full `verify:core` before recommending P1.3.
 3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
 5. Keep browser/dev-server and `verify:core:main-thread` verification reserved for their live-process owner.
@@ -25,7 +25,23 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.1 renderer runtime context first receiver on `main` | base `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`; integrated at `main@35bbcde6` | integrated | Hot files: `js/core/map_renderer.js`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, P51/P52 inventory tests, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.1 docs, this registry, and generated Pages mirror files `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `d0386559c2c939a026e3863ea9c7515f7ee68450`. Targeted P1.1 validation, `verify:dist-drift`, code-reviewer self-check, and full `npm run verify:core` passed on `35bbcde6`; `git push origin main` advanced remote from `d0386559` to `35bbcde6`. | Yellow for future `map_renderer.js` receiver wiring, renderer runtime contract tests, verification routing, and generated Pages mirror sync; green for public facade, UI, CSS, scenario data, click selection, and pass drawing by explicit non-goals. | P1.1 is integrated; proceed to P1.2 planning from the pushed main baseline. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.2 renderer runtime context render cache read model on `main` | base `origin/main@0614f9ae2cde1538440f24764bd4c9ee07cc14c5` | in-progress | Hot files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, `tests/renderer_runtime_context_render_cache_behavior.test.mjs`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/test_map_renderer_render_cache_owner_boundary_contract.py`, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.2 docs, this registry, and possible generated Pages mirror files. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` reported `0614f9ae2cde1538440f24764bd4c9ee07cc14c5`. | Yellow for renderer runtime context, render cache owner receiver wiring, source-scan tests, verification routing, and generated Pages mirror sync. Green for public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` behavior by explicit non-goals. | Finish P1.2 implementation, run targeted gates, changed-file selector dry-run, `verify:dist-drift`, final `verify:core`, then commit and push. |
+
+## Scenario Forge P1.2 RendererRuntimeContext Render Cache Read Model 2026-07-09
+
+Planned change:
+
+1. Add a real `renderCache` section to `RendererRuntimeContext` with constants, helper descriptors, runtime/surface identity accessors, and a main context getter.
+2. Add a clearer `surface` read model while preserving `surface.host`.
+3. Make `getRenderCacheOwner()` consume runtime state, render cache constants, helper functions, and main context through the runtime context.
+4. Keep `createRenderCacheOwner()` algorithm and API shape unchanged.
+5. Add render cache context behavior coverage, receiver source-scan coverage, Python boundary coverage, package script, verification metadata, and route coverage.
+
+Non-goals: no `drawCanvas()` migration, no pass drawing migration, no `renderPassToCache()` behavior change, no click selection migration, no public facade change, no scenario/UI/CSS/data change, no package dependency change.
+
+Live owner: main Codex thread owns P1.2 implementation, dist drift, and final `verify:core`. Browser/dev-server E2E and `verify:core:main-thread` are reserved Not-tested lanes unless ownership changes explicitly.
+
+Initial validation plan: syntax checks for changed JS/MJS; renderer runtime context foundation/receiver/render-cache tests; render cache owner and P51/P52 owner suites; Python render cache boundary contract; verification metadata; verify-core runner; architecture boundaries; state-write allowlist; test import graph; selector route check and changed-file dry-run; supervisor contracts/plan; `verify:dist-drift`; final `verify:core`.
 
 ## Scenario Forge P1.1 RendererRuntimeContext First Receiver 2026-07-09
 
