@@ -1,11 +1,11 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.1 renderer runtime context first receiver validated
+Last updated: 2026-07-09 P1.1 renderer runtime context first receiver pushed
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@d0386559c2c939a026e3863ea9c7515f7ee68450`, matching `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`.
+- Default-main baseline is `main@35bbcde6`, matching `origin/main@35bbcde6` after P1.1 push.
 - Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main` before P1.1 edits; `git status --short --branch` reports `## main...origin/main`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator`.
@@ -25,7 +25,7 @@ Current rows reflect `git worktree list --porcelain` and per-worktree `git statu
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.1 renderer runtime context first receiver on `main` | base `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450` | ready-for-integration | Hot files: `js/core/map_renderer.js`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, P51/P52 inventory tests, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.1 docs, this registry, and generated Pages mirror files `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reports `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both report `d0386559c2c939a026e3863ea9c7515f7ee68450`. Targeted P1.1 validation, `verify:dist-drift`, code-reviewer self-check, and full `npm run verify:core` passed. | Yellow for `map_renderer.js` receiver wiring, renderer runtime contract tests, verification routing, and generated Pages mirror sync; green for public facade, UI, CSS, scenario data, click selection, and pass drawing by explicit non-goals. | Push P1.1, then proceed to P1.2 planning from the pushed main baseline. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.1 renderer runtime context first receiver on `main` | base `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`; integrated at `main@35bbcde6` | integrated | Hot files: `js/core/map_renderer.js`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, P51/P52 inventory tests, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.1 docs, this registry, and generated Pages mirror files `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `d0386559c2c939a026e3863ea9c7515f7ee68450`. Targeted P1.1 validation, `verify:dist-drift`, code-reviewer self-check, and full `npm run verify:core` passed on `35bbcde6`; `git push origin main` advanced remote from `d0386559` to `35bbcde6`. | Yellow for future `map_renderer.js` receiver wiring, renderer runtime contract tests, verification routing, and generated Pages mirror sync; green for public facade, UI, CSS, scenario data, click selection, and pass drawing by explicit non-goals. | P1.1 is integrated; proceed to P1.2 planning from the pushed main baseline. |
 
 ## Scenario Forge P1.1 RendererRuntimeContext First Receiver 2026-07-09
 
@@ -65,7 +65,7 @@ Temporary files: ignored reports under `.runtime/reports/generated/`, including 
 
 Diff summary: P1.1 adds a private lazy runtime context holder and first receiver assertion in `map_renderer.js`, one receiver behavior test, inventory assertions for P51/P52 receiver ordering, one package script, one renderer-runtime verification metadata route, verify-core plan expectations, active docs, and generated Pages mirror sync.
 
-Commit status: P1.1 Lore commit prepared on `main`; push pending at this registry update.
+Commit status: P1.1 functional Lore commit `35bbcde6` pushed to `origin/main`; this registry closeout records integration truth.
 
 Base divergence: base and pre-edit baseline are `main@d0386559c2c939a026e3863ea9c7515f7ee68450` and `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`.
 
@@ -77,7 +77,7 @@ Route gaps: none. The P1.1 changed-file selector dry-run covered `js/core/map_re
 
 Checks intentionally skipped: `verify:core:main-thread` remains an explicit browser/dev-server/Playwright lane outside this P1.1 delivery.
 
-Recommendation status: ready to push P1.1, then start P1.2 from the pushed main baseline.
+Recommendation status: integrated; start P1.2 from `origin/main@35bbcde6` or newer.
 
 ## Scenario Forge P1.0 Renderer Runtime Context Foundation 2026-07-09
 
