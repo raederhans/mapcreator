@@ -1,0 +1,191 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "..");
+
+const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const CONTEXT_PATH = "js/core/map_renderer/renderer_runtime_context.js";
+const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
+const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
+
+function readRepoFile(relativePath) {
+  const absolutePath = path.join(REPO_ROOT, ...relativePath.split("/"));
+  assert.ok(fs.existsSync(absolutePath), `Expected repository file to exist: ${relativePath}`);
+  return fs.readFileSync(absolutePath, "utf8");
+}
+
+function sliceBetween(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  assert.notEqual(start, -1, `Expected start marker to exist: ${startMarker}`);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `Expected end marker to exist after ${startMarker}: ${endMarker}`);
+  return source.slice(start, end);
+}
+
+function assertIncludes(source, token, message) {
+  assert.ok(source.includes(token), `${message}: missing ${JSON.stringify(token)}`);
+}
+
+function assertExcludes(source, token, message) {
+  assert.equal(source.includes(token), false, `${message}: unexpected ${JSON.stringify(token)}`);
+}
+
+function assertMatches(source, pattern, message) {
+  assert.match(source, pattern, message);
+}
+
+function countOccurrences(source, token) {
+  return source.split(token).length - 1;
+}
+
+test("map_renderer lazily owns the private RendererRuntimeContext receiver", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const helperSource = sliceBetween(
+    rendererSource,
+    "function getRendererRuntimeContext()",
+    "function getRenderPassReceiverContext()",
+  );
+  const receiverSource = sliceBetween(
+    rendererSource,
+    "function getRenderPassReceiverContext()",
+    "function getRendererSurfaceLifecycleOwner()",
+  );
+
+  assertMatches(
+    rendererSource,
+    /import\s*\{[^}]*assertRendererRuntimeContext[^}]*createRendererRuntimeContext[^}]*describeRendererRuntimeContext[^}]*\}\s*from\s*"\/?\.\/map_renderer\/renderer_runtime_context\.js";/,
+    "map_renderer must import the runtime context contract helpers",
+  );
+  assertIncludes(rendererSource, "let rendererRuntimeContext = null;", "map_renderer must keep the context private");
+  assert.equal(
+    countOccurrences(rendererSource, "createRendererRuntimeContext({"),
+    1,
+    "map_renderer must create the context from one lazy helper",
+  );
+
+  for (const token of [
+    "if (rendererRuntimeContext) {",
+    "return rendererRuntimeContext;",
+    "runtimeState,",
+    "rendererSurfaceHost,",
+    "ownerTag: \"map-renderer\",",
+  ]) {
+    assertIncludes(helperSource, token, "getRendererRuntimeContext must keep lazy construction token");
+  }
+
+  for (const token of [
+    "const rendererContext = assertRendererRuntimeContext(getRendererRuntimeContext());",
+    "rendererContext.state.runtimeState !== runtimeState",
+    "rendererContext.surface.host !== rendererSurfaceHost",
+    "describeRendererRuntimeContext(rendererContext);",
+    "return rendererContext;",
+  ]) {
+    assertIncludes(receiverSource, token, "receiver helper must assert and describe the context contract");
+  }
+});
+
+test("P51 and P52 owners are the first receivers without changing owner APIs", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const p51Source = sliceBetween(
+    rendererSource,
+    "function getRenderPassCacheHostOwner()",
+    "function getRenderPassCommitAccountingOwner()",
+  );
+  const p52Source = sliceBetween(
+    rendererSource,
+    "function getRenderPassCommitAccountingOwner()",
+    "function getRenderPipelinePassesOwner()",
+  );
+
+  for (const [ownerSource, createToken, label] of [
+    [p51Source, "renderPassCacheHostOwner = createRenderPassCacheHostOwner({", "P51"],
+    [p52Source, "renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({", "P52"],
+  ]) {
+    const receiverIndex = ownerSource.indexOf("getRenderPassReceiverContext();");
+    const createIndex = ownerSource.indexOf(createToken);
+    assert.notEqual(receiverIndex, -1, `${label} owner must request the runtime context receiver`);
+    assert.notEqual(createIndex, -1, `${label} owner must keep its existing constructor call`);
+    assert.ok(receiverIndex < createIndex, `${label} receiver assertion must run before owner construction`);
+  }
+
+  assertIncludes(p51Source, "ensureRenderPassCanvas,", "P51 constructor must keep existing effects shape");
+  assertIncludes(p52Source, "clearPassFullReferenceTransforms,", "P52 constructor must keep existing effects shape");
+  assertExcludes(p51Source, "rendererRuntimeContext:", "P51 owner API must not receive a new context bag parameter");
+  assertExcludes(p52Source, "rendererRuntimeContext:", "P52 owner API must not receive a new context bag parameter");
+});
+
+test("render wrapper drawing and public boundaries remain stable", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const renderPassToCacheSource = sliceBetween(
+    rendererSource,
+    "function renderPassToCache(passName, drawFn, transform, timings)",
+    "function resetCanvasContext(",
+  );
+  const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
+  const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
+  const stateContextToken = ["runtimeState", "rendererRuntimeContext"].join(".");
+  const globalContextToken = ["globalThis", "rendererRuntimeContext"].join(".");
+
+  for (const token of [
+    "function drawCanvas()",
+    "function drawBackgroundPass",
+    "function drawPhysicalBasePass",
+    "function drawPoliticalPass",
+    "function drawEffectsPass",
+    "function drawLabelsPass",
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must keep drawing functions in place");
+  }
+
+  for (const token of [
+    "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
+    "if (hostResult?.skipped) return;",
+    "getRenderPassCommitAccountingOwner().commitRenderPass({",
+    "hostSummary: hostResult,",
+  ]) {
+    assertIncludes(renderPassToCacheSource, token, "renderPassToCache must keep P51/P52 delegation shape");
+  }
+
+  for (const token of [
+    "RendererRuntimeContext",
+    "getRendererRuntimeContext",
+    "renderer_runtime_context",
+  ]) {
+    assertExcludes(publicFacadeSource, token, "public facade must not expose the private runtime context");
+  }
+  assertExcludes(rendererSource, stateContextToken, "map_renderer must not write the context onto runtimeState");
+  assertExcludes(rendererSource, globalContextToken, "map_renderer must not expose the context on globalThis");
+  assertExcludes(stateWriteAllowlistSource, "rendererRuntimeContext", "state-write allowlist must not add a context exception");
+  assertExcludes(stateWriteAllowlistSource, "renderer_runtime_context", "state-write allowlist must not add a context module exception");
+});
+
+test("RendererRuntimeContext module remains the small P1.0 contract surface", () => {
+  const contextSource = readRepoFile(CONTEXT_PATH);
+
+  for (const token of [
+    "export function createRendererRuntimeContext(options = {})",
+    "export function assertRendererRuntimeContext(context)",
+    "export function describeRendererRuntimeContext(context)",
+    "Object.freeze({",
+    "schemaVersion: RENDERER_RUNTIME_CONTEXT_SCHEMA_VERSION",
+    "surface: Object.freeze({",
+    "diagnostics: Object.freeze({",
+  ]) {
+    assertIncludes(contextSource, token, "runtime context contract must keep P1.0 exports and shape");
+  }
+
+  for (const token of [
+    "import ",
+    "render_pass_cache_host",
+    "render_pass_commit_accounting",
+    "drawCanvas",
+    "renderPassToCache",
+  ]) {
+    assertExcludes(contextSource, token, "runtime context module must stay independent from receivers");
+  }
+});

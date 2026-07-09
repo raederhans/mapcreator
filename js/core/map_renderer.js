@@ -168,6 +168,11 @@ import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createRenderPassCacheHostOwner } from "./map_renderer/render_pass_cache_host_owner.js";
 import { createRenderPassCommitAccountingOwner } from "./map_renderer/render_pass_commit_accounting_owner.js";
+import {
+  assertRendererRuntimeContext,
+  createRendererRuntimeContext,
+  describeRendererRuntimeContext,
+} from "./map_renderer/renderer_runtime_context.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
 import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
@@ -979,6 +984,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let rendererRuntimeContext = null;
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
 let renderTransformReusePolicyOwner = null;
@@ -1006,6 +1012,30 @@ let intensityFieldMaskOwner = null;
 let hgoRuntimePreviewRenderOwner = null;
 
 // --- owner 初始化区：getXxxOwner() 统一承载组装入口与依赖注入。 ---
+function getRendererRuntimeContext() {
+  if (rendererRuntimeContext) {
+    return rendererRuntimeContext;
+  }
+  rendererRuntimeContext = createRendererRuntimeContext({
+    runtimeState,
+    rendererSurfaceHost,
+    ownerTag: "map-renderer",
+  });
+  return rendererRuntimeContext;
+}
+
+function getRenderPassReceiverContext() {
+  const rendererContext = assertRendererRuntimeContext(getRendererRuntimeContext());
+  if (rendererContext.state.runtimeState !== runtimeState) {
+    throw new TypeError("RendererRuntimeContext runtimeState receiver mismatch.");
+  }
+  if (rendererContext.surface.host !== rendererSurfaceHost) {
+    throw new TypeError("RendererRuntimeContext surface host receiver mismatch.");
+  }
+  describeRendererRuntimeContext(rendererContext);
+  return rendererContext;
+}
+
 function getRendererSurfaceLifecycleOwner() {
   if (rendererSurfaceLifecycleOwner) {
     return rendererSurfaceLifecycleOwner;
@@ -2359,6 +2389,7 @@ function getRenderPassCacheHostOwner() {
   if (renderPassCacheHostOwner) {
     return renderPassCacheHostOwner;
   }
+  getRenderPassReceiverContext();
   renderPassCacheHostOwner = createRenderPassCacheHostOwner({
     effects: {
       ensureRenderPassCanvas,
@@ -2376,6 +2407,7 @@ function getRenderPassCommitAccountingOwner() {
   if (renderPassCommitAccountingOwner) {
     return renderPassCommitAccountingOwner;
   }
+  getRenderPassReceiverContext();
   renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({
     effects: {
       clearPassFullReferenceTransforms,

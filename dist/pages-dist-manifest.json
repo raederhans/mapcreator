@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 884423,
+      "size_bytes": 885473,
       "source_kind": "dist"
     },
     {
@@ -47534,7 +47534,7 @@
     {
       "file_count": 9420,
       "path": "app",
-      "size_bytes": 965592513
+      "size_bytes": 965593563
     },
     {
       "file_count": 57,
@@ -47567,5 +47567,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972158049
+  "total_bytes": 972159099
 }

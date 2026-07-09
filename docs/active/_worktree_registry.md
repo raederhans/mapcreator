@@ -1,31 +1,83 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.0 renderer runtime context foundation validated for main closeout
+Last updated: 2026-07-09 P1.1 renderer runtime context first receiver validated
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline is `main@6dc506f18632e104a39b4527b742392bc756a716`, matching `origin/main@6dc506f18632e104a39b4527b742392bc756a716`.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` was clean on `main` before P1.0 edits; current staged changes are the validated P1.0 delivery.
+- Default-main baseline is `main@d0386559c2c939a026e3863ea9c7515f7ee68450`, matching `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`.
+- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` is clean on `main` before P1.1 edits; `git status --short --branch` reports `## main...origin/main`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator`.
-- Live test/build owner: main Codex thread owns P1.0 verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
+- Live test/build owner: main Codex thread owns P1.1 verification. Browser/dev-server E2E and `verify:core:main-thread` remain reserved main-thread lanes.
 
 ## Recommended Order
 
-1. Finish P1.0 on the current main checkout, keeping `map_renderer.js`, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
-2. Run the P1.0 child-safe validation set and changed-file selector dry-run before recommending P1.1.
+1. Finish P1.1 on the current main checkout, keeping `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, click selection, public facade, UI, CSS, scenario data, and production behavior unchanged. Checked-in `dist/**` may change only as generated Pages mirror sync required by `verify:dist-drift`.
+2. Run the P1.1 child-safe validation set, changed-file selector dry-run, `verify:dist-drift` if renderer source mirror changed, and full `verify:core` before recommending P1.2.
 3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
 5. Keep browser/dev-server and `verify:core:main-thread` verification reserved for their live-process owner.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P1.0 pre-edit check.
+Current rows reflect `git worktree list --porcelain` and per-worktree `git status --short --branch` after the P1.1 pre-edit check.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.0 renderer runtime context foundation on `main` | base `origin/main@6dc506f18632e104a39b4527b742392bc756a716` | integrated | Delivered files: `js/core/map_renderer/renderer_runtime_context.js`, `tests/renderer_runtime_context_foundation_behavior.test.mjs`, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/renderer_render_phase_lifecycle_inventory.test.mjs`, `package.json`, P1.0 docs, this registry, and generated Pages mirror files under `dist/**`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reported `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both reported `6dc506f18632e104a39b4527b742392bc756a716`; `verify:core` passed 41 commands after generated Pages mirror sync. | Yellow for future renderer runtime contract, verification routing, and generated Pages mirror edits; green for `map_renderer.js`, public facade, UI, CSS, scenario data, and production behavior. | Commit and push this validated main closeout; recommend P1.1 only after the pushed main baseline is current. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.1 renderer runtime context first receiver on `main` | base `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450` | ready-for-integration | Hot files: `js/core/map_renderer.js`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, P51/P52 inventory tests, `tools/verification/verification_domains.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `package.json`, P1.1 docs, this registry, and generated Pages mirror files `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`. | `git worktree list --porcelain` lists only this path; pre-edit `git status --short --branch` reports `## main...origin/main`; `git rev-parse HEAD` and `git rev-parse origin/main` both report `d0386559c2c939a026e3863ea9c7515f7ee68450`. Targeted P1.1 validation, `verify:dist-drift`, code-reviewer self-check, and full `npm run verify:core` passed. | Yellow for `map_renderer.js` receiver wiring, renderer runtime contract tests, verification routing, and generated Pages mirror sync; green for public facade, UI, CSS, scenario data, click selection, and pass drawing by explicit non-goals. | Push P1.1, then proceed to P1.2 planning from the pushed main baseline. |
+
+## Scenario Forge P1.1 RendererRuntimeContext First Receiver 2026-07-09
+
+Planned change:
+
+1. Add lazy `RendererRuntimeContext` creation in `js/core/map_renderer.js` through `getRendererRuntimeContext()`.
+2. Use the context in render pass cache host / commit accounting owner dependency construction as the first receiver.
+3. Keep `map_renderer.js` as the composition root and keep owner algorithms unchanged.
+4. Add a receiver behavior/inventory test, package script, verification metadata, and route coverage.
+5. Sync checked-in Pages mirror only if `verify:dist-drift` requires it.
+
+Non-goals: no `drawCanvas()` migration, no pass drawing migration, no `renderPassToCache()` behavior change, no click selection migration, no public facade change, no scenario/UI/CSS/data change, no package dependency change.
+
+Live owner: main Codex thread owns P1.1 implementation and deterministic verification. Browser/dev-server E2E and `verify:core:main-thread` are reserved Not-tested lanes unless ownership changes explicitly.
+
+Initial validation plan: syntax checks for changed JS/MJS; `test:node:renderer-runtime-context-foundation`; new `test:node:renderer-runtime-context-receiver`; P51/P52 owner suites; verification metadata; verify-core runner; architecture boundaries; state-write allowlist; verify-core list; selector route check and changed-file dry-run; test import graph; supervisor contracts/plan; `verify:dist-drift` if renderer source mirror changed; final `verify:core`.
+
+What changed:
+
+1. `js/core/map_renderer.js` now lazily creates one private `RendererRuntimeContext` from `runtimeState`, `rendererSurfaceHost`, and owner tag `map-renderer`.
+2. P51 `getRenderPassCacheHostOwner()` and P52 `getRenderPassCommitAccountingOwner()` now call `getRenderPassReceiverContext()` before existing owner construction.
+3. P51/P52 owner constructor APIs, owner algorithms, `renderPassToCache()`, pass drawing, `drawCanvas()`, click selection, public facade, UI, CSS, and scenario data stay in their current locations and contracts.
+4. `tests/renderer_runtime_context_receiver_behavior.test.mjs` locks lazy creation, first receiver ordering, private boundary, public-facade boundary, and P1.0 context module independence.
+5. Verification metadata and `verify:core` default planning now include `test:node:renderer-runtime-context-receiver`; Pages dist mirror was regenerated for the `map_renderer.js` source change.
+
+Core files: `js/core/map_renderer.js`.
+
+Test files: `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/render_pass_cache_host_owner_inventory.test.mjs`, `tests/render_pass_commit_accounting_owner_inventory.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/active/renderer-runtime-context-first-receiver-p1-1-20260709.md`, `docs/active/_worktree_registry.md`.
+
+Metadata / package files: `tools/verification/verification_domains.mjs`, `package.json`.
+
+Generated Pages mirror files: `dist/app/js/core/map_renderer.js`, `dist/pages-dist-manifest.json`.
+
+Temporary files: ignored reports under `.runtime/reports/generated/`, including `p1-1-adaptive-selection.json`, `p1-1-adaptive-selection.md`, `p1-1-verify-core-plan.json`, `p1-1-verify-core-plan.md`, and `supervisor-plan.json`.
+
+Diff summary: P1.1 adds a private lazy runtime context holder and first receiver assertion in `map_renderer.js`, one receiver behavior test, inventory assertions for P51/P52 receiver ordering, one package script, one renderer-runtime verification metadata route, verify-core plan expectations, active docs, and generated Pages mirror sync.
+
+Commit status: P1.1 Lore commit prepared on `main`; push pending at this registry update.
+
+Base divergence: base and pre-edit baseline are `main@d0386559c2c939a026e3863ea9c7515f7ee68450` and `origin/main@d0386559c2c939a026e3863ea9c7515f7ee68450`.
+
+Potential conflicts: yellow with future edits to `js/core/map_renderer.js`, `package.json`, verification metadata/tests, this registry, generated Pages mirrors, and future renderer runtime context receiver work. Green with public facade, shared UI, CSS, scenario data, click selection, and pass drawing because P1.1 did not touch those surfaces.
+
+Validation passed: `node --check js/core/map_renderer.js`; `node --check js/core/map_renderer/renderer_runtime_context.js`; `node --check tests/renderer_runtime_context_receiver_behavior.test.mjs`; `npm run test:node:renderer-runtime-context-receiver` 4/4; `npm run test:node:renderer-runtime-context-foundation` 8/8; `npm run test:node:render-pass-cache-host-owner-suite` 26/26; `npm run test:node:render-pass-commit-accounting-owner-suite` 15/15; `npm run test:node:verification-metadata` 7/7; `npm run test:node:verify-core-runner` 8/8; `npm run verify:state-write-allowlist`; `npm run verify:architecture-boundaries`; `npm run verify:test-import-graph`; changed-file selector dry-run wrote `.runtime/reports/generated/p1-1-adaptive-selection.json` and `.runtime/reports/generated/p1-1-adaptive-selection.md` with `unmatchedChangedFiles: []`; `npm run verify:supervisor-contracts`; `npm run verify:supervisor-plan`; `npm run verify:core:list` wrote a 42-command plan with receiver/foundation/dist checks; `npm run verify:dist-drift` passed after staging generated Pages mirror files; code-reviewer reported no blocking findings and the one low test-format sensitivity comment was fixed; full `npm run verify:core` passed 42 commands and wrote `.runtime/reports/generated/verify-core.json`.
+
+Route gaps: none. The P1.1 changed-file selector dry-run covered `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P51/P52 owner files, the new receiver test, P51/P52 inventory tests, verification metadata, verify-core runner, package script, active docs, and generated Pages mirror responsibilities.
+
+Checks intentionally skipped: `verify:core:main-thread` remains an explicit browser/dev-server/Playwright lane outside this P1.1 delivery.
+
+Recommendation status: ready to push P1.1, then start P1.2 from the pushed main baseline.
 
 ## Scenario Forge P1.0 Renderer Runtime Context Foundation 2026-07-09
 

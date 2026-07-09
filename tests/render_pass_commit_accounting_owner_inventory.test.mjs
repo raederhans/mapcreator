@@ -82,6 +82,15 @@ test("map_renderer keeps drawCanvas and renderPassToCache wrapper while delegati
     "function renderPassToCache(",
     "function resetCanvasContext(",
   );
+  const p52OwnerFactorySource = sliceBetween(
+    rendererSource,
+    "function getRenderPassCommitAccountingOwner()",
+    "function getRenderPipelinePassesOwner()",
+  );
+  const receiverIndex = p52OwnerFactorySource.indexOf("getRenderPassReceiverContext();");
+  const createIndex = p52OwnerFactorySource.indexOf(
+    "renderPassCommitAccountingOwner = createRenderPassCommitAccountingOwner({",
+  );
 
   assertIncludes(rendererSource, "function drawCanvas()", "map_renderer must keep drawCanvas");
   assertIncludes(rendererSource, "function renderPassToCache(", "map_renderer must keep renderPassToCache wrapper");
@@ -95,6 +104,14 @@ test("map_renderer keeps drawCanvas and renderPassToCache wrapper while delegati
     "import { createRenderPassCommitAccountingOwner } from \"./map_renderer/render_pass_commit_accounting_owner.js\";",
     "map_renderer must import P52 owner from map_renderer namespace",
   );
+  assertIncludes(
+    rendererSource,
+    "from \"./map_renderer/renderer_runtime_context.js\";",
+    "map_renderer must keep the private runtime context contract import",
+  );
+  assert.notEqual(receiverIndex, -1, "P52 owner construction must request the runtime context receiver");
+  assert.notEqual(createIndex, -1, "P52 owner construction must keep its existing constructor call");
+  assert.ok(receiverIndex < createIndex, "P52 receiver assertion must run before owner construction");
 
   for (const token of [
     "let passStart = 0;",

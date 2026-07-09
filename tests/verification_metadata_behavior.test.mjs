@@ -133,3 +133,21 @@ test("renderer runtime context foundation files route to renderer owner verifica
   assert.ok(report.coveredDomains.includes("renderer-runtime"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-foundation"));
 });
+
+test("renderer runtime context receiver files route to renderer owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/map_renderer/render_pass_cache_host_owner.js",
+    "js/core/map_renderer/render_pass_commit_accounting_owner.js",
+    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
+    "docs/active/renderer-runtime-context-first-receiver-p1-1-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-cache-host-owner-suite"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:render-pass-commit-accounting-owner-suite"));
+});
