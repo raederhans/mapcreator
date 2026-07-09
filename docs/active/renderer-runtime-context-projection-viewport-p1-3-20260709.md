@@ -22,7 +22,8 @@ Migrate projection/path owner construction and viewport read/command owner const
 - [x] Update worktree registry with P1.3 delivery state.
 - [x] Sync checked-in Pages mirror files for P1.3.
 - [x] Run deterministic full validation, including `verify:pages-dist`, `verify:dist-drift`, and full `npm run verify:core`.
-- [ ] Commit the validated P1.3 patch. Do not archive this active doc in this closeout.
+- [x] Commit the P1.3 functional patch as `91ffdfa6`.
+- [ ] Commit this closeout update, then push the functional commit and closeout commit. Do not archive this active doc in this closeout.
 
 ## Validation Checklist
 
@@ -78,7 +79,7 @@ Changed checked-in Pages mirror files: `dist/app/js/core/map_renderer.js`, `dist
 
 Runtime artifacts: changed-file selector dry-run wrote `.runtime/reports/generated/p1-3-adaptive-selection.json` and `.runtime/reports/generated/p1-3-adaptive-selection.md` for 18 staged files with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); full `npm run verify:core` wrote `.runtime/reports/generated/verify-core.json`.
 
-Commit status: not committed; validated and ready to commit.
+Commit status: P1.3 functional commit `91ffdfa6` exists locally; this closeout update is preparing a follow-up docs commit, then push.
 
 Base/HEAD starting point: `5d712c4b92ecb910a4aeb916ad11e195852d4e5f`.
 
@@ -88,4 +89,4 @@ Validation passed: syntax checks for changed JS/MJS; runtime context foundation/
 
 Not run: `verify:core:main-thread`, browser, dev-server, and Playwright lanes.
 
-Recommended next step: commit the validated P1.3 patch.
+Recommended next step: commit this closeout update, then push P1.3 functional commit `91ffdfa6` and the closeout commit.

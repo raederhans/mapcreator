@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport validated, ready to commit
+Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport functional commit created; closeout commit preparing, then push
 
 ## Integration Owner
 
@@ -13,7 +13,7 @@ Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport v
 
 ## Recommended Order
 
-1. Commit the validated P1.3 source/test/tooling/docs/Pages mirror patch from the current main checkout.
+1. Commit this P1.3 closeout doc update, then push functional commit `91ffdfa6` plus the closeout commit.
 2. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
 3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
@@ -21,11 +21,11 @@ Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport v
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and current P1.3 validation state.
+Current rows reflect `git worktree list --porcelain` and current P1.3 functional commit closeout state.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.3 renderer runtime context projection + viewport patch on `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | base `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | validated / ready to commit | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P1.3 context/receiver/static tests, two stale inventory assertion updates, verification routing, `package.json`, checked-in Pages mirrors, P1.3 docs, and this registry. No public facade, UI, CSS, scenario data, draw/pass/click-selection changes. | `git worktree list --porcelain` lists only this path at HEAD `5d712c4b92ecb910a4aeb916ad11e195852d4e5f`; changed-file selector dry-run for the complete staged P1.3 patch wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); `verify:pages-dist`, `verify:dist-drift`, supervisor contracts/plan, and full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`. | Green for active worktree overlap because only the main worktree exists. Yellow for future renderer runtime context, verification routing, inventory, and Pages mirror edits. | Ready to commit as P1.3; browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | P1.3 renderer runtime context projection + viewport patch on functional commit `91ffdfa6` | base `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | functional commit created; closeout commit preparing, then push | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P1.3 context/receiver/static tests, two stale inventory assertion updates, verification routing, `package.json`, checked-in Pages mirrors, P1.3 docs, and this registry. No public facade, UI, CSS, scenario data, draw/pass/click-selection changes. | Functional commit `91ffdfa6` exists locally; changed-file selector dry-run for the complete staged P1.3 patch wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); `verify:pages-dist`, `verify:dist-drift`, supervisor contracts/plan, and full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`. | Green for active worktree overlap because only the main worktree exists. Yellow for future renderer runtime context, verification routing, inventory, and Pages mirror edits. | Commit this closeout update, then push P1.3 functional commit `91ffdfa6` and the closeout commit; browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. |
 
 ## Scenario Forge P1.3 RendererRuntimeContext Projection + Viewport Read Model 2026-07-09
 
@@ -63,9 +63,9 @@ Temporary files: ignored reports under `.runtime/reports/generated/`, including 
 
 Diff summary: P1.3 extends the private runtime context contract, migrates three construction paths to context-derived reads, syncs checked-in Pages mirrors, and refreshes two stale inventory assertions. It does not modify owner modules, public facade, draw/pass functions, scenario/UI/CSS/data, or production dependencies.
 
-Commit status: not committed; current state is validated and ready to commit.
+Commit status: P1.3 functional commit `91ffdfa6` exists locally; this closeout update is preparing a follow-up docs commit, then push.
 
-Base divergence: base and HEAD starting point are `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`. Current local `main` is dirty with the validated P1.3 patch, and `git worktree list --porcelain` lists only `C:\Users\raede\Desktop\dev\mapcreator` on `main`.
+Base divergence: P1.3 started from `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`; functional commit `91ffdfa6` is local and awaiting push with this closeout commit.
 
 Potential conflicts: green for active worktree overlap because only the main worktree exists. Yellow with future edits to `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, runtime context tests, inventory tests, Python boundary scans, verification metadata, this registry, and generated Pages mirrors. Green with public facade, UI, CSS, scenario data, click selection, pass drawing, and `renderPassToCache()` because P1.3 does not touch those surfaces.
 
@@ -77,7 +77,7 @@ Review follow-ups: `tests/renderer_projection_path_lifecycle_inventory_boundary.
 
 Checks intentionally skipped: `verify:core:main-thread`, browser, dev-server, and Playwright lanes were not run. Deterministic core passed, and `verify:core` skipped explicit E2E main-thread commands by default.
 
-Recommendation status: validated / ready to commit as P1.3.
+Recommendation status: commit this closeout update, then push P1.3 functional commit `91ffdfa6` and the closeout commit.
 
 ## Scenario Forge P1.2 RendererRuntimeContext Render Cache Read Model 2026-07-09
 
