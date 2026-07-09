@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 891835,
+      "size_bytes": 893534,
       "source_kind": "dist"
     },
     {
@@ -45867,7 +45867,7 @@
     },
     {
       "path": "app/js/core/map_renderer/renderer_runtime_context.js",
-      "size_bytes": 21166,
+      "size_bytes": 21548,
       "source_kind": "dist"
     },
     {
@@ -46107,7 +46107,7 @@
     },
     {
       "path": "app/js/core/renderer/renderer_viewport_update_owner.js",
-      "size_bytes": 1523,
+      "size_bytes": 1728,
       "source_kind": "dist"
     },
     {
@@ -47534,7 +47534,7 @@
     {
       "file_count": 9420,
       "path": "app",
-      "size_bytes": 965616388
+      "size_bytes": 965618674
     },
     {
       "file_count": 57,
@@ -47567,5 +47567,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972181925
+  "total_bytes": 972184211
 }

@@ -55,6 +55,11 @@ const VIEWPORT_ACCESSOR_NAMES = Object.freeze([
   "getPathSvg",
   "getZoomBehavior",
   "getInteractionRect",
+  "getMapContainer",
+  "getViewportGroup",
+  "getGlobal",
+  "getDevicePixelRatio",
+  "hasLandFeatures",
 ]);
 
 function describeValue(value) {
@@ -310,6 +315,11 @@ function createViewportReadModel(viewport, runtimeState, rendererSurfaceHost) {
     getPathSvg: viewportAccessors.getPathSvg,
     getZoomBehavior: viewportAccessors.getZoomBehavior,
     getInteractionRect: viewportAccessors.getInteractionRect,
+    getMapContainer: viewportAccessors.getMapContainer,
+    getViewportGroup: viewportAccessors.getViewportGroup,
+    getGlobal: viewportAccessors.getGlobal,
+    getDevicePixelRatio: viewportAccessors.getDevicePixelRatio,
+    hasLandFeatures: viewportAccessors.hasLandFeatures,
   });
 }
 

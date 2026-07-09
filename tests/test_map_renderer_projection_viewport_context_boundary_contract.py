@@ -81,10 +81,11 @@ class MapRendererProjectionViewportContextBoundaryContractTest(unittest.TestCase
         self.assertIn("RendererRuntimeContext.viewport receiver is required.", viewport_receiver)
         self.assertIn("rendererContext.viewport.getRuntimeState() !== runtimeState", viewport_receiver)
         self.assertIn("rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost", viewport_receiver)
+        self.assertIn("rendererContext.viewport.getGlobal() !== globalThis", viewport_receiver)
+        self.assertIn("rendererContext.viewport.getDevicePixelRatio() !== globalThis.devicePixelRatio", viewport_receiver)
         self.assertIn("return rendererContext;", viewport_receiver)
 
         forbidden_tokens = [
-            "globalThis.",
             "setProjection",
             "setPath",
             "setZoomTransform",

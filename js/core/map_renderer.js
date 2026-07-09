@@ -1062,6 +1062,11 @@ function getRendererRuntimeContext() {
         getPathSvg: () => rendererSurfaceHost.getPathSvg(),
         getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
         getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+        getMapContainer: () => rendererSurfaceHost.getMapContainer(),
+        getViewportGroup: () => rendererSurfaceHost.getViewportGroup(),
+        getGlobal: () => globalThis,
+        getDevicePixelRatio: () => globalThis.devicePixelRatio,
+        hasLandFeatures: () => !!runtimeState.landData?.features?.length,
       },
     },
     renderCache: {
@@ -1144,6 +1149,21 @@ function getViewportReceiverContext() {
   if (rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost) {
     throw new TypeError("RendererRuntimeContext viewport surface host receiver mismatch.");
   }
+  if (rendererContext.viewport.getMapContainer() !== rendererSurfaceHost.getMapContainer()) {
+    throw new TypeError("RendererRuntimeContext viewport map container receiver mismatch.");
+  }
+  if (rendererContext.viewport.getViewportGroup() !== rendererSurfaceHost.getViewportGroup()) {
+    throw new TypeError("RendererRuntimeContext viewport group receiver mismatch.");
+  }
+  if (rendererContext.viewport.getGlobal() !== globalThis) {
+    throw new TypeError("RendererRuntimeContext viewport global receiver mismatch.");
+  }
+  if (rendererContext.viewport.getDevicePixelRatio() !== globalThis.devicePixelRatio) {
+    throw new TypeError("RendererRuntimeContext viewport DPR receiver mismatch.");
+  }
+  if (rendererContext.viewport.hasLandFeatures() !== !!runtimeState.landData?.features?.length) {
+    throw new TypeError("RendererRuntimeContext viewport land feature receiver mismatch.");
+  }
   return rendererContext;
 }
 
@@ -1207,15 +1227,20 @@ function getRendererFitProjectionOwner() {
   if (rendererFitProjectionOwner) {
     return rendererFitProjectionOwner;
   }
+  const rendererContext = getViewportReceiverContext();
+  const viewportContext = rendererContext.viewport;
+  const viewportHelpers = viewportContext.helpers;
+  const runtime = viewportContext.getRuntimeState();
+  const surfaceHost = viewportContext.getSurfaceHost();
   rendererFitProjectionOwner = createRendererFitProjectionOwner({
-    surfaceHost: rendererSurfaceHost,
-    state,
+    surfaceHost,
+    state: runtime,
     constants: {
-      projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,
+      projectionFitPaddingRatio: viewportContext.constants.projectionFitPaddingRatio,
     },
     getters: {
-      getLogicalCanvasDimensions,
-      getRenderableLandFeatures,
+      getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,
+      getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,
     },
     effects: {
       resetCityAnchorCache: () => {
@@ -2667,22 +2692,23 @@ function getRendererViewportUpdateOwner() {
   if (rendererViewportUpdateOwner) {
     return rendererViewportUpdateOwner;
   }
+  const rendererContext = getViewportReceiverContext();
+  const viewportContext = rendererContext.viewport;
+  const runtime = viewportContext.getRuntimeState();
   rendererViewportUpdateOwner = createRendererViewportUpdateOwner({
+    getters: {
+      getViewportGroup: viewportContext.getViewportGroup,
+    },
     effects: {
       setZoomTransform: (transform) => {
-        runtimeState.zoomTransform = transform;
+        runtime.zoomTransform = transform;
       },
       setHitCanvasDirty: () => {
-        runtimeState.hitCanvasDirty = true;
+        runtime.hitCanvasDirty = true;
       },
       updateZoomUi: () => {
-        if (typeof runtimeState.updateZoomUIFn === "function") {
-          runtimeState.updateZoomUIFn();
-        }
-      },
-      applyViewportTransform: (transform) => {
-        if (rendererSurfaceHost.getViewportGroup()) {
-          rendererSurfaceHost.getViewportGroup().attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+        if (typeof runtime.updateZoomUIFn === "function") {
+          runtime.updateZoomUIFn();
         }
       },
       renderPhysicalIntensityBrushPreview,
@@ -2702,13 +2728,16 @@ function getViewportResizeLifecycleOwner() {
   if (viewportResizeLifecycleOwner) {
     return viewportResizeLifecycleOwner;
   }
+  const rendererContext = getViewportReceiverContext();
+  const viewportContext = rendererContext.viewport;
+  const runtime = viewportContext.getRuntimeState();
   viewportResizeLifecycleOwner = createViewportResizeLifecycleOwner({
-    state,
+    state: runtime,
     getters: {
-      getMapContainer: () => rendererSurfaceHost.getMapContainer(),
-      getGlobal: () => globalThis,
-      getDevicePixelRatio: () => globalThis.devicePixelRatio,
-      hasLandFeatures: () => !!runtimeState.landData?.features?.length,
+      getMapContainer: viewportContext.getMapContainer,
+      getGlobal: viewportContext.getGlobal,
+      getDevicePixelRatio: viewportContext.getDevicePixelRatio,
+      hasLandFeatures: viewportContext.hasLandFeatures,
     },
     helpers: {
       scheduleDeferredWork,

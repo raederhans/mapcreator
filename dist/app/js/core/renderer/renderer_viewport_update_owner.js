@@ -9,12 +9,10 @@ export function createRendererViewportUpdateOwner({
   effects = {},
   getters = {},
 } = {}) {
-  void getters;
-
+  const getViewportGroup = requireFunction(getters, "getViewportGroup", "getters");
   const setZoomTransform = requireFunction(effects, "setZoomTransform", "effects");
   const setHitCanvasDirty = requireFunction(effects, "setHitCanvasDirty", "effects");
   const updateZoomUi = requireFunction(effects, "updateZoomUi", "effects");
-  const applyViewportTransform = requireFunction(effects, "applyViewportTransform", "effects");
   const renderPhysicalIntensityBrushPreview = requireFunction(
     effects,
     "renderPhysicalIntensityBrushPreview",
@@ -31,6 +29,13 @@ export function createRendererViewportUpdateOwner({
     "effects",
   );
   const drawFrame = requireFunction(effects, "drawFrame", "effects");
+
+  function applyViewportTransform(transform) {
+    const viewportGroup = getViewportGroup();
+    if (viewportGroup) {
+      viewportGroup.attr("transform", `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+    }
+  }
 
   function updateMap(transform) {
     setZoomTransform(transform);

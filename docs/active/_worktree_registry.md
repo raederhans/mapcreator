@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport functional commit created; closeout commit preparing, then push
+Last updated: 2026-07-09 P1.4 viewport mutation chain verified for commit; unrelated parent WIP preserved
 
 ## Integration Owner
 
@@ -21,11 +21,47 @@ Last updated: 2026-07-09 P1.3 renderer runtime context projection and viewport f
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain` and current P1.3 functional commit closeout state.
+Current rows reflect `git worktree list --porcelain`; P1.4 is active in the main checkout with unrelated parent WIP preserved.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | P1.3 renderer runtime context projection + viewport patch on functional commit `91ffdfa6` | base `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | functional commit created; closeout commit preparing, then push | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P1.3 context/receiver/static tests, two stale inventory assertion updates, verification routing, `package.json`, checked-in Pages mirrors, P1.3 docs, and this registry. No public facade, UI, CSS, scenario data, draw/pass/click-selection changes. | Functional commit `91ffdfa6` exists locally; changed-file selector dry-run for the complete staged P1.3 patch wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); `verify:pages-dist`, `verify:dist-drift`, supervisor contracts/plan, and full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`. | Green for active worktree overlap because only the main worktree exists. Yellow for future renderer runtime context, verification routing, inventory, and Pages mirror edits. | Commit this closeout update, then push P1.3 functional commit `91ffdfa6` and the closeout commit; browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. |
+
+## Scenario Forge P1.4 Viewport Mutation Chain Context Migration 2026-07-09
+
+Status: ready-for-commit / verified after focused and main-thread validation.
+
+Worktree: `C:\Users\raede\Desktop\dev\mapcreator`.
+
+Task: migrate fit projection, viewport update, and resize lifecycle receiver construction paths to read viewport mutation dependencies through `RendererRuntimeContext.viewport`.
+
+Base: `main...origin/main` at task start; current checkout also has unrelated unstaged WIP in `docs/archive/**` deletions and `lessons learned.md`.
+
+Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, `js/core/renderer/renderer_viewport_update_owner.js`.
+
+Test files: `tests/renderer_runtime_context_projection_viewport_behavior.test.mjs`, `tests/renderer_runtime_context_receiver_behavior.test.mjs`, `tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs`, `tests/renderer_viewport_update_owner_behavior.test.mjs`, `tests/test_map_renderer_viewport_mutation_context_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`.
+
+Docs files: `docs/active/renderer-runtime-context-viewport-mutation-chain-p1-4-20260709.md`, `docs/active/_worktree_registry.md`.
+
+Metadata / package files: `tools/verification/verification_domains.mjs`, `package.json`.
+
+Generated dist: builder generated and staged the checked-in dist mirror sync during `npm run verify:dist-drift`.
+
+Shared hotspots: renderer runtime context, `map_renderer.js` owner wiring, viewport update owner, verification metadata, package scripts, and this registry.
+
+Current diff summary: viewport context gains pure read accessors for map container, viewport group, global object, DPR, and land-feature presence; fit projection/update/resize owner wiring consumes those accessors through `getViewportReceiverContext()`; viewport update owner applies SVG transform through `getters.getViewportGroup`; focused Node/Python contracts and route metadata were added.
+
+Commit status: staged by the main integration owner and ready for the P1.4 Lore commit.
+
+Potential overlap: red with other active edits to `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, `js/core/renderer/renderer_viewport_update_owner.js`, runtime context tests, verification metadata, package scripts, or registry. Green with README, public facade, UI, CSS, scenario data, draw/pass/click-selection, and existing unrelated `docs/archive/**` / `lessons learned.md` WIP.
+
+Validation passed: `node --check js/core/map_renderer.js`; `node --check js/core/map_renderer/renderer_runtime_context.js`; `node --check js/core/renderer/renderer_viewport_update_owner.js`; `node --check tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs`; `node --check tests/renderer_runtime_context_receiver_behavior.test.mjs`; `node --check tests/renderer_viewport_update_owner_behavior.test.mjs`; `node --check tests/renderer_runtime_context_projection_viewport_behavior.test.mjs`; `node --check tests/verification_metadata_behavior.test.mjs`; `node --check tests/verify_core_runner_behavior.test.mjs`; `python -m py_compile tests/test_map_renderer_projection_viewport_context_boundary_contract.py tests/test_map_renderer_viewport_mutation_context_boundary_contract.py`; `npm run test:node:renderer-runtime-context-viewport-mutation` 4/4; `npm run test:python:map-renderer-viewport-mutation-context-boundary` 6/6; `npm run test:node:renderer-viewport-update-owner` 6/6; `npm run test:node:renderer-runtime-context-projection-viewport` 7/7; `npm run test:node:renderer-runtime-context-receiver` 9/9; `npm run test:node:viewport-resize-lifecycle-owner` 12/12; `npm run test:node:verification-metadata` 10/10; `npm run test:node:renderer-fit-projection-lifecycle` 23/23; `npm run test:python:map-renderer-projection-viewport-context-boundary` 4/4; `npm run test:node:verify-core-runner` 8/8; `npm run test:node:renderer-runtime-context-foundation` 8/8; `npm run test:node:renderer-runtime-context-render-cache` 9/9; `git diff --check`; `npm run verify:pages-dist` exit 0; `npm run verify:dist-drift` exit 0 after builder-generated dist mirror staging; `npm run verify:core` exit 0 with 50 commands and report `.runtime/reports/generated/verify-core.json`.
+
+Route gaps: none. Initial selector dry-run wrote `.runtime/reports/generated/p1-4-adaptive-selection.json` and `.runtime/reports/generated/p1-4-adaptive-selection.md` with `Unmatched changed files: none`; final selector dry-run wrote `.runtime/reports/generated/p1-4-adaptive-selection-final.json` and `.runtime/reports/generated/p1-4-adaptive-selection-final.md` with `changed=22`, `recommended=181`, and `unmatched=[]`.
+
+Not-tested lanes: `verify:core:main-thread`, browser, dev-server, and Playwright.
+
+Recommended integration: commit the verified P1.4 package. P1.5 can start after this commit; keep `verify:core:main-thread`, browser, dev-server, and Playwright as explicit not-run lanes.
 
 ## Scenario Forge P1.3 RendererRuntimeContext Projection + Viewport Read Model 2026-07-09
 

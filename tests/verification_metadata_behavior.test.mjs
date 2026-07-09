@@ -195,3 +195,27 @@ test("renderer runtime context projection and viewport files route to renderer o
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-read-model-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-command-owner"));
 });
+
+test("renderer runtime context viewport mutation files route to renderer owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/renderer/renderer_fit_projection_owner.js",
+    "js/core/renderer/renderer_viewport_update_owner.js",
+    "js/core/renderer/viewport_resize_lifecycle_owner.js",
+    "tests/renderer_runtime_context_viewport_mutation_behavior.test.mjs",
+    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
+    "tests/renderer_viewport_update_owner_behavior.test.mjs",
+    "tests/viewport_resize_lifecycle_owner_behavior.test.mjs",
+    "tests/test_map_renderer_viewport_mutation_context_boundary_contract.py",
+    "docs/active/renderer-runtime-context-viewport-mutation-chain-p1-4-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-viewport-mutation"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-viewport-mutation-context-boundary"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-viewport-update-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-resize-lifecycle-owner"));
+});

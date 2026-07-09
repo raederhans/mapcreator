@@ -14,6 +14,16 @@ const EFFECT_NAMES = Object.freeze([
   "setZoomTransform",
   "setHitCanvasDirty",
   "updateZoomUi",
+  "renderPhysicalIntensityBrushPreview",
+  "syncUnitCounterScalesDuringZoom",
+  "syncSpecialZonePatternTransformDuringZoom",
+  "drawFrame",
+]);
+
+const UPDATE_ORDER = Object.freeze([
+  "setZoomTransform",
+  "setHitCanvasDirty",
+  "updateZoomUi",
   "applyViewportTransform",
   "renderPhysicalIntensityBrushPreview",
   "syncUnitCounterScalesDuringZoom",
@@ -21,12 +31,20 @@ const EFFECT_NAMES = Object.freeze([
   "drawFrame",
 ]);
 
-function createHarness() {
+function createHarness(options = {}) {
   const calls = {
     order: [],
     setZoomTransform: [],
     applyViewportTransform: [],
   };
+  const group = Object.hasOwn(options, "viewportGroup")
+    ? options.viewportGroup
+    : {
+      attr(name, value) {
+        calls.order.push("applyViewportTransform");
+        calls.applyViewportTransform.push({ name, value });
+      },
+    };
   const effects = {};
   for (const name of EFFECT_NAMES) {
     effects[name] = (transform) => {
@@ -34,13 +52,13 @@ function createHarness() {
       if (name === "setZoomTransform") {
         calls.setZoomTransform.push(transform);
       }
-      if (name === "applyViewportTransform") {
-        calls.applyViewportTransform.push(transform);
-      }
     };
   }
-  const owner = createRendererViewportUpdateOwner({ effects });
-  return { calls, effects, owner };
+  const getters = {
+    getViewportGroup: () => group,
+  };
+  const owner = createRendererViewportUpdateOwner({ effects, getters });
+  return { calls, effects, getters, owner };
 }
 
 function readRepoFile(...parts) {
@@ -69,37 +87,50 @@ test("updateMap runs viewport update effects in exact order", () => {
 
   owner.updateMap(transform);
 
-  assert.deepEqual(calls.order, [...EFFECT_NAMES]);
+  assert.deepEqual(calls.order, [...UPDATE_ORDER]);
   assert.deepEqual(calls.setZoomTransform, [transform]);
-  assert.deepEqual(calls.applyViewportTransform, [transform]);
+  assert.deepEqual(calls.applyViewportTransform, [{
+    name: "transform",
+    value: "translate(12,-5) scale(3)",
+  }]);
   assert.equal(calls.order.at(-1), "drawFrame");
   assert.equal(calls.order.filter((name) => name === "drawFrame").length, 1);
 });
 
 test("updateMap passes null and partial transforms through exactly", () => {
-  const { calls, owner } = createHarness();
+  const { calls, owner } = createHarness({ viewportGroup: false });
   const partialTransform = { x: 7 };
 
   owner.updateMap(null);
-  assert.deepEqual(calls.order, [...EFFECT_NAMES]);
+  assert.deepEqual(calls.order, EFFECT_NAMES);
 
   owner.updateMap(partialTransform);
 
   assert.deepEqual(calls.order, [...EFFECT_NAMES, ...EFFECT_NAMES]);
   assert.deepEqual(calls.setZoomTransform, [null, partialTransform]);
-  assert.deepEqual(calls.applyViewportTransform, [null, partialTransform]);
+  assert.deepEqual(calls.applyViewportTransform, []);
 });
 
 test("owner fails fast when a required effect is missing", () => {
   for (const missingName of EFFECT_NAMES) {
-    const { effects } = createHarness();
+    const { effects, getters } = createHarness();
     delete effects[missingName];
 
     assert.throws(
-      () => createRendererViewportUpdateOwner({ effects }),
+      () => createRendererViewportUpdateOwner({ effects, getters }),
       new RegExp(`renderer viewport update owner requires effects\\.${missingName}`),
     );
   }
+});
+
+test("owner fails fast when viewport group getter is missing", () => {
+  const { getters, effects } = createHarness();
+  delete getters.getViewportGroup;
+
+  assert.throws(
+    () => createRendererViewportUpdateOwner({ effects, getters }),
+    /renderer viewport update owner requires getters\.getViewportGroup/,
+  );
 });
 
 test("map_renderer imports wires and delegates viewport updates through the owner", () => {
@@ -119,11 +150,15 @@ test("map_renderer imports wires and delegates viewport updates through the owne
     "import { createRendererViewportUpdateOwner } from \"./renderer/renderer_viewport_update_owner.js\";",
     "let rendererViewportUpdateOwner = null;",
     "function getRendererViewportUpdateOwner()",
+    "const rendererContext = getViewportReceiverContext();",
+    "const viewportContext = rendererContext.viewport;",
+    "const runtime = viewportContext.getRuntimeState();",
     "rendererViewportUpdateOwner = createRendererViewportUpdateOwner({",
+    "getters: {",
+    "getViewportGroup: viewportContext.getViewportGroup,",
     "setZoomTransform: (transform) => {",
     "setHitCanvasDirty: () => {",
     "updateZoomUi: () => {",
-    "applyViewportTransform: (transform) => {",
     "renderPhysicalIntensityBrushPreview,",
     "syncUnitCounterScalesDuringZoom: () => {",
     "syncSpecialZonePatternTransformDuringZoom,",
@@ -147,6 +182,7 @@ test("map_renderer imports wires and delegates viewport updates through the owne
     ["runtimeState.", "zoomTransform = transform;"],
     ["runtimeState.", "hitCanvasDirty = true;"],
     ["rendererSurfaceHost.getViewportGroup().attr("],
+    ["rendererSurfaceHost.getViewportGroup()"],
     ["renderPhysicalIntensityBrushPreview();"],
     ["getStrategicOverlayRenderOwner().syncUnitCounterScalesDuringZoom();"],
     ["syncSpecialZonePatternTransformDuringZoom();"],

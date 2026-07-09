@@ -60,6 +60,11 @@ function createViewportDescriptor(runtimeState, rendererSurfaceHost, overrides =
       getPathSvg: () => rendererSurfaceHost.getPathSvg(),
       getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
       getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+      getMapContainer: () => rendererSurfaceHost.getMapContainer(),
+      getViewportGroup: () => rendererSurfaceHost.getViewportGroup(),
+      getGlobal: () => globalThis,
+      getDevicePixelRatio: () => globalThis.devicePixelRatio,
+      hasLandFeatures: () => Boolean(runtimeState.landData?.features?.length),
       ...(overrides.accessors || {}),
     },
   };
@@ -77,6 +82,8 @@ function createContextFixture(overrides = {}) {
       pathHitCanvas: { type: "hit-path" },
       zoomBehavior: { scaleExtent() {}, extent() {}, translateExtent() {} },
       interactionRect: { node: () => ({}) },
+      mapContainer: { type: "map-container" },
+      viewportGroup: { attr() {} },
     },
   });
   return createRendererRuntimeContext({
@@ -142,6 +149,11 @@ test("projection and viewport read models expose frozen constants, helpers, and 
   assert.equal(context.viewport.getSurfaceHost(), rendererSurfaceHost);
   assert.equal(context.projection.getProjection(), rendererSurfaceHost.getProjection());
   assert.equal(context.viewport.getProjection(), rendererSurfaceHost.getProjection());
+  assert.equal(context.viewport.getMapContainer(), rendererSurfaceHost.getMapContainer());
+  assert.equal(context.viewport.getViewportGroup(), rendererSurfaceHost.getViewportGroup());
+  assert.equal(context.viewport.getGlobal(), globalThis);
+  assert.equal(context.viewport.getDevicePixelRatio(), globalThis.devicePixelRatio);
+  assert.equal(context.viewport.hasLandFeatures(), false);
 
   const nextProjection = { name: "projection-b" };
   rendererSurfaceHost.setProjection(nextProjection);
@@ -169,6 +181,11 @@ test("projection and viewport descriptions are JSON-safe and contain no function
   assert.deepEqual(description.sections.projection.accessors.getProjection, { present: true, type: "function" });
   assert.deepEqual(description.sections.viewport.helpers.getLogicalCanvasDimensions, { present: true, type: "function" });
   assert.deepEqual(description.sections.viewport.accessors.getInteractionRect, { present: true, type: "function" });
+  assert.deepEqual(description.sections.viewport.accessors.getMapContainer, { present: true, type: "function" });
+  assert.deepEqual(description.sections.viewport.accessors.getViewportGroup, { present: true, type: "function" });
+  assert.deepEqual(description.sections.viewport.accessors.getGlobal, { present: true, type: "function" });
+  assert.deepEqual(description.sections.viewport.accessors.getDevicePixelRatio, { present: true, type: "function" });
+  assert.deepEqual(description.sections.viewport.accessors.hasLandFeatures, { present: true, type: "function" });
   assert.equal(json.includes("secretCanvasHandle"), false);
   assert.equal(json.includes("nextCanvasHandle"), false);
   assert.equal(json.includes("function"), true);
@@ -245,5 +262,11 @@ test("viewport helpers and accessors must be functions", () => {
       viewportOverrides: { accessors: { getInteractionRect: null } },
     }),
     /viewport\.accessors\.getInteractionRect must be a function/,
+  );
+  assert.throws(
+    () => createContextFixture({
+      viewportOverrides: { accessors: { getViewportGroup: null } },
+    }),
+    /viewport\.accessors\.getViewportGroup must be a function/,
   );
 });

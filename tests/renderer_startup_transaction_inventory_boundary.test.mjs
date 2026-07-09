@@ -243,13 +243,18 @@ test("render semantic anchors remain in map_renderer and outside P36 first move"
   }
 });
 
-test("viewport update owner remains effects-only", () => {
+test("viewport update owner reads viewport group through getter", () => {
   const ownerSource = readRepoFile("js", "core", "renderer", "renderer_viewport_update_owner.js");
 
   assertIncludes(ownerSource, "export function createRendererViewportUpdateOwner({", "viewport owner must exist");
   assertIncludes(ownerSource, "getters = {},", "viewport owner must preserve factory signature");
-  assertIncludes(ownerSource, "void getters;", "viewport owner must keep getters unused");
-  assertExcludes(ownerSource, "getters.", "viewport owner must stay effects-only");
+  assertIncludes(
+    ownerSource,
+    'const getViewportGroup = requireFunction(getters, "getViewportGroup", "getters");',
+    "viewport owner must read viewport group through injected getter",
+  );
+  assertIncludes(ownerSource, "const viewportGroup = getViewportGroup();", "viewport owner must call viewport group getter");
+  assertIncludes(ownerSource, 'viewportGroup.attr("transform"', "viewport owner must apply transform to viewport group");
   for (const token of ["runtimeState", "map_renderer.js", "fitProjection", "initMap", "setMapData"]) {
     assertExcludes(ownerSource, token, "viewport owner must avoid startup transaction tokens");
   }

@@ -320,12 +320,17 @@ test("P36 startup transaction owner remains focused away from setMapData", () =>
   }
 });
 
-test("P34 viewport update owner remains effects-only", () => {
+test("P34 viewport update owner reads viewport group through getter", () => {
   const ownerSource = readRepoFile("js", "core", "renderer", "renderer_viewport_update_owner.js");
 
   assertIncludes(ownerSource, "getters = {},", "viewport owner must preserve factory signature");
-  assertIncludes(ownerSource, "void getters;", "viewport owner must keep getters unused");
-  assertExcludes(ownerSource, "getters.", "viewport owner must stay effects-only");
+  assertIncludes(
+    ownerSource,
+    'const getViewportGroup = requireFunction(getters, "getViewportGroup", "getters");',
+    "viewport owner must read viewport group through injected getter",
+  );
+  assertIncludes(ownerSource, "const viewportGroup = getViewportGroup();", "viewport owner must call viewport group getter");
+  assertIncludes(ownerSource, 'viewportGroup.attr("transform"', "viewport owner must apply transform to viewport group");
   for (const tokenParts of [
     ["set", "MapData"],
     ["fit", "Projection"],

@@ -1489,7 +1489,7 @@ function collectFailures() {
     "createScenarioRefreshRuntime({",
     "createExactAfterSettleScheduler({",
     "createStrategicOverlayRuntimeOwner({",
-    "viewport owner must stay effects-only",
+    "viewport owner must read viewport group through injected getter",
     "fitProjection owner must not own initMap transaction token",
     "startup transaction owner must expose initMap reset transaction method",
     "map_renderer must wire startup transaction owner effect",
@@ -1546,7 +1546,7 @@ function collectFailures() {
     "P37 is preflight only.",
     "P37 must keep `js/core/map_renderer/set_map_data_transaction_owner.js` absent.",
     "P36 startup transaction owner: `js/core/renderer/renderer_startup_transaction_owner.js` owns the `initMap` reset transaction after projection/path initialization.",
-    "P34 viewport update owner: `js/core/renderer/renderer_viewport_update_owner.js` remains effects-only and owns `updateMap` orchestration.",
+    "P34 viewport update owner: `js/core/renderer/renderer_viewport_update_owner.js`",
     "P32 fitProjection owner: `js/core/renderer/renderer_fit_projection_owner.js` owns `fitProjection` through injected getters and effects.",
     "`js/core/map_renderer.js` remains the composition root and still contains `function setMapData({`.",
     "resetRendererTransactionState({",
@@ -1822,7 +1822,7 @@ function collectFailures() {
     "createExactAfterSettleScheduler({",
     "createStrategicOverlayRuntimeOwner({",
     "startup transaction owner must avoid setMapData scope",
-    "viewport owner must stay effects-only",
+    "viewport owner must read viewport group through injected getter",
     "fitProjection owner must avoid setMapData transaction scope",
     "public facade must keep setMapData export",
   ]) {
@@ -4477,9 +4477,6 @@ function collectFailures() {
       failures.push(`${FILES.rendererViewportUpdateOwner} must not touch renderer lifecycle token: ${token}`);
     }
   }
-  if (rendererViewportUpdateOwner.includes("getters.")) {
-    failures.push(`${FILES.rendererViewportUpdateOwner} must keep P34 as effects-only orchestration.`);
-  }
   const viewportUpdateWrapperSource = sliceBetween(
     renderer,
     "function updateMap(transform)",
@@ -5032,17 +5029,17 @@ function collectFailures() {
       ownerTokens: [
         "export function createRendererViewportUpdateOwner(",
         "getters = {},",
-        "void getters;",
+        "const getViewportGroup = requireFunction(getters, \"getViewportGroup\", \"getters\");",
         "function updateMap(transform)",
         "const setZoomTransform = requireFunction(effects, \"setZoomTransform\", \"effects\");",
         "const setHitCanvasDirty = requireFunction(effects, \"setHitCanvasDirty\", \"effects\");",
         "const updateZoomUi = requireFunction(effects, \"updateZoomUi\", \"effects\");",
-        "const applyViewportTransform = requireFunction(effects, \"applyViewportTransform\", \"effects\");",
+        "const viewportGroup = getViewportGroup();",
+        "viewportGroup.attr(\"transform\"",
         "const drawFrame = requireFunction(effects, \"drawFrame\", \"effects\");",
         "setZoomTransform(transform);",
         "setHitCanvasDirty();",
         "updateZoomUi();",
-        "applyViewportTransform(transform);",
         "renderPhysicalIntensityBrushPreview();",
         "syncUnitCounterScalesDuringZoom();",
         "syncSpecialZonePatternTransformDuringZoom();",

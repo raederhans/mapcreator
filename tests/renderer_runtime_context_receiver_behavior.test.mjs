@@ -109,6 +109,11 @@ test("map_renderer lazily owns the private RendererRuntimeContext receiver", () 
     "RendererRuntimeContext.viewport receiver is required.",
     "rendererContext.viewport.getRuntimeState() !== runtimeState",
     "rendererContext.viewport.getSurfaceHost() !== rendererSurfaceHost",
+    "rendererContext.viewport.getMapContainer() !== rendererSurfaceHost.getMapContainer()",
+    "rendererContext.viewport.getViewportGroup() !== rendererSurfaceHost.getViewportGroup()",
+    "rendererContext.viewport.getGlobal() !== globalThis",
+    "rendererContext.viewport.getDevicePixelRatio() !== globalThis.devicePixelRatio",
+    "rendererContext.viewport.hasLandFeatures() !== !!runtimeState.landData?.features?.length",
   ]) {
     assertIncludes(receiverSource, token, "receiver helper must assert and describe the context contract");
   }
@@ -150,6 +155,11 @@ test("projection and viewport descriptors are assembled in the private runtime c
     "getSurfaceHost: () => rendererSurfaceHost,",
     "getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),",
     "getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),",
+    "getMapContainer: () => rendererSurfaceHost.getMapContainer(),",
+    "getViewportGroup: () => rendererSurfaceHost.getViewportGroup(),",
+    "getGlobal: () => globalThis,",
+    "getDevicePixelRatio: () => globalThis.devicePixelRatio,",
+    "hasLandFeatures: () => !!runtimeState.landData?.features?.length,",
   ]) {
     assertIncludes(helperSource, token, "getRendererRuntimeContext must assemble projection and viewport descriptors");
   }
@@ -313,6 +323,94 @@ test("viewport owners receive runtime, constants, helpers, and accessors through
   ]) {
     assertExcludes(`${readModelSource}\n${commandSource}`, token, "viewport owners must use context read-model tokens");
   }
+});
+
+test("viewport mutation owners receive read dependencies through the viewport context", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const fitSource = sliceBetween(
+    rendererSource,
+    "function getRendererFitProjectionOwner()",
+    "function getRendererStartupTransactionOwner()",
+  );
+  const updateSource = sliceBetween(
+    rendererSource,
+    "function getRendererViewportUpdateOwner()",
+    "function getViewportResizeLifecycleOwner()",
+  );
+  const resizeSource = sliceBetween(
+    rendererSource,
+    "function getViewportResizeLifecycleOwner()",
+    "function getScenarioWaterCachePolicyOwner()",
+  );
+  const stateWriteToken = (root, field, value) => [root, `${field} = ${value};`].join(".");
+
+  for (const [ownerSource, createToken, label] of [
+    [fitSource, "rendererFitProjectionOwner = createRendererFitProjectionOwner({", "fit projection"],
+    [updateSource, "rendererViewportUpdateOwner = createRendererViewportUpdateOwner({", "viewport update"],
+    [resizeSource, "viewportResizeLifecycleOwner = createViewportResizeLifecycleOwner({", "viewport resize"],
+  ]) {
+    const receiverIndex = ownerSource.indexOf("const rendererContext = getViewportReceiverContext();");
+    const createIndex = ownerSource.indexOf(createToken);
+    assert.notEqual(receiverIndex, -1, `${label} owner must request the viewport receiver context`);
+    assert.notEqual(createIndex, -1, `${label} owner must keep its constructor call`);
+    assert.ok(receiverIndex < createIndex, `${label} receiver assertion must run before owner construction`);
+  }
+
+  for (const token of [
+    "const viewportContext = rendererContext.viewport;",
+    "const viewportHelpers = viewportContext.helpers;",
+    "const runtime = viewportContext.getRuntimeState();",
+    "const surfaceHost = viewportContext.getSurfaceHost();",
+    "surfaceHost,",
+    "state: runtime,",
+    "projectionFitPaddingRatio: viewportContext.constants.projectionFitPaddingRatio,",
+    "getLogicalCanvasDimensions: viewportHelpers.getLogicalCanvasDimensions,",
+    "getRenderableLandFeatures: viewportHelpers.getRenderableLandFeatures,",
+  ]) {
+    assertIncludes(fitSource, token, "fit projection owner must consume viewport context tokens");
+  }
+
+  for (const token of [
+    "const viewportContext = rendererContext.viewport;",
+    "const runtime = viewportContext.getRuntimeState();",
+    "getViewportGroup: viewportContext.getViewportGroup,",
+    stateWriteToken("runtime", "zoomTransform", "transform"),
+    stateWriteToken("runtime", "hitCanvasDirty", "true"),
+    "runtime.updateZoomUIFn",
+    "drawCanvas();",
+  ]) {
+    assertIncludes(updateSource, token, "viewport update owner must consume viewport context tokens");
+  }
+
+  for (const token of [
+    "const viewportContext = rendererContext.viewport;",
+    "const runtime = viewportContext.getRuntimeState();",
+    "state: runtime,",
+    "getMapContainer: viewportContext.getMapContainer,",
+    "getGlobal: viewportContext.getGlobal,",
+    "getDevicePixelRatio: viewportContext.getDevicePixelRatio,",
+    "hasLandFeatures: viewportContext.hasLandFeatures,",
+    "scheduleDeferredWork,",
+    "cancelDeferredWork,",
+    "nowMs,",
+    "recordRenderPerfMetric,",
+  ]) {
+    assertIncludes(resizeSource, token, "viewport resize owner must consume viewport context tokens");
+  }
+
+  for (const token of [
+    "surfaceHost: rendererSurfaceHost,",
+    "projectionFitPaddingRatio: PROJECTION_FIT_PADDING_RATIO,",
+    "rendererSurfaceHost.getViewportGroup()",
+    "getMapContainer: () => rendererSurfaceHost.getMapContainer(),",
+    "getGlobal: () => globalThis,",
+    "getDevicePixelRatio: () => globalThis.devicePixelRatio,",
+    "hasLandFeatures: () => !!runtimeState.landData?.features?.length,",
+  ]) {
+    assertExcludes(`${fitSource}\n${updateSource}\n${resizeSource}`, token, "viewport mutation owners must use context read-model tokens");
+  }
+  assertExcludes(updateSource, stateWriteToken("runtimeState", "zoomTransform", "transform"), "viewport update owner must use context runtime");
+  assertExcludes(updateSource, stateWriteToken("runtimeState", "hitCanvasDirty", "true"), "viewport update owner must use context runtime");
 });
 
 test("P51 and P52 owners are the first receivers without changing owner APIs", () => {
