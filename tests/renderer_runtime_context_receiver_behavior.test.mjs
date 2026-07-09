@@ -114,9 +114,143 @@ test("map_renderer lazily owns the private RendererRuntimeContext receiver", () 
     "rendererContext.viewport.getGlobal() !== globalThis",
     "rendererContext.viewport.getDevicePixelRatio() !== globalThis.devicePixelRatio",
     "rendererContext.viewport.hasLandFeatures() !== !!runtimeState.landData?.features?.length",
+    "function getInteractionReceiverContext()",
+    "RendererRuntimeContext.interaction receiver is required.",
+    "interactionContext.getRuntimeState() !== runtimeState",
+    "interactionContext.getSurfaceHost() !== rendererSurfaceHost",
+    "interactionContext.getD3() !== globalThis.d3",
+    "interactionContext.getInteractionRect() !== rendererSurfaceHost.getInteractionRect()",
+    "interactionContext.getInteractionRectNode() !== rendererSurfaceHost.getInteractionRect()?.node?.()",
+    "interactionContext.getWindow() !== window",
+    "interactionContext.getZoomBehavior() !== rendererSurfaceHost.getZoomBehavior()",
   ]) {
     assertIncludes(receiverSource, token, "receiver helper must assert and describe the context contract");
   }
+});
+
+test("interaction descriptor and owner receivers route reads while effects stay at the composition root", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const helperSource = sliceBetween(
+    rendererSource,
+    "function getRendererRuntimeContext()",
+    "function getRenderPassReceiverContext()",
+  );
+  const zoomSource = sliceBetween(
+    rendererSource,
+    "function getZoomInteractionLifecycleOwner()",
+    "function getMapInteractionEventBindingOwner()",
+  );
+  const bindingSource = sliceBetween(
+    rendererSource,
+    "function getMapInteractionEventBindingOwner()",
+    "function getIntensityFieldMaskOwner()",
+  );
+
+  for (const token of [
+    "interaction: {",
+    "renderPhaseInteracting: RENDER_PHASE_INTERACTING,",
+    "renderPhaseSettling: RENDER_PHASE_SETTLING,",
+    "cloneZoomTransform,",
+    "shouldAllowZoomEvent,",
+    "getRuntimeState: () => runtimeState,",
+    "getSurfaceHost: () => rendererSurfaceHost,",
+    "getWidth: () => runtimeState.width,",
+    "getHeight: () => runtimeState.height,",
+    "getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),",
+    "getWindow: () => window,",
+    "getPendingZoomTransform: () => runtimeState.pendingZoomTransform,",
+    "getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,",
+    "isZoomRenderScheduled: () => !!runtimeState.zoomRenderScheduled,",
+  ]) {
+    assertIncludes(helperSource, token, "private runtime context must assemble the interaction read model");
+  }
+  for (const token of [
+    "requestAnimationFrame:",
+    "nowMs:",
+    "handlers:",
+    "effects:",
+    "setPendingZoomTransform:",
+    "dispatchMapClick:",
+  ]) {
+    assertExcludes(helperSource, token, "interaction context descriptor must exclude effect capabilities");
+  }
+
+  for (const [ownerSource, createToken, label] of [
+    [zoomSource, "zoomInteractionLifecycleOwner = createZoomInteractionLifecycleOwner({", "zoom lifecycle"],
+    [bindingSource, "mapInteractionEventBindingOwner = createMapInteractionEventBindingOwner({", "event binding"],
+  ]) {
+    const receiverIndex = ownerSource.indexOf("const rendererContext = getInteractionReceiverContext();");
+    const createIndex = ownerSource.indexOf(createToken);
+    assert.notEqual(receiverIndex, -1, `${label} owner must request the interaction receiver context`);
+    assert.notEqual(createIndex, -1, `${label} owner must keep its constructor call`);
+    assert.ok(receiverIndex < createIndex, `${label} receiver assertion must run before owner construction`);
+  }
+
+  for (const token of [
+    "const interactionContext = rendererContext.interaction;",
+    "const interactionConstants = interactionContext.constants;",
+    "const interactionHelpers = interactionContext.helpers;",
+    "const runtime = interactionContext.getRuntimeState();",
+    "state: runtime,",
+    "minZoomScale: interactionConstants.minZoomScale,",
+    "maxZoomScale: interactionConstants.maxZoomScale,",
+    "renderPhaseInteracting: interactionConstants.renderPhaseInteracting,",
+    "renderPhaseSettling: interactionConstants.renderPhaseSettling,",
+    "getD3: interactionContext.getD3,",
+    "getWidth: interactionContext.getWidth,",
+    "getHeight: interactionContext.getHeight,",
+    "getInteractionRect: interactionContext.getInteractionRect,",
+    "getZoomBehavior: interactionContext.getZoomBehavior,",
+    "getZoomIdentity: interactionContext.getZoomIdentity,",
+    "getZoomTransform: interactionContext.getZoomTransform,",
+    "getPendingZoomTransform: interactionContext.getPendingZoomTransform,",
+    "getZoomGestureStartTransform: interactionContext.getZoomGestureStartTransform,",
+    "isZoomRenderScheduled: interactionContext.isZoomRenderScheduled,",
+    "cloneZoomTransform: interactionHelpers.cloneZoomTransform,",
+    "shouldAllowZoomEvent: interactionHelpers.shouldAllowZoomEvent,",
+  ]) {
+    assertIncludes(zoomSource, token, "zoom owner must consume interaction context reads");
+  }
+  for (const token of [
+    "getInteractionRect: interactionContext.getInteractionRect,",
+    "getWindow: interactionContext.getWindow,",
+    "getInteractionRectNode: interactionContext.getInteractionRectNode,",
+  ]) {
+    assertIncludes(bindingSource, token, "event binding owner must consume interaction context reads");
+  }
+
+  for (const token of [
+    "nowMs,",
+    "requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),",
+    "setPendingZoomTransform:",
+    "setZoomRenderScheduled:",
+    "scheduleRenderPhaseIdle,",
+  ]) {
+    assertIncludes(zoomSource, token, "zoom effects and timing capabilities must remain in map_renderer");
+  }
+  for (const token of [
+    "handlers: {",
+    "mapClick: handleClick,",
+    "mapDoubleClick: handleDoubleClick,",
+    "effects: {",
+    "bindMapContainerResizeObserver,",
+    "bindBrowserZoomObservers,",
+  ]) {
+    assertIncludes(bindingSource, token, "binding handlers and effects must remain in map_renderer");
+  }
+
+  for (const token of [
+    "getD3: () => globalThis.d3,",
+    "getWidth: () => runtimeState.width,",
+    "getHeight: () => runtimeState.height,",
+    "getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),",
+    "getWindow: () => window,",
+    "getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),",
+  ]) {
+    assertExcludes(`${zoomSource}\n${bindingSource}`, token, "interaction owners must use context read accessors");
+  }
+  assertExcludes(zoomSource, "rendererRuntimeContext:", "zoom owner must not receive the full context bag");
+  assertExcludes(bindingSource, "rendererRuntimeContext:", "binding owner must not receive the full context bag");
 });
 
 test("projection and viewport descriptors are assembled in the private runtime context", () => {

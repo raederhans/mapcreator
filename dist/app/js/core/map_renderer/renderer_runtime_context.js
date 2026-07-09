@@ -62,6 +62,28 @@ const VIEWPORT_ACCESSOR_NAMES = Object.freeze([
   "hasLandFeatures",
 ]);
 
+const INTERACTION_HELPER_NAMES = Object.freeze([
+  "cloneZoomTransform",
+  "shouldAllowZoomEvent",
+]);
+
+const INTERACTION_ACCESSOR_NAMES = Object.freeze([
+  "getRuntimeState",
+  "getSurfaceHost",
+  "getD3",
+  "getWidth",
+  "getHeight",
+  "getInteractionRect",
+  "getInteractionRectNode",
+  "getWindow",
+  "getZoomBehavior",
+  "getZoomIdentity",
+  "getZoomTransform",
+  "getPendingZoomTransform",
+  "getZoomGestureStartTransform",
+  "isZoomRenderScheduled",
+]);
+
 function describeValue(value) {
   return Object.freeze({
     present: value !== null && value !== undefined,
@@ -173,6 +195,13 @@ function readFiniteNumber(sectionName, name, value, { optional = false } = {}) {
     throw new TypeError(`RendererRuntimeContext.${sectionName}.constants.${name} must be a finite number.`);
   }
   return numberValue;
+}
+
+function readNonEmptyString(sectionName, name, value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`RendererRuntimeContext.${sectionName}.constants.${name} must be a non-empty string.`);
+  }
+  return value;
 }
 
 function createFunctionGroup(sectionName, groupName, source, functionNames) {
@@ -323,6 +352,67 @@ function createViewportReadModel(viewport, runtimeState, rendererSurfaceHost) {
   });
 }
 
+function createInteractionReadModel(interaction) {
+  if (interaction === null || interaction === undefined) {
+    return null;
+  }
+  if (!interaction || typeof interaction !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction must be an object when provided.");
+  }
+  const constants = interaction.constants || {};
+  const helpers = interaction.helpers || {};
+  const accessors = interaction.accessors || {};
+  const minZoomScale = readFiniteNumber("interaction", "minZoomScale", constants.minZoomScale);
+  const maxZoomScale = readFiniteNumber("interaction", "maxZoomScale", constants.maxZoomScale);
+  if (minZoomScale >= maxZoomScale) {
+    throw new TypeError("RendererRuntimeContext.interaction.constants.minZoomScale must be less than maxZoomScale.");
+  }
+  const interactionHelpers = createFunctionGroup(
+    "interaction",
+    "helpers",
+    helpers,
+    INTERACTION_HELPER_NAMES,
+  );
+  const interactionAccessors = createFunctionGroup(
+    "interaction",
+    "accessors",
+    accessors,
+    INTERACTION_ACCESSOR_NAMES,
+  );
+
+  return Object.freeze({
+    constants: Object.freeze({
+      minZoomScale,
+      maxZoomScale,
+      renderPhaseInteracting: readNonEmptyString(
+        "interaction",
+        "renderPhaseInteracting",
+        constants.renderPhaseInteracting,
+      ),
+      renderPhaseSettling: readNonEmptyString(
+        "interaction",
+        "renderPhaseSettling",
+        constants.renderPhaseSettling,
+      ),
+    }),
+    helpers: interactionHelpers,
+    getRuntimeState: interactionAccessors.getRuntimeState,
+    getSurfaceHost: interactionAccessors.getSurfaceHost,
+    getD3: interactionAccessors.getD3,
+    getWidth: interactionAccessors.getWidth,
+    getHeight: interactionAccessors.getHeight,
+    getInteractionRect: interactionAccessors.getInteractionRect,
+    getInteractionRectNode: interactionAccessors.getInteractionRectNode,
+    getWindow: interactionAccessors.getWindow,
+    getZoomBehavior: interactionAccessors.getZoomBehavior,
+    getZoomIdentity: interactionAccessors.getZoomIdentity,
+    getZoomTransform: interactionAccessors.getZoomTransform,
+    getPendingZoomTransform: interactionAccessors.getPendingZoomTransform,
+    getZoomGestureStartTransform: interactionAccessors.getZoomGestureStartTransform,
+    isZoomRenderScheduled: interactionAccessors.isZoomRenderScheduled,
+  });
+}
+
 function getCollectionCount(value) {
   if (Array.isArray(value)) return value.length;
   if (value && typeof value.size === "number") return value.size;
@@ -389,6 +479,23 @@ function describeViewportContext(viewport) {
     }),
     helpers: describeFunctionGroup(viewport.helpers, VIEWPORT_HELPER_NAMES),
     accessors: describeFunctionGroup(viewport, VIEWPORT_ACCESSOR_NAMES),
+  });
+}
+
+function describeInteractionContext(interaction) {
+  if (interaction === null || interaction === undefined) {
+    return Object.freeze({ present: false });
+  }
+  return Object.freeze({
+    present: true,
+    constants: Object.freeze({
+      minZoomScale: interaction.constants?.minZoomScale,
+      maxZoomScale: interaction.constants?.maxZoomScale,
+      renderPhaseInteracting: interaction.constants?.renderPhaseInteracting,
+      renderPhaseSettling: interaction.constants?.renderPhaseSettling,
+    }),
+    helpers: describeFunctionGroup(interaction.helpers, INTERACTION_HELPER_NAMES),
+    accessors: describeFunctionGroup(interaction, INTERACTION_ACCESSOR_NAMES),
   });
 }
 
@@ -484,6 +591,39 @@ function assertViewportContext(viewport) {
   }
 }
 
+function assertInteractionContext(interaction) {
+  if (interaction === null || interaction === undefined) {
+    return;
+  }
+  if (!interaction || typeof interaction !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction must be an object.");
+  }
+  if (!interaction.constants || typeof interaction.constants !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction.constants is required.");
+  }
+  const minZoomScale = readFiniteNumber("interaction", "minZoomScale", interaction.constants.minZoomScale);
+  const maxZoomScale = readFiniteNumber("interaction", "maxZoomScale", interaction.constants.maxZoomScale);
+  if (minZoomScale >= maxZoomScale) {
+    throw new TypeError("RendererRuntimeContext.interaction.constants.minZoomScale must be less than maxZoomScale.");
+  }
+  readNonEmptyString(
+    "interaction",
+    "renderPhaseInteracting",
+    interaction.constants.renderPhaseInteracting,
+  );
+  readNonEmptyString(
+    "interaction",
+    "renderPhaseSettling",
+    interaction.constants.renderPhaseSettling,
+  );
+  for (const helperName of INTERACTION_HELPER_NAMES) {
+    assertSectionFunction("interaction", "helpers", interaction.helpers, helperName);
+  }
+  for (const accessorName of INTERACTION_ACCESSOR_NAMES) {
+    assertSectionFunction("interaction", "accessors", interaction, accessorName);
+  }
+}
+
 export function createRendererRuntimeContext(options = {}) {
   const {
     runtimeState,
@@ -491,6 +631,7 @@ export function createRendererRuntimeContext(options = {}) {
     projection = null,
     viewport = null,
     renderCache = null,
+    interaction = null,
     ownerTag = "map-renderer",
     createdAt = new Date().toISOString(),
   } = options;
@@ -509,6 +650,7 @@ export function createRendererRuntimeContext(options = {}) {
     projection: createProjectionReadModel(projection),
     viewport: createViewportReadModel(viewport, runtimeState, rendererSurfaceHost),
     renderCache: createRenderCacheReadModel(renderCache, runtimeState, rendererSurfaceHost),
+    interaction: createInteractionReadModel(interaction),
     diagnostics: Object.freeze({
       getSnapshot() {
         return sanitizeSurfaceSnapshot(rendererSurfaceHost.snapshot());
@@ -543,6 +685,7 @@ export function assertRendererRuntimeContext(context) {
   assertProjectionContext(context.projection);
   assertViewportContext(context.viewport);
   assertRenderCacheContext(context.renderCache);
+  assertInteractionContext(context.interaction);
   if (!context.diagnostics || typeof context.diagnostics.getSnapshot !== "function") {
     throw new TypeError("RendererRuntimeContext.diagnostics.getSnapshot() is required.");
   }
@@ -568,6 +711,7 @@ export function describeRendererRuntimeContext(context) {
       projection: describeProjectionContext(context.projection),
       viewport: describeViewportContext(context.viewport),
       renderCache: describeRenderCacheContext(context.renderCache),
+      interaction: describeInteractionContext(context.interaction),
       diagnostics: Object.freeze({
         getSnapshot: describeValue(context.diagnostics.getSnapshot),
       }),

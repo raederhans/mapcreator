@@ -1,31 +1,51 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.4 viewport mutation chain committed; unrelated parent WIP preserved
+Last updated: 2026-07-09 P1.5 interaction read model completion and integration handoff
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline for P1.3 is `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`.
-- Parent checkout `C:\Users\raede\Desktop\dev\mapcreator` started clean on `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f`.
+- Default-main baseline for P1.5 is `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`.
+- P1.5 started in an isolated clean checkout with `main...origin/main` and no unrelated WIP.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- `git worktree list --porcelain` currently lists only `C:\Users\raede\Desktop\dev\mapcreator` at HEAD `5d712c4b92ecb910a4aeb916ad11e195852d4e5f` on `refs/heads/main`.
-- Verification owner: main Codex thread owned P1.3 deterministic validation, Pages mirror sync, dist drift, and full `verify:core`. Browser/dev-server/Playwright and `verify:core:main-thread` were not run.
+- Verification owner: the main Codex thread completed P1.5 focused checks, Pages mirror sync, dist drift, selector and supervisor checks, and the 53-command default `verify:core` attempt. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. The final Pages command has an external unchanged-asset reproducibility blocker recorded below.
 
 ## Recommended Order
 
-1. Commit this P1.3 closeout doc update, then push functional commit `91ffdfa6` plus the closeout commit.
-2. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
-3. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
-4. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-5. Keep browser/dev-server/Playwright and `verify:core:main-thread` as explicit not-run lanes for this deterministic P1.3 closeout.
+1. Commit the audited P1.5 delivery and push it to `origin/main`, preserving the recorded external Landing asset reproducibility evidence.
+2. Start P1.6 only from the integrated P1.5 baseline in a separate auditable stage.
+3. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection effects, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
+4. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
+5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
+6. Keep browser/dev-server/Playwright and `verify:core:main-thread` as explicit not-run lanes for P1.5.
 
 ## Current Worktrees
 
-Current rows reflect `git worktree list --porcelain`; P1.4 is active in the main checkout with unrelated parent WIP preserved.
+Current rows describe the isolated P1.5 delivery checkout. The earlier parent WIP remains preserved on its recovery branch.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | P1.3 renderer runtime context projection + viewport patch on functional commit `91ffdfa6` | base `main@5d712c4b92ecb910a4aeb916ad11e195852d4e5f` | functional commit created; closeout commit preparing, then push | Hot files changed: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, P1.3 context/receiver/static tests, two stale inventory assertion updates, verification routing, `package.json`, checked-in Pages mirrors, P1.3 docs, and this registry. No public facade, UI, CSS, scenario data, draw/pass/click-selection changes. | Functional commit `91ffdfa6` exists locally; changed-file selector dry-run for the complete staged P1.3 patch wrote `.runtime/reports/generated/p1-3-adaptive-selection.json/.md` with `changedFiles=18`, `recommended=179`, `unmatched=0`, and `mainThreadSerial=6` (6 main-thread serial checks); `verify:pages-dist`, `verify:dist-drift`, supervisor contracts/plan, and full `npm run verify:core` passed 46 commands and wrote `.runtime/reports/generated/verify-core.json`. | Green for active worktree overlap because only the main worktree exists. Yellow for future renderer runtime context, verification routing, inventory, and Pages mirror edits. | Commit this closeout update, then push P1.3 functional commit `91ffdfa6` and the closeout commit; browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. |
+| Isolated Codex checkout on `main` | P1.5 interaction read model from `db8bd6c1` | base `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` | implementation and scoped verification complete; ready to integrate | Hot files: `map_renderer.js`, runtime context, interaction/receiver/boundary tests, verification metadata, package scripts, active docs, and generated Pages mirrors. Public facade, owner modules, UI, CSS, scenario data, draw/pass logic, and click-selection effects are unchanged. | Focused suites, Pages mirror sync, dist drift, selector, supervisor, import graph, and 52/53 default core commands are green. The final Pages command is blocked only by unchanged Landing asset byte reproducibility under the locked geospatial stack. | Yellow for later interaction-context, hit/hover receiver, verification-routing, and Pages-mirror edits. | Create one functional commit, push to `origin/main`, then stop. |
+
+## Scenario Forge P1.5 Interaction Read Model Migration 2026-07-09
+
+Status: implementation and scoped verification complete; ready to integrate with the external Landing asset reproducibility blocker recorded.
+
+Base: `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`.
+
+Scope: add the read-only `RendererRuntimeContext.interaction` contract and route zoom lifecycle plus map event-binding construction reads through it. Timing, handlers, state writes, scheduling, DOM effects, click selection, and public facade remain at existing ownership boundaries.
+
+Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`.
+
+Focused coverage: new interaction context Node suite, receiver source contract, Python composition-root boundary, metadata routing, verify-core planning, and the existing zoom/event-binding owner behavior suites.
+
+Focused validation passed: foundation 8/8, receiver 10/10, interaction 6/6, zoom lifecycle 7/7, event binding 6/6, Python boundary 4/4, metadata 11/11, runner 8/8, architecture boundaries, and state-write allowlist.
+
+Route status: the new Node and Python commands are child-safe renderer-owner routes; zoom lifecycle now joins event binding in the default renderer-owner plan. The final selector reported 14 changed files, 183 recommended commands, 0 unmatched files, and 6 main-thread commands.
+
+Final deterministic evidence: source/dist mirrors are byte-identical; base-environment `verify:pages-dist` passed with 4 optional geospatial builder skips; `verify:dist-drift`, selector schema, import graph, supervisor contracts, and supervisor plan passed. The 53-command default `verify:core` execution passed its first 52 commands. Its final Pages command exposed four byte-comparison failures in unchanged Landing hero assets under the exact locked geospatial stack. Metadata differences are floating-point tails from `5.55e-17` to `2.27e-13`; blank and TNO SVGs are byte-identical, while the two HOI4 SVGs retain equal element counts with limited path ordering or floating-point geometry differences. Those assets, builders, and source data are outside and absent from the staged P1.5 patch.
+
+Not-tested lanes: `verify:core:main-thread`, browser, dev-server, and Playwright.
 
 ## Scenario Forge P1.4 Viewport Mutation Chain Context Migration 2026-07-09
 

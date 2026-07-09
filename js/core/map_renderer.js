@@ -1069,6 +1069,34 @@ function getRendererRuntimeContext() {
         hasLandFeatures: () => !!runtimeState.landData?.features?.length,
       },
     },
+    interaction: {
+      constants: {
+        minZoomScale: MIN_ZOOM_SCALE,
+        maxZoomScale: MAX_ZOOM_SCALE,
+        renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+        renderPhaseSettling: RENDER_PHASE_SETTLING,
+      },
+      helpers: {
+        cloneZoomTransform,
+        shouldAllowZoomEvent,
+      },
+      accessors: {
+        getRuntimeState: () => runtimeState,
+        getSurfaceHost: () => rendererSurfaceHost,
+        getD3: () => globalThis.d3,
+        getWidth: () => runtimeState.width,
+        getHeight: () => runtimeState.height,
+        getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
+        getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),
+        getWindow: () => window,
+        getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
+        getZoomIdentity: () => globalThis.d3?.zoomIdentity,
+        getZoomTransform: () => runtimeState.zoomTransform,
+        getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
+        getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
+        isZoomRenderScheduled: () => !!runtimeState.zoomRenderScheduled,
+      },
+    },
     renderCache: {
       constants: {
         interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
@@ -1163,6 +1191,36 @@ function getViewportReceiverContext() {
   }
   if (rendererContext.viewport.hasLandFeatures() !== !!runtimeState.landData?.features?.length) {
     throw new TypeError("RendererRuntimeContext viewport land feature receiver mismatch.");
+  }
+  return rendererContext;
+}
+
+function getInteractionReceiverContext() {
+  const rendererContext = getRenderPassReceiverContext();
+  if (!rendererContext.interaction) {
+    throw new TypeError("RendererRuntimeContext.interaction receiver is required.");
+  }
+  const interactionContext = rendererContext.interaction;
+  if (interactionContext.getRuntimeState() !== runtimeState) {
+    throw new TypeError("RendererRuntimeContext interaction runtimeState receiver mismatch.");
+  }
+  if (interactionContext.getSurfaceHost() !== rendererSurfaceHost) {
+    throw new TypeError("RendererRuntimeContext interaction surface host receiver mismatch.");
+  }
+  if (interactionContext.getD3() !== globalThis.d3) {
+    throw new TypeError("RendererRuntimeContext interaction d3 receiver mismatch.");
+  }
+  if (interactionContext.getInteractionRect() !== rendererSurfaceHost.getInteractionRect()) {
+    throw new TypeError("RendererRuntimeContext interaction rect receiver mismatch.");
+  }
+  if (interactionContext.getInteractionRectNode() !== rendererSurfaceHost.getInteractionRect()?.node?.()) {
+    throw new TypeError("RendererRuntimeContext interaction rect node receiver mismatch.");
+  }
+  if (interactionContext.getWindow() !== window) {
+    throw new TypeError("RendererRuntimeContext interaction window receiver mismatch.");
+  }
+  if (interactionContext.getZoomBehavior() !== rendererSurfaceHost.getZoomBehavior()) {
+    throw new TypeError("RendererRuntimeContext interaction zoom behavior receiver mismatch.");
   }
   return rendererContext;
 }
@@ -2789,29 +2847,34 @@ function getZoomInteractionLifecycleOwner() {
   if (zoomInteractionLifecycleOwner) {
     return zoomInteractionLifecycleOwner;
   }
+  const rendererContext = getInteractionReceiverContext();
+  const interactionContext = rendererContext.interaction;
+  const interactionConstants = interactionContext.constants;
+  const interactionHelpers = interactionContext.helpers;
+  const runtime = interactionContext.getRuntimeState();
   zoomInteractionLifecycleOwner = createZoomInteractionLifecycleOwner({
-    state,
+    state: runtime,
     constants: {
-      minZoomScale: MIN_ZOOM_SCALE,
-      maxZoomScale: MAX_ZOOM_SCALE,
-      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
-      renderPhaseSettling: RENDER_PHASE_SETTLING,
+      minZoomScale: interactionConstants.minZoomScale,
+      maxZoomScale: interactionConstants.maxZoomScale,
+      renderPhaseInteracting: interactionConstants.renderPhaseInteracting,
+      renderPhaseSettling: interactionConstants.renderPhaseSettling,
     },
     getters: {
-      getD3: () => globalThis.d3,
-      getWidth: () => runtimeState.width,
-      getHeight: () => runtimeState.height,
-      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
-      getZoomBehavior: () => rendererSurfaceHost.getZoomBehavior(),
-      getZoomIdentity: () => globalThis.d3?.zoomIdentity,
-      getZoomTransform: () => runtimeState.zoomTransform,
-      getPendingZoomTransform: () => runtimeState.pendingZoomTransform,
-      getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
-      isZoomRenderScheduled: () => runtimeState.zoomRenderScheduled,
+      getD3: interactionContext.getD3,
+      getWidth: interactionContext.getWidth,
+      getHeight: interactionContext.getHeight,
+      getInteractionRect: interactionContext.getInteractionRect,
+      getZoomBehavior: interactionContext.getZoomBehavior,
+      getZoomIdentity: interactionContext.getZoomIdentity,
+      getZoomTransform: interactionContext.getZoomTransform,
+      getPendingZoomTransform: interactionContext.getPendingZoomTransform,
+      getZoomGestureStartTransform: interactionContext.getZoomGestureStartTransform,
+      isZoomRenderScheduled: interactionContext.isZoomRenderScheduled,
     },
     helpers: {
-      cloneZoomTransform,
-      shouldAllowZoomEvent,
+      cloneZoomTransform: interactionHelpers.cloneZoomTransform,
+      shouldAllowZoomEvent: interactionHelpers.shouldAllowZoomEvent,
       nowMs,
       requestAnimationFrame: (callback) => globalThis.requestAnimationFrame(callback),
     },
@@ -2863,11 +2926,13 @@ function getMapInteractionEventBindingOwner() {
   if (mapInteractionEventBindingOwner) {
     return mapInteractionEventBindingOwner;
   }
+  const rendererContext = getInteractionReceiverContext();
+  const interactionContext = rendererContext.interaction;
   mapInteractionEventBindingOwner = createMapInteractionEventBindingOwner({
     getters: {
-      getInteractionRect: () => rendererSurfaceHost.getInteractionRect(),
-      getWindow: () => window,
-      getInteractionRectNode: () => rendererSurfaceHost.getInteractionRect()?.node?.(),
+      getInteractionRect: interactionContext.getInteractionRect,
+      getWindow: interactionContext.getWindow,
+      getInteractionRectNode: interactionContext.getInteractionRectNode,
     },
     helpers: {
       bindInteractionFunnel,

@@ -219,3 +219,27 @@ test("renderer runtime context viewport mutation files route to renderer owner v
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-viewport-update-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:viewport-resize-lifecycle-owner"));
 });
+
+test("renderer runtime context interaction files route to interaction owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/renderer/zoom_interaction_lifecycle_owner.js",
+    "js/core/renderer/map_interaction_event_binding_owner.js",
+    "tests/renderer_runtime_context_interaction_behavior.test.mjs",
+    "tests/renderer_runtime_context_receiver_behavior.test.mjs",
+    "tests/zoom_interaction_lifecycle_owner_behavior.test.mjs",
+    "tests/map_interaction_event_binding_owner_behavior.test.mjs",
+    "tests/test_map_renderer_interaction_context_boundary_contract.py",
+    "docs/active/renderer-runtime-context-interaction-p1-5-20260709.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-interaction"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-receiver"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:zoom-interaction-lifecycle-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:map-interaction-event-binding-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-interaction-context-boundary"));
+});
