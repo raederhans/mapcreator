@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.4 viewport mutation chain verified for commit; unrelated parent WIP preserved
+Last updated: 2026-07-09 P1.4 viewport mutation chain committed; unrelated parent WIP preserved
 
 ## Integration Owner
 
@@ -29,7 +29,7 @@ Current rows reflect `git worktree list --porcelain`; P1.4 is active in the main
 
 ## Scenario Forge P1.4 Viewport Mutation Chain Context Migration 2026-07-09
 
-Status: ready-for-commit / verified after focused and main-thread validation.
+Status: committed / verified after focused and main-thread validation.
 
 Worktree: `C:\Users\raede\Desktop\dev\mapcreator`.
 
@@ -51,7 +51,7 @@ Shared hotspots: renderer runtime context, `map_renderer.js` owner wiring, viewp
 
 Current diff summary: viewport context gains pure read accessors for map container, viewport group, global object, DPR, and land-feature presence; fit projection/update/resize owner wiring consumes those accessors through `getViewportReceiverContext()`; viewport update owner applies SVG transform through `getters.getViewportGroup`; focused Node/Python contracts and route metadata were added.
 
-Commit status: staged by the main integration owner and ready for the P1.4 Lore commit.
+Commit status: P1.4 functional Lore commit `16e81581` exists locally; push to `origin/main` follows this closeout.
 
 Potential overlap: red with other active edits to `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`, `js/core/renderer/renderer_viewport_update_owner.js`, runtime context tests, verification metadata, package scripts, or registry. Green with README, public facade, UI, CSS, scenario data, draw/pass/click-selection, and existing unrelated `docs/archive/**` / `lessons learned.md` WIP.
 
@@ -61,7 +61,7 @@ Route gaps: none. Initial selector dry-run wrote `.runtime/reports/generated/p1-
 
 Not-tested lanes: `verify:core:main-thread`, browser, dev-server, and Playwright.
 
-Recommended integration: commit the verified P1.4 package. P1.5 can start after this commit; keep `verify:core:main-thread`, browser, dev-server, and Playwright as explicit not-run lanes.
+Recommended integration: push P1.4 commit `16e81581` and this closeout to `origin/main`. P1.5 can start from `16e81581`; keep `verify:core:main-thread`, browser, dev-server, and Playwright as explicit not-run lanes.
 
 ## Scenario Forge P1.3 RendererRuntimeContext Projection + Viewport Read Model 2026-07-09
 

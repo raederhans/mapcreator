@@ -1,6 +1,6 @@
 # Renderer Runtime Context Viewport Mutation Chain P1.4
 
-Status: ready-for-commit / verified
+Status: committed / verified
 Date: 2026-07-09
 
 ## Goal
@@ -67,4 +67,4 @@ Not-run lanes:
 
 ## P1.5 Recommendation
 
-Begin P1.5 after P1.4 is committed. Keep the next scope to another narrow receiver chain and continue to leave draw/pass/click-selection behavior in place until its own phase.
+Begin P1.5 from commit `16e81581`. Keep the next scope to another narrow receiver chain and continue to leave draw/pass/click-selection behavior in place until its own phase.
