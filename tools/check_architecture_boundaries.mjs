@@ -3772,7 +3772,7 @@ function collectFailures() {
     "const OWNER_PATH = \"js/core/map_renderer/hit_canvas_scheduling_owner.js\";",
     "function gitDiffNames(paths)",
     "only the P47 production hit canvas scheduling owner exists",
-    "public facade state allowlist and dist remain untouched by P47",
+    "public facade state allowlist and P47 owner dist mirror remain untouched",
     "getHitCanvasSchedulingOwner().scheduleHitCanvasBuildIfNeeded({ reason });",
     "getHitCanvasSchedulingOwner().cancelScheduledHitCanvasBuild({ reason: \"strict-validation\" });",
   ]) {
@@ -4065,7 +4065,7 @@ function collectFailures() {
     "handleMouseMove wrapper must delegate to P48 owner",
     "event binding owner must keep injected mousemove handler",
     "interaction hit candidates must avoid hover owner ownership",
-    "public facade state-write allowlist P47 owner scenario runtime exact scheduler and dist remain untouched",
+    "public facade state-write allowlist owners scenario runtime exact scheduler and owner mirrors remain untouched",
     "package and architecture checker register P48 validation gates",
   ]) {
     if (!mapHoverInteractionOwnerInventoryTest.includes(token)) {

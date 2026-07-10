@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001 integration preflight and G002 P1.5 remote acceptance are complete; P1.5 is `green`; P1.6 is the next pending phase.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 functional work is committed. The first clean full-core attempt passed 54/55 and identified a stale Pages manifest size record; same-commit manifest amend and clean rerun remain pending.
 
 ## Integration setup
 
@@ -21,17 +21,25 @@ Current status: G001 integration preflight and G002 P1.5 remote acceptance are c
 - [x] Record P1.5 as `green` with report/log paths and post-run clean-state proof.
 - [x] Prove both committed source/dist Git-blob pairs match and record the Windows `core.autocrlf` checkout distinction.
 - [x] Record independent static `APPROVE`, root-owned effect boundaries, zero selector route gaps, explicit unrun lanes, and registry checkpoint.
-- [ ] Create the independent G001/G002 Lore evidence commit under root integration ownership.
+- [x] Create the independent G001/G002 Lore evidence commit under root integration ownership: `3d4c8d12`.
 
 Acceptance: satisfied by fresh full-core exit 0 from clean `a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
 ## P1.6 `interaction.hitHover`
 
-- [ ] Run pre-edit SF-ATS dry-run.
-- [ ] Add narrow readonly accessors/constants; retain direct root effect injections.
-- [ ] Extend existing suites and add/register the canonical Python boundary.
-- [ ] Sync Pages mirrors and run root-owned focused/shared gates.
-- [ ] Record route gaps, remaining risk, Lore commit, and registry checkpoint.
+- [x] Record the process deviation: the planned pre-edit SF-ATS dry-run has no durable evidence and receives no execution credit.
+- [x] Add the exact two constants and thirteen readonly live accessors; retain direct root effect injections.
+- [x] Extend existing interaction/hit/hover inventories and add the Node/Python boundary contracts.
+- [x] Register the exact package scripts, verification metadata routes, and default `renderer-owner` leaves.
+- [x] Apply the matching source changes to both checked-in Pages mirrors.
+- [x] Run the fresh actual-diff adaptive selector: exit 0, `unmatched=[]`, artifacts `.runtime/reports/generated/p1-6-adaptive-selection.{json,md}`.
+- [x] Run the root-owned nine-group focused matrix: all groups passed; named Node 4/4 and named Python 5/5.
+- [x] Run shared gates: architecture, state-write allowlist, test-import graph, supervisor contracts, and supervisor plan all exited 0.
+- [x] Record three independent static `APPROVE` verdicts.
+- [x] Create the P1.6 functional Lore commit; canonical-manifest rework remains part of the same commit through amend.
+- [x] Record the first clean-HEAD `verify:core` attempt: 54/55, with only `verify:dist-drift` failing on four stale `dist/pages-dist-manifest.json` size fields.
+- [ ] Amend the canonical manifest, rerun clean-HEAD `verify:core`, and record committed-blob parity.
+- [ ] Record final P1.6 remaining risk, full-core result, Lore commit hash, and registry checkpoint.
 
 Acceptance: receiver allowlist and negative effect boundary pass; behavior is stable; route gaps are zero; clean gates pass.
 
@@ -63,14 +71,16 @@ Acceptance: one consistent commit contains owner, delegation, assertions, and be
 
 ## Delivery package fields
 
-- What changed: G001 established the isolated continuation lane; G002 accepted the remote P1.5 baseline as `green`; this checkpoint changes evidence documents only.
-- Core/test files: P1.5 product and regression files are already committed in baseline `a8f71822`; this evidence checkpoint adds no code or test changes.
-- Docs: `docs/active/renderer-runtime-context-p1-remaining-20260709/{plan.md,context.md,task.md}` and `docs/active/_worktree_registry.md`.
-- Temporary: ignored `node_modules` Junction, `.runtime/reports/generated/verify-core.json`, and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`.
-- Diff/commit/divergence: branch base and current pre-evidence-commit HEAD are `a8f71822d705fcd3b26c32db1abd417b41264eb0`; the four evidence documents await an independent Lore commit. Parent `main@db8bd6c1` retains 19 archive deletions and modified `lessons learned.md` unchanged.
-- P1.5 parity: committed source/dist blobs are `24d9718b816c1a4a7f912980d34755eab9620718` for `map_renderer.js` and `27afb4005a05e8a8b8b6d7fab52096dad9e781e2` for `renderer_runtime_context.js`; checkout raw SHA differences follow `core.autocrlf` conversion.
-- Overlap: red for future renderer/runtime-context/package/metadata/dist/registry hotspots; green against the parent archive/lessons WIP.
-- Validation: root-owned `npm run verify:core` exit 0, 53/53; report and full log recorded; independent static audit `APPROVE`; selector route gaps 0; worktree clean immediately after the run.
-- Explicit unrun lanes: `verify:core:main-thread`, browser, dev server, and Playwright.
-- Remaining risks: P1.6 receiver/effect boundary, P1.7 canonical routing, P1.8 atomic semantics, and upstream movement.
-- Recommended next step: root creates the G001/G002 Lore evidence commit, then begins the P1.6 pre-edit SF-ATS dry-run.
+- What changed: `interaction.hitHover` now provides the exact frozen readonly capsule; hit-canvas scheduling and hover owners consume its reads while root-owned timing, event, scheduling, metric, write, UI, and DOM capabilities retain their current injection paths.
+- Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`; matching mirrors under `dist/app/js/core/`; canonical size inventory in `dist/pages-dist-manifest.json`.
+- Test files: new `tests/renderer_runtime_context_hit_hover_behavior.test.mjs` and `tests/test_map_renderer_hit_hover_context_boundary_contract.py`; updated interaction, hit-canvas inventory, hover inventory, metadata, and verify-core runner tests.
+- Metadata/package/tooling: `tools/verification/verification_domains.mjs` and `package.json` register `test:node:renderer-runtime-context-hit-hover` plus `test:python:map-renderer-hit-hover-context-boundary` in `renderer-owner`; `tools/check_architecture_boundaries.mjs` tracks the updated P47/P48 inventory titles.
+- Docs: this task folder, `docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md`, and `docs/active/_worktree_registry.md`.
+- Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; this implementation agent wrote no runtime artifact.
+- Diff/commit/divergence: current HEAD is evidence commit `3d4c8d12`, one commit ahead of `origin/main@a8f71822`; the P1.6 worktree diff is uncommitted pending root validation and review.
+- Conflict analysis: red for `map_renderer.js`, runtime context, package, metadata, Pages mirrors, and registry; yellow for interaction/hit/hover tests; green against parent archive/lessons WIP.
+- Validation: P1.5 evidence remains 53/53 green. P1.6 named Node passed 4/4, named Python passed 5/5, all nine focused groups passed, five shared gates exited 0, actual-diff selector exited 0 with `unmatched=[]`, and three static reviews returned `APPROVE`.
+- Process deviation: the pre-edit selector has no durable evidence. The actual-diff selector artifacts provide current routing proof without retroactive execution credit.
+- Explicit pending/unrun P1.6 lanes: clean-HEAD `verify:core` waits for the functional commit; `verify:core:main-thread`, browser, dev server, and Playwright remain excluded from this phase plan.
+- Remaining risks: clean full-core rerun, committed source/dist blob parity, final registry evidence, and upstream movement.
+- Recommended next step: root amends the canonical manifest, reruns clean-HEAD full core, records final evidence, and advances to P1.7 only after the phase gate closes.

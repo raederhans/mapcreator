@@ -2,7 +2,19 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001 integration preflight and G002 P1.5 remote acceptance complete; P1.6 pending next
+Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 functional patch committed and under canonical manifest rework after a 54/55 clean-core attempt; clean rerun pending
+
+## Progress
+
+- G001 integration setup and G002 P1.5 acceptance are recorded in Lore evidence commit `3d4c8d12b1a2516b22d45afc64bf11b396d23d5e`.
+- P1.5 is `green`: root-owned full `verify:core` passed 53/53 commands from clean `a8f71822`.
+- P1.6 code, regression contracts, verification metadata, package entries, architecture-checker title synchronization, and the two checked-in Pages mirrors are implemented in the worktree.
+- The root-owned nine-group focused matrix passed; the new named Node suite passed 4/4 and the named Python boundary passed 5/5.
+- Architecture, state-write allowlist, test-import graph, supervisor-contracts, and supervisor-plan gates exited 0. Three independent static review lanes returned `APPROVE`.
+- The fresh actual-diff adaptive selector exited 0 with `unmatched=[]`; its artifacts are `.runtime/reports/generated/p1-6-adaptive-selection.json` and `.runtime/reports/generated/p1-6-adaptive-selection.md`.
+- The planned pre-edit selector has no durable evidence and is recorded as a process deviation.
+- The first clean-HEAD `verify:core` attempt passed 54/55 commands. Its only failure was `verify:dist-drift`: the checked-in `dist/pages-dist-manifest.json` still held the old sizes for the two P1.6 Pages mirrors. The canonical builder changed four size fields only.
+- The generated manifest is part of the same P1.6 functional commit through amend. A fresh clean-HEAD `verify:core` rerun remains pending; P1.6 stays open.
 
 Approved sources:
 
@@ -57,6 +69,15 @@ Execution checkpoint (G001/G002):
 - Extend the existing hit-canvas and hover inventories, add the planned Node/Python boundary contracts, register routes, synchronize Pages mirrors, and run focused plus full gates.
 - Define `test:python:map-renderer-hit-hover-context-boundary` as `npm run python -- -m unittest tests.test_map_renderer_hit_hover_context_boundary_contract -q`; metadata, routing, and acceptance use this named npm entry.
 
+Execution checkpoint:
+
+- Process deviation: the planned pre-edit SF-ATS dry-run has no durable evidence. This gap is recorded explicitly rather than credited as an executed gate.
+- The fresh selector against the actual P1.6 diff exited 0 with zero unmatched files and wrote `.runtime/reports/generated/p1-6-adaptive-selection.{json,md}`.
+- All nine focused test groups passed, including the new Node capsule suite at 4/4 and the named Python boundary at 5/5.
+- `verify:architecture-boundaries`, `verify:state-write-allowlist`, `verify:test-import-graph`, `verify:supervisor-contracts`, and `verify:supervisor-plan` all exited 0.
+- Three independent static reviewers returned `APPROVE` for the runtime boundary, architecture/first-principles shape, and test/SF-ATS coverage.
+- Next gate: create the P1.6 functional Lore commit, then run clean-HEAD `verify:core`. Phase completion waits for that result and the evidence/registry checkpoint.
+
 ### 3. P1.7 click-selection preflight
 
 - Keep production renderer behavior unchanged.
@@ -93,6 +114,7 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 ## SF-ATS, commits, and integration
 
 - Run SF-ATS selector dry-run before phase edits and against actual phase changes. Any unmatched production file blocks the phase.
+- P1.6 records one process deviation: its pre-edit selector has no durable evidence. The fresh actual-diff selector is the authoritative current routing proof and reports `unmatched=[]`.
 - Pages/dist is required for browser-loaded renderer source changes. Deterministic checks are completion evidence.
 - Every phase receives an intent-first Lore commit with rationale, constraints, rejected alternatives, confidence, scope risk, directive, tested evidence, and honest not-tested lanes.
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.

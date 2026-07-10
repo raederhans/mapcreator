@@ -19,6 +19,7 @@ const INTERACTION_HIT_CANDIDATES_PATH = "js/core/map_renderer/interaction_hit_ca
 const MAP_INTERACTION_EVENT_BINDING_OWNER_PATH = "js/core/renderer/map_interaction_event_binding_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
+const OWNER_DIST_PATH = "dist/app/js/core/map_renderer/hit_canvas_scheduling_owner.js";
 
 function readRepoFile(...segments) {
   return fs.readFileSync(path.join(REPO_ROOT, ...segments), "utf8");
@@ -139,6 +140,11 @@ test("owner file declares only scheduling dependencies and frozen summaries", ()
 
 test("map_renderer wrapper delegates scheduling while keeping old false return", () => {
   const rendererSource = readRepoFile(...MAP_RENDERER_PATH.split("/"));
+  const ownerFactorySource = sliceBetween(
+    rendererSource,
+    "function getHitCanvasSchedulingOwner()",
+    "function getRendererTransactionResetOwner()",
+  );
 
   assertIncludes(
     rendererSource,
@@ -148,19 +154,37 @@ test("map_renderer wrapper delegates scheduling while keeping old false return",
   assertIncludes(rendererSource, "let hitCanvasSchedulingOwner = null;", "map_renderer must keep owner singleton");
   assertIncludes(rendererSource, "function getHitCanvasSchedulingOwner()", "map_renderer must expose owner factory");
   for (const token of [
+    "const rendererContext = getInteractionReceiverContext();",
+    "const hitHoverContext = rendererContext.interaction.hitHover;",
+    "renderPhaseIdle: hitHoverContext.constants.renderPhaseIdle,",
+    "idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,",
+    "hasHitCanvasRuntime: hitHoverContext.hasHitCanvasRuntime,",
+    "isHitCanvasDirty: hitHoverContext.isHitCanvasDirty,",
+    "isHitCanvasBuildDeferred: hitHoverContext.isHitCanvasBuildDeferred,",
+    "getRenderPhase: hitHoverContext.getRenderPhase,",
+    "getScheduledHitCanvasBuildHandle: hitHoverContext.getScheduledHitCanvasBuildHandle,",
+    "getActiveScenarioId: hitHoverContext.getActiveScenarioId,",
+    "scheduleDeferredWork,",
+    "cancelDeferredWork,",
+    "setScheduledHitCanvasBuildHandle: (handle) => {",
+    stateWriteToken("hitCanvasBuildScheduled", "handle;"),
+    "runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details)",
+  ]) {
+    assertIncludes(ownerFactorySource, token, "map_renderer must inject scheduling owner dependency");
+  }
+  assertIncludes(rendererSource, "function drawScheduledHitCanvasWithMetric(details = {})", "map_renderer must keep scheduled draw body");
+  assertIncludes(rendererSource, "mode: \"deferred\"", "map_renderer must keep deferred draw mode");
+  for (const forbiddenToken of [
+    "renderPhaseIdle: RENDER_PHASE_IDLE,",
     "hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas())",
     "isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty)",
     "isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild)",
     "getRenderPhase: () => runtimeState.renderPhase",
     "getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled",
     "getActiveScenarioId: () => runtimeState.activeScenarioId",
-    "setScheduledHitCanvasBuildHandle: (handle) => {",
-    stateWriteToken("hitCanvasBuildScheduled", "handle;"),
-    "runScheduledHitCanvasBuild: (details) => drawScheduledHitCanvasWithMetric(details)",
-    "function drawScheduledHitCanvasWithMetric(details = {})",
-    "mode: \"deferred\"",
+    "rendererRuntimeContext:",
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must inject scheduling owner dependency");
+    assertExcludes(ownerFactorySource, forbiddenToken, "scheduling owner factory must consume only the narrow receiver reads");
   }
 
   const wrapperSource = sliceBetween(
@@ -281,7 +305,7 @@ test("only the P47 production hit canvas scheduling owner exists", () => {
   assert.deepEqual(hitCanvasSourceFiles, [OWNER_PATH]);
 });
 
-test("public facade state allowlist and dist remain untouched by P47", () => {
+test("public facade state allowlist and P47 owner dist mirror remain untouched", () => {
   const publicFacadeSource = readRepoFile(...PUBLIC_FACADE_PATH.split("/"));
   const stateWriteAllowlistSource = readRepoFile(...STATE_WRITE_ALLOWLIST_PATH.split("/"));
 
@@ -303,5 +327,5 @@ test("public facade state allowlist and dist remain untouched by P47", () => {
     assertExcludes(publicFacadeSource, token, "public facade must not expose hit canvas scheduling owner");
     assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not add hit canvas scheduling owner");
   }
-  assert.deepEqual(gitDiffNames([PUBLIC_FACADE_PATH, STATE_WRITE_ALLOWLIST_PATH, "dist"]), []);
+  assert.deepEqual(gitDiffNames([PUBLIC_FACADE_PATH, STATE_WRITE_ALLOWLIST_PATH, OWNER_DIST_PATH]), []);
 });

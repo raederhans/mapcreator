@@ -1096,6 +1096,43 @@ function getRendererRuntimeContext() {
         getZoomGestureStartTransform: () => runtimeState.zoomGestureStartTransform,
         isZoomRenderScheduled: () => !!runtimeState.zoomRenderScheduled,
       },
+      hitHover: {
+        constants: {
+          renderPhaseIdle: RENDER_PHASE_IDLE,
+          hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,
+        },
+        accessors: {
+          hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),
+          isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
+          isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
+          getRenderPhase: () => runtimeState.renderPhase,
+          getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
+          getActiveScenarioId: () => runtimeState.activeScenarioId,
+          hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData),
+          isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active),
+          isReducedHoverPhase: () => (
+            runtimeState.renderPhase !== RENDER_PHASE_IDLE
+            || runtimeState.isInteracting
+            || runtimeState.scenarioApplyInFlight
+            || runtimeState.startupReadonly
+            || runtimeState.startupReadonlyUnlockInFlight
+          ),
+          getHoverIds: () => ({
+            landId: runtimeState.hoveredId,
+            waterId: runtimeState.hoveredWaterRegionId,
+            specialId: runtimeState.hoveredSpecialRegionId,
+          }),
+          hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip()),
+          getHoveredFacilityEntry: () => hoveredFacilityEntry,
+          getFeatureForHit: (hit) => {
+            const id = hit?.id;
+            if (!id) return null;
+            if (hit.targetType === "special") return runtimeState.specialRegionsById?.get(id) || null;
+            if (hit.targetType === "water") return runtimeState.waterRegionsById?.get(id) || null;
+            return runtimeState.landIndex?.get(id) || null;
+          },
+        },
+      },
     },
     renderCache: {
       constants: {
@@ -1201,6 +1238,10 @@ function getInteractionReceiverContext() {
     throw new TypeError("RendererRuntimeContext.interaction receiver is required.");
   }
   const interactionContext = rendererContext.interaction;
+  const hitHoverContext = interactionContext.hitHover;
+  if (!hitHoverContext) {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover receiver is required.");
+  }
   if (interactionContext.getRuntimeState() !== runtimeState) {
     throw new TypeError("RendererRuntimeContext interaction runtimeState receiver mismatch.");
   }
@@ -1597,18 +1638,20 @@ function getHitCanvasSchedulingOwner() {
   if (hitCanvasSchedulingOwner) {
     return hitCanvasSchedulingOwner;
   }
+  const rendererContext = getInteractionReceiverContext();
+  const hitHoverContext = rendererContext.interaction.hitHover;
   hitCanvasSchedulingOwner = createHitCanvasSchedulingOwner({
     state: {
-      renderPhaseIdle: RENDER_PHASE_IDLE,
+      renderPhaseIdle: hitHoverContext.constants.renderPhaseIdle,
       idleTimeoutMs: STAGED_HIT_CANVAS_TIMEOUT_MS,
     },
     getters: {
-      hasHitCanvasRuntime: () => Boolean(rendererSurfaceHost.getHitContext() && rendererSurfaceHost.getPathHitCanvas()),
-      isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
-      isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
-      getRenderPhase: () => runtimeState.renderPhase,
-      getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
-      getActiveScenarioId: () => runtimeState.activeScenarioId,
+      hasHitCanvasRuntime: hitHoverContext.hasHitCanvasRuntime,
+      isHitCanvasDirty: hitHoverContext.isHitCanvasDirty,
+      isHitCanvasBuildDeferred: hitHoverContext.isHitCanvasBuildDeferred,
+      getRenderPhase: hitHoverContext.getRenderPhase,
+      getScheduledHitCanvasBuildHandle: hitHoverContext.getScheduledHitCanvasBuildHandle,
+      getActiveScenarioId: hitHoverContext.getActiveScenarioId,
     },
     effects: {
       scheduleDeferredWork,
@@ -1695,42 +1738,28 @@ function getMapHoverInteractionOwner() {
   if (mapHoverInteractionOwner) {
     return mapHoverInteractionOwner;
   }
+  const rendererContext = getInteractionReceiverContext();
+  const hitHoverContext = rendererContext.interaction.hitHover;
   mapHoverInteractionOwner = createMapHoverInteractionOwner({
     state: {
-      hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,
+      hoverSnapPx: hitHoverContext.constants.hoverSnapPx,
     },
     getters: {
       nowMs: () => performance.now(),
       getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,
       getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,
-      hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData),
-      isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active),
+      hasHoverData: hitHoverContext.hasHoverData,
+      isSpecialZoneEditorActive: hitHoverContext.isSpecialZoneEditorActive,
       inspectHgoRuntimePreviewFromEvent,
-      isReducedHoverPhase: () => (
-        runtimeState.renderPhase !== RENDER_PHASE_IDLE
-        || runtimeState.isInteracting
-        || runtimeState.scenarioApplyInFlight
-        || runtimeState.startupReadonly
-        || runtimeState.startupReadonlyUnlockInFlight
-      ),
-      getHoverIds: () => ({
-        landId: runtimeState.hoveredId,
-        waterId: runtimeState.hoveredWaterRegionId,
-        specialId: runtimeState.hoveredSpecialRegionId,
-      }),
+      isReducedHoverPhase: hitHoverContext.isReducedHoverPhase,
+      getHoverIds: hitHoverContext.getHoverIds,
       getHitFromEvent,
-      hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip()),
-      getHoveredFacilityEntry: () => hoveredFacilityEntry,
+      hasTooltip: hitHoverContext.hasTooltip,
+      getHoveredFacilityEntry: hitHoverContext.getHoveredFacilityEntry,
       getHoveredFacilityEntryFromEvent,
       isFacilityDetailsSurfaceActive,
       getHoveredCityTooltipEntry,
-      getFeatureForHit: (hit) => {
-        const id = hit?.id;
-        if (!id) return null;
-        if (hit.targetType === "special") return runtimeState.specialRegionsById?.get(id) || null;
-        if (hit.targetType === "water") return runtimeState.waterRegionsById?.get(id) || null;
-        return runtimeState.landIndex?.get(id) || null;
-      },
+      getFeatureForHit: hitHoverContext.getFeatureForHit,
       getTooltipTextForFeature: (feature) => getTooltipText(feature),
     },
     effects: {

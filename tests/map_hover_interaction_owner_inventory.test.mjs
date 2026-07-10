@@ -20,6 +20,8 @@ const EXACT_SCHEDULER_PATH = "js/core/map_renderer/exact_after_settle_scheduler.
 const INTERACTION_HIT_CANDIDATES_PATH = "js/core/map_renderer/interaction_hit_candidates.js";
 const EVENT_BINDING_OWNER_PATH = "js/core/renderer/map_interaction_event_binding_owner.js";
 const ARCHITECTURE_CHECKER_PATH = "tools/check_architecture_boundaries.mjs";
+const HOVER_OWNER_DIST_PATH = "dist/app/js/core/map_renderer/map_hover_interaction_owner.js";
+const HIT_CANVAS_OWNER_DIST_PATH = "dist/app/js/core/map_renderer/hit_canvas_scheduling_owner.js";
 
 function readRepoFile(relativePath) {
   return fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
@@ -75,6 +77,11 @@ test("P48 owner file and active doc exist", () => {
 
 test("map_renderer keeps handleMouseMove wrapper and delegates to P48 owner", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const ownerFactorySource = sliceBetween(
+    rendererSource,
+    "function getMapHoverInteractionOwner()",
+    "function getVisibleFrameDiagnosticsOwner()",
+  );
   assertIncludes(
     rendererSource,
     "import { createMapHoverInteractionOwner } from \"./map_renderer/map_hover_interaction_owner.js\";",
@@ -84,6 +91,24 @@ test("map_renderer keeps handleMouseMove wrapper and delegates to P48 owner", ()
   assertIncludes(rendererSource, "function getMapHoverInteractionOwner()", "map_renderer must expose P48 owner factory");
   assertIncludes(rendererSource, "mapHoverInteractionOwner = createMapHoverInteractionOwner({", "map_renderer must build P48 owner");
   for (const token of [
+    "const rendererContext = getInteractionReceiverContext();",
+    "const hitHoverContext = rendererContext.interaction.hitHover;",
+    "hoverSnapPx: hitHoverContext.constants.hoverSnapPx,",
+    "hasHoverData: hitHoverContext.hasHoverData,",
+    "isSpecialZoneEditorActive: hitHoverContext.isSpecialZoneEditorActive,",
+    "isReducedHoverPhase: hitHoverContext.isReducedHoverPhase,",
+    "getHoverIds: hitHoverContext.getHoverIds,",
+    "hasTooltip: hitHoverContext.hasTooltip,",
+    "getHoveredFacilityEntry: hitHoverContext.getHoveredFacilityEntry,",
+    "getFeatureForHit: hitHoverContext.getFeatureForHit,",
+    "nowMs: () => performance.now(),",
+    "getLastMouseMoveTime: () => runtimeState.lastMouseMoveTime,",
+    "getMouseThrottleMs: () => runtimeState.MOUSE_THROTTLE_MS,",
+    "inspectHgoRuntimePreviewFromEvent,",
+    "getHitFromEvent,",
+    "getHoveredFacilityEntryFromEvent,",
+    "isFacilityDetailsSurfaceActive,",
+    "getHoveredCityTooltipEntry,",
     "setHoverIds: ({ landId = null, waterId = null, specialId = null } = {}) => {",
     stateWriteToken("hoveredId", "landId;"),
     stateWriteToken("hoveredWaterRegionId", "waterId;"),
@@ -93,8 +118,25 @@ test("map_renderer keeps handleMouseMove wrapper and delegates to P48 owner", ()
     "markHoverOverlayDirty: () => {",
     stateWriteToken("hoverOverlayDirty", "true;"),
     "getTooltipTextForFeature: (feature) => getTooltipText(feature)",
+    "getFacilityKey: buildFacilityEntryKey,",
   ]) {
-    assertIncludes(rendererSource, token, "map_renderer must keep injected P48 state/effect boundary");
+    assertIncludes(ownerFactorySource, token, "map_renderer must keep injected P48 state/effect boundary");
+  }
+  const receiverIndex = ownerFactorySource.indexOf("const rendererContext = getInteractionReceiverContext();");
+  const createIndex = ownerFactorySource.indexOf("mapHoverInteractionOwner = createMapHoverInteractionOwner({");
+  assert.ok(receiverIndex >= 0 && receiverIndex < createIndex, "hover receiver assertion must run before owner construction");
+  for (const forbiddenToken of [
+    "hoverSnapPx: HIT_SNAP_RADIUS_HOVER_PX,",
+    "hasHoverData: () => Boolean(runtimeState.landData || runtimeState.waterRegionsData || runtimeState.scenarioSpecialRegionsData)",
+    "isSpecialZoneEditorActive: () => Boolean(runtimeState.specialZoneEditor?.active)",
+    "isReducedHoverPhase: () => (",
+    "getHoverIds: () => ({",
+    "hasTooltip: () => Boolean(rendererSurfaceHost.getTooltip())",
+    "getHoveredFacilityEntry: () => hoveredFacilityEntry",
+    "getFeatureForHit: (hit) => {",
+    "rendererRuntimeContext:",
+  ]) {
+    assertExcludes(ownerFactorySource, forbiddenToken, "hover owner factory must consume only the narrow receiver reads");
   }
 
   const wrapperSource = sliceBetween(
@@ -189,7 +231,7 @@ test("interaction hit candidates remain pure and outside hover owner", () => {
   assert.deepEqual(gitDiffNames([INTERACTION_HIT_CANDIDATES_PATH]), []);
 });
 
-test("public facade state-write allowlist P47 owner scenario runtime exact scheduler and dist remain untouched", () => {
+test("public facade state-write allowlist owners scenario runtime exact scheduler and owner mirrors remain untouched", () => {
   const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
   const allowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
   const hitCanvasOwnerSource = readRepoFile(HIT_CANVAS_OWNER_PATH);
@@ -219,7 +261,8 @@ test("public facade state-write allowlist P47 owner scenario runtime exact sched
     HIT_CANVAS_OWNER_PATH,
     SCENARIO_REFRESH_RUNTIME_PATH,
     EXACT_SCHEDULER_PATH,
-    "dist",
+    HOVER_OWNER_DIST_PATH,
+    HIT_CANVAS_OWNER_DIST_PATH,
   ]), []);
 });
 

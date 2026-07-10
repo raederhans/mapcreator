@@ -1,12 +1,12 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.5 fresh acceptance green; P1.6 pending next
+Last updated: 2026-07-09 P1.6 first clean core 54/55; canonical Pages manifest rework and clean rerun pending
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` with 19 unrelated `docs/archive/**` deletions and modified `lessons learned.md`, preserved unchanged.
-- Remote P1.5 acceptance base and continuation HEAD are `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0` in an isolated clean checkout.
+- Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; continuation HEAD is G001/G002 evidence commit `3d4c8d12b1a2516b22d45afc64bf11b396d23d5e` with a reviewed, pre-commit-verified P1.6 diff.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread owns all P1.5 acceptance reruns and later P1.6-P1.8/Closeout live verification. Other agents are static-only while a live process exists.
@@ -17,7 +17,7 @@ Last updated: 2026-07-09 P1.5 fresh acceptance green; P1.6 pending next
 ## Recommended Order
 
 1. P1.5 acceptance from clean `a8f71822` is complete with `green` status and 53/53 full-core commands.
-2. Create the independent G001/G002 Lore evidence commit, then complete P1.6, P1.7, P1.8, and P1 Closeout serially in the registered continuation worktree, with one Lore commit boundary per phase.
+2. Create the reviewed P1.6 functional Lore commit, run clean-HEAD full core, record the phase evidence checkpoint, then complete P1.7, P1.8, and P1 Closeout serially in the registered continuation worktree.
 3. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection effects, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
 4. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
@@ -29,25 +29,53 @@ Current rows reflect the real continuation worktree. The dirty parent checkout r
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; HEAD `a8f71822d705fcd3b26c32db1abd417b41264eb0` | branch `origin/main`; base `a8f71822d705fcd3b26c32db1abd417b41264eb0` | `in-progress`: G001 complete; P1.5/G002 `green`; P1.6 pending next | Current evidence docs: `docs/active/renderer-runtime-context-p1-remaining-20260709/{plan.md,context.md,task.md}` plus registry. Future hotspots: `js/core/map_renderer.js`, runtime context, click owner, P54/Python tests, architecture checker, package/metadata/routes, Pages mirrors, registry. | Fresh root-owned `verify:core` exited 0 with 53/53 commands; report/log recorded; Pages/dist green; committed source/dist blob pairs match; static audit `APPROVE`; selector route gaps 0. Browser/dev-server/Playwright and `verify:core:main-thread` are explicit unrun lanes. Worktree returned clean after verification; current evidence docs await a Lore commit. | Red for direct shared-hotspot overlap; yellow for semantic interaction/click/routing overlap; green against parent archive/lessons WIP. | Create G001/G002 evidence commit → P1.6 → P1.7 → P1.8 → Closeout/integration. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.6 functional commit under same-commit manifest amend | branch `origin/main`; base `a8f71822d705fcd3b26c32db1abd417b41264eb0` | `in-progress`: G001/G002 committed; P1.5 `green`; P1.6 first clean core 54/55; manifest rework and clean rerun pending | Hotspots: renderer/runtime context, package/metadata, architecture checker, interaction/hit/hover tests, two new contracts, Pages mirrors, `dist/pages-dist-manifest.json`, P1.6/task docs, registry. Public facade, owner algorithms, UI/CSS/data remain untouched. | P1.5: root-owned `verify:core` 53/53 green. P1.6: focused/shared gates green; selector `unmatched=[]`; three static `APPROVE`; first clean core 54/55, with only `verify:dist-drift` failing because four manifest size fields were stale; canonical manifest amend and clean rerun pending. | Red for direct renderer/context/package/metadata/tooling/dist/registry overlap; yellow for interaction/hit/hover test overlap; green against parent archive/lessons WIP. | Same-commit manifest amend → clean-HEAD full core rerun → evidence checkpoint → P1.7. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
-Status: `in-progress`; G001 integration setup complete; P1.5/G002 accepted `green`; P1.6 pending next.
+Status: `in-progress`; G001/G002 evidence committed as `3d4c8d12`; P1.5 accepted `green`; P1.6 implementation and pre-commit verification complete, with functional commit and clean-HEAD full core pending.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
 Goal: execute the approved linear P1.5 fresh gate, P1.6 narrow hit/hover receiver, P1.7 canonical click preflight, P1.8 atomic pure owner, and P1 Closeout while preserving effect ownership and behavior.
 
-Current changed files are the three task documents and this registry. Future shared hotspots are renderer/runtime context, package/metadata/routes, architecture/P54 contracts, Pages mirrors, and registry.
+Current P1.6 changed files are renderer/runtime context and their two Pages mirrors; package/verification metadata; `tools/check_architecture_boundaries.mjs`; interaction/hit/hover/metadata/core-runner tests; two new P1.6 boundary tests; the three task documents; the new P1.6 phase document; and this registry.
 
-Validation truth: G001 used static Git/diff/required-field checks. G002 used a fresh root-owned clean full-core run that passed 53/53, including selector-routed commands, Pages, and dist drift. Browser, dev server, Playwright, and `verify:core:main-thread` remain explicit unrun lanes.
+Validation truth: G001 used static Git/diff/required-field checks. G002 used a fresh root-owned clean full-core run that passed 53/53. P1.6 has nine green focused groups, named Node 4/4, named Python 5/5, five shared gates at exit 0, actual-diff selector exit 0 with `unmatched=[]`, and three static `APPROVE` verdicts. The planned pre-edit selector has no durable evidence and is recorded as a process deviation. P1.6 clean-HEAD full core waits for the functional commit. Browser, dev server, Playwright, and `verify:core:main-thread` remain explicit unrun lanes.
 
 Dependency preparation: the ignored `node_modules` Junction targets `C:\Users\raede\Desktop\dev\mapcreator\node_modules`; `.gitignore:18` is `node_modules/`; the ignored log directory `.runtime/tests/renderer-runtime-context-p1-remaining-20260709` is created. Both are removed with the worktree during verified cleanup.
 
 P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
 
-Recommended integration: keep one linear ancestry; checkpoint every phase with a Lore commit and registry update; recheck origin before integration; push once after final review; clean only after remote and recovery truth are recorded.
+Recommended integration: root creates one P1.6 Lore functional commit from the reviewed patch, runs clean-HEAD full core, records committed-blob parity and the final evidence checkpoint, then advances on the same linear ancestry to P1.7.
+
+## Scenario Forge P1.6 Hit/Hover Runtime Context Migration 2026-07-09
+
+Status: implementation and pre-commit verification complete; functional commit and clean-HEAD full core pending.
+
+Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
+
+Current HEAD: G001/G002 evidence commit `3d4c8d12b1a2516b22d45afc64bf11b396d23d5e`; P1.6 remains an uncommitted worktree diff.
+
+Scope: add the exact frozen `interaction.hitHover` read capsule, route hit-canvas scheduling and map-hover owner construction through it, and preserve all owner algorithms, effects, event resolution, scheduling, metrics, writes, DOM/UI access, timing reads, and public facade behavior at their existing root boundaries.
+
+Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`.
+
+Test files: `tests/renderer_runtime_context_hit_hover_behavior.test.mjs`, `tests/test_map_renderer_hit_hover_context_boundary_contract.py`, `tests/renderer_runtime_context_interaction_behavior.test.mjs`, `tests/hit_canvas_scheduling_owner_inventory.test.mjs`, `tests/map_hover_interaction_owner_inventory.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`.
+
+Package / metadata / tooling files: `package.json`, `tools/verification/verification_domains.mjs`, `tools/check_architecture_boundaries.mjs`.
+
+Pages artifacts: `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/renderer_runtime_context.js`, `dist/pages-dist-manifest.json`.
+
+Documentation files: `docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md`, `docs/active/renderer-runtime-context-p1-remaining-20260709/context.md`, `docs/active/renderer-runtime-context-p1-remaining-20260709/task.md`, `docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md`, and this registry.
+
+Direct overlap risk: red for renderer/runtime-context source and mirrors, package/metadata/core-runner routing, and this registry; yellow for shared interaction/hit/hover inventory tests; green for public facade, owner algorithms, UI/CSS/scenario data, and the dirty parent archive/lessons work.
+
+Validation status: the root-owned nine-group focused matrix passed, including named Node 4/4 and named Python 5/5. Architecture, state-write allowlist, test-import graph, supervisor contracts, and supervisor plan all exited 0. The fresh actual-diff adaptive selector exited 0 with `unmatched=[]` and wrote `.runtime/reports/generated/p1-6-adaptive-selection.{json,md}`. Three independent static lanes returned `APPROVE`. The pre-edit selector has no durable evidence and is recorded as a process deviation. The first clean full-core run passed 54/55; only `verify:dist-drift` failed on four stale manifest size fields. Canonical manifest amend and clean rerun remain pending. Browser, dev-server, Playwright, and main-thread lanes remain explicitly unrun as described above.
+
+Commit status: P1.6 is uncommitted. G001/G002 is preserved at `3d4c8d12`; the root integration owner creates the functional Lore commit from the reviewed patch, then runs the clean-HEAD acceptance gate.
+
+Recommended integration: create one P1.6 Lore functional commit, run clean-HEAD `verify:core`, prove committed source/dist blob parity, record the final phase evidence/registry checkpoint, and advance linearly to P1.7 only after that gate closes.
 
 ## Scenario Forge P1.5 Interaction Read Model Migration 2026-07-09
 

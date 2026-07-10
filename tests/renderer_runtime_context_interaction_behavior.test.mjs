@@ -11,6 +11,7 @@ import { createRendererSurfaceHost } from "../js/core/renderer/renderer_surface_
 function createInteractionDescriptor(runtimeState, rendererSurfaceHost, overrides = {}) {
   const targetWindow = overrides.targetWindow || { addEventListener() {} };
   const d3 = overrides.d3 || { zoomIdentity: { x: 0, y: 0, k: 1 } };
+  const hitHoverOverrides = overrides.hitHover || {};
   return {
     constants: {
       minZoomScale: 0.35,
@@ -41,7 +42,39 @@ function createInteractionDescriptor(runtimeState, rendererSurfaceHost, override
       isZoomRenderScheduled: () => runtimeState.zoomRenderScheduled,
       ...(overrides.accessors || {}),
     },
+    hitHover: {
+      constants: {
+        renderPhaseIdle: "idle",
+        hoverSnapPx: 0,
+        ...(hitHoverOverrides.constants || {}),
+      },
+      accessors: {
+        hasHitCanvasRuntime: () => false,
+        isHitCanvasDirty: () => Boolean(runtimeState.hitCanvasDirty),
+        isHitCanvasBuildDeferred: () => Boolean(runtimeState.deferHitCanvasBuild),
+        getRenderPhase: () => runtimeState.renderPhase,
+        getScheduledHitCanvasBuildHandle: () => runtimeState.hitCanvasBuildScheduled,
+        getActiveScenarioId: () => runtimeState.activeScenarioId,
+        hasHoverData: () => false,
+        isSpecialZoneEditorActive: () => false,
+        isReducedHoverPhase: () => false,
+        getHoverIds: () => ({ landId: null, waterId: null, specialId: null }),
+        hasTooltip: () => false,
+        getHoveredFacilityEntry: () => null,
+        getFeatureForHit: () => null,
+        ...(hitHoverOverrides.accessors || {}),
+      },
+    },
   };
+}
+
+function collectObjectKeys(value, keys = new Set()) {
+  if (!value || typeof value !== "object") return keys;
+  for (const [key, nestedValue] of Object.entries(value)) {
+    keys.add(key);
+    collectObjectKeys(nestedValue, keys);
+  }
+  return keys;
 }
 
 function createContextFixture(overrides = {}) {
@@ -205,10 +238,7 @@ test("interaction helpers and accessors must be functions", () => {
 
 test("interaction read model excludes handlers, state setters, and scheduling effects", () => {
   const context = createContextFixture();
-  const exposedKeys = new Set([
-    ...Object.keys(context.interaction),
-    ...Object.keys(context.interaction.helpers),
-  ]);
+  const exposedKeys = collectObjectKeys(context.interaction);
 
   for (const forbiddenName of [
     "handlers",

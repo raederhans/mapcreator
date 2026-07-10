@@ -243,3 +243,30 @@ test("renderer runtime context interaction files route to interaction owner veri
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:map-interaction-event-binding-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-interaction-context-boundary"));
 });
+
+test("renderer runtime context hit hover files route to hit hover owner verification", () => {
+  const report = buildRecommendation([
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/renderer_runtime_context.js",
+    "js/core/map_renderer/hit_canvas_scheduling_owner.js",
+    "js/core/map_renderer/map_hover_interaction_owner.js",
+    "tests/renderer_runtime_context_hit_hover_behavior.test.mjs",
+    "tests/renderer_runtime_context_interaction_behavior.test.mjs",
+    "tests/hit_canvas_scheduling_owner_behavior.test.mjs",
+    "tests/hit_canvas_scheduling_owner_inventory.test.mjs",
+    "tests/map_hover_interaction_owner_behavior.test.mjs",
+    "tests/map_hover_interaction_owner_inventory.test.mjs",
+    "tests/test_map_renderer_hit_hover_context_boundary_contract.py",
+    "docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/context.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/task.md",
+    "package.json",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-runtime-context-hit-hover"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-hit-hover-context-boundary"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:hit-canvas-scheduling-owner-suite"));
+});

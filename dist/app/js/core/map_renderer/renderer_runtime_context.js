@@ -84,6 +84,22 @@ const INTERACTION_ACCESSOR_NAMES = Object.freeze([
   "isZoomRenderScheduled",
 ]);
 
+const INTERACTION_HIT_HOVER_ACCESSOR_NAMES = Object.freeze([
+  "hasHitCanvasRuntime",
+  "isHitCanvasDirty",
+  "isHitCanvasBuildDeferred",
+  "getRenderPhase",
+  "getScheduledHitCanvasBuildHandle",
+  "getActiveScenarioId",
+  "hasHoverData",
+  "isSpecialZoneEditorActive",
+  "isReducedHoverPhase",
+  "getHoverIds",
+  "hasTooltip",
+  "getHoveredFacilityEntry",
+  "getFeatureForHit",
+]);
+
 function describeValue(value) {
   return Object.freeze({
     present: value !== null && value !== undefined,
@@ -352,6 +368,52 @@ function createViewportReadModel(viewport, runtimeState, rendererSurfaceHost) {
   });
 }
 
+function createInteractionHitHoverReadModel(hitHover) {
+  if (!hitHover || typeof hitHover !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover must be an object.");
+  }
+  const constants = hitHover.constants || {};
+  const accessors = hitHover.accessors || {};
+  const hoverSnapPx = readFiniteNumber(
+    "interaction.hitHover",
+    "hoverSnapPx",
+    constants.hoverSnapPx,
+  );
+  if (hoverSnapPx < 0) {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover.constants.hoverSnapPx must be non-negative.");
+  }
+  const hitHoverAccessors = createFunctionGroup(
+    "interaction.hitHover",
+    "accessors",
+    accessors,
+    INTERACTION_HIT_HOVER_ACCESSOR_NAMES,
+  );
+
+  return Object.freeze({
+    constants: Object.freeze({
+      renderPhaseIdle: readNonEmptyString(
+        "interaction.hitHover",
+        "renderPhaseIdle",
+        constants.renderPhaseIdle,
+      ),
+      hoverSnapPx,
+    }),
+    hasHitCanvasRuntime: hitHoverAccessors.hasHitCanvasRuntime,
+    isHitCanvasDirty: hitHoverAccessors.isHitCanvasDirty,
+    isHitCanvasBuildDeferred: hitHoverAccessors.isHitCanvasBuildDeferred,
+    getRenderPhase: hitHoverAccessors.getRenderPhase,
+    getScheduledHitCanvasBuildHandle: hitHoverAccessors.getScheduledHitCanvasBuildHandle,
+    getActiveScenarioId: hitHoverAccessors.getActiveScenarioId,
+    hasHoverData: hitHoverAccessors.hasHoverData,
+    isSpecialZoneEditorActive: hitHoverAccessors.isSpecialZoneEditorActive,
+    isReducedHoverPhase: hitHoverAccessors.isReducedHoverPhase,
+    getHoverIds: hitHoverAccessors.getHoverIds,
+    hasTooltip: hitHoverAccessors.hasTooltip,
+    getHoveredFacilityEntry: hitHoverAccessors.getHoveredFacilityEntry,
+    getFeatureForHit: hitHoverAccessors.getFeatureForHit,
+  });
+}
+
 function createInteractionReadModel(interaction) {
   if (interaction === null || interaction === undefined) {
     return null;
@@ -379,6 +441,7 @@ function createInteractionReadModel(interaction) {
     accessors,
     INTERACTION_ACCESSOR_NAMES,
   );
+  const hitHover = createInteractionHitHoverReadModel(interaction.hitHover);
 
   return Object.freeze({
     constants: Object.freeze({
@@ -396,6 +459,7 @@ function createInteractionReadModel(interaction) {
       ),
     }),
     helpers: interactionHelpers,
+    hitHover,
     getRuntimeState: interactionAccessors.getRuntimeState,
     getSurfaceHost: interactionAccessors.getSurfaceHost,
     getD3: interactionAccessors.getD3,
@@ -495,6 +559,17 @@ function describeInteractionContext(interaction) {
       renderPhaseSettling: interaction.constants?.renderPhaseSettling,
     }),
     helpers: describeFunctionGroup(interaction.helpers, INTERACTION_HELPER_NAMES),
+    hitHover: Object.freeze({
+      present: true,
+      constants: Object.freeze({
+        renderPhaseIdle: interaction.hitHover?.constants?.renderPhaseIdle,
+        hoverSnapPx: interaction.hitHover?.constants?.hoverSnapPx,
+      }),
+      accessors: describeFunctionGroup(
+        interaction.hitHover,
+        INTERACTION_HIT_HOVER_ACCESSOR_NAMES,
+      ),
+    }),
     accessors: describeFunctionGroup(interaction, INTERACTION_ACCESSOR_NAMES),
   });
 }
@@ -621,6 +696,29 @@ function assertInteractionContext(interaction) {
   }
   for (const accessorName of INTERACTION_ACCESSOR_NAMES) {
     assertSectionFunction("interaction", "accessors", interaction, accessorName);
+  }
+  const hitHover = interaction.hitHover;
+  if (!hitHover || typeof hitHover !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover is required.");
+  }
+  if (!hitHover.constants || typeof hitHover.constants !== "object") {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover.constants is required.");
+  }
+  readNonEmptyString(
+    "interaction.hitHover",
+    "renderPhaseIdle",
+    hitHover.constants.renderPhaseIdle,
+  );
+  const hoverSnapPx = readFiniteNumber(
+    "interaction.hitHover",
+    "hoverSnapPx",
+    hitHover.constants.hoverSnapPx,
+  );
+  if (hoverSnapPx < 0) {
+    throw new TypeError("RendererRuntimeContext.interaction.hitHover.constants.hoverSnapPx must be non-negative.");
+  }
+  for (const accessorName of INTERACTION_HIT_HOVER_ACCESSOR_NAMES) {
+    assertSectionFunction("interaction.hitHover", "accessors", hitHover, accessorName);
   }
 }
 
