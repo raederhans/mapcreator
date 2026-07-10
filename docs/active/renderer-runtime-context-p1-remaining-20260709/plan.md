@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 functional patch committed and under canonical manifest rework after a 54/55 clean-core attempt; clean rerun pending
+Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green`, complete, and ready for integration at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`; P1.7 is next
 
 ## Progress
 
@@ -11,10 +11,11 @@ Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 functional patch
 - P1.6 code, regression contracts, verification metadata, package entries, architecture-checker title synchronization, and the two checked-in Pages mirrors are implemented in the worktree.
 - The root-owned nine-group focused matrix passed; the new named Node suite passed 4/4 and the named Python boundary passed 5/5.
 - Architecture, state-write allowlist, test-import graph, supervisor-contracts, and supervisor-plan gates exited 0. Three independent static review lanes returned `APPROVE`.
-- The fresh actual-diff adaptive selector exited 0 with `unmatched=[]`; its artifacts are `.runtime/reports/generated/p1-6-adaptive-selection.json` and `.runtime/reports/generated/p1-6-adaptive-selection.md`.
+- The final branch-history adaptive selector exited 0 with `unmatchedChangedFiles=[]`; its artifacts are `.runtime/reports/generated/p1-6-final-adaptive-selection.json`, `.runtime/reports/generated/p1-6-final-adaptive-selection.md`, and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-final-selector.log`.
 - The planned pre-edit selector has no durable evidence and is recorded as a process deviation.
 - The first clean-HEAD `verify:core` attempt passed 54/55 commands. Its only failure was `verify:dist-drift`: the checked-in `dist/pages-dist-manifest.json` still held the old sizes for the two P1.6 Pages mirrors. The canonical builder changed four size fields only.
-- The generated manifest is part of the same P1.6 functional commit through amend. A fresh clean-HEAD `verify:core` rerun remains pending; P1.6 stays open.
+- The canonical manifest was amended into the same P1.6 functional commit. A fresh clean-HEAD `npm run verify:core` rerun passed 55/55 with exit 0; the log is `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-full-core-rerun.log` and the report is `.runtime/reports/generated/verify-core.json`.
+- The post-rerun worktree returned clean before these evidence documents were edited. Committed source/dist Git blobs match: `map_renderer.js` is `b494fe2d97be761963a7b32493fec40ae4034de3`, `renderer_runtime_context.js` is `f680c25e307a91b819ecdd35d8258ef610a7475a`, and the canonical manifest blob is `075ac209a96c88e26d97effa406b3c546de50ebb`.
 
 Approved sources:
 
@@ -60,7 +61,7 @@ Execution checkpoint (G001/G002):
 - Evidence is stored in `.runtime/reports/generated/verify-core.json` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`; the worktree returned clean after the run, before these evidence documents were restored for their Lore commit.
 - Committed source/dist Git blobs match for both P1.5 pairs: `map_renderer.js` is `24d9718b816c1a4a7f912980d34755eab9620718` and `renderer_runtime_context.js` is `27afb4005a05e8a8b8b6d7fab52096dad9e781e2`. Checkout raw SHA differences come from `core.autocrlf` line-ending conversion.
 - Independent static audit returned `APPROVE`. Effects, handlers, timing, scheduling, metrics, and click selection remain composition-root owned. Selector route gaps are zero.
-- Explicit unrun lanes remain `verify:core:main-thread`, browser, dev server, and Playwright. P1.6 remains the next pending phase.
+- Explicit P1.5 unrun lanes remain `verify:core:main-thread`, browser, dev server, and Playwright. P1.6 later completed green; P1.7 is the next pending phase.
 
 ### 2. P1.6 hit/hover read capsule
 
@@ -72,11 +73,13 @@ Execution checkpoint (G001/G002):
 Execution checkpoint:
 
 - Process deviation: the planned pre-edit SF-ATS dry-run has no durable evidence. This gap is recorded explicitly rather than credited as an executed gate.
-- The fresh selector against the actual P1.6 diff exited 0 with zero unmatched files and wrote `.runtime/reports/generated/p1-6-adaptive-selection.{json,md}`.
+- The final branch-history selector exited 0 with `unmatchedChangedFiles=[]` and wrote `.runtime/reports/generated/p1-6-final-adaptive-selection.{json,md}` plus `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-final-selector.log`.
 - All nine focused test groups passed, including the new Node capsule suite at 4/4 and the named Python boundary at 5/5.
 - `verify:architecture-boundaries`, `verify:state-write-allowlist`, `verify:test-import-graph`, `verify:supervisor-contracts`, and `verify:supervisor-plan` all exited 0.
 - Three independent static reviewers returned `APPROVE` for the runtime boundary, architecture/first-principles shape, and test/SF-ATS coverage.
-- Next gate: create the P1.6 functional Lore commit, then run clean-HEAD `verify:core`. Phase completion waits for that result and the evidence/registry checkpoint.
+- Functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` includes the canonical manifest amend. The fresh clean-HEAD `npm run verify:core` rerun passed 55/55 with exit 0 and returned the worktree to clean state before evidence editing.
+- Committed Git-blob parity is green for both source/dist pairs: `map_renderer.js` at `b494fe2d97be761963a7b32493fec40ae4034de3` and `renderer_runtime_context.js` at `f680c25e307a91b819ecdd35d8258ef610a7475a`; manifest blob `075ac209a96c88e26d97effa406b3c546de50ebb` anchors the accepted size inventory.
+- P1.6 is `green`, complete, and ready for integration. The next phase is P1.7 click-selection preflight.
 
 ### 3. P1.7 click-selection preflight
 
@@ -114,11 +117,13 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 ## SF-ATS, commits, and integration
 
 - Run SF-ATS selector dry-run before phase edits and against actual phase changes. Any unmatched production file blocks the phase.
-- P1.6 records one process deviation: its pre-edit selector has no durable evidence. The fresh actual-diff selector is the authoritative current routing proof and reports `unmatched=[]`.
+- P1.6 records one process deviation: its pre-edit selector has no durable evidence. The final branch-history selector is the authoritative routing proof and reports `unmatchedChangedFiles=[]`.
 - Pages/dist is required for browser-loaded renderer source changes. Deterministic checks are completion evidence.
 - Every phase receives an intent-first Lore commit with rationale, constraints, rejected alternatives, confidence, scope risk, directive, tested evidence, and honest not-tested lanes.
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.
 - Stage exact paths. Keep parent WIP and unrelated Landing outputs outside commits. Recheck origin before integration, integrate serially, push once, verify remote main, then clean with recovery hashes recorded.
+
+P1.6 explicit unrun lanes remain `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo.
 
 ## Stop rules
 

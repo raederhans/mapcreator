@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 functional work is committed. The first clean full-core attempt passed 54/55 and identified a stale Pages manifest size record; same-commit manifest amend and clean rerun remain pending.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 is `green`, complete, and ready for integration at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`. P1.7 is next.
 
 ## Integration setup
 
@@ -32,14 +32,15 @@ Acceptance: satisfied by fresh full-core exit 0 from clean `a8f71822d705fcd3b26c
 - [x] Extend existing interaction/hit/hover inventories and add the Node/Python boundary contracts.
 - [x] Register the exact package scripts, verification metadata routes, and default `renderer-owner` leaves.
 - [x] Apply the matching source changes to both checked-in Pages mirrors.
-- [x] Run the fresh actual-diff adaptive selector: exit 0, `unmatched=[]`, artifacts `.runtime/reports/generated/p1-6-adaptive-selection.{json,md}`.
+- [x] Run the final branch-history adaptive selector: exit 0, `unmatchedChangedFiles=[]`, artifacts `.runtime/reports/generated/p1-6-final-adaptive-selection.{json,md}` and log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-final-selector.log`.
 - [x] Run the root-owned nine-group focused matrix: all groups passed; named Node 4/4 and named Python 5/5.
 - [x] Run shared gates: architecture, state-write allowlist, test-import graph, supervisor contracts, and supervisor plan all exited 0.
 - [x] Record three independent static `APPROVE` verdicts.
 - [x] Create the P1.6 functional Lore commit; canonical-manifest rework remains part of the same commit through amend.
 - [x] Record the first clean-HEAD `verify:core` attempt: 54/55, with only `verify:dist-drift` failing on four stale `dist/pages-dist-manifest.json` size fields.
-- [ ] Amend the canonical manifest, rerun clean-HEAD `verify:core`, and record committed-blob parity.
-- [ ] Record final P1.6 remaining risk, full-core result, Lore commit hash, and registry checkpoint.
+- [x] Amend the canonical manifest into the same functional commit and rerun clean-HEAD `npm run verify:core`: 55/55, exit 0, log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-full-core-rerun.log`, report `.runtime/reports/generated/verify-core.json`.
+- [x] Record committed-blob parity: `map_renderer.js` source/dist `b494fe2d97be761963a7b32493fec40ae4034de3`; runtime context source/dist `f680c25e307a91b819ecdd35d8258ef610a7475a`; manifest `075ac209a96c88e26d97effa406b3c546de50ebb`.
+- [x] Record final P1.6 remaining risk, full-core result, Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`, post-rerun clean-state proof, and registry checkpoint.
 
 Acceptance: receiver allowlist and negative effect boundary pass; behavior is stable; route gaps are zero; clean gates pass.
 
@@ -77,10 +78,10 @@ Acceptance: one consistent commit contains owner, delegation, assertions, and be
 - Metadata/package/tooling: `tools/verification/verification_domains.mjs` and `package.json` register `test:node:renderer-runtime-context-hit-hover` plus `test:python:map-renderer-hit-hover-context-boundary` in `renderer-owner`; `tools/check_architecture_boundaries.mjs` tracks the updated P47/P48 inventory titles.
 - Docs: this task folder, `docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md`, and `docs/active/_worktree_registry.md`.
 - Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; this implementation agent wrote no runtime artifact.
-- Diff/commit/divergence: current HEAD is evidence commit `3d4c8d12`, one commit ahead of `origin/main@a8f71822`; the P1.6 worktree diff is uncommitted pending root validation and review.
+- Diff/commit/divergence: P1.6 is committed as `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` on the linear branch over `origin/main@a8f71822`; the worktree returned clean after the final full-core rerun and before evidence-document edits.
 - Conflict analysis: red for `map_renderer.js`, runtime context, package, metadata, Pages mirrors, and registry; yellow for interaction/hit/hover tests; green against parent archive/lessons WIP.
-- Validation: P1.5 evidence remains 53/53 green. P1.6 named Node passed 4/4, named Python passed 5/5, all nine focused groups passed, five shared gates exited 0, actual-diff selector exited 0 with `unmatched=[]`, and three static reviews returned `APPROVE`.
-- Process deviation: the pre-edit selector has no durable evidence. The actual-diff selector artifacts provide current routing proof without retroactive execution credit.
-- Explicit pending/unrun P1.6 lanes: clean-HEAD `verify:core` waits for the functional commit; `verify:core:main-thread`, browser, dev server, and Playwright remain excluded from this phase plan.
-- Remaining risks: clean full-core rerun, committed source/dist blob parity, final registry evidence, and upstream movement.
-- Recommended next step: root amends the canonical manifest, reruns clean-HEAD full core, records final evidence, and advances to P1.7 only after the phase gate closes.
+- Validation: P1.5 evidence remains 53/53 green. P1.6 named Node passed 4/4, named Python passed 5/5, all nine focused groups passed, five shared gates exited 0, the final branch-history selector exited 0 with `unmatchedChangedFiles=[]`, three static reviews returned `APPROVE`, and the final clean-HEAD full core passed 55/55 with exit 0.
+- Process deviation: the pre-edit selector has no durable evidence. The final branch-history selector artifacts provide acceptance routing proof without retroactive execution credit.
+- Explicit unrun P1.6 lanes: `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo.
+- Remaining risks: browser-specific visual behavior and main-thread-only coverage remain represented by the explicit unrun lanes; deterministic P1.6 acceptance risk is closed.
+- Recommended next step: advance to P1.7 click-selection preflight on the same linear branch.

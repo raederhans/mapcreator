@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: functional patch committed; canonical manifest rework and clean-HEAD full-core rerun pending
+Status: `green`; complete and ready for integration at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`
 
 Base and branch:
 
@@ -94,23 +94,27 @@ The implementation agent performed static source/diff work only. The root live-p
 - Three independent static review lanes returned `APPROVE` for runtime/effect ownership, architecture/first-principles shape, and test/SF-ATS coverage.
 - The fresh adaptive selector against the actual P1.6 diff exited 0 with `unmatched=[]`. It wrote `.runtime/reports/generated/p1-6-adaptive-selection.json` and `.runtime/reports/generated/p1-6-adaptive-selection.md`.
 
-Process deviation: the planned pre-edit SF-ATS selector has no durable evidence and receives no execution credit. The fresh actual-diff selector closes the current routing risk while preserving an honest process record.
+Process deviation: the planned pre-edit SF-ATS selector has no durable evidence and receives no execution credit. The fresh actual-diff selector supplied pre-commit routing evidence; the final branch-history selector below supplies acceptance routing proof.
 
-The first clean-HEAD `verify:core` attempt passed 54/55 commands. Its only failure was `verify:dist-drift`: `dist/pages-dist-manifest.json` still recorded the old byte sizes for the two changed mirrors. The canonical builder changed four size fields only, so the generated manifest is being amended into the same functional commit.
+The first clean-HEAD `verify:core` attempt passed 54/55 commands. Its only failure was `verify:dist-drift`: `dist/pages-dist-manifest.json` still recorded the old byte sizes for the two changed mirrors. The canonical builder changed four size fields only, and the generated manifest was amended into the same functional commit.
 
-P1.6 remains open. The root integration owner still needs to rerun clean-HEAD `verify:core`, prove committed source/dist blob parity, and record the final evidence/registry checkpoint.
+The canonical manifest was amended into functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`. The fresh clean-HEAD `npm run verify:core` rerun passed 55/55 with exit 0. Its log is `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-full-core-rerun.log`, and its report is `.runtime/reports/generated/verify-core.json`. The worktree returned clean immediately after the run, before this evidence edit.
 
-Browser, dev-server, Playwright, `verify:core:main-thread`, perf, scenario-data, and heavy-geo lanes remain outside the planned P1.6 deterministic lane.
+The final branch-history adaptive selector exited 0 with `unmatchedChangedFiles=[]`. Its artifacts are `.runtime/reports/generated/p1-6-final-adaptive-selection.json`, `.runtime/reports/generated/p1-6-final-adaptive-selection.md`, and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-final-selector.log`.
+
+Committed source/dist Git blobs match: `map_renderer.js` is `b494fe2d97be761963a7b32493fec40ae4034de3`, `renderer_runtime_context.js` is `f680c25e307a91b819ecdd35d8258ef610a7475a`, and `dist/pages-dist-manifest.json` is `075ac209a96c88e26d97effa406b3c546de50ebb`.
+
+Browser, dev-server, Playwright, `verify:core:main-thread`, perf, scenario-data, and heavy-geo remain explicit unrun lanes. P1.6 deterministic acceptance is complete and green.
 
 ## Delivery package
 
 1. The change routes thirteen existing readonly dependencies and two constants through a narrow capsule; owner algorithms and observable interaction behavior stay at their prior implementations.
 2. Core, tests, routing/package, docs, and checked-in Pages mirror paths are grouped above; no temporary source-tree file was added.
 3. The diff adds the read-model contract, replaces owner-construction closures with stable context function identities, and adds regression/route coverage.
-4. The functional patch is committed; the canonical manifest and evidence wording are being folded into that same commit through amend.
-5. The branch remains linear over `origin/main@a8f71822`; the final amended P1.6 hash is recorded after the clean rerun.
+4. The functional patch and canonical manifest are committed together as `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`.
+5. The branch remains linear over `origin/main@a8f71822`; the post-rerun worktree was clean before evidence editing.
 6. Direct overlap risk is red for renderer/context/package/metadata/dist/registry and yellow for interaction/hit/hover tests. Parent archive/lessons WIP remains separate.
-7. P1.5 full core is green. P1.6 focused/shared gates, actual-diff routing, and three static reviews are green; the first clean core reached 54/55 and isolated the manifest-only drift.
-8. Remaining risks are the clean full-core rerun, committed source/dist blob parity, final registry truth, and upstream movement.
-9. Recommended integration is the same-commit manifest amend, followed by clean-HEAD full core and a final evidence checkpoint before P1.7.
-10. Current state is ready for the clean rerun after amend; P1.6 phase acceptance waits for that result.
+7. P1.5 full core is green. P1.6 focused/shared gates, final branch-history routing, three static reviews, and clean-HEAD full core 55/55 are green; the retained 54/55 attempt documents the manifest drift root cause.
+8. Remaining risk is limited to the explicit unrun main-thread, browser/dev-server/Playwright, perf, scenario-data, and heavy-geo lanes plus future upstream movement.
+9. Recommended integration state is `ready-for-integration`; the next linear implementation phase is P1.7.
+10. P1.6 phase acceptance is complete.
