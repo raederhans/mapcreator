@@ -34,8 +34,8 @@ live process owner: root
 
 ## Current phase
 
-- phase: P1.8 atomic pure click-selection owner implementation and root-owned deterministic verification complete; functional Lore commit pending
-- state: overall worktree `in-progress`; P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 remains uncommitted until the next root checkpoint
+- phase: P1.8 atomic pure click-selection owner complete; P1 Closeout next
+- state: overall worktree `in-progress`; P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint pending
 - phase acceptance: P1.5 accepted `green` from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`
 - deterministic gate: root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`
 - evidence: `.runtime/reports/generated/verify-core.json` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`
@@ -72,11 +72,13 @@ live process owner: root
 - P1.8 actual selector: 19 changed files / 187 recommended commands / 6 main-thread commands / `unmatchedChangedFiles=[]`; artifacts `.runtime/reports/generated/p1-8-actual-adaptive-selection.{json,md}`; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-actual-selector.log`
 - P1.8 Pages/dist: canonical builder wrote the renderer mirror, new owner mirror, and manifest; `verify:pages-dist` exit 0 with Python startup 41/41, landing 18/18, and sample contracts 17/17. Pre-commit `verify:dist-drift` exit 1 is expected until those generated files are committed.
 - P1.8 final reviews: architecture `CLEAR`, code/evidence `APPROVE`, and contract adjudication `APPROVE`
-- P1.8 functional commit: current functional HEAD
-- P1.8 clean-head drift: `verify:dist-drift` passed after the current P1.8 functional HEAD
+- P1.8 functional commit: `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`
+- P1.8 clean-head drift: `verify:dist-drift` passed after the P1.8 functional commit
 - P1.8 clean-head core first attempt: 57-command run reached one deterministic stale-contract failure in `test:node:scenario-chunk-contracts`; `firstBatchInteractionWritesUseRafRenderBoundary` still expected raw ctrl/meta event gating after P1.8 moved the land dev-selection decision behind `decision.devSelectionRequested`
 - P1.8 clean-head core rework: `tests/scenario_chunk_contracts.test.mjs` now asserts the decision branch and its focused rerun exits 0
-- P1.8 pending root work: clean-HEAD `verify:core`, committed selector, and P1 Closeout
+- P1.8 clean-head core: rerun passed 58/58 with failed 0; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-full-core-clean-head-rerun.log`; report `.runtime/reports/generated/verify-core.json`
+- P1.8 committed selector: 29 changed files / 188 recommended commands / 7 main-thread commands / 0 CI-only / `unmatchedChangedFiles=[]`; artifacts `.runtime/reports/generated/p1-8-committed-adaptive-selection.{json,md}`
+- P1.8 pending root work: evidence checkpoint and P1 Closeout
 - P1.8 focused rework classification: the Python boundary reached 5/6 because a file-level import assertion was placed inside the extracted click-handler contract; this is a boundary-test placement failure
 - P1.8 routing rework classification: the verify-core runner reached 7/8 because three renderer-runtime entries included the runner test in their `sourceRefs`; this is verification metadata ownership drift
 - P1.8 rework status: contract corrections passed on root rerun
@@ -95,7 +97,7 @@ live process owner: root
 | P1.6 implementation | `/root/ultragoal_runtime` | code/tests/metadata/tooling/dist committed; phase `green` and ready for integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` |
 | static review | three delegated lanes | P1.6 `APPROVE` from all three lanes | static source/test/SF-ATS review reports |
 | P1.7 implementation | root | complete; evidence checkpoint committed | functional `5f78f3a5`; evidence `f355546c`; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; three `APPROVE / CLEAR` reviews |
-| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | implementation and deterministic verification complete; amend and clean core pending | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; three final reviews clear |
+| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | complete; evidence checkpoint pending | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear |
 
 ## Phase evidence
 
@@ -105,7 +107,7 @@ live process owner: root
 | P1.5 / G002 | green | baseline `a8f71822`; evidence `3d4c8d12` | `verify:core` 53/53 exit 0; Pages/dist green; blob parity; static `APPROVE`; route gaps 0 | main-thread and visual lanes remain explicit unrun lanes |
 | P1.6 | `green`; complete; ready-for-integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` | narrow capsule; Node 4/4; Python 5/5; nine focused groups green; five shared gates exit 0; final branch-history selector `unmatchedChangedFiles=[]`; three static `APPROVE`; final clean core 55/55; committed source/dist blob parity | explicit unrun lanes and future upstream movement |
 | P1.7 | complete; ready-for-integration | functional `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence `f355546c281da1e51cbbbe651fb96a55801267cc` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | explicit unrun lanes recorded |
-| P1.8 | in progress; deterministic verification complete | current functional HEAD | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; three final reviews clear | clean-HEAD core and committed selector pending |
+| P1.8 | complete; evidence checkpoint pending | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | P1 Closeout pending |
 | Closeout | pending | pending | pending | integration/cleanup |
 
 ## Decision log
@@ -139,6 +141,7 @@ live process owner: root
 - 2026-07-09: the confirmed RED log records only the expected missing owner module assertion. Implementation is complete; root retains every GREEN test, checker, selector, dist builder, review, commit, and full-core decision.
 - 2026-07-09: review found one executable-consumption gap in the approved P1.8 test spec. The existing P54 inventory now compiles the actual `handleClick` source with a minimal injected harness and traces canonical empty, typed blank-id clear, special selection, water admission, land hydration, and land dev-toggle outcomes from returned owner values.
 - 2026-07-09: the executable harness and its architecture-checker anchors passed on root rerun; P1.8 remains `in-progress` only for atomic commit, clean-HEAD gates, and closeout.
+- 2026-07-10: P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` passed trailer parsing, clean-head drift, clean-head `verify:core` 58/58, and committed selector zero unmatched. P1 Closeout starts next.
 
 ## Next action
 

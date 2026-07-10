@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: `in-progress`; implementation, root-owned deterministic verification, Pages generation, actual selector, and independent reviews complete; functional Lore commit and clean-HEAD gates pending
+Status: complete; functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; clean-HEAD core and committed selector green
 
 ## Atomic owner contract
 
@@ -77,13 +77,17 @@ Shared and generated gates passed:
 
 Actual adaptive selection wrote `.runtime/reports/generated/p1-8-actual-adaptive-selection.{json,md}` and reported 19 changed files, 187 recommended commands, 6 main-thread commands, and `unmatchedChangedFiles=[]`.
 
-Generated scope is `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/click_selection_transaction_owner.js`, and `dist/pages-dist-manifest.json`. The pre-commit `verify:dist-drift` run exited 1 because those intended generated changes were still uncommitted; the clean-HEAD drift rerun passed after the current P1.8 functional HEAD.
+Generated scope is `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/click_selection_transaction_owner.js`, and `dist/pages-dist-manifest.json`. The pre-commit `verify:dist-drift` run exited 1 because those intended generated changes were still uncommitted; the clean-HEAD drift rerun passed after functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`.
+
+Clean-HEAD `verify:core` rerun passed 58/58 with failed 0. Report: `.runtime/reports/generated/verify-core.json`. Log: `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-full-core-clean-head-rerun.log`.
+
+Committed selector evidence: 29 changed files, 188 recommended commands, 7 main-thread commands, 0 CI-only commands, `unmatchedChangedFiles=[]`. Artifacts: `.runtime/reports/generated/p1-8-committed-adaptive-selection.{json,md}`.
 
 Independent review evidence: architecture, code/evidence, and contract adjudication lanes returned `APPROVE / CLEAR`.
 
 ## Remaining risk
 
-The implementation remains `in-progress` until the amended atomic Lore commit, clean-HEAD `verify:core`, and committed selector pass. Browser, dev-server, Playwright, perf, scenario-data, heavy-geo, and `verify:core:main-thread` stay explicit unrun lanes because deterministic contracts leave no browser-specific residual risk.
+Browser, dev-server, Playwright, perf, scenario-data, heavy-geo, and `verify:core:main-thread` stay explicit unrun lanes because deterministic contracts leave no browser-specific residual risk. Remaining work moves to P1 Closeout.
 
 ## Focused rework checkpoint
 

@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with docs evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 implementation, root-owned verification, Pages generation, selector, and independent reviews are complete; functional Lore commit and clean-HEAD core remain next.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with docs evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 is complete at functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` with clean-HEAD core and committed selector green.
 
 ## Integration setup
 
@@ -71,7 +71,7 @@ Acceptance: canonical files and routes reach default core; ordered inventory and
 - [x] Enforce closed schemas and prove returned values control branch admission.
 - [x] Preserve P1.7 order and root effects; register routing and generate Pages mirrors under root ownership.
 - [x] Run focused and shared gates, actual selector, Pages build, `verify:pages-dist`, independent reviews, and pre-commit diff checks.
-- [ ] Create the atomic Lore commit, rerun clean-HEAD `verify:dist-drift` and `verify:core`, and record the evidence checkpoint.
+- [x] Create the atomic Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`, rerun clean-HEAD `verify:dist-drift` and `verify:core`, and record evidence.
 
 Acceptance: one consistent commit contains owner, delegation, assertions, and behavior proof; clean gates pass.
 
@@ -89,6 +89,8 @@ Focused rework checkpoint:
 - [x] Independent final reviews returned `APPROVE / CLEAR` from architecture, code/evidence, and contract adjudication lanes.
 - [x] Clean-HEAD `verify:dist-drift` passed after the current P1.8 functional HEAD.
 - [x] First clean-HEAD `verify:core` attempt found one stale static contract in `test:node:scenario-chunk-contracts`: it still expected raw `event?.ctrlKey || event?.metaKey` in the dev-selection branch. The contract now asserts the P1.8 `decision.devSelectionRequested` branch and the focused rerun exits 0.
+- [x] Clean-HEAD `verify:core` rerun passed 58/58 with failed 0; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-full-core-clean-head-rerun.log`; report `.runtime/reports/generated/verify-core.json`.
+- [x] Committed selector passed: 29 changed files, 188 recommended commands, 7 main-thread commands, 0 CI-only commands, `unmatchedChangedFiles=[]`; artifacts `.runtime/reports/generated/p1-8-committed-adaptive-selection.{json,md}`.
 
 ## P1 Closeout
 
@@ -108,6 +110,6 @@ Focused rework checkpoint:
 - Diff/commit/divergence: P1.8 is uncommitted because the atomic Lore commit is the next root action. Current HEAD is the P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`, five commits ahead of `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0` with that origin as merge-base.
 - Conflict analysis: red for `js/core/map_renderer.js`; yellow for click-selection tests, architecture checker, package/verification metadata, phase docs, and registry; green for `RendererRuntimeContext`, public facade, state-write allowlist, UI/CSS/scenario data, README, and parent archive/lessons WIP.
 - Validation completed: TDD RED exit 1 for the expected missing owner module; focused owner 9/9, P54 10/10, Python 6/6, metadata 13/13, core runner 8/8; shared state-write/import/supervisor gates exit 0; architecture PASS; `verify:pages-dist` exit 0; actual selector zero unmatched; three independent reviews `APPROVE / CLEAR`; `git diff --check` exit 0.
-- Validation pending: rerun clean-HEAD `verify:core` and run committed selector. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
-- Remaining risks: clean-HEAD core must prove the amended contract set is stable; no browser-specific residual risk is identified by deterministic checks.
-- Recommended next step: root runs clean-HEAD core and committed selector before P1 Closeout. Integration and cleanup remain deferred.
+- Validation completed: clean-HEAD `verify:dist-drift` and `verify:core` are green; committed selector has zero unmatched files. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
+- Remaining risks: P1 Closeout must still run final bug/first-principles review, UltraQA, integration preflight, push, registry finalization, and safe cleanup.
+- Recommended next step: root records the P1.8 evidence checkpoint, then enters P1 Closeout. Integration and cleanup remain deferred until Closeout passes.
