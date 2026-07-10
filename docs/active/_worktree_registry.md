@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P1.8 complete; evidence checkpoint and Closeout pending
+Last updated: 2026-07-10 P1 Closeout passed; ready for integration and push
 
 ## Integration Owner
 
@@ -29,11 +29,11 @@ Current rows reflect the real continuation worktree. The dirty parent checkout r
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.8 functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | branch `origin/main`; base/merge-base `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is seven commits ahead | overall `in-progress`; P1.5/P1.6 `green`; P1.7 complete; P1.8 complete; Closeout pending | Hot files: `js/core/map_renderer.js`, new pure owner, owner/P54/Python/metadata/core-runner/scenario-chunk tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, P54 and phase/control docs. Protected surfaces remain clean: runtime context, public facade, state allowlist, README, UI/CSS/data. | P1.8 RED confirmed; focused owner/P54/Python/metadata/core-runner all green; shared static gates green; actual selector 19 / 187 / 6 / zero unmatched; `verify:pages-dist` green; clean-head `verify:dist-drift` green; first clean-core found stale scenario dev-selection contract; focused scenario rerun green; clean-head core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three reviews clear. | Red for `map_renderer.js`; yellow for shared click/scenario tests/checker/package/metadata/docs/dist; green for protected surfaces and parent archive/lessons WIP. | Root runs P1 Closeout, integration, push, and cleanup. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.8 functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; closeout sync `21f15595947fa5871f334729cc73f171ce89f7f5` | branch `origin/main`; base/merge-base `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is nine commits ahead | overall `ready-for-integration`; P1.5/P1.6 `green`; P1.7 complete; P1.8 complete; Closeout passed | Hot files: `js/core/map_renderer.js`, new pure owner, owner/P54/Python/metadata/core-runner/scenario-chunk tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, P54 and phase/control docs. Protected surfaces remain clean: runtime context, public facade, state allowlist, README, UI/CSS/data. | P1.8 RED confirmed; focused owner/P54/Python/metadata/core-runner all green; shared static gates green; actual selector 19 / 187 / 6 / zero unmatched; `verify:pages-dist` green; clean-head `verify:dist-drift` green; first clean-core found stale scenario dev-selection contract; focused scenario rerun green; clean-head core 58/58; committed selector 29 / 188 / 7 / zero unmatched; Closeout selector 29 / 188 / 7 / zero unmatched; final reviews clear after docs truth sync. | Red for `map_renderer.js`; yellow for shared click/scenario tests/checker/package/metadata/docs/dist; green for protected surfaces and parent archive/lessons WIP. | Push this linear branch to `origin/main`, then remove the verified isolated worktree. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
-Status: `in-progress`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; Closeout pending.
+Status: `ready-for-integration`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` and evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5`; Closeout passed after docs truth sync `21f15595947fa5871f334729cc73f171ce89f7f5`.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
@@ -47,13 +47,13 @@ Dependency preparation: the ignored `node_modules` Junction targets `C:\Users\ra
 
 P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
 
-Recommended integration: keep the branch on the same linear ancestry; root completes P1.8 verification and generated Pages synchronization, creates the atomic Lore commit, runs clean core, then proceeds to P1 Closeout. Integration and cleanup remain deferred.
+Recommended integration: push the verified linear branch to `origin/main`, verify the remote hash, then remove the isolated worktree after preserving branch and commit hashes.
 
 ## Scenario Forge P1.8 Pure Click-Selection Decision Owner 2026-07-09
 
-Status: `in-progress`; implementation and deterministic root-owned verification complete. Current HEAD is P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`.
+Status: `ready-for-integration`; implementation, deterministic root-owned verification, and Closeout complete. Current HEAD includes closeout truth sync `21f15595947fa5871f334729cc73f171ce89f7f5`.
 
-Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; initial base and current `origin/main` are `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is seven commits ahead with that commit as merge-base.
+Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; initial base and current `origin/main` are `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is nine commits ahead with that commit as merge-base.
 
 What changed:
 
@@ -83,7 +83,7 @@ Validation evidence: pre-edit selector 19 files / 186 commands / 6 main-thread c
 
 Validation evidence: owner behavior 9/9; executable P54 inventory 10/10; Python boundary 6/6; metadata 13/13; core runner 8/8; architecture PASS; state-write allowlist PASS; test import graph PASS; supervisor contracts 12/12 plus routing 4/4; supervisor plan 15/15; `verify:core:list` 58 commands; actual selector 19 / 187 / 6 / zero unmatched; canonical Pages builder and `verify:pages-dist` exit 0; clean-head `verify:dist-drift` exit 0; focused scenario-chunk rerun exit 0 after updating its P1.8 dev-selection decision assertion; `git diff --check` exit 0; three independent reviews clear. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
 
-Recommended next action: root runs P1 Closeout, then integration, push, and cleanup.
+Recommended next action: push to `origin/main`, verify the remote hash, then clean the isolated worktree.
 
 ## Scenario Forge P1.7 Click-Selection Transaction Preflight 2026-07-09
 

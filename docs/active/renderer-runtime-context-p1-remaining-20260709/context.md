@@ -34,8 +34,8 @@ live process owner: root
 
 ## Current phase
 
-- phase: P1.8 atomic pure click-selection owner complete; P1 Closeout next
-- state: overall worktree `in-progress`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`
+- phase: P1 Closeout passed; integration and cleanup next
+- state: overall worktree `ready-for-integration`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; closeout truth sync `21f15595947fa5871f334729cc73f171ce89f7f5`
 - phase acceptance: P1.5 accepted `green` from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`
 - deterministic gate: root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`
 - evidence: `.runtime/reports/generated/verify-core.json` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`
@@ -97,7 +97,7 @@ live process owner: root
 | P1.6 implementation | `/root/ultragoal_runtime` | code/tests/metadata/tooling/dist committed; phase `green` and ready for integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` |
 | static review | three delegated lanes | P1.6 `APPROVE` from all three lanes | static source/test/SF-ATS review reports |
 | P1.7 implementation | root | complete; evidence checkpoint committed | functional `5f78f3a5`; evidence `f355546c`; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; three `APPROVE / CLEAR` reviews |
-| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear |
+| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; closeout truth sync `21f15595947fa5871f334729cc73f171ce89f7f5` | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; Closeout selector 29 / 188 / 7 / zero unmatched; final reviews clear after docs truth sync |
 
 ## Phase evidence
 
@@ -107,8 +107,8 @@ live process owner: root
 | P1.5 / G002 | green | baseline `a8f71822`; evidence `3d4c8d12` | `verify:core` 53/53 exit 0; Pages/dist green; blob parity; static `APPROVE`; route gaps 0 | main-thread and visual lanes remain explicit unrun lanes |
 | P1.6 | `green`; complete; ready-for-integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` | narrow capsule; Node 4/4; Python 5/5; nine focused groups green; five shared gates exit 0; final branch-history selector `unmatchedChangedFiles=[]`; three static `APPROVE`; final clean core 55/55; committed source/dist blob parity | explicit unrun lanes and future upstream movement |
 | P1.7 | complete; ready-for-integration | functional `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence `f355546c281da1e51cbbbe651fb96a55801267cc` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | explicit unrun lanes recorded |
-| P1.8 | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | P1 Closeout pending |
-| Closeout | pending | pending | pending | integration/cleanup |
+| P1.8 | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | Closeout passed |
+| Closeout | passed; ready-for-integration | finalization commit after docs truth sync `21f15595947fa5871f334729cc73f171ce89f7f5` | stale P1.8 status grep zero matches; `git diff --check` green; `verify:dist-drift` green after Pages regeneration; Closeout selector 29 / 188 / 7 / zero unmatched; code review, first-principles review, and UltraQA docs blockers resolved | push/cleanup |
 
 ## Decision log
 
@@ -145,4 +145,4 @@ live process owner: root
 
 ## Next action
 
-Root runs the P1.8 focused matrix and shared gates, generates/verifies the Pages mirrors, records actual selector and independent review evidence, creates the atomic Lore commit, and runs clean-HEAD core. Integration and cleanup remain deferred.
+Root pushes the verified linear branch to `origin/main`, verifies the remote hash, then removes the isolated worktree after preserving branch and commit hashes.

@@ -111,5 +111,5 @@ Focused rework checkpoint:
 - Conflict analysis: red for `js/core/map_renderer.js`; yellow for click-selection tests, architecture checker, package/verification metadata, phase docs, and registry; green for `RendererRuntimeContext`, public facade, state-write allowlist, UI/CSS/scenario data, README, and parent archive/lessons WIP.
 - Validation completed: TDD RED exit 1 for the expected missing owner module; focused owner 9/9, P54 10/10, Python 6/6, metadata 13/13, core runner 8/8; shared state-write/import/supervisor gates exit 0; architecture PASS; `verify:pages-dist` exit 0; actual selector zero unmatched; three independent reviews `APPROVE / CLEAR`; `git diff --check` exit 0.
 - Validation completed: clean-HEAD `verify:dist-drift` and `verify:core` are green; committed selector has zero unmatched files. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
-- Remaining risks: P1 Closeout must still run final bug/first-principles review, UltraQA, integration preflight, push, registry finalization, and safe cleanup.
-- Recommended next step: root enters P1 Closeout, then integration, push, and cleanup.
+- Remaining risks: integration preflight, remote push verification, and safe worktree cleanup remain.
+- Recommended next step: push the verified linear branch to `origin/main`, verify the remote hash, then remove the isolated worktree.
