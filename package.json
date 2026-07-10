@@ -162,6 +162,7 @@
     "test:python:map-renderer-interaction-context-boundary": "npm run python -- -m unittest tests.test_map_renderer_interaction_context_boundary_contract -q",
     "test:python:map-renderer-hit-hover-context-boundary": "npm run python -- -m unittest tests.test_map_renderer_hit_hover_context_boundary_contract -q",
     "test:node:renderer-draw-canvas-orchestration-inventory": "node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
+    "test:node:click-selection-transaction-owner": "node --test tests/click_selection_transaction_owner_behavior.test.mjs",
     "test:node:renderer-click-selection-transaction-inventory": "node --test tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",
     "test:python:map-renderer-click-selection-transaction-boundary": "npm run python -- -m unittest tests.test_map_renderer_click_selection_transaction_boundary_contract -q",
     "test:node:renderer-render-request-boundary-owner": "node --test tests/renderer_render_request_boundary_owner_behavior.test.mjs",

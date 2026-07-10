@@ -170,3 +170,11 @@ npm run verify:test-import-graph
 npm run verify:state-write-allowlist
 git diff --check
 ```
+
+## P1.8 implementation follow-up
+
+P54 remains the historical production-zero preflight. P1.8 now implements the predeclared atomic pure-decision seam in `js/core/map_renderer/click_selection_transaction_owner.js` and delegates to it once from `handleClick(...)`.
+
+The implementation keeps the P54 effect inventory at the composition root. The new owner validates only the exact scalar hit projection and boolean modifier record, then returns the closed `{ decision, target }` value. `map_renderer.js` retains hit resolution, empty/special/water/land admission, selection writes, feature lookup, hydration, refreshed-hit resolution, history, dirty state, sidebar refresh, rendering, DOM/UI work, and metrics.
+
+The phase-specific contract, RED evidence, generated Pages scope, pending gates, and integration state are recorded in `docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md`.

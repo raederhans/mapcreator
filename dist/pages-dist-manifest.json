@@ -45762,12 +45762,17 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 898389,
+      "size_bytes": 899027,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/map_renderer/canvas_layer_manager.js",
       "size_bytes": 3889,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/click_selection_transaction_owner.js",
+      "size_bytes": 2567,
       "source_kind": "dist"
     },
     {
@@ -47402,7 +47407,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467176,
+      "size_bytes": 1467322,
       "source_kind": "dist"
     },
     {
@@ -47532,9 +47537,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9420,
+      "file_count": 9421,
       "path": "app",
-      "size_bytes": 965632339
+      "size_bytes": 965635544
     },
     {
       "file_count": 57,
@@ -47544,7 +47549,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467176
+      "size_bytes": 1467322
     },
     {
       "file_count": 1,
@@ -47567,5 +47572,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972197876
+  "total_bytes": 972201227
 }

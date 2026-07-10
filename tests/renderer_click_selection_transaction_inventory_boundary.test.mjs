@@ -11,7 +11,10 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 
 const DOC_PATH = "docs/active/renderer-click-selection-transaction-preflight-20260702.md";
 const P1_7_DOC_PATH = "docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md";
+const P1_8_DOC_PATH = "docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const CLICK_SELECTION_TRANSACTION_OWNER_PATH = "js/core/map_renderer/click_selection_transaction_owner.js";
+const CLICK_SELECTION_TRANSACTION_OWNER_TEST_PATH = "tests/click_selection_transaction_owner_behavior.test.mjs";
 const MAP_HOVER_INTERACTION_OWNER_PATH = "js/core/map_renderer/map_hover_interaction_owner.js";
 const MAP_INTERACTION_EVENT_BINDING_OWNER_PATH = "js/core/renderer/map_interaction_event_binding_owner.js";
 const INTERACTION_HIT_CANDIDATES_PATH = "js/core/map_renderer/interaction_hit_candidates.js";
@@ -102,7 +105,7 @@ function sliceFrom(source, startMarker) {
   return source.slice(start);
 }
 
-function isForbiddenClickSelectionTransactionOwnerPath(sourcePath) {
+function isClickSelectionTransactionOwnerPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
   if (!normalized.startsWith("js/core/")) {
     return false;
@@ -286,6 +289,7 @@ function assertExcludes(source, token, message) {
 test("P54 doc exists and locks required click selection transaction headings", () => {
   const docSource = readRepoFile(DOC_PATH);
   const p1_7DocSource = readRepoFile(P1_7_DOC_PATH);
+  const p1_8DocSource = readRepoFile(P1_8_DOC_PATH);
 
   for (const heading of P54_DOC_HEADINGS) {
     assertIncludes(docSource, heading, "P54 doc must keep required heading");
@@ -328,10 +332,22 @@ test("P54 doc exists and locks required click selection transaction headings", (
   ]) {
     assertIncludes(p1_7DocSource, token, "P1.7 doc must lock the future click-selection seam");
   }
+  for (const token of [
+    "`resolveClickSelectionDecision(resolvedHit, readonlyModifiers) -> { decision, target }`",
+    "The owner receives the exact four-key scalar `resolvedHit` projection, never the raw hit object.",
+    "Water ctrl/meta toggle remains a root-owned selection behavior and reads the frozen modifier snapshot independently.",
+    "Only the land dev-selection branch consumes `decision.devSelectionRequested`.",
+    "History, dirty state, runtime selection writes, hydration, refreshed-hit resolution, sidebar refresh, rendering, DOM/UI work, and metrics remain root-owned.",
+    "Canonical empty admission is explicit: `if (target.kind === \"empty\" || !id) {`; typed land/water/special targets with blank or null ids retain their typed kind and enter the same clear branch.",
+    "Pre-edit selector: 19 files, 186 commands, 6 main-thread commands, with only this new phase record unmatched.",
+  ]) {
+    assertIncludes(p1_8DocSource, token, "P1.8 doc must lock the pure click-selection decision owner boundary");
+  }
 });
 
 test("click entry remains in map_renderer and event binding keeps injected dispatch", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const clickSelectionOwnerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
   const eventBindingOwnerSource = readRepoFile(MAP_INTERACTION_EVENT_BINDING_OWNER_PATH);
   const interactionFunnelSource = readRepoFile(INTERACTION_FUNNEL_PATH);
   const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
@@ -339,6 +355,21 @@ test("click entry remains in map_renderer and event binding keeps injected dispa
   assertIncludes(rendererSource, "async function handleClick(event, _interactionContext = null)", "map_renderer must keep click handler entry");
   assertIncludes(rendererSource, "mapClick: handleClick", "map_renderer must inject click handler");
   assertIncludes(rendererSource, "dispatchMapClick", "map_renderer must keep click dispatcher wiring");
+  assertIncludes(
+    rendererSource,
+    "import { resolveClickSelectionDecision } from \"./map_renderer/click_selection_transaction_owner.js\";",
+    "map_renderer must import the P1.8 pure decision owner",
+  );
+  assert.equal(
+    rendererSource.split("resolveClickSelectionDecision(").length - 1,
+    1,
+    "map_renderer must delegate to the P1.8 resolver exactly once",
+  );
+  assertIncludes(
+    clickSelectionOwnerSource,
+    "export function resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
+    "P1.8 owner must expose one pure resolver",
+  );
 
   for (const token of [
     "requireFunction(helpers, \"bindInteractionFunnel\")({",
@@ -361,6 +392,11 @@ test("click entry remains in map_renderer and event binding keeps injected dispa
   }
   assertIncludes(handleClickSource, "getHitFromEvent(event, {", "handleClick must keep hit resolution");
   assertIncludes(handleClickSource, "eventType: \"click\"", "handleClick must resolve click hit type");
+  assertIncludes(
+    handleClickSource,
+    "resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
+    "handleClick must delegate the scalar click decision once",
+  );
 });
 
 test("handleClick keeps the global branch spine and branch-local transaction order", () => {
@@ -394,17 +430,21 @@ test("handleClick keeps the global branch spine and branch-local transaction ord
     step.syncReadOnly("facility block-underlying admission", "if (clickedFacilityEntry && shouldBlockUnderlyingSelectionForFacility(clickedFacilityEntry)) {"),
     step.syncReadOnly("selected facility clear admission", "\n  if (selectedFacilityEntry) {"),
     step.syncReadOnly("root hit resolution", "const hit = getHitFromEvent(event, {"),
-    step.syncReadOnly("resolved id admission", "const id = hit.id;"),
-    step.syncReadOnly("empty branch", "if (!id) {"),
+    step.syncReadOnly("scalar hit projection", "const resolvedHit = {"),
+    step.syncReadOnly("frozen modifier projection", "const readonlyModifiers = Object.freeze({"),
+    step.syncReadOnly("pure decision delegation", "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);"),
+    step.syncReadOnly("resolved id admission", "const id = target.id;"),
+    step.syncReadOnly("empty branch", "if (target.kind === \"empty\" || !id) {"),
     step.syncEffectful("dev hit update", "updateDevSelectedHit(hit);"),
     step.syncEffectful("special-zone membership", "if (handleSpecialZoneMembershipClick(hit, event)) return;"),
-    step.syncReadOnly("special branch", "if (hit.targetType === \"special\") {"),
-    step.syncReadOnly("water branch", "if (hit.targetType === \"water\") {"),
+    step.syncReadOnly("special branch", "if (target.kind === \"special\") {"),
+    step.syncReadOnly("water branch", "if (target.kind === \"water\") {"),
+    step.syncReadOnly("land admission", "if (target.kind !== \"land\") return;"),
     step.syncReadOnly("land clears water selection", "if (runtimeState.selectedWaterRegionId) {"),
     step.syncReadOnly("land clears special selection", "if (runtimeState.selectedSpecialRegionId) {"),
     step.syncReadOnly("land hit admission", "let landHit = hit;"),
     step.syncReadOnly("land feature lookup", "let feature = runtimeState.landIndex.get(landId);"),
-    step.syncReadOnly("dev selection branch", "if (event?.ctrlKey || event?.metaKey) {"),
+    step.syncReadOnly("dev selection branch", "if (decision.devSelectionRequested) {"),
     step.asyncEffectful("async detail hydration", "if (!(await ensureLeafDetailReady(countryCode, { announce: true }))) {"),
     step.syncReadOnly("refreshed hit resolution", "const refreshedHit = getHitFromEvent(event, {"),
     step.syncReadOnly("target expansion", "const targetIds = resolveInteractionTargetIds(feature, landId);"),
@@ -493,7 +533,11 @@ test("handleClick keeps the global branch spine and branch-local transaction ord
   ], "selected facility clear branch must keep card and overlay clear order");
   assertReturnStatementCount(selectedFacilityClearSource, 0, "selected facility clear branch return contract");
 
-  const emptyBranchSource = sliceBetween(handleClickSource, "if (!id) {", "updateDevSelectedHit(hit);");
+  const emptyBranchSource = sliceBetween(
+    handleClickSource,
+    "if (target.kind === \"empty\" || !id) {",
+    "updateDevSelectedHit(hit);",
+  );
   assertOrderedSteps(emptyBranchSource, [
     step.syncReadOnly("empty water admission", "if (runtimeState.selectedWaterRegionId) {"),
     step.syncReadOnly("empty water previous id", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
@@ -510,8 +554,8 @@ test("handleClick keeps the global branch spine and branch-local transaction ord
 
   const specialBranchSource = sliceBetween(
     handleClickSource,
-    "if (hit.targetType === \"special\") {",
-    "if (hit.targetType === \"water\") {",
+    "if (target.kind === \"special\") {",
+    "if (target.kind === \"water\") {",
   );
   assertOrderedSteps(specialBranchSource, [
     step.syncReadOnly("special lookup", "const specialFeature = runtimeState.specialRegionsById.get(id);"),
@@ -534,15 +578,15 @@ test("handleClick keeps the global branch spine and branch-local transaction ord
 
   const waterBranchSource = sliceBetween(
     handleClickSource,
-    "if (hit.targetType === \"water\") {",
-    "if (runtimeState.selectedWaterRegionId) {",
+    "if (target.kind === \"water\") {",
+    "if (target.kind !== \"land\") return;",
   );
   assertOrderedSteps(waterBranchSource, [
     step.syncReadOnly("water lookup", "const waterFeature = runtimeState.waterRegionsById.get(id);"),
     step.syncReadOnly("water lookup admission", "if (!waterFeature) return;"),
     step.syncReadOnly("water previous special", "const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || \"\").trim();"),
     step.syncReadOnly("water previous water", "const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || \"\").trim();"),
-    step.syncReadOnly("water toggle decision", "const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);"),
+    step.syncReadOnly("water toggle decision", "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;"),
     step.syncEffectful("water special clear", stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";")),
     step.syncReadOnly("water toggle-off admission", "if (isSelectionToggle && previousWaterRegionId === id) {"),
     step.syncEffectful("water toggle-off clear", stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";")),
@@ -605,11 +649,11 @@ test("handleClick keeps the global branch spine and branch-local transaction ord
   );
   const devSelectionSource = sliceBetween(
     landTransactionSource,
-    "if (event?.ctrlKey || event?.metaKey) {",
+    "if (decision.devSelectionRequested) {",
     "let countryCode = landHit.countryCode || getFeatureCountryCodeNormalized(feature);",
   );
   assertOrderedSteps(devSelectionSource, [
-    step.syncReadOnly("dev selection modifier admission", "if (event?.ctrlKey || event?.metaKey) {"),
+    step.syncReadOnly("dev selection decision admission", "if (decision.devSelectionRequested) {"),
     step.syncEffectful("dev selection prevent default", "if (event?.preventDefault) event.preventDefault();"),
     step.syncEffectful("dev selection toggle", "const changedSelection = toggleFeatureInDevSelection(landId);"),
     step.syncEffectful("dev inspector sync", "syncInspectorCountryToLandSelection(feature, landId, landHit);"),
@@ -764,17 +808,28 @@ test("land water special and empty click branches remain in map_renderer", () =>
   const applyVisualSubdivisionFillSource = extractFunctionSource(rendererSource, "applyVisualSubdivisionFill");
 
   for (const token of [
-    "if (!id) {",
+    "const resolvedHit = {",
+    "targetType: hit.targetType ?? null,",
+    "id: hit.id ?? null,",
+    "countryCode: hit.countryCode ?? null,",
+    "runtimeCountryCode: hit.runtimeCountryCode ?? null,",
+    "const readonlyModifiers = Object.freeze({",
+    "ctrlKey: !!event?.ctrlKey,",
+    "metaKey: !!event?.metaKey,",
+    "shiftKey: !!event?.shiftKey,",
+    "altKey: !!event?.altKey,",
+    "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
+    "if (target.kind === \"empty\" || !id) {",
     stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";"),
     "requestInteractionRender(\"clear-water-selection-empty-click\")",
     stateWriteToken("runtimeState", "selectedSpecialRegionId", " = \"\";"),
     "requestInteractionRender(\"clear-special-selection-empty-click\")",
-    "if (hit.targetType === \"special\") {",
+    "if (target.kind === \"special\") {",
     stateWriteToken("runtimeState", "selectedWaterRegionId", " = \"\";"),
     stateWriteToken("runtimeState", "selectedSpecialRegionId", " = id;"),
     "requestInteractionRender(\"select-special-region\")",
-    "if (hit.targetType === \"water\") {",
-    "const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);",
+    "if (target.kind === \"water\") {",
+    "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;",
     "requestInteractionRender(\"water-selection-toggle-off\")",
     "requestInteractionRender(\"water-selection-toggle-on\")",
     "requestInteractionRender(\"click-select-open-ocean\")",
@@ -784,6 +839,8 @@ test("land water special and empty click branches remain in map_renderer", () =>
     "applyWaterRegionFill(id, runtimeState.selectedColor, {",
     "requestInteractionRender(\"clear-water-selection-land-click\")",
     "requestInteractionRender(\"clear-special-selection-land-click\")",
+    "if (target.kind !== \"land\") return;",
+    "if (decision.devSelectionRequested) {",
     "const changedSelection = toggleFeatureInDevSelection(landId);",
     "await ensureLeafDetailReady(countryCode, { announce: true })",
     "markDirty(\"erase-sovereignty\")",
@@ -819,6 +876,215 @@ test("land water special and empty click branches remain in map_renderer", () =>
   ]) {
     assertIncludes(applyVisualSubdivisionFillSource, token, "land visual fill helper must keep transaction token");
   }
+});
+
+test("returned target and decision drive executable handleClick admission", async () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const handleClickSource = extractFunctionSource(rendererSource, "handleClick");
+  const executableHandleClickSource = handleClickSource.startsWith("async ")
+    ? handleClickSource
+    : `async ${handleClickSource}`;
+  const dependencyNames = [
+    "runtimeState",
+    "nowMs",
+    "suppressNextClickAfterBrush",
+    "dismissOnboardingHint",
+    "getIntensityFieldTool",
+    "inspectHgoRuntimePreviewFromEvent",
+    "getHoveredFacilityEntryFromEvent",
+    "selectedFacilityEntry",
+    "getHitFromEvent",
+    "HIT_SNAP_RADIUS_CLICK_PX",
+    "resolveClickSelectionDecision",
+    "refreshWaterRegionSidebarRowsNow",
+    "refreshSpecialRegionSidebarRowsNow",
+    "requestInteractionRender",
+    "updateDevSelectedHit",
+    "handleSpecialZoneMembershipClick",
+    "noteRenderAction",
+    "isMacroOceanWaterRegion",
+    "isOpenOceanPaintEnabled",
+    "toggleFeatureInDevSelection",
+    "syncInspectorCountryToLandSelection",
+    "ensureLeafDetailReady",
+  ];
+  const handleClickFactory = new Function(
+    ...dependencyNames,
+    `"use strict"; return (${executableHandleClickSource});`,
+  );
+  const rawHit = Object.freeze({
+    targetType: "land",
+    id: "land-raw",
+    countryCode: "AA",
+    runtimeCountryCode: "AA",
+  });
+  const frozenModifierSnapshot = Object.freeze({
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    altKey: false,
+  });
+
+  async function runAdmissionCase(target, decision = { devSelectionRequested: false }) {
+    const trace = [];
+    let seenResolvedHit = null;
+    let seenModifiers = null;
+    const runtimeState = {
+      startupReadonly: false,
+      landData: {},
+      waterRegionsData: {},
+      scenarioSpecialRegionsData: {},
+      specialZoneEditor: null,
+      operationalLineEditor: null,
+      operationGraphicsEditor: null,
+      unitCounterEditor: null,
+      selectedWaterRegionId: "water-old",
+      selectedSpecialRegionId: "special-old",
+      specialRegionsById: new Map([["special-1", {}]]),
+      waterRegionsById: new Map([["water-1", {}]]),
+      landIndex: new Map([["land-1", {}]]),
+      currentTool: "select",
+    };
+    const dependencies = {
+      runtimeState,
+      nowMs: () => 100,
+      suppressNextClickAfterBrush: false,
+      dismissOnboardingHint: () => trace.push("dismiss-onboarding"),
+      getIntensityFieldTool: () => ({ active: false }),
+      inspectHgoRuntimePreviewFromEvent: () => ({ active: false }),
+      getHoveredFacilityEntryFromEvent: () => null,
+      selectedFacilityEntry: null,
+      getHitFromEvent: () => {
+        trace.push("raw-hit:land:land-raw");
+        return rawHit;
+      },
+      HIT_SNAP_RADIUS_CLICK_PX: 4,
+      resolveClickSelectionDecision: (resolvedHit, modifiers) => {
+        seenResolvedHit = resolvedHit;
+        seenModifiers = modifiers;
+        trace.push(`resolve:${target.kind}:${target.id ?? "blank"}:${decision.devSelectionRequested}`);
+        return { decision, target };
+      },
+      refreshWaterRegionSidebarRowsNow: (ids) => trace.push(`refresh-water:${ids.join(",")}`),
+      refreshSpecialRegionSidebarRowsNow: (ids) => trace.push(`refresh-special:${ids.join(",")}`),
+      requestInteractionRender: (reason) => trace.push(`render:${reason}`),
+      updateDevSelectedHit: (hit) => trace.push(`update-dev-hit:${hit.id}`),
+      handleSpecialZoneMembershipClick: (hit) => {
+        trace.push(`special-zone-membership:${hit.id}`);
+        return false;
+      },
+      noteRenderAction: (reason) => trace.push(`note:${reason}`),
+      isMacroOceanWaterRegion: () => true,
+      isOpenOceanPaintEnabled: () => false,
+      toggleFeatureInDevSelection: (id) => {
+        trace.push(`dev-toggle:${id}`);
+        return true;
+      },
+      syncInspectorCountryToLandSelection: (_feature, id) => trace.push(`sync-inspector:${id}`),
+      ensureLeafDetailReady: async (countryCode) => {
+        trace.push(`ensure-leaf-detail:${countryCode}`);
+        return false;
+      },
+    };
+    const handleClick = handleClickFactory(...dependencyNames.map((name) => dependencies[name]));
+    await handleClick({
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      preventDefault: () => trace.push("prevent-default"),
+    });
+    assert.deepEqual(seenResolvedHit, rawHit);
+    assert.deepEqual(seenModifiers, frozenModifierSnapshot);
+    assert.equal(Object.isFrozen(seenModifiers), true);
+    return { runtimeState, trace };
+  }
+
+  const canonicalEmpty = await runAdmissionCase({ kind: "empty" });
+  assert.deepEqual(canonicalEmpty.trace, [
+    "dismiss-onboarding",
+    "raw-hit:land:land-raw",
+    "resolve:empty:blank:false",
+    "refresh-water:water-old",
+    "render:clear-water-selection-empty-click",
+    "refresh-special:special-old",
+    "render:clear-special-selection-empty-click",
+  ]);
+  assert.equal(canonicalEmpty.runtimeState.selectedWaterRegionId, "");
+  assert.equal(canonicalEmpty.runtimeState.selectedSpecialRegionId, "");
+
+  const typedBlankTarget = {
+    kind: "land",
+    id: null,
+    countryCode: "AA",
+    runtimeCountryCode: "AA",
+  };
+  const typedBlank = await runAdmissionCase(typedBlankTarget);
+  assert.deepEqual(typedBlank.trace.slice(3), canonicalEmpty.trace.slice(3));
+  assert.deepEqual(typedBlankTarget, {
+    kind: "land",
+    id: null,
+    countryCode: "AA",
+    runtimeCountryCode: "AA",
+  });
+  assert.equal(typedBlank.runtimeState.selectedWaterRegionId, "");
+  assert.equal(typedBlank.runtimeState.selectedSpecialRegionId, "");
+
+  const special = await runAdmissionCase({
+    kind: "special",
+    id: "special-1",
+    countryCode: null,
+    runtimeCountryCode: null,
+  });
+  assert.deepEqual(special.trace, [
+    "dismiss-onboarding",
+    "raw-hit:land:land-raw",
+    "resolve:special:special-1:false",
+    "update-dev-hit:land-raw",
+    "special-zone-membership:land-raw",
+    "refresh-water:water-old",
+    "refresh-special:special-old,special-1",
+    "render:select-special-region",
+    "note:select-special-region",
+  ]);
+  assert.equal(special.runtimeState.selectedWaterRegionId, "");
+  assert.equal(special.runtimeState.selectedSpecialRegionId, "special-1");
+
+  const water = await runAdmissionCase({
+    kind: "water",
+    id: "water-1",
+    countryCode: null,
+    runtimeCountryCode: null,
+  });
+  assert.deepEqual(water.trace, [
+    "dismiss-onboarding",
+    "raw-hit:land:land-raw",
+    "resolve:water:water-1:false",
+    "update-dev-hit:land-raw",
+    "special-zone-membership:land-raw",
+    "refresh-special:special-old",
+    "refresh-water:water-old,water-1",
+    "render:click-select-open-ocean",
+    "note:click-select-open-ocean",
+  ]);
+  assert.equal(water.runtimeState.selectedWaterRegionId, "water-1");
+  assert.equal(water.runtimeState.selectedSpecialRegionId, "");
+
+  const landTarget = {
+    kind: "land",
+    id: "land-1",
+    countryCode: "AA",
+    runtimeCountryCode: "AA",
+  };
+  const landHydration = await runAdmissionCase(landTarget);
+  assert.equal(landHydration.trace.includes("ensure-leaf-detail:AA"), true);
+  assert.equal(landHydration.trace.some((entry) => entry.startsWith("dev-toggle:")), false);
+
+  const landDevToggle = await runAdmissionCase(landTarget, { devSelectionRequested: true });
+  assert.equal(landDevToggle.trace.includes("dev-toggle:land-1"), true);
+  assert.equal(landDevToggle.trace.includes("sync-inspector:land-1"), true);
+  assert.equal(landDevToggle.trace.includes("note:dev-selection-toggle"), true);
+  assert.equal(landDevToggle.trace.some((entry) => entry.startsWith("ensure-leaf-detail:")), false);
 });
 
 test("dev selection and fill remain in map_renderer and public facade stays stable", () => {
@@ -944,8 +1210,9 @@ test("history dirty and render refresh calls remain in current paths", () => {
   }
 });
 
-test("P54 keeps facade state allowlist production runtime dist and click owner topology unchanged", () => {
+test("P1.8 keeps one pure click decision owner and preserves forbidden boundaries", () => {
   const packageJsonSource = readRepoFile("package.json");
+  const ownerSource = readRepoFile(CLICK_SELECTION_TRANSACTION_OWNER_PATH);
   const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
   const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
 
@@ -954,18 +1221,24 @@ test("P54 keeps facade state allowlist production runtime dist and click owner t
     "\"test:node:renderer-click-selection-transaction-inventory\": \"node --test tests/renderer_click_selection_transaction_inventory_boundary.test.mjs\"",
     "package.json must expose P54 inventory script",
   );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:click-selection-transaction-owner\": \"node --test tests/click_selection_transaction_owner_behavior.test.mjs\"",
+    "package.json must expose the P1.8 owner behavior script",
+  );
+  assert.equal(repoFileExists(CLICK_SELECTION_TRANSACTION_OWNER_TEST_PATH), true, "P1.8 owner behavior test must exist");
   for (const token of [
     "click_selection_transaction",
     "renderer_click_selection_transaction",
     "clickSelectionTransaction",
     "mapClickSelection",
   ]) {
-    assertExcludes(publicFacadeSource, token, "public facade must not expose P54 forbidden owner token");
-    assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not include P54 forbidden owner token");
+    assertExcludes(publicFacadeSource, token, "public facade must remain outside P1.8 owner exposure");
+    assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must remain outside P1.8 pure owner");
   }
 
+  assert.equal(repoFileExists(CLICK_SELECTION_TRANSACTION_OWNER_PATH), true, "P1.8 pure decision owner must exist");
   for (const relativePath of [
-    "js/core/map_renderer/click_selection_transaction_owner.js",
     "js/core/map_renderer/click_selection_transaction_helper.js",
     "js/core/map_renderer/click_selection_transaction_controller.js",
     "js/core/map_renderer/click_selection_transaction_adapter.js",
@@ -974,25 +1247,57 @@ test("P54 keeps facade state allowlist production runtime dist and click owner t
     "js/core/renderer/click_selection_transaction_controller.js",
     "js/core/renderer/click_selection_transaction_adapter.js",
   ]) {
-    assert.equal(repoFileExists(relativePath), false, `P54 must not add production click selection owner/helper: ${relativePath}`);
+    assert.equal(repoFileExists(relativePath), false, `P1.8 must keep extra click selection owner/helper absent: ${relativePath}`);
   }
-  for (const sourcePath of listRepoSourceFiles("js/core")) {
-    assert.equal(
-      isForbiddenClickSelectionTransactionOwnerPath(sourcePath),
-      false,
-      `P54 must not add renamed production click selection transaction owner/helper: ${sourcePath}`,
-    );
+  const clickSelectionOwnerPaths = listRepoSourceFiles("js/core")
+    .filter((sourcePath) => isClickSelectionTransactionOwnerPath(sourcePath));
+  assert.deepEqual(
+    clickSelectionOwnerPaths,
+    [CLICK_SELECTION_TRANSACTION_OWNER_PATH],
+    "P1.8 must keep exactly one production click selection owner/helper path",
+  );
+
+  for (const token of [
+    "import ",
+    "async ",
+    "await ",
+    "globalThis",
+    "runtimeState",
+    "map_renderer.js",
+    "document",
+    "window",
+    "Event",
+    "addEventListener",
+    "markDirty",
+    "captureHistoryState",
+    "pushHistoryEntry",
+    "commitHistoryEntry",
+    "requestInteractionRender",
+    "selectedWaterRegionId",
+    "selectedSpecialRegionId",
+    "toggleFeatureInDevSelection",
+    "ensureLeafDetailReady",
+    "getHitFromEvent",
+  ]) {
+    assertExcludes(ownerSource, token, "P1.8 owner must remain pure and effect-free");
+  }
+  for (const token of [
+    "export function resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
+    "devSelectionRequested: target.kind === \"land\" && (readonlyModifiers.ctrlKey || readonlyModifiers.metaKey)",
+    "return { decision, target };",
+  ]) {
+    assertIncludes(ownerSource, token, "P1.8 owner must keep its exact pure decision contract");
   }
 
-  const immutableDiff = execFileSync(
+  const forbiddenDiff = execFileSync(
     "git",
     [
       "status",
       "--porcelain=v1",
       "--untracked-files=all",
       "--",
-      "js",
-      "dist",
+      PUBLIC_FACADE_PATH,
+      "js/core/map_renderer/renderer_runtime_context.js",
       STATE_WRITE_ALLOWLIST_PATH,
     ],
     { cwd: REPO_ROOT, encoding: "utf8" },
@@ -1000,5 +1305,9 @@ test("P54 keeps facade state allowlist production runtime dist and click owner t
     .trim()
     .split(/\r?\n/)
     .filter(Boolean);
-  assert.deepEqual(immutableDiff, [], "P54 must not modify production runtime, public facade, state allowlist, or dist");
+  assert.deepEqual(
+    forbiddenDiff,
+    [],
+    "P1.8 must keep public facade, runtime context, and state allowlist unchanged",
+  );
 });

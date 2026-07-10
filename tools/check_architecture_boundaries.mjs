@@ -89,6 +89,9 @@ const FILES = Object.freeze({
   rendererDrawCanvasOrchestrationPreflightDoc: "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
   rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   rendererClickSelectionTransactionPreflightDoc: "docs/active/renderer-click-selection-transaction-preflight-20260702.md",
+  rendererClickSelectionDecisionOwnerDoc: "docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md",
+  clickSelectionTransactionOwner: "js/core/map_renderer/click_selection_transaction_owner.js",
+  clickSelectionTransactionOwnerTest: "tests/click_selection_transaction_owner_behavior.test.mjs",
   rendererClickSelectionTransactionInventoryTest: "tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",
   rendererRenderRequestBoundaryOwnerDoc: "docs/active/renderer-render-request-boundary-owner-p41-20260630.md",
   rendererRenderRequestBoundaryOwnerTest: "tests/renderer_render_request_boundary_owner_behavior.test.mjs",
@@ -156,6 +159,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.renderPassCacheHostOwner]: 260,
   [FILES.renderPassCommitAccountingOwner]: 260,
+  [FILES.clickSelectionTransactionOwner]: 120,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
   [FILES.rendererTransactionResetOwner]: 260,
@@ -268,7 +272,7 @@ function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
     && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
 }
 
-function isForbiddenClickSelectionTransactionOwnerPath(sourcePath) {
+function isClickSelectionTransactionOwnerPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
   if (!normalized.startsWith("js/core/")) {
     return false;
@@ -426,6 +430,11 @@ function collectFailures() {
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
   );
+  const rendererClickSelectionDecisionOwnerDoc = readProjectFile(
+    FILES.rendererClickSelectionDecisionOwnerDoc,
+  );
+  const clickSelectionTransactionOwner = readProjectFile(FILES.clickSelectionTransactionOwner);
+  const clickSelectionTransactionOwnerTest = readProjectFile(FILES.clickSelectionTransactionOwnerTest);
   const rendererClickSelectionTransactionInventoryTest = readProjectFile(
     FILES.rendererClickSelectionTransactionInventoryTest,
   );
@@ -535,6 +544,9 @@ function collectFailures() {
     [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
     [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
+    [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
+    [FILES.clickSelectionTransactionOwner]: clickSelectionTransactionOwner,
+    [FILES.clickSelectionTransactionOwnerTest]: clickSelectionTransactionOwnerTest,
     [FILES.rendererClickSelectionTransactionInventoryTest]: rendererClickSelectionTransactionInventoryTest,
     [FILES.rendererRenderRequestBoundaryOwnerDoc]: rendererRenderRequestBoundaryOwnerDoc,
     [FILES.rendererRenderRequestBoundaryOwnerTest]: rendererRenderRequestBoundaryOwnerTest,
@@ -3061,18 +3073,35 @@ function collectFailures() {
     }
   }
   for (const token of [
+    "`resolveClickSelectionDecision(resolvedHit, readonlyModifiers) -> { decision, target }`",
+    "The owner receives the exact four-key scalar `resolvedHit` projection, never the raw hit object.",
+    "Water ctrl/meta toggle remains a root-owned selection behavior and reads the frozen modifier snapshot independently.",
+    "Only the land dev-selection branch consumes `decision.devSelectionRequested`.",
+    "History, dirty state, runtime selection writes, hydration, refreshed-hit resolution, sidebar refresh, rendering, DOM/UI work, and metrics remain root-owned.",
+    "Canonical empty admission is explicit: `if (target.kind === \"empty\" || !id) {`; typed land/water/special targets with blank or null ids retain their typed kind and enter the same clear branch.",
+    "Pre-edit selector: 19 files, 186 commands, 6 main-thread commands, with only this new phase record unmatched.",
+  ]) {
+    if (!rendererClickSelectionDecisionOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererClickSelectionDecisionOwnerDoc} must lock P1.8 boundary token: ${token}`);
+    }
+  }
+  for (const token of [
     "const DOC_PATH = \"docs/active/renderer-click-selection-transaction-preflight-20260702.md\";",
+    "const P1_8_DOC_PATH = \"docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md\";",
+    "const CLICK_SELECTION_TRANSACTION_OWNER_PATH = \"js/core/map_renderer/click_selection_transaction_owner.js\";",
     "const P54_DOC_HEADINGS = Object.freeze([",
     "function extractFunctionSource(source, functionName)",
-    "function isForbiddenClickSelectionTransactionOwnerPath(sourcePath)",
+    "function isClickSelectionTransactionOwnerPath(sourcePath)",
     "async function handleClick(event, _interactionContext = null)",
     "mapClick: handleClick",
     "interactionRect.on(\\\"click\\\", requireFunction(handlers, \\\"dispatchMapClick\\\"));",
     "Land click transaction logic remains",
     "Water click transaction logic remains",
     "Special region click transaction logic remains",
-    "P54 must not add renamed production click selection transaction owner/helper",
-    "P54 must not modify production runtime, public facade, state allowlist, or dist",
+    "P1.8 must keep exactly one production click selection owner/helper path",
+    "P1.8 must keep public facade, runtime context, and state allowlist unchanged",
+    "returned target and decision drive executable handleClick admission",
+    "const handleClickFactory = new Function(",
   ]) {
     if (!rendererClickSelectionTransactionInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererClickSelectionTransactionInventoryTest} must lock P54 inventory token: ${token}`);
@@ -3084,8 +3113,20 @@ function collectFailures() {
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererClickSelectionTransactionInventoryTest))) {
     failures.push(`${FILES.rendererClickSelectionTransactionInventoryTest} must exist for P54.`);
   }
+  for (const requiredPath of [
+    FILES.rendererClickSelectionDecisionOwnerDoc,
+    FILES.clickSelectionTransactionOwner,
+    FILES.clickSelectionTransactionOwnerTest,
+  ]) {
+    if (!fs.existsSync(path.join(REPO_ROOT, requiredPath))) {
+      failures.push(`${requiredPath} must exist for P1.8.`);
+    }
+  }
   if (!packageJson.includes("\"test:node:renderer-click-selection-transaction-inventory\": \"node --test tests/renderer_click_selection_transaction_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P54 click selection transaction inventory script.`);
+  }
+  if (!packageJson.includes("\"test:node:click-selection-transaction-owner\": \"node --test tests/click_selection_transaction_owner_behavior.test.mjs\"")) {
+    failures.push(`${FILES.packageJson} must expose P1.8 click selection decision owner script.`);
   }
   if (!renderer.includes("async function handleClick(event, _interactionContext = null)")) {
     failures.push(`${FILES.renderer} must keep P54 click handler anchor.`);
@@ -3098,14 +3139,26 @@ function collectFailures() {
   for (const token of [
     "getHitFromEvent(event, {",
     "eventType: \"click\"",
-    "if (!id) {",
+    "const resolvedHit = {",
+    "targetType: hit.targetType ?? null,",
+    "id: hit.id ?? null,",
+    "countryCode: hit.countryCode ?? null,",
+    "runtimeCountryCode: hit.runtimeCountryCode ?? null,",
+    "const readonlyModifiers = Object.freeze({",
+    "ctrlKey: !!event?.ctrlKey,",
+    "metaKey: !!event?.metaKey,",
+    "shiftKey: !!event?.shiftKey,",
+    "altKey: !!event?.altKey,",
+    "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
+    "const id = target.id;",
+    "if (target.kind === \"empty\" || !id) {",
     "requestInteractionRender(\"clear-water-selection-empty-click\")",
     "requestInteractionRender(\"clear-special-selection-empty-click\")",
-    "if (hit.targetType === \"special\") {",
+    "if (target.kind === \"special\") {",
     "runtimeState.selectedSpecialRegionId = id;",
     "requestInteractionRender(\"select-special-region\")",
-    "if (hit.targetType === \"water\") {",
-    "const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);",
+    "if (target.kind === \"water\") {",
+    "const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;",
     "requestInteractionRender(\"water-selection-toggle-off\")",
     "requestInteractionRender(\"water-selection-toggle-on\")",
     "requestInteractionRender(\"click-select-open-ocean\")",
@@ -3114,6 +3167,8 @@ function collectFailures() {
     "applyWaterRegionFill(id, runtimeState.selectedColor, {",
     "requestInteractionRender(\"clear-water-selection-land-click\")",
     "requestInteractionRender(\"clear-special-selection-land-click\")",
+    "if (target.kind !== \"land\") return;",
+    "if (decision.devSelectionRequested) {",
     "const changedSelection = toggleFeatureInDevSelection(landId);",
     "await ensureLeafDetailReady(countryCode, { announce: true })",
     "markDirty(\"erase-sovereignty\")",
@@ -3126,6 +3181,32 @@ function collectFailures() {
   ]) {
     if (!handleClickSource.includes(token)) {
       failures.push(`${FILES.renderer} handleClick must keep P54 transaction token: ${token}`);
+    }
+  }
+  if (!renderer.includes("import { resolveClickSelectionDecision } from \"./map_renderer/click_selection_transaction_owner.js\";")) {
+    failures.push(`${FILES.renderer} must import the P1.8 pure click selection decision owner.`);
+  }
+  if (renderer.split("resolveClickSelectionDecision(").length - 1 !== 1) {
+    failures.push(`${FILES.renderer} must delegate to resolveClickSelectionDecision exactly once.`);
+  }
+  if (
+    handleClickSource.includes("resolveClickSelectionDecision(hit")
+    || handleClickSource.includes("resolveClickSelectionDecision(event")
+  ) {
+    failures.push(`${FILES.renderer} must pass the exact scalar projection, never raw hit or event, to P1.8 owner.`);
+  }
+  const initialClickAdmissionSource = sliceBetween(
+    handleClickSource,
+    "const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);",
+    "const refreshedHit = getHitFromEvent(event, {",
+  );
+  for (const forbiddenToken of [
+    "if (hit.targetType === \"special\") {",
+    "if (hit.targetType === \"water\") {",
+    "if (event?.ctrlKey || event?.metaKey) {",
+  ]) {
+    if (initialClickAdmissionSource.includes(forbiddenToken)) {
+      failures.push(`${FILES.renderer} initial click admission must use P1.8 returned target/decision: ${forbiddenToken}`);
     }
   }
   for (const token of [
@@ -3234,7 +3315,6 @@ function collectFailures() {
     }
   }
   for (const relativePath of [
-    "js/core/map_renderer/click_selection_transaction_owner.js",
     "js/core/map_renderer/click_selection_transaction_helper.js",
     "js/core/map_renderer/click_selection_transaction_controller.js",
     "js/core/map_renderer/click_selection_transaction_adapter.js",
@@ -3244,15 +3324,73 @@ function collectFailures() {
     "js/core/renderer/click_selection_transaction_adapter.js",
   ]) {
     if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
-      failures.push(`P54 must keep production click selection owner/helper absent: ${relativePath}`);
+      failures.push(`P1.8 must keep extra click selection owner/helper absent: ${relativePath}`);
     }
   }
-  for (const sourcePath of listProjectSourceFiles("js/core")) {
-    if (isForbiddenClickSelectionTransactionOwnerPath(sourcePath)) {
-      failures.push(`P54 must keep production click selection transaction owner/helper absent: ${sourcePath}`);
+  const clickSelectionOwnerPaths = listProjectSourceFiles("js/core")
+    .filter((sourcePath) => isClickSelectionTransactionOwnerPath(sourcePath));
+  if (
+    clickSelectionOwnerPaths.length !== 1
+    || clickSelectionOwnerPaths[0] !== FILES.clickSelectionTransactionOwner
+  ) {
+    failures.push(
+      `P1.8 must keep exactly one production click selection owner/helper path: ${clickSelectionOwnerPaths.join(", ")}`,
+    );
+  }
+  for (const token of [
+    "const RESOLVED_HIT_KEYS = [",
+    "const READONLY_MODIFIER_KEYS = [",
+    "const ownKeys = Reflect.ownKeys(value);",
+    "export function resolveClickSelectionDecision(resolvedHit, readonlyModifiers)",
+    "devSelectionRequested: target.kind === \"land\" && (readonlyModifiers.ctrlKey || readonlyModifiers.metaKey)",
+    "return { decision, target };",
+  ]) {
+    if (!clickSelectionTransactionOwner.includes(token)) {
+      failures.push(`${FILES.clickSelectionTransactionOwner} must keep P1.8 pure owner token: ${token}`);
     }
   }
-
+  for (const token of [
+    "import ",
+    "async ",
+    "await ",
+    "globalThis",
+    "runtimeState",
+    "map_renderer.js",
+    "document",
+    "window",
+    "Event",
+    "addEventListener",
+    "markDirty",
+    "captureHistoryState",
+    "pushHistoryEntry",
+    "commitHistoryEntry",
+    "requestInteractionRender",
+    "selectedWaterRegionId",
+    "selectedSpecialRegionId",
+    "toggleFeatureInDevSelection",
+    "ensureLeafDetailReady",
+    "getHitFromEvent",
+  ]) {
+    if (clickSelectionTransactionOwner.includes(token)) {
+      failures.push(`${FILES.clickSelectionTransactionOwner} must remain pure and avoid root-owned token: ${token}`);
+    }
+  }
+  for (const token of [
+    "click selection decision owner module exists with one public resolver",
+    "empty hit returns exact empty target and false decision",
+    "land ctrl or meta requests dev selection while shift and alt stay inert",
+    "water and special targets never reuse the land dev-selection decision",
+    "blank identity fields normalize to null without mutating input",
+    "Reflect.ownKeys(result)",
+    "repeated calls return equal data and preserve both inputs",
+    "nonEnumerableKey",
+    "Symbol(\"feature\")",
+    "createResolvedHit({ id: undefined })",
+  ]) {
+    if (!clickSelectionTransactionOwnerTest.includes(token)) {
+      failures.push(`${FILES.clickSelectionTransactionOwnerTest} must keep P1.8 behavior token: ${token}`);
+    }
+  }
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.renderRequestBoundaryOwner))) {
     failures.push(`${FILES.renderRequestBoundaryOwner} must exist for P41.`);
   }

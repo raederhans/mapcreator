@@ -175,6 +175,7 @@ import {
 } from "./map_renderer/renderer_runtime_context.js";
 import { createHitCanvasSchedulingOwner } from "./map_renderer/hit_canvas_scheduling_owner.js";
 import { createMapHoverInteractionOwner } from "./map_renderer/map_hover_interaction_owner.js";
+import { resolveClickSelectionDecision } from "./map_renderer/click_selection_transaction_owner.js";
 import { createRendererTransactionResetOwner } from "./map_renderer/renderer_transaction_reset_owner.js";
 import { createScenarioRefreshRuntime } from "./map_renderer/scenario_refresh_runtime.js";
 import { createExactAfterSettleScheduler } from "./map_renderer/exact_after_settle_scheduler.js";
@@ -22572,10 +22573,23 @@ async function handleClick(event, _interactionContext = null) {
     snapPx: HIT_SNAP_RADIUS_CLICK_PX,
     eventType: "click",
   });
+  const resolvedHit = {
+    targetType: hit.targetType ?? null,
+    id: hit.id ?? null,
+    countryCode: hit.countryCode ?? null,
+    runtimeCountryCode: hit.runtimeCountryCode ?? null,
+  };
+  const readonlyModifiers = Object.freeze({
+    ctrlKey: !!event?.ctrlKey,
+    metaKey: !!event?.metaKey,
+    shiftKey: !!event?.shiftKey,
+    altKey: !!event?.altKey,
+  });
+  const { decision, target } = resolveClickSelectionDecision(resolvedHit, readonlyModifiers);
   // City points may influence hover messaging, but paint/select stays bound to
   // the canonical land/water/special hit pipeline only.
-  const id = hit.id;
-  if (!id) {
+  const id = target.id;
+  if (target.kind === "empty" || !id) {
     if (runtimeState.selectedWaterRegionId) {
       const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
       runtimeState.selectedWaterRegionId = "";
@@ -22592,7 +22606,7 @@ async function handleClick(event, _interactionContext = null) {
   }
   updateDevSelectedHit(hit);
   if (handleSpecialZoneMembershipClick(hit, event)) return;
-  if (hit.targetType === "special") {
+  if (target.kind === "special") {
     const specialFeature = runtimeState.specialRegionsById.get(id);
     if (!specialFeature) return;
     const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
@@ -22616,12 +22630,12 @@ async function handleClick(event, _interactionContext = null) {
     noteRenderAction("select-special-region", actionStart);
     return;
   }
-  if (hit.targetType === "water") {
+  if (target.kind === "water") {
     const waterFeature = runtimeState.waterRegionsById.get(id);
     if (!waterFeature) return;
     const previousSpecialRegionId = String(runtimeState.selectedSpecialRegionId || "").trim();
     const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
-    const isSelectionToggle = !!(event?.ctrlKey || event?.metaKey);
+    const isSelectionToggle = readonlyModifiers.ctrlKey || readonlyModifiers.metaKey;
     if (isSelectionToggle && event?.preventDefault) event.preventDefault();
     runtimeState.selectedSpecialRegionId = "";
     if (isSelectionToggle && previousWaterRegionId === id) {
@@ -22679,6 +22693,7 @@ async function handleClick(event, _interactionContext = null) {
     });
     return;
   }
+  if (target.kind !== "land") return;
   if (runtimeState.selectedWaterRegionId) {
     const previousWaterRegionId = String(runtimeState.selectedWaterRegionId || "").trim();
     runtimeState.selectedWaterRegionId = "";
@@ -22695,7 +22710,7 @@ async function handleClick(event, _interactionContext = null) {
   let landId = id;
   let feature = runtimeState.landIndex.get(landId);
   if (!feature) return;
-  if (event?.ctrlKey || event?.metaKey) {
+  if (decision.devSelectionRequested) {
     if (event?.preventDefault) event.preventDefault();
     const changedSelection = toggleFeatureInDevSelection(landId);
     syncInspectorCountryToLandSelection(feature, landId, landHit);

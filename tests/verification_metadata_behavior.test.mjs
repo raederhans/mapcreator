@@ -271,8 +271,12 @@ test("renderer runtime context hit hover files route to hit hover owner verifica
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:hit-canvas-scheduling-owner-suite"));
 });
 
-test("renderer click selection preflight files route to both canonical boundary commands", () => {
+test("renderer click selection P1.8 files route to owner and both canonical boundary commands", () => {
   const expectedEntries = new Map([
+    [
+      "verify-core:test:node:click-selection-transaction-owner",
+      "test:node:click-selection-transaction-owner",
+    ],
     [
       "verify-core:test:node:renderer-click-selection-transaction-inventory",
       "test:node:renderer-click-selection-transaction-inventory",
@@ -314,24 +318,51 @@ test("renderer click selection preflight files route to both canonical boundary 
       },
     );
     assert.ok(entry.sourceRefs.includes("docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md"));
+    assert.ok(entry.sourceRefs.includes("docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md"));
+    assert.ok(entry.sourceRefs.includes("js/core/map_renderer/click_selection_transaction_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/click_selection_transaction_owner_behavior.test.mjs"));
+  }
+
+  const ownerOnlyReport = buildRecommendation([
+    "js/core/map_renderer/click_selection_transaction_owner.js",
+  ]);
+  assert.deepEqual(ownerOnlyReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:click-selection-transaction-owner",
+    "test:node:renderer-click-selection-transaction-inventory",
+    "test:python:map-renderer-click-selection-transaction-boundary",
+    "verify:architecture-boundaries",
+    "verify:pages-dist",
+  ]) {
+    assert.ok(
+      ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
+      `owner-only routing must recommend ${commandRef}`,
+    );
   }
 
   const report = buildRecommendation([
     "docs/active/_worktree_registry.md",
+    "docs/active/renderer-click-selection-transaction-preflight-20260702.md",
     "docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md",
+    "docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md",
     "docs/active/renderer-runtime-context-p1-remaining-20260709/context.md",
     "docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md",
     "docs/active/renderer-runtime-context-p1-remaining-20260709/task.md",
     "package.json",
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/click_selection_transaction_owner.js",
+    "tests/click_selection_transaction_owner_behavior.test.mjs",
     "tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",
     "tests/test_map_renderer_click_selection_transaction_boundary_contract.py",
     "tests/verification_metadata_behavior.test.mjs",
     "tests/verify_core_runner_behavior.test.mjs",
+    "tools/check_architecture_boundaries.mjs",
     "tools/verification/verification_domains.mjs",
   ]);
 
   assert.deepEqual(report.unmatchedChangedFiles, []);
   assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:click-selection-transaction-owner"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-click-selection-transaction-inventory"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-click-selection-transaction-boundary"));
 });

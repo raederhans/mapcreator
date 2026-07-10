@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is complete/ready-for-integration at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; P1.8 is next
+Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 implementation and deterministic verification are complete with functional Lore commit pending
 
 ## Progress
 
@@ -26,7 +26,10 @@ Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at fu
 - At the pre-commit checkpoint, architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`.
 - P1.7 functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` has trailers parsed by `git interpret-trailers`; the worktree was clean immediately after commit.
 - Root-owned clean-HEAD `npm run verify:core` passed 57/57 with exit 0 and returned the worktree clean. Committed history-mode selection reported 23 files / 186 commands / 6 main-thread / zero unmatched. The protected P1.7 phase diff is empty.
-- P1.7 is complete and ready for integration; its docs-only evidence checkpoint remains pending while the same worktree advances to P1.8.
+- P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is `f355546c281da1e51cbbbe651fb96a55801267cc`.
+- The root-owned P1.8 pre-edit selector reported 19 files, 186 commands, 6 main-thread commands, and one unmatched path: the new P1.8 phase record.
+- TDD RED is confirmed at `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`: the targeted first subtest exited 1 solely because the pure owner module did not yet exist.
+- P1.8 implementation now contains one pure owner, one composition-root delegation, behavior and boundary regressions, architecture assertions, package/default-core routing, updated phase/control documents, generated Pages mirrors/manifest, and the matching scenario-chunk static contract update for `decision.devSelectionRequested`. Focused/shared deterministic gates, actual selector, `verify:pages-dist`, clean-head drift, independent reviews, and diff check are green; clean-HEAD core and committed selector remain pending.
 
 Approved sources:
 
@@ -125,6 +128,16 @@ Execution checkpoint:
 - Root uses only returned `target.kind`/`target.id` for empty/special/water/land admission and only returned `decision.devSelectionRequested` for the dev-selection branch. Raw hit data is available after admission for root-owned lookup, hydration, refreshed-hit work, and effects.
 - Preserve order: readonly/tool/editor/HGO/facility guards -> root hit resolution -> pure call -> returned admission -> empty clear or `updateDevSelectedHit` -> membership -> special effects -> water effects -> land clearing -> feature lookup -> decision-driven dev selection -> async hydration -> refreshed-hit resolution/lookup -> preset/eraser/eyedropper/fill -> history, dirty, sidebar, render, metrics.
 
+Execution checkpoint:
+
+- Pre-edit explicit-input selection reported 19 planned files, 186 commands, 6 main-thread commands, and only `docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md` unmatched. The new phase record is now included in the P1.8 metadata source references; root will record the actual-diff selector after verification.
+- The root-owned TDD RED run targeted the owner behavior test before production implementation and exited 1 on the expected missing-module assertion only. Log: `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`.
+- Implementation adds `js/core/map_renderer/click_selection_transaction_owner.js`, projects the exact four scalar hit fields in `map_renderer.js`, freezes the four modifier booleans at the root, delegates once, and consumes the returned target/decision for admission and the land dev-selection branch.
+- Water ctrl/meta toggle stays root-owned and reads `readonlyModifiers` independently. History, dirty state, selection writes, feature lookup, hydration, refreshed-hit work, sidebar refresh, render requests, DOM/UI work, and metrics stay in `map_renderer.js`.
+- The new owner behavior suite rejects malformed or extended input records and covers empty, land, water, special, blank identity, and nonmutation behavior. Existing P54/Python boundaries and the architecture checker now assert the unique owner/delegation topology.
+- The implementation lane changed no `RendererRuntimeContext`, public facade, state-write allowlist, dependency, README, UI/CSS/data, or `dist/**` path. Source guards cover protected source surfaces and extra owner paths; canonical generation plus `verify:pages-dist` and `verify:dist-drift` own the expected Pages changes.
+- Verification status: focused owner 9/9, P54 10/10, Python 6/6, metadata 13/13, core runner 8/8; shared architecture/state-write/import/supervisor gates pass; actual selector reports zero unmatched; Pages builder and `verify:pages-dist` pass; three independent reviews are clear; `git diff --check` exits 0. The pre-commit `verify:dist-drift` exit 1 recorded expected uncommitted generated dist changes, and the clean-HEAD drift rerun passed after the current P1.8 functional HEAD. The first clean-HEAD `verify:core` attempt found one stale scenario static contract for the old raw-event dev-selection gate; the contract now asserts the P1.8 decision branch and its focused rerun passes. The phase still requires clean-HEAD `verify:core` and committed selector before integration readiness.
+
 ### 5. P1 Closeout and integration
 
 - Record P1.0-P1.8 truth, commits, validation, explicit unrun lanes, remaining risks, and staged P2 scope.
@@ -144,12 +157,13 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 - Run SF-ATS selector dry-run before phase edits and against actual phase changes. Any unmatched production file blocks the phase.
 - P1.6 records one process deviation: its pre-edit selector has no durable evidence. The final branch-history selector is the authoritative routing proof and reports `unmatchedChangedFiles=[]`.
 - P1.7 pre-edit selector evidence is durable. Its single new-document gap is addressed through both canonical entries' `sourceRefs`; final selector evidence is `.runtime/reports/generated/p1-7-final-adaptive-selection.{json,md}` with log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-final-selector.log`, 11 files, 184 commands, 5 main-thread commands, and zero unmatched.
+- P1.8 pre-edit selection reported 19 files / 186 commands / 6 main-thread commands with only its new phase record unmatched. Actual-diff selection reported 19 files / 187 commands / 6 main-thread commands with zero unmatched files.
 - Pages/dist is required for browser-loaded renderer source changes. Deterministic checks are completion evidence.
 - Every phase receives an intent-first Lore commit with rationale, constraints, rejected alternatives, confidence, scope risk, directive, tested evidence, and honest not-tested lanes.
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.
 - Stage exact paths. Keep parent WIP and unrelated Landing outputs outside commits. Recheck origin before integration, integrate serially, push once, verify remote main, then clean with recovery hashes recorded.
 
-P1.6 explicit unrun lanes remain recorded in its phase evidence. P1.7 is complete/ready-for-integration; only its docs-only evidence checkpoint remains pending. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit P1.7 unrun lanes. Deterministic checks cover the production-zero preflight. Continue to P1.8 in the same worktree without integration or cleanup.
+P1.6 and P1.7 explicit unrun lanes remain recorded in their phase evidence. P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc` preserves the accepted production-zero preflight. P1.8 implementation, focused/shared deterministic verification, actual selector, Pages/dist generation, clean drift, and reviews are complete; clean core, committed selector, and closeout remain pending. Continue P1.8 in the same worktree without integration or cleanup.
 
 ## Stop rules
 

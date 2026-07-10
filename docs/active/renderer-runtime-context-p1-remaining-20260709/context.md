@@ -34,12 +34,12 @@ live process owner: root
 
 ## Current phase
 
-- phase: P1.7 click-selection preflight complete and `ready-for-integration`; docs-only evidence checkpoint pending; P1.8 next
-- state: overall worktree `in-progress`; P1.7 functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; clean-HEAD full core 57/57 green
+- phase: P1.8 atomic pure click-selection owner implementation and root-owned deterministic verification complete; functional Lore commit pending
+- state: overall worktree `in-progress`; P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 remains uncommitted until the next root checkpoint
 - phase acceptance: P1.5 accepted `green` from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`
 - deterministic gate: root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`
 - evidence: `.runtime/reports/generated/verify-core.json` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`
-- clean-state proof: the worktree returned clean after the P1.5 verification run, after the final P1.6 full-core rerun, and after the P1.6 evidence commit; current dirty paths are the delegated P1.7 tests, package/metadata, and documentation only
+- clean-state proof: the worktree returned clean after P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; current dirty paths are the delegated P1.8 owner/root/tests/tooling/package/metadata/documentation implementation only
 - parity proof: committed source/dist Git blobs match for `map_renderer.js` at `24d9718b816c1a4a7f912980d34755eab9620718` and `renderer_runtime_context.js` at `27afb4005a05e8a8b8b6d7fab52096dad9e781e2`; `core.autocrlf` explains checkout raw SHA differences
 - P1.6 focused evidence: nine focused test groups passed; the new named Node suite passed 4/4 and the named Python boundary passed 5/5
 - P1.6 shared evidence: architecture, state-write allowlist, test-import graph, supervisor contracts, and supervisor plan all exited 0
@@ -62,6 +62,25 @@ live process owner: root
 - P1.7 clean core: root-owned clean-HEAD `npm run verify:core` 57/57 exit 0; report `.runtime/reports/generated/verify-core.json`; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-full-core-clean-head.log`; worktree clean after run
 - P1.7 committed selector: 23 files / 186 commands / 6 main-thread / zero unmatched; `.runtime/reports/generated/p1-7-committed-adaptive-selection.{json,md}`; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-committed-selector.log`
 - P1.7 phase comparison: protected diff `1e14c944..5f78f3a5` across production, dist, allowlist, architecture checker, and original P54 document is empty
+- P1.7 evidence checkpoint: `f355546c281da1e51cbbbe651fb96a55801267cc`; worktree clean before P1.8 edits
+- P1.8 pre-edit route status: 19 files / 186 commands / 6 main-thread commands; only the new phase document was unmatched
+- P1.8 TDD RED: root targeted the first owner behavior subtest before production implementation; exit 1 came from the expected missing owner module assertion only; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`
+- P1.8 implementation scope: new strict pure owner, exact scalar hit/modifier projection, one root delegation, returned target/decision admission, owner/P54/Python/architecture regressions, named package entry, default-core verification metadata, and phase/control docs
+- P1.8 preserved ownership: water ctrl/meta toggle reads the root-frozen modifier snapshot independently; all selection writes, lookup, hydration, refreshed-hit work, history, dirty state, sidebar refresh, rendering, DOM/UI work, and metrics stay in `map_renderer.js`
+- P1.8 protected surfaces: `RendererRuntimeContext`, public facade, state-write allowlist, dependencies, README, UI/CSS/scenario data, and `dist/**` remain unchanged in the implementation slice
+- P1.8 root verification: owner 9/9, P54 inventory 10/10, Python boundary 6/6, metadata 13/13, core runner 8/8, architecture PASS, state-write allowlist PASS, test import graph PASS, supervisor contracts 12/12 plus routing 4/4, supervisor plan 15/15, `verify:core:list` 58 commands, and `git diff --check` exit 0
+- P1.8 actual selector: 19 changed files / 187 recommended commands / 6 main-thread commands / `unmatchedChangedFiles=[]`; artifacts `.runtime/reports/generated/p1-8-actual-adaptive-selection.{json,md}`; log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-actual-selector.log`
+- P1.8 Pages/dist: canonical builder wrote the renderer mirror, new owner mirror, and manifest; `verify:pages-dist` exit 0 with Python startup 41/41, landing 18/18, and sample contracts 17/17. Pre-commit `verify:dist-drift` exit 1 is expected until those generated files are committed.
+- P1.8 final reviews: architecture `CLEAR`, code/evidence `APPROVE`, and contract adjudication `APPROVE`
+- P1.8 functional commit: current functional HEAD
+- P1.8 clean-head drift: `verify:dist-drift` passed after the current P1.8 functional HEAD
+- P1.8 clean-head core first attempt: 57-command run reached one deterministic stale-contract failure in `test:node:scenario-chunk-contracts`; `firstBatchInteractionWritesUseRafRenderBoundary` still expected raw ctrl/meta event gating after P1.8 moved the land dev-selection decision behind `decision.devSelectionRequested`
+- P1.8 clean-head core rework: `tests/scenario_chunk_contracts.test.mjs` now asserts the decision branch and its focused rerun exits 0
+- P1.8 pending root work: clean-HEAD `verify:core`, committed selector, and P1 Closeout
+- P1.8 focused rework classification: the Python boundary reached 5/6 because a file-level import assertion was placed inside the extracted click-handler contract; this is a boundary-test placement failure
+- P1.8 routing rework classification: the verify-core runner reached 7/8 because three renderer-runtime entries included the runner test in their `sourceRefs`; this is verification metadata ownership drift
+- P1.8 rework status: contract corrections passed on root rerun
+- P1.8 contract ruling C: composition-root admission is `target.kind === "empty" || !id`; typed land/water/special blank-id targets keep their typed kind and retain the existing clear behavior; owner semantics and data/enumerable property validation stay unchanged
 - explicit unrun lanes: `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo; deterministic checks cover the production-zero preflight
 - node_modules Junction: verified; `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709\node_modules` is a Windows Junction targeting `C:\Users\raede\Desktop\dev\mapcreator\node_modules`.
 - ignore rule: `.gitignore:18` is exactly `node_modules/`; `git check-ignore` covers the Junction.
@@ -75,7 +94,8 @@ live process owner: root
 | live tests/builds/Pages/dist/browser/output locks | root | P1.5 complete; P1.6 complete with final clean full core 55/55 | `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-full-core-rerun.log`; `.runtime/reports/generated/verify-core.json`; `.runtime/reports/generated/p1-6-final-adaptive-selection.{json,md}` |
 | P1.6 implementation | `/root/ultragoal_runtime` | code/tests/metadata/tooling/dist committed; phase `green` and ready for integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` |
 | static review | three delegated lanes | P1.6 `APPROVE` from all three lanes | static source/test/SF-ATS review reports |
-| P1.7 implementation | root | complete/ready-for-integration; evidence checkpoint pending | `5f78f3a5`; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; three `APPROVE / CLEAR` reviews |
+| P1.7 implementation | root | complete; evidence checkpoint committed | functional `5f78f3a5`; evidence `f355546c`; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; three `APPROVE / CLEAR` reviews |
+| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | implementation and deterministic verification complete; amend and clean core pending | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; three final reviews clear |
 
 ## Phase evidence
 
@@ -84,8 +104,8 @@ live process owner: root
 | Integration setup / G001 | complete | `3d4c8d12` | worktree/base/branch/docs/registry; Junction and log root verified; parent WIP preserved | none for setup |
 | P1.5 / G002 | green | baseline `a8f71822`; evidence `3d4c8d12` | `verify:core` 53/53 exit 0; Pages/dist green; blob parity; static `APPROVE`; route gaps 0 | main-thread and visual lanes remain explicit unrun lanes |
 | P1.6 | `green`; complete; ready-for-integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` | narrow capsule; Node 4/4; Python 5/5; nine focused groups green; five shared gates exit 0; final branch-history selector `unmatchedChangedFiles=[]`; three static `APPROVE`; final clean core 55/55; committed source/dist blob parity | explicit unrun lanes and future upstream movement |
-| P1.7 | complete; ready-for-integration | `5f78f3a545d1cfae2e311019718e25b5397bb218` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | docs-only evidence checkpoint pending; explicit unrun lanes recorded |
-| P1.8 | pending | pending | pending | atomic semantics |
+| P1.7 | complete; ready-for-integration | functional `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence `f355546c281da1e51cbbbe651fb96a55801267cc` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | explicit unrun lanes recorded |
+| P1.8 | in progress; deterministic verification complete | current functional HEAD | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; three final reviews clear | clean-HEAD core and committed selector pending |
 | Closeout | pending | pending | pending | integration/cleanup |
 
 ## Decision log
@@ -113,7 +133,13 @@ live process owner: root
 - 2026-07-09: final root evidence passed Node 9/9, Python 6/6, metadata 13/13, core runner 8/8, all five shared gates, and the zero-gap final selector. Production guard is empty, route schema is 279, core list is 57, diff check exits 0, and protected production/checker/P54 surfaces have zero diff.
 - 2026-07-09: at the pre-commit checkpoint, architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`.
 - 2026-07-09: P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`; trailers parsed successfully; clean-HEAD core passed 57/57; committed selector has zero unmatched; protected phase diff is empty. P1.7 is complete/ready-for-integration.
+- 2026-07-09: P1.7 docs-only evidence checkpoint is `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 starts from a clean linear checkpoint.
+- 2026-07-09: P1.8 keeps one pure resolver with exact own-key/scalar validation. The composition root creates the exact four-key hit projection and frozen four-boolean modifier snapshot, delegates once, and consumes returned admission values.
+- 2026-07-09: water ctrl/meta behavior remains root-owned and independent from the land-only `decision.devSelectionRequested` result. Effect order and ownership stay in `map_renderer.js`.
+- 2026-07-09: the confirmed RED log records only the expected missing owner module assertion. Implementation is complete; root retains every GREEN test, checker, selector, dist builder, review, commit, and full-core decision.
+- 2026-07-09: review found one executable-consumption gap in the approved P1.8 test spec. The existing P54 inventory now compiles the actual `handleClick` source with a minimal injected harness and traces canonical empty, typed blank-id clear, special selection, water admission, land hydration, and land dev-toggle outcomes from returned owner values.
+- 2026-07-09: the executable harness and its architecture-checker anchors passed on root rerun; P1.8 remains `in-progress` only for atomic commit, clean-HEAD gates, and closeout.
 
 ## Next action
 
-Root records the pending P1.7 docs-only evidence checkpoint, then continues P1.8 in the same worktree without integration or cleanup.
+Root runs the P1.8 focused matrix and shared gates, generates/verifies the Pages mirrors, records actual selector and independent review evidence, creates the atomic Lore commit, and runs clean-HEAD core. Integration and cleanup remain deferred.

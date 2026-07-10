@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete/ready-for-integration at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is pending; P1.8 is next.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with docs evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 implementation, root-owned verification, Pages generation, selector, and independent reviews are complete; functional Lore commit and clean-HEAD core remain next.
 
 ## Integration setup
 
@@ -60,19 +60,35 @@ Acceptance: receiver allowlist and negative effect boundary pass; behavior is st
 - [x] Create functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; parse trailers successfully with `git interpret-trailers`; prove the post-commit worktree clean.
 - [x] Run root-owned clean-HEAD full core: 57/57, exit 0; record report/log and post-run clean-state proof.
 - [x] Run committed history-mode selector: 23 files, 186 commands, 6 main-thread commands, `unmatchedChangedFiles=[]`; record artifacts/log and protected phase diff empty.
-- [ ] Create the docs-only P1.7 evidence checkpoint commit; no hash exists yet.
+- [x] Create the docs-only P1.7 evidence checkpoint commit: `f355546c281da1e51cbbbe651fb96a55801267cc`.
 
 Acceptance: canonical files and routes reach default core; ordered inventory and full core pass.
 
 ## P1.8 atomic pure owner
 
-- [ ] Add the unique pure owner, behavior test, and one root delegation.
-- [ ] Atomically evolve P54 and architecture assertions.
-- [ ] Enforce closed schemas and prove returned values control branch admission.
-- [ ] Preserve P1.7 order and root effects; sync mirrors and routing.
-- [ ] Run gates; record remaining risk, atomic Lore commit, and registry checkpoint.
+- [x] Add the unique pure owner, behavior test, and one root delegation.
+- [x] Atomically evolve P54 and architecture assertions.
+- [x] Enforce closed schemas and prove returned values control branch admission.
+- [x] Preserve P1.7 order and root effects; register routing and generate Pages mirrors under root ownership.
+- [x] Run focused and shared gates, actual selector, Pages build, `verify:pages-dist`, independent reviews, and pre-commit diff checks.
+- [ ] Create the atomic Lore commit, rerun clean-HEAD `verify:dist-drift` and `verify:core`, and record the evidence checkpoint.
 
 Acceptance: one consistent commit contains owner, delegation, assertions, and behavior proof; clean gates pass.
+
+Focused rework checkpoint:
+
+- Python boundary: 5/6; the sole failure is a file-level import assertion placed inside the extracted `handleClick` body. Classification: boundary-test contract placement.
+- Verify-core runner: 7/8; the sole failure is reverse routing caused by the three new renderer-runtime entries claiming `tests/verify_core_runner_behavior.test.mjs`. Classification: verification metadata ownership.
+- Contract ruling C: use explicit composition-root admission `target.kind === "empty" || !id`; preserve typed blank-id targets, owner normalization, data-property checks, and enumerable-property checks.
+- [x] Cover the approved executable-consumption gap in the existing P54 inventory: compile the actual `handleClick`, keep one fixed raw land hit, vary only returned target/decision values, and trace the five admission outcomes plus the land dev-toggle/hydration split.
+- [x] Lock the executable harness title and `new Function` factory token in the architecture checker.
+- [x] Root reran the corrected focused contracts: owner 9/9, executable P54 inventory 10/10, Python boundary 6/6, verification metadata 13/13, core runner 8/8, and architecture PASS.
+- [x] Root ran shared deterministic gates: state-write allowlist PASS, test import graph PASS, supervisor contracts 12/12 plus routing 4/4, supervisor plan 15/15, `verify:core:list` 58 commands, and `git diff --check` exit 0.
+- [x] Root generated Pages mirrors and manifest; `verify:pages-dist` exited 0 with Python startup 41/41, landing 18/18, and sample contracts 17/17. The pre-commit `verify:dist-drift` exit 1 is expected because the canonical generated `dist/**` changes are not committed yet.
+- [x] Actual SF-ATS dry-run: 19 changed files, 187 recommended commands, 6 main-thread commands, `unmatchedChangedFiles=[]`; artifacts `.runtime/reports/generated/p1-8-actual-adaptive-selection.{json,md}`.
+- [x] Independent final reviews returned `APPROVE / CLEAR` from architecture, code/evidence, and contract adjudication lanes.
+- [x] Clean-HEAD `verify:dist-drift` passed after the current P1.8 functional HEAD.
+- [x] First clean-HEAD `verify:core` attempt found one stale static contract in `test:node:scenario-chunk-contracts`: it still expected raw `event?.ctrlKey || event?.metaKey` in the dev-selection branch. The contract now asserts the P1.8 `decision.devSelectionRequested` branch and the focused rerun exits 0.
 
 ## P1 Closeout
 
@@ -83,15 +99,15 @@ Acceptance: one consistent commit contains owner, delegation, assertions, and be
 
 ## Delivery package fields
 
-- What changed: P1.7 strengthens the canonical P54 inventory with one global branch spine, branch-local transaction order, both fill-helper order contracts, and a production-zero guard; a new Python boundary locks composition-root ownership and future-owner absence.
-- Core files: empty. `js/**`, `dist/**`, `tools/eslint-rules/state-writer-allowlist.json`, the original P54 preflight record, and `tools/check_architecture_boundaries.mjs` retain their accepted P1.6 contents.
-- Test files: `tests/renderer_click_selection_transaction_inventory_boundary.test.mjs`, new `tests/test_map_renderer_click_selection_transaction_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, and `tests/verify_core_runner_behavior.test.mjs`.
-- Metadata/package: `tools/verification/verification_domains.mjs` and `package.json` register the existing Node inventory and new canonical Python boundary as child-safe `renderer-owner` default-core leaves.
-- Docs: this task folder, `docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md`, and `docs/active/_worktree_registry.md`.
-- Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; the implementation lane wrote no runtime artifact.
-- Diff/commit/divergence: P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`, linear over P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; its protected phase diff is empty.
-- Conflict analysis: yellow for package/metadata/verification-runner/registry shared surfaces; green for production renderer, runtime context, Pages mirrors, UI/CSS/data, architecture checker, state allowlist, and parent archive/lessons WIP.
-- Validation: both historical `BLOCK` fixes and three final `APPROVE / CLEAR` reviews are retained. Functional trailers parsed successfully; root-owned clean-HEAD core passed 57/57 and returned the worktree clean; committed selector reported 23 files / 186 commands / 6 main-thread / zero unmatched; protected phase diff is empty. Reports and logs are recorded above.
-- Explicit pending lanes: docs-only evidence checkpoint. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicitly unrun.
-- Remaining risks: deterministic checks cover the production-zero preflight; no browser-only P1.7 risk remains. P1.8 implementation remains outside P1.7.
-- Recommended next step: root creates the evidence checkpoint, then continues P1.8 in the same worktree without integration or cleanup.
+- What changed: P1.8 adds one strict pure click-selection decision owner; delegates once from `handleClick`; makes returned target/decision values control admission and the land dev-selection branch; extends behavior, composition-root, P54, architecture, metadata, and core-runner contracts; records the deterministic verification boundary.
+- Core files: `js/core/map_renderer.js` and new `js/core/map_renderer/click_selection_transaction_owner.js`.
+- Test files: new `tests/click_selection_transaction_owner_behavior.test.mjs`; updated `tests/renderer_click_selection_transaction_inventory_boundary.test.mjs`, `tests/test_map_renderer_click_selection_transaction_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, and `tests/scenario_chunk_contracts.test.mjs`.
+- Metadata/package/tooling: `package.json`, `tools/verification/verification_domains.mjs`, and `tools/check_architecture_boundaries.mjs`.
+- Docs: `docs/active/renderer-click-selection-transaction-preflight-20260702.md`, new `docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md`, this task folder, and `docs/active/_worktree_registry.md`.
+- Generated and temporary files: root generated `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/click_selection_transaction_owner.js`, and `dist/pages-dist-manifest.json`; `verify:pages-dist` owns parity. The implementation lane wrote no `.runtime` artifact. Existing ignored Junction/log roots stay root-owned.
+- Diff/commit/divergence: P1.8 is uncommitted because the atomic Lore commit is the next root action. Current HEAD is the P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`, five commits ahead of `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0` with that origin as merge-base.
+- Conflict analysis: red for `js/core/map_renderer.js`; yellow for click-selection tests, architecture checker, package/verification metadata, phase docs, and registry; green for `RendererRuntimeContext`, public facade, state-write allowlist, UI/CSS/scenario data, README, and parent archive/lessons WIP.
+- Validation completed: TDD RED exit 1 for the expected missing owner module; focused owner 9/9, P54 10/10, Python 6/6, metadata 13/13, core runner 8/8; shared state-write/import/supervisor gates exit 0; architecture PASS; `verify:pages-dist` exit 0; actual selector zero unmatched; three independent reviews `APPROVE / CLEAR`; `git diff --check` exit 0.
+- Validation pending: rerun clean-HEAD `verify:core` and run committed selector. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
+- Remaining risks: clean-HEAD core must prove the amended contract set is stable; no browser-specific residual risk is identified by deterministic checks.
+- Recommended next step: root runs clean-HEAD core and committed selector before P1 Closeout. Integration and cleanup remain deferred.
