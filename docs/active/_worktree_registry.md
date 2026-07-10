@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P1 pushed to origin/main; safe local cleanup pending
+Last updated: 2026-07-10 P1 pushed to origin/main; isolated worktree cleaned; release verification worktree retained
 
 ## Integration Owner
 
@@ -9,8 +9,8 @@ Last updated: 2026-07-10 P1 pushed to origin/main; safe local cleanup pending
 - Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; P1.6 evidence checkpoint is `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is `f355546c281da1e51cbbbe651fb96a55801267cc`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
-- Current continuation owner: the root Codex thread owns all P1.5 acceptance reruns and later P1.6-P1.8/Closeout live verification. Other agents are static-only while a live process exists.
-- Current continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`, branch `codex/renderer-runtime-context-p1-remaining-20260709`, base `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
+- Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
+- Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`, branch `codex/renderer-runtime-context-p1-remaining-20260709`, base `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; recovery remains through `origin/main@e102a70a` and `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
 - live process owner: root
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
@@ -25,15 +25,15 @@ Last updated: 2026-07-10 P1 pushed to origin/main; safe local cleanup pending
 
 ## Current Worktrees
 
-Current rows reflect the real continuation worktree. The dirty parent checkout remains preserved and unchanged.
+Current rows reflect the real local worktrees after P1 cleanup. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.8 functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; closeout sync `21f15595947fa5871f334729cc73f171ce89f7f5` | pushed to `origin/main`; recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709` preserved | overall `integrated`; P1.5/P1.6 `green`; P1.7 complete; P1.8 complete; Closeout passed; local cleanup pending | Hot files: `js/core/map_renderer.js`, new pure owner, owner/P54/Python/metadata/core-runner/scenario-chunk tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, P54 and phase/control docs. Protected surfaces remain clean: runtime context, public facade, state allowlist, README, UI/CSS/data. | P1.8 RED confirmed; focused owner/P54/Python/metadata/core-runner all green; shared static gates green; actual selector 19 / 187 / 6 / zero unmatched; `verify:pages-dist` green; clean-head `verify:dist-drift` green; first clean-core found stale scenario dev-selection contract; focused scenario rerun green; clean-head core 58/58; committed selector 29 / 188 / 7 / zero unmatched; Closeout selector 29 / 188 / 7 / zero unmatched; final reviews clear after docs truth sync; `origin/main` fast-forward push succeeded. | Red for `map_renderer.js`; yellow for shared click/scenario tests/checker/package/metadata/docs/dist; green for protected surfaces and parent archive/lessons WIP. | Remove the verified isolated worktree after remote hash confirmation. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=e102a70aab2515b3a476751301fce9481acdc61c`; no branch | same as `origin/main@e102a70a`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; dirty `.gitignore` only | Dirty file: `.gitignore` has local `.vercel` and `.env*` ignore additions. Product/runtime files are clean in this worktree. | P1 is already pushed and independently rechecked from clean temporary `origin/main@e102a70a`: selector 32 / 188 / 7 / zero unmatched; `verify:core` 58/58 including `verify:pages-dist` and `verify:dist-drift`; P1 isolated worktree path is removed. | Yellow for `.gitignore` policy; green for product/runtime files. | Keep this worktree until the `.gitignore` local edit is reviewed, committed, or explicitly discarded in a separate task. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
-Status: `integrated`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` and evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5`; Closeout passed and pushed to `origin/main`; local cleanup pending.
+Status: `integrated`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` and evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5`; Closeout passed and pushed to `origin/main`; isolated P1 worktree cleanup complete.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
@@ -43,15 +43,15 @@ Current P1.8 changed files are the new pure owner, `map_renderer.js` delegation,
 
 Validation truth: P1.7 retains its accepted evidence through checkpoint `f355546c`. P1.8 pre-edit selection reported 19 files / 186 commands / 6 main-thread commands with only the new phase record unmatched. Root confirmed the expected TDD RED at `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`. Focused tests, shared gates, actual selector, Pages generation, `verify:pages-dist`, clean-head `verify:dist-drift`, diff check, focused scenario rerun, clean-head core, committed selector, and three independent reviews are green.
 
-Dependency preparation: the ignored `node_modules` Junction targets `C:\Users\raede\Desktop\dev\mapcreator\node_modules`; `.gitignore:18` is `node_modules/`; the ignored log directory `.runtime/tests/renderer-runtime-context-p1-remaining-20260709` is created. Both are removed with the worktree during verified cleanup.
+Dependency preparation: the ignored `node_modules` Junction targeted `C:\Users\raede\Desktop\dev\mapcreator\node_modules`; `.gitignore:18` is `node_modules/`; the ignored log directory `.runtime/tests/renderer-runtime-context-p1-remaining-20260709` was scoped to the isolated worktree. Both were removed with the verified P1 worktree cleanup.
 
 P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
 
-Recommended integration: verify the final remote hash for `origin/main`, then remove the isolated worktree after preserving branch and commit hashes.
+Recommended integration: use `origin/main@e102a70a` as the P1 integrated baseline. Keep `mapcreator-release-e102a70` only for the separate `.gitignore` decision.
 
 ## Scenario Forge P1.8 Pure Click-Selection Decision Owner 2026-07-09
 
-Status: `integrated`; implementation, deterministic root-owned verification, Closeout, and first remote push complete. Local cleanup pending.
+Status: `integrated`; implementation, deterministic root-owned verification, Closeout, remote push, and isolated worktree cleanup complete.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; initial base was `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; branch has been pushed to `origin/main` and preserved as `origin/codex/renderer-runtime-context-p1-remaining-20260709`.
 
