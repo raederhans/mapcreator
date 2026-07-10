@@ -163,10 +163,34 @@ async function waitForProjectUiReady(page) {
 async function exportProjectJson(page, outputPath) {
   logProjectSaveLoadStep("exportProjectJson:start", { outputPath });
   await page.getByRole("tablist", { name: "Inspector panels" }).getByRole("tab", { name: "Project" }).click();
-  await page.locator("#projectManagement").evaluate((section) => {
-    const details = section.closest("details");
-    if (details) details.open = true;
+  const projectLegendSection = page.locator("#projectLegendSection");
+  const projectLegendSummary = page.locator("#lblProjectLegend");
+  await expect(projectLegendSummary).toBeVisible();
+  const projectLegendOpen = await projectLegendSection.evaluate((details) => details.open);
+  if (!projectLegendOpen) {
+    await projectLegendSummary.click();
+  }
+  await expect(projectLegendSection).toHaveJSProperty("open", true);
+  await installStateHandle(page);
+  await page.evaluate(async () => {
+    const state = globalThis.__pwProjectSaveLoad?.state;
+    const renderPresetTreeFn = state?.renderPresetTreeFn;
+    if (typeof renderPresetTreeFn === "function") {
+      const result = renderPresetTreeFn();
+      if (result && typeof result.then === "function") {
+        await result;
+      }
+    }
   });
+  await expect(projectLegendSection).toHaveJSProperty("open", true);
+  await expect.poll(async () => {
+    const currentUrl = new URL(page.url());
+    const openSections = (currentUrl.searchParams.get("section") || "")
+      .split(",")
+      .map((section) => section.trim())
+      .filter(Boolean);
+    return openSections.includes("projectLegendSection");
+  }).toBe(true);
   const downloadButton = page.locator("#downloadProjectBtn");
   await downloadButton.scrollIntoViewIfNeeded();
   await expect(downloadButton).toBeVisible({ timeout: 30000 });

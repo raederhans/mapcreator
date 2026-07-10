@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; pre-P2 repair is committed at current HEAD, with clean-head browser/main-thread/perf baseline still pending
+Last updated: 2026-07-10 P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair `28bda618` has historical focused browser evidence of 2/5, and the production disclosure race repair is green through source/E2E/contract, deterministic, static review, canonical Pages generation, dist parity, post-build boundary, and adaptive evidence. Generated tracked files are exactly `dist/app/js/ui/sidebar.js` and `dist/pages-dist-manifest.json`. Functional commit, clean-head `verify:dist-drift` / `verify:core`, and browser/main-thread/perf baselines remain pending.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-10 P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca46
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: root
+- live process owner: none active; root must assign one before browser, main-thread, or perf lanes run
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -21,7 +21,7 @@ Last updated: 2026-07-10 P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca46
 3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright, perf, and `verify:core:main-thread` under single-owner execution in later P2 phases.
+6. Keep browser/dev-server/Playwright, perf, and `verify:core:main-thread` under single-owner execution in later P2 phases; there is currently no active live-process owner.
 
 ## Current Worktrees
 
@@ -29,20 +29,34 @@ Current rows reflect the real local worktrees after P1 cleanup and P2 startup. T
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated implementation lane | current branch/worktree for P2; P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; pre-P2 repair committed at current HEAD | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress` | Current repair scope is one E2E plus existing P2 control-plane docs and this registry. Shared future hotspots are `js/core/map_renderer.js`, `js/core/renderer/**`, verification metadata, architecture checks, and this registry. | Static repair checks are complete: `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0; `git diff --check` exit 0; `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs; `npm run verify:test-import-graph` exit 0 with 51 specs; adaptive dry-run artifact `.runtime/reports/generated/test-adaptive-selection.json` reports `changedFiles=4`, `recommendedCommands=7`, `mainThreadSerialVerification=1`, `unmatchedChangedFiles=[]`. Clean-head browser/main-thread/perf baseline remains pending. | Yellow for the E2E baseline repair and registry/doc coordination; red later for shared renderer composition roots and verification metadata once code phases start. | Keep isolated; record browser/main-thread/perf baseline before P2.1. Parent WIP remains untouched. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated implementation lane | current branch/worktree for P2; P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair committed at `28bda618`; production disclosure race repair in progress before functional commit | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress` | Current repair scope is `js/ui/sidebar.js`, `tests/e2e/project_save_load_roundtrip.spec.js`, existing UI mainline contract, generated tracked files `dist/app/js/ui/sidebar.js` and `dist/pages-dist-manifest.json`, and the three existing control-plane docs. Shared future hotspots are `js/core/map_renderer.js`, `js/core/renderer/**`, verification metadata, architecture checks, generated Pages mirror/manifest, and this registry. Parent checkout WIP remains untouched. | Historical focused browser evidence after `28bda618` is 2/5 and confirms `renderPresetTree -> updateScenarioInspectorLayout` forced global Project/Legend/Diagnostics details closed under an active scenario. Production source removed the five-line forced-close block while keeping the `scenarioDefaultsKey` gate and `collapseScenarioManagedSections()` intact. The E2E now uses a visible `#lblProjectLegend` summary click, awaits `state.renderPresetTreeFn`, reasserts open state, and polls URL `section` for `projectLegendSection`. Focused Python disclosure coverage is 1/1. Full UI mainline keeps the new disclosure contract green with two existing out-of-scope HTML substring errors: project sidebar order and `transportProjectSection`. Deterministic evidence is green: Node syntax; state-write allowlist 115; architecture boundaries; selector schema 282; E2E layers 47; import graph 51; supervisor contracts and plan. Static review is `APPROVE`. `verify:pages-dist` exited 0: total 927.16 MiB; startup shell 44/44; landing showcase 18/18; sample project 17/17. Source/dist sidebar hashes both equal `6a67865bc5d199c20b7cb639c99ca12cabca1932`. Post-build sidebar/support boundary suite is green 19/19. Adaptive result is `changedFiles=8`, `recommendedCommands=61`, `mainThreadSerialVerification=53`, `unmatchedChangedFiles=0`. The Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript. | Yellow for sidebar/E2E/control-plane coordination and generated Pages mirror/manifest; red later for shared renderer composition roots and verification metadata once code phases start. | Keep isolated; create the functional commit, then run clean-head `verify:dist-drift` and `verify:core` as one post-commit item. Browser/main-thread/perf baselines remain pending; root must assign one live-process owner before those lanes run. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`; no branch | same as `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; clean | No product/runtime/doc edits in this worktree. | Release residue is clean at detached `b14165c0`; P1 isolated worktree path is removed and P1 recovery remains remote. | Green for current P2 docs-only truth work. | Retain as separate release verification residue until a later integration owner cleanup pass. |
 
 ## P2 Pre-baseline Repair 2026-07-10
 
 - P2.0 docs-only truth reconciliation is complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
-- Repair scope is one E2E file plus existing P2 docs and this registry; parent checkout WIP remains untouched.
+- Test-only repair scope was one E2E file plus existing P2 docs and this registry; parent checkout WIP remains untouched.
 - Main-thread collection first failed because the Pages release URL was missing; the `/dist` retry through `PLAYWRIGHT_TEST_BASE_URL` was the wrong shape for mixed tests.
 - The separated probe used `MAPCREATOR_BASE_URL=http://127.0.0.1:8892`, `SCENARIO_FORGE_PAGES_URL=http://127.0.0.1:8892/dist/`, and no `PLAYWRIGHT_TEST_BASE_URL`, producing four downloads.
 - Remaining test drift is the hidden styled-select native control and stale E2E schema expectation `21` while production/unit truth is `22`.
-- Static results complete: `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0; `git diff --check` exit 0; `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs; `npm run verify:test-import-graph` exit 0 with 51 specs.
+- Static results for committed test-only repair `28bda618` are complete: `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0; `git diff --check` exit 0; `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs; `npm run verify:test-import-graph` exit 0 with 51 specs.
 - Adaptive dry-run artifact `.runtime/reports/generated/test-adaptive-selection.json` reports `changedFiles=4`, `recommendedCommands=7`, `mainThreadSerialVerification=1`, and `unmatchedChangedFiles=[]`.
-- Sole future live-process owner is `/root/p2_baseline_test_fix`; P2.1 waits for a green baseline.
-- Pre-P2 repair is committed at current HEAD; clean-head browser/main-thread/perf baseline remains pending.
+- Historical expected-red owner path is `/root/p2_baseline_test_fix`; there is currently no active live-process owner, and root must assign one before browser, main-thread, or perf lanes run. P2.1 waits for a green baseline.
+- Fresh focused browser baseline after `28bda618` is 2/5 and confirms a production disclosure race: `renderPresetTree -> updateScenarioInspectorLayout` forced global Project, Legend, and Diagnostics details closed under an active scenario.
+- Production source removed the five-line forced-close block for global Project/Legend/Diagnostics disclosures in `updateScenarioInspectorLayout`; the `scenarioDefaultsKey` gate and `collapseScenarioManagedSections()` remain intact.
+- `project_save_load_roundtrip.spec.js` now uses a real visible `#lblProjectLegend` summary click, awaits `state.renderPresetTreeFn`, reasserts open state, and uses `expect.poll` until URL `section` contains `projectLegendSection`.
+- Focused Python disclosure coverage is green 1/1.
+- Full UI mainline keeps the new disclosure contract green and has two existing out-of-scope HTML substring errors: project sidebar order and `transportProjectSection`.
+- Deterministic evidence is green: Node syntax; state-write allowlist 115; architecture boundaries; selector schema 282; E2E layers 47; import graph 51; supervisor contracts and plan.
+- Independent static review result is `APPROVE`.
+- `verify:pages-dist` exited 0: total 927.16 MiB; startup shell 44/44; landing showcase 18/18; sample project 17/17.
+- Generated tracked files are exactly `dist/app/js/ui/sidebar.js` and `dist/pages-dist-manifest.json`.
+- Source/dist sidebar hashes both equal `6a67865bc5d199c20b7cb639c99ca12cabca1932`.
+- Post-build sidebar/support boundary suite is green 19/19.
+- Adaptive result is `changedFiles=8`, `recommendedCommands=61`, `mainThreadSerialVerification=53`, `unmatchedChangedFiles=0`.
+- The Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript.
+- Functional commit, clean-head `verify:dist-drift`, and clean-head `verify:core` remain pending until the functional commit.
+- Browser/main-thread/perf baseline remains pending; root must assign one live-process owner before those lanes run.
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 

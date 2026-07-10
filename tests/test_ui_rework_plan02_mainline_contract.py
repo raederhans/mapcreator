@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -79,6 +80,28 @@ class UiReworkPlan02MainlineContractTest(unittest.TestCase):
         self.assertIn("syncRightSidebarUrlState", sidebar)
         self.assertIn("UI_URL_STATE_KEYS.scope", sidebar)
         self.assertIn("UI_URL_STATE_KEYS.section", sidebar)
+
+    def test_scenario_inspector_layout_keeps_global_sections_unforced(self):
+        sidebar = (REPO_ROOT / "js" / "ui" / "sidebar.js").read_text(encoding="utf-8")
+        function_start = sidebar.index("  const updateScenarioInspectorLayout = () => {")
+        function_end = sidebar.index("  const INSPECTOR_VH_BASELINE =", function_start)
+        function_body = sidebar[function_start:function_end]
+
+        self.assertIn('const scenarioDefaultsKey = String(runtimeState.activeScenarioId || "__base__");', function_body)
+        scenario_defaults_gate = re.compile(
+            r"if \(scenarioDefaultsKey !== lastScenarioInspectorDefaultsKey\) \{\s*"
+            r"collapseScenarioManagedSections\(\);\s*"
+            r"lastScenarioInspectorDefaultsKey = scenarioDefaultsKey;\s*"
+            r"\}",
+            re.S,
+        )
+        self.assertRegex(function_body, scenario_defaults_gate)
+        for assignment in [
+            "projectLegendSection.open =",
+            "legendProjectSection.open =",
+            "diagnosticsSection.open =",
+        ]:
+            self.assertNotIn(assignment, function_body)
 
     def test_dev_workspace_top_entry_stays_hidden_under_developer_button(self):
         toolbar = (REPO_ROOT / "js" / "ui" / "toolbar.js").read_text(encoding="utf-8")

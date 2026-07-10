@@ -46677,7 +46677,7 @@
     },
     {
       "path": "app/js/ui/sidebar.js",
-      "size_bytes": 269344,
+      "size_bytes": 269119,
       "source_kind": "dist"
     },
     {
@@ -47539,7 +47539,7 @@
     {
       "file_count": 9421,
       "path": "app",
-      "size_bytes": 965635544
+      "size_bytes": 965635319
     },
     {
       "file_count": 57,
@@ -47572,5 +47572,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972201227
+  "total_bytes": 972201002
 }

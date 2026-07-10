@@ -3644,11 +3644,6 @@ function initSidebar({ render } = {}) {
       selectedCountryActionsSection.classList.remove("hidden");
       selectedCountryActionsSection.setAttribute("aria-hidden", "false");
     }
-    if (projectLegendSection && diagnosticsSection && isScenarioMode) {
-      projectLegendSection.open = false;
-      if (legendProjectSection) legendProjectSection.open = false;
-      diagnosticsSection.open = false;
-    }
   };
 
   const INSPECTOR_VH_BASELINE = {
