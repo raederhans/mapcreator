@@ -2328,6 +2328,27 @@ class PagesDistStartupShellTest(unittest.TestCase):
 
             self.assertEqual(target_path.read_bytes(), b'{"ok":true}')
 
+    def test_pages_dist_path_guard_treats_windows_extended_prefix_as_same_root(self) -> None:
+        root_path = Path("C:/repo/dist/app")
+        normal_path = root_path / "data" / "scenarios" / "sample" / "chunks" / "political.detail.country.swe.json"
+        extended_path = Path("\\\\?\\C:\\repo\\dist\\app\\data\\scenarios\\sample\\chunks\\political.detail.country.swe.json")
+
+        self.assertEqual(
+            build_pages_dist.normalize_windows_path_text(normal_path),
+            build_pages_dist.normalize_windows_path_text(extended_path),
+        )
+
+    def test_pages_dist_lf_normalizer_skips_removed_generated_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            previous_dist_root = build_pages_dist.DIST_ROOT
+            tmp_root = Path(tmp_dir) / "dist"
+            removed_path = tmp_root / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
+            build_pages_dist.DIST_ROOT = tmp_root
+            try:
+                build_pages_dist.normalize_dist_text_file_lf(removed_path)
+            finally:
+                build_pages_dist.DIST_ROOT = previous_dist_root
+
     def test_pages_scenario_url_probe_rejects_empty_manifest_url(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             previous_app_dist_root = build_pages_dist.APP_DIST_ROOT

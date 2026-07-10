@@ -202,7 +202,10 @@ def should_normalize_dist_text_file_lf(path: Path) -> bool:
 def normalize_dist_text_file_lf(path: Path) -> None:
     if not should_normalize_dist_text_file_lf(path):
         return
-    data = path.read_bytes()
+    try:
+        data = path.read_bytes()
+    except FileNotFoundError:
+        return
     if b"\r\n" not in data:
         return
     path.write_bytes(data.replace(b"\r\n", b"\n"))
@@ -459,11 +462,22 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
 def _dist_path_for_app_url(url: str) -> Path:
     value = str(url or "").strip()
     path = (APP_DIST_ROOT / value).resolve()
+    app_root_text = normalize_windows_path_text(APP_DIST_ROOT.resolve())
+    path_text = normalize_windows_path_text(path)
     try:
-        path.relative_to(APP_DIST_ROOT.resolve())
+        common_path = os.path.commonpath([app_root_text, path_text])
     except ValueError as exc:
         raise ValueError(f"Pages dist URL must stay under app dist root: {value}") from exc
+    if common_path != app_root_text:
+        raise ValueError(f"Pages dist URL must stay under app dist root: {value}")
     return path
+
+
+def normalize_windows_path_text(path: Path) -> str:
+    text = str(path)
+    if os.name == "nt" and text.startswith("\\\\?\\"):
+        text = text[4:]
+    return os.path.normcase(os.path.normpath(text))
 
 
 def _require_dist_url(url: str, *, source: str, missing: list[str], required: bool = False) -> None:
