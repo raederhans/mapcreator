@@ -1,39 +1,40 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P1 pushed to origin/main; isolated worktree cleaned; release verification worktree retained
+Last updated: 2026-07-10 P1 integrated/pushed/cleaned; P2 docs-only truth reconciliation started from clean `origin/main@b14165c0`
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` with 19 unrelated `docs/archive/**` deletions and modified `lessons learned.md`, preserved unchanged.
+- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 16 behind origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`, with 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged.
 - Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; P1.6 evidence checkpoint is `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is `f355546c281da1e51cbbbe651fb96a55801267cc`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
-- Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`, branch `codex/renderer-runtime-context-p1-remaining-20260709`, base `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; recovery remains through `origin/main@e102a70a` and `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
+- Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
 - live process owner: root
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
 
-1. P1.5 acceptance from clean `a8f71822` is complete with `green` status and 53/53 full-core commands.
-2. Preserve P1.7 functional commit `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; complete root-owned P1.8 verification, dist synchronization, review, atomic commit, and clean core serially in the same worktree.
-3. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection effects, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
-4. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
+1. P1 is already integrated on `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; keep its recovery branch for traceability only.
+2. Run P2 in the isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.
+3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
+4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright and `verify:core:main-thread` as explicit not-run lanes for P1.5.
+6. Keep browser/dev-server/Playwright, perf, and `verify:core:main-thread` under single-owner execution in later P2 phases.
 
 ## Current Worktrees
 
-Current rows reflect the real local worktrees after P1 cleanup. The dirty parent checkout remains preserved and unchanged.
+Current rows reflect the real local worktrees after P1 cleanup and P2 startup. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=e102a70aab2515b3a476751301fce9481acdc61c`; no branch | same as `origin/main@e102a70a`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; dirty `.gitignore` only | Dirty file: `.gitignore` has local `.vercel` and `.env*` ignore additions. Product/runtime files are clean in this worktree. | P1 is already pushed and independently rechecked from clean temporary `origin/main@e102a70a`: selector 32 / 188 / 7 / zero unmatched; `verify:core` 58/58 including `verify:pages-dist` and `verify:dist-drift`; P1 isolated worktree path is removed. | Yellow for `.gitignore` policy; green for product/runtime files. | Keep this worktree until the `.gitignore` local edit is reviewed, committed, or explicitly discarded in a separate task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated implementation lane | current branch/worktree for P2; clean docs-only start | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress` | Current task edits only active docs truth surfaces. Shared future hotspots are `js/core/map_renderer.js`, `js/core/renderer/**`, verification metadata, architecture checks, and this registry. | Approved P2 phase topology is staged: P2.0 docs-only truth reconciliation, then clean baseline, P2.1, P2.2a, P2.2b, review, integration prep. Single live-process owner and log root are fixed in the P2 plan/context/task package. | Yellow for registry/doc coordination now; red later for shared renderer composition roots and verification metadata once code phases start. | Keep isolated; finish P2.0 docs-only commit first, then continue the approved P2 sequence in this worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`; no branch | same as `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; clean | No product/runtime/doc edits in this worktree. | Release residue is clean at detached `b14165c0`; P1 isolated worktree path is removed and P1 recovery remains remote. | Green for current P2 docs-only truth work. | Retain as separate release verification residue until a later integration owner cleanup pass. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
-Status: `integrated`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` and evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5`; Closeout passed and pushed to `origin/main`; isolated P1 worktree cleanup complete.
+Status: `integrated`; P1.5/P1.6 green; P1.7 complete at functional `5f78f3a545d1cfae2e311019718e25b5397bb218` and evidence `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 complete at functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` and evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5`; Closeout passed, pushed, and cleaned; next approved phase is P2 renderer frame orchestration.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
@@ -47,7 +48,7 @@ Dependency preparation: the ignored `node_modules` Junction targeted `C:\Users\r
 
 P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
 
-Recommended integration: use `origin/main@e102a70a` as the P1 integrated baseline. Keep `mapcreator-release-e102a70` only for the separate `.gitignore` decision.
+Recommended integration: use `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` as the P1 integrated baseline for P2 startup. Keep the release residue worktree separate from P2 implementation.
 
 ## Scenario Forge P1.8 Pure Click-Selection Decision Owner 2026-07-09
 

@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with docs evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 is complete at functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` with clean-HEAD core and committed selector green.
+Current status: complete; G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with docs evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 is complete at functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` with clean-HEAD core and committed selector green; Closeout integrated, pushed, and cleaned.
 
 ## Integration setup
 
@@ -94,10 +94,10 @@ Focused rework checkpoint:
 
 ## P1 Closeout
 
-- [ ] Record P1.0-P1.8 commits, gates, route status, unrun lanes, risks, and P2 scope.
-- [ ] Run final review/bug/first-principles audit.
-- [ ] Recheck remote ancestry; integrate serially; push and confirm remote main.
-- [ ] Update registry and clean only after recovery hashes are explicit.
+- [x] Record P1.0-P1.8 commits, gates, route status, unrun lanes, risks, and P2 scope.
+- [x] Run final review/bug/first-principles audit.
+- [x] Recheck remote ancestry; integrate serially; push and confirm remote main.
+- [x] Update registry and clean only after recovery hashes are explicit.
 
 ## Delivery package fields
 
@@ -111,5 +111,5 @@ Focused rework checkpoint:
 - Conflict analysis: red for `js/core/map_renderer.js`; yellow for click-selection tests, architecture checker, package/verification metadata, phase docs, and registry; green for `RendererRuntimeContext`, public facade, state-write allowlist, UI/CSS/scenario data, README, and parent archive/lessons WIP.
 - Validation completed: TDD RED exit 1 for the expected missing owner module; focused owner 9/9, P54 10/10, Python 6/6, metadata 13/13, core runner 8/8; shared state-write/import/supervisor gates exit 0; architecture PASS; `verify:pages-dist` exit 0; actual selector zero unmatched; three independent reviews `APPROVE / CLEAR`; `git diff --check` exit 0.
 - Validation completed: clean-HEAD `verify:dist-drift` and `verify:core` are green; committed selector has zero unmatched files. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
-- Remaining risks: final remote hash verification and safe worktree cleanup remain.
-- Recommended next step: verify the final remote hash, then remove the isolated worktree.
+- Remaining risks: explicit browser/perf/main-thread lanes remain intentionally outside the P1 docs package and move to later follow-up work only if separately required.
+- Recommended next step: start P2 in its isolated worktree from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.

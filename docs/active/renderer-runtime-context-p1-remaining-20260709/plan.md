@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 is complete at functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1 Closeout is next
+Status: complete; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is complete at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` with evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 is complete at functional Lore commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1 Closeout integrated, pushed, and cleaned; next phase is P2
 
 ## Progress
 
@@ -30,6 +30,7 @@ Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at fu
 - The root-owned P1.8 pre-edit selector reported 19 files, 186 commands, 6 main-thread commands, and one unmatched path: the new P1.8 phase record.
 - TDD RED is confirmed at `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`: the targeted first subtest exited 1 solely because the pure owner module did not yet exist.
 - P1.8 implementation now contains one pure owner, one composition-root delegation, behavior and boundary regressions, architecture assertions, package/default-core routing, updated phase/control documents, generated Pages mirrors/manifest, and the matching scenario-chunk static contract update for `decision.devSelectionRequested`. Focused/shared deterministic gates, actual selector, `verify:pages-dist`, clean-head drift, clean-head core 58/58, committed selector, independent reviews, and diff check are green.
+- P1 Closeout completed, integrated to `origin/main`, and the isolated P1 worktree was cleaned. P2 starts from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.
 
 Approved sources:
 
@@ -41,7 +42,7 @@ Architect and Critic approved these sources. Their DRAFT banners are RALPLAN pro
 
 ## Goal
 
-Accept the remote P1.5 baseline, then complete P1.6, P1.7, P1.8, and P1 Closeout in one linear isolated worktree. `RendererRuntimeContext` remains a read-model boundary; time, event resolution, scheduling, writes, metrics, DOM work, and user-visible effects remain in `map_renderer.js` as the composition root.
+Accepted the remote P1.5 baseline, then completed P1.6, P1.7, P1.8, and P1 Closeout in one linear isolated worktree. `RendererRuntimeContext` remained a read-model boundary; time, event resolution, scheduling, writes, metrics, DOM work, and user-visible effects stayed in `map_renderer.js` as the composition root.
 
 ## Invariants
 
@@ -143,6 +144,7 @@ Execution checkpoint:
 - Record P1.0-P1.8 truth, commits, validation, explicit unrun lanes, remaining risks, and staged P2 scope.
 - Run final first-principles review, ai-slop-cleaner, independent code review, Architect review, and UltraQA.
 - Push the verified linear branch, confirm remote `main`, update registry truth, preserve recovery commits, and remove the isolated worktree only after integration is proven.
+- Completion truth: integrated to `origin/main`, recovery preserved at `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`, and the isolated P1 worktree is already cleaned.
 
 ## Live-process ownership
 
@@ -163,7 +165,7 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.
 - Stage exact paths. Keep parent WIP and unrelated Landing outputs outside commits. Recheck origin before integration, integrate serially, push once, verify remote main, then clean with recovery hashes recorded.
 
-P1.6 and P1.7 explicit unrun lanes remain recorded in their phase evidence. P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc` preserves the accepted production-zero preflight. P1.8 implementation, focused/shared deterministic verification, actual selector, Pages/dist generation, clean drift, clean core, committed selector, and reviews are complete. Continue to P1 Closeout in the same worktree without integration or cleanup.
+P1.6 and P1.7 explicit unrun lanes remain recorded in their phase evidence. P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc` preserves the accepted production-zero preflight. P1.8 implementation, focused/shared deterministic verification, actual selector, Pages/dist generation, clean drift, clean core, committed selector, and reviews are complete. P1 Closeout is complete. P2 becomes the next active lane in a new isolated worktree.
 
 ## Stop rules
 

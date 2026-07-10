@@ -6,11 +6,12 @@ Approval: Architect and Critic approved.
 
 ## Repository facts
 
-- worktree path: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`
+- worktree path: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` during execution; the isolated P1 worktree is now cleaned
 - branch: `codex/renderer-runtime-context-p1-remaining-20260709`
 - base branch: `origin/main`
 - base commit / origin/main / initial HEAD: `a8f71822d705fcd3b26c32db1abd417b41264eb0`
-- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, dirty on `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, one commit behind origin/main, with 19 unrelated `docs/archive/**` deletions and modified `lessons learned.md`; preserved unchanged.
+- integrated remote baseline now used by follow-up P2: `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`
+- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, dirty on `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 16 behind` current origin/main, with 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`; preserved unchanged.
 
 ## Approved sources
 
@@ -34,7 +35,7 @@ live process owner: root
 
 ## Current phase
 
-- phase: P1 pushed to `origin/main`; cleanup next
+- phase: P1 integrated/pushed/cleaned; P2 docs-only truth reconciliation next
 - state: overall worktree `integrated`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; closeout truth sync `21f15595947fa5871f334729cc73f171ce89f7f5`
 - phase acceptance: P1.5 accepted `green` from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`
 - deterministic gate: root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`
@@ -87,7 +88,7 @@ live process owner: root
 - node_modules Junction: verified; `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709\node_modules` is a Windows Junction targeting `C:\Users\raede\Desktop\dev\mapcreator\node_modules`.
 - ignore rule: `.gitignore:18` is exactly `node_modules/`; `git check-ignore` covers the Junction.
 - log directory: verified at `.runtime/tests/renderer-runtime-context-p1-remaining-20260709`; P1.5 evidence is recorded and later-phase log names remain reserved.
-- cleanup: remove the Junction and ignored log directory with this worktree after integration/verification/push and recovery recording.
+- cleanup: completed; the Junction, ignored log directory, and isolated P1 worktree were removed after integration/verification/push and recovery recording.
 
 ## Owner ledger
 
@@ -108,7 +109,7 @@ live process owner: root
 | P1.6 | `green`; complete; ready-for-integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` | narrow capsule; Node 4/4; Python 5/5; nine focused groups green; five shared gates exit 0; final branch-history selector `unmatchedChangedFiles=[]`; three static `APPROVE`; final clean core 55/55; committed source/dist blob parity | explicit unrun lanes and future upstream movement |
 | P1.7 | complete; ready-for-integration | functional `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence `f355546c281da1e51cbbbe651fb96a55801267cc` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | explicit unrun lanes recorded |
 | P1.8 | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | Closeout passed |
-| Closeout | passed; integrated | finalization commit after docs truth sync `21f15595947fa5871f334729cc73f171ce89f7f5` | stale P1.8 status grep zero matches; `git diff --check` green; `verify:dist-drift` green after Pages regeneration; Closeout selector 29 / 188 / 7 / zero unmatched; code review, first-principles review, and UltraQA docs blockers resolved; first `origin/main` push succeeded | remote hash verification and cleanup |
+| Closeout | passed; integrated; pushed; cleaned | finalization commit after docs truth sync `21f15595947fa5871f334729cc73f171ce89f7f5` | stale P1.8 status grep zero matches; `git diff --check` green; `verify:dist-drift` green after Pages regeneration; Closeout selector 29 / 188 / 7 / zero unmatched; code review, first-principles review, and UltraQA docs blockers resolved; `origin/main` integration is now represented by follow-up clean baseline `b14165c0` | residual risk moves to P2 only |
 
 ## Decision log
 
@@ -141,8 +142,8 @@ live process owner: root
 - 2026-07-09: the confirmed RED log records only the expected missing owner module assertion. Implementation is complete; root retains every GREEN test, checker, selector, dist builder, review, commit, and full-core decision.
 - 2026-07-09: review found one executable-consumption gap in the approved P1.8 test spec. The existing P54 inventory now compiles the actual `handleClick` source with a minimal injected harness and traces canonical empty, typed blank-id clear, special selection, water admission, land hydration, and land dev-toggle outcomes from returned owner values.
 - 2026-07-09: the executable harness and its architecture-checker anchors passed on root rerun; P1.8 remains `in-progress` only for atomic commit, clean-HEAD gates, and closeout.
-- 2026-07-10: P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` passed trailer parsing, clean-head drift, clean-head `verify:core` 58/58, and committed selector zero unmatched. P1 Closeout starts next.
+- 2026-07-10: P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` passed trailer parsing, clean-head drift, clean-head `verify:core` 58/58, and committed selector zero unmatched. P1 Closeout completed, remote integration succeeded, and the isolated P1 worktree was cleaned.
 
 ## Next action
 
-Root verifies the final remote hash, then removes the isolated worktree after preserving branch and commit hashes.
+P2 starts in `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.
