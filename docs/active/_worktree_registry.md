@@ -29,7 +29,7 @@ Current rows reflect the real continuation worktree. The dirty parent checkout r
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.8 functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint pending | branch `origin/main`; base/merge-base `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is six commits ahead | overall `in-progress`; P1.5/P1.6 `green`; P1.7 complete; P1.8 complete; Closeout pending | Hot files: `js/core/map_renderer.js`, new pure owner, owner/P54/Python/metadata/core-runner/scenario-chunk tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, P54 and phase/control docs. Protected surfaces remain clean: runtime context, public facade, state allowlist, README, UI/CSS/data. | P1.8 RED confirmed; focused owner/P54/Python/metadata/core-runner all green; shared static gates green; actual selector 19 / 187 / 6 / zero unmatched; `verify:pages-dist` green; clean-head `verify:dist-drift` green; first clean-core found stale scenario dev-selection contract; focused scenario rerun green; clean-head core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three reviews clear. | Red for `map_renderer.js`; yellow for shared click/scenario tests/checker/package/metadata/docs/dist; green for protected surfaces and parent archive/lessons WIP. | Root records evidence checkpoint, runs P1 Closeout, integration, push, and cleanup. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.8 functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | branch `origin/main`; base/merge-base `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is seven commits ahead | overall `in-progress`; P1.5/P1.6 `green`; P1.7 complete; P1.8 complete; Closeout pending | Hot files: `js/core/map_renderer.js`, new pure owner, owner/P54/Python/metadata/core-runner/scenario-chunk tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, P54 and phase/control docs. Protected surfaces remain clean: runtime context, public facade, state allowlist, README, UI/CSS/data. | P1.8 RED confirmed; focused owner/P54/Python/metadata/core-runner all green; shared static gates green; actual selector 19 / 187 / 6 / zero unmatched; `verify:pages-dist` green; clean-head `verify:dist-drift` green; first clean-core found stale scenario dev-selection contract; focused scenario rerun green; clean-head core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three reviews clear. | Red for `map_renderer.js`; yellow for shared click/scenario tests/checker/package/metadata/docs/dist; green for protected surfaces and parent archive/lessons WIP. | Root runs P1 Closeout, integration, push, and cleanup. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
@@ -39,7 +39,7 @@ Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-2
 
 Goal: execute the approved linear P1.5 fresh gate, P1.6 narrow hit/hover receiver, P1.7 canonical click preflight, P1.8 atomic pure owner, and P1 Closeout while preserving effect ownership and behavior.
 
-Current uncommitted P1.8 changed files are the new pure owner, `map_renderer.js` delegation, owner/P54/Python/metadata/core-runner tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, original P54 plus new P1.8 phase record, the three task documents, and this registry. Runtime context, public facade, state-write allowlist, dependencies, README, UI/CSS/data, and scenario data remain unchanged in this implementation slice.
+Current P1.8 changed files are the new pure owner, `map_renderer.js` delegation, owner/P54/Python/metadata/core-runner tests, architecture checker, package/verification metadata, generated Pages mirrors/manifest, original P54 plus new P1.8 phase record, the three task documents, and this registry. Runtime context, public facade, state-write allowlist, dependencies, README, UI/CSS/data, and scenario data remain unchanged in this implementation slice.
 
 Validation truth: P1.7 retains its accepted evidence through checkpoint `f355546c`. P1.8 pre-edit selection reported 19 files / 186 commands / 6 main-thread commands with only the new phase record unmatched. Root confirmed the expected TDD RED at `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-8-owner-red.log`. Focused tests, shared gates, actual selector, Pages generation, `verify:pages-dist`, clean-head `verify:dist-drift`, diff check, focused scenario rerun, clean-head core, committed selector, and three independent reviews are green.
 
@@ -51,9 +51,9 @@ Recommended integration: keep the branch on the same linear ancestry; root compl
 
 ## Scenario Forge P1.8 Pure Click-Selection Decision Owner 2026-07-09
 
-Status: `in-progress`; implementation and deterministic root-owned verification complete. Current HEAD is P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 has no commit yet.
+Status: `in-progress`; implementation and deterministic root-owned verification complete. Current HEAD is P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`.
 
-Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; initial base and current `origin/main` are `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is five commits ahead with that commit as merge-base.
+Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; initial base and current `origin/main` are `a8f71822d705fcd3b26c32db1abd417b41264eb0`; HEAD is seven commits ahead with that commit as merge-base.
 
 What changed:
 
@@ -71,7 +71,7 @@ Changed files by group:
 - Documentation: original P54 record, new P1.8 phase record, `renderer-runtime-context-p1-remaining-20260709/{plan,context,task}.md`, and this registry.
 - Temporary/generated: the implementation executor wrote no `.runtime` artifact and changed no `dist/**` path. Root owns the generated owner mirror, renderer mirror, and Pages manifest. Source-boundary guards exclude those expected generated paths; canonical Pages checks own their parity and drift.
 
-Diff/commit/divergence: P1.8 remains uncommitted because root owns the atomic verified Lore commit. The diff is linear over `f355546c`; exact final stat belongs to the root checkpoint after canonical Pages generation. Branch ancestry is five commits ahead and zero behind current `origin/main@a8f71822`.
+Diff/commit/divergence: P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` plus evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` sit linearly over P1.7. Branch ancestry is seven commits ahead and zero behind current `origin/main@a8f71822`.
 
 Overlap analysis:
 
@@ -83,7 +83,7 @@ Validation evidence: pre-edit selector 19 files / 186 commands / 6 main-thread c
 
 Validation evidence: owner behavior 9/9; executable P54 inventory 10/10; Python boundary 6/6; metadata 13/13; core runner 8/8; architecture PASS; state-write allowlist PASS; test import graph PASS; supervisor contracts 12/12 plus routing 4/4; supervisor plan 15/15; `verify:core:list` 58 commands; actual selector 19 / 187 / 6 / zero unmatched; canonical Pages builder and `verify:pages-dist` exit 0; clean-head `verify:dist-drift` exit 0; focused scenario-chunk rerun exit 0 after updating its P1.8 dev-selection decision assertion; `git diff --check` exit 0; three independent reviews clear. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes.
 
-Recommended next action: root records the P1.8 evidence checkpoint, then runs P1 Closeout. Integration and cleanup stay deferred until Closeout passes.
+Recommended next action: root runs P1 Closeout, then integration, push, and cleanup.
 
 ## Scenario Forge P1.7 Click-Selection Transaction Preflight 2026-07-09
 

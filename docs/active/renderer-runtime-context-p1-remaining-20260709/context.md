@@ -35,11 +35,11 @@ live process owner: root
 ## Current phase
 
 - phase: P1.8 atomic pure click-selection owner complete; P1 Closeout next
-- state: overall worktree `in-progress`; P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence checkpoint pending
+- state: overall worktree `in-progress`; P1.8 functional commit `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`
 - phase acceptance: P1.5 accepted `green` from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`
 - deterministic gate: root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`
 - evidence: `.runtime/reports/generated/verify-core.json` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`
-- clean-state proof: the worktree returned clean after P1.7 evidence checkpoint `f355546c281da1e51cbbbe651fb96a55801267cc`; current dirty paths are the delegated P1.8 owner/root/tests/tooling/package/metadata/documentation implementation only
+- clean-state proof: the worktree returned clean after P1.8 evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5`; current dirty paths are the closeout truth-sync docs only
 - parity proof: committed source/dist Git blobs match for `map_renderer.js` at `24d9718b816c1a4a7f912980d34755eab9620718` and `renderer_runtime_context.js` at `27afb4005a05e8a8b8b6d7fab52096dad9e781e2`; `core.autocrlf` explains checkout raw SHA differences
 - P1.6 focused evidence: nine focused test groups passed; the new named Node suite passed 4/4 and the named Python boundary passed 5/5
 - P1.6 shared evidence: architecture, state-write allowlist, test-import graph, supervisor contracts, and supervisor plan all exited 0
@@ -97,7 +97,7 @@ live process owner: root
 | P1.6 implementation | `/root/ultragoal_runtime` | code/tests/metadata/tooling/dist committed; phase `green` and ready for integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` |
 | static review | three delegated lanes | P1.6 `APPROVE` from all three lanes | static source/test/SF-ATS review reports |
 | P1.7 implementation | root | complete; evidence checkpoint committed | functional `5f78f3a5`; evidence `f355546c`; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; three `APPROVE / CLEAR` reviews |
-| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | complete; evidence checkpoint pending | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear |
+| P1.8 implementation | `/root/p1_7_executor` plus root verification owner | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | pre-edit 19 / 186 / 6 with one new-doc gap; RED log `p1-8-owner-red.log`; focused/shared gates green; actual selector 19 / 187 / 6 / zero unmatched; Pages dist green; drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear |
 
 ## Phase evidence
 
@@ -107,7 +107,7 @@ live process owner: root
 | P1.5 / G002 | green | baseline `a8f71822`; evidence `3d4c8d12` | `verify:core` 53/53 exit 0; Pages/dist green; blob parity; static `APPROVE`; route gaps 0 | main-thread and visual lanes remain explicit unrun lanes |
 | P1.6 | `green`; complete; ready-for-integration | `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` | narrow capsule; Node 4/4; Python 5/5; nine focused groups green; five shared gates exit 0; final branch-history selector `unmatchedChangedFiles=[]`; three static `APPROVE`; final clean core 55/55; committed source/dist blob parity | explicit unrun lanes and future upstream movement |
 | P1.7 | complete; ready-for-integration | functional `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence `f355546c281da1e51cbbbe651fb96a55801267cc` | trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews | explicit unrun lanes recorded |
-| P1.8 | complete; evidence checkpoint pending | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | P1 Closeout pending |
+| P1.8 | complete; evidence checkpoint `be9d722748d590a7fa9063d6e69f403b4cb259c5` | functional `5a8deeebcccbc3d5a4f06e83f9a33c69baa70f16`; evidence `be9d722748d590a7fa9063d6e69f403b4cb259c5` | TDD RED confirmed; focused/shared gates green; actual selector zero unmatched; Pages dist green; clean drift green; scenario contract rerun green; clean core 58/58; committed selector 29 / 188 / 7 / zero unmatched; three final reviews clear | P1 Closeout pending |
 | Closeout | pending | pending | pending | integration/cleanup |
 
 ## Decision log
