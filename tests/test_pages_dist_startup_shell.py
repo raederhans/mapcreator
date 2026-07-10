@@ -2320,6 +2320,14 @@ class PagesDistStartupShellTest(unittest.TestCase):
             finally:
                 build_pages_dist.APP_DIST_ROOT = previous_app_dist_root
 
+    def test_pages_dist_binary_writer_recreates_missing_parent_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target_path = Path(tmp_dir) / "dist" / "app" / "data" / "scenarios" / "sample" / "startup.bundle.en.json"
+
+            build_pages_dist.write_bytes_with_parent(target_path, b'{"ok":true}')
+
+            self.assertEqual(target_path.read_bytes(), b'{"ok":true}')
+
     def test_pages_scenario_url_probe_rejects_empty_manifest_url(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             previous_app_dist_root = build_pages_dist.APP_DIST_ROOT

@@ -164,6 +164,19 @@ def write_text_lf(path: Path, text: str) -> None:
             time.sleep(0.15 * (attempt + 1))
 
 
+def write_bytes_with_parent(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    for attempt in range(5):
+        try:
+            path.write_bytes(data)
+            return
+        except OSError:
+            if attempt >= 4:
+                raise
+            path.parent.mkdir(parents=True, exist_ok=True)
+            time.sleep(0.15 * (attempt + 1))
+
+
 def should_normalize_dist_text_file_lf(path: Path) -> bool:
     try:
         relative_path = path.resolve().relative_to(DIST_ROOT.resolve())
@@ -437,10 +450,10 @@ def strip_scenario_publish_audit_urls(scenarios_dir: Path) -> None:
             continue
         if strip_unpublished_manifest_urls(manifest_subset):
             bundle_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-            bundle_path.write_bytes(bundle_bytes)
+            write_bytes_with_parent(bundle_path, bundle_bytes)
             gzip_path = bundle_path.with_suffix(bundle_path.suffix + ".gz")
             if gzip_path.is_file():
-                gzip_path.write_bytes(gzip.compress(bundle_bytes, mtime=0))
+                write_bytes_with_parent(gzip_path, gzip.compress(bundle_bytes, mtime=0))
 
 
 def _dist_path_for_app_url(url: str) -> Path:
