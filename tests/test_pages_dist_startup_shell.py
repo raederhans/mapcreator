@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import unittest
@@ -2329,6 +2330,9 @@ class PagesDistStartupShellTest(unittest.TestCase):
             self.assertEqual(target_path.read_bytes(), b'{"ok":true}')
 
     def test_pages_dist_path_guard_treats_windows_extended_prefix_as_same_root(self) -> None:
+        if os.name != "nt":
+            self.skipTest("Windows extended-path normalization is only active on Windows.")
+
         root_path = Path("C:/repo/dist/app")
         normal_path = root_path / "data" / "scenarios" / "sample" / "chunks" / "political.detail.country.swe.json"
         extended_path = Path("\\\\?\\C:\\repo\\dist\\app\\data\\scenarios\\sample\\chunks\\political.detail.country.swe.json")

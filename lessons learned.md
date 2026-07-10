@@ -14,6 +14,9 @@
 - UI 需要“保存后立即可见”时，显式串联 `materialize + publish`。
 - 编辑器输出、bundle publish、startup supporting file publish 要分清边界。
 
+### Windows 发布包先缩短路径再上传
+- Vercel CLI 在 Windows 长 worktree 路径上传大型 `dist/` 时，先把发布产物镜像到 `%TEMP%` 下短路径，并使用 archive 上传；发布元数据用最终 commit sha 对齐。
+
 ### 多 scenario 能力必须整链 scenario-aware
 - builder 一旦支持多个 scenario，默认输入、域规则、display 文案、bookmark、authoring input contract 都要一起切换。
 - startup supporting file 进入 scenario 链路后，要直接正式化到 checkpoint artifact 和 scenario publish contract。
