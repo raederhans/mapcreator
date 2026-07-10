@@ -1,19 +1,23 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.5 interaction read model completion and integration handoff
+Last updated: 2026-07-09 P1.5 fresh acceptance green; P1.6 pending next
 
 ## Integration Owner
 
 - Owner: main integration owner.
-- Default-main baseline for P1.5 is `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`.
-- P1.5 started in an isolated clean checkout with `main...origin/main` and no unrelated WIP.
+- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` with 19 unrelated `docs/archive/**` deletions and modified `lessons learned.md`, preserved unchanged.
+- Remote P1.5 acceptance base and continuation HEAD are `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0` in an isolated clean checkout.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- Verification owner: the main Codex thread completed P1.5 focused checks, Pages mirror sync, dist drift, selector and supervisor checks, and the 53-command default `verify:core` attempt. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit not-run lanes. The final Pages command has an external unchanged-asset reproducibility blocker recorded below.
+- Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
+- Current continuation owner: the root Codex thread owns all P1.5 acceptance reruns and later P1.6-P1.8/Closeout live verification. Other agents are static-only while a live process exists.
+- Current continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`, branch `codex/renderer-runtime-context-p1-remaining-20260709`, base `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
+- live process owner: root
+- Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
 
-1. Commit the audited P1.5 delivery and push it to `origin/main`, preserving the recorded external Landing asset reproducibility evidence.
-2. Start P1.6 only from the integrated P1.5 baseline in a separate auditable stage.
+1. P1.5 acceptance from clean `a8f71822` is complete with `green` status and 53/53 full-core commands.
+2. Create the independent G001/G002 Lore evidence commit, then complete P1.6, P1.7, P1.8, and P1 Closeout serially in the registered continuation worktree, with one Lore commit boundary per phase.
 3. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection effects, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
 4. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
@@ -21,15 +25,33 @@ Last updated: 2026-07-09 P1.5 interaction read model completion and integration 
 
 ## Current Worktrees
 
-Current rows describe the isolated P1.5 delivery checkout. The earlier parent WIP remains preserved on its recovery branch.
+Current rows reflect the real continuation worktree. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Isolated Codex checkout on `main` | P1.5 interaction read model from `db8bd6c1` | base `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` | implementation and scoped verification complete; ready to integrate | Hot files: `map_renderer.js`, runtime context, interaction/receiver/boundary tests, verification metadata, package scripts, active docs, and generated Pages mirrors. Public facade, owner modules, UI, CSS, scenario data, draw/pass logic, and click-selection effects are unchanged. | Focused suites, Pages mirror sync, dist drift, selector, supervisor, import graph, and 52/53 default core commands are green. The final Pages command is blocked only by unchanged Landing asset byte reproducibility under the locked geospatial stack. | Yellow for later interaction-context, hit/hover receiver, verification-routing, and Pages-mirror edits. | Create one functional commit, push to `origin/main`, then stop. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; HEAD `a8f71822d705fcd3b26c32db1abd417b41264eb0` | branch `origin/main`; base `a8f71822d705fcd3b26c32db1abd417b41264eb0` | `in-progress`: G001 complete; P1.5/G002 `green`; P1.6 pending next | Current evidence docs: `docs/active/renderer-runtime-context-p1-remaining-20260709/{plan.md,context.md,task.md}` plus registry. Future hotspots: `js/core/map_renderer.js`, runtime context, click owner, P54/Python tests, architecture checker, package/metadata/routes, Pages mirrors, registry. | Fresh root-owned `verify:core` exited 0 with 53/53 commands; report/log recorded; Pages/dist green; committed source/dist blob pairs match; static audit `APPROVE`; selector route gaps 0. Browser/dev-server/Playwright and `verify:core:main-thread` are explicit unrun lanes. Worktree returned clean after verification; current evidence docs await a Lore commit. | Red for direct shared-hotspot overlap; yellow for semantic interaction/click/routing overlap; green against parent archive/lessons WIP. | Create G001/G002 evidence commit → P1.6 → P1.7 → P1.8 → Closeout/integration. |
+
+## Scenario Forge P1 Remaining Renderer Context 2026-07-09
+
+Status: `in-progress`; G001 integration setup complete; P1.5/G002 accepted `green`; P1.6 pending next.
+
+Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
+
+Goal: execute the approved linear P1.5 fresh gate, P1.6 narrow hit/hover receiver, P1.7 canonical click preflight, P1.8 atomic pure owner, and P1 Closeout while preserving effect ownership and behavior.
+
+Current changed files are the three task documents and this registry. Future shared hotspots are renderer/runtime context, package/metadata/routes, architecture/P54 contracts, Pages mirrors, and registry.
+
+Validation truth: G001 used static Git/diff/required-field checks. G002 used a fresh root-owned clean full-core run that passed 53/53, including selector-routed commands, Pages, and dist drift. Browser, dev server, Playwright, and `verify:core:main-thread` remain explicit unrun lanes.
+
+Dependency preparation: the ignored `node_modules` Junction targets `C:\Users\raede\Desktop\dev\mapcreator\node_modules`; `.gitignore:18` is `node_modules/`; the ignored log directory `.runtime/tests/renderer-runtime-context-p1-remaining-20260709` is created. Both are removed with the worktree during verified cleanup.
+
+P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
+
+Recommended integration: keep one linear ancestry; checkpoint every phase with a Lore commit and registry update; recheck origin before integration; push once after final review; clean only after remote and recovery truth are recorded.
 
 ## Scenario Forge P1.5 Interaction Read Model Migration 2026-07-09
 
-Status: implementation and scoped verification complete; ready to integrate with the external Landing asset reproducibility blocker recorded.
+Status: remote implementation accepted `green` by the continuation gate; fresh clean full core passed 53/53.
 
 Base: `origin/main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`.
 
@@ -43,7 +65,9 @@ Focused validation passed: foundation 8/8, receiver 10/10, interaction 6/6, zoom
 
 Route status: the new Node and Python commands are child-safe renderer-owner routes; zoom lifecycle now joins event binding in the default renderer-owner plan. The final selector reported 14 changed files, 183 recommended commands, 0 unmatched files, and 6 main-thread commands.
 
-Final deterministic evidence: source/dist mirrors are byte-identical; base-environment `verify:pages-dist` passed with 4 optional geospatial builder skips; `verify:dist-drift`, selector schema, import graph, supervisor contracts, and supervisor plan passed. The 53-command default `verify:core` execution passed its first 52 commands. Its final Pages command exposed four byte-comparison failures in unchanged Landing hero assets under the exact locked geospatial stack. Metadata differences are floating-point tails from `5.55e-17` to `2.27e-13`; blank and TNO SVGs are byte-identical, while the two HOI4 SVGs retain equal element counts with limited path ordering or floating-point geometry differences. Those assets, builders, and source data are outside and absent from the staged P1.5 patch.
+Fresh acceptance evidence: from clean `HEAD=a8f71822d705fcd3b26c32db1abd417b41264eb0`, root-owned `npm run verify:core` exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. The report is `.runtime/reports/generated/verify-core.json`; the complete log is `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-5-full-core-original.log`; the worktree returned clean after execution. Committed source/dist Git blobs match: `map_renderer.js` is `24d9718b816c1a4a7f912980d34755eab9620718`, and `renderer_runtime_context.js` is `27afb4005a05e8a8b8b6d7fab52096dad9e781e2`. Windows `core.autocrlf` checkout conversion explains raw-file SHA differences. Independent static audit returned `APPROVE`; effects, handlers, timing, scheduling, metrics, and click selection remain root-owned. Selector route gaps are zero.
+
+Historical deterministic evidence: source/dist mirrors were byte-identical; base-environment `verify:pages-dist` passed with 4 optional geospatial builder skips; `verify:dist-drift`, selector schema, import graph, supervisor contracts, and supervisor plan passed. The earlier 53-command default `verify:core` execution passed its first 52 commands. Its final Pages command exposed four byte-comparison failures in unchanged Landing hero assets under the exact locked geospatial stack. Metadata differences are floating-point tails from `5.55e-17` to `2.27e-13`; blank and TNO SVGs were byte-identical, while the two HOI4 SVGs retained equal element counts with limited path ordering or floating-point geometry differences. Those assets, builders, and source data were outside and absent from the staged P1.5 patch. The fresh 53/53 acceptance result supersedes this historical disposition.
 
 Not-tested lanes: `verify:core:main-thread`, browser, dev-server, and Playwright.
 
