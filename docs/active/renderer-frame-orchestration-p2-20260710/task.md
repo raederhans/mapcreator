@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`, historical focused browser evidence is 2/5, and the production disclosure contract is now green through source/E2E/contract, deterministic, static review, canonical Pages generation, dist parity, post-build boundary, and adaptive evidence. Functional commit, clean-head `verify:dist-drift` / `verify:core`, browser baseline, main-thread baseline, perf baseline, and P2.1 entry remain pending.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`, whose Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`. Current work is a narrow Windows perf readiness fix for the `py.exe` / `python.exe` PID mismatch before perf measurement. Fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, `perf:gate`, and P2.1 entry remain pending.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -42,18 +42,29 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Post-build sidebar/support boundary suite is green 19/19.
 - [x] Adaptive result is `changedFiles=8`, `recommendedCommands=61`, `mainThreadSerialVerification=53`, `unmatchedChangedFiles=0`.
 - Operational note: the Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript.
-- [ ] Create the functional commit for the production disclosure race repair; this remains the gate before clean-head `verify:dist-drift` and `verify:core`.
-- [ ] After the functional commit, run clean-head `verify:dist-drift` and clean-head `verify:core`.
-- [ ] Record browser baseline.
-- [ ] Record main-thread baseline.
-- [ ] Record perf baseline.
+- [x] Create the functional commit for the production disclosure race repair: `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`.
+- [ ] Record fresh clean-head `verify:core` and `verify:core:main-thread` after the Windows readiness fix is committed and one live-process owner runs them serially.
+- [ ] Record browser regressions after the Windows readiness fix is committed and one live-process owner runs them serially.
+- [ ] Record `perf:gate` after the Windows readiness fix is committed and one live-process owner runs it serially.
 - [ ] Reach green baseline before P2.1.
+
+## Pre-P2 Windows perf readiness fix
+
+- [x] Confirm clean executor baseline `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`.
+- [x] Reproduce the contract gap with TDD: `npm run verify:perf-gate-contract` exited 1 after extending `tests/test_perf_gate_contract.py`; expected red was missing `import { spawn, spawnSync } from "node:child_process";` while runner still spawned raw `py -3 tools/dev_server.py`.
+- [x] Keep strict readiness contracts unchanged: PID equality, cwd match, live process probe, external server reuse, metadata schema, cleanup API, timeout, product, renderer, and dist all stay as-is.
+- [x] Minimal implementation decision: on Windows without setup-python env, run `spawnSync("py", ["-3", "-c", "import sys; print(sys.executable)"], { cwd: REPO_ROOT, encoding: "utf8", windowsHide: true })`; fail immediately on probe error, nonzero/null status, or blank stdout with `[perf-baseline]` plus truncated stderr; then spawn `tools/dev_server.py` through the resolved Python executable.
+- [x] Focused green: `node --check tools/perf/run_baseline.mjs` exit 0; `npm run verify:perf-gate-contract` exit 0 with 22 tests.
+- [x] Run final `git diff --check`: exit 0, with Windows LF-to-CRLF working-copy warnings only for the two edited code/test files.
+- [x] Run adaptive selector dry-run for the five changed files: exit 0; `changedFiles=5`; `unmatchedChangedFiles=[]`; recommended child-safe checks plus one deferred main-thread `perf:gate`.
+- [x] Run additional deterministic selector recommendations: `node tools/select_verification_targets.mjs --check` exit 0 with 282 routes; `npm run verify:supervisor-contracts` exit 0 with schemas 40 domains and Node 12/12 + 4/4; `npm run test:node:perf-probe-snapshot-behavior` exit 0 with 5/5; `npm run test:node:polyline-simplification-benchmark` exit 0 with 4/4; `npm run test:node:renderer-draw-canvas-orchestration-inventory` exit 0 with 6/6.
+- [x] Leave changes unstaged and uncommitted for integration.
 
 ## Clean baseline
 
-- [ ] Root assigns one live-process owner before any repaired browser/main-thread/perf baseline run.
-- [ ] Run `verify:core:main-thread`, physical-layer regression, scenario resilience, and `perf:gate` under one live-process owner.
-- [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner.
+- [ ] Root assigns one live-process owner before any fresh clean-head core/main-thread/browser/perf baseline run.
+- [ ] Run fresh clean-head `verify:core`, `verify:core:main-thread`, physical-layer regression, scenario resilience, and `perf:gate` under one live-process owner after the Windows readiness fix is committed.
+- [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner after the Windows readiness fix is committed.
 - [ ] Record browser baseline.
 - [ ] Record perf baseline.
 

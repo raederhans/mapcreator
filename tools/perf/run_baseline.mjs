@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -166,6 +166,10 @@ function truncateDiagnosticText(value, maxLength = 2_000) {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...<truncated>` : text;
 }
 
+function truncateStderr(value) {
+  return truncateDiagnosticText(value);
+}
+
 function sanitizeDiagnosticPathPart(value) {
   return String(value || "")
     .trim()
@@ -217,6 +221,32 @@ function shouldReuseActiveServer() {
   return /^(1|true|yes|on)$/i.test(String(process.env.PERF_REUSE_ACTIVE_SERVER || "").trim());
 }
 
+function formatWindowsPythonProbeError(reason, stderr) {
+  const stderrText = String(stderr || "").trim();
+  return stderrText
+    ? `[perf-baseline] Unable to resolve Windows Python executable: ${reason}\nstderr:\n${stderrText}`
+    : `[perf-baseline] Unable to resolve Windows Python executable: ${reason}`;
+}
+
+function resolveWindowsPythonExecutable() {
+  const pythonProbe = spawnSync("py", ["-3", "-c", "import sys; print(sys.executable)"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (pythonProbe.error) {
+    throw new Error(formatWindowsPythonProbeError(String(pythonProbe.error.message || pythonProbe.error), truncateStderr(pythonProbe.stderr)));
+  }
+  if (pythonProbe.status === null || pythonProbe.status !== 0) {
+    throw new Error(formatWindowsPythonProbeError(`py probe exited with status ${pythonProbe.status}`, truncateStderr(pythonProbe.stderr)));
+  }
+  const pythonExecutable = String(pythonProbe.stdout || "").trim();
+  if (!pythonExecutable) {
+    throw new Error(formatWindowsPythonProbeError("py probe returned a blank executable path", truncateStderr(pythonProbe.stderr)));
+  }
+  return pythonExecutable;
+}
+
 function resolveDevServerPythonCommand() {
   const setupPythonRoot = process.env.pythonLocation || process.env.Python_ROOT_DIR || process.env.Python3_ROOT_DIR;
   if (setupPythonRoot) {
@@ -226,7 +256,8 @@ function resolveDevServerPythonCommand() {
     };
   }
   if (process.platform === "win32") {
-    return { command: "py", args: ["-3", "tools/dev_server.py"] };
+    const pythonExecutable = resolveWindowsPythonExecutable();
+    return { command: pythonExecutable, args: ["tools/dev_server.py"] };
   }
   return { command: "python3", args: ["tools/dev_server.py"] };
 }

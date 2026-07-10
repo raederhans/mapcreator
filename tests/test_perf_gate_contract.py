@@ -90,9 +90,26 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("workloadIdentity: buildReportWorkloadIdentity(options, measurement)", script)
         self.assertIn("function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {})", script)
         self.assertIn("function resolveDevServerPythonCommand()", script)
+        self.assertIn('import { spawn, spawnSync } from "node:child_process";', script)
         self.assertIn("process.env.pythonLocation || process.env.Python_ROOT_DIR || process.env.Python3_ROOT_DIR", script)
         self.assertIn('path.join(setupPythonRoot, process.platform === "win32" ? "python.exe" : "bin/python")', script)
-        self.assertIn('return { command: "py", args: ["-3", "tools/dev_server.py"] };', script)
+        self.assertIn('const pythonExecutable = resolveWindowsPythonExecutable();', script)
+        self.assertIn('return { command: pythonExecutable, args: ["tools/dev_server.py"] };', script)
+        self.assertIn('return { command: "python3", args: ["tools/dev_server.py"] };', script)
+        self.assertIn(
+            'const pythonProbe = spawnSync("py", ["-3", "-c", "import sys; print(sys.executable)"], {\n'
+            "    cwd: REPO_ROOT,\n"
+            '    encoding: "utf8",\n'
+            "    windowsHide: true,\n"
+            "  });",
+            script,
+        )
+        self.assertIn("pythonProbe.error", script)
+        self.assertIn("pythonProbe.status === null", script)
+        self.assertIn("pythonProbe.status !== 0", script)
+        self.assertIn("!pythonExecutable", script)
+        self.assertIn("truncateStderr(pythonProbe.stderr)", script)
+        self.assertNotIn('return { command: "py", args: ["-3", "tools/dev_server.py"] };', script)
         self.assertIn("expectedPid = null", script)
         self.assertIn("const metadataPid = Number(metadata?.pid);", script)
         self.assertIn("isProcessIdRunning(metadataPid)", script)
