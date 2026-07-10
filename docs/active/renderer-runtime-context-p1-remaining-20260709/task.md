@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 is `green`, complete, and ready for integration at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`. P1.7 is next.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is `ready-for-commit` with final deterministic evidence and reviews green.
 
 ## Integration setup
 
@@ -46,10 +46,19 @@ Acceptance: receiver allowlist and negative effect boundary pass; behavior is st
 
 ## P1.7 click-selection preflight
 
-- [ ] Extend the sole P54 inventory and add the canonical Python boundary.
-- [ ] Freeze ordered anchors and retained effect ownership with production renderer unchanged.
-- [ ] Run named entries/shared gates; record route gaps and remaining risk.
+- [x] Run the root-owned pre-edit SF-ATS dry-run: exit 0, 183 recommended commands, one unmatched new phase document; retain `.runtime/reports/generated/p1-7-pre-edit-adaptive-selection.{json,md}` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-pre-edit-selector.log`.
+- [x] Extend the sole P54 inventory and add the canonical Python boundary.
+- [x] Freeze the complete pre-hit guard spine, explicit composite boundary categories, strict local return counts, all required branch-local order slices, helper transaction order, future closed seam, and retained root effect ownership with production/generated scope empty.
+- [x] Replace the immutable-path check with the staged-and-untracked-aware `git status --porcelain=v1 --untracked-files=all -- js dist tools/eslint-rules/state-writer-allowlist.json` guard.
+- [x] Register the existing Node command and new Python command through package scripts, verification metadata, route registry, and default `renderer-owner` group; include the new phase document in both `sourceRefs`.
+- [x] Record the initial pre-rework root evidence: Node 8/8, Python 6/6, metadata 13/13, core runner 8/8; architecture/state-write/import-graph/supervisor-contracts/supervisor-plan exit 0; actual selector 11 files, 184 commands, 5 main-thread commands, `unmatchedChangedFiles=[]`.
+- [x] Preserve the first static review `BLOCK`: missing HGO/facility branch topology, generic one-line return-expression coverage, and exact frozen-modifier/target-kind locks.
+- [x] Record post-first-rework fresh evidence: Node 8/8, Python 6/6, metadata 13/13, core runner 8/8; five shared gates exit 0; selector 11 files / 184 commands / 5 main-thread / `unmatchedChangedFiles=[]`; production guard empty; route registry 279; core list 57.
+- [x] Preserve the second static review `BLOCK` and fix: mask multiline strings/comments in the return counter and add a dedicated fixture subtest.
+- [x] Record final root evidence: Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates exit 0, final selector 11 / 184 / 5 / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0.
+- [x] Complete the final three-party static review: architecture, test-engineer, and code/evidence reviewer each returned `APPROVE / Architectural Status: CLEAR`.
 - [ ] Create independent Lore commit and registry checkpoint.
+- [ ] Run the clean-HEAD full core and record explicit unrun lanes.
 
 Acceptance: canonical files and routes reach default core; ordered inventory and full core pass.
 
@@ -72,16 +81,15 @@ Acceptance: one consistent commit contains owner, delegation, assertions, and be
 
 ## Delivery package fields
 
-- What changed: `interaction.hitHover` now provides the exact frozen readonly capsule; hit-canvas scheduling and hover owners consume its reads while root-owned timing, event, scheduling, metric, write, UI, and DOM capabilities retain their current injection paths.
-- Core files: `js/core/map_renderer.js`, `js/core/map_renderer/renderer_runtime_context.js`; matching mirrors under `dist/app/js/core/`; canonical size inventory in `dist/pages-dist-manifest.json`.
-- Test files: new `tests/renderer_runtime_context_hit_hover_behavior.test.mjs` and `tests/test_map_renderer_hit_hover_context_boundary_contract.py`; updated interaction, hit-canvas inventory, hover inventory, metadata, and verify-core runner tests.
-- Metadata/package/tooling: `tools/verification/verification_domains.mjs` and `package.json` register `test:node:renderer-runtime-context-hit-hover` plus `test:python:map-renderer-hit-hover-context-boundary` in `renderer-owner`; `tools/check_architecture_boundaries.mjs` tracks the updated P47/P48 inventory titles.
-- Docs: this task folder, `docs/active/renderer-runtime-context-hit-hover-p1-6-20260709.md`, and `docs/active/_worktree_registry.md`.
-- Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; this implementation agent wrote no runtime artifact.
-- Diff/commit/divergence: P1.6 is committed as `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` on the linear branch over `origin/main@a8f71822`; the worktree returned clean after the final full-core rerun and before evidence-document edits.
-- Conflict analysis: red for `map_renderer.js`, runtime context, package, metadata, Pages mirrors, and registry; yellow for interaction/hit/hover tests; green against parent archive/lessons WIP.
-- Validation: P1.5 evidence remains 53/53 green. P1.6 named Node passed 4/4, named Python passed 5/5, all nine focused groups passed, five shared gates exited 0, the final branch-history selector exited 0 with `unmatchedChangedFiles=[]`, three static reviews returned `APPROVE`, and the final clean-HEAD full core passed 55/55 with exit 0.
-- Process deviation: the pre-edit selector has no durable evidence. The final branch-history selector artifacts provide acceptance routing proof without retroactive execution credit.
-- Explicit unrun P1.6 lanes: `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo.
-- Remaining risks: browser-specific visual behavior and main-thread-only coverage remain represented by the explicit unrun lanes; deterministic P1.6 acceptance risk is closed.
-- Recommended next step: advance to P1.7 click-selection preflight on the same linear branch.
+- What changed: P1.7 strengthens the canonical P54 inventory with one global branch spine, branch-local transaction order, both fill-helper order contracts, and a production-zero guard; a new Python boundary locks composition-root ownership and future-owner absence.
+- Core files: empty. `js/**`, `dist/**`, `tools/eslint-rules/state-writer-allowlist.json`, the original P54 preflight record, and `tools/check_architecture_boundaries.mjs` retain their accepted P1.6 contents.
+- Test files: `tests/renderer_click_selection_transaction_inventory_boundary.test.mjs`, new `tests/test_map_renderer_click_selection_transaction_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, and `tests/verify_core_runner_behavior.test.mjs`.
+- Metadata/package: `tools/verification/verification_domains.mjs` and `package.json` register the existing Node inventory and new canonical Python boundary as child-safe `renderer-owner` default-core leaves.
+- Docs: this task folder, `docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md`, and `docs/active/_worktree_registry.md`.
+- Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; the implementation lane wrote no runtime artifact.
+- Diff/commit/divergence: P1.7 is uncommitted over P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; the branch remains linear over `origin/main@a8f71822`.
+- Conflict analysis: yellow for package/metadata/verification-runner/registry shared surfaces; green for production renderer, runtime context, Pages mirrors, UI/CSS/data, architecture checker, state allowlist, and parent archive/lessons WIP.
+- Validation: both historical `BLOCK` verdicts retain their fixes. Final root evidence passed Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates, and the final 11-file / 184-command / 5-main-thread / zero-unmatched selector. Production guard is empty; route schema is 279; core list is 57; diff check exits 0 with `core.autocrlf` warnings only. Final selector evidence is `.runtime/reports/generated/p1-7-final-adaptive-selection.{json,md}` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-final-selector.log`.
+- Explicit pending lanes: Lore functional commit, clean-HEAD full core, phase-commit comparison, evidence checkpoint, `verify:core:main-thread`, browser, dev server, and Playwright.
+- Remaining risks: final review and clean-HEAD acceptance remain open; P1.8 implementation remains outside P1.7.
+- Recommended next step: root creates the Lore functional commit, runs clean-HEAD full core, compares the phase commit, and records the evidence checkpoint before P1.8.

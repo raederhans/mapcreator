@@ -270,3 +270,68 @@ test("renderer runtime context hit hover files route to hit hover owner verifica
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-hit-hover-context-boundary"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:hit-canvas-scheduling-owner-suite"));
 });
+
+test("renderer click selection preflight files route to both canonical boundary commands", () => {
+  const expectedEntries = new Map([
+    [
+      "verify-core:test:node:renderer-click-selection-transaction-inventory",
+      "test:node:renderer-click-selection-transaction-inventory",
+    ],
+    [
+      "verify-core:test:python:map-renderer-click-selection-transaction-boundary",
+      "test:python:map-renderer-click-selection-transaction-boundary",
+    ],
+  ]);
+  for (const [id, commandRef] of expectedEntries) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === id);
+    assert.ok(entry, `${id} should exist in verification metadata`);
+    assert.deepEqual(
+      {
+        commandRef: entry.commandRef,
+        domain: entry.domain,
+        ownerHint: entry.ownerHint,
+        layer: entry.layer,
+        cost: entry.cost,
+        resourceLocks: entry.resourceLocks,
+        executionOwner: entry.executionOwner,
+        ciProfile: entry.ciProfile,
+        verifyCoreDefaultGroup: entry.verifyCoreDefaultGroup,
+        supervisorDomain: entry.supervisorDomain,
+        routeRegistry: entry.routeRegistry,
+      },
+      {
+        commandRef,
+        domain: "renderer-runtime",
+        ownerHint: "renderer-runtime",
+        layer: "contract",
+        cost: "fast",
+        resourceLocks: [],
+        executionOwner: "child-safe",
+        ciProfile: "pr-fast",
+        verifyCoreDefaultGroup: "renderer-owner",
+        supervisorDomain: "renderer-runtime",
+        routeRegistry: true,
+      },
+    );
+    assert.ok(entry.sourceRefs.includes("docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md"));
+  }
+
+  const report = buildRecommendation([
+    "docs/active/_worktree_registry.md",
+    "docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/context.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/plan.md",
+    "docs/active/renderer-runtime-context-p1-remaining-20260709/task.md",
+    "package.json",
+    "tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",
+    "tests/test_map_renderer_click_selection_transaction_boundary_contract.py",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/verify_core_runner_behavior.test.mjs",
+    "tools/verification/verification_domains.mjs",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-click-selection-transaction-inventory"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-click-selection-transaction-boundary"));
+});

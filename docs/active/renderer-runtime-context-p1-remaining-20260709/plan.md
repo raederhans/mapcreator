@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green`, complete, and ready for integration at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`; P1.7 is next
+Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is `ready-for-commit` with final deterministic evidence and reviews green
 
 ## Progress
 
@@ -16,6 +16,14 @@ Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green`, comp
 - The first clean-HEAD `verify:core` attempt passed 54/55 commands. Its only failure was `verify:dist-drift`: the checked-in `dist/pages-dist-manifest.json` still held the old sizes for the two P1.6 Pages mirrors. The canonical builder changed four size fields only.
 - The canonical manifest was amended into the same P1.6 functional commit. A fresh clean-HEAD `npm run verify:core` rerun passed 55/55 with exit 0; the log is `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-6-full-core-rerun.log` and the report is `.runtime/reports/generated/verify-core.json`.
 - The post-rerun worktree returned clean before these evidence documents were edited. Committed source/dist Git blobs match: `map_renderer.js` is `b494fe2d97be761963a7b32493fec40ae4034de3`, `renderer_runtime_context.js` is `f680c25e307a91b819ecdd35d8258ef610a7475a`, and the canonical manifest blob is `075ac209a96c88e26d97effa406b3c546de50ebb`.
+- P1.7 now strengthens the existing P54 Node inventory, adds the canonical Python click-selection composition-root boundary, and registers both commands as child-safe `renderer-owner` leaves. Production and generated file scope is empty.
+- The root-owned P1.7 pre-edit selector exited 0 with 183 recommended commands. Its only unmatched path was the new phase record; both new metadata entries now include that record in `sourceRefs`.
+- The initial pre-rework root matrix recorded Node 8/8, Python 6/6, metadata 13/13, core runner 8/8; architecture/state-write/import-graph/supervisor-contracts/supervisor-plan exit 0; and actual-diff selection for 11 files with 184 recommended commands, 5 main-thread commands, and `unmatchedChangedFiles=[]`.
+- The first static review returned `BLOCK` for missing HGO/facility branch topology, generic one-line return-expression coverage, and exact locks for frozen modifiers plus the output target-kind enum.
+- Post-first-rework root evidence is fresh and green: Node 8/8, Python 6/6, metadata 13/13, core runner 8/8; the five shared gates exit 0; selector 11 files / 184 commands / 5 main-thread / `unmatchedChangedFiles=[]`; production guard empty; route registry 279; core list 57.
+- The second static review returned `BLOCK` for multiline string/comment false positives in the line-only return counter. Root added masking plus a dedicated fixture subtest while retaining the four branch slices and seam locks.
+- Final root evidence is green: Node 9/9, Python 6/6, metadata 13/13, core runner 8/8, five shared gates exit 0, final selector 11 files / 184 commands / 5 main-thread / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0.
+- Architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`. P1.7 is `ready-for-commit`.
 
 Approved sources:
 
@@ -90,6 +98,18 @@ Execution checkpoint:
 - Reuse the sole P54 Node file `tests/renderer_click_selection_transaction_inventory_boundary.test.mjs` through `npm run test:node:renderer-click-selection-transaction-inventory`.
 - Canonical Python layers are: file `tests/test_map_renderer_click_selection_transaction_boundary_contract.py`; package/commandRef `test:python:map-renderer-click-selection-transaction-boundary`; metadata/route ID `verify-core:test:python:map-renderer-click-selection-transaction-boundary`; default group `renderer-owner`. The package body is `npm run python -- -m unittest tests.test_map_renderer_click_selection_transaction_boundary_contract -q`.
 
+Execution checkpoint:
+
+- The pre-edit explicit-input SF-ATS dry-run exited 0 for all 11 planned paths with 183 recommended commands. The sole unmatched file was `docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md`; artifacts are `.runtime/reports/generated/p1-7-pre-edit-adaptive-selection.{json,md}` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-pre-edit-selector.log`.
+- The sole P54 Node file locks the full pre-hit guard spine, explicit sync/async and read-only/effectful categories, strict local return counts, empty/special/water order, land clearing and dev selection, every land-eraser subpath, land fill, unchanged water fill, `applyWaterRegionFill`, and `applyVisualSubdivisionFill`.
+- The production-zero guard now covers staged, unstaged, and untracked paths through `git status --porcelain=v1 --untracked-files=all -- js dist tools/eslint-rules/state-writer-allowlist.json`.
+- The canonical Python boundary locks root ownership of initial/refreshed hit resolution, feature lookup, async hydration, history, dirty state, sidebar refresh, render requests, metrics, binding/funnel injection, and hit-candidate purity while owner/import/delegation topology remains empty for P1.7.
+- The initial pre-rework matrix was green. The first static review then returned `BLOCK` for missing HGO/facility topology, general line-return coverage, and frozen-modifier/target-kind locks.
+- Post-first-rework root evidence is fresh and green: Node 8/8, Python 6/6, metadata 13/13, core runner 8/8, five shared gates at exit 0, selector 11 files / 184 commands / 5 main-thread / zero unmatched, production guard empty, route registry 279, and core list 57.
+- The second minimal review rework added HGO active, facility-details, facility block-underlying, and selected-facility-clear local topology plus the two seam doc locks. The second static review then returned `BLOCK` for multiline string/comment false positives in the line-only return counter; root added masking and a dedicated fixture subtest.
+- Final root evidence is green: Node 9/9, Python 6/6, metadata 13/13, core runner 8/8, five shared gates exit 0, final selector 11 files / 184 commands / 5 main-thread / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0 with `core.autocrlf` warnings only. Protected production/checker/P54 surfaces have zero diff.
+- Final static review is green: architecture, test-engineer, and code/evidence reviewer each returned `APPROVE / Architectural Status: CLEAR`.
+
 ### 4. P1.8 pure transaction seam
 
 - Atomically add the unique pure click-selection owner, its single root call, behavior tests, P54 presence assertions, and architecture assertions.
@@ -118,12 +138,13 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 
 - Run SF-ATS selector dry-run before phase edits and against actual phase changes. Any unmatched production file blocks the phase.
 - P1.6 records one process deviation: its pre-edit selector has no durable evidence. The final branch-history selector is the authoritative routing proof and reports `unmatchedChangedFiles=[]`.
+- P1.7 pre-edit selector evidence is durable. Its single new-document gap is addressed through both canonical entries' `sourceRefs`; final selector evidence is `.runtime/reports/generated/p1-7-final-adaptive-selection.{json,md}` with log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-final-selector.log`, 11 files, 184 commands, 5 main-thread commands, and zero unmatched.
 - Pages/dist is required for browser-loaded renderer source changes. Deterministic checks are completion evidence.
 - Every phase receives an intent-first Lore commit with rationale, constraints, rejected alternatives, confidence, scope risk, directive, tested evidence, and honest not-tested lanes.
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.
 - Stage exact paths. Keep parent WIP and unrelated Landing outputs outside commits. Recheck origin before integration, integrate serially, push once, verify remote main, then clean with recovery hashes recorded.
 
-P1.6 explicit unrun lanes remain `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo.
+P1.6 explicit unrun lanes remain recorded in its phase evidence. P1.7 is `ready-for-commit`; Lore functional commit, clean-HEAD full core, phase-commit comparison, and evidence checkpoint remain pending. P1.7 `verify:core:main-thread`, browser, dev server, and Playwright remain explicit unrun lanes.
 
 ## Stop rules
 
