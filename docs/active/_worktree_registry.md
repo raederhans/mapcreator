@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P1 integrated/pushed/cleaned; P2 docs-only truth reconciliation started from clean `origin/main@b14165c0`
+Last updated: 2026-07-10 P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; pre-P2 repair is committed at current HEAD, with clean-head browser/main-thread/perf baseline still pending
 
 ## Integration Owner
 
@@ -29,8 +29,20 @@ Current rows reflect the real local worktrees after P1 cleanup and P2 startup. T
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated implementation lane | current branch/worktree for P2; clean docs-only start | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress` | Current task edits only active docs truth surfaces. Shared future hotspots are `js/core/map_renderer.js`, `js/core/renderer/**`, verification metadata, architecture checks, and this registry. | Approved P2 phase topology is staged: P2.0 docs-only truth reconciliation, then clean baseline, P2.1, P2.2a, P2.2b, review, integration prep. Single live-process owner and log root are fixed in the P2 plan/context/task package. | Yellow for registry/doc coordination now; red later for shared renderer composition roots and verification metadata once code phases start. | Keep isolated; finish P2.0 docs-only commit first, then continue the approved P2 sequence in this worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated implementation lane | current branch/worktree for P2; P2.0 complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; pre-P2 repair committed at current HEAD | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress` | Current repair scope is one E2E plus existing P2 control-plane docs and this registry. Shared future hotspots are `js/core/map_renderer.js`, `js/core/renderer/**`, verification metadata, architecture checks, and this registry. | Static repair checks are complete: `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0; `git diff --check` exit 0; `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs; `npm run verify:test-import-graph` exit 0 with 51 specs; adaptive dry-run artifact `.runtime/reports/generated/test-adaptive-selection.json` reports `changedFiles=4`, `recommendedCommands=7`, `mainThreadSerialVerification=1`, `unmatchedChangedFiles=[]`. Clean-head browser/main-thread/perf baseline remains pending. | Yellow for the E2E baseline repair and registry/doc coordination; red later for shared renderer composition roots and verification metadata once code phases start. | Keep isolated; record browser/main-thread/perf baseline before P2.1. Parent WIP remains untouched. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`; no branch | same as `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; clean | No product/runtime/doc edits in this worktree. | Release residue is clean at detached `b14165c0`; P1 isolated worktree path is removed and P1 recovery remains remote. | Green for current P2 docs-only truth work. | Retain as separate release verification residue until a later integration owner cleanup pass. |
+
+## P2 Pre-baseline Repair 2026-07-10
+
+- P2.0 docs-only truth reconciliation is complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
+- Repair scope is one E2E file plus existing P2 docs and this registry; parent checkout WIP remains untouched.
+- Main-thread collection first failed because the Pages release URL was missing; the `/dist` retry through `PLAYWRIGHT_TEST_BASE_URL` was the wrong shape for mixed tests.
+- The separated probe used `MAPCREATOR_BASE_URL=http://127.0.0.1:8892`, `SCENARIO_FORGE_PAGES_URL=http://127.0.0.1:8892/dist/`, and no `PLAYWRIGHT_TEST_BASE_URL`, producing four downloads.
+- Remaining test drift is the hidden styled-select native control and stale E2E schema expectation `21` while production/unit truth is `22`.
+- Static results complete: `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0; `git diff --check` exit 0; `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs; `npm run verify:test-import-graph` exit 0 with 51 specs.
+- Adaptive dry-run artifact `.runtime/reports/generated/test-adaptive-selection.json` reports `changedFiles=4`, `recommendedCommands=7`, `mainThreadSerialVerification=1`, and `unmatchedChangedFiles=[]`.
+- Sole future live-process owner is `/root/p2_baseline_test_fix`; P2.1 waits for a green baseline.
+- Pre-P2 repair is committed at current HEAD; clean-head browser/main-thread/perf baseline remains pending.
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 

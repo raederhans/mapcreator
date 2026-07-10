@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation in progress from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; pre-P2 repair is committed at current HEAD and static repair checks are complete. Browser/main-thread/perf baseline remains pending, and P2.1 waits for a green baseline.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -10,20 +10,41 @@ Current status: P2.0 docs-only truth reconciliation in progress from clean `orig
 - [x] Read the approved P2 plan title, execution topology, fixed owner topology, and stop conditions.
 - [x] Update current truth surfaces for parent, release residue, P1 cleanup, and P2 startup.
 - [x] Create P2 plan/context/task with fixed owner path, invariants, log root, single live-process owner, stop rules, and staged checklist.
-- [ ] Run stale-closeout grep on current truth files only.
-- [ ] Run `git diff --check`.
-- [ ] Run selector with `--changed-file` for all seven docs files and confirm `unmatchedChangedFiles=[]`.
-- [ ] Stage only the seven docs files and inspect staged diff.
-- [ ] Create the docs-only Lore commit.
+- [x] Run stale-closeout grep on current truth files only.
+- [x] Run `git diff --check`.
+- [x] Run selector with `--changed-file` for all seven docs files and confirm `unmatchedChangedFiles=[]`.
+- [x] Stage only the seven docs files and inspect staged diff.
+- [x] Create the docs-only Lore commit `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
+
+## Pre-P2 repair checklist
+
+- [x] Record initial main-thread collection failure from missing Pages release URL.
+- [x] Record the incorrect retry using `PLAYWRIGHT_TEST_BASE_URL` with `/dist` for every test.
+- [x] Record the correct separated probe using `MAPCREATOR_BASE_URL=http://127.0.0.1:8892` plus `SCENARIO_FORGE_PAGES_URL=http://127.0.0.1:8892/dist/` and no `PLAYWRIGHT_TEST_BASE_URL`, producing four downloads.
+- [x] Identify remaining test drift: hidden styled-select native control plus stale schema `21` versus production/unit schema `22`.
+- [x] Keep scope to one E2E and existing P2 docs, with parent WIP untouched.
+- [x] Set sole future live-process owner to `/root/p2_baseline_test_fix`.
+- [x] `node --check tests/e2e/project_save_load_roundtrip.spec.js` exit 0.
+- [x] `git diff --check` exit 0.
+- [x] `npm run verify:test:e2e-layers` exit 0 with 47 manifest specs.
+- [x] `npm run verify:test-import-graph` exit 0 with 51 specs.
+- [x] Adaptive dry-run artifact `.runtime/reports/generated/test-adaptive-selection.json`: `changedFiles=4`, `recommendedCommands=7`, `mainThreadSerialVerification=1`, `unmatchedChangedFiles=[]`.
+- [x] Create the pre-P2 repair Lore commit.
+- [ ] Record browser baseline.
+- [ ] Record main-thread baseline.
+- [ ] Record perf baseline.
+- [ ] Reach green baseline before P2.1.
 
 ## Clean baseline
 
+- [ ] Re-run the repaired baseline under `/root/p2_baseline_test_fix`.
 - [ ] Run `verify:core:main-thread`, physical-layer regression, scenario resilience, and `perf:gate` under one live-process owner.
 - [ ] Record browser baseline.
 - [ ] Record perf baseline.
 
 ## P2.1 draw canvas orchestration owner
 
+- [ ] Start only after the green baseline is recorded.
 - [ ] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - [ ] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
 - [ ] Reach at least 35 extracted lines.

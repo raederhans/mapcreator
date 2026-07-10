@@ -170,7 +170,9 @@ async function exportProjectJson(page, outputPath) {
   const downloadButton = page.locator("#downloadProjectBtn");
   await downloadButton.scrollIntoViewIfNeeded();
   await expect(downloadButton).toBeVisible({ timeout: 30000 });
-  await page.locator("#projectDownloadDestination").selectOption("browser");
+  const projectDownloadDestination = page.locator("#projectDownloadDestination");
+  await setSelectValue(page, "#projectDownloadDestination", "browser");
+  await expect(projectDownloadDestination).toHaveValue("browser");
   const downloadPromise = page.waitForEvent("download", { timeout: 120000 });
   await downloadButton.click();
   let download;
@@ -403,7 +405,7 @@ test("project save/load roundtrip preserves extended runtime state", async ({ pa
   const initialExportPath = path.join(artifactDir, "initial-export.json");
   const initialExport = await exportProjectJson(page, initialExportPath);
 
-  expect(initialExport.schemaVersion).toBe(21);
+  expect(initialExport.schemaVersion).toBe(22);
   expect(initialExport.styleConfig.internalBorders).toMatchObject({
     color: "#123456",
     opacity: 0.42,
