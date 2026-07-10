@@ -2,12 +2,13 @@
 
 Date: 2026-07-09
 
-Status: `ready-for-commit`; final deterministic evidence and three-party static review are green
+Status: `complete`; functional Lore commit and clean-HEAD full core are green; ready for integration after the pending evidence checkpoint
 
 Base and branch:
 
 - Initial remote base: `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 - Accepted P1.6 functional checkpoint: `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`.
+- P1.7 functional Lore commit: `5f78f3a545d1cfae2e311019718e25b5397bb218`.
 - Worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`.
 - Branch: `codex/renderer-runtime-context-p1-remaining-20260709`.
 
@@ -159,8 +160,16 @@ Fresh final root evidence:
 - production status guard: empty; route schema: 279; `verify:core:list`: 57;
 - `git diff --check`: exit 0 with `core.autocrlf` warnings only.
 
-Final static review results are architecture `APPROVE / Architectural Status: CLEAR`, test-engineer `APPROVE / Architectural Status: CLEAR`, and code/evidence reviewer `APPROVE / Architectural Status: CLEAR`. Current production code, `dist/**`, the state-write allowlist, architecture checker, and original P54 document have zero diff. Pending P1.7 work is the independent Lore functional commit, clean-HEAD `npm run verify:core`, phase-commit comparison, and evidence checkpoint. `verify:core:main-thread`, browser, dev server, and Playwright remain explicit unrun lanes.
+Final static review results are architecture `APPROVE / Architectural Status: CLEAR`, test-engineer `APPROVE / Architectural Status: CLEAR`, and code/evidence reviewer `APPROVE / Architectural Status: CLEAR`. Current production code, `dist/**`, the state-write allowlist, architecture checker, and original P54 document have zero diff. Post-commit acceptance is recorded below; only the docs-only evidence checkpoint remains pending.
+
+## Post-commit acceptance
+
+- Functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` has trailers parsed successfully by `git interpret-trailers`.
+- The worktree was clean after the functional commit. Root-owned clean-HEAD `npm run verify:core` exited 0 with 57/57 commands, report `.runtime/reports/generated/verify-core.json`, and log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-full-core-clean-head.log`; the worktree returned clean after the run.
+- Committed history-mode selection reported 23 files, 186 commands, 6 main-thread commands, and `unmatchedChangedFiles=[]`; artifacts are `.runtime/reports/generated/p1-7-committed-adaptive-selection.{json,md}` and log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-committed-selector.log`.
+- `git diff --name-only 1e14c944..5f78f3a5 -- js dist tools/eslint-rules/state-writer-allowlist.json tools/check_architecture_boundaries.mjs docs/active/renderer-click-selection-transaction-preflight-20260702.md` returned empty.
+- `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicitly unrun. Deterministic checks cover this preflight, whose production-zero boundary leaves no browser-only P1.7 risk.
 
 ## Delivery state
 
-P1.7 is `ready-for-commit`. Root creates the Lore functional commit, runs clean-HEAD full core, compares the phase commit, and records the evidence checkpoint before P1.8.
+P1.7 is complete and `ready-for-integration`. Root records the pending docs-only evidence checkpoint, then continues to P1.8 in the same worktree without integration or cleanup.

@@ -1,12 +1,12 @@
 # Worktree Registry
 
-Last updated: 2026-07-09 P1.6 green/complete/ready-for-integration at `02cbc3a5`; P1.7 final deterministic evidence and reviews green, ready for commit
+Last updated: 2026-07-09 P1.7 complete/ready-for-integration at functional Lore commit `5f78f3a5`; evidence checkpoint pending; P1.8 next
 
 ## Integration Owner
 
 - Owner: main integration owner.
 - Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326` with 19 unrelated `docs/archive/**` deletions and modified `lessons learned.md`, preserved unchanged.
-- Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; accepted P1.6 functional checkpoint is Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4`, with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is an uncommitted contract-only implementation ready for its Lore functional commit.
+- Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; P1.6 evidence checkpoint is `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is pending.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread owns all P1.5 acceptance reruns and later P1.6-P1.8/Closeout live verification. Other agents are static-only while a live process exists.
@@ -17,7 +17,7 @@ Last updated: 2026-07-09 P1.6 green/complete/ready-for-integration at `02cbc3a5`
 ## Recommended Order
 
 1. P1.5 acceptance from clean `a8f71822` is complete with `green` status and 53/53 full-core commands.
-2. Preserve accepted P1.6 Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` and evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; create the P1.7 Lore commit, run clean full core, compare the phase commit, record the evidence checkpoint, then complete P1.8 and P1 Closeout serially.
+2. Preserve P1.7 functional commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; record its docs-only evidence checkpoint, then continue P1.8 and P1 Closeout serially in the same worktree.
 3. Keep `drawCanvas()`, pass drawing, `renderPassToCache()` behavior, render order, click selection effects, public facade, UI, CSS, scenario data, water/special/dev selection, and production owner algorithms unchanged.
 4. Treat `codex/stale-main-wip-preserve-20260708` as a recovery snapshot for old-base WIP. Replay only reviewed pieces onto current `origin/main` if a later task needs them.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
@@ -29,11 +29,11 @@ Current rows reflect the real continuation worktree. The dirty parent checkout r
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; uncommitted P1.7 patch | branch `origin/main`; base `a8f71822d705fcd3b26c32db1abd417b41264eb0` | overall `in-progress`; P1.5/P1.6 `green`; P1.7 `ready-for-commit` | P1.7 hotspots: P54 Node inventory, new Python boundary, package/verification metadata, metadata/core-runner tests, phase/task docs, registry. Production renderer/runtime context, Pages mirrors, state-write allowlist, original P54 record, architecture checker, UI/CSS/data remain unchanged. | P1.7 final: Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates exit 0, selector 11 / 184 / 5 / zero unmatched, guard empty, 279 routes, 57 core commands, diff check exit 0. Two historical `BLOCK` findings are fixed; three final reviewers returned `APPROVE / CLEAR`. | Yellow for package/metadata/core-runner/registry overlap; green for production renderer/runtime context, Pages/dist, state allowlist, architecture checker, and parent archive/lessons WIP. | Root creates the Lore commit, runs clean full core, compares the phase commit, and records the evidence checkpoint before P1.8. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` — task `renderer-runtime-context-p1-remaining-20260709` | branch `codex/renderer-runtime-context-p1-remaining-20260709`; P1.7 functional commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence checkpoint pending | branch `origin/main`; base `a8f71822d705fcd3b26c32db1abd417b41264eb0` | overall `in-progress`; P1.5/P1.6 `green`; P1.7 complete/ready-for-integration; P1.8 next | Current dirty paths are the five P1.7 evidence docs only. Production renderer/runtime context, Pages mirrors, state-write allowlist, original P54 record, architecture checker, UI/CSS/data remain unchanged. | P1.7: trailers parsed; clean core 57/57; committed selector 23 / 186 / 6 / zero unmatched; protected phase diff empty; three `APPROVE / CLEAR` reviews. | Green for P1.7 protected production surfaces; yellow for future P1.8 shared verification/docs surfaces. | Root records the evidence checkpoint, then continues P1.8 in this worktree without integration or cleanup. |
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 
-Status: `in-progress`; G001/G002 evidence committed as `3d4c8d12`; P1.5 accepted `green`; P1.6 is `green` at `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is `ready-for-commit` with final deterministic evidence and reviews green.
+Status: `in-progress`; P1.5/P1.6 green; P1.7 complete/ready-for-integration at `5f78f3a545d1cfae2e311019718e25b5397bb218`; evidence checkpoint pending; P1.8 next.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
@@ -41,17 +41,17 @@ Goal: execute the approved linear P1.5 fresh gate, P1.6 narrow hit/hover receive
 
 Current uncommitted P1.7 changed files are the sole P54 Node inventory; the new canonical Python boundary; package/verification metadata; metadata/core-runner tests; the three task documents; the new P1.7 phase document; and this registry. Production and generated file scope is empty.
 
-Validation truth: G001/G002 and P1.6 evidence remain unchanged. P1.7 retains two historical `BLOCK` findings and their fixes. Final root evidence passed Node 9/9, Python 6/6, metadata 13/13, runner 8/8, all five shared gates, and final selector 11 files / 184 commands / 5 main-thread / zero unmatched. Artifacts are `.runtime/reports/generated/p1-7-final-adaptive-selection.{json,md}` with log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-final-selector.log`; production guard is empty, route schema is 279, core list is 57, and diff check exits 0 with `core.autocrlf` warnings only. `verify:core:main-thread`, browser, dev server, and Playwright remain explicit unrun lanes.
+Validation truth: P1.7 retains two historical `BLOCK` findings and fixes plus three final `APPROVE / CLEAR` reviews. Functional commit trailers parsed successfully; clean-HEAD core passed 57/57; committed selector reported 23 files / 186 commands / 6 main-thread / zero unmatched; protected phase diff is empty. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit unrun lanes; deterministic checks cover the production-zero preflight.
 
 Dependency preparation: the ignored `node_modules` Junction targets `C:\Users\raede\Desktop\dev\mapcreator\node_modules`; `.gitignore:18` is `node_modules/`; the ignored log directory `.runtime/tests/renderer-runtime-context-p1-remaining-20260709` is created. Both are removed with the worktree during verified cleanup.
 
 P1.5 provenance: the historical section below retains the earlier 52/53 attempt. Fresh root-owned acceptance at clean `a8f71822` passed 53/53 and establishes `green` status.
 
-Recommended integration: preserve P1.6 checkpoints `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` and `1e14c944855225ec3913bd27bc942e86ede03202`; create the P1.7 Lore commit, run clean full core, compare the phase commit, and record the evidence checkpoint on the same linear ancestry before P1.8.
+Recommended integration: record the P1.7 docs-only evidence checkpoint, then continue P1.8 on the same linear ancestry; defer integration and cleanup.
 
 ## Scenario Forge P1.7 Click-Selection Transaction Preflight 2026-07-09
 
-Status: `ready-for-commit`; contract-only implementation is uncommitted and final deterministic evidence plus reviews are green.
+Status: complete and `ready-for-integration`; functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; docs-only evidence checkpoint pending.
 
 Worktree/branch/base: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709`; `codex/renderer-runtime-context-p1-remaining-20260709`; P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; initial base `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`.
 
@@ -67,11 +67,11 @@ Preserved files: `js/**`, `dist/**`, `tools/eslint-rules/state-writer-allowlist.
 
 Pre-edit evidence: the explicit-input dry-run exited 0 with 183 recommended commands. Its only unmatched path was the new P1.7 phase record; both new metadata entries now include that record in `sourceRefs`. Artifacts are `.runtime/reports/generated/p1-7-pre-edit-adaptive-selection.{json,md}` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-pre-edit-selector.log`.
 
-Validation status: the first review `BLOCK` covered missing topology/seam locks; the second covered multiline string/comment return-count masking. Both fixes are retained. Final root evidence passed Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates, and the final zero-gap selector. Architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`. Production guard is empty; route schema is 279; core list is 57; diff check exits 0 with `core.autocrlf` warnings only.
+Validation status: both historical review fixes and three final `APPROVE / CLEAR` verdicts are retained. `git interpret-trailers` parsed the functional commit; clean core passed 57/57 with report/log; committed selector reported 23 / 186 / 6 / zero unmatched with artifacts/log; worktree was clean before and after core; protected phase diff is empty.
 
 Direct overlap risk: yellow for package/metadata/core-runner/registry; green for production renderer/runtime context, Pages mirrors, state allowlist, architecture checker, original P54 record, UI/CSS/scenario data, and parent archive/lessons WIP.
 
-Recommended integration: preserve one independent Lore functional commit, run clean-HEAD full core, record phase-commit comparison and the evidence checkpoint, then advance to P1.8.
+Recommended integration: create the pending docs-only evidence checkpoint, then advance to P1.8 in the same worktree without integration or cleanup.
 
 ## Scenario Forge P1.6 Hit/Hover Runtime Context Migration 2026-07-09
 

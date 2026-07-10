@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is `ready-for-commit` with final deterministic evidence and reviews green
+Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is complete/ready-for-integration at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; P1.8 is next
 
 ## Progress
 
@@ -23,7 +23,10 @@ Status: in progress; G001/G002 evidence commit `3d4c8d12`; P1.6 is `green` at fu
 - Post-first-rework root evidence is fresh and green: Node 8/8, Python 6/6, metadata 13/13, core runner 8/8; the five shared gates exit 0; selector 11 files / 184 commands / 5 main-thread / `unmatchedChangedFiles=[]`; production guard empty; route registry 279; core list 57.
 - The second static review returned `BLOCK` for multiline string/comment false positives in the line-only return counter. Root added masking plus a dedicated fixture subtest while retaining the four branch slices and seam locks.
 - Final root evidence is green: Node 9/9, Python 6/6, metadata 13/13, core runner 8/8, five shared gates exit 0, final selector 11 files / 184 commands / 5 main-thread / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0.
-- Architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`. P1.7 is `ready-for-commit`.
+- At the pre-commit checkpoint, architecture, test-engineer, and code/evidence reviewers each returned `APPROVE / Architectural Status: CLEAR`.
+- P1.7 functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` has trailers parsed by `git interpret-trailers`; the worktree was clean immediately after commit.
+- Root-owned clean-HEAD `npm run verify:core` passed 57/57 with exit 0 and returned the worktree clean. Committed history-mode selection reported 23 files / 186 commands / 6 main-thread / zero unmatched. The protected P1.7 phase diff is empty.
+- P1.7 is complete and ready for integration; its docs-only evidence checkpoint remains pending while the same worktree advances to P1.8.
 
 Approved sources:
 
@@ -109,6 +112,8 @@ Execution checkpoint:
 - The second minimal review rework added HGO active, facility-details, facility block-underlying, and selected-facility-clear local topology plus the two seam doc locks. The second static review then returned `BLOCK` for multiline string/comment false positives in the line-only return counter; root added masking and a dedicated fixture subtest.
 - Final root evidence is green: Node 9/9, Python 6/6, metadata 13/13, core runner 8/8, five shared gates exit 0, final selector 11 files / 184 commands / 5 main-thread / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0 with `core.autocrlf` warnings only. Protected production/checker/P54 surfaces have zero diff.
 - Final static review is green: architecture, test-engineer, and code/evidence reviewer each returned `APPROVE / Architectural Status: CLEAR`.
+- Functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218` passed trailer parsing. Clean-HEAD full core passed 57/57 with report `.runtime/reports/generated/verify-core.json` and log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-full-core-clean-head.log`; the worktree was clean before and after the run.
+- Committed selector evidence is `.runtime/reports/generated/p1-7-committed-adaptive-selection.{json,md}` with log `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-committed-selector.log`, 23 files, 186 commands, 6 main-thread commands, and zero unmatched. The protected phase diff from `1e14c944` to `5f78f3a5` is empty.
 
 ### 4. P1.8 pure transaction seam
 
@@ -144,7 +149,7 @@ Recorded P1.5 acceptance log: `p1-5-full-core-original.log`. Reserved later-phas
 - When full core needs clean HEAD, create the functional phase commit after focused checks, run the clean gate, then record final evidence without mixing later-phase code.
 - Stage exact paths. Keep parent WIP and unrelated Landing outputs outside commits. Recheck origin before integration, integrate serially, push once, verify remote main, then clean with recovery hashes recorded.
 
-P1.6 explicit unrun lanes remain recorded in its phase evidence. P1.7 is `ready-for-commit`; Lore functional commit, clean-HEAD full core, phase-commit comparison, and evidence checkpoint remain pending. P1.7 `verify:core:main-thread`, browser, dev server, and Playwright remain explicit unrun lanes.
+P1.6 explicit unrun lanes remain recorded in its phase evidence. P1.7 is complete/ready-for-integration; only its docs-only evidence checkpoint remains pending. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicit P1.7 unrun lanes. Deterministic checks cover the production-zero preflight. Continue to P1.8 in the same worktree without integration or cleanup.
 
 ## Stop rules
 

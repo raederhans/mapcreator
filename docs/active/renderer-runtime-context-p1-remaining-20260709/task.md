@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 
-Current status: G001/G002 are committed in `3d4c8d12`; P1.5 is `green`; P1.6 is `green` at functional Lore commit `02cbc3a5ee19716eb8be14a5ed52db877ad25eb4` with evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 is `ready-for-commit` with final deterministic evidence and reviews green.
+Current status: G001/G002 are committed in `3d4c8d12`; P1.5 and P1.6 are green; P1.7 is complete/ready-for-integration at functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is pending; P1.8 is next.
 
 ## Integration setup
 
@@ -57,8 +57,10 @@ Acceptance: receiver allowlist and negative effect boundary pass; behavior is st
 - [x] Preserve the second static review `BLOCK` and fix: mask multiline strings/comments in the return counter and add a dedicated fixture subtest.
 - [x] Record final root evidence: Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates exit 0, final selector 11 / 184 / 5 / zero unmatched, production guard empty, route schema 279, core list 57, and diff check exit 0.
 - [x] Complete the final three-party static review: architecture, test-engineer, and code/evidence reviewer each returned `APPROVE / Architectural Status: CLEAR`.
-- [ ] Create independent Lore commit and registry checkpoint.
-- [ ] Run the clean-HEAD full core and record explicit unrun lanes.
+- [x] Create functional Lore commit `5f78f3a545d1cfae2e311019718e25b5397bb218`; parse trailers successfully with `git interpret-trailers`; prove the post-commit worktree clean.
+- [x] Run root-owned clean-HEAD full core: 57/57, exit 0; record report/log and post-run clean-state proof.
+- [x] Run committed history-mode selector: 23 files, 186 commands, 6 main-thread commands, `unmatchedChangedFiles=[]`; record artifacts/log and protected phase diff empty.
+- [ ] Create the docs-only P1.7 evidence checkpoint commit; no hash exists yet.
 
 Acceptance: canonical files and routes reach default core; ordered inventory and full core pass.
 
@@ -87,9 +89,9 @@ Acceptance: one consistent commit contains owner, delegation, assertions, and be
 - Metadata/package: `tools/verification/verification_domains.mjs` and `package.json` register the existing Node inventory and new canonical Python boundary as child-safe `renderer-owner` default-core leaves.
 - Docs: this task folder, `docs/active/renderer-click-selection-transaction-preflight-p1-7-20260709.md`, and `docs/active/_worktree_registry.md`.
 - Temporary: existing ignored `node_modules` Junction and `.runtime` evidence root remain root-owned; the implementation lane wrote no runtime artifact.
-- Diff/commit/divergence: P1.7 is uncommitted over P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; the branch remains linear over `origin/main@a8f71822`.
+- Diff/commit/divergence: P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`, linear over P1.6 evidence checkpoint `1e14c944855225ec3913bd27bc942e86ede03202`; its protected phase diff is empty.
 - Conflict analysis: yellow for package/metadata/verification-runner/registry shared surfaces; green for production renderer, runtime context, Pages mirrors, UI/CSS/data, architecture checker, state allowlist, and parent archive/lessons WIP.
-- Validation: both historical `BLOCK` verdicts retain their fixes. Final root evidence passed Node 9/9, Python 6/6, metadata 13/13, runner 8/8, five shared gates, and the final 11-file / 184-command / 5-main-thread / zero-unmatched selector. Production guard is empty; route schema is 279; core list is 57; diff check exits 0 with `core.autocrlf` warnings only. Final selector evidence is `.runtime/reports/generated/p1-7-final-adaptive-selection.{json,md}` and `.runtime/tests/renderer-runtime-context-p1-remaining-20260709/p1-7-final-selector.log`.
-- Explicit pending lanes: Lore functional commit, clean-HEAD full core, phase-commit comparison, evidence checkpoint, `verify:core:main-thread`, browser, dev server, and Playwright.
-- Remaining risks: final review and clean-HEAD acceptance remain open; P1.8 implementation remains outside P1.7.
-- Recommended next step: root creates the Lore functional commit, runs clean-HEAD full core, compares the phase commit, and records the evidence checkpoint before P1.8.
+- Validation: both historical `BLOCK` fixes and three final `APPROVE / CLEAR` reviews are retained. Functional trailers parsed successfully; root-owned clean-HEAD core passed 57/57 and returned the worktree clean; committed selector reported 23 files / 186 commands / 6 main-thread / zero unmatched; protected phase diff is empty. Reports and logs are recorded above.
+- Explicit pending lanes: docs-only evidence checkpoint. `verify:core:main-thread`, browser, dev server, Playwright, perf, scenario-data, and heavy-geo remain explicitly unrun.
+- Remaining risks: deterministic checks cover the production-zero preflight; no browser-only P1.7 risk remains. P1.8 implementation remains outside P1.7.
+- Recommended next step: root creates the evidence checkpoint, then continues P1.8 in the same worktree without integration or cleanup.
