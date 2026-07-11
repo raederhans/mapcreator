@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.1 browser acceptance is green. The original legacy pooled-render report remains `failed/blocked`; governed role reanalysis of the same frozen 40 raw files is `accepted-with-governed-reanalysis`, so P2.2a is admitted under `render-sample-role-v1`.
+Current status: P2.2a cached-pass compositor implementation and clean-head deterministic/dist closeout are complete at `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`. The isolated lane is ready for static review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -151,7 +151,9 @@ Current status: P2.1 browser acceptance is green. The original legacy pooled-ren
 - [x] Reduce `js/core/map_renderer.js` from 23,437 to 23,376 split lines, net reduction 61; keep the owner at 170 split lines.
 - [x] Add named Node behavior and combined Python boundary suites; upgrade P53, scenario, Pages, architecture, metadata, and core-runner contracts.
 - [x] Complete pre-commit Pages generation at 927.17 MiB with startup 47/47, landing 18/18, sample 17/17 and source/dist blob parity.
-- [ ] Create the functional Lore commit and rerun clean-head dist/core gates.
+- [x] Create functional Lore commit `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`; clean-head `verify:dist-drift` exits 0 and `verify:core` passes 64/64 with seven explicit main-thread skips.
+- [x] Record selector evidence: 19 changed files, 195 recommended commands, 7 main-thread lanes, and 0 unmatched files.
+- [x] Record exact source/dist parity: renderer `9467d79806d1f418c89527ac6b1a560ff11a27c1`; cached compositor `bc84b5c34f060282b573b333ba14344e59483f73`.
 - [ ] Complete separate browser/main-thread/performance acceptance under the registered governed protocol.
 
 ## P2.2b transformed frame compositor owner

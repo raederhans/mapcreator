@@ -42,3 +42,13 @@ Public facade, RendererRuntimeContext, and state-write allowlist remain unchange
 - P53, scenario, Pages startup, architecture, verification metadata, selector, dist, and full-core contracts are upgraded in the same functional slice.
 
 Browser, Playwright, perf, and main-thread acceptance remain assigned to the separate acceptance lane.
+
+## Clean-head deterministic closeout
+
+- Functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`.
+- The first clean-head core run exposed one stale source-scan boundary: the render-cache receiver test still sliced through the next historical owner. The boundary now ends at `getCachedPassCompositorOwner()`, so the test inspects only `getRenderCacheOwner()`; the focused receiver suite passes 10/10. Production code was unchanged by this repair.
+- Clean-head `npm run verify:dist-drift` exits 0. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-cached-compositor/clean-head/20-verify-dist-drift.log`.
+- Clean-head `npm run verify:core` exits 0 with 64/64 commands, zero failures, zero omitted commands, and zero duplicate commands. Report: `.runtime/reports/generated/verify-core.json`. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-cached-compositor/clean-head/22-verify-core-rerun.log`.
+- Adaptive selection records 19 changed files, 195 recommended commands, 7 main-thread lanes, and 0 unmatched files in `.runtime/reports/generated/test-adaptive-selection.json`.
+- Source/dist blob parity is exact: renderer `9467d79806d1f418c89527ac6b1a560ff11a27c1`; cached compositor `bc84b5c34f060282b573b333ba14344e59483f73`.
+- The isolated lane is ready for static review plus the separately owned browser/main-thread/performance acceptance. The seven E2E main-thread commands remain explicitly skipped by the deterministic core lane.
