@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.1 functional Lore commit `cc6477e0111568091a8665f76fa13d1083c67426` is committed and clean-head dist/core verification is green; P2.1 is ready for separate acceptance. Current Worktrees reflects the real two worktrees: dirty parent `C:\Users\raede\Desktop\dev\mapcreator` at `db8bd6c` and P2 worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` clean at `cc6477e0111568091a8665f76fa13d1083c67426`, `ahead 9 / behind 1 origin/main@17aeedf`. Parent is behind 17 from `origin/main@17aeedf` and retains existing WIP; release residue worktree path is no longer registered.
+Last updated: 2026-07-11 P2.1 acceptance HEAD `a777d17b9d22a5f1d8dde7aac515ab39d8f69b2a` is being integrated with `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c`; the release packaging audit and P2 renderer contracts are both retained. Current Worktrees reflects the dirty parent checkout and the isolated P2 integration lane. Parent WIP remains untouched; the release residue worktree is already removed.
 
 ## Integration Owner
 
@@ -134,6 +134,42 @@ Checks still assigned or pending: browser, Playwright, main-thread, and performa
 - Historical April gate status: April baseline/threshold frozen; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
 - Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` was removed and is no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`.
 
+## Audit Release Packaging Guardrails 2026-07-11
+
+Status: `integrated`; audit commit `17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` is current `origin/main`. The temporary release residue worktree `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` has been removed; recovery remains in Git history.
+
+What changed:
+
+1. Made Pages dist LF normalization fail-fast when a scanned file disappears, while keeping explicit optional missing-file probes opt-in.
+2. Corrected Windows extended UNC path normalization and added direct URL parent-escape coverage.
+3. Narrowed local deployment ignore policy to `.vercel/`, preserved `.env.example` and `.env.template`, and routed `.gitignore` through selector contracts.
+4. Synchronized route-registry and verification-metadata truth for `.gitignore` changes.
+5. Added structural and Pages startup shell regression coverage for the audit findings.
+
+Changed files by group:
+
+- Core/tooling: `.gitignore`, `tools/build_pages_dist.py`, `tools/test_route_registry.mjs`, `tools/verification/verification_domains.mjs`.
+- Tests: `tests/test_pages_dist_startup_shell.py`, `tests/test_e2e_structural_tooling.py`.
+- Documentation/control: this registry and `lessons learned.md`.
+- Temporary/generated: `.runtime/reports/generated/audit-20260711-*.json|md` and `supervisor-plan.json` are runtime artifacts and stay untracked.
+
+Diff summary: small audit patch over `origin/main@b14165c0`; semantic diff is limited to release packaging guards, selector route coverage, and tests. No `dist/**` file remains modified after `verify:dist-drift`.
+
+Commit status: integrated on `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c`.
+
+Base divergence: the audit started at `origin/main@b14165c0` and now forms upstream `origin/main@17aeedf5`. Parent checkout remains stale/dirty and untouched. The P2 worktree merges this upstream commit while preserving its isolated renderer history.
+
+Overlap analysis:
+
+- Green: runtime app behavior, UI/CSS, scenario data, and P2 renderer implementation were not edited by this audit.
+- Yellow: `.gitignore`, `tools/build_pages_dist.py`, `tools/test_route_registry.mjs`, and `tests/test_e2e_structural_tooling.py` are semantically related to selector/Pages validation and retain upstream authority.
+- Red: `docs/active/_worktree_registry.md`, `tools/verification/verification_domains.mjs`, and `tests/test_pages_dist_startup_shell.py` overlap directly with P2; the integration owner reconciles both contracts in the merge.
+
+Validation passed: `node tools/select_verification_targets.mjs --check`; `npm run -s test:node:verification-metadata`; `NODE_PATH=C:\Users\raede\Desktop\dev\mapcreator\node_modules npm run python -- -m unittest tests.test_e2e_structural_tooling -q` with 34 tests; `npm run python -- -m unittest tests.test_pages_dist_startup_shell -q` with 46 tests; adaptive dry-run for changed files with zero unmatched; `npm run python -- -m py_compile tools/build_pages_dist.py tests/test_pages_dist_startup_shell.py tests/test_e2e_structural_tooling.py`; `node --check` for the changed MJS files; `npm run -s verify:dist-drift`; `npm run -s verify:supervisor-contracts`; `npm run -s verify:supervisor-plan`; `npm run -s verify:test-import-graph`; `npm run -s verify:test:e2e-layers`; `npm run -s test:node:verify-core-runner`; `npm run -s test:node:click-selection-transaction-owner`; `npm run -s test:node:renderer-click-selection-transaction-inventory`; `npm run -s test:python:map-renderer-click-selection-transaction-boundary`; and `git diff --check`.
+
+Validation gaps at the audit commit: full `verify:core`, browser/Playwright release smoke, and remote CI were not run locally for the narrow release packaging audit. The P2 integration reruns the combined deterministic and dist gates.
+
+Recommended next step: complete the P2 upstream merge, verify the combined release-packaging and draw-canvas owner contracts, then hand the clean integrated P2.1 HEAD to its acceptance owner.
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 

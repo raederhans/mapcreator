@@ -537,6 +537,7 @@
 
 ### Selector 路由要覆盖 checked-in dist 镜像
 - 新增 source owner 或公开样例入口后，同步检查 `dist/app/**` 和 `dist/pages-dist-manifest.json` 的 selector 路由；只改镜像文件时也要进入 `verify:pages-dist`，并带上 `dist` 与 `.runtime-output` 主线程锁。
+- 仓库级配置文件也要有 selector 路由；`.gitignore`、workflow、验证入口这类改动如果 unmatched，`--execute` 会正确红灯，但例行审计会漏掉应跑的 contract。
 
 ### 新增 selector domain 要同步 supervisor registry
 - `tools/test_route_registry.mjs` 新增 domain 时，同步更新 `tools/ai_test_supervisor/domain_registry.json` 和 supervisor schema test；否则 selector 本身能路由，SF-ATS contract gate 会因未登记 domain 失败。

@@ -134,6 +134,25 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn('run: |\n          echo "Scenario contract matrix skipped:', workflow)
         self.assertIn('run: |\n          echo "Transport contract skipped:', transport_workflow)
 
+    def test_gitignore_policy_keeps_local_state_ignored_and_templates_trackable(self) -> None:
+        expectations = {
+            ".env": True,
+            ".env.local": True,
+            ".env.example": False,
+            ".env.template": False,
+            ".vercel/project.json": True,
+        }
+
+        for path, should_be_ignored in expectations.items():
+            with self.subTest(path=path):
+                result = run_command("git", "check-ignore", "--no-index", "-q", "--", path)
+                self.assertIn(result.returncode, {0, 1}, result.stderr)
+                self.assertEqual(
+                    should_be_ignored,
+                    result.returncode == 0,
+                    f"{path} ignore status drifted",
+                )
+
     def test_console_allowlist_decay_passes(self) -> None:
         result = run_command("node", "tools/check_console_allowlist_decay.mjs")
         self.assert_command_ok(result)
@@ -550,6 +569,22 @@ const cases = [
     ],
   },
   {
+    name: 'gitignore policy changes route to selector contract',
+    changedFiles: ['.gitignore'],
+    expectedCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/select_verification_targets.mjs --check',
+    ],
+    exactCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/select_verification_targets.mjs --check',
+    ],
+    exactExecutionOwners: ['child-safe'],
+    exactResourceLocks: [],
+    exactMainThreadCommands: [],
+    expectedUnmatched: [],
+  },
+  {
     name: 'package metadata routes to dev e2e scripts and guardrails',
     changedFiles: ['package.json'],
     expectedCommands: [
@@ -686,6 +721,13 @@ for (const testCase of cases) {
     const actual = report.mainThreadSerialVerification.map((entry) => entry.commandRef).sort();
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
       throw new Error(`${testCase.name}: expected exact main-thread commands ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.expectedUnmatched) {
+    const expected = [...testCase.expectedUnmatched].sort();
+    const actual = [...report.unmatchedChangedFiles].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected unmatched ${expected.join(', ')}; got ${actual.join(', ')}`);
     }
   }
 }

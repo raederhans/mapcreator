@@ -77,5 +77,7 @@ data/.build_stage_cache.json
 data/*.tif.part
 data/*.tif.parts/
 data/.tmp_*
-.vercel
+.vercel/
 .env*
+!.env.example
+!.env.template

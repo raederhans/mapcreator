@@ -2342,20 +2342,48 @@ class PagesDistStartupShellTest(unittest.TestCase):
         root_path = Path("C:/repo/dist/app")
         normal_path = root_path / "data" / "scenarios" / "sample" / "chunks" / "political.detail.country.swe.json"
         extended_path = Path("\\\\?\\C:\\repo\\dist\\app\\data\\scenarios\\sample\\chunks\\political.detail.country.swe.json")
+        unc_path = Path("\\\\server\\share\\repo\\dist\\app\\data\\scenarios\\sample\\manifest.json")
+        extended_unc_path = Path("\\\\?\\UNC\\server\\share\\repo\\dist\\app\\data\\scenarios\\sample\\manifest.json")
 
         self.assertEqual(
             build_pages_dist.normalize_windows_path_text(normal_path),
             build_pages_dist.normalize_windows_path_text(extended_path),
         )
+        self.assertEqual(
+            build_pages_dist.normalize_windows_path_text(unc_path),
+            build_pages_dist.normalize_windows_path_text(extended_unc_path),
+        )
 
-    def test_pages_dist_lf_normalizer_skips_removed_generated_file(self) -> None:
+    def test_pages_dist_path_guard_rejects_parent_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            previous_app_dist_root = build_pages_dist.APP_DIST_ROOT
+            build_pages_dist.APP_DIST_ROOT = Path(tmp_dir) / "dist" / "app"
+            try:
+                with self.assertRaises(ValueError):
+                    build_pages_dist._dist_path_for_app_url("../outside.json")
+            finally:
+                build_pages_dist.APP_DIST_ROOT = previous_app_dist_root
+
+    def test_pages_dist_lf_normalizer_fails_when_scanned_file_disappears(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             previous_dist_root = build_pages_dist.DIST_ROOT
             tmp_root = Path(tmp_dir) / "dist"
             removed_path = tmp_root / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
             build_pages_dist.DIST_ROOT = tmp_root
             try:
-                build_pages_dist.normalize_dist_text_file_lf(removed_path)
+                with self.assertRaises(FileNotFoundError):
+                    build_pages_dist.normalize_dist_text_file_lf(removed_path)
+            finally:
+                build_pages_dist.DIST_ROOT = previous_dist_root
+
+    def test_pages_dist_lf_normalizer_can_skip_explicit_optional_missing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            previous_dist_root = build_pages_dist.DIST_ROOT
+            tmp_root = Path(tmp_dir) / "dist"
+            removed_path = tmp_root / "app" / "data" / "hgo_catalogs" / "hgo_flags.png_manifest.json"
+            build_pages_dist.DIST_ROOT = tmp_root
+            try:
+                build_pages_dist.normalize_dist_text_file_lf(removed_path, allow_missing=True)
             finally:
                 build_pages_dist.DIST_ROOT = previous_dist_root
 

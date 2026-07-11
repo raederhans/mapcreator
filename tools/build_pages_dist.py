@@ -199,13 +199,15 @@ def should_normalize_dist_text_file_lf(path: Path) -> bool:
     )
 
 
-def normalize_dist_text_file_lf(path: Path) -> None:
+def normalize_dist_text_file_lf(path: Path, *, allow_missing: bool = False) -> None:
     if not should_normalize_dist_text_file_lf(path):
         return
     try:
         data = path.read_bytes()
     except FileNotFoundError:
-        return
+        if allow_missing:
+            return
+        raise FileNotFoundError(f"Dist text file disappeared during LF normalization: {path}") from None
     if b"\r\n" not in data:
         return
     path.write_bytes(data.replace(b"\r\n", b"\n"))
@@ -475,8 +477,11 @@ def _dist_path_for_app_url(url: str) -> Path:
 
 def normalize_windows_path_text(path: Path) -> str:
     text = str(path)
-    if os.name == "nt" and text.startswith("\\\\?\\"):
-        text = text[4:]
+    if os.name == "nt":
+        if text.startswith("\\\\?\\UNC\\"):
+            text = "\\\\" + text[len("\\\\?\\UNC\\") :]
+        elif text.startswith("\\\\?\\"):
+            text = text[4:]
     return os.path.normcase(os.path.normpath(text))
 
 
