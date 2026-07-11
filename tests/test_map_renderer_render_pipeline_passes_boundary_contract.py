@@ -12,13 +12,17 @@ EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exac
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
+DRAW_CANVAS_ORCHESTRATION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "draw_canvas_orchestration_owner.js"
+RENDER_PASS_COMMIT_ACCOUNTING_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "render_pass_commit_accounting_owner.js"
 RENDER_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "render_pass_catalog.js"
 VIEWPORT_READ_MODEL_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "viewport_read_model_owner.js"
+VIEWPORT_COMMAND_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "viewport_command_owner.js"
 
 
 class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
     def test_map_renderer_keeps_pass_orchestration_shell_while_idle_pass_owner_moves_to_module(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
         exact_pass_catalog_content = EXACT_AFTER_SETTLE_PASS_CATALOG_JS.read_text(encoding="utf-8")
@@ -148,8 +152,10 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
 
     def test_hgo_preview_ready_replaces_normal_overlay_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_commit_content = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
+        render_pass_commit_owner_content = RENDER_PASS_COMMIT_ACCOUNTING_OWNER_JS.read_text(encoding="utf-8")
         render_pass_catalog_content = RENDER_PASS_CATALOG_JS.read_text(encoding="utf-8")
         signature_body = renderer_content.split("function getRenderPassSignature(passName", 1)[1].split(
             "\nfunction resolveHitMode",
@@ -163,7 +169,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         )[0]
         self.assertIn('isHgoRuntimePreviewReady() ? "hgo:on" : "hgo:off"', hgo_signature_body)
         self.assertIn('String(preview.status || "")', hgo_signature_body)
-        self.assertIn('projection ? transformSignature : "projection:none"', hgo_signature_body)
+        self.assertIn('rendererSurfaceHost.getProjection() ? transformSignature : "projection:none"', hgo_signature_body)
         hgo_preview_pass_body = hgo_preview_owner_content.split("function drawPreviewPass()", 1)[1].split(
             "\n\n  function normalizeHitPayload",
             1,
@@ -203,42 +209,44 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             1,
         )[0]
         self.assertNotIn('"hgoPreview"', interaction_composite_body)
-        self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", renderer_content)
-        self.assertIn("getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);", renderer_content)
-        self.assertIn("drewExactFrame = composeCachedPasses(activeRenderPassNames);", renderer_content)
+        self.assertIn("const activeRenderPassNames = getActiveRenderPassNames();", draw_canvas_owner_content)
+        self.assertIn("ensureIdleRenderPasses(frameTimings, activeRenderPassNames);", draw_canvas_owner_content)
+        self.assertIn("drewExactFrame = !!composeCachedPasses(activeRenderPassNames);", draw_canvas_owner_content)
         self.assertIn("function getProjectedHgoRuntimePreviewBounds() {", renderer_content)
         self.assertIn("function getProjectedBounds() {", hgo_preview_owner_content)
         viewport_owner_content = VIEWPORT_READ_MODEL_OWNER_JS.read_text(encoding="utf-8")
-        render_pass_to_cache_body = renderer_content.split("function renderPassToCache(passName, drawFn, transform, timings) {", 1)[1].split(
-            "\n\nfunction resetCanvasContext",
+        render_pass_commit_body = render_pass_commit_owner_content.split("function commitRenderPass({", 1)[1].split(
+            "\n  return Object.freeze",
             1,
         )[0]
         self.assertLess(
-            render_pass_to_cache_body.index("drawResult.committed === false"),
-            render_pass_to_cache_body.index("setPassReferenceTransform(passName, transform);"),
+            render_pass_commit_body.index("drawResult.committed === false"),
+            render_pass_commit_body.index('"setPassReferenceTransform"'),
         )
-        self.assertIn('recordRenderPerfMetric("renderPassCommitSkipped"', render_pass_to_cache_body)
-        self.assertIn("cache.politicalPassDataStage = politicalDataStage;", render_pass_to_cache_body)
-        self.assertIn("cache.politicalPassFineCacheReady = politicalFineCacheReady;", render_pass_to_cache_body)
-        self.assertIn("if (politicalFineCacheReady) {", render_pass_to_cache_body)
-        self.assertIn("clearPassFullReferenceTransforms([passName]);", render_pass_to_cache_body)
+        self.assertIn('"renderPassCommitSkipped"', render_pass_commit_body)
+        self.assertIn("cache.politicalPassDataStage = politicalDataStage;", render_pass_commit_body)
+        self.assertIn("cache.politicalPassFineCacheReady = politicalFineCacheReady;", render_pass_commit_body)
+        self.assertIn("if (politicalFineCacheReady) {", render_pass_commit_body)
+        self.assertIn('"clearPassFullReferenceTransforms"', render_pass_commit_body)
         self.assertLess(
-            render_pass_to_cache_body.index("if (politicalFineCacheReady) {"),
-            render_pass_to_cache_body.index("cache.partialPoliticalDirtyIds.clear();"),
+            render_pass_commit_body.index("if (politicalFineCacheReady) {"),
+            render_pass_commit_body.index("cache.partialPoliticalDirtyIds.clear();"),
         )
         self.assertIn("function getProjectedRenderableContentBounds()", viewport_owner_content)
         self.assertIn("getters.isHgoRuntimePreviewReady()", viewport_owner_content)
         self.assertIn("return getters.getHgoRuntimePreviewBounds?.() || null;", viewport_owner_content)
         self.assertIn("return getViewportReadModelOwner().getProjectedRenderableContentBounds();", renderer_content)
+        viewport_command_owner_content = VIEWPORT_COMMAND_OWNER_JS.read_text(encoding="utf-8")
         pan_extent_body = renderer_content.split("function calculatePanExtent()", 1)[1].split(
             "\n\nfunction updateZoomTranslateExtent",
             1,
         )[0]
         self.assertIn("return getViewportReadModelOwner().calculatePanExtent();", pan_extent_body)
-        reset_zoom_body = renderer_content.split("function resetZoomToFit(", 1)[1].split(
-            "\n\nfunction zoomByStep",
+        reset_zoom_body = viewport_command_owner_content.split("function resetZoomToFit(", 1)[1].split(
+            "\n\n  function zoomByStep",
             1,
         )[0]
+        self.assertIn("return getViewportCommandOwner().resetZoomToFit({ centerContent, centerX, centerY });", renderer_content)
         self.assertLess(
             reset_zoom_body.index("updateZoomTranslateExtent();"),
             reset_zoom_body.index("const transform = centerContent"),
@@ -293,7 +301,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "\nfunction handleRectangularSelection",
             1,
         )[0]
-        empty_click_body = click_body.split("if (!id) {", 1)[1].split("\n  }", 1)[0]
+        empty_click_body = click_body.split('if (target.kind === "empty" || !id) {', 1)[1].split("\n  }", 1)[0]
 
         self.assertIn("runtimeState.selectedWaterRegionId = \"\";", empty_click_body)
         self.assertIn("refreshWaterRegionSidebarRowsNow([previousWaterRegionId]);", empty_click_body)
@@ -308,12 +316,12 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "\nfunction handleRectangularSelection",
             1,
         )[0]
-        water_click_body = click_body.split('if (hit.targetType === "water") {', 1)[1].split(
+        water_click_body = click_body.split('if (target.kind === "water") {', 1)[1].split(
             "\n  if (runtimeState.selectedWaterRegionId)",
             1,
         )[0]
-        special_click_body = click_body.split('if (hit.targetType === "special") {', 1)[1].split(
-            '\n  if (hit.targetType === "water")',
+        special_click_body = click_body.split('if (target.kind === "special") {', 1)[1].split(
+            '\n  if (target.kind === "water")',
             1,
         )[0]
 

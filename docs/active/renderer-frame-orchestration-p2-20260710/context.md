@@ -8,12 +8,12 @@ Date: 2026-07-10
 - base branch: `origin/main`
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
-- current task phase: contemporary A/B admission closeout and docs-only evidence commit
-- current worktree state at start: clean
-- release residue worktree: `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70`, detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`, clean
+- current task phase: P2.1 deterministic implementation closeout and separate acceptance handoff
+- current worktree state at start: dirty expected P2.1 package
+- release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
-- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 16 behind origin/main`, with 43 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md`
+- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 43 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md`
 
 ## Approved hard invariants
 
@@ -45,6 +45,19 @@ Date: 2026-07-10
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
+
+## P2.1 deterministic implementation completion 2026-07-11
+
+- State: deterministic implementation complete and ready for separate browser/performance acceptance.
+- Physical lines: `js/core/map_renderer.js` source/dist 23437; draw-canvas owner source/dist 255; baseline 23472; net reduction 35.
+- Enforced ceilings: architecture split-entry budget 23438; Python `splitlines()` ceiling 23437.
+- Focused results: owner 14/14; P53 8/8; Python boundary 5/5; render-pipeline 5/5; scenario chunk 57/57; scenario refresh 36/36; metadata 14/14; core-runner 8/8.
+- Shared deterministic gates passed: architecture boundaries, state-write allowlist, import graph, route schema 286, and supervisor contracts.
+- Pages/dist generation passed: startup shell 44/44, landing showcase 18/18, sample project 17/17, total 927.17 MiB. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/verify-pages-dist.log`.
+- Blob parity: renderer source/dist `a78767ade0dd2f416fab95b02d67f007e0a9f79c`; owner source/dist `85eb8cc125b3438fd63805fca7c5be371e64076c`.
+- Runtime cleanup: old PIDs 27992, 18096, and 35820 are absent; ports 8000 and 8892 are clear.
+- Remote movement: `origin/main@17aeedf` moved forward by one commit. Direct red overlaps are `docs/active/_worktree_registry.md`, `tests/test_pages_dist_startup_shell.py`, and `tools/verification/verification_domains.mjs`. Preserve the dirty worktree and defer rebase to the integration owner after the functional commit and clean-head verification.
+- Remaining deterministic closeout: create the functional commit, then run clean-head dist/core checks. Browser, Playwright, main-thread, and performance acceptance are assigned to a separate acceptance owner.
 
 ## Pre-P2 baseline repair notes
 
@@ -118,7 +131,7 @@ Date: 2026-07-10
 
 - Decision: P2.1 admitted under scoped governance waiver. Old block-drift data (`A2/A1=-7.2%`, `B2/B1=11.1%`) is preserved as historical evidence only; primary contemporary A/B readiness, workload identity, B/A startup thresholds, and B/A render thresholds pass.
 - Historical April gate status: April baseline/threshold frozen; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
-- Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` remains untouched. Docs verification after edits: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, and `unmatchedChangedFiles=[]`.
+- Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` was removed and is no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`. Docs verification after edits: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, and `unmatchedChangedFiles=[]`.
 
 ## Notes
 
@@ -140,4 +153,4 @@ Waiver scope: authorizes P2.1 implementation entry only. P2.1 acceptance A/B, P2
 
 Formal supplement: reports `.runtime/reports/generated/p2-perf-hoi4-isolated-abba-20260710.{json,md}` stay `inconclusive/blocked` for attribution; attempt01/02 invalid due validator `[double]::IsFinite` flaw after A3 exit 0; attempt03 invalid due stale task-owned Chromium; attempt04 A3/control 5 valid partial samples and B3/P2 quiet-window failed 3 bounded attempts, with B4/A4 not run; attempt05 discarded. Supplement cannot establish regression or no-regression and cannot overturn phase admission.
 
-Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
+Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent untouched; release residue removed/no longer registered on 2026-07-11 with recovery evidence at commit `b14165c0e693a87872361b87ac78dc31cd7a0155`; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.

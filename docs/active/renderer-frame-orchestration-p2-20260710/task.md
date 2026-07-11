@@ -99,12 +99,17 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 ## P2.1 draw canvas orchestration owner
 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
-- [ ] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
+- [x] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - [ ] P2.1 acceptance A/B.
 - [ ] P2.2 entry A/B.
 - [ ] P2 closeout A/B.
-- [ ] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
-- [ ] Reach at least 35 extracted lines.
+- [x] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
+- [x] Reach at least 35 extracted lines: baseline 23472 to current source/dist 23437, net reduction 35.
+- [x] Complete focused owner, P53, Python boundary, render-pipeline, scenario chunk/refresh, metadata, core-runner, architecture, state, import, route schema 286, and supervisor checks.
+- [x] Complete Pages/dist parity: startup 44/44, landing 18/18, sample 17/17, total 927.17 MiB; renderer blob `a78767ade0dd2f416fab95b02d67f007e0a9f79c`; owner blob `85eb8cc125b3438fd63805fca7c5be371e64076c`.
+- [ ] Create the P2.1 functional Lore commit.
+- [ ] Run clean-head dist/core verification after the functional commit.
+- Acceptance ownership: browser, Playwright, main-thread, and performance lanes belong to the separate acceptance owner.
 
 ## P2.2a cached pass compositor owner
 
@@ -132,9 +137,11 @@ Governance basis: primary contemporary A/B readiness PASS, workload/runner ident
 Waiver scope: authorizes P2.1 implementation entry only.
 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
-- [ ] P2.1 implementation extraction.
+- [x] P2.1 implementation extraction and deterministic behavior preservation.
 - [ ] P2.1 acceptance A/B.
 - [ ] P2.2 entry A/B.
 - [ ] P2 closeout A/B.
 
 Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
+
+Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render-pipeline 5/5, scenario chunk 57/57, scenario refresh 36/36, metadata 14/14, core-runner 8/8, architecture/state/import/route schema 286/supervisor, and `verify:pages-dist` passed. Functional commit and clean-head dist/core remain pending. `origin/main@17aeedf` moved one commit; preserve this dirty worktree without rebase because direct red overlaps exist in the registry, Pages startup test, and verification domains metadata.

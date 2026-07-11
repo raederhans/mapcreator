@@ -366,3 +366,96 @@ test("renderer click selection P1.8 files route to owner and both canonical boun
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-click-selection-transaction-inventory"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-click-selection-transaction-boundary"));
 });
+
+test("renderer draw canvas P2.1 files route to owner behavior inventory and boundary commands", () => {
+  const expectedEntries = new Map([
+    [
+      "verify-core:test:node:draw-canvas-orchestration-owner",
+      "test:node:draw-canvas-orchestration-owner",
+    ],
+    [
+      "verify-core:test:node:renderer-draw-canvas-orchestration-inventory",
+      "test:node:renderer-draw-canvas-orchestration-inventory",
+    ],
+    [
+      "verify-core:test:python:map-renderer-draw-canvas-orchestration-boundary",
+      "test:python:map-renderer-draw-canvas-orchestration-boundary",
+    ],
+  ]);
+  for (const [id, commandRef] of expectedEntries) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === id);
+    assert.ok(entry, `${id} should exist in verification metadata`);
+    assert.deepEqual(
+      {
+        commandRef: entry.commandRef,
+        domain: entry.domain,
+        ownerHint: entry.ownerHint,
+        layer: entry.layer,
+        cost: entry.cost,
+        resourceLocks: entry.resourceLocks,
+        executionOwner: entry.executionOwner,
+        ciProfile: entry.ciProfile,
+        verifyCoreDefaultGroup: entry.verifyCoreDefaultGroup,
+        supervisorDomain: entry.supervisorDomain,
+        routeRegistry: entry.routeRegistry,
+      },
+      {
+        commandRef,
+        domain: "renderer-runtime",
+        ownerHint: "renderer-runtime",
+        layer: "contract",
+        cost: "fast",
+        resourceLocks: [],
+        executionOwner: "child-safe",
+        ciProfile: "pr-fast",
+        verifyCoreDefaultGroup: "renderer-owner",
+        supervisorDomain: "renderer-runtime",
+        routeRegistry: true,
+      },
+    );
+    assert.ok(entry.sourceRefs.includes("js/core/map_renderer/draw_canvas_orchestration_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/draw_canvas_orchestration_owner_behavior.test.mjs"));
+    assert.ok(entry.sourceRefs.includes("docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md"));
+  }
+
+  const ownerOnlyReport = buildRecommendation([
+    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+  ]);
+  assert.deepEqual(ownerOnlyReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:draw-canvas-orchestration-owner",
+    "test:node:renderer-draw-canvas-orchestration-inventory",
+    "test:python:map-renderer-draw-canvas-orchestration-boundary",
+    "verify:architecture-boundaries",
+    "verify:pages-dist",
+  ]) {
+    assert.ok(
+      ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
+      `owner-only routing must recommend ${commandRef}`,
+    );
+  }
+
+  const report = buildRecommendation([
+    "docs/active/_worktree_registry.md",
+    "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
+    "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
+    "docs/active/renderer-frame-orchestration-p2-20260710/context.md",
+    "docs/active/renderer-frame-orchestration-p2-20260710/task.md",
+    "package.json",
+    "js/core/map_renderer.js",
+    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+    "tests/draw_canvas_orchestration_owner_behavior.test.mjs",
+    "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
+    "tests/test_map_renderer_draw_canvas_orchestration_owner_boundary_contract.py",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/verify_core_runner_behavior.test.mjs",
+    "tools/check_architecture_boundaries.mjs",
+    "tools/verification/verification_domains.mjs",
+  ]);
+
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.coveredDomains.includes("renderer-runtime"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:draw-canvas-orchestration-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-draw-canvas-orchestration-inventory"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-draw-canvas-orchestration-boundary"));
+});

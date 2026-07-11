@@ -10,7 +10,11 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 const DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md";
+const P21_DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
+const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
+const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
+const DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
 const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
 const RENDER_REQUEST_BOUNDARY_OWNER_PATH = "js/core/map_renderer/render_request_boundary_owner.js";
@@ -125,6 +129,10 @@ function assertExcludes(source, token, message) {
   assert.equal(source.includes(token), false, `${message}: unexpected ${JSON.stringify(token)}`);
 }
 
+function normalizeLineEndings(source) {
+  return source.replace(/\r\n/g, "\n");
+}
+
 test("P53 doc exists and locks required drawCanvas orchestration inventory headings", () => {
   const docSource = readRepoFile(DOC_PATH);
 
@@ -132,12 +140,15 @@ test("P53 doc exists and locks required drawCanvas orchestration inventory headi
     assertIncludes(docSource, heading, "P53 doc must keep required heading");
   }
   for (const token of [
-    "P53 is preflight only.",
+    "P53 is preflight only. It inventories `drawCanvas()` pass orchestration before any implementation.",
     "No production runtime changes.",
+    "No `js/core/map_renderer.js` changes.",
+    "No public facade, state-write allowlist, or `dist/**` changes.",
     "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
     "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
     "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
-    "`function drawCanvas()` remains in `js/core/map_renderer.js`.",
+    "`drawCanvas()` remains untouched in `js/core/map_renderer.js`.",
+    "P53 locks this as orchestration inventory. It does not move `drawCanvas()`.",
     "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
     "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
     "`render_pass_catalog.js` remains authoritative for pass-name groups",
@@ -150,10 +161,24 @@ test("P53 doc exists and locks required drawCanvas orchestration inventory headi
     "Add a transformed-frame compositor adapter preflight.",
     "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
     "P54/P55 must not start by moving individual pass drawing functions.",
-    "No public facade, state-write allowlist, or `dist/**` changes.",
     "No broad `renderer_render_lifecycle_owner`.",
   ]) {
     assertIncludes(docSource, token, "P53 doc must lock boundary token");
+  }
+});
+
+test("P2.1 implementation doc locks canonical owner and thin wrapper", () => {
+  const docSource = readRepoFile(P21_DOC_PATH);
+
+  for (const token of [
+    "# Renderer Draw Canvas Orchestration Owner P2.1",
+    "Canonical owner: `js/core/map_renderer/draw_canvas_orchestration_owner.js`",
+    "Wrapper shape: `function drawCanvas() { getDrawCanvasOrchestrationOwner().drawCanvasFrame(); }`",
+    "P53 historical preflight remains unchanged.",
+    "`dist/app/js/core/map_renderer.js` and `dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js` are generated mirrors.",
+    "Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.",
+  ]) {
+    assertIncludes(docSource, token, "P2.1 doc must lock implementation token");
   }
 });
 
@@ -178,6 +203,11 @@ test("map_renderer keeps drawCanvas entry and renderPassToCache P51/P52 wrapper"
     "import { createRenderPassCommitAccountingOwner } from \"./map_renderer/render_pass_commit_accounting_owner.js\";",
     "map_renderer must keep P52 commit/accounting owner import",
   );
+  assertIncludes(
+    rendererSource,
+    "import { createDrawCanvasOrchestrationOwner } from \"./map_renderer/draw_canvas_orchestration_owner.js\";",
+    "map_renderer must keep P2.1 drawCanvas orchestration owner import",
+  );
 
   for (const token of [
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
@@ -190,16 +220,44 @@ test("map_renderer keeps drawCanvas entry and renderPassToCache P51/P52 wrapper"
   }
 
   for (const token of [
-    "const useTransformedFrame =",
-    "drawTransformedFrameFromCaches(frameTimings, {",
-    "const activeRenderPassNames = getActiveRenderPassNames();",
-    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
-    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
-    "markFirstVisibleFramePainted(usedLastGoodFallback ? \"last-good-frame\" : (useTransformedFrame ? \"fast-frame\" : \"exact-frame\"));",
-    "finalizePendingExactAfterSettleRefreshAfterPaint();",
-    "incrementPerfCounter(\"frames\");",
+    "getDrawCanvasOrchestrationOwner().drawCanvasFrame();",
   ]) {
     assertIncludes(drawCanvasSource, token, "drawCanvas must keep orchestration token");
+  }
+});
+
+test("P2.1 drawCanvas orchestration owner owns frame branch selection", () => {
+  const ownerSource = readRepoFile(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
+
+  for (const token of [
+    "export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {}, effects = {} } = {})",
+    "function drawCanvasFrame()",
+    "const useTransformedFrame = currentPhase === renderPhaseInteracting",
+    "drawTransformedFrameFromCaches",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "resetContextBreakdownForExactFrame",
+    "ensureIdleRenderPasses",
+    "composeCachedPasses",
+    "abortPendingExactAfterSettleRefreshAfterPaint",
+    "markFirstVisibleFramePainted",
+    "captureLastGoodFrame",
+    "recordRenderPerfMetric",
+    "finalizePendingExactAfterSettleRefreshAfterPaint",
+    "incrementPerfCounter",
+  ]) {
+    assertIncludes(ownerSource, token, "drawCanvas owner must keep orchestration token");
+  }
+  for (const token of [
+    "effectOrder",
+    "getterOrder",
+    "createTrace",
+    "runtimeState",
+    "globalThis",
+    "document",
+    "window",
+  ]) {
+    assertExcludes(ownerSource, token, "drawCanvas owner must keep import-free JSON-safe boundary");
   }
 });
 
@@ -340,15 +398,28 @@ test("adjacent lifecycle diagnostic hit exact scenario and strategic owners stay
   assertIncludes(scenarioRefreshRuntimeSource, "function refreshMapDataForScenarioChunkPromotion(", "scenario runtime must keep chunk refresh entry");
 });
 
-test("P53 keeps public facade state allowlist dist and owner topology unchanged", () => {
+test("P2.1 keeps public facade state allowlist owner topology and dist mirror aligned", () => {
   const packageJsonSource = readRepoFile("package.json");
   const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
   const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
+  const ownerSource = readRepoFile(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
+  const distOwnerSource = readRepoFile(DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
+  const distRendererSource = readRepoFile(DIST_MAP_RENDERER_PATH);
 
   assertIncludes(
     packageJsonSource,
     "\"test:node:renderer-draw-canvas-orchestration-inventory\": \"node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs\"",
     "package.json must expose P53 inventory script",
+  );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:draw-canvas-orchestration-owner\": \"node --test tests/draw_canvas_orchestration_owner_behavior.test.mjs\"",
+    "package.json must expose P2.1 owner behavior script",
+  );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:python:map-renderer-draw-canvas-orchestration-boundary\": \"npm run python -- -m unittest tests.test_map_renderer_draw_canvas_orchestration_owner_boundary_contract -q\"",
+    "package.json must expose P2.1 Python boundary script",
   );
 
   for (const token of [
@@ -375,13 +446,14 @@ test("P53 keeps public facade state allowlist dist and owner topology unchanged"
     "js/core/renderer/draw_canvas_orchestration_owner.js",
     "js/core/renderer/draw_canvas_orchestration_helper.js",
     "js/core/renderer/draw_canvas_orchestration_controller.js",
-    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
     "js/core/map_renderer/draw_canvas_orchestration_helper.js",
     "js/core/map_renderer/draw_canvas_orchestration_controller.js",
   ]) {
     assert.equal(repoFileExists(relativePath), false, `P53 must not add production owner/helper: ${relativePath}`);
   }
+  assert.equal(repoFileExists(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH), true, "P2.1 must keep canonical drawCanvas owner");
   for (const sourcePath of listRepoSourceFiles("js/core")) {
+    if (sourcePath === DRAW_CANVAS_ORCHESTRATION_OWNER_PATH) continue;
     assert.equal(
       isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath),
       false,
@@ -389,21 +461,29 @@ test("P53 keeps public facade state allowlist dist and owner topology unchanged"
     );
   }
 
+  assert.equal(
+    normalizeLineEndings(distOwnerSource),
+    normalizeLineEndings(ownerSource),
+    "dist drawCanvas owner must mirror source owner",
+  );
+  assertIncludes(
+    distRendererSource,
+    "import { createDrawCanvasOrchestrationOwner } from \"./map_renderer/draw_canvas_orchestration_owner.js\";",
+    "dist map_renderer must keep P2.1 owner import",
+  );
+  assertIncludes(
+    extractFunctionSource(distRendererSource, "drawCanvas"),
+    "getDrawCanvasOrchestrationOwner().drawCanvasFrame();",
+    "dist drawCanvas must keep thin wrapper",
+  );
+
   const immutableDiff = execFileSync(
     "git",
-    [
-      "diff",
-      "--name-only",
-      "--",
-      "dist",
-      MAP_RENDERER_PATH,
-      PUBLIC_FACADE_PATH,
-      STATE_WRITE_ALLOWLIST_PATH,
-    ],
+    ["diff", "--name-only", "--", PUBLIC_FACADE_PATH, STATE_WRITE_ALLOWLIST_PATH],
     { cwd: REPO_ROOT, encoding: "utf8" },
   )
     .trim()
     .split(/\r?\n/)
     .filter(Boolean);
-  assert.deepEqual(immutableDiff, [], "P53 must not modify production runtime, public facade, state allowlist, or dist");
+  assert.deepEqual(immutableDiff, [], "P2.1 must keep public facade and state allowlist unchanged");
 });

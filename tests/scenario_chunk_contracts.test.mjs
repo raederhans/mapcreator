@@ -1165,6 +1165,12 @@ test("viewport geo bounds samples curved projection edges for chunk eligibility"
 
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const drawCanvasOrchestrationOwnerSource = readRepoFile(
+    "js",
+    "core",
+    "map_renderer",
+    "draw_canvas_orchestration_owner.js",
+  );
   const mainSource = readRepoFile("js", "main.js");
   const deferredUiBootstrapSource = readRepoFile("js", "bootstrap", "deferred_ui_bootstrap.js");
   const contextScenarioSignatureBranch = extractRendererPassSignatureBranch(rendererSource, "contextScenario");
@@ -1264,7 +1270,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?frame\.stale = true;/.test(renderCacheOwnerSource)
       && /function recordLastGoodFrameInvalidationSummary\(summary = \{\}\) \{[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
-      && /if \(runtimeState\.renderPhase === RENDER_PHASE_INTERACTING && runtimeState\.firstVisibleFramePainted\) \{[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(rendererSource)
+      && /currentPhase === renderPhaseInteracting && getFirstVisibleFramePainted\(\)[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = !!drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(drawCanvasOrchestrationOwnerSource)
       && rendererSource.includes('recordRenderPerfMetric("continuityFrameStaleAgeMs"')
       && visibleFrameDiagnosticsOwnerSource.includes('"visibleFrameTransaction"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameCount"')
@@ -1301,7 +1307,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function applyScheduledExactAfterSettleRefreshPlan\(generation, plan\) \{[\s\S]*?phase: "applying"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshApply"[\s\S]*?prepareExactAfterSettlePassesInSlices\(generation, plan\);/.test(exactSchedulerSource)
       && /function completeScheduledExactAfterSettleRefreshPlan\(generation, plan, passStartedAt\) \{[\s\S]*?phase: "awaiting-paint"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshPasses"[\s\S]*?requestRendererRender\("exact-after-settle", \{[\s\S]*?flush: true/.test(exactSchedulerSource),
     exactAfterSettleFinalizesAfterExactCompose:
-      /function drawCanvas\(\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(rendererSource)
+      /function drawCanvasFrame\(\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = !!composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(drawCanvasOrchestrationOwnerSource)
       && /function finalizePendingExactAfterSettleRefreshAfterPaint\(\) \{[\s\S]*?isExactAfterSettleIdentityCurrent\(controller\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshWaitForPaint"[\s\S]*?finalizeExactAfterSettleRefreshPlan\(plan\);[\s\S]*?recordRenderPerfMetric\("settleExactRefreshFinalize"/.test(exactSchedulerSource)
       && /metricSequenceStartedAt: Math\.max\(0, Number\(runtimeState\.renderPerfMetricSequence \|\| 0\)\)/.test(exactSchedulerSource)
       && /function readRenderPerfMetricDuration\(metricName, minSequence = 0\) \{[\s\S]*?requiredMinSequence > 0[\s\S]*?entry\?\.sequence/.test(rendererSource)
@@ -1323,7 +1329,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
     exactAfterSettleAbortsAwaitingPaintAfterExactComposeFailure:
       /function abortPendingExactAfterSettleRefreshAfterPaint\(reason = "exact-compose-failed"\) \{[\s\S]*?String\(controller\.phase \|\| ""\) !== "awaiting-paint"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshAbortAfterPaintFailure"[\s\S]*?resetExactAfterSettleController\(`abort-\$\{reason\}`, generation\);/.test(exactSchedulerSource)
       && /function abortPendingExactAfterSettleRefreshAfterPaint\(reason = "exact-compose-failed"\) \{[\s\S]*?resetExactAfterSettleController\(`abort-\$\{reason\}`, generation\);[\s\S]*?runtimeState\.deferExactAfterSettle = false;[\s\S]*?runtimeState\.pendingExactPoliticalFastFrame = false;[\s\S]*?invalidateRenderPasses\("political", "exact-after-settle-abort"\);[\s\S]*?requestRendererRender\("exact-after-settle-abort-recover", \{[\s\S]*?flush: false,[\s\S]*?if \(getContext\(\)\) render\(\);/.test(exactSchedulerSource)
-      && /if \(!useTransformedFrame \|\| !drewFrame\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(!drewExactFrame\) \{[\s\S]*?abortPendingExactAfterSettleRefreshAfterPaint\("compose-cached-passes-failed"\);[\s\S]*?\}/.test(rendererSource)
+      && /if \(!useTransformedFrame \|\| !drewFrame\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = !!composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(!drewExactFrame\) \{[\s\S]*?abortPendingExactAfterSettleRefreshAfterPaint\("compose-cached-passes-failed"\);[\s\S]*?\}/.test(drawCanvasOrchestrationOwnerSource)
       && /function isInteractionRecoveryBlocked\(\) \{[\s\S]*?isExactAfterSettleControllerActive\(\)/.test(rendererSource),
     exactComposeFailureReportsControllerAndMissingPassContext:
       /function composeCachedPasses\(passNames, currentTransform = runtimeState\.zoomTransform \|\| globalThis\.d3\.zoomIdentity\) \{[\s\S]*?recordRenderPerfMetric\("compositeBufferMissingPass", 0, \{[\s\S]*?missingPassNames:[\s\S]*?controllerPhase:[\s\S]*?deferExactAfterSettle:[\s\S]*?\}\);/.test(rendererSource)
@@ -1597,7 +1603,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function canBuildInteractionComposite\(cache = getRenderPassCacheState\(\)\) \{[\s\S]*?canDrawTransformedPass\(passName, cache\)/.test(rendererSource)
       && /function buildInteractionComposite\(currentTransform, timings\) \{[\s\S]*?canBuildInteractionComposite\(getRenderPassCacheState\(\)\)/.test(rendererSource)
       && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?runtimeState\.renderPhase === RENDER_PHASE_SETTLING[\s\S]*?runtimeState\.deferExactAfterSettle[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(rendererSource)
-      && /function drawCanvas[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(rendererSource),
+      && /function drawCanvasFrame[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(drawCanvasOrchestrationOwnerSource),
     politicalRasterWorkerProtocolDefaultsOff:
       politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 4")
       && politicalRasterWorkerClientSource.includes("political_raster_worker")
@@ -3508,6 +3514,12 @@ test("political raster renderer request identity includes viewport and pass sign
 
 test("political patch overlay and first-pixel source are explicit layer contracts", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const drawCanvasOrchestrationOwnerSource = readRepoFile(
+    "js",
+    "core",
+    "map_renderer",
+    "draw_canvas_orchestration_owner.js",
+  );
   const layerManagerSource = readRepoFile("js", "core", "map_renderer", "canvas_layer_manager.js");
   const packetSource = readRepoFile("js", "core", "map_renderer", "political_raster_worker_packet.js");
   const runtimeStateSource = readRepoFile("js", "core", "state", "renderer_runtime_state.js");
@@ -3517,7 +3529,7 @@ test("political patch overlay and first-pixel source are explicit layer contract
   assert.ok(rendererSource.includes("function paintPoliticalPatchOverlayForIds"));
   assert.ok(rendererSource.includes("function clearPoliticalPatchOverlayIfStale"));
   assert.ok(rendererSource.includes("pendingPoliticalPatchOverlayTransformSignature"));
-  assert.ok(rendererSource.includes('clearPoliticalPatchOverlayIfStale("drawCanvas-stale-overlay")'));
+  assert.ok(drawCanvasOrchestrationOwnerSource.includes('clearPoliticalPatchOverlayIfStale("drawCanvas-stale-overlay")'));
   assert.ok(layerManagerSource.includes("function shouldClearStaleCanvasOverlay"));
   assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayPaint"'));
   assert.ok(rendererSource.includes('recordRenderPerfMetric("politicalPatchOverlayClear"'));

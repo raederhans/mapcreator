@@ -168,6 +168,7 @@ import { createRenderRequestBoundaryOwner } from "./map_renderer/render_request_
 import { createRenderPhaseLifecycleOwner } from "./map_renderer/render_phase_lifecycle_owner.js";
 import { createRenderPassCacheHostOwner } from "./map_renderer/render_pass_cache_host_owner.js";
 import { createRenderPassCommitAccountingOwner } from "./map_renderer/render_pass_commit_accounting_owner.js";
+import { createDrawCanvasOrchestrationOwner } from "./map_renderer/draw_canvas_orchestration_owner.js";
 import {
   assertRendererRuntimeContext,
   createRendererRuntimeContext,
@@ -988,6 +989,7 @@ let renderCacheOwner = null;
 let rendererRuntimeContext = null;
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
+let drawCanvasOrchestrationOwner = null;
 let renderTransformReusePolicyOwner = null;
 let projectedGeometryBoundsOwner = null;
 let viewportReadModelOwner = null;
@@ -3063,6 +3065,59 @@ function getRenderPipelinePassesOwner() {
     },
   });
   return renderPipelinePassesOwner;
+}
+
+function getDrawCanvasOrchestrationOwner() {
+  if (drawCanvasOrchestrationOwner) return drawCanvasOrchestrationOwner;
+
+  drawCanvasOrchestrationOwner = createDrawCanvasOrchestrationOwner({
+    constants: {
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+      renderPhaseSettling: RENDER_PHASE_SETTLING,
+    },
+    getters: {
+      isFrameSurfaceReady: () => Boolean(rendererSurfaceHost.getContext() && rendererSurfaceHost.getPathCanvas()),
+      getRenderPhase: () => runtimeState.renderPhase,
+      getDeferExactAfterSettle: () => runtimeState.deferExactAfterSettle,
+      getFirstVisibleFramePainted: () => runtimeState.firstVisibleFramePainted,
+      getEffectiveZoomTransform: () => runtimeState.zoomTransform || globalThis.d3.zoomIdentity,
+      getRawZoomTransform: () => runtimeState.zoomTransform,
+      getActiveScenarioId: () => runtimeState.activeScenarioId,
+      getActiveRenderPassNames,
+      nowMs,
+    },
+    effects: {
+      ensureLayerDataFromTopology,
+      incrementPerfCounter,
+      clearPoliticalPatchOverlayIfStale,
+      cancelPoliticalPathWarmup,
+      promoteDeferredColorRenderToIdle,
+      drawTransformedFrameFromCaches,
+      drawLastGoodFrameFallback,
+      noteMissingVisibleFrameSkippedDuringInteraction,
+      drawBaseVisibleFrameFallback,
+      resetContextBreakdownForExactFrame,
+      composeCachedPasses,
+      abortPendingExactAfterSettleRefreshAfterPaint,
+      markFirstVisibleFramePainted,
+      captureLastGoodFrame,
+      recordRenderPerfMetric,
+      finalizePendingExactAfterSettleRefreshAfterPaint,
+      ensureIdleRenderPasses: (frameTimings, activeRenderPassNames) => {
+        getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);
+      },
+      commitLastFrame: ({ phase, totalMs, timings, transform }) => {
+        getRenderPassCacheState().lastFrame = {
+          phase,
+          totalMs,
+          timings,
+          transform: cloneZoomTransform(transform),
+        };
+      },
+    },
+  });
+  return drawCanvasOrchestrationOwner;
 }
 
 // --- 注释锚点：缓存状态（cache state）章节 ---
@@ -18348,25 +18403,16 @@ function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } 
   return true;
 }
 
-function shouldPromoteDeferredColorRenderToIdle() {
-  const cache = getRenderPassCacheState();
-  if (
-    runtimeState.renderPhase !== RENDER_PHASE_SETTLING
-    && !(runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle)
-  ) {
-    return false;
-  }
-  if (!cache.dirty?.political) {
-    return false;
-  }
-  const reason = String(cache.reasons?.political || "");
-  return reason === "refresh-colors" || reason === "rebuild-colors";
-}
-
 function promoteDeferredColorRenderToIdle() {
-  if (!shouldPromoteDeferredColorRenderToIdle()) {
-    return false;
-  }
+  const cache = getRenderPassCacheState();
+  const reason = String(cache.reasons?.political || "");
+  const currentPhase = runtimeState.renderPhase;
+  const phaseEligible = currentPhase === RENDER_PHASE_SETTLING
+    || (currentPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
+  const promotionEligible = phaseEligible
+    && !!cache.dirty?.political
+    && (reason === "refresh-colors" || reason === "rebuild-colors");
+  if (!promotionEligible) return false;
   const previousPhase = String(runtimeState.renderPhase || "");
   const previousDefer = !!runtimeState.deferExactAfterSettle;
   clearRenderPhaseTimer();
@@ -18381,88 +18427,7 @@ function promoteDeferredColorRenderToIdle() {
 }
 
 function drawCanvas() {
-  if (!rendererSurfaceHost.getContext() || !rendererSurfaceHost.getPathCanvas()) return;
-  ensureLayerDataFromTopology();
-  incrementPerfCounter("drawCanvas");
-  clearPoliticalPatchOverlayIfStale("drawCanvas-stale-overlay");
-  if (runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle) {
-    cancelPoliticalPathWarmup("drawCanvas-non-idle");
-  }
-  promoteDeferredColorRenderToIdle();
-  const frameStart = nowMs();
-  const frameTimings = {};
-  const useTransformedFrame =
-    runtimeState.renderPhase === RENDER_PHASE_INTERACTING
-    || runtimeState.renderPhase === RENDER_PHASE_SETTLING
-    || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
-  let drewFrame = false;
-  let usedLastGoodFallback = false;
-  let usedBaseVisibleFallback = false;
-  let keptPreviousPixels = false;
-  let drewExactFrame = false;
-  if (useTransformedFrame && !drewFrame) {
-    drewFrame = drawTransformedFrameFromCaches(frameTimings, {
-      interactiveBorders: runtimeState.renderPhase !== RENDER_PHASE_IDLE || runtimeState.deferExactAfterSettle,
-    });
-    if (!drewFrame) {
-      drewFrame = drawLastGoodFrameFallback(runtimeState.zoomTransform || globalThis.d3.zoomIdentity);
-      usedLastGoodFallback = drewFrame;
-      if (!drewFrame) {
-        if (runtimeState.renderPhase === RENDER_PHASE_INTERACTING && runtimeState.firstVisibleFramePainted) {
-          noteMissingVisibleFrameSkippedDuringInteraction("missing-fast-frame-no-continuity");
-          keptPreviousPixels = true;
-          drewFrame = true;
-        } else {
-          drewFrame = drawBaseVisibleFrameFallback("missing-fast-frame-no-continuity");
-          usedBaseVisibleFallback = drewFrame;
-        }
-      }
-    }
-  }
-
-  if (!useTransformedFrame || !drewFrame) {
-    resetContextBreakdownForExactFrame();
-    const activeRenderPassNames = getActiveRenderPassNames();
-    getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);
-    drewExactFrame = composeCachedPasses(activeRenderPassNames);
-    drewFrame = drewExactFrame;
-    if (!drewExactFrame) {
-      abortPendingExactAfterSettleRefreshAfterPaint("compose-cached-passes-failed");
-    }
-  }
-
-  const cache = getRenderPassCacheState();
-  cache.lastFrame = {
-    phase: runtimeState.renderPhase,
-    totalMs: Math.max(0, nowMs() - frameStart),
-    timings: frameTimings,
-    transform: cloneZoomTransform(runtimeState.zoomTransform),
-  };
-  if (drewFrame && !usedBaseVisibleFallback && !keptPreviousPixels) {
-    markFirstVisibleFramePainted(usedLastGoodFallback ? "last-good-frame" : (useTransformedFrame ? "fast-frame" : "exact-frame"));
-  }
-  const usedDirtyFastFramePasses = typeof frameTimings.usedDirtyFastFramePasses === "string"
-    && frameTimings.usedDirtyFastFramePasses.length > 0;
-  if (
-    drewFrame
-    && !usedLastGoodFallback
-    && !usedBaseVisibleFallback
-    && !usedDirtyFastFramePasses
-    && (!useTransformedFrame || runtimeState.renderPhase !== RENDER_PHASE_INTERACTING)
-  ) {
-    captureLastGoodFrame(useTransformedFrame ? "fast-frame" : "exact-frame", runtimeState.zoomTransform);
-  } else if (drewFrame && usedDirtyFastFramePasses) {
-    recordRenderPerfMetric("lastGoodFrameCaptureSkipped", 0, {
-      reason: "dirty-fast-frame",
-      dirtyPasses: frameTimings.usedDirtyFastFramePasses,
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      phase: String(runtimeState.renderPhase || ""),
-    });
-  }
-  if (drewExactFrame) {
-    finalizePendingExactAfterSettleRefreshAfterPaint();
-  }
-  incrementPerfCounter("frames");
+  getDrawCanvasOrchestrationOwner().drawCanvasFrame();
 }
 
 function readRenderPerfMetricDuration(metricName, minSequence = 0) {

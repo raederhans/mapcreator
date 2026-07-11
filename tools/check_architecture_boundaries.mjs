@@ -87,7 +87,9 @@ const FILES = Object.freeze({
   renderPassCommitAccountingOwnerTest: "tests/render_pass_commit_accounting_owner_behavior.test.mjs",
   renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
   rendererDrawCanvasOrchestrationPreflightDoc: "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
+  rendererDrawCanvasOrchestrationOwnerDoc: "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
   rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
+  drawCanvasOrchestrationOwner: "js/core/map_renderer/draw_canvas_orchestration_owner.js",
   rendererClickSelectionTransactionPreflightDoc: "docs/active/renderer-click-selection-transaction-preflight-20260702.md",
   rendererClickSelectionDecisionOwnerDoc: "docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md",
   clickSelectionTransactionOwner: "js/core/map_renderer/click_selection_transaction_owner.js",
@@ -141,7 +143,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 24120,
+  [FILES.renderer]: 23438,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -159,6 +161,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderPhaseLifecycleOwner]: 260,
   [FILES.renderPassCacheHostOwner]: 260,
   [FILES.renderPassCommitAccountingOwner]: 260,
+  [FILES.drawCanvasOrchestrationOwner]: 320,
   [FILES.clickSelectionTransactionOwner]: 120,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
@@ -258,6 +261,9 @@ function isForbiddenRenderLifecycleOwnerPath(sourcePath) {
 
 function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
   const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === FILES.drawCanvasOrchestrationOwner) {
+    return false;
+  }
   if (!normalized.startsWith("js/core/")) {
     return false;
   }
@@ -424,9 +430,13 @@ function collectFailures() {
   const rendererDrawCanvasOrchestrationPreflightDoc = readProjectFile(
     FILES.rendererDrawCanvasOrchestrationPreflightDoc,
   );
+  const rendererDrawCanvasOrchestrationOwnerDoc = readProjectFile(
+    FILES.rendererDrawCanvasOrchestrationOwnerDoc,
+  );
   const rendererDrawCanvasOrchestrationInventoryTest = readProjectFile(
     FILES.rendererDrawCanvasOrchestrationInventoryTest,
   );
+  const drawCanvasOrchestrationOwner = readProjectFile(FILES.drawCanvasOrchestrationOwner);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
   );
@@ -542,7 +552,9 @@ function collectFailures() {
     [FILES.renderPassCommitAccountingOwnerTest]: renderPassCommitAccountingOwnerTest,
     [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
     [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
+    [FILES.rendererDrawCanvasOrchestrationOwnerDoc]: rendererDrawCanvasOrchestrationOwnerDoc,
     [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
+    [FILES.drawCanvasOrchestrationOwner]: drawCanvasOrchestrationOwner,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
     [FILES.clickSelectionTransactionOwner]: clickSelectionTransactionOwner,
@@ -2831,12 +2843,15 @@ function collectFailures() {
     }
   }
   for (const token of [
-    "P53 is preflight only.",
+    "P53 is preflight only. It inventories `drawCanvas()` pass orchestration before any implementation.",
     "No production runtime changes.",
+    "No `js/core/map_renderer.js` changes.",
+    "No public facade, state-write allowlist, or `dist/**` changes.",
     "P51 is landed on default main as commit `725abb4a305a03687e7bca358ff918ba659cfef1`.",
     "P52 is landed on default main as commit `c60fd9239f8352b1916686b6dac8ee16eee8f017`.",
     "`function renderPassToCache(passName, drawFn, transform, timings)` remains in `js/core/map_renderer.js`.",
-    "`function drawCanvas()` remains in `js/core/map_renderer.js`.",
+    "`drawCanvas()` remains untouched in `js/core/map_renderer.js`.",
+    "P53 locks this as orchestration inventory. It does not move `drawCanvas()`.",
     "`render_pipeline_passes.js` remains authoritative for idle pass preparation",
     "`render_pipeline_catalog.js` remains authoritative for `IDLE_RENDER_PASS_DEFINITIONS`.",
     "`render_pass_catalog.js` remains authoritative for pass-name groups",
@@ -2849,7 +2864,6 @@ function collectFailures() {
     "Add a transformed-frame compositor adapter preflight.",
     "Add a first-render acceptance adapter if P42 does not already cover the acceptance boundary fully.",
     "P54/P55 must not start by moving individual pass drawing functions.",
-    "No public facade, state-write allowlist, or `dist/**` changes.",
     "No broad `renderer_render_lifecycle_owner`.",
   ]) {
     if (!rendererDrawCanvasOrchestrationPreflightDoc.includes(token)) {
@@ -2858,6 +2872,7 @@ function collectFailures() {
   }
   for (const token of [
     "const DOC_PATH = \"docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md\";",
+    "const P21_DOC_PATH = \"docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md\";",
     "const P53_DOC_HEADINGS = Object.freeze([",
     "function extractFunctionSource(source, functionName)",
     "function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)",
@@ -2865,11 +2880,12 @@ function collectFailures() {
     "function renderPassToCache(",
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
     "getRenderPassCommitAccountingOwner().commitRenderPass({",
-    "drawTransformedFrameFromCaches(frameTimings, {",
-    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
-    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
-    "markFirstVisibleFramePainted(usedLastGoodFallback ? \\\"last-good-frame\\\" : (useTransformedFrame ? \\\"fast-frame\\\" : \\\"exact-frame\\\"));",
-    "finalizePendingExactAfterSettleRefreshAfterPaint();",
+    "P2.1 drawCanvas orchestration owner owns frame branch selection",
+    "getDrawCanvasOrchestrationOwner().drawCanvasFrame();",
+    "drawTransformedFrameFromCaches",
+    "ensureIdleRenderPasses",
+    "composeCachedPasses",
+    "finalizePendingExactAfterSettleRefreshAfterPaint",
     "export function createRenderPipelinePassesOwner({",
     "export const IDLE_RENDER_PASS_DEFINITIONS = [",
     "export const TRANSFORMED_FRAME_PASS_NAMES = [",
@@ -2879,8 +2895,8 @@ function collectFailures() {
     "function refreshMapDataForScenarioApply(options = {})",
     "createStrategicOverlayRuntimeOwner({",
     "createStrategicOverlayRenderOwner({",
-    "P53 must not add production owner/helper",
-    "P53 must not modify production runtime, public facade, state allowlist, or dist",
+    "P2.1 must keep canonical drawCanvas owner",
+    "P2.1 must keep public facade and state allowlist unchanged",
   ]) {
     if (!rendererDrawCanvasOrchestrationInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must lock P53 inventory token: ${token}`);
@@ -2888,6 +2904,9 @@ function collectFailures() {
   }
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationPreflightDoc))) {
     failures.push(`${FILES.rendererDrawCanvasOrchestrationPreflightDoc} must exist for P53.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationOwnerDoc))) {
+    failures.push(`${FILES.rendererDrawCanvasOrchestrationOwnerDoc} must exist for P2.1.`);
   }
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationInventoryTest))) {
     failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must exist for P53.`);
@@ -2906,18 +2925,40 @@ function collectFailures() {
     "function drawCanvas()",
     "function readRenderPerfMetricDuration(",
   );
+  if (!drawCanvasSource.includes("getDrawCanvasOrchestrationOwner().drawCanvasFrame();")) {
+    failures.push(`${FILES.renderer} drawCanvas must keep P2.1 thin wrapper.`);
+  }
   for (const token of [
-    "const useTransformedFrame =",
-    "drawTransformedFrameFromCaches(frameTimings, {",
-    "const activeRenderPassNames = getActiveRenderPassNames();",
-    "getRenderPipelinePassesOwner().ensureIdleRenderPasses(frameTimings, activeRenderPassNames);",
-    "drewExactFrame = composeCachedPasses(activeRenderPassNames);",
-    "markFirstVisibleFramePainted(usedLastGoodFallback ? \"last-good-frame\" : (useTransformedFrame ? \"fast-frame\" : \"exact-frame\"));",
-    "finalizePendingExactAfterSettleRefreshAfterPaint();",
+    "export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {}, effects = {} } = {})",
+    "function drawCanvasFrame()",
+    "const useTransformedFrame = currentPhase === renderPhaseInteracting",
+    "drawTransformedFrameFromCaches",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "resetContextBreakdownForExactFrame",
+    "ensureIdleRenderPasses",
+    "composeCachedPasses",
+    "abortPendingExactAfterSettleRefreshAfterPaint",
+    "markFirstVisibleFramePainted",
+    "captureLastGoodFrame",
+    "recordRenderPerfMetric",
+    "finalizePendingExactAfterSettleRefreshAfterPaint",
     "incrementPerfCounter(\"frames\");",
   ]) {
-    if (!drawCanvasSource.includes(token)) {
-      failures.push(`${FILES.renderer} drawCanvas must keep P53 orchestration token: ${token}`);
+    if (!drawCanvasOrchestrationOwner.includes(token)) {
+      failures.push(`${FILES.drawCanvasOrchestrationOwner} must keep P2.1 orchestration token: ${token}`);
+    }
+  }
+  for (const token of [
+    "# Renderer Draw Canvas Orchestration Owner P2.1",
+    "Canonical owner: `js/core/map_renderer/draw_canvas_orchestration_owner.js`",
+    "Wrapper shape: `function drawCanvas() { getDrawCanvasOrchestrationOwner().drawCanvasFrame(); }`",
+    "P53 historical preflight remains unchanged.",
+    "`dist/app/js/core/map_renderer.js` and `dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js` are generated mirrors.",
+    "Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.",
+  ]) {
+    if (!rendererDrawCanvasOrchestrationOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererDrawCanvasOrchestrationOwnerDoc} must lock P2.1 token: ${token}`);
     }
   }
   for (const token of [
@@ -3020,9 +3061,11 @@ function collectFailures() {
     "js/core/renderer/draw_canvas_orchestration_owner.js",
     "js/core/renderer/draw_canvas_orchestration_helper.js",
     "js/core/renderer/draw_canvas_orchestration_controller.js",
-    "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+    "js/core/renderer/draw_canvas_orchestration_adapter.js",
     "js/core/map_renderer/draw_canvas_orchestration_helper.js",
     "js/core/map_renderer/draw_canvas_orchestration_controller.js",
+    "js/core/map_renderer/draw_canvas_orchestration_adapter.js",
+    "js/core/map_renderer/shared_draw_canvas_orchestration_owner.js",
   ]) {
     if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
       failures.push(`P53 must keep production owner/helper absent: ${relativePath}`);

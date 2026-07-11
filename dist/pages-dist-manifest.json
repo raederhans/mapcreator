@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 899027,
+      "size_bytes": 897666,
       "source_kind": "dist"
     },
     {
@@ -45773,6 +45773,11 @@
     {
       "path": "app/js/core/map_renderer/click_selection_transaction_owner.js",
       "size_bytes": 2567,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/draw_canvas_orchestration_owner.js",
+      "size_bytes": 9595,
       "source_kind": "dist"
     },
     {
@@ -47407,7 +47412,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467322,
+      "size_bytes": 1467466,
       "source_kind": "dist"
     },
     {
@@ -47537,9 +47542,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9421,
+      "file_count": 9422,
       "path": "app",
-      "size_bytes": 965635319
+      "size_bytes": 965643553
     },
     {
       "file_count": 57,
@@ -47549,7 +47554,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467322
+      "size_bytes": 1467466
     },
     {
       "file_count": 1,
@@ -47572,5 +47577,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972201002
+  "total_bytes": 972209380
 }
