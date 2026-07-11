@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.1 browser acceptance is green, and the completed contemporary performance A/B is `failed/blocked`. The pooled `tno_1962` render median increased from `668.10ms` on control to `815.75ms` on the P2.1 candidate, a `147.65ms / 22.10%` regression. P2.2 remains blocked pending root-cause work and a fresh full A/B. Parent WIP remains untouched.
+Last updated: 2026-07-11 P2.1 browser acceptance is green. The original legacy pooled-render report remains `failed/blocked`; deterministic governed reanalysis of the same 40 frozen raw runs is `accepted-with-governed-reanalysis`, with 40/40 role matches and canonical TNO/HOI4 A/B deltas inside the pre-registered gates. P2.2a is admitted. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -21,7 +21,7 @@ Last updated: 2026-07-11 P2.1 browser acceptance is green, and the completed con
 3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright and perf under single-owner execution. P2.2 entry now requires an explained TNO render regression plus a fresh full A/B under the same identity and quiet-window contract.
+6. Keep browser/dev-server/Playwright and perf under single-owner execution. P2.2a/P2.2b must retain `render-sample-role-v1`, A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
 
 ## Current Worktrees
 
@@ -30,9 +30,9 @@ Current rows reflect the real two local worktrees from the current worktree list
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`. | User-provided current worktree list says parent path exists at `db8bd6c`; existing WIP retained. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; acceptance candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1`; control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `blocked-on-P2.1-performance-regression`; deterministic/dist/browser green | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Main-thread 65/65, physical runtime 1/1, scenario resilience 3/3; valid A1/B1/B2/A2 with 10 samples per side/scenario; TNO render `+147.65ms / +22.10%`. | Red for P2.2 admission until the TNO render regression is explained and a fresh full A/B passes. | Keep branch and artifacts recoverable; diagnose P2.1 draw-frame runtime attribution before starting P2.2. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; current pre-governance HEAD `e2319fa8a46ca95f4964c9cca175fc165e675917`; acceptance candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1`; control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `in-progress`; P2.2a admitted through governed P2.1 reanalysis | Perf role policy/runner/analyzer/tests/metadata and P2 control docs. Parent WIP remains untouched. | Main-thread 65/65, physical runtime 1/1, scenario resilience 3/3; 40/40 canonical role matches; TNO canonical A/B `1197.90/1195.35ms`; HOI4 `694.55/694.80ms`. | Yellow for future perf runner/metadata/docs overlap; red only for concurrent edits to this isolated lane. | Complete deterministic gates and Lore commit, then start P2.2a under the pre-registered acceptance protocol. |
 
-## P2.1 Acceptance Closeout 2026-07-11
+## P2.1 Legacy-Metric Acceptance Closeout 2026-07-11
 
 Status: `failed/blocked` for P2.2 admission at candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1` against control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`.
 
@@ -69,7 +69,19 @@ Artifacts and cleanup:
 - Block artifacts: `.runtime/output/perf/p2-1-acceptance/20260711/A/{A1,A2}/` and `.runtime/output/perf/p2-1-acceptance/20260711/B/{B1,B2}/`.
 - Cleanup: `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`; the runner was restored, the `node_modules` junction and control worktree were removed, worktree registration was pruned, ports remained clear, and parent WIP retained its original shape.
 
-Decision: P2.1 implementation remains recoverable and browser-correct under the exercised matrix. P2.2 stays blocked by the definite TNO render regression. The approved protocol forbids selective reruns; the next acceptance attempt must follow root-cause work and repeat the full A1/B1/B2/A2 experiment.
+Historical legacy decision: P2.1 implementation remained recoverable and browser-correct under the exercised matrix while the mixed-role pooled render metric blocked P2.2. The following governed reanalysis supersedes only the phase-admission interpretation; the original report and decision remain preserved as evidence.
+
+## P2.1 Governed Render-Sample Reanalysis 2026-07-11
+
+Status: `accepted-with-governed-reanalysis`; P2.2a admitted.
+
+The original report `.runtime/reports/generated/p2-1-performance-ab-20260711.json` remains unchanged at SHA256 `f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839` with its legacy `failed/blocked` decision. The new companion reads all 40 existing raw files and applies `render-sample-role-v1` / `last-post-promotion-idle-scenario-frame-v1`. Every run has count 2, sequence `[1,2]`, one unique final canonical sample, matching scenario, idle phase, progressive political background, positive scenario context, and a timestamp at or after visual chunk promotion. Role classification does not inspect duration.
+
+The legacy TNO first-sample composition differs: A blank/scenario `6/4`, B `3/7`. Canonical medians remove that role mixture: TNO A/B `1197.90/1195.35ms`; HOI4 A/B `694.55/694.80ms`. Startup, block validity/quiet windows, control/candidate HEAD, runner, lock, environment, query, workload identity, 40 raw hashes, block drift, outliers, and direction checks pass. HOI4 has no material promotion gap, recorded as `not-applicable/pass`.
+
+Tooling delivery adds the reusable pure policy, import-safe offline analyzer, schema-version-2 runner role output, legacy schema-version-1 baseline compatibility, focused Node/Python contracts, verification metadata, and default core routing. Companion artifacts: `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.json` and `.md`.
+
+P2.2a and P2.2b are pre-registered to the same role policy, A1/B1/B2/A2 order, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, block drift `5%/10%`, and frozen historical `1.15/1.25` baseline thresholds. Parent checkout WIP remains untouched.
 
 ## P2 Upstream Integration 2026-07-11
 

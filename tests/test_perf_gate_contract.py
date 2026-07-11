@@ -11,6 +11,8 @@ WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
 BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-04-20.md"
 BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-04-20.json"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
+RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
+RENDER_SAMPLE_ROLE_ANALYZER = REPO_ROOT / "tools" / "perf" / "analyze_render_sample_roles.mjs"
 EDITOR_BENCHMARK_SCRIPT = REPO_ROOT / "ops" / "browser-mcp" / "editor-performance-benchmark.py"
 
 
@@ -71,8 +73,16 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn('benchmarkMetricsSchemaVersion: "3.3"', script)
         self.assertIn('probeSchema: "mc_perf_snapshot"', script)
         self.assertIn('const PERF_REPORT_CONTRACT_FIELDS = [', script)
-        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
+        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline", { allowLegacySchema: true })', script)
         self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
+        self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
+        self.assertIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION = 1;", script)
+        self.assertIn('from "./render_sample_role_policy.mjs";', script)
+        self.assertIn("canonicalRenderSampleMs", script)
+        self.assertIn("renderSampleRoleSummary", script)
+        self.assertIn("collectGovernedRenderSampleRoleMismatches", script)
+        self.assertIn("Perf gate render sample role mismatch.", script)
+        self.assertIn("renderSampleRoleMismatches", script)
         self.assertIn('const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];', script)
         self.assertIn("const MIN_GATE_WARMUPS = 3;", script)
         self.assertIn("const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;", script)
@@ -175,6 +185,43 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("workerDecodeMs", script)
         self.assertIn("workerMetaBuildMs", script)
         self.assertIn("Perf gate baseline contract mismatch.", script)
+
+    def test_render_sample_role_policy_and_governed_analyzer_are_explicit_contracts(self):
+        policy = RENDER_SAMPLE_ROLE_POLICY.read_text(encoding="utf-8")
+        analyzer = RENDER_SAMPLE_ROLE_ANALYZER.read_text(encoding="utf-8")
+        package_payload = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
+
+        self.assertIn('RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v1"', policy)
+        self.assertIn('CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenario-frame-v1"', policy)
+        self.assertIn('GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"])', policy)
+        for contract_token in (
+            '"declared-sample-count"',
+            '"sample-sequence"',
+            '"canonical-candidate-unique"',
+            '"canonical-candidate-is-last"',
+            '"last-active-scenario"',
+            '"last-phase-idle"',
+            '"last-political-bg-progressive"',
+            '"last-context-scenario-positive"',
+            '"last-recorded-after-promotion"',
+        ):
+            self.assertIn(contract_token, policy)
+        self.assertIn("buildGovernedCompanionReport", analyzer)
+        self.assertIn("accepted-with-governed-reanalysis", analyzer)
+        self.assertIn("blocked-rerun-required", analyzer)
+        self.assertIn("DEFAULT_EXPECTED_SOURCE_SHA256", analyzer)
+        self.assertIn("rawFileCount", analyzer)
+        self.assertIn("roleMatches", analyzer)
+        self.assertIn("legacyDecision", analyzer)
+        self.assertIn("pathToFileURL", analyzer)
+        self.assertEqual(
+            package_payload["scripts"].get("test:node:render-sample-role-policy"),
+            "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",
+        )
+        self.assertEqual(
+            package_payload["scripts"].get("perf:analyze-render-sample-roles"),
+            "node tools/perf/analyze_render_sample_roles.mjs",
+        )
 
     def test_checked_in_baseline_keeps_report_identity_and_worker_summary_fields(self):
         baseline_payload = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))

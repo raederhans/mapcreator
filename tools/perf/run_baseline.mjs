@@ -8,6 +8,13 @@ import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import {
+  CANONICAL_RENDER_SAMPLE_ROLE_ID,
+  GOVERNED_RENDER_SAMPLE_SCENARIOS,
+  RENDER_SAMPLE_ROLE_POLICY_ID,
+  analyzeRenderSampleRole,
+  summarizeRenderSampleRoleAnalyses,
+} from "./render_sample_role_policy.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
@@ -28,6 +35,8 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
 );
 const MIN_GATE_WARMUPS = 3;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
+const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;
+const LEGACY_PERF_REPORT_SCHEMA_VERSION = 1;
 const PERF_URL_QUERY = Object.freeze({
   render_profile: "balanced",
   startup_interaction: "full",
@@ -430,11 +439,12 @@ function metricAtMs(metric, bootTotal) {
   return 0;
 }
 
-function summarizeSnapshot(snapshot) {
+function summarizeSnapshot(snapshot, scenarioId) {
   const bootMetrics = snapshot?.bootMetrics && typeof snapshot.bootMetrics === "object" ? snapshot.bootMetrics : {};
   const renderPerfMetrics = snapshot?.renderPerfMetrics && typeof snapshot.renderPerfMetrics === "object" ? snapshot.renderPerfMetrics : {};
   const scenarioPerfMetrics = snapshot?.scenarioPerfMetrics && typeof snapshot.scenarioPerfMetrics === "object" ? snapshot.scenarioPerfMetrics : {};
   const renderSamples = snapshot?.renderSamples && typeof snapshot.renderSamples === "object" ? snapshot.renderSamples : {};
+  const renderSampleRole = analyzeRenderSampleRole({ scenarioId, snapshot });
   const bootTotal = bootMetrics.total && typeof bootMetrics.total === "object" ? bootMetrics.total : {};
   return {
     totalStartupMs: finiteNumber(bootTotal.durationMs),
@@ -482,6 +492,8 @@ function summarizeSnapshot(snapshot) {
     renderSampleCount: finiteNumber(renderSamples.count),
     renderSampleTotalMs: finiteNumber(renderSamples.totalMs),
     renderSampleMedianMs: finiteNumber(renderSamples.medianMs),
+    canonicalRenderSampleMs: finiteNumber(renderSampleRole.canonicalRenderSampleMs),
+    preScenarioRenderSampleCount: finiteNumber(renderSampleRole.preScenarioSampleCount),
   };
 }
 
@@ -568,6 +580,8 @@ function aggregateRuns(runs) {
     "renderSampleCount",
     "renderSampleTotalMs",
     "renderSampleMedianMs",
+    "canonicalRenderSampleMs",
+    "preScenarioRenderSampleCount",
   ];
   const medianSummary = {};
   for (const fieldName of fieldNames) {
@@ -590,6 +604,7 @@ function buildAggregateSampleSpread(runs) {
     "interactionRecoveryWindowMs",
     "settleExactRefreshMs",
     "renderSampleCount",
+    "canonicalRenderSampleMs",
   ];
   for (const metricKey of Array.from(new Set(metricKeys))) {
     spread[metricKey] = summarizeSampleSpread(summaries.map((summary) => summary[metricKey]));
@@ -804,7 +819,8 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
       url: targetUrl,
       activeScenarioId,
       snapshot,
-      summary: summarizeSnapshot(snapshot),
+      summary: summarizeSnapshot(snapshot, scenarioId),
+      renderSampleRole: analyzeRenderSampleRole({ scenarioId, snapshot }),
     };
   } catch (error) {
     try {
@@ -899,6 +915,7 @@ async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
     runs,
     summary: aggregateRuns(runs),
     sampleSpread: buildAggregateSampleSpread(runs),
+    renderSampleRoleSummary: summarizeRenderSampleRoleAnalyses(runs.map((run) => run.renderSampleRole)),
   };
 }
 
@@ -975,6 +992,10 @@ function buildMarkdown(report) {
     lines.push(formatMetricRow("settle exact wait for paint", summary.settleExactRefreshWaitForPaintMs));
     lines.push(formatMetricRow("settle exact finalize", summary.settleExactRefreshFinalizeMs));
     lines.push(`- render samples: ${finiteNumber(summary.renderSampleCount).toFixed(0)} calls / ${finiteNumber(summary.renderSampleTotalMs).toFixed(1)} ms total / ${finiteNumber(summary.renderSampleMedianMs).toFixed(1)} ms median`);
+    const roleSummary = entry.renderSampleRoleSummary || {};
+    lines.push(`- render sample role policy: ${String(roleSummary.policyId || RENDER_SAMPLE_ROLE_POLICY_ID)}`);
+    lines.push(`- canonical render sample role: ${String(roleSummary.canonicalRoleId || CANONICAL_RENDER_SAMPLE_ROLE_ID)}`);
+    lines.push(`- canonical render sample: ${finiteNumber(summary.canonicalRenderSampleMs).toFixed(1)} ms median / ${finiteNumber(roleSummary.matchedRunCount).toFixed(0)} matched runs / ${finiteNumber(roleSummary.mismatchCount).toFixed(0)} mismatches`);
     lines.push("");
   }
   return `${lines.join("\n")}\n`;
@@ -1019,15 +1040,21 @@ async function writeBaselineArtifacts(options, report) {
 }
 
 const PERF_REPORT_CONTRACT_FIELDS = [
-  { key: "schemaVersion", expected: 1 },
   { key: "benchmarkMetricsSchemaVersion", expected: "3.3" },
   { key: "probeSchema", expected: "mc_perf_snapshot" },
 ];
 
-function getPerfReportContractMismatches(report, label = "report") {
-  return PERF_REPORT_CONTRACT_FIELDS
+function getPerfReportContractMismatches(report, label = "report", { allowLegacySchema = false } = {}) {
+  const expectedSchemas = allowLegacySchema
+    ? [LEGACY_PERF_REPORT_SCHEMA_VERSION, CURRENT_PERF_REPORT_SCHEMA_VERSION]
+    : [CURRENT_PERF_REPORT_SCHEMA_VERSION];
+  const mismatches = PERF_REPORT_CONTRACT_FIELDS
     .filter(({ key, expected }) => report?.[key] !== expected)
     .map(({ key, expected }) => `${label}.${key} expected=${JSON.stringify(expected)} actual=${JSON.stringify(report?.[key])}`);
+  if (!expectedSchemas.includes(report?.schemaVersion)) {
+    mismatches.unshift(`${label}.schemaVersion expected=${JSON.stringify(expectedSchemas)} actual=${JSON.stringify(report?.schemaVersion)}`);
+  }
+  return mismatches;
 }
 
 function compareAgainstBaseline(currentReport, baselineReport, threshold) {
@@ -1062,7 +1089,11 @@ function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
   if (!baselineReport || typeof baselineReport !== "object") {
     throw new Error(`[perf-baseline] Baseline report is invalid: ${baselinePath}`);
   }
-  const baselineContractMismatches = getPerfReportContractMismatches(baselineReport, "baseline");
+  const baselineContractMismatches = getPerfReportContractMismatches(
+    baselineReport,
+    "baseline",
+    { allowLegacySchema: true }
+  );
   if (baselineContractMismatches.length) {
     throw new Error(
       `[perf-baseline] Baseline report schema mismatch: ${baselinePath}\n${baselineContractMismatches.map((item) => `- ${item}`).join("\n")}`
@@ -1140,10 +1171,37 @@ function validateGateCurrentReport(currentReport, scenarioIds, label = "current 
   }
 }
 
+function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
+  const mismatches = [];
+  for (const scenarioId of scenarioIds) {
+    if (!GOVERNED_RENDER_SAMPLE_SCENARIOS.includes(scenarioId)) {
+      continue;
+    }
+    const scenario = report?.scenarios?.[scenarioId] || {};
+    const roleSummary = scenario.renderSampleRoleSummary || {};
+    const runs = Array.isArray(scenario.runs) ? scenario.runs : [];
+    if (roleSummary.policyId !== RENDER_SAMPLE_ROLE_POLICY_ID) {
+      mismatches.push(`${scenarioId}.policyId=${JSON.stringify(roleSummary.policyId)}`);
+    }
+    if (roleSummary.canonicalRoleId !== CANONICAL_RENDER_SAMPLE_ROLE_ID) {
+      mismatches.push(`${scenarioId}.canonicalRoleId=${JSON.stringify(roleSummary.canonicalRoleId)}`);
+    }
+    if (roleSummary.matchedRunCount !== runs.length || roleSummary.mismatchCount !== 0) {
+      mismatches.push(
+        `${scenarioId}.roleMatches=${finiteNumber(roleSummary.matchedRunCount)}/${runs.length} mismatches=${finiteNumber(roleSummary.mismatchCount)}`
+      );
+    }
+    if (!(finiteNumber(scenario?.summary?.canonicalRenderSampleMs) > 0)) {
+      mismatches.push(`${scenarioId}.canonicalRenderSampleMs must be > 0`);
+    }
+  }
+  return mismatches;
+}
+
 function collectBaselineContractMismatches(currentReport, baselineReport) {
   const mismatches = [
     ...getPerfReportContractMismatches(currentReport, "current"),
-    ...getPerfReportContractMismatches(baselineReport, "baseline"),
+    ...getPerfReportContractMismatches(baselineReport, "baseline", { allowLegacySchema: true }),
   ];
   const baselinePlatform = normalizeOsPlatform(
     baselineReport?.environment?.platform || baselineReport?.environment?.os
@@ -1205,9 +1263,14 @@ async function main() {
 
   const measurement = await runMeasurements(options);
   const report = {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_PERF_REPORT_SCHEMA_VERSION,
     benchmarkMetricsSchemaVersion: "3.3",
     probeSchema: "mc_perf_snapshot",
+    renderSampleRolePolicy: {
+      policyId: RENDER_SAMPLE_ROLE_POLICY_ID,
+      canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
+      governedScenarios: GOVERNED_RENDER_SAMPLE_SCENARIOS,
+    },
     generatedAt: new Date().toISOString(),
     gitHead,
     mode: options.mode,
@@ -1227,12 +1290,18 @@ async function main() {
   if (options.mode === "gate") {
     validateGateCurrentReport(report, options.scenarios, "current report");
     const contractMismatches = collectBaselineContractMismatches(report, baselineReportForGate);
+    const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(report, options.scenarios);
     const failures = compareAgainstBaseline(report, baselineReportForGate, options.threshold);
     const gateReportPath = path.join(options.rawDir, "perf-gate-current.json");
-    await writeJson(gateReportPath, { report, contractMismatches, failures });
+    await writeJson(gateReportPath, { report, contractMismatches, renderSampleRoleMismatches, failures });
     if (contractMismatches.length) {
       throw new Error(
         `Perf gate baseline contract mismatch.\n${contractMismatches.map((item) => `- ${item}`).join("\n")}`
+      );
+    }
+    if (renderSampleRoleMismatches.length) {
+      throw new Error(
+        `Perf gate render sample role mismatch.\n${renderSampleRoleMismatches.map((item) => `- ${item}`).join("\n")}`
       );
     }
     if (failures.length) {
@@ -1248,6 +1317,12 @@ async function main() {
   }
 
   await writeBaselineArtifacts(options, report);
+  const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(report, options.scenarios);
+  if (renderSampleRoleMismatches.length) {
+    throw new Error(
+      `Perf baseline render sample role mismatch.\n${renderSampleRoleMismatches.map((item) => `- ${item}`).join("\n")}`
+    );
+  }
   console.log(`Baseline written to ${path.relative(REPO_ROOT, options.baselineJson)}`);
   if (options.writeMarkdown) {
     console.log(`Markdown written to ${path.relative(REPO_ROOT, options.baselineMd)}`);

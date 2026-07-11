@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc01dd05` is deterministic/dist/browser verified; scenario-resilience test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` is green 3/3; performance A/B remains before P2.2 entry
+Status: deterministic/dist/browser evidence is green; the frozen P2.1 A/B is admitted for P2.2a through governed canonical render-sample role analysis while its original legacy report remains preserved
 
 ## Scope
 
@@ -121,4 +121,6 @@ Outlier and opposite-direction checks passed. HOI4 promotion produced no materia
 
 Reports: `.runtime/reports/generated/p2-1-performance-ab-20260711.json` and `.runtime/reports/generated/p2-1-performance-ab-20260711.md`. Cleanup evidence: `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`.
 
-P2.1 acceptance status is `failed/blocked`. P2.2 entry requires a root-cause change and a fresh complete A1/B1/B2/A2 acceptance run.
+The original legacy report remains `failed/blocked` at SHA256 `f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839`. The reusable `render-sample-role-v1` policy proves the legacy TNO delta came from first-sample role composition A blank/scenario `6/4` versus B `3/7`. All 40 canonical `last-post-promotion-idle-scenario-frame-v1` samples match the role contract. Canonical TNO A/B is `1197.90/1195.35ms`; HOI4 A/B is `694.55/694.80ms`. Companion reports `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.{json,md}` record `accepted-with-governed-reanalysis`, so P2.2a is admitted.
+
+P2.2a/P2.2b performance acceptance stays pre-registered to the same A1/B1/B2/A2 sequence, role policy, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.

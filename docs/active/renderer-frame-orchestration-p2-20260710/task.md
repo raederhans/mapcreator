@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.1 browser acceptance is green and the completed contemporary performance A/B is `failed/blocked`. Candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1` regressed pooled `tno_1962` render median by `147.65ms / 22.10%` versus control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`. P2.2 remains blocked.
+Current status: P2.1 browser acceptance is green. The original legacy pooled-render report remains `failed/blocked`; governed role reanalysis of the same frozen 40 raw files is `accepted-with-governed-reanalysis`, so P2.2a is admitted under `render-sample-role-v1`.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -119,7 +119,7 @@ Current status: P2.1 browser acceptance is green and the completed contemporary 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
 - [x] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - [x] P2.1 acceptance A/B completed with `failed/blocked` decision on TNO render `+147.65ms / +22.10%`.
-- [ ] P2.2 entry A/B.
+- [x] P2.2 entry admitted through deterministic governed reanalysis of the complete frozen A/B evidence.
 - [ ] P2 closeout A/B.
 - [x] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
 - [x] Reach at least 35 extracted lines: baseline 23472 to current source/dist 23437, net reduction 35.
@@ -142,7 +142,7 @@ Current status: P2.1 browser acceptance is green and the completed contemporary 
 - [x] Repair the retired view-mode test-contract drift and pass scenario resilience 3/3 at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`.
 - [x] Verify scenario-resilience selector routing: one changed file, two recommended commands, one main-thread lane, zero unmatched files.
 - [x] Stop server PID 18364, remove matching stale metadata, and verify ports 8000/8892 clear.
-- [x] Complete P2.1 performance A/B acceptance; all blocks valid, pooled TNO render failed, P2.2 blocked.
+- [x] Preserve the original legacy-metric A/B decision: all blocks valid, pooled TNO mixed-role render failed, and P2.2 was provisionally blocked before governed reanalysis.
 
 ## P2.2a cached pass compositor owner
 
@@ -195,7 +195,9 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Preserve the April historical baseline and thresholds.
 - [x] Generate `.runtime/reports/generated/p2-1-performance-ab-20260711.{json,md}`.
 - [x] Restore runner, remove junction/control worktree, prune registrations, verify clear ports and zero task processes, and preserve parent WIP.
-- [x] Mark P2.2 admission blocked.
-- [ ] Explain the TNO render regression with code/metric evidence.
-- [ ] Repeat the full acceptance A/B after the root-cause change.
-- [ ] Begin P2.2 only after a green phase-admission result.
+- [x] Preserve the original legacy report and its `failed/blocked` decision unchanged.
+- [x] Explain the apparent TNO regression as legacy median role mixing: TNO first-sample composition A blank/scenario `6/4`, B `3/7`.
+- [x] Validate all 40 canonical samples against `last-post-promotion-idle-scenario-frame-v1` with zero mismatches.
+- [x] Generate `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.{json,md}` without modifying the original report or raw evidence.
+- [x] Admit P2.2a from canonical medians: TNO A/B `1197.90/1195.35ms`; HOI4 A/B `694.55/694.80ms`; startup, block drift, outlier, direction, identity, and quiet-window checks pass.
+- [x] Pre-register P2.2a/P2.2b with A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.

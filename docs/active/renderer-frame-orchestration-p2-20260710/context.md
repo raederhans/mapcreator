@@ -9,7 +9,7 @@ Date: 2026-07-10
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
-- current task phase: P2.1 deterministic/dist/browser verified; performance A/B handoff
+- current task phase: P2.1 governed performance admission tooling; P2.2a admitted after deterministic role reanalysis
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
 - current worktree state: clean at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` before this docs evidence update; product runtime source remains at reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
@@ -195,7 +195,7 @@ Cleanup: runner restored; junction removed; control worktree removed/pruned; por
 
 ## P2.1 final browser and performance acceptance 2026-07-11
 
-Current phase truth: P2.1 acceptance is complete and `failed/blocked`; P2.2 entry is closed pending root-cause work and a fresh complete A/B.
+Historical legacy-metric phase truth: P2.1 acceptance originally recorded `failed/blocked` before the governed role reanalysis below. The original report remains preserved.
 
 Browser matrix:
 
@@ -229,3 +229,20 @@ Artifacts:
 - `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`
 
 Cleanup is complete: the control runner was restored to its original byte SHA, the ignored junction and control worktree were removed safely, `git worktree prune` completed, ports 8000/8892 are clear, task-owned browser/process counts are zero, and parent WIP retains its preflight shape. The April baseline remains frozen. The approved protocol excludes selective reruns.
+
+## Governed render-sample role reanalysis 2026-07-11
+
+The original report `.runtime/reports/generated/p2-1-performance-ab-20260711.json` remains byte-preserved at SHA256 `f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839`, including its legacy `failed/blocked` decision. Its legacy metric pooled two different first-frame roles with the final post-promotion scenario frame. TNO first-sample composition was A blank/scenario `6/4` and B `3/7`, which changed the median role represented on each side.
+
+The reusable policy `render-sample-role-v1` selects `last-post-promotion-idle-scenario-frame-v1` only when each measured run has exactly two samples with sequence `[1,2]`, the unique canonical candidate is `samples.at(-1)`, scenario identity matches, phase is idle, political background is progressive, scenario context time is positive, and the sample is recorded at or after visual chunk promotion. All 40 frozen raw runs match. No duration participates in role classification.
+
+Governed canonical medians:
+
+| Scenario | Control A | Candidate B | Delta | Result |
+| --- | ---: | ---: | ---: | --- |
+| `tno_1962` | `1197.90ms` | `1195.35ms` | `-2.55ms / -0.21%` | PASS |
+| `hoi4_1939` | `694.55ms` | `694.80ms` | `+0.25ms / +0.04%` | PASS |
+
+Startup, quiet-window/block validity, control/candidate HEAD, runner, lock, environment, URL query, workload identity, raw hashes, block drift, outlier, and opposite-direction checks pass. HOI4 has no material promotion gap, so promotion-stratified admission is `not-applicable/pass`. Companion artifacts are `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.json` and `.md`; the decision is `accepted-with-governed-reanalysis`.
+
+Future baseline/gate reports use schema version 2 and expose both `canonicalRenderSampleMs` and the legacy median diagnostic. The April schema-version-1 baseline and historical `1.15/1.25` thresholds remain compatible and frozen. Governed scenario role mismatch fails closed. P2.2a and P2.2b must repeat the same policy, A1/B1/B2/A2 order, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
