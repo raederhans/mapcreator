@@ -126,9 +126,12 @@ export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {
     finalizePendingExactAfterSettleRefreshAfterPaint: effects.finalizePendingExactAfterSettleRefreshAfterPaint,
   });
 
-  function drawCanvasFrame() {
+  function drawCanvasFrame(options) {
+    const includeSummary = options?.includeSummary === true;
     if (!isFrameSurfaceReady()) {
-      return createSummary({ status: "skipped-not-ready", frameMode: "none" });
+      return includeSummary
+        ? createSummary({ status: "skipped-not-ready", frameMode: "none" })
+        : undefined;
     }
 
     ensureLayerDataFromTopology();
@@ -165,7 +168,7 @@ export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {
         usedLastGoodFallback = drewFrame;
         if (drewFrame) {
           frameMode = "last-good";
-        } else if (currentPhase === renderPhaseInteracting && getFirstVisibleFramePainted()) {
+        } else if (getRenderPhase() === renderPhaseInteracting && getFirstVisibleFramePainted()) {
           noteMissingVisibleFrameSkippedDuringInteraction("missing-fast-frame-no-continuity");
           keptPreviousPixels = true;
           drewFrame = true;
@@ -232,21 +235,23 @@ export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {
     }
     incrementPerfCounter("frames");
 
-    return createSummary({
-      status: drewFrame ? "drawn" : "not-drawn",
-      frameMode,
-      totalMs,
-      timings: frameTimings,
-      branch: {
-        drewFrame,
-        useTransformedFrame,
-        usedLastGoodFallback,
-        usedBaseVisibleFallback,
-        keptPreviousPixels,
-        drewExactFrame,
-        skippedCapture: usedDirtyFastFramePasses,
-      },
-    });
+    return includeSummary
+      ? createSummary({
+        status: drewFrame ? "drawn" : "not-drawn",
+        frameMode,
+        totalMs,
+        timings: frameTimings,
+        branch: {
+          drewFrame,
+          useTransformedFrame,
+          usedLastGoodFallback,
+          usedBaseVisibleFallback,
+          keptPreviousPixels,
+          drewExactFrame,
+          skippedCapture: usedDirtyFastFramePasses,
+        },
+      })
+      : undefined;
   }
 
   return Object.freeze({

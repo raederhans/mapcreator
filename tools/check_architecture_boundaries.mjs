@@ -2896,7 +2896,9 @@ function collectFailures() {
     "createStrategicOverlayRuntimeOwner({",
     "createStrategicOverlayRenderOwner({",
     "P2.1 must keep canonical drawCanvas owner",
-    "P2.1 must keep public facade and state allowlist unchanged",
+    "public facade must not expose P53/P40 forbidden owner token",
+    "state-write allowlist must retain the existing map_renderer composition-root entry",
+    "state-write allowlist must keep the pure drawCanvas owner out",
   ]) {
     if (!rendererDrawCanvasOrchestrationInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must lock P53 inventory token: ${token}`);
@@ -2930,7 +2932,9 @@ function collectFailures() {
   }
   for (const token of [
     "export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {}, effects = {} } = {})",
-    "function drawCanvasFrame()",
+    "function drawCanvasFrame(options)",
+    "const includeSummary = options?.includeSummary === true;",
+    "getRenderPhase() === renderPhaseInteracting && getFirstVisibleFramePainted()",
     "const useTransformedFrame = currentPhase === renderPhaseInteracting",
     "drawTransformedFrameFromCaches",
     "drawLastGoodFrameFallback",

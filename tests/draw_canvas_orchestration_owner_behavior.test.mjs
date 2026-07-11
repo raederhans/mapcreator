@@ -8,6 +8,7 @@ const CONSTANTS = Object.freeze({
   renderPhaseInteracting: "interacting",
   renderPhaseSettling: "settling",
 });
+const SUMMARY_OPTIONS = Object.freeze({ includeSummary: true });
 
 function names(calls) {
   return calls.map((call) => call[0]);
@@ -30,6 +31,9 @@ function createHarness({
   nowValues = [1000, 1042],
   onNow = null,
   onFirstVisible = null,
+  onTransformed = null,
+  onLastGood = null,
+  onEnsureIdleTimings = null,
 } = {}) {
   const calls = [];
   let currentPhase = phase;
@@ -61,10 +65,12 @@ function createHarness({
     drawTransformedFrameFromCaches: (timings, options) => {
       calls.push(["drawTransformedFrameFromCaches", options]);
       if (dirtyFastPasses) timings.usedDirtyFastFramePasses = dirtyFastPasses;
+      if (onTransformed) onTransformed(mutators);
       return transformed;
     },
     drawLastGoodFrameFallback: (transform) => {
       calls.push(["drawLastGoodFrameFallback", transform]);
+      if (onLastGood) onLastGood(mutators);
       return lastGood;
     },
     noteMissingVisibleFrameSkippedDuringInteraction: (reason) => calls.push(["noteMissingVisibleFrameSkippedDuringInteraction", reason]),
@@ -76,6 +82,7 @@ function createHarness({
     ensureIdleRenderPasses: (timings, passNames) => {
       calls.push(["ensureIdleRenderPasses", passNames]);
       timings.idle = 7;
+      if (onEnsureIdleTimings) onEnsureIdleTimings(timings);
     },
     composeCachedPasses: (passNames) => {
       calls.push(["composeCachedPasses", passNames]);
@@ -139,7 +146,7 @@ function createHarness({
 
 test("readiness failure returns before side effects and counters", () => {
   const { calls, owner } = createHarness({ ready: false });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.deepEqual(calls, [["isFrameSurfaceReady"]]);
   assert.equal(summary.status, "skipped-not-ready");
@@ -149,7 +156,7 @@ test("readiness failure returns before side effects and counters", () => {
 
 test("exact idle success preserves order and final frames counter", () => {
   const { calls, owner, rawTransform } = createHarness({ phase: "idle", exact: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.deepEqual(names(calls), [
     "isFrameSurfaceReady",
@@ -226,7 +233,7 @@ test("promotion re-reads phase and uses transformed fast frame", () => {
     promoteToDefer: false,
     exact: true,
   });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "exact");
   assert.deepEqual(calls.find((call) => call[0] === "cancelPoliticalPathWarmup"), ["cancelPoliticalPathWarmup", "drawCanvas-non-idle"]);
@@ -236,7 +243,7 @@ test("promotion re-reads phase and uses transformed fast frame", () => {
 
 test("transformed success marks fast frame and captures clean non-interacting frame", () => {
   const { calls, owner, rawTransform } = createHarness({ phase: "settling", transformed: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "fast");
   assert.equal(summary.usedTransformedFrame, true);
@@ -274,7 +281,7 @@ test("first-visible mutation refreshes capture phase and raw transform", () => {
 
 test("last-good fallback uses effective transform and first-visible reason", () => {
   const { calls, effectiveTransform, owner } = createHarness({ phase: "settling", lastGood: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "last-good");
   assert.deepEqual(calls.find((call) => call[0] === "drawLastGoodFrameFallback"), ["drawLastGoodFrameFallback", effectiveTransform]);
@@ -284,7 +291,7 @@ test("last-good fallback uses effective transform and first-visible reason", () 
 
 test("interacting first-visible failure keeps previous pixels", () => {
   const { calls, owner } = createHarness({ phase: "interacting", firstVisible: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "previous-pixels");
   assert.equal(summary.keptPreviousPixels, true);
@@ -295,9 +302,29 @@ test("interacting first-visible failure keeps previous pixels", () => {
   assert.equal(calls.some((call) => call[0] === "markFirstVisibleFramePainted"), false);
 });
 
+test("previous-pixel continuity uses the phase after transformed and last-good effects", () => {
+  const { calls, owner } = createHarness({
+    phase: "interacting",
+    firstVisible: true,
+    baseVisible: true,
+    onTransformed: ({ setPhase }) => setPhase("idle"),
+    onLastGood: ({ setPhase }) => setPhase("settling"),
+  });
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
+
+  assert.equal(summary.frameMode, "base-visible");
+  assert.equal(calls.some((call) => call[0] === "noteMissingVisibleFrameSkippedDuringInteraction"), false);
+  const lastGoodIndex = names(calls).indexOf("drawLastGoodFrameFallback");
+  assert.deepEqual(names(calls).slice(lastGoodIndex, lastGoodIndex + 3), [
+    "drawLastGoodFrameFallback",
+    "getRenderPhase",
+    "drawBaseVisibleFrameFallback",
+  ]);
+});
+
 test("base visible fallback preserves reason and skips first-visible mark", () => {
   const { calls, owner } = createHarness({ phase: "interacting", baseVisible: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "base-visible");
   assert.deepEqual(calls.find((call) => call[0] === "drawBaseVisibleFrameFallback"), [
@@ -309,7 +336,7 @@ test("base visible fallback preserves reason and skips first-visible mark", () =
 
 test("failed fast path falls through to exact frame", () => {
   const { calls, owner, rawTransform } = createHarness({ phase: "settling", exact: true });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.frameMode, "exact");
   assert.equal(names(calls).filter((name) => name === "drawTransformedFrameFromCaches").length, 1);
@@ -320,7 +347,7 @@ test("failed fast path falls through to exact frame", () => {
 
 test("exact failure aborts exact-after-settle and skips finalize", () => {
   const { calls, owner } = createHarness({ phase: "idle", exact: false });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.status, "not-drawn");
   assert.deepEqual(calls.find((call) => call[0] === "abortPendingExactAfterSettleRefreshAfterPaint"), [
@@ -337,7 +364,7 @@ test("dirty fast frame skips capture and records exact metadata", () => {
     dirtyFastPasses: "political,labels",
     activeScenarioId: "tno_1962",
   });
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
 
   assert.equal(summary.skippedCapture, true);
   assert.equal(calls.some((call) => call[0] === "captureLastGoodFrame"), false);
@@ -369,6 +396,38 @@ test("dirty fast frame metric uses phase refreshed after first-visible mutation"
   });
 });
 
+test("default production path returns undefined without serializing a summary", () => {
+  let summaryTimingReads = 0;
+  const { owner } = createHarness({
+    phase: "idle",
+    exact: true,
+    onEnsureIdleTimings: (timings) => {
+      Object.defineProperty(timings, "summaryOnly", {
+        enumerable: true,
+        get() {
+          summaryTimingReads += 1;
+          return 1;
+        },
+      });
+    },
+  });
+
+  assert.equal(owner.drawCanvasFrame(), undefined);
+  assert.equal(summaryTimingReads, 0);
+});
+
+test("last-frame commit keeps mutable timings while opt-in summary owns a frozen copy", () => {
+  const { calls, owner } = createHarness({ phase: "idle", exact: true });
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
+  const committedTimings = calls.find((call) => call[0] === "commitLastFrame")?.[1]?.timings;
+
+  assert.notStrictEqual(committedTimings, summary.timings);
+  assert.equal(Object.isFrozen(committedTimings), false);
+  assert.equal(Object.isFrozen(summary.timings), true);
+  committedTimings.idle = 99;
+  assert.equal(summary.timings.idle, 7);
+});
+
 test("requires dependencies and returns frozen JSON-safe summary without trace arrays", () => {
   const { owner } = createHarness({ phase: "idle", exact: true });
   assert.throws(
@@ -380,7 +439,7 @@ test("requires dependencies and returns frozen JSON-safe summary without trace a
     /constants\.renderPhaseIdle must be a non-empty string/,
   );
 
-  const summary = owner.drawCanvasFrame();
+  const summary = owner.drawCanvasFrame(SUMMARY_OPTIONS);
   assert.equal(Object.isFrozen(summary), true);
   assert.equal(Object.isFrozen(summary.timings), true);
   assert.equal(summary.effectOrder, undefined);

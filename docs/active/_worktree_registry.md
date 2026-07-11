@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.1 acceptance HEAD `a777d17b9d22a5f1d8dde7aac515ab39d8f69b2a` is merged with `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` at `aebb9efd492db711e24f43c39c51b4ef94f59097`; combined focused, shared, Pages/dist, and clean-head core verification is green. Current Worktrees reflects the dirty parent checkout and the isolated P2 integration lane. Parent WIP remains untouched; the release residue worktree is already removed.
+Last updated: 2026-07-11 P2.1 post-acceptance code-review hardening is being closed from integrated clean HEAD `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3`. The previous HEAD passed browser/main-thread 65/65 and cleaned its live server. The new review-fix HEAD requires deterministic/dist closeout followed by fresh browser/performance acceptance. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -30,7 +30,7 @@ Current rows reflect the real two local worktrees from the current worktree list
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`. | User-provided current worktree list says parent path exists at `db8bd6c`; existing WIP retained. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; merge `aebb9efd492db711e24f43c39c51b4ef94f59097` with parents `a777d17b9d22a5f1d8dde7aac515ab39d8f69b2a` and `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c`; `ahead 11 / behind 0` before evidence-doc commit | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `ready-for-P2.1-acceptance`; clean merge integration verified | P2 renderer source/dist/owner plus upstream release packaging guards, selector routes, Pages startup contracts, registry, and lessons record. Parent WIP remains untouched. | One text conflict in registry was manually reconciled. Pages startup test and verification metadata auto-merged with both P2 and upstream assertions present. Upstream focused 80/80; P2 owner 14/14; P53 8/8; Python boundary 5/5; shared gates green; `verify:pages-dist` 46/46 + 18/18 + 17/17; clean-head `verify:dist-drift` exit 0; clean-head `verify:core` 61/61. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-upstream-integration/`. | Green for renderer behavior; resolved red overlaps in registry, Pages startup test, and verification metadata; yellow selector/build semantics retained from upstream. | Hand clean upstream-integrated HEAD to the P2.1 acceptance owner. Browser, main-thread, and perf stay in their separate live lanes. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; review-fix base `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `in-progress`; post-acceptance review fix | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Pre-fix browser/main-thread 65/65; review-fix owner 17/17, P53 8/8, Python boundary 5/5, Pages startup 46/46, landing 18/18, sample 17/17, selector 12 files / 13 commands / 2 main-thread / 0 unmatched. Clean-head dist/core remain pending until commit. | Green for bounded owner behavior; yellow until clean-head deterministic and fresh browser/performance acceptance complete. | Commit the review fix, run clean-head dist/core, then hand the new HEAD to the acceptance owner. |
 
 ## P2 Upstream Integration 2026-07-11
 
@@ -53,6 +53,17 @@ Verification evidence:
 - Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-upstream-integration/01-upstream-python-focused.log` through `06-clean-head-verify-core.log`; report `.runtime/reports/generated/verify-core.json`.
 
 Parent proof: `C:\Users\raede\Desktop\dev\mapcreator` remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, behind 17, with its pre-existing WIP shape untouched. The release residue worktree path is absent. Browser, main-thread, and performance remain assigned to their separate acceptance owner and were not run by this integration owner.
+
+## P2.1 Post-Acceptance Code-Review Fix 2026-07-11
+
+Status: `in-progress` from clean integrated HEAD `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3`.
+
+- Production behavior fix: previous-pixel continuity now reads phase after transformed-cache and last-good effects complete.
+- Hot-path fix: `drawCanvasFrame()` creates a frozen JSON-safe summary only for explicit `{ includeSummary: true }`; the production no-options path returns `undefined` without summary serialization or timings copying.
+- Timing contract: `commitLastFrame` keeps the original mutable timings reference; opted-in summaries own independent frozen copies.
+- Contract fix: P53 inventory validates public-facade and state-write semantics directly and no longer shells out to a temporary working-tree diff.
+- Pre-fix acceptance evidence: `verify:core:main-thread` passed 65/65 at `7b3a8fb4`; cleanup evidence records stopped PID 34784 and clear port 8892. Fresh acceptance is required on the post-fix clean HEAD.
+- Live-process owner: this writer owns deterministic and Pages/dist commands. Browser, Playwright, main-thread, and performance lanes remain idle until the later acceptance handoff.
 
 ## P2.1 Focused Repair Closeout 2026-07-11
 

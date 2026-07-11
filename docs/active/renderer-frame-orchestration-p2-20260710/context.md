@@ -148,6 +148,16 @@ Date: 2026-07-10
 - Historical April gate status: April baseline/threshold frozen; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
 - Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` was removed and is no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`. Docs verification after edits: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, and `unmatchedChangedFiles=[]`.
 
+## P2.1 post-acceptance code-review hardening
+
+- Starting clean HEAD: `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3`.
+- Previous-pixel continuity now reads phase after transformed-cache and last-good fallback effects complete.
+- Production `drawCanvas()` ignores the owner result, so frame summaries now require explicit `{ includeSummary: true }`; the no-options path returns `undefined` without enumerating or copying timings.
+- `commitLastFrame` receives the original mutable frame timings. An opted-in summary receives an independent frozen copy.
+- P53 inventory proves public-facade and state-write semantics from current file content and no longer treats a clean working-tree diff as architectural evidence.
+- Pre-fix browser acceptance at `7b3a8fb4` passed 65/65 and cleanup stopped PID 34784 with port 8892 clear. Fresh browser/performance acceptance remains required on the new committed clean HEAD.
+- Live-process ownership: this writer owns deterministic and Pages/dist commands. Browser, Playwright, main-thread, and perf remain idle for the later acceptance owner.
+
 ## Notes
 
 - P2.0 changed only active docs truth surfaces and completed at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.

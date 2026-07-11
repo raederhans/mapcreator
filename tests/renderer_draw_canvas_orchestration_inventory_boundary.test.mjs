@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -231,7 +230,9 @@ test("P2.1 drawCanvas orchestration owner owns frame branch selection", () => {
 
   for (const token of [
     "export function createDrawCanvasOrchestrationOwner({ constants = {}, getters = {}, effects = {} } = {})",
-    "function drawCanvasFrame()",
+    "function drawCanvasFrame(options)",
+    "const includeSummary = options?.includeSummary === true;",
+    "getRenderPhase() === renderPhaseInteracting && getFirstVisibleFramePainted()",
     "const useTransformedFrame = currentPhase === renderPhaseInteracting",
     "drawTransformedFrameFromCaches",
     "drawLastGoodFrameFallback",
@@ -402,6 +403,7 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
   const packageJsonSource = readRepoFile("package.json");
   const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
   const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
+  const stateWriteAllowlist = JSON.parse(stateWriteAllowlistSource);
   const ownerSource = readRepoFile(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
   const distOwnerSource = readRepoFile(DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
   const distRendererSource = readRepoFile(DIST_MAP_RENDERER_PATH);
@@ -440,6 +442,16 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     assertExcludes(publicFacadeSource, token, "public facade must not expose P53/P40 forbidden owner token");
     assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not include P53/P40 forbidden owner token");
   }
+  assert.equal(
+    stateWriteAllowlist.files.includes(MAP_RENDERER_PATH),
+    true,
+    "state-write allowlist must retain the existing map_renderer composition-root entry",
+  );
+  assert.equal(
+    stateWriteAllowlist.files.includes(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH),
+    false,
+    "state-write allowlist must keep the pure drawCanvas owner out",
+  );
 
   for (const relativePath of [
     "js/core/renderer/renderer_render_lifecycle_owner.js",
@@ -477,13 +489,4 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     "dist drawCanvas must keep thin wrapper",
   );
 
-  const immutableDiff = execFileSync(
-    "git",
-    ["diff", "--name-only", "--", PUBLIC_FACADE_PATH, STATE_WRITE_ALLOWLIST_PATH],
-    { cwd: REPO_ROOT, encoding: "utf8" },
-  )
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean);
-  assert.deepEqual(immutableDiff, [], "P2.1 must keep public facade and state allowlist unchanged");
 });

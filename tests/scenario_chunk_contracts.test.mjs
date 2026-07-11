@@ -1270,7 +1270,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?frame\.stale = true;/.test(renderCacheOwnerSource)
       && /function recordLastGoodFrameInvalidationSummary\(summary = \{\}\) \{[\s\S]*?recordRenderPerfMetric\("continuityFrameMarkedStale"/.test(rendererSource)
-      && /currentPhase === renderPhaseInteracting && getFirstVisibleFramePainted\(\)[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = !!drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(drawCanvasOrchestrationOwnerSource)
+      && /getRenderPhase\(\) === renderPhaseInteracting && getFirstVisibleFramePainted\(\)[\s\S]*?noteMissingVisibleFrameSkippedDuringInteraction\("missing-fast-frame-no-continuity"\);[\s\S]*?keptPreviousPixels = true;[\s\S]*?\} else \{[\s\S]*?drewFrame = !!drawBaseVisibleFrameFallback\("missing-fast-frame-no-continuity"\);/.test(drawCanvasOrchestrationOwnerSource)
       && rendererSource.includes('recordRenderPerfMetric("continuityFrameStaleAgeMs"')
       && visibleFrameDiagnosticsOwnerSource.includes('"visibleFrameTransaction"')
       && rendererSource.includes('recordRenderPerfMetric("missingVisibleFrameCount"')
@@ -1307,7 +1307,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function applyScheduledExactAfterSettleRefreshPlan\(generation, plan\) \{[\s\S]*?phase: "applying"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshApply"[\s\S]*?prepareExactAfterSettlePassesInSlices\(generation, plan\);/.test(exactSchedulerSource)
       && /function completeScheduledExactAfterSettleRefreshPlan\(generation, plan, passStartedAt\) \{[\s\S]*?phase: "awaiting-paint"[\s\S]*?recordRenderPerfMetric\("settleExactRefreshPasses"[\s\S]*?requestRendererRender\("exact-after-settle", \{[\s\S]*?flush: true/.test(exactSchedulerSource),
     exactAfterSettleFinalizesAfterExactCompose:
-      /function drawCanvasFrame\(\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = !!composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(drawCanvasOrchestrationOwnerSource)
+      /function drawCanvasFrame\(options\) \{[\s\S]*?const activeRenderPassNames = getActiveRenderPassNames\(\);[\s\S]*?drewExactFrame = !!composeCachedPasses\(activeRenderPassNames\);[\s\S]*?if \(drewExactFrame\) \{[\s\S]*?finalizePendingExactAfterSettleRefreshAfterPaint\(\);/.test(drawCanvasOrchestrationOwnerSource)
       && /function finalizePendingExactAfterSettleRefreshAfterPaint\(\) \{[\s\S]*?isExactAfterSettleIdentityCurrent\(controller\)[\s\S]*?recordRenderPerfMetric\("settleExactRefreshWaitForPaint"[\s\S]*?finalizeExactAfterSettleRefreshPlan\(plan\);[\s\S]*?recordRenderPerfMetric\("settleExactRefreshFinalize"/.test(exactSchedulerSource)
       && /metricSequenceStartedAt: Math\.max\(0, Number\(runtimeState\.renderPerfMetricSequence \|\| 0\)\)/.test(exactSchedulerSource)
       && /function readRenderPerfMetricDuration\(metricName, minSequence = 0\) \{[\s\S]*?requiredMinSequence > 0[\s\S]*?entry\?\.sequence/.test(rendererSource)

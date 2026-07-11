@@ -45777,7 +45777,7 @@
     },
     {
       "path": "app/js/core/map_renderer/draw_canvas_orchestration_owner.js",
-      "size_bytes": 9595,
+      "size_bytes": 9781,
       "source_kind": "dist"
     },
     {
@@ -47544,7 +47544,7 @@
     {
       "file_count": 9422,
       "path": "app",
-      "size_bytes": 965643553
+      "size_bytes": 965643739
     },
     {
       "file_count": 57,
@@ -47577,5 +47577,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972209380
+  "total_bytes": 972209566
 }

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`; P2.1 functional Lore commit is `cc6477e0111568091a8665f76fa13d1083c67426`. Clean-head dist/core verification is green, the worktree is clean at that HEAD, `ahead 9 / behind 1 origin/main@17aeedf`, and P2.1 is ready for separate browser/performance acceptance.
+Current status: P2.1 post-acceptance code-review hardening is in progress from integrated clean HEAD `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3`. The previous HEAD passed browser/main-thread 65/65; the review fix must complete deterministic/dist closeout, then a fresh acceptance owner must rerun browser/performance evidence on the new clean HEAD.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -128,6 +128,17 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Create the P2.1 functional Lore commit `cc6477e0111568091a8665f76fa13d1083c67426`.
 - [x] Run clean-head dist/core verification after the functional commit: `verify:dist-drift` exit 0 with log `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-dist-drift.log`; `verify:core` exit 0 with 61/61, report `.runtime/reports/generated/verify-core.json`, and log `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-core.log`.
 - Acceptance ownership: browser, Playwright, main-thread, and performance lanes belong to the separate acceptance owner.
+
+## P2.1 post-acceptance review fix
+
+- [x] Read fresh render phase after transformed-cache and last-good fallback effects before previous-pixel continuity.
+- [x] Make frame summaries explicit opt-in and keep the production no-options path free of summary serialization/timing copies.
+- [x] Lock original mutable commit timings versus independent frozen summary timings.
+- [x] Replace P53 working-tree diff evidence with direct public-facade and state-write semantic assertions.
+- [x] Generate canonical Pages dist mirrors and manifest; source/dist owner and main-renderer blobs match.
+- [ ] Run focused/shared deterministic gates, selector, Pages/dist parity, and clean-head full `verify:core`.
+- [ ] Commit the review fix with Lore trailers.
+- [ ] Hand the new clean HEAD to browser/performance acceptance.
 
 ## P2.2a cached pass compositor owner
 

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: functional commit committed/verified; ready for separate browser/performance acceptance
+Status: post-acceptance code-review hardening implemented; deterministic/dist verification in progress; fresh browser/performance acceptance remains required on the new clean HEAD
 
 ## Scope
 
@@ -17,18 +17,23 @@ P53 historical preflight remains unchanged. P2.1 implements the approved first m
 - Surface/context/path readiness returns before side effects and counters.
 - The frame path preserves layer data refresh, `drawCanvas` counter, stale overlay cleanup, non-idle warmup cancel, deferred color promotion, phase/defer re-read, transformed-frame attempt, fallback ordering, exact composition, first-visible reasons, last-good capture skip metadata, exact-after-settle finalize, and final `frames` counter.
 - The owner receives constants, getters, and effects by injection. It reads no renderer globals and imports no runtime modules.
-- The summary is frozen and JSON-safe. It excludes DOM, canvas, context, runtime state, raw D3 transform objects, and trace arrays.
+- Production calls omit options and return `undefined`, so the per-frame hot path performs zero summary serialization or timing-copy work.
+- Tests and diagnostics may opt in with `{ includeSummary: true }`; that summary is frozen and JSON-safe and owns a frozen timings copy.
+- `commitLastFrame` retains the original mutable timings object used by renderer accounting. The optional summary never freezes or aliases that object.
+- Previous-pixel continuity reads the current phase after transformed-cache and last-good fallback effects complete, preserving synchronous phase mutations.
 - `map_renderer.js` remains the composition root. It clones the raw zoom transform before committing `cache.lastFrame`.
 
 ## Performance risk note
 
 This split preserves the existing draw order contract, but browser/performance acceptance still needs an A/B lane that compares first-visible timing, dirty fast-frame capture skips, and exact-after-settle behavior against a clean baseline.
 
+The pre-fix integrated HEAD `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3` completed `verify:core:main-thread` with 65/65 commands. That result proves the previous implementation baseline. The review fix changes the visible-frame hot path, so browser/performance acceptance must run again on the new committed clean HEAD.
+
 ## Line count
 
 - Baseline `js/core/map_renderer.js`: 23472 physical lines at `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`.
 - Current P2.1 source/dist: 23437 physical lines each.
-- Current owner source/dist: 255 physical lines each.
+- Current owner source/dist after review hardening: 260 physical lines each.
 - Net reduction: 35 physical lines.
 - Architecture split-entry budget: 23438 physical lines.
 - Python `splitlines()` ceiling: 23437 lines.
