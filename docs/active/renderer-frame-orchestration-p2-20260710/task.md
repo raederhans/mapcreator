@@ -201,3 +201,7 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Generate `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.{json,md}` without modifying the original report or raw evidence.
 - [x] Admit P2.2a from canonical medians: TNO A/B `1197.90/1195.35ms`; HOI4 A/B `694.55/694.80ms`; startup, block drift, outlier, direction, identity, and quiet-window checks pass.
 - [x] Pre-register P2.2a/P2.2b with A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
+- [x] Commit the reusable governed role tooling in Lore commit `14878c78937f36f9ddee53a876521494a2214cbb`.
+- [x] Run clean-head `verify:dist-drift` and full `verify:core` 62/62 from the governed tooling commit.
+- [x] Re-run the offline analyzer and confirm stable governed JSON/Markdown hashes while preserving the original legacy report hash.
+- [x] Mark the isolated lane `ready-for-P2.2a`; browser/dev-server/Playwright/live-perf execution remains assigned to the later single-owner acceptance lane.
