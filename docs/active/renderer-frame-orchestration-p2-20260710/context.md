@@ -40,7 +40,7 @@ Date: 2026-07-10
 - Pre-P2 production disclosure race repair: committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; its Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
-- P2.1 draw canvas orchestration owner: blocked by contemporary A/B admission drift pending separate perf investigation or governed baseline decision
+- P2.1 draw canvas orchestration owner: P2.1 admitted under scoped governance waiver; waiver authorizes P2.1 implementation entry only
 - P2.2a cached pass compositor owner: pending
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
@@ -85,7 +85,7 @@ Date: 2026-07-10
 - Attribution boundary: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch. HOI4 render median is borderline and environment noise can explain it.
 - Main-thread evidence remains the prior `f5f27d` evidence; this closeout did not rerun main-thread. `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run after the perf stop rule.
 - Cleanup: the interrupted typed owner had started a dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear afterward; worktree status was clean before docs edits.
-- P2.1 remains blocked by the red perf gate. Next acceptable path is a separate perf investigation or a governed baseline decision before visible-frame production edits.
+- P2.1 admitted under scoped governance waiver. Old red perf-gate evidence is historical only; P2.1 acceptance A/B, P2.2 entry A/B, and P2 closeout A/B remain required before later phase advancement.
 - Runtime classification report: `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
 ## P2 Contemporary A/B Admission Run 2026-07-10
 
@@ -116,17 +116,28 @@ Date: 2026-07-10
 | `hoi4_1939` | `refreshScenarioApplyMs` | 438.6 | 432.4 | 0.986 / -1.4% | -6.2 | 0.3% | 2.3% | 464.0 | 455.0 |
 | `hoi4_1939` | `renderSampleMedianMs` | 701.8 | 685.1 | 0.976 / -2.4% | -16.7 | -1.3% | 0.8% | 708.7 | 699.0 |
 
-- Decision: P2.1 is blocked by contemporary A/B admission, with exact blocker `hoi4_1939.totalStartupMs` block drift (`A2/A1=-7.2%`, `B2/B1=11.1%`) exceeding the startup drift rule `<=5%`. B/A startup and render thresholds pass, readiness/contract errors are zero, and workload identity matches. The B/A direction is mixed across scenarios (`tno_1962` slight positive, `hoi4_1939` slight negative), so the anomaly check is recorded as failed rather than admitted.
-- Historical April gate status: April baseline gate remains a governance follow-up; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
+- Decision: P2.1 admitted under scoped governance waiver. Old block-drift data (`A2/A1=-7.2%`, `B2/B1=11.1%`) is preserved as historical evidence only; primary contemporary A/B readiness, workload identity, B/A startup thresholds, and B/A render thresholds pass.
+- Historical April gate status: April baseline/threshold frozen; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
 - Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` remains untouched. Docs verification after edits: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, and `unmatchedChangedFiles=[]`.
 
 ## Notes
 
 - P2.0 changed only active docs truth surfaces and completed at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
 - Selector/adaptive proof for this closeout covers exactly the three allowed docs and must end with `unmatchedChangedFiles=[]`.
-- Fresh main-thread/browser evidence stays as a later root-owned lane; P2.1 starts only after perf acceptance is resolved.
+- Fresh main-thread/browser evidence stays as a later root-owned lane; P2.1 implementation entry is admitted under scoped governance waiver.
 - Cumulative extraction target is at least 150 lines, with P2.1 contributing at least 35 lines.
 
 ## Next action
 
-Commit this docs-only contemporary A/B evidence closeout without push. Keep P2.1 blocked until a separate perf investigation or governed baseline decision resolves the contemporary drift and perf acceptance boundary.
+Commit this docs-only governance-waiver closeout without push. P2.1 admitted under scoped governance waiver; P2.1 acceptance A/B, P2.2 entry A/B, and P2 closeout A/B remain required.
+## Current admission note
+
+State: P2.1 admitted under scoped governance waiver.
+
+Governance basis: primary contemporary A/B readiness PASS, workload/runner identity PASS, B/A startup thresholds PASS, B/A render thresholds PASS. HOI4 promotion short-path A/B counts 3/3 and long-path A/B counts 6/6, all stratified deltas inside declared deadband. Old block-drift data is preserved as historical evidence only. April baseline/threshold frozen. Control SHA: `b14165c0e693a87872361b87ac78dc31cd7a0155`. P2 starting HEAD: `1c58d5dbe1a42794074beb792b64b5e8ab26e153`.
+
+Waiver scope: authorizes P2.1 implementation entry only. P2.1 acceptance A/B, P2.2 entry A/B, and P2 closeout A/B remain required.
+
+Formal supplement: reports `.runtime/reports/generated/p2-perf-hoi4-isolated-abba-20260710.{json,md}` stay `inconclusive/blocked` for attribution; attempt01/02 invalid due validator `[double]::IsFinite` flaw after A3 exit 0; attempt03 invalid due stale task-owned Chromium; attempt04 A3/control 5 valid partial samples and B3/P2 quiet-window failed 3 bounded attempts, with B4/A4 not run; attempt05 discarded. Supplement cannot establish regression or no-regression and cannot overturn phase admission.
+
+Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.

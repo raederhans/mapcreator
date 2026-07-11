@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. Readiness/PID ownership is green, contemporary A/B completed, B/A startup/render thresholds pass, block drift fails, and P2.1 remains blocked pending separate perf investigation or governed baseline decision.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. P2.1 admitted under scoped governance waiver. Readiness/PID ownership is green, contemporary A/B completed, B/A startup/render thresholds pass, and old block drift is historical evidence only.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -46,7 +46,7 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Record carried clean-head `npm run verify:core` exit 0 from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; main-thread evidence remains the prior `f5f27d3f` evidence and was not rerun in this docs-only closeout.
 - [ ] Record browser regressions later under one assigned live-process owner.
 - [x] Record post-commit `perf:gate`: measurement completed, readiness green, exit 1 in `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.log` on threshold failures against `docs/perf/baseline_2026-04-20.json`.
-- [ ] Reach green perf acceptance boundary before P2.1; current gate is red at `61e090388feb0c69887b9947b55b61968d5324de`.
+- [x] P2.1 starting gate admitted under scoped governance waiver; current gate evidence stays historical at `61e090388feb0c69887b9947b55b61968d5324de`.
 
 ## Pre-P2 Windows perf readiness fix
 
@@ -66,7 +66,7 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Record metric table, run dispersion, baseline reference, readiness result, listener cleanup, and attribution boundary.
 - [x] Record that `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run in this round.
 - [x] Preserve `plan.md` unchanged.
-- [x] Keep P2.1 blocked by red perf gate.
+- [x] Record P2.1 admitted under scoped governance waiver; old red perf-gate evidence stays historical only.
 ## Clean baseline
 
 - [x] Carry existing clean-head `npm run verify:core` exit 0 evidence from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; this docs-only closeout did not rerun live-process lanes.
@@ -75,7 +75,7 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner.
 - [ ] Record browser baseline.
 - [x] Record perf threshold facts: baseline `docs/perf/baseline_2026-04-20.json` with `contractMismatches=[]`; TNO totalStartup current 8131.4ms, baseline 5805.3ms, limit 6676.1ms at 1.15x, ratio 1.401, run min 8049.5, max 8185, spread 135.5ms / 1.67%; HOI4 totalStartup current 7746.8ms, baseline 5205.7ms, limit 5986.6ms at 1.15x, ratio 1.488, run min 7160.4, max 7789.5, spread 629.1ms / 8.12%; HOI4 render median current 705.05ms, baseline 560.9ms, limit 701.125ms at 1.25x, ratio 1.257, exceeds by 3.925ms / 0.56%, run min 690.4, max 715.65, spread 25.25ms / 3.58%.
-- [x] Classify perf outcome: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch; HOI4 render median is borderline and environment noise can explain it; P2 production perf gate remains red; P2.1 remains blocked pending separate perf investigation/baseline governance.
+- [x] Classify historical perf outcome: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch; HOI4 render median is borderline and environment noise can explain it; April baseline/threshold frozen.
 
 ## Contemporary A/B admission run
 
@@ -92,13 +92,17 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Copy A-side control runtime artifacts into P2 `.runtime/output/perf/p2-ab/20260710/A/` before cleanup.
 - [x] Remove only the control `node_modules` junction with non-recursive operation, then remove the detached control worktree and prune.
 - [x] Confirm control path gone, P2 clean before docs edits, release residue untouched, and parent checkout WIP unchanged.
-- [x] Admission result: readiness and workload identity pass; B/A startup and render thresholds pass; block drift fails on `hoi4_1939.totalStartupMs` (`A2/A1=-7.2%`, `B2/B1=11.1%`); anomaly check records mixed scenario direction; P2.1 remains blocked.
-- [x] Historical April gate remains governance follow-up; checked-in baseline files were not modified.\n- [x] Run docs closeout validation: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, `unmatchedChangedFiles=[]`.
+- [x] Admission result: P2.1 admitted under scoped governance waiver; readiness and workload identity pass; B/A startup and render thresholds pass; old block drift on `hoi4_1939.totalStartupMs` (`A2/A1=-7.2%`, `B2/B1=11.1%`) is historical evidence only.
+- [x] Historical April baseline/threshold frozen; checked-in baseline files were not modified.
+- [x] Run docs closeout validation: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, `unmatchedChangedFiles=[]`.
 
 ## P2.1 draw canvas orchestration owner
 
-- [ ] Start only after contemporary A/B drift and the red perf gate are resolved by separate perf investigation or governed baseline decision.
+- [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
 - [ ] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
+- [ ] P2.1 acceptance A/B.
+- [ ] P2.2 entry A/B.
+- [ ] P2 closeout A/B.
 - [ ] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
 - [ ] Reach at least 35 extracted lines.
 
@@ -119,3 +123,18 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [ ] Recheck integration ancestry and overlap.
 - [ ] Push verified result.
 - [ ] Clean isolated worktree after recovery recording.
+## Current admission note
+
+State: P2.1 admitted under scoped governance waiver.
+
+Governance basis: primary contemporary A/B readiness PASS, workload/runner identity PASS, B/A startup thresholds PASS, B/A render thresholds PASS. HOI4 promotion short-path A/B counts 3/3 and long-path A/B counts 6/6, all stratified deltas inside declared deadband. Old block-drift data is preserved as historical evidence only. April baseline/threshold frozen. Control SHA: `b14165c0e693a87872361b87ac78dc31cd7a0155`. P2 starting HEAD: `1c58d5dbe1a42794074beb792b64b5e8ab26e153`.
+
+Waiver scope: authorizes P2.1 implementation entry only.
+
+- [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
+- [ ] P2.1 implementation extraction.
+- [ ] P2.1 acceptance A/B.
+- [ ] P2.2 entry A/B.
+- [ ] P2 closeout A/B.
+
+Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
