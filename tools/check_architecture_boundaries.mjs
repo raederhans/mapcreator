@@ -3015,6 +3015,7 @@ function collectFailures() {
     "export function createCachedPassCompositorOwner({ constants = {}, getters = {}, helpers = {}, effects = {} } = {})",
     "function drawTransformedPass(passName, currentTransform, referenceTransform = null)",
     "function composeRenderPassesToTarget(",
+    "{ requireAllPasses = false } = {},",
     "const cacheSnapshot = getRenderPassCacheSnapshot();",
     "const targetContext = getActiveTargetContext();",
     "const scaleRatio = current.k / Math.max(reference.k, 0.0001);",

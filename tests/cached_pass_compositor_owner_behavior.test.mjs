@@ -452,12 +452,37 @@ test("DPR reads stay at the original draw-site evaluation points", () => {
   );
 });
 
-test("compose options are read once and preserve caller-owned option semantics", () => {
+test("compose rejects null options before reading the cache snapshot", () => {
   const harness = createHarness();
+  assert.throws(
+    () => harness.owner.composeRenderPassesToTarget(
+      createCanvasContext("null-options"),
+      ["background"],
+      { k: 2, x: 10, y: 20 },
+      null,
+    ),
+    TypeError,
+  );
+  assert.equal(harness.cacheSnapshotReads, 0);
+});
+
+test("compose reads requireAllPasses once before capturing the cache snapshot", () => {
+  const events = [];
+  let cacheSnapshot = null;
+  const harness = createHarness({
+    getters: {
+      getRenderPassCacheSnapshot: () => {
+        events.push("cache-snapshot");
+        return cacheSnapshot;
+      },
+    },
+  });
+  cacheSnapshot = harness.cacheSnapshot;
   let optionReads = 0;
   const options = Object.freeze({
     get requireAllPasses() {
       optionReads += 1;
+      events.push("require-all");
       return true;
     },
   });
@@ -471,6 +496,7 @@ test("compose options are read once and preserve caller-owned option semantics",
     { ok: true },
   );
   assert.equal(optionReads, 1);
+  assert.deepEqual(events, ["require-all", "cache-snapshot"]);
 });
 
 test("owner source stays free of renderer globals imports and dynamic dispatch helpers", () => {

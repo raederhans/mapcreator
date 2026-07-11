@@ -91,11 +91,10 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
     targetContext,
     passNames,
     currentTransform,
-    options,
+    { requireAllPasses = false } = {},
   ) {
     if (!targetContext) return { ok: false, reason: "missing-target-context" };
     const cacheSnapshot = getRenderPassCacheSnapshot();
-    const requireAllPasses = options?.requireAllPasses ?? false;
     const names = Array.isArray(passNames) ? passNames : renderPassNames;
     const missingCanvasPassNames = [];
     const missingReferenceTransformPassNames = [];

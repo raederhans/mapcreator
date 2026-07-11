@@ -58,6 +58,8 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
         ]:
             self.assertNotIn(token, source)
         self.assertEqual(source.count("const cacheSnapshot = getRenderPassCacheSnapshot();"), 2)
+        self.assertIn("{ requireAllPasses = false } = {},", source)
+        self.assertNotIn("options?.requireAllPasses", source)
         self.assertLessEqual(len(source.splitlines()), 320)
 
         forbidden = [
