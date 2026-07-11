@@ -157,6 +157,9 @@ Date: 2026-07-10
 - P53 inventory proves public-facade and state-write semantics from current file content and no longer treats a clean working-tree diff as architectural evidence.
 - Pre-fix browser acceptance at `7b3a8fb4` passed 65/65 and cleanup stopped PID 34784 with port 8892 clear. Fresh browser/performance acceptance remains required on the new committed clean HEAD.
 - Live-process ownership: this writer owns deterministic and Pages/dist commands. Browser, Playwright, main-thread, and perf remain idle for the later acceptance owner.
+- Functional Lore commit: `3efc43206d04616b82be576eb75ae105fc01dd05`.
+- Clean-head acceptance: `verify:dist-drift` exit 0; full `verify:core` exit 0 with 61/61. Logs are under `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-review-fix/`.
+- Current handoff: `ready-for-new-P2.1-acceptance` at `3efc4320`; browser/main-thread/performance must be rerun on this exact source commit before P2.2 entry.
 
 ## Notes
 
@@ -167,7 +170,7 @@ Date: 2026-07-10
 
 ## Next action
 
-Commit this docs-only governance-waiver closeout without push. P2.1 admitted under scoped governance waiver; P2.1 acceptance A/B, P2.2 entry A/B, and P2 closeout A/B remain required.
+Hand clean review-fix commit `3efc43206d04616b82be576eb75ae105fc01dd05` to the P2.1 browser/performance acceptance owner. P2.2 entry remains gated on that fresh exact-commit evidence.
 ## Current admission note
 
 State: P2.1 admitted under scoped governance waiver.

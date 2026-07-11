@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: post-acceptance code-review hardening implemented; deterministic/dist verification in progress; fresh browser/performance acceptance remains required on the new clean HEAD
+Status: post-acceptance code-review hardening committed and deterministic/dist verified at `3efc43206d04616b82be576eb75ae105fc01dd05`; fresh browser/performance acceptance remains required on this new clean HEAD
 
 ## Scope
 
@@ -65,7 +65,18 @@ Allowed in this lane: focused syntax, owner behavior, inventory, Python boundary
 
 Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.
 
-## Deterministic completion evidence
+## Post-acceptance review-fix evidence
+
+- Functional Lore commit: `3efc43206d04616b82be576eb75ae105fc01dd05`.
+- Focused owner behavior: 17/17; P53 inventory: 8/8; Python boundary: 5/5; scenario chunk contracts: 57/57.
+- Shared gates passed: architecture boundaries, state-write allowlist 115, import graph 51, verification metadata 14/14, core runner 8/8, route schema 286, and supervisor contracts/plan.
+- Adaptive dry-run: 12 changed files, 13 recommended commands, 2 main-thread lanes, and 0 unmatched files. Artifact: `.runtime/reports/generated/p2-1-review-fix-adaptive.json`.
+- Canonical `verify:pages-dist` passed with startup 46/46, landing 18/18, sample 17/17, and total size 927.17 MiB.
+- Source/dist blobs match: owner `ebceea6dd873a5ac223abf438bc220d1a50b5ace`; main renderer `a78767ade0dd2f416fab95b02d67f007e0a9f79c`.
+- Clean functional HEAD `verify:dist-drift` exited 0 and full `verify:core` exited 0 with 61/61. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-review-fix/33-clean-head-verify-dist-drift.log` and `34-clean-head-verify-core.log`.
+- Pre-fix browser/main-thread evidence remains 65/65 at `7b3a8fb4`. Fresh browser/performance acceptance is the next owned lane.
+
+## Original P2.1 deterministic completion evidence
 
 - Owner behavior: 14/14; P53 inventory: 8/8; Python owner boundary: 5/5; render-pipeline boundary: 5/5.
 - Scenario chunk contracts: 57/57; scenario refresh contracts: 36/36; verification metadata: 14/14; core-runner behavior: 8/8.

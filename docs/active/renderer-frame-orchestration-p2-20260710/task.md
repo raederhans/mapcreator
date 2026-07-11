@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.1 post-acceptance code-review hardening is in progress from integrated clean HEAD `7b3a8fb4662c62a1ba7708da92ba2aa2f82ad9e3`. The previous HEAD passed browser/main-thread 65/65; the review fix must complete deterministic/dist closeout, then a fresh acceptance owner must rerun browser/performance evidence on the new clean HEAD.
+Current status: P2.1 post-acceptance code-review hardening is committed at `3efc43206d04616b82be576eb75ae105fc01dd05`; clean-head `verify:dist-drift` and full `verify:core` 61/61 are green. The previous HEAD passed browser/main-thread 65/65; a fresh acceptance owner must rerun browser/performance evidence on `3efc4320` before P2.2 entry.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -136,8 +136,8 @@ Current status: P2.1 post-acceptance code-review hardening is in progress from i
 - [x] Lock original mutable commit timings versus independent frozen summary timings.
 - [x] Replace P53 working-tree diff evidence with direct public-facade and state-write semantic assertions.
 - [x] Generate canonical Pages dist mirrors and manifest; source/dist owner and main-renderer blobs match.
-- [ ] Run focused/shared deterministic gates, selector, Pages/dist parity, and clean-head full `verify:core`.
-- [ ] Commit the review fix with Lore trailers.
+- [x] Run focused/shared deterministic gates, selector, Pages/dist parity, and clean-head full `verify:core` 61/61.
+- [x] Commit the review fix with Lore trailers at `3efc43206d04616b82be576eb75ae105fc01dd05`.
 - [ ] Hand the new clean HEAD to browser/performance acceptance.
 
 ## P2.2a cached pass compositor owner
