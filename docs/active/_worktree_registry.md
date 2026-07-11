@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.2a cached-pass compositor final contract microfix commit `76977207` is clean-head deterministic complete in the isolated P2 worktree. `verify:dist-drift` exits 0, `verify:core` passes 64/64, functional selector coverage is 7/13/1/0, and source/dist blobs match. The lane is ready for final static re-review plus separate browser/main-thread/performance acceptance. Parent WIP remains untouched.
+Last updated: 2026-07-11 P2.2a exact candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread acceptance and completes the governed A/B experiment. Performance acceptance is `blocked` by HOI4 startup/canonical regression, material block drift, and opposite-direction checks. P2.2b entry is closed. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-11 P2.2a cached-pass compositor final contract microfix co
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none active; P2.1 browser and A/B owners completed cleanup, ports 8000/8892 are clear, the temporary control worktree is removed, and task-owned Chromium/processes are absent
+- live process owner: none active; P2.2a browser and A/B owners completed cleanup, ports 8000/8892 are clear, the temporary control worktree is removed, and task-owned Chromium/processes are absent
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -21,7 +21,7 @@ Last updated: 2026-07-11 P2.2a cached-pass compositor final contract microfix co
 3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright and perf under single-owner execution. P2.2a/P2.2b must retain `render-sample-role-v1`, A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
+6. Keep browser/dev-server/Playwright and perf under single-owner execution. P2.2a completed under `render-sample-role-v1`, A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`; its blocked decision controls P2.2b entry.
 
 ## Current Worktrees
 
@@ -30,7 +30,7 @@ Current rows reflect the real two local worktrees from the current worktree list
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`. | User-provided current worktree list says parent path exists at `db8bd6c`; existing WIP retained. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; clean P2.2a final contract microfix commit `76977207` plus evidence closeout | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `ready-for-review`; deterministic/dist final closeout complete, separate browser/performance acceptance pending | Hot files: cached compositor, P53/Pages/architecture contracts, generated dist mirror, and P2 control docs. Parent WIP remains untouched. | Owner 13/13, P53 11/11, Python boundary 4/4, Pages startup 47/47, clean-head dist drift 0, full core 64/64; functional selector 7 changed / 13 recommended / 1 main-thread / 0 unmatched; source/dist blobs match. | Red for concurrent edits to this isolated renderer lane; yellow for P2.2b/perf runner/metadata/docs overlap. | Run final independent static re-review, then hand exact evidence HEAD to the separate browser/main-thread/performance acceptance owner before P2.2b. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; exact accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` plus this docs-only acceptance closeout | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `blocked`; implementation/deterministic/dist/browser complete, governed performance acceptance red | Hot files: cached compositor, P53/Pages/architecture contracts, generated dist mirror, and P2 control docs. Parent WIP remains untouched. | Browser: main-thread 68 commands, physical 1/1, resilience 3/3. Performance: four valid blocks, role 40/40, TNO pooled gates pass; HOI4 startup +8.85% and canonical +9.76% fail; block drift and direction fail. | Red for concurrent renderer work and P2.2b; yellow for future governed performance rerun planning. | Hold P2.2b. Preserve candidate and evidence; any fresh experiment requires separate approval and a new full governed sequence. |
 
 ## P2.2a Cached-Pass Compositor Delivery Package 2026-07-11
 
@@ -40,8 +40,8 @@ Current rows reflect the real two local worktrees from the current worktree list
 4. Conflict assessment: red for concurrent `map_renderer.js`, cached-compositor, architecture, verification-metadata, Pages startup/manifest, registry/context/task edits; yellow for P2.2b transformed-frame composition and governed performance tooling; green for unrelated parent WIP, which remains untouched.
 5. Verification: TDD red artifacts retained; owner 13/13; P53 11/11; combined Python boundary 4/4; architecture/state/import/selector/supervisor green; Pages 927.17 MiB with startup 47/47, landing 18/18, sample 17/17; clean-head dist drift exit 0; clean-head core 64/64.
 6. Routes/parity: final microfix selector 7 changed files / 13 recommended commands / 1 main-thread lane / 0 unmatched; evidence-doc selector 4/9/0/0. Owner source/dist blobs match at `55c3f02bdf6da3f57ba1a7266a4954cd51bed249`; `map_renderer.js` remains unchanged from the prior exact source/mirror pair.
-7. Remaining acceptance: browser, Playwright, `verify:core:main-thread`, and governed performance remain assigned to a separate single live-process owner. The deterministic core report explicitly skips seven main-thread E2E commands.
-8. Recommendation: static re-review the review-fix commit, run separate browser/performance acceptance, then begin P2.2b from the accepted commit. Preserve recovery through the branch and commit; keep this worktree until integration is complete.
+7. Acceptance result: exact-head browser gates pass. Governed A/B produced 40/40 canonical role matches and a fail-closed `blocked` decision from HOI4 startup/canonical regression, material block drift, and opposite-direction checks. Reports are `.runtime/reports/generated/p2-2a-performance-ab-20260711.{json,md}`; raw manifest is `.runtime/output/perf/p2-2a-acceptance/20260711/raw-sha256-manifest.json`.
+8. Recommendation: hold P2.2b. Preserve candidate `8eda8c5c`, the blocked report, and runtime artifacts. A future performance attempt starts as a separately approved full governed sequence.
 
 ## P2.1 Legacy-Metric Acceptance Closeout 2026-07-11
 

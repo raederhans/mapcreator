@@ -10,9 +10,10 @@ Date: 2026-07-10
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
-- current task phase: P2.2a cached-pass compositor deterministic closeout complete; ready for static review plus separate browser/main-thread/performance acceptance
+- current acceptance candidate: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
+- current task phase: P2.2a exact-head browser acceptance is green; governed A/B acceptance is `blocked`; P2.2b entry is closed
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch is clean at P2.2a functional commit `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`; parent WIP remains untouched
+- current worktree state: isolated P2 branch contained a clean candidate at `8eda8c5c` before this docs-only blocked closeout; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -44,8 +45,8 @@ Date: 2026-07-10
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
-- P2.2a cached pass compositor owner: functional commit `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`; focused/Pages/dist plus clean-head `verify:core` 64/64 complete; separate acceptance pending
-- P2.2b transformed frame compositor owner: pending
+- P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; governed performance decision blocked
+- P2.2b transformed frame compositor owner: pending with entry blocked by P2.2a acceptance
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
 
@@ -297,3 +298,32 @@ The one-snapshot-per-public-method contract and DPR evaluation order remain unch
 Clean-head `verify:dist-drift` and full `verify:core` pass at the functional commit; core reports 64/64 commands, zero failures, zero omitted commands, zero duplicates, and seven explicit main-thread skips. Functional adaptive selection reports 7 changed files, 13 recommended commands, 1 main-thread lane, and 0 unmatched files; final evidence-doc selection reports 4/9/0/0.
 
 Status: `ready-for-final-static-re-review + separate browser/performance acceptance`. Browser, dev server, Playwright, `verify:core:main-thread`, and governed live performance remain assigned to their separate single-owner lane.
+
+## P2.2a exact-head browser and governed performance acceptance 2026-07-11
+
+Candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passed the exact-head browser lane on one port-8892 server: `verify:core:main-thread` 68 commands, smoke 4/4, scenario concurrency 1/1, project save/load 5/5, interaction funnel 3/3, physical-layer runtime 1/1, and scenario resilience 3/3. Cleanup closed ports 8000/8892, removed matching metadata, and left zero task-owned Chromium.
+
+The governed performance control is immediate ancestor `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`. The final adjudicative experiment completed `A1 -> B1 -> B2 -> A2` with fixed TNO/HOI4 order, three warmups, five measured runs, schema-2 fail-closed role policy, and matched runner/lock/environment/query/workload identity. Quiet gates accepted A1 on attempt 1, B1 on attempt 3, B2 on attempt 3, and A2 on attempt 3. Every block exited 0; canonical role coverage is 40/40 with zero mismatches.
+
+Pooled results:
+
+- TNO startup: 7378.10ms control, 7237.50ms candidate, -140.60ms / -1.91%, pass.
+- TNO canonical render: 1393.60ms control, 1355.50ms candidate, -38.10ms / -2.73%, pass.
+- HOI4 startup: 6589.45ms control, 7172.80ms candidate, +583.35ms / +8.85%, fail.
+- HOI4 canonical render: 804.45ms control, 883.00ms candidate, +78.55ms / +9.76%, fail.
+
+Block drift is material across both sides. TNO A/B startup drift is 30.37%/31.75% and canonical drift is 32.93%/35.87%; HOI4 A/B startup drift is 31.44%/9.30% and canonical drift is 44.15%/17.73%. HOI4 first-pair and second-pair deltas reverse beyond the registered startup/render deadbands. Outlier rules pass.
+
+Legacy `renderSampleMedianMs` is diagnostic: TNO A/B 840.45/832.75ms; HOI4 A/B 646.08/698.45ms. TNO first-role composition is A blank/scenario 9/1 and B 8/2; HOI4 is scenario 10/10 on both sides.
+
+Acceptance decision: `blocked`. Failed checks are startup regression, canonical render regression, block drift, and opposite direction beyond deadband. P2.2b remains pending behind this gate.
+
+Evidence:
+
+- `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-acceptance/browser/browser-result.json`
+- `.runtime/output/perf/p2-2a-acceptance/20260711/performance-result.json`
+- `.runtime/output/perf/p2-2a-acceptance/20260711/raw-sha256-manifest.json`
+- `.runtime/reports/generated/p2-2a-performance-ab-20260711.json`
+- `.runtime/reports/generated/p2-2a-performance-ab-20260711.md`
+
+The final measurement group is the sole adjudicative A/B input. Earlier harness-only preflight/validation and quiet-gate stop artifacts remain under the same runtime root for process audit. The control worktree and junction are removed, candidate/control ports are clear, and parent checkout WIP is unchanged.

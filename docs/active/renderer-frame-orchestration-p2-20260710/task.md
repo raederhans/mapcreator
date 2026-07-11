@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a cached-pass compositor final contract microfix and clean-head deterministic/dist closeout are complete at `76977207`. The isolated lane is ready for static re-review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Exact candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates; governed A/B acceptance is `blocked`, so P2.2b entry is closed.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -154,7 +154,7 @@ Current status: P2.2a cached-pass compositor final contract microfix and clean-h
 - [x] Create functional Lore commit `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`; clean-head `verify:dist-drift` exits 0 and `verify:core` passes 64/64 with seven explicit main-thread skips.
 - [x] Record selector evidence: 19 changed files, 195 recommended commands, 7 main-thread lanes, and 0 unmatched files.
 - [x] Record exact source/dist parity: renderer `9467d79806d1f418c89527ac6b1a560ff11a27c1`; cached compositor `bc84b5c34f060282b573b333ba14344e59483f73`.
-- [ ] Complete separate browser/main-thread/performance acceptance under the registered governed protocol.
+- [x] Complete separate browser/main-thread/performance acceptance under the registered governed protocol; record the fail-closed P2.2a decision.
 
 ### P2.2a static-review fixes
 
@@ -182,8 +182,24 @@ Current status: P2.2a cached-pass compositor final contract microfix and clean-h
 
 ## P2.2b transformed frame compositor owner
 
+- [ ] Entry gate: obtain a separately approved governed acceptance result after the P2.2a `blocked` decision.
 - [ ] Extract `js/core/map_renderer/transformed_frame_compositor_owner.js`.
 - [ ] Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
+
+## P2.2a exact-head acceptance 2026-07-11
+
+- [x] Run `verify:core:main-thread` on exact candidate `8eda8c5c`: 68 commands, smoke 4/4, scenario concurrency 1/1, project save/load 5/5, interaction funnel 3/3.
+- [x] Run exact physical-layer runtime 1/1 and scenario resilience 3/3 on the same dedicated port-8892 server.
+- [x] Clean the browser lane: ports 8000/8892 clear, active-server metadata removed, zero task-owned Chromium.
+- [x] Run governed `A1 -> B1 -> B2 -> A2` against control `ab86b1e2`; every block uses TNO then HOI4, three warmups, five measured runs, matching runner/policy/lock/environment/query/workload identity.
+- [x] Validate 40/40 canonical role matches, zero mismatches, four block exits 0, and 40 raw SHA256 entries.
+- [x] Record pooled TNO startup/canonical PASS at -1.91%/-2.73%.
+- [x] Record pooled HOI4 startup FAIL at +583.35ms/+8.85% and canonical FAIL at +78.55ms/+9.76%.
+- [x] Record block-drift FAIL for both scenarios and opposite-direction FAIL for HOI4; outlier rules PASS.
+- [x] Keep legacy render medians diagnostic: TNO -0.92%; HOI4 +8.11%.
+- [x] Generate `.runtime/reports/generated/p2-2a-performance-ab-20260711.{json,md}` and the 40-file raw hash manifest.
+- [x] Remove the temporary control worktree/junction after restoring original control tooling; preserve parent WIP.
+- [x] Mark P2.2b blocked by P2.2a acceptance.
 
 ## Review / UltraQA / integration
 
