@@ -29,9 +29,9 @@ Date: 2026-07-10
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
-- main-thread baseline: pending; `f5f27d3f` records post-commit browser/main-thread/perf baseline as `Not-tested`
+- main-thread evidence: remains the prior `f5f27d3f` evidence; this closeout did not rerun main-thread
 - perf baseline: red at `61e090388feb0c69887b9947b55b61968d5324de`; readiness green, threshold acceptance blocked
-- clean-head `npm run verify:core` exited 0 from existing post-commit evidence; main-thread evidence is carried from `f5f27d3f`; browser regressions, physical-layer runtime contract, scenario resilience, and any further perf investigation remain separate lanes
+- clean-head `npm run verify:core` exited 0 from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; main-thread evidence remains the prior `f5f27d3f` evidence; browser regressions, physical-layer runtime contract, scenario resilience, and any further perf investigation remain separate lanes
 
 ## Current phase ledger
 
@@ -71,25 +71,27 @@ Date: 2026-07-10
 - Perf gate pre-measurement readiness exposed a Windows-only launcher PID mismatch: Node saw `py.exe` as `child.pid`, while the server metadata recorded `python.exe` from `os.getpid()`.
 - Minimal decision: resolve `sys.executable` once with `py -3 -c "import sys; print(sys.executable)"`, then spawn `tools/dev_server.py` with the real interpreter so strict PID/cwd/live/probe/external-reuse contracts stay unchanged.
 - Focused verification is green: TDD red captured `npm run verify:perf-gate-contract` exit 1 on the missing `spawnSync`/raw `py` fallback; final `node --check tools/perf/run_baseline.mjs`, `npm run verify:perf-gate-contract`, direct `py -3 -c "import sys; print(sys.executable)"`, `git diff --check`, selector dry-run for the five changed files with `unmatchedChangedFiles=[]`, selector route check, supervisor contracts, perf probe snapshot, polyline simplification benchmark, and draw-canvas inventory all exited 0.
-- Fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, and `perf:gate` remain pending until the Windows readiness fix is committed and one live-process owner runs them serially.
+- Post-commit split after the Windows readiness fix: clean-head `npm run verify:core` is green from existing evidence; `perf:gate` reached measurement and is red on real thresholds; main-thread/browser regressions remain inherited or unrun lanes under a future live-process owner.
 - Parent checkout WIP remains untouched.
 
 ## Post-commit perf readiness classification
 
 - Functional commit `61e090388feb0c69887b9947b55b61968d5324de` was ahead 4 from `origin/main`; the worktree was clean before this docs-only closeout.
-- Clean-head `npm run verify:core` exited 0 in existing post-commit evidence. This docs-only closeout inspected existing artifacts and did not rerun core, main-thread, browser, server, Playwright, or perf commands.
-- Windows readiness is green: the perf runner completed measurement and wrote `.runtime/output/perf/baseline_2026-04-20/perf-gate-current.json`; `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.exit-code.txt` records `exit_code=1` because the threshold gate is red.
-- Baseline reference is `docs/perf/baseline_2026-04-20.json` via `DEFAULT_BASELINE_JSON`; `contractMismatches` is empty; current and baseline share `win32 10.0.26200`, Node major 22, `chromium-headless`, `warmups=3`, and the same URL query.
-- Threshold failures: `tno_1962.totalStartupMs` 8131.4 vs 5805.3, limit 6676.095; `hoi4_1939.totalStartupMs` 7746.8 vs 5205.7, limit 5986.555; `hoi4_1939.renderSampleMedianMs` 705.05 vs 560.9, limit 701.125, only 3.925 ms / 0.56% over the allowed limit.
-- Attribution boundary: totalStartup failures are repeatable current-vs-April-baseline shifts; scenarioApplied and applyBundle are faster than baseline; the HOI render miss is close enough for short-run / machine noise to remain plausible; the functional patch only changed perf launcher/readiness and does not attribute threshold failures to renderer or scenario runtime code.
-- Cleanup: before cleanup port 8000 was clear; port 8892 belonged to PID 58444 (`python.exe tools/dev_server.py --port 8892`) with matching worktree metadata; only PID 58444 was terminated; parent PID 67120 had exited; ports 8000 and 8892 were clear afterward; worktree status was clean before docs edits.
-- P2.1 remains blocked by the red perf gate. Next acceptable path is a separate perf investigation or a governed baseline decision before visible-frame production edits. `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run in this round.
+- Clean-head `npm run verify:core` exited 0 in `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`. This docs-only closeout inspected existing artifacts and did not rerun core, main-thread, browser, server, Playwright, or perf commands.
+- Windows readiness is green: the gate launched its managed server, completed three warmups and three runs for both scenarios, wrote `.runtime/output/perf/baseline_2026-04-20/perf-gate-current.json`, and had no PID/readiness timeout.
+- `npm run perf:gate` exited 1 in `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.log` because the threshold gate is red.
+- Baseline reference is `docs/perf/baseline_2026-04-20.json`; `contractMismatches=[]`.
+- Threshold failures: TNO totalStartup current 8131.4ms, baseline 5805.3ms, limit 6676.1ms at 1.15x, ratio 1.401, run min 8049.5, max 8185, spread 135.5ms / 1.67%; HOI4 totalStartup current 7746.8ms, baseline 5205.7ms, limit 5986.6ms at 1.15x, ratio 1.488, run min 7160.4, max 7789.5, spread 629.1ms / 8.12%; HOI4 renderSampleMedian current 705.05ms, baseline 560.9ms, limit 701.125ms at 1.25x, ratio 1.257, exceeds by 3.925ms / 0.56%, run min 690.4, max 715.65, spread 25.25ms / 3.58%.
+- Attribution boundary: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch. HOI4 render median is borderline and environment noise can explain it.
+- Main-thread evidence remains the prior `f5f27d` evidence; this closeout did not rerun main-thread. `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run after the perf stop rule.
+- Cleanup: the interrupted typed owner had started a dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear afterward; worktree status was clean before docs edits.
+- P2.1 remains blocked by the red perf gate. Next acceptable path is a separate perf investigation or a governed baseline decision before visible-frame production edits.
 - Runtime classification report: `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
 ## Notes
 
 - P2.0 changed only active docs truth surfaces and completed at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
-- Selector/adaptive proof must end with `unmatchedChangedFiles=0` for the eight changed files.
-- Fresh clean-head core/main-thread/browser/perf evidence stays as later clean-head baseline evidence after this readiness fix, with a root-assigned live-process owner.
+- Selector/adaptive proof for this closeout covers exactly the three allowed docs and must end with `unmatchedChangedFiles=[]`.
+- Fresh main-thread/browser evidence stays as a later root-owned lane; P2.1 starts only after perf acceptance is resolved.
 - Cumulative extraction target is at least 150 lines, with P2.1 contributing at least 35 lines.
 
 ## Next action

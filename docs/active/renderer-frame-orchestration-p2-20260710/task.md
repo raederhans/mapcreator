@@ -43,9 +43,9 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Adaptive result is `changedFiles=8`, `recommendedCommands=61`, `mainThreadSerialVerification=53`, `unmatchedChangedFiles=0`.
 - Operational note: the Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript.
 - [x] Create the functional commit for the production disclosure race repair: `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`.
-- [x] Record carried clean-head `npm run verify:core` exit 0 from existing post-commit evidence; main-thread evidence remains carried from `f5f27d3f` and was not rerun in this docs-only closeout.
-- [ ] Record browser regressions after the Windows readiness fix is committed and one live-process owner runs them serially.
-- [x] Record post-commit `perf:gate`: measurement completed, readiness green, exit 1 on threshold failures against `docs/perf/baseline_2026-04-20.json`.
+- [x] Record carried clean-head `npm run verify:core` exit 0 from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; main-thread evidence remains the prior `f5f27d3f` evidence and was not rerun in this docs-only closeout.
+- [ ] Record browser regressions later under one assigned live-process owner.
+- [x] Record post-commit `perf:gate`: measurement completed, readiness green, exit 1 in `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.log` on threshold failures against `docs/perf/baseline_2026-04-20.json`.
 - [ ] Reach green perf acceptance boundary before P2.1; current gate is red at `61e090388feb0c69887b9947b55b61968d5324de`.
 
 ## Pre-P2 Windows perf readiness fix
@@ -63,17 +63,19 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 ## Docs-only perf readiness cleanup classification
 
 - [x] Create ignored runtime report `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
-- [x] Record metric table, run dispersion, baseline dispersion, readiness result, listener cleanup, and attribution boundary.
+- [x] Record metric table, run dispersion, baseline reference, readiness result, listener cleanup, and attribution boundary.
 - [x] Record that `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run in this round.
 - [x] Preserve `plan.md` unchanged.
 - [x] Keep P2.1 blocked by red perf gate.
 ## Clean baseline
 
-- [x] Carry existing clean-head `npm run verify:core` exit 0 evidence; this docs-only closeout did not rerun live-process lanes.
-- [x] Record readiness cleanup: before cleanup port 8000 was clear; port 8892 was PID 58444 `python.exe tools/dev_server.py --port 8892`; metadata matched PID/port/cwd/runtime root; only PID 58444 was terminated; parent PID 67120 had exited; ports 8000 and 8892 were clear afterward; worktree was clean before docs edits.
+- [x] Carry existing clean-head `npm run verify:core` exit 0 evidence from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; this docs-only closeout did not rerun live-process lanes.
+- [x] Record readiness success: the gate launched its managed server, completed three warmups and three runs for both scenarios, wrote `.runtime/output/perf/baseline_2026-04-20/perf-gate-current.json`, and had no PID/readiness timeout.
+- [x] Record readiness cleanup: the interrupted typed owner had started dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear afterward; worktree was clean before docs edits.
 - [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner.
 - [ ] Record browser baseline.
-- [x] Record perf threshold facts: TNO totalStartup 8131.4/5805.3 over 6676.095; HOI totalStartup 7746.8/5205.7 over 5986.555; HOI render median 705.05/560.9 over 701.125 by 3.925 ms / 0.56%.
+- [x] Record perf threshold facts: baseline `docs/perf/baseline_2026-04-20.json` with `contractMismatches=[]`; TNO totalStartup current 8131.4ms, baseline 5805.3ms, limit 6676.1ms at 1.15x, ratio 1.401, run min 8049.5, max 8185, spread 135.5ms / 1.67%; HOI4 totalStartup current 7746.8ms, baseline 5205.7ms, limit 5986.6ms at 1.15x, ratio 1.488, run min 7160.4, max 7789.5, spread 629.1ms / 8.12%; HOI4 render median current 705.05ms, baseline 560.9ms, limit 701.125ms at 1.25x, ratio 1.257, exceeds by 3.925ms / 0.56%, run min 690.4, max 715.65, spread 25.25ms / 3.58%.
+- [x] Classify perf outcome: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch; HOI4 render median is borderline and environment noise can explain it; P2 production perf gate remains red; P2.1 remains blocked pending separate perf investigation/baseline governance.
 
 ## P2.1 draw canvas orchestration owner
 
