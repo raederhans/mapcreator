@@ -209,6 +209,7 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
+import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
@@ -986,6 +987,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
+let cachedPassCompositorOwner = null;
 let rendererRuntimeContext = null;
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
@@ -2620,6 +2622,39 @@ function getRenderCacheOwner() {
     },
   });
   return renderCacheOwner;
+}
+
+function getCachedPassCompositorOwner() {
+  if (cachedPassCompositorOwner) return cachedPassCompositorOwner;
+  cachedPassCompositorOwner = createCachedPassCompositorOwner({
+    constants: {
+      renderPassNames: RENDER_PASS_NAMES,
+    },
+    getters: {
+      getActiveTargetContext: () => rendererSurfaceHost.getContext(),
+      getPassCanvas: (passName) => getRenderPassCacheState().canvases?.[passName] || null,
+      getPassReferenceTransform,
+      getRenderPassLayout,
+      getDpr: () => runtimeState.dpr,
+      getRenderPhase: () => runtimeState.renderPhase,
+      isPassDirty: (passName) => !!getRenderPassCacheState().dirty?.[passName],
+      isRenderDiagnosticsEnabled: () => !!renderDiag.enabled,
+    },
+    helpers: {
+      cloneZoomTransform,
+      areZoomTransformsEquivalent,
+    },
+    effects: {
+      recordTransformedPassDiagnostics: (passName, details) => {
+        renderDiag.transformedPasses = {
+          ...(renderDiag.transformedPasses || {}),
+          [passName]: details,
+        };
+        publishRenderDiagnostics();
+      },
+    },
+  });
+  return cachedPassCompositorOwner;
 }
 
 function getRenderPassCacheHostOwner() {
@@ -18099,43 +18134,11 @@ function drawInteractionComposite(
 }
 
 function drawTransformedPass(passName, currentTransform, referenceTransform = null) {
-  const cache = getRenderPassCacheState();
-  const passCanvas = cache.canvases?.[passName];
-  if (!passCanvas) return false;
-  const resolvedReferenceTransform = referenceTransform || getPassReferenceTransform(passName);
-  if (!resolvedReferenceTransform) return false;
-  const current = cloneZoomTransform(currentTransform);
-  const reference = cloneZoomTransform(resolvedReferenceTransform);
-  const layout = getRenderPassLayout(passName);
-  const scaleRatio = current.k / Math.max(reference.k, 0.0001);
-  const dx = current.x - (reference.x * scaleRatio);
-  const dy = current.y - (reference.y * scaleRatio);
-  if (renderDiag.enabled) {
-    renderDiag.transformedPasses = {
-      ...(renderDiag.transformedPasses || {}),
-      [passName]: {
-        current,
-        reference,
-        scaleRatio,
-        dx,
-        dy,
-        layout,
-        phase: String(runtimeState.renderPhase || ""),
-        dirty: !!cache.dirty?.[passName],
-      },
-    };
-    publishRenderDiagnostics();
-  }
-  rendererSurfaceHost.getContext().save();
-  rendererSurfaceHost.getContext().setTransform(1, 0, 0, 1, 0, 0);
-  rendererSurfaceHost.getContext().translate(
-    (dx - Number(layout?.offsetX || 0) * scaleRatio) * runtimeState.dpr,
-    (dy - Number(layout?.offsetY || 0) * scaleRatio) * runtimeState.dpr,
+  return getCachedPassCompositorOwner().drawTransformedPass(
+    passName,
+    currentTransform,
+    referenceTransform,
   );
-  rendererSurfaceHost.getContext().scale(scaleRatio, scaleRatio);
-  rendererSurfaceHost.getContext().drawImage(passCanvas, 0, 0);
-  rendererSurfaceHost.getContext().restore();
-  return true;
 }
 
 function composeRenderPassesToTarget(
@@ -18144,76 +18147,12 @@ function composeRenderPassesToTarget(
   currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity,
   { requireAllPasses = false } = {},
 ) {
-  if (!targetContext) return { ok: false, reason: "missing-target-context" };
-  const cache = getRenderPassCacheState();
-  const names = Array.isArray(passNames) ? passNames : RENDER_PASS_NAMES;
-  const missingCanvasPassNames = [];
-  const missingReferenceTransformPassNames = [];
-  if (requireAllPasses) {
-    for (const passName of names) {
-      const passCanvas = cache.canvases?.[passName];
-      if (!passCanvas) {
-        missingCanvasPassNames.push(passName);
-        continue;
-      }
-      const referenceTransform = getPassReferenceTransform(passName);
-      if (!referenceTransform) {
-        missingReferenceTransformPassNames.push(passName);
-      }
-    }
-    if (missingCanvasPassNames.length) {
-      return {
-        ok: false,
-        reason: "missing-pass-canvas",
-        passName: missingCanvasPassNames[0],
-        missingPassNames: missingCanvasPassNames,
-      };
-    }
-    if (missingReferenceTransformPassNames.length) {
-      return {
-        ok: false,
-        reason: "missing-reference-transform",
-        passName: missingReferenceTransformPassNames[0],
-        missingPassNames: missingReferenceTransformPassNames,
-      };
-    }
-  }
-  for (const passName of names) {
-    const passCanvas = cache.canvases?.[passName];
-    if (!passCanvas) {
-      if (requireAllPasses) return { ok: false, reason: "missing-pass-canvas", passName };
-      continue;
-    }
-    const referenceTransform = getPassReferenceTransform(passName);
-    if (!referenceTransform && requireAllPasses) {
-      return { ok: false, reason: "missing-reference-transform", passName };
-    }
-    if (referenceTransform && !areZoomTransformsEquivalent(referenceTransform, currentTransform)) {
-      const layout = getRenderPassLayout(passName);
-      const current = cloneZoomTransform(currentTransform);
-      const reference = cloneZoomTransform(referenceTransform);
-      const scaleRatio = current.k / Math.max(reference.k, 0.0001);
-      const dx = current.x - (reference.x * scaleRatio);
-      const dy = current.y - (reference.y * scaleRatio);
-      targetContext.save();
-      targetContext.setTransform(1, 0, 0, 1, 0, 0);
-      targetContext.translate(
-        (dx - Number(layout?.offsetX || 0) * scaleRatio) * runtimeState.dpr,
-        (dy - Number(layout?.offsetY || 0) * scaleRatio) * runtimeState.dpr,
-      );
-      targetContext.scale(scaleRatio, scaleRatio);
-      targetContext.drawImage(passCanvas, 0, 0);
-      targetContext.restore();
-      continue;
-    }
-    const layout = getRenderPassLayout(passName);
-    targetContext.drawImage(
-      passCanvas,
-      Math.round(-Number(layout?.offsetX || 0) * runtimeState.dpr),
-      Math.round(-Number(layout?.offsetY || 0) * runtimeState.dpr),
-    );
-  }
-  return { ok: true };
+  return getCachedPassCompositorOwner().composeRenderPassesToTarget(
+    targetContext,
+    passNames,
+    currentTransform,
+    { requireAllPasses },
+  );
 }
 
 

@@ -459,3 +459,68 @@ test("renderer draw canvas P2.1 files route to owner behavior inventory and boun
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:renderer-draw-canvas-orchestration-inventory"));
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-draw-canvas-orchestration-boundary"));
 });
+
+test("renderer cached pass P2.2a files route to behavior inventory boundary and Pages commands", () => {
+  const expectedEntries = new Map([
+    [
+      "verify-core:test:node:cached-pass-compositor-owner",
+      "test:node:cached-pass-compositor-owner",
+    ],
+    [
+      "verify-core:test:python:map-renderer-frame-compositor-boundary",
+      "test:python:map-renderer-frame-compositor-boundary",
+    ],
+  ]);
+  for (const [id, commandRef] of expectedEntries) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === id);
+    assert.ok(entry, `${id} should exist in verification metadata`);
+    assert.deepEqual(
+      {
+        commandRef: entry.commandRef,
+        domain: entry.domain,
+        ownerHint: entry.ownerHint,
+        layer: entry.layer,
+        cost: entry.cost,
+        resourceLocks: entry.resourceLocks,
+        executionOwner: entry.executionOwner,
+        ciProfile: entry.ciProfile,
+        verifyCoreDefaultGroup: entry.verifyCoreDefaultGroup,
+        supervisorDomain: entry.supervisorDomain,
+        routeRegistry: entry.routeRegistry,
+      },
+      {
+        commandRef,
+        domain: "renderer-runtime",
+        ownerHint: "renderer-runtime",
+        layer: "contract",
+        cost: "fast",
+        resourceLocks: [],
+        executionOwner: "child-safe",
+        ciProfile: "pr-fast",
+        verifyCoreDefaultGroup: "renderer-owner",
+        supervisorDomain: "renderer-runtime",
+        routeRegistry: true,
+      },
+    );
+    assert.ok(entry.sourceRefs.includes("js/core/renderer/cached_pass_compositor_owner.js"));
+    assert.ok(entry.sourceRefs.includes("tests/cached_pass_compositor_owner_behavior.test.mjs"));
+    assert.ok(entry.sourceRefs.includes("docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md"));
+  }
+
+  const ownerOnlyReport = buildRecommendation([
+    "js/core/renderer/cached_pass_compositor_owner.js",
+  ]);
+  assert.deepEqual(ownerOnlyReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:cached-pass-compositor-owner",
+    "test:node:renderer-draw-canvas-orchestration-inventory",
+    "test:python:map-renderer-frame-compositor-boundary",
+    "verify:architecture-boundaries",
+    "verify:pages-dist",
+  ]) {
+    assert.ok(
+      ownerOnlyReport.recommendedCommands.some((command) => command.commandRef === commandRef),
+      `cached-pass owner routing must recommend ${commandRef}`,
+    );
+  }
+});

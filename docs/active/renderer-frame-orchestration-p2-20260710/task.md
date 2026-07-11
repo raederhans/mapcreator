@@ -146,8 +146,13 @@ Current status: P2.1 browser acceptance is green. The original legacy pooled-ren
 
 ## P2.2a cached pass compositor owner
 
-- [ ] Extract `js/core/renderer/cached_pass_compositor_owner.js`.
-- [ ] Preserve active target context, transform math, compose result schema, and wrapper shape.
+- [x] Extract `js/core/renderer/cached_pass_compositor_owner.js`.
+- [x] Preserve dynamic active target context, transform math, compose result schema, require-all preflight priority, export wrapper shape, and composition-root diagnostics writes.
+- [x] Reduce `js/core/map_renderer.js` from 23,437 to 23,376 split lines, net reduction 61; keep the owner at 170 split lines.
+- [x] Add named Node behavior and combined Python boundary suites; upgrade P53, scenario, Pages, architecture, metadata, and core-runner contracts.
+- [x] Complete pre-commit Pages generation at 927.17 MiB with startup 47/47, landing 18/18, sample 17/17 and source/dist blob parity.
+- [ ] Create the functional Lore commit and rerun clean-head dist/core gates.
+- [ ] Complete separate browser/main-thread/performance acceptance under the registered governed protocol.
 
 ## P2.2b transformed frame compositor owner
 

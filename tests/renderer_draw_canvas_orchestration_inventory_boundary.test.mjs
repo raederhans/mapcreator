@@ -10,10 +10,13 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 
 const DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md";
 const P21_DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
+const P22A_DOC_PATH = "docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
+const CACHED_PASS_COMPOSITOR_OWNER_PATH = "js/core/renderer/cached_pass_compositor_owner.js";
 const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
 const DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js";
+const DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH = "dist/app/js/core/renderer/cached_pass_compositor_owner.js";
 const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
 const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
 const RENDER_REQUEST_BOUNDARY_OWNER_PATH = "js/core/map_renderer/render_request_boundary_owner.js";
@@ -86,7 +89,9 @@ function extractFunctionSource(source, functionName) {
   const marker = `function ${functionName}`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `Expected function to exist: ${functionName}`);
-  const openBrace = source.indexOf("{", start + marker.length);
+  const signatureEnd = source.indexOf(") {", start + marker.length);
+  assert.notEqual(signatureEnd, -1, `Expected function signature to close: ${functionName}`);
+  const openBrace = signatureEnd + 2;
   assert.notEqual(openBrace, -1, `Expected function body to start: ${functionName}`);
   let depth = 0;
   for (let index = openBrace; index < source.length; index += 1) {
@@ -126,6 +131,16 @@ function assertIncludes(source, token, message) {
 
 function assertExcludes(source, token, message) {
   assert.equal(source.includes(token), false, `${message}: unexpected ${JSON.stringify(token)}`);
+}
+
+function isForbiddenCachedPassCompositorOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === CACHED_PASS_COMPOSITOR_OWNER_PATH) return false;
+  if (!normalized.startsWith("js/core/")) return false;
+  const stem = path.basename(normalized).replace(/\.m?js$/, "").toLowerCase().replace(/-/g, "_");
+  const compact = stem.replaceAll("_", "");
+  return compact.includes("cachedpasscompositor")
+    && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
 }
 
 function normalizeLineEndings(source) {
@@ -178,6 +193,21 @@ test("P2.1 implementation doc locks canonical owner and thin wrapper", () => {
     "Browser, Playwright, perf, and main-thread lanes are owned by a separate acceptance lane.",
   ]) {
     assertIncludes(docSource, token, "P2.1 doc must lock implementation token");
+  }
+});
+
+test("P2.2a implementation doc locks cached-pass ownership and protected adjacent algorithms", () => {
+  const docSource = readRepoFile(P22A_DOC_PATH);
+  for (const token of [
+    "# Renderer Cached Pass Compositor Owner P2.2a",
+    "Canonical owner: `js/core/renderer/cached_pass_compositor_owner.js`",
+    "`drawTransformedPass()` and `composeRenderPassesToTarget()` own cached-pass canvas composition.",
+    "`getActiveTargetContext()` is resolved on every transformed-pass draw.",
+    "`composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()` remain in `js/core/map_renderer.js` for P2.2b.",
+    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
+    "Browser, Playwright, perf, and main-thread acceptance remain assigned to the separate acceptance lane.",
+  ]) {
+    assertIncludes(docSource, token, "P2.2a doc must lock implementation token");
   }
 });
 
@@ -259,6 +289,80 @@ test("P2.1 drawCanvas orchestration owner owns frame branch selection", () => {
     "window",
   ]) {
     assertExcludes(ownerSource, token, "drawCanvas owner must keep import-free JSON-safe boundary");
+  }
+});
+
+test("P2.2a cached pass compositor owns cached canvas transform math only", () => {
+  const ownerSource = readRepoFile(CACHED_PASS_COMPOSITOR_OWNER_PATH);
+  for (const token of [
+    "export function createCachedPassCompositorOwner({ constants = {}, getters = {}, helpers = {}, effects = {} } = {})",
+    "function drawTransformedPass(passName, currentTransform, referenceTransform = null)",
+    "function composeRenderPassesToTarget(",
+    "const targetContext = getActiveTargetContext();",
+    "const scaleRatio = current.k / Math.max(reference.k, 0.0001);",
+    "const missingCanvasPassNames = [];",
+    "const missingReferenceTransformPassNames = [];",
+    "reason: \"missing-pass-canvas\"",
+    "reason: \"missing-reference-transform\"",
+    "Math.round(-Number(layout?.offsetX || 0) * dpr)",
+    "recordTransformedPassDiagnostics(passName, {",
+    "return Object.freeze({",
+  ]) {
+    assertIncludes(ownerSource, token, "cached-pass compositor must keep owner token");
+  }
+  for (const token of [
+    "composeTransformedFrameToBuffer",
+    "drawTransformedFrameFromCaches",
+    "buildInteractionComposite",
+    "drawInteractionComposite",
+    "drawInteractionBorderSnapshot",
+    "drawBordersPass",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "renderPassToCache",
+    "runtimeState",
+    "globalThis",
+    "document",
+    "window",
+    "runGetter",
+    "runEffect",
+    "createTrace",
+  ]) {
+    assertExcludes(ownerSource, token, "cached-pass compositor must avoid adjacent/global token");
+  }
+});
+
+test("map_renderer keeps cached-pass composition root and thin wrappers", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const drawWrapper = extractFunctionSource(rendererSource, "drawTransformedPass");
+  const composeWrapper = extractFunctionSource(rendererSource, "composeRenderPassesToTarget");
+  for (const token of [
+    "import { createCachedPassCompositorOwner } from \"./renderer/cached_pass_compositor_owner.js\";",
+    "let cachedPassCompositorOwner = null;",
+    "function getCachedPassCompositorOwner() {",
+    "getActiveTargetContext: () => rendererSurfaceHost.getContext()",
+    "recordTransformedPassDiagnostics: (passName, details) => {",
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must keep cached-pass composition token");
+  }
+  assertIncludes(drawWrapper, "return getCachedPassCompositorOwner().drawTransformedPass(", "draw wrapper must delegate");
+  assertIncludes(composeWrapper, "return getCachedPassCompositorOwner().composeRenderPassesToTarget(", "compose wrapper must delegate");
+  for (const token of ["scaleRatio", "missingCanvasPassNames", "targetContext.drawImage(", "renderDiag.transformedPasses"]) {
+    assertExcludes(drawWrapper, token, "draw wrapper must stay thin");
+    assertExcludes(composeWrapper, token, "compose wrapper must stay thin");
+  }
+  for (const functionName of [
+    "composeTransformedFrameToBuffer",
+    "drawTransformedFrameFromCaches",
+    "buildInteractionComposite",
+    "drawInteractionComposite",
+    "drawInteractionBorderSnapshot",
+    "drawBordersPass",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "renderPassToCache",
+  ]) {
+    assertIncludes(rendererSource, `function ${functionName}(`, `${functionName} must remain in map_renderer`);
   }
 });
 
@@ -405,7 +509,9 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
   const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
   const stateWriteAllowlist = JSON.parse(stateWriteAllowlistSource);
   const ownerSource = readRepoFile(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
+  const cachedPassCompositorOwnerSource = readRepoFile(CACHED_PASS_COMPOSITOR_OWNER_PATH);
   const distOwnerSource = readRepoFile(DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
+  const distCachedPassCompositorOwnerSource = readRepoFile(DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH);
   const distRendererSource = readRepoFile(DIST_MAP_RENDERER_PATH);
 
   assertIncludes(
@@ -423,6 +529,16 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     "\"test:python:map-renderer-draw-canvas-orchestration-boundary\": \"npm run python -- -m unittest tests.test_map_renderer_draw_canvas_orchestration_owner_boundary_contract -q\"",
     "package.json must expose P2.1 Python boundary script",
   );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:cached-pass-compositor-owner\": \"node --test tests/cached_pass_compositor_owner_behavior.test.mjs\"",
+    "package.json must expose P2.2a owner behavior script",
+  );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:python:map-renderer-frame-compositor-boundary\": \"npm run python -- -m unittest tests.test_map_renderer_frame_compositor_owner_boundary_contract -q\"",
+    "package.json must expose P2.2a Python boundary script",
+  );
 
   for (const token of [
     "render,",
@@ -438,6 +554,8 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     "renderer_draw_canvas_orchestration",
     "drawCanvasOrchestration",
     "renderer_render_lifecycle_owner",
+    "cached_pass_compositor_owner",
+    "cachedPassCompositorOwner",
   ]) {
     assertExcludes(publicFacadeSource, token, "public facade must not expose P53/P40 forbidden owner token");
     assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not include P53/P40 forbidden owner token");
@@ -452,6 +570,11 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     false,
     "state-write allowlist must keep the pure drawCanvas owner out",
   );
+  assert.equal(
+    stateWriteAllowlist.files.includes(CACHED_PASS_COMPOSITOR_OWNER_PATH),
+    false,
+    "state-write allowlist must keep the pure cached-pass compositor out",
+  );
 
   for (const relativePath of [
     "js/core/renderer/renderer_render_lifecycle_owner.js",
@@ -464,12 +587,18 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     assert.equal(repoFileExists(relativePath), false, `P53 must not add production owner/helper: ${relativePath}`);
   }
   assert.equal(repoFileExists(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH), true, "P2.1 must keep canonical drawCanvas owner");
+  assert.equal(repoFileExists(CACHED_PASS_COMPOSITOR_OWNER_PATH), true, "P2.2a must keep canonical cached-pass compositor");
   for (const sourcePath of listRepoSourceFiles("js/core")) {
     if (sourcePath === DRAW_CANVAS_ORCHESTRATION_OWNER_PATH) continue;
     assert.equal(
       isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath),
       false,
       `P53 must not add renamed production drawCanvas orchestration owner/helper: ${sourcePath}`,
+    );
+    assert.equal(
+      isForbiddenCachedPassCompositorOwnerPath(sourcePath),
+      false,
+      `P53 must not add renamed cached-pass compositor owner/helper: ${sourcePath}`,
     );
   }
 
@@ -482,6 +611,16 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     distRendererSource,
     "import { createDrawCanvasOrchestrationOwner } from \"./map_renderer/draw_canvas_orchestration_owner.js\";",
     "dist map_renderer must keep P2.1 owner import",
+  );
+  assert.equal(
+    normalizeLineEndings(distCachedPassCompositorOwnerSource),
+    normalizeLineEndings(cachedPassCompositorOwnerSource),
+    "dist cached-pass compositor must mirror source owner",
+  );
+  assertIncludes(
+    distRendererSource,
+    "import { createCachedPassCompositorOwner } from \"./renderer/cached_pass_compositor_owner.js\";",
+    "dist map_renderer must keep P2.2a owner import",
   );
   assertIncludes(
     extractFunctionSource(distRendererSource, "drawCanvas"),

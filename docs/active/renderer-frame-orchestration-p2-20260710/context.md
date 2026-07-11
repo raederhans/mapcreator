@@ -9,9 +9,9 @@ Date: 2026-07-10
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
-- current task phase: P2.1 governed performance admission tooling; P2.2a admitted after deterministic role reanalysis
+- current task phase: P2.2a cached-pass compositor implementation complete; clean-head deterministic/dist evidence pending
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: clean at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` before this docs evidence update; product runtime source remains at reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`
+- current worktree state: isolated P2 branch has the P2.2a functional slice staged in the working tree from clean HEAD `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -43,7 +43,7 @@ Date: 2026-07-10
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
-- P2.2a cached pass compositor owner: pending
+- P2.2a cached pass compositor owner: implementation and pre-commit focused/Pages validation complete; functional Lore commit and clean-head gates pending
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
@@ -252,3 +252,19 @@ Future baseline/gate reports use schema version 2 and expose both `canonicalRend
 Functional Lore commit `14878c78937f36f9ddee53a876521494a2214cbb` contains the policy, runner schema, offline analyzer, focused tests, metadata route, and documentation. Clean-head `verify:dist-drift` exited 0 and full `verify:core` passed 62/62; logs are `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-role-governance-14878c78/01-verify-dist-drift.log` and `02-verify-core.log`.
 
 The offline analyzer was rerun after the gates and reproduced the governed JSON SHA256 `6f76b274a7827c1c6b7baac68508e40dbafb521206cdc85c1e06c03c42790245` and Markdown SHA256 `bed108df85b38aaf803287b3354332e0023868235767aea7500c5bad88d52305`. The source legacy report remained byte-identical at SHA256 `f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839`. This deterministic tooling slice used the already captured and validated 40-run evidence set; browser, dev server, Playwright, and live performance execution remain assigned to the later single-owner acceptance lane. P2.2a is ready under the pre-registered governed protocol.
+
+## P2.2a cached-pass compositor implementation 2026-07-11
+
+Starting clean HEAD: `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`. Current `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` is an ancestor of this branch; the isolated lane was ahead 19 / behind 0 before edits. The dirty parent checkout remained read-only.
+
+The new import-free owner `js/core/renderer/cached_pass_compositor_owner.js` owns only `drawTransformedPass()` and `composeRenderPassesToTarget()`. `map_renderer.js` keeps the singleton, dependency wiring, diagnostics write effect, stable wrappers, export call path, and every P2.2b/adjacent algorithm. Dynamic target context is resolved per draw. The original transform/DPR/layout math, require-all canvas-before-reference preflight, result schema, non-required direct path, and success return remain locked by behavior tests.
+
+Delivery package before the functional commit:
+
+1. Core: `js/core/map_renderer.js`, new cached-pass owner, generated source mirrors, and Pages manifest.
+2. Tests/contracts: named owner behavior, combined Python frame-compositor boundary, P53 inventory, scenario source scans, Pages startup, verification metadata, and core-runner fixtures.
+3. Tooling/docs: architecture checker, verification domains, package scripts, P2.2a implementation record, registry, context, and task ledger.
+4. Diff/size: `map_renderer.js` 23,437 -> 23,376 split lines, net -61; cached owner 170 split lines; cumulative P2 extraction is 96 lines after P2.1 + P2.2a.
+5. Validation: owner 8/8, Python boundary 4/4, scenario 57/57, metadata 15/15, architecture green, Pages startup 47/47, landing 18/18, sample 17/17, and P53 11/11 after generation. Source/dist blobs match for renderer and cached owner.
+
+Pre-commit P51/P52 inventory checks report generated `dist/**` as modified because those historical tests assert a clean dist diff against HEAD. Their owner behavior tests remain green. The functional commit is the intended boundary for their clean-head rerun. Browser, main-thread, Playwright, and performance acceptance stay with the separate single-owner lane.

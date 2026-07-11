@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 897666,
+      "size_bytes": 894962,
       "source_kind": "dist"
     },
     {
@@ -45978,6 +45978,11 @@
     {
       "path": "app/js/core/renderer/border_mesh_source_selection.js",
       "size_bytes": 8126,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/cached_pass_compositor_owner.js",
+      "size_bytes": 6366,
       "source_kind": "dist"
     },
     {
@@ -47412,7 +47417,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467466,
+      "size_bytes": 1467603,
       "source_kind": "dist"
     },
     {
@@ -47542,9 +47547,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9422,
+      "file_count": 9423,
       "path": "app",
-      "size_bytes": 965643739
+      "size_bytes": 965647401
     },
     {
       "file_count": 57,
@@ -47554,7 +47559,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467466
+      "size_bytes": 1467603
     },
     {
       "file_count": 1,
@@ -47577,5 +47582,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972209566
+  "total_bytes": 972213365
 }

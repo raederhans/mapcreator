@@ -22,6 +22,7 @@ LANDING_STYLES_CSS = REPO_ROOT / "landing" / "styles.css"
 LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 DRAW_CANVAS_ORCHESTRATION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "draw_canvas_orchestration_owner.js"
+CACHED_PASS_COMPOSITOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "cached_pass_compositor_owner.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_frame_commit.js"
 DIST_ROOT_INDEX = REPO_ROOT / "dist" / "index.html"
@@ -1121,6 +1122,19 @@ class PagesDistStartupShellTest(unittest.TestCase):
             source,
         )
         self.assertIn("drewExactFrame = !!composeCachedPasses(activeRenderPassNames);", draw_canvas_owner_source)
+
+    def test_cached_pass_compositor_owner_is_in_the_pages_module_graph(self) -> None:
+        renderer_source = MAP_RENDERER_JS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        owner_source = CACHED_PASS_COMPOSITOR_OWNER_JS.read_text(encoding="utf-8").replace("\r\n", "\n")
+        dist_renderer = (DIST_APP_JS_ROOT / "core" / "map_renderer.js").read_text(encoding="utf-8").replace("\r\n", "\n")
+        dist_owner_path = DIST_APP_JS_ROOT / "core" / "renderer" / "cached_pass_compositor_owner.js"
+        self.assertTrue(dist_owner_path.exists())
+        self.assertEqual(dist_owner_path.read_text(encoding="utf-8").replace("\r\n", "\n"), owner_source)
+        import_token = 'import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";'
+        self.assertIn(import_token, renderer_source)
+        self.assertIn(import_token, dist_renderer)
+        self.assertIn("return getCachedPassCompositorOwner().drawTransformedPass(", renderer_source)
+        self.assertIn("return getCachedPassCompositorOwner().composeRenderPassesToTarget(", renderer_source)
 
     def test_landing_i18n_table_keeps_english_and_chinese_values_separate(self) -> None:
         app_js = LANDING_APP_JS.read_text(encoding="utf-8")

@@ -313,7 +313,7 @@ test("render cache owner receives runtime, surface, constants, and helpers throu
   const renderCacheOwnerSource = sliceBetween(
     rendererSource,
     "function getRenderCacheOwner()",
-    "function getRenderPassCacheHostOwner()",
+    "function getCachedPassCompositorOwner()",
   );
 
   const receiverIndex = renderCacheOwnerSource.indexOf("const rendererContext = getRenderCacheReceiverContext();");

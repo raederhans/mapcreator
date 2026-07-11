@@ -1208,6 +1208,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
+  const cachedPassCompositorOwnerSource = readRepoFile("js", "core", "renderer", "cached_pass_compositor_owner.js");
   const renderTransformReusePolicyOwnerSource = readRepoFile("js", "core", "renderer", "render_transform_reuse_policy_owner.js");
   const visibleFrameDiagnosticsOwnerSource = readRepoFile("js", "core", "renderer", "visible_frame_diagnostics_owner.js");
   const setMapDataTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "set_map_data_transaction_owner.js");
@@ -1333,7 +1334,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function isInteractionRecoveryBlocked\(\) \{[\s\S]*?isExactAfterSettleControllerActive\(\)/.test(rendererSource),
     exactComposeFailureReportsControllerAndMissingPassContext:
       /function composeCachedPasses\(passNames, currentTransform = runtimeState\.zoomTransform \|\| globalThis\.d3\.zoomIdentity\) \{[\s\S]*?recordRenderPerfMetric\("compositeBufferMissingPass", 0, \{[\s\S]*?missingPassNames:[\s\S]*?controllerPhase:[\s\S]*?deferExactAfterSettle:[\s\S]*?\}\);/.test(rendererSource)
-      && /function composeRenderPassesToTarget\([\s\S]*?const missingCanvasPassNames = \[\];[\s\S]*?const missingReferenceTransformPassNames = \[\];[\s\S]*?reason: "missing-pass-canvas"[\s\S]*?missingPassNames: missingCanvasPassNames[\s\S]*?reason: "missing-reference-transform"[\s\S]*?missingPassNames: missingReferenceTransformPassNames/.test(rendererSource),
+      && /function composeRenderPassesToTarget\([\s\S]*?const missingCanvasPassNames = \[\];[\s\S]*?const missingReferenceTransformPassNames = \[\];[\s\S]*?reason: "missing-pass-canvas"[\s\S]*?missingPassNames: missingCanvasPassNames[\s\S]*?reason: "missing-reference-transform"[\s\S]*?missingPassNames: missingReferenceTransformPassNames/.test(cachedPassCompositorOwnerSource),
     interactionRecoveryDoesNotSelfBlockPostReadyTask:
       interactionRecoveryBlockedBody.includes("runtimeState.renderPhase !== RENDER_PHASE_IDLE")
       && interactionRecoveryBlockedBody.includes("runtimeState.isInteracting")
@@ -1766,6 +1767,7 @@ test("first visible political frame accepts coarse startup pass without full ref
 
 test("perf contracts keep coarse first frame and benchmark app-path fallback boundaries", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const cachedPassCompositorOwnerSource = readRepoFile("js", "core", "renderer", "cached_pass_compositor_owner.js");
   const scenarioManagerSource = readRepoFile("js", "core", "scenario_manager.js");
   const scenarioApplyPipelineSource = readRepoFile("js", "core", "scenario_apply_pipeline.js");
   const chunkRuntimeSource = readRepoFile("js", "core", "scenario", "chunk_runtime.js");
@@ -1777,7 +1779,8 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
     politicalPassStartsWithBackgroundFills:
       /function drawPoliticalPass\(k\) \{[\s\S]*?recordPoliticalRasterWorkerSnapshot\(\);[\s\S]*?const politicalOverscanPx = getPoliticalPassViewportOverscanPx\(\);[\s\S]*?collectVisibleLandSpatialItemsWithStats\(\{ overscanPx: politicalOverscanPx \}\)[\s\S]*?const visibleItems = visibleItemsResult \? visibleItemsResult\.items : null;[\s\S]*?drawPoliticalBackgroundFills\(\{[\s\S]*?returnSummary: true,[\s\S]*?\}\);[\s\S]*?if \(!(?:runtimeState|state)\.landData\?\.features\?\.length\) return;/.test(rendererSource),
     drawTransformedPassRecordsRenderDiagnostics:
-      /function drawTransformedPass\(passName, currentTransform, referenceTransform = null\) \{[\s\S]*?renderDiag\.transformedPasses = \{[\s\S]*?\[passName\]: \{[\s\S]*?current,[\s\S]*?reference,[\s\S]*?scaleRatio,[\s\S]*?dx,[\s\S]*?dy,[\s\S]*?layout,[\s\S]*?publishRenderDiagnostics\(\);/.test(rendererSource),
+      /function drawTransformedPass\(passName, currentTransform, referenceTransform = null\) \{[\s\S]*?recordTransformedPassDiagnostics\(passName, \{[\s\S]*?current,[\s\S]*?reference,[\s\S]*?scaleRatio,[\s\S]*?dx,[\s\S]*?dy,[\s\S]*?layout,/.test(cachedPassCompositorOwnerSource)
+      && /recordTransformedPassDiagnostics: \(passName, details\) => \{[\s\S]*?renderDiag\.transformedPasses = \{[\s\S]*?\[passName\]: details,[\s\S]*?publishRenderDiagnostics\(\);/.test(rendererSource),
     drawInteractionCompositeRecordsStableRenderDiagnostics:
       (() => {
         const body = rendererSource.match(/function drawInteractionComposite\([\s\S]*?\r?\n\}\r?\n\r?\nfunction /)?.[0] || "";

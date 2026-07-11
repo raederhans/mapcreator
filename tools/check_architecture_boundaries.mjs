@@ -88,8 +88,12 @@ const FILES = Object.freeze({
   renderPassCommitAccountingOwnerInventoryTest: "tests/render_pass_commit_accounting_owner_inventory.test.mjs",
   rendererDrawCanvasOrchestrationPreflightDoc: "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
   rendererDrawCanvasOrchestrationOwnerDoc: "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
+  rendererCachedPassCompositorOwnerDoc: "docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md",
   rendererDrawCanvasOrchestrationInventoryTest: "tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   drawCanvasOrchestrationOwner: "js/core/map_renderer/draw_canvas_orchestration_owner.js",
+  cachedPassCompositorOwner: "js/core/renderer/cached_pass_compositor_owner.js",
+  cachedPassCompositorOwnerTest: "tests/cached_pass_compositor_owner_behavior.test.mjs",
+  rendererFrameCompositorBoundaryTest: "tests/test_map_renderer_frame_compositor_owner_boundary_contract.py",
   rendererClickSelectionTransactionPreflightDoc: "docs/active/renderer-click-selection-transaction-preflight-20260702.md",
   rendererClickSelectionDecisionOwnerDoc: "docs/active/renderer-click-selection-pure-decision-owner-p1-8-20260709.md",
   clickSelectionTransactionOwner: "js/core/map_renderer/click_selection_transaction_owner.js",
@@ -143,7 +147,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23438,
+  [FILES.renderer]: 23377,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -162,6 +166,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.renderPassCacheHostOwner]: 260,
   [FILES.renderPassCommitAccountingOwner]: 260,
   [FILES.drawCanvasOrchestrationOwner]: 320,
+  [FILES.cachedPassCompositorOwner]: 320,
   [FILES.clickSelectionTransactionOwner]: 120,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
@@ -275,6 +280,18 @@ function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath) {
   const compact = stem.replace(/[_-]/g, "");
   return compact.includes("drawcanvas")
     && (compact.includes("orchestration") || compact.includes("orchestrator"))
+    && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
+}
+
+function isForbiddenCachedPassCompositorOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === FILES.cachedPassCompositorOwner) return false;
+  if (!normalized.startsWith("js/core/")) return false;
+  const baseName = path.basename(normalized);
+  if (!/\.m?js$/.test(baseName)) return false;
+  const stem = baseName.replace(/\.m?js$/, "").toLowerCase().replace(/-/g, "_");
+  const compact = stem.replaceAll("_", "");
+  return compact.includes("cachedpasscompositor")
     && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
 }
 
@@ -433,10 +450,16 @@ function collectFailures() {
   const rendererDrawCanvasOrchestrationOwnerDoc = readProjectFile(
     FILES.rendererDrawCanvasOrchestrationOwnerDoc,
   );
+  const rendererCachedPassCompositorOwnerDoc = readProjectFile(
+    FILES.rendererCachedPassCompositorOwnerDoc,
+  );
   const rendererDrawCanvasOrchestrationInventoryTest = readProjectFile(
     FILES.rendererDrawCanvasOrchestrationInventoryTest,
   );
   const drawCanvasOrchestrationOwner = readProjectFile(FILES.drawCanvasOrchestrationOwner);
+  const cachedPassCompositorOwner = readProjectFile(FILES.cachedPassCompositorOwner);
+  const cachedPassCompositorOwnerTest = readProjectFile(FILES.cachedPassCompositorOwnerTest);
+  const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
   );
@@ -553,8 +576,12 @@ function collectFailures() {
     [FILES.renderPassCommitAccountingOwnerInventoryTest]: renderPassCommitAccountingOwnerInventoryTest,
     [FILES.rendererDrawCanvasOrchestrationPreflightDoc]: rendererDrawCanvasOrchestrationPreflightDoc,
     [FILES.rendererDrawCanvasOrchestrationOwnerDoc]: rendererDrawCanvasOrchestrationOwnerDoc,
+    [FILES.rendererCachedPassCompositorOwnerDoc]: rendererCachedPassCompositorOwnerDoc,
     [FILES.rendererDrawCanvasOrchestrationInventoryTest]: rendererDrawCanvasOrchestrationInventoryTest,
     [FILES.drawCanvasOrchestrationOwner]: drawCanvasOrchestrationOwner,
+    [FILES.cachedPassCompositorOwner]: cachedPassCompositorOwner,
+    [FILES.cachedPassCompositorOwnerTest]: cachedPassCompositorOwnerTest,
+    [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
     [FILES.clickSelectionTransactionOwner]: clickSelectionTransactionOwner,
@@ -2873,6 +2900,7 @@ function collectFailures() {
   for (const token of [
     "const DOC_PATH = \"docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md\";",
     "const P21_DOC_PATH = \"docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md\";",
+    "const P22A_DOC_PATH = \"docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md\";",
     "const P53_DOC_HEADINGS = Object.freeze([",
     "function extractFunctionSource(source, functionName)",
     "function isForbiddenDrawCanvasOrchestrationOwnerPath(sourcePath)",
@@ -2881,6 +2909,8 @@ function collectFailures() {
     "const hostResult = getRenderPassCacheHostOwner().prepareRenderPassHost({",
     "getRenderPassCommitAccountingOwner().commitRenderPass({",
     "P2.1 drawCanvas orchestration owner owns frame branch selection",
+    "P2.2a cached pass compositor owns cached canvas transform math only",
+    "map_renderer keeps cached-pass composition root and thin wrappers",
     "getDrawCanvasOrchestrationOwner().drawCanvasFrame();",
     "drawTransformedFrameFromCaches",
     "ensureIdleRenderPasses",
@@ -2899,6 +2929,7 @@ function collectFailures() {
     "public facade must not expose P53/P40 forbidden owner token",
     "state-write allowlist must retain the existing map_renderer composition-root entry",
     "state-write allowlist must keep the pure drawCanvas owner out",
+    "state-write allowlist must keep the pure cached-pass compositor out",
   ]) {
     if (!rendererDrawCanvasOrchestrationInventoryTest.includes(token)) {
       failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must lock P53 inventory token: ${token}`);
@@ -2912,6 +2943,9 @@ function collectFailures() {
   }
   if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererDrawCanvasOrchestrationInventoryTest))) {
     failures.push(`${FILES.rendererDrawCanvasOrchestrationInventoryTest} must exist for P53.`);
+  }
+  if (!fs.existsSync(path.join(REPO_ROOT, FILES.rendererCachedPassCompositorOwnerDoc))) {
+    failures.push(`${FILES.rendererCachedPassCompositorOwnerDoc} must exist for P2.2a.`);
   }
   if (!packageJson.includes("\"test:node:renderer-draw-canvas-orchestration-inventory\": \"node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs\"")) {
     failures.push(`${FILES.packageJson} must expose P53 drawCanvas orchestration inventory script.`);
@@ -2963,6 +2997,111 @@ function collectFailures() {
   ]) {
     if (!rendererDrawCanvasOrchestrationOwnerDoc.includes(token)) {
       failures.push(`${FILES.rendererDrawCanvasOrchestrationOwnerDoc} must lock P2.1 token: ${token}`);
+    }
+  }
+  for (const token of [
+    "# Renderer Cached Pass Compositor Owner P2.2a",
+    "Canonical owner: `js/core/renderer/cached_pass_compositor_owner.js`",
+    "`drawTransformedPass()` and `composeRenderPassesToTarget()` own cached-pass canvas composition.",
+    "`getActiveTargetContext()` is resolved on every transformed-pass draw.",
+    "`composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()` remain in `js/core/map_renderer.js` for P2.2b.",
+    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
+  ]) {
+    if (!rendererCachedPassCompositorOwnerDoc.includes(token)) {
+      failures.push(`${FILES.rendererCachedPassCompositorOwnerDoc} must lock P2.2a token: ${token}`);
+    }
+  }
+  for (const token of [
+    "export function createCachedPassCompositorOwner({ constants = {}, getters = {}, helpers = {}, effects = {} } = {})",
+    "function drawTransformedPass(passName, currentTransform, referenceTransform = null)",
+    "function composeRenderPassesToTarget(",
+    "const targetContext = getActiveTargetContext();",
+    "const scaleRatio = current.k / Math.max(reference.k, 0.0001);",
+    "const missingCanvasPassNames = [];",
+    "const missingReferenceTransformPassNames = [];",
+    "recordTransformedPassDiagnostics(passName, {",
+    "Math.round(-Number(layout?.offsetX || 0) * dpr)",
+    "return Object.freeze({",
+  ]) {
+    if (!cachedPassCompositorOwner.includes(token)) {
+      failures.push(`${FILES.cachedPassCompositorOwner} must keep P2.2a compositor token: ${token}`);
+    }
+  }
+  for (const token of [
+    "composeTransformedFrameToBuffer",
+    "drawTransformedFrameFromCaches",
+    "buildInteractionComposite",
+    "drawInteractionComposite",
+    "drawInteractionBorderSnapshot",
+    "drawBordersPass",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "renderPassToCache",
+    "runtimeState",
+    "globalThis",
+    "document",
+    "window",
+    "runGetter",
+    "runEffect",
+    "createTrace",
+  ]) {
+    if (cachedPassCompositorOwner.includes(token)) {
+      failures.push(`${FILES.cachedPassCompositorOwner} must avoid P2.2a adjacent/global token: ${token}`);
+    }
+  }
+  for (const token of [
+    "import { createCachedPassCompositorOwner } from \"./renderer/cached_pass_compositor_owner.js\";",
+    "let cachedPassCompositorOwner = null;",
+    "function getCachedPassCompositorOwner() {",
+    "getActiveTargetContext: () => rendererSurfaceHost.getContext()",
+    "recordTransformedPassDiagnostics: (passName, details) => {",
+    "return getCachedPassCompositorOwner().drawTransformedPass(",
+    "return getCachedPassCompositorOwner().composeRenderPassesToTarget(",
+  ]) {
+    if (!renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must keep P2.2a composition-root token: ${token}`);
+    }
+  }
+  for (const token of [
+    "composeTransformedFrameToBuffer",
+    "drawTransformedFrameFromCaches",
+    "buildInteractionComposite",
+    "drawInteractionComposite",
+    "drawInteractionBorderSnapshot",
+    "drawBordersPass",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "renderPassToCache",
+  ]) {
+    if (!renderer.includes(`function ${token}(`)) {
+      failures.push(`${FILES.renderer} must retain P2.2a adjacent function: ${token}`);
+    }
+  }
+  for (const token of ["cached_pass_compositor_owner", "cachedPassCompositorOwner"]) {
+    if (publicFacadeSource.includes(token)) {
+      failures.push(`${FILES.publicFacade} must not expose P2.2a cached-pass compositor token: ${token}`);
+    }
+    if (stateWriteAllowlist.includes(token)) {
+      failures.push(`${FILES.stateWriteAllowlist} must not include P2.2a cached-pass compositor token: ${token}`);
+    }
+  }
+  for (const relativePath of [
+    "js/core/renderer/cached_pass_compositor_helper.js",
+    "js/core/renderer/cached_pass_compositor_controller.js",
+    "js/core/renderer/cached_pass_compositor_adapter.js",
+    "js/core/renderer/shared_cached_pass_compositor_owner.js",
+    "js/core/map_renderer/cached_pass_compositor_owner.js",
+    "js/core/map_renderer/cached_pass_compositor_helper.js",
+    "js/core/map_renderer/cached_pass_compositor_controller.js",
+    "js/core/map_renderer/cached_pass_compositor_adapter.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`P2.2a must keep duplicate cached-pass compositor absent: ${relativePath}`);
+    }
+  }
+  for (const sourcePath of listProjectSourceFiles("js/core")) {
+    if (isForbiddenCachedPassCompositorOwnerPath(sourcePath)) {
+      failures.push(`P2.2a must keep renamed cached-pass compositor absent: ${sourcePath}`);
     }
   }
   for (const token of [
