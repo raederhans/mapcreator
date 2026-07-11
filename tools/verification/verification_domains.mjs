@@ -83,6 +83,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     commandType: "direct",
     packageScriptRequired: false,
     sourceRefs: [
+      ".gitignore",
       "tools/run_adaptive_tests.mjs",
       "tools/select_verification_targets.mjs",
       "tools/test_route_registry.mjs",

@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-10 P1 pushed to origin/main; isolated worktree cleaned; release verification worktree retained
+Last updated: 2026-07-11 audit fixed release packaging guardrails; release verification residue ready for cleanup
 
 ## Integration Owner
 
@@ -25,11 +25,48 @@ Last updated: 2026-07-10 P1 pushed to origin/main; isolated worktree cleaned; re
 
 ## Current Worktrees
 
-Current rows reflect the real local worktrees after P1 cleanup. The dirty parent checkout remains preserved and unchanged.
+Current rows reflect the intended local worktrees after the 2026-07-11 audit closeout cleanup. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` — release verification residue | detached `HEAD=e102a70aab2515b3a476751301fce9481acdc61c`; no branch | same as `origin/main@e102a70a`; P1 recovery branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a` preserved | `retained`; dirty `.gitignore` only | Dirty file: `.gitignore` has local `.vercel` and `.env*` ignore additions. Product/runtime files are clean in this worktree. | P1 is already pushed and independently rechecked from clean temporary `origin/main@e102a70a`: selector 32 / 188 / 7 / zero unmatched; `verify:core` 58/58 including `verify:pages-dist` and `verify:dist-drift`; P1 isolated worktree path is removed. | Yellow for `.gitignore` policy; green for product/runtime files. | Keep this worktree until the `.gitignore` local edit is reviewed, committed, or explicitly discarded in a separate task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — renderer frame orchestration P2 | branch `codex/renderer-frame-orchestration-p2-20260710`; `HEAD=c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`; ahead of `origin/main` by 8 commits | `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155` | `in-progress`; dirty source, dist, package, tests, and registry files | Dirty files include `js/core/map_renderer.js`, `dist/app/js/core/map_renderer.js`, `package.json`, renderer orchestration tests, scenario chunk tests, Pages startup shell test, verification metadata, and `tools/check_architecture_boundaries.mjs`; untracked draw-canvas orchestration owner source/dist/tests/doc are present. | P2 validation belongs to its owner lane. This audit did not modify or merge P2. | Red with future renderer orchestration work and Pages dist synchronization; yellow with this audit only through `tools/verification/verification_domains.mjs` and `tests/test_pages_dist_startup_shell.py`. | Keep P2 isolated. Rebase/review after this audit lands, then run its owner-specific verification before integration. |
+
+## Audit Release Packaging Guardrails 2026-07-11
+
+Status: `ready-for-integration`; audit branch `codex/audit-20260711-release-packaging` is based on `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`. The temporary release residue worktree `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` should be removed after this audit commit is pushed and confirmed contained in `origin/main`.
+
+What changed:
+
+1. Made Pages dist LF normalization fail-fast when a scanned file disappears, while keeping explicit optional missing-file probes opt-in.
+2. Corrected Windows extended UNC path normalization and added direct URL parent-escape coverage.
+3. Narrowed local deployment ignore policy to `.vercel/`, preserved `.env.example` and `.env.template`, and routed `.gitignore` through selector contracts.
+4. Synchronized route-registry and verification-metadata truth for `.gitignore` changes.
+5. Added structural and Pages startup shell regression coverage for the audit findings.
+
+Changed files by group:
+
+- Core/tooling: `.gitignore`, `tools/build_pages_dist.py`, `tools/test_route_registry.mjs`, `tools/verification/verification_domains.mjs`.
+- Tests: `tests/test_pages_dist_startup_shell.py`, `tests/test_e2e_structural_tooling.py`.
+- Documentation/control: this registry and `lessons learned.md`.
+- Temporary/generated: `.runtime/reports/generated/audit-20260711-*.json|md` and `supervisor-plan.json` are runtime artifacts and stay untracked.
+
+Diff summary: small audit patch over `origin/main@b14165c0`; semantic diff is limited to release packaging guards, selector route coverage, and tests. No `dist/**` file remains modified after `verify:dist-drift`.
+
+Commit status: pending until this registry closeout is committed; do not record this commit's own hash inside the same commit.
+
+Base divergence: branch starts at current `origin/main@b14165c0`. Parent checkout remains stale/dirty and untouched. P2 worktree is separate and ahead with dirty renderer orchestration work.
+
+Overlap analysis:
+
+- Green: runtime app behavior, UI/CSS, scenario data, and P2 renderer implementation were not edited by this audit.
+- Yellow: `tools/verification/verification_domains.mjs` and `tests/test_pages_dist_startup_shell.py` overlap with P2 file paths and should be reconciled when P2 rebases.
+- Red: none for this audit patch after rebase because it does not modify shared renderer runtime files.
+
+Validation passed: `node tools/select_verification_targets.mjs --check`; `npm run -s test:node:verification-metadata`; `NODE_PATH=C:\Users\raede\Desktop\dev\mapcreator\node_modules npm run python -- -m unittest tests.test_e2e_structural_tooling -q` with 34 tests; `npm run python -- -m unittest tests.test_pages_dist_startup_shell -q` with 46 tests; adaptive dry-run for changed files with zero unmatched; `npm run python -- -m py_compile tools/build_pages_dist.py tests/test_pages_dist_startup_shell.py tests/test_e2e_structural_tooling.py`; `node --check` for the changed MJS files; `npm run -s verify:dist-drift`; `npm run -s verify:supervisor-contracts`; `npm run -s verify:supervisor-plan`; `npm run -s verify:test-import-graph`; `npm run -s verify:test:e2e-layers`; `npm run -s test:node:verify-core-runner`; `npm run -s test:node:click-selection-transaction-owner`; `npm run -s test:node:renderer-click-selection-transaction-inventory`; `npm run -s test:python:map-renderer-click-selection-transaction-boundary`; and `git diff --check`.
+
+Validation gaps: full `verify:core`, browser/Playwright release smoke, and remote CI were not run locally for this narrow release packaging audit.
+
+Recommended next step: commit and push this audit patch to `origin/main`, then remove the temporary release residue worktree and keep P2 isolated for its owner lane.
 
 ## Scenario Forge P1 Remaining Renderer Context 2026-07-09
 

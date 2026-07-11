@@ -62,7 +62,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:verification-selector",
     commandRef: "node tools/select_verification_targets.mjs --check",
-    sourceRef: "tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    sourceRef: ".gitignore,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "test-routing",
     ownerHint: "test-infra",
     layer: "contract",
@@ -145,7 +145,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:playwright-observability",
     commandRef: "python -m unittest tests.test_e2e_structural_tooling -q",
-    sourceRef: "playwright.config.cjs,tests/e2e/support/fixtures.js,tests/e2e/support/playwright-app.js,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
+    sourceRef: ".gitignore,playwright.config.cjs,tests/e2e/support/fixtures.js,tests/e2e/support/playwright-app.js,tests/e2e/support/reporters,tests/e2e/support/playwright-selectors.js,tests/e2e/support/expectations/console-allowlist.js,tests/e2e/test-flake-budget.json,tests/test_e2e_structural_tooling.py,tools/run_adaptive_tests.mjs,tools/select_verification_targets.mjs,tools/test_route_registry.mjs,tools/test_timeout_inventory.mjs,tools/check_console_allowlist_decay.mjs,tools/check_test_timeout_guardrails.mjs,tools/test_timing_summary.mjs,.github/workflows/pr-verify.yml,.github/workflows/verify-shared.yml",
     domain: "playwright-observability",
     ownerHint: "test-infra",
     layer: "contract",
