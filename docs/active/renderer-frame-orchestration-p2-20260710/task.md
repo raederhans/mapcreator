@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. Readiness/PID ownership is green, perf threshold gate is red, and P2.1 remains blocked pending separate perf investigation or governed baseline decision.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. Readiness/PID ownership is green, contemporary A/B completed, B/A startup/render thresholds pass, block drift fails, and P2.1 remains blocked pending separate perf investigation or governed baseline decision.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -77,9 +77,27 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Record perf threshold facts: baseline `docs/perf/baseline_2026-04-20.json` with `contractMismatches=[]`; TNO totalStartup current 8131.4ms, baseline 5805.3ms, limit 6676.1ms at 1.15x, ratio 1.401, run min 8049.5, max 8185, spread 135.5ms / 1.67%; HOI4 totalStartup current 7746.8ms, baseline 5205.7ms, limit 5986.6ms at 1.15x, ratio 1.488, run min 7160.4, max 7789.5, spread 629.1ms / 8.12%; HOI4 render median current 705.05ms, baseline 560.9ms, limit 701.125ms at 1.25x, ratio 1.257, exceeds by 3.925ms / 0.56%, run min 690.4, max 715.65, spread 25.25ms / 3.58%.
 - [x] Classify perf outcome: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch; HOI4 render median is borderline and environment noise can explain it; P2 production perf gate remains red; P2.1 remains blocked pending separate perf investigation/baseline governance.
 
+## Contemporary A/B admission run
+
+- [x] Read handoff `C:\Users\raede\Desktop\dev\mapcreator\.omx\handoff\perf-ab-owner-20260710.md` completely and execute as sole live-process owner.
+- [x] Record preflight: P2 clean at `3c54d9298c393a3401fd7279b180eac136c9ae85`, origin/main/control commit `b14165c0e693a87872361b87ac78dc31cd7a0155`, ports 8000/8892 clear, control path absent, parent WIP preserved.
+- [x] Create detached control worktree at `C:\Users\raede\.codex\worktrees\mapcreator-perf-control-b14165c-20260710` from exact SHA `b14165c0e693a87872361b87ac78dc31cd7a0155`.
+- [x] Verify package-lock SHA match: `fa60a74b517568ffedd1bcdad5414e5ab3a36380ec1ea511411a267a52766385`; create ignored control `node_modules` junction to P2 `node_modules`.
+- [x] Use same Node/npm/Python/Chromium identity: Node `v22.23.0`, npm `11.18.0`, Python `C:\Users\raede\AppData\Local\Programs\Python\Python312\python.exe`, Chromium `145.0.7632.6`.
+- [x] Run A1 control `tno_1962,hoi4_1939` exit 0.
+- [x] Run B1 P2 `tno_1962,hoi4_1939` exit 0.
+- [x] Run B2 P2 `hoi4_1939,tno_1962` exit 0.
+- [x] Run A2 control `hoi4_1939,tno_1962` exit 0.
+- [x] Generate combined reports `.runtime/reports/generated/p2-perf-ab-20260710.json` and `.runtime/reports/generated/p2-perf-ab-20260710.md`.
+- [x] Copy A-side control runtime artifacts into P2 `.runtime/output/perf/p2-ab/20260710/A/` before cleanup.
+- [x] Remove only the control `node_modules` junction with non-recursive operation, then remove the detached control worktree and prune.
+- [x] Confirm control path gone, P2 clean before docs edits, release residue untouched, and parent checkout WIP unchanged.
+- [x] Admission result: readiness and workload identity pass; B/A startup and render thresholds pass; block drift fails on `hoi4_1939.totalStartupMs` (`A2/A1=-7.2%`, `B2/B1=11.1%`); anomaly check records mixed scenario direction; P2.1 remains blocked.
+- [x] Historical April gate remains governance follow-up; checked-in baseline files were not modified.\n- [x] Run docs closeout validation: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, `unmatchedChangedFiles=[]`.
+
 ## P2.1 draw canvas orchestration owner
 
-- [ ] Start only after the red perf gate is resolved by separate perf investigation or governed baseline decision.
+- [ ] Start only after contemporary A/B drift and the red perf gate are resolved by separate perf investigation or governed baseline decision.
 - [ ] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - [ ] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
 - [ ] Reach at least 35 extracted lines.

@@ -8,7 +8,7 @@ Date: 2026-07-10
 - base branch: `origin/main`
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
-- current task phase: perf readiness cleanup classification and docs-only evidence closeout
+- current task phase: contemporary A/B admission closeout and docs-only evidence commit
 - current worktree state at start: clean
 - release residue worktree: `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70`, detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`, clean
 - P1 isolated worktree: removed
@@ -40,7 +40,7 @@ Date: 2026-07-10
 - Pre-P2 production disclosure race repair: committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; its Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
-- P2.1 draw canvas orchestration owner: blocked by red perf gate pending separate perf investigation or governed baseline decision
+- P2.1 draw canvas orchestration owner: blocked by contemporary A/B admission drift pending separate perf investigation or governed baseline decision
 - P2.2a cached pass compositor owner: pending
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
@@ -87,6 +87,39 @@ Date: 2026-07-10
 - Cleanup: the interrupted typed owner had started a dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear afterward; worktree status was clean before docs edits.
 - P2.1 remains blocked by the red perf gate. Next acceptable path is a separate perf investigation or a governed baseline decision before visible-frame production edits.
 - Runtime classification report: `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
+## P2 Contemporary A/B Admission Run 2026-07-10
+
+- Scope: contemporary A/B only; no renderer/product code, perf runner, historical baseline, thresholds, or samples were edited. Browser E2E was not run.
+- Control lifecycle: detached control worktree `C:\Users\raede\.codex\worktrees\mapcreator-perf-control-b14165c-20260710` was created from `b14165c0e693a87872361b87ac78dc31cd7a0155`, used only for A1/A2, then removed after deleting its ignored `node_modules` junction with a non-recursive junction-safe operation. Cleanup proof: `.runtime/output/perf/p2-ab/20260710/cleanup/control-cleanup.txt`; control path is gone.
+- Recovery evidence: control SHA `b14165c0e693a87872361b87ac78dc31cd7a0155`; P2 SHA `3c54d9298c393a3401fd7279b180eac136c9ae85`; package-lock SHA256 `fa60a74b517568ffedd1bcdad5414e5ab3a36380ec1ea511411a267a52766385` on both sides; control artifacts were copied into P2 `.runtime/output/perf/p2-ab/20260710/A/` before cleanup.
+- Environment: Node `v22.23.0`; npm `11.18.0`; Python `Python 3.12.10` at `C:\Users\raede\AppData\Local\Programs\Python\Python312\python.exe`; `pythonLocation=C:\Users\raede\AppData\Local\Programs\Python\Python312`; Playwright `1.58.2`; Chromium `145.0.7632.6` at `C:\Users\raede\AppData\Local\ms-playwright\chromium-1208\chrome-win64\chrome.exe`.
+- Blocks:
+- `A1` control order `tno_1962,hoi4_1939` exit `0`; log `.runtime\output\perf\p2-ab\20260710\A\A1\runner.log`; baseline `.runtime\output\perf\p2-ab\20260710\A\A1\baseline.json`; raw `.runtime\output\perf\p2-ab\20260710\A\A1\raw`.
+- `B1` p2 order `tno_1962,hoi4_1939` exit `0`; log `.runtime\output\perf\p2-ab\20260710\B\B1\runner.log`; baseline `.runtime\output\perf\p2-ab\20260710\B\B1\baseline.json`; raw `.runtime\output\perf\p2-ab\20260710\B\B1\raw`.
+- `B2` p2 order `hoi4_1939,tno_1962` exit `0`; log `.runtime\output\perf\p2-ab\20260710\B\B2\runner.log`; baseline `.runtime\output\perf\p2-ab\20260710\B\B2\baseline.json`; raw `.runtime\output\perf\p2-ab\20260710\B\B2\raw`.
+- `A2` control order `hoi4_1939,tno_1962` exit `0`; log `.runtime\output\perf\p2-ab\20260710\A\A2\runner.log`; baseline `.runtime\output\perf\p2-ab\20260710\A\A2\baseline.json`; raw `.runtime\output\perf\p2-ab\20260710\A\A2\raw`.
+- Combined reports: `.runtime/reports/generated/p2-perf-ab-20260710.json` and `.runtime/reports/generated/p2-perf-ab-20260710.md`.
+- Admission checks: readiness_contract_errors=PASS, workload_identity_matches=PASS, block_drift=FAIL, b_vs_a_startup=PASS, b_vs_a_render_median=PASS, new_outlier_or_opposite_direction_anomaly=FAIL.
+- Workload identity: scenario id, manifest SHA, runtime topology SHA, bootstrap topology SHA, runtime meta SHA, detail chunk manifest SHA, feature count, owner count, snapshot fingerprint, baseline hash, URL query, package-lock hash, Node major, Playwright package, and Chromium identity all match between A/B.
+- Metrics:
+
+| Scenario | Metric | A median | B median | B/A | B-A ms | A2/A1 drift | B2/B1 drift | A p90 | B p90 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `tno_1962` | `totalStartupMs` | 8243.0 | 8369.9 | 1.015 / 1.5% | 126.9 | 1.2% | 1.0% | 8337.5 | 8454.2 |
+| `tno_1962` | `scenarioAppliedMs` | 3338.3 | 3400.7 | 1.019 / 1.9% | 62.4 | 0.3% | 0.1% | 3419.3 | 3419.8 |
+| `tno_1962` | `applyScenarioBundleMs` | 664.0 | 665.6 | 1.002 / 0.2% | 1.6 | -3.1% | 4.2% | 694.9 | 688.8 |
+| `tno_1962` | `refreshScenarioApplyMs` | 331.2 | 339.1 | 1.024 / 2.4% | 7.9 | -8.5% | 8.6% | 356.4 | 354.4 |
+| `tno_1962` | `renderSampleMedianMs` | 831.0 | 835.1 | 1.005 / 0.5% | 4.0 | 3.5% | 0.9% | 868.0 | 853.2 |
+| `hoi4_1939` | `totalStartupMs` | 7513.2 | 7485.8 | 0.996 / -0.4% | -27.4 | -7.2% | 11.1% | 7830.9 | 7873.5 |
+| `hoi4_1939` | `scenarioAppliedMs` | 3474.4 | 3505.3 | 1.009 / 0.9% | 30.9 | 1.9% | 3.1% | 3534.1 | 3540.8 |
+| `hoi4_1939` | `applyScenarioBundleMs` | 714.6 | 714.6 | 1.000 / -0.0% | -0.0 | 0.2% | 4.2% | 732.7 | 727.8 |
+| `hoi4_1939` | `refreshScenarioApplyMs` | 438.6 | 432.4 | 0.986 / -1.4% | -6.2 | 0.3% | 2.3% | 464.0 | 455.0 |
+| `hoi4_1939` | `renderSampleMedianMs` | 701.8 | 685.1 | 0.976 / -2.4% | -16.7 | -1.3% | 0.8% | 708.7 | 699.0 |
+
+- Decision: P2.1 is blocked by contemporary A/B admission, with exact blocker `hoi4_1939.totalStartupMs` block drift (`A2/A1=-7.2%`, `B2/B1=11.1%`) exceeding the startup drift rule `<=5%`. B/A startup and render thresholds pass, readiness/contract errors are zero, and workload identity matches. The B/A direction is mixed across scenarios (`tno_1962` slight positive, `hoi4_1939` slight negative), so the anomaly check is recorded as failed rather than admitted.
+- Historical April gate status: April baseline gate remains a governance follow-up; `docs/perf/baseline_2026-04-20.json` and `.md` were not modified.
+- Parent checkout proof: parent status after cleanup matches preflight WIP shape and remains untouched. Release residue `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70` remains untouched. Docs verification after edits: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, and `unmatchedChangedFiles=[]`.
+
 ## Notes
 
 - P2.0 changed only active docs truth surfaces and completed at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
@@ -96,4 +129,4 @@ Date: 2026-07-10
 
 ## Next action
 
-Commit this docs-only evidence closeout without push. Keep P2.1 blocked until a separate perf investigation or governed baseline decision turns the perf acceptance boundary green.
+Commit this docs-only contemporary A/B evidence closeout without push. Keep P2.1 blocked until a separate perf investigation or governed baseline decision resolves the contemporary drift and perf acceptance boundary.
