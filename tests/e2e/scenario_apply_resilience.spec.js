@@ -288,7 +288,6 @@ test('scenario apply fatal recovery locks controls when rollback restore fails',
     applyDisabled: true,
     resetDisabled: true,
     clearDisabled: true,
-    viewModeDisabled: true,
   });
   expect(blockedAction.ok).toBe(false);
   expect(blockedAction.code).toBe('SCENARIO_FATAL_RECOVERY');
@@ -340,7 +339,6 @@ test('scenario apply fatal recovery locks controls when rollback consistency fai
     applyDisabled: true,
     resetDisabled: true,
     clearDisabled: true,
-    viewModeDisabled: true,
   });
   expect(blockedAction.ok).toBe(false);
   expect(blockedAction.code).toBe('SCENARIO_FATAL_RECOVERY');
