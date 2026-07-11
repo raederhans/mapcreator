@@ -298,6 +298,7 @@ test("P2.2a cached pass compositor owns cached canvas transform math only", () =
     "export function createCachedPassCompositorOwner({ constants = {}, getters = {}, helpers = {}, effects = {} } = {})",
     "function drawTransformedPass(passName, currentTransform, referenceTransform = null)",
     "function composeRenderPassesToTarget(",
+    "const cacheSnapshot = getRenderPassCacheSnapshot();",
     "const targetContext = getActiveTargetContext();",
     "const scaleRatio = current.k / Math.max(reference.k, 0.0001);",
     "const missingCanvasPassNames = [];",
@@ -341,12 +342,18 @@ test("map_renderer keeps cached-pass composition root and thin wrappers", () => 
     "let cachedPassCompositorOwner = null;",
     "function getCachedPassCompositorOwner() {",
     "getActiveTargetContext: () => rendererSurfaceHost.getContext()",
+    "getRenderPassCacheSnapshot: getRenderPassCacheState",
     "recordTransformedPassDiagnostics: (passName, details) => {",
   ]) {
     assertIncludes(rendererSource, token, "map_renderer must keep cached-pass composition token");
   }
   assertIncludes(drawWrapper, "return getCachedPassCompositorOwner().drawTransformedPass(", "draw wrapper must delegate");
   assertIncludes(composeWrapper, "return getCachedPassCompositorOwner().composeRenderPassesToTarget(", "compose wrapper must delegate");
+  assertIncludes(composeWrapper, "options,", "compose wrapper must forward the caller-owned options object");
+  assertExcludes(composeWrapper, "{ requireAllPasses }", "compose wrapper must avoid rebuilding caller options");
+  const cachedOwnerGetter = extractFunctionSource(rendererSource, "getCachedPassCompositorOwner");
+  assertExcludes(cachedOwnerGetter, "getPassCanvas:", "cached owner wiring must use one cache snapshot getter");
+  assertExcludes(cachedOwnerGetter, "isPassDirty:", "cached owner wiring must derive diagnostics from its cache snapshot");
   for (const token of ["scaleRatio", "missingCanvasPassNames", "targetContext.drawImage(", "renderDiag.transformedPasses"]) {
     assertExcludes(drawWrapper, token, "draw wrapper must stay thin");
     assertExcludes(composeWrapper, token, "compose wrapper must stay thin");

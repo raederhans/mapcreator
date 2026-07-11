@@ -2632,12 +2632,11 @@ function getCachedPassCompositorOwner() {
     },
     getters: {
       getActiveTargetContext: () => rendererSurfaceHost.getContext(),
-      getPassCanvas: (passName) => getRenderPassCacheState().canvases?.[passName] || null,
+      getRenderPassCacheSnapshot: getRenderPassCacheState,
       getPassReferenceTransform,
       getRenderPassLayout,
       getDpr: () => runtimeState.dpr,
       getRenderPhase: () => runtimeState.renderPhase,
-      isPassDirty: (passName) => !!getRenderPassCacheState().dirty?.[passName],
       isRenderDiagnosticsEnabled: () => !!renderDiag.enabled,
     },
     helpers: {
@@ -18145,13 +18144,13 @@ function composeRenderPassesToTarget(
   targetContext,
   passNames,
   currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity,
-  { requireAllPasses = false } = {},
+  options,
 ) {
   return getCachedPassCompositorOwner().composeRenderPassesToTarget(
     targetContext,
     passNames,
     currentTransform,
-    { requireAllPasses },
+    options,
   );
 }
 

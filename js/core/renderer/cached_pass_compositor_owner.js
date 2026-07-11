@@ -18,7 +18,10 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
     getters.getActiveTargetContext,
     "getters.getActiveTargetContext",
   );
-  const getPassCanvas = requireFunction(getters.getPassCanvas, "getters.getPassCanvas");
+  const getRenderPassCacheSnapshot = requireFunction(
+    getters.getRenderPassCacheSnapshot,
+    "getters.getRenderPassCacheSnapshot",
+  );
   const getPassReferenceTransform = requireFunction(
     getters.getPassReferenceTransform,
     "getters.getPassReferenceTransform",
@@ -29,7 +32,6 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
   );
   const getDpr = requireFunction(getters.getDpr, "getters.getDpr");
   const getRenderPhase = requireFunction(getters.getRenderPhase, "getters.getRenderPhase");
-  const isPassDirty = requireFunction(getters.isPassDirty, "getters.isPassDirty");
   const isRenderDiagnosticsEnabled = requireFunction(
     getters.isRenderDiagnosticsEnabled,
     "getters.isRenderDiagnosticsEnabled",
@@ -48,7 +50,8 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
   );
 
   function drawTransformedPass(passName, currentTransform, referenceTransform = null) {
-    const passCanvas = getPassCanvas(passName);
+    const cacheSnapshot = getRenderPassCacheSnapshot();
+    const passCanvas = cacheSnapshot.canvases?.[passName] || null;
     if (!passCanvas) return false;
     const resolvedReferenceTransform = referenceTransform || getPassReferenceTransform(passName);
     if (!resolvedReferenceTransform) return false;
@@ -67,13 +70,13 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
         dy,
         layout,
         phase: String(getRenderPhase() || ""),
-        dirty: !!isPassDirty(passName),
+        dirty: !!cacheSnapshot.dirty?.[passName],
       });
     }
     const targetContext = getActiveTargetContext();
-    const dpr = getDpr();
     targetContext.save();
     targetContext.setTransform(1, 0, 0, 1, 0, 0);
+    const dpr = getDpr();
     targetContext.translate(
       (dx - Number(layout?.offsetX || 0) * scaleRatio) * dpr,
       (dy - Number(layout?.offsetY || 0) * scaleRatio) * dpr,
@@ -88,15 +91,17 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
     targetContext,
     passNames,
     currentTransform,
-    { requireAllPasses = false } = {},
+    options,
   ) {
     if (!targetContext) return { ok: false, reason: "missing-target-context" };
+    const cacheSnapshot = getRenderPassCacheSnapshot();
+    const requireAllPasses = options?.requireAllPasses ?? false;
     const names = Array.isArray(passNames) ? passNames : renderPassNames;
     const missingCanvasPassNames = [];
     const missingReferenceTransformPassNames = [];
     if (requireAllPasses) {
       for (const passName of names) {
-        const passCanvas = getPassCanvas(passName);
+        const passCanvas = cacheSnapshot.canvases?.[passName] || null;
         if (!passCanvas) {
           missingCanvasPassNames.push(passName);
           continue;
@@ -124,7 +129,7 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
       }
     }
     for (const passName of names) {
-      const passCanvas = getPassCanvas(passName);
+      const passCanvas = cacheSnapshot.canvases?.[passName] || null;
       if (!passCanvas) {
         if (requireAllPasses) return { ok: false, reason: "missing-pass-canvas", passName };
         continue;
@@ -135,7 +140,6 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
       }
       if (referenceTransform && !areZoomTransformsEquivalent(referenceTransform, currentTransform)) {
         const layout = getRenderPassLayout(passName);
-        const dpr = getDpr();
         const current = cloneZoomTransform(currentTransform);
         const reference = cloneZoomTransform(referenceTransform);
         const scaleRatio = current.k / Math.max(reference.k, 0.0001);
@@ -143,6 +147,7 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
         const dy = current.y - (reference.y * scaleRatio);
         targetContext.save();
         targetContext.setTransform(1, 0, 0, 1, 0, 0);
+        const dpr = getDpr();
         targetContext.translate(
           (dx - Number(layout?.offsetX || 0) * scaleRatio) * dpr,
           (dy - Number(layout?.offsetY || 0) * scaleRatio) * dpr,

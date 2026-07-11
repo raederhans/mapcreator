@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 894962,
+      "size_bytes": 894811,
       "source_kind": "dist"
     },
     {
@@ -45982,7 +45982,7 @@
     },
     {
       "path": "app/js/core/renderer/cached_pass_compositor_owner.js",
-      "size_bytes": 6366,
+      "size_bytes": 6553,
       "source_kind": "dist"
     },
     {
@@ -47549,7 +47549,7 @@
     {
       "file_count": 9423,
       "path": "app",
-      "size_bytes": 965647401
+      "size_bytes": 965647437
     },
     {
       "file_count": 57,
@@ -47582,5 +47582,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972213365
+  "total_bytes": 972213401
 }

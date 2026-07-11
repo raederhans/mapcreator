@@ -66,19 +66,23 @@ function createHarness(overrides = {}) {
   };
   const dirty = { background: true, labels: false };
   const diagnostics = [];
+  let cacheSnapshotReads = 0;
   let activeTarget = createCanvasContext("first");
+  const cacheSnapshot = { canvases, dirty };
   const dependencies = {
     constants: {
       renderPassNames: ["background", "labels"],
     },
     getters: {
       getActiveTargetContext: () => activeTarget,
-      getPassCanvas: (passName) => canvases[passName] || null,
+      getRenderPassCacheSnapshot: () => {
+        cacheSnapshotReads += 1;
+        return cacheSnapshot;
+      },
       getPassReferenceTransform: (passName) => references[passName] || null,
       getRenderPassLayout: (passName) => layouts[passName] || null,
       getDpr: () => 2,
       getRenderPhase: () => "interacting",
-      isPassDirty: (passName) => Boolean(dirty[passName]),
       isRenderDiagnosticsEnabled: () => true,
     },
     helpers: {
@@ -100,6 +104,10 @@ function createHarness(overrides = {}) {
     references,
     layouts,
     diagnostics,
+    cacheSnapshot,
+    get cacheSnapshotReads() {
+      return cacheSnapshotReads;
+    },
     get activeTarget() {
       return activeTarget;
     },
@@ -119,12 +127,11 @@ test("factory validates the bounded dependency surface and freezes its API", () 
 
   for (const [namespace, name] of [
     ["getters", "getActiveTargetContext"],
-    ["getters", "getPassCanvas"],
+    ["getters", "getRenderPassCacheSnapshot"],
     ["getters", "getPassReferenceTransform"],
     ["getters", "getRenderPassLayout"],
     ["getters", "getDpr"],
     ["getters", "getRenderPhase"],
-    ["getters", "isPassDirty"],
     ["getters", "isRenderDiagnosticsEnabled"],
     ["helpers", "cloneZoomTransform"],
     ["helpers", "areZoomTransformsEquivalent"],
@@ -139,6 +146,38 @@ test("factory validates the bounded dependency surface and freezes its API", () 
     () => createHarness({ constants: { renderPassNames: [] } }),
     /constants\.renderPassNames must be a non-empty array/,
   );
+});
+
+test("each public method captures one normalized cache snapshot regardless of pass count", () => {
+  const drawHarness = createHarness();
+  assert.equal(
+    drawHarness.owner.drawTransformedPass("background", { k: 4, x: 50, y: 70 }),
+    true,
+  );
+  assert.equal(drawHarness.cacheSnapshotReads, 1);
+
+  const nonRequiredHarness = createHarness();
+  assert.deepEqual(
+    nonRequiredHarness.owner.composeRenderPassesToTarget(
+      createCanvasContext("non-required"),
+      ["background", "labels", "missing"],
+      { k: 2, x: 10, y: 20 },
+    ),
+    { ok: true },
+  );
+  assert.equal(nonRequiredHarness.cacheSnapshotReads, 1);
+
+  const requireAllHarness = createHarness();
+  assert.deepEqual(
+    requireAllHarness.owner.composeRenderPassesToTarget(
+      createCanvasContext("require-all"),
+      ["background", "labels"],
+      { k: 2, x: 10, y: 20 },
+      { requireAllPasses: true },
+    ),
+    { ok: true },
+  );
+  assert.equal(requireAllHarness.cacheSnapshotReads, 1);
 });
 
 test("drawTransformedPass preserves missing-input and explicit-reference behavior", () => {
@@ -348,6 +387,92 @@ test("composeRenderPassesToTarget preserves equivalence layout and DPR read orde
   assert.deepEqual(calls, ["equivalent", "layout:background", "dpr"]);
 });
 
+test("DPR reads stay at the original draw-site evaluation points", () => {
+  let drawTarget;
+  const drawHarness = createHarness({
+    getters: {
+      getDpr: () => {
+        assert.deepEqual(drawTarget.calls, [
+          ["save"],
+          ["setTransform", 1, 0, 0, 1, 0, 0],
+        ]);
+        return 2;
+      },
+    },
+  });
+  drawTarget = drawHarness.activeTarget;
+  assert.equal(
+    drawHarness.owner.drawTransformedPass("background", { k: 4, x: 50, y: 70 }),
+    true,
+  );
+
+  const transformedTarget = createCanvasContext("transformed-order");
+  const transformedHarness = createHarness({
+    getters: {
+      getDpr: () => {
+        assert.deepEqual(transformedTarget.calls, [
+          ["save"],
+          ["setTransform", 1, 0, 0, 1, 0, 0],
+        ]);
+        return 2;
+      },
+    },
+  });
+  assert.deepEqual(
+    transformedHarness.owner.composeRenderPassesToTarget(
+      transformedTarget,
+      ["background"],
+      { k: 4, x: 50, y: 70 },
+    ),
+    { ok: true },
+  );
+
+  const directTarget = createCanvasContext("direct-order");
+  let layoutRead = false;
+  const directHarness = createHarness({
+    getters: {
+      getRenderPassLayout: () => {
+        layoutRead = true;
+        return { offsetX: 3, offsetY: 4 };
+      },
+      getDpr: () => {
+        assert.equal(layoutRead, true);
+        assert.deepEqual(directTarget.calls, []);
+        return 2;
+      },
+    },
+  });
+  assert.deepEqual(
+    directHarness.owner.composeRenderPassesToTarget(
+      directTarget,
+      ["background"],
+      { k: 2, x: 10, y: 20 },
+    ),
+    { ok: true },
+  );
+});
+
+test("compose options are read once and preserve caller-owned option semantics", () => {
+  const harness = createHarness();
+  let optionReads = 0;
+  const options = Object.freeze({
+    get requireAllPasses() {
+      optionReads += 1;
+      return true;
+    },
+  });
+  assert.deepEqual(
+    harness.owner.composeRenderPassesToTarget(
+      createCanvasContext("options"),
+      ["background", "labels"],
+      { k: 2, x: 10, y: 20 },
+      options,
+    ),
+    { ok: true },
+  );
+  assert.equal(optionReads, 1);
+});
+
 test("owner source stays free of renderer globals imports and dynamic dispatch helpers", () => {
   const source = fs.readFileSync(OWNER_PATH, "utf8");
   assert.doesNotMatch(source, /^\s*import\s/m);
@@ -359,6 +484,8 @@ test("owner source stays free of renderer globals imports and dynamic dispatch h
     "window",
     "runtimeState",
     "getRenderPassCacheState",
+    "getPassCanvas",
+    "isPassDirty",
     "runGetter",
     "runEffect",
     "effectOrder",

@@ -53,8 +53,11 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
             "runGetter",
             "runEffect",
             "createTrace",
+            "getPassCanvas",
+            "isPassDirty",
         ]:
             self.assertNotIn(token, source)
+        self.assertEqual(source.count("const cacheSnapshot = getRenderPassCacheSnapshot();"), 2)
         self.assertLessEqual(len(source.splitlines()), 320)
 
         forbidden = [
@@ -79,7 +82,13 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
         self.assertIn("let cachedPassCompositorOwner = null;", renderer)
         self.assertIn("function getCachedPassCompositorOwner() {", renderer)
         self.assertIn("getActiveTargetContext: () => rendererSurfaceHost.getContext()", renderer)
+        self.assertIn("getRenderPassCacheSnapshot: getRenderPassCacheState", renderer)
         self.assertIn("recordTransformedPassDiagnostics:", renderer)
+
+        owner_getter = extract_function(renderer, "getCachedPassCompositorOwner")
+        self.assertEqual(owner_getter.count("getRenderPassCacheSnapshot: getRenderPassCacheState"), 1)
+        self.assertNotIn("getPassCanvas:", owner_getter)
+        self.assertNotIn("isPassDirty:", owner_getter)
 
         draw_wrapper = extract_function(renderer, "drawTransformedPass")
         self.assertRegex(
@@ -95,6 +104,8 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
 
         compose_wrapper = extract_function(renderer, "composeRenderPassesToTarget")
         self.assertIn("return getCachedPassCompositorOwner().composeRenderPassesToTarget(", compose_wrapper)
+        self.assertIn("options,", compose_wrapper)
+        self.assertNotIn("{ requireAllPasses }", compose_wrapper)
         for token in [
             "missingCanvasPassNames",
             "missingReferenceTransformPassNames",

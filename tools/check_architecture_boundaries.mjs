@@ -3015,6 +3015,7 @@ function collectFailures() {
     "export function createCachedPassCompositorOwner({ constants = {}, getters = {}, helpers = {}, effects = {} } = {})",
     "function drawTransformedPass(passName, currentTransform, referenceTransform = null)",
     "function composeRenderPassesToTarget(",
+    "const cacheSnapshot = getRenderPassCacheSnapshot();",
     "const targetContext = getActiveTargetContext();",
     "const scaleRatio = current.k / Math.max(reference.k, 0.0001);",
     "const missingCanvasPassNames = [];",
@@ -3054,12 +3055,21 @@ function collectFailures() {
     "let cachedPassCompositorOwner = null;",
     "function getCachedPassCompositorOwner() {",
     "getActiveTargetContext: () => rendererSurfaceHost.getContext()",
+    "getRenderPassCacheSnapshot: getRenderPassCacheState",
     "recordTransformedPassDiagnostics: (passName, details) => {",
     "return getCachedPassCompositorOwner().drawTransformedPass(",
     "return getCachedPassCompositorOwner().composeRenderPassesToTarget(",
   ]) {
     if (!renderer.includes(token)) {
       failures.push(`${FILES.renderer} must keep P2.2a composition-root token: ${token}`);
+    }
+  }
+  for (const token of [
+    "getPassCanvas: (passName) => getRenderPassCacheState()",
+    "isPassDirty: (passName) => !!getRenderPassCacheState()",
+  ]) {
+    if (renderer.includes(token)) {
+      failures.push(`${FILES.renderer} must use one P2.2a cache snapshot per compositor method: ${token}`);
     }
   }
   for (const token of [
