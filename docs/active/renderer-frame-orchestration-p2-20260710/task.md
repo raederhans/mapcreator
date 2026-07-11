@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a cached-pass compositor review fixes and clean-head deterministic/dist closeout are complete at `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4`. The isolated lane is ready for static re-review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
+Current status: P2.2a cached-pass compositor final contract microfix and clean-head deterministic/dist closeout are complete at `76977207`. The isolated lane is ready for static re-review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -160,7 +160,7 @@ Current status: P2.2a cached-pass compositor review fixes and clean-head determi
 
 - [x] Replace per-pass cache getters with one normalized `getRenderPassCacheSnapshot()` call per owner public method.
 - [x] Prove snapshot call count `1` for transformed draw, non-required multi-pass compose, and require-all multi-pass compose.
-- [x] Forward the original compose `options` object from `map_renderer.js`; resolve `options?.requireAllPasses` inside the owner.
+- [x] Forward the original compose `options` object from `map_renderer.js`; parameter-destructure `{ requireAllPasses = false } = {}` inside the owner.
 - [x] Restore DPR evaluation to the original draw site for transformed and direct cached composition.
 - [x] Upgrade owner, P53, Python boundary, and architecture contracts to reject the retired per-pass wiring.
 - [x] Create review-fix Lore commit `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4`; keep `map_renderer.js` at 23,376 split lines and the hardened owner at 176 split lines.
@@ -168,6 +168,17 @@ Current status: P2.2a cached-pass compositor review fixes and clean-head determi
 - [x] Record review-fix selector evidence: 9 changed files, 27 recommended commands, 1 main-thread lane, and 0 unmatched files.
 - [x] Record evidence-doc selector coverage: 4 changed files, 9 recommended commands, 0 main-thread lanes, and 0 unmatched files.
 - [x] Record post-fix source/dist parity: renderer `b2df02b5be80702b6c50cd3bc572a100302e8f4b`; cached compositor `134a295605cd7081177f9af0ac5648c82c07be6b`.
+
+### P2.2a final contract microfix
+
+- [x] Restore compose parameter destructuring so `null` options throws `TypeError` before function-body effects.
+- [x] Prove the cache snapshot getter remains uncalled on `null` options.
+- [x] Prove getter-backed `requireAllPasses` evaluates exactly once before cache snapshot capture.
+- [x] Preserve the existing one-snapshot-per-method and DPR draw-site order contracts.
+- [x] Create functional Lore commit `76977207`; keep the root wrapper forwarding the exact options object.
+- [x] Pass owner 13/13, P53 11/11, Python boundary 4/4, architecture, Pages 47/47 + 18/18 + 17/17, source/dist parity, clean `verify:dist-drift`, and clean `verify:core` 64/64.
+- [x] Record functional selector evidence: 7 changed files, 13 recommended commands, 1 main-thread lane, and 0 unmatched files.
+- [x] Record final evidence-doc selector coverage: 4 changed files, 9 recommended commands, 0 main-thread lanes, and 0 unmatched files.
 
 ## P2.2b transformed frame compositor owner
 

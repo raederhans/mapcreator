@@ -279,7 +279,7 @@ Status: `ready-for-static-review + browser/performance acceptance`. Browser, mai
 Static review found one high-risk consistency issue and two narrow call-shape/order issues. Review-fix Lore commit `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4` resolves all three while preserving the public/private renderer call surface:
 
 1. Each owner public method now captures `getRenderPassCacheState()` once through the injected `getRenderPassCacheSnapshot()` dependency. Every pass canvas and dirty diagnostic in that call uses the same normalized snapshot. Tests prove one snapshot read for transformed draw, non-required multi-pass compose, and require-all multi-pass compose.
-2. `map_renderer.js` forwards the caller's `options` object directly to `composeRenderPassesToTarget()`; the owner resolves `options?.requireAllPasses` once.
+2. `map_renderer.js` forwards the caller's `options` object directly to `composeRenderPassesToTarget()`; the final owner-side parameter semantics are recorded in the follow-up section below.
 3. DPR evaluation is restored to the original draw site after target-context setup for transformed paths and after layout resolution for direct composition.
 
 The root renderer stays at 23,376 split lines. The hardened cached-pass owner is 176 split lines, within its 320-line ceiling. Source/dist blobs match at renderer `b2df02b5be80702b6c50cd3bc572a100302e8f4b` and owner `134a295605cd7081177f9af0ac5648c82c07be6b`.
@@ -287,3 +287,13 @@ The root renderer stays at 23,376 split lines. The hardened cached-pass owner is
 Focused and shared evidence is green: cached-owner 12/12, P53 11/11, Python boundary 4/4, clean P51 26/26, clean P52 15/15, draw-owner suite, architecture/state/import/metadata/supervisor gates, Pages startup 47/47, landing 18/18, sample 17/17, clean `verify:dist-drift`, and clean `verify:core` 64/64. The functional selector reports 9 changed files, 27 recommended commands, 1 main-thread lane, and 0 unmatched files; the evidence-doc selector reports 4/9/0/0. The pre-commit P51 red was its intentional dirty-worktree dist guard; the clean-head suite passed after the functional commit.
 
 Status: `ready-for-static-re-review + separate browser/performance acceptance`. The deterministic review-fix lane did not run browser, dev server, Playwright, `verify:core:main-thread`, or governed live performance.
+
+## P2.2a final options-contract microfix 2026-07-11
+
+Functional Lore commit `76977207` restores the exact compose options contract. The root wrapper continues forwarding the caller-owned options object. The owner now parameter-destructures `{ requireAllPasses = false } = {}` before the function body, so `null` retains the historical `TypeError`, a getter-backed option is evaluated once, and option evaluation precedes the method-local cache snapshot capture.
+
+The one-snapshot-per-public-method contract and DPR evaluation order remain unchanged. Owner behavior passes 13/13; P53 passes 11/11; the combined Python boundary passes 4/4; architecture boundaries pass. Canonical Pages generation passes startup 47/47, landing 18/18, sample 17/17 at 927.17 MiB. Owner source/dist blobs match at `55c3f02bdf6da3f57ba1a7266a4954cd51bed249`. The owner is 175 split lines and `map_renderer.js` remains 23,376 split lines.
+
+Clean-head `verify:dist-drift` and full `verify:core` pass at the functional commit; core reports 64/64 commands, zero failures, zero omitted commands, zero duplicates, and seven explicit main-thread skips. Functional adaptive selection reports 7 changed files, 13 recommended commands, 1 main-thread lane, and 0 unmatched files; final evidence-doc selection reports 4/9/0/0.
+
+Status: `ready-for-final-static-re-review + separate browser/performance acceptance`. Browser, dev server, Playwright, `verify:core:main-thread`, and governed live performance remain assigned to their separate single-owner lane.
