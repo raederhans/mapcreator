@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`, whose Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`. Current work is a narrow Windows perf readiness fix for the `py.exe` / `python.exe` PID mismatch before perf measurement. Fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, `perf:gate`, and P2.1 entry remain pending.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. Readiness/PID ownership is green, perf threshold gate is red, and P2.1 remains blocked pending separate perf investigation or governed baseline decision.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -43,10 +43,10 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Adaptive result is `changedFiles=8`, `recommendedCommands=61`, `mainThreadSerialVerification=53`, `unmatchedChangedFiles=0`.
 - Operational note: the Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript.
 - [x] Create the functional commit for the production disclosure race repair: `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`.
-- [ ] Record fresh clean-head `verify:core` and `verify:core:main-thread` after the Windows readiness fix is committed and one live-process owner runs them serially.
+- [x] Record carried clean-head `npm run verify:core` exit 0 from existing post-commit evidence; main-thread evidence remains carried from `f5f27d3f` and was not rerun in this docs-only closeout.
 - [ ] Record browser regressions after the Windows readiness fix is committed and one live-process owner runs them serially.
-- [ ] Record `perf:gate` after the Windows readiness fix is committed and one live-process owner runs it serially.
-- [ ] Reach green baseline before P2.1.
+- [x] Record post-commit `perf:gate`: measurement completed, readiness green, exit 1 on threshold failures against `docs/perf/baseline_2026-04-20.json`.
+- [ ] Reach green perf acceptance boundary before P2.1; current gate is red at `61e090388feb0c69887b9947b55b61968d5324de`.
 
 ## Pre-P2 Windows perf readiness fix
 
@@ -58,19 +58,26 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Run final `git diff --check`: exit 0, with Windows LF-to-CRLF working-copy warnings only for the two edited code/test files.
 - [x] Run adaptive selector dry-run for the five changed files: exit 0; `changedFiles=5`; `unmatchedChangedFiles=[]`; recommended child-safe checks plus one deferred main-thread `perf:gate`.
 - [x] Run additional deterministic selector recommendations: `node tools/select_verification_targets.mjs --check` exit 0 with 282 routes; `npm run verify:supervisor-contracts` exit 0 with schemas 40 domains and Node 12/12 + 4/4; `npm run test:node:perf-probe-snapshot-behavior` exit 0 with 5/5; `npm run test:node:polyline-simplification-benchmark` exit 0 with 4/4; `npm run test:node:renderer-draw-canvas-orchestration-inventory` exit 0 with 6/6.
-- [x] Leave changes unstaged and uncommitted for integration.
+- [x] Create functional Windows perf readiness commit `61e090388feb0c69887b9947b55b61968d5324de`; branch was ahead 4 from `origin/main` and worktree was clean before this docs-only closeout.
 
+## Docs-only perf readiness cleanup classification
+
+- [x] Create ignored runtime report `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
+- [x] Record metric table, run dispersion, baseline dispersion, readiness result, listener cleanup, and attribution boundary.
+- [x] Record that `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run in this round.
+- [x] Preserve `plan.md` unchanged.
+- [x] Keep P2.1 blocked by red perf gate.
 ## Clean baseline
 
-- [ ] Root assigns one live-process owner before any fresh clean-head core/main-thread/browser/perf baseline run.
-- [ ] Run fresh clean-head `verify:core`, `verify:core:main-thread`, physical-layer regression, scenario resilience, and `perf:gate` under one live-process owner after the Windows readiness fix is committed.
-- [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner after the Windows readiness fix is committed.
+- [x] Carry existing clean-head `npm run verify:core` exit 0 evidence; this docs-only closeout did not rerun live-process lanes.
+- [x] Record readiness cleanup: before cleanup port 8000 was clear; port 8892 was PID 58444 `python.exe tools/dev_server.py --port 8892`; metadata matched PID/port/cwd/runtime root; only PID 58444 was terminated; parent PID 67120 had exited; ports 8000 and 8892 were clear afterward; worktree was clean before docs edits.
+- [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner.
 - [ ] Record browser baseline.
-- [ ] Record perf baseline.
+- [x] Record perf threshold facts: TNO totalStartup 8131.4/5805.3 over 6676.095; HOI totalStartup 7746.8/5205.7 over 5986.555; HOI render median 705.05/560.9 over 701.125 by 3.925 ms / 0.56%.
 
 ## P2.1 draw canvas orchestration owner
 
-- [ ] Start only after the green baseline is recorded.
+- [ ] Start only after the red perf gate is resolved by separate perf investigation or governed baseline decision.
 - [ ] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - [ ] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
 - [ ] Reach at least 35 extracted lines.

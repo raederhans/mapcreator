@@ -7,8 +7,8 @@ Date: 2026-07-10
 - worktree path: `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710`
 - base branch: `origin/main`
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
-- current pre-P2 Windows perf readiness baseline: `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`
-- current task phase: pre-P2 Windows perf readiness fix after the production disclosure repair
+- current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
+- current task phase: perf readiness cleanup classification and docs-only evidence closeout
 - current worktree state at start: clean
 - release residue worktree: `C:\Users\raede\.codex\worktrees\mapcreator-release-e102a70`, detached `HEAD=b14165c0e693a87872361b87ac78dc31cd7a0155`, clean
 - P1 isolated worktree: removed
@@ -30,17 +30,17 @@ Date: 2026-07-10
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
 - main-thread baseline: pending; `f5f27d3f` records post-commit browser/main-thread/perf baseline as `Not-tested`
-- perf baseline: pending; current lane only fixes pre-measurement Windows readiness
-- fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, and `perf:gate` remain pending until the Windows readiness fix is committed and one live-process owner runs them serially
+- perf baseline: red at `61e090388feb0c69887b9947b55b61968d5324de`; readiness green, threshold acceptance blocked
+- clean-head `npm run verify:core` exited 0 from existing post-commit evidence; main-thread evidence is carried from `f5f27d3f`; browser regressions, physical-layer runtime contract, scenario resilience, and any further perf investigation remain separate lanes
 
 ## Current phase ledger
 
 - P2.0 docs-only truth reconciliation: complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`
 - Pre-P2 test-only repair: committed at `28bda618`; static checks complete; focused browser baseline refreshed at 2/5 and identified a production disclosure race
 - Pre-P2 production disclosure race repair: committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; its Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`
-- Pre-P2 Windows perf readiness fix: in progress; root cause is `tools/perf/run_baseline.mjs` spawning `py -3 tools/dev_server.py` on Windows while `tools/dev_server.py` records the child `python.exe` pid in `active_server.json`, so strict `metadataPid === child.pid` readiness times out before measurement
-- Clean baseline: waits for this perf readiness contract fix before perf measurement
-- P2.1 draw canvas orchestration owner: waits for green baseline
+- Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
+- Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
+- P2.1 draw canvas orchestration owner: blocked by red perf gate pending separate perf investigation or governed baseline decision
 - P2.2a cached pass compositor owner: pending
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
@@ -74,6 +74,17 @@ Date: 2026-07-10
 - Fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, and `perf:gate` remain pending until the Windows readiness fix is committed and one live-process owner runs them serially.
 - Parent checkout WIP remains untouched.
 
+## Post-commit perf readiness classification
+
+- Functional commit `61e090388feb0c69887b9947b55b61968d5324de` was ahead 4 from `origin/main`; the worktree was clean before this docs-only closeout.
+- Clean-head `npm run verify:core` exited 0 in existing post-commit evidence. This docs-only closeout inspected existing artifacts and did not rerun core, main-thread, browser, server, Playwright, or perf commands.
+- Windows readiness is green: the perf runner completed measurement and wrote `.runtime/output/perf/baseline_2026-04-20/perf-gate-current.json`; `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.exit-code.txt` records `exit_code=1` because the threshold gate is red.
+- Baseline reference is `docs/perf/baseline_2026-04-20.json` via `DEFAULT_BASELINE_JSON`; `contractMismatches` is empty; current and baseline share `win32 10.0.26200`, Node major 22, `chromium-headless`, `warmups=3`, and the same URL query.
+- Threshold failures: `tno_1962.totalStartupMs` 8131.4 vs 5805.3, limit 6676.095; `hoi4_1939.totalStartupMs` 7746.8 vs 5205.7, limit 5986.555; `hoi4_1939.renderSampleMedianMs` 705.05 vs 560.9, limit 701.125, only 3.925 ms / 0.56% over the allowed limit.
+- Attribution boundary: totalStartup failures are repeatable current-vs-April-baseline shifts; scenarioApplied and applyBundle are faster than baseline; the HOI render miss is close enough for short-run / machine noise to remain plausible; the functional patch only changed perf launcher/readiness and does not attribute threshold failures to renderer or scenario runtime code.
+- Cleanup: before cleanup port 8000 was clear; port 8892 belonged to PID 58444 (`python.exe tools/dev_server.py --port 8892`) with matching worktree metadata; only PID 58444 was terminated; parent PID 67120 had exited; ports 8000 and 8892 were clear afterward; worktree status was clean before docs edits.
+- P2.1 remains blocked by the red perf gate. Next acceptable path is a separate perf investigation or a governed baseline decision before visible-frame production edits. `test:e2e:physical-layer-runtime-contract` and `test:e2e:scenario-resilience` were not run in this round.
+- Runtime classification report: `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/cleanup-classification.md`.
 ## Notes
 
 - P2.0 changed only active docs truth surfaces and completed at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`.
@@ -83,4 +94,4 @@ Date: 2026-07-10
 
 ## Next action
 
-Finish the Windows perf readiness contract fix without committing, then hand the dirty worktree to integration; after commit, root assigns one live-process owner for fresh clean-head `verify:core`, `verify:core:main-thread`, browser regressions, and `perf:gate` before P2.1.
+Commit this docs-only evidence closeout without push. Keep P2.1 blocked until a separate perf investigation or governed baseline decision turns the perf acceptance boundary green.
