@@ -192,3 +192,40 @@ Waiver scope: authorizes P2.1 implementation entry only. P2.1 acceptance A/B, P2
 Formal supplement: reports `.runtime/reports/generated/p2-perf-hoi4-isolated-abba-20260710.{json,md}` stay `inconclusive/blocked` for attribution; attempt01/02 invalid due validator `[double]::IsFinite` flaw after A3 exit 0; attempt03 invalid due stale task-owned Chromium; attempt04 A3/control 5 valid partial samples and B3/P2 quiet-window failed 3 bounded attempts, with B4/A4 not run; attempt05 discarded. Supplement cannot establish regression or no-regression and cannot overturn phase admission.
 
 Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent untouched; release residue removed/no longer registered on 2026-07-11 with recovery evidence at commit `b14165c0e693a87872361b87ac78dc31cd7a0155`; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
+
+## P2.1 final browser and performance acceptance 2026-07-11
+
+Current phase truth: P2.1 acceptance is complete and `failed/blocked`; P2.2 entry is closed pending root-cause work and a fresh complete A/B.
+
+Browser matrix:
+
+- `npm run verify:core:main-thread`: 65/65 passed. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-acceptance/browser-77855450/01-verify-core-main-thread.log`.
+- `npm run test:e2e:physical-layer-runtime-contract`: 1/1 passed. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-acceptance/browser-77855450/02-physical-layer-runtime-contract.log`.
+- `npm run test:e2e:scenario-resilience`: 3/3 passed after the retired view-mode expectation was removed in test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Product runtime source remains rooted at reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`.
+
+Contemporary performance experiment:
+
+- Control: `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`.
+- Candidate: `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1`.
+- Sequence: `A1 -> B1 -> B2 -> A2`; every block used `tno_1962,hoi4_1939`, three warmups, and five measured runs per scenario.
+- All four blocks exited 0 and passed their first quiet-window attempt. A-side CPU/memory-delta readings were A1 `18.0% / 0.049%` and A2 `18.4% / 0.349%`; B-side readings were B1 `18.0% / 0.391%` and B2 `12.2% / 0.001%`. Ports were clear and task-owned Chromium was absent before/after each block.
+- Exact runner SHA256 `5d3756d9532d83fede372096823129ee4a66b5cac651fee0a049a7eb3465c34d`; exact package-lock SHA256 `fa60a74b517568ffedd1bcdad5414e5ab3a36380ec1ea511411a267a52766385`. Environment, URL query, scenario order, and workload identities matched.
+
+Pooled primary results:
+
+| Scenario | Startup A/B | Render A/B | Gate |
+| --- | --- | --- | --- |
+| `tno_1962` | `6414.40 / 6408.15ms` (`-6.25ms`, `-0.10%`) | `668.10 / 815.75ms` (`+147.65ms`, `+22.10%`) | render FAIL |
+| `hoi4_1939` | `5833.95 / 5804.10ms` (`-29.85ms`, `-0.51%`) | `569.70 / 573.18ms` (`+3.48ms`, `+0.61%`) | PASS |
+
+HOI4 promotion classification found a largest adjacent gap of `31.20ms` (`640.60 -> 671.80ms`) and a maximum within-cluster gap of `16.60ms`; the two-cluster materiality rule therefore did not pass. The provisional A/B short/long counts are `9/1` and `10/0`, with a 10 percentage-point long-rate difference. The long stratum remains below the three-per-side minimum and is ancillary inconclusive. Outlier and opposite-direction checks passed.
+
+Artifacts:
+
+- `.runtime/reports/generated/p2-1-performance-ab-20260711.json`
+- `.runtime/reports/generated/p2-1-performance-ab-20260711.md`
+- `.runtime/output/perf/p2-1-acceptance/20260711/A/{A1,A2}/`
+- `.runtime/output/perf/p2-1-acceptance/20260711/B/{B1,B2}/`
+- `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`
+
+Cleanup is complete: the control runner was restored to its original byte SHA, the ignored junction and control worktree were removed safely, `git worktree prune` completed, ports 8000/8892 are clear, task-owned browser/process counts are zero, and parent WIP retains its preflight shape. The April baseline remains frozen. The approved protocol excludes selective reruns.

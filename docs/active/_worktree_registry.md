@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.1 browser acceptance is green for `verify:core:main-thread` 65/65, physical-layer runtime 1/1, and scenario resilience 3/3 after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Product runtime source is unchanged from reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`; performance A/B is the next gate. Parent WIP remains untouched.
+Last updated: 2026-07-11 P2.1 browser acceptance is green, and the completed contemporary performance A/B is `failed/blocked`. The pooled `tno_1962` render median increased from `668.10ms` on control to `815.75ms` on the P2.1 candidate, a `147.65ms / 22.10%` regression. P2.2 remains blocked pending root-cause work and a fresh full A/B. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-11 P2.1 browser acceptance is green for `verify:core:main-
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none active; the scenario-resilience contract-fix owner stopped dedicated server PID 18364, removed its matching stale active-server metadata, and verified ports 8000 and 8892 clear; root must assign one before future perf lanes run
+- live process owner: none active; P2.1 browser and A/B owners completed cleanup, ports 8000/8892 are clear, the temporary control worktree is removed, and task-owned Chromium/processes are absent
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -21,7 +21,7 @@ Last updated: 2026-07-11 P2.1 browser acceptance is green for `verify:core:main-
 3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright, perf, and `verify:core:main-thread` under single-owner execution in later P2 phases; there is currently no active live-process owner.
+6. Keep browser/dev-server/Playwright and perf under single-owner execution. P2.2 entry now requires an explained TNO render regression plus a fresh full A/B under the same identity and quiet-window contract.
 
 ## Current Worktrees
 
@@ -30,7 +30,46 @@ Current rows reflect the real two local worktrees from the current worktree list
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`. | User-provided current worktree list says parent path exists at `db8bd6c`; existing WIP retained. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; runtime review commit `3efc43206d04616b82be576eb75ae105fc01dd05`; test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `ready-for-P2.1-performance-A/B`; deterministic/dist/browser green | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Owner 17/17, P53 8/8, Python 5/5, scenario 57/57, Pages 46/46 + 18/18 + 17/17, clean-head core 61/61, main-thread 65/65, physical runtime 1/1, scenario resilience 3/3, route gaps 0. | Green for deterministic/dist/browser; yellow until performance A/B completes. | Resume the single-owner performance A/B lane, then decide P2.2 entry. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; acceptance candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1`; control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `blocked-on-P2.1-performance-regression`; deterministic/dist/browser green | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Main-thread 65/65, physical runtime 1/1, scenario resilience 3/3; valid A1/B1/B2/A2 with 10 samples per side/scenario; TNO render `+147.65ms / +22.10%`. | Red for P2.2 admission until the TNO render regression is explained and a fresh full A/B passes. | Keep branch and artifacts recoverable; diagnose P2.1 draw-frame runtime attribution before starting P2.2. |
+
+## P2.1 Acceptance Closeout 2026-07-11
+
+Status: `failed/blocked` for P2.2 admission at candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1` against control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`.
+
+Browser acceptance:
+
+- `npm run verify:core:main-thread`: 65/65 passed. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-acceptance/browser-77855450/01-verify-core-main-thread.log`.
+- `npm run test:e2e:physical-layer-runtime-contract`: 1/1 passed. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-acceptance/browser-77855450/02-physical-layer-runtime-contract.log`.
+- `npm run test:e2e:scenario-resilience`: 3/3 passed after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Evidence root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/scenario-resilience-contract-fix/`.
+
+Contemporary A/B protocol and validity:
+
+- Sequence `A1 -> B1 -> B2 -> A2`; every block used scenario order `tno_1962,hoi4_1939`, three warmups, and five measured runs per scenario.
+- All four blocks exited 0, matched their expected HEAD, passed their first quiet-window attempt, retained clear ports 8000/8892, and left no task-owned Chromium. Each side therefore contributes ten measured samples per scenario.
+- Runner SHA256 `5d3756d9532d83fede372096823129ee4a66b5cac651fee0a049a7eb3465c34d` and package-lock SHA256 `fa60a74b517568ffedd1bcdad5414e5ab3a36380ec1ea511411a267a52766385` match across all blocks. Node/npm/Python/Playwright/Chromium, URL query, scenario order, and workload identity also match.
+
+Primary pooled medians:
+
+| Scenario | Metric | Control A | Candidate B | B-A | B/A delta | Result |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `tno_1962` | startup | 6414.40ms | 6408.15ms | -6.25ms | -0.10% | PASS |
+| `tno_1962` | render | 668.10ms | 815.75ms | +147.65ms | +22.10% | FAIL |
+| `hoi4_1939` | startup | 5833.95ms | 5804.10ms | -29.85ms | -0.51% | PASS |
+| `hoi4_1939` | render | 569.70ms | 573.18ms | +3.48ms | +0.61% | PASS |
+
+Additional classification:
+
+- Outlier rules and opposite-direction veto passed.
+- HOI4 promotion largest adjacent gap is `640.60 -> 671.80ms`; its `31.20ms` gap is below the material two-cluster rule. The provisional short/long split is A `9/1`, B `10/0`; the long-path rate difference is 10 percentage points and passes the 30-point limit. The long stratum has fewer than three samples per side, so promotion-stratum attribution remains ancillary inconclusive.
+- The historical April baseline and thresholds remain frozen. This contemporary A/B decides the current phase gate.
+
+Artifacts and cleanup:
+
+- Reports: `.runtime/reports/generated/p2-1-performance-ab-20260711.json` and `.runtime/reports/generated/p2-1-performance-ab-20260711.md`.
+- Block artifacts: `.runtime/output/perf/p2-1-acceptance/20260711/A/{A1,A2}/` and `.runtime/output/perf/p2-1-acceptance/20260711/B/{B1,B2}/`.
+- Cleanup: `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`; the runner was restored, the `node_modules` junction and control worktree were removed, worktree registration was pruned, ports remained clear, and parent WIP retained its original shape.
+
+Decision: P2.1 implementation remains recoverable and browser-correct under the exercised matrix. P2.2 stays blocked by the definite TNO render regression. The approved protocol forbids selective reruns; the next acceptance attempt must follow root-cause work and repeat the full A1/B1/B2/A2 experiment.
 
 ## P2 Upstream Integration 2026-07-11
 

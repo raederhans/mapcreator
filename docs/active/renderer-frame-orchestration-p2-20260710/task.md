@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc01dd05` has deterministic/dist/browser evidence. `verify:core:main-thread` passed 65/65, physical-layer runtime passed 1/1, and scenario resilience passed 3/3 after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Performance A/B remains before P2.2 entry.
+Current status: P2.1 browser acceptance is green and the completed contemporary performance A/B is `failed/blocked`. Candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1` regressed pooled `tno_1962` render median by `147.65ms / 22.10%` versus control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`. P2.2 remains blocked.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -44,7 +44,7 @@ Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc
 - Operational note: the Conductor hook prevented writing the requested Pages log file; full output remains in the sole live-owner Codex transcript.
 - [x] Create the functional commit for the production disclosure race repair: `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`.
 - [x] Record carried clean-head `npm run verify:core` exit 0 from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; main-thread evidence remains the prior `f5f27d3f` evidence and was not rerun in this docs-only closeout.
-- [ ] Record browser regressions later under one assigned live-process owner.
+- [x] Record browser regressions under one assigned live-process owner: main-thread 65/65, physical-layer runtime 1/1, scenario resilience 3/3.
 - [x] Record post-commit `perf:gate`: measurement completed, readiness green, exit 1 in `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/02-perf-gate.log` on threshold failures against `docs/perf/baseline_2026-04-20.json`.
 - [x] P2.1 starting gate admitted under scoped governance waiver; current gate evidence stays historical at `61e090388feb0c69887b9947b55b61968d5324de`.
 
@@ -72,8 +72,8 @@ Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc
 - [x] Carry existing clean-head `npm run verify:core` exit 0 evidence from `.runtime/tests/renderer-frame-orchestration-p2-20260710/perf-readiness/post-commit/01-verify-core.log`; this docs-only closeout did not rerun live-process lanes.
 - [x] Record readiness success: the gate launched its managed server, completed three warmups and three runs for both scenarios, wrote `.runtime/output/perf/baseline_2026-04-20/perf-gate-current.json`, and had no PID/readiness timeout.
 - [x] Record readiness cleanup: the interrupted typed owner had started dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear afterward; worktree was clean before docs edits.
-- [ ] Run later browser gates for focused project save/load, existing UI mainline contract, and clean-head baseline under the sole live owner.
-- [ ] Record browser baseline.
+- [x] Run browser gates under the sole live owner through `verify:core:main-thread`, physical-layer runtime, and scenario resilience.
+- [x] Record browser baseline and cleanup artifacts.
 - [x] Record perf threshold facts: baseline `docs/perf/baseline_2026-04-20.json` with `contractMismatches=[]`; TNO totalStartup current 8131.4ms, baseline 5805.3ms, limit 6676.1ms at 1.15x, ratio 1.401, run min 8049.5, max 8185, spread 135.5ms / 1.67%; HOI4 totalStartup current 7746.8ms, baseline 5205.7ms, limit 5986.6ms at 1.15x, ratio 1.488, run min 7160.4, max 7789.5, spread 629.1ms / 8.12%; HOI4 render median current 705.05ms, baseline 560.9ms, limit 701.125ms at 1.25x, ratio 1.257, exceeds by 3.925ms / 0.56%, run min 690.4, max 715.65, spread 25.25ms / 3.58%.
 - [x] Classify historical perf outcome: both startup shifts are repeatable current-vs-April failures; current evidence cannot attribute them to this launcher-only patch; HOI4 render median is borderline and environment noise can explain it; April baseline/threshold frozen.
 
@@ -118,7 +118,7 @@ Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc
 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
 - [x] Extract `js/core/map_renderer/draw_canvas_orchestration_owner.js`.
-- [ ] P2.1 acceptance A/B.
+- [x] P2.1 acceptance A/B completed with `failed/blocked` decision on TNO render `+147.65ms / +22.10%`.
 - [ ] P2.2 entry A/B.
 - [ ] P2 closeout A/B.
 - [x] Preserve `drawCanvas()` undefined return, phase/defer double-read, and effect order.
@@ -142,7 +142,7 @@ Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc
 - [x] Repair the retired view-mode test-contract drift and pass scenario resilience 3/3 at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`.
 - [x] Verify scenario-resilience selector routing: one changed file, two recommended commands, one main-thread lane, zero unmatched files.
 - [x] Stop server PID 18364, remove matching stale metadata, and verify ports 8000/8892 clear.
-- [ ] Complete P2.1 performance A/B acceptance.
+- [x] Complete P2.1 performance A/B acceptance; all blocks valid, pooled TNO render failed, P2.2 blocked.
 
 ## P2.2a cached pass compositor owner
 
@@ -171,10 +171,31 @@ Waiver scope: authorizes P2.1 implementation entry only.
 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.
 - [x] P2.1 implementation extraction and deterministic behavior preservation.
-- [ ] P2.1 acceptance A/B.
+- [x] P2.1 acceptance A/B completed; report decision `failed/blocked`.
 - [ ] P2.2 entry A/B.
 - [ ] P2 closeout A/B.
 
 Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
 
 Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render-pipeline 5/5, scenario chunk 57/57, scenario refresh 36/36, metadata 14/14, core-runner 8/8, architecture/state/import/route schema 286/supervisor, and `verify:pages-dist` passed. Functional commit `cc6477e0111568091a8665f76fa13d1083c67426` is committed; clean-head `verify:dist-drift` exited 0 and clean-head `verify:core` exited 0 with 61/61. `origin/main@17aeedf` moved one commit; preserve this clean worktree without rebase because direct red overlaps exist in the registry, Pages startup test, and verification domains metadata.
+
+## P2.1 final acceptance checklist 2026-07-11
+
+- [x] `verify:core:main-thread` passed 65/65.
+- [x] `test:e2e:physical-layer-runtime-contract` passed 1/1.
+- [x] `test:e2e:scenario-resilience` passed 3/3 after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`.
+- [x] Run exact `A1 -> B1 -> B2 -> A2` with fixed scenario order, three warmups, five measured runs per scenario/block, and 10 pooled samples per side/scenario.
+- [x] Confirm all blocks exited 0, matched HEAD, passed first quiet window, retained clear ports, and left zero task-owned Chromium.
+- [x] Confirm runner, package lock, environment, URL query, scenario order, and workload identity match.
+- [x] Confirm pooled startup PASS for TNO and HOI4.
+- [x] Confirm pooled HOI4 render PASS.
+- [x] Record pooled TNO render FAIL: control `668.10ms`, candidate `815.75ms`, `+147.65ms / +22.10%`.
+- [x] Confirm outlier rules and opposite-direction veto PASS.
+- [x] Record HOI4 promotion gap/long-stratum result as ancillary inconclusive; long-rate difference remains within limit.
+- [x] Preserve the April historical baseline and thresholds.
+- [x] Generate `.runtime/reports/generated/p2-1-performance-ab-20260711.{json,md}`.
+- [x] Restore runner, remove junction/control worktree, prune registrations, verify clear ports and zero task processes, and preserve parent WIP.
+- [x] Mark P2.2 admission blocked.
+- [ ] Explain the TNO render regression with code/metric evidence.
+- [ ] Repeat the full acceptance A/B after the root-cause change.
+- [ ] Begin P2.2 only after a green phase-admission result.

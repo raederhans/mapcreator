@@ -98,4 +98,27 @@ Browser, Playwright, perf, and main-thread lanes are owned by a separate accepta
 - Pages log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/verify-pages-dist.log`.
 - Cleanup proof: old PIDs 27992, 18096, and 35820 are absent; ports 8000 and 8892 are clear.
 
-Browser, Playwright, main-thread, and performance acceptance belong to the separate acceptance owner.
+## P2.1 final acceptance gate — 2026-07-11
+
+The separate acceptance lane is complete for candidate `7e6ca0159cb5a9d8734a58b2bace5ca898ccaed1`.
+
+Browser evidence is green:
+
+- `verify:core:main-thread`: 65/65.
+- `test:e2e:physical-layer-runtime-contract`: 1/1.
+- `test:e2e:scenario-resilience`: 3/3 after the test-contract-only correction at `427e68398a67586ef4a330b5304dfde567da917e`.
+
+The contemporary A/B used exact control `c7fb5cde4d6eb5ec4fc9c7c712b1964f45502f8a`, sequence `A1 -> B1 -> B2 -> A2`, fixed scenario order `tno_1962,hoi4_1939`, three warmups, and five measured runs per scenario/block. All four blocks passed HEAD, exit, sample-count, quiet-window, listener, Chromium, runner, lockfile, environment, query, and workload identity checks.
+
+Primary pooled results:
+
+- TNO startup: `6414.40ms -> 6408.15ms`, PASS.
+- TNO render: `668.10ms -> 815.75ms`, `+147.65ms / +22.10%`, FAIL.
+- HOI4 startup: `5833.95ms -> 5804.10ms`, PASS.
+- HOI4 render: `569.70ms -> 573.18ms`, PASS.
+
+Outlier and opposite-direction checks passed. HOI4 promotion produced no material two-cluster gap; its long stratum remains too small for attribution. The definite TNO render regression controls the phase decision.
+
+Reports: `.runtime/reports/generated/p2-1-performance-ab-20260711.json` and `.runtime/reports/generated/p2-1-performance-ab-20260711.md`. Cleanup evidence: `.runtime/output/perf/p2-1-acceptance/20260711/cleanup/control-cleanup.json`.
+
+P2.1 acceptance status is `failed/blocked`. P2.2 entry requires a root-cause change and a fresh complete A1/B1/B2/A2 acceptance run.
