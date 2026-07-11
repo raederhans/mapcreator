@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`. P2.1 admitted under scoped governance waiver. Readiness/PID ownership is green, contemporary A/B completed, B/A startup/render thresholds pass, and old block drift is historical evidence only.
+Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3bebae0ba84c4dc09dbca462d4`; test-only repair is committed at `28bda618`; production disclosure repair is committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; Windows perf readiness fix is committed at `61e090388feb0c69887b9947b55b61968d5324de`; P2.1 functional Lore commit is `cc6477e0111568091a8665f76fa13d1083c67426`. Clean-head dist/core verification is green, the worktree is clean at that HEAD, `ahead 9 / behind 1 origin/main@17aeedf`, and P2.1 is ready for separate browser/performance acceptance.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -107,8 +107,8 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Reach at least 35 extracted lines: baseline 23472 to current source/dist 23437, net reduction 35.
 - [x] Complete focused owner, P53, Python boundary, render-pipeline, scenario chunk/refresh, metadata, core-runner, architecture, state, import, route schema 286, and supervisor checks.
 - [x] Complete Pages/dist parity: startup 44/44, landing 18/18, sample 17/17, total 927.17 MiB; renderer blob `a78767ade0dd2f416fab95b02d67f007e0a9f79c`; owner blob `85eb8cc125b3438fd63805fca7c5be371e64076c`.
-- [ ] Create the P2.1 functional Lore commit.
-- [ ] Run clean-head dist/core verification after the functional commit.
+- [x] Create the P2.1 functional Lore commit `cc6477e0111568091a8665f76fa13d1083c67426`.
+- [x] Run clean-head dist/core verification after the functional commit: `verify:dist-drift` exit 0 with log `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-dist-drift.log`; `verify:core` exit 0 with 61/61, report `.runtime/reports/generated/verify-core.json`, and log `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-core.log`.
 - Acceptance ownership: browser, Playwright, main-thread, and performance lanes belong to the separate acceptance owner.
 
 ## P2.2a cached pass compositor owner
@@ -144,4 +144,4 @@ Waiver scope: authorizes P2.1 implementation entry only.
 
 Cleanup: runner restored; junction removed; control worktree removed/pruned; ports 8000/8892 clear; task-owned runner/server/Chromium 0; parent/release untouched; artifact `.runtime/tmp/p2-supplement-control-cleanup.json`.
 
-Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render-pipeline 5/5, scenario chunk 57/57, scenario refresh 36/36, metadata 14/14, core-runner 8/8, architecture/state/import/route schema 286/supervisor, and `verify:pages-dist` passed. Functional commit and clean-head dist/core remain pending. `origin/main@17aeedf` moved one commit; preserve this dirty worktree without rebase because direct red overlaps exist in the registry, Pages startup test, and verification domains metadata.
+Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render-pipeline 5/5, scenario chunk 57/57, scenario refresh 36/36, metadata 14/14, core-runner 8/8, architecture/state/import/route schema 286/supervisor, and `verify:pages-dist` passed. Functional commit `cc6477e0111568091a8665f76fa13d1083c67426` is committed; clean-head `verify:dist-drift` exited 0 and clean-head `verify:core` exited 0 with 61/61. `origin/main@17aeedf` moved one commit; preserve this clean worktree without rebase because direct red overlaps exist in the registry, Pages startup test, and verification domains metadata.

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: deterministic implementation complete; ready for separate browser/performance acceptance
+Status: functional commit committed/verified; ready for separate browser/performance acceptance
 
 ## Scope
 
@@ -66,8 +66,11 @@ Browser, Playwright, perf, and main-thread lanes are owned by a separate accepta
 - Scenario chunk contracts: 57/57; scenario refresh contracts: 36/36; verification metadata: 14/14; core-runner behavior: 8/8.
 - Architecture boundaries, state-write allowlist, import graph, route schema 286, and supervisor contracts passed.
 - `verify:pages-dist` passed: startup shell 44/44, landing showcase 18/18, sample project 17/17, total 927.17 MiB.
+- Functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`; worktree clean at that HEAD, `ahead 9 / behind 1 origin/main@17aeedf`.
+- Clean-head `verify:dist-drift` exited 0. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-dist-drift.log`.
+- Clean-head `verify:core` exited 0 with 61/61. Report: `.runtime/reports/generated/verify-core.json`; log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-core.log`.
 - Source/dist blob parity passed: renderer `a78767ade0dd2f416fab95b02d67f007e0a9f79c`; owner `85eb8cc125b3438fd63805fca7c5be371e64076c`.
 - Pages log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/verify-pages-dist.log`.
 - Cleanup proof: old PIDs 27992, 18096, and 35820 are absent; ports 8000 and 8892 are clear.
 
-The functional commit plus clean-head dist/core verification remain the next deterministic closeout steps. Browser, Playwright, main-thread, and performance acceptance belong to the separate acceptance owner.
+Browser, Playwright, main-thread, and performance acceptance belong to the separate acceptance owner.

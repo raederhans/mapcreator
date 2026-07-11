@@ -8,8 +8,9 @@ Date: 2026-07-10
 - base branch: `origin/main`
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
-- current task phase: P2.1 deterministic implementation closeout and separate acceptance handoff
-- current worktree state at start: dirty expected P2.1 package
+- current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
+- current task phase: P2.1 clean-head dist/core verified and separate acceptance handoff
+- current worktree state: clean at `cc6477e0111568091a8665f76fa13d1083c67426`, `ahead 9 / behind 1 origin/main@17aeedf`
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -40,7 +41,7 @@ Date: 2026-07-10
 - Pre-P2 production disclosure race repair: committed at `f5f27d3fe3dc2a928b6de453b2883a3c766daf21`; its Lore trailer records post-commit browser/main-thread/perf baseline as `Not-tested`
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
-- P2.1 draw canvas orchestration owner: P2.1 admitted under scoped governance waiver; waiver authorizes P2.1 implementation entry only
+- P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: pending
 - P2.2b transformed frame compositor owner: pending
 - Review / UltraQA: pending
@@ -48,16 +49,18 @@ Date: 2026-07-10
 
 ## P2.1 deterministic implementation completion 2026-07-11
 
-- State: deterministic implementation complete and ready for separate browser/performance acceptance.
+- State: functional commit `cc6477e0111568091a8665f76fa13d1083c67426` committed and verified; ready for separate browser/performance acceptance.
 - Physical lines: `js/core/map_renderer.js` source/dist 23437; draw-canvas owner source/dist 255; baseline 23472; net reduction 35.
 - Enforced ceilings: architecture split-entry budget 23438; Python `splitlines()` ceiling 23437.
 - Focused results: owner 14/14; P53 8/8; Python boundary 5/5; render-pipeline 5/5; scenario chunk 57/57; scenario refresh 36/36; metadata 14/14; core-runner 8/8.
 - Shared deterministic gates passed: architecture boundaries, state-write allowlist, import graph, route schema 286, and supervisor contracts.
 - Pages/dist generation passed: startup shell 44/44, landing showcase 18/18, sample project 17/17, total 927.17 MiB. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/verify-pages-dist.log`.
+- Clean-head `verify:dist-drift` exited 0. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-dist-drift.log`.
+- Clean-head `verify:core` exited 0 with 61/61. Report: `.runtime/reports/generated/verify-core.json`; log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-recovery/clean-head-verify-core.log`.
 - Blob parity: renderer source/dist `a78767ade0dd2f416fab95b02d67f007e0a9f79c`; owner source/dist `85eb8cc125b3438fd63805fca7c5be371e64076c`.
 - Runtime cleanup: old PIDs 27992, 18096, and 35820 are absent; ports 8000 and 8892 are clear.
-- Remote movement: `origin/main@17aeedf` moved forward by one commit. Direct red overlaps are `docs/active/_worktree_registry.md`, `tests/test_pages_dist_startup_shell.py`, and `tools/verification/verification_domains.mjs`. Preserve the dirty worktree and defer rebase to the integration owner after the functional commit and clean-head verification.
-- Remaining deterministic closeout: create the functional commit, then run clean-head dist/core checks. Browser, Playwright, main-thread, and performance acceptance are assigned to a separate acceptance owner.
+- Remote movement: `origin/main@17aeedf` moved forward by one commit. Direct red overlaps are `docs/active/_worktree_registry.md`, `tests/test_pages_dist_startup_shell.py`, and `tools/verification/verification_domains.mjs`. Preserve the clean worktree and defer rebase to the integration owner.
+- Remaining acceptance: Browser, Playwright, main-thread, and performance acceptance are assigned to a separate acceptance owner.
 
 ## Pre-P2 baseline repair notes
 
