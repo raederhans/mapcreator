@@ -96,6 +96,24 @@ Current status: P2.0 docs-only truth reconciliation complete at `6cd077bd3a732d3
 - [x] Historical April baseline/threshold frozen; checked-in baseline files were not modified.
 - [x] Run docs closeout validation: `git diff --check` exit 0; adaptive dry-run exit 0 with `changedFiles=3`, `recommendedCommands=5`, `mainThreadSerialVerification=0`, `unmatchedChangedFiles=[]`.
 
+## P2 upstream integration
+
+- [x] Run `git worktree list`, inspect every registered worktree status/HEAD/branch/base, and preserve parent WIP.
+- [x] Classify overlap: green renderer implementation; yellow selector/Pages-policy surfaces; red registry, Pages startup test, and verification metadata.
+- [x] Merge latest `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` without rebasing the ten-commit P2 history.
+- [x] Resolve the registry text conflict manually while retaining upstream release-audit truth and P2 acceptance truth.
+- [x] Confirm auto-merged Pages startup and verification metadata retain upstream release guards plus P2 owner contracts.
+- [x] Create merge Lore commit `aebb9efd492db711e24f43c39c51b4ef94f59097` with parents `a777d17b` and `17aeedf5`.
+- [x] Run upstream focused Python tests: 80/80.
+- [x] Run P2 owner 14/14, P53 8/8, and Python boundary 5/5.
+- [x] Run metadata/core-runner/architecture/state/import/E2E-layer/selector/supervisor gates with zero failures.
+- [x] Run canonical `verify:pages-dist`: startup 46/46, landing 18/18, sample 17/17, total 927.17 MiB.
+- [x] Confirm renderer, draw-canvas owner, and sidebar source/dist blob parity.
+- [x] Run clean merge HEAD `verify:dist-drift`: exit 0.
+- [x] Run clean merge HEAD `verify:core`: 61/61, zero failures, seven skipped main-thread lanes.
+- [x] Record logs under `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-upstream-integration/` and report `.runtime/reports/generated/verify-core.json`.
+- [x] Mark the upstream-integrated branch `ready-for-P2.1-acceptance`; browser, main-thread, and performance stay with their separate owner.
+
 ## P2.1 draw canvas orchestration owner
 
 - [x] P2.1 starting gate admitted: P2.1 admitted under scoped governance waiver.

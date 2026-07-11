@@ -47,6 +47,18 @@ Date: 2026-07-10
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
 
+## P2 upstream integration 2026-07-11
+
+- Integration owner merged P2 acceptance HEAD `a777d17b9d22a5f1d8dde7aac515ab39d8f69b2a` with latest `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` using a non-rebase merge. Merge commit: `aebb9efd492db711e24f43c39c51b4ef94f59097`.
+- Worktree planning: dirty parent `main@db8bd6c` remains read-only and behind 17; the P2 worktree was clean at `a777d17b`; the release residue path was already absent.
+- Direct overlap: registry, Pages startup shell test, and verification metadata. Only the registry produced a text conflict. Manual resolution kept both P2 integration truth and the upstream release packaging audit record. Pages and metadata auto-merged with both assertion families present.
+- Semantic overlap: `.gitignore`, Pages builder, route registry, structural tooling test, and lessons record retain upstream authority. Renderer source/dist, owner, package, and P2 contracts had no upstream overlap.
+- Focused integration results: upstream Python 80/80; owner 14/14; P53 8/8; Python boundary 5/5; metadata 14/14; core runner 8/8; architecture/state/import/E2E-layer/selector/supervisor all green.
+- Canonical Pages result: startup 46/46, landing 18/18, sample 17/17, total 927.17 MiB. Renderer, owner, and sidebar source/dist blobs match.
+- Clean merge HEAD result: `verify:dist-drift` exit 0; full `verify:core` 61/61, zero failures, seven skipped main-thread lanes.
+- Evidence directory: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-upstream-integration/`; core report `.runtime/reports/generated/verify-core.json`.
+- Current handoff: `ready-for-P2.1-acceptance`. Browser, main-thread, and performance remain owned by the separate acceptance lane.
+
 ## P2.1 deterministic implementation completion 2026-07-11
 
 - State: functional commit `cc6477e0111568091a8665f76fa13d1083c67426` committed and verified; ready for separate browser/performance acceptance.
