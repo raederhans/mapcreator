@@ -9,8 +9,9 @@ Date: 2026-07-10
 - base commit / clean baseline HEAD: `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
-- current task phase: P2.1 clean-head dist/core verified and separate acceptance handoff
-- current worktree state: clean at `cc6477e0111568091a8665f76fa13d1083c67426`, `ahead 9 / behind 1 origin/main@17aeedf`
+- current task phase: P2.1 deterministic/dist/browser verified; performance A/B handoff
+- current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
+- current worktree state: clean at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` before this docs evidence update; product runtime source remains at reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -170,7 +171,16 @@ Date: 2026-07-10
 
 ## Next action
 
-Hand clean review-fix commit `3efc43206d04616b82be576eb75ae105fc01dd05` to the P2.1 browser/performance acceptance owner. P2.2 entry remains gated on that fresh exact-commit evidence.
+Resume the single-owner P2.1 performance A/B lane from test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. P2.2 entry remains gated on the performance result.
+
+## Scenario resilience contract realignment 2026-07-11
+
+- Root cause: commit `cd0204fa` retired `#scenarioViewModeSelect` and removed `viewModeDisabled` from `readScenarioResilienceState()`, while two exact-object expectations retained that removed field.
+- Scope: test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` deletes only those two expected keys. Fatal recovery, reload/inconsistent status, the four existing disabled controls, and `SCENARIO_FATAL_RECOVERY` remain asserted.
+- Browser evidence: `npm run test:e2e:scenario-resilience` passed 3/3 at the equivalent test patch later committed as `427e6839`. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/scenario-resilience-contract-fix/06-scenario-resilience.stdout.log` and `.stderr.log`.
+- Prior same-runtime-tree evidence remains valid: `verify:core:main-thread` passed 65/65 and `test:e2e:physical-layer-runtime-contract` passed 1/1 at docs-only HEAD `77855450`; commits `77855450` and `427e6839` change documentation/test expectations only, so both runs exercise the same product runtime tree rooted at `3efc4320`.
+- Static evidence: syntax, E2E layer manifest 47, test import graph 51, and the focused adaptive dry-run passed with one changed file, two recommended commands, one main-thread lane, and zero unmatched files. The final test-plus-docs selector reported five changed files, nine recommended commands, one main-thread lane, and zero unmatched files; all eight child-safe recommendations passed.
+- Cleanup: server PID 18364 stopped; matching active-server metadata removed; ports 8000 and 8892 are clear. Evidence: `.runtime/tests/renderer-frame-orchestration-p2-20260710/scenario-resilience-contract-fix/07-cleanup.json` and `08-metadata-cleanup.json`.
 ## Current admission note
 
 State: P2.1 admitted under scoped governance waiver.

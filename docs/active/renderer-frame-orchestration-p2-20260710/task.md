@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.1 post-acceptance code-review hardening is committed at `3efc43206d04616b82be576eb75ae105fc01dd05`; clean-head `verify:dist-drift` and full `verify:core` 61/61 are green. The previous HEAD passed browser/main-thread 65/65; a fresh acceptance owner must rerun browser/performance evidence on `3efc4320` before P2.2 entry.
+Current status: P2.1 reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc01dd05` has deterministic/dist/browser evidence. `verify:core:main-thread` passed 65/65, physical-layer runtime passed 1/1, and scenario resilience passed 3/3 after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Performance A/B remains before P2.2 entry.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -138,7 +138,11 @@ Current status: P2.1 post-acceptance code-review hardening is committed at `3efc
 - [x] Generate canonical Pages dist mirrors and manifest; source/dist owner and main-renderer blobs match.
 - [x] Run focused/shared deterministic gates, selector, Pages/dist parity, and clean-head full `verify:core` 61/61.
 - [x] Commit the review fix with Lore trailers at `3efc43206d04616b82be576eb75ae105fc01dd05`.
-- [ ] Hand the new clean HEAD to browser/performance acceptance.
+- [x] Hand the new clean HEAD to browser acceptance; main-thread 65/65 and physical-layer runtime 1/1 passed on the same product runtime tree.
+- [x] Repair the retired view-mode test-contract drift and pass scenario resilience 3/3 at test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`.
+- [x] Verify scenario-resilience selector routing: one changed file, two recommended commands, one main-thread lane, zero unmatched files.
+- [x] Stop server PID 18364, remove matching stale metadata, and verify ports 8000/8892 clear.
+- [ ] Complete P2.1 performance A/B acceptance.
 
 ## P2.2a cached pass compositor owner
 

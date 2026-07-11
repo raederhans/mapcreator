@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-11 P2.1 post-acceptance code-review hardening is committed at `3efc43206d04616b82be576eb75ae105fc01dd05`; clean-head dist/core verification is green. The previous HEAD passed browser/main-thread 65/65 and cleaned its live server. Fresh browser/performance acceptance on `3efc4320` is the next gate. Parent WIP remains untouched.
+Last updated: 2026-07-11 P2.1 browser acceptance is green for `verify:core:main-thread` 65/65, physical-layer runtime 1/1, and scenario resilience 3/3 after test-contract commit `427e68398a67586ef4a330b5304dfde567da917e`. Product runtime source is unchanged from reviewed commit `3efc43206d04616b82be576eb75ae105fc01dd05`; performance A/B is the next gate. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-11 P2.1 post-acceptance code-review hardening is committed
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none active; the interrupted typed owner had started dedicated port 8892 server PID 58444; active_server metadata matched this worktree/runtime root; cleanup terminated only PID 58444; ports 8000 and 8892 were clear after cleanup; root must assign one before browser, main-thread, or future perf lanes run
+- live process owner: none active; the scenario-resilience contract-fix owner stopped dedicated server PID 18364, removed its matching stale active-server metadata, and verified ports 8000 and 8892 clear; root must assign one before future perf lanes run
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -30,7 +30,7 @@ Current rows reflect the real two local worktrees from the current worktree list
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 43 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`. | User-provided current worktree list says parent path exists at `db8bd6c`; existing WIP retained. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; review-fix commit `3efc43206d04616b82be576eb75ae105fc01dd05` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `ready-for-new-P2.1-acceptance`; clean-head deterministic/dist green | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Owner 17/17, P53 8/8, Python 5/5, scenario 57/57, Pages 46/46 + 18/18 + 17/17, selector 12 / 13 / 2 / 0, clean-head dist drift 0, clean-head core 61/61. | Green for deterministic/dist; yellow until exact-commit browser/performance acceptance completes. | Hand `3efc4320` to the single live-process acceptance owner, then decide P2.2 entry. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; runtime review commit `3efc43206d04616b82be576eb75ae105fc01dd05`; test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `ready-for-P2.1-performance-A/B`; deterministic/dist/browser green | P2 owner/source/dist/tests and P2 control docs. Parent WIP remains untouched. | Owner 17/17, P53 8/8, Python 5/5, scenario 57/57, Pages 46/46 + 18/18 + 17/17, clean-head core 61/61, main-thread 65/65, physical runtime 1/1, scenario resilience 3/3, route gaps 0. | Green for deterministic/dist/browser; yellow until performance A/B completes. | Resume the single-owner performance A/B lane, then decide P2.2 entry. |
 
 ## P2 Upstream Integration 2026-07-11
 

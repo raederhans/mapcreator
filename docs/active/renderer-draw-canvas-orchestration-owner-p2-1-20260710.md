@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: post-acceptance code-review hardening committed and deterministic/dist verified at `3efc43206d04616b82be576eb75ae105fc01dd05`; fresh browser/performance acceptance remains required on this new clean HEAD
+Status: reviewed runtime commit `3efc43206d04616b82be576eb75ae105fc01dd05` is deterministic/dist/browser verified; scenario-resilience test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` is green 3/3; performance A/B remains before P2.2 entry
 
 ## Scope
 
@@ -75,6 +75,15 @@ Browser, Playwright, perf, and main-thread lanes are owned by a separate accepta
 - Source/dist blobs match: owner `ebceea6dd873a5ac223abf438bc220d1a50b5ace`; main renderer `a78767ade0dd2f416fab95b02d67f007e0a9f79c`.
 - Clean functional HEAD `verify:dist-drift` exited 0 and full `verify:core` exited 0 with 61/61. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-1-review-fix/33-clean-head-verify-dist-drift.log` and `34-clean-head-verify-core.log`.
 - Pre-fix browser/main-thread evidence remains 65/65 at `7b3a8fb4`. Fresh browser/performance acceptance is the next owned lane.
+
+## Exact-runtime browser acceptance and test-contract repair
+
+- At docs-only handoff HEAD `77855450`, `verify:core:main-thread` passed 65/65 and `test:e2e:physical-layer-runtime-contract` passed 1/1 against the reviewed product runtime tree from `3efc4320`.
+- Scenario resilience initially passed 1/3 because its two fatal-recovery exact-object expectations still named `viewModeDisabled`; `cd0204fa` had already retired the corresponding selector and snapshot field.
+- Test-contract commit `427e68398a67586ef4a330b5304dfde567da917e` removes only those two obsolete expected keys. The targeted suite now passes 3/3 while preserving the four-control fatal lock, fatal recovery payload, status text, and blocked dispatcher action.
+- Commits `77855450` and `427e6839` leave product runtime source unchanged, so the main-thread 65/65 and physical-layer 1/1 results remain evidence for the same runtime tree.
+- Static routing is green with zero unmatched files. Dedicated server PID 18364 and ports 8000/8892 were cleaned after the targeted run.
+- Evidence root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/scenario-resilience-contract-fix/`.
 
 ## Original P2.1 deterministic completion evidence
 
