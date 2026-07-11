@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a cached-pass compositor implementation and clean-head deterministic/dist closeout are complete at `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`. The isolated lane is ready for static review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
+Current status: P2.2a cached-pass compositor review fixes and clean-head deterministic/dist closeout are complete at `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4`. The isolated lane is ready for static re-review plus separately owned browser/main-thread/performance acceptance under `render-sample-role-v1`.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -155,6 +155,19 @@ Current status: P2.2a cached-pass compositor implementation and clean-head deter
 - [x] Record selector evidence: 19 changed files, 195 recommended commands, 7 main-thread lanes, and 0 unmatched files.
 - [x] Record exact source/dist parity: renderer `9467d79806d1f418c89527ac6b1a560ff11a27c1`; cached compositor `bc84b5c34f060282b573b333ba14344e59483f73`.
 - [ ] Complete separate browser/main-thread/performance acceptance under the registered governed protocol.
+
+### P2.2a static-review fixes
+
+- [x] Replace per-pass cache getters with one normalized `getRenderPassCacheSnapshot()` call per owner public method.
+- [x] Prove snapshot call count `1` for transformed draw, non-required multi-pass compose, and require-all multi-pass compose.
+- [x] Forward the original compose `options` object from `map_renderer.js`; resolve `options?.requireAllPasses` inside the owner.
+- [x] Restore DPR evaluation to the original draw site for transformed and direct cached composition.
+- [x] Upgrade owner, P53, Python boundary, and architecture contracts to reject the retired per-pass wiring.
+- [x] Create review-fix Lore commit `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4`; keep `map_renderer.js` at 23,376 split lines and the hardened owner at 176 split lines.
+- [x] Pass clean P51 26/26, P52 15/15, draw-owner and cached-owner suites, Pages startup 47/47, landing 18/18, sample 17/17, clean `verify:dist-drift`, and full `verify:core` 64/64.
+- [x] Record review-fix selector evidence: 9 changed files, 27 recommended commands, 1 main-thread lane, and 0 unmatched files.
+- [x] Record evidence-doc selector coverage: 4 changed files, 9 recommended commands, 0 main-thread lanes, and 0 unmatched files.
+- [x] Record post-fix source/dist parity: renderer `b2df02b5be80702b6c50cd3bc572a100302e8f4b`; cached compositor `134a295605cd7081177f9af0ac5648c82c07be6b`.
 
 ## P2.2b transformed frame compositor owner
 

@@ -13,8 +13,9 @@ P2.2a moves the two cached-pass canvas composition algorithms behind one import-
 - Factory: `createCachedPassCompositorOwner({ constants, getters, helpers, effects })`.
 - Frozen API: `drawTransformedPass()` and `composeRenderPassesToTarget()`.
 - `getActiveTargetContext()` is resolved on every transformed-pass draw.
-- The owner receives pass canvas, reference transform, layout, DPR, phase, dirty state, transform helpers, and diagnostics publication through narrow direct-call dependencies.
-- The owner receives no raw runtime state, render cache, surface host, RendererRuntimeContext, D3, DOM, or global object.
+- Each public method captures one normalized render-pass cache snapshot through `getRenderPassCacheSnapshot()` and reads every pass canvas plus dirty diagnostic from that method-local view.
+- The owner receives reference transforms, layouts, DPR, phase, transform helpers, and diagnostics publication through narrow direct-call dependencies.
+- The owner receives no raw runtime state, mutable render-cache owner, surface host, RendererRuntimeContext, D3, DOM, or global object.
 - Diagnostics writes stay in the `map_renderer.js` composition-root effect.
 
 ## Preserved behavior
@@ -24,6 +25,8 @@ P2.2a moves the two cached-pass canvas composition algorithms behind one import-
 - `requireAllPasses` completes the canvas preflight before the reference-transform preflight and returns the full missing-name list with the original reason schema.
 - Non-required missing canvases are skipped; non-required missing references use the direct draw path.
 - Equivalent transforms keep rounded negative layout offsets.
+- The root compose wrapper forwards the caller's `options` object unchanged; the owner resolves `options?.requireAllPasses` once.
+- DPR evaluation stays at the original canvas draw site: after `save()` and `setTransform()` for transformed draws, and after layout resolution for direct draws.
 - Successful composition returns `{ ok: true }`; a missing target returns `{ ok: false, reason: "missing-target-context" }`.
 - `renderExportPassesToCanvas()` continues to call the stable `composeRenderPassesToTarget()` wrapper.
 
@@ -37,7 +40,7 @@ Public facade, RendererRuntimeContext, and state-write allowlist remain unchange
 
 - `map_renderer.js` baseline: 23,437 split lines.
 - P2.2a implementation: 23,376 split lines, net reduction 61.
-- Cached-pass owner: 170 split lines, within the 320-line owner ceiling.
+- Cached-pass owner after review hardening: 176 split lines, within the 320-line owner ceiling.
 - Named Node behavior and combined Python boundary tests lock the dependency surface, transform math, dynamic target lookup, compose schema, thin wrappers, protected adjacent algorithms, and owner uniqueness.
 - P53, scenario, Pages startup, architecture, verification metadata, selector, dist, and full-core contracts are upgraded in the same functional slice.
 
@@ -45,10 +48,14 @@ Browser, Playwright, perf, and main-thread acceptance remain assigned to the sep
 
 ## Clean-head deterministic closeout
 
-- Functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`.
+- Initial extraction Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`.
+- Review-fix Lore commit: `aa34b8b43ad52590f4c5fc553ff4b13d74fceab4`.
+- The review fix replaces per-pass cache getters with one normalized snapshot per public method. Behavior tests prove snapshot call count `1` for transformed draw, non-required multi-pass compose, and require-all multi-pass compose. They also lock exact `options` forwarding and the original DPR evaluation order.
 - The first clean-head core run exposed one stale source-scan boundary: the render-cache receiver test still sliced through the next historical owner. The boundary now ends at `getCachedPassCompositorOwner()`, so the test inspects only `getRenderCacheOwner()`; the focused receiver suite passes 10/10. Production code was unchanged by this repair.
-- Clean-head `npm run verify:dist-drift` exits 0. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-cached-compositor/clean-head/20-verify-dist-drift.log`.
-- Clean-head `npm run verify:core` exits 0 with 64/64 commands, zero failures, zero omitted commands, and zero duplicate commands. Report: `.runtime/reports/generated/verify-core.json`. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-cached-compositor/clean-head/22-verify-core-rerun.log`.
-- Adaptive selection records 19 changed files, 195 recommended commands, 7 main-thread lanes, and 0 unmatched files in `.runtime/reports/generated/test-adaptive-selection.json`.
-- Source/dist blob parity is exact: renderer `9467d79806d1f418c89527ac6b1a560ff11a27c1`; cached compositor `bc84b5c34f060282b573b333ba14344e59483f73`.
+- Clean review-fix `npm run verify:dist-drift` exits 0. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-review-fix/43-clean-verify-dist-drift.log`.
+- Clean review-fix `npm run verify:core` exits 0 with 64/64 commands, zero failures, zero omitted commands, and zero duplicate commands. Report: `.runtime/reports/generated/verify-core.json`. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-review-fix/44-clean-verify-core.log`.
+- Functional review-fix adaptive selection records 9 changed files, 27 recommended commands, 1 main-thread lane, and 0 unmatched files in `.runtime/reports/generated/p2-2a-review-fix-adaptive.json`.
+- Evidence-doc selection records 4 changed files, 9 recommended commands, 0 main-thread lanes, and 0 unmatched files in `.runtime/reports/generated/p2-2a-review-fix-docs-adaptive.json`.
+- Source/dist blob parity is exact after the review fix: renderer `b2df02b5be80702b6c50cd3bc572a100302e8f4b`; cached compositor `134a295605cd7081177f9af0ac5648c82c07be6b`.
+- The historical P51 inventory initially reported the expected dirty-tree failure while generated `dist/**` changes were uncommitted. The same clean-head P51 suite passes 26/26 after the functional commit, confirming that the failure was its intentional clean-worktree diff guard.
 - The isolated lane is ready for static review plus the separately owned browser/main-thread/performance acceptance. The seven E2E main-thread commands remain explicitly skipped by the deterministic core lane.
