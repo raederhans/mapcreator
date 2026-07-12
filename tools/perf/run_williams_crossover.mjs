@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
@@ -16,13 +16,12 @@ import {
   buildWilliamsPreregistration,
 } from "./williams_crossover_policy.mjs";
 import {
+  WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
   collectWindowsPerformanceWindow,
-  collectWindowsProcessSnapshot,
+  collectWindowsProcessSnapshot as collectProcessSnapshot,
   collectWindowsTcpConnections,
-  createTaskOwnedProcessMonitor,
-  isProcessRunning,
-  startWindowsProcessStartWatcher,
-  terminateTaskOwnedProcess,
+  prepareWindowsJobRunner,
+  runWindowsJobCommand,
 } from "./williams_crossover_windows_runtime.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -35,6 +34,7 @@ const ROLE_POLICY_PATH = "tools/perf/render_sample_role_policy.mjs";
 const ANALYZER_PATH = "tools/perf/run_williams_crossover.mjs";
 const POLICY_PATH = "tools/perf/williams_crossover_policy.mjs";
 const WINDOWS_RUNTIME_PATH = "tools/perf/williams_crossover_windows_runtime.mjs";
+const JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
 const PACKAGE_LOCK_PATH = "package-lock.json";
 const LIVE_TIMEOUT_MS = 45 * 60 * 1000;
 
@@ -88,6 +88,12 @@ function artifactDescriptorsEqual(left, right) {
   return String(left?.path || "") === String(right?.path || "")
     && String(left?.gitBlob || "") === String(right?.gitBlob || "")
     && String(left?.lfNormalizedSha256 || "") === String(right?.lfNormalizedSha256 || "");
+}
+
+function binaryDescriptorsEqual(left, right) {
+  return String(left?.path || "") === String(right?.path || "")
+    && String(left?.sha256 || "") === String(right?.sha256 || "")
+    && Number(left?.bytes) === Number(right?.bytes);
 }
 
 async function ensureDir(directory) {
@@ -189,6 +195,8 @@ export function buildWilliamsExecutionPlan(options = {}) {
     controlWorktree: options.controlWorktree,
     candidateWorktree: options.candidateWorktree,
     generatedAt: null,
+    jobRunnerSource: options.jobRunnerSource || null,
+    jobRunnerBinary: options.jobRunnerBinary || null,
   });
   return {
     preregistration,
@@ -279,6 +287,7 @@ export async function buildCurrentHarnessArtifacts() {
     analyzer: await currentArtifactDescriptor(ANALYZER_PATH),
     policy: await currentArtifactDescriptor(POLICY_PATH),
     windowsRuntime: await currentArtifactDescriptor(WINDOWS_RUNTIME_PATH),
+    jobRunnerSource: await currentArtifactDescriptor(JOB_RUNNER_SOURCE_PATH),
   };
 }
 
@@ -330,6 +339,8 @@ async function collectBlockIdentity(block, harnessArtifacts) {
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
+      jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
     },
   };
 }
@@ -380,7 +391,7 @@ async function collectServerState(worktree) {
 
 async function collectEnvironmentState(worktree) {
   const listeners = collectWindowsTcpConnections();
-  const processes = collectWindowsProcessSnapshot();
+  const processes = collectProcessSnapshot();
   const browser = processes.filter((entry) => /(?:chrome|chromium|msedge)/i.test(String(entry?.Name || "")));
   const server = await collectServerState(worktree);
   const probe = await Promise.all(TASK_PORTS.map((port) => fetchProbe(`http://127.0.0.1:${port}/app/`)));
@@ -456,82 +467,17 @@ async function runLoggedCommand(command, {
   cwd,
   stdoutPath,
   stderrPath,
+  jobEvidencePath,
+  preparedRunner,
   timeoutMs = LIVE_TIMEOUT_MS,
-  onSpawn = null,
-  processMonitorFactory = createTaskOwnedProcessMonitor,
-  processWatcherFactory = startWindowsProcessStartWatcher,
 } = {}) {
-  const processMonitor = processMonitorFactory();
-  let processWatcher;
-  try {
-    processWatcher = await processWatcherFactory({
-      onProcessStart: (processEntry) => processMonitor.ingest([processEntry]),
-      onError: (error) => processMonitor.recordCaptureError(error),
-    });
-  } catch (error) {
-    processMonitor.recordCaptureError(error);
-    await writeText(stdoutPath, "");
-    await writeText(stderrPath, String(error?.stack || error?.message || error));
-    return {
-      pid: null,
-      exitCode: WILLIAMS_EXIT_CODES.invalidExperiment,
-      signal: null,
-      timedOut: false,
-      stdoutPath,
-      stderrPath,
-      taskOwnedTree: processMonitor.snapshot(),
-      error: String(error?.message || error),
-    };
-  }
-  return new Promise((resolve) => {
-    const child = spawn(command.bin, command.args, {
-      cwd,
-      env: process.env,
-      windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    processMonitor.registerRoot(child.pid);
-    if (typeof onSpawn === "function") onSpawn(child.pid);
-    const stdout = [];
-    const stderr = [];
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    let timedOut = false;
-    let settled = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      terminateTaskOwnedProcess(child.pid);
-    }, timeoutMs);
-    const finish = async ({ code, signal, error = null }) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      await processMonitor.stop({ finalSamples: 3 });
-      const watcherTermination = processWatcher.stop();
-      if (watcherTermination?.exitCode !== 0) {
-        processMonitor.recordCaptureError(`process-start watcher cleanup exited ${watcherTermination?.exitCode}`);
-      }
-      const taskOwnedTree = { ...processMonitor.snapshot(), watcherTermination };
-      const stdoutBuffer = Buffer.concat(stdout);
-      const stderrBuffer = Buffer.concat(stderr);
-      await writeText(stdoutPath, stdoutBuffer.toString("utf8"));
-      await writeText(
-        stderrPath,
-        error ? String(error?.stack || error?.message || error) : stderrBuffer.toString("utf8"),
-      );
-      resolve({
-        pid: child.pid,
-        exitCode: Number.isInteger(code) ? code : 1,
-        signal,
-        timedOut,
-        stdoutPath,
-        stderrPath,
-        taskOwnedTree,
-        error: error ? String(error?.message || error) : undefined,
-      });
-    };
-    child.on("close", (code, signal) => { void finish({ code, signal }); });
-    child.on("error", (error) => { void finish({ code: 1, signal: null, error }); });
+  return runWindowsJobCommand(command, {
+    preparedRunner,
+    cwd,
+    stdoutPath,
+    stderrPath,
+    evidencePath: jobEvidencePath,
+    timeoutMs,
   });
 }
 
@@ -539,18 +485,19 @@ function pidSet(items) {
   return new Set((items || []).map((item) => Number(item?.ProcessId)).filter(Number.isInteger));
 }
 
-function buildCleanup(preTelemetry, postTelemetry, taskOwnedTree) {
+function buildCleanup(preTelemetry, postTelemetry, taskOwnedTree, jobEvidence) {
   const preEnvironment = preTelemetry?.environment || {};
   const postEnvironment = postTelemetry?.environment || {};
   const preBrowserPids = pidSet(preEnvironment.browser);
   const postBrowserPids = [...pidSet(postEnvironment.browser)];
   const newBrowserPids = postBrowserPids.filter((pid) => !preBrowserPids.has(pid));
   const taskOwnedPids = taskOwnedTree?.pids || [];
-  const postProcessPids = pidSet(postEnvironment.processes);
-  const taskOwnedPidsRemaining = taskOwnedPids.filter((pid) => postProcessPids.has(pid) || isProcessRunning(pid));
+  const taskOwnedPidsRemaining = Array.isArray(jobEvidence?.remainingPids)
+    ? jobEvidence.remainingPids.map(Number).filter(Number.isInteger)
+    : taskOwnedPids;
   const taskOwnedProcessesRemaining = (taskOwnedTree?.processes || []).filter((entry) => taskOwnedPidsRemaining.includes(entry.ProcessId));
-  const terminationResults = taskOwnedTree?.terminationResults || [];
-  const terminationSucceeded = terminationResults.every((entry) => entry?.exitCode === 0);
+  const terminationResults = [];
+  const terminationSucceeded = jobEvidence?.cleanupValid === true;
   const portsClear = TASK_PORTS.every((port) => (postEnvironment.ports?.[String(port)] || []).length === 0);
   const serverProbesClear = (postEnvironment.server || []).every((entry) => entry?.probe?.responded !== true)
     && (postEnvironment.probe || []).every((entry) => entry?.responded !== true);
@@ -585,10 +532,11 @@ function buildCleanup(preTelemetry, postTelemetry, taskOwnedTree) {
     gitStatusStable,
     gitHeadStable,
     detachedStable,
+    jobObject: jobEvidence || null,
   };
 }
 
-async function runBlock(block, harnessArtifacts) {
+async function runBlock(block, harnessArtifacts, preparedRunner) {
   const directory = block.directory;
   await ensureDir(directory);
   const metadata = {
@@ -625,6 +573,8 @@ async function runBlock(block, harnessArtifacts) {
         cwd: block.cwd,
         stdoutPath: path.join(directory, "runner.stdout.log"),
         stderrPath: path.join(directory, "runner.stderr.log"),
+        jobEvidencePath: path.join(directory, "job-object.json"),
+        preparedRunner,
       });
     } else {
       await writeText(path.join(directory, "runner.stdout.log"), "");
@@ -636,17 +586,12 @@ async function runBlock(block, harnessArtifacts) {
       pids: Number.isInteger(commandResult.pid) ? [commandResult.pid] : [],
       processes: [],
       captureStatus: "collection-error",
-      captureErrors: ["process monitor result missing"],
+      captureErrors: ["job object evidence missing"],
     };
-    const terminationResults = [];
-    for (const entry of [...taskOwnedTree.processes].sort((left, right) => right.depth - left.depth)) {
-      terminationResults.push(terminateTaskOwnedProcess(entry.ProcessId));
-    }
-    taskOwnedTree.terminationResults = terminationResults;
   }
   const postTelemetry = await collectWindowsTelemetryWindow({ worktree: block.cwd, phase: "post" });
   await writeJson(path.join(directory, "telemetry-post.json"), postTelemetry);
-  const cleanup = buildCleanup(preTelemetry, postTelemetry, taskOwnedTree);
+  const cleanup = buildCleanup(preTelemetry, postTelemetry, taskOwnedTree, commandResult.jobEvidence);
   await writeJson(path.join(directory, "cleanup.json"), cleanup);
   const complete = quietWindow.valid && commandResult.exitCode === 0 && cleanup.valid;
   const blockResult = {
@@ -678,7 +623,11 @@ async function walkFiles(root) {
 }
 
 function requiredEvidencePaths() {
-  const paths = ["preregistration.json"];
+  const paths = [
+    "preregistration.json",
+    "harness/job-runner-preparation.json",
+    WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
+  ];
   for (const block of WILLIAMS_BLOCK_SEQUENCE) {
     const prefix = `blocks/${block.id}`;
     for (const fileName of [
@@ -691,6 +640,7 @@ function requiredEvidencePaths() {
       "telemetry-post.json",
       "cleanup.json",
       "block-result.json",
+      "job-object.json",
     ]) {
       paths.push(`${prefix}/${fileName}`);
     }
@@ -732,6 +682,8 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
       analyzer: harnessArtifacts.analyzer,
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
+      jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
       sides: sideIdentity,
     },
     files,
@@ -750,7 +702,15 @@ async function readRequiredJson(rawRoot, relativePath, errors) {
   }
 }
 
-async function validateRawManifest(rawRoot, manifest, actualRawFiles, loadErrors, blocks, currentToolIdentity) {
+async function validateRawManifest(
+  rawRoot,
+  manifest,
+  actualRawFiles,
+  loadErrors,
+  blocks,
+  currentToolIdentity,
+  jobRunnerPreparation,
+) {
   const errors = [...loadErrors];
   if (!manifest || typeof manifest !== "object") {
     return { status: "invalid", errors: [...errors, "manifest.missing"], measuredRawFileCount: actualRawFiles.length };
@@ -795,7 +755,7 @@ async function validateRawManifest(rawRoot, manifest, actualRawFiles, loadErrors
   for (const actualPath of actualRaw) if (!expectedRaw.has(actualPath)) errors.push(`raw.extra:${actualPath}`);
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
   if (manifest.measuredRawFileCount !== 32) errors.push(`manifest.raw-count.expected-32-actual-${manifest.measuredRawFileCount}`);
-  for (const field of ["analyzer", "policy", "windowsRuntime"]) {
+  for (const field of ["analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
     if (!/^[a-f0-9]{40}$/i.test(String(manifest.toolIdentity?.[field]?.gitBlob || ""))) {
       errors.push(`manifest.toolIdentity.${field}.gitBlob`);
     }
@@ -809,6 +769,34 @@ async function validateRawManifest(rawRoot, manifest, actualRawFiles, loadErrors
       if (!artifactDescriptorsEqual(manifest.toolIdentity?.[field], block?.identity?.artifacts?.[field])) {
         errors.push(`manifest.toolIdentity.${field}.${block?.id || "unknown-block"}`);
       }
+    }
+  }
+  const binaryDescriptor = manifest.toolIdentity?.jobRunnerBinary;
+  if (binaryDescriptor?.path !== WINDOWS_JOB_RUNNER_EVIDENCE_PATH) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.path");
+  }
+  if (!/^[a-f0-9]{64}$/i.test(String(binaryDescriptor?.sha256 || ""))) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.sha256");
+  }
+  if (!Number.isInteger(binaryDescriptor?.bytes) || binaryDescriptor.bytes <= 0) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.bytes");
+  }
+  const binaryEntry = entries.get(WINDOWS_JOB_RUNNER_EVIDENCE_PATH);
+  if (binaryEntry?.sha256 !== binaryDescriptor?.sha256) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.evidence.sha256");
+  }
+  if (binaryEntry?.bytes !== binaryDescriptor?.bytes) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.evidence.bytes");
+  }
+  if (!binaryDescriptorsEqual(binaryDescriptor, jobRunnerPreparation?.binary)) {
+    errors.push("manifest.toolIdentity.jobRunnerBinary.preparation");
+  }
+  if (!artifactDescriptorsEqual(manifest.toolIdentity?.jobRunnerSource, jobRunnerPreparation?.source)) {
+    errors.push("manifest.toolIdentity.jobRunnerSource.preparation");
+  }
+  for (const block of blocks) {
+    if (!binaryDescriptorsEqual(binaryDescriptor, block?.identity?.artifacts?.jobRunnerBinary)) {
+      errors.push(`manifest.toolIdentity.jobRunnerBinary.${block?.id || "unknown-block"}`);
     }
   }
   for (const side of ["A", "B"]) {
@@ -839,6 +827,11 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
   const resolvedRoot = normalizePath(rawRoot);
   const loadErrors = [];
   const preregistration = await readRequiredJson(resolvedRoot, "preregistration.json", loadErrors);
+  const jobRunnerPreparation = await readRequiredJson(
+    resolvedRoot,
+    "harness/job-runner-preparation.json",
+    loadErrors,
+  );
   const manifest = await readRequiredJson(resolvedRoot, "raw-sha256-manifest.json", loadErrors);
   const allFiles = await walkFiles(path.join(resolvedRoot, "blocks"));
   const actualRawFiles = allFiles.filter((filePath) => /[\\/]raw[\\/].+\.json$/i.test(filePath));
@@ -873,6 +866,7 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
       command: await readRequiredJson(resolvedRoot, `${prefix}/command.json`, loadErrors),
       baseline: await readRequiredJson(resolvedRoot, `${prefix}/baseline.json`, loadErrors),
       cleanup: await readRequiredJson(resolvedRoot, `${prefix}/cleanup.json`, loadErrors),
+      jobObject: await readRequiredJson(resolvedRoot, `${prefix}/job-object.json`, loadErrors),
       blockResult: await readRequiredJson(resolvedRoot, `${prefix}/block-result.json`, loadErrors),
       rawRuns,
     });
@@ -885,8 +879,14 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
     loadErrors,
     blocks,
     analyzerToolIdentity,
+    jobRunnerPreparation,
   );
-  return analyzeWilliamsCrossoverEvidence({ preregistration, blocks, manifestValidation });
+  return analyzeWilliamsCrossoverEvidence({
+    preregistration,
+    jobRunnerPreparation,
+    blocks,
+    manifestValidation,
+  });
 }
 
 export function buildWilliamsMarkdown(report) {
@@ -980,12 +980,14 @@ async function collectHarnessArtifacts(options) {
     analyzer: await trackedArtifactDescriptor(candidate, ANALYZER_PATH),
     policy: await trackedArtifactDescriptor(candidate, POLICY_PATH),
     windowsRuntime: await trackedArtifactDescriptor(candidate, WINDOWS_RUNTIME_PATH),
+    jobRunnerSource: await trackedArtifactDescriptor(candidate, JOB_RUNNER_SOURCE_PATH),
   };
   const current = await buildCurrentHarnessArtifacts();
   for (const [field, relativePath] of [
     ["analyzer", ANALYZER_PATH],
     ["policy", POLICY_PATH],
     ["windowsRuntime", WINDOWS_RUNTIME_PATH],
+    ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
   ]) {
     if (!artifactDescriptorsEqual(current[field], artifacts[field])) {
       throw new WilliamsInvalidExperimentError(
@@ -997,26 +999,62 @@ async function collectHarnessArtifacts(options) {
   return artifacts;
 }
 
+export function requireWilliamsJobRunnerReady(preparation) {
+  if (preparation?.status !== "available") {
+    throw new WilliamsInvalidExperimentError(
+      `Windows Job runner preparation failed (${preparation?.status || "missing"}): ${preparation?.error || "unknown error"}`,
+      `job-runner-${preparation?.status || "missing"}`,
+    );
+  }
+  return preparation;
+}
+
 async function executeExperiment(options) {
   validateExecuteOptions(options);
   validateMeasurementWorktree(options.controlWorktree, options.controlHead, "control/A");
   validateMeasurementWorktree(options.candidateWorktree, options.candidateHead, "candidate/B");
   const harnessArtifacts = await collectHarnessArtifacts(options);
   await validateWilliamsOutputPolicy(options, { reserveRawRoot: true, allowReportOverwrite: false });
-  const plan = buildWilliamsExecutionPlan(options);
-  const preregistration = {
-    ...plan.preregistration,
-    generatedAt: new Date().toISOString(),
-  };
-  await writeJson(path.join(options.rawRoot, "preregistration.json"), preregistration);
-  for (const block of plan.blocks) {
-    const result = await runBlock(block, harnessArtifacts);
-    if (!result.complete) break;
+  const preparationResult = await prepareWindowsJobRunner({
+    evidenceDirectory: path.join(options.rawRoot, "harness", "job-runner"),
+    evidenceBinaryPath: path.join(options.rawRoot, WINDOWS_JOB_RUNNER_EVIDENCE_PATH),
+    evidenceBinaryDescriptorPath: WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
+  });
+  await writeJson(path.join(options.rawRoot, "harness", "job-runner-preparation.json"), {
+    schemaVersion: 1,
+    status: preparationResult.status,
+    error: preparationResult.error || null,
+    compiledAt: preparationResult.compiledAt || null,
+    capabilityProbedAt: preparationResult.capabilityProbedAt || null,
+    source: harnessArtifacts.jobRunnerSource,
+    binary: preparationResult.binary || null,
+    capabilityCommand: preparationResult.capabilityCommand || null,
+    capabilityEvidence: preparationResult.capabilityEvidence || preparationResult.probeResult?.jobEvidence || null,
+  });
+  const preparation = requireWilliamsJobRunnerReady(preparationResult);
+  harnessArtifacts.jobRunnerBinary = preparation.binary;
+  try {
+    const plan = buildWilliamsExecutionPlan({
+      ...options,
+      jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
+    });
+    const preregistration = {
+      ...plan.preregistration,
+      generatedAt: new Date().toISOString(),
+    };
+    await writeJson(path.join(options.rawRoot, "preregistration.json"), preregistration);
+    for (const block of plan.blocks) {
+      const result = await runBlock(block, harnessArtifacts, preparation);
+      if (!result.complete) break;
+    }
+    await buildWilliamsRawManifest(options.rawRoot, harnessArtifacts);
+    const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot);
+    await writeReport(options, report, { allowOverwrite: false });
+    return report;
+  } finally {
+    await preparation.cleanup();
   }
-  await buildWilliamsRawManifest(options.rawRoot, harnessArtifacts);
-  const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot);
-  await writeReport(options, report, { allowOverwrite: false });
-  return report;
 }
 
 export async function runWilliamsCli(options) {

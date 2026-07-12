@@ -556,3 +556,6 @@
 
 ### Python source-scan 合同要有真实入口
 - 把 Python boundary contract 放进 verification metadata 的 `sourceRefs` 只能帮助 selector 识别文件；还要同步 package script、route registry 和 verify-core plan 断言，确保该 contract 真实执行。
+
+### Windows 子进程树隔离要先验证当前用户权限
+- WMI 进程事件订阅可能在普通用户令牌下直接返回权限错误；Windows 性能实验应在测量前编译并探测 Job Object helper，通过 suspended root、assign-before-resume、kill-on-close 和 fail-closed 清理证据实现可审计的整棵进程树隔离。

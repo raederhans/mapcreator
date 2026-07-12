@@ -1,5 +1,27 @@
+import crypto from "node:crypto";
+import { constants as fsConstants } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
 import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+export const WINDOWS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
+export const WINDOWS_JOB_RUNNER_SOURCE_PATH = fileURLToPath(
+  new URL("./williams_crossover_windows_job_runner.cs", import.meta.url),
+);
+
+const WINDOWS_JOB_RUNNER_BINARY_NAME = "williams_crossover_windows_job_runner.exe";
+const WINDOWS_JOB_RUNNER_DESCRIPTOR_PATH = `runtime-compiled/${WINDOWS_JOB_RUNNER_BINARY_NAME}`;
+export const WINDOWS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
+const DEFAULT_JOB_RUNNER_BUILD_ROOT = path.resolve(
+  path.dirname(WINDOWS_JOB_RUNNER_SOURCE_PATH),
+  "..",
+  "..",
+  ".runtime",
+  "tmp",
+  "williams-job-runner",
+);
 
 const WINDOWS_COUNTER_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
@@ -97,35 +119,6 @@ $ErrorActionPreference = 'Stop'
 ) | ConvertTo-Json -Depth 5 -Compress
 `;
 
-const WINDOWS_PROCESS_START_WATCHER_SCRIPT = String.raw`
-$ErrorActionPreference = 'Stop'
-$sourceIdentifier = 'ScenarioForgeWilliamsProcessStart'
-Register-CimIndicationEvent -Query 'SELECT * FROM Win32_ProcessStartTrace' -SourceIdentifier $sourceIdentifier -ErrorAction Stop | Out-Null
-[Console]::Out.WriteLine('{"type":"ready"}')
-[Console]::Out.Flush()
-try {
-  while ($true) {
-    $eventRecord = Wait-Event -SourceIdentifier $sourceIdentifier -Timeout 1
-    if ($null -eq $eventRecord) { continue }
-    $processEvent = $eventRecord.SourceEventArgs.NewEvent
-    [pscustomobject]@{
-      type = 'process-start'
-      ProcessId = [int]$processEvent.ProcessID
-      ParentProcessId = [int]$processEvent.ParentProcessID
-      Name = [string]$processEvent.ProcessName
-    } | ConvertTo-Json -Compress | ForEach-Object {
-      [Console]::Out.WriteLine($_)
-      [Console]::Out.Flush()
-    }
-    Remove-Event -EventIdentifier $eventRecord.EventIdentifier -ErrorAction SilentlyContinue
-  }
-} finally {
-  Unregister-Event -SourceIdentifier $sourceIdentifier -ErrorAction SilentlyContinue
-}
-`;
-
-export const TASK_PROCESS_MONITOR_INTERVAL_MS = 200;
-
 function runPowerShell(script) {
   const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
     encoding: "utf8",
@@ -192,272 +185,358 @@ export function collectWindowsTcpConnections({ platform = process.platform } = {
   }));
 }
 
-export async function startWindowsProcessStartWatcher({
-  platform = process.platform,
-  onProcessStart = () => {},
-  onError = () => {},
-  startupTimeoutMs = 5000,
-  spawnFn = spawn,
-} = {}) {
-  if (platform !== "win32") throw new Error(`Windows process-start watcher required; platform=${platform}`);
-  return new Promise((resolve, reject) => {
-    const child = spawnFn(
-      "powershell.exe",
-      ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_PROCESS_START_WATCHER_SCRIPT],
-      { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
-    );
-    let ready = false;
-    let stopped = false;
-    let stdoutBuffer = "";
-    let stderr = "";
-    const startupTimer = setTimeout(() => {
-      if (ready) return;
-      terminateTaskOwnedProcess(child.pid);
-      reject(new Error(`Windows process-start watcher readiness timed out after ${startupTimeoutMs}ms`));
-    }, startupTimeoutMs);
+function base64Line(value) {
+  return Buffer.from(String(value ?? ""), "utf8").toString("base64");
+}
 
-    function handleLine(line) {
-      if (!line.trim()) return;
-      let payload;
-      try {
-        payload = JSON.parse(line);
-      } catch (error) {
-        onError(new Error(`Windows process-start watcher emitted invalid JSON: ${line}`));
-        return;
-      }
-      if (payload?.type === "ready" && !ready) {
-        ready = true;
-        clearTimeout(startupTimer);
-        resolve(Object.freeze({
-          pid: child.pid,
-          stop() {
-            if (stopped) return { pid: child.pid, attempted: false, exitCode: 0, stderr };
-            stopped = true;
-            return { ...terminateTaskOwnedProcess(child.pid), watcherStderr: stderr };
-          },
-        }));
-        return;
-      }
-      if (payload?.type === "process-start") onProcessStart(payload);
+function sha256(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+function encodePowerShellCommand(script) {
+  return Buffer.from(script, "utf16le").toString("base64");
+}
+
+export class WilliamsJobRunnerTransportError extends Error {
+  constructor(message, code, cause = null) {
+    super(message, cause ? { cause } : undefined);
+    this.name = "WilliamsJobRunnerTransportError";
+    this.code = code;
+  }
+}
+
+export function validateJobRunnerEvidence(evidence, { command = null, cwd = null } = {}) {
+  const errors = [];
+  if (!evidence || typeof evidence !== "object") return ["job-evidence.missing"];
+  if (evidence.schemaVersion !== 1) errors.push("job-evidence.schemaVersion");
+  if (evidence.protocolId !== WINDOWS_JOB_RUNNER_PROTOCOL_ID) errors.push("job-evidence.protocolId");
+  if (evidence.provider !== "windows-job-object") errors.push("job-evidence.provider");
+  if (evidence.status !== "complete") errors.push("job-evidence.status");
+  if (evidence.createSuspended !== true) errors.push("job-evidence.createSuspended");
+  if (evidence.createNoWindow !== true) errors.push("job-evidence.createNoWindow");
+  if (evidence.assignedBeforeResume !== true) errors.push("job-evidence.assignedBeforeResume");
+  if (evidence.rootInJobBeforeResume !== true) errors.push("job-evidence.rootInJobBeforeResume");
+  if (evidence.killOnJobClose !== true) errors.push("job-evidence.killOnJobClose");
+  if (evidence.breakawayAllowed !== false) errors.push("job-evidence.breakawayAllowed");
+  if (evidence.jobCloseSucceeded !== true) errors.push("job-evidence.jobCloseSucceeded");
+  if (evidence.rootTerminationConfirmed !== true) errors.push("job-evidence.rootTerminationConfirmed");
+  if (evidence.cleanupValid !== true) errors.push("job-evidence.cleanupValid");
+  if (!Array.isArray(evidence.remainingPids) || evidence.remainingPids.length !== 0) {
+    errors.push("job-evidence.remainingPids");
+  }
+  if (!Array.isArray(evidence.unverifiedPids) || evidence.unverifiedPids.length !== 0) {
+    errors.push("job-evidence.unverifiedPids");
+  }
+  if (evidence.timedOut === true && evidence.terminateJobSucceeded !== true) {
+    errors.push("job-evidence.terminateJobSucceeded");
+  }
+  if (!Number.isInteger(evidence.rootExitCode)) errors.push("job-evidence.rootExitCode");
+  if (command) {
+    if (evidence.commandExecutablePath !== command.bin) errors.push("job-evidence.commandExecutablePath");
+    if (evidence.commandWorkingDirectory !== cwd) errors.push("job-evidence.commandWorkingDirectory");
+    if (
+      !Array.isArray(evidence.commandArguments)
+      || evidence.commandArguments.length !== (command.args || []).length
+      || evidence.commandArguments.some((argument, index) => argument !== command.args[index])
+    ) {
+      errors.push("job-evidence.commandArguments");
     }
+  }
+  return errors;
+}
 
-    child.stdout.on("data", (chunk) => {
-      stdoutBuffer += chunk.toString("utf8");
-      const lines = stdoutBuffer.split(/\r?\n/);
-      stdoutBuffer = lines.pop() || "";
-      lines.forEach(handleLine);
-    });
-    child.stderr.on("data", (chunk) => { stderr += chunk.toString("utf8"); });
-    child.on("error", (error) => {
-      clearTimeout(startupTimer);
-      if (!ready) reject(error);
-      else onError(error);
-    });
-    child.on("close", (code) => {
-      clearTimeout(startupTimer);
-      if (!ready) reject(new Error(`Windows process-start watcher exited ${code}: ${stderr.trim()}`));
-      else if (!stopped) onError(new Error(`Windows process-start watcher exited ${code}: ${stderr.trim()}`));
-    });
+export function encodeWindowsJobRunnerSpec({
+  command,
+  executablePath = command?.bin,
+  workingDirectory,
+  cwd = workingDirectory,
+  evidencePath,
+  timeoutMs,
+  args = command?.args || [],
+} = {}) {
+  if (!String(executablePath || "").trim()) throw new TypeError("executablePath is required");
+  if (!String(cwd || "").trim()) throw new TypeError("workingDirectory is required");
+  if (!String(evidencePath || "").trim()) throw new TypeError("evidencePath is required");
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) throw new TypeError("timeoutMs must be a positive integer");
+  if (!Array.isArray(args)) throw new TypeError("args must be an array");
+  return [
+    WINDOWS_JOB_RUNNER_PROTOCOL_ID,
+    base64Line(executablePath),
+    base64Line(cwd),
+    base64Line(evidencePath),
+    String(timeoutMs),
+    String(args.length),
+    ...args.map(base64Line),
+    "",
+  ].join("\n");
+}
+
+export async function compileWindowsJobRunner({
+  platform = process.platform,
+  sourcePath = WINDOWS_JOB_RUNNER_SOURCE_PATH,
+  buildRoot = DEFAULT_JOB_RUNNER_BUILD_ROOT,
+  spawnSyncFn = spawnSync,
+} = {}) {
+  if (platform !== "win32") throw new Error(`Windows Job Object capability required; platform=${platform}`);
+  await fs.mkdir(buildRoot, { recursive: true });
+  const buildDirectory = await fs.mkdtemp(path.join(buildRoot, "build-"));
+  const executablePath = path.join(buildDirectory, WINDOWS_JOB_RUNNER_BINARY_NAME);
+  const sourceEncoded = base64Line(path.resolve(sourcePath));
+  const outputEncoded = base64Line(executablePath);
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    `$source = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${sourceEncoded}'))`,
+    `$output = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${outputEncoded}'))`,
+    "Add-Type -Path $source -OutputAssembly $output -OutputType ConsoleApplication -ErrorAction Stop",
+  ].join("\n");
+  const result = spawnSyncFn(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-EncodedCommand", encodePowerShellCommand(script)],
+    { encoding: "utf8", windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (result.error || result.status !== 0) {
+    await fs.rm(buildDirectory, { recursive: true, force: true });
+    throw result.error || new Error(
+      `Windows Job runner compilation exited ${result.status}: ${String(result.stderr || result.stdout || "").trim()}`,
+    );
+  }
+  const binary = await fs.readFile(executablePath);
+  return Object.freeze({
+    status: "compiled",
+    compiledAt: new Date().toISOString(),
+    buildDirectory,
+    executablePath,
+    binary: Object.freeze({
+      path: WINDOWS_JOB_RUNNER_DESCRIPTOR_PATH,
+      sha256: sha256(binary),
+      bytes: binary.length,
+    }),
+    async cleanup() {
+      await fs.rm(buildDirectory, { recursive: true, force: true });
+    },
   });
 }
 
-function normalizedPidSet(values = []) {
-  return new Set(values.map(Number).filter((pid) => Number.isInteger(pid) && pid > 0));
-}
-
-export function expandTaskOwnedProcessIds(processes = [], knownOwnedPids = []) {
-  const owned = normalizedPidSet(knownOwnedPids);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const processEntry of processes) {
-      const pid = Number(processEntry?.ProcessId);
-      const parentPid = Number(processEntry?.ParentProcessId);
-      if (!Number.isInteger(pid) || pid <= 0 || owned.has(pid) || !owned.has(parentPid)) continue;
-      owned.add(pid);
-      changed = true;
-    }
-  }
-  return [...owned];
-}
-
-export function buildTaskOwnedProcessTree(processes = [], rootPids = [], knownOwnedPids = []) {
-  const roots = [...normalizedPidSet(rootPids)];
-  const byParent = new Map();
-  const byPid = new Map();
-  for (const processEntry of processes) {
-    const pid = Number(processEntry?.ProcessId);
-    const parentPid = Number(processEntry?.ParentProcessId);
-    if (!Number.isInteger(pid) || pid <= 0) continue;
-    const normalized = { ...processEntry, ProcessId: pid, ParentProcessId: parentPid };
-    byPid.set(pid, normalized);
-    if (!byParent.has(parentPid)) byParent.set(parentPid, []);
-    byParent.get(parentPid).push(normalized);
-  }
-  const expandedOwnedPids = expandTaskOwnedProcessIds(processes, [...knownOwnedPids, ...roots]);
-  const depthByPid = new Map(roots.map((pid) => [pid, 0]));
-  let depthChanged = true;
-  while (depthChanged) {
-    depthChanged = false;
-    for (const processEntry of processes) {
-      const pid = Number(processEntry?.ProcessId);
-      const parentPid = Number(processEntry?.ParentProcessId);
-      if (!expandedOwnedPids.includes(pid) || !depthByPid.has(parentPid) || depthByPid.has(pid)) continue;
-      depthByPid.set(pid, depthByPid.get(parentPid) + 1);
-      depthChanged = true;
-    }
-  }
-  const queue = expandedOwnedPids.map((pid) => ({ pid, depth: depthByPid.get(pid) ?? 0 }));
-  const seen = new Set();
-  const owned = [];
-  while (queue.length) {
-    const current = queue.shift();
-    if (seen.has(current.pid)) continue;
-    seen.add(current.pid);
-    const processEntry = byPid.get(current.pid);
-    owned.push({
-      ProcessId: current.pid,
-      ParentProcessId: processEntry?.ParentProcessId ?? null,
-      Name: processEntry?.Name ?? null,
-      ExecutablePath: processEntry?.ExecutablePath ?? null,
-      CommandLine: processEntry?.CommandLine ?? null,
-      depth: current.depth,
-      root: roots.includes(current.pid),
-    });
-    for (const child of byParent.get(current.pid) || []) {
-      queue.push({ pid: child.ProcessId, depth: current.depth + 1 });
-    }
-  }
-  return {
-    rootPids: roots,
-    pids: owned.map((entry) => entry.ProcessId),
-    processes: owned,
-  };
-}
-
-export function createTaskOwnedProcessMonitor({
-  snapshotProvider = collectWindowsProcessSnapshot,
-  intervalMs = TASK_PROCESS_MONITOR_INTERVAL_MS,
-  delayFn = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+export async function runWindowsJobCommand(command, {
+  preparedRunner,
+  cwd,
+  stdoutPath,
+  stderrPath,
+  evidencePath,
+  timeoutMs,
+  spawnFn = spawn,
 } = {}) {
-  const rootPids = new Set();
-  const ownedPids = new Set();
-  const observedProcesses = new Map();
-  const ownedProcesses = new Map();
-  const captureErrors = [];
-  function recomputeOwnership() {
-    const processes = [...observedProcesses.values()];
-    const expanded = expandTaskOwnedProcessIds(processes, [...ownedPids, ...rootPids]);
-    expanded.forEach((pid) => ownedPids.add(pid));
-    for (const processEntry of processes) {
-      const pid = Number(processEntry?.ProcessId);
-      if (ownedPids.has(pid)) ownedProcesses.set(pid, { ...processEntry, ProcessId: pid });
-    }
+  if (preparedRunner?.status !== "available" && preparedRunner?.status !== "compiled") {
+    throw new Error(`Windows Job runner is not prepared: ${preparedRunner?.status || "missing"}`);
   }
-
-  function ingest(processes) {
-    try {
-      for (const processEntry of processes) {
-        const pid = Number(processEntry?.ProcessId);
-        if (Number.isInteger(pid) && pid > 0) observedProcesses.set(pid, { ...processEntry, ProcessId: pid });
-      }
-      recomputeOwnership();
-    } catch (error) {
-      captureErrors.push(String(error?.stack || error?.message || error));
-    }
-  }
-
-  function sample() {
-    try {
-      ingest(snapshotProvider());
-    } catch (error) {
-      captureErrors.push(String(error?.stack || error?.message || error));
-    }
-  }
-
-  function recordCaptureError(error) {
-    captureErrors.push(String(error?.stack || error?.message || error));
-  }
-
-  function registerRoot(pid) {
-    const numericPid = Number(pid);
-    if (!Number.isInteger(numericPid) || numericPid <= 0) return;
-    rootPids.add(numericPid);
-    ownedPids.add(numericPid);
-    recomputeOwnership();
-  }
-
-  function snapshot() {
-    const roots = [...rootPids];
-    const pids = [...ownedPids];
-    const processes = pids.map((pid) => ({
-      ProcessId: pid,
-      ParentProcessId: ownedProcesses.get(pid)?.ParentProcessId ?? null,
-      Name: ownedProcesses.get(pid)?.Name ?? null,
-      ExecutablePath: ownedProcesses.get(pid)?.ExecutablePath ?? null,
-      CommandLine: ownedProcesses.get(pid)?.CommandLine ?? null,
-      depth: 0,
-      root: rootPids.has(pid),
-    }));
-    for (const processEntry of processes) {
-      let currentParent = processEntry.ParentProcessId;
-      const visited = new Set();
-      while (ownedPids.has(currentParent) && !visited.has(currentParent)) {
-        visited.add(currentParent);
-        processEntry.depth += 1;
-        currentParent = ownedProcesses.get(currentParent)?.ParentProcessId ?? null;
-      }
-    }
-    return {
-      rootPids: roots,
-      pids,
-      processes,
-      captureStatus: captureErrors.length ? "collection-error" : "available",
-      captureErrors: [...captureErrors],
-    };
-  }
-
-  async function stop({ finalSamples = 3 } = {}) {
-    for (let index = 0; index < finalSamples; index += 1) {
-      sample();
-      if (index + 1 < finalSamples) await delayFn(intervalMs);
-    }
-    return snapshot();
-  }
-
-  return Object.freeze({ ingest, recordCaptureError, registerRoot, sample, snapshot, stop });
-}
-
-export function isProcessRunning(pid) {
-  const numericPid = Number(pid);
-  if (!Number.isInteger(numericPid) || numericPid <= 0) return false;
-  try {
-    process.kill(numericPid, 0);
-    return true;
-  } catch (error) {
-    return error?.code === "EPERM";
-  }
-}
-
-export function terminateTaskOwnedProcess(pid, { platform = process.platform } = {}) {
-  if (!isProcessRunning(pid)) return { pid: Number(pid), attempted: false, exitCode: 0, stdout: "", stderr: "" };
-  if (platform === "win32") {
-    const result = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-      encoding: "utf8",
+  await Promise.all([
+    fs.mkdir(path.dirname(stdoutPath), { recursive: true }),
+    fs.mkdir(path.dirname(stderrPath), { recursive: true }),
+    fs.mkdir(path.dirname(evidencePath), { recursive: true }),
+  ]);
+  await fs.rm(evidencePath, { force: true });
+  return new Promise((resolve, reject) => {
+    const child = spawnFn(preparedRunner.executablePath, [], {
+      cwd,
+      env: process.env,
       windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"],
     });
-    return {
-      pid: Number(pid),
-      attempted: true,
-      exitCode: result.status ?? 1,
-      stdout: String(result.stdout || ""),
-      stderr: String(result.stderr || result.error?.message || ""),
+    const stdout = [];
+    const stderr = [];
+    let settled = false;
+    let outerTimedOut = false;
+    let guardTimer = null;
+    child.stdout?.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
+    child.stderr?.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
+
+    const finish = async ({ code, signal, error = null }) => {
+      if (settled) return;
+      settled = true;
+      try {
+        if (guardTimer) clearTimeout(guardTimer);
+        const stdoutBuffer = Buffer.concat(stdout);
+        const stderrBuffer = Buffer.concat(stderr);
+        try {
+          await fs.writeFile(stdoutPath, stdoutBuffer);
+          await fs.writeFile(
+            stderrPath,
+            error ? String(error?.stack || error?.message || error) : stderrBuffer,
+          );
+        } catch (writeError) {
+          throw new WilliamsJobRunnerTransportError(
+            `Windows Job runner output write failed: ${String(writeError?.message || writeError)}`,
+            "job-runner-output-write-error",
+            writeError,
+          );
+        }
+        if (error instanceof WilliamsJobRunnerTransportError) throw error;
+        let evidence = null;
+        let evidenceError = null;
+        try {
+          evidence = JSON.parse(await fs.readFile(evidencePath, "utf8"));
+        } catch (readError) {
+          evidenceError = String(readError?.message || readError);
+        }
+        const evidenceErrors = validateJobRunnerEvidence(evidence, { command, cwd });
+        if (evidenceError) evidenceErrors.unshift(`job-evidence.read:${evidenceError}`);
+        if (code !== 0) evidenceErrors.unshift(`job-runner.exitCode:${code}`);
+        if (outerTimedOut) evidenceErrors.unshift("job-runner.outer-timeout");
+        const rootPid = Number(evidence?.rootPid);
+        const jobPids = [...new Set([
+          ...(Array.isArray(evidence?.jobProcessIdsAtRootExit) ? evidence.jobProcessIdsAtRootExit : []),
+          ...(Number.isInteger(rootPid) && rootPid > 0 ? [rootPid] : []),
+        ].map(Number).filter((pid) => Number.isInteger(pid) && pid > 0))];
+        const containmentAvailable = evidenceErrors.length === 0;
+        resolve({
+          pid: Number.isInteger(rootPid) && rootPid > 0 ? rootPid : null,
+          exitCode: containmentAvailable && Number.isInteger(evidence?.rootExitCode)
+            ? evidence.rootExitCode
+            : 3,
+          signal,
+          timedOut: evidence?.timedOut === true || outerTimedOut,
+          stdoutPath,
+          stderrPath,
+          jobEvidencePath: evidencePath,
+          jobEvidence: evidence,
+          jobRunnerBinary: preparedRunner.binary,
+          containmentStatus: containmentAvailable ? "available" : "invalid",
+          containmentErrors: evidenceErrors,
+          taskOwnedTree: {
+            rootPids: Number.isInteger(rootPid) && rootPid > 0 ? [rootPid] : [],
+            pids: jobPids,
+            processes: jobPids.map((pid) => ({
+              ProcessId: pid,
+              ParentProcessId: null,
+              Name: null,
+              ExecutablePath: null,
+              CommandLine: null,
+              depth: pid === rootPid ? 0 : 1,
+              root: pid === rootPid,
+            })),
+            captureStatus: containmentAvailable ? "available" : "collection-error",
+            captureErrors: evidenceErrors,
+            jobEvidence: evidence,
+          },
+          error: error ? String(error?.message || error) : evidenceErrors[0],
+        });
+      } catch (finishError) {
+        reject(finishError);
+      }
     };
+    child.on("close", (code, signal) => { void finish({ code, signal }); });
+    child.on("error", (error) => { void finish({ code: 1, signal: null, error }); });
+    child.stdin?.once("error", (stdinError) => {
+      child.kill();
+      void finish({
+        code: 1,
+        signal: null,
+        error: new WilliamsJobRunnerTransportError(
+          `Windows Job runner stdin failed: ${String(stdinError?.message || stdinError)}`,
+          "job-runner-stdin-error",
+          stdinError,
+        ),
+      });
+    });
+    guardTimer = setTimeout(() => {
+      outerTimedOut = true;
+      child.kill();
+    }, timeoutMs + 10_000);
+    try {
+      child.stdin?.end(encodeWindowsJobRunnerSpec({
+        executablePath: command.bin,
+        workingDirectory: cwd,
+        evidencePath,
+        timeoutMs,
+        args: command.args,
+      }));
+    } catch (stdinError) {
+      child.kill();
+      void finish({
+        code: 1,
+        signal: null,
+        error: new WilliamsJobRunnerTransportError(
+          `Windows Job runner stdin failed: ${String(stdinError?.message || stdinError)}`,
+          "job-runner-stdin-error",
+          stdinError,
+        ),
+      });
+    }
+  });
+}
+
+export async function prepareWindowsJobRunner({
+  platform = process.platform,
+  buildRoot = DEFAULT_JOB_RUNNER_BUILD_ROOT,
+  evidenceDirectory = buildRoot,
+  evidenceBinaryPath = null,
+  evidenceBinaryDescriptorPath = WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
+  compileFn = compileWindowsJobRunner,
+  runFn = runWindowsJobCommand,
+} = {}) {
+  if (platform !== "win32") {
+    return Object.freeze({ status: "required-capability-missing", error: `platform=${platform}` });
   }
+  let compiled;
   try {
-    process.kill(pid, "SIGTERM");
-    return { pid: Number(pid), attempted: true, exitCode: 0, stdout: "", stderr: "" };
-  } catch (_error) {
-    return { pid: Number(pid), attempted: true, exitCode: 1, stdout: "", stderr: String(_error?.message || _error) };
+    compiled = await compileFn({ platform, buildRoot });
+  } catch (error) {
+    return Object.freeze({ status: "compile-error", error: String(error?.stack || error?.message || error) });
+  }
+  let preparedExecutablePath = compiled.executablePath;
+  let preparedBinary = compiled.binary;
+  try {
+    if (evidenceBinaryPath) {
+      await fs.mkdir(path.dirname(evidenceBinaryPath), { recursive: true });
+      await fs.copyFile(compiled.executablePath, evidenceBinaryPath, fsConstants.COPYFILE_EXCL);
+      const evidenceBinary = await fs.readFile(evidenceBinaryPath);
+      preparedExecutablePath = evidenceBinaryPath;
+      preparedBinary = Object.freeze({
+        path: evidenceBinaryDescriptorPath,
+        sha256: sha256(evidenceBinary),
+        bytes: evidenceBinary.length,
+      });
+    }
+    const capabilityCommand = Object.freeze({
+      bin: process.execPath,
+      args: Object.freeze(["-e", "process.stdout.write('williams-job-runner-ready')"]),
+      cwd: path.dirname(WINDOWS_JOB_RUNNER_SOURCE_PATH),
+    });
+    const prepared = {
+      ...compiled,
+      executablePath: preparedExecutablePath,
+      binary: preparedBinary,
+      status: "available",
+    };
+    const probeResult = await runFn(
+      capabilityCommand,
+      {
+        preparedRunner: prepared,
+        cwd: capabilityCommand.cwd,
+        stdoutPath: path.join(evidenceDirectory, "capability.stdout.log"),
+        stderrPath: path.join(evidenceDirectory, "capability.stderr.log"),
+        evidencePath: path.join(evidenceDirectory, "capability.job.json"),
+        timeoutMs: 10_000,
+      },
+    );
+    if (probeResult.containmentStatus !== "available" || probeResult.exitCode !== 0) {
+      await compiled.cleanup();
+      return Object.freeze({
+        status: "capability-error",
+        error: probeResult.error || `probe exit ${probeResult.exitCode}`,
+        probeResult,
+      });
+    }
+    return Object.freeze({
+      ...prepared,
+      compiledAt: compiled.compiledAt,
+      capabilityProbedAt: new Date().toISOString(),
+      capabilityCommand,
+      capabilityEvidence: probeResult.jobEvidence,
+      capabilityEvidencePath: probeResult.jobEvidencePath,
+    });
+  } catch (error) {
+    await compiled.cleanup();
+    return Object.freeze({ status: "ready-error", error: String(error?.stack || error?.message || error) });
   }
 }

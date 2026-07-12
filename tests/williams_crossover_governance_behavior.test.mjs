@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { EventEmitter } from "node:events";
 import os from "node:os";
 import path from "node:path";
-import { PassThrough } from "node:stream";
 import test from "node:test";
 
 import {
@@ -23,23 +22,20 @@ import {
   deriveWilliamsQuietWindow,
   getWilliamsErrorExitCode,
   parseWilliamsArgs,
+  requireWilliamsJobRunnerReady,
   resolveServerMetadataProbeTarget,
   runWilliamsCli,
   validateMeasurementSnapshot,
   validateWilliamsOutputPolicy,
   WilliamsInvalidExperimentError,
 } from "../tools/perf/run_williams_crossover.mjs";
-import {
-  buildTaskOwnedProcessTree,
-  createTaskOwnedProcessMonitor,
-  expandTaskOwnedProcessIds,
-  startWindowsProcessStartWatcher,
-} from "../tools/perf/williams_crossover_windows_runtime.mjs";
 
 const CONTROL_HEAD = "a".repeat(40);
 const CANDIDATE_HEAD = "b".repeat(40);
 const CONTROL_WORKTREE = "C:\\perf\\control";
 const CANDIDATE_WORKTREE = "C:\\perf\\candidate";
+const JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
+const JOB_RUNNER_FIXTURE_BYTES = Buffer.from("MZ-SCENARIO-FORGE-WILLIAMS-JOB-RUNNER-FIXTURE", "utf8");
 const HASH = "c".repeat(64);
 const URL_QUERY = Object.freeze({
   render_profile: "balanced",
@@ -124,6 +120,69 @@ function artifactDescriptor(relativePath = "artifact") {
   return { path: relativePath, gitBlob: "d".repeat(40), lfNormalizedSha256: HASH };
 }
 
+function jobRunnerBinaryDescriptor() {
+  return {
+    path: JOB_RUNNER_EVIDENCE_PATH,
+    sha256: crypto.createHash("sha256").update(JOB_RUNNER_FIXTURE_BYTES).digest("hex"),
+    bytes: JOB_RUNNER_FIXTURE_BYTES.length,
+  };
+}
+
+function jobObjectEvidence(rootPid = 4242, {
+  command = { bin: process.execPath, args: ["--version"] },
+  cwd = "C:\\perf\\runner",
+} = {}) {
+  return {
+    schemaVersion: 1,
+    protocolId: "SF_WILLIAMS_JOB_V1",
+    provider: "windows-job-object",
+    status: "complete",
+    rootPid,
+    rootExitCode: 0,
+    timedOut: false,
+    createSuspended: true,
+    createNoWindow: true,
+    assignedBeforeResume: true,
+    rootInJobBeforeResume: true,
+    killOnJobClose: true,
+    breakawayAllowed: false,
+    suspendedRootTerminatedOnAssignFailure: false,
+    jobCloseSucceeded: true,
+    terminateJobSucceeded: false,
+    rootTerminationConfirmed: true,
+    jobProcessIdsAtRootExit: [rootPid],
+    remainingPids: [],
+    unverifiedPids: [],
+    cleanupValid: true,
+    commandExecutablePath: command.bin,
+    commandWorkingDirectory: cwd,
+    commandArguments: [...command.args],
+    error: null,
+  };
+}
+
+function jobRunnerPreparation(source = artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs")) {
+  const capabilityCommand = {
+    bin: process.execPath,
+    args: ["-e", "process.stdout.write('williams-job-runner-ready')"],
+    cwd: "C:\\perf\\runner",
+  };
+  return {
+    schemaVersion: 1,
+    status: "available",
+    error: null,
+    compiledAt: "2026-07-10T23:59:00.000Z",
+    capabilityProbedAt: "2026-07-10T23:59:30.000Z",
+    source: structuredClone(source),
+    binary: jobRunnerBinaryDescriptor(),
+    capabilityCommand,
+    capabilityEvidence: jobObjectEvidence(3999, {
+      command: capabilityCommand,
+      cwd: capabilityCommand.cwd,
+    }),
+  };
+}
+
 function workloadIdentity(scenarioId) {
   return {
     scenarioId,
@@ -145,6 +204,8 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     controlWorktree: CONTROL_WORKTREE,
     candidateWorktree: CANDIDATE_WORKTREE,
     generatedAt: "2026-07-11T00:00:00.000Z",
+    jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+    jobRunnerBinary: jobRunnerBinaryDescriptor(),
   });
   const blocks = WILLIAMS_BLOCK_SEQUENCE.map((block) => {
     const expectedHead = block.side === "A" ? CONTROL_HEAD : CANDIDATE_HEAD;
@@ -178,6 +239,10 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         },
       };
     }
+    const command = {
+      bin: process.execPath,
+      args: ["tools/perf/run_baseline.mjs", "--mode", "baseline", "--scenarios", block.scenarioOrder.join(",")],
+    };
     return {
       ordinal: block.ordinal,
       id: block.id,
@@ -198,6 +263,8 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           analyzer: artifactDescriptor("tools/perf/run_williams_crossover.mjs"),
           policy: artifactDescriptor("tools/perf/williams_crossover_policy.mjs"),
           windowsRuntime: artifactDescriptor("tools/perf/williams_crossover_windows_runtime.mjs"),
+          jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+          jobRunnerBinary: jobRunnerBinaryDescriptor(),
         },
       },
       telemetry: {
@@ -217,7 +284,10 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         gitStatusStable: true,
         gitHeadStable: true,
         detachedStable: true,
+        jobObject: jobObjectEvidence(4000 + block.ordinal, { command, cwd }),
       },
+      jobObject: jobObjectEvidence(4000 + block.ordinal, { command, cwd }),
+      command,
       quietWindow: { status: "valid", valid: true },
       blockResult: { status: "complete", exitCode: 0 },
       baseline: {
@@ -246,6 +316,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
   });
   return {
     preregistration,
+    jobRunnerPreparation: jobRunnerPreparation(preregistration.workloadContract.processContainment.identity.source),
     blocks,
     manifestValidation: { status: "valid", errors: [], measuredRawFileCount: 32 },
   };
@@ -265,12 +336,25 @@ async function writeJson(filePath, payload) {
 async function materializeEvidenceRoot(evidence) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "williams-crossover-"));
   const currentToolIdentity = await buildCurrentHarnessArtifacts();
+  currentToolIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  evidence.preregistration.workloadContract.processContainment.identity = {
+    source: currentToolIdentity.jobRunnerSource,
+    binary: currentToolIdentity.jobRunnerBinary,
+  };
   for (const block of evidence.blocks) {
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
     block.identity.artifacts.windowsRuntime = currentToolIdentity.windowsRuntime;
+    block.identity.artifacts.jobRunnerSource = currentToolIdentity.jobRunnerSource;
+    block.identity.artifacts.jobRunnerBinary = currentToolIdentity.jobRunnerBinary;
   }
   await writeJson(path.join(root, "preregistration.json"), evidence.preregistration);
+  const preparation = jobRunnerPreparation(currentToolIdentity.jobRunnerSource);
+  preparation.binary = currentToolIdentity.jobRunnerBinary;
+  evidence.jobRunnerPreparation = preparation;
+  await writeJson(path.join(root, "harness", "job-runner-preparation.json"), preparation);
+  await fs.mkdir(path.join(root, "tooling"), { recursive: true });
+  await fs.writeFile(path.join(root, JOB_RUNNER_EVIDENCE_PATH), JOB_RUNNER_FIXTURE_BYTES);
   for (const block of evidence.blocks) {
     const directory = path.join(root, "blocks", block.id);
     await writeJson(path.join(directory, "block-metadata.json"), {
@@ -284,10 +368,11 @@ async function materializeEvidenceRoot(evidence) {
     await writeJson(path.join(directory, "telemetry-pre.json"), block.telemetry.pre);
     await writeJson(path.join(directory, "telemetry-post.json"), block.telemetry.post);
     await writeJson(path.join(directory, "quiet-window.json"), block.quietWindow);
-    await writeJson(path.join(directory, "command.json"), { bin: "node", args: [] });
+    await writeJson(path.join(directory, "command.json"), block.command);
     await writeJson(path.join(directory, "baseline.json"), block.baseline);
     await writeJson(path.join(directory, "cleanup.json"), block.cleanup);
     await writeJson(path.join(directory, "block-result.json"), block.blockResult);
+    await writeJson(path.join(directory, "job-object.json"), block.jobObject);
     for (const scenarioId of WILLIAMS_SCENARIOS) {
       for (let index = 0; index < block.rawRuns[scenarioId].length; index += 1) {
         await writeJson(
@@ -615,6 +700,57 @@ test("raw analyzer rebuilds an accepted report from exactly 32 measured files", 
   assert.equal(report.decision.status, "accepted");
 });
 
+test("raw analyzer requires the executed Job runner binary and recomputes its descriptor", async (t) => {
+  const missingRoot = await materializeEvidenceRoot(createEvidence());
+  const tamperedRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([missingRoot, tamperedRoot].map((root) => fs.rm(root, { recursive: true, force: true }))));
+
+  await fs.rm(path.join(missingRoot, JOB_RUNNER_EVIDENCE_PATH));
+  await fs.rm(path.join(missingRoot, "raw-sha256-manifest.json"));
+  const missingIdentity = await buildCurrentHarnessArtifacts();
+  missingIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await buildWilliamsRawManifest(missingRoot, missingIdentity);
+  const missingReport = await analyzeWilliamsCrossoverRawRoot(missingRoot);
+  assert.ok(missingReport.manifestValidation.errors.includes(`manifest.missing-entry:${JOB_RUNNER_EVIDENCE_PATH}`));
+
+  await fs.writeFile(path.join(tamperedRoot, JOB_RUNNER_EVIDENCE_PATH), Buffer.from("MZ-tampered", "utf8"));
+  await fs.rm(path.join(tamperedRoot, "raw-sha256-manifest.json"));
+  const tamperedIdentity = await buildCurrentHarnessArtifacts();
+  tamperedIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await buildWilliamsRawManifest(tamperedRoot, tamperedIdentity);
+  const tamperedReport = await analyzeWilliamsCrossoverRawRoot(tamperedRoot);
+  assert.ok(tamperedReport.manifestValidation.errors.includes("manifest.toolIdentity.jobRunnerBinary.evidence.sha256"));
+});
+
+test("raw analyzer consumes preparation and canonical per-block Job evidence", async (t) => {
+  const preparationRoot = await materializeEvidenceRoot(createEvidence());
+  const jobRoot = await materializeEvidenceRoot(createEvidence());
+  t.after(() => Promise.all([preparationRoot, jobRoot].map((root) => fs.rm(root, { recursive: true, force: true }))));
+
+  const preparationPath = path.join(preparationRoot, "harness", "job-runner-preparation.json");
+  const preparation = JSON.parse(await fs.readFile(preparationPath, "utf8"));
+  preparation.status = "capability-error";
+  await writeJson(preparationPath, preparation);
+  await fs.rm(path.join(preparationRoot, "raw-sha256-manifest.json"));
+  const preparationIdentity = await buildCurrentHarnessArtifacts();
+  preparationIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await buildWilliamsRawManifest(preparationRoot, preparationIdentity);
+  const preparationReport = await analyzeWilliamsCrossoverRawRoot(preparationRoot);
+  assert.ok(preparationReport.decision.invalidReasons.includes("job-runner-preparation.status"));
+
+  const jobPath = path.join(jobRoot, "blocks", "block-01", "job-object.json");
+  const jobObject = JSON.parse(await fs.readFile(jobPath, "utf8"));
+  jobObject.rootExitCode = 17;
+  await writeJson(jobPath, jobObject);
+  await fs.rm(path.join(jobRoot, "raw-sha256-manifest.json"));
+  const jobIdentity = await buildCurrentHarnessArtifacts();
+  jobIdentity.jobRunnerBinary = jobRunnerBinaryDescriptor();
+  await buildWilliamsRawManifest(jobRoot, jobIdentity);
+  const jobReport = await analyzeWilliamsCrossoverRawRoot(jobRoot);
+  assert.ok(jobReport.decision.invalidReasons.includes("block-01.jobObject.cleanup-canonical"));
+  assert.ok(jobReport.decision.invalidReasons.includes("block-01.jobObject.rootExitCode"));
+});
+
 test("raw analyzer rejects both extra and missing measured files", async (t) => {
   const extraRoot = await materializeEvidenceRoot(createEvidence());
   const missingRoot = await materializeEvidenceRoot(createEvidence());
@@ -661,93 +797,72 @@ test("raw manifest rejects extra metadata, tampering, and current tool identity 
   assert.equal(toolReport.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 });
 
-test("task-owned process tree includes descendants and excludes unrelated processes", () => {
-  const tree = buildTaskOwnedProcessTree([
-    { ProcessId: 10, ParentProcessId: 1, Name: "node.exe" },
-    { ProcessId: 11, ParentProcessId: 10, Name: "python.exe" },
-    { ProcessId: 12, ParentProcessId: 11, Name: "chrome.exe" },
-    { ProcessId: 99, ParentProcessId: 1, Name: "msedge.exe" },
-  ], [10]);
-  assert.deepEqual(tree.pids, [10, 11, 12]);
-  assert.deepEqual(tree.processes.map(({ ProcessId, depth }) => ({ ProcessId, depth })), [
-    { ProcessId: 10, depth: 0 },
-    { ProcessId: 11, depth: 1 },
-    { ProcessId: 12, depth: 2 },
-  ]);
+test("Windows Job cleanup evidence fails admission closed for any unverified process", () => {
+  const evidence = createEvidence();
+  evidence.blocks[0].cleanup.valid = false;
+  evidence.blocks[0].cleanup.jobObject.cleanupValid = false;
+  evidence.blocks[0].cleanup.jobObject.unverifiedPids = [9999];
+  const report = analyzeWilliamsCrossoverEvidence(evidence);
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.jobObject.cleanupValid"));
+  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.jobObject.unverifiedPids"));
 });
 
-test("task-owned monitor retains orphan descendants across process snapshots", async () => {
-  assert.deepEqual(
-    expandTaskOwnedProcessIds([{ ProcessId: 12, ParentProcessId: 11 }], [10, 11]),
-    [10, 11, 12],
-  );
-  const snapshots = [
-    [
-      { ProcessId: 10, ParentProcessId: 1, Name: "node.exe" },
-      { ProcessId: 11, ParentProcessId: 10, Name: "python.exe" },
-    ],
-    [{ ProcessId: 12, ParentProcessId: 11, Name: "chrome.exe" }],
-    [],
+test("Job runner preparation fails closed on schema, timestamp, identity, and capability drift", () => {
+  const cases = [
+    ["job-runner-preparation.schemaVersion", (evidence) => { evidence.jobRunnerPreparation.schemaVersion = 0; }],
+    ["job-runner-preparation.compiledAt", (evidence) => { evidence.jobRunnerPreparation.compiledAt = "invalid"; }],
+    ["job-runner-preparation.timestamp-order", (evidence) => {
+      evidence.jobRunnerPreparation.compiledAt = "2026-07-11T00:00:00.000Z";
+      evidence.jobRunnerPreparation.capabilityProbedAt = "2026-07-10T23:59:30.000Z";
+    }],
+    ["job-runner-preparation.source", (evidence) => {
+      evidence.jobRunnerPreparation.source.lfNormalizedSha256 = "f".repeat(64);
+    }],
+    ["job-runner-preparation.binary", (evidence) => {
+      evidence.jobRunnerPreparation.binary.bytes += 1;
+    }],
+    ["job-runner-preparation.capabilityEvidence.schemaVersion", (evidence) => {
+      evidence.jobRunnerPreparation.capabilityEvidence.schemaVersion = 0;
+    }],
   ];
-  const monitor = createTaskOwnedProcessMonitor({
-    snapshotProvider: () => snapshots.shift() || [],
-    delayFn: async () => {},
-  });
-  monitor.ingest([{ ProcessId: 11, ParentProcessId: 10, Name: "python.exe" }]);
-  monitor.registerRoot(10);
-  assert.deepEqual(monitor.snapshot().pids, [10, 11]);
-  monitor.sample();
-  const result = await monitor.stop({ finalSamples: 2 });
-  assert.deepEqual(result.pids, [10, 11, 12]);
-  assert.equal(result.captureStatus, "available");
-  assert.equal(result.processes.find((entry) => entry.ProcessId === 12)?.ParentProcessId, 11);
+  for (const [reason, mutate] of cases) {
+    const evidence = createEvidence();
+    mutate(evidence);
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.ok(report.decision.invalidReasons.includes(reason), reason);
+  }
 });
 
-test("process monitor collection errors fail cleanup admission closed", async () => {
-  const monitor = createTaskOwnedProcessMonitor({
-    snapshotProvider: () => { throw new Error("snapshot unavailable"); },
-    delayFn: async () => {},
-  });
-  monitor.registerRoot(10);
-  const result = await monitor.stop({ finalSamples: 1 });
-  assert.equal(result.captureStatus, "collection-error");
-  assert.deepEqual(result.pids, [10]);
-
-  const evidence = createEvidence();
-  evidence.blocks[0].cleanup.processTreeCaptureStatus = result.captureStatus;
-  evidence.blocks[0].cleanup.valid = false;
-  const report = analyzeWilliamsCrossoverEvidence(evidence);
-  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
-  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.processTreeCaptureStatus"));
+test("canonical block Job evidence validates schema, root exit, and command identity", () => {
+  const cases = [
+    ["schemaVersion", 0],
+    ["rootExitCode", 17],
+    ["commandExecutablePath", "C:\\wrong.exe"],
+    ["commandWorkingDirectory", "C:\\wrong"],
+    ["commandArguments", ["--wrong"]],
+  ];
+  for (const [field, value] of cases) {
+    const evidence = createEvidence();
+    evidence.blocks[0].jobObject[field] = value;
+    evidence.blocks[0].cleanup.jobObject[field] = structuredClone(value);
+    const report = analyzeWilliamsCrossoverEvidence(evidence);
+    assert.ok(report.decision.invalidReasons.includes(`block-01.jobObject.${field}`), field);
+    assert.ok(report.decision.invalidReasons.includes(`block-01.cleanup.jobObject.${field}`), field);
+  }
 });
 
-test("process-start watcher fails closed after an unexpected successful exit", async () => {
-  const child = new EventEmitter();
-  child.pid = 4242;
-  child.stdout = new PassThrough();
-  child.stderr = new PassThrough();
-  const monitor = createTaskOwnedProcessMonitor({
-    snapshotProvider: () => [],
-    delayFn: async () => {},
-  });
-  const watcherPromise = startWindowsProcessStartWatcher({
-    platform: "win32",
-    spawnFn: () => child,
-    onError: (error) => monitor.recordCaptureError(error),
-  });
-  child.stdout.write(`${JSON.stringify({ type: "ready" })}\n`);
-  await watcherPromise;
-  child.emit("close", 0);
-  const taskOwnedTree = monitor.snapshot();
-  assert.equal(taskOwnedTree.captureStatus, "collection-error");
-  assert.match(taskOwnedTree.captureErrors[0] || "", /watcher exited 0/);
-
-  const evidence = createEvidence();
-  evidence.blocks[0].cleanup.processTreeCaptureStatus = taskOwnedTree.captureStatus;
-  evidence.blocks[0].cleanup.valid = false;
-  const report = analyzeWilliamsCrossoverEvidence(evidence);
-  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
-  assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.processTreeCaptureStatus"));
+test("Job runner compile, readiness, and capability failures map to typed invalid exit 3", () => {
+  const available = Object.freeze({ status: "available" });
+  assert.equal(requireWilliamsJobRunnerReady(available), available);
+  for (const status of ["compile-error", "ready-error", "capability-error", "required-capability-missing"]) {
+    assert.throws(
+      () => requireWilliamsJobRunnerReady({ status, error: "unavailable" }),
+      (error) => error instanceof WilliamsInvalidExperimentError
+        && error.code === `job-runner-${status}`
+        && getWilliamsErrorExitCode(error) === WILLIAMS_EXIT_CODES.invalidExperiment,
+    );
+  }
 });
 
 test("canonical server metadata and every HTTP response fail quiet admission closed", () => {
@@ -816,11 +931,12 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(runnerSource, /responded: true/);
   assert.match(windowsSource, /performanceAdjustedFrequencyMHz/);
   assert.doesNotMatch(windowsSource, /effectiveFrequencyMHz/);
-  assert.match(windowsSource, /Win32_ProcessStartTrace/);
-  assert.doesNotMatch(runnerSource, /processMonitor\.start\(/);
+  assert.doesNotMatch(windowsSource, /Win32_ProcessStartTrace|Register-CimIndicationEvent|Wait-Event/);
+  assert.match(windowsSource, /JOB_RUNNER_PROTOCOL_ID/);
+  assert.match(runnerSource, /runWindowsJobCommand/);
   assert.match(windowsSource, /required-capability-missing/);
   assert.match(windowsSource, /collection-error/);
   assert.match(runnerSource, /mode: "list"/);
   assert.match(runnerSource, /options\.mode === "execute"/);
-  assert.match(runnerSource, /processMonitor\.stop\(\{ finalSamples: 3 \}\)/);
+  assert.match(runnerSource, /prepareWindowsJobRunner/);
 });

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Runtime source anchor `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates. Exact rerun candidate `f53a44f483403edbd7286db226380f0f0e4664be` passed the mandatory core gate and Williams plan, then rerun01 stopped before measurement when the Windows process-start watcher received `HRESULT 0x80041003` permission denied. The incomplete evidence exposed a secondary analyzer null dereference; the current static TDD slice fixes that fail-closed path. P2.2b entry remains closed.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 remains immutable after the Windows process-start watcher received `HRESULT 0x80041003`. The analyzer null-safety repair is committed through `557cdf34204b30d07f6c260841edc70531527b38`. The current uncommitted TDD slice replaces the unavailable watcher with compile-once Windows Job Object containment, binds source/binary identity, and passes focused plus Windows integration checks. A fresh governed Williams run remains pending and P2.2b entry stays closed.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -217,7 +217,24 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Complete cleanup: task processes `0`, ports 8000/8892 clear, both temporary junctions/worktrees removed, candidate clean/stable, and parent status exactly matches the preflight baseline.
 - [x] Complete static validation: focused GREEN 1/1, Williams governance 27/27, verification metadata 16/16, core runner 8/8, perf-gate contract 23/23, render-role policy 17/17, selector schema 295, supervisor contracts/routing 12/12 + 4/4, syntax, and diff check all pass.
 - [x] Run SF-ATS dry-run: 5 changed files, 14 recommended commands, 12 child-safe suggestions, 2 main-thread perf lanes, and 0 unmatched files; live perf lanes remain intentionally unrun.
-- [x] Keep P2.2b blocked. A future governed run requires an explicit watcher-capability resolution and a new fresh evidence root; rerun01 remains immutable and is not selectively resumed.
+- [x] Keep P2.2b blocked. Rerun01 remains immutable and is not selectively resumed; the later Job Object containment section records the replacement capability path for a new fresh evidence root.
+
+## Windows Job Object containment repair 2026-07-12
+
+- [x] Reproduce the WMI provider limitation under the normal-user lane and retain rerun01 as immutable failed capability evidence.
+- [x] Add protocol RED coverage for exact empty/spaced/quoted/trailing-backslash argv and for removal of watcher/polling/taskkill measurement paths.
+- [x] Add tracked `tools/perf/williams_crossover_windows_job_runner.cs` with `CREATE_SUSPENDED | CREATE_NO_WINDOW`, assign-before-resume, nested Job, kill-on-close, disabled breakaway, and restricted inherited handles.
+- [x] Make cleanup fail closed on Job close failure, root termination uncertainty, surviving descendants, and unverified PIDs; terminate and wait for an unassigned suspended root.
+- [x] Compile once before pre telemetry, run a short capability probe, reuse one compiled binary across blocks, and clean the temporary binary after execution.
+- [x] Replace `runLoggedCommand()` containment with `runWindowsJobCommand()` while keeping pre/post environment snapshots outside measurement.
+- [x] Bind tracked source and compiled binary identity in preregistration, block identity, raw manifest, and cross-block validation.
+- [x] Require per-block Job evidence in cleanup policy and preserve typed invalid exit `3` for compile/readiness/capability failures.
+- [x] Pass the final Job package `10/10`, Williams governance `29/29`, verification metadata `16/16`, core runner `8/8`, perf-gate contract `23/23`, render-role policy `17/17`, five compile/integration attempts with zero compile failures, and detached-child Windows integration.
+- [x] Close evidence-chain TDD: RED `30/33` proves missing/tampered raw EXE, ignored preparation/direct Job evidence, and missing runtime schema/transport contracts; GREEN `33/33` plus the expanded suites bind the immutable raw PE and semantic evidence. One new preparation test initially exposed a shared fixture reference, then passed after fixture isolation; no focused test reached the three-failure stop rule.
+- [x] Complete current-snapshot independent P/Invoke and evidence-chain re-reviews. Both return `APPROVE / CLEAR`; the earlier `2 HIGH + 1 MEDIUM` verdict is a preserved pre-fix snapshot.
+- [x] Run selector/import/supervisor/core-list/diff static closeout: `16 changed / 197 recommended / 7 main-thread / 0 unmatched`, import graph `51`, route schema `297`, supervisor `12 + 4 + 15`, core list `66`, architecture/state-write, and diff check all pass.
+- [x] Hand off the uncommitted ready-for-integration package to the integration owner; commit/push remain integration-owner operations.
+- [ ] Run a new fresh governed Williams experiment under a separately assigned live owner; only accepted exit `0` opens P2.2b.
 
 ## P2.2a exact-head acceptance 2026-07-11
 

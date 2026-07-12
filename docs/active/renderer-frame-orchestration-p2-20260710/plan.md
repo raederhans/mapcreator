@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: in progress; P2.0 docs-only truth reconciliation is active; later phases remain pending
+Status: in progress; P2.2a Job Object containment repair is implemented and statically verified; a fresh governed Williams run remains pending and P2.2b entry stays closed
 
 ## Approved source
 
@@ -78,6 +78,14 @@ The replacement experiment uses the tracked `p2-williams-crossover-v1` policy an
 8. Both measurement worktrees are exact detached clean checkouts. Tracked runners are used in place and identified by git blob plus LF-normalized SHA256.
 9. Exit codes are `0 accepted`, `2 valid regression`, `3 invalid experiment`, and `1 harness fault`. Legacy pooled medians remain diagnostic-only.
 
+### Windows Job Object containment prerequisite
+
+The rerun01 watcher failure proved that the WMI process-start provider is unavailable to the normal-user execution lane (`HRESULT 0x80041003`). The replacement containment contract uses one tracked C# helper compiled once before any pre-block telemetry. Every workload root is created with `CREATE_SUSPENDED | CREATE_NO_WINDOW`, assigned to a nested Job with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, verified in the Job, then resumed. Breakaway is disabled and no WMI watcher, process-start subscription, process snapshot polling, or `taskkill` runs during measurement.
+
+The helper uses a base64 line protocol for exact Windows argv transport, restricts inherited handles to stdin/stdout/stderr, records source and compiled-binary identity, and fails cleanup closed unless Job close succeeds and every captured descendant is verified gone. The compiled PE is copied before capability probing to the fixed immutable raw-evidence path `tooling/windows-job-runner.exe`; every measured block executes that copy, and offline analysis re-hashes it against preparation, preregistration, block identity, and manifest descriptors. Preparation plus direct per-block Job evidence are required semantic inputs, with schema, timestamps, capability, command identity, root exit, cleanup and canonical-copy equality checked fail-closed. Compile, readiness, capability, stdin transport, or output persistence failure maps to an explicit rejected path. A Windows-only integration test compiles the helper, preserves an exit-7 root result, and proves that a detached descendant is terminated when the Job closes.
+
+This repair authorizes a future fresh rerun after review/integration. It does not admit P2.2b by itself; only a complete accepted Williams report with exit `0` opens that gate.
+
 Static tooling can run `npm run perf:williams-crossover:plan`, `npm run perf:williams-crossover:analyze`, and `npm run test:node:williams-crossover-governance`. Analysis writes `.runtime` reports and therefore requires one output owner; report replacement requires explicit `--overwrite-analysis`. Execute mode reserves a fresh raw root plus fresh JSON/Markdown outputs. The deterministic policy test belongs to the `verify:core` infra group. Live execution is `npm run perf:williams-crossover:run` with the four `WILLIAMS_*` worktree/head environment variables set by the sole live owner. The live lane is main-thread/heavy and owns `perf-dev-server`, `browser-dev-server`, `playwright-browser`, and `.runtime-output`; the live command is excluded from `verify:core`.
 
 ### Review and UltraQA
@@ -97,6 +105,7 @@ Static tooling can run `npm run perf:williams-crossover:plan`, `npm run perf:wil
 - [x] Clean deterministic/browser baseline and governed P2.1 acceptance completed; the historical perf-gate red remained preserved.
 - [x] P2.1 completed with >=35 extracted lines.
 - [x] P2.2a implementation, deterministic/dist, and browser acceptance completed; Williams performance rerun pending.
+- [x] Replace the unavailable WMI watcher path with reviewed Windows Job Object containment and deterministic capability coverage.
 - [ ] P2.2b completed.
 - [ ] Cumulative extracted lines >=150.
 - [ ] Review and UltraQA completed.

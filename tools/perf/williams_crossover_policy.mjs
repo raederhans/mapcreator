@@ -8,6 +8,9 @@ import {
 export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v1";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
+export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
+export const WILLIAMS_JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
+export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 
 function freezeBlock(block) {
   return Object.freeze({
@@ -107,6 +110,98 @@ function arraysEqual(left, right) {
     && left.every((value, index) => value === right[index]);
 }
 
+function artifactDescriptorsEqual(left, right) {
+  return left?.path === right?.path
+    && left?.gitBlob === right?.gitBlob
+    && left?.lfNormalizedSha256 === right?.lfNormalizedSha256;
+}
+
+function binaryDescriptorsEqual(left, right) {
+  return left?.path === right?.path
+    && left?.sha256 === right?.sha256
+    && left?.bytes === right?.bytes;
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function validateJobObjectEvidence(jobObject, prefix, { command = null, cwd = null, exitCode = null } = {}) {
+  if (!jobObject || typeof jobObject !== "object") return [`${prefix}.missing`];
+  const errors = [];
+  if (jobObject.schemaVersion !== 1) errors.push(`${prefix}.schemaVersion`);
+  if (jobObject.protocolId !== WILLIAMS_JOB_RUNNER_PROTOCOL_ID) errors.push(`${prefix}.protocolId`);
+  if (jobObject.provider !== "windows-job-object") errors.push(`${prefix}.provider`);
+  if (jobObject.status !== "complete") errors.push(`${prefix}.status`);
+  if (!Number.isInteger(jobObject.rootPid) || jobObject.rootPid <= 0) errors.push(`${prefix}.rootPid`);
+  if (!Number.isInteger(jobObject.rootExitCode) || (exitCode !== null && jobObject.rootExitCode !== exitCode)) {
+    errors.push(`${prefix}.rootExitCode`);
+  }
+  if (jobObject.createSuspended !== true) errors.push(`${prefix}.createSuspended`);
+  if (jobObject.createNoWindow !== true) errors.push(`${prefix}.createNoWindow`);
+  if (jobObject.assignedBeforeResume !== true) errors.push(`${prefix}.assignedBeforeResume`);
+  if (jobObject.rootInJobBeforeResume !== true) errors.push(`${prefix}.rootInJobBeforeResume`);
+  if (jobObject.killOnJobClose !== true) errors.push(`${prefix}.killOnJobClose`);
+  if (jobObject.breakawayAllowed !== false) errors.push(`${prefix}.breakawayAllowed`);
+  if (jobObject.jobCloseSucceeded !== true) errors.push(`${prefix}.jobCloseSucceeded`);
+  if (jobObject.rootTerminationConfirmed !== true) errors.push(`${prefix}.rootTerminationConfirmed`);
+  if (jobObject.cleanupValid !== true) errors.push(`${prefix}.cleanupValid`);
+  if (!Array.isArray(jobObject.remainingPids) || jobObject.remainingPids.length !== 0) errors.push(`${prefix}.remainingPids`);
+  if (!Array.isArray(jobObject.unverifiedPids) || jobObject.unverifiedPids.length !== 0) errors.push(`${prefix}.unverifiedPids`);
+  if (jobObject.timedOut === true && jobObject.terminateJobSucceeded !== true) {
+    errors.push(`${prefix}.terminateJobSucceeded`);
+  }
+  if (command) {
+    if (jobObject.commandExecutablePath !== command.bin) errors.push(`${prefix}.commandExecutablePath`);
+    if (jobObject.commandWorkingDirectory !== cwd) errors.push(`${prefix}.commandWorkingDirectory`);
+    if (!arraysEqual(jobObject.commandArguments, command.args || [])) errors.push(`${prefix}.commandArguments`);
+  }
+  return errors;
+}
+
+function validateWilliamsJobRunnerPreparation(preparation, preregistration) {
+  if (!preparation || typeof preparation !== "object") return ["job-runner-preparation.missing"];
+  const errors = [];
+  const containmentIdentity = preregistration?.workloadContract?.processContainment?.identity || {};
+  if (preparation.schemaVersion !== 1) errors.push("job-runner-preparation.schemaVersion");
+  if (preparation.status !== "available") errors.push("job-runner-preparation.status");
+  if (preparation.error !== null) errors.push("job-runner-preparation.error");
+  const compiledAt = Date.parse(String(preparation.compiledAt || ""));
+  const capabilityProbedAt = Date.parse(String(preparation.capabilityProbedAt || ""));
+  const preregisteredAt = Date.parse(String(preregistration?.generatedAt || ""));
+  if (!Number.isFinite(compiledAt)) errors.push("job-runner-preparation.compiledAt");
+  if (!Number.isFinite(capabilityProbedAt)) errors.push("job-runner-preparation.capabilityProbedAt");
+  if (Number.isFinite(compiledAt) && Number.isFinite(capabilityProbedAt) && compiledAt > capabilityProbedAt) {
+    errors.push("job-runner-preparation.timestamp-order");
+  }
+  if (Number.isFinite(capabilityProbedAt) && Number.isFinite(preregisteredAt) && capabilityProbedAt > preregisteredAt) {
+    errors.push("job-runner-preparation.preregistration-order");
+  }
+  if (!artifactDescriptorsEqual(preparation.source, containmentIdentity.source)) {
+    errors.push("job-runner-preparation.source");
+  }
+  if (!binaryDescriptorsEqual(preparation.binary, containmentIdentity.binary)) {
+    errors.push("job-runner-preparation.binary");
+  }
+  if (preparation.binary?.path !== WILLIAMS_JOB_RUNNER_EVIDENCE_PATH) {
+    errors.push("job-runner-preparation.binary.path");
+  }
+  const capabilityCommand = preparation.capabilityCommand;
+  if (!String(capabilityCommand?.bin || "").trim()) errors.push("job-runner-preparation.capabilityCommand.bin");
+  if (!Array.isArray(capabilityCommand?.args)) errors.push("job-runner-preparation.capabilityCommand.args");
+  if (!String(capabilityCommand?.cwd || "").trim()) errors.push("job-runner-preparation.capabilityCommand.cwd");
+  errors.push(...validateJobObjectEvidence(
+    preparation.capabilityEvidence,
+    "job-runner-preparation.capabilityEvidence",
+    { command: capabilityCommand, cwd: capabilityCommand?.cwd, exitCode: 0 },
+  ));
+  return errors;
+}
+
 function percentDelta(current, baseline) {
   const currentValue = finite(current);
   const baselineValue = finite(baseline);
@@ -181,6 +276,8 @@ export function buildWilliamsPreregistration({
   controlWorktree = "",
   candidateWorktree = "",
   generatedAt = null,
+  jobRunnerSource = null,
+  jobRunnerBinary = null,
 } = {}) {
   return {
     schemaVersion: WILLIAMS_CROSSOVER_SCHEMA_VERSION,
@@ -258,6 +355,21 @@ export function buildWilliamsPreregistration({
       bindAcrossSidesAndBlocks: true,
       governedScenarioSampleRole: "gate",
       baseUrlAdmissionRole: "excluded-dynamic-runtime-value",
+      processContainment: {
+        provider: "windows-job-object",
+        protocolId: WILLIAMS_JOB_RUNNER_PROTOCOL_ID,
+        sourcePath: WILLIAMS_JOB_RUNNER_SOURCE_PATH,
+        compileTiming: "once-before-any-pre-telemetry",
+        creationFlags: ["CREATE_SUSPENDED", "CREATE_NO_WINDOW"],
+        assignBeforeResume: true,
+        jobLimit: "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+        breakawayAllowed: false,
+        measurementProcessObservation: "none",
+        identity: {
+          source: jobRunnerSource,
+          binary: jobRunnerBinary,
+        },
+      },
     },
     rawContract: {
       exactMeasuredRawFiles: 32,
@@ -276,7 +388,11 @@ export function buildWilliamsPreregistration({
 
 export function validateWilliamsPreregistration(preregistration) {
   const normalized = normalizePreregistration(preregistration);
-  const expected = buildWilliamsPreregistration();
+  const containmentIdentity = normalized.workloadContract?.processContainment?.identity || {};
+  const expected = buildWilliamsPreregistration({
+    jobRunnerSource: containmentIdentity.source || null,
+    jobRunnerBinary: containmentIdentity.binary || null,
+  });
   const errors = [];
   if (normalized.policyId !== expected.policyId) errors.push("preregistration.policyId");
   if (normalized.schemaVersion !== expected.schemaVersion) errors.push("preregistration.schemaVersion");
@@ -333,6 +449,26 @@ export function validateWilliamsPreregistration(preregistration) {
   }
   if (JSON.stringify(normalized.workloadContract) !== JSON.stringify(expected.workloadContract)) {
     errors.push("preregistration.workloadContract");
+  }
+  const sourceIdentity = containmentIdentity.source;
+  if (String(sourceIdentity?.path || "") !== WILLIAMS_JOB_RUNNER_SOURCE_PATH) {
+    errors.push("preregistration.workloadContract.processContainment.identity.source.path");
+  }
+  if (!/^[a-f0-9]{40}$/i.test(String(sourceIdentity?.gitBlob || ""))) {
+    errors.push("preregistration.workloadContract.processContainment.identity.source.gitBlob");
+  }
+  if (!/^[a-f0-9]{64}$/i.test(String(sourceIdentity?.lfNormalizedSha256 || ""))) {
+    errors.push("preregistration.workloadContract.processContainment.identity.source.lfNormalizedSha256");
+  }
+  const binaryIdentity = containmentIdentity.binary;
+  if (binaryIdentity?.path !== WILLIAMS_JOB_RUNNER_EVIDENCE_PATH) {
+    errors.push("preregistration.workloadContract.processContainment.identity.binary.path");
+  }
+  if (!/^[a-f0-9]{64}$/i.test(String(binaryIdentity?.sha256 || ""))) {
+    errors.push("preregistration.workloadContract.processContainment.identity.binary.sha256");
+  }
+  if (!Number.isInteger(binaryIdentity?.bytes) || binaryIdentity.bytes <= 0) {
+    errors.push("preregistration.workloadContract.processContainment.identity.binary.bytes");
   }
   if (JSON.stringify(normalized.rawContract) !== JSON.stringify(expected.rawContract)) {
     errors.push("preregistration.rawContract");
@@ -581,17 +717,43 @@ function validateIdentity(identity, block, preregistration) {
   if (identity?.detached !== true) errors.push(`${block.id}.identity.detached`);
   if (String(identity?.gitStatus || "") !== "") errors.push(`${block.id}.identity.gitStatus`);
   if (String(identity?.cwd || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.cwd`);
-  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime"]) {
+  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
     const descriptor = identity?.artifacts?.[field];
     if (!String(descriptor?.gitBlob || "").trim()) errors.push(`${block.id}.identity.artifacts.${field}.gitBlob`);
     if (!/^[a-f0-9]{64}$/i.test(String(descriptor?.lfNormalizedSha256 || ""))) {
       errors.push(`${block.id}.identity.artifacts.${field}.lfNormalizedSha256`);
     }
   }
+  const jobRunnerBinary = identity?.artifacts?.jobRunnerBinary;
+  if (!String(jobRunnerBinary?.path || "").trim()) errors.push(`${block.id}.identity.artifacts.jobRunnerBinary.path`);
+  if (!/^[a-f0-9]{64}$/i.test(String(jobRunnerBinary?.sha256 || ""))) {
+    errors.push(`${block.id}.identity.artifacts.jobRunnerBinary.sha256`);
+  }
+  if (!Number.isInteger(jobRunnerBinary?.bytes) || jobRunnerBinary.bytes <= 0) {
+    errors.push(`${block.id}.identity.artifacts.jobRunnerBinary.bytes`);
+  }
+  const containmentIdentity = registration.workloadContract?.processContainment?.identity || {};
+  const registeredSource = containmentIdentity.source;
+  const actualSource = identity?.artifacts?.jobRunnerSource;
+  if (
+    actualSource?.path !== registeredSource?.path
+    || actualSource?.gitBlob !== registeredSource?.gitBlob
+    || actualSource?.lfNormalizedSha256 !== registeredSource?.lfNormalizedSha256
+  ) {
+    errors.push(`${block.id}.identity.artifacts.jobRunnerSource.preregistration`);
+  }
+  const registeredBinary = containmentIdentity.binary;
+  if (
+    jobRunnerBinary?.path !== registeredBinary?.path
+    || jobRunnerBinary?.sha256 !== registeredBinary?.sha256
+    || jobRunnerBinary?.bytes !== registeredBinary?.bytes
+  ) {
+    errors.push(`${block.id}.identity.artifacts.jobRunnerBinary.preregistration`);
+  }
   return errors;
 }
 
-function validateCleanup(cleanup, block) {
+function validateCleanup(cleanup, block, evidence) {
   const errors = [];
   if (!cleanup || typeof cleanup !== "object") return [`${block.id}.cleanup.missing`];
   if (cleanup.valid !== true) errors.push(`${block.id}.cleanup.valid`);
@@ -605,6 +767,20 @@ function validateCleanup(cleanup, block) {
   if (cleanup.gitStatusStable !== true) errors.push(`${block.id}.cleanup.gitStatusStable`);
   if (cleanup.gitHeadStable !== true) errors.push(`${block.id}.cleanup.gitHeadStable`);
   if (cleanup.detachedStable !== true) errors.push(`${block.id}.cleanup.detachedStable`);
+  const jobObject = cleanup.jobObject;
+  errors.push(...validateJobObjectEvidence(jobObject, `${block.id}.cleanup.jobObject`, {
+    command: evidence?.command,
+    cwd: evidence?.identity?.cwd,
+    exitCode: evidence?.blockResult?.exitCode,
+  }));
+  errors.push(...validateJobObjectEvidence(evidence?.jobObject, `${block.id}.jobObject`, {
+    command: evidence?.command,
+    cwd: evidence?.identity?.cwd,
+    exitCode: evidence?.blockResult?.exitCode,
+  }));
+  if (canonicalJson(evidence?.jobObject) !== canonicalJson(jobObject)) {
+    errors.push(`${block.id}.jobObject.cleanup-canonical`);
+  }
   return errors;
 }
 
@@ -932,7 +1108,7 @@ function validateCrossBlockIdentity(blocks) {
   const errors = [];
   const first = blocks[0]?.identity?.artifacts || {};
   for (const block of blocks.slice(1)) {
-    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime"]) {
+    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
       const actual = block.identity?.artifacts?.[field];
       const expected = first[field];
       if (
@@ -943,17 +1119,28 @@ function validateCrossBlockIdentity(blocks) {
         errors.push(`${block.id}.identity.crossBlock.${field}`);
       }
     }
+    const actualBinary = block.identity?.artifacts?.jobRunnerBinary;
+    const expectedBinary = first.jobRunnerBinary;
+    if (
+      actualBinary?.path !== expectedBinary?.path
+      || actualBinary?.sha256 !== expectedBinary?.sha256
+      || actualBinary?.bytes !== expectedBinary?.bytes
+    ) {
+      errors.push(`${block.id}.identity.crossBlock.jobRunnerBinary`);
+    }
   }
   return errors;
 }
 
 export function analyzeWilliamsCrossoverEvidence({
   preregistration,
+  jobRunnerPreparation,
   blocks = [],
   manifestValidation = { status: "missing", errors: ["manifest.missing"] },
 } = {}) {
   const invalidReasons = [
     ...validateWilliamsPreregistration(preregistration),
+    ...validateWilliamsJobRunnerPreparation(jobRunnerPreparation, preregistration),
     ...(manifestValidation?.status === "valid" ? [] : (manifestValidation?.errors || ["manifest.invalid"])),
   ];
   const blockValues = new Map();
@@ -978,7 +1165,7 @@ export function analyzeWilliamsCrossoverEvidence({
       invalidReasons.push(`${expectedBlock.id}.metadata`);
     }
     invalidReasons.push(...validateIdentity(evidence.identity, expectedBlock, preregistration));
-    invalidReasons.push(...validateCleanup(evidence.cleanup, expectedBlock));
+    invalidReasons.push(...validateCleanup(evidence.cleanup, expectedBlock, evidence));
     invalidReasons.push(...validateBlockResult(evidence.blockResult, expectedBlock));
     invalidReasons.push(...validateQuietWindow(evidence.quietWindow, expectedBlock));
     invalidReasons.push(...validateBaselineIdentity(evidence.baseline, expectedBlock, preregistration));
