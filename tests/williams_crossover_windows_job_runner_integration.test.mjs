@@ -6,6 +6,7 @@ import process from "node:process";
 import test from "node:test";
 
 import {
+  collectWindowsPerformanceWindow,
   prepareWindowsJobRunner,
   runWindowsJobCommand,
 } from "../tools/perf/williams_crossover_windows_runtime.mjs";
@@ -72,4 +73,33 @@ test("Windows Job runner preserves argv and kills a detached descendant on Job c
   assert.ok(Number.isInteger(payload.childPid) && payload.childPid > 0);
   assert.ok(result.jobEvidence.jobProcessIdsAtRootExit.includes(payload.childPid));
   assert.equal(isPidRunning(payload.childPid), false);
+});
+
+const LIVE_TELEMETRY_ENABLED = process.env.WILLIAMS_LIVE_TELEMETRY_TEST === "1";
+
+test("Windows telemetry collector samples actual capture starts on a fixed-rate cadence", {
+  skip: process.platform !== "win32"
+    ? "Windows performance counters require win32"
+    : (LIVE_TELEMETRY_ENABLED ? false : "explicit live telemetry lane required"),
+}, () => {
+  const telemetry = collectWindowsPerformanceWindow({ phase: "integration" });
+  assert.equal(telemetry.capability?.status, "available", telemetry.capability?.missing?.join("\n"));
+  assert.deepEqual(telemetry.sampling, {
+    scheduler: "monotonic-fixed-rate",
+    timestampSemantics: "actual-capture-start",
+    sampleIntervalMs: 1000,
+    sampleCount: 5,
+  });
+  assert.equal(telemetry.samples.length, 5);
+
+  const captureStarts = telemetry.samples.map((sample) => Date.parse(sample.at));
+  const intervals = captureStarts.slice(1).map((atMs, index) => atMs - captureStarts[index]);
+  for (const intervalMs of intervals) {
+    assert.ok(intervalMs >= 750 && intervalMs <= 1250, `capture-start interval ${intervalMs}ms`);
+  }
+  for (const sample of telemetry.samples) {
+    assert.ok(Date.parse(sample.completedAt) >= Date.parse(sample.at));
+    assert.ok(Number.isFinite(sample.captureDurationMs) && sample.captureDurationMs >= 0);
+    assert.ok(Number.isFinite(sample.scheduleLagMs));
+  }
 });

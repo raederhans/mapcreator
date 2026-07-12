@@ -6,6 +6,8 @@ import process from "node:process";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { WILLIAMS_TELEMETRY_CADENCE } from "./williams_crossover_policy.mjs";
+
 export const WINDOWS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
 export const WINDOWS_JOB_RUNNER_SOURCE_PATH = fileURLToPath(
   new URL("./williams_crossover_windows_job_runner.cs", import.meta.url),
@@ -25,9 +27,19 @@ const DEFAULT_JOB_RUNNER_BUILD_ROOT = path.resolve(
 
 const WINDOWS_COUNTER_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
+$sampleIntervalMs = ${WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs}.0
+$sampleCount = ${WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow}
 $samples = @()
-for ($index = 0; $index -lt 5; $index += 1) {
-  Start-Sleep -Seconds 1
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+for ($index = 0; $index -lt $sampleCount; $index += 1) {
+  $targetElapsedMs = [double](($index + 1) * $sampleIntervalMs)
+  $remainingDelayMs = [math]::Ceiling($targetElapsedMs - $stopwatch.Elapsed.TotalMilliseconds)
+  if ($remainingDelayMs -gt 0) {
+    Start-Sleep -Milliseconds ([int]$remainingDelayMs)
+  }
+  $captureStartedElapsedMs = $stopwatch.Elapsed.TotalMilliseconds
+  $captureStartedAt = [datetime]::UtcNow
+  $scheduleLagMs = $captureStartedElapsedMs - $targetElapsedMs
   $processorSample = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'" -ErrorAction Stop
   $memorySample = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop
   foreach ($propertyName in @('PercentProcessorTime','PercentProcessorPerformance','PercentofMaximumFrequency','ProcessorFrequency')) {
@@ -36,8 +48,13 @@ for ($index = 0; $index -lt 5; $index += 1) {
   foreach ($propertyName in @('PercentCommittedBytesInUse','AvailableMBytes')) {
     if ($null -eq $memorySample.$propertyName) { throw "required memory counter missing: $propertyName" }
   }
+  $completedAt = [datetime]::UtcNow
+  $captureDurationMs = $stopwatch.Elapsed.TotalMilliseconds - $captureStartedElapsedMs
   $samples += [pscustomobject]@{
-    at = [datetime]::UtcNow.ToString('o')
+    at = $captureStartedAt.ToString('o')
+    completedAt = $completedAt.ToString('o')
+    captureDurationMs = [double]$captureDurationMs
+    scheduleLagMs = [double]$scheduleLagMs
     cpuUtilizationPercent = [double]$processorSample.PercentProcessorTime
     processorPerformancePercent = [double]$processorSample.PercentProcessorPerformance
     percentOfMaximumFrequency = [double]$processorSample.PercentofMaximumFrequency
@@ -47,7 +64,7 @@ for ($index = 0; $index -lt 5; $index += 1) {
     memoryAvailableMBytes = [double]$memorySample.AvailableMBytes
   }
 }
-if ($samples.Count -ne 5) { throw "required sample count mismatch: $($samples.Count)" }
+if ($samples.Count -ne $sampleCount) { throw "required sample count mismatch: $($samples.Count)" }
 $processors = @(Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Name,MaxClockSpeed,CurrentClockSpeed,NumberOfCores,NumberOfLogicalProcessors)
 $operatingSystem = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop | Select-Object TotalVisibleMemorySize,FreePhysicalMemory
 $powerText = (& powercfg /getactivescheme 2>&1 | Out-String).Trim()
@@ -76,7 +93,13 @@ public static class ScenarioForgePowerStatus {
 $powerStatus = New-Object ScenarioForgePowerStatus+SYSTEM_POWER_STATUS
 if (-not [ScenarioForgePowerStatus]::GetSystemPowerStatus([ref]$powerStatus)) { throw "GetSystemPowerStatus failed" }
 [pscustomobject]@{
-  schemaVersion = 1
+  schemaVersion = ${WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion}
+  sampling = [pscustomobject]@{
+    scheduler = '${WILLIAMS_TELEMETRY_CADENCE.scheduler}'
+    timestampSemantics = '${WILLIAMS_TELEMETRY_CADENCE.timestampSemantics}'
+    sampleIntervalMs = [int]$sampleIntervalMs
+    sampleCount = [int]$sampleCount
+  }
   capability = [pscustomobject]@{
     status = 'available'
     missing = @()
@@ -134,8 +157,14 @@ function runPowerShell(script) {
 
 function missingWindow(phase, status, detail) {
   return {
-    schemaVersion: 1,
+    schemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
     phase,
+    sampling: {
+      scheduler: WILLIAMS_TELEMETRY_CADENCE.scheduler,
+      timestampSemantics: WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
+      sampleIntervalMs: WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs,
+      sampleCount: WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
+    },
     capability: { status, missing: [String(detail || "unknown Windows counter capability")] },
     samples: [],
     processor: [],
@@ -151,8 +180,9 @@ export function collectWindowsPerformanceWindow({ phase, platform = process.plat
   try {
     const payload = runPowerShell(WINDOWS_COUNTER_SCRIPT);
     return {
-      schemaVersion: 1,
+      schemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
       phase,
+      sampling: payload.sampling,
       capability: payload.capability,
       samples: Array.isArray(payload.samples) ? payload.samples : [payload.samples].filter(Boolean),
       processor: Array.isArray(payload.processor) ? payload.processor : [payload.processor].filter(Boolean),

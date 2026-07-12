@@ -8,9 +8,11 @@ import test from "node:test";
 import {
   WILLIAMS_ADJACENT_PAIRS,
   WILLIAMS_BLOCK_SEQUENCE,
+  WILLIAMS_CROSSOVER_POLICY_ID,
   WILLIAMS_DRIFT_PAIRS,
   WILLIAMS_EXIT_CODES,
   WILLIAMS_SCENARIOS,
+  WILLIAMS_TELEMETRY_CADENCE,
   analyzeWilliamsCrossoverEvidence,
   buildWilliamsPreregistration,
 } from "../tools/perf/williams_crossover_policy.mjs";
@@ -80,19 +82,31 @@ function canonicalSnapshot(scenarioId, durationMs) {
 function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
   const baseMs = Date.UTC(2026, 6, 11, 0, 0, (blockOrdinal - 1) * 20 + (phase === "post" ? 10 : 0));
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     phase,
+    sampling: {
+      scheduler: "monotonic-fixed-rate",
+      timestampSemantics: "actual-capture-start",
+      sampleIntervalMs: 1000,
+      sampleCount: 5,
+    },
     capability: { status: "available", missing: [] },
-    samples: Array.from({ length: 5 }, (_, index) => ({
-      at: new Date(baseMs + index * 1000).toISOString(),
-      cpuUtilizationPercent: 10 + index,
-      processorPerformancePercent: 100,
-      percentOfMaximumFrequency: 95,
-      processorFrequencyMHz: 4200,
-      performanceAdjustedFrequencyMHz: 4200,
-      memoryCommittedPercent: 50,
-      memoryAvailableMBytes: 16000,
-    })),
+    samples: Array.from({ length: 5 }, (_, index) => {
+      const captureStartedAtMs = baseMs + index * 1000;
+      return {
+        at: new Date(captureStartedAtMs).toISOString(),
+        completedAt: new Date(captureStartedAtMs + 600).toISOString(),
+        captureDurationMs: 600,
+        scheduleLagMs: 0,
+        cpuUtilizationPercent: 10 + index,
+        processorPerformancePercent: 100,
+        percentOfMaximumFrequency: 95,
+        processorFrequencyMHz: 4200,
+        performanceAdjustedFrequencyMHz: 4200,
+        memoryCommittedPercent: 50,
+        memoryAvailableMBytes: 16000,
+      };
+    }),
     environment: {
       power: {
         activeSchemeGuid: "00000000-0000-0000-0000-000000000000",
@@ -387,6 +401,16 @@ async function materializeEvidenceRoot(evidence) {
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
+  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v2");
+  assert.deepEqual(WILLIAMS_TELEMETRY_CADENCE, {
+    windowSchemaVersion: 2,
+    samplesPerWindow: 5,
+    sampleIntervalMs: 1000,
+    sampleIntervalToleranceMs: 250,
+    scheduler: "monotonic-fixed-rate",
+    timestampSemantics: "actual-capture-start",
+    requiredCaptureFields: ["completedAt", "captureDurationMs", "scheduleLagMs"],
+  });
   assert.deepEqual(
     WILLIAMS_BLOCK_SEQUENCE.map(({ ordinal, side, orderId, scenarioOrder }) => ({ ordinal, side, orderId, scenarioOrder })),
     [
@@ -496,8 +520,32 @@ test("missing telemetry summary returns a typed invalid experiment", () => {
 test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and power regimes", () => {
   const cases = [
     {
+      reason: "block-01.telemetry.pre.schemaVersion",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.schemaVersion = 1; },
+    },
+    {
       reason: "block-01.telemetry.pre.phase",
       mutate: (evidence) => { evidence.blocks[0].telemetry.pre.phase = "post"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.sampling.scheduler",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.sampling.scheduler = "fixed-delay"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.sampling.timestampSemantics",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.sampling.timestampSemantics = "capture-complete"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.sampling.sampleIntervalMs",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.sampling.sampleIntervalMs = 1200; },
+    },
+    {
+      reason: "block-01.telemetry.pre.sampling.sampleCount",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.sampling.sampleCount = 4; },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.expected-5-actual-4",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples.pop(); },
     },
     {
       reason: "block-01.telemetry.pre.samples.timestamp-order",
@@ -513,6 +561,26 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
     {
       reason: "block-01.telemetry.pre.samples.0.performanceAdjustedFrequencyMHz.formula",
       mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].performanceAdjustedFrequencyMHz = 4100; },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.0.completedAt",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].completedAt = "invalid"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.0.completedAt",
+      mutate: (evidence) => {
+        evidence.blocks[0].telemetry.pre.samples[0].completedAt = new Date(
+          Date.parse(evidence.blocks[0].telemetry.pre.samples[0].at) - 1,
+        ).toISOString();
+      },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.0.captureDurationMs",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].captureDurationMs = -1; },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.0.scheduleLagMs",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].scheduleLagMs = null; },
     },
     {
       reason: "block-01.telemetry.pre.capability.missing",
@@ -558,6 +626,35 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
     assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment, testCase.reason);
     assert.ok(report.decision.invalidReasons.includes(testCase.reason), testCase.reason);
   }
+});
+
+test("telemetry cadence is frozen in preregistration and rejects a fixed-delay window before workload admission", () => {
+  const evidence = createEvidence();
+  assert.equal(evidence.preregistration.telemetry.scheduler, "monotonic-fixed-rate");
+  assert.equal(evidence.preregistration.telemetry.timestampSemantics, "actual-capture-start");
+  assert.equal(evidence.preregistration.telemetry.windowSchemaVersion, 2);
+  assert.deepEqual(evidence.preregistration.telemetry.requiredCaptureFields, [
+    "completedAt",
+    "captureDurationMs",
+    "scheduleLagMs",
+  ]);
+
+  const telemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  const validQuietWindow = deriveWilliamsQuietWindow(telemetry);
+  assert.equal(validQuietWindow.valid, true);
+  assert.equal(validQuietWindow.telemetryCadence.valid, true);
+  assert.deepEqual(validQuietWindow.telemetryCadence.intervalsMs, [1000, 1000, 1000, 1000]);
+
+  const firstAtMs = Date.parse(telemetry.samples[0].at);
+  telemetry.samples.forEach((sample, index) => {
+    const captureStartedAtMs = firstAtMs + index * 1635;
+    sample.at = new Date(captureStartedAtMs).toISOString();
+    sample.completedAt = new Date(captureStartedAtMs + sample.captureDurationMs).toISOString();
+  });
+  const quietWindow = deriveWilliamsQuietWindow(telemetry);
+  assert.equal(quietWindow.valid, false);
+  assert.equal(quietWindow.telemetryCadence.valid, false);
+  assert.ok(quietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
 });
 
 test("dirty or attached measurement worktrees invalidate identity", () => {
@@ -808,6 +905,41 @@ test("Windows Job cleanup evidence fails admission closed for any unverified pro
   assert.ok(report.decision.invalidReasons.includes("block-01.cleanup.jobObject.unverifiedPids"));
 });
 
+test("ambient browser PID churn remains diagnostic when Job containment and telemetry are valid", () => {
+  const evidence = createEvidence();
+  evidence.blocks[0].cleanup.newBrowserPids = [99504, 106292];
+  const report = analyzeWilliamsCrossoverEvidence(evidence);
+  assert.equal(report.decision.status, "accepted");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.accepted);
+  assert.equal(report.decision.invalidReasons.includes("block-01.cleanup.newBrowserPids"), false);
+});
+
+test("cleanup construction records ambient browser PID churn while Job containment stays authoritative", async () => {
+  const { buildWilliamsCleanup } = await import("../tools/perf/run_williams_crossover.mjs");
+  assert.equal(typeof buildWilliamsCleanup, "function");
+  const preTelemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  const postTelemetry = telemetryWindow("post", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  postTelemetry.environment.browser = [{ ProcessId: 99504, ParentProcessId: 32132, Name: "msedge.exe" }];
+  const cleanup = buildWilliamsCleanup(
+    preTelemetry,
+    postTelemetry,
+    { pids: [4242], processes: [], captureStatus: "available" },
+    jobObjectEvidence(4242),
+  );
+  assert.equal(cleanup.valid, true);
+  assert.deepEqual(cleanup.newBrowserPids, [99504]);
+
+  const failedJob = jobObjectEvidence(4242);
+  failedJob.cleanupValid = false;
+  failedJob.remainingPids = [4242];
+  assert.equal(buildWilliamsCleanup(
+    preTelemetry,
+    postTelemetry,
+    { pids: [4242], processes: [], captureStatus: "available" },
+    failedJob,
+  ).valid, false);
+});
+
 test("Job runner preparation fails closed on schema, timestamp, identity, and capability drift", () => {
   const cases = [
     ["job-runner-preparation.schemaVersion", (evidence) => { evidence.jobRunnerPreparation.schemaVersion = 0; }],
@@ -936,6 +1068,26 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(runnerSource, /runWindowsJobCommand/);
   assert.match(windowsSource, /required-capability-missing/);
   assert.match(windowsSource, /collection-error/);
+  assert.doesNotMatch(windowsSource, /Start-Sleep -Seconds 1/);
+  assert.match(windowsSource, /\[System\.Diagnostics\.Stopwatch\]::StartNew\(\)/);
+  assert.match(windowsSource, /\$targetElapsedMs = \[double\]\(\(\$index \+ 1\) \* \$sampleIntervalMs\)/);
+  assert.match(windowsSource, /\$remainingDelayMs = \[math\]::Ceiling\(\$targetElapsedMs - \$stopwatch\.Elapsed\.TotalMilliseconds\)/);
+  assert.match(windowsSource, /Start-Sleep -Milliseconds \(\[int\]\$remainingDelayMs\)/);
+  assert.match(windowsSource, /captureStartedAt/);
+  assert.match(windowsSource, /completedAt/);
+  assert.match(windowsSource, /captureDurationMs/);
+  assert.match(windowsSource, /\$scheduleLagMs = \$captureStartedElapsedMs - \$targetElapsedMs/);
+  const captureStartIndex = windowsSource.indexOf("$captureStartedAt = [datetime]::UtcNow");
+  const processorQueryIndex = windowsSource.indexOf("$processorSample = Get-CimInstance");
+  const memoryQueryIndex = windowsSource.indexOf("$memorySample = Get-CimInstance");
+  assert.ok(captureStartIndex >= 0);
+  assert.ok(captureStartIndex < processorQueryIndex);
+  assert.ok(captureStartIndex < memoryQueryIndex);
+  assert.match(windowsSource, /at = \$captureStartedAt\.ToString\('o'\)/);
+  assert.match(runnerSource, /validateWilliamsTelemetryCadence/);
+  assert.match(runnerSource, /if \(quietWindow\.valid\) \{\s*commandResult = await runLoggedCommand/);
+  assert.doesNotMatch(runnerSource, /newBrowserPids\.length === 0/);
+  assert.match(runnerSource, /newBrowserPids,/);
   assert.match(runnerSource, /mode: "list"/);
   assert.match(runnerSource, /options\.mode === "execute"/);
   assert.match(runnerSource, /prepareWindowsJobRunner/);

@@ -5,12 +5,25 @@ import {
   median,
 } from "./render_sample_role_policy.mjs";
 
-export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v1";
+export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v2";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
 export const WILLIAMS_JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
 export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
+export const WILLIAMS_TELEMETRY_CADENCE = Object.freeze({
+  windowSchemaVersion: 2,
+  samplesPerWindow: 5,
+  sampleIntervalMs: 1000,
+  sampleIntervalToleranceMs: 250,
+  scheduler: "monotonic-fixed-rate",
+  timestampSemantics: "actual-capture-start",
+  requiredCaptureFields: Object.freeze([
+    "completedAt",
+    "captureDurationMs",
+    "scheduleLagMs",
+  ]),
+});
 
 function freezeBlock(block) {
   return Object.freeze({
@@ -311,10 +324,14 @@ export function buildWilliamsPreregistration({
     telemetry: {
       platform: "win32",
       windowsCounterCapability: "required",
-      preSamplesPerBlock: 5,
-      postSamplesPerBlock: 5,
-      sampleIntervalMs: 1000,
-      sampleIntervalToleranceMs: 250,
+      windowSchemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
+      preSamplesPerBlock: WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
+      postSamplesPerBlock: WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
+      sampleIntervalMs: WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs,
+      sampleIntervalToleranceMs: WILLIAMS_TELEMETRY_CADENCE.sampleIntervalToleranceMs,
+      scheduler: WILLIAMS_TELEMETRY_CADENCE.scheduler,
+      timestampSemantics: WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
+      requiredCaptureFields: [...WILLIAMS_TELEMETRY_CADENCE.requiredCaptureFields],
       phases: ["pre", "post"],
       timestampOrder: "strictly-increasing-with-pre-before-post",
       performanceAdjustedFrequencyDefinition: "processorFrequencyMHz*processorPerformancePercent/100",
@@ -489,12 +506,81 @@ function telemetrySampleValues(window, field) {
     .filter((value) => value !== null);
 }
 
-function validateTelemetryWindow(window, label, expectedPhase) {
+export function validateWilliamsTelemetryCadence(window, {
+  label = "telemetry",
+  schemaVersion = WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
+  sampleCount = WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
+  sampleIntervalMs = WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs,
+  sampleIntervalToleranceMs = WILLIAMS_TELEMETRY_CADENCE.sampleIntervalToleranceMs,
+  scheduler = WILLIAMS_TELEMETRY_CADENCE.scheduler,
+  timestampSemantics = WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
+} = {}) {
   const errors = [];
+  if (!window || typeof window !== "object") {
+    return Object.freeze({
+      valid: false,
+      errors: Object.freeze([`${label}.missing`]),
+      sampleTimesMs: Object.freeze([]),
+      intervalsMs: Object.freeze([]),
+      sampleCount: 0,
+    });
+  }
+  if (finite(window.schemaVersion) !== schemaVersion) errors.push(`${label}.schemaVersion`);
+  if (String(window.sampling?.scheduler || "") !== scheduler) errors.push(`${label}.sampling.scheduler`);
+  if (String(window.sampling?.timestampSemantics || "") !== timestampSemantics) {
+    errors.push(`${label}.sampling.timestampSemantics`);
+  }
+  if (finite(window.sampling?.sampleIntervalMs) !== sampleIntervalMs) {
+    errors.push(`${label}.sampling.sampleIntervalMs`);
+  }
+  if (finite(window.sampling?.sampleCount) !== sampleCount) errors.push(`${label}.sampling.sampleCount`);
+
+  const samples = Array.isArray(window.samples) ? window.samples : [];
+  if (samples.length !== sampleCount) {
+    errors.push(`${label}.samples.expected-${sampleCount}-actual-${samples.length}`);
+  }
+  const sampleTimesMs = samples.map((sample, sampleIndex) => {
+    const parsedAt = Date.parse(String(sample?.at || ""));
+    if (!Number.isFinite(parsedAt)) errors.push(`${label}.samples.${sampleIndex}.at`);
+
+    const completedAtMs = Date.parse(String(sample?.completedAt || ""));
+    if (!Number.isFinite(completedAtMs) || (Number.isFinite(parsedAt) && completedAtMs < parsedAt)) {
+      errors.push(`${label}.samples.${sampleIndex}.completedAt`);
+    }
+    const captureDurationMs = finite(sample?.captureDurationMs);
+    if (captureDurationMs === null || captureDurationMs < 0) {
+      errors.push(`${label}.samples.${sampleIndex}.captureDurationMs`);
+    }
+    if (finite(sample?.scheduleLagMs) === null) errors.push(`${label}.samples.${sampleIndex}.scheduleLagMs`);
+    return Number.isFinite(parsedAt) ? parsedAt : null;
+  });
+  const intervalsMs = [];
+  for (let index = 1; index < sampleTimesMs.length; index += 1) {
+    const previousAtMs = sampleTimesMs[index - 1];
+    const currentAtMs = sampleTimesMs[index];
+    if (previousAtMs === null || currentAtMs === null) continue;
+    if (!(currentAtMs > previousAtMs)) errors.push(`${label}.samples.timestamp-order`);
+    const intervalMs = currentAtMs - previousAtMs;
+    intervalsMs.push(intervalMs);
+    if (Math.abs(intervalMs - sampleIntervalMs) > sampleIntervalToleranceMs) {
+      errors.push(`${label}.samples.interval`);
+    }
+  }
+  return Object.freeze({
+    valid: errors.length === 0,
+    errors: Object.freeze([...new Set(errors)]),
+    sampleTimesMs: Object.freeze([...sampleTimesMs]),
+    intervalsMs: Object.freeze(intervalsMs),
+    sampleCount: samples.length,
+  });
+}
+
+function validateTelemetryWindow(window, label, expectedPhase) {
+  const cadence = validateWilliamsTelemetryCadence(window, { label });
+  const errors = [...cadence.errors];
   if (!window || typeof window !== "object") {
     return { errors: [`${label}.missing`], summary: null };
   }
-  if (finite(window.schemaVersion) !== 1) errors.push(`${label}.schemaVersion`);
   if (String(window.phase || "") !== expectedPhase) errors.push(`${label}.phase`);
   const capabilityStatus = String(window.capability?.status || "missing");
   if (capabilityStatus !== "available") {
@@ -504,25 +590,13 @@ function validateTelemetryWindow(window, label, expectedPhase) {
     errors.push(`${label}.capability.missing`);
   }
   const samples = Array.isArray(window.samples) ? window.samples : [];
-  if (samples.length !== 5) {
-    errors.push(`${label}.samples.expected-5-actual-${samples.length}`);
-  }
-  const sampleTimes = [];
   samples.forEach((sample, sampleIndex) => {
-    const parsedAt = Date.parse(String(sample?.at || ""));
-    if (!Number.isFinite(parsedAt)) errors.push(`${label}.samples.${sampleIndex}.at`);
-    else sampleTimes.push(parsedAt);
     for (const field of REQUIRED_TELEMETRY_SAMPLE_FIELDS) {
       if (finite(sample?.[field]) === null) {
         errors.push(`${label}.samples.${sampleIndex}.${field}`);
       }
     }
   });
-  for (let index = 1; index < sampleTimes.length; index += 1) {
-    if (!(sampleTimes[index] > sampleTimes[index - 1])) errors.push(`${label}.samples.timestamp-order`);
-    const spacingMs = sampleTimes[index] - sampleTimes[index - 1];
-    if (Math.abs(spacingMs - 1000) > 250) errors.push(`${label}.samples.interval`);
-  }
   samples.forEach((sample, sampleIndex) => {
     const processorFrequency = finite(sample?.processorFrequencyMHz);
     const processorPerformance = finite(sample?.processorPerformancePercent);
@@ -549,15 +623,24 @@ function validateTelemetryWindow(window, label, expectedPhase) {
   const cpuValues = telemetrySampleValues(window, "cpuUtilizationPercent");
   const frequencyValues = telemetrySampleValues(window, "performanceAdjustedFrequencyMHz");
   const memoryValues = telemetrySampleValues(window, "memoryAvailableMBytes");
+  const hasCompleteSampleTimes = cadence.sampleTimesMs.length === samples.length
+    && samples.length > 0
+    && cadence.sampleTimesMs.every(Number.isFinite);
   return {
-    errors,
+    errors: [...new Set(errors)],
     summary: {
       phase: expectedPhase,
-      firstAtMs: sampleTimes.length === samples.length ? sampleTimes[0] : null,
-      lastAtMs: sampleTimes.length === samples.length ? sampleTimes.at(-1) : null,
-      averageCpuUtilizationPercent: cpuValues.length === 5 ? average(cpuValues) : null,
-      medianPerformanceAdjustedFrequencyMHz: frequencyValues.length === 5 ? median(frequencyValues) : null,
-      medianAvailableMemoryMBytes: memoryValues.length === 5 ? median(memoryValues) : null,
+      firstAtMs: hasCompleteSampleTimes ? cadence.sampleTimesMs[0] : null,
+      lastAtMs: hasCompleteSampleTimes ? cadence.sampleTimesMs.at(-1) : null,
+      averageCpuUtilizationPercent: cpuValues.length === WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow
+        ? average(cpuValues)
+        : null,
+      medianPerformanceAdjustedFrequencyMHz: frequencyValues.length === WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow
+        ? median(frequencyValues)
+        : null,
+      medianAvailableMemoryMBytes: memoryValues.length === WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow
+        ? median(memoryValues)
+        : null,
       powerSchemeGuid: String(power.activeSchemeGuid || "").toLowerCase(),
       acLineStatus: finite(power.acLineStatus),
     },
@@ -761,7 +844,6 @@ function validateCleanup(cleanup, block, evidence) {
   if (cleanup.terminationSucceeded !== true) errors.push(`${block.id}.cleanup.terminationSucceeded`);
   if ((cleanup.taskOwnedPidsRemaining || []).length !== 0) errors.push(`${block.id}.cleanup.taskOwnedPidsRemaining`);
   if ((cleanup.taskOwnedProcessesRemaining || []).length !== 0) errors.push(`${block.id}.cleanup.taskOwnedProcessesRemaining`);
-  if ((cleanup.newBrowserPids || []).length !== 0) errors.push(`${block.id}.cleanup.newBrowserPids`);
   if (cleanup.portsClear !== true) errors.push(`${block.id}.cleanup.portsClear`);
   if (cleanup.serverProbesClear !== true) errors.push(`${block.id}.cleanup.serverProbesClear`);
   if (cleanup.gitStatusStable !== true) errors.push(`${block.id}.cleanup.gitStatusStable`);

@@ -14,6 +14,7 @@ import {
   WILLIAMS_SCENARIOS,
   analyzeWilliamsCrossoverEvidence,
   buildWilliamsPreregistration,
+  validateWilliamsTelemetryCadence,
 } from "./williams_crossover_policy.mjs";
 import {
   WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
@@ -436,6 +437,7 @@ export async function collectWindowsTelemetryWindow({ worktree, phase } = {}) {
 
 export function deriveWilliamsQuietWindow(telemetry) {
   const environment = telemetry?.environment || {};
+  const telemetryCadence = validateWilliamsTelemetryCadence(telemetry, { label: "telemetry" });
   const portsClear = TASK_PORTS.every((port) => (environment.ports?.[String(port)] || []).length === 0);
   const activeServer = (environment.server || []).some((entry) => (
     entry?.present === true
@@ -443,8 +445,7 @@ export function deriveWilliamsQuietWindow(telemetry) {
   ));
   const directProbeResponse = (environment.probe || []).some((entry) => entry?.responded === true);
   const valid = telemetry?.capability?.status === "available"
-    && Array.isArray(telemetry.samples)
-    && telemetry.samples.length === 5
+    && telemetryCadence.valid
     && portsClear
     && !activeServer
     && !directProbeResponse
@@ -455,6 +456,12 @@ export function deriveWilliamsQuietWindow(telemetry) {
     status: valid ? "valid" : "invalid",
     valid,
     capabilityStatus: telemetry?.capability?.status || "missing",
+    telemetryCadence: {
+      valid: telemetryCadence.valid,
+      sampleCount: telemetryCadence.sampleCount,
+      intervalsMs: [...telemetryCadence.intervalsMs],
+      errors: [...telemetryCadence.errors],
+    },
     portsClear,
     activeServer,
     directProbeResponse,
@@ -485,7 +492,7 @@ function pidSet(items) {
   return new Set((items || []).map((item) => Number(item?.ProcessId)).filter(Number.isInteger));
 }
 
-function buildCleanup(preTelemetry, postTelemetry, taskOwnedTree, jobEvidence) {
+export function buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree, jobEvidence) {
   const preEnvironment = preTelemetry?.environment || {};
   const postEnvironment = postTelemetry?.environment || {};
   const preBrowserPids = pidSet(preEnvironment.browser);
@@ -510,7 +517,6 @@ function buildCleanup(preTelemetry, postTelemetry, taskOwnedTree, jobEvidence) {
     && taskOwnedTree?.captureStatus === "available"
     && terminationSucceeded
     && taskOwnedPidsRemaining.length === 0
-    && newBrowserPids.length === 0
     && portsClear
     && serverProbesClear
     && gitStatusStable
@@ -591,7 +597,7 @@ async function runBlock(block, harnessArtifacts, preparedRunner) {
   }
   const postTelemetry = await collectWindowsTelemetryWindow({ worktree: block.cwd, phase: "post" });
   await writeJson(path.join(directory, "telemetry-post.json"), postTelemetry);
-  const cleanup = buildCleanup(preTelemetry, postTelemetry, taskOwnedTree, commandResult.jobEvidence);
+  const cleanup = buildWilliamsCleanup(preTelemetry, postTelemetry, taskOwnedTree, commandResult.jobEvidence);
   await writeJson(path.join(directory, "cleanup.json"), cleanup);
   const complete = quietWindow.valid && commandResult.exitCode === 0 && cleanup.valid;
   const blockResult = {

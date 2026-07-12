@@ -529,9 +529,11 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   const policyEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "infra:williams-crossover-governance");
   const jobRunnerEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "infra:williams-crossover-job-runner");
   const liveEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "perf:williams-crossover-live");
+  const liveTelemetryEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "perf:williams-crossover-telemetry-live");
   assert.ok(policyEntry);
   assert.ok(jobRunnerEntry);
   assert.ok(liveEntry);
+  assert.ok(liveTelemetryEntry);
   assert.equal(policyEntry.commandRef, "test:node:williams-crossover-governance");
   assert.equal(policyEntry.executionOwner, "child-safe");
   assert.equal(policyEntry.verifyCoreDefaultGroup, "infra");
@@ -562,6 +564,20 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     "package-lock.json",
     "package.json",
   ]);
+  assert.deepEqual(liveTelemetryEntry, {
+    ...liveTelemetryEntry,
+    commandRef: "test:node:williams-crossover-telemetry-live",
+    domain: "perf",
+    ownerHint: "perf-runtime",
+    layer: "regression",
+    cost: "contract",
+    resourceLocks: ["perf-dev-server"],
+    executionOwner: "main-thread",
+    ciProfile: "perf-pr-gate",
+    supervisorDomain: "perf",
+    routeRegistry: true,
+  });
+  assert.equal(liveTelemetryEntry.verifyCoreDefaultGroup, undefined);
 
   const runtimeReport = buildRecommendation([
     "tools/perf/williams_crossover_policy.mjs",
@@ -573,6 +589,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.ok(runtimeReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
   assert.ok(runtimeReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
   assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
+  assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "test:node:williams-crossover-telemetry-live"));
 
   const staticReport = buildRecommendation([
     "tests/williams_crossover_governance_behavior.test.mjs",
@@ -589,6 +606,11 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   assert.deepEqual(jobTestReport.unmatchedChangedFiles, []);
   assert.ok(jobTestReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-job-runner"));
   assert.equal(jobTestReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), false);
+  assert.ok(jobTestReport.mainThreadSerialVerification.some((command) => command.commandRef === "test:node:williams-crossover-telemetry-live"));
+
+  const defaultCoreCommands = buildVerifyCoreDefaultGroups()
+    .flatMap((group) => group.commands.map((command) => command.commandRef));
+  assert.equal(defaultCoreCommands.includes("test:node:williams-crossover-telemetry-live"), false);
 
   for (const sourceRef of ["tools/perf/run_baseline.mjs", "tools/perf/render_sample_role_policy.mjs", "package-lock.json"]) {
     const identityInputReport = buildRecommendation([sourceRef]);
