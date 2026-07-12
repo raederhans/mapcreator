@@ -524,3 +524,59 @@ test("renderer cached pass P2.2a files route to behavior inventory boundary and 
     );
   }
 });
+
+test("Williams crossover tooling routes to child-safe governance plus an explicit heavy perf lane", () => {
+  const policyEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "infra:williams-crossover-governance");
+  const liveEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "perf:williams-crossover-live");
+  assert.ok(policyEntry);
+  assert.ok(liveEntry);
+  assert.equal(policyEntry.commandRef, "test:node:williams-crossover-governance");
+  assert.equal(policyEntry.executionOwner, "child-safe");
+  assert.equal(policyEntry.verifyCoreDefaultGroup, "infra");
+  assert.deepEqual(liveEntry, {
+    ...liveEntry,
+    commandRef: "perf:williams-crossover:run",
+    domain: "perf",
+    ownerHint: "perf-runtime",
+    layer: "heavy",
+    cost: "heavy",
+    resourceLocks: ["perf-dev-server", "browser-dev-server", "playwright-browser", ".runtime-output"],
+    executionOwner: "main-thread",
+    ciProfile: "perf-pr-gate",
+    supervisorDomain: "perf",
+    routeRegistry: true,
+  });
+  assert.equal(liveEntry.verifyCoreDefaultGroup, undefined);
+  assert.deepEqual(liveEntry.sourceRefs, [
+    "tools/perf/williams_crossover_policy.mjs",
+    "tools/perf/run_williams_crossover.mjs",
+    "tools/perf/williams_crossover_windows_runtime.mjs",
+    "tools/perf/run_baseline.mjs",
+    "tools/perf/render_sample_role_policy.mjs",
+    "package-lock.json",
+    "package.json",
+  ]);
+
+  const runtimeReport = buildRecommendation([
+    "tools/perf/williams_crossover_policy.mjs",
+    "tools/perf/run_williams_crossover.mjs",
+    "tools/perf/williams_crossover_windows_runtime.mjs",
+  ]);
+  assert.deepEqual(runtimeReport.unmatchedChangedFiles, []);
+  assert.ok(runtimeReport.coveredDomains.includes("perf"));
+  assert.ok(runtimeReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
+  assert.ok(runtimeReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"));
+
+  const staticReport = buildRecommendation([
+    "tests/williams_crossover_governance_behavior.test.mjs",
+    "docs/active/renderer-frame-orchestration-p2-20260710/plan.md",
+    "docs/active/_worktree_registry.md",
+  ]);
+  assert.ok(staticReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
+  assert.equal(staticReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), false);
+
+  for (const sourceRef of ["tools/perf/run_baseline.mjs", "tools/perf/render_sample_role_policy.mjs", "package-lock.json"]) {
+    const identityInputReport = buildRecommendation([sourceRef]);
+    assert.ok(identityInputReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
+  }
+});

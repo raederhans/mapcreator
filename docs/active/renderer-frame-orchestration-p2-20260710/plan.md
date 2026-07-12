@@ -62,6 +62,24 @@ Start P2 from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`, comp
 - Extract `js/core/map_renderer/transformed_frame_compositor_owner.js`.
 - Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
 
+### P2.2a governed Williams rerun prerequisite
+
+The first P2.2a A/B report remains preserved as evidence and is classified `invalid-environment-regime` for phase admission because a machine performance regime switch occurred during B1, the HOI4 direction reversed in the adjacent control comparison, and the whole startup/render chain moved together. P2.2b stays blocked until a new pre-registered experiment reaches an accepted decision.
+
+The replacement experiment uses the tracked `p2-williams-crossover-v1` policy and one explicit live owner:
+
+1. Fixed blocks: `A TH`, `B TH`, `B HT`, `A HT`, `B TH`, `A TH`, `A HT`, `B HT`.
+2. Each block/scenario runs one warmup and two measured runs; the block value is their median.
+3. Adjacent comparisons always compute `B-A`: `1/2`, `4/3`, `6/5`, `7/8`; the primary estimate is the median of four pair deltas.
+4. Same-side/same-order drift is fixed at `A TH 1/6`, `A HT 4/7`, `B TH 2/5`, `B HT 3/8` with startup `5%` and canonical render `10%` ceilings.
+5. Practical regression thresholds remain startup `+3% AND +75ms` and canonical render `+5% AND +35ms`. One of four practical pair regressions is diagnostic, two invalidates the experiment, and three or four yields a valid regression failure.
+6. Symmetric direction veto, internal two-run outliers, exact identity, exact 32 raw files, manifest hashes, role identity, telemetry, and cleanup all fail closed.
+7. Windows telemetry requires five ordered one-second pre and post samples per block. Admission requires complete CPU/Processor Performance/performance-adjusted-frequency coverage, pre-block average CPU at most 25%, adjacent-pair pre CPU difference at most 10 percentage points, adjacent-pair median performance-adjusted-frequency difference at most 5%, global performance-adjusted-frequency drift at most 10%, adjacent-pair available-memory difference at most 5%, and within-block memory change at most 5%. Power-scheme GUID and AC source stay constant across all windows. Missing capability, phase/time drift, structured-port occupancy, or any direct HTTP response invalidates the experiment.
+8. Both measurement worktrees are exact detached clean checkouts. Tracked runners are used in place and identified by git blob plus LF-normalized SHA256.
+9. Exit codes are `0 accepted`, `2 valid regression`, `3 invalid experiment`, and `1 harness fault`. Legacy pooled medians remain diagnostic-only.
+
+Static tooling can run `npm run perf:williams-crossover:plan`, `npm run perf:williams-crossover:analyze`, and `npm run test:node:williams-crossover-governance`. Analysis writes `.runtime` reports and therefore requires one output owner; report replacement requires explicit `--overwrite-analysis`. Execute mode reserves a fresh raw root plus fresh JSON/Markdown outputs. The deterministic policy test belongs to the `verify:core` infra group. Live execution is `npm run perf:williams-crossover:run` with the four `WILLIAMS_*` worktree/head environment variables set by the sole live owner. The live lane is main-thread/heavy and owns `perf-dev-server`, `browser-dev-server`, `playwright-browser`, and `.runtime-output`; the live command is excluded from `verify:core`.
+
 ### Review and UltraQA
 
 - Run independent code review, first-principles architecture review, and UltraQA after functional checkpoints.
@@ -76,9 +94,9 @@ Start P2 from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`, comp
 ## Checklist
 
 - [x] P2.0 docs-only truth reconciliation plan/context/task created.
-- [ ] Clean baseline completed under one live-process owner.
-- [ ] P2.1 completed with >=35 extracted lines.
-- [ ] P2.2a completed.
+- [x] Clean deterministic/browser baseline and governed P2.1 acceptance completed; the historical perf-gate red remained preserved.
+- [x] P2.1 completed with >=35 extracted lines.
+- [x] P2.2a implementation, deterministic/dist, and browser acceptance completed; Williams performance rerun pending.
 - [ ] P2.2b completed.
 - [ ] Cumulative extracted lines >=150.
 - [ ] Review and UltraQA completed.

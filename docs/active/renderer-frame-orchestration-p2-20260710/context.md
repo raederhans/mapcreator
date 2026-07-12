@@ -11,7 +11,7 @@ Date: 2026-07-10
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
 - current acceptance candidate: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
-- current task phase: P2.2a exact-head browser acceptance is green; governed A/B acceptance is `blocked`; P2.2b entry is closed
+- current task phase: P2.2a exact-head browser acceptance is green; the first governed A/B report is classified `invalid-environment-regime`; a Williams crossover rerun is pre-registered and awaiting a sole live owner; P2.2b entry is closed
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
 - current worktree state: isolated P2 branch contained a clean candidate at `8eda8c5c` before this docs-only blocked closeout; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
@@ -45,7 +45,7 @@ Date: 2026-07-10
 - Pre-P2 Windows perf readiness fix: complete at `61e090388feb0c69887b9947b55b61968d5324de`; readiness/PID ownership is green and perf gate reached measurement
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
-- P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; governed performance decision blocked
+- P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun pending
 - P2.2b transformed frame compositor owner: pending with entry blocked by P2.2a acceptance
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
@@ -247,7 +247,7 @@ Governed canonical medians:
 
 Startup, quiet-window/block validity, control/candidate HEAD, runner, lock, environment, URL query, workload identity, raw hashes, block drift, outlier, and opposite-direction checks pass. HOI4 has no material promotion gap, so promotion-stratified admission is `not-applicable/pass`. Companion artifacts are `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.json` and `.md`; the decision is `accepted-with-governed-reanalysis`.
 
-Future baseline/gate reports use schema version 2 and expose both `canonicalRenderSampleMs` and the legacy median diagnostic. The April schema-version-1 baseline and historical `1.15/1.25` thresholds remain compatible and frozen. Governed scenario role mismatch fails closed. P2.2a and P2.2b must repeat the same policy, A1/B1/B2/A2 order, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
+Future baseline/gate reports use schema version 2 and expose both `canonicalRenderSampleMs` and the legacy median diagnostic. The April schema-version-1 baseline and historical `1.15/1.25` thresholds remain compatible and frozen. Governed scenario role mismatch fails closed. The original P2.2 preregistration used A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`; the later Williams section supersedes the execution shape for the replacement P2.2a rerun while retaining the same practical thresholds.
 
 ## Governed tooling deterministic closeout 2026-07-11
 
@@ -317,6 +317,26 @@ Block drift is material across both sides. TNO A/B startup drift is 30.37%/31.75
 Legacy `renderSampleMedianMs` is diagnostic: TNO A/B 840.45/832.75ms; HOI4 A/B 646.08/698.45ms. TNO first-role composition is A blank/scenario 9/1 and B 8/2; HOI4 is scenario 10/10 on both sides.
 
 Acceptance decision: `blocked`. Failed checks are startup regression, canonical render regression, block drift, and opposite direction beyond deadband. P2.2b remains pending behind this gate.
+
+## P2.2a Williams crossover rerun governance 2026-07-11
+
+The original P2.2a report and raw evidence remain byte-preserved:
+
+- JSON `.runtime/reports/generated/p2-2a-performance-ab-20260711.json`: SHA256 `277dba80fafb796b1d96ee0793e18a4eab1281e790908a778c617857a0dc7ddc`.
+- Markdown `.runtime/reports/generated/p2-2a-performance-ab-20260711.md`: SHA256 `15359b93c75a36d1f5f0a442710f248517eaaa40b995d421b0b4e5e554edec45`.
+- Raw manifest `.runtime/output/perf/p2-2a-acceptance/20260711/raw-sha256-manifest.json`: SHA256 `c832d438cef94962ac2fb88623fca6464f3e8d11f94732aa09ffb4a2f1279246`.
+
+Its admission classification is now `invalid-environment-regime`. The machine switched performance regimes during B1 between HOI4 run 2 and run 3, later blocks stayed in the slower regime, HOI4 adjacent directions reversed, and bundle/apply/render/canonical timings moved together. This classification preserves the original blocked decision and keeps P2.2b closed.
+
+Governance approved `p2-williams-crossover-v1`. The tracked policy, import-safe CLI, and narrow Windows capability adapter live at `tools/perf/williams_crossover_policy.mjs`, `tools/perf/run_williams_crossover.mjs`, and `tools/perf/williams_crossover_windows_runtime.mjs`. They freeze the eight-block Williams sequence, adjacent `B-A` pairs, same-side/order drift pairs, one-warmup/two-measured block medians, four-pair primary medians, practical thresholds, pair-count adjudication, symmetric direction veto, internal outliers, exact detached/clean identity, structured Windows telemetry, exact 32-file raw reconstruction, evidence manifests, cleanup, and `0/2/3/1` exit meanings.
+
+The raw analyzer reads every measured run from disk, recomputes the canonical `last-post-promotion-idle-scenario-frame-v1` role, requires strict equality with each raw summary, binds scenario manifest path/SHA, feature count, gate sample role, runs, warmups, and URL query across all sides/blocks, and treats legacy pooled medians as diagnostic-only. Its exact manifest set binds schema/policy plus analyzer/policy/Windows-runtime identities to current LF-normalized content, block identities, and side identities; extra, missing, duplicate, tampered, or stale-tool evidence is invalid.
+
+Windows counter state is tri-state; `required-capability-missing` and `collection-error` invalidate the experiment, and null values remain null. `performanceAdjustedFrequencyMHz` is derived as `processorFrequencyMHz * processorPerformancePercent / 100`. Telemetry admission freezes the CPU/frequency/memory thresholds from the plan, enforces pre/post and cross-block time ordering, and binds a single power-scheme GUID and AC source. Port admission uses structured `Get-NetTCPConnection` data plus direct probes where every HTTP response proves an active server. Cleanup uses one persistent `Win32_ProcessStartTrace` watcher during measurement, accumulates the task-owned `ParentProcessId` closure across process-start events, then takes three 200 ms-spaced process snapshots after runner close. It terminates only the accumulated tree and requires every recorded descendant to disappear. A missing intermediate ancestor in a later snapshot therefore cannot orphan its already-owned child, while the measured window avoids repeated PowerShell/CIM polling.
+
+Live-process owner: `none`. No browser, dev server, Playwright, perf, Pages, or dist process was started by this tooling slice. Analyze mode also needs one `.runtime` output owner and defaults to no-clobber; explicit report replacement uses `--overwrite-analysis`. The next live owner must create two exact detached clean worktrees, preserve tracked runners in place, set the four `WILLIAMS_*` identity variables, choose a fresh raw root and fresh report paths, run the full sequence once, and retain all artifacts. P2.2b remains blocked until the analyzer returns `accepted` with exit `0`.
+
+Review-fix deterministic closeout is green: Williams governance 26/26, metadata 16/16, core-runner 8/8, route schema 295, import graph 51, supervisor contracts/routing/plan green, core list 65, adaptive dry-run `12 changed / 196 recommended / 7 main-thread / 0 unmatched`, and diff check green. Final independent telemetry and harness reviews found no remaining blocker. This slice retained a static-only owner and produced no live/browser/perf/Pages/dist evidence.
 
 Evidence:
 

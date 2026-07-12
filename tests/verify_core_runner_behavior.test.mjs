@@ -28,6 +28,7 @@ const PACKAGE_SCRIPTS = {
   "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
   "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
   "test:node:render-sample-role-policy": "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",
+  "test:node:williams-crossover-governance": "node --test tests/williams_crossover_governance_behavior.test.mjs",
   "test:node:renderer-draw-canvas-orchestration-inventory": "node --test tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs",
   "test:node:draw-canvas-orchestration-owner": "node --test tests/draw_canvas_orchestration_owner_behavior.test.mjs",
   "test:node:draw-canvas-orchestration-owner-suite": "npm run test:node:draw-canvas-orchestration-owner && npm run test:node:renderer-draw-canvas-orchestration-inventory && npm run test:python:map-renderer-draw-canvas-orchestration-boundary",
@@ -134,12 +135,14 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
   assert.deepEqual(plan.omittedCommands, []);
   assert.deepEqual(plan.duplicateCommands, []);
   assert.equal(commandRefs(plan).some((commandRef) => commandRef.startsWith("test:e2e:")), false);
+  assert.equal(commandRefs(plan).includes("perf:williams-crossover:run"), false);
   assertCommandRefsInclude(plan, [
     "verify:state-write-allowlist",
     "verify:pages-dist",
     "verify:dist-drift",
     "test:node:verification-metadata",
     "test:node:render-sample-role-policy",
+    "test:node:williams-crossover-governance",
     "test:node:renderer-draw-canvas-orchestration-inventory",
     "test:node:draw-canvas-orchestration-owner",
     "test:python:map-renderer-draw-canvas-orchestration-boundary",

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Exact candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates; governed A/B acceptance is `blocked`, so P2.2b entry is closed.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Exact candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates. The first governed A/B report is classified `invalid-environment-regime`; the replacement Williams crossover rerun is pre-registered and awaits a sole live owner, so P2.2b entry is closed.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -184,6 +184,24 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 
 - [ ] Entry gate: obtain a separately approved governed acceptance result after the P2.2a `blocked` decision.
 - [ ] Extract `js/core/map_renderer/transformed_frame_compositor_owner.js`.
+
+## P2.2a Williams crossover rerun prerequisite
+
+- [x] Preserve the first JSON/Markdown/raw manifest and exact SHA256 evidence.
+- [x] Classify the first report `invalid-environment-regime` for phase admission while retaining its original blocked decision.
+- [x] Freeze the eight-block Williams sequence and four adjacent `B-A` pairs.
+- [x] Freeze same-side/order drift pairs `A TH 1/6`, `A HT 4/7`, `B TH 2/5`, and `B HT 3/8`.
+- [x] Freeze one warmup plus two measured runs, block medians, and the median of four pair deltas.
+- [x] Freeze practical thresholds, symmetric direction veto, internal outliers, and 1/2/3+ pair-regression adjudication.
+- [x] Require five one-second Windows telemetry samples before and after every block with structured tri-state capability handling.
+- [x] Require exact detached clean worktrees, git blob/LF-normalized artifact identity, exact 32 raw files, evidence manifest, and cleanup evidence.
+- [x] Add import-safe `--list`, `--plan`, `--dry-run`, `--analyze`, and explicit `--execute` CLI modes.
+- [x] Add named child-safe policy/raw-analyzer tests and main-thread/heavy verification routing without adding perf to `verify:core`.
+- [x] Harden telemetry admission with frozen CPU/frequency/memory/power thresholds, strict phase/time order, structured TCP/direct probes, and accurate performance-adjusted-frequency naming.
+- [x] Bind full preregistration, canonical-role recomputation, workload identity, exact manifest/tool identity, task-owned process-tree cleanup, typed exits, and raw/report no-clobber behavior.
+- [x] Keep docs/tests on the child-safe governance route; limit the heavy live route to execution/analyzer semantics and tracked workload inputs. Analyze writes `.runtime` under one owner.
+- [ ] Assign one live owner and run the pre-registered sequence from a fresh raw root.
+- [ ] Accept P2.2a only when the raw analyzer returns `accepted` / exit `0`; keep P2.2b blocked for exit `2`, `3`, or `1`.
 - [ ] Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
 
 ## P2.2a exact-head acceptance 2026-07-11
@@ -247,7 +265,7 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Validate all 40 canonical samples against `last-post-promotion-idle-scenario-frame-v1` with zero mismatches.
 - [x] Generate `.runtime/reports/generated/p2-1-performance-ab-governed-20260711.{json,md}` without modifying the original report or raw evidence.
 - [x] Admit P2.2a from canonical medians: TNO A/B `1197.90/1195.35ms`; HOI4 A/B `694.55/694.80ms`; startup, block drift, outlier, direction, identity, and quiet-window checks pass.
-- [x] Pre-register P2.2a/P2.2b with A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`.
+- [x] Record the historical P2.2a/P2.2b preregistration with A1/B1/B2/A2, three warmups, five measured runs, startup `3% + 75ms`, render `5% + 35ms`, and block drift `5%/10%`; the Williams prerequisite section governs the replacement rerun.
 - [x] Commit the reusable governed role tooling in Lore commit `14878c78937f36f9ddee53a876521494a2214cbb`.
 - [x] Run clean-head `verify:dist-drift` and full `verify:core` 62/62 from the governed tooling commit.
 - [x] Re-run the offline analyzer and confirm stable governed JSON/Markdown hashes while preserving the original legacy report hash.
