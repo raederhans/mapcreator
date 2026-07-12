@@ -11,12 +11,15 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md";
 const P21_DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
 const P22A_DOC_PATH = "docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md";
+const P22B_DOC_PATH = "docs/active/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const CACHED_PASS_COMPOSITOR_OWNER_PATH = "js/core/renderer/cached_pass_compositor_owner.js";
+const TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH = "js/core/map_renderer/transformed_frame_compositor_owner.js";
 const DIST_MAP_RENDERER_PATH = "dist/app/js/core/map_renderer.js";
 const DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH = "dist/app/js/core/renderer/cached_pass_compositor_owner.js";
+const DIST_TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH = "dist/app/js/core/map_renderer/transformed_frame_compositor_owner.js";
 const HOST_OWNER_PATH = "js/core/map_renderer/render_pass_cache_host_owner.js";
 const COMMIT_OWNER_PATH = "js/core/map_renderer/render_pass_commit_accounting_owner.js";
 const RENDER_REQUEST_BOUNDARY_OWNER_PATH = "js/core/map_renderer/render_request_boundary_owner.js";
@@ -143,6 +146,16 @@ function isForbiddenCachedPassCompositorOwnerPath(sourcePath) {
     && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
 }
 
+function isForbiddenTransformedFrameCompositorOwnerPath(sourcePath) {
+  const normalized = sourcePath.replaceAll("\\", "/");
+  if (normalized === TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH) return false;
+  if (!normalized.startsWith("js/core/")) return false;
+  const stem = path.basename(normalized).replace(/\.m?js$/, "").toLowerCase().replace(/-/g, "_");
+  const compact = stem.replaceAll("_", "");
+  return compact.includes("transformedframecompositor")
+    && /(?:^|_)(?:owner|helper|controller|adapter)(?:_|$)/.test(stem);
+}
+
 function normalizeLineEndings(source) {
   return source.replace(/\r\n/g, "\n");
 }
@@ -208,6 +221,20 @@ test("P2.2a implementation doc locks cached-pass ownership and protected adjacen
     "Browser, Playwright, perf, and main-thread acceptance were assigned to the separate acceptance lane and are recorded below.",
   ]) {
     assertIncludes(docSource, token, "P2.2a doc must lock implementation token");
+  }
+});
+
+test("P2.2b implementation doc locks transformed-frame ownership and protected adjacent algorithms", () => {
+  const docSource = readRepoFile(P22B_DOC_PATH);
+  for (const token of [
+    "# Renderer Transformed Frame Compositor Owner P2.2b",
+    "canonical owner is `js/core/map_renderer/transformed_frame_compositor_owner.js`",
+    "The owner contains `composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()`.",
+    "Runtime state writes remain composition-root effects in `js/core/map_renderer.js`.",
+    "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
+    "P53 historical preflight remains retained as the architecture inventory.",
+  ]) {
+    assertIncludes(docSource, token, "P2.2b doc must lock implementation token");
   }
 });
 
@@ -334,10 +361,41 @@ test("P2.2a cached pass compositor owns cached canvas transform math only", () =
   }
 });
 
-test("map_renderer keeps cached-pass composition root and thin wrappers", () => {
+test("P2.2b transformed frame compositor owns buffered transformed-frame decisions only", () => {
+  const ownerSource = readRepoFile(TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH);
+  for (const token of [
+    "export function createTransformedFrameCompositorOwner({",
+    "function composeTransformedFrameToBuffer(",
+    "function drawTransformedFrameFromCaches(",
+    "setInteractionCompositeRejectedReason(compositeReuseDecision.reason || \"unknown\")",
+    "setPendingExactPoliticalFastFrame(false)",
+    "blitCompositeBufferToMain(bufferCanvas)",
+    "return Object.freeze({",
+  ]) {
+    assertIncludes(ownerSource, token, "transformed-frame compositor must keep owner token");
+  }
+  for (const token of [
+    "renderPassToCache",
+    "drawLastGoodFrameFallback",
+    "drawBaseVisibleFrameFallback",
+    "runtimeState",
+    "globalThis",
+    "document",
+    "window",
+    "runGetter",
+    "runEffect",
+    "createTrace",
+  ]) {
+    assertExcludes(ownerSource, token, "transformed-frame compositor must avoid adjacent/global token");
+  }
+});
+
+test("map_renderer keeps frame compositor composition roots and thin wrappers", () => {
   const rendererSource = readRepoFile(MAP_RENDERER_PATH);
   const drawWrapper = extractFunctionSource(rendererSource, "drawTransformedPass");
   const composeWrapper = extractFunctionSource(rendererSource, "composeRenderPassesToTarget");
+  const bufferWrapper = extractFunctionSource(rendererSource, "composeTransformedFrameToBuffer");
+  const transformedFrameWrapper = extractFunctionSource(rendererSource, "drawTransformedFrameFromCaches");
   for (const token of [
     "import { createCachedPassCompositorOwner } from \"./renderer/cached_pass_compositor_owner.js\";",
     "let cachedPassCompositorOwner = null;",
@@ -355,13 +413,28 @@ test("map_renderer keeps cached-pass composition root and thin wrappers", () => 
   const cachedOwnerGetter = extractFunctionSource(rendererSource, "getCachedPassCompositorOwner");
   assertExcludes(cachedOwnerGetter, "getPassCanvas:", "cached owner wiring must use one cache snapshot getter");
   assertExcludes(cachedOwnerGetter, "isPassDirty:", "cached owner wiring must derive diagnostics from its cache snapshot");
+  for (const token of [
+    "import { createTransformedFrameCompositorOwner } from \"./map_renderer/transformed_frame_compositor_owner.js\";",
+    "let transformedFrameCompositorOwner = null;",
+    "function getTransformedFrameCompositorOwner() {",
+  ]) {
+    assertIncludes(rendererSource, token, "map_renderer must keep transformed-frame composition token");
+  }
+  assertIncludes(
+    bufferWrapper,
+    "return getTransformedFrameCompositorOwner().composeTransformedFrameToBuffer(",
+    "buffer wrapper must delegate",
+  );
+  assertIncludes(
+    transformedFrameWrapper,
+    "return getTransformedFrameCompositorOwner().drawTransformedFrameFromCaches(timings, options);",
+    "transformed-frame wrapper must delegate",
+  );
   for (const token of ["scaleRatio", "missingCanvasPassNames", "targetContext.drawImage(", "renderDiag.transformedPasses"]) {
     assertExcludes(drawWrapper, token, "draw wrapper must stay thin");
     assertExcludes(composeWrapper, token, "compose wrapper must stay thin");
   }
   for (const functionName of [
-    "composeTransformedFrameToBuffer",
-    "drawTransformedFrameFromCaches",
     "buildInteractionComposite",
     "drawInteractionComposite",
     "drawInteractionBorderSnapshot",
@@ -511,15 +584,17 @@ test("adjacent lifecycle diagnostic hit exact scenario and strategic owners stay
   assertIncludes(scenarioRefreshRuntimeSource, "function refreshMapDataForScenarioChunkPromotion(", "scenario runtime must keep chunk refresh entry");
 });
 
-test("P2.1 keeps public facade state allowlist owner topology and dist mirror aligned", () => {
+test("P2 owners keep public facade state allowlist topology and dist mirrors aligned", () => {
   const packageJsonSource = readRepoFile("package.json");
   const publicFacadeSource = readRepoFile(PUBLIC_FACADE_PATH);
   const stateWriteAllowlistSource = readRepoFile(STATE_WRITE_ALLOWLIST_PATH);
   const stateWriteAllowlist = JSON.parse(stateWriteAllowlistSource);
   const ownerSource = readRepoFile(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
   const cachedPassCompositorOwnerSource = readRepoFile(CACHED_PASS_COMPOSITOR_OWNER_PATH);
+  const transformedFrameCompositorOwnerSource = readRepoFile(TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH);
   const distOwnerSource = readRepoFile(DIST_DRAW_CANVAS_ORCHESTRATION_OWNER_PATH);
   const distCachedPassCompositorOwnerSource = readRepoFile(DIST_CACHED_PASS_COMPOSITOR_OWNER_PATH);
+  const distTransformedFrameCompositorOwnerSource = readRepoFile(DIST_TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH);
   const distRendererSource = readRepoFile(DIST_MAP_RENDERER_PATH);
 
   assertIncludes(
@@ -547,6 +622,16 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     "\"test:python:map-renderer-frame-compositor-boundary\": \"npm run python -- -m unittest tests.test_map_renderer_frame_compositor_owner_boundary_contract -q\"",
     "package.json must expose P2.2a Python boundary script",
   );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:transformed-frame-compositor-owner\": \"node --test tests/transformed_frame_compositor_owner_behavior.test.mjs\"",
+    "package.json must expose P2.2b owner behavior script",
+  );
+  assertIncludes(
+    packageJsonSource,
+    "\"test:node:transformed-frame-compositor-owner-suite\": \"npm run test:node:transformed-frame-compositor-owner && npm run test:node:renderer-draw-canvas-orchestration-inventory && npm run test:python:map-renderer-frame-compositor-boundary\"",
+    "package.json must expose P2.2b owner suite",
+  );
 
   for (const token of [
     "render,",
@@ -564,6 +649,8 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     "renderer_render_lifecycle_owner",
     "cached_pass_compositor_owner",
     "cachedPassCompositorOwner",
+    "transformed_frame_compositor_owner",
+    "transformedFrameCompositorOwner",
   ]) {
     assertExcludes(publicFacadeSource, token, "public facade must not expose P53/P40 forbidden owner token");
     assertExcludes(stateWriteAllowlistSource, token, "state-write allowlist must not include P53/P40 forbidden owner token");
@@ -583,6 +670,11 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     false,
     "state-write allowlist must keep the pure cached-pass compositor out",
   );
+  assert.equal(
+    stateWriteAllowlist.files.includes(TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH),
+    false,
+    "state-write allowlist must keep the pure transformed-frame compositor out",
+  );
 
   for (const relativePath of [
     "js/core/renderer/renderer_render_lifecycle_owner.js",
@@ -596,6 +688,7 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
   }
   assert.equal(repoFileExists(DRAW_CANVAS_ORCHESTRATION_OWNER_PATH), true, "P2.1 must keep canonical drawCanvas owner");
   assert.equal(repoFileExists(CACHED_PASS_COMPOSITOR_OWNER_PATH), true, "P2.2a must keep canonical cached-pass compositor");
+  assert.equal(repoFileExists(TRANSFORMED_FRAME_COMPOSITOR_OWNER_PATH), true, "P2.2b must keep canonical transformed-frame compositor");
   for (const sourcePath of listRepoSourceFiles("js/core")) {
     if (sourcePath === DRAW_CANVAS_ORCHESTRATION_OWNER_PATH) continue;
     assert.equal(
@@ -608,6 +701,11 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
       false,
       `P53 must not add renamed cached-pass compositor owner/helper: ${sourcePath}`,
     );
+    assert.equal(
+      isForbiddenTransformedFrameCompositorOwnerPath(sourcePath),
+      false,
+      `P53 must not add renamed transformed-frame compositor owner/helper: ${sourcePath}`,
+    );
   }
 
   assert.equal(
@@ -619,6 +717,16 @@ test("P2.1 keeps public facade state allowlist owner topology and dist mirror al
     distRendererSource,
     "import { createDrawCanvasOrchestrationOwner } from \"./map_renderer/draw_canvas_orchestration_owner.js\";",
     "dist map_renderer must keep P2.1 owner import",
+  );
+  assert.equal(
+    normalizeLineEndings(distTransformedFrameCompositorOwnerSource),
+    normalizeLineEndings(transformedFrameCompositorOwnerSource),
+    "dist transformed-frame compositor must mirror source owner",
+  );
+  assertIncludes(
+    distRendererSource,
+    "import { createTransformedFrameCompositorOwner } from \"./map_renderer/transformed_frame_compositor_owner.js\";",
+    "dist map_renderer must keep P2.2b owner import",
   );
   assert.equal(
     normalizeLineEndings(distCachedPassCompositorOwnerSource),

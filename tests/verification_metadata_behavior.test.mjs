@@ -460,11 +460,15 @@ test("renderer draw canvas P2.1 files route to owner behavior inventory and boun
   assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-draw-canvas-orchestration-boundary"));
 });
 
-test("renderer cached pass P2.2a files route to behavior inventory boundary and Pages commands", () => {
+test("renderer frame compositor P2.2 files route to behavior inventory boundary and Pages commands", () => {
   const expectedEntries = new Map([
     [
       "verify-core:test:node:cached-pass-compositor-owner",
       "test:node:cached-pass-compositor-owner",
+    ],
+    [
+      "verify-core:test:node:transformed-frame-compositor-owner",
+      "test:node:transformed-frame-compositor-owner",
     ],
     [
       "verify-core:test:python:map-renderer-frame-compositor-boundary",
@@ -502,17 +506,25 @@ test("renderer cached pass P2.2a files route to behavior inventory boundary and 
         routeRegistry: true,
       },
     );
-    assert.ok(entry.sourceRefs.includes("js/core/renderer/cached_pass_compositor_owner.js"));
-    assert.ok(entry.sourceRefs.includes("tests/cached_pass_compositor_owner_behavior.test.mjs"));
-    assert.ok(entry.sourceRefs.includes("docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md"));
+    if (commandRef === "test:node:cached-pass-compositor-owner") {
+      assert.ok(entry.sourceRefs.includes("js/core/renderer/cached_pass_compositor_owner.js"));
+      assert.ok(entry.sourceRefs.includes("tests/cached_pass_compositor_owner_behavior.test.mjs"));
+    }
+    if (commandRef === "test:node:transformed-frame-compositor-owner") {
+      assert.ok(entry.sourceRefs.includes("js/core/map_renderer/transformed_frame_compositor_owner.js"));
+      assert.ok(entry.sourceRefs.includes("tests/transformed_frame_compositor_owner_behavior.test.mjs"));
+    }
+    assert.ok(entry.sourceRefs.some((sourceRef) => sourceRef.includes("renderer-") && sourceRef.endsWith(".md")));
   }
 
   const ownerOnlyReport = buildRecommendation([
     "js/core/renderer/cached_pass_compositor_owner.js",
+    "js/core/map_renderer/transformed_frame_compositor_owner.js",
   ]);
   assert.deepEqual(ownerOnlyReport.unmatchedChangedFiles, []);
   for (const commandRef of [
     "test:node:cached-pass-compositor-owner",
+    "test:node:transformed-frame-compositor-owner",
     "test:node:renderer-draw-canvas-orchestration-inventory",
     "test:python:map-renderer-frame-compositor-boundary",
     "verify:architecture-boundaries",

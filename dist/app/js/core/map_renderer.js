@@ -210,6 +210,7 @@ import {
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
+import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";
 import { createRenderTransformReusePolicyOwner } from "./renderer/render_transform_reuse_policy_owner.js";
 import { createProjectedGeometryBoundsOwner } from "./renderer/projected_geometry_bounds_owner.js";
 import { createViewportReadModelOwner } from "./renderer/viewport_read_model_owner.js";
@@ -988,6 +989,7 @@ let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
+let transformedFrameCompositorOwner = null;
 let rendererRuntimeContext = null;
 let renderPassCacheHostOwner = null;
 let renderPassCommitAccountingOwner = null;
@@ -2654,6 +2656,61 @@ function getCachedPassCompositorOwner() {
     },
   });
   return cachedPassCompositorOwner;
+}
+
+function getTransformedFrameCompositorOwner() {
+  if (transformedFrameCompositorOwner) return transformedFrameCompositorOwner;
+  transformedFrameCompositorOwner = createTransformedFrameCompositorOwner({
+    constants: {
+      interactionCompositePassNames: INTERACTION_COMPOSITE_PASS_NAMES,
+      renderPhaseIdle: RENDER_PHASE_IDLE,
+      renderPhaseInteracting: RENDER_PHASE_INTERACTING,
+      renderPhaseSettling: RENDER_PHASE_SETTLING,
+    },
+    getters: {
+      getCurrentTransform: () => runtimeState.zoomTransform || globalThis.d3.zoomIdentity,
+      getRenderPassCacheSnapshot: getRenderPassCacheState,
+      getActiveTransformedFramePassNames,
+      getRenderPhase: () => runtimeState.renderPhase,
+      getDeferExactAfterSettle: () => runtimeState.deferExactAfterSettle,
+      getActiveScenarioId: () => runtimeState.activeScenarioId,
+      getPendingExactPoliticalFastFrame: () => runtimeState.pendingExactPoliticalFastFrame,
+      getZoomGestureScaleDelta: () => runtimeState.zoomGestureScaleDelta,
+      getZoomGestureEndedAt: () => runtimeState.zoomGestureEndedAt,
+      getDpr: () => runtimeState.dpr,
+      isHgoRuntimePreviewReady,
+    },
+    helpers: {
+      nowMs,
+      canDrawTransformedPass,
+      getInteractionCompositeReuseDecision,
+    },
+    effects: {
+      ensureCompositeBufferCanvas,
+      resetCanvasContext,
+      withRenderTarget,
+      drawInteractionComposite,
+      composeRenderPassesToTarget,
+      drawTransformedPass,
+      drawInteractionBorderSnapshot,
+      drawBordersPass,
+      blitCompositeBufferToMain,
+      resetMainCanvas,
+      setInteractionCompositeRejectedReason: (reason) => {
+        getRenderPassCacheState().interactionComposite.rejectedReason = reason;
+      },
+      invalidateInteractionComposite,
+      buildInteractionComposite,
+      canDrawInteractionComposite,
+      setPendingExactPoliticalFastFrame: (value) => {
+        runtimeState.pendingExactPoliticalFastFrame = value;
+      },
+      recordRenderPerfMetric,
+      recordPassTiming,
+      incrementPerfCounter,
+    },
+  });
+  return transformedFrameCompositorOwner;
 }
 
 function getRenderPassCacheHostOwner() {
@@ -18174,171 +18231,17 @@ function renderExportPassesToCanvas(passNames) {
 function composeTransformedFrameToBuffer(
   currentTransform,
   transformedPasses,
-  {
-    interactiveBorders = false,
-    useInteractionComposite = true,
-    allowInteractionCompositeContinuity = false,
-  } = {},
+  options,
 ) {
-  const bufferCanvas = ensureCompositeBufferCanvas();
-  const bufferContext = bufferCanvas.getContext("2d");
-  if (!bufferContext) return false;
-  resetCanvasContext(bufferContext, bufferCanvas.width, bufferCanvas.height);
-  let ok = false;
-  withRenderTarget(bufferContext, () => {
-    const interactionOk = useInteractionComposite
-      ? drawInteractionComposite(currentTransform, {
-        allowSelectionTopologyContinuity: allowInteractionCompositeContinuity,
-      })
-      : composeRenderPassesToTarget(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES, currentTransform, {
-        requireAllPasses: true,
-      }).ok;
-    ok = interactionOk
-      && transformedPasses.every((passName) => drawTransformedPass(passName, currentTransform));
-    if (!ok) return;
-    if (!drawInteractionBorderSnapshot(currentTransform)) {
-      const k = Math.max(0.0001, Number(currentTransform?.k || 1));
-      bufferContext.setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);
-      bufferContext.translate(currentTransform.x, currentTransform.y);
-      bufferContext.scale(k, k);
-      drawBordersPass(k, { interactive: !!interactiveBorders });
-      bufferContext.setTransform(1, 0, 0, 1, 0, 0);
-    }
-    ok = drawTransformedPass("labels", currentTransform);
-  });
-  if (!ok) return false;
-  blitCompositeBufferToMain(bufferCanvas);
-  return true;
+  return getTransformedFrameCompositorOwner().composeTransformedFrameToBuffer(
+    currentTransform,
+    transformedPasses,
+    options,
+  );
 }
 
-function drawTransformedFrameFromCaches(timings, { interactiveBorders = false } = {}) {
-  const currentTransform = runtimeState.zoomTransform || globalThis.d3.zoomIdentity;
-  const compositeStart = nowMs();
-  const cache = getRenderPassCacheState();
-  const activeTransformedPassNames = getActiveTransformedFramePassNames();
-  const transformedPasses = activeTransformedPassNames.filter((passName) =>
-    !INTERACTION_COMPOSITE_PASS_NAMES.includes(passName) && passName !== "labels"
-  );
-  const allowDirtyFastFrame =
-    runtimeState.renderPhase === RENDER_PHASE_SETTLING
-    || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle);
-  const dirtyFastFramePassNames = allowDirtyFastFrame
-    ? activeTransformedPassNames.filter((passName) => !!cache.dirty?.[passName])
-    : [];
-  // Preflight avoids clearing the visible canvas when a cached pass is missing.
-  if (activeTransformedPassNames.some((passName) => !canDrawTransformedPass(passName, cache, {
-    allowDirty: allowDirtyFastFrame,
-  }))) {
-    return false;
-  }
-  if (isHgoRuntimePreviewReady()) {
-    resetMainCanvas();
-    const drewHgoPreviewFrame = activeTransformedPassNames.every((passName) => (
-      drawTransformedPass(passName, currentTransform)
-    ));
-    if (!drewHgoPreviewFrame) {
-      recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
-        phase: String(runtimeState.renderPhase || ""),
-        activeScenarioId: String(runtimeState.activeScenarioId || ""),
-        allowDirtyFastFrame,
-        usedDirtyInteractionPasses: false,
-        reason: "hgo-runtime-preview",
-      });
-      return false;
-    }
-    if (dirtyFastFramePassNames.length) {
-      timings.usedDirtyFastFramePasses = dirtyFastFramePassNames.join(",");
-    }
-    recordPassTiming(timings, "hgoPreviewTransformedFrame", compositeStart);
-    incrementPerfCounter("transformedFrames");
-    return true;
-  }
-  const compositeReuseDecision = getInteractionCompositeReuseDecision(currentTransform, cache, {
-    allowSelectionTopologyContinuity: runtimeState.renderPhase === RENDER_PHASE_INTERACTING,
-  });
-  const canReuseComposite = compositeReuseDecision.ok;
-  if (!canReuseComposite) {
-    cache.interactionComposite.rejectedReason = compositeReuseDecision.reason || "unknown";
-    if (compositeReuseDecision.reason !== "invalid") {
-      invalidateInteractionComposite(compositeReuseDecision.reason);
-    }
-  }
-  const canBuildCompositeNow = runtimeState.renderPhase !== RENDER_PHASE_INTERACTING;
-  const canDrawDirtyInteractionPasses = allowDirtyFastFrame
-    && !canReuseComposite
-    && INTERACTION_COMPOSITE_PASS_NAMES.every((passName) => canDrawTransformedPass(passName, cache, {
-      allowDirty: true,
-    }));
-  const compositeReady = canReuseComposite
-    || (canBuildCompositeNow && buildInteractionComposite(currentTransform, timings))
-    || canDrawDirtyInteractionPasses;
-  if (!compositeReady) {
-    recordRenderPerfMetric("interactionCompositeUnavailable", 0, {
-      phase: String(runtimeState.renderPhase || ""),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      deferredBuild: !canBuildCompositeNow,
-      allowDirtyFastFrame,
-      reason: compositeReuseDecision.reason || cache.interactionComposite?.rejectedReason || "missing-interaction-composite",
-    });
-    return false;
-  }
-  if (!canDrawDirtyInteractionPasses && !canReuseComposite && !canDrawInteractionComposite(currentTransform, cache)) {
-    return false;
-  }
-  if (
-    runtimeState.deferExactAfterSettle
-    && runtimeState.pendingExactPoliticalFastFrame
-    && !cache.dirty?.political
-  ) {
-    runtimeState.pendingExactPoliticalFastFrame = false;
-    recordRenderPerfMetric("settlePoliticalFastExactSkipped", 0, {
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      reason: "defer-to-sliced-exact-refresh",
-      scaleDelta: Number(runtimeState.zoomGestureScaleDelta || 0),
-      zoomEndedAt: Number(runtimeState.zoomGestureEndedAt || 0),
-    });
-  }
-  if (canDrawDirtyInteractionPasses) {
-    timings.usedDirtyInteractionPasses = true;
-    recordRenderPerfMetric("dirtyInteractionPassFastFrame", 0, {
-      phase: String(runtimeState.renderPhase || ""),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      reason: cache.interactionComposite?.rejectedReason || "dirty-interaction-passes",
-    });
-  }
-  if (dirtyFastFramePassNames.length) {
-    timings.usedDirtyFastFramePasses = dirtyFastFramePassNames.join(",");
-  }
-  const drewAll = composeTransformedFrameToBuffer(currentTransform, transformedPasses, {
-    interactiveBorders,
-    useInteractionComposite: !canDrawDirtyInteractionPasses,
-    allowInteractionCompositeContinuity: compositeReuseDecision.mode === "continuity",
-  });
-  if (!drewAll) {
-    recordRenderPerfMetric("transformedFrameBufferComposeFailure", 0, {
-      phase: String(runtimeState.renderPhase || ""),
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-      allowDirtyFastFrame,
-      usedDirtyInteractionPasses: canDrawDirtyInteractionPasses,
-    });
-    return false;
-  }
-  const timingLabel = interactiveBorders ? "interactiveComposite" : "transformedComposite";
-  recordPassTiming(timings, timingLabel, compositeStart);
-  if (Number.isFinite(timings.contextBase) || Number.isFinite(timings.contextScenario)) {
-    timings.context =
-      Math.max(0, Number(timings.contextBase || 0))
-      + Math.max(0, Number(timings.contextScenario || 0));
-  }
-  incrementPerfCounter("transformedFrames");
-  if (runtimeState.renderPhase === RENDER_PHASE_SETTLING || (runtimeState.renderPhase === RENDER_PHASE_IDLE && runtimeState.deferExactAfterSettle)) {
-    recordRenderPerfMetric("settleFastFrame", Math.max(0, nowMs() - compositeStart), {
-      phase: runtimeState.renderPhase,
-      interactiveBorders: !!interactiveBorders,
-      activeScenarioId: String(runtimeState.activeScenarioId || ""),
-    });
-  }
-  return true;
+function drawTransformedFrameFromCaches(timings, options) {
+  return getTransformedFrameCompositorOwner().drawTransformedFrameFromCaches(timings, options);
 }
 
 function promoteDeferredColorRenderToIdle() {

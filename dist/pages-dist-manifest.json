@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 894811,
+      "size_bytes": 889967,
       "source_kind": "dist"
     },
     {
@@ -45903,6 +45903,11 @@
     {
       "path": "app/js/core/map_renderer/set_map_data_transaction_owner.js",
       "size_bytes": 6641,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/map_renderer/transformed_frame_compositor_owner.js",
+      "size_bytes": 13115,
       "source_kind": "dist"
     },
     {
@@ -47417,7 +47422,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467603,
+      "size_bytes": 1467751,
       "source_kind": "dist"
     },
     {
@@ -47547,9 +47552,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9423,
+      "file_count": 9424,
       "path": "app",
-      "size_bytes": 965647398
+      "size_bytes": 965655669
     },
     {
       "file_count": 57,
@@ -47559,7 +47564,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467603
+      "size_bytes": 1467751
     },
     {
       "file_count": 1,
@@ -47582,5 +47587,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972213362
+  "total_bytes": 972221781
 }

@@ -175,6 +175,8 @@
     "test:python:map-renderer-draw-canvas-orchestration-boundary": "npm run python -- -m unittest tests.test_map_renderer_draw_canvas_orchestration_owner_boundary_contract -q",
     "test:node:cached-pass-compositor-owner": "node --test tests/cached_pass_compositor_owner_behavior.test.mjs",
     "test:node:cached-pass-compositor-owner-suite": "npm run test:node:cached-pass-compositor-owner && npm run test:node:renderer-draw-canvas-orchestration-inventory && npm run test:python:map-renderer-frame-compositor-boundary",
+    "test:node:transformed-frame-compositor-owner": "node --test tests/transformed_frame_compositor_owner_behavior.test.mjs",
+    "test:node:transformed-frame-compositor-owner-suite": "npm run test:node:transformed-frame-compositor-owner && npm run test:node:renderer-draw-canvas-orchestration-inventory && npm run test:python:map-renderer-frame-compositor-boundary",
     "test:python:map-renderer-frame-compositor-boundary": "npm run python -- -m unittest tests.test_map_renderer_frame_compositor_owner_boundary_contract -q",
     "test:node:click-selection-transaction-owner": "node --test tests/click_selection_transaction_owner_behavior.test.mjs",
     "test:node:renderer-click-selection-transaction-inventory": "node --test tests/renderer_click_selection_transaction_inventory_boundary.test.mjs",

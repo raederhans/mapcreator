@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist/browser closeout are complete. Rerun01 through rerun04 remain immutable terminal evidence. Rerun04 completed all eight blocks and 32 measured raw files, then returned `invalid-experiment / exit 3` because its preregistered CPU, frequency, global drift, and one capture-duration admission checks failed. Independent evidence/statistics reviews keep the performance gate closed. Independent architecture review authorizes a reversible isolated P2.2b implementation; main integration and P2 closeout still require fresh `accepted / exit 0` performance evidence.
+Current status: P2.2b isolated implementation is complete at the working-tree level. The transformed-frame compositor owner, root-owned mutation effects, focused regressions, architecture/state-write/metadata checks, zero-gap adaptive routing, and generated Pages mirror are green. Rerun01 through rerun04 remain immutable terminal evidence. Main integration and P2 closeout still require clean-head deterministic/browser gates plus a fresh complete Williams `accepted / exit 0` result.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -183,7 +183,7 @@ Current status: P2.2a implementation and deterministic/dist/browser closeout are
 ## P2.2b transformed frame compositor owner
 
 - [ ] Entry gate: obtain a separately approved governed acceptance result after the P2.2a `blocked` decision.
-- [ ] Extract `js/core/map_renderer/transformed_frame_compositor_owner.js`.
+- [x] Extract `js/core/map_renderer/transformed_frame_compositor_owner.js`.
 
 ## P2.2a Williams crossover rerun prerequisite
 
@@ -203,7 +203,7 @@ Current status: P2.2a implementation and deterministic/dist/browser closeout are
 - [x] Assign one live owner and start rerun01 from exact detached worktrees and a fresh raw root.
 - [ ] Complete the full pre-registered sequence; rerun01 stopped in block-01 before the baseline runner started because the required Windows process-start watcher lacked permission.
 - [ ] Accept P2.2a only when the raw analyzer returns `accepted` / exit `0`; keep P2.2b blocked for exit `2`, `3`, or `1`.
-- [ ] Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
+- [x] Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
 
 ## P2.2a Williams rerun01 outcome 2026-07-11/12
 
@@ -290,7 +290,7 @@ Current status: P2.2a implementation and deterministic/dist/browser closeout are
 - [x] Record canonical hashes for execute, analysis, raw manifest, preregistration, dry plan, pre-execute snapshot, and final cleanup index.
 - [x] Remove both clean detached rerun04 worktrees and their verified dependency junctions; prune worktree metadata; confirm zero task process and clear ports 8000/8892.
 - [x] Complete three independent read-only reviews: evidence integrity `BLOCK` for performance admission, statistics/governance `BLOCK` for inference, and architecture `APPROVE` for reversible isolated implementation only.
-- [ ] Implement only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` in the canonical transformed-frame compositor owner, retaining all composition-root writes/effects and existing public/context/state boundaries.
+- [x] Implement only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` in the canonical transformed-frame compositor owner, retaining all composition-root writes/effects and existing public/context/state boundaries.
 - [ ] Run focused, shared, Pages/dist, browser, and review gates on the isolated implementation.
 - [ ] Run a fresh post-change Williams experiment under a new preregistration/evidence root; only `accepted / exit 0` permits main integration and P2 closeout.
 

@@ -6,6 +6,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 CACHED_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "cached_pass_compositor_owner.js"
+TRANSFORMED_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "transformed_frame_compositor_owner.js"
 PUBLIC_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "public.js"
 RUNTIME_CONTEXT_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "renderer_runtime_context.js"
 STATE_WRITE_ALLOWLIST = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
@@ -75,6 +76,50 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
         for relative in forbidden:
             self.assertFalse((REPO_ROOT / relative).exists(), relative)
 
+    def test_transformed_owner_is_canonical_bounded_and_unique(self):
+        self.assertTrue(TRANSFORMED_OWNER_JS.exists())
+        source = read(TRANSFORMED_OWNER_JS)
+        self.assertIn(
+            "export function createTransformedFrameCompositorOwner({",
+            source,
+        )
+        self.assertNotRegex(source, r"(?m)^\s*import\s")
+        for token in [
+            "map_renderer.js",
+            "RendererRuntimeContext",
+            "runtime" + "State",
+            "global" + "This",
+            "document",
+            "window",
+            "runGetter",
+            "runEffect",
+            "createTrace",
+        ]:
+            self.assertNotIn(token, source)
+        for token in [
+            "function composeTransformedFrameToBuffer(",
+            "function drawTransformedFrameFromCaches(",
+            "setInteractionCompositeRejectedReason(compositeReuseDecision.reason || \"unknown\")",
+            "setPendingExactPoliticalFastFrame(false)",
+            "blitCompositeBufferToMain(bufferCanvas)",
+            "return Object.freeze({",
+        ]:
+            self.assertIn(token, source)
+        self.assertLessEqual(len(source.splitlines()), 420)
+
+        forbidden = [
+            "js/core/map_renderer/transformed_frame_compositor_helper.js",
+            "js/core/map_renderer/transformed_frame_compositor_controller.js",
+            "js/core/map_renderer/transformed_frame_compositor_adapter.js",
+            "js/core/map_renderer/shared_transformed_frame_compositor_owner.js",
+            "js/core/renderer/transformed_frame_compositor_owner.js",
+            "js/core/renderer/transformed_frame_compositor_helper.js",
+            "js/core/renderer/transformed_frame_compositor_controller.js",
+            "js/core/renderer/transformed_frame_compositor_adapter.js",
+        ]
+        for relative in forbidden:
+            self.assertFalse((REPO_ROOT / relative).exists(), relative)
+
     def test_map_renderer_keeps_thin_wrappers_and_composition_root_writes(self):
         renderer = read(MAP_RENDERER_JS)
         self.assertIn(
@@ -121,11 +166,46 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
         self.assertIn("composeRenderPassesToTarget(exportContext, passNames,", export_wrapper)
         self.assertNotIn("getCachedPassCompositorOwner()", export_wrapper)
 
+        self.assertIn(
+            'import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";',
+            renderer,
+        )
+        self.assertIn("let transformedFrameCompositorOwner = null;", renderer)
+        transformed_owner_getter = extract_function(renderer, "getTransformedFrameCompositorOwner")
+        for token in [
+            "createTransformedFrameCompositorOwner({",
+            "getCurrentTransform: () => runtimeState.zoomTransform || globalThis.d3.zoomIdentity",
+            "getRenderPassCacheSnapshot: getRenderPassCacheState",
+            "setInteractionCompositeRejectedReason: (reason) => {",
+            "getRenderPassCacheState().interactionComposite.rejectedReason = reason;",
+            "setPendingExactPoliticalFastFrame: (value) => {",
+            "runtimeState.pendingExactPoliticalFastFrame = value;",
+        ]:
+            self.assertIn(token, transformed_owner_getter)
+
+        buffer_wrapper = extract_function(renderer, "composeTransformedFrameToBuffer")
+        self.assertIn(
+            "return getTransformedFrameCompositorOwner().composeTransformedFrameToBuffer(",
+            buffer_wrapper,
+        )
+        frame_wrapper = extract_function(renderer, "drawTransformedFrameFromCaches")
+        self.assertIn(
+            "return getTransformedFrameCompositorOwner().drawTransformedFrameFromCaches(timings, options);",
+            frame_wrapper,
+        )
+        for wrapper in [buffer_wrapper, frame_wrapper]:
+            for token in [
+                "allowDirtyFastFrame",
+                "getInteractionCompositeReuseDecision",
+                "buildInteractionComposite(",
+                "drawInteractionBorderSnapshot(",
+                "pendingExactPoliticalFastFrame =",
+            ]:
+                self.assertNotIn(token, wrapper)
+
     def test_adjacent_frame_algorithms_and_public_surfaces_stay_in_place(self):
         renderer = read(MAP_RENDERER_JS)
         for function_name in [
-            "composeTransformedFrameToBuffer",
-            "drawTransformedFrameFromCaches",
             "buildInteractionComposite",
             "drawInteractionComposite",
             "drawInteractionBorderSnapshot",
@@ -138,6 +218,8 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
         for token in [
             "cached_pass_compositor_owner",
             "cachedPassCompositorOwner",
+            "transformed_frame_compositor_owner",
+            "transformedFrameCompositorOwner",
         ]:
             self.assertNotIn(token, read(PUBLIC_JS))
             self.assertNotIn(token, read(RUNTIME_CONTEXT_JS))
@@ -145,7 +227,7 @@ class FrameCompositorOwnerBoundaryContract(unittest.TestCase):
 
     def test_map_renderer_budget_moves_down_without_format_compaction(self):
         renderer = read(MAP_RENDERER_JS)
-        self.assertLessEqual(len(renderer.splitlines()), 23382)
+        self.assertLessEqual(len(renderer.splitlines()), 23280)
 
 
 if __name__ == "__main__":

@@ -1209,6 +1209,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
   const cachedPassCompositorOwnerSource = readRepoFile("js", "core", "renderer", "cached_pass_compositor_owner.js");
+  const transformedFrameCompositorOwnerSource = readRepoFile("js", "core", "map_renderer", "transformed_frame_compositor_owner.js");
   const renderTransformReusePolicyOwnerSource = readRepoFile("js", "core", "renderer", "render_transform_reuse_policy_owner.js");
   const visibleFrameDiagnosticsOwnerSource = readRepoFile("js", "core", "renderer", "visible_frame_diagnostics_owner.js");
   const setMapDataTransactionOwnerSource = readRepoFile("js", "core", "map_renderer", "set_map_data_transaction_owner.js");
@@ -1266,7 +1267,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && rendererSource.includes('recordRenderPerfMetric("interactionCompositeContinuityReuse"')
       && renderCacheOwnerSource.includes("function getInteractionCompositeReuseDecision(")
       && renderCacheOwnerSource.includes('new Set(["selection-version-mismatch", "topology-revision-mismatch"])')
-      && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?allowInteractionCompositeContinuity = false[\s\S]*?drawInteractionComposite\(currentTransform, \{[\s\S]*?allowSelectionTopologyContinuity: allowInteractionCompositeContinuity[\s\S]*?composeRenderPassesToTarget\(bufferContext, INTERACTION_COMPOSITE_PASS_NAMES[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(rendererSource),
+      && /function composeTransformedFrameToBuffer\([\s\S]*?useInteractionComposite = true[\s\S]*?allowInteractionCompositeContinuity = false[\s\S]*?drawInteractionComposite\(currentTransform, \{[\s\S]*?allowSelectionTopologyContinuity: allowInteractionCompositeContinuity[\s\S]*?composeRenderPassesToTarget\([\s\S]*?interactionCompositePassNames[\s\S]*?drawInteractionBorderSnapshot\(currentTransform\)/.test(transformedFrameCompositorOwnerSource),
     continuityFrameSkipsBaseFillDuringInteraction:
       rendererSource.includes("const CONTINUITY_FRAME_MAX_STALE_AGE_MS = 1500;")
       && /function invalidateLastGoodFrame\(reason = "visual-invalidation"\) \{[\s\S]*?frame\.stale = true;/.test(renderCacheOwnerSource)
@@ -1552,8 +1553,8 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /if \(shouldRestoreFullPoliticalDerivedState\) \{[\s\S]*?rebuildPoliticalLandCollections\(\);[\s\S]*?rebuildRuntimeDerivedState\(\{[\s\S]*?includeRuntimePoliticalMeta: true,[\s\S]*?includeSecondarySpatial: false,[\s\S]*?\}\);/.test(scenarioRefreshRuntimeSource)
       && /restoredFullPoliticalChunkData = shouldRestoreFullPoliticalDerivedState;/.test(scenarioRefreshRuntimeSource),
     exactAfterSettleDefersPoliticalFastExact:
-      /function drawTransformedFrameFromCaches[\s\S]*?settlePoliticalFastExactSkipped[\s\S]*?defer-to-sliced-exact-refresh/.test(rendererSource)
-      && !/function drawTransformedFrameFromCaches[\s\S]*?renderPassToCache\("political", \(k\) => drawPoliticalPass\(k\)/.test(rendererSource),
+      /function drawTransformedFrameFromCaches[\s\S]*?settlePoliticalFastExactSkipped[\s\S]*?defer-to-sliced-exact-refresh/.test(transformedFrameCompositorOwnerSource)
+      && !/function drawTransformedFrameFromCaches[\s\S]*?renderPassToCache\("political", \(k\) => drawPoliticalPass\(k\)/.test(transformedFrameCompositorOwnerSource),
     transformReusablePassSignaturesUseStableViewportKey:
       renderPassCatalogSource.includes("export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set")
       && /export const VIEWPORT_STABLE_RENDER_PASS_SIGNATURE_NAMES = new Set\(\[[\s\S]*?"contextBase",[\s\S]*?\]\);/.test(renderPassCatalogSource)
@@ -1603,7 +1604,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       /function canDrawTransformedPass\(passName, cache = getRenderPassCacheState\(\), \{ allowDirty = false \} = \{\}\) \{[\s\S]*?cache\.dirty\?\.\[passName\] && !allowDirty/.test(rendererSource)
       && /function canBuildInteractionComposite\(cache = getRenderPassCacheState\(\)\) \{[\s\S]*?canDrawTransformedPass\(passName, cache\)/.test(rendererSource)
       && /function buildInteractionComposite\(currentTransform, timings\) \{[\s\S]*?canBuildInteractionComposite\(getRenderPassCacheState\(\)\)/.test(rendererSource)
-      && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?runtimeState\.renderPhase === RENDER_PHASE_SETTLING[\s\S]*?runtimeState\.deferExactAfterSettle[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(rendererSource)
+      && /function drawTransformedFrameFromCaches[\s\S]*?const allowDirtyFastFrame =[\s\S]*?initialRenderPhase === renderPhaseSettling[\s\S]*?getDeferExactAfterSettle\(\)[\s\S]*?const dirtyFastFramePassNames = allowDirtyFastFrame[\s\S]*?canDrawTransformedPass\(passName, cache, \{[\s\S]*?allowDirty: allowDirtyFastFrame[\s\S]*?const canDrawDirtyInteractionPasses = allowDirtyFastFrame[\s\S]*?allowDirty: true[\s\S]*?buildInteractionComposite\(currentTransform, timings\)[\s\S]*?useInteractionComposite: !canDrawDirtyInteractionPasses/.test(transformedFrameCompositorOwnerSource)
       && /function drawCanvasFrame[\s\S]*?usedDirtyFastFramePasses[\s\S]*?!usedDirtyFastFramePasses[\s\S]*?captureLastGoodFrame[\s\S]*?lastGoodFrameCaptureSkipped/.test(drawCanvasOrchestrationOwnerSource),
     politicalRasterWorkerProtocolDefaultsOff:
       politicalRasterWorkerClientSource.includes("POLITICAL_RASTER_WORKER_PROTOCOL_VERSION = 4")
