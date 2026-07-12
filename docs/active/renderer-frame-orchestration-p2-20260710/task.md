@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 remains immutable after the Windows process-start watcher received `HRESULT 0x80041003`. The analyzer null-safety repair is committed through `557cdf34204b30d07f6c260841edc70531527b38`. The current uncommitted TDD slice replaces the unavailable watcher with compile-once Windows Job Object containment, binds source/binary identity, and passes focused plus Windows integration checks. A fresh governed Williams run remains pending and P2.2b entry stays closed.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 remains immutable after the Windows process-start watcher received `HRESULT 0x80041003`. The reviewed compile-once Windows Job Object containment path is committed at candidate `6a2fad24bfe864d47c5d0fc712fb07403ceac98d`. Fresh rerun02 terminated `invalid-experiment` / exit `3` after block-01 with multiple admission failures: external Edge extension renderer churn and pre/post telemetry sample intervals outside the 1000±250ms contract. P2.2b entry stays closed.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -234,7 +234,22 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Complete current-snapshot independent P/Invoke and evidence-chain re-reviews. Both return `APPROVE / CLEAR`; the earlier `2 HIGH + 1 MEDIUM` verdict is a preserved pre-fix snapshot.
 - [x] Run selector/import/supervisor/core-list/diff static closeout: `16 changed / 197 recommended / 7 main-thread / 0 unmatched`, import graph `51`, route schema `297`, supervisor `12 + 4 + 15`, core list `66`, architecture/state-write, and diff check all pass.
 - [x] Hand off the uncommitted ready-for-integration package to the integration owner; commit/push remain integration-owner operations.
-- [ ] Run a new fresh governed Williams experiment under a separately assigned live owner; only accepted exit `0` opens P2.2b.
+- [x] Run one fresh governed Williams experiment under a separately assigned live owner at candidate `6a2fad24`; terminal result `invalid-experiment` / exit `3`, so P2.2b remains closed.
+
+## P2.2a Williams rerun02 outcome 2026-07-12
+
+- [x] Run mandatory clean-head `npm run verify:core` at candidate `6a2fad24`; 66/66 commands passed.
+- [x] Create exact detached clean candidate/control worktrees at `6a2fad24` and `ab86b1e2`; confirm matching package-lock Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`.
+- [x] Run dry plan once; exit `0`, eight blocks, four adjacent pairs, and 32 expected measured raw files.
+- [x] Run exactly one governed `--execute`; no retry.
+- [x] Complete block-01 control/TH baseline with runner exit `0`, valid quiet window, 4 measured raw files, and valid Job Object cleanup.
+- [x] Preserve fail-closed invalidation from external Edge extension renderer PIDs `99504` and `106292`, children of pre-existing Edge PID `32132` that appeared only in the post snapshot.
+- [x] Preserve the additional telemetry invalidators `block-01.telemetry.pre.samples.interval` and `block-01.telemetry.post.samples.interval`; rounded intervals were pre `[1666, 1628, 1655, 1618]ms` and post `[1628, 1635, 1617, 1631]ms` against the 1000±250ms contract.
+- [x] Record block `cleanupValid=false`, harness decision `invalid-experiment`, exit `3`, and stop before block-02.
+- [x] Preserve immutable hashes: raw manifest `d9f4c89f...74b60`, analysis JSON `0c6c229b...e799`, analysis Markdown `f3a41608...b31e`, execute log `3920a243...757d`, cleanup `36a6a103...191`, and Job evidence `f0a99b36...586`.
+- [x] Remove both temporary junctions/worktrees, prune registrations, verify ports 8000/8892 clear, and verify zero rerun02 task processes.
+- [x] Preserve parent `main@db8bd6c` without P2 writes. `cleanup-final.json` captured 48 entries at experiment cleanup; a later read-only snapshot contains 57 entries from unrelated parent work.
+- [x] Keep P2.2b blocked; rerun02 supplies no four-pair performance verdict and no acceptance/regression conclusion.
 
 ## P2.2a exact-head acceptance 2026-07-11
 
