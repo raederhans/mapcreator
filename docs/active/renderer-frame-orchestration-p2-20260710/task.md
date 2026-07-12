@@ -281,7 +281,7 @@ Current status: P2.2a implementation and deterministic/dist/browser closeout are
 - [x] Commit the telemetry-v3 functional checkpoint at `26b1115cc3fe1e66200661e195a4c5abbf4d4c05` and run clean-head `npm run verify:core`; 66/66 commands passed with exit 0.
 - [x] Remove and prune terminal rerun03 detached worktrees after verifying their clean status, commit identities, junction targets, and immutable evidence root.
 - [x] Create fresh exact detached candidate/control worktrees with matching lock identity, shared dependency junctions, and a reserved unique rerun04 evidence root; both sides are clean and the transient control initialization lock cleared normally.
-- [ ] Run one rerun04 dry plan and exactly one governed `--execute`; no automatic retry.
+- [ ] Run exactly one governed rerun04 `--execute` with no automatic retry; the sole dry plan already passed and froze policy v3, schema 3, eight Williams blocks, and 32 measured raw files.
 - [ ] Admit P2.2b only when rerun04 completes all eight blocks and returns `accepted / exit 0`.
 
 ## P2.2a exact-head acceptance 2026-07-11
