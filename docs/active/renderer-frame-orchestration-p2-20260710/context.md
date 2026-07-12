@@ -338,6 +338,8 @@ Live-process owner: `none`. No browser, dev server, Playwright, perf, Pages, or 
 
 Review-fix deterministic closeout is green: Williams governance 26/26, metadata 16/16, core-runner 8/8, route schema 295, import graph 51, supervisor contracts/routing/plan green, core list 65, adaptive dry-run `12 changed / 196 recommended / 7 main-thread / 0 unmatched`, and diff check green. Final independent telemetry and harness reviews found no remaining blocker. This slice retained a static-only owner and produced no live/browser/perf/Pages/dist evidence.
 
+The first clean-head `verify:core` attempt after the Williams tooling commit exposed one stale P53 inventory sentence. The test contract now matches the exact P2.2a document truth, and the focused P53/Williams/metadata/core-runner checks are green; no production or task document wording changed.
+
 Evidence:
 
 - `.runtime/tests/renderer-frame-orchestration-p2-20260710/p2-2a-acceptance/browser/browser-result.json`

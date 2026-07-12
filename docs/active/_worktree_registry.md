@@ -55,6 +55,7 @@ Current rows reflect the real two local worktrees from the current worktree list
 8. Current state: `ready-for-review`; live owner `none`; no live process started by this slice; P2.2b remains blocked until analyzer exit `0`.
 9. Review-fix closeout: all telemetry/preregistration/canonical/workload/process-tree/port/manifest/no-clobber/typed-exit blockers are closed. Independent final static reviews report no remaining live blocker and approve handoff to the first exact Williams run.
 10. Deterministic verification: four syntax checks, Williams governance 26/26, verification metadata 16/16, core runner 8/8, route schema 295, import graph 51, supervisor contracts 12/12 plus routing 4/4, supervisor plan 15/15, and `verify:core:list` 65 commands all pass. Adaptive dry-run reports 12 changed files, 196 recommendations, 7 main-thread lanes, and 0 unmatched; `git diff --check` passes.
+11. Clean-head follow-up: the first `verify:core` attempt exposed one stale P53 inventory sentence. The test contract now asserts the exact current P2.2a acceptance-lane wording; focused P53/Williams/metadata/core-runner checks pass without changing production or task-document truth.
 
 ## P2.1 Legacy-Metric Acceptance Closeout 2026-07-11
 

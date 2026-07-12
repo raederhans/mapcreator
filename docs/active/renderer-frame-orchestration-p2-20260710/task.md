@@ -270,3 +270,4 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Run clean-head `verify:dist-drift` and full `verify:core` 62/62 from the governed tooling commit.
 - [x] Re-run the offline analyzer and confirm stable governed JSON/Markdown hashes while preserving the original legacy report hash.
 - [x] Mark the isolated lane `ready-for-P2.2a`; browser/dev-server/Playwright/live-perf execution remains assigned to the later single-owner acceptance lane.
+- [x] Repair the stale P53 acceptance-lane sentence exposed by the first clean-head `verify:core` attempt; keep the current P2.2a document and production runtime unchanged.

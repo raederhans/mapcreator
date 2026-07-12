@@ -205,7 +205,7 @@ test("P2.2a implementation doc locks cached-pass ownership and protected adjacen
     "`getActiveTargetContext()` is resolved on every transformed-pass draw.",
     "`composeTransformedFrameToBuffer()` and `drawTransformedFrameFromCaches()` remain in `js/core/map_renderer.js` for P2.2b.",
     "Public facade, RendererRuntimeContext, and state-write allowlist remain unchanged.",
-    "Browser, Playwright, perf, and main-thread acceptance remain assigned to the separate acceptance lane.",
+    "Browser, Playwright, perf, and main-thread acceptance were assigned to the separate acceptance lane and are recorded below.",
   ]) {
     assertIncludes(docSource, token, "P2.2a doc must lock implementation token");
   }
