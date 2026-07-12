@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 remains immutable after the Windows process-start watcher received `HRESULT 0x80041003`. The reviewed compile-once Windows Job Object containment path is committed at candidate `6a2fad24bfe864d47c5d0fc712fb07403ceac98d`. Fresh rerun02 terminated `invalid-experiment` / exit `3` after block-01 with multiple admission failures: external Edge extension renderer churn and pre/post telemetry sample intervals outside the 1000±250ms contract. P2.2b entry stays closed.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 and rerun02 remain immutable terminal evidence. Telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c` replaces fixed-delay WMI sampling with monotonic fixed-rate capture-start sampling, keeps the 1000 +/- 250ms admission gate, records schedule lag as diagnostic, and uses Windows Job Object evidence as task-cleanup authority. Focused/static gates and the explicit live telemetry lane are green. P2.2b entry stays closed until one fresh complete rerun03 returns accepted / exit 0.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -250,6 +250,22 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Remove both temporary junctions/worktrees, prune registrations, verify ports 8000/8892 clear, and verify zero rerun02 task processes.
 - [x] Preserve parent `main@db8bd6c` without P2 writes. `cleanup-final.json` captured 48 entries at experiment cleanup; a later read-only snapshot contains 57 entries from unrelated parent work.
 - [x] Keep P2.2b blocked; rerun02 supplies no four-pair performance verdict and no acceptance/regression conclusion.
+
+## Williams telemetry-v2 repair and rerun03 prerequisite 2026-07-12
+
+- [x] Preserve rerun02 byte-for-byte and classify its old 1.63s capture-start intervals as a fixed-delay collector defect.
+- [x] Rotate the policy ID to `p2-williams-crossover-v2` and telemetry window schema to 2.
+- [x] Schedule five samples against monotonic absolute targets and timestamp each actual capture start before both CIM queries.
+- [x] Record `completedAt`, `captureDurationMs`, and `scheduleLagMs`; keep interval admission at 1000 +/- 250ms and lag diagnostic-only.
+- [x] Keep Windows Job Object containment authoritative for task-owned cleanup; retain ambient browser PID churn as diagnostic evidence.
+- [x] Add TDD coverage for policy/schema rotation, cadence validation, valid and invalid quiet-window admission, source scheduling formulas, ambient PID diagnostics, and Job cleanup failure.
+- [x] Separate the real WMI cadence probe from default `verify:core` through named main-thread route `test:node:williams-crossover-telemetry-live`.
+- [x] Pass focused/static validation at functional commit `89dfe15e`: governance 32/32; default Job runner 10 pass + 1 skip; explicit live telemetry 2/2; metadata 16/16; core runner 8/8; perf gate 23/23; render role 17/17; route schema 299; architecture/state/import/supervisor gates; adaptive 9/198/8/0.
+- [x] Complete independent code, architecture, and test-contract review; current verdicts CLEAR / APPROVE with interval-gate and ambient-environment WATCH notes documented.
+- [ ] Run clean-head full `verify:core` after evidence docs commit.
+- [ ] Create exact detached candidate/control worktrees with matching lock identity and a fresh rerun03 raw/report root.
+- [ ] Run one dry plan and exactly one governed `--execute`; no automatic retry.
+- [ ] Admit P2.2b only when the fresh analyzer returns `accepted` / exit `0`.
 
 ## P2.2a exact-head acceptance 2026-07-11
 

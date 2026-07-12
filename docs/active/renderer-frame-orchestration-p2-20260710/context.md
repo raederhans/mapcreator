@@ -11,14 +11,14 @@ Date: 2026-07-10
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
 - current runtime source anchor: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
-- current Williams rerun candidate: `6a2fad24bfe864d47c5d0fc712fb07403ceac98d`
-- current task phase: P2.2a browser acceptance is green; fresh Williams rerun02 terminated fail-closed after block-01 with `invalid-experiment` / exit `3` and multiple admission failures: external Edge extension renderer churn plus pre/post telemetry sample intervals outside the 1000±250ms contract; the run produced 4/32 measured raw files and no four-pair performance verdict; P2.2b entry stays closed
+- current Williams telemetry-v2 functional candidate: `89dfe15e1b28536687e258634bb92324336ff81c`
+- current task phase: P2.2a browser acceptance is green; rerun02 remains immutable invalid evidence; policy `p2-williams-crossover-v2` and telemetry window schema 2 repair the fixed-delay collector and use Job Object containment as task-cleanup authority; focused/static gates and the explicit live cadence probe are green; one fresh rerun03 remains required before P2.2b entry
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch is at committed Job Object containment candidate `6a2fad24bfe864d47c5d0fc712fb07403ceac98d`; rerun01 and rerun02 temporary worktrees/junctions are removed; the rerun02 evidence closeout updates only P2 control docs; parent WIP remains untouched
+- current worktree state: isolated P2 branch contains telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c`; rerun01 and rerun02 temporary worktrees/junctions are removed; rerun03 has not started; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
-- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 43 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md`
+- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total)
 
 ## Approved hard invariants
 
@@ -30,13 +30,14 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: none active
+- live-process owner: root integration agent for the explicit live WMI cadence probe and the later single governed rerun03
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
 - main-thread evidence: remains the prior `f5f27d3f` evidence; this closeout did not rerun main-thread
 - perf baseline: red at `61e090388feb0c69887b9947b55b61968d5324de`; readiness green, threshold acceptance blocked
 - clean-head `npm run verify:core` exited 0 with 66/66 at candidate `6a2fad24`; log `.runtime/output/perf/p2-2a-williams-live-20260712-rerun02/preflight/verify-core.log`, SHA256 `c21f6e97aff7d9a5c0a6cfc0a84459991db172bed72653a3870af35b81a686de`; rerun02 then used exactly one governed execute invocation and no retry
+- telemetry-v2 focused evidence at `89dfe15e`: governance 32/32; default Job runner 10 pass plus one explicit live skip; explicit live telemetry lane 2/2; metadata 16/16; core-runner 8/8; perf-gate contract 23/23; render-role 17/17; route schema 299; architecture/state/import/supervisor gates green; adaptive dry-run 9 changed files, 198 recommendations, 8 main-thread lanes, 0 unmatched
 
 ## Current phase ledger
 
@@ -47,7 +48,7 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: pending with entry blocked by P2.2a acceptance
+- P2.2b transformed frame compositor owner: pending with entry blocked until fresh rerun03 returns accepted / exit 0
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
 
@@ -382,3 +383,9 @@ The governed `--execute` command was invoked exactly once. Block-01/control/TH c
 This run supplies no four-pair performance verdict. No regression or acceptance conclusion exists. P2.2b remains blocked. There was no automatic retry. Canonical evidence lives under `.runtime/output/perf/p2-2a-williams-live-20260712-rerun02/`: raw manifest SHA256 `d9f4c89f01d01d661f38ac81a42ffa71d762842c2dd93d6a4e17ceba1f074b60`; analysis JSON `0c6c229bbfbc7b4df91b0810284aca4ece989e02ad27604deca738adfca4e799`; analysis Markdown `f3a4160887f3a794ad987b06526b029628fc97657ac4e14d0dcae21a4aaab31e`; execute log `3920a243e777a193cba68caade0f2ddc8834d18a74d0b02db9a0c5c6a1f7757d`; block cleanup `36a6a103e42574e5d837cf559ab20239fd682688331565353eb159e5bcc6e191`; Job evidence `f0a99b36f74f5bff07b3dae95710141442f0b40745eb84ad7377d5bc728ed586`.
 
 Final cleanup removed both temporary `node_modules` junctions and detached measurement worktrees, pruned registrations, confirmed no listeners on 8000/8892, and found no rerun02 task processes. The remaining worktree list contains only the dirty parent checkout and the P2 isolated branch. `cleanup-final.json` captured 48 parent WIP entries at experiment cleanup. A later read-only snapshot contains 57 entries (52 deletions and 5 modifications) from unrelated parent work; P2 has kept the parent checkout untouched. Final cleanup and evidence indexes are `cleanup-final.json` and `canonical-evidence.json` beside the reports.
+
+## Active Williams telemetry repair lane 2026-07-12
+
+Live-process owner: root integration agent. The owner alone runs and interprets the focused Windows WMI telemetry test and the later governed rerun03. Focused command logs belong under `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/`; rerun03 receives a new immutable root under `.runtime/output/perf/`. Static reviewers may inspect committed source and completed log snapshots only.
+
+The repair keeps rerun02 immutable. It introduces policy `p2-williams-crossover-v2`, telemetry window schema 2, monotonic fixed-rate scheduling, actual capture-start timestamps, completion/duration/lag fields, and Job Object cleanup authority. Ambient browser PID churn remains a diagnostic. The 1000 +/- 250ms capture-start interval stays the admission gate; schedule lag stays diagnostic.
