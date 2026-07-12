@@ -16,8 +16,8 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SOURCE_REPORT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-20260711.json");
 const DEFAULT_EXPERIMENT_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf", "p2-1-acceptance", "20260711");
-const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-20260711.json");
-const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-20260711.md");
+const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-v2-20260711.json");
+const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-v2-20260711.md");
 const DEFAULT_EXPECTED_SOURCE_SHA256 = "f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839";
 const BLOCK_SEQUENCE = Object.freeze(["A1", "B1", "B2", "A2"]);
 const SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
@@ -363,16 +363,17 @@ export async function buildGovernedCompanionReport({
 
   return {
     schemaVersion: 1,
-    reportId: "p2-1-performance-ab-governed-20260711",
+    reportId: "p2-1-performance-ab-governed-v2-20260711",
     generatedFrom: source.payload?.generatedAt || null,
     policy: {
       policyId: RENDER_SAMPLE_ROLE_POLICY_ID,
       canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
       governedScenarios: SCENARIOS,
       predicates: [
-        "renderSamples.count === 2",
-        "sample sequences are [1, 2]",
+        "renderSamples.count matches the sample array and is at least 2",
+        "sample sequences are contiguous from 1 through N",
         "canonical candidate is unique and samples.at(-1)",
+        "every sample before the canonical candidate is recorded before chunk promotion",
         "activeScenarioId equals requested scenario",
         "phase is idle",
         "politicalBgProgressive is true",

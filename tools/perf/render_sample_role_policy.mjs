@@ -1,8 +1,6 @@
-export const RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v1";
+export const RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v2";
 export const CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenario-frame-v1";
 export const GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
-
-const EXPECTED_SAMPLE_SEQUENCES = Object.freeze([1, 2]);
 
 function finiteNumberOrNull(value) {
   const numericValue = Number(value);
@@ -53,7 +51,15 @@ export function classifyFirstRenderSampleRole(sample) {
 }
 
 function roleCheck(id, pass, expected, actual) {
-  return Object.freeze({ id, pass: !!pass, expected, actual });
+  const freezeEvidenceValue = (value) => (
+    Array.isArray(value) ? Object.freeze([...value]) : value
+  );
+  return Object.freeze({
+    id,
+    pass: !!pass,
+    expected: freezeEvidenceValue(expected),
+    actual: freezeEvidenceValue(actual),
+  });
 }
 
 function isCanonicalCandidate(sample, scenarioId, promotionRecordedAt) {
@@ -84,10 +90,12 @@ export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null }
   );
   const declaredCount = finiteNumberOrNull(renderSamples.count);
   const sequences = samples.map((sample) => sample?.sequence);
+  const expectedSequences = samples.map((_, index) => index + 1);
   const lastSample = samples.at(-1) || null;
   const canonicalCandidates = samples.filter((sample) => (
     isCanonicalCandidate(sample, requestedScenarioId, promotionRecordedAt)
   ));
+  const preCanonicalSamples = samples.slice(0, -1);
   const firstRole = classifyFirstRenderSampleRole(rawSamples[0]);
   const scenarioFirstSample = samples.find((sample) => (
     sample?.contextScenarioMs !== null && sample.contextScenarioMs > 0
@@ -120,12 +128,12 @@ export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null }
   }
 
   const checks = [
-    roleCheck("declared-sample-count", declaredCount === 2, 2, declaredCount),
-    roleCheck("sample-array-count", samples.length === 2, 2, samples.length),
+    roleCheck("declared-sample-count", declaredCount === samples.length, samples.length, declaredCount),
+    roleCheck("sample-array-count", samples.length >= 2, ">= 2", samples.length),
     roleCheck(
       "sample-sequence",
-      sequences.length === 2 && sequences.every((sequence, index) => sequence === EXPECTED_SAMPLE_SEQUENCES[index]),
-      EXPECTED_SAMPLE_SEQUENCES,
+      sequences.every((sequence, index) => sequence === expectedSequences[index]),
+      expectedSequences,
       sequences
     ),
     roleCheck(
@@ -139,6 +147,15 @@ export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null }
       canonicalCandidates.length === 1 && canonicalCandidates[0] === lastSample,
       "samples.at(-1)",
       canonicalCandidates[0]?.index ?? null
+    ),
+    roleCheck(
+      "all-pre-canonical-samples-before-promotion",
+      promotionRecordedAt !== null
+        && preCanonicalSamples.every((sample) => (
+          sample?.recordedAt !== null && sample.recordedAt < promotionRecordedAt
+        )),
+      `< ${promotionRecordedAt ?? "missing"}`,
+      preCanonicalSamples.map((sample) => sample?.recordedAt ?? null)
     ),
     roleCheck("last-active-scenario", lastSample?.activeScenarioId === requestedScenarioId, requestedScenarioId, lastSample?.activeScenarioId ?? null),
     roleCheck("last-phase-idle", lastSample?.phase === "idle", "idle", lastSample?.phase ?? null),

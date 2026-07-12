@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-12 P2.2b isolated implementation is ready for a clean-head acceptance checkpoint. The canonical transformed-frame compositor, root-owned mutation effects, 15 behavior tests, boundary/inventory contracts, zero-gap routing, and generated Pages mirror are in place. Main integration and P2 closeout still require clean-head deterministic/browser/perf gates and a fresh Williams `accepted / exit 0` result. Parent WIP remains untouched.
+Last updated: 2026-07-12 P2.2b production and browser acceptance are green through city rendering; `perf:gate` passes. Williams rerun05 is immutable terminal `invalid-experiment / exit 3` evidence because the frozen role-v1 contract rejected a valid three-sample lifecycle. Role-policy v2 and Williams v4 are implemented, focused tests and independent reviews are green, and rerun06 preparation now requires a committed candidate checkpoint plus a one-file control overlay. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-12 P2.2b isolated implementation is ready for a clean-head
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none. The root integration owner completed the latest Pages-dist process and its log is `.runtime/reports/generated/p2-2b-verify-pages-dist-final.log`; task processes are absent. The post-P2.2b browser/perf and Williams lanes require one root-owned serial process, exact clean measurement identities, and a unique evidence root.
+- live process owner: none. Root completed clean-head core, main-thread/browser, city, Pages/dist, and `perf:gate` acceptance. Rerun05 issued one execute with zero retry and is terminal. Rerun06 requires one root-owned serial process after the v2/v4 checkpoint and control overlay are committed.
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -25,12 +25,24 @@ Last updated: 2026-07-12 P2.2b isolated implementation is ready for a clean-head
 
 ## Current Worktrees
 
-Current rows reflect the real two local worktrees from the current worktree list: the dirty parent checkout and the P2 isolated integration lane. The terminal rerun04 measurement worktrees were clean before removal and remain recoverable through their exact detached commits and immutable evidence package. The dirty parent checkout remains preserved and unchanged.
+Current rows reflect the four registered local worktrees: the dirty parent checkout, the P2 isolated integration lane, and two terminal rerun05 detached measurement worktrees awaiting governed cleanup. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | Current read-only snapshot has 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | Rerun02 cleanup captured 48 entries. Subsequent unrelated parent work produced the current 57-entry snapshot; the P2 worktree has not written to the parent checkout. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
 | `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710`; implementation checkpoint based on `f091ca84` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `in-progress`; P2.2b ready for clean-head acceptance | Hot files: `map_renderer.js`, canonical transformed compositor owner, P2 context/task, shared registry, verification metadata, and Pages mirror. Parent WIP remains untouched. | Owner 15/15, P53 13/13 after mirror sync, Python 5/5, chunk contracts 57/57, architecture/state/metadata/supervisor gates green, selector 15 files / 201 commands / 0 unmatched, Pages 927.18 MiB. Browser/perf and fresh Williams remain pending. | Red for concurrent renderer/performance work; yellow for registry/docs/metadata overlap; green for unrelated parent WIP. | Create a Lore functional commit, run clean-head deterministic/browser/perf gates, obtain fresh accepted Williams evidence, then integrate and close P2. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-williams-rerun05-candidate-3bbf46ec` — terminal candidate measurement lane | detached `3bbf46ec0fd5dec62d719b1aae31c8b0ef5792b7` | exact P2 city-fix candidate | `ready-for-cleanup`; rerun05 terminal | Ignored `node_modules` junction only; tracked tree clean. | Zero candidate measurements; immutable rerun05 evidence retained outside the worktree. | Red for another live performance owner. | Verify junction target, remove junction, remove worktree, prune after v2/v4 candidate checkpoint. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-williams-rerun05-control-ab86b1e2` — terminal control measurement lane | detached `ab86b1e24d161edbe6bcc80acb0b316e4bf81942` | frozen control | `ready-for-cleanup`; rerun05 terminal | Ignored `node_modules` junction only; tracked tree clean. | Four control raw files; immutable rerun05 evidence retained outside the worktree. | Red for another live performance owner. | Verify junction target, remove junction, remove worktree, prune before rerun06. |
+
+## Williams Rerun05 Terminal Package and Role-v2 Repair 2026-07-12
+
+1. Exact identities: candidate `3bbf46ec0fd5dec62d719b1aae31c8b0ef5792b7`, control `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`, matching package-lock blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`, baseline-runner blob `70453d9b`, and role-policy-v1 blob `c66fe181`.
+2. Execution: one dry plan, one execute, zero retry. Block-01/control produced three valid TNO lifecycle samples; v1 rejected the sample count/array/sequence and stopped before candidate execution.
+3. Formal result: `invalid-experiment / exit 3`; candidate measurements `0`; no performance conclusion.
+4. Immutable evidence root: `.runtime/output/perf/p2-2b-williams-postchange-20260712-rerun05/`. SHA256: raw manifest `3f5e1902c8910f19bce07b0a274c60ae60245ce3fe58781525221cb9146939ed`; analysis JSON `0ec23cfeac7f9f2dda0cced3cb4292cdbace1b600f6a6fbc1a31f8001c787c89`; analysis Markdown `908193d2c9fc4e85b6a3c9bf58b4d2575a7d12793285815ca1bed9ec4846e1c4`; dry-plan log `fe6cb0d1c846f54b40874f1fdb561e169d564af7d557bfcdac8185a936b6d20f`; execute log `67d0ffc7ab373aa270e12e8189a70cbcf8a94de8ac14d41a89c807a6e9b7d102`.
+5. Governed correction: `render-sample-role-v2` accepts two-or-more contiguous lifecycle samples only when declared and actual counts match, the canonical sample is unique and last, and every earlier sample predates chunk promotion. Williams identity rotates to `p2-williams-crossover-v4`.
+6. TDD/review: render-role `23/23`, Williams `34/34`, Python perf contract `23/23`; independent code and governance reviews `CLEAR`.
+7. Rerun06 gate: commit candidate v2/v4, create a one-file control overlay from `ab86b1e2`, verify dual-side blobs, clean rerun05 worktrees, create fresh exact detached worktrees and paths, run one plan and one execute, require full `accepted / exit 0`.
 
 ## Williams Rerun04 Terminal Package 2026-07-12
 

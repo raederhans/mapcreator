@@ -191,14 +191,16 @@ class PerfGateContractTest(unittest.TestCase):
         analyzer = RENDER_SAMPLE_ROLE_ANALYZER.read_text(encoding="utf-8")
         package_payload = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
 
-        self.assertIn('RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v1"', policy)
+        self.assertIn('RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v2"', policy)
         self.assertIn('CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenario-frame-v1"', policy)
         self.assertIn('GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"])', policy)
         for contract_token in (
             '"declared-sample-count"',
+            '"sample-array-count"',
             '"sample-sequence"',
             '"canonical-candidate-unique"',
             '"canonical-candidate-is-last"',
+            '"all-pre-canonical-samples-before-promotion"',
             '"last-active-scenario"',
             '"last-phase-idle"',
             '"last-political-bg-progressive"',

@@ -5,7 +5,7 @@ import {
   median,
 } from "./render_sample_role_policy.mjs";
 
-export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v3";
+export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v4";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";

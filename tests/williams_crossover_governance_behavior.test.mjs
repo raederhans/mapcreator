@@ -253,7 +253,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         runs: rawRuns[scenarioId],
         summary: { canonicalRenderSampleMs: render + 0.5 },
         renderSampleRoleSummary: {
-          policyId: "render-sample-role-v1",
+          policyId: "render-sample-role-v2",
           canonicalRoleId: "last-post-promotion-idle-scenario-frame-v1",
           governedRunCount: 2,
           matchedRunCount: 2,
@@ -321,7 +321,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
         gitHead: expectedHead,
         config: { warmups: 1, runs: 2, scenarios: [...block.scenarioOrder], threshold: 1.15, urlQuery: { ...URL_QUERY } },
         renderSampleRolePolicy: {
-          policyId: "render-sample-role-v1",
+          policyId: "render-sample-role-v2",
           canonicalRoleId: "last-post-promotion-idle-scenario-frame-v1",
         },
         workloadIdentity: {
@@ -410,7 +410,7 @@ async function materializeEvidenceRoot(evidence) {
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
-  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v3");
+  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v4");
   assert.deepEqual(WILLIAMS_TELEMETRY_CADENCE, {
     windowSchemaVersion: 3,
     samplesPerWindow: 5,
@@ -780,6 +780,8 @@ test("preregistration drift in thresholds or pair topology invalidates the repor
 
 test("every preregistered admission surface is exact and field drift is invalid", () => {
   const cases = [
+    ["policyId", (_value, preregistration) => { preregistration.policyId = "p2-williams-crossover-v3"; }],
+    ["renderSampleRolePolicyId", (_value, preregistration) => { preregistration.renderSampleRolePolicyId = "render-sample-role-v1"; }],
     ["generatedAt", (_value, preregistration) => { preregistration.generatedAt = "invalid"; }],
     ["scenarios", (value) => value.reverse()],
     ["primaryEstimator", (_value, preregistration) => { preregistration.primaryEstimator = "mean"; }],
@@ -810,6 +812,14 @@ test("recomputed canonical role is authoritative and raw summary mismatch is inv
   assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
   assert.ok(report.decision.invalidReasons.includes("block-01.tno_1962.run-1.canonicalRenderSummaryMismatch"));
   assert.equal(report.blocks[0].scenarios.tno_1962.canonicalRender.values[0], 1000);
+});
+
+test("stale render-sample role policy evidence fails closed", () => {
+  const evidence = createEvidence();
+  evidence.blocks[0].baseline.scenarios.tno_1962.renderSampleRoleSummary.policyId = "render-sample-role-v1";
+  const report = analyzeWilliamsCrossoverEvidence(evidence);
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.ok(report.decision.invalidReasons.includes("block-01.tno_1962.baselineRoleSummary.policyId"));
 });
 
 test("workload identity binds manifest, feature count, sample role, runs, warmups, and URL query across blocks", () => {

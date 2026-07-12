@@ -8,6 +8,10 @@ import {
 
 test("governed companion reproduces the canonical role medians from frozen raw evidence", async () => {
   const report = await buildGovernedCompanionReport();
+  assert.equal(report.reportId, "p2-1-performance-ab-governed-v2-20260711");
+  assert.equal(report.policy.policyId, "render-sample-role-v2");
+  assert.ok(report.policy.predicates.includes("sample sequences are contiguous from 1 through N"));
+  assert.ok(report.policy.predicates.includes("every sample before the canonical candidate is recorded before chunk promotion"));
   assert.equal(report.evidence.rawFileCount, 40);
   assert.equal(report.evidence.roleMatches, 40);
   assert.deepEqual(report.evidence.roleMismatches, []);

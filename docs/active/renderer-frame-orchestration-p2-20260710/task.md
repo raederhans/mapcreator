@@ -311,6 +311,21 @@ Current status: P2.2b isolated implementation is complete at the working-tree le
 
 ## Review / UltraQA / integration
 
+## Williams rerun05 and role-policy v2 repair 2026-07-12
+
+- [x] Preserve rerun05 as terminal `invalid-experiment / exit 3` evidence with exactly one dry plan, one execute, and zero retry.
+- [x] Record the direct failure: the valid TNO lifecycle emitted three contiguous samples and the frozen v1 policy hardcoded exactly two.
+- [x] Keep the rerun05 performance verdict empty; candidate produced zero measurements.
+- [x] Implement `render-sample-role-v2`: declared/actual count equality, at least two samples, contiguous `1..N`, unique final canonical sample, and every earlier sample recorded before chunk promotion.
+- [x] Rotate Williams governance to `p2-williams-crossover-v4` and reject stale v1/v3 evidence.
+- [x] Preserve the historical governed companion through a v2 report ID/output path while retaining the earlier v1 files.
+- [x] Complete focused TDD and reviews: render-role 23/23, Williams governance 34/34, Python perf contract 23/23; independent code and governance reviews CLEAR.
+- [ ] Commit the candidate v2/v4 checkpoint and pass clean-head deterministic gates.
+- [ ] Create a control overlay from `ab86b1e2` containing only `tools/perf/render_sample_role_policy.mjs`; verify matching lock, baseline-runner, and role-policy blobs.
+- [ ] Remove the terminal rerun05 detached worktrees after verifying exact HEADs, clean status, and dependency junction targets; preserve its evidence root.
+- [ ] Run one fresh rerun06 dry plan and exactly one execute under a unique evidence root with zero retry.
+- [ ] Admit P2 closeout only when rerun06 returns `accepted / exit 0` with all eight blocks and 32 measured raw files.
+
 - [ ] Reach cumulative extracted lines >=150.
 - [ ] Run independent code review, first-principles review, and UltraQA.
 - [ ] Recheck integration ancestry and overlap.
