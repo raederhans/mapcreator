@@ -14,9 +14,9 @@ Date: 2026-07-10
 - prior Williams telemetry-v2 functional commit: `89dfe15e1b28536687e258634bb92324336ff81c`
 - rerun03 exact measurement candidate: `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; control: `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`; package-lock Git blob on both sides: `df70020f2f930d5692a1ff9febebf86dbb0e0db1`
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
-- current task phase: rerun03 is immutable terminal `invalid-experiment / exit 3` evidence after a 3617ms first governed CIM capture triggered catch-up intervals; policy `p2-williams-crossover-v3` and telemetry window schema 3 add one explicit excluded priming capture plus measured capture-duration and schedule-lag admission; P2.2b remains closed until one fresh rerun04 returns `accepted / exit 0`
+- current task phase: rerun04 is immutable terminal `invalid-experiment / exit 3` evidence after all eight blocks and 32 measured raw files completed; the preregistered environment admission failed on four pre-block CPU checks, two adjacent-pair frequency checks, one global frequency-drift check, and one measured counter capture-duration check; P2.2b receives conditional isolated implementation entry while main integration and P2 closeout remain gated on a fresh complete `accepted / exit 0` performance result
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch contains the committed telemetry-v3 checkpoint and this post-checkpoint control-plane update; terminal rerun03 detached candidate/control worktrees were removed and pruned after their commit hashes and immutable evidence root were verified; parent WIP remains untouched
+- current worktree state: isolated P2 branch contains the committed telemetry-v3 checkpoint and the terminal rerun04 evidence record; rerun04 detached candidate/control worktrees and dependency junctions were removed and pruned after exact identities, clean status, Job cleanup, ports, and immutable evidence hashes were verified; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -32,7 +32,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: root integration agent; the telemetry-v3 two-window probe is complete and no live process remains; the next authorized live lane is the single governed rerun04 after clean-head verification and independent review
+- live-process owner: none; rerun04 completed exactly one execute with zero retry, all task processes are gone, ports 8000/8892 are clear, and a later post-P2.2b performance lane requires a fresh explicit owner and a unique evidence root
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -53,7 +53,7 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: pending with entry blocked until fresh rerun04 returns accepted / exit 0
+- P2.2b transformed frame compositor owner: conditional isolated implementation entry approved by independent architecture review; only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` may migrate, while main integration and P2 closeout remain gated on fresh `accepted / exit 0` performance evidence
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
 
@@ -416,3 +416,15 @@ Rerun04 now has exact detached worktrees at candidate `26b1115cc3fe1e66200661e19
 Root remains the sole live-process owner. The unique evidence root is `.runtime/output/perf/p2-2a-williams-live-20260712-rerun04/`. The next steps are one dry plan, mechanical preregistration validation, and exactly one execute with zero automatic retry. P2.2b remains closed until all eight Williams blocks complete and the analyzer returns `accepted / exit 0`.
 
 The sole dry plan completed with exit `0`. It froze policy `p2-williams-crossover-v3`, telemetry schema `3`, one `excluded-warmup` priming capture per pre/post window, eight Williams blocks in `A/TH, B/TH, B/HT, A/HT, B/TH, A/TH, A/HT, B/HT` order, one warmup per scenario, two measured runs per scenario, and 32 measured raw files. The dry-plan JSON SHA256 is `e486b198be5011a266c0b67d45f449724eb3416b31b528042fcc764523e528c3`; the clean pre-execute snapshot SHA256 is `682b909663fc241407f8d252bac69ef5a15b3ab8e0d3752fe15f4e60ba9d8f31`. Raw and report outputs remain uncreated. Root now owns exactly one execute invocation and zero automatic retries.
+
+## Williams governed rerun04 terminal record and conditional P2.2b entry 2026-07-12
+
+Root issued the authorized execute command exactly once and issued no retry. All eight Williams blocks completed with runner exit `0`; all eight block cleanup records and Windows Job Object records are valid with empty `remainingPids` and `unverifiedPids`; the raw manifest validates 115 entries and all 32 measured raw files. The analyzer returned `invalid-experiment / exit 3`, `admitted=false`, and no regression list. This terminal result supplies no acceptance, regression, equivalence, improvement, or slowdown conclusion.
+
+The eight preregistered invalid reasons are: pre-block CPU averages `26.2%`, `31.2%`, `27.6%`, and `30.4%` for blocks 02, 03, 06, and 08 against the `25%` ceiling; adjacent-pair performance-adjusted frequency differences `9.580838323353298%` and `8.290155440414502%` for pairs 01-02 and 05-06 against the `5%` ceiling; global pre-frequency drift `15.568862275449089%` against the `10%` ceiling; and block-06 post sample 5 capture duration `1334.4013ms` against the `1250ms` ceiling. The four primary paired point estimates remain diagnostic-only because environment admission failed.
+
+Canonical evidence remains under `.runtime/output/perf/p2-2a-williams-live-20260712-rerun04/`. SHA256 values: execute log `6e9575ef94d1685355a4c624e36d7e728d2371dcc4314d074613a1007d46f29a`; execute exit `24ba1e99dc06b19351323aae0d7370243d586475a634b7f6ff7927fbc72cfaed`; analysis JSON `aa24701dbb7efcc1a184e52eb85a5f222f8124b4d4516e2ae7b1a51d7273bada`; analysis Markdown `d6bcf67309fb19cda24143089c4051cb0b4834d91bdc15b6d66984c55de2752c`; raw manifest `484e6866b86217ebf61127b19dd92efee767a27fe4ae1e2abdb59ce545c765f4`; preregistration `45978565c603b50a04801d3a6b03611a66af0e23d7504f32bbf74bea5eff2da4`; canonical index `35cda7dfd189b9a6dd7595bbbb9a6df6d67ecaf0e5b8afb4aada0d728cd33251`; cleanup index `8f5d8e4188572cbc3d65ea68330b36104cd21547517b237271700e3f07d2525d`.
+
+Cleanup is complete. Both dependency junctions were verified as reparse points targeting the isolated P2 dependency tree before removal. Both detached measurement worktrees were clean at their exact commits before `git worktree remove`; worktree metadata was pruned. All task Job PIDs are absent, ports 8000/8892 have no listeners, and the remaining worktrees are the preserved dirty parent plus this isolated P2 lane. The parent remains at `db8bd6c1` with 57 unrelated status entries and was untouched.
+
+Three independent read-only reviews agree that rerun04 is trustworthy terminal invalid evidence and cannot open the performance gate. The evidence audit verified 115/115 manifest hashes, 32/32 raw files, 8/8 block identities, 16/16 telemetry windows, and complete cleanup. The statistics review prohibits post-hoc threshold changes, sample/block exclusion, and performance inference. The architecture review authorizes a reversible `P2.2b-G` isolated implementation entry while retaining the original integration gate. P2.2b may now migrate only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` in an isolated recovery branch; main integration and P2 closeout require a fresh complete Williams result with `accepted / exit 0`.

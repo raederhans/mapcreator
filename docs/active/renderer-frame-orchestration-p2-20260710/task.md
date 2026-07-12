@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist/browser closeout are complete. Rerun01, rerun02, and rerun03 remain immutable terminal evidence. Rerun03 exposed a 3617ms first governed CIM capture followed by catch-up intervals. Telemetry-v3 now performs one explicit excluded priming capture before the stopwatch and enforces measured capture-duration and schedule-lag limits while retaining the 1000 +/- 250ms capture-start contract. Focused governance and the two-successive-window live telemetry lane are green. P2.2b entry stays closed until one fresh complete rerun04 returns accepted / exit 0.
+Current status: P2.2a implementation and deterministic/dist/browser closeout are complete. Rerun01 through rerun04 remain immutable terminal evidence. Rerun04 completed all eight blocks and 32 measured raw files, then returned `invalid-experiment / exit 3` because its preregistered CPU, frequency, global drift, and one capture-duration admission checks failed. Independent evidence/statistics reviews keep the performance gate closed. Independent architecture review authorizes a reversible isolated P2.2b implementation; main integration and P2 closeout still require fresh `accepted / exit 0` performance evidence.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -281,8 +281,18 @@ Current status: P2.2a implementation and deterministic/dist/browser closeout are
 - [x] Commit the telemetry-v3 functional checkpoint at `26b1115cc3fe1e66200661e195a4c5abbf4d4c05` and run clean-head `npm run verify:core`; 66/66 commands passed with exit 0.
 - [x] Remove and prune terminal rerun03 detached worktrees after verifying their clean status, commit identities, junction targets, and immutable evidence root.
 - [x] Create fresh exact detached candidate/control worktrees with matching lock identity, shared dependency junctions, and a reserved unique rerun04 evidence root; both sides are clean and the transient control initialization lock cleared normally.
-- [ ] Run exactly one governed rerun04 `--execute` with no automatic retry; the sole dry plan already passed and froze policy v3, schema 3, eight Williams blocks, and 32 measured raw files.
-- [ ] Admit P2.2b only when rerun04 completes all eight blocks and returns `accepted / exit 0`.
+- [x] Run exactly one governed rerun04 `--execute` with no automatic retry; all eight blocks, 32 measured raw files, 115 manifest entries, and eight valid Job cleanup records completed before the analyzer returned terminal `invalid-experiment / exit 3`.
+- [ ] Permit main integration and P2 closeout only after a fresh complete Williams experiment returns `accepted / exit 0`; rerun04 remains terminal invalid evidence and cannot satisfy this gate.
+
+## P2.2b-G conditional isolated implementation entry 2026-07-12
+
+- [x] Preserve rerun04 as canonical terminal evidence with zero retry and no selective block/sample exclusion or post-hoc threshold change.
+- [x] Record canonical hashes for execute, analysis, raw manifest, preregistration, dry plan, pre-execute snapshot, and final cleanup index.
+- [x] Remove both clean detached rerun04 worktrees and their verified dependency junctions; prune worktree metadata; confirm zero task process and clear ports 8000/8892.
+- [x] Complete three independent read-only reviews: evidence integrity `BLOCK` for performance admission, statistics/governance `BLOCK` for inference, and architecture `APPROVE` for reversible isolated implementation only.
+- [ ] Implement only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` in the canonical transformed-frame compositor owner, retaining all composition-root writes/effects and existing public/context/state boundaries.
+- [ ] Run focused, shared, Pages/dist, browser, and review gates on the isolated implementation.
+- [ ] Run a fresh post-change Williams experiment under a new preregistration/evidence root; only `accepted / exit 0` permits main integration and P2 closeout.
 
 ## P2.2a exact-head acceptance 2026-07-11
 
