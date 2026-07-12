@@ -89,6 +89,25 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("runReleaseSmokePreflight", spec)
         self.assertIn("RELEASE_SMOKE_RETRY_DELAY_MS", spec)
         self.assertIn("browser.newContext()", spec)
+        config_probe = """
+const lifecycleEvent = process.argv[1];
+if (lifecycleEvent) process.env.npm_lifecycle_event = lifecycleEvent;
+else delete process.env.npm_lifecycle_event;
+const config = require('./playwright.config.cjs');
+const ignores = (Array.isArray(config.testIgnore) ? config.testIgnore : [config.testIgnore])
+  .filter(Boolean)
+  .map((entry) => String(entry));
+process.stdout.write(JSON.stringify(ignores));
+"""
+        default_config = run_command("node", "-e", config_probe, "")
+        release_config = run_command("node", "-e", config_probe, "test:e2e:pages-public-release-gate")
+        deployed_config = run_command("node", "-e", config_probe, "test:e2e:pages-public-release-gate:deployed")
+        self.assert_command_ok(default_config)
+        self.assert_command_ok(release_config)
+        self.assert_command_ok(deployed_config)
+        self.assertTrue(any("release" in entry for entry in json.loads(default_config.stdout)))
+        self.assertFalse(any("release" in entry for entry in json.loads(release_config.stdout)))
+        self.assertFalse(any("release" in entry for entry in json.loads(deployed_config.stdout)))
         self.assertIn("issueSummary.unexpectedNetworkFailures.length > 0", spec)
         self.assertIn("originalPhase", spec)
         landing_phase_index = spec.index("await withReleaseSmokePhase(RELEASE_SMOKE_PHASES.LANDING_PREFLIGHT")

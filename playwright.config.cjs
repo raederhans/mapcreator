@@ -1,6 +1,18 @@
 const path = require("path");
 const { getConfiguredAppOrigin, getWebServerConfig } = require("./tests/e2e/support/playwright-app");
 
+const RELEASE_GATE_LIFECYCLE_EVENTS = new Set([
+  "test:e2e:pages-public-release-gate",
+  "test:e2e:pages-public-release-gate:deployed",
+]);
+const isReleaseGateRun = RELEASE_GATE_LIFECYCLE_EVENTS.has(
+  String(process.env.npm_lifecycle_event || "")
+);
+const testIgnore = [
+  ...(process.env.CI ? [/[\\/]tests[\\/]e2e[\\/]dev[\\/]/] : []),
+  ...(!isReleaseGateRun ? [/[\\/]tests[\\/]e2e[\\/]release[\\/]/] : []),
+];
+
 module.exports = {
   testDir: path.join(__dirname, "tests", "e2e"),
   outputDir: path.join(__dirname, ".runtime", "tests", "playwright"),
@@ -10,9 +22,9 @@ module.exports = {
     ["./tests/e2e/support/reporters/failure-context-reporter.js"],
   ],
   retries: process.env.CI ? 1 : 0,
-  // Keep root-level @dev-tagged cases out of CI and ignore only tests/e2e/dev/**.
+  // Keep root-level @dev-tagged cases out of CI; deployed release smoke has an explicit npm-owned lane.
   grepInvert: process.env.CI ? /@dev/ : undefined,
-  testIgnore: process.env.CI ? /[\\/]tests[\\/]e2e[\\/]dev[\\/]/ : undefined,
+  testIgnore: testIgnore.length ? testIgnore : undefined,
   webServer: getWebServerConfig(),
   use: {
     baseURL: getConfiguredAppOrigin(),
