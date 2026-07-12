@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-12 telemetry-v3 is committed at `26b1115c`; governance passes 33/33, the root-owned two-successive-window live lane passes 2/2, all three final reviews are CLEAR, and clean-head `verify:core` passes 66/66. Terminal rerun03 worktrees were removed after recovery verification. Root owns the forthcoming single rerun04 lane. P2.2b stays blocked pending `accepted / exit 0`, and parent WIP remains untouched.
+Last updated: 2026-07-12 rerun04 preflight uses exact detached candidate `26b1115c` and control `ab86b1e2` worktrees with matching package-lock identity and shared dependency junctions. Root owns the forthcoming single dry plan and single execute. P2.2b stays blocked pending `accepted / exit 0`, and parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-12 telemetry-v3 is committed at `26b1115c`; governance pas
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: root integration agent; telemetry-v3 live verification and clean-head core verification are complete and no live process remains. The next authorized live process is one fresh governed rerun04. Terminal rerun03 detached worktrees have been removed and pruned.
+- live process owner: root integration agent; telemetry-v3 live verification and clean-head core verification are complete and no live process currently runs. The next authorized live process is one fresh governed rerun04 using the registered exact detached worktrees below. Terminal rerun03 detached worktrees have been removed and pruned.
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -25,12 +25,23 @@ Last updated: 2026-07-12 telemetry-v3 is committed at `26b1115c`; governance pas
 
 ## Current Worktrees
 
-Current rows reflect the real two local worktrees from the current worktree list: the dirty parent checkout and the P2 isolated integration lane. The dirty parent checkout remains preserved and unchanged.
+Current rows reflect the real four local worktrees from the current worktree list: the dirty parent checkout, the P2 isolated integration lane, and the two exact detached rerun04 measurement worktrees. The dirty parent checkout remains preserved and unchanged.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | Current read-only snapshot has 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | Rerun02 cleanup captured 48 entries. Subsequent unrelated parent work produced the current 57-entry snapshot; the P2 worktree has not written to the parent checkout. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710@26b1115c`; post-checkpoint control-plane update in progress | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | telemetry-v3 checkpoint accepted for rerun04 preparation; P2.2b blocked | Hot files: P2 context/task and shared registry. Parent WIP remains untouched. | Governance 33/33; default Job runner 10 pass + 1 skip; two-successive-window live telemetry 2/2; three reviews CLEAR; clean-head core 66/66. | Red for concurrent performance/P2.2b work; yellow for registry/docs overlap; green for unrelated parent WIP. | Create fresh rerun04 candidate/control worktrees and run the sole authorized experiment. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated integration lane | branch `codex/renderer-frame-orchestration-p2-20260710@441cb112`; rerun04 registry reconciliation in progress | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | rerun04 preflight; P2.2b blocked | Hot files: P2 context/task and shared registry. Parent WIP remains untouched. | Telemetry-v3 governance 33/33; two-successive-window live telemetry 2/2; clean-head core 66/66; candidate/control identity checks clean. | Red for concurrent performance/P2.2b work; yellow for registry/docs overlap; green for unrelated parent WIP. | Commit this control-plane truth, run one dry plan, then one execute with zero retry. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-williams-rerun04-candidate-26b1115c` — rerun04 candidate | detached `26b1115cc3fe1e66200661e195a4c5abbf4d4c05` | P2 telemetry-v3 functional checkpoint | `in-progress`; exact clean measurement identity | Ignored `node_modules` junction targets the P2 integration dependency tree; tracked status clean. | Package-lock Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`; harness identity frozen by candidate commit. | Red with any writer touching this path or its runtime processes. | Read-only measurement side; root live-process owner only. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-williams-rerun04-control-ab86b1e2` — rerun04 control | detached `ab86b1e24d161edbe6bcc80acb0b316e4bf81942` | frozen P2 control | `in-progress`; exact clean measurement identity | Ignored `node_modules` junction targets the P2 integration dependency tree; tracked status clean. | Package-lock Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`; baseline runner and render-role policy blobs match candidate. | Red with any writer touching this path or its runtime processes. | Read-only measurement side; root live-process owner only. |
+
+## Williams Rerun04 Preflight Package 2026-07-12
+
+1. Exact identities: candidate `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`, control `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`, matching package-lock Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`.
+2. Worktree health: both sides are detached and tracked-clean. The control worktree briefly appeared as `locked initializing` while Git was still completing its checkout; a later process/metadata/status inspection confirmed initialization completed normally, the lock disappeared, and both indexes are healthy. No repair or checkout mutation was required.
+3. Dependency identity: both ignored `node_modules` junctions target `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710\node_modules`.
+4. Reserved evidence root: `.runtime/output/perf/p2-2a-williams-live-20260712-rerun04/`; the root remains unique and will contain one dry plan plus one execute terminal package.
+5. Live ownership: root integration agent owns the future command and logs. No subagent may start, poll, retry, stop, or interpret the live process while it runs.
+6. Admission remains closed until all eight blocks complete and the analyzer returns `accepted / exit 0`; exit `1`, `2`, or `3` remains terminal with zero automatic retry.
 
 ## Williams Rerun03 Terminal and Telemetry-v3 Repair Package 2026-07-12
 
