@@ -10,10 +10,11 @@ Date: 2026-07-10
 - current pre-P2 Windows perf readiness functional commit: `61e090388feb0c69887b9947b55b61968d5324de`
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
-- current acceptance candidate: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
-- current task phase: P2.2a exact-head browser acceptance is green; the first governed A/B report is classified `invalid-environment-regime`; a Williams crossover rerun is pre-registered and awaiting a sole live owner; P2.2b entry is closed
+- current runtime source anchor: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
+- current Williams rerun candidate: `f53a44f483403edbd7286db226380f0f0e4664be`
+- current task phase: P2.2a browser acceptance is green; the first governed A/B report is classified `invalid-environment-regime`; Williams rerun01 stopped before measurement on a required process-start watcher permission failure and exposed a secondary analyzer null dereference; the current static TDD slice repairs the typed-invalid analysis path; P2.2b entry remains closed
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch contained a clean candidate at `8eda8c5c` before this docs-only blocked closeout; parent WIP remains untouched
+- current worktree state: isolated P2 branch started this static analyzer repair clean at `f53a44f4`; rerun01 temporary worktrees and junctions are removed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -334,11 +335,23 @@ The raw analyzer reads every measured run from disk, recomputes the canonical `l
 
 Windows counter state is tri-state; `required-capability-missing` and `collection-error` invalidate the experiment, and null values remain null. `performanceAdjustedFrequencyMHz` is derived as `processorFrequencyMHz * processorPerformancePercent / 100`. Telemetry admission freezes the CPU/frequency/memory thresholds from the plan, enforces pre/post and cross-block time ordering, and binds a single power-scheme GUID and AC source. Port admission uses structured `Get-NetTCPConnection` data plus direct probes where every HTTP response proves an active server. Cleanup uses one persistent `Win32_ProcessStartTrace` watcher during measurement, accumulates the task-owned `ParentProcessId` closure across process-start events, then takes three 200 ms-spaced process snapshots after runner close. It terminates only the accumulated tree and requires every recorded descendant to disappear. A missing intermediate ancestor in a later snapshot therefore cannot orphan its already-owned child, while the measured window avoids repeated PowerShell/CIM polling.
 
-Live-process owner: `none`. No browser, dev server, Playwright, perf, Pages, or dist process was started by this tooling slice. Analyze mode also needs one `.runtime` output owner and defaults to no-clobber; explicit report replacement uses `--overwrite-analysis`. The next live owner must create two exact detached clean worktrees, preserve tracked runners in place, set the four `WILLIAMS_*` identity variables, choose a fresh raw root and fresh report paths, run the full sequence once, and retain all artifacts. P2.2b remains blocked until the analyzer returns `accepted` with exit `0`.
+Live-process owner: `none`. The sole rerun01 owner completed cleanup after the watcher preflight failure. Analyze mode still needs one `.runtime` output owner and defaults to no-clobber; explicit report replacement uses `--overwrite-analysis`. A future live attempt requires a separately authorized watcher-capability resolution, two exact detached clean worktrees, a fresh raw root and fresh report paths, one full sequence, and retained artifacts. P2.2b remains blocked until a complete analyzer result returns `accepted` with exit `0`.
 
 Review-fix deterministic closeout is green: Williams governance 26/26, metadata 16/16, core-runner 8/8, route schema 295, import graph 51, supervisor contracts/routing/plan green, core list 65, adaptive dry-run `12 changed / 196 recommended / 7 main-thread / 0 unmatched`, and diff check green. Final independent telemetry and harness reviews found no remaining blocker. This slice retained a static-only owner and produced no live/browser/perf/Pages/dist evidence.
 
 The first clean-head `verify:core` attempt after the Williams tooling commit exposed one stale P53 inventory sentence. The test contract now matches the exact P2.2a document truth, and the focused P53/Williams/metadata/core-runner checks are green; no production or task document wording changed.
+
+## P2.2a Williams rerun01 outcome and analyzer TDD repair 2026-07-11/12
+
+The exact rerun candidate was `f53a44f483403edbd7286db226380f0f0e4664be`, with runtime source anchor `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; control remained `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`. Mandatory clean-candidate `verify:core` exited `0`. The committed harness `--plan` exited `0` and reproduced the frozen eight-block sequence, one warmup plus two measured runs per scenario, 32-file raw contract, and registered thresholds.
+
+The single `--execute` attempt stopped during block-01 watcher setup. `Register-CimIndicationEvent` returned permission denied / `HRESULT 0x80041003`; the baseline runner never started (`runnerPid=null`) and measured raw count remained `0`. Block evidence records `status=invalid`, exit `3`, and `cleanupValid=false`. The harness then built the partial raw manifest, but analysis dereferenced `post.summary.firstAtMs` after `validateTelemetryWindow()` correctly returned `summary=null` for missing later-block telemetry. That secondary TypeError changed the outer process result to harness fault exit `1` and prevented generation of the typed invalid JSON/Markdown report.
+
+The static repair uses TDD in the existing governance suite. Focused RED produced the exact `Cannot read properties of null (reading 'firstAtMs')` failure at policy line 471. Minimal GREEN normalizes the four cross-window timestamps to `number|null`, compares only present values, retains the existing `.missing` validation reason, and adds no synthetic telemetry. Focused GREEN passes; the full Williams governance suite passes 27/27.
+
+Evidence remains under `.runtime/output/perf/p2-2a-williams-live-20260711-rerun01/`. The immutable raw root is `experiment-20260712T010243Z-raw`; `raw-sha256-manifest.json` SHA256 is `65ab4e89a77d40f4a7e8c1361d69be21ca9df5db625ce6f924b1037bf9667727`; `cleanup-final.json` SHA256 is `b20617025622387118537543ff474f0ac53c3d90a410a637d0c78f898f14beb9`; execute stderr SHA256 is `723dd8ed312ceb611a9a7f53cead2fab71642d0aff484cad0603ff944fbf723a`. Cleanup leaves zero task processes, ports 8000/8892 clear, no temporary junction/worktree, candidate head stable, and parent status identical to preflight. Rerun01 is terminal and will not be selectively resumed. P2.2b stays blocked pending an explicit watcher-capability resolution and a fresh complete governed acceptance result.
+
+Static validation is green: policy/test syntax, focused regression 1/1, Williams governance 27/27, verification metadata 16/16, core runner 8/8, perf-gate contract 23/23, render-role policy 17/17, selector schema 295, supervisor contracts/routing 12/12 + 4/4, and diff check. SF-ATS dry-run reports `5 changed / 14 recommended / 12 child-safe / 2 main-thread / 0 unmatched`. The two main-thread recommendations are `perf:gate` and `perf:williams-crossover:run`; this static repair started no live process and leaves both lanes unrun.
 
 Evidence:
 

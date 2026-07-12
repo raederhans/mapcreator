@@ -396,6 +396,18 @@ test("missing telemetry capability fails closed without converting null to zero"
   assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
 });
 
+test("missing telemetry summary returns a typed invalid experiment", () => {
+  const evidence = createEvidence();
+  evidence.blocks[0].telemetry.post = null;
+  let report;
+  assert.doesNotThrow(() => {
+    report = analyzeWilliamsCrossoverEvidence(evidence);
+  });
+  assert.equal(report.decision.status, "invalid-experiment");
+  assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.invalidExperiment);
+  assert.ok(report.decision.invalidReasons.includes("block-01.telemetry.post.missing"));
+});
+
 test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and power regimes", () => {
   const cases = [
     {

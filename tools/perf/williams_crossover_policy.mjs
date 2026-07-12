@@ -468,13 +468,17 @@ function buildTelemetryAdmission(blocks, preregistration) {
       ...validateTelemetryEnvironment(block.telemetry?.pre, `${expectedBlock.id}.telemetry.pre`, expectedBlock, preregistration),
       ...validateTelemetryEnvironment(block.telemetry?.post, `${expectedBlock.id}.telemetry.post`, expectedBlock, preregistration),
     );
-    if (pre.summary?.lastAtMs !== null && post.summary?.firstAtMs !== null && !(post.summary.firstAtMs > pre.summary.lastAtMs)) {
+    const preFirstAtMs = pre.summary?.firstAtMs ?? null;
+    const preLastAtMs = pre.summary?.lastAtMs ?? null;
+    const postFirstAtMs = post.summary?.firstAtMs ?? null;
+    const postLastAtMs = post.summary?.lastAtMs ?? null;
+    if (preLastAtMs !== null && postFirstAtMs !== null && !(postFirstAtMs > preLastAtMs)) {
       errors.push(`${expectedBlock.id}.telemetry.pre-post-order`);
     }
-    if (previousPostAtMs !== null && pre.summary?.firstAtMs !== null && !(pre.summary.firstAtMs > previousPostAtMs)) {
+    if (previousPostAtMs !== null && preFirstAtMs !== null && !(preFirstAtMs > previousPostAtMs)) {
       errors.push(`${expectedBlock.id}.telemetry.block-order`);
     }
-    if (post.summary?.lastAtMs !== null) previousPostAtMs = post.summary.lastAtMs;
+    if (postLastAtMs !== null) previousPostAtMs = postLastAtMs;
 
     for (const summary of [pre.summary, post.summary]) {
       if (summary?.powerSchemeGuid) powerSchemes.add(summary.powerSchemeGuid);

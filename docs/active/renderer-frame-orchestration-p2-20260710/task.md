@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Exact candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates. The first governed A/B report is classified `invalid-environment-regime`; the replacement Williams crossover rerun is pre-registered and awaits a sole live owner, so P2.2b entry is closed.
+Current status: P2.2a implementation and deterministic/dist closeout are complete. Runtime source anchor `8eda8c5ce19f54fd839e72e3031a2424a4e658f3` passes browser/main-thread gates. Exact rerun candidate `f53a44f483403edbd7286db226380f0f0e4664be` passed the mandatory core gate and Williams plan, then rerun01 stopped before measurement when the Windows process-start watcher received `HRESULT 0x80041003` permission denied. The incomplete evidence exposed a secondary analyzer null dereference; the current static TDD slice fixes that fail-closed path. P2.2b entry remains closed.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -200,9 +200,24 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Harden telemetry admission with frozen CPU/frequency/memory/power thresholds, strict phase/time order, structured TCP/direct probes, and accurate performance-adjusted-frequency naming.
 - [x] Bind full preregistration, canonical-role recomputation, workload identity, exact manifest/tool identity, task-owned process-tree cleanup, typed exits, and raw/report no-clobber behavior.
 - [x] Keep docs/tests on the child-safe governance route; limit the heavy live route to execution/analyzer semantics and tracked workload inputs. Analyze writes `.runtime` under one owner.
-- [ ] Assign one live owner and run the pre-registered sequence from a fresh raw root.
+- [x] Assign one live owner and start rerun01 from exact detached worktrees and a fresh raw root.
+- [ ] Complete the full pre-registered sequence; rerun01 stopped in block-01 before the baseline runner started because the required Windows process-start watcher lacked permission.
 - [ ] Accept P2.2a only when the raw analyzer returns `accepted` / exit `0`; keep P2.2b blocked for exit `2`, `3`, or `1`.
 - [ ] Preserve boolean return, HGO/dirty/reuse/order semantics, and composition-root global writes.
+
+## P2.2a Williams rerun01 outcome 2026-07-11/12
+
+- [x] Run mandatory clean-candidate `npm run verify:core` at `f53a44f483403edbd7286db226380f0f0e4664be`; exit `0`.
+- [x] Validate `--plan` at control `ab86b1e24d161edbe6bcc80acb0b316e4bf81942` and candidate `f53a44f4`; fixed eight-block order, one warmup plus two measured runs, 32 raw files, and frozen thresholds match the preregistration.
+- [x] Start the single governed `--execute` once. Block-01 watcher setup failed with `Register-CimIndicationEvent` permission denied / `HRESULT 0x80041003`; `runnerPid=null`, baseline never started, and measured raw count is `0`.
+- [x] Preserve the fail-closed block result (`status=invalid`, block exit `3`, `cleanupValid=false`) and the outer harness fault (`exit=1`).
+- [x] Record the secondary analyzer fault: incomplete telemetry produced `summary=null`, then cross-window ordering read `post.summary.firstAtMs` and prevented a typed invalid report.
+- [x] Add TDD regression coverage in the existing Williams governance suite: focused RED reproduces the exact TypeError; minimal GREEN returns `invalid-experiment`, exit `3`, and `block-01.telemetry.post.missing` without inventing telemetry values.
+- [x] Preserve raw root `.runtime/output/perf/p2-2a-williams-live-20260711-rerun01/experiment-20260712T010243Z-raw`; raw manifest SHA256 `65ab4e89a77d40f4a7e8c1361d69be21ca9df5db625ce6f924b1037bf9667727`; cleanup evidence SHA256 `b20617025622387118537543ff474f0ac53c3d90a410a637d0c78f898f14beb9`.
+- [x] Complete cleanup: task processes `0`, ports 8000/8892 clear, both temporary junctions/worktrees removed, candidate clean/stable, and parent status exactly matches the preflight baseline.
+- [x] Complete static validation: focused GREEN 1/1, Williams governance 27/27, verification metadata 16/16, core runner 8/8, perf-gate contract 23/23, render-role policy 17/17, selector schema 295, supervisor contracts/routing 12/12 + 4/4, syntax, and diff check all pass.
+- [x] Run SF-ATS dry-run: 5 changed files, 14 recommended commands, 12 child-safe suggestions, 2 main-thread perf lanes, and 0 unmatched files; live perf lanes remain intentionally unrun.
+- [x] Keep P2.2b blocked. A future governed run requires an explicit watcher-capability resolution and a new fresh evidence root; rerun01 remains immutable and is not selectively resumed.
 
 ## P2.2a exact-head acceptance 2026-07-11
 
