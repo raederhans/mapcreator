@@ -11,11 +11,12 @@ Date: 2026-07-10
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
 - current runtime source anchor: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
-- current Williams telemetry-v2 functional commit: `89dfe15e1b28536687e258634bb92324336ff81c`
-- rerun03 exact measurement candidate: `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9` (same product/runtime/tooling tree as `89dfe15e`, plus committed evidence docs)
-- current task phase: P2.2a browser acceptance is green; rerun02 remains immutable invalid evidence; policy `p2-williams-crossover-v2` and telemetry window schema 2 repair the fixed-delay collector and use Job Object containment as task-cleanup authority; focused/static gates and the explicit live cadence probe are green; one fresh rerun03 remains required before P2.2b entry
+- prior Williams telemetry-v2 functional commit: `89dfe15e1b28536687e258634bb92324336ff81c`
+- rerun03 exact measurement candidate: `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; control: `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`; package-lock Git blob on both sides: `df70020f2f930d5692a1ff9febebf86dbb0e0db1`
+- current telemetry repair checkpoint: `30bafd20562f0d9c636248449510cfead123263d`; telemetry-v3 source and regression tests are in progress on top of this clean evidence commit
+- current task phase: rerun03 is immutable terminal `invalid-experiment / exit 3` evidence after a 3617ms first governed CIM capture triggered catch-up intervals; policy `p2-williams-crossover-v3` and telemetry window schema 3 add one explicit excluded priming capture plus measured capture-duration and schedule-lag admission; P2.2b remains closed until one fresh rerun04 returns `accepted / exit 0`
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch contains telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c` and evidence checkpoint `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; rerun01 and rerun02 temporary worktrees/junctions are removed; rerun03 has not started; parent WIP remains untouched
+- current worktree state: isolated P2 branch is dirty only with telemetry-v3 policy/runtime/tests plus this control-plane update; rerun03 detached candidate/control worktrees remain registered temporarily for evidence review and will be removed after the telemetry-v3 checkpoint is committed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -31,7 +32,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: root integration agent for the explicit live WMI cadence probe and the later single governed rerun03
+- live-process owner: root integration agent; the telemetry-v3 two-window probe is complete and no live process remains; the next authorized live lane is the single governed rerun04 after clean-head verification and independent review
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -40,6 +41,8 @@ Date: 2026-07-10
 - clean-head `npm run verify:core` exited 0 with 66/66 at candidate `6a2fad24`; log `.runtime/output/perf/p2-2a-williams-live-20260712-rerun02/preflight/verify-core.log`, SHA256 `c21f6e97aff7d9a5c0a6cfc0a84459991db172bed72653a3870af35b81a686de`; rerun02 then used exactly one governed execute invocation and no retry
 - telemetry-v2 focused evidence at `89dfe15e`: governance 32/32; default Job runner 10 pass plus one explicit live skip; explicit live telemetry lane 2/2; metadata 16/16; core-runner 8/8; perf-gate contract 23/23; render-role 17/17; route schema 299; architecture/state/import/supervisor gates green; adaptive dry-run 9 changed files, 198 recommendations, 8 main-thread lanes, 0 unmatched
 - telemetry-v2 clean-head evidence at `2e05d5a8`: `npm run verify:core` passed 66/66 with zero failures; the explicit live Windows cadence lane passed 2/2 in 9.28 seconds. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/01-clean-head-verify-core.log` and `02-live-telemetry.log`.
+- rerun03 terminal evidence: exactly one dry plan and one execute were used. Block-01/control completed with valid Job cleanup. Block-02/candidate pre-telemetry recorded capture durations `[3617.4604, 628-653...]ms`, capture-start intervals `[3621,629,637,654]ms`, and schedule lags up to `2652.9ms`; quiet admission failed on `telemetry.samples.interval`, workload execution stopped, and analysis returned `invalid-experiment / exit 3`. Canonical root: `.runtime/output/perf/p2-2a-williams-live-20260712-rerun03/`.
+- telemetry-v3 pre-commit evidence: governance 33/33; default Job runner 10 pass plus one explicit live skip; the root-owned explicit live lane passed 2/2 while collecting two successive fresh telemetry windows in 18.903 seconds. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v3/01-live-telemetry.log` and `01-live-telemetry.exit.txt`.
 
 ## Current phase ledger
 
@@ -50,7 +53,7 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: pending with entry blocked until fresh rerun03 returns accepted / exit 0
+- P2.2b transformed frame compositor owner: pending with entry blocked until fresh rerun04 returns accepted / exit 0
 - Review / UltraQA: pending
 - Integration / push / cleanup: pending
 
@@ -386,8 +389,20 @@ This run supplies no four-pair performance verdict. No regression or acceptance 
 
 Final cleanup removed both temporary `node_modules` junctions and detached measurement worktrees, pruned registrations, confirmed no listeners on 8000/8892, and found no rerun02 task processes. The remaining worktree list contains only the dirty parent checkout and the P2 isolated branch. `cleanup-final.json` captured 48 parent WIP entries at experiment cleanup. A later read-only snapshot contains 57 entries (52 deletions and 5 modifications) from unrelated parent work; P2 has kept the parent checkout untouched. Final cleanup and evidence indexes are `cleanup-final.json` and `canonical-evidence.json` beside the reports.
 
-## Active Williams telemetry repair lane 2026-07-12
+## Historical Williams telemetry-v2 repair lane 2026-07-12
 
-Live-process owner: root integration agent. The owner alone runs and interprets the focused Windows WMI telemetry test and the later governed rerun03. Focused command logs belong under `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/`; rerun03 receives a new immutable root under `.runtime/output/perf/`. Static reviewers may inspect committed source and completed log snapshots only.
+The root integration agent owned the completed focused Windows WMI telemetry test and governed rerun03. Focused command logs remain under `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/`; rerun03 remains immutable under `.runtime/output/perf/p2-2a-williams-live-20260712-rerun03/`. The current live-process owner is `none`; the next authorized live lane is one fresh governed rerun04 after the telemetry-v3 checkpoint and clean-head core gate.
 
 The repair keeps rerun02 immutable. It introduces policy `p2-williams-crossover-v2`, telemetry window schema 2, monotonic fixed-rate scheduling, actual capture-start timestamps, completion/duration/lag fields, and Job Object cleanup authority. Ambient browser PID churn remains a diagnostic. The 1000 +/- 250ms capture-start interval stays the admission gate; schedule lag stays diagnostic.
+
+## Williams governed rerun03 terminal record and telemetry-v3 repair 2026-07-12
+
+Rerun03 used candidate `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`, control `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`, and matching package-lock Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`. The live owner issued one dry plan and exactly one execute command. Block-01/control completed with valid telemetry, four raw measurements, and valid Job Object cleanup. Block-02/candidate then failed before workload admission: its first governed CIM capture lasted `3617.4604ms`; the absolute-target loop caught up with capture-start intervals `[3621,629,637,654]ms` and schedule lags `[31.9,2652.9,2281.0,1919.3,1572.8]ms`. The quiet gate rejected `telemetry.samples.interval`, the analyzer returned `invalid-experiment / exit 3`, and no retry was issued.
+
+Rerun03 remains byte-preserved under `.runtime/output/perf/p2-2a-williams-live-20260712-rerun03/`. Canonical SHA256 values: execute log `4622a91609f260aef829681d4950fd42a0639bf3fdd8089b0dc16a01a7639d99`; execute exit file `24ba1e99dc06b19351323aae0d7370243d586475a634b7f6ff7927fbc72cfaed`; analysis JSON `c5e61eef6fdc8a567b1a73f9c1d840930c51d622cbbae47c1ffbfa43a372d6bd`; analysis Markdown `90697fe456ffb603732775ccb0cfec972e7d33176b4a5db8a5bd0bdc2f1cc414`; raw manifest `ede91623f669e684f57e64683f5b547027d3185534e1470b897073eb1bb5c6e4`; block-02 pre telemetry `a5ffb5ab5cde02be5fc32f04b0f8b26e622f6a50b7358358e12a25da7b51f37`; block-02 quiet window `391fa24aee7f5f42e255d48107600c3de867cce57bbfc705ec67a43bccef6dd0`.
+
+Three independent static analyses agreed on the minimum protocol repair: every telemetry window performs exactly one same-counter priming capture before the sampling stopwatch; priming evidence is explicit and excluded from admission aggregates; the five governed samples retain the 1000 +/- 250ms capture-start contract. The policy identity rotates to `p2-williams-crossover-v3` and telemetry schema 3. Governed measured samples also fail closed when `captureDurationMs > 1250` or `abs(scheduleLagMs) > 250`, covering a final-sample stall that lacks a following interval. The implementation retains fixed absolute targets and existing interval admission; it adds no tolerance increase, sample discard, dynamic retry, or alternate fallback.
+
+TDD evidence is green: governance 33/33; default Job runner 10 pass plus one explicit live skip. The root-owned explicit live lane collected two successive fresh telemetry windows and passed 2/2 in 18.903 seconds. Each window records one complete excluded priming capture, five governed samples, priming-to-first interval within 750-1250ms, all measured capture-start intervals within 750-1250ms, capture durations at or below 1250ms, and absolute schedule lag at or below 250ms. Rerun04 is the sole next experiment authorization after the telemetry-v3 functional checkpoint, clean-head core verification, and three independent final reviews. It must use fresh detached candidate/control worktrees, a unique evidence root, one dry plan, one execute, and zero automatic retry. P2.2b admission still requires a complete `accepted / exit 0` analyzer result.
+
+Final implementation review is complete. The architecture review returned `CLEAR / APPROVE`; the code review returned `CLEAR` after adding occurrence-count assertions for the single counter reader, single priming call site, and single measured-loop call site; the evidence review returned `CLEAR` after this historical-lane wording and the rerun03 terminal task record were corrected. Focused and shared validation is green with adaptive selection `7 changed / 16 recommended / 3 main-thread / 0 unmatched`. A future hardening item may cross-check timestamp deltas against `captureDurationMs`; the current frozen runtime identity and live two-window evidence leave no present admission blocker.

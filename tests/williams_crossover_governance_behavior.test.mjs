@@ -81,9 +81,18 @@ function canonicalSnapshot(scenarioId, durationMs) {
 
 function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
   const baseMs = Date.UTC(2026, 6, 11, 0, 0, (blockOrdinal - 1) * 20 + (phase === "post" ? 10 : 0));
+  const primingCompletedAtMs = baseMs - 1000;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     phase,
+    priming: {
+      captureCount: 1,
+      status: "complete",
+      admissionRole: "excluded-warmup",
+      startedAt: new Date(primingCompletedAtMs - 3617).toISOString(),
+      completedAt: new Date(primingCompletedAtMs).toISOString(),
+      captureDurationMs: 3617,
+    },
     sampling: {
       scheduler: "monotonic-fixed-rate",
       timestampSemantics: "actual-capture-start",
@@ -401,14 +410,22 @@ async function materializeEvidenceRoot(evidence) {
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
-  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v2");
+  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v3");
   assert.deepEqual(WILLIAMS_TELEMETRY_CADENCE, {
-    windowSchemaVersion: 2,
+    windowSchemaVersion: 3,
     samplesPerWindow: 5,
     sampleIntervalMs: 1000,
     sampleIntervalToleranceMs: 250,
+    maxCaptureDurationMs: 1250,
+    maxScheduleLagMs: 250,
     scheduler: "monotonic-fixed-rate",
     timestampSemantics: "actual-capture-start",
+    priming: {
+      captureCount: 1,
+      timing: "before-sampling-stopwatch",
+      admissionRole: "excluded-warmup",
+      requiredEvidenceFields: ["status", "startedAt", "completedAt", "captureDurationMs"],
+    },
     requiredCaptureFields: ["completedAt", "captureDurationMs", "scheduleLagMs"],
   });
   assert.deepEqual(
@@ -521,7 +538,41 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
   const cases = [
     {
       reason: "block-01.telemetry.pre.schemaVersion",
-      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.schemaVersion = 1; },
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.schemaVersion = 2; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.missing",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming = null; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.captureCount",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.captureCount = 2; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.status",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.status = "failed"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.admissionRole",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.admissionRole = "measured"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.startedAt",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.startedAt = "invalid"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.completedAt",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.completedAt = "invalid"; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.captureDurationMs",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.captureDurationMs = -1; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.first-sample-interval",
+      mutate: (evidence) => {
+        evidence.blocks[0].telemetry.pre.priming.completedAt = evidence.blocks[0].telemetry.pre.samples[0].at;
+      },
     },
     {
       reason: "block-01.telemetry.pre.phase",
@@ -579,8 +630,16 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
       mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].captureDurationMs = -1; },
     },
     {
+      reason: "block-01.telemetry.pre.samples.4.captureDurationMs.max",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[4].captureDurationMs = 3617; },
+    },
+    {
       reason: "block-01.telemetry.pre.samples.0.scheduleLagMs",
       mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[0].scheduleLagMs = null; },
+    },
+    {
+      reason: "block-01.telemetry.pre.samples.4.scheduleLagMs.max",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.samples[4].scheduleLagMs = 251; },
     },
     {
       reason: "block-01.telemetry.pre.capability.missing",
@@ -632,7 +691,15 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
   const evidence = createEvidence();
   assert.equal(evidence.preregistration.telemetry.scheduler, "monotonic-fixed-rate");
   assert.equal(evidence.preregistration.telemetry.timestampSemantics, "actual-capture-start");
-  assert.equal(evidence.preregistration.telemetry.windowSchemaVersion, 2);
+  assert.equal(evidence.preregistration.telemetry.windowSchemaVersion, 3);
+  assert.equal(evidence.preregistration.telemetry.maxCaptureDurationMs, 1250);
+  assert.equal(evidence.preregistration.telemetry.maxScheduleLagMs, 250);
+  assert.deepEqual(evidence.preregistration.telemetry.priming, {
+    captureCount: 1,
+    timing: "before-sampling-stopwatch",
+    admissionRole: "excluded-warmup",
+    requiredEvidenceFields: ["status", "startedAt", "completedAt", "captureDurationMs"],
+  });
   assert.deepEqual(evidence.preregistration.telemetry.requiredCaptureFields, [
     "completedAt",
     "captureDurationMs",
@@ -655,6 +722,31 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
   assert.equal(quietWindow.valid, false);
   assert.equal(quietWindow.telemetryCadence.valid, false);
   assert.ok(quietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
+});
+
+test("a long excluded WMI prime preserves strict measured cadence while a measured cold spike stays invalid", () => {
+  const primedTelemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  primedTelemetry.priming.captureDurationMs = 3617;
+  primedTelemetry.priming.startedAt = new Date(
+    Date.parse(primedTelemetry.priming.completedAt) - 3617,
+  ).toISOString();
+  const primedQuietWindow = deriveWilliamsQuietWindow(primedTelemetry);
+  assert.equal(primedQuietWindow.valid, true);
+  assert.deepEqual(primedQuietWindow.telemetryCadence.intervalsMs, [1000, 1000, 1000, 1000]);
+
+  const measuredSpikeTelemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  const measuredIntervals = [3621, 629, 637, 654];
+  let captureStartedAtMs = Date.parse(measuredSpikeTelemetry.samples[0].at);
+  measuredSpikeTelemetry.samples[0].captureDurationMs = 3617;
+  measuredSpikeTelemetry.samples[0].completedAt = new Date(captureStartedAtMs + 3617).toISOString();
+  measuredIntervals.forEach((intervalMs, index) => {
+    captureStartedAtMs += intervalMs;
+    measuredSpikeTelemetry.samples[index + 1].at = new Date(captureStartedAtMs).toISOString();
+    measuredSpikeTelemetry.samples[index + 1].completedAt = new Date(captureStartedAtMs + 650).toISOString();
+  });
+  const measuredSpikeQuietWindow = deriveWilliamsQuietWindow(measuredSpikeTelemetry);
+  assert.equal(measuredSpikeQuietWindow.valid, false);
+  assert.ok(measuredSpikeQuietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
 });
 
 test("dirty or attached measurement worktrees invalidate identity", () => {
@@ -1070,6 +1162,12 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(windowsSource, /collection-error/);
   assert.doesNotMatch(windowsSource, /Start-Sleep -Seconds 1/);
   assert.match(windowsSource, /\[System\.Diagnostics\.Stopwatch\]::StartNew\(\)/);
+  assert.match(windowsSource, /function Read-WilliamsCounterSample/);
+  assert.match(windowsSource, /\$primingCapture = Read-WilliamsCounterSample/);
+  assert.match(windowsSource, /admissionRole = '\$\{WILLIAMS_TELEMETRY_CADENCE\.priming\.admissionRole\}'/);
+  assert.equal(windowsSource.match(/function Read-WilliamsCounterSample/g)?.length, 1);
+  assert.equal(windowsSource.match(/\$primingCapture = Read-WilliamsCounterSample/g)?.length, 1);
+  assert.equal(windowsSource.match(/\$counterCapture = Read-WilliamsCounterSample/g)?.length, 1);
   assert.match(windowsSource, /\$targetElapsedMs = \[double\]\(\(\$index \+ 1\) \* \$sampleIntervalMs\)/);
   assert.match(windowsSource, /\$remainingDelayMs = \[math\]::Ceiling\(\$targetElapsedMs - \$stopwatch\.Elapsed\.TotalMilliseconds\)/);
   assert.match(windowsSource, /Start-Sleep -Milliseconds \(\[int\]\$remainingDelayMs\)/);
@@ -1077,12 +1175,20 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(windowsSource, /completedAt/);
   assert.match(windowsSource, /captureDurationMs/);
   assert.match(windowsSource, /\$scheduleLagMs = \$captureStartedElapsedMs - \$targetElapsedMs/);
-  const captureStartIndex = windowsSource.indexOf("$captureStartedAt = [datetime]::UtcNow");
+  const counterReaderIndex = windowsSource.indexOf("function Read-WilliamsCounterSample");
   const processorQueryIndex = windowsSource.indexOf("$processorSample = Get-CimInstance");
   const memoryQueryIndex = windowsSource.indexOf("$memorySample = Get-CimInstance");
-  assert.ok(captureStartIndex >= 0);
-  assert.ok(captureStartIndex < processorQueryIndex);
-  assert.ok(captureStartIndex < memoryQueryIndex);
+  const primingIndex = windowsSource.indexOf("$primingCapture = Read-WilliamsCounterSample");
+  const samplingStopwatchIndex = windowsSource.indexOf("$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()");
+  const captureStartIndex = windowsSource.indexOf("$captureStartedAt = [datetime]::UtcNow");
+  const measuredCaptureIndex = windowsSource.indexOf("$counterCapture = Read-WilliamsCounterSample");
+  assert.ok(counterReaderIndex >= 0);
+  assert.ok(counterReaderIndex < processorQueryIndex);
+  assert.ok(processorQueryIndex < memoryQueryIndex);
+  assert.ok(memoryQueryIndex < primingIndex);
+  assert.ok(primingIndex < samplingStopwatchIndex);
+  assert.ok(samplingStopwatchIndex < captureStartIndex);
+  assert.ok(captureStartIndex < measuredCaptureIndex);
   assert.match(windowsSource, /at = \$captureStartedAt\.ToString\('o'\)/);
   assert.match(runnerSource, /validateWilliamsTelemetryCadence/);
   assert.match(runnerSource, /if \(quietWindow\.valid\) \{\s*commandResult = await runLoggedCommand/);

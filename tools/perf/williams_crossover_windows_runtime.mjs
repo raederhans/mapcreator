@@ -30,6 +30,33 @@ $ErrorActionPreference = 'Stop'
 $sampleIntervalMs = ${WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs}.0
 $sampleCount = ${WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow}
 $samples = @()
+function Read-WilliamsCounterSample {
+  $processorSample = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'" -ErrorAction Stop
+  $memorySample = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop
+  foreach ($propertyName in @('PercentProcessorTime','PercentProcessorPerformance','PercentofMaximumFrequency','ProcessorFrequency')) {
+    if ($null -eq $processorSample.$propertyName) { throw "required processor counter missing: $propertyName" }
+  }
+  foreach ($propertyName in @('PercentCommittedBytesInUse','AvailableMBytes')) {
+    if ($null -eq $memorySample.$propertyName) { throw "required memory counter missing: $propertyName" }
+  }
+  return [pscustomobject]@{
+    processor = $processorSample
+    memory = $memorySample
+  }
+}
+$primingStartedAt = [datetime]::UtcNow
+$primingStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$primingCapture = Read-WilliamsCounterSample
+$primingStopwatch.Stop()
+$primingCompletedAt = [datetime]::UtcNow
+$priming = [pscustomobject]@{
+  captureCount = ${WILLIAMS_TELEMETRY_CADENCE.priming.captureCount}
+  status = 'complete'
+  admissionRole = '${WILLIAMS_TELEMETRY_CADENCE.priming.admissionRole}'
+  startedAt = $primingStartedAt.ToString('o')
+  completedAt = $primingCompletedAt.ToString('o')
+  captureDurationMs = [double]$primingStopwatch.Elapsed.TotalMilliseconds
+}
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 for ($index = 0; $index -lt $sampleCount; $index += 1) {
   $targetElapsedMs = [double](($index + 1) * $sampleIntervalMs)
@@ -40,14 +67,9 @@ for ($index = 0; $index -lt $sampleCount; $index += 1) {
   $captureStartedElapsedMs = $stopwatch.Elapsed.TotalMilliseconds
   $captureStartedAt = [datetime]::UtcNow
   $scheduleLagMs = $captureStartedElapsedMs - $targetElapsedMs
-  $processorSample = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'" -ErrorAction Stop
-  $memorySample = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop
-  foreach ($propertyName in @('PercentProcessorTime','PercentProcessorPerformance','PercentofMaximumFrequency','ProcessorFrequency')) {
-    if ($null -eq $processorSample.$propertyName) { throw "required processor counter missing: $propertyName" }
-  }
-  foreach ($propertyName in @('PercentCommittedBytesInUse','AvailableMBytes')) {
-    if ($null -eq $memorySample.$propertyName) { throw "required memory counter missing: $propertyName" }
-  }
+  $counterCapture = Read-WilliamsCounterSample
+  $processorSample = $counterCapture.processor
+  $memorySample = $counterCapture.memory
   $completedAt = [datetime]::UtcNow
   $captureDurationMs = $stopwatch.Elapsed.TotalMilliseconds - $captureStartedElapsedMs
   $samples += [pscustomobject]@{
@@ -113,6 +135,7 @@ if (-not [ScenarioForgePowerStatus]::GetSystemPowerStatus([ref]$powerStatus)) { 
       'PerfOS_Memory.AvailableMBytes'
     )
   }
+  priming = $priming
   samples = @($samples)
   processor = @($processors)
   memory = $operatingSystem
@@ -159,6 +182,7 @@ function missingWindow(phase, status, detail) {
   return {
     schemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
     phase,
+    priming: null,
     sampling: {
       scheduler: WILLIAMS_TELEMETRY_CADENCE.scheduler,
       timestampSemantics: WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
@@ -182,6 +206,7 @@ export function collectWindowsPerformanceWindow({ phase, platform = process.plat
     return {
       schemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
       phase,
+      priming: payload.priming,
       sampling: payload.sampling,
       capability: payload.capability,
       samples: Array.isArray(payload.samples) ? payload.samples : [payload.samples].filter(Boolean),

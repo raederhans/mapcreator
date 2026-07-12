@@ -5,19 +5,27 @@ import {
   median,
 } from "./render_sample_role_policy.mjs";
 
-export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v2";
+export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v3";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
 export const WILLIAMS_JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
 export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 export const WILLIAMS_TELEMETRY_CADENCE = Object.freeze({
-  windowSchemaVersion: 2,
+  windowSchemaVersion: 3,
   samplesPerWindow: 5,
   sampleIntervalMs: 1000,
   sampleIntervalToleranceMs: 250,
+  maxCaptureDurationMs: 1250,
+  maxScheduleLagMs: 250,
   scheduler: "monotonic-fixed-rate",
   timestampSemantics: "actual-capture-start",
+  priming: Object.freeze({
+    captureCount: 1,
+    timing: "before-sampling-stopwatch",
+    admissionRole: "excluded-warmup",
+    requiredEvidenceFields: Object.freeze(["status", "startedAt", "completedAt", "captureDurationMs"]),
+  }),
   requiredCaptureFields: Object.freeze([
     "completedAt",
     "captureDurationMs",
@@ -329,8 +337,11 @@ export function buildWilliamsPreregistration({
       postSamplesPerBlock: WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
       sampleIntervalMs: WILLIAMS_TELEMETRY_CADENCE.sampleIntervalMs,
       sampleIntervalToleranceMs: WILLIAMS_TELEMETRY_CADENCE.sampleIntervalToleranceMs,
+      maxCaptureDurationMs: WILLIAMS_TELEMETRY_CADENCE.maxCaptureDurationMs,
+      maxScheduleLagMs: WILLIAMS_TELEMETRY_CADENCE.maxScheduleLagMs,
       scheduler: WILLIAMS_TELEMETRY_CADENCE.scheduler,
       timestampSemantics: WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
+      priming: JSON.parse(JSON.stringify(WILLIAMS_TELEMETRY_CADENCE.priming)),
       requiredCaptureFields: [...WILLIAMS_TELEMETRY_CADENCE.requiredCaptureFields],
       phases: ["pre", "post"],
       timestampOrder: "strictly-increasing-with-pre-before-post",
@@ -535,6 +546,33 @@ export function validateWilliamsTelemetryCadence(window, {
   }
   if (finite(window.sampling?.sampleCount) !== sampleCount) errors.push(`${label}.sampling.sampleCount`);
 
+  const priming = window.priming;
+  let primingCompletedAtMs = null;
+  if (!priming || typeof priming !== "object") {
+    errors.push(`${label}.priming.missing`);
+  } else {
+    if (finite(priming.captureCount) !== WILLIAMS_TELEMETRY_CADENCE.priming.captureCount) {
+      errors.push(`${label}.priming.captureCount`);
+    }
+    if (String(priming.status || "") !== "complete") errors.push(`${label}.priming.status`);
+    if (String(priming.admissionRole || "") !== WILLIAMS_TELEMETRY_CADENCE.priming.admissionRole) {
+      errors.push(`${label}.priming.admissionRole`);
+    }
+    const primingStartedAtMs = Date.parse(String(priming.startedAt || ""));
+    primingCompletedAtMs = Date.parse(String(priming.completedAt || ""));
+    if (!Number.isFinite(primingStartedAtMs)) errors.push(`${label}.priming.startedAt`);
+    if (
+      !Number.isFinite(primingCompletedAtMs)
+      || (Number.isFinite(primingStartedAtMs) && primingCompletedAtMs < primingStartedAtMs)
+    ) {
+      errors.push(`${label}.priming.completedAt`);
+    }
+    const primingCaptureDurationMs = finite(priming.captureDurationMs);
+    if (primingCaptureDurationMs === null || primingCaptureDurationMs < 0) {
+      errors.push(`${label}.priming.captureDurationMs`);
+    }
+  }
+
   const samples = Array.isArray(window.samples) ? window.samples : [];
   if (samples.length !== sampleCount) {
     errors.push(`${label}.samples.expected-${sampleCount}-actual-${samples.length}`);
@@ -550,11 +588,28 @@ export function validateWilliamsTelemetryCadence(window, {
     const captureDurationMs = finite(sample?.captureDurationMs);
     if (captureDurationMs === null || captureDurationMs < 0) {
       errors.push(`${label}.samples.${sampleIndex}.captureDurationMs`);
+    } else if (captureDurationMs > WILLIAMS_TELEMETRY_CADENCE.maxCaptureDurationMs) {
+      errors.push(`${label}.samples.${sampleIndex}.captureDurationMs.max`);
     }
-    if (finite(sample?.scheduleLagMs) === null) errors.push(`${label}.samples.${sampleIndex}.scheduleLagMs`);
+    const scheduleLagMs = finite(sample?.scheduleLagMs);
+    if (scheduleLagMs === null) {
+      errors.push(`${label}.samples.${sampleIndex}.scheduleLagMs`);
+    } else if (Math.abs(scheduleLagMs) > WILLIAMS_TELEMETRY_CADENCE.maxScheduleLagMs) {
+      errors.push(`${label}.samples.${sampleIndex}.scheduleLagMs.max`);
+    }
     return Number.isFinite(parsedAt) ? parsedAt : null;
   });
   const intervalsMs = [];
+  const firstSampleAtMs = sampleTimesMs[0];
+  if (Number.isFinite(primingCompletedAtMs) && Number.isFinite(firstSampleAtMs)) {
+    const primingToFirstSampleMs = firstSampleAtMs - primingCompletedAtMs;
+    if (
+      primingToFirstSampleMs <= 0
+      || Math.abs(primingToFirstSampleMs - sampleIntervalMs) > sampleIntervalToleranceMs
+    ) {
+      errors.push(`${label}.priming.first-sample-interval`);
+    }
+  }
   for (let index = 1; index < sampleTimesMs.length; index += 1) {
     const previousAtMs = sampleTimesMs[index - 1];
     const currentAtMs = sampleTimesMs[index];

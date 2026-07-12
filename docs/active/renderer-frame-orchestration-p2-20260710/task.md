@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2a implementation and deterministic/dist closeout are complete. Rerun01 and rerun02 remain immutable terminal evidence. Telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c` replaces fixed-delay WMI sampling with monotonic fixed-rate capture-start sampling, keeps the 1000 +/- 250ms admission gate, records schedule lag as diagnostic, and uses Windows Job Object evidence as task-cleanup authority. Focused/static gates and the explicit live telemetry lane are green. P2.2b entry stays closed until one fresh complete rerun03 returns accepted / exit 0.
+Current status: P2.2a implementation and deterministic/dist/browser closeout are complete. Rerun01, rerun02, and rerun03 remain immutable terminal evidence. Rerun03 exposed a 3617ms first governed CIM capture followed by catch-up intervals. Telemetry-v3 now performs one explicit excluded priming capture before the stopwatch and enforces measured capture-duration and schedule-lag limits while retaining the 1000 +/- 250ms capture-start contract. Focused governance and the two-successive-window live telemetry lane are green. P2.2b entry stays closed until one fresh complete rerun04 returns accepted / exit 0.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -263,9 +263,26 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Pass focused/static validation at functional commit `89dfe15e`: governance 32/32; default Job runner 10 pass + 1 skip; explicit live telemetry 2/2; metadata 16/16; core runner 8/8; perf gate 23/23; render role 17/17; route schema 299; architecture/state/import/supervisor gates; adaptive 9/198/8/0.
 - [x] Complete independent code, architecture, and test-contract review; current verdicts CLEAR / APPROVE with interval-gate and ambient-environment WATCH notes documented.
 - [x] Run clean-head full `verify:core` at evidence checkpoint `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; 66/66 commands passed with zero failures. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/01-clean-head-verify-core.log`.
-- [ ] Create exact detached candidate/control worktrees with matching lock identity and a fresh rerun03 raw/report root.
-- [ ] Run one dry plan and exactly one governed `--execute`; no automatic retry.
-- [ ] Admit P2.2b only when the fresh analyzer returns `accepted` / exit `0`.
+- [x] Create exact detached candidate/control worktrees with matching lock identity and a fresh rerun03 raw/report root.
+- [x] Run one dry plan and exactly one governed `--execute`; no automatic retry.
+- [x] Record rerun03 as terminal `invalid-experiment / exit 3` after block-02 candidate pre-telemetry failed `telemetry.samples.interval`; preserve all artifacts and hashes.
+- [x] Record rerun03 as terminal `invalid-experiment / exit 3`; it did not admit P2.2b, and rerun04 now owns the next acceptance decision.
+
+## Williams telemetry-v3 repair and rerun04 prerequisite 2026-07-12
+
+- [x] Preserve rerun03 byte-for-byte and identify the direct failure chain: first governed CIM capture `3617.4604ms`, then fixed-rate catch-up intervals `[3621,629,637,654]ms` and schedule lag up to `2652.9ms`.
+- [x] Complete three independent static root-cause/test/architecture analyses; all approve one fixed same-counter priming capture before the sampling stopwatch with explicit excluded-warmup evidence.
+- [x] Rotate the policy ID to `p2-williams-crossover-v3` and telemetry window schema to 3.
+- [x] Add exactly one priming capture per pre/post window, reuse the same validated counter reader, record priming timing/status/duration, and keep five governed samples.
+- [x] Keep capture-start interval admission at 1000 +/- 250ms and add measured `captureDurationMs <= 1250` plus `abs(scheduleLagMs) <= 250` admission.
+- [x] Add deterministic regressions for missing/invalid priming, long excluded prime, measured cold spike, final-sample capture duration, final-sample schedule lag, source order, and one-reader reuse.
+- [x] Extend the explicit Windows live lane to two successive fresh windows; root-owned run passed 2/2 in 18.903 seconds.
+- [x] Complete focused/shared checks and three independent final implementation reviews; architecture and code reviews are CLEAR, and the evidence review is CLEAR after correcting the historical telemetry-v2 lane wording and rerun03 terminal task record.
+- [ ] Commit the telemetry-v3 functional/evidence checkpoint and run clean-head `npm run verify:core`.
+- [ ] Remove and prune terminal rerun03 detached worktrees after the committed evidence index provides recovery.
+- [ ] Create fresh exact detached candidate/control worktrees with matching lock identity and a unique rerun04 evidence root.
+- [ ] Run one rerun04 dry plan and exactly one governed `--execute`; no automatic retry.
+- [ ] Admit P2.2b only when rerun04 completes all eight blocks and returns `accepted / exit 0`.
 
 ## P2.2a exact-head acceptance 2026-07-11
 

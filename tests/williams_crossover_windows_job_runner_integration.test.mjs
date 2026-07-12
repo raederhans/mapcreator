@@ -77,29 +77,50 @@ test("Windows Job runner preserves argv and kills a detached descendant on Job c
 
 const LIVE_TELEMETRY_ENABLED = process.env.WILLIAMS_LIVE_TELEMETRY_TEST === "1";
 
-test("Windows telemetry collector samples actual capture starts on a fixed-rate cadence", {
+test("successive Windows telemetry windows prime once and keep measured capture starts on a fixed-rate cadence", {
   skip: process.platform !== "win32"
     ? "Windows performance counters require win32"
     : (LIVE_TELEMETRY_ENABLED ? false : "explicit live telemetry lane required"),
 }, () => {
-  const telemetry = collectWindowsPerformanceWindow({ phase: "integration" });
-  assert.equal(telemetry.capability?.status, "available", telemetry.capability?.missing?.join("\n"));
-  assert.deepEqual(telemetry.sampling, {
-    scheduler: "monotonic-fixed-rate",
-    timestampSemantics: "actual-capture-start",
-    sampleIntervalMs: 1000,
-    sampleCount: 5,
-  });
-  assert.equal(telemetry.samples.length, 5);
+  for (let windowIndex = 0; windowIndex < 2; windowIndex += 1) {
+    const telemetry = collectWindowsPerformanceWindow({ phase: `integration-${windowIndex + 1}` });
+    assert.equal(telemetry.schemaVersion, 3);
+    assert.equal(telemetry.capability?.status, "available", telemetry.capability?.missing?.join("\n"));
+    assert.deepEqual(telemetry.sampling, {
+      scheduler: "monotonic-fixed-rate",
+      timestampSemantics: "actual-capture-start",
+      sampleIntervalMs: 1000,
+      sampleCount: 5,
+    });
+    assert.deepEqual(
+      {
+        captureCount: telemetry.priming?.captureCount,
+        status: telemetry.priming?.status,
+        admissionRole: telemetry.priming?.admissionRole,
+      },
+      { captureCount: 1, status: "complete", admissionRole: "excluded-warmup" },
+    );
+    assert.ok(Date.parse(telemetry.priming.startedAt) <= Date.parse(telemetry.priming.completedAt));
+    assert.ok(Number.isFinite(telemetry.priming.captureDurationMs) && telemetry.priming.captureDurationMs >= 0);
+    assert.equal(telemetry.samples.length, 5);
 
-  const captureStarts = telemetry.samples.map((sample) => Date.parse(sample.at));
-  const intervals = captureStarts.slice(1).map((atMs, index) => atMs - captureStarts[index]);
-  for (const intervalMs of intervals) {
-    assert.ok(intervalMs >= 750 && intervalMs <= 1250, `capture-start interval ${intervalMs}ms`);
-  }
-  for (const sample of telemetry.samples) {
-    assert.ok(Date.parse(sample.completedAt) >= Date.parse(sample.at));
-    assert.ok(Number.isFinite(sample.captureDurationMs) && sample.captureDurationMs >= 0);
-    assert.ok(Number.isFinite(sample.scheduleLagMs));
+    const captureStarts = telemetry.samples.map((sample) => Date.parse(sample.at));
+    const primingToFirstSampleMs = captureStarts[0] - Date.parse(telemetry.priming.completedAt);
+    assert.ok(
+      primingToFirstSampleMs >= 750 && primingToFirstSampleMs <= 1250,
+      `window ${windowIndex + 1} priming-to-first-sample interval ${primingToFirstSampleMs}ms`,
+    );
+    const intervals = captureStarts.slice(1).map((atMs, index) => atMs - captureStarts[index]);
+    for (const intervalMs of intervals) {
+      assert.ok(
+        intervalMs >= 750 && intervalMs <= 1250,
+        `window ${windowIndex + 1} capture-start interval ${intervalMs}ms`,
+      );
+    }
+    for (const sample of telemetry.samples) {
+      assert.ok(Date.parse(sample.completedAt) >= Date.parse(sample.at));
+      assert.ok(Number.isFinite(sample.captureDurationMs) && sample.captureDurationMs >= 0 && sample.captureDurationMs <= 1250);
+      assert.ok(Number.isFinite(sample.scheduleLagMs) && Math.abs(sample.scheduleLagMs) <= 250);
+    }
   }
 });
