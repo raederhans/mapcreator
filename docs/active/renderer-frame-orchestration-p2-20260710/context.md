@@ -11,10 +11,11 @@ Date: 2026-07-10
 - current P2.1 functional Lore commit: `cc6477e0111568091a8665f76fa13d1083c67426`
 - current P2.2a functional Lore commit: `2f4ed71d8455bc16ad87ff361ac3f106360aa8c0`
 - current runtime source anchor: `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`
-- current Williams telemetry-v2 functional candidate: `89dfe15e1b28536687e258634bb92324336ff81c`
+- current Williams telemetry-v2 functional commit: `89dfe15e1b28536687e258634bb92324336ff81c`
+- rerun03 exact measurement candidate: `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9` (same product/runtime/tooling tree as `89dfe15e`, plus committed evidence docs)
 - current task phase: P2.2a browser acceptance is green; rerun02 remains immutable invalid evidence; policy `p2-williams-crossover-v2` and telemetry window schema 2 repair the fixed-delay collector and use Job Object containment as task-cleanup authority; focused/static gates and the explicit live cadence probe are green; one fresh rerun03 remains required before P2.2b entry
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch contains telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c`; rerun01 and rerun02 temporary worktrees/junctions are removed; rerun03 has not started; parent WIP remains untouched
+- current worktree state: isolated P2 branch contains telemetry-v2 functional commit `89dfe15e1b28536687e258634bb92324336ff81c` and evidence checkpoint `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; rerun01 and rerun02 temporary worktrees/junctions are removed; rerun03 has not started; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -38,6 +39,7 @@ Date: 2026-07-10
 - perf baseline: red at `61e090388feb0c69887b9947b55b61968d5324de`; readiness green, threshold acceptance blocked
 - clean-head `npm run verify:core` exited 0 with 66/66 at candidate `6a2fad24`; log `.runtime/output/perf/p2-2a-williams-live-20260712-rerun02/preflight/verify-core.log`, SHA256 `c21f6e97aff7d9a5c0a6cfc0a84459991db172bed72653a3870af35b81a686de`; rerun02 then used exactly one governed execute invocation and no retry
 - telemetry-v2 focused evidence at `89dfe15e`: governance 32/32; default Job runner 10 pass plus one explicit live skip; explicit live telemetry lane 2/2; metadata 16/16; core-runner 8/8; perf-gate contract 23/23; render-role 17/17; route schema 299; architecture/state/import/supervisor gates green; adaptive dry-run 9 changed files, 198 recommendations, 8 main-thread lanes, 0 unmatched
+- telemetry-v2 clean-head evidence at `2e05d5a8`: `npm run verify:core` passed 66/66 with zero failures; the explicit live Windows cadence lane passed 2/2 in 9.28 seconds. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/01-clean-head-verify-core.log` and `02-live-telemetry.log`.
 
 ## Current phase ledger
 

@@ -262,7 +262,7 @@ Current status: P2.2a implementation and deterministic/dist closeout are complet
 - [x] Separate the real WMI cadence probe from default `verify:core` through named main-thread route `test:node:williams-crossover-telemetry-live`.
 - [x] Pass focused/static validation at functional commit `89dfe15e`: governance 32/32; default Job runner 10 pass + 1 skip; explicit live telemetry 2/2; metadata 16/16; core runner 8/8; perf gate 23/23; render role 17/17; route schema 299; architecture/state/import/supervisor gates; adaptive 9/198/8/0.
 - [x] Complete independent code, architecture, and test-contract review; current verdicts CLEAR / APPROVE with interval-gate and ambient-environment WATCH notes documented.
-- [ ] Run clean-head full `verify:core` after evidence docs commit.
+- [x] Run clean-head full `verify:core` at evidence checkpoint `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; 66/66 commands passed with zero failures. Log: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/01-clean-head-verify-core.log`.
 - [ ] Create exact detached candidate/control worktrees with matching lock identity and a fresh rerun03 raw/report root.
 - [ ] Run one dry plan and exactly one governed `--execute`; no automatic retry.
 - [ ] Admit P2.2b only when the fresh analyzer returns `accepted` / exit `0`.
