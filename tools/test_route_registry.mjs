@@ -488,7 +488,7 @@ const PYTHON_FAST_CONTRACTS = [
   {
     id: "python:tests.test_map_renderer_interaction_border_snapshot_orchestration_contract",
     commandRef: "python -m unittest tests.test_map_renderer_interaction_border_snapshot_orchestration_contract -q",
-    sourceRef: "tests/test_map_renderer_interaction_border_snapshot_orchestration_contract.py",
+    sourceRef: "js/core/map_renderer.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/render_cache_owner.js,js/core/renderer/zoom_interaction_lifecycle_owner.js,tests/test_map_renderer_interaction_border_snapshot_orchestration_contract.py",
     domain: "renderer-runtime",
     ownerHint: "renderer-runtime",
     layer: "contract",

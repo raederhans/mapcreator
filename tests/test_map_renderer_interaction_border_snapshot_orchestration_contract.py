@@ -7,6 +7,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_CACHE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_cache_owner.js"
 ZOOM_INTERACTION_LIFECYCLE_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "zoom_interaction_lifecycle_owner.js"
+TRANSFORMED_FRAME_COMPOSITOR_OWNER_JS = (
+    REPO_ROOT / "js" / "core" / "map_renderer" / "transformed_frame_compositor_owner.js"
+)
 
 
 class MapRendererInteractionBorderSnapshotOrchestrationContractTest(unittest.TestCase):
@@ -15,6 +18,9 @@ class MapRendererInteractionBorderSnapshotOrchestrationContractTest(unittest.Tes
         cls.renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         cls.render_cache_owner_content = RENDER_CACHE_OWNER_JS.read_text(encoding="utf-8")
         cls.zoom_interaction_lifecycle_owner_content = ZOOM_INTERACTION_LIFECYCLE_OWNER_JS.read_text(encoding="utf-8")
+        cls.transformed_frame_compositor_owner_content = (
+            TRANSFORMED_FRAME_COMPOSITOR_OWNER_JS.read_text(encoding="utf-8")
+        )
 
     def test_borders_invalidation_still_invalidates_interaction_snapshot(self):
         self.assertIn('targetPassNames.includes("borders")', self.renderer_content)
@@ -35,14 +41,17 @@ class MapRendererInteractionBorderSnapshotOrchestrationContractTest(unittest.Tes
         )
 
     def test_transformed_frame_still_prefers_snapshot_before_border_pass_fallback(self):
+        self.assertIn("drawInteractionBorderSnapshot,", self.renderer_content)
+        self.assertIn("drawBordersPass,", self.renderer_content)
         fallback_block = re.search(
             r'if \(!drawInteractionBorderSnapshot\(currentTransform\)\) \{(?P<body>[\s\S]*?)drawBordersPass\(k, \{ interactive: !!interactiveBorders \}\);',
-            self.renderer_content,
+            self.transformed_frame_compositor_owner_content,
         )
         self.assertIsNotNone(fallback_block)
         body = fallback_block.group("body")
         self.assertIn("const k = Math.max(0.0001, Number(currentTransform?.k || 1));", body)
-        self.assertIn(".setTransform(runtimeState.dpr, 0, 0, runtimeState.dpr, 0, 0);", body)
+        self.assertIn("const dpr = getDpr();", body)
+        self.assertIn(".setTransform(dpr, 0, 0, dpr, 0, 0);", body)
         self.assertIn(".translate(currentTransform.x, currentTransform.y);", body)
         self.assertIn(".scale(k, k);", body)
 

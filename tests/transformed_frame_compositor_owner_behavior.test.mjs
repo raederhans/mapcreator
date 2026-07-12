@@ -313,6 +313,35 @@ test("buffer composition keeps target scope, border fallback math, labels-last, 
   assert.deepEqual(harness.calls[13], ["drawTransformedPass", "labels", harness.runtime.currentTransform]);
 });
 
+test("successful border snapshot skips fallback and still draws labels before blit", () => {
+  const harness = createHarness();
+
+  assert.equal(
+    harness.owner.composeTransformedFrameToBuffer(
+      harness.runtime.currentTransform,
+      ["context", "effects"],
+      { interactiveBorders: true },
+    ),
+    true,
+  );
+
+  assert.deepEqual(callNames(harness), [
+    "ensureCompositeBufferCanvas",
+    "buffer.getContext",
+    "resetCanvasContext",
+    "withRenderTarget.enter",
+    "drawInteractionComposite",
+    "drawTransformedPass",
+    "drawTransformedPass",
+    "drawInteractionBorderSnapshot",
+    "drawTransformedPass",
+    "withRenderTarget.exit",
+    "blitCompositeBufferToMain",
+  ]);
+  assert.equal(callNames(harness).includes("drawBordersPass"), false);
+  assert.deepEqual(harness.calls[8], ["drawTransformedPass", "labels", harness.runtime.currentTransform]);
+});
+
 test("buffer composition supports direct interaction passes and fails before blit", () => {
   const harness = createHarness();
   harness.behavior.interactionPassComposeResult = { ok: false, reason: "missing-pass-canvas" };
