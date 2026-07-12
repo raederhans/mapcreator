@@ -29,11 +29,11 @@ const SHARED_CITY_POINTS_VIEW_SETTINGS = {
   },
 };
 
-async function activateAppearanceTab(page, tabId, panelId) {
+async function activatePanelTab(page, tabId, panelId) {
   await page.evaluate(({ targetTabId }) => {
     const button = document.getElementById(targetTabId);
     if (!button) {
-      throw new Error(`Missing appearance tab: ${targetTabId}`);
+      throw new Error(`Missing panel tab: ${targetTabId}`);
     }
     button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }, { targetTabId: tabId });
@@ -290,7 +290,7 @@ test("city points runtime bridge exposes preset + point-density controls and syn
     timeout: 120_000,
   });
 
-  await activateAppearanceTab(page, "appearanceTabLayers", "appearancePanelLayers");
+  await activatePanelTab(page, "appearanceTabCityPoints", "appearancePanelCityPoints");
   await expect(page.locator("#cityPointsMarkerScale")).toHaveValue("1.15");
   await expect(page.locator("#cityPointsThemeStatic")).toHaveCount(0);
   await expect(page.locator("#cityPointsRadius")).toHaveCount(0);
@@ -306,7 +306,7 @@ test("city points runtime bridge exposes preset + point-density controls and syn
   expect(pointDensityControl?.value).toBeTruthy();
   await expect(page.locator("#cityPointsRadius")).toHaveCount(0);
 
-  await activateAppearanceTab(page, "appearanceTabDayNight", "appearancePanelDayNight");
+  await activatePanelTab(page, "mapContentTabDayNight", "appearancePanelDayNight");
   if (!(await page.locator("#dayNightEnabled").isChecked())) {
     await setCheckbox(page, "dayNightEnabled", true);
   }
@@ -368,7 +368,7 @@ test("city points runtime bridge exposes preset + point-density controls and syn
   expect(postInteractionSnapshot.urbanAdaptiveStatusText).toBe("");
 
   const originalTokens = runtimeSnapshot.sampleMarkerTokens;
-  await activateAppearanceTab(page, "appearanceTabLayers", "appearancePanelLayers");
+  await activatePanelTab(page, "appearanceTabCityPoints", "appearancePanelCityPoints");
   await setSelectValue(page, "cityPointsTheme", "classic_graphite");
   const pointDensityControlId = await setFirstExistingControlValue(page, ["cityPointsPointDensity", "cityPointsMarkerDensity"], 0.55);
   await waitForStableExactRender(page);

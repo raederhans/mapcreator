@@ -4976,6 +4976,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.showCityPoints ? "cities:on" : "cities:off",
       `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
       `colors:${Number(runtimeState.colorRevision || 0)}`,
+      stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
     ].join("::");
   }
   if (passName === "contextScenario") {
@@ -5012,17 +5013,6 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       `field:urbanGlow:${Number(intensityFields.channels.urbanGlow?.revision || 0)}`,
       stableJson(dayNightConfig),
       getDayNightSignatureClockToken(dayNightConfig),
-    ].join("::");
-  }
-  if (passName === "labels") {
-    return [
-      transformSignature,
-      runtimeState.topologyRevision || 0,
-      runtimeState.activeScenarioId || "",
-      runtimeState.showCityPoints ? "cities:on" : "cities:off",
-      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
-      `colors:${Number(runtimeState.colorRevision || 0)}`,
-      stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
     ].join("::");
   }
   if (passName === "borders") {

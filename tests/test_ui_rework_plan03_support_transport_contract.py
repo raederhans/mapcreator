@@ -305,6 +305,23 @@ class UiReworkPlan03SupportTransportContractTest(unittest.TestCase):
         self.assertIn('setAppearanceTabController("borders");', toolbar_content)
         self.assertNotIn('setAppearanceTabController("ocean");', toolbar_content)
 
+    def test_city_runtime_e2e_uses_current_appearance_and_map_content_tabs(self):
+        city_runtime_content = (
+            REPO_ROOT / "tests" / "e2e" / "city_points_urban_runtime.spec.js"
+        ).read_text(encoding="utf-8")
+
+        for token in [
+            'activatePanelTab(page, "appearanceTabCityPoints", "appearancePanelCityPoints")',
+            'activatePanelTab(page, "mapContentTabDayNight", "appearancePanelDayNight")',
+        ]:
+            self.assertIn(token, city_runtime_content)
+
+        for stale_token in [
+            '"appearanceTabLayers"',
+            '"appearanceTabDayNight"',
+        ]:
+            self.assertNotIn(stale_token, city_runtime_content)
+
     def test_river_dash_style_applies_to_outline_and_core_strokes(self):
         owner_content = RIVER_LAYER_RENDER_OWNER_JS.read_text(encoding="utf-8")
         self.assertIn("const resolvedDashPattern = dashPattern.map((value) => value / scale);", owner_content)

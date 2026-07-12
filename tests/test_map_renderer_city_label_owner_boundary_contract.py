@@ -36,6 +36,25 @@ class MapRendererCityLabelOwnerBoundaryContractTest(unittest.TestCase):
         self.assertIn("entry.labelContrastMode = labelStyle.usesLightLabel ? \"light\" : \"default\";", owner_content)
         self.assertIsNone(re.search(r"function\s+doScreenBoxesOverlap\s*\(", renderer_content))
 
+    def test_labels_pass_signature_tracks_city_style_once(self):
+        renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        labels_signature_token = 'if (passName === "labels") {'
+
+        self.assertEqual(renderer_content.count(labels_signature_token), 1)
+        labels_signature = renderer_content.split(labels_signature_token, 1)[1].split(
+            'if (passName === "contextScenario") {',
+            1,
+        )[0]
+
+        for token in [
+            "getHgoRuntimePreviewVisibilitySignature()",
+            'runtimeState.showBlankFeatureLabels ? "blank-feature-labels:on" : "blank-feature-labels:off"',
+            '`cities:${Number(runtimeState.cityLayerRevision || 0)}`',
+            '`colors:${Number(runtimeState.colorRevision || 0)}`',
+            "stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {}))",
+        ]:
+            self.assertIn(token, labels_signature)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -444,3 +444,17 @@ The functional owner landed at `9321680a`; a follow-up contract alignment landed
 Clean-head `verify:core` at `a2d8a66b` passed all 67 commands. Log: `.runtime/reports/generated/p2-2b-clean-verify-core-rerun.log`; structured report: `.runtime/reports/generated/verify-core.json`.
 
 Root integration agent is the sole live-process owner for the remaining serialized acceptance lane. The reserved sequence is `verify:core:main-thread`, scenario resilience, physical-layer runtime contract, TNO contracts, water rendering, city rendering, `perf:gate`, then one fresh Williams crossover plan and execute. Each command receives a separate log under `.runtime/reports/generated/`; other agents are restricted to static review of committed source and completed artifacts. No automatic retry is authorized for the Williams experiment.
+
+## City browser matrix diagnosis and repair lane 2026-07-12
+
+The clean-head main-thread gate passed 71/71. Scenario resilience passed 3/3, physical-layer runtime passed 1/1, TNO contracts passed 2/2, and water rendering passed 12/12. City rendering exposed two failures. A detached `origin/main@17aeedf5` control worktree reproduced both failures unchanged, so neither failure was introduced by P2.
+
+The city-points runtime spec still referenced retired Appearance tab IDs from before `c96af211`; the current canonical targets are `appearanceTabCityPoints` / `appearancePanelCityPoints` and `mapContentTabDayNight` / `appearancePanelDayNight`. The city marker pixel regression exposed two `labels` branches in `getRenderPassSignature()`: the reachable branch omitted normalized city style while the later city-style branch was unreachable. Existing deterministic contracts now require one labels signature branch with HGO, blank-label, revision, color, and normalized city-style inputs. The duplicate branch is merged at the composition root, and the E2E spec uses current panel IDs.
+
+Root remains the sole live-process owner. The next serialized command runs the two repaired city specs from the P2 worktree, writing `.runtime/reports/generated/p2-2b-city-targeted-rerun.*.log`; static subagents may inspect committed source and completed artifacts only. After targeted green, root will run the full city suite once, then continue to `perf:gate` and the single governed Williams experiment.
+
+## City browser matrix repair acceptance 2026-07-12
+
+The repaired targeted matrix passed 2/2. `city_points_urban_runtime.spec.js` exercised the canonical city-points and day/night tabs with zero console or network issues. `city_urban_rendering_regression.spec.js` recorded `markerScaleDiff=444`, `cityPointDiff=459`, `lightsDiff=489`, zero page errors, zero console issues, and zero network failures. Logs: `.runtime/reports/generated/p2-2b-city-targeted-rerun.stdout.log` and `.runtime/reports/generated/p2-2b-city-targeted-rerun.stderr.log`.
+
+The complete `npm run test:e2e:city-rendering` lane then passed 8/8 in 3.6 minutes. Its marker-scale check recorded `markerScaleDiff=444`; all city-label, city-light, reveal-plan, urban, and marker-visibility checks passed. Log: `.runtime/reports/generated/p2-2b-city-rendering-final.stdout.log`. The final renderer size is 23,269 lines by the architecture checker's counting convention, with the architecture ceiling reduced from 23,280 to 23,269. Root now owns the canonical Pages mirror sync; performance lanes remain serialized after the city repair commit.
