@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-13 recent P2 follow-up audit functional checkpoint `76af9f681f781a90f411995c40b7c64582650f64` is integrated into remote `main`; registry closeout and isolated-worktree cleanup are in progress. P2 renderer frame orchestration remains integrated, archived, pushed, and cleaned. The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
+Last updated: 2026-07-13 recent P2 follow-up audit functional checkpoint `76af9f681f781a90f411995c40b7c64582650f64` and registry checkpoint `8817450ef70397547fd7ab983950e36c860e6b07` are integrated into remote `main`; the isolated audit worktree is retired by this closeout. P2 renderer frame orchestration remains integrated, archived, pushed, and cleaned. The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
 
 ## Integration Owner
 
@@ -21,12 +21,12 @@ Last updated: 2026-07-13 recent P2 follow-up audit functional checkpoint `76af9f
 
 ## Current Worktrees
 
-Current truth contains the dirty parent checkout plus one isolated audit worktree. Historical P2 measurement/support worktrees remain removed and pruned.
+Current truth contains the dirty parent checkout. The isolated audit worktree and historical P2 measurement/support worktrees are retired; their recovery branches and immutable commit hashes remain available.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; local branch remains behind the newly integrated remote main | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | P2 integration used the isolated clean branch and left all parent files unchanged. | Red for direct synchronization because the parent is old and dirty. | Keep untouched; reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260713-recent` — recent P2 audit | `codex/audit-20260713-recent@76af9f681f781a90f411995c40b7c64582650f64` | `origin/main@76af9f681f781a90f411995c40b7c64582650f64` after functional push | `integrated`; registry closeout pending | Renderer compositor diagnostics, urban policy owner, Williams performance governance/runtime, verification routing, regression tests, state-writer metadata, and checked-in Pages mirrors. | Ten functional commits audited; clean-head core 69/69, embedded Pages/dist drift, and four independent static reviews passed. | Green after isolated integration; dirty parent overlap remains preserved for its separate reconciliation task. | Commit and push this registry closeout, verify remote `main`, then remove the clean isolated worktree while retaining the branch recovery pointer. |
+| former `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260713-recent` — recent P2 audit | recovery branch `codex/audit-20260713-recent`; functional `76af9f681f781a90f411995c40b7c64582650f64`; registry `8817450ef70397547fd7ab983950e36c860e6b07` | original base `e195a4531a08870f45c2a3dac00b6ab52ad620fc` | `integrated`, pushed, verified, and cleaned | Renderer compositor diagnostics, urban policy owner, Williams performance governance/runtime, verification routing, regression tests, state-writer metadata, and checked-in Pages mirrors. | Ten functional commits audited; clean-head core 69/69, embedded Pages/dist drift, and four independent static reviews passed. | Green after isolated integration; dirty parent overlap remains preserved for its separate reconciliation task. | No active integration action; recover through the retained branch and immutable hashes. |
 
 ## Recent P2 audit delivery package 2026-07-13
 
@@ -38,8 +38,8 @@ Current truth contains the dirty parent checkout plus one isolated audit worktre
 6. Overlap: the dirty parent directly overlaps `docs/active/_worktree_registry.md`, `dist/pages-dist-manifest.json`, and other generated Pages surfaces; integration therefore proceeds from this isolated worktree directly to remote main.
 7. Verification: clean committed HEAD passes `verify:core` 69/69 with embedded `verify:pages-dist` and `verify:dist-drift`; report SHA256 is `c578e1b70a4b6efb398665b63021f30575ecd3cb965c577105ced424d1e532d4`, combined log SHA256 is `82ac9a12e64c5a9a094273cc223400fff211bd3f31e594a0ceb45fd75e1d8dc4`; selector reports 32 changed files and zero unmatched files; state-write allowlist passes with 116 tracked writers; TNO coverage chain passes including 57/57 chunk contracts; Scenario runtime E2E passes 8/8 and the fresh transformed-frame case passes 1/1; perf gate, Williams governance/job runner/live preflight/live telemetry, renderer boundaries, and urban data contracts pass; four independent static reviews return APPROVE, including the final foreign-GUID deletion security repair.
 8. Remaining verification: the 45-minute Williams crossover measurement and nine main-thread/browser lanes remain assigned to their dedicated owners; deterministic integration evidence is complete.
-9. Recommendation: push this registry-only closeout to `origin/main`, verify the exact remote hash, then remove the clean isolated worktree and retain branch `codex/audit-20260713-recent` as the recovery pointer.
-10. Integration readiness: functional repair is integrated; registry push and isolated-worktree cleanup are the remaining closeout actions.
+9. Recommendation: retain branch `codex/audit-20260713-recent` and the recorded commit hashes as recovery pointers; reconcile the dirty parent WIP in its own task.
+10. Integration readiness: functional repair, registry truth, remote push, and isolated-worktree cleanup are complete.
 
 ## P2 final integration decision 2026-07-13
 
