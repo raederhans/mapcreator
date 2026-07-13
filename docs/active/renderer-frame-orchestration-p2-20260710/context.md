@@ -14,9 +14,11 @@ Date: 2026-07-10
 - prior Williams telemetry-v2 functional commit: `89dfe15e1b28536687e258634bb92324336ff81c`
 - rerun03 exact measurement candidate: `2e05d5a8e7beae2c2200f6d4f3ffdc19e8df16a9`; control: `ab86b1e24d161edbe6bcc80acb0b316e4bf81942`; package-lock Git blob on both sides: `df70020f2f930d5692a1ff9febebf86dbb0e0db1`
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
-- current task phase: rerun04 is immutable terminal `invalid-experiment / exit 3` evidence after all eight blocks and 32 measured raw files completed; the preregistered environment admission failed on four pre-block CPU checks, two adjacent-pair frequency checks, one global frequency-drift check, and one measured counter capture-duration check; P2.2b receives conditional isolated implementation entry while main integration and P2 closeout remain gated on a fresh complete `accepted / exit 0` performance result
+- current P2.2b production checkpoint: `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; production, deterministic, Pages, browser matrix, and `perf:gate` acceptance are green
+- current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
+- current task phase: rerun06 is immutable terminal `invalid-experiment / exit 3` evidence after 8/8 blocks, 32/32 measured raw files, and 115/115 manifest entries; three frequency-admission checks, one TNO startup internal outlier, and one same-side startup drift check failed; one final capped rerun07 is authorized under `p2-williams-rerun07-final-repeat-v1`
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch contains the committed telemetry-v3 checkpoint and the terminal rerun04 evidence record; rerun04 detached candidate/control worktrees and dependency junctions were removed and pruned after exact identities, clean status, Job cleanup, ports, and immutable evidence hashes were verified; parent WIP remains untouched
+- current worktree state: isolated P2 branch is clean at `9479e9e6`; rerun06 detached candidate/control worktrees and dependency junctions were removed and pruned after exact identities, clean status, Job cleanup, ports, and immutable evidence hashes were verified; the control overlay recovery worktree remains registered at `bd98c580`; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -32,7 +34,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: none; rerun04 completed exactly one execute with zero retry, all task processes are gone, ports 8000/8892 are clear, and a later post-P2.2b performance lane requires a fresh explicit owner and a unique evidence root
+- live-process owner: none; rerun06 completed exactly one execute with zero retry, all task processes are gone, ports 8000/8892 are clear, and rerun07 is the sole remaining live lane under a fresh explicit owner and unique evidence root
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -53,8 +55,8 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: conditional isolated implementation entry approved by independent architecture review; only `composeTransformedFrameToBuffer` and `drawTransformedFrameFromCaches` may migrate, while main integration and P2 closeout remain gated on fresh `accepted / exit 0` performance evidence
-- Review / UltraQA: pending
+- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun06 is terminal invalid and rerun07 owns the final performance disposition
+- Review / UltraQA: final implementation review pending after rerun07 terminal disposition
 - Integration / push / cleanup: pending
 
 ## P2 upstream integration 2026-07-11
@@ -472,3 +474,27 @@ Rerun05 remains immutable under `.runtime/output/perf/p2-2b-williams-postchange-
 The reproduced failure supports one strict protocol correction: declared count must equal the actual sample array length; the array must contain at least two samples; sequences must be contiguous `1..N`; the canonical sample must be unique and last; every preceding sample must have a finite timestamp before chunk promotion. Scenario, idle phase, progressive-background, positive scenario-context, post-promotion, and duration contracts remain unchanged. Policy identities rotate to `render-sample-role-v2` and `p2-williams-crossover-v4`, so v1/v3 preregistration and raw evidence fail closed.
 
 The first TDD run accepted the three-sample fixture only after the v2 implementation. Focused GREEN is render-role `23/23`, Williams governance `34/34`, and Python perf contract `23/23`. Tests also reject a single sample, declared-count drift, array-count drift, sequence gaps/duplicates, a non-unique or non-final canonical sample, and a post-promotion noncanonical intermediate frame. Dynamic sequence/timestamp evidence is frozen. The historical governed companion uses the new v2 report identity and output path while preserving the earlier v1 report files byte-for-byte. Independent code and governance reviews returned `CLEAR`; rerun06 remains gated on a committed candidate checkpoint, a control overlay containing only the v2 role policy, exact dual-side blob checks, fresh detached worktrees, a unique evidence root, one dry plan, one execute, and an `accepted / exit 0` analyzer result.
+
+## Williams governed rerun06 terminal record and rerun07 authorization 2026-07-12
+
+Rerun06 used candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`
+and control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f` under policy
+`p2-williams-crossover-v4` and role policy `render-sample-role-v2`. Root issued
+one dry plan, one execute, and zero retries. All eight blocks completed with
+valid Job cleanup; 32 measured raw files and all 115 manifest entries validate.
+
+The analyzer returned `invalid-experiment / exit 3`, `admitted=false`,
+`regressions=[]`. Invalid reasons are adjacent-pair pre-frequency differences
+of `15.625%` and `9.271523%`, global pre-frequency drift `35.036496%`, a block-02
+TNO startup outlier ratio `1.260172` with `1692ms` spread, and B-TH blocks 02/05
+TNO startup drift `12.234332%`. The four primary estimates remain diagnostic.
+Canonical hashes and the fixed final-repeat contract live in
+`rerun07-final-repeat-governance.md`.
+
+Three independent read-only reviews found the evidence complete, the
+calculations and identities correct, and the result terminal invalid. They
+authorized exactly one final capped rerun07 under a temporary standard Windows
+High performance scheme, a fixed 120-second quiet interval, fresh detached
+worktrees, one dry plan, one execute, and zero retry. Exit `0` opens P2 closeout;
+exit `2`, `3`, or `1` ends the P2 acceptance lane under its recorded terminal
+classification. Rerun07 receives no repetition.

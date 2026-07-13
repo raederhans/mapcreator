@@ -940,6 +940,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "docs/active/renderer-frame-orchestration-p2-20260710/plan.md",
       "docs/active/renderer-frame-orchestration-p2-20260710/context.md",
       "docs/active/renderer-frame-orchestration-p2-20260710/task.md",
+      "docs/active/renderer-frame-orchestration-p2-20260710/rerun07-final-repeat-governance.md",
       "docs/active/_worktree_registry.md",
       "package.json",
     ],

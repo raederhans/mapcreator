@@ -606,8 +606,10 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   const staticReport = buildRecommendation([
     "tests/williams_crossover_governance_behavior.test.mjs",
     "docs/active/renderer-frame-orchestration-p2-20260710/plan.md",
+    "docs/active/renderer-frame-orchestration-p2-20260710/rerun07-final-repeat-governance.md",
     "docs/active/_worktree_registry.md",
   ]);
+  assert.deepEqual(staticReport.unmatchedChangedFiles, []);
   assert.ok(staticReport.recommendedCommands.some((command) => command.commandRef === "test:node:williams-crossover-governance"));
   assert.equal(staticReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), false);
 

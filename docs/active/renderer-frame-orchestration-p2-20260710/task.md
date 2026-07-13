@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2b isolated implementation is complete at the working-tree level. The transformed-frame compositor owner, root-owned mutation effects, focused regressions, architecture/state-write/metadata checks, zero-gap adaptive routing, and generated Pages mirror are green. Rerun01 through rerun04 remain immutable terminal evidence. Main integration and P2 closeout still require clean-head deterministic/browser gates plus a fresh complete Williams `accepted / exit 0` result.
+Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun01 through rerun06 remain immutable terminal evidence. Rerun06 completed 8/8 blocks, 32/32 measured raw files, and 115/115 manifest entries, then returned `invalid-experiment / exit 3`. One final capped rerun07 is authorized under `p2-williams-rerun07-final-repeat-v1` and determines the P2 performance disposition.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -320,11 +320,31 @@ Current status: P2.2b isolated implementation is complete at the working-tree le
 - [x] Rotate Williams governance to `p2-williams-crossover-v4` and reject stale v1/v3 evidence.
 - [x] Preserve the historical governed companion through a v2 report ID/output path while retaining the earlier v1 files.
 - [x] Complete focused TDD and reviews: render-role 23/23, Williams governance 34/34, Python perf contract 23/23; independent code and governance reviews CLEAR.
-- [ ] Commit the candidate v2/v4 checkpoint and pass clean-head deterministic gates.
-- [ ] Create a control overlay from `ab86b1e2` containing only `tools/perf/render_sample_role_policy.mjs`; verify matching lock, baseline-runner, and role-policy blobs.
-- [ ] Remove the terminal rerun05 detached worktrees after verifying exact HEADs, clean status, and dependency junction targets; preserve its evidence root.
-- [ ] Run one fresh rerun06 dry plan and exactly one execute under a unique evidence root with zero retry.
-- [ ] Admit P2 closeout only when rerun06 returns `accepted / exit 0` with all eight blocks and 32 measured raw files.
+- [x] Commit the candidate v2/v4 checkpoint and pass clean-head deterministic gates at `9479e9e6`.
+- [x] Create a one-file control overlay with matching lock, baseline-runner, and role-policy blobs at `bd98c580`.
+- [x] Remove terminal rerun05 and rerun06 detached measurement worktrees after verifying exact HEADs, clean status, dependency junction targets, and immutable evidence roots.
+- [x] Run one fresh rerun06 dry plan and exactly one execute under a unique evidence root with zero retry.
+- [ ] Admit P2 closeout through the final rerun07 terminal mapping. Rerun06 returned `invalid-experiment / exit 3` after the complete 8-block package.
+
+## Williams rerun06 terminal outcome and rerun07 final authorization 2026-07-12
+
+- [x] Preserve rerun06 as immutable terminal `invalid-experiment / exit 3`.
+- [x] Record 8/8 blocks, 32/32 measured raw files, 115/115 manifest entries,
+      valid Job cleanup, one dry plan, one execute, and zero retry.
+- [x] Record all five preregistered invalid reasons and keep the four primary
+      estimates diagnostic-only.
+- [x] Complete independent evidence, calculation, and governance reviews.
+- [x] Approve exactly one final rerun07 under
+      `p2-williams-rerun07-final-repeat-v1`.
+- [ ] Create fresh exact detached rerun07 worktrees and a unique evidence root.
+- [ ] Record original power GUID, create and activate a temporary standard High
+      performance scheme, require AC, and complete the fixed 120-second quiet
+      interval.
+- [ ] Run one rerun07 dry plan and exactly one execute with zero retry.
+- [ ] Restore the original power scheme and delete the temporary scheme in the
+      cleanup path.
+- [ ] Apply the terminal exit mapping and stop all further Williams repetitions.
+- [ ] Complete P2 integration/closeout only through the recorded terminal result.
 
 - [ ] Reach cumulative extracted lines >=150.
 - [ ] Run independent code review, first-principles review, and UltraQA.
