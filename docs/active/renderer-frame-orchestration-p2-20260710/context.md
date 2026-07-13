@@ -57,7 +57,7 @@ Date: 2026-07-10
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
 - P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun07 ended in a terminal pre-execute harness fault and supplies no Williams performance verdict
 - Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE` and formal integration `BLOCK` under the frozen rerun07 terminal mapping
-- Integration / push / cleanup: main integration is closed by the rerun07 terminal mapping; recovery-branch push and support-worktree cleanup remain authorized
+- Integration / push / cleanup: main integration is closed by the rerun07 terminal mapping; the recovery branch is pushed through `d508e00698cec84b707b589ec0163a07014ebf61`; the isolated P2 worktree remains retained for recovery and audit
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
 
@@ -81,7 +81,7 @@ Browser evidence is bound to the same final product source tree. `p2-2b-browser-
 
 Three independent read-only closeout reviews found zero renderer-code blocker. Code review approved frame order, cached-pass math, transformed-frame behavior, source/dist parity, and composition-root writes. First-principles review confirmed `RendererRuntimeContext` is unchanged, public facade and state-write allowlist have zero P2 diff, and pass authority remains in the existing catalog/pipeline. Evidence/UltraQA review approved implementation completion and retained the formal integration block. Architecture counting is `23,473 -> 23,269`, a 204-line reduction, with the enforced ceiling at 23,269.
 
-Fresh ancestry verification after `git fetch origin --prune` records `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor of the P2 branch, with `0 behind / 47 ahead` at checkpoint `72ccbc3a`. Governance keeps `origin/main` unchanged. The authorized next action is recovery-branch push; the isolated P2 worktree and active task documents remain retained.
+Fresh ancestry verification after `git fetch origin --prune` records `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor of the P2 branch, with `0 behind / 47 ahead` at checkpoint `72ccbc3a`. Governance keeps `origin/main` unchanged. The recovery branch was pushed through `d508e00698cec84b707b589ec0163a07014ebf61`; the isolated P2 worktree and active task documents remain retained.
 
 ## P2 upstream integration 2026-07-11
 

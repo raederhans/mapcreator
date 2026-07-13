@@ -354,7 +354,7 @@ Terminal evidence:
 - [x] Reach cumulative extracted lines >=150: the current `origin/main` baseline and architecture counting move `map_renderer.js` from 23,473 to 23,269 lines, a cumulative reduction of 204 lines.
 - [x] Run independent code review, first-principles review, and UltraQA: code `APPROVE`, architecture implementation `CLEAR`, evidence implementation `APPROVE`, formal integration `BLOCK` under rerun07 governance.
 - [x] Recheck integration ancestry and overlap: `origin/main@17aeedf5` is an ancestor of terminal-truth checkpoint `72ccbc3a`; checkpoint state is `0 behind / 47 ahead`; renderer/metadata/docs remain red-overlap surfaces for future integration.
-- [ ] Push verified result.
+- [x] Push verified recovery result: `origin/codex/renderer-frame-orchestration-p2-20260710@d508e00698cec84b707b589ec0163a07014ebf61`.
 - [ ] Clean isolated worktree after recovery recording.
 
 Final recovery-branch gate evidence:
