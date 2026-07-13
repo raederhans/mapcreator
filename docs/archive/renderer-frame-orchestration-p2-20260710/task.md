@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun08 consumed its single dry plan and single execute under `p2-williams-rerun08-harness-recovery-v1`, returned terminal `invalid-experiment / exit 3`, and recorded zero regressions. The frozen terminal mapping ends P2 as implementation-complete/performance-unresolved. Main integration, completion, and archival remain closed; the pushed recovery branch and isolated P2 worktree stay available for a future explicit project decision.
+Current status: complete and authorized for integration. P2.2b implementation is committed at `9479e9e6`; deterministic, Pages, browser matrix, and standard `perf:gate` acceptance are green. The 2026-07-13 project decision accepts the refreshed current state for P2 closeout and defers specialized Williams performance governance to a later phase. Main integration, archival, and isolated-worktree cleanup are the final actions in this ledger.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -436,3 +436,16 @@ Terminal rerun08 evidence:
 - invalidity is driven by preregistered CPU/telemetry admission, same-side drift, and one direction-veto check; the paired estimates remain diagnostic-only
 - original Balanced scheme `381b4222-f694-41f0-9685-ff5bb260df2e` restored; temporary scheme `43e48295-98a5-4a6d-a46c-d38408fa7cbd` deleted; 11/11 lifecycle events recorded; cleanup valid with zero errors
 - both detached measurement worktrees and their verified dependency junctions removed and pruned; ports 8000/8892 clear; rerun08 task process count zero; parent WIP unchanged
+
+## Final integration and archive closeout 2026-07-13
+
+- [x] Re-fetch and prove `origin/main@17aeedf5` is an ancestor of the P2 recovery branch.
+- [x] Confirm the isolated P2 worktree is tracked-clean and the dirty parent checkout remains unchanged.
+- [x] Adopt the refreshed current deterministic, Pages/dist, browser, and standard `perf:gate` evidence as the P2 acceptance basis.
+- [x] Defer specialized Williams performance governance to the later performance-governance phase while preserving all raw evidence and terminal classifications.
+- [x] Update plan, context, task, and registry truth for the project decision.
+- [x] Move the P2 task package and owner closeout documents into `docs/archive/renderer-frame-orchestration-p2-20260710/`.
+- [x] Run archive-aware selector, architecture, state-write, import-graph, Pages/dist, and clean-head `verify:core` validation.
+- [x] Commit with Lore trailers, push the recovery branch, and fast-forward `origin/main`.
+- [x] Remove the isolated P2 worktree and prune the worktree registry.
+- [x] Verify remote main, recovery branch, final worktree list, and unchanged parent WIP.

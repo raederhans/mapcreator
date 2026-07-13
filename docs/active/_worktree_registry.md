@@ -1,36 +1,40 @@
 # Worktree Registry
 
-Last updated: 2026-07-13 P2.2b renderer implementation has final code, architecture, and UltraQA approval. Clean-head Pages/dist/core is green at terminal-truth checkpoint `72ccbc3a` with `verify:core` 67/67. Williams rerun08 consumed one dry plan and one execute under the frozen harness-recovery protocol and returned terminal `invalid-experiment / exit 3` with zero regressions. P2 is implementation-complete/performance-unresolved. Main integration, P2 completion, and archival remain closed. The terminal closeout is committed and pushed at `faf79f04`; the isolated P2 worktree remains registered for recovery evidence; parent WIP remains untouched.
+Last updated: 2026-07-13 P2 renderer frame orchestration is integrated, archived, pushed, and cleaned. The project owner accepted the refreshed deterministic, Pages/dist, browser, and standard `perf:gate` state for P2 closeout and deferred specialized Williams performance governance to a later phase. The remote recovery branch remains the recovery pointer. The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
 
 ## Integration Owner
 
-- Owner: main integration owner.
+- Owner: root main integration owner.
 - Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged.
-- Remote P1.5 acceptance base is `origin/main@a8f71822d705fcd3b26c32db1abd417b41264eb0`; P1.6 evidence checkpoint is `1e14c944855225ec3913bd27bc942e86ede03202`; P1.7 functional Lore commit is `5f78f3a545d1cfae2e311019718e25b5397bb218`; its docs-only evidence checkpoint is `f355546c281da1e51cbbbe651fb96a55801267cc`.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
-- Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
-- Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none. Root completed the single rerun08 lane, restored the original Balanced scheme, removed the temporary scheme, cleaned both measurement worktrees, and confirmed clear ports and zero task processes.
-- Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
+- P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710`; it contains the pre-integration `origin/main@17aeedf5` as an ancestor and preserves the complete P2 Lore history.
+- P2 verification basis: clean-head `verify:core` 67/67, Pages/dist parity, recorded main-thread/browser acceptance, standard `perf:gate`, selector zero-gap evidence, and independent code/architecture/evidence reviews.
+- Live process owner: none. Performance-governance work is outside the current P2 closeout scope.
 
 ## Recommended Order
 
-1. P1 is already integrated on `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; keep its recovery branch for traceability only.
-2. Run P2 in the isolated worktree `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` from clean `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`.
-3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
+1. P2 is integrated into remote `main`; keep `origin/codex/renderer-frame-orchestration-p2-20260710` as the recovery pointer.
+2. P2 task and owner closeout documents live under `docs/archive/renderer-frame-orchestration-p2-20260710/`.
+3. Keep all Williams rerun evidence immutable for the later performance-governance phase.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
-5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep all rerun evidence immutable. Rerun08 returned terminal `invalid-experiment / exit 3`, so the frozen protocol closes P2 integration and archival. Retain the recovery branch and isolated P2 worktree until a future explicit project decision supersedes this terminal gate.
+5. Reconcile the dirty parent checkout in its own task before updating local `main`.
 
 ## Current Worktrees
 
-Current rows reflect the two registered local worktrees: the dirty parent checkout and the P2 isolated recovery lane. Rerun08 detached measurement worktrees, earlier detached measurement worktrees, and the control-overlay support worktree are removed and pruned. The control identity remains recoverable from `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`. The dirty parent checkout remains preserved and unchanged.
+Final post-cleanup truth contains the dirty parent checkout only. The isolated P2 worktree and all measurement/support worktrees are removed and pruned. Recovery remains available through remote branches and archived task documents.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | Current read-only snapshot has 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | Rerun02 cleanup captured 48 entries. Subsequent unrelated parent work produced the current 57-entry snapshot; the P2 worktree has not written to the parent checkout. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated recovery lane | branch `codex/renderer-frame-orchestration-p2-20260710`; terminal closeout pushed at `faf79f04` | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `blocked`; implementation-complete/performance-unresolved under terminal rerun08 mapping | Hot files: renderer owners, `map_renderer.js`, P2 control docs, verification metadata, tests, and Pages mirror. Parent WIP remains untouched. | Clean-head Pages/dist/core exit 0; `verify:core` 67/67; main-thread 71/71; scenario 3/3; physical 1/1; TNO 2/2; water 12/12; post-repair city 8/8; final perf log PASS. Rerun08 completed 8/8 blocks, 32/32 raw samples, 115/115 manifest entries, valid cleanup, and terminal `invalid-experiment / exit 3`. | Red for main integration and archival; yellow for registry/docs/metadata overlap; green for parent WIP. | Retain branch/worktree as recovery evidence. A future explicit project decision must define any new acceptance or integration path. |
+| `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; local branch remains behind the newly integrated remote main | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | P2 integration used the isolated clean branch and left all parent files unchanged. | Red for direct synchronization because the parent is old and dirty. | Keep untouched; reconcile in a separate parent-WIP task. |
+
+## P2 final integration decision 2026-07-13
+
+1. The project owner accepted the refreshed current verification state for P2 and deferred specialized performance governance.
+2. `origin/main@17aeedf5` was proven to be an ancestor of the P2 recovery branch, enabling a fast-forward integration with no merge conflict.
+3. P2 delivers the draw-canvas orchestration owner, cached-pass compositor owner, and transformed-frame compositor owner while preserving public facade, render order, state-write allowlist, and concrete pass drawing ownership.
+4. `map_renderer.js` decreased from 23,473 to 23,269 lines, a 204-line reduction.
+5. P2 archive location: `docs/archive/renderer-frame-orchestration-p2-20260710/`.
+6. Final cleanup removes the isolated P2 worktree and retains the remote recovery branch.
 
 ## Williams Rerun08 Harness-Recovery Frozen Contract 2026-07-13
 
@@ -280,14 +284,14 @@ Status: functional commit `cc6477e0111568091a8665f76fa13d1083c67426` is committe
 2. Added owner behavior regressions for synchronous `nowMs` and first-visible hook mutations of phase/transform; kept the frozen JSON-safe summary contract.
 3. Applied reviewer-approved wiring reductions: compact singleton return, one-line readiness getter, and positive promotion eligibility guard; source/dist `js/core/map_renderer.js` are 23437 physical lines, owner source/dist are 255, baseline is 23472, net reduction is 35, architecture split-entry budget is 23438, and Python `splitlines()` ceiling is 23437.
 4. Fixed P2.1 metadata owner-only routing coverage and kept generated source/dist owner mirrors aligned.
-5. Added a performance-risk note to `docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md`; later browser/performance A/B acceptance remains a separate lane.
+5. Added a performance-risk note to `docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md`; later browser/performance A/B acceptance remains a separate lane.
 
 Files touched:
 
 - Core/runtime: `js/core/map_renderer.js`, `js/core/map_renderer/draw_canvas_orchestration_owner.js`, `dist/app/js/core/map_renderer.js`, `dist/app/js/core/map_renderer/draw_canvas_orchestration_owner.js`.
 - Tests/contracts: `tests/draw_canvas_orchestration_owner_behavior.test.mjs`, `tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs`, `tests/test_map_renderer_draw_canvas_orchestration_owner_boundary_contract.py`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/scenario_chunk_contracts.test.mjs`, `tests/test_map_renderer_render_pipeline_passes_boundary_contract.py`, `tests/test_pages_dist_startup_shell.py`, `tests/test_scenario_chunk_refresh_contracts.py`.
 - Tooling/metadata: `package.json`, `tools/check_architecture_boundaries.mjs`, `tools/verification/verification_domains.mjs`.
-- Docs/generated metadata: `docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md`, `docs/active/_worktree_registry.md`, `dist/pages-dist-manifest.json`.
+- Docs/generated metadata: `docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md`, `docs/active/_worktree_registry.md`, `dist/pages-dist-manifest.json`.
 - Runtime artifacts: `.runtime/reports/generated/supervisor-plan.json`.
 
 Diff summary: the large `drawCanvas()` frame state machine is delegated to the new injected owner; concrete pass drawing, cache composition, public facade, runtime context, state-write allowlist, UI/CSS/data, and scenario data stay outside this owner. The P2.1 tests and metadata route the owner, inventory, Python boundary, architecture, and state-write checks as focused child-safe lanes. The focused repair adjusted reviewer-identified ordering and approved line-count reductions inside the existing P2.1 slice.
@@ -1042,7 +1046,7 @@ Review results: code-reviewer returned REQUEST CHANGES for stale Pages dist mirr
 4. Updated `tools/check_architecture_boundaries.mjs` with P53 doc/test/package/source-boundary gates and a semantic detector for accidental drawCanvas orchestration owner files during preflight.
 5. Kept production runtime files unchanged.
 
-Files: docs `docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md` and this registry; tests `tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs`; tooling/package `tools/check_architecture_boundaries.mjs`, `package.json`; temporary files none.
+Files: docs `docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md` and this registry; tests `tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs`; tooling/package `tools/check_architecture_boundaries.mjs`, `package.json`; temporary files none.
 
 Diff summary: P53 is docs/tests/tooling-only. It adds one active preflight doc, one static inventory test, one package script, and architecture-boundary checks. `js/core/map_renderer.js`, `js/core/map_renderer/public.js`, `tools/eslint-rules/state-writer-allowlist.json`, and `dist/**` have no P53 diff. P51/P52 production owners remain unchanged.
 

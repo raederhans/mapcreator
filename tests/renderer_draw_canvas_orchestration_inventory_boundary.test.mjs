@@ -8,10 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-const DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md";
-const P21_DOC_PATH = "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
-const P22A_DOC_PATH = "docs/active/renderer-cached-pass-compositor-owner-p2-2a-20260711.md";
-const P22B_DOC_PATH = "docs/active/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md";
+const DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md";
+const P21_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md";
+const P22A_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-cached-pass-compositor-owner-p2-2a-20260711.md";
+const P22B_DOC_PATH = "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-transformed-frame-compositor-owner-p2-2b-20260712.md";
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const DRAW_CANVAS_ORCHESTRATION_OWNER_PATH = "js/core/map_renderer/draw_canvas_orchestration_owner.js";
 const CACHED_PASS_COMPOSITOR_OWNER_PATH = "js/core/renderer/cached_pass_compositor_owner.js";

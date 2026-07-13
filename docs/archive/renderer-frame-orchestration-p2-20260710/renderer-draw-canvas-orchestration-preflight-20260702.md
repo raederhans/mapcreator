@@ -6,7 +6,7 @@ P53 is preflight only. It inventories `drawCanvas()` pass orchestration before a
 
 Allowed changes:
 
-- `docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md`
+- `docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md`
 - `tests/renderer_draw_canvas_orchestration_inventory_boundary.test.mjs`
 - `package.json`
 - `tools/check_architecture_boundaries.mjs`

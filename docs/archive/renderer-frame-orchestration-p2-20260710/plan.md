@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Status: in progress; P2.2a Job Object containment repair is implemented and statically verified; a fresh governed Williams run remains pending and P2.2b entry stays closed
+Status: complete; P2.1, P2.2a, and P2.2b are implemented and verified. The 2026-07-13 project integration decision accepts the refreshed deterministic, Pages/dist, browser, and standard `perf:gate` evidence for P2 closeout. Specialized Williams performance governance is deferred to the later performance-governance phase.
 
 ## Approved source
 
@@ -106,10 +106,10 @@ Static tooling can run `npm run perf:williams-crossover:plan`, `npm run perf:wil
 - [x] P2.1 completed with >=35 extracted lines.
 - [x] P2.2a implementation, deterministic/dist, and browser acceptance completed; Williams performance rerun pending.
 - [x] Replace the unavailable WMI watcher path with reviewed Windows Job Object containment and deterministic capability coverage.
-- [ ] P2.2b completed.
-- [ ] Cumulative extracted lines >=150.
-- [ ] Review and UltraQA completed.
-- [ ] Integration, push, and cleanup completed.
+- [x] P2.2b completed.
+- [x] Cumulative extracted lines >=150; `map_renderer.js` is 204 lines smaller than the current origin baseline used by the closeout audit.
+- [x] Review and UltraQA completed with zero code or architecture blocker; the former integration objection was limited to the now-deferred specialized performance gate.
+- [x] Integration, push, archival, and cleanup authorized by the 2026-07-13 project decision and executed through the isolated recovery branch.
 
 ## Stop rules
 

@@ -415,7 +415,7 @@ test("renderer draw canvas P2.1 files route to owner behavior inventory and boun
     );
     assert.ok(entry.sourceRefs.includes("js/core/map_renderer/draw_canvas_orchestration_owner.js"));
     assert.ok(entry.sourceRefs.includes("tests/draw_canvas_orchestration_owner_behavior.test.mjs"));
-    assert.ok(entry.sourceRefs.includes("docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md"));
+    assert.ok(entry.sourceRefs.includes("docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md"));
   }
 
   const ownerOnlyReport = buildRecommendation([
@@ -437,10 +437,10 @@ test("renderer draw canvas P2.1 files route to owner behavior inventory and boun
 
   const report = buildRecommendation([
     "docs/active/_worktree_registry.md",
-    "docs/active/renderer-draw-canvas-orchestration-preflight-20260702.md",
-    "docs/active/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
-    "docs/active/renderer-frame-orchestration-p2-20260710/context.md",
-    "docs/active/renderer-frame-orchestration-p2-20260710/task.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-preflight-20260702.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/context.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/task.md",
     "package.json",
     "js/core/map_renderer.js",
     "js/core/map_renderer/draw_canvas_orchestration_owner.js",
@@ -605,8 +605,8 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
 
   const staticReport = buildRecommendation([
     "tests/williams_crossover_governance_behavior.test.mjs",
-    "docs/active/renderer-frame-orchestration-p2-20260710/plan.md",
-    "docs/active/renderer-frame-orchestration-p2-20260710/rerun07-final-repeat-governance.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/plan.md",
+    "docs/archive/renderer-frame-orchestration-p2-20260710/rerun07-final-repeat-governance.md",
     "docs/active/_worktree_registry.md",
   ]);
   assert.deepEqual(staticReport.unmatchedChangedFiles, []);

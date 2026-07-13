@@ -16,13 +16,23 @@ Date: 2026-07-10
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
 - current P2.2b production checkpoint: `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; production, deterministic, Pages, browser matrix, and `perf:gate` acceptance are green
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
-- current task phase: rerun08 completed its sole dry plan and sole execute under `p2-williams-rerun08-harness-recovery-v1`; the analyzer returned terminal `invalid-experiment / exit 3`, `admitted=false`, and `regressions=[]`; P2 is implementation-complete/performance-unresolved and the main integration gate remains closed
+- current task phase: P2 implementation and refreshed closeout verification are complete. On 2026-07-13 the project owner accepted the current deterministic, Pages/dist, browser, and standard `perf:gate` state for integration and deferred specialized Williams performance governance to a later performance-governance phase.
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
 - current worktree state: isolated P2 recovery branch has terminal closeout committed and pushed at `faf79f04`; rerun08 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, evidence integrity, and power cleanup were verified; the control overlay branch remains recoverable at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
 - parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total)
+
+## Final integration decision 2026-07-13
+
+- The project owner superseded the former Williams-only integration condition and placed specialized performance governance outside the current P2 acceptance scope.
+- P2 closes on the refreshed functional evidence: clean-head `verify:core` 67/67, Pages/dist parity, the recorded main-thread/browser matrix, standard `perf:gate`, zero selector route gaps, and three independent final reviews of code, architecture, and evidence.
+- The P2 recovery branch contains current `origin/main` as an ancestor, so integration uses a fast-forward remote update with no semantic conflict resolution.
+- The P2 task documents move to `docs/archive/renderer-frame-orchestration-p2-20260710/` after closeout truth is recorded.
+- The isolated P2 worktree is removed after the remote main update. The remote recovery branch remains the recovery pointer.
+- The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
+- Rerun01-rerun08 Williams artifacts remain immutable historical evidence. They carry no P2 integration veto under the refreshed project scope.
 
 ## Approved hard invariants
 

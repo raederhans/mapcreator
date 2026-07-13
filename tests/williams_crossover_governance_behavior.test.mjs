@@ -1214,7 +1214,7 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
 test("rerun08 governance uses query and active GUID identity without list-delta ownership", async () => {
   const governanceSource = await fs.readFile(
     new URL(
-      "../docs/active/renderer-frame-orchestration-p2-20260710/rerun08-harness-recovery-governance.md",
+      "../docs/archive/renderer-frame-orchestration-p2-20260710/rerun08-harness-recovery-governance.md",
       import.meta.url,
     ),
     "utf8",
