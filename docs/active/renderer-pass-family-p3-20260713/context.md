@@ -14,11 +14,12 @@
 The approved planning records remain immutable. Current source at the exact base establishes these corrections:
 
 1. `borders.implementationStatus` is `thin-wrapper`. `drawBordersPass` owns HGO/data guards and delegates the main draw to `js/core/renderer/border_draw_owner.js`. The current thin wrappers are `borders` and `labels`.
-2. `effects`, `lineEffects`, and `textureLabels` use `riskTier: medium`. Idempotent style-config normalization writes shared `runtimeState`, which creates limited shared-state coupling. `effects` also crosses the asynchronous image/cache/render-request boundary.
+2. `effects`, `lineEffects`, `dayNight`, and `textureLabels` use `riskTier: medium`. Idempotent style-config normalization writes shared `runtimeState`, which creates limited shared-state coupling. `effects` also crosses the asynchronous image/cache/render-request boundary; `dayNight` additionally reads the clock.
 3. `effects`, `lineEffects`, `dayNight`, and `textureLabels` include `runtime-state` in `stateWriteClass`.
 4. `physicalBase` includes `scenario` in `stateReadClass` because the pass signature reads `activeScenarioId` and the scenario topology token.
 5. `effects.existingDependencyOwners` includes `js/core/map_renderer/render_request_boundary_owner.js`, which owns the asynchronous texture rerender request.
 6. Risk semantics: idempotent style-config normalization is limited shared-state coupling and maps to `medium`. Ownership-critical cross-pass lifecycle mutation maps to `high`.
+7. `background` includes `runtime-state` and `diagnostics` writes because the ocean owner updates mask mode/quality while the depth-mask path normalizes intensity fields and records performance metrics. `contextBase` includes `runtime-state` because its urban-layer multiplier normalizes shared intensity fields.
 
 ## 13-pass source review
 

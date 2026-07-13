@@ -23,29 +23,32 @@ const RECORD_KEYS = [
   "existingDependencyOwners", "browserLanes", "perfSensitivity", "notes",
 ];
 const ARRAY_FIELDS = ["stateReadClass", "stateWriteClass", "existingDependencyOwners", "browserLanes"];
-const ENUMS = [
-  RENDER_PASS_FAMILY_IDS,
-  RENDER_PASS_IMPLEMENTATION_STATUS_IDS,
-  RENDER_PASS_PLANNED_PHASE_IDS,
-  RENDER_PASS_RISK_TIER_IDS,
-  RENDER_PASS_STATE_READ_CLASS_IDS,
-  RENDER_PASS_STATE_WRITE_CLASS_IDS,
-  RENDER_PASS_SURFACE_IDS,
-  RENDER_PASS_PERF_SENSITIVITY_IDS,
+const SCALAR_ENUM_FIELDS = [
+  ["familyId", RENDER_PASS_FAMILY_IDS, ["foundation", "political", "hgo-preview", "context", "visual-effects", "borders", "labels"]],
+  ["implementationStatus", RENDER_PASS_IMPLEMENTATION_STATUS_IDS, ["inline", "thin-wrapper", "delegated-existing", "owned-p3", "hold"]],
+  ["plannedPhase", RENDER_PASS_PLANNED_PHASE_IDS, ["P3.1", "P3.2", "P3.3a", "existing-delegated", "hold", "future-review"]],
+  ["riskTier", RENDER_PASS_RISK_TIER_IDS, ["low", "medium", "high"]],
+  ["canvasOrSvg", RENDER_PASS_SURFACE_IDS, ["canvas", "svg", "hybrid"]],
+  ["perfSensitivity", RENDER_PASS_PERF_SENSITIVITY_IDS, ["low", "medium", "high"]],
+];
+const ENUM_CONTRACTS = [
+  ...SCALAR_ENUM_FIELDS.map(([, values, expected]) => [values, expected]),
+  [RENDER_PASS_STATE_READ_CLASS_IDS, ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache", "clock", "diagnostics"]],
+  [RENDER_PASS_STATE_WRITE_CLASS_IDS, ["pass-surface", "owner-cache", "runtime-state", "diagnostics"]],
 ];
 const EXPECTED_INVENTORY = [
-  {"passName":"background","familyId":"foundation","entryFunction":"drawBackgroundPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"hold","riskTier":"high","stateReadClass":["viewport","appearance","map-data","render-cache"],"stateWriteClass":["pass-surface","owner-cache"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/ocean_render_owner.js","js/core/renderer/intensity_field_mask_owner.js"],"browserLanes":["test:e2e:water-rendering"],"perfSensitivity":"high","notes":"foundational background ownership held for later review"},
+  {"passName":"background","familyId":"foundation","entryFunction":"drawBackgroundPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"hold","riskTier":"high","stateReadClass":["viewport","appearance","map-data","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/ocean_render_owner.js","js/core/renderer/intensity_field_mask_owner.js"],"browserLanes":["test:e2e:water-rendering"],"perfSensitivity":"high","notes":"foundational background ownership held for later review"},
   {"passName":"physicalBase","familyId":"foundation","entryFunction":"drawPhysicalBasePass","implementationStatus":"delegated-existing","currentOwnerPath":"js/core/renderer/physical_layer_render_owner.js","plannedPhase":"existing-delegated","riskTier":"medium","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":[],"browserLanes":["test:e2e:physical-layer-runtime-contract"],"perfSensitivity":"high","notes":"existing physical owner remains authoritative"},
   {"passName":"political","familyId":"political","entryFunction":"drawPoliticalPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.3a","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache","diagnostics"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/color_resolution_strategy.js","js/core/renderer/political_collection_owner.js","js/core/renderer/spatial_index_runtime_owner.js","js/core/renderer/visible_frame_diagnostics_owner.js"],"browserLanes":["test:e2e:scenario-resilience","test:e2e:tno-contracts"],"perfSensitivity":"high","notes":"P3.3a preflight scope only"},
   {"passName":"hgoPreview","familyId":"hgo-preview","entryFunction":"drawHgoPreviewPass","implementationStatus":"delegated-existing","currentOwnerPath":"js/core/map_renderer/hgo_runtime_preview_render_owner.js","plannedPhase":"existing-delegated","riskTier":"medium","stateReadClass":["viewport","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/map_renderer/hgo_runtime_preview_frame_commit.js"],"browserLanes":[],"perfSensitivity":"high","notes":"dedicated browser lane gap; static and contract evidence only"},
-  {"passName":"contextBase","familyId":"context","entryFunction":"drawContextBasePass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.2","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/physical_layer_render_owner.js","js/core/renderer/river_layer_render_owner.js"],"browserLanes":["test:e2e:physical-layer-runtime-contract","test:e2e:water-rendering"],"perfSensitivity":"high","notes":"P3.2 context-base extraction candidate"},
+  {"passName":"contextBase","familyId":"context","entryFunction":"drawContextBasePass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.2","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/physical_layer_render_owner.js","js/core/renderer/river_layer_render_owner.js"],"browserLanes":["test:e2e:physical-layer-runtime-contract","test:e2e:water-rendering"],"perfSensitivity":"high","notes":"P3.2 context-base extraction candidate"},
   {"passName":"contextScenario","familyId":"context","entryFunction":"drawContextScenarioPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.2","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/scenario_water_cache_policy_owner.js","js/core/renderer/scenario_relief_overlay_render_owner.js"],"browserLanes":["test:e2e:scenario-resilience","test:e2e:water-rendering","test:e2e:tno-contracts"],"perfSensitivity":"high","notes":"P3.2 scenario overlay extraction candidate"},
   {"passName":"effects","familyId":"visual-effects","entryFunction":"drawEffectsPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/map_renderer/render_request_boundary_owner.js"],"browserLanes":["test:e2e:layer:regression"],"perfSensitivity":"high","notes":"P3.1 full-sphere paper effect with async texture rerender boundary"},
-  {"passName":"lineEffects","familyId":"visual-effects","entryFunction":"drawLineEffectsPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state"],"canvasOrSvg":"canvas","existingDependencyOwners":[],"browserLanes":["test:e2e:layer:regression"],"perfSensitivity":"medium","notes":"P3.1 graticule and draft-grid lines with shared texture config normalization"},
-  {"passName":"dayNight","familyId":"visual-effects","entryFunction":"drawDayNightPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","map-data","interaction","render-cache","clock"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/city_lights_render_owner.js"],"browserLanes":["test:e2e:city-rendering"],"perfSensitivity":"high","notes":"P3.1 clock-coupled shadow and lights with shared texture config normalization"},
+  {"passName":"lineEffects","familyId":"visual-effects","entryFunction":"drawLineEffectsPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state"],"canvasOrSvg":"canvas","existingDependencyOwners":[],"browserLanes":["test:e2e:layer:regression"],"perfSensitivity":"medium","notes":"P3.1 graticule and draft-grid lines with shared style config normalization"},
+  {"passName":"dayNight","familyId":"visual-effects","entryFunction":"drawDayNightPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","map-data","interaction","render-cache","clock"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/city_lights_render_owner.js"],"browserLanes":["test:e2e:city-rendering"],"perfSensitivity":"high","notes":"P3.1 clock-coupled shadow and lights with shared style config normalization"},
   {"passName":"borders","familyId":"borders","entryFunction":"drawBordersPass","implementationStatus":"thin-wrapper","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"hold","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/border_draw_owner.js"],"browserLanes":["test:e2e:layer:regression","test:e2e:tno-contracts"],"perfSensitivity":"high","notes":"HGO and data guards remain in the wrapper; main border draw delegates to the existing owner"},
   {"passName":"contextMarkers","familyId":"context","entryFunction":"drawContextMarkersPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.2","riskTier":"high","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/transport_overview_render_owner.js","js/core/renderer/city_points_render_owner.js","js/core/renderer/urban_city_policy.js"],"browserLanes":["test:e2e:city-rendering","test:e2e:scenario-resilience","test:e2e:tno-contracts"],"perfSensitivity":"high","notes":"P3.2 transport, strategic and city marker orchestration"},
-  {"passName":"textureLabels","familyId":"visual-effects","entryFunction":"drawTextureLabelEffectsPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":[],"browserLanes":["test:e2e:layer:regression"],"perfSensitivity":"low","notes":"P3.1 graticule label effect with shared texture config normalization"},
+  {"passName":"textureLabels","familyId":"visual-effects","entryFunction":"drawTextureLabelEffectsPass","implementationStatus":"inline","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"P3.1","riskTier":"medium","stateReadClass":["viewport","appearance","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","runtime-state","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":[],"browserLanes":["test:e2e:layer:regression"],"perfSensitivity":"low","notes":"P3.1 graticule label effect with shared style config normalization"},
   {"passName":"labels","familyId":"labels","entryFunction":"drawLabelsPass","implementationStatus":"thin-wrapper","currentOwnerPath":"js/core/map_renderer.js","plannedPhase":"future-review","riskTier":"medium","stateReadClass":["viewport","appearance","scenario","map-data","interaction","render-cache"],"stateWriteClass":["pass-surface","owner-cache","diagnostics"],"canvasOrSvg":"canvas","existingDependencyOwners":["js/core/renderer/city_points_render_owner.js","js/core/renderer/urban_city_policy.js"],"browserLanes":["test:e2e:city-rendering"],"perfSensitivity":"medium","notes":"blank labels stay inline; city labels delegate; future review"}
 ];
 
@@ -74,7 +77,11 @@ function assertCanonicalTokens(values, canonical, label) {
 test("inventory shape, enums, records, and nested arrays are frozen", () => {
   assert.equal(RENDER_PASS_FAMILY_INVENTORY.length, 13);
   assert.equal(Object.isFrozen(RENDER_PASS_FAMILY_INVENTORY), true);
-  for (const values of ENUMS) assert.equal(Object.isFrozen(values), true);
+  for (const [values, expected] of ENUM_CONTRACTS) {
+    assert.equal(Object.isFrozen(values), true);
+    assert.equal(new Set(values).size, values.length, "inventory enums should be duplicate-free");
+    assert.deepEqual(values, expected, "inventory enum tokens should keep their canonical order");
+  }
 
   for (const record of RENDER_PASS_FAMILY_INVENTORY) {
     assert.equal(Object.isFrozen(record), true, `${record.passName} record should be frozen`);
@@ -86,6 +93,9 @@ test("inventory shape, enums, records, and nested arrays are frozen", () => {
       assert.equal(Array.isArray(record[key]), true, `${record.passName}.${key} should be an array`);
       assert.equal(Object.isFrozen(record[key]), true, `${record.passName}.${key} should be frozen`);
       assert.equal(record[key].every((value) => typeof value === "string"), true);
+    }
+    for (const [key, values] of SCALAR_ENUM_FIELDS) {
+      assert.equal(values.includes(record[key]), true, `${record.passName}.${key} should use a known enum value`);
     }
     assertCanonicalTokens(record.stateReadClass, RENDER_PASS_STATE_READ_CLASS_IDS, `${record.passName}.stateReadClass`);
     assertCanonicalTokens(record.stateWriteClass, RENDER_PASS_STATE_WRITE_CLASS_IDS, `${record.passName}.stateWriteClass`);
@@ -132,6 +142,11 @@ test("all 13 records match the source-grounded P3.0 ontology", () => {
     assert.equal(fs.existsSync(path.join(REPO_ROOT, record.currentOwnerPath)), true, `${record.passName} owner should exist`);
     assert.equal(record.stateWriteClass.includes("pass-surface"), true);
     assert.equal(record.canvasOrSvg, "canvas");
+    assert.equal(
+      new Set(record.existingDependencyOwners).size,
+      record.existingDependencyOwners.length,
+      `${record.passName}.existingDependencyOwners should be duplicate-free`,
+    );
     for (const dependencyPath of record.existingDependencyOwners) {
       assert.equal(dependencyPath.includes("\\"), false, `${record.passName} dependencies should use POSIX paths`);
       assert.equal(fs.existsSync(path.join(REPO_ROOT, dependencyPath)), true, `${dependencyPath} should exist`);

@@ -66,7 +66,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     plannedPhase: "hold",
     riskTier: "high",
     stateReadClass: ["viewport", "appearance", "map-data", "render-cache"],
-    stateWriteClass: ["pass-surface", "owner-cache"],
+    stateWriteClass: ["pass-surface", "owner-cache", "runtime-state", "diagnostics"],
     canvasOrSvg: "canvas",
     existingDependencyOwners: [
       "js/core/renderer/ocean_render_owner.js",
@@ -138,7 +138,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     plannedPhase: "P3.2",
     riskTier: "high",
     stateReadClass: ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache"],
-    stateWriteClass: ["pass-surface", "owner-cache", "diagnostics"],
+    stateWriteClass: ["pass-surface", "owner-cache", "runtime-state", "diagnostics"],
     canvasOrSvg: "canvas",
     existingDependencyOwners: [
       "js/core/renderer/physical_layer_render_owner.js",
@@ -197,7 +197,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     existingDependencyOwners: [],
     browserLanes: ["test:e2e:layer:regression"],
     perfSensitivity: "medium",
-    notes: "P3.1 graticule and draft-grid lines with shared texture config normalization",
+    notes: "P3.1 graticule and draft-grid lines with shared style config normalization",
   }),
   freezeRecord({
     passName: "dayNight",
@@ -213,7 +213,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     existingDependencyOwners: ["js/core/renderer/city_lights_render_owner.js"],
     browserLanes: ["test:e2e:city-rendering"],
     perfSensitivity: "high",
-    notes: "P3.1 clock-coupled shadow and lights with shared texture config normalization",
+    notes: "P3.1 clock-coupled shadow and lights with shared style config normalization",
   }),
   freezeRecord({
     passName: "borders",
@@ -265,7 +265,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     existingDependencyOwners: [],
     browserLanes: ["test:e2e:layer:regression"],
     perfSensitivity: "low",
-    notes: "P3.1 graticule label effect with shared texture config normalization",
+    notes: "P3.1 graticule label effect with shared style config normalization",
   }),
   freezeRecord({
     passName: "labels",
