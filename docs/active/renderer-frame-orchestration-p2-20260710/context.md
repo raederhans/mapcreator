@@ -16,9 +16,9 @@ Date: 2026-07-10
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
 - current P2.2b production checkpoint: `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; production, deterministic, Pages, browser matrix, and `perf:gate` acceptance are green
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
-- current task phase: rerun06 is immutable terminal `invalid-experiment / exit 3` evidence after 8/8 blocks, 32/32 measured raw files, and 115/115 manifest entries; three frequency-admission checks, one TNO startup internal outlier, and one same-side startup drift check failed; one final capped rerun07 is authorized under `p2-williams-rerun07-final-repeat-v1`
+- current task phase: rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution; the sole dry plan succeeded, execute count is zero, and P2 performance acceptance remains unresolved
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 branch is clean at `9479e9e6`; rerun06 detached candidate/control worktrees and dependency junctions were removed and pruned after exact identities, clean status, Job cleanup, ports, and immutable evidence hashes were verified; the control overlay recovery worktree remains registered at `bd98c580`; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch is at `233ff550`; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -34,7 +34,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: none; rerun06 completed exactly one execute with zero retry, all task processes are gone, ports 8000/8892 are clear, and rerun07 is the sole remaining live lane under a fresh explicit owner and unique evidence root
+- live-process owner: none; rerun07 completed one dry plan, issued zero execute commands, restored the original Balanced power scheme, removed the temporary scheme, and consumed the final experiment authorization
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -55,9 +55,23 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun06 is terminal invalid and rerun07 owns the final performance disposition
-- Review / UltraQA: final implementation review pending after rerun07 terminal disposition
-- Integration / push / cleanup: pending
+- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun07 ended in a terminal pre-execute harness fault and supplies no Williams performance verdict
+- Review / UltraQA: rerun07 evidence and governance reviews classify the terminal state as trustworthy `exit 1 / harness fault`; final branch closeout review follows the terminal-truth commit
+- Integration / push / cleanup: main integration is closed by the rerun07 terminal mapping; recovery-branch push and support-worktree cleanup remain authorized
+
+## Williams rerun07 terminal harness-fault record 2026-07-13
+
+Rerun07 used the frozen candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`, control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`, package-lock blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`, baseline-runner blob `70453d9b1b17b9013929a11e9a8e05044dc7682d`, role-policy blob `7d11e76bb87e0f62fc4270288d617640e59dc267`, and policy `p2-williams-crossover-v4`. Both exact detached measurement worktrees were tracked-clean and used verified `node_modules` junctions targeting the isolated P2 dependency tree.
+
+The unique dry plan completed once and froze 8 blocks plus 32 measured raw files. Plan log SHA256 is `43d9151f25717b609686621535aebcdf28a26872b107990f99856aec545dacd0`. The operator then duplicated `SCHEME_MIN`; Windows returned temporary GUID `5b998c51-6f90-428d-870c-cb8d8d279b05` with exit `0`, while the immediate `powercfg /list` output still contained only the original Balanced scheme. The list-delta invariant found zero new schemes and raised `expected exactly one temporary power scheme; found 0`.
+
+The fault occurred before the fixed quiet interval and before the Williams execute command. `executeExitCode`, `decision`, `quietStartedAt`, and `quietCompletedAt` are `null`. Execute log, operator preregistration, raw root, analysis JSON, and analysis Markdown are absent by contract. Rerun07 therefore produced zero candidate/control performance samples and supplies no acceptance, regression, equivalence, improvement, or slowdown verdict.
+
+The `finally` path restored original Balanced GUID `381b4222-f694-41f0-9685-ff5bb260df2e`, deleted the returned temporary GUID, verified Balanced as active, verified the temporary GUID absent, and recorded `cleanup.valid=true` with no cleanup errors. The operator finalization SHA256 is `55f9810ac2a5456b9a87aadc9df343a472852237e7430542c2731098c0ae8d6f`; all ten recorded power-event hashes and all frozen Git identities were independently revalidated.
+
+The governance terminal mapping classifies this result as `exit 1 / harness fault`. Every rerun07 result is terminal and the authorization allows zero repetition. P2 implementation remains verified by deterministic, Pages, browser-matrix, and `perf:gate` evidence. Williams performance acceptance remains unresolved. Main integration, ready-for-merge status, P2 completion, and task archival stay closed. The P2 branch and control overlay may be pushed as recovery/audit branches.
+
+Cleanup removed both rerun07 detached measurement worktrees and their verified dependency junctions, then pruned worktree metadata. The tracked-clean control overlay branch was pushed at `bd98c580`; its support worktree was then removed and pruned. The isolated P2 implementation worktree remains registered because the branch is not integrated. The dirty parent checkout remains unchanged.
 
 ## P2 upstream integration 2026-07-11
 

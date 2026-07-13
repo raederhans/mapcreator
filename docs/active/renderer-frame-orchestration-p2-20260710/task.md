@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun01 through rerun06 remain immutable terminal evidence. Rerun06 completed 8/8 blocks, 32/32 measured raw files, and 115/115 manifest entries, then returned `invalid-experiment / exit 3`. One final capped rerun07 is authorized under `p2-williams-rerun07-final-repeat-v1` and determines the P2 performance disposition.
+Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution. The sole dry plan succeeded, execute count is zero, performance acceptance remains unresolved, and main integration stays closed pending a new explicit governance decision.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -324,7 +324,7 @@ Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, 
 - [x] Create a one-file control overlay with matching lock, baseline-runner, and role-policy blobs at `bd98c580`.
 - [x] Remove terminal rerun05 and rerun06 detached measurement worktrees after verifying exact HEADs, clean status, dependency junction targets, and immutable evidence roots.
 - [x] Run one fresh rerun06 dry plan and exactly one execute under a unique evidence root with zero retry.
-- [ ] Admit P2 closeout through the final rerun07 terminal mapping. Rerun06 returned `invalid-experiment / exit 3` after the complete 8-block package.
+- [x] Apply the final rerun07 terminal mapping: `exit 1 / harness fault`; performance acceptance stopped and main integration remains closed.
 
 ## Williams rerun06 terminal outcome and rerun07 final authorization 2026-07-12
 
@@ -336,17 +336,22 @@ Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, 
 - [x] Complete independent evidence, calculation, and governance reviews.
 - [x] Approve exactly one final rerun07 under
       `p2-williams-rerun07-final-repeat-v1`.
-- [ ] Create fresh exact detached rerun07 worktrees and a unique evidence root.
-- [ ] Record original power GUID, create and activate a temporary standard High
-      performance scheme, require AC, and complete the fixed 120-second quiet
-      interval.
-- [ ] Run one rerun07 dry plan and exactly one execute with zero retry.
-- [ ] Restore the original power scheme and delete the temporary scheme in the
-      cleanup path.
-- [ ] Apply the terminal exit mapping and stop all further Williams repetitions.
-- [ ] Complete P2 integration/closeout only through the recorded terminal result.
+- [x] Create fresh exact detached rerun07 worktrees and a unique evidence root; both measurement worktrees were later removed after identity, status, and junction checks.
+- [x] Record original Balanced GUID and request one temporary standard High performance scheme. Windows returned GUID `5b998c51-6f90-428d-870c-cb8d8d279b05`, while the immediate scheme list exposed zero new entries and triggered the pre-execute harness fault. Activation, AC admission, and the fixed quiet interval were never reached.
+- [x] Run the sole rerun07 dry plan. Execute count is `0`, retry count is `0`, and no execute log, preregistration, raw root, or analysis report exists.
+- [x] Restore original Balanced GUID `381b4222-f694-41f0-9685-ff5bb260df2e`, delete the returned temporary GUID, and verify `cleanup.valid=true` with no errors.
+- [x] Apply the terminal exit mapping and stop all further Williams repetitions.
+- [x] Record the terminal result: P2 implementation remains verified; performance acceptance is unresolved; main integration, completion, and archival stay closed.
 
-- [ ] Reach cumulative extracted lines >=150.
+Terminal evidence:
+
+- candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; governance `233ff550157de0a5e0e3b09ea6ff00c6bd0fa8c0`
+- plan log SHA256 `43d9151f25717b609686621535aebcdf28a26872b107990f99856aec545dacd0`
+- operator finalization SHA256 `55f9810ac2a5456b9a87aadc9df343a472852237e7430542c2731098c0ae8d6f`
+- failure `expected exactly one temporary power scheme; found 0`
+- cleanup: original Balanced active; temporary GUID absent; both detached measurement worktrees and dependency junctions removed and pruned
+
+- [x] Reach cumulative extracted lines >=150: `map_renderer.js` moved from 23,472 to 23,269 lines, a cumulative reduction of 203 lines.
 - [ ] Run independent code review, first-principles review, and UltraQA.
 - [ ] Recheck integration ancestry and overlap.
 - [ ] Push verified result.

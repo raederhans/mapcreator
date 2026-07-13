@@ -559,3 +559,6 @@
 
 ### Windows 子进程树隔离要先验证当前用户权限
 - WMI 进程事件订阅可能在普通用户令牌下直接返回权限错误；Windows 性能实验应在测量前编译并探测 Job Object helper，通过 suspended root、assign-before-resume、kill-on-close 和 fail-closed 清理证据实现可审计的整棵进程树隔离。
+
+### Windows 电源方案复制要验证返回 GUID 的真实状态
+- `powercfg /duplicatescheme` 可能返回新 GUID，同时紧接着的 `/list` 仍看不到该方案；未来独立实验协议应以返回 GUID 为身份起点，再分别验证查询、激活和最终清理，并在任何测量前完成一次无副作用 preflight。
