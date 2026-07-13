@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   buildGovernedCompanionReport,
@@ -14,8 +19,160 @@ import {
   validateGateCurrentReport,
 } from "../tools/perf/run_baseline.mjs";
 
-test("governed companion reproduces the canonical role medians from frozen raw evidence", async () => {
-  const report = await buildGovernedCompanionReport();
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const BLOCK_SEQUENCE = Object.freeze(["A1", "B1", "B2", "A2"]);
+const SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
+const CANONICAL_RENDER_MS = Object.freeze({
+  tno_1962: Object.freeze({ A: 1197.9000000059605, B: 1195.3499999940395 }),
+  hoi4_1939: Object.freeze({ A: 694.5500000119209, B: 694.8000000119209 }),
+});
+const CANONICAL_RENDER_OFFSETS = Object.freeze([-4, -3, -2, -1, 0, 0, 1, 2, 3, 4]);
+
+function sha256(bytes) {
+  return crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+function toRepoPath(filePath) {
+  return path.relative(REPO_ROOT, filePath).replaceAll("\\", "/");
+}
+
+function buildExpectedRawManifestSha256(rawFiles) {
+  const rows = rawFiles
+    .map((entry) => `${entry.path}\0${entry.sha256}\n`)
+    .sort();
+  return sha256(Buffer.from(rows.join(""), "utf8"));
+}
+
+async function writeJson(filePath, payload) {
+  const bytes = Buffer.from(JSON.stringify(payload), "utf8");
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, bytes);
+  return sha256(bytes);
+}
+
+function buildSourceReport() {
+  const controlCommit = "a".repeat(40);
+  const candidateCommit = "b".repeat(40);
+  const blocks = Object.fromEntries(BLOCK_SEQUENCE.map((block) => {
+    const side = block.startsWith("A") ? "A" : "B";
+    const expectedHead = side === "A" ? controlCommit : candidateCommit;
+    return [block, {
+      block,
+      side,
+      valid: true,
+      exitCode: 0,
+      reasons: [],
+      quietAttempts: [{ pass: true }],
+      listenersAfter: { port8000: [], port8892: [] },
+      taskOwnedChromiumAfter: [],
+      runnerSha256: "c".repeat(64),
+      packageLockSha256: "d".repeat(64),
+      urlQuery: { perf: "1" },
+      workloadIdentity: { scenarios: SCENARIOS },
+      environment: { platform: "test-fixture" },
+      headMatches: true,
+      head: expectedHead,
+      expectedHead,
+    }];
+  }));
+  return {
+    generatedAt: "2026-07-11T00:00:00.000Z",
+    experiment: { controlCommit, candidateCommit },
+    blocks,
+    decision: { status: "failed/blocked", admitted: false },
+    promotionClassification: { materialGap: false },
+    pooledRegressions: [],
+  };
+}
+
+function buildRawRun({ scenarioId, side, sideScenarioIndex, firstSampleHasScenario }) {
+  const canonicalRenderSampleMs = CANONICAL_RENDER_MS[scenarioId][side]
+    + CANONICAL_RENDER_OFFSETS[sideScenarioIndex];
+  const firstRenderSampleMs = canonicalRenderSampleMs / 2;
+  return {
+    summary: {
+      totalStartupMs: scenarioId === "tno_1962" ? 1000 : 800,
+      renderSampleMedianMs: (firstRenderSampleMs + canonicalRenderSampleMs) / 2,
+      scenarioChunkPromotionVisualStageMs: 100,
+    },
+    snapshot: {
+      renderPerfMetrics: {
+        scenarioChunkPromotionVisualStage: { recordedAt: 200 },
+      },
+      renderSamples: {
+        count: 2,
+        medianMs: (firstRenderSampleMs + canonicalRenderSampleMs) / 2,
+        samples: [
+          {
+            sequence: 1,
+            durationMs: firstRenderSampleMs,
+            recordedAt: 100,
+            activeScenarioId: scenarioId,
+            phase: "idle",
+            politicalBgProgressive: false,
+            contextScenarioMs: firstSampleHasScenario ? 10 : 0,
+          },
+          {
+            sequence: 2,
+            durationMs: canonicalRenderSampleMs,
+            recordedAt: 300,
+            activeScenarioId: scenarioId,
+            phase: "idle",
+            politicalBgProgressive: true,
+            contextScenarioMs: 600,
+          },
+        ],
+      },
+    },
+  };
+}
+
+async function materializeGovernedFixture(t) {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "render-role-governed-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const sourceReportPath = path.join(root, "source-report.json");
+  const experimentRoot = path.join(root, "experiment");
+  const expectedSourceSha256 = await writeJson(sourceReportPath, buildSourceReport());
+  const rawFiles = [];
+  const sideScenarioIndexes = { A: { tno_1962: 0, hoi4_1939: 0 }, B: { tno_1962: 0, hoi4_1939: 0 } };
+
+  for (const block of BLOCK_SEQUENCE) {
+    const side = block.startsWith("A") ? "A" : "B";
+    for (const scenarioId of SCENARIOS) {
+      for (let runNumber = 1; runNumber <= 5; runNumber += 1) {
+        const sideScenarioIndex = sideScenarioIndexes[side][scenarioId];
+        sideScenarioIndexes[side][scenarioId] += 1;
+        const scenarioFirstSampleCount = scenarioId === "tno_1962" ? (side === "A" ? 4 : 7) : 5;
+        const filePath = path.join(
+          experimentRoot,
+          side,
+          block,
+          "raw",
+          scenarioId,
+          `run-${String(runNumber).padStart(2, "0")}.json`
+        );
+        const rawSha256 = await writeJson(filePath, buildRawRun({
+          scenarioId,
+          side,
+          sideScenarioIndex,
+          firstSampleHasScenario: sideScenarioIndex < scenarioFirstSampleCount,
+        }));
+        rawFiles.push({ path: toRepoPath(filePath), sha256: rawSha256 });
+      }
+    }
+  }
+
+  return {
+    sourceReportPath,
+    experimentRoot,
+    expectedSourceSha256,
+    expectedRawManifestSha256: buildExpectedRawManifestSha256(rawFiles),
+  };
+}
+
+test("governed companion reproduces canonical role medians from a hermetic synthetic 40-run fixture", async (t) => {
+  const fixture = await materializeGovernedFixture(t);
+  const report = await buildGovernedCompanionReport(fixture);
   assert.equal(report.reportId, "p2-1-performance-ab-governed-v2-20260711");
   assert.equal(report.policy.policyId, "render-sample-role-v2");
   assert.ok(report.policy.predicates.includes("sample sequences are contiguous from 1 through N"));
@@ -126,8 +283,12 @@ test("snapshot summarization keeps non-number measurements out of gate summaries
   assert.equal(summary.renderSampleMedianMs, 0);
 });
 
-test("companion report fails closed when the frozen source report identity changes", async () => {
-  const report = await buildGovernedCompanionReport({ expectedSourceSha256: "0".repeat(64) });
+test("companion report fails closed when the injected source report identity changes", async (t) => {
+  const fixture = await materializeGovernedFixture(t);
+  const report = await buildGovernedCompanionReport({
+    ...fixture,
+    expectedSourceSha256: "0".repeat(64),
+  });
   assert.equal(report.decision.status, "blocked-rerun-required");
   assert.equal(report.decision.admitted, false);
   assert.ok(report.decision.failedChecks.includes("source_report_sha"));

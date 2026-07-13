@@ -6,7 +6,7 @@
 - Branch: `codex/renderer-pass-family-p3-20260713`
 - Exact base: `origin/main@63dd0bb5e23afd340afe2dc0dcc74095cc4cb2cd`
 - Parent checkout: 57 pre-existing WIP entries preserved untouched.
-- Worker live-process boundary: worker-1 runs child-safe deterministic commands only. The App leader owns browser, Playwright, dist, full-core, performance, push, and integration.
+- Live-process boundary: the formal Team lane completed and released all child-safe deterministic work. The App leader is the sole owner of dist, full-core, browser, Playwright, performance, push, and integration.
 - Dependency identity: `package-lock.json` Git blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`; Node `v22.23.0`; npm `11.18.0`.
 
 ## Source-grounded ontology corrections
@@ -38,6 +38,9 @@ Both production catalogs contain the same 13-pass set. The inventory follows `ID
 
 - Inventory, contract test, package script, metadata route, metadata/runner assertions, coupling matrix, and worktree records are implemented.
 - The child-safe sequence passes: inventory 6/6, metadata 18/18, runner 8/8, architecture boundaries, 116-file state-write allowlist, 51-spec import graph, supervisor contracts/plan, selector schema, 70-command core list, and diff checks.
-- Adaptive selection over all 11 delivery files reports `unmatchedChangedFiles: []`; the dry-run supervisor exits 0. Evidence lives under `.runtime/reports/generated/renderer-pass-family-p3-0/`.
+- Adaptive selection over all 13 delivery files reports `unmatchedChangedFiles: []`; the dry-run supervisor exits 0. Evidence lives under `.runtime/reports/generated/renderer-pass-family-p3-0/`.
 - The initial verify-core runner check exposed base-stale fixture coverage for two already registered city owner scripts and two already registered optional main-thread lanes. The focused fixture update aligns the test with live metadata; the final rerun passes 8/8.
-- Browser, Playwright, dist, full-core, performance, push, and integration remain assigned to the App leader on the final committed clean HEAD.
+- Preliminary clean-HEAD baseline `preliminary-e9ba9e0b` passed `verify:pages-dist` and `verify:dist-drift`, then `verify:core` stopped at `test:node:render-sample-role-policy`. Two governed-report tests attempted to read an expired ignored file at `.runtime/reports/generated/p2-1-performance-ab-20260711.json`; commands after core were never started. Evidence: `.runtime/reports/generated/renderer-pass-family-p3-0/preliminary-e9ba9e0b/`.
+- Git history establishes the test-infrastructure root cause: commit `14878c78937f36f9ddee53a876521494a2214cbb` registered the child-safe test while its source report and 40 raw inputs remained under the already ignored `.runtime/` tree. Those artifact paths have no object in Git history, so a clean worktree cannot satisfy the unit test's implicit default-path precondition.
+- The focused repair stays in `tests/perf_role_governed_report_behavior.test.mjs`. It materializes one source report and 40 raw runs under the system temporary directory, computes source and raw-manifest identities independently, injects the analyzer's existing path/hash options, preserves A/B medians and TNO first-role composition, verifies fail-closed source identity, and cleans up through the Node test lifecycle. `tools/perf/analyze_render_sample_roles.mjs` and its historical offline defaults remain unchanged.
+- The repaired package command passes 36/36. The prescribed full baseline, adversarial verification, push, and integration evidence remain assigned to the App leader on the next committed clean HEAD.
