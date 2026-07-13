@@ -18,11 +18,11 @@ Date: 2026-07-10
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
 - current task phase: P2 implementation and refreshed closeout verification are complete. On 2026-07-13 the project owner accepted the current deterministic, Pages/dist, browser, and standard `perf:gate` state for integration and deferred specialized Williams performance governance to a later performance-governance phase.
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: P2 is integrated and pushed at `origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; `origin/codex/renderer-frame-orchestration-p2-20260710` points to the same recovery commit; the isolated P2 worktree and all measurement/support worktrees are removed and pruned; parent WIP remains untouched
+- current worktree state: P2 closeout commit `a963ad9be78ba5fbc35c6f98ee33f99e40aba9da` is contained by remote `main` and preserved at `origin/codex/renderer-frame-orchestration-p2-20260710`; final docs-only truth corrections continue on remote `main`; the isolated P2 worktree and all measurement/support worktrees are removed and pruned; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
-- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 71 behind origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total)
+- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, behind remote `main`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total); use live Git ancestry for the current behind count
 
 ## Final integration decision 2026-07-13
 
@@ -33,7 +33,7 @@ Date: 2026-07-10
 - The isolated P2 worktree is removed after the remote main update. The remote recovery branch remains the recovery pointer.
 - The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
 - Rerun01-rerun08 Williams artifacts remain immutable historical evidence. They carry no P2 integration veto under the refreshed project scope.
-- Final remote truth: `origin/main` and `origin/codex/renderer-frame-orchestration-p2-20260710` both point to `a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`.
+- Final remote truth: `origin/main` contains P2 closeout commit `a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; `origin/codex/renderer-frame-orchestration-p2-20260710` preserves that exact recovery point; final docs-only truth corrections continue on remote `main` and `origin/codex/p2-truth-fix-20260713`.
 
 ## Approved hard invariants
 

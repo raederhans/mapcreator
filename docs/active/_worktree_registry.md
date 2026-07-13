@@ -5,9 +5,9 @@ Last updated: 2026-07-13 P2 renderer frame orchestration is integrated, archived
 ## Integration Owner
 
 - Owner: root main integration owner.
-- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 71 behind origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`, with 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged.
+- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, behind remote `main`, with 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged. Use live Git ancestry for the current behind count.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; remote `main` points to the same commit, and the branch preserves the complete P2 Lore history.
+- P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; remote `main` contains this P2 closeout commit, and the branch preserves the complete P2 Lore history. Final docs-only truth corrections continue on `origin/codex/p2-truth-fix-20260713` and remote `main`.
 - P2 verification basis: clean-head `verify:core` 67/67, Pages/dist parity, recorded main-thread/browser acceptance, standard `perf:gate`, selector zero-gap evidence, and independent code/architecture/evidence reviews.
 - Live process owner: none. Performance-governance work is outside the current P2 closeout scope.
 
