@@ -28,7 +28,7 @@ Date: 2026-07-10
 
 - The project owner superseded the former Williams-only integration condition and placed specialized performance governance outside the current P2 acceptance scope.
 - P2 closes on the refreshed functional evidence: clean-head `verify:core` 67/67, Pages/dist parity, the recorded main-thread/browser matrix, standard `perf:gate`, zero selector route gaps, and three independent final reviews of code, architecture, and evidence.
-- The P2 recovery branch contains current `origin/main` as an ancestor, so integration uses a fast-forward remote update with no semantic conflict resolution.
+- The P2 recovery branch contained pre-integration `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor, so the P2 closeout used a fast-forward remote update with no semantic conflict resolution.
 - The P2 task documents move to `docs/archive/renderer-frame-orchestration-p2-20260710/` after closeout truth is recorded.
 - The isolated P2 worktree is removed after the remote main update. The remote recovery branch remains the recovery pointer.
 - The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
