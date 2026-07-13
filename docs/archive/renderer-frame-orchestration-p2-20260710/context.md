@@ -18,11 +18,11 @@ Date: 2026-07-10
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
 - current task phase: P2 implementation and refreshed closeout verification are complete. On 2026-07-13 the project owner accepted the current deterministic, Pages/dist, browser, and standard `perf:gate` state for integration and deferred specialized Williams performance governance to a later performance-governance phase.
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch has terminal closeout committed and pushed at `faf79f04`; rerun08 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, evidence integrity, and power cleanup were verified; the control overlay branch remains recoverable at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`; parent WIP remains untouched
+- current worktree state: P2 is integrated and pushed at `origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; `origin/codex/renderer-frame-orchestration-p2-20260710` points to the same recovery commit; the isolated P2 worktree and all measurement/support worktrees are removed and pruned; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
-- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total)
+- parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`, `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 71 behind origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`, with 52 `docs/archive/**` deletions and modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, `lessons learned.md` (57 entries total)
 
 ## Final integration decision 2026-07-13
 
@@ -33,6 +33,7 @@ Date: 2026-07-10
 - The isolated P2 worktree is removed after the remote main update. The remote recovery branch remains the recovery pointer.
 - The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
 - Rerun01-rerun08 Williams artifacts remain immutable historical evidence. They carry no P2 integration veto under the refreshed project scope.
+- Final remote truth: `origin/main` and `origin/codex/renderer-frame-orchestration-p2-20260710` both point to `a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`.
 
 ## Approved hard invariants
 
@@ -66,10 +67,12 @@ Date: 2026-07-10
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
 - P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun08 consumed the frozen experiment and returned terminal `invalid-experiment / exit 3`
-- Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE`; formal integration remains `BLOCK` under the frozen rerun08 terminal mapping
-- Integration / push / cleanup: the frozen rerun08 mapping closes main integration after `invalid-experiment / exit 3`; terminal closeout is committed and pushed at `faf79f04`; the isolated P2 worktree and active docs remain retained as recoverable evidence
+- Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE`; the project owner's refreshed acceptance scope resolves the former Williams-only integration block
+- Integration / push / cleanup: complete at `a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; P2 documents are archived, the isolated P2 worktree is removed, and the remote recovery branch remains available
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
+
+Historical record: the following Williams and recovery sections preserve their checkpoint-local decisions. The final integration decision above is the current authority for P2 status.
 
 Rerun07 used the frozen candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`, control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`, package-lock blob `df70020f2f930d5692a1ff9febebf86dbb0e0db1`, baseline-runner blob `70453d9b1b17b9013929a11e9a8e05044dc7682d`, role-policy blob `7d11e76bb87e0f62fc4270288d617640e59dc267`, and policy `p2-williams-crossover-v4`. Both exact detached measurement worktrees were tracked-clean and used verified `node_modules` junctions targeting the isolated P2 dependency tree.
 
@@ -83,7 +86,7 @@ The governance terminal mapping classifies this result as `exit 1 / harness faul
 
 Cleanup removed both rerun07 detached measurement worktrees and their verified dependency junctions, then pruned worktree metadata. The tracked-clean control overlay branch was pushed at `bd98c580`; its support worktree was then removed and pruned. The isolated P2 implementation worktree remains registered because the branch is not integrated. The dirty parent checkout remains unchanged.
 
-## Final recovery-branch verification 2026-07-13
+## Historical final recovery-branch verification before integration 2026-07-13
 
 The tracked-clean terminal-truth checkpoint `72ccbc3a71cbc4bbea386af867eab67cd8f1bfb0` ran the required sequence `verify:pages-dist -> verify:dist-drift -> verify:core` under one root-owned live process. The sequence exited `0`. The final core report contains 67 results, every result has exit code `0`, and seven main-thread lanes remain intentionally outside the deterministic core plan. Report: `.runtime/reports/generated/verify-core.json`, SHA256 `70947a928c08fa6f0735b321ef2cfcd5f7cf23cfe25bc973b161fdcb5b661f2b`. Combined stdout: `.runtime/tests/renderer-frame-orchestration-p2-20260710/terminal-closeout/clean-head-gates.stdout.log`, SHA256 `bb853b56e460c574a1f28fff713f921f33852fae9a16153b73fea6d9d73310dd`. The post-run P2 worktree remained tracked-clean.
 
@@ -91,7 +94,7 @@ Browser evidence is bound to the same final product source tree. `p2-2b-browser-
 
 Three independent read-only closeout reviews found zero renderer-code blocker. Code review approved frame order, cached-pass math, transformed-frame behavior, source/dist parity, and composition-root writes. First-principles review confirmed `RendererRuntimeContext` is unchanged, public facade and state-write allowlist have zero P2 diff, and pass authority remains in the existing catalog/pipeline. Evidence/UltraQA review approved implementation completion and retained the formal integration block. Architecture counting is `23,473 -> 23,269`, a 204-line reduction, with the enforced ceiling at 23,269.
 
-Fresh ancestry verification after `git fetch origin --prune` records `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor of the P2 branch, with `0 behind / 47 ahead` at checkpoint `72ccbc3a`. Governance keeps `origin/main` unchanged. The recovery branch was pushed through `d508e00698cec84b707b589ec0163a07014ebf61`; the isolated P2 worktree and active task documents remain retained.
+At this pre-integration checkpoint, ancestry verification recorded `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor of the P2 branch, with `0 behind / 47 ahead` at checkpoint `72ccbc3a`. The recovery branch was pushed through `d508e00698cec84b707b589ec0163a07014ebf61`. The final integration decision above supersedes the checkpoint-local retention action.
 
 ## P2 upstream integration 2026-07-11
 
@@ -607,8 +610,7 @@ worktrees were clean, their `node_modules` junctions targeted the isolated P2
 dependency tree, and cleanup removed the junctions, worktrees, and registry
 entries. Ports 8000/8892 are clear and the rerun08 task-process count is zero.
 
-The terminal mapping now controls project status: P2 implementation remains
-verified; Williams performance acceptance remains unresolved; main integration,
-P2 completion, and archival stay closed. The isolated P2 branch/worktree and
-active documentation remain the recovery surface for a future explicit project
-decision. Parent checkout WIP is unchanged.
+At the rerun08 checkpoint, the terminal mapping kept integration, completion,
+and archival closed pending an explicit project decision. The final integration
+decision above supersedes that checkpoint-local action. Parent checkout WIP is
+unchanged.

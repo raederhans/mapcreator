@@ -5,9 +5,9 @@ Last updated: 2026-07-13 P2 renderer frame orchestration is integrated, archived
 ## Integration Owner
 
 - Owner: root main integration owner.
-- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 17 behind origin/main@17aeedf`, with 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged.
+- Dirty parent checkout remains `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`, `0 ahead / 71 behind origin/main@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`, with 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md`, preserved unchanged.
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
-- P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710`; it contains the pre-integration `origin/main@17aeedf5` as an ancestor and preserves the complete P2 Lore history.
+- P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; remote `main` points to the same commit, and the branch preserves the complete P2 Lore history.
 - P2 verification basis: clean-head `verify:core` 67/67, Pages/dist parity, recorded main-thread/browser acceptance, standard `perf:gate`, selector zero-gap evidence, and independent code/architecture/evidence reviews.
 - Live process owner: none. Performance-governance work is outside the current P2 closeout scope.
 
@@ -37,6 +37,8 @@ Final post-cleanup truth contains the dirty parent checkout only. The isolated P
 6. Final cleanup removes the isolated P2 worktree and retains the remote recovery branch.
 
 ## Williams Rerun08 Harness-Recovery Frozen Contract 2026-07-13
+
+Historical record: the Williams sections below preserve the gate state at each experiment checkpoint. The project owner's final integration decision in lines 30-37 supersedes their phase-local integration and archival actions.
 
 1. Governance: `rerun08-harness-recovery-governance.md`; protocol `p2-williams-rerun08-harness-recovery-v1`; one dry plan, one execute, zero retry; every result terminal.
 2. Frozen identities: candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; policy `p2-williams-crossover-v4`; role policy `render-sample-role-v2`.
