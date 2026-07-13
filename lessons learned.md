@@ -562,3 +562,8 @@
 
 ### Windows 电源方案复制要验证返回 GUID 的真实状态
 - `powercfg /duplicatescheme` 可能返回新 GUID，同时紧接着的 `/list` 仍看不到该方案；未来独立实验协议应以返回 GUID 为身份起点，再分别验证查询、激活和最终清理，并在任何测量前完成一次无副作用 preflight。
+
+### 审计修复要锁住完整入口与可恢复所有权
+- transformed-pass diagnostics 必须覆盖单 pass 绘制和多 pass compose 两条入口；浏览器断言同时绑定本次操作前后签名与目标 zoom，才能排除陈旧诊断假阳性。
+- 源码结构测试提取函数体时应先配平参数括号，再从参数结束后的 `{` 配平函数体；默认参数 `{}` 会让“首个花括号就是函数体”的扫描器截断合同。
+- Windows 电源方案只有在 duplicate 返回 GUID 等于预分配 `temporaryGuid` 后才能写 `createdGuid`；清理前还要校验 journal 的 GUID 一致性与 absence + duplicate 所有权证据，让错误输出和篡改 journal 都保持零删除。

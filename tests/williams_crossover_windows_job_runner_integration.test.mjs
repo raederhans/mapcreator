@@ -84,7 +84,7 @@ test("successive Windows telemetry windows prime once and keep measured capture 
 }, () => {
   for (let windowIndex = 0; windowIndex < 2; windowIndex += 1) {
     const telemetry = collectWindowsPerformanceWindow({ phase: `integration-${windowIndex + 1}` });
-    assert.equal(telemetry.schemaVersion, 3);
+    assert.equal(telemetry.schemaVersion, 4);
     assert.equal(telemetry.capability?.status, "available", telemetry.capability?.missing?.join("\n"));
     assert.deepEqual(telemetry.sampling, {
       scheduler: "monotonic-fixed-rate",

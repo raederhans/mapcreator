@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import {
   CANONICAL_RENDER_SAMPLE_ROLE_ID,
@@ -375,9 +375,8 @@ function buildScenarioUrl(baseUrl, scenarioId, urlQuery = PERF_URL_QUERY) {
   return url.toString();
 }
 
-function finiteNumber(value, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
+export function finiteNumber(value, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function median(values) {
@@ -439,7 +438,7 @@ function metricAtMs(metric, bootTotal) {
   return 0;
 }
 
-function summarizeSnapshot(snapshot, scenarioId) {
+export function summarizeSnapshot(snapshot, scenarioId) {
   const bootMetrics = snapshot?.bootMetrics && typeof snapshot.bootMetrics === "object" ? snapshot.bootMetrics : {};
   const renderPerfMetrics = snapshot?.renderPerfMetrics && typeof snapshot.renderPerfMetrics === "object" ? snapshot.renderPerfMetrics : {};
   const scenarioPerfMetrics = snapshot?.scenarioPerfMetrics && typeof snapshot.scenarioPerfMetrics === "object" ? snapshot.scenarioPerfMetrics : {};
@@ -519,7 +518,7 @@ function parseNodeMajor(value) {
   if (!match?.groups?.major) {
     return 0;
   }
-  return finiteNumber(match.groups.major, 0);
+  return Number.parseInt(match.groups.major, 10) || 0;
 }
 
 function collectEnvironment() {
@@ -1085,7 +1084,7 @@ function compareAgainstBaseline(currentReport, baselineReport, threshold) {
   return failures;
 }
 
-function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
+export function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
   if (!baselineReport || typeof baselineReport !== "object") {
     throw new Error(`[perf-baseline] Baseline report is invalid: ${baselinePath}`);
   }
@@ -1114,8 +1113,8 @@ function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
     const invalidMetrics = GATE_METRICS
       .map((metric) => metric.key)
       .filter((metricKey) => {
-        const metricValue = Number(summary[metricKey]);
-        return !(Number.isFinite(metricValue) && metricValue > 0);
+        const metricValue = summary[metricKey];
+        return !(typeof metricValue === "number" && Number.isFinite(metricValue) && metricValue > 0);
       });
     if (invalidMetrics.length) {
       invalid.push(`${scenarioId}: ${invalidMetrics.join(", ")}`);
@@ -1133,7 +1132,7 @@ function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
   }
 }
 
-function validateGateCurrentReport(currentReport, scenarioIds, label = "current report") {
+export function validateGateCurrentReport(currentReport, scenarioIds, label = "current report") {
   if (!currentReport || typeof currentReport !== "object") {
     throw new Error(`[perf-baseline] Current report is invalid: ${label}`);
   }
@@ -1152,8 +1151,8 @@ function validateGateCurrentReport(currentReport, scenarioIds, label = "current 
     const invalidMetrics = GATE_METRICS
       .map((metric) => metric.key)
       .filter((metricKey) => {
-        const metricValue = Number(summary[metricKey]);
-        return !(Number.isFinite(metricValue) && metricValue > 0);
+        const metricValue = summary[metricKey];
+        return !(typeof metricValue === "number" && Number.isFinite(metricValue) && metricValue > 0);
       });
     if (invalidMetrics.length) {
       invalid.push(`${scenarioId}: ${invalidMetrics.join(", ")}`);
@@ -1329,7 +1328,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error?.stack || error?.message || error);
-  process.exit(1);
-});
+const directEntryPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+if (directEntryPath && pathToFileURL(directEntryPath).href === import.meta.url) {
+  main().catch((error) => {
+    console.error(error?.stack || error?.message || error);
+    process.exit(1);
+  });
+}

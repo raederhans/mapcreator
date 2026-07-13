@@ -691,29 +691,47 @@ test("tno zoom diagnostic keeps political pass padded during transformed frames"
   await ensureScenario(page, "tno_1962", "TNO 1962");
   await waitForStableExactRender(page);
 
+  const previousTransformedPoliticalSignature = await page.evaluate(() => JSON.stringify(
+    globalThis.__mapRenderDiag?.transformedPasses?.political || null,
+  ));
   await setZoomPercent(page, 145, { waitAfterMs: 0 });
-  const diagHandle = await page.waitForFunction(() => {
+  const diagHandle = await page.waitForFunction((previousSignature) => {
     const diag = globalThis.__mapRenderDiag || {};
     const politicalPass = diag.politicalPass || null;
+    const transformedPolitical = (diag.transformedPasses || {}).political || null;
+    const transformedPoliticalSignature = JSON.stringify(transformedPolitical);
+    const currentScale = Number(transformedPolitical?.current?.k);
+    const scaleRatio = Number(transformedPolitical?.scaleRatio);
     if (
       !politicalPass
+      || !transformedPolitical
+      || transformedPoliticalSignature === previousSignature
+      || !Number.isFinite(currentScale)
+      || Math.abs(currentScale - 1.45) > 0.001
+      || !Number.isFinite(scaleRatio)
+      || scaleRatio <= 0
       || Number(politicalPass.visibleItemCount || 0) <= 0
       || Number(politicalPass.overscanPx || 0) <= 96
+      || Math.abs(scaleRatio - 1) <= 0.01
     ) {
       return false;
     }
     return {
       politicalPass,
-      transformedPolitical: (diag.transformedPasses || {}).political || null,
+      transformedPolitical,
+      transformedPoliticalSignature,
     };
-  }, undefined, { timeout: 30_000 });
+  }, previousTransformedPoliticalSignature, { timeout: 30_000 });
   const diag = await diagHandle.jsonValue();
 
   expect(diag.politicalPass.visibleItemCount).toBeGreaterThan(0);
   expect(diag.politicalPass.overscanPx).toBeGreaterThan(96);
-  if (diag.transformedPolitical) {
-    expect(Number(diag.transformedPolitical.scaleRatio)).toBeGreaterThan(0);
-  }
+  expect(diag.transformedPolitical).toBeTruthy();
+  expect(diag.transformedPoliticalSignature).not.toBe(previousTransformedPoliticalSignature);
+  expect(Number(diag.transformedPolitical.current.k)).toBeCloseTo(1.45, 3);
+  expect(Number.isFinite(Number(diag.transformedPolitical.scaleRatio))).toBe(true);
+  expect(Number(diag.transformedPolitical.scaleRatio)).toBeGreaterThan(0);
+  expect(Math.abs(Number(diag.transformedPolitical.scaleRatio) - 1)).toBeGreaterThan(0.01);
 });
 
 test("tno drag interaction settles cleanly without black-frame regression", async ({ page }) => {

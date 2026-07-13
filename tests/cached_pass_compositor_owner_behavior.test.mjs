@@ -243,6 +243,37 @@ test("drawTransformedPass preserves exact transform math diagnostics and dynamic
   assert.equal(secondTarget.calls.filter(([name]) => name === "drawImage").length, 1);
 });
 
+test("diagnostics-disabled draws skip phase reads and diagnostic effects", () => {
+  let phaseReads = 0;
+  let diagnosticEffects = 0;
+  const harness = createHarness({
+    getters: {
+      isRenderDiagnosticsEnabled: () => false,
+      getRenderPhase: () => {
+        phaseReads += 1;
+        return "interacting";
+      },
+    },
+    effects: {
+      recordTransformedPassDiagnostics: () => {
+        diagnosticEffects += 1;
+      },
+    },
+  });
+
+  assert.equal(harness.owner.drawTransformedPass("background", { k: 4, x: 50, y: 70 }), true);
+  assert.deepEqual(
+    harness.owner.composeRenderPassesToTarget(
+      createCanvasContext("diagnostics-disabled"),
+      ["background"],
+      { k: 4, x: 50, y: 70 },
+    ),
+    { ok: true },
+  );
+  assert.equal(phaseReads, 0);
+  assert.equal(diagnosticEffects, 0);
+});
+
 test("composeRenderPassesToTarget preserves missing target and require-all preflight priority", () => {
   let referenceReads = [];
   const harness = createHarness({
@@ -335,6 +366,19 @@ test("composeRenderPassesToTarget preserves transformed and equivalent direct co
     ["drawImage", harness.canvases.background, 0, 0],
     ["restore"],
   ]);
+  assert.deepEqual(harness.diagnostics, [{
+    passName: "background",
+    detail: {
+      current: { k: 4, x: 50, y: 70 },
+      reference: { k: 2, x: 10, y: 20 },
+      scaleRatio: 2,
+      dx: 30,
+      dy: 30,
+      layout: { offsetX: 3, offsetY: 4 },
+      phase: "interacting",
+      dirty: true,
+    },
+  }]);
 
   const directTarget = createCanvasContext("direct");
   assert.deepEqual(

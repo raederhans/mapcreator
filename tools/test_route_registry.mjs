@@ -217,7 +217,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:perf-gate",
     commandRef: "perf:gate",
-    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py",
+    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js",
     domain: "perf",
     ownerHint: "perf-runtime",
     layer: "heavy",

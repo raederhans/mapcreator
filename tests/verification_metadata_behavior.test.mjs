@@ -535,6 +535,14 @@ test("renderer frame compositor P2.2 files route to behavior inventory boundary 
       `cached-pass owner routing must recommend ${commandRef}`,
     );
   }
+  const transformedRuntimeEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "renderer:transformed-frame-compositor-runtime");
+  assert.ok(transformedRuntimeEntry);
+  assert.equal(transformedRuntimeEntry.commandRef, "test:e2e:dev:scenario-chunk-runtime");
+  assert.equal(transformedRuntimeEntry.executionOwner, "main-thread");
+  assert.ok(transformedRuntimeEntry.sourceRefs.includes("js/core/map_renderer/transformed_frame_compositor_owner.js"));
+  assert.ok(ownerOnlyReport.mainThreadSerialVerification.some((command) => (
+    command.commandRef === "test:e2e:dev:scenario-chunk-runtime"
+  )));
 });
 
 test("Williams crossover tooling routes to child-safe governance plus an explicit heavy perf lane", () => {
@@ -559,7 +567,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     ownerHint: "perf-runtime",
     layer: "heavy",
     cost: "heavy",
-    resourceLocks: ["perf-dev-server", "browser-dev-server", "playwright-browser", ".runtime-output"],
+    resourceLocks: ["perf-dev-server", "browser-dev-server", "playwright-browser", ".runtime-output", "system-power-scheme"],
     executionOwner: "main-thread",
     ciProfile: "perf-pr-gate",
     supervisorDomain: "perf",
@@ -571,6 +579,7 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     "tools/perf/run_williams_crossover.mjs",
     "tools/perf/williams_crossover_windows_runtime.mjs",
     "tools/perf/williams_crossover_windows_job_runner.cs",
+    "tools/perf/williams_crossover_power_scheme.ps1",
     "tools/perf/run_baseline.mjs",
     "tools/perf/render_sample_role_policy.mjs",
     "package-lock.json",
@@ -630,4 +639,38 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
     const identityInputReport = buildRecommendation([sourceRef]);
     assert.ok(identityInputReport.mainThreadSerialVerification.some((command) => command.commandRef === "perf:williams-crossover:run"), sourceRef);
   }
+});
+
+test("city policy and live power preflight have named verification ownership", () => {
+  const cityPolicyEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "verify-core:test:node:city-points-render-owner");
+  assert.ok(cityPolicyEntry);
+  assert.equal(cityPolicyEntry.commandRef, "test:node:city-points-render-owner");
+  assert.equal(cityPolicyEntry.executionOwner, "child-safe");
+  assert.equal(cityPolicyEntry.verifyCoreDefaultGroup, "renderer-owner");
+  assert.ok(cityPolicyEntry.sourceRefs.includes("tests/urban_city_policy_strategic_values_behavior.test.mjs"));
+
+  const cityBoundaryEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "verify-core:test:python:map-renderer-city-points-boundary");
+  assert.ok(cityBoundaryEntry);
+  assert.equal(cityBoundaryEntry.commandRef, "test:python:map-renderer-city-points-boundary");
+  assert.equal(cityBoundaryEntry.executionOwner, "child-safe");
+
+  const powerPreflightEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "perf:williams-power-scheme-live-preflight");
+  assert.ok(powerPreflightEntry);
+  assert.equal(powerPreflightEntry.commandRef, "perf:williams-power-scheme:live-preflight");
+  assert.equal(powerPreflightEntry.executionOwner, "main-thread");
+  assert.equal(powerPreflightEntry.optionalMainThread, true);
+  assert.deepEqual(powerPreflightEntry.resourceLocks, ["system-power-scheme"]);
+  assert.ok(powerPreflightEntry.sourceRefs.includes("tools/perf/williams_crossover_power_scheme.ps1"));
+
+  const report = buildRecommendation([
+    "js/core/renderer/urban_city_policy.js",
+    "tests/urban_city_policy_strategic_values_behavior.test.mjs",
+    "tools/perf/williams_crossover_power_scheme.ps1",
+  ]);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:node:city-points-render-owner"));
+  assert.ok(report.recommendedCommands.some((command) => command.commandRef === "test:python:map-renderer-city-points-boundary"));
+  assert.ok(report.mainThreadSerialVerification.some((command) => (
+    command.commandRef === "perf:williams-power-scheme:live-preflight"
+  )));
 });

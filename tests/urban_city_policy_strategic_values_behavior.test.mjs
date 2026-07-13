@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createUrbanCityPolicyOwner } from "../js/core/renderer/urban_city_policy.js";
+import {
+  createUrbanCityPolicyOwner,
+  getUrbanCityRenderPassSignatureParts,
+} from "../js/core/renderer/urban_city_policy.js";
 
 function createCityFeature(id, hostFeatureId, extraProps = {}) {
   return {
@@ -62,6 +65,35 @@ function createOwner(state) {
   });
 }
 
+test("urban city policy owns revision-sensitive render pass signature parts", () => {
+  const state = {
+    cityLayerRevision: 4,
+    scenarioStrategicValuesRevision: 5,
+    strategicChoroplethMetric: "victory_points",
+    sovereigntyRevision: 6,
+    colorRevision: 7,
+    deferContextBasePass: true,
+  };
+
+  assert.deepEqual(getUrbanCityRenderPassSignatureParts(state, "contextMarkers"), [
+    "cities:4",
+    "strategic:5:victory_points",
+    "sovereignty:6",
+    "colors:7",
+  ]);
+  assert.deepEqual(getUrbanCityRenderPassSignatureParts(state, "labels"), [
+    "labels:deferred",
+    "cities:4",
+    "strategic:5",
+    "sovereignty:6",
+    "colors:7",
+  ]);
+  assert.throws(
+    () => getUrbanCityRenderPassSignatureParts(state, "political"),
+    /Unsupported urban city render pass/,
+  );
+});
+
 test("urban city policy copies matching strategic victory points onto city features", () => {
   const state = {
     activeScenarioId: "hoi4_city_test",
@@ -97,6 +129,35 @@ test("urban city policy copies matching strategic victory points onto city featu
   assert.equal(collection.features[0].properties.__city_scenario_vp_name, "Berlin");
   assert.equal(collection.features[0].properties.__city_scenario_vp_province_id, 6521);
   assert.equal(collection.features[0].properties.__city_scenario_vp_match_method, "city_exact");
+});
+
+test("urban city policy invalidates one owner cache when strategic values revision changes", () => {
+  const strategicValues = createStrategicValuesPayload({
+    "GER-1": [{ city_id: "berlin", stable_key: "berlin", value: 10, name: "Berlin" }],
+  });
+  const state = {
+    activeScenarioId: "hoi4_city_test",
+    worldCitiesData: {
+      type: "FeatureCollection",
+      features: [createCityFeature("berlin", "GER-1")],
+    },
+    scenarioCityOverridesData: null,
+    scenarioStrategicValuesData: strategicValues,
+    scenarioStrategicValuesRevision: 1,
+    scenarioCountriesByTag: {},
+    sovereigntyByFeatureId: {},
+    sovereigntyRevision: 0,
+    cityLayerRevision: 0,
+  };
+  const owner = createOwner(state);
+  const first = owner.getEffectiveCityCollection();
+  assert.equal(first.features[0].properties.__city_scenario_victory_points, 10);
+
+  strategicValues.victoryPointsByFeature["GER-1"][0].value = 40;
+  state.scenarioStrategicValuesRevision += 1;
+  const second = owner.getEffectiveCityCollection();
+  assert.notEqual(second, first);
+  assert.equal(second.features[0].properties.__city_scenario_victory_points, 40);
 });
 
 test("urban city policy uses the strongest host victory point when city ids do not match", () => {

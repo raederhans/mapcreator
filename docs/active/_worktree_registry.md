@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-13 P2 renderer frame orchestration is integrated, archived, pushed, and cleaned. The project owner accepted the refreshed deterministic, Pages/dist, browser, and standard `perf:gate` state for P2 closeout and deferred specialized Williams performance governance to a later phase. The remote recovery branch remains the recovery pointer. The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
+Last updated: 2026-07-13 recent P2 follow-up audit is in progress from a clean `origin/main@e195a453` worktree. P2 renderer frame orchestration remains integrated, archived, pushed, and cleaned. The dirty parent checkout and its 57 unrelated WIP entries remain untouched.
 
 ## Integration Owner
 
@@ -9,23 +9,37 @@ Last updated: 2026-07-13 P2 renderer frame orchestration is integrated, archived
 - The previous dirty parent checkout was preserved before sync on recovery branch `codex/stale-main-wip-preserve-20260708@199828a2`, pushed to `origin/codex/stale-main-wip-preserve-20260708`.
 - P2 recovery branch: `origin/codex/renderer-frame-orchestration-p2-20260710@a963ad9be78ba5fbc35c6f98ee33f99e40aba9da`; remote `main` contains this P2 closeout commit, and the branch preserves the complete P2 Lore history. Final docs-only truth corrections continue on `origin/codex/p2-truth-fix-20260713` and remote `main`.
 - P2 verification basis: clean-head `verify:core` 67/67, Pages/dist parity, recorded main-thread/browser acceptance, standard `perf:gate`, selector zero-gap evidence, and independent code/architecture/evidence reviews.
-- Live process owner: none. Performance-governance work is outside the current P2 closeout scope.
+- Live process owner: root audit integration owner for any SF-ATS or verification command started by this audit. Subagents remain static/read-only.
 
 ## Recommended Order
 
-1. P2 is integrated into remote `main`; keep `origin/codex/renderer-frame-orchestration-p2-20260710` as the recovery pointer.
-2. P2 task and owner closeout documents live under `docs/archive/renderer-frame-orchestration-p2-20260710/`.
-3. Keep all Williams rerun evidence immutable for the later performance-governance phase.
-4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
+1. Finish the isolated audit of the ten recent P2 functional commits and fix only reproduced defects.
+2. Run SF-ATS selection plus the smallest deterministic gates that prove the repaired scope.
+3. Rebase or fast-forward the audit branch onto the refreshed remote tip, then push one worktree at a time.
+4. Keep `origin/codex/renderer-frame-orchestration-p2-20260710` as the P2 recovery pointer and preserve Williams evidence immutably.
 5. Reconcile the dirty parent checkout in its own task before updating local `main`.
 
 ## Current Worktrees
 
-Final post-cleanup truth contains the dirty parent checkout only. The isolated P2 worktree and all measurement/support worktrees are removed and pruned. Recovery remains available through remote branches and archived task documents.
+Current truth contains the dirty parent checkout plus one isolated audit worktree. Historical P2 measurement/support worktrees remain removed and pruned.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; local branch remains behind the newly integrated remote main | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | P2 integration used the isolated clean branch and left all parent files unchanged. | Red for direct synchronization because the parent is old and dirty. | Keep untouched; reconcile in a separate parent-WIP task. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-audit-20260713-recent` — recent P2 audit | current Lore checkpoint on `codex/audit-20260713-recent` | `origin/main@e195a4531a08870f45c2a3dac00b6ab52ad620fc` | `ready-for-integration` | Renderer compositor diagnostics, urban policy owner, Williams performance governance/runtime, verification routing, regression tests, state-writer metadata, and checked-in Pages mirrors. | Ten functional commits audited; deterministic gates and four independent static reviews passed. Root owns final clean-head gates and push. | Green for isolated source/tool changes; red overlap with dirty parent on this registry and generated Pages files keeps the parent untouched. | Amend the metadata repair into the Lore checkpoint, run clean-head `verify:core` plus `verify:dist-drift`, push `HEAD:main`, mark integrated, then remove this worktree. |
+
+## Recent P2 audit delivery package 2026-07-13
+
+1. Changes: repaired transformed-pass diagnostics on both compositor paths; extracted urban strategic-value policy from the renderer; made Williams power-scheme ownership, GUID mismatch handling, replay, telemetry, and policy adjudication auditable; tightened render-sample validation and verification routing.
+2. Files: core files are `js/core/map_renderer.js`, `js/core/renderer/cached_pass_compositor_owner.js`, `js/core/renderer/urban_city_policy.js`, and `tools/perf/**`; tests are the related Node, Python boundary, and Scenario E2E contracts; control files are `package.json`, verification registries, `tools/eslint-rules/state-writer-allowlist.json`, this registry, and checked-in `dist/**` mirrors; disposable evidence stays under `.runtime/**`.
+3. Diff from base: 32 tracked files, 2,427 insertions, 223 deletions after the final security and verification-metadata repairs; production work is concentrated in compositor diagnostics, urban policy ownership, and Williams measurement governance.
+4. Commit state: this delivery package is frozen in the branch's functional Lore checkpoint; the immutable hash is recorded after the metadata amendment.
+5. Divergence: branch base and current remote main both resolve to `e195a4531a08870f45c2a3dac00b6ab52ad620fc`; a final fetch precedes commit/push.
+6. Overlap: the dirty parent directly overlaps `docs/active/_worktree_registry.md`, `dist/pages-dist-manifest.json`, and other generated Pages surfaces; integration therefore proceeds from this isolated worktree directly to remote main.
+7. Verification: selector reports 32 changed files and zero unmatched files; state-write allowlist passes with 116 tracked writers; TNO coverage chain passes including 57/57 chunk contracts; Scenario runtime E2E passes 8/8 and the fresh transformed-frame case passes 1/1; Pages/dist, perf gate, Williams governance/job runner/live preflight/live telemetry, renderer boundaries, and urban data contracts pass; four independent static reviews return APPROVE, including the final foreign-GUID deletion security repair.
+8. Remaining verification: clean committed HEAD must pass `verify:core` and `verify:dist-drift`; the 45-minute Williams crossover measurement remains assigned to its dedicated measurement lane.
+9. Recommendation: commit on `codex/audit-20260713-recent`, verify the clean commit, then push it to `origin/main` without updating the dirty parent checkout.
+10. Integration readiness: ready for the integration owner to execute the commit, clean-head gates, push, registry closeout, and isolated-worktree cleanup in that order.
 
 ## P2 final integration decision 2026-07-13
 

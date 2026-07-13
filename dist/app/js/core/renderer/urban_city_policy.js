@@ -9,6 +9,22 @@
  */
 import { isScenarioStrategicValuesUsable } from "../scenario/strategic_values.js";
 
+export function getUrbanCityRenderPassSignatureParts(state, passName) {
+  const cities = `cities:${Number(state?.cityLayerRevision || 0)}`;
+  const strategic = `strategic:${Number(state?.scenarioStrategicValuesRevision || 0)}`;
+  const sharedTail = [
+    `sovereignty:${Number(state?.sovereigntyRevision || 0)}`,
+    `colors:${Number(state?.colorRevision || 0)}`,
+  ];
+  if (passName === "contextMarkers") {
+    return [cities, `${strategic}:${String(state?.strategicChoroplethMetric || "")}`, ...sharedTail];
+  }
+  if (passName === "labels") {
+    return [state?.deferContextBasePass ? "labels:deferred" : "labels:ready", cities, strategic, ...sharedTail];
+  }
+  throw new RangeError(`Unsupported urban city render pass: ${String(passName || "")}`);
+}
+
 export function createUrbanCityPolicyOwner({
   state,
   caches = {},

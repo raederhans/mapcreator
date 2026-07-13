@@ -120,7 +120,7 @@ import {
   dispatchMapClick,
   dispatchMapDoubleClick,
 } from "./interaction_funnel.js";
-import { createUrbanCityPolicyOwner } from "./renderer/urban_city_policy.js";
+import { createUrbanCityPolicyOwner, getUrbanCityRenderPassSignatureParts } from "./renderer/urban_city_policy.js";
 import { createCityLabelOwner } from "./renderer/city_label_owner.js";
 import { createCityPointsRenderOwner } from "./renderer/city_points_render_owner.js";
 import { buildStrategicResourceMarkerEntries } from "./renderer/strategic_resource_markers.js";
@@ -4958,9 +4958,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       runtimeState.showAirports ? "airports:on" : "airports:off",
       runtimeState.showPorts ? "ports:on" : "ports:off",
       runtimeState.showRail ? "rail:on" : "rail:off",
-      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
-      `strategic:${Number(runtimeState.scenarioStrategicValuesRevision || 0)}:${String(runtimeState.strategicChoroplethMetric || "")}`,
-      `colors:${Number(runtimeState.colorRevision || 0)}`,
+      ...getUrbanCityRenderPassSignatureParts(runtimeState, "contextMarkers"),
       `context:${Number(runtimeState.contextLayerRevision || 0)}`,
       stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
       stableJson(normalizeTransportOverviewStyleConfig(runtimeState.styleConfig?.transportOverview || {})),
@@ -4974,8 +4972,7 @@ function getRenderPassSignature(passName, transform = runtimeState.zoomTransform
       getHgoRuntimePreviewVisibilitySignature(),
       runtimeState.showBlankFeatureLabels ? "blank-feature-labels:on" : "blank-feature-labels:off",
       runtimeState.showCityPoints ? "cities:on" : "cities:off",
-      `cities:${Number(runtimeState.cityLayerRevision || 0)}`,
-      `colors:${Number(runtimeState.colorRevision || 0)}`,
+      ...getUrbanCityRenderPassSignatureParts(runtimeState, "labels"),
       stableJson(normalizeCityLayerStyleConfig(runtimeState.styleConfig?.cityPoints || {})),
     ].join("::");
   }

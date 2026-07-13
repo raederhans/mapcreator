@@ -49,6 +49,29 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
     "effects.recordTransformedPassDiagnostics",
   );
 
+  function recordTransformedPassIfEnabled(
+    passName,
+    cacheSnapshot,
+    current,
+    reference,
+    scaleRatio,
+    dx,
+    dy,
+    layout,
+  ) {
+    if (!isRenderDiagnosticsEnabled()) return;
+    recordTransformedPassDiagnostics(passName, {
+      current,
+      reference,
+      scaleRatio,
+      dx,
+      dy,
+      layout,
+      phase: String(getRenderPhase() || ""),
+      dirty: !!cacheSnapshot.dirty?.[passName],
+    });
+  }
+
   function drawTransformedPass(passName, currentTransform, referenceTransform = null) {
     const cacheSnapshot = getRenderPassCacheSnapshot();
     const passCanvas = cacheSnapshot.canvases?.[passName] || null;
@@ -61,18 +84,16 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
     const scaleRatio = current.k / Math.max(reference.k, 0.0001);
     const dx = current.x - (reference.x * scaleRatio);
     const dy = current.y - (reference.y * scaleRatio);
-    if (isRenderDiagnosticsEnabled()) {
-      recordTransformedPassDiagnostics(passName, {
-        current,
-        reference,
-        scaleRatio,
-        dx,
-        dy,
-        layout,
-        phase: String(getRenderPhase() || ""),
-        dirty: !!cacheSnapshot.dirty?.[passName],
-      });
-    }
+    recordTransformedPassIfEnabled(
+      passName,
+      cacheSnapshot,
+      current,
+      reference,
+      scaleRatio,
+      dx,
+      dy,
+      layout,
+    );
     const targetContext = getActiveTargetContext();
     targetContext.save();
     targetContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -144,6 +165,16 @@ export function createCachedPassCompositorOwner({ constants = {}, getters = {}, 
         const scaleRatio = current.k / Math.max(reference.k, 0.0001);
         const dx = current.x - (reference.x * scaleRatio);
         const dy = current.y - (reference.y * scaleRatio);
+        recordTransformedPassIfEnabled(
+          passName,
+          cacheSnapshot,
+          current,
+          reference,
+          scaleRatio,
+          dx,
+          dy,
+          layout,
+        );
         targetContext.save();
         targetContext.setTransform(1, 0, 0, 1, 0, 0);
         const dpr = getDpr();

@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 889604,
+      "size_bytes": 889412,
       "source_kind": "dist"
     },
     {
@@ -45987,7 +45987,7 @@
     },
     {
       "path": "app/js/core/renderer/cached_pass_compositor_owner.js",
-      "size_bytes": 6514,
+      "size_bytes": 7022,
       "source_kind": "dist"
     },
     {
@@ -46257,7 +46257,7 @@
     },
     {
       "path": "app/js/core/renderer/urban_city_policy.js",
-      "size_bytes": 23467,
+      "size_bytes": 24221,
       "source_kind": "dist"
     },
     {
@@ -47554,7 +47554,7 @@
     {
       "file_count": 9424,
       "path": "app",
-      "size_bytes": 965655306
+      "size_bytes": 965656376
     },
     {
       "file_count": 57,
@@ -47587,5 +47587,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972221418
+  "total_bytes": 972222488
 }

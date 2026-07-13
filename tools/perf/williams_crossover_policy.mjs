@@ -5,14 +5,14 @@ import {
   median,
 } from "./render_sample_role_policy.mjs";
 
-export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v4";
+export const WILLIAMS_CROSSOVER_POLICY_ID = "p2-williams-crossover-v7";
 export const WILLIAMS_CROSSOVER_SCHEMA_VERSION = 1;
 export const WILLIAMS_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 export const WILLIAMS_JOB_RUNNER_PROTOCOL_ID = "SF_WILLIAMS_JOB_V1";
 export const WILLIAMS_JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
 export const WILLIAMS_JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 export const WILLIAMS_TELEMETRY_CADENCE = Object.freeze({
-  windowSchemaVersion: 3,
+  windowSchemaVersion: 4,
   samplesPerWindow: 5,
   sampleIntervalMs: 1000,
   sampleIntervalToleranceMs: 250,
@@ -31,6 +31,7 @@ export const WILLIAMS_TELEMETRY_CADENCE = Object.freeze({
     "captureDurationMs",
     "scheduleLagMs",
   ]),
+  requiredWindowFields: Object.freeze(["startedAt", "completedAt"]),
 });
 
 function freezeBlock(block) {
@@ -117,11 +118,7 @@ const METRICS = Object.freeze([
 ]);
 
 function finite(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function arraysEqual(left, right) {
@@ -299,6 +296,8 @@ export function buildWilliamsPreregistration({
   generatedAt = null,
   jobRunnerSource = null,
   jobRunnerBinary = null,
+  powerSchemeHelper = null,
+  expectedPowerSchemeGuid = "",
 } = {}) {
   return {
     schemaVersion: WILLIAMS_CROSSOVER_SCHEMA_VERSION,
@@ -331,6 +330,8 @@ export function buildWilliamsPreregistration({
     },
     telemetry: {
       platform: "win32",
+      expectedPowerSchemeGuid: String(expectedPowerSchemeGuid || "").trim().toLowerCase(),
+      powerSchemeHelper,
       windowsCounterCapability: "required",
       windowSchemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
       preSamplesPerBlock: WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow,
@@ -343,6 +344,7 @@ export function buildWilliamsPreregistration({
       timestampSemantics: WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
       priming: JSON.parse(JSON.stringify(WILLIAMS_TELEMETRY_CADENCE.priming)),
       requiredCaptureFields: [...WILLIAMS_TELEMETRY_CADENCE.requiredCaptureFields],
+      requiredWindowFields: [...WILLIAMS_TELEMETRY_CADENCE.requiredWindowFields],
       phases: ["pre", "post"],
       timestampOrder: "strictly-increasing-with-pre-before-post",
       performanceAdjustedFrequencyDefinition: "processorFrequencyMHz*processorPerformancePercent/100",
@@ -420,6 +422,8 @@ export function validateWilliamsPreregistration(preregistration) {
   const expected = buildWilliamsPreregistration({
     jobRunnerSource: containmentIdentity.source || null,
     jobRunnerBinary: containmentIdentity.binary || null,
+    powerSchemeHelper: normalized.telemetry?.powerSchemeHelper || null,
+    expectedPowerSchemeGuid: normalized.telemetry?.expectedPowerSchemeGuid || "",
   });
   const errors = [];
   if (normalized.policyId !== expected.policyId) errors.push("preregistration.policyId");
@@ -474,6 +478,18 @@ export function validateWilliamsPreregistration(preregistration) {
   }
   if (JSON.stringify(normalized.telemetry) !== JSON.stringify(expected.telemetry)) {
     errors.push("preregistration.telemetry");
+  }
+  if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(String(normalized.telemetry?.expectedPowerSchemeGuid || ""))) {
+    errors.push("preregistration.telemetry.expectedPowerSchemeGuid");
+  }
+  if (String(normalized.telemetry?.powerSchemeHelper?.path || "") !== "tools/perf/williams_crossover_power_scheme.ps1") {
+    errors.push("preregistration.telemetry.powerSchemeHelper.path");
+  }
+  if (!/^[a-f0-9]{40}$/i.test(String(normalized.telemetry?.powerSchemeHelper?.gitBlob || ""))) {
+    errors.push("preregistration.telemetry.powerSchemeHelper.gitBlob");
+  }
+  if (!/^[a-f0-9]{64}$/i.test(String(normalized.telemetry?.powerSchemeHelper?.lfNormalizedSha256 || ""))) {
+    errors.push("preregistration.telemetry.powerSchemeHelper.lfNormalizedSha256");
   }
   if (JSON.stringify(normalized.workloadContract) !== JSON.stringify(expected.workloadContract)) {
     errors.push("preregistration.workloadContract");
@@ -546,7 +562,18 @@ export function validateWilliamsTelemetryCadence(window, {
   }
   if (finite(window.sampling?.sampleCount) !== sampleCount) errors.push(`${label}.sampling.sampleCount`);
 
+  const windowStartedAtMs = Date.parse(String(window.startedAt || ""));
+  const windowCompletedAtMs = Date.parse(String(window.completedAt || ""));
+  if (!Number.isFinite(windowStartedAtMs)) errors.push(`${label}.startedAt`);
+  if (
+    !Number.isFinite(windowCompletedAtMs)
+    || (Number.isFinite(windowStartedAtMs) && windowCompletedAtMs < windowStartedAtMs)
+  ) {
+    errors.push(`${label}.completedAt`);
+  }
+
   const priming = window.priming;
+  let primingStartedAtMs = null;
   let primingCompletedAtMs = null;
   if (!priming || typeof priming !== "object") {
     errors.push(`${label}.priming.missing`);
@@ -558,7 +585,7 @@ export function validateWilliamsTelemetryCadence(window, {
     if (String(priming.admissionRole || "") !== WILLIAMS_TELEMETRY_CADENCE.priming.admissionRole) {
       errors.push(`${label}.priming.admissionRole`);
     }
-    const primingStartedAtMs = Date.parse(String(priming.startedAt || ""));
+    primingStartedAtMs = Date.parse(String(priming.startedAt || ""));
     primingCompletedAtMs = Date.parse(String(priming.completedAt || ""));
     if (!Number.isFinite(primingStartedAtMs)) errors.push(`${label}.priming.startedAt`);
     if (
@@ -571,12 +598,16 @@ export function validateWilliamsTelemetryCadence(window, {
     if (primingCaptureDurationMs === null || primingCaptureDurationMs < 0) {
       errors.push(`${label}.priming.captureDurationMs`);
     }
+    if (Number.isFinite(windowStartedAtMs) && Number.isFinite(primingStartedAtMs) && primingStartedAtMs < windowStartedAtMs) {
+      errors.push(`${label}.startedAt.priming-coverage`);
+    }
   }
 
   const samples = Array.isArray(window.samples) ? window.samples : [];
   if (samples.length !== sampleCount) {
     errors.push(`${label}.samples.expected-${sampleCount}-actual-${samples.length}`);
   }
+  const sampleCompletedTimesMs = [];
   const sampleTimesMs = samples.map((sample, sampleIndex) => {
     const parsedAt = Date.parse(String(sample?.at || ""));
     if (!Number.isFinite(parsedAt)) errors.push(`${label}.samples.${sampleIndex}.at`);
@@ -585,6 +616,7 @@ export function validateWilliamsTelemetryCadence(window, {
     if (!Number.isFinite(completedAtMs) || (Number.isFinite(parsedAt) && completedAtMs < parsedAt)) {
       errors.push(`${label}.samples.${sampleIndex}.completedAt`);
     }
+    sampleCompletedTimesMs.push(Number.isFinite(completedAtMs) ? completedAtMs : null);
     const captureDurationMs = finite(sample?.captureDurationMs);
     if (captureDurationMs === null || captureDurationMs < 0) {
       errors.push(`${label}.samples.${sampleIndex}.captureDurationMs`);
@@ -621,12 +653,33 @@ export function validateWilliamsTelemetryCadence(window, {
       errors.push(`${label}.samples.interval`);
     }
   }
+  const lastSampleCompletedAtMs = sampleCompletedTimesMs.every(Number.isFinite) && sampleCompletedTimesMs.length > 0
+    ? Math.max(...sampleCompletedTimesMs)
+    : null;
+  if (
+    Number.isFinite(windowCompletedAtMs)
+    && Number.isFinite(primingCompletedAtMs)
+    && windowCompletedAtMs < primingCompletedAtMs
+  ) {
+    errors.push(`${label}.completedAt.priming-coverage`);
+  }
+  if (
+    Number.isFinite(windowCompletedAtMs)
+    && Number.isFinite(lastSampleCompletedAtMs)
+    && windowCompletedAtMs < lastSampleCompletedAtMs
+  ) {
+    errors.push(`${label}.completedAt.sample-coverage`);
+  }
   return Object.freeze({
     valid: errors.length === 0,
     errors: Object.freeze([...new Set(errors)]),
     sampleTimesMs: Object.freeze([...sampleTimesMs]),
+    sampleCompletedTimesMs: Object.freeze([...sampleCompletedTimesMs]),
     intervalsMs: Object.freeze(intervalsMs),
     sampleCount: samples.length,
+    windowStartedAtMs: Number.isFinite(windowStartedAtMs) ? windowStartedAtMs : null,
+    windowCompletedAtMs: Number.isFinite(windowCompletedAtMs) ? windowCompletedAtMs : null,
+    lastSampleCompletedAtMs,
   });
 }
 
@@ -668,7 +721,7 @@ function validateTelemetryWindow(window, label, expectedPhase) {
   const power = window.environment?.power || {};
   if (!String(power.activeSchemeGuid || "").trim()) errors.push(`${label}.environment.power.activeSchemeGuid`);
   if (!String(power.activeSchemeName || "").trim()) errors.push(`${label}.environment.power.activeSchemeName`);
-  if (finite(power.acLineStatus) === null) errors.push(`${label}.environment.power.acLineStatus`);
+  if (power.acLineStatus !== 1) errors.push(`${label}.environment.power.acLineStatus.ac-required`);
   if (finite(power.batteryFlag) === null) errors.push(`${label}.environment.power.batteryFlag`);
   for (const field of ["ports", "processes", "server", "browser", "cwd", "probe", "gitStatus"]) {
     if (window.environment?.[field] === undefined || window.environment?.[field] === null) {
@@ -685,8 +738,10 @@ function validateTelemetryWindow(window, label, expectedPhase) {
     errors: [...new Set(errors)],
     summary: {
       phase: expectedPhase,
-      firstAtMs: hasCompleteSampleTimes ? cadence.sampleTimesMs[0] : null,
-      lastAtMs: hasCompleteSampleTimes ? cadence.sampleTimesMs.at(-1) : null,
+      firstAtMs: Number.isFinite(cadence.windowStartedAtMs) ? cadence.windowStartedAtMs : null,
+      lastAtMs: Number.isFinite(cadence.windowCompletedAtMs) ? cadence.windowCompletedAtMs : null,
+      firstSampleAtMs: hasCompleteSampleTimes ? cadence.sampleTimesMs[0] : null,
+      lastSampleCompletedAtMs: Number.isFinite(cadence.lastSampleCompletedAtMs) ? cadence.lastSampleCompletedAtMs : null,
       averageCpuUtilizationPercent: cpuValues.length === WILLIAMS_TELEMETRY_CADENCE.samplesPerWindow
         ? average(cpuValues)
         : null,
@@ -712,6 +767,113 @@ function environmentHasActiveTaskSurface(environment) {
   return occupiedPort || directProbeResponse || metadataProbeResponse;
 }
 
+function validateWilliamsPowerSchemeLifecycle(lifecycle, preregistration, jobRunnerPreparation) {
+  const errors = [];
+  const expectedGuid = String(preregistration?.telemetry?.expectedPowerSchemeGuid || "").trim().toLowerCase();
+  if (!lifecycle || typeof lifecycle !== "object") {
+    return { errors: ["power-lifecycle.missing"], activeAtMs: null, restoreAtMs: null };
+  }
+  if (lifecycle.schemaVersion !== 1) errors.push("power-lifecycle.schemaVersion");
+  if (lifecycle.status !== "cleaned") errors.push("power-lifecycle.status");
+  if (String(lifecycle.temporaryGuid || "").toLowerCase() !== expectedGuid) errors.push("power-lifecycle.temporaryGuid");
+  if (String(lifecycle.createdGuid || "").toLowerCase() !== expectedGuid) errors.push("power-lifecycle.createdGuid");
+  if (lifecycle.destinationWasAbsent !== true) errors.push("power-lifecycle.destinationWasAbsent");
+  if (lifecycle.destinationAbsenceClassification !== "scheme-absent") {
+    errors.push("power-lifecycle.destinationAbsenceClassification");
+  }
+  if (lifecycle.duplicateStarted !== true) errors.push("power-lifecycle.duplicateStarted");
+  if (lifecycle.cleanup?.valid !== true) errors.push("power-lifecycle.cleanup.valid");
+  if (lifecycle.cleanup?.temporaryGuidAbsent !== true) errors.push("power-lifecycle.cleanup.temporaryGuidAbsent");
+  if (lifecycle.cleanup?.absenceClassification !== "scheme-absent") errors.push("power-lifecycle.cleanup.absenceClassification");
+  if (String(lifecycle.cleanup?.restoredGuid || "").toLowerCase() !== String(lifecycle.originalGuid || "").toLowerCase()) {
+    errors.push("power-lifecycle.cleanup.restoredGuid");
+  }
+  const events = Array.isArray(lifecycle.events) ? lifecycle.events : [];
+  const normalCleanupActions = [
+    "capabilities",
+    "original-active",
+    "query-destination-before-duplicate",
+    "query-original-before-duplicate",
+    "duplicate",
+    "query-created",
+    "activate",
+    "temporary-active",
+    "restore",
+    "restored-active",
+    "query-temporary-before-delete",
+    "delete-temporary",
+    "query-deleted",
+    "query-original-after-delete",
+  ];
+  const alreadyAbsentCleanupActions = [
+    "capabilities",
+    "original-active",
+    "query-destination-before-duplicate",
+    "query-original-before-duplicate",
+    "duplicate",
+    "query-created",
+    "activate",
+    "temporary-active",
+    "restore",
+    "restored-active",
+    "query-temporary-before-delete",
+    "query-original-after-delete",
+  ];
+  const actionSequence = events.map((event) => event?.action);
+  const normalCleanup = arraysEqual(actionSequence, normalCleanupActions);
+  const alreadyAbsentCleanup = arraysEqual(actionSequence, alreadyAbsentCleanupActions);
+  if (!normalCleanup && !alreadyAbsentCleanup) {
+    errors.push("power-lifecycle.events.sequence");
+  }
+  const beforeDeleteQuery = events.find((event) => event?.action === "query-temporary-before-delete");
+  const deletedQuery = events.find((event) => event?.action === "query-deleted");
+  const controlQuery = events.find((event) => event?.action === "query-original-after-delete");
+  const destinationQuery = events.find((event) => event?.action === "query-destination-before-duplicate");
+  const destinationControlQuery = events.find((event) => event?.action === "query-original-before-duplicate");
+  if (destinationQuery?.exitCode !== 1 || destinationControlQuery?.exitCode !== 0) {
+    errors.push("power-lifecycle.destination-absence-proof");
+  }
+  if (
+    normalCleanup
+    && (
+      lifecycle.cleanup?.deletionPerformed !== true
+      || lifecycle.cleanup?.alreadyAbsent !== false
+      || beforeDeleteQuery?.exitCode !== 0
+      || deletedQuery?.exitCode !== 1
+      || controlQuery?.exitCode !== 0
+    )
+  ) {
+    errors.push("power-lifecycle.cleanup.normal-proof");
+  }
+  if (
+    alreadyAbsentCleanup
+    && (
+      lifecycle.cleanup?.deletionPerformed !== false
+      || lifecycle.cleanup?.alreadyAbsent !== true
+      || beforeDeleteQuery?.exitCode !== 1
+      || controlQuery?.exitCode !== 0
+    )
+  ) {
+    errors.push("power-lifecycle.cleanup.already-absent-proof");
+  }
+  const activeAtMs = Date.parse(String(events.find((event) => event?.action === "temporary-active")?.completedAt || ""));
+  const restoreAtMs = Date.parse(String(events.find((event) => event?.action === "restore")?.startedAt || ""));
+  const preregisteredAtMs = Date.parse(String(preregistration?.generatedAt || ""));
+  const capabilityProbedAtMs = Date.parse(String(jobRunnerPreparation?.capabilityProbedAt || ""));
+  if (!Number.isFinite(activeAtMs)) errors.push("power-lifecycle.events.temporary-active.completedAt");
+  if (!Number.isFinite(restoreAtMs)) errors.push("power-lifecycle.events.restore.startedAt");
+  if (Number.isFinite(activeAtMs) && Number.isFinite(restoreAtMs) && !(restoreAtMs > activeAtMs)) {
+    errors.push("power-lifecycle.events.active-window");
+  }
+  if (Number.isFinite(capabilityProbedAtMs) && Number.isFinite(activeAtMs) && capabilityProbedAtMs > activeAtMs) {
+    errors.push("power-lifecycle.job-runner-order");
+  }
+  if (Number.isFinite(activeAtMs) && Number.isFinite(preregisteredAtMs) && activeAtMs > preregisteredAtMs) {
+    errors.push("power-lifecycle.preregistration-order");
+  }
+  return { errors, activeAtMs, restoreAtMs, preregisteredAtMs };
+}
+
 function validateTelemetryEnvironment(window, label, expectedBlock, preregistration) {
   const errors = [];
   const environment = window?.environment || {};
@@ -721,15 +883,22 @@ function validateTelemetryEnvironment(window, label, expectedBlock, preregistrat
   if (environment.detached !== true) errors.push(`${label}.environment.detached`);
   if (String(environment.gitStatus || "") !== "") errors.push(`${label}.environment.gitStatus.clean`);
   if (environmentHasActiveTaskSurface(environment)) errors.push(`${label}.environment.task-surface-active`);
+  if (
+    String(environment.power?.activeSchemeGuid || "").trim().toLowerCase()
+    !== String(preregistration?.telemetry?.expectedPowerSchemeGuid || "").trim().toLowerCase()
+  ) {
+    errors.push(`${label}.environment.power.activeSchemeGuid.expected`);
+  }
   return errors;
 }
 
-function buildTelemetryAdmission(blocks, preregistration) {
+function buildTelemetryAdmission(blocks, preregistration, powerLifecycleWindow = null) {
   const errors = [];
   const blockSummaries = new Map();
   const powerSchemes = new Set();
   const acSources = new Set();
   let previousPostAtMs = null;
+  let firstWindowStartedAtMs = null;
 
   const blocksByOrdinal = new Map(blocks.map((block) => [finite(block?.ordinal), block]));
   for (const expectedBlock of WILLIAMS_BLOCK_SEQUENCE) {
@@ -746,6 +915,11 @@ function buildTelemetryAdmission(blocks, preregistration) {
     const preLastAtMs = pre.summary?.lastAtMs ?? null;
     const postFirstAtMs = post.summary?.firstAtMs ?? null;
     const postLastAtMs = post.summary?.lastAtMs ?? null;
+    for (const startedAtMs of [preFirstAtMs, postFirstAtMs]) {
+      if (Number.isFinite(startedAtMs) && (firstWindowStartedAtMs === null || startedAtMs < firstWindowStartedAtMs)) {
+        firstWindowStartedAtMs = startedAtMs;
+      }
+    }
     if (preLastAtMs !== null && postFirstAtMs !== null && !(postFirstAtMs > preLastAtMs)) {
       errors.push(`${expectedBlock.id}.telemetry.pre-post-order`);
     }
@@ -782,6 +956,33 @@ function buildTelemetryAdmission(blocks, preregistration) {
 
   if (powerSchemes.size !== 1) errors.push("telemetry.environment.powerSchemeGuid.consistency");
   if (acSources.size !== 1) errors.push("telemetry.environment.acLineStatus.consistency");
+  const preregisteredAtMs = Date.parse(String(preregistration?.generatedAt || ""));
+  if (
+    Number.isFinite(preregisteredAtMs)
+    && Number.isFinite(firstWindowStartedAtMs)
+    && preregisteredAtMs >= firstWindowStartedAtMs
+  ) {
+    errors.push("telemetry.preregistration-order");
+  }
+  if (powerLifecycleWindow) {
+    for (const block of blockSummaries.values()) {
+      for (const phase of ["pre", "post"]) {
+        const summary = block[phase];
+        if (
+          summary?.firstAtMs === null
+          || summary?.firstAtMs === undefined
+          || summary?.lastAtMs === null
+          || summary?.lastAtMs === undefined
+          || !Number.isFinite(powerLifecycleWindow.activeAtMs)
+          || !Number.isFinite(powerLifecycleWindow.restoreAtMs)
+          || summary.firstAtMs < powerLifecycleWindow.activeAtMs
+          || summary.lastAtMs >= powerLifecycleWindow.restoreAtMs
+        ) {
+          errors.push(`${block.blockId}.telemetry.${phase}.power-lifecycle-window`);
+        }
+      }
+    }
+  }
 
   const adjacentPairChecks = [];
   for (const pair of WILLIAMS_ADJACENT_PAIRS) {
@@ -855,7 +1056,7 @@ function validateIdentity(identity, block, preregistration) {
   if (identity?.detached !== true) errors.push(`${block.id}.identity.detached`);
   if (String(identity?.gitStatus || "") !== "") errors.push(`${block.id}.identity.gitStatus`);
   if (String(identity?.cwd || "") !== String(sideRegistration?.worktree || "")) errors.push(`${block.id}.identity.cwd`);
-  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
+  for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource", "powerSchemeHelper"]) {
     const descriptor = identity?.artifacts?.[field];
     if (!String(descriptor?.gitBlob || "").trim()) errors.push(`${block.id}.identity.artifacts.${field}.gitBlob`);
     if (!/^[a-f0-9]{64}$/i.test(String(descriptor?.lfNormalizedSha256 || ""))) {
@@ -879,6 +1080,15 @@ function validateIdentity(identity, block, preregistration) {
     || actualSource?.lfNormalizedSha256 !== registeredSource?.lfNormalizedSha256
   ) {
     errors.push(`${block.id}.identity.artifacts.jobRunnerSource.preregistration`);
+  }
+  const registeredPowerSchemeHelper = registration.telemetry?.powerSchemeHelper;
+  const actualPowerSchemeHelper = identity?.artifacts?.powerSchemeHelper;
+  if (
+    actualPowerSchemeHelper?.path !== registeredPowerSchemeHelper?.path
+    || actualPowerSchemeHelper?.gitBlob !== registeredPowerSchemeHelper?.gitBlob
+    || actualPowerSchemeHelper?.lfNormalizedSha256 !== registeredPowerSchemeHelper?.lfNormalizedSha256
+  ) {
+    errors.push(`${block.id}.identity.artifacts.powerSchemeHelper.preregistration`);
   }
   const registeredBinary = containmentIdentity.binary;
   if (
@@ -1245,7 +1455,7 @@ function validateCrossBlockIdentity(blocks) {
   const errors = [];
   const first = blocks[0]?.identity?.artifacts || {};
   for (const block of blocks.slice(1)) {
-    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
+    for (const field of ["packageLock", "runner", "rolePolicy", "analyzer", "policy", "windowsRuntime", "jobRunnerSource", "powerSchemeHelper"]) {
       const actual = block.identity?.artifacts?.[field];
       const expected = first[field];
       if (
@@ -1272,19 +1482,26 @@ function validateCrossBlockIdentity(blocks) {
 export function analyzeWilliamsCrossoverEvidence({
   preregistration,
   jobRunnerPreparation,
+  powerSchemeLifecycle,
   blocks = [],
   manifestValidation = { status: "missing", errors: ["manifest.missing"] },
 } = {}) {
+  const powerLifecycleValidation = validateWilliamsPowerSchemeLifecycle(
+    powerSchemeLifecycle,
+    preregistration,
+    jobRunnerPreparation,
+  );
   const invalidReasons = [
     ...validateWilliamsPreregistration(preregistration),
     ...validateWilliamsJobRunnerPreparation(jobRunnerPreparation, preregistration),
+    ...powerLifecycleValidation.errors,
     ...(manifestValidation?.status === "valid" ? [] : (manifestValidation?.errors || ["manifest.invalid"])),
   ];
   const blockValues = new Map();
   const internalOutliers = [];
   const normalizedBlocks = [];
   const blocksByOrdinal = new Map(blocks.map((block) => [finite(block?.ordinal), block]));
-  const telemetryAdmission = buildTelemetryAdmission(blocks, preregistration);
+  const telemetryAdmission = buildTelemetryAdmission(blocks, preregistration, powerLifecycleValidation);
   invalidReasons.push(...telemetryAdmission.errors);
 
   for (const expectedBlock of WILLIAMS_BLOCK_SEQUENCE) {
@@ -1420,6 +1637,7 @@ export function analyzeWilliamsCrossoverEvidence({
       canonicalRoleId: CANONICAL_RENDER_SAMPLE_ROLE_ID,
     },
     preregistration,
+    powerSchemeLifecycle,
     manifestValidation,
     blocks: normalizedBlocks,
     pairs,

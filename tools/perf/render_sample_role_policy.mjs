@@ -3,8 +3,11 @@ export const CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenari
 export const GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 
 function finiteNumberOrNull(value) {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function primitiveText(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 export function median(values) {
@@ -22,7 +25,7 @@ export function median(values) {
 }
 
 export function isGovernedRenderSampleScenario(scenarioId) {
-  return GOVERNED_RENDER_SAMPLE_SCENARIOS.includes(String(scenarioId || "").trim());
+  return GOVERNED_RENDER_SAMPLE_SCENARIOS.includes(primitiveText(scenarioId));
 }
 
 function summarizeSample(sample, index) {
@@ -34,8 +37,8 @@ function summarizeSample(sample, index) {
     sequence: finiteNumberOrNull(sample.sequence),
     durationMs: finiteNumberOrNull(sample.durationMs),
     recordedAt: finiteNumberOrNull(sample.recordedAt),
-    activeScenarioId: String(sample.activeScenarioId || "").trim(),
-    phase: String(sample.phase || "").trim(),
+    activeScenarioId: primitiveText(sample.activeScenarioId),
+    phase: primitiveText(sample.phase),
     politicalBgProgressive: sample.politicalBgProgressive === true,
     contextScenarioMs: finiteNumberOrNull(sample.contextScenarioMs),
   });
@@ -78,7 +81,7 @@ function isCanonicalCandidate(sample, scenarioId, promotionRecordedAt) {
 }
 
 export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null } = {}) {
-  const requestedScenarioId = String(scenarioId || "").trim();
+  const requestedScenarioId = primitiveText(scenarioId);
   const governed = isGovernedRenderSampleScenario(requestedScenarioId);
   const renderSamples = snapshot?.renderSamples && typeof snapshot.renderSamples === "object"
     ? snapshot.renderSamples
@@ -128,6 +131,18 @@ export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null }
   }
 
   const checks = [
+    roleCheck(
+      "promotion-recorded-at-nonnegative",
+      promotionRecordedAt !== null && promotionRecordedAt >= 0,
+      ">= 0",
+      promotionRecordedAt,
+    ),
+    roleCheck(
+      "sample-recorded-at-nonnegative",
+      samples.every((sample) => sample?.recordedAt !== null && sample.recordedAt >= 0),
+      "all >= 0",
+      samples.map((sample) => sample?.recordedAt ?? null),
+    ),
     roleCheck("declared-sample-count", declaredCount === samples.length, samples.length, declaredCount),
     roleCheck("sample-array-count", samples.length >= 2, ">= 2", samples.length),
     roleCheck(

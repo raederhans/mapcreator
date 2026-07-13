@@ -25,7 +25,10 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         renderer_imports = renderer_content.replace('"', "'")
         renderer_export_block = self.get_map_renderer_export_block(renderer_content)
 
-        self.assertIn("import { createUrbanCityPolicyOwner } from './renderer/urban_city_policy.js';", renderer_imports)
+        self.assertIn(
+            "import { createUrbanCityPolicyOwner, getUrbanCityRenderPassSignatureParts } from './renderer/urban_city_policy.js';",
+            renderer_imports,
+        )
         self.assertIn("import { createCityPointsRenderOwner } from './renderer/city_points_render_owner.js';", renderer_imports)
         self.assertIn("let urbanCityPolicyOwner = null;", renderer_content)
         self.assertIn("let cityPointsRenderOwner = null;", renderer_content)
@@ -62,6 +65,7 @@ class MapRendererUrbanCityPolicyBoundaryContractTest(unittest.TestCase):
         self.assertIn("+ (victoryPointValue * 25_000_000)", renderer_content)
 
         self.assertIn("export function createUrbanCityPolicyOwner({", policy_content)
+        self.assertIn("export function getUrbanCityRenderPassSignatureParts(state, passName) {", policy_content)
         self.assertIn("function getUrbanFeatureIndex() {", policy_content)
         self.assertIn("function getCityUrbanRuntimeInfo(feature, urbanIndex = getUrbanFeatureIndex()) {", policy_content)
         self.assertIn("function buildCityRevealPlan(cityCollection, scale, transform, config = {}) {", policy_content)

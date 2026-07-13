@@ -22,6 +22,7 @@ import {
   analyzeWilliamsCrossoverRawRoot,
   buildCurrentHarnessArtifacts,
   buildWilliamsExecutionPlan,
+  buildWilliamsMarkdown,
   buildWilliamsRawManifest,
   deriveWilliamsQuietWindow,
   getWilliamsErrorExitCode,
@@ -38,6 +39,7 @@ const CONTROL_HEAD = "a".repeat(40);
 const CANDIDATE_HEAD = "b".repeat(40);
 const CONTROL_WORKTREE = "C:\\perf\\control";
 const CANDIDATE_WORKTREE = "C:\\perf\\candidate";
+const EXPECTED_POWER_SCHEME_GUID = "00000000-0000-0000-0000-000000000000";
 const JOB_RUNNER_EVIDENCE_PATH = "tooling/windows-job-runner.exe";
 const JOB_RUNNER_FIXTURE_BYTES = Buffer.from("MZ-SCENARIO-FORGE-WILLIAMS-JOB-RUNNER-FIXTURE", "utf8");
 const HASH = "c".repeat(64);
@@ -84,9 +86,13 @@ function canonicalSnapshot(scenarioId, durationMs) {
 function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
   const baseMs = Date.UTC(2026, 6, 11, 0, 0, (blockOrdinal - 1) * 20 + (phase === "post" ? 10 : 0));
   const primingCompletedAtMs = baseMs - 1000;
+  const windowStartedAtMs = primingCompletedAtMs - 3717;
+  const windowCompletedAtMs = baseMs + 4700;
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     phase,
+    startedAt: new Date(windowStartedAtMs).toISOString(),
+    completedAt: new Date(windowCompletedAtMs).toISOString(),
     priming: {
       captureCount: 1,
       status: "complete",
@@ -120,7 +126,7 @@ function telemetryWindow(phase, blockOrdinal, cwd, gitHead) {
     }),
     environment: {
       power: {
-        activeSchemeGuid: "00000000-0000-0000-0000-000000000000",
+        activeSchemeGuid: EXPECTED_POWER_SCHEME_GUID,
         activeSchemeName: "Balanced",
         acLineStatus: 1,
         batteryFlag: 128,
@@ -208,6 +214,57 @@ function jobRunnerPreparation(source = artifactDescriptor("tools/perf/williams_c
   };
 }
 
+function powerSchemeLifecycle() {
+  const actions = [
+    "capabilities",
+    "original-active",
+    "query-destination-before-duplicate",
+    "query-original-before-duplicate",
+    "duplicate",
+    "query-created",
+    "activate",
+    "temporary-active",
+    "restore",
+    "restored-active",
+    "query-temporary-before-delete",
+    "delete-temporary",
+    "query-deleted",
+    "query-original-after-delete",
+  ];
+  return {
+    schemaVersion: 1,
+    status: "cleaned",
+    originalGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+    temporaryGuid: EXPECTED_POWER_SCHEME_GUID,
+    createdGuid: EXPECTED_POWER_SCHEME_GUID,
+    destinationWasAbsent: true,
+    destinationAbsenceClassification: "scheme-absent",
+    duplicateStarted: true,
+    events: actions.map((action, index) => {
+      const cleanupStartIndex = actions.indexOf("restore");
+      const at = index >= cleanupStartIndex
+        ? new Date(Date.UTC(2026, 6, 11, 0, 3, index - cleanupStartIndex)).toISOString()
+        : new Date(Date.UTC(2026, 6, 10, 23, 59, 40 + index)).toISOString();
+      return {
+        action,
+        startedAt: at,
+        completedAt: at,
+        exitCode: new Set(["query-destination-before-duplicate", "query-deleted"]).has(action) ? 1 : 0,
+      };
+    }),
+    cleanup: {
+      valid: true,
+      restoredGuid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+      temporaryGuid: EXPECTED_POWER_SCHEME_GUID,
+      temporaryGuidAbsent: true,
+      absenceClassification: "scheme-absent",
+      deletedQueryExitCode: 1,
+      deletionPerformed: true,
+      alreadyAbsent: false,
+    },
+  };
+}
+
 function workloadIdentity(scenarioId) {
   return {
     scenarioId,
@@ -228,7 +285,9 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
     candidateHead: CANDIDATE_HEAD,
     controlWorktree: CONTROL_WORKTREE,
     candidateWorktree: CANDIDATE_WORKTREE,
-    generatedAt: "2026-07-11T00:00:00.000Z",
+    generatedAt: "2026-07-10T23:59:50.000Z",
+    expectedPowerSchemeGuid: EXPECTED_POWER_SCHEME_GUID,
+    powerSchemeHelper: artifactDescriptor("tools/perf/williams_crossover_power_scheme.ps1"),
     jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
     jobRunnerBinary: jobRunnerBinaryDescriptor(),
   });
@@ -289,6 +348,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
           policy: artifactDescriptor("tools/perf/williams_crossover_policy.mjs"),
           windowsRuntime: artifactDescriptor("tools/perf/williams_crossover_windows_runtime.mjs"),
           jobRunnerSource: artifactDescriptor("tools/perf/williams_crossover_windows_job_runner.cs"),
+          powerSchemeHelper: artifactDescriptor("tools/perf/williams_crossover_power_scheme.ps1"),
           jobRunnerBinary: jobRunnerBinaryDescriptor(),
         },
       },
@@ -342,6 +402,7 @@ function createEvidence({ startupByBlock = {}, renderByBlock = {} } = {}) {
   return {
     preregistration,
     jobRunnerPreparation: jobRunnerPreparation(preregistration.workloadContract.processContainment.identity.source),
+    powerSchemeLifecycle: powerSchemeLifecycle(),
     blocks,
     manifestValidation: { status: "valid", errors: [], measuredRawFileCount: 32 },
   };
@@ -366,11 +427,13 @@ async function materializeEvidenceRoot(evidence) {
     source: currentToolIdentity.jobRunnerSource,
     binary: currentToolIdentity.jobRunnerBinary,
   };
+  evidence.preregistration.telemetry.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
   for (const block of evidence.blocks) {
     block.identity.artifacts.analyzer = currentToolIdentity.analyzer;
     block.identity.artifacts.policy = currentToolIdentity.policy;
     block.identity.artifacts.windowsRuntime = currentToolIdentity.windowsRuntime;
     block.identity.artifacts.jobRunnerSource = currentToolIdentity.jobRunnerSource;
+    block.identity.artifacts.powerSchemeHelper = currentToolIdentity.powerSchemeHelper;
     block.identity.artifacts.jobRunnerBinary = currentToolIdentity.jobRunnerBinary;
   }
   await writeJson(path.join(root, "preregistration.json"), evidence.preregistration);
@@ -378,6 +441,7 @@ async function materializeEvidenceRoot(evidence) {
   preparation.binary = currentToolIdentity.jobRunnerBinary;
   evidence.jobRunnerPreparation = preparation;
   await writeJson(path.join(root, "harness", "job-runner-preparation.json"), preparation);
+  await writeJson(path.join(root, "harness", "power-scheme-lifecycle.json"), evidence.powerSchemeLifecycle);
   await fs.mkdir(path.join(root, "tooling"), { recursive: true });
   await fs.writeFile(path.join(root, JOB_RUNNER_EVIDENCE_PATH), JOB_RUNNER_FIXTURE_BYTES);
   for (const block of evidence.blocks) {
@@ -412,9 +476,9 @@ async function materializeEvidenceRoot(evidence) {
 }
 
 test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are frozen", () => {
-  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v4");
+  assert.equal(WILLIAMS_CROSSOVER_POLICY_ID, "p2-williams-crossover-v7");
   assert.deepEqual(WILLIAMS_TELEMETRY_CADENCE, {
-    windowSchemaVersion: 3,
+    windowSchemaVersion: 4,
     samplesPerWindow: 5,
     sampleIntervalMs: 1000,
     sampleIntervalToleranceMs: 250,
@@ -429,6 +493,7 @@ test("Williams sequence, adjacent B-A pairs, and same-side drift pairs are froze
       requiredEvidenceFields: ["status", "startedAt", "completedAt", "captureDurationMs"],
     },
     requiredCaptureFields: ["completedAt", "captureDurationMs", "scheduleLagMs"],
+    requiredWindowFields: ["startedAt", "completedAt"],
   });
   assert.deepEqual(
     WILLIAMS_BLOCK_SEQUENCE.map(({ ordinal, side, orderId, scenarioOrder }) => ({ ordinal, side, orderId, scenarioOrder })),
@@ -549,6 +614,10 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
     {
       reason: "block-01.telemetry.pre.priming.captureCount",
       mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.captureCount = 2; },
+    },
+    {
+      reason: "block-01.telemetry.pre.priming.captureCount",
+      mutate: (evidence) => { evidence.blocks[0].telemetry.pre.priming.captureCount = true; },
     },
     {
       reason: "block-01.telemetry.pre.priming.status",
@@ -679,6 +748,19 @@ test("telemetry admission enforces phase, ordering, CPU, frequency, memory, and 
       reason: "telemetry.environment.acLineStatus.consistency",
       mutate: (evidence) => { evidence.blocks[2].telemetry.pre.environment.power.acLineStatus = 0; },
     },
+    {
+      reason: "block-01.telemetry.pre.environment.power.acLineStatus.ac-required",
+      mutate: (evidence) => evidence.blocks.forEach((block) => {
+        block.telemetry.pre.environment.power.acLineStatus = 0;
+        block.telemetry.post.environment.power.acLineStatus = 0;
+      }),
+    },
+    {
+      reason: "block-01.telemetry.pre.environment.power.activeSchemeGuid.expected",
+      mutate: (evidence) => {
+        evidence.blocks[0].telemetry.pre.environment.power.activeSchemeGuid = "11111111-1111-1111-1111-111111111111";
+      },
+    },
   ];
   for (const testCase of cases) {
     const evidence = createEvidence();
@@ -693,7 +775,7 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
   const evidence = createEvidence();
   assert.equal(evidence.preregistration.telemetry.scheduler, "monotonic-fixed-rate");
   assert.equal(evidence.preregistration.telemetry.timestampSemantics, "actual-capture-start");
-  assert.equal(evidence.preregistration.telemetry.windowSchemaVersion, 3);
+  assert.equal(evidence.preregistration.telemetry.windowSchemaVersion, 4);
   assert.equal(evidence.preregistration.telemetry.maxCaptureDurationMs, 1250);
   assert.equal(evidence.preregistration.telemetry.maxScheduleLagMs, 250);
   assert.deepEqual(evidence.preregistration.telemetry.priming, {
@@ -707,6 +789,7 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
     "captureDurationMs",
     "scheduleLagMs",
   ]);
+  assert.deepEqual(evidence.preregistration.telemetry.requiredWindowFields, ["startedAt", "completedAt"]);
 
   const telemetry = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
   const validQuietWindow = deriveWilliamsQuietWindow(telemetry);
@@ -724,6 +807,12 @@ test("telemetry cadence is frozen in preregistration and rejects a fixed-delay w
   assert.equal(quietWindow.valid, false);
   assert.equal(quietWindow.telemetryCadence.valid, false);
   assert.ok(quietWindow.telemetryCadence.errors.includes("telemetry.samples.interval"));
+
+  const incompleteWindow = telemetryWindow("pre", 1, CONTROL_WORKTREE, CONTROL_HEAD);
+  incompleteWindow.completedAt = incompleteWindow.samples.at(-1).at;
+  const incompleteQuietWindow = deriveWilliamsQuietWindow(incompleteWindow);
+  assert.equal(incompleteQuietWindow.valid, false);
+  assert.ok(incompleteQuietWindow.telemetryCadence.errors.includes("telemetry.completedAt.sample-coverage"));
 });
 
 test("a long excluded WMI prime preserves strict measured cadence while a measured cold spike stays invalid", () => {
@@ -890,6 +979,250 @@ test("CLI defaults to list and the plan keeps live execution explicit", () => {
     "--runs", "2",
     "--warmups", "1",
   ]);
+
+  const powerBoundOptions = parseWilliamsArgs([
+    "--expected-power-scheme-guid",
+    EXPECTED_POWER_SCHEME_GUID.toUpperCase(),
+  ]);
+  const powerBoundPlan = buildWilliamsExecutionPlan({
+    ...powerBoundOptions,
+    controlHead: CONTROL_HEAD,
+    candidateHead: CANDIDATE_HEAD,
+    controlWorktree: CONTROL_WORKTREE,
+    candidateWorktree: CANDIDATE_WORKTREE,
+  });
+  assert.equal(powerBoundOptions.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
+  assert.equal(powerBoundPlan.preregistration.telemetry.expectedPowerSchemeGuid, EXPECTED_POWER_SCHEME_GUID);
+});
+
+test("Williams admission requires a cleaned power lifecycle covering every telemetry window", () => {
+  const missing = createEvidence();
+  missing.powerSchemeLifecycle = null;
+  let report = analyzeWilliamsCrossoverEvidence(missing);
+  assert.ok(report.decision.invalidReasons.includes("power-lifecycle.missing"));
+
+  const unprovenCleanup = createEvidence();
+  unprovenCleanup.powerSchemeLifecycle.cleanup.valid = false;
+  unprovenCleanup.powerSchemeLifecycle.cleanup.absenceClassification = "query-failure-unclassified";
+  report = analyzeWilliamsCrossoverEvidence(unprovenCleanup);
+  assert.ok(report.decision.invalidReasons.includes("power-lifecycle.cleanup.valid"));
+  assert.ok(report.decision.invalidReasons.includes("power-lifecycle.cleanup.absenceClassification"));
+
+  const earlyRestore = createEvidence();
+  const restore = earlyRestore.powerSchemeLifecycle.events.find((event) => event.action === "restore");
+  restore.startedAt = "2026-07-11T00:00:01.000Z";
+  report = analyzeWilliamsCrossoverEvidence(earlyRestore);
+  assert.ok(report.decision.invalidReasons.some((reason) => reason.endsWith("power-lifecycle-window")));
+
+  const idempotentRetry = createEvidence();
+  idempotentRetry.powerSchemeLifecycle.events = idempotentRetry.powerSchemeLifecycle.events.filter(
+    (event) => !["delete-temporary", "query-deleted"].includes(event.action),
+  );
+  const retryProbe = idempotentRetry.powerSchemeLifecycle.events.find(
+    (event) => event.action === "query-temporary-before-delete",
+  );
+  retryProbe.exitCode = 1;
+  idempotentRetry.powerSchemeLifecycle.cleanup.deletionPerformed = false;
+  idempotentRetry.powerSchemeLifecycle.cleanup.alreadyAbsent = true;
+  report = analyzeWilliamsCrossoverEvidence(idempotentRetry);
+  assert.equal(report.decision.status, "accepted");
+});
+
+test("Williams admission binds preparation, activation, preregistration, telemetry, and restore time", () => {
+  const probeAfterActivation = createEvidence();
+  probeAfterActivation.jobRunnerPreparation.capabilityProbedAt = "2026-07-10T23:59:48.000Z";
+  let report = analyzeWilliamsCrossoverEvidence(probeAfterActivation);
+  assert.ok(report.decision.invalidReasons.includes("power-lifecycle.job-runner-order"));
+
+  const preregistrationBeforeActivation = createEvidence();
+  preregistrationBeforeActivation.preregistration.generatedAt = "2026-07-10T23:59:44.000Z";
+  report = analyzeWilliamsCrossoverEvidence(preregistrationBeforeActivation);
+  assert.ok(report.decision.invalidReasons.includes("power-lifecycle.preregistration-order"));
+
+  const preregistrationAfterTelemetryStart = createEvidence();
+  preregistrationAfterTelemetryStart.preregistration.generatedAt = "2026-07-11T00:00:00.000Z";
+  report = analyzeWilliamsCrossoverEvidence(preregistrationAfterTelemetryStart);
+  assert.ok(report.decision.invalidReasons.includes("telemetry.preregistration-order"));
+
+  const telemetryStartsBeforeActivation = createEvidence();
+  telemetryStartsBeforeActivation.blocks[0].telemetry.pre.startedAt = "2026-07-10T23:59:44.000Z";
+  telemetryStartsBeforeActivation.blocks[0].telemetry.pre.priming.startedAt = "2026-07-10T23:59:44.100Z";
+  report = analyzeWilliamsCrossoverEvidence(telemetryStartsBeforeActivation);
+  assert.ok(report.decision.invalidReasons.includes("block-01.telemetry.pre.power-lifecycle-window"));
+
+  const sampleCompletesAfterRestore = createEvidence();
+  const finalPost = sampleCompletesAfterRestore.blocks.at(-1).telemetry.post;
+  finalPost.samples.at(-1).completedAt = "2026-07-11T00:03:01.000Z";
+  finalPost.completedAt = "2026-07-11T00:03:02.000Z";
+  report = analyzeWilliamsCrossoverEvidence(sampleCompletesAfterRestore);
+  assert.ok(report.decision.invalidReasons.includes("block-08.telemetry.post.power-lifecycle-window"));
+});
+
+test("power-scheme orchestration preallocates identity and cleans a journaled partial start", async () => {
+  const runner = await import("../tools/perf/run_williams_crossover.mjs");
+  assert.equal(typeof runner.startWilliamsPowerSchemeSession, "function");
+  const generatedGuid = "12345678-1234-4234-8234-123456789abc";
+  const successfulCalls = [];
+  const started = await runner.startWilliamsPowerSchemeSession({
+    helperPath: "power-helper.ps1",
+    sessionPath: "power-session.json",
+    randomUUIDFn: () => generatedGuid,
+    invokeHelper: (options) => {
+      successfulCalls.push(options);
+      return { temporaryGuid: options.destinationGuid };
+    },
+  });
+  assert.equal(started.expectedPowerSchemeGuid, generatedGuid);
+  assert.equal(successfulCalls[0].destinationGuid, generatedGuid);
+
+  const failedCalls = [];
+  await assert.rejects(
+    runner.startWilliamsPowerSchemeSession({
+      helperPath: "power-helper.ps1",
+      sessionPath: "power-session.json",
+      randomUUIDFn: () => generatedGuid,
+      pathExistsFn: async () => true,
+      invokeHelper: (options) => {
+        failedCalls.push(options);
+        if (options.action === "start") {
+          throw new WilliamsInvalidExperimentError("start timed out", "power-scheme-start-failed");
+        }
+        return { status: "cleaned" };
+      },
+    }),
+    (error) => error instanceof WilliamsInvalidExperimentError && error.code === "power-scheme-start-failed",
+  );
+  assert.deepEqual(failedCalls.map((call) => call.action), ["start", "stop"]);
+  assert.equal(failedCalls[0].destinationGuid, generatedGuid);
+});
+
+test("power-scheme stop replays the durable journal once after a transient failure", async () => {
+  const runner = await import("../tools/perf/run_williams_crossover.mjs");
+  assert.equal(typeof runner.stopWilliamsPowerSchemeSession, "function");
+  const calls = [];
+  const cleanup = await runner.stopWilliamsPowerSchemeSession({
+    helperPath: "power-helper.ps1",
+    sessionPath: "power-session.json",
+    pathExistsFn: async () => true,
+    invokeHelper: (options) => {
+      calls.push(options.action);
+      if (calls.length === 1) throw new Error("stop timed out");
+      return { status: "cleaned", cleanup: { valid: true } };
+    },
+  });
+  assert.deepEqual(calls, ["stop", "stop"]);
+  assert.equal(cleanup.status, "cleaned");
+
+  const missingJournalCalls = [];
+  await assert.rejects(
+    runner.stopWilliamsPowerSchemeSession({
+      helperPath: "power-helper.ps1",
+      sessionPath: "missing-session.json",
+      pathExistsFn: async () => false,
+      invokeHelper: (options) => {
+        missingJournalCalls.push(options.action);
+        throw new Error("stop failed without a journal");
+      },
+    }),
+    /stop failed without a journal/,
+  );
+  assert.deepEqual(missingJournalCalls, ["stop"]);
+
+  let failedReplayAttempt = 0;
+  await assert.rejects(
+    runner.stopWilliamsPowerSchemeSession({
+      helperPath: "power-helper.ps1",
+      sessionPath: "power-session.json",
+      pathExistsFn: async () => true,
+      invokeHelper: () => {
+        failedReplayAttempt += 1;
+        throw new Error(failedReplayAttempt === 1 ? "initial stop timed out" : "replay access denied");
+      },
+    }),
+    (error) => (
+      error instanceof WilliamsInvalidExperimentError
+      && error.code === "power-scheme-stop-replay-failed"
+      && error.message.includes("initial stop timed out")
+      && error.message.includes("replay access denied")
+    ),
+  );
+  assert.equal(failedReplayAttempt, 2);
+});
+
+test("power-scheme execution always stops the session and restores the process environment", async () => {
+  const runner = await import("../tools/perf/run_williams_crossover.mjs");
+  assert.equal(typeof runner.withWilliamsPowerSchemeSession, "function");
+  const generatedGuid = "12345678-1234-4234-8234-123456789abc";
+  const environment = { WILLIAMS_EXPECTED_POWER_SCHEME_GUID: "original-value" };
+  const calls = [];
+  await assert.rejects(
+    runner.withWilliamsPowerSchemeSession({
+      helperPath: "power-helper.ps1",
+      sessionPath: "power-session.json",
+      environment,
+      randomUUIDFn: () => generatedGuid,
+      invokeHelper: (options) => {
+        calls.push(options.action);
+        return options.action === "start" ? { temporaryGuid: options.destinationGuid } : { status: "cleaned" };
+      },
+      operation: async (expectedPowerSchemeGuid) => {
+        assert.equal(expectedPowerSchemeGuid, generatedGuid);
+        assert.equal(environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID, generatedGuid);
+        throw new Error("workload failed");
+      },
+    }),
+    /workload failed/,
+  );
+  assert.deepEqual(calls, ["start", "stop"]);
+  assert.equal(environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID, "original-value");
+
+  for (const stopFailureEnvironment of [
+    { WILLIAMS_EXPECTED_POWER_SCHEME_GUID: "original-value" },
+    {},
+  ]) {
+    const hadOriginalValue = "WILLIAMS_EXPECTED_POWER_SCHEME_GUID" in stopFailureEnvironment;
+    await assert.rejects(
+      runner.withWilliamsPowerSchemeSession({
+        helperPath: "power-helper.ps1",
+        sessionPath: "power-session.json",
+        environment: stopFailureEnvironment,
+        randomUUIDFn: () => generatedGuid,
+        invokeHelper: (options) => {
+          if (options.action === "stop") throw new Error("stop failed");
+          return { temporaryGuid: options.destinationGuid };
+        },
+        operation: async () => "complete",
+      }),
+      /stop failed/,
+    );
+    if (hadOriginalValue) {
+      assert.equal(stopFailureEnvironment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID, "original-value");
+    } else {
+      assert.equal("WILLIAMS_EXPECTED_POWER_SCHEME_GUID" in stopFailureEnvironment, false);
+    }
+  }
+
+  await assert.rejects(
+    runner.withWilliamsPowerSchemeSession({
+      helperPath: "power-helper.ps1",
+      sessionPath: "power-session.json",
+      randomUUIDFn: () => generatedGuid,
+      pathExistsFn: async () => true,
+      invokeHelper: (options) => {
+        if (options.action === "stop") throw new Error("cleanup timed out");
+        return { temporaryGuid: options.destinationGuid };
+      },
+      operation: async () => {
+        throw new Error("workload crashed");
+      },
+    }),
+    (error) => (
+      error instanceof WilliamsInvalidExperimentError
+      && error.code === "power-scheme-operation-cleanup-failed"
+      && error.message.includes("workload crashed")
+      && error.message.includes("cleanup timed out")
+    ),
+  );
 });
 
 test("raw analyzer rebuilds an accepted report from exactly 32 measured files", async (t) => {
@@ -1016,6 +1349,28 @@ test("ambient browser PID churn remains diagnostic when Job containment and tele
   assert.equal(report.decision.status, "accepted");
   assert.equal(report.decision.exitCode, WILLIAMS_EXIT_CODES.accepted);
   assert.equal(report.decision.invalidReasons.includes("block-01.cleanup.newBrowserPids"), false);
+});
+
+test("blocked Williams reports display missing primary metrics explicitly", () => {
+  const missingMetric = {
+    deltaMs: null,
+    deltaPercent: null,
+    practicalRegressionCount: 0,
+    pairPolicyStatus: "missing",
+  };
+  const primary = Object.fromEntries(WILLIAMS_SCENARIOS.map((scenarioId) => [scenarioId, {
+    startup: missingMetric,
+    canonicalRender: missingMetric,
+  }]));
+  const markdown = buildWilliamsMarkdown({
+    policyId: WILLIAMS_CROSSOVER_POLICY_ID,
+    decision: { status: "invalid-experiment", exitCode: WILLIAMS_EXIT_CODES.invalidExperiment, invalidReasons: ["raw.metric"] },
+    renderSampleRole: { canonicalRoleId: "role" },
+    manifestValidation: { measuredRawFileCount: 31 },
+    primary,
+  });
+  assert.match(markdown, /tno_1962\.startup: missing ms \/ missing%/);
+  assert.doesNotMatch(markdown, /tno_1962\.startup: 0\.00 ms/);
 });
 
 test("cleanup construction records ambient browser PID churn while Job containment stays authoritative", async () => {
@@ -1239,12 +1594,15 @@ test("tracked power helper locks the rerun08 GUID lifecycle and deletion proof",
   const expectedSequence = [
     "capabilities",
     "original-active",
+    "query-destination-before-duplicate",
+    "query-original-before-duplicate",
     "duplicate",
     "query-created",
     "activate",
     "temporary-active",
     "restore",
     "restored-active",
+    "query-temporary-before-delete",
     "delete-temporary",
     "query-deleted",
     "query-original-after-delete",
@@ -1258,10 +1616,46 @@ test("tracked power helper locks the rerun08 GUID lifecycle and deletion proof",
     true,
   );
   assert.match(helperSource, /returnedGuid -ne \$session\.temporaryGuid/);
+  assert.match(
+    helperSource,
+    /if \(\$returnedGuid -ne \$session\.temporaryGuid\)[\s\S]*?throw "duplicate GUID mismatch:[\s\S]*?\$session\.createdGuid = \$returnedGuid/,
+  );
+  assert.match(helperSource, /function Assert-WilliamsPowerSchemeSessionSafety/);
+  assert.match(helperSource, /createdGuid does not match temporaryGuid/);
+  assert.match(helperSource, /\$cleanupGuid = if \(\$ownsDestinationGuid\) \{ \$sessionSafety\.temporaryGuid \}/);
+  assert.match(helperSource, /destinationWasAbsent/);
+  assert.match(helperSource, /duplicateStarted/);
+  assert.match(helperSource, /phase = 'duplicate-pending'/);
+  assert.match(helperSource, /\$ownsDestinationGuid/);
+  assert.match(helperSource, /'delete-temporary'.*\$cleanupGuid/);
   assert.match(helperSource, /activeGuid -ne \$session\.temporaryGuid/);
   assert.match(helperSource, /restoredGuid -ne \$Session\.originalGuid/);
   assert.match(helperSource, /ExpectedOutcome 'failure'/);
-  assert.match(helperSource, /absenceClassification = 'scheme-absent'/);
+  assert.match(helperSource, /function Get-WilliamsPowerSchemeAbsenceClassification/);
+  assert.match(helperSource, /query-failure-unclassified/);
+  assert.match(helperSource, /power-scheme absence proof failed/);
+  assert.match(helperSource, /WILLIAMS_EXPECTED_POWER_SCHEME_GUID/);
+  assert.match(helperSource, /originalExpectedPowerSchemeGuidEnv/);
+  assert.match(helperSource, /absenceClassification -eq 'scheme-absent'/);
+  assert.match(helperSource, /function Invoke-WilliamsPowerSchemeCheckpoint/);
+  assert.match(helperSource, /\[IO\.File\]::Replace/);
+  assert.match(helperSource, /query-temporary-before-delete/);
+  const startSessionEntry = helperSource.indexOf("if ($StartSession)");
+  const stopSessionEntry = helperSource.indexOf("if ($StopSession)");
+  const selfTestEntry = helperSource.indexOf("if ($SelfTest)");
+  assert.ok(startSessionEntry >= 0 && stopSessionEntry > startSessionEntry && selfTestEntry > stopSessionEntry);
+  assert.match(
+    helperSource.slice(startSessionEntry, stopSessionEntry),
+    /Start-WilliamsTemporaryPowerScheme -SessionOut \$sessionRef -DestinationGuid \$DestinationGuid -Checkpoint \$checkpoint/,
+  );
+  assert.match(
+    helperSource.slice(startSessionEntry, stopSessionEntry),
+    /Start-WilliamsTemporaryPowerScheme -SessionOut \$sessionRef -Checkpoint \$checkpoint/,
+  );
+  assert.match(
+    helperSource.slice(stopSessionEntry, selfTestEntry),
+    /Stop-WilliamsTemporaryPowerScheme[\s\S]*-Checkpoint \$checkpoint/,
+  );
   const livePreflightStart = helperSource.indexOf("function Invoke-WilliamsPowerSchemeLivePreflight");
   const livePreflightEnd = helperSource.indexOf("if ($SelfTest)", livePreflightStart);
   assert.ok(livePreflightStart >= 0 && livePreflightEnd > livePreflightStart);
@@ -1285,6 +1679,45 @@ test("tracked power helper locks the rerun08 GUID lifecycle and deletion proof",
     assert.equal(report.queryDeletedExitCode, 1);
     assert.equal(report.absenceClassification, "scheme-absent");
     assert.deepEqual(report.commandSequence, expectedSequence);
+    assert.equal(report.journalReadyBeforeFirstMutation, true);
+    assert.equal(report.interruptedDeleteRetrySucceeded, true);
+    assert.equal(report.retrySkippedDelete, true);
+    assert.equal(report.preexistingDestinationDeleteCount, 0);
+    assert.equal(report.originalDestinationDeleteCount, 0);
+    assert.equal(report.foreignGuidMismatchSafe, true);
+    assert.equal(report.tamperedJournalRejectedWithoutDelete, true);
+    assert.equal(report.livePreflightPreservesStartAndCleanupFailures, true);
     assert.equal(report.events.some((event) => event.arguments.includes("/list")), false);
+
+    const escapedHelperPath = helperPath.replaceAll("'", "''");
+    const controlGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
+    const deletedGuid = "11111111-2222-4333-8444-555555555555";
+    const classification = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        `. '${escapedHelperPath}'; Get-WilliamsPowerSchemeAbsenceClassification -QueryResult ([pscustomobject]@{ exitCode = 5; output = 'Access is denied.' }) -ControlQueryResult ([pscustomobject]@{ exitCode = 0; output = 'Power Scheme GUID: ${controlGuid}' }) -ExpectedControlGuid '${controlGuid}' -DeletedGuid '${deletedGuid}'`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.equal(classification.status, 0, `${classification.stdout}\n${classification.stderr}`);
+    assert.equal(classification.stdout.trim(), "query-failure-unclassified");
+
+    const localizedAbsence = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        `. '${escapedHelperPath}'; Get-WilliamsPowerSchemeAbsenceClassification -QueryResult ([pscustomobject]@{ exitCode = 1; output = '指定的电源方案、子组或设置不存在。' }) -ControlQueryResult ([pscustomobject]@{ exitCode = 0; output = '电源方案 GUID: ${controlGuid}' }) -ExpectedControlGuid '${controlGuid}' -DeletedGuid '${deletedGuid}'`,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.equal(localizedAbsence.status, 0, `${localizedAbsence.stdout}\n${localizedAbsence.stderr}`);
+    assert.equal(localizedAbsence.stdout.trim(), "scheme-absent");
   }
 });

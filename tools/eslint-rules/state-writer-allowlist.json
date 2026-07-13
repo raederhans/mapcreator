@@ -114,6 +114,7 @@
     "tests/scenario_lifecycle_runtime_behavior.test.mjs",
     "tests/scenario_optional_layers_behavior.test.mjs",
     "tests/special_zones_workbench_controller_behavior.test.mjs",
-    "tests/strategic_overlay_runtime_owner_behavior.test.mjs"
+    "tests/strategic_overlay_runtime_owner_behavior.test.mjs",
+    "tests/urban_city_policy_strategic_values_behavior.test.mjs"
   ]
 }

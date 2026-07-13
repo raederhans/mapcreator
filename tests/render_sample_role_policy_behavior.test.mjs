@@ -94,10 +94,22 @@ const invalidCases = [
   ["wrong sequence", (snapshot) => { snapshot.renderSamples.samples[1].sequence = 3; }, "sample-sequence"],
   ["duplicate sequence", (snapshot) => { snapshot.renderSamples.samples[1].sequence = 1; }, "sample-sequence"],
   ["wrong scenario", (snapshot) => { snapshot.renderSamples.samples[1].activeScenarioId = "hoi4_1939"; }, "last-active-scenario"],
+  ["array scenario", (snapshot) => { snapshot.renderSamples.samples[1].activeScenarioId = ["tno_1962"]; }, "last-active-scenario"],
   ["wrong phase", (snapshot) => { snapshot.renderSamples.samples[1].phase = "settling"; }, "last-phase-idle"],
+  ["array phase", (snapshot) => { snapshot.renderSamples.samples[1].phase = ["idle"]; }, "last-phase-idle"],
   ["missing progressive role", (snapshot) => { snapshot.renderSamples.samples[1].politicalBgProgressive = false; }, "last-political-bg-progressive"],
   ["missing scenario context", (snapshot) => { snapshot.renderSamples.samples[1].contextScenarioMs = 0; }, "last-context-scenario-positive"],
+  ["null canonical duration", (snapshot) => { snapshot.renderSamples.samples[1].durationMs = null; }, "last-duration-positive"],
+  ["blank canonical duration", (snapshot) => { snapshot.renderSamples.samples[1].durationMs = ""; }, "last-duration-positive"],
+  ["boolean canonical duration", (snapshot) => { snapshot.renderSamples.samples[1].durationMs = true; }, "last-duration-positive"],
+  ["array canonical duration", (snapshot) => { snapshot.renderSamples.samples[1].durationMs = [1200]; }, "last-duration-positive"],
   ["pre-promotion sample", (snapshot) => { snapshot.renderSamples.samples[1].recordedAt = 199; }, "last-recorded-after-promotion"],
+  ["negative promotion timeline", (snapshot) => {
+    snapshot.renderPerfMetrics.scenarioChunkPromotionVisualStage.recordedAt = -100;
+    snapshot.renderSamples.samples[0].recordedAt = -200;
+    snapshot.renderSamples.samples[1].recordedAt = -50;
+  }, "promotion-recorded-at-nonnegative"],
+  ["negative sample timestamp", (snapshot) => { snapshot.renderSamples.samples[0].recordedAt = -1; }, "sample-recorded-at-nonnegative"],
   ["non-unique canonical role", (snapshot) => {
     Object.assign(snapshot.renderSamples.samples[0], {
       recordedAt: 250,

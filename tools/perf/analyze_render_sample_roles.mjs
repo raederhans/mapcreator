@@ -19,6 +19,7 @@ const DEFAULT_EXPERIMENT_ROOT = path.join(REPO_ROOT, ".runtime", "output", "perf
 const DEFAULT_JSON_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-v2-20260711.json");
 const DEFAULT_MD_OUT = path.join(REPO_ROOT, ".runtime", "reports", "generated", "p2-1-performance-ab-governed-v2-20260711.md");
 const DEFAULT_EXPECTED_SOURCE_SHA256 = "f601896f26478ae9e023d97d0193e281cb8a0c3931fdcd8fa4bccebe03f4d839";
+const DEFAULT_EXPECTED_RAW_MANIFEST_SHA256 = "679a05b79b7239caf329240cf8d7b92a931c3fa78f899321ec178a12ce546c99";
 const BLOCK_SEQUENCE = Object.freeze(["A1", "B1", "B2", "A2"]);
 const SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"]);
 const EXPECTED_CANONICAL_MEDIANS = Object.freeze({
@@ -40,6 +41,7 @@ function parseArgs(argv) {
     jsonOut: DEFAULT_JSON_OUT,
     mdOut: DEFAULT_MD_OUT,
     expectedSourceSha256: DEFAULT_EXPECTED_SOURCE_SHA256,
+    expectedRawManifestSha256: DEFAULT_EXPECTED_RAW_MANIFEST_SHA256,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -58,6 +60,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (token === "--expected-source-sha256" && next) {
       options.expectedSourceSha256 = String(next).trim().toLowerCase();
+      index += 1;
+    } else if (token === "--expected-raw-manifest-sha256" && next) {
+      options.expectedRawManifestSha256 = String(next).trim().toLowerCase();
       index += 1;
     }
   }
@@ -78,8 +83,36 @@ async function readJsonWithHash(filePath) {
 }
 
 function finite(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export function buildRawPerformanceMetricIntegrity(records) {
+  const invalidRecords = [];
+  for (const record of Array.isArray(records) ? records : []) {
+    for (const metric of ["totalStartupMs", "canonicalRenderSampleMs"]) {
+      const value = record?.[metric];
+      if (!Number.isFinite(value) || value <= 0) {
+        invalidRecords.push({
+          block: record?.block ?? null,
+          scenarioId: record?.scenarioId ?? null,
+          runNumber: record?.runNumber ?? null,
+          metric,
+          value: value ?? null,
+        });
+      }
+    }
+  }
+  return Object.freeze({
+    pass: invalidRecords.length === 0,
+    invalidRecords: Object.freeze(invalidRecords),
+  });
+}
+
+export function buildRawHashManifestSha256(rawFiles) {
+  const rows = (Array.isArray(rawFiles) ? rawFiles : [])
+    .map((entry) => `${String(entry?.path || "")}\0${String(entry?.sha256 || "")}\n`)
+    .sort();
+  return sha256(Buffer.from(rows.join(""), "utf8"));
 }
 
 function percentDelta(current, baseline) {
@@ -265,6 +298,7 @@ export async function buildGovernedCompanionReport({
   sourceReportPath = DEFAULT_SOURCE_REPORT,
   experimentRoot = DEFAULT_EXPERIMENT_ROOT,
   expectedSourceSha256 = DEFAULT_EXPECTED_SOURCE_SHA256,
+  expectedRawManifestSha256 = DEFAULT_EXPECTED_RAW_MANIFEST_SHA256,
 } = {}) {
   const source = await readJsonWithHash(sourceReportPath);
   const rawFiles = [];
@@ -322,6 +356,8 @@ export async function buildGovernedCompanionReport({
   const blockDrift = Object.fromEntries(SCENARIOS.map((scenarioId) => [scenarioId, buildBlockDrift(byBlock, scenarioId)]));
   const outlierCheck = buildOutlierCheck(records);
   const directionCheck = buildDirectionCheck(byBlock);
+  const rawMetricIntegrity = buildRawPerformanceMetricIntegrity(records);
+  const rawHashManifestSha256 = buildRawHashManifestSha256(rawFiles);
   const expectedCanonicalValuesPass = SCENARIOS.every((scenarioId) => (
     Math.abs(canonicalComparisons[scenarioId].a.median - EXPECTED_CANONICAL_MEDIANS[scenarioId].A) < 0.01
     && Math.abs(canonicalComparisons[scenarioId].b.median - EXPECTED_CANONICAL_MEDIANS[scenarioId].B) < 0.01
@@ -334,10 +370,18 @@ export async function buildGovernedCompanionReport({
     check("runner_lock_query_workload_identity", identity.pass, identity),
     check(
       "raw_file_count_and_hashes",
-      rawFiles.length === 40 && rawFiles.every((entry) => /^[0-9a-f]{64}$/.test(entry.sha256)),
-      { count: rawFiles.length, hashCount: rawFiles.filter((entry) => /^[0-9a-f]{64}$/.test(entry.sha256)).length }
+      rawFiles.length === 40
+        && rawFiles.every((entry) => /^[0-9a-f]{64}$/.test(entry.sha256))
+        && rawHashManifestSha256 === expectedRawManifestSha256,
+      {
+        count: rawFiles.length,
+        hashCount: rawFiles.filter((entry) => /^[0-9a-f]{64}$/.test(entry.sha256)).length,
+        expectedManifestSha256: expectedRawManifestSha256,
+        actualManifestSha256: rawHashManifestSha256,
+      }
     ),
     check("render_sample_roles", roleMismatches.length === 0 && records.length === 40, { matches: records.length - roleMismatches.length, mismatches: roleMismatches }),
+    check("raw_performance_metrics_complete", rawMetricIntegrity.pass, rawMetricIntegrity),
     check("expected_canonical_medians", expectedCanonicalValuesPass, { expected: EXPECTED_CANONICAL_MEDIANS, actual: canonicalComparisons }),
     check("startup_regression", Object.values(startupComparisons).every((comparison) => !comparison.failed), startupComparisons),
     check("canonical_render_regression", Object.values(canonicalComparisons).every((comparison) => !comparison.failed), canonicalComparisons),
@@ -394,6 +438,7 @@ export async function buildGovernedCompanionReport({
     evidence: {
       rawFileCount: rawFiles.length,
       rawFiles,
+      rawHashManifestSha256,
       roleMatches: records.length - roleMismatches.length,
       roleMismatches,
     },
@@ -437,6 +482,9 @@ export async function buildGovernedCompanionReport({
 }
 
 export function buildMarkdown(report) {
+  const formatMetric = (value, digits) => (
+    typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "missing"
+  );
   const lines = [
     "# P2.1 governed render-sample reanalysis",
     "",
@@ -452,7 +500,7 @@ export function buildMarkdown(report) {
   ];
   for (const scenarioId of SCENARIOS) {
     const comparison = report.canonicalMetric.comparisons[scenarioId];
-    lines.push(`- ${scenarioId}: A=${comparison.a.median.toFixed(2)} ms, B=${comparison.b.median.toFixed(2)} ms, delta=${comparison.deltaMs.toFixed(2)} ms (${comparison.deltaPercent.toFixed(3)}%), ${comparison.status}`);
+    lines.push(`- ${scenarioId}: A=${formatMetric(comparison.a.median, 2)} ms, B=${formatMetric(comparison.b.median, 2)} ms, delta=${formatMetric(comparison.deltaMs, 2)} ms (${formatMetric(comparison.deltaPercent, 3)}%), ${comparison.status}`);
   }
   lines.push("", "## Legacy composition", `- TNO A: blank=${report.legacyMetric.tnoFirstRoleComposition.A.blank}, scenario=${report.legacyMetric.tnoFirstRoleComposition.A.scenario}`, `- TNO B: blank=${report.legacyMetric.tnoFirstRoleComposition.B.blank}, scenario=${report.legacyMetric.tnoFirstRoleComposition.B.scenario}`);
   lines.push("", "## Checks");

@@ -162,7 +162,23 @@ function extractRendererFunction(source, functionName) {
   const startToken = `function ${functionName}`;
   const start = source.indexOf(startToken);
   assert.notEqual(start, -1, `${functionName} must exist`);
-  const bodyStart = source.indexOf("{", start);
+  const parametersStart = source.indexOf("(", start + startToken.length);
+  assert.notEqual(parametersStart, -1, `${functionName} must have parameters`);
+  let parameterDepth = 0;
+  let parametersEnd = -1;
+  for (let index = parametersStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "(") parameterDepth += 1;
+    if (char === ")") {
+      parameterDepth -= 1;
+      if (parameterDepth === 0) {
+        parametersEnd = index;
+        break;
+      }
+    }
+  }
+  assert.notEqual(parametersEnd, -1, `${functionName} parameters must close`);
+  const bodyStart = source.indexOf("{", parametersEnd);
   assert.notEqual(bodyStart, -1, `${functionName} must have a body`);
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
@@ -1165,6 +1181,7 @@ test("viewport geo bounds samples curved projection edges for chunk eligibility"
 
 test("exact-after-settle keeps scenario overlays on the contextScenario reuse path", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
+  const urbanCityPolicySource = readRepoFile("js", "core", "renderer", "urban_city_policy.js");
   const drawCanvasOrchestrationOwnerSource = readRepoFile(
     "js",
     "core",
@@ -1375,7 +1392,9 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
       && /function shouldRefreshContextBaseContoursForColorChanges\(\) \{[\s\S]*?runtimeState\.showPhysical[\s\S]*?physicalContourMajorData/.test(rendererSource)
       && /if \(passName === "contextBase"\) \{[\s\S]*?`context-colors:\$\{shouldRefreshContextBaseForColorChanges\(\) \? Number\(runtimeState\.colorRevision \|\| 0\) : 0\}`/.test(rendererSource)
       && !contextScenarioSignatureBranch.includes("`colors:${Number(runtimeState.colorRevision || 0)}`")
-      && /if \(passName === "labels"\) \{[\s\S]*?`colors:\$\{Number\(runtimeState\.colorRevision \|\| 0\)\}`/.test(rendererSource),
+      && /if \(passName === "labels"\) \{[\s\S]*?getUrbanCityRenderPassSignatureParts\(runtimeState, "labels"\)/.test(rendererSource)
+      && /const sharedTail = \[[\s\S]*?`colors:\$\{Number\(state\?\.colorRevision \|\| 0\)\}`[\s\S]*?\];/.test(urbanCityPolicySource)
+      && /if \(passName === "labels"\) \{[\s\S]*?return \[[\s\S]*?strategic, \.\.\.sharedTail\];/.test(urbanCityPolicySource),
     partialPoliticalRepaintOnlyAcceptsTargetedRefreshColors:
       /function tryPartialPoliticalPassRepaint\(transform, nextSignature, timings\) \{[\s\S]*?String\(cache\.reasons\?\.political \|\| ""\) !== "refresh-colors"[\s\S]*?return fallback\("non-color-invalidation"\);/.test(rendererSource)
       && !rendererSource.includes('["refresh-colors", "rebuild-colors"].includes(String(cache.reasons?.political || ""))')
@@ -1775,12 +1794,27 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
   const mainSource = readRepoFile("js", "main.js");
   const benchmarkSource = readRepoFile("ops", "browser-mcp", "editor-performance-benchmark.py");
   const playwrightAppPathsSource = readRepoFile("tests", "e2e", "support", "playwright-app-paths.js");
+  const transformedPassDiagnosticsOwnerSource = extractRendererFunction(
+    cachedPassCompositorOwnerSource,
+    "recordTransformedPassIfEnabled",
+  );
+  const drawTransformedPassSource = extractRendererFunction(
+    cachedPassCompositorOwnerSource,
+    "drawTransformedPass",
+  );
+  const composeRenderPassesSource = extractRendererFunction(
+    cachedPassCompositorOwnerSource,
+    "composeRenderPassesToTarget",
+  );
 
   const checks = {
     politicalPassStartsWithBackgroundFills:
       /function drawPoliticalPass\(k\) \{[\s\S]*?recordPoliticalRasterWorkerSnapshot\(\);[\s\S]*?const politicalOverscanPx = getPoliticalPassViewportOverscanPx\(\);[\s\S]*?collectVisibleLandSpatialItemsWithStats\(\{ overscanPx: politicalOverscanPx \}\)[\s\S]*?const visibleItems = visibleItemsResult \? visibleItemsResult\.items : null;[\s\S]*?drawPoliticalBackgroundFills\(\{[\s\S]*?returnSummary: true,[\s\S]*?\}\);[\s\S]*?if \(!(?:runtimeState|state)\.landData\?\.features\?\.length\) return;/.test(rendererSource),
-    drawTransformedPassRecordsRenderDiagnostics:
-      /function drawTransformedPass\(passName, currentTransform, referenceTransform = null\) \{[\s\S]*?recordTransformedPassDiagnostics\(passName, \{[\s\S]*?current,[\s\S]*?reference,[\s\S]*?scaleRatio,[\s\S]*?dx,[\s\S]*?dy,[\s\S]*?layout,/.test(cachedPassCompositorOwnerSource)
+    transformedPassPathsRecordRenderDiagnosticsThroughOwner:
+      transformedPassDiagnosticsOwnerSource.includes("if (!isRenderDiagnosticsEnabled()) return;")
+      && /recordTransformedPassDiagnostics\(passName, \{[\s\S]*?current,[\s\S]*?reference,[\s\S]*?scaleRatio,[\s\S]*?dx,[\s\S]*?dy,[\s\S]*?layout,/.test(transformedPassDiagnosticsOwnerSource)
+      && drawTransformedPassSource.includes("recordTransformedPassIfEnabled(")
+      && composeRenderPassesSource.includes("recordTransformedPassIfEnabled(")
       && /recordTransformedPassDiagnostics: \(passName, details\) => \{[\s\S]*?renderDiag\.transformedPasses = \{[\s\S]*?\[passName\]: details,[\s\S]*?publishRenderDiagnostics\(\);/.test(rendererSource),
     drawInteractionCompositeRecordsStableRenderDiagnostics:
       (() => {

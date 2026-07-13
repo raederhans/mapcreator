@@ -36,6 +36,8 @@ const ANALYZER_PATH = "tools/perf/run_williams_crossover.mjs";
 const POLICY_PATH = "tools/perf/williams_crossover_policy.mjs";
 const WINDOWS_RUNTIME_PATH = "tools/perf/williams_crossover_windows_runtime.mjs";
 const JOB_RUNNER_SOURCE_PATH = "tools/perf/williams_crossover_windows_job_runner.cs";
+const POWER_SCHEME_HELPER_PATH = "tools/perf/williams_crossover_power_scheme.ps1";
+const POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH = "harness/power-scheme-lifecycle.json";
 const PACKAGE_LOCK_PATH = "package-lock.json";
 const LIVE_TIMEOUT_MS = 45 * 60 * 1000;
 
@@ -148,6 +150,7 @@ export function parseWilliamsArgs(argv = []) {
     candidateWorktree: process.env.WILLIAMS_CANDIDATE_WORKTREE ? normalizePath(process.env.WILLIAMS_CANDIDATE_WORKTREE) : "",
     controlHead: String(process.env.WILLIAMS_CONTROL_HEAD || "").trim(),
     candidateHead: String(process.env.WILLIAMS_CANDIDATE_HEAD || "").trim(),
+    expectedPowerSchemeGuid: String(process.env.WILLIAMS_EXPECTED_POWER_SCHEME_GUID || "").trim().toLowerCase(),
     overwriteAnalysis: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -176,6 +179,9 @@ export function parseWilliamsArgs(argv = []) {
     } else if (token === "--candidate-head" && next) {
       options.candidateHead = String(next).trim();
       index += 1;
+    } else if (token === "--expected-power-scheme-guid" && next) {
+      options.expectedPowerSchemeGuid = String(next).trim().toLowerCase();
+      index += 1;
     } else if (token === "--overwrite-analysis") {
       options.overwriteAnalysis = true;
     } else {
@@ -198,6 +204,8 @@ export function buildWilliamsExecutionPlan(options = {}) {
     generatedAt: null,
     jobRunnerSource: options.jobRunnerSource || null,
     jobRunnerBinary: options.jobRunnerBinary || null,
+    powerSchemeHelper: options.powerSchemeHelper || null,
+    expectedPowerSchemeGuid: options.expectedPowerSchemeGuid || "",
   });
   return {
     preregistration,
@@ -263,6 +271,167 @@ function runGit(cwd, args, options = {}) {
   return runSync("git", args, { cwd, ...options });
 }
 
+export function invokeWilliamsPowerSchemeHelper({
+  action,
+  helperPath,
+  sessionPath,
+  destinationGuid = "",
+  spawnSyncFn = spawnSync,
+} = {}) {
+  if (!new Set(["start", "stop"]).has(action)) throw new TypeError("Power-scheme action must be start or stop.");
+  const args = [
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy", "Bypass",
+    "-File", helperPath,
+    action === "start" ? "-StartSession" : "-StopSession",
+    "-SessionPath", sessionPath,
+  ];
+  if (action === "start" && destinationGuid) args.push("-DestinationGuid", destinationGuid);
+  const result = spawnSyncFn("powershell.exe", args, {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    windowsHide: true,
+    maxBuffer: 16 * 1024 * 1024,
+    timeout: 120_000,
+  });
+  if (result.error || result.status !== 0) {
+    throw new WilliamsInvalidExperimentError(
+      `Power-scheme ${action} failed: ${String(result.error?.message || result.stderr || result.stdout || "unknown error").trim()}`,
+      `power-scheme-${action}-failed`,
+    );
+  }
+  try {
+    return JSON.parse(String(result.stdout || "null"));
+  } catch (error) {
+    throw new WilliamsInvalidExperimentError(
+      `Power-scheme ${action} returned invalid JSON: ${String(error?.message || error)}`,
+      `power-scheme-${action}-invalid-json`,
+    );
+  }
+}
+
+export async function stopWilliamsPowerSchemeSession({
+  helperPath,
+  sessionPath,
+  invokeHelper = invokeWilliamsPowerSchemeHelper,
+  pathExistsFn = pathExists,
+} = {}) {
+  try {
+    return await invokeHelper({ action: "stop", helperPath, sessionPath });
+  } catch (firstError) {
+    if (!(await pathExistsFn(sessionPath))) throw firstError;
+    try {
+      return await invokeHelper({ action: "stop", helperPath, sessionPath });
+    } catch (replayError) {
+      throw new WilliamsInvalidExperimentError(
+        `Power-scheme stop failed: ${String(firstError?.message || firstError)}; journal replay failed: ${String(replayError?.message || replayError)}`,
+        "power-scheme-stop-replay-failed",
+      );
+    }
+  }
+}
+
+export async function startWilliamsPowerSchemeSession({
+  helperPath,
+  sessionPath,
+  requestedGuid = "",
+  randomUUIDFn = crypto.randomUUID,
+  invokeHelper = invokeWilliamsPowerSchemeHelper,
+  pathExistsFn = pathExists,
+} = {}) {
+  const destinationGuid = String(requestedGuid || randomUUIDFn()).trim().toLowerCase();
+  if (!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(destinationGuid)) {
+    throw new WilliamsInvalidExperimentError(
+      "Power-scheme destination GUID is invalid.",
+      "power-scheme-guid-invalid",
+    );
+  }
+  try {
+    const powerSession = invokeHelper({
+      action: "start",
+      helperPath,
+      sessionPath,
+      destinationGuid,
+    });
+    const actualGuid = String(powerSession?.temporaryGuid || "").trim().toLowerCase();
+    if (actualGuid !== destinationGuid) {
+      throw new WilliamsInvalidExperimentError(
+        `Power-scheme helper returned ${actualGuid || "no GUID"}; expected ${destinationGuid}.`,
+        "power-scheme-guid-mismatch",
+      );
+    }
+    return { powerSession, expectedPowerSchemeGuid: destinationGuid };
+  } catch (startError) {
+    if (await pathExistsFn(sessionPath)) {
+      try {
+        await stopWilliamsPowerSchemeSession({
+          helperPath,
+          sessionPath,
+          invokeHelper,
+          pathExistsFn,
+        });
+      } catch (cleanupError) {
+        throw new WilliamsInvalidExperimentError(
+          `${startError.message}; cleanup also failed: ${cleanupError.message}`,
+          "power-scheme-start-cleanup-failed",
+        );
+      }
+    }
+    throw startError;
+  }
+}
+
+export async function withWilliamsPowerSchemeSession({
+  helperPath,
+  sessionPath,
+  requestedGuid = "",
+  operation,
+  environment = process.env,
+  randomUUIDFn = crypto.randomUUID,
+  invokeHelper = invokeWilliamsPowerSchemeHelper,
+  pathExistsFn = pathExists,
+} = {}) {
+  if (typeof operation !== "function") throw new TypeError("Power-scheme operation must be a function.");
+  const previousExpectedGuid = environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID;
+  const { expectedPowerSchemeGuid } = await startWilliamsPowerSchemeSession({
+    helperPath,
+    sessionPath,
+    requestedGuid,
+    randomUUIDFn,
+    invokeHelper,
+    pathExistsFn,
+  });
+  environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID = expectedPowerSchemeGuid;
+  let operationError = null;
+  try {
+    return await operation(expectedPowerSchemeGuid);
+  } catch (error) {
+    operationError = error;
+    throw error;
+  } finally {
+    try {
+      await stopWilliamsPowerSchemeSession({
+        helperPath,
+        sessionPath,
+        invokeHelper,
+        pathExistsFn,
+      });
+    } catch (cleanupError) {
+      if (operationError) {
+        throw new WilliamsInvalidExperimentError(
+          `Workload failed: ${String(operationError?.message || operationError)}; power-scheme cleanup failed: ${String(cleanupError?.message || cleanupError)}`,
+          "power-scheme-operation-cleanup-failed",
+        );
+      }
+      throw cleanupError;
+    } finally {
+      if (previousExpectedGuid === undefined) delete environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID;
+      else environment.WILLIAMS_EXPECTED_POWER_SCHEME_GUID = previousExpectedGuid;
+    }
+  }
+}
+
 async function trackedArtifactDescriptor(worktree, relativePath) {
   const gitBlob = runGit(worktree, ["rev-parse", `HEAD:${toPosix(relativePath)}`]).stdout.trim();
   const content = runGit(worktree, ["show", `HEAD:${toPosix(relativePath)}`]).stdout;
@@ -289,6 +458,7 @@ export async function buildCurrentHarnessArtifacts() {
     policy: await currentArtifactDescriptor(POLICY_PATH),
     windowsRuntime: await currentArtifactDescriptor(WINDOWS_RUNTIME_PATH),
     jobRunnerSource: await currentArtifactDescriptor(JOB_RUNNER_SOURCE_PATH),
+    powerSchemeHelper: await currentArtifactDescriptor(POWER_SCHEME_HELPER_PATH),
   };
 }
 
@@ -341,6 +511,7 @@ async function collectBlockIdentity(block, harnessArtifacts) {
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
       jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
       jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
     },
   };
@@ -418,6 +589,7 @@ export async function collectWindowsTelemetryWindow({ worktree, phase } = {}) {
     const environment = await collectEnvironmentState(worktree);
     return {
       ...counterPayload,
+      completedAt: new Date().toISOString(),
       environment: {
         ...environment,
         power: counterPayload.power,
@@ -426,6 +598,7 @@ export async function collectWindowsTelemetryWindow({ worktree, phase } = {}) {
   } catch (error) {
     return {
       ...counterPayload,
+      completedAt: new Date().toISOString(),
       capability: {
         status: "collection-error",
         missing: [String(error?.stack || error?.message || error)],
@@ -632,6 +805,7 @@ function requiredEvidencePaths() {
   const paths = [
     "preregistration.json",
     "harness/job-runner-preparation.json",
+    POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH,
     WINDOWS_JOB_RUNNER_EVIDENCE_PATH,
   ];
   for (const block of WILLIAMS_BLOCK_SEQUENCE) {
@@ -689,6 +863,7 @@ export async function buildWilliamsRawManifest(rawRoot, harnessArtifacts) {
       policy: harnessArtifacts.policy,
       windowsRuntime: harnessArtifacts.windowsRuntime,
       jobRunnerSource: harnessArtifacts.jobRunnerSource,
+      powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
       jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
       sides: sideIdentity,
     },
@@ -761,7 +936,7 @@ async function validateRawManifest(
   for (const actualPath of actualRaw) if (!expectedRaw.has(actualPath)) errors.push(`raw.extra:${actualPath}`);
   if (actualRaw.size !== 32) errors.push(`raw.count.expected-32-actual-${actualRaw.size}`);
   if (manifest.measuredRawFileCount !== 32) errors.push(`manifest.raw-count.expected-32-actual-${manifest.measuredRawFileCount}`);
-  for (const field of ["analyzer", "policy", "windowsRuntime", "jobRunnerSource"]) {
+  for (const field of ["analyzer", "policy", "windowsRuntime", "jobRunnerSource", "powerSchemeHelper"]) {
     if (!/^[a-f0-9]{40}$/i.test(String(manifest.toolIdentity?.[field]?.gitBlob || ""))) {
       errors.push(`manifest.toolIdentity.${field}.gitBlob`);
     }
@@ -838,6 +1013,11 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
     "harness/job-runner-preparation.json",
     loadErrors,
   );
+  const powerSchemeLifecycle = await readRequiredJson(
+    resolvedRoot,
+    POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH,
+    loadErrors,
+  );
   const manifest = await readRequiredJson(resolvedRoot, "raw-sha256-manifest.json", loadErrors);
   const allFiles = await walkFiles(path.join(resolvedRoot, "blocks"));
   const actualRawFiles = allFiles.filter((filePath) => /[\\/]raw[\\/].+\.json$/i.test(filePath));
@@ -890,12 +1070,16 @@ export async function analyzeWilliamsCrossoverRawRoot(rawRoot, { currentToolIden
   return analyzeWilliamsCrossoverEvidence({
     preregistration,
     jobRunnerPreparation,
+    powerSchemeLifecycle,
     blocks,
     manifestValidation,
   });
 }
 
 export function buildWilliamsMarkdown(report) {
+  const formatMetric = (value, digits = 2) => (
+    typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "missing"
+  );
   const lines = [
     "# P2 Williams crossover performance report",
     "",
@@ -911,7 +1095,7 @@ export function buildWilliamsMarkdown(report) {
   for (const scenarioId of WILLIAMS_SCENARIOS) {
     for (const metricId of ["startup", "canonicalRender"]) {
       const metric = report.primary?.[scenarioId]?.[metricId] || {};
-      lines.push(`- ${scenarioId}.${metricId}: ${Number(metric.deltaMs || 0).toFixed(2)} ms / ${Number(metric.deltaPercent || 0).toFixed(2)}%; pair regressions ${metric.practicalRegressionCount ?? 0}/4; ${metric.pairPolicyStatus || "missing"}`);
+      lines.push(`- ${scenarioId}.${metricId}: ${formatMetric(metric.deltaMs)} ms / ${formatMetric(metric.deltaPercent)}%; pair regressions ${metric.practicalRegressionCount ?? 0}/4; ${metric.pairPolicyStatus || "missing"}`);
     }
   }
   lines.push("", "## Admission", "");
@@ -941,6 +1125,15 @@ function validateExecuteOptions(options) {
     if (!String(options[field] || "").trim()) throw new WilliamsInvalidExperimentError(
       `--${field.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)} is required for --execute.`,
       "identity-option-missing",
+    );
+  }
+  if (
+    options.expectedPowerSchemeGuid
+    && !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(options.expectedPowerSchemeGuid)
+  ) {
+    throw new WilliamsInvalidExperimentError(
+      "--expected-power-scheme-guid must be a Windows power-scheme GUID.",
+      "power-scheme-guid-invalid",
     );
   }
 }
@@ -987,6 +1180,7 @@ async function collectHarnessArtifacts(options) {
     policy: await trackedArtifactDescriptor(candidate, POLICY_PATH),
     windowsRuntime: await trackedArtifactDescriptor(candidate, WINDOWS_RUNTIME_PATH),
     jobRunnerSource: await trackedArtifactDescriptor(candidate, JOB_RUNNER_SOURCE_PATH),
+    powerSchemeHelper: await trackedArtifactDescriptor(candidate, POWER_SCHEME_HELPER_PATH),
   };
   const current = await buildCurrentHarnessArtifacts();
   for (const [field, relativePath] of [
@@ -994,6 +1188,7 @@ async function collectHarnessArtifacts(options) {
     ["policy", POLICY_PATH],
     ["windowsRuntime", WINDOWS_RUNTIME_PATH],
     ["jobRunnerSource", JOB_RUNNER_SOURCE_PATH],
+    ["powerSchemeHelper", POWER_SCHEME_HELPER_PATH],
   ]) {
     if (!artifactDescriptorsEqual(current[field], artifacts[field])) {
       throw new WilliamsInvalidExperimentError(
@@ -1040,20 +1235,31 @@ async function executeExperiment(options) {
   const preparation = requireWilliamsJobRunnerReady(preparationResult);
   harnessArtifacts.jobRunnerBinary = preparation.binary;
   try {
-    const plan = buildWilliamsExecutionPlan({
-      ...options,
-      jobRunnerSource: harnessArtifacts.jobRunnerSource,
-      jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
+    const lifecyclePath = path.join(options.rawRoot, POWER_SCHEME_LIFECYCLE_EVIDENCE_PATH);
+    const helperPath = path.join(options.candidateWorktree, POWER_SCHEME_HELPER_PATH);
+    await withWilliamsPowerSchemeSession({
+      helperPath,
+      sessionPath: lifecyclePath,
+      requestedGuid: options.expectedPowerSchemeGuid,
+      operation: async (expectedPowerSchemeGuid) => {
+        const plan = buildWilliamsExecutionPlan({
+          ...options,
+          expectedPowerSchemeGuid,
+          jobRunnerSource: harnessArtifacts.jobRunnerSource,
+          jobRunnerBinary: harnessArtifacts.jobRunnerBinary,
+          powerSchemeHelper: harnessArtifacts.powerSchemeHelper,
+        });
+        const preregistration = {
+          ...plan.preregistration,
+          generatedAt: new Date().toISOString(),
+        };
+        await writeJson(path.join(options.rawRoot, "preregistration.json"), preregistration);
+        for (const block of plan.blocks) {
+          const result = await runBlock(block, harnessArtifacts, preparation);
+          if (!result.complete) break;
+        }
+      },
     });
-    const preregistration = {
-      ...plan.preregistration,
-      generatedAt: new Date().toISOString(),
-    };
-    await writeJson(path.join(options.rawRoot, "preregistration.json"), preregistration);
-    for (const block of plan.blocks) {
-      const result = await runBlock(block, harnessArtifacts, preparation);
-      if (!result.complete) break;
-    }
     await buildWilliamsRawManifest(options.rawRoot, harnessArtifacts);
     const report = await analyzeWilliamsCrossoverRawRoot(options.rawRoot);
     await writeReport(options, report, { allowOverwrite: false });
