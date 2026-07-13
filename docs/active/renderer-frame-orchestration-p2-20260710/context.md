@@ -16,9 +16,9 @@ Date: 2026-07-10
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
 - current P2.2b production checkpoint: `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; production, deterministic, Pages, browser matrix, and `perf:gate` acceptance are green
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
-- current task phase: rerun08 harness recovery is explicitly authorized under `p2-williams-rerun08-harness-recovery-v1`; its tracked power helper and complete live lifecycle preflight are green; the sole rerun08 dry plan and execute remain unused
+- current task phase: rerun08 completed its sole dry plan and sole execute under `p2-williams-rerun08-harness-recovery-v1`; the analyzer returned terminal `invalid-experiment / exit 3`, `admitted=false`, and `regressions=[]`; P2 is implementation-complete/performance-unresolved and the main integration gate remains closed
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch has pushed rerun08 governance checkpoint `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch is pushed through rerun08 operator/governance checkpoint `914f4828d5d3004bcd5e05c75ef9192e1726c84d`; rerun08 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, evidence integrity, and power cleanup were verified; the control overlay branch remains recoverable at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -34,7 +34,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: root integration agent; root exclusively owns rerun08 power, quiet, browser, telemetry, Job Object, Williams execute, and cleanup; all other agents remain static-only
+- live-process owner: none; root integration agent completed the sole rerun08 power, quiet, browser, telemetry, Job Object, Williams execute, and cleanup lane; ports 8000/8892 are clear and task-owned process count is zero
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -55,9 +55,9 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun08 is authorized to resolve the remaining Williams performance gate through one frozen experiment
-- Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE` and formal integration `BLOCK` under the frozen rerun07 terminal mapping
-- Integration / push / cleanup: main integration remains closed until rerun08 returns `accepted / exit 0`; the recovery branch is pushed through `d429b97946956f9abe9824037b513c1ab8dbdccb`; the isolated P2 worktree remains retained for the governed experiment
+- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun08 consumed the frozen experiment and returned terminal `invalid-experiment / exit 3`
+- Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE`; formal integration remains `BLOCK` under the frozen rerun08 terminal mapping
+- Integration / push / cleanup: the frozen rerun08 mapping closes main integration after `invalid-experiment / exit 3`; the recovery branch is pushed through `914f4828d5d3004bcd5e05c75ef9192e1726c84d` before terminal closeout; the isolated P2 worktree and active docs remain retained as recoverable evidence
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
 
@@ -553,12 +553,52 @@ Its 11 recorded events include `powercfg /a`, creation query, activation,
 restore, delete, the post-delete expected-failure query classified
 `scheme-absent`, and a final successful query of the original Balanced scheme.
 
-Root is the sole live-process owner for rerun08. Other agents remain static.
-Main integration stays closed until the analyzer returns `accepted / exit 0`.
+Root held sole live-process ownership for rerun08. That lane is complete, all
+task processes are gone, and the terminal analyzer result keeps main integration
+closed.
 
 The governance package is committed and pushed at `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`.
 Fresh verification reports Williams governance 36/36, metadata 16/16, route
 schema 302, adaptive selection 7 changed files / 23 recommendations / zero
-unmatched, and three independent static reviews at CLEAR. The adaptive execute
-entry stopped before execution because its plan includes protected main-thread
-performance lanes; the governed operator remains the sole owner of those lanes.
+unmatched, and three independent static reviews at CLEAR. The earlier adaptive
+execute entry stopped before execution because its plan included protected
+main-thread performance lanes; the later governed operator owned and completed
+the sole live lane.
+
+## Rerun08 terminal outcome 2026-07-13
+
+Rerun08 consumed the protocol's single dry plan and single execute with zero
+retry. The analyzer returned `invalid-experiment / exit 3`,
+`admitted=false`, and `regressions=[]`. The invalid reasons are confined to
+preregistered CPU/telemetry admission, same-side drift, and one direction-veto
+check. The paired candidate/control estimates remain diagnostic-only under the
+frozen protocol.
+
+Evidence integrity was independently rechecked after execution. All eight
+blocks completed with exit `0`, valid Job cleanup, four raw runs per block, and
+zero-byte runner stderr. The raw package contains 32/32 measured JSON files and
+115/115 manifest entries; every recorded byte count and SHA256 matches the
+file on disk. Canonical SHA256 values are analysis JSON
+`3db96ff50d7a7d435e85d09e04d271e879f03bc1136b82ff44caa708088e6272`,
+analysis Markdown
+`8eaf26475d91ca5ff64ab444ce56e5cf25cca93c64b003aa59a6516092f42b56`,
+raw manifest
+`83ad80a62d0c94cd537b301e5f3e6b0aeea26aa681d7c558e0e74f0b9ae589fd`,
+execute log
+`493b36091160379e45c93fbe80ac8433159d1f272b6c0fed2d9db6b23a183947`,
+and operator script
+`8aa39325fbee8d6dc57bda99c0bc25914f43a45883ffcfc29f630fd7c96d9a1e`.
+
+The power lifecycle completed all 11 events. Balanced GUID
+`381b4222-f694-41f0-9685-ff5bb260df2e` is active, temporary GUID
+`43e48295-98a5-4a6d-a46c-d38408fa7cbd` is absent, and cleanup reports
+`valid=true` with an empty error list. Both frozen detached measurement
+worktrees were clean, their `node_modules` junctions targeted the isolated P2
+dependency tree, and cleanup removed the junctions, worktrees, and registry
+entries. Ports 8000/8892 are clear and the rerun08 task-process count is zero.
+
+The terminal mapping now controls project status: P2 implementation remains
+verified; Williams performance acceptance remains unresolved; main integration,
+P2 completion, and archival stay closed. The isolated P2 branch/worktree and
+active documentation remain the recovery surface for a future explicit project
+decision. Parent checkout WIP is unchanged.

@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun08 is explicitly authorized under `p2-williams-rerun08-harness-recovery-v1`; the tracked power helper self-test and complete live lifecycle preflight are green. Root owns the sole live lane. The rerun08 dry plan and execute remain unused, and main integration stays closed until `accepted / exit 0`.
+Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun08 consumed its single dry plan and single execute under `p2-williams-rerun08-harness-recovery-v1`, returned terminal `invalid-experiment / exit 3`, and recorded zero regressions. The frozen terminal mapping ends P2 as implementation-complete/performance-unresolved. Main integration, completion, and archival remain closed; the pushed recovery branch and isolated P2 worktree stay available for a future explicit project decision.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -420,8 +420,19 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Add a tracked power helper and deterministic governance regression that remove `/list` from identity ownership and lock the complete 11-event lifecycle.
 - [x] Approve `p2-williams-rerun08-harness-recovery-v1` with frozen candidate/control/policy/role/workload/order/sample/threshold/estimator/quiet/terminal contracts.
 - [x] Commit and push the rerun08 governance checkpoint at `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`.
-- [ ] Create fresh exact detached candidate/control worktrees and verify clean identities plus dependency junctions.
-- [ ] Validate the rerun08 operator and its expected-failure deletion proof.
-- [ ] Run exactly one dry plan and one Williams execute with zero retry.
-- [ ] Record terminal analyzer, cleanup, hashes, power evidence, and worktree cleanup.
+- [x] Create fresh exact detached candidate/control worktrees and verify clean identities plus dependency junctions.
+- [x] Validate the rerun08 operator and its expected-failure deletion proof.
+- [x] Run exactly one dry plan and one Williams execute with zero retry.
+- [x] Record terminal analyzer, cleanup, hashes, power evidence, and worktree cleanup.
 - [ ] Open main integration only if rerun08 returns `accepted / exit 0`.
+- [x] Apply the frozen terminal mapping: rerun08 returned `invalid-experiment / exit 3`, so P2 ends implementation-complete/performance-unresolved and main integration remains closed.
+
+Terminal rerun08 evidence:
+
+- protocol `p2-williams-rerun08-harness-recovery-v1`; candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`
+- one dry plan, one execute, zero retry; execute exit `3`; analyzer `invalid-experiment`; `admitted=false`; `regressions=[]`
+- eight completed blocks; 32/32 measured raw JSON files; 115/115 manifest entries; every manifest byte count and SHA256 independently revalidated
+- analysis JSON SHA256 `3db96ff50d7a7d435e85d09e04d271e879f03bc1136b82ff44caa708088e6272`; raw manifest SHA256 `83ad80a62d0c94cd537b301e5f3e6b0aeea26aa681d7c558e0e74f0b9ae589fd`; operator SHA256 `8aa39325fbee8d6dc57bda99c0bc25914f43a45883ffcfc29f630fd7c96d9a1e`
+- invalidity is driven by preregistered CPU/telemetry admission, same-side drift, and one direction-veto check; the paired estimates remain diagnostic-only
+- original Balanced scheme `381b4222-f694-41f0-9685-ff5bb260df2e` restored; temporary scheme `43e48295-98a5-4a6d-a46c-d38408fa7cbd` deleted; 11/11 lifecycle events recorded; cleanup valid with zero errors
+- both detached measurement worktrees and their verified dependency junctions removed and pruned; ports 8000/8892 clear; rerun08 task process count zero; parent WIP unchanged
