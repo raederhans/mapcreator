@@ -269,6 +269,7 @@
     "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
     "test:node:verify-core-runner": "node --test tests/verify_core_runner_behavior.test.mjs",
     "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+    "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
     "verify:core:list": "node tools/run_core_verification.mjs --list",
     "verify:core": "node tools/run_core_verification.mjs",
     "verify:core:main-thread": "node tools/run_core_verification.mjs --include-main-thread",

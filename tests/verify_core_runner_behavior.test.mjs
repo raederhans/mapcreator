@@ -18,6 +18,8 @@ import {
 } from "../tools/run_core_verification.mjs";
 
 const PACKAGE_SCRIPTS = {
+  "test:node:city-points-render-owner": "node --test tests/city_points_render_owner_behavior.test.mjs tests/urban_city_policy_strategic_values_behavior.test.mjs",
+  "test:python:map-renderer-city-points-boundary": "npm run python -- -m unittest tests.test_map_renderer_urban_city_policy_boundary_contract tests.test_map_renderer_city_label_owner_boundary_contract -q",
   "verify:test:e2e-layers": "node tools/e2e_layering.mjs check",
   "verify:test-import-graph": "node tools/check_test_import_graph.mjs",
   "verify:architecture-boundaries": "node tools/check_architecture_boundaries.mjs",
@@ -27,6 +29,7 @@ const PACKAGE_SCRIPTS = {
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
   "verify:supervisor-plan": "npm run test:node:supervisor-plan && node tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tools/ai_test_supervisor/supervise_adaptive_verification.mjs --changed-file tests/supervisor_plan_behavior.test.mjs",
   "test:node:verification-metadata": "node --test tests/verification_metadata_behavior.test.mjs",
+  "test:node:renderer-pass-family-inventory": "node --test tests/renderer_pass_family_inventory_behavior.test.mjs",
   "test:node:render-sample-role-policy": "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",
   "test:node:williams-crossover-governance": "node --test tests/williams_crossover_governance_behavior.test.mjs",
   "test:node:williams-crossover-job-runner": "node --test tests/williams_crossover_windows_job_runner_behavior.test.mjs tests/williams_crossover_windows_job_runner_integration.test.mjs",
@@ -144,6 +147,7 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "verify:pages-dist",
     "verify:dist-drift",
     "test:node:verification-metadata",
+    "test:node:renderer-pass-family-inventory",
     "test:node:render-sample-role-policy",
     "test:node:williams-crossover-governance",
     "test:node:williams-crossover-job-runner",
@@ -186,6 +190,8 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
       "test:e2e:scenario-apply-concurrency",
       "test:e2e:project-save-load",
       "test:e2e:interaction-funnel",
+      "perf:williams-power-scheme:live-preflight",
+      "test:e2e:dev:scenario-chunk-runtime",
       "test:e2e:tno-contracts",
       "test:e2e:water-rendering",
       "test:e2e:city-rendering",
@@ -205,7 +211,13 @@ test("includeMainThread adds explicit E2E group and keeps optional E2E skipped",
   ]);
   assert.deepEqual(
     plan.skippedMainThreadCommands.map((entry) => entry.commandRef),
-    ["test:e2e:tno-contracts", "test:e2e:water-rendering", "test:e2e:city-rendering"],
+    [
+      "perf:williams-power-scheme:live-preflight",
+      "test:e2e:dev:scenario-chunk-runtime",
+      "test:e2e:tno-contracts",
+      "test:e2e:water-rendering",
+      "test:e2e:city-rendering",
+    ],
   );
 });
 

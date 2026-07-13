@@ -66,6 +66,67 @@ test("verification metadata validates against package scripts and supervisor dom
   );
 });
 
+test("P3.0 renderer pass family route is child-safe, exact, and part of renderer-owner", () => {
+  const expectedSourceRefs = [
+    "tools/renderer_pass_family_inventory.mjs",
+    "tests/renderer_pass_family_inventory_behavior.test.mjs",
+    "docs/active/renderer-pass-family-p3-20260713/plan.md",
+    "docs/active/renderer-pass-family-p3-20260713/context.md",
+    "docs/active/renderer-pass-family-p3-20260713/task.md",
+    "docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md",
+    "package.json",
+  ];
+  const entry = VERIFICATION_DOMAINS.find((candidate) => (
+    candidate.id === "verify-core:test:node:renderer-pass-family-inventory"
+  ));
+
+  assert.deepEqual(entry, {
+    id: "verify-core:test:node:renderer-pass-family-inventory",
+    commandRef: "test:node:renderer-pass-family-inventory",
+    commandType: "package-script",
+    packageScriptRequired: true,
+    sourceRefs: expectedSourceRefs,
+    domain: "renderer-runtime",
+    ownerHint: "renderer-runtime",
+    layer: "contract",
+    cost: "fast",
+    resourceLocks: [],
+    executionOwner: "child-safe",
+    ciProfile: "pr-fast",
+    verifyCoreDefaultGroup: "renderer-owner",
+    supervisorDomain: "renderer-runtime",
+    routeRegistry: true,
+  });
+  assert.deepEqual({
+    total: VERIFICATION_DOMAINS.length,
+    routes: buildVerificationMetadataRoutes().length,
+    defaults: commandRefsFromGroups(buildVerifyCoreDefaultGroups()).length,
+    mainThread: buildVerifyCoreMainThreadGroup().commands.length,
+    optionalMainThread: getVerifyCoreOptionalMainThreadCommands().length,
+  }, {
+    total: 82,
+    routes: 41,
+    defaults: 70,
+    mainThread: 4,
+    optionalMainThread: 5,
+  });
+
+  for (const sourceRef of expectedSourceRefs.filter((candidate) => candidate !== "package.json")) {
+    const report = buildRecommendation([sourceRef]);
+    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
+    assert.equal(
+      report.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      true,
+      `${sourceRef} should select the inventory contract`,
+    );
+  }
+  const unrelatedReport = buildRecommendation(["tests/render_pass_catalog_behavior.test.mjs"]);
+  assert.equal(
+    unrelatedReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+    false,
+  );
+});
+
 test("verify-core default plan is generated from verification metadata", () => {
   const packageJson = readJson("package.json");
   const metadataDefaultRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());
