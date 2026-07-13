@@ -889,7 +889,21 @@ async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) 
   let lastHit = null;
   for (const point of points) {
     await clearDevSelectedHit(page);
-    await page.mouse.click(point.x, point.y);
+    const actionStartedAt = await page.evaluate(async () => {
+      const { state } = await import("/js/core/state.js");
+      const previousActionAt = Number(state.renderPassCache?.lastActionAt || 0);
+      while (Date.now() <= previousActionAt) {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+      }
+      return Date.now();
+    });
+    // Ctrl-selection prevents candidate retries from writing sovereignty paint changes.
+    await page.keyboard.down("Control");
+    try {
+      await page.mouse.click(point.x, point.y);
+    } finally {
+      await page.keyboard.up("Control");
+    }
     lastHit = await waitForDevSelectedHit(page, {
       timeout: 720,
       polling: 120,
@@ -898,7 +912,23 @@ async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) 
       rejectPrefixes: acceptAnyHit ? HELPER_PREFIXES : [],
     });
     if (lastHit) {
-      return { point, hit: lastHit };
+      const selectionAction = await page.evaluate(async (notBefore) => {
+        const { state } = await import("/js/core/state.js");
+        const cache = state.renderPassCache || {};
+        const action = String(cache.lastAction || "").trim();
+        const actionAt = Number(cache.lastActionAt || 0);
+        return {
+          action,
+          actionAt,
+          observed: actionAt >= Number(notBefore || 0)
+            && (action === "dev-selection-toggle" || action === "dev-selection-sync"),
+        };
+      }, actionStartedAt);
+      expect(
+        selectionAction.observed,
+        `Expected readonly dev-selection action for ${featureId}; got ${JSON.stringify(selectionAction)}`,
+      ).toBe(true);
+      return { point, hit: lastHit, selectionAction };
     }
   }
   throw new Error(`Failed to click feature ${featureId}; lastHit=${JSON.stringify(lastHit || null)}`);
@@ -1089,6 +1119,8 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
     await expect.poll(async () => (await readDevSelectedHit(page))?.id || "", { timeout: 30000 }).toBe(probe.featureId);
     const hit = await readDevSelectedHit(page);
     expect(hit?.countryCode || "").toBe(probe.ownerCode);
+    const runtimeAfterClick = await readLandFeatureRuntime(page, probe.featureId);
+    expect(runtimeAfterClick.ownerCode).toBe(probe.ownerCode);
     const patch = await sampleCanvasPatchAtPagePoint(page, clickPoint, 6);
     expect(patch).not.toBeNull();
     probeResults.push({
@@ -1097,6 +1129,7 @@ test("tno atlantropa welded donor islands stay clickable and mediterranean sea u
       ownerCode: probe.ownerCode,
       clickPoint,
       runtime,
+      runtimeAfterClick,
       hit,
       patch,
     });
