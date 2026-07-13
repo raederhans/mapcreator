@@ -18,7 +18,7 @@ Date: 2026-07-10
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
 - current task phase: rerun08 completed its sole dry plan and sole execute under `p2-williams-rerun08-harness-recovery-v1`; the analyzer returned terminal `invalid-experiment / exit 3`, `admitted=false`, and `regressions=[]`; P2 is implementation-complete/performance-unresolved and the main integration gate remains closed
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch is pushed through rerun08 operator/governance checkpoint `914f4828d5d3004bcd5e05c75ef9192e1726c84d`; rerun08 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, evidence integrity, and power cleanup were verified; the control overlay branch remains recoverable at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch has terminal closeout committed and pushed at `faf79f04`; rerun08 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, evidence integrity, and power cleanup were verified; the control overlay branch remains recoverable at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580`; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -57,7 +57,7 @@ Date: 2026-07-10
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
 - P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun08 consumed the frozen experiment and returned terminal `invalid-experiment / exit 3`
 - Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE`; formal integration remains `BLOCK` under the frozen rerun08 terminal mapping
-- Integration / push / cleanup: the frozen rerun08 mapping closes main integration after `invalid-experiment / exit 3`; the recovery branch is pushed through `914f4828d5d3004bcd5e05c75ef9192e1726c84d` before terminal closeout; the isolated P2 worktree and active docs remain retained as recoverable evidence
+- Integration / push / cleanup: the frozen rerun08 mapping closes main integration after `invalid-experiment / exit 3`; terminal closeout is committed and pushed at `faf79f04`; the isolated P2 worktree and active docs remain retained as recoverable evidence
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
 
