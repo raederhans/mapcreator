@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   WILLIAMS_ADJACENT_PAIRS,
@@ -1207,4 +1209,82 @@ test("harness source keeps Windows capability tri-state and explicit execute mod
   assert.match(runnerSource, /mode: "list"/);
   assert.match(runnerSource, /options\.mode === "execute"/);
   assert.match(runnerSource, /prepareWindowsJobRunner/);
+});
+
+test("rerun08 governance uses query and active GUID identity without list-delta ownership", async () => {
+  const governanceSource = await fs.readFile(
+    new URL(
+      "../docs/active/renderer-frame-orchestration-p2-20260710/rerun08-harness-recovery-governance.md",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(governanceSource, /p2-williams-rerun08-harness-recovery-v1/);
+  assert.match(governanceSource, /powercfg \/duplicatescheme SCHEME_MIN <destination-guid>/);
+  assert.match(governanceSource, /powercfg \/query <temporary-guid>/);
+  assert.match(governanceSource, /powercfg \/setactive <temporary-guid>/);
+  assert.match(governanceSource, /powercfg \/getactivescheme/);
+  assert.match(governanceSource, /diagnostic-only/);
+  assert.match(governanceSource, /one dry plan, one execute, and zero retry/);
+  assert.match(governanceSource, /Every rerun08 result is terminal/);
+  assert.doesNotMatch(governanceSource, /exactly one new scheme.*\/list/is);
+  assert.doesNotMatch(governanceSource, /\/list.*identity owner/is);
+});
+
+test("tracked power helper locks the rerun08 GUID lifecycle and deletion proof", async () => {
+  const helperUrl = new URL("../tools/perf/williams_crossover_power_scheme.ps1", import.meta.url);
+  const helperPath = fileURLToPath(helperUrl);
+  const helperSource = await fs.readFile(helperUrl, "utf8");
+  const expectedSequence = [
+    "capabilities",
+    "original-active",
+    "duplicate",
+    "query-created",
+    "activate",
+    "temporary-active",
+    "restore",
+    "restored-active",
+    "delete-temporary",
+    "query-deleted",
+    "query-original-after-delete",
+  ];
+  const actionIndexes = expectedSequence.map((action) =>
+    helperSource.indexOf(`-Action '${action}'`),
+  );
+  assert.equal(actionIndexes.every((index) => index >= 0), true);
+  assert.equal(
+    actionIndexes.every((index, position) => position === 0 || index > actionIndexes[position - 1]),
+    true,
+  );
+  assert.match(helperSource, /returnedGuid -ne \$session\.temporaryGuid/);
+  assert.match(helperSource, /activeGuid -ne \$session\.temporaryGuid/);
+  assert.match(helperSource, /restoredGuid -ne \$Session\.originalGuid/);
+  assert.match(helperSource, /ExpectedOutcome 'failure'/);
+  assert.match(helperSource, /absenceClassification = 'scheme-absent'/);
+  const livePreflightStart = helperSource.indexOf("function Invoke-WilliamsPowerSchemeLivePreflight");
+  const livePreflightEnd = helperSource.indexOf("if ($SelfTest)", livePreflightStart);
+  assert.ok(livePreflightStart >= 0 && livePreflightEnd > livePreflightStart);
+  assert.match(
+    helperSource.slice(livePreflightStart, livePreflightEnd),
+    /finally \{[\s\S]*Stop-WilliamsTemporaryPowerScheme/,
+  );
+  assert.doesNotMatch(helperSource, /['"]\/list['"]/);
+
+  if (process.platform === "win32") {
+    const result = spawnSync(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helperPath, "-SelfTest"],
+      { encoding: "utf8", windowsHide: true },
+    );
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.lifecycleSucceeded, true);
+    assert.equal(report.cleanupValid, true);
+    assert.equal(report.queryDeletedExitCode, 1);
+    assert.equal(report.absenceClassification, "scheme-absent");
+    assert.deepEqual(report.commandSequence, expectedSequence);
+    assert.equal(report.events.some((event) => event.arguments.includes("/list")), false);
+  }
 });

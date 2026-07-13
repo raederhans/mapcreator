@@ -16,9 +16,9 @@ Date: 2026-07-10
 - current telemetry-v3 functional checkpoint: `26b1115cc3fe1e66200661e195a4c5abbf4d4c05`; policy/runtime/tests and their review evidence are committed
 - current P2.2b production checkpoint: `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; production, deterministic, Pages, browser matrix, and `perf:gate` acceptance are green
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
-- current task phase: rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution; the sole dry plan succeeded, execute count is zero, and P2 performance acceptance remains unresolved
+- current task phase: rerun08 harness recovery is explicitly authorized under `p2-williams-rerun08-harness-recovery-v1`; its tracked power helper and complete live lifecycle preflight are green; the sole rerun08 dry plan and execute remain unused
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch has terminal-truth checkpoint `72ccbc3a` and remains tracked-clean; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch is based on pushed checkpoint `d429b979` and contains the pending rerun08 governance package; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -34,7 +34,7 @@ Date: 2026-07-10
 
 ## Live-process ownership
 
-- live-process owner: none; rerun07 completed one dry plan, issued zero execute commands, restored the original Balanced power scheme, removed the temporary scheme, and consumed the final experiment authorization
+- live-process owner: root integration agent; root exclusively owns rerun08 power, quiet, browser, telemetry, Job Object, Williams execute, and cleanup; all other agents remain static-only
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
@@ -55,9 +55,9 @@ Date: 2026-07-10
 - Clean baseline: perf measurement completed and gate is red on April-baseline thresholds
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
-- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun07 ended in a terminal pre-execute harness fault and supplies no Williams performance verdict
+- P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun08 is authorized to resolve the remaining Williams performance gate through one frozen experiment
 - Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE` and formal integration `BLOCK` under the frozen rerun07 terminal mapping
-- Integration / push / cleanup: main integration is closed by the rerun07 terminal mapping; the recovery branch is pushed through `d508e00698cec84b707b589ec0163a07014ebf61`; the isolated P2 worktree remains retained for recovery and audit
+- Integration / push / cleanup: main integration remains closed until rerun08 returns `accepted / exit 0`; the recovery branch is pushed through `d429b97946956f9abe9824037b513c1ab8dbdccb`; the isolated P2 worktree remains retained for the governed experiment
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
 
@@ -522,3 +522,36 @@ High performance scheme, a fixed 120-second quiet interval, fresh detached
 worktrees, one dry plan, one execute, and zero retry. Exit `0` opens P2 closeout;
 exit `2`, `3`, or `1` ends the P2 acceptance lane under its recorded terminal
 classification. Rerun07 receives no repetition.
+
+## Rerun08 harness-recovery governance 2026-07-13
+
+Three independent static reviews agreed that rerun07 failed before measurement
+because its temporary-scheme identity depended on an extra `/list` set-delta
+assertion. The returned GUID was sufficient for query, activation, restore, and
+deletion. Repository governance permits the integration owner to issue a new
+explicit decision while every measurement and acceptance contract stays frozen.
+
+The new governing record is
+`rerun08-harness-recovery-governance.md`, protocol
+`p2-williams-rerun08-harness-recovery-v1`. Candidate `9479e9e6`, control
+`bd98c580`, policy v4, role v2, block order, samples, thresholds, estimator,
+120-second quiet interval, Job Object isolation, and terminal mapping remain
+unchanged. Rerun08 permits one dry plan, one execute, and zero retry; every
+result is terminal.
+
+The current host reports S0 Low Power Idle. The tracked helper's fresh
+no-measurement lifecycle preflight generated GUID
+`48e07b9c-8653-460a-aee8-f997e862c009`, duplicated
+`SCHEME_MIN` to that exact GUID, queried it, activated it, verified the active
+GUID, restored Balanced `381b4222-f694-41f0-9685-ff5bb260df2e`, deleted the
+temporary GUID, and ended with `lifecycleSucceeded=true` and
+`cleanupValid=true`. The report is
+`.runtime/reports/generated/p2-2b-williams-rerun08-power-preflight-v3.json`,
+SHA256
+`85b4c6d374fd9c0018529d7851bd75f3619e508e2244852e52838383cfb5082f`.
+Its 11 recorded events include `powercfg /a`, creation query, activation,
+restore, delete, the post-delete expected-failure query classified
+`scheme-absent`, and a final successful query of the original Balanced scheme.
+
+Root is the sole live-process owner for rerun08. Other agents remain static.
+Main integration stays closed until the analyzer returns `accepted / exit 0`.

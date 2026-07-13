@@ -2,7 +2,7 @@
 
 Date: 2026-07-10
 
-Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution. The sole dry plan succeeded, execute count is zero, performance acceptance remains unresolved, and main integration stays closed pending a new explicit governance decision.
+Current status: P2.2b implementation is committed at `9479e9e6`. Deterministic, Pages, browser matrix, and `perf:gate` acceptance are green. Rerun08 is explicitly authorized under `p2-williams-rerun08-harness-recovery-v1`; the tracked power helper self-test and complete live lifecycle preflight are green. Root owns the sole live lane. The rerun08 dry plan and execute remain unused, and main integration stays closed until `accepted / exit 0`.
 
 ## P2.0 docs-only truth reconciliation
 
@@ -410,3 +410,18 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Re-run the offline analyzer and confirm stable governed JSON/Markdown hashes while preserving the original legacy report hash.
 - [x] Mark the isolated lane `ready-for-P2.2a`; browser/dev-server/Playwright/live-perf execution remains assigned to the later single-owner acceptance lane.
 - [x] Repair the stale P53 acceptance-lane sentence exposed by the first clean-head `verify:core` attempt; keep the current P2.2a document and production runtime unchanged.
+
+## Williams rerun08 harness-recovery authorization 2026-07-13
+
+- [x] Preserve rerun07 as immutable terminal `harness fault / exit 1` evidence.
+- [x] Complete three independent static reviews of governance, harness root cause, and integration readiness.
+- [x] Confirm repository governance permits a new integration-owner decision while measurement and acceptance contracts stay frozen.
+- [x] Reproduce the host power lifecycle under S0 Low Power Idle: generated GUID duplicate, query, activate, active-GUID match, restore, delete, expected-failure deletion query, original-scheme query, and valid cleanup.
+- [x] Add a tracked power helper and deterministic governance regression that remove `/list` from identity ownership and lock the complete 11-event lifecycle.
+- [x] Approve `p2-williams-rerun08-harness-recovery-v1` with frozen candidate/control/policy/role/workload/order/sample/threshold/estimator/quiet/terminal contracts.
+- [ ] Commit and push the rerun08 governance checkpoint.
+- [ ] Create fresh exact detached candidate/control worktrees and verify clean identities plus dependency junctions.
+- [ ] Validate the rerun08 operator and its expected-failure deletion proof.
+- [ ] Run exactly one dry plan and one Williams execute with zero retry.
+- [ ] Record terminal analyzer, cleanup, hashes, power evidence, and worktree cleanup.
+- [ ] Open main integration only if rerun08 returns `accepted / exit 0`.

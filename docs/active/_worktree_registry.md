@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-13 P2.2b renderer implementation has final code, architecture, and UltraQA approval. Clean-head Pages/dist/core is green at terminal-truth checkpoint `72ccbc3a` with `verify:core` 67/67. The recovery branch is pushed through `d508e006`. Williams rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution. Performance acceptance remains unresolved, main integration stays closed, and the P2 branch is preserved as a recovery/audit branch. Parent WIP remains untouched.
+Last updated: 2026-07-13 P2.2b renderer implementation has final code, architecture, and UltraQA approval. Clean-head Pages/dist/core is green at terminal-truth checkpoint `72ccbc3a` with `verify:core` 67/67. The recovery branch is pushed through `d429b979`. Williams rerun07 remains terminal `harness fault / exit 1`. Rerun08 is explicitly authorized with frozen product, policy, threshold, workload, sample, order, identity, and terminal contracts. The tracked helper's Modern Standby lifecycle preflight completed all 11 identity and cleanup events with exit 0. Root owns the single rerun08 live lane. Main integration remains closed until rerun08 returns `accepted / exit 0`. Parent WIP remains untouched.
 
 ## Integration Owner
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-13 P2.2b renderer implementation has final code, architect
 - Verification owner: the root Codex thread completed a fresh clean P1.5 `npm run verify:core` run at `a8f71822`; it exited 0 with 53/53 commands, including `verify:pages-dist` and `verify:dist-drift`. Browser/dev-server/Playwright and `verify:core:main-thread` remain explicit unrun lanes.
 - Current continuation owner: the root Codex thread completed P1.5-P1.8/Closeout live verification. Other agents stayed static-only while live processes existed.
 - Cleaned continuation worktree: `C:\Users\raede\.codex\worktrees\mapcreator-p1-remaining-20260709` is removed; recovery remains through remote branch `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`.
-- live process owner: none. Root completed clean-head core, main-thread/browser, city, Pages/dist, `perf:gate`, and terminal rerun07 cleanup. Williams execution count for rerun07 is zero and the final authorization is consumed.
+- live process owner: root integration agent owns the single rerun08 preparation and execution lane. Other agents are static-only. Root previously completed clean-head core, main-thread/browser, city, Pages/dist, `perf:gate`, and terminal rerun07 cleanup.
 - Integration setup owner: `/root/ralplan_critic`; Architect and Critic approved the continuation plan.
 
 ## Recommended Order
@@ -21,7 +21,7 @@ Last updated: 2026-07-13 P2.2b renderer implementation has final code, architect
 3. Keep `drawCanvas()`, cached pass composition, transformed frame composition, render order, public facade, UI, CSS, scenario data, and production owner algorithms behavior-stable across P2.
 4. Treat `codex/stale-main-wip-preserve-20260708` as the recovery snapshot for old-base parent WIP.
 5. Preserve unmerged retained branches for separate integration review: `codex/hgo-preview-projection-base-replace`, `codex/wgi-post-push-truth-20260622`, `codex/preserve-parent-wip-before-branch-cleanup-20260623`, and remote `origin/codex/tno-toponym-zh-audit`.
-6. Keep browser/dev-server/Playwright and perf under single-owner execution. Rerun01 through rerun07 remain immutable terminal evidence. Rerun07 ended at the pre-execute harness boundary, receives zero repetition, and keeps P2 main integration closed until a new explicit governance decision exists.
+6. Keep browser/dev-server/Playwright and perf under single-owner execution. Rerun01 through rerun07 remain immutable terminal evidence. Run the single governed rerun08 under `p2-williams-rerun08-harness-recovery-v1`; only `accepted / exit 0` opens P2 main integration.
 
 ## Current Worktrees
 
@@ -30,7 +30,16 @@ Current rows reflect the two registered local worktrees: the dirty parent checko
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` — dirty parent checkout | `main@db8bd6c118d158aaed4dd6734ecdd981fe80f326`; `0 ahead / 17 behind origin/main@17aeedf` | old parent baseline; retains existing WIP | `in-progress`; preserved dirty parent | Current read-only snapshot has 52 `docs/archive/**` deletions plus modified `README.zh-CN.md`, `dist/app.js`, `dist/pages-dist-manifest.json`, `landing/app.js`, and `lessons learned.md` (57 entries total). | Rerun02 cleanup captured 48 entries. Subsequent unrelated parent work produced the current 57-entry snapshot; the P2 worktree has not written to the parent checkout. | Red for direct integration because parent is behind 17 and dirty. | Keep untouched; split or reconcile in a separate parent-WIP task. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated recovery lane | branch `codex/renderer-frame-orchestration-p2-20260710`; pushed recovery checkpoint `d508e006`, followed by this final evidence record | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `blocked`; implementation verified, performance acceptance stopped by terminal harness fault | Hot files: renderer owners, `map_renderer.js`, P2 control docs, verification metadata, tests, and Pages mirror. Parent WIP remains untouched. | Clean-head Pages/dist/core exit 0; `verify:core` 67/67; main-thread 71/71; scenario 3/3; physical 1/1; TNO 2/2; water 12/12; post-repair city 8/8; final perf log reports PASS. Rerun07: dry plan 1, execute 0, cleanup valid. | Red for main integration under current governance; yellow for registry/docs/metadata overlap; green for parent WIP. | Retain this worktree and await a new governance decision for any future integration path. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-renderer-frame-orchestration-p2-20260710` — P2 isolated recovery lane | branch `codex/renderer-frame-orchestration-p2-20260710`; pushed recovery checkpoint `d429b979`; rerun08 governance package pending commit | original P2 base `origin/main@b14165c0e693a87872361b87ac78dc31cd7a0155`; latest upstream release audit merged | `in-progress`; implementation verified, rerun08 performance acceptance authorized | Hot files: renderer owners, `map_renderer.js`, P2 control docs, verification metadata, tests, and Pages mirror. Parent WIP remains untouched. | Clean-head Pages/dist/core exit 0; `verify:core` 67/67; main-thread 71/71; scenario 3/3; physical 1/1; TNO 2/2; water 12/12; post-repair city 8/8; final perf log reports PASS. Rerun08 tracked power helper self-test and complete live lifecycle preflight exit 0. | Red for main integration until rerun08 returns accepted; yellow for registry/docs/metadata overlap; green for parent WIP. | Root commits the governance package, executes the single governed rerun08, then integrates only on `accepted / exit 0`. |
+
+## Williams Rerun08 Harness-Recovery Authorization 2026-07-13
+
+1. Governance: `rerun08-harness-recovery-governance.md`; protocol `p2-williams-rerun08-harness-recovery-v1`; one dry plan, one execute, zero retry; every result terminal.
+2. Frozen identities: candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; policy `p2-williams-crossover-v4`; role policy `render-sample-role-v2`.
+3. Correction boundary: a generated destination GUID owns duplicate/query/activate/get-active/restore/delete/query-absent identity. `/list` is diagnostic-only.
+4. Reproduced capability: S0 Low Power Idle host; the tracked helper completed all 11 lifecycle events, including post-delete expected-failure query and original-scheme query; final active scheme returned to Balanced; report `.runtime/reports/generated/p2-2b-williams-rerun08-power-preflight-v3.json`, SHA256 `85b4c6d374fd9c0018529d7851bd75f3619e508e2244852e52838383cfb5082f`.
+5. Live ownership: root integration agent owns all rerun08 power, quiet, browser, telemetry, Job Object, and Williams processes. Other agents remain static-only.
+6. Integration gate: only `accepted / exit 0` opens main integration, archival, push, and cleanup.
 
 ## Williams Rerun07 Terminal Harness-Fault Package 2026-07-13
 
