@@ -32,7 +32,7 @@ Current truth contains the dirty parent checkout. The isolated audit worktree an
 
 1. Changes: repaired transformed-pass diagnostics on both compositor paths; extracted urban strategic-value policy from the renderer; made Williams power-scheme ownership, GUID mismatch handling, replay, telemetry, and policy adjudication auditable; tightened render-sample validation and verification routing.
 2. Files: core files are `js/core/map_renderer.js`, `js/core/renderer/cached_pass_compositor_owner.js`, `js/core/renderer/urban_city_policy.js`, and `tools/perf/**`; tests are the related Node, Python boundary, and Scenario E2E contracts; control files are `package.json`, verification registries, `tools/eslint-rules/state-writer-allowlist.json`, this registry, and checked-in `dist/**` mirrors; disposable evidence stays under `.runtime/**`.
-3. Diff from base: 32 tracked files, 2,427 insertions, 223 deletions after the final security and verification-metadata repairs; production work is concentrated in compositor diagnostics, urban policy ownership, and Williams measurement governance.
+3. Diff from base: functional checkpoint `76af9f68` changes 32 tracked files with 2,427 insertions and 223 deletions; the full integrated chain through the control-plane closeout changes the same 32 files with 2,429 insertions and 225 deletions. Production work is concentrated in compositor diagnostics, urban policy ownership, and Williams measurement governance.
 4. Commit state: functional Lore checkpoint `76af9f681f781a90f411995c40b7c64582650f64` is pushed to `origin/main`.
 5. Divergence: the functional checkpoint was one commit ahead and zero behind refreshed `origin/main@e195a4531a08870f45c2a3dac00b6ab52ad620fc`; the push fast-forwarded remote `main` to `76af9f681f781a90f411995c40b7c64582650f64`.
 6. Overlap: the dirty parent directly overlaps `docs/active/_worktree_registry.md`, `dist/pages-dist-manifest.json`, and other generated Pages surfaces; integration therefore proceeds from this isolated worktree directly to remote main.
@@ -52,7 +52,7 @@ Current truth contains the dirty parent checkout. The isolated audit worktree an
 
 ## Williams Rerun08 Harness-Recovery Frozen Contract 2026-07-13
 
-Historical record: the Williams sections below preserve the gate state at each experiment checkpoint. The project owner's final integration decision in lines 30-37 supersedes their phase-local integration and archival actions.
+Historical record: the Williams sections below preserve the gate state at each experiment checkpoint. The `P2 final integration decision 2026-07-13` section supersedes their phase-local integration and archival actions.
 
 1. Governance: `rerun08-harness-recovery-governance.md`; protocol `p2-williams-rerun08-harness-recovery-v1`; one dry plan, one execute, zero retry; every result terminal.
 2. Frozen identities: candidate `9479e9e6ff8d4b2fa8ba969fdc7b7e2f341d2d40`; control `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; policy `p2-williams-crossover-v4`; role policy `render-sample-role-v2`.
