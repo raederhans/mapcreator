@@ -419,7 +419,7 @@ Deterministic completion note: owner 14/14, P53 8/8, Python boundary 5/5, render
 - [x] Reproduce the host power lifecycle under S0 Low Power Idle: generated GUID duplicate, query, activate, active-GUID match, restore, delete, expected-failure deletion query, original-scheme query, and valid cleanup.
 - [x] Add a tracked power helper and deterministic governance regression that remove `/list` from identity ownership and lock the complete 11-event lifecycle.
 - [x] Approve `p2-williams-rerun08-harness-recovery-v1` with frozen candidate/control/policy/role/workload/order/sample/threshold/estimator/quiet/terminal contracts.
-- [ ] Commit and push the rerun08 governance checkpoint.
+- [x] Commit and push the rerun08 governance checkpoint at `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`.
 - [ ] Create fresh exact detached candidate/control worktrees and verify clean identities plus dependency junctions.
 - [ ] Validate the rerun08 operator and its expected-failure deletion proof.
 - [ ] Run exactly one dry plan and one Williams execute with zero retry.

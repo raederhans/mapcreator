@@ -18,7 +18,7 @@ Date: 2026-07-10
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
 - current task phase: rerun08 harness recovery is explicitly authorized under `p2-williams-rerun08-harness-recovery-v1`; its tracked power helper and complete live lifecycle preflight are green; the sole rerun08 dry plan and execute remain unused
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch is based on pushed checkpoint `d429b979` and contains the pending rerun08 governance package; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch has pushed rerun08 governance checkpoint `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -555,3 +555,10 @@ restore, delete, the post-delete expected-failure query classified
 
 Root is the sole live-process owner for rerun08. Other agents remain static.
 Main integration stays closed until the analyzer returns `accepted / exit 0`.
+
+The governance package is committed and pushed at `c1671a95466e8801e32eaa4d193f4d0264d6a6b9`.
+Fresh verification reports Williams governance 36/36, metadata 16/16, route
+schema 302, adaptive selection 7 changed files / 23 recommendations / zero
+unmatched, and three independent static reviews at CLEAR. The adaptive execute
+entry stopped before execution because its plan includes protected main-thread
+performance lanes; the governed operator remains the sole owner of those lanes.
