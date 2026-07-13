@@ -18,7 +18,7 @@ Date: 2026-07-10
 - current Williams control overlay: `bd98c5800ac5cca2a93d7f55ac1b0a254ca5028f`; candidate/control share the frozen package-lock, baseline-runner, and role-policy-v2 blobs
 - current task phase: rerun07 consumed the final capped authorization and ended as terminal `harness fault / exit 1` before quiet time or Williams execution; the sole dry plan succeeded, execute count is zero, and P2 performance acceptance remains unresolved
 - current acceptance test-contract commit: `427e68398a67586ef4a330b5304dfde567da917e`
-- current worktree state: isolated P2 recovery branch is at `233ff550`; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
+- current worktree state: isolated P2 recovery branch has terminal-truth checkpoint `72ccbc3a` and remains tracked-clean; rerun07 detached candidate/control worktrees and verified dependency junctions are removed and pruned after exact identities, clean status, power cleanup, and immutable evidence hashes were verified; the control overlay branch is pushed at `origin/codex/williams-rerun06-control-role-v2-20260712@bd98c580` and its support worktree is removed; parent WIP remains untouched
 - release residue worktree: removed/no longer registered on 2026-07-11; recovery evidence remains commit `b14165c0e693a87872361b87ac78dc31cd7a0155`
 - P1 isolated worktree: removed
 - P1 recovery branch: `origin/codex/renderer-runtime-context-p1-remaining-20260709@e102a70a`
@@ -38,8 +38,8 @@ Date: 2026-07-10
 - historical expected-red owner path: `/root/p2_baseline_test_fix`
 - log root: `.runtime/tests/renderer-frame-orchestration-p2-20260710/`
 - focused browser evidence: historical 2/5 after committed test-only repair `28bda618`, confirming a production disclosure race
-- main-thread evidence: remains the prior `f5f27d3f` evidence; this closeout did not rerun main-thread
-- perf baseline: red at `61e090388feb0c69887b9947b55b61968d5324de`; readiness green, threshold acceptance blocked
+- main-thread evidence: current product tree passed `verify:core:main-thread` 71/71; scenario resilience 3/3, physical runtime 1/1, TNO 2/2, water 12/12, and the post-repair city lane 8/8 are green
+- perf evidence: the final `p2-2b-perf-gate-final.log` reports `Perf gate passed against docs\perf\baseline_2026-04-20.json`; its SHA256 is `98796574bd75ed3647cd4d42d7da654556031769bd4e4f626917d4cb1908507e`; this standalone invocation did not emit a separate exit-code artifact
 - clean-head `npm run verify:core` exited 0 with 66/66 at candidate `6a2fad24`; log `.runtime/output/perf/p2-2a-williams-live-20260712-rerun02/preflight/verify-core.log`, SHA256 `c21f6e97aff7d9a5c0a6cfc0a84459991db172bed72653a3870af35b81a686de`; rerun02 then used exactly one governed execute invocation and no retry
 - telemetry-v2 focused evidence at `89dfe15e`: governance 32/32; default Job runner 10 pass plus one explicit live skip; explicit live telemetry lane 2/2; metadata 16/16; core-runner 8/8; perf-gate contract 23/23; render-role 17/17; route schema 299; architecture/state/import/supervisor gates green; adaptive dry-run 9 changed files, 198 recommendations, 8 main-thread lanes, 0 unmatched
 - telemetry-v2 clean-head evidence at `2e05d5a8`: `npm run verify:core` passed 66/66 with zero failures; the explicit live Windows cadence lane passed 2/2 in 9.28 seconds. Logs: `.runtime/tests/renderer-frame-orchestration-p2-20260710/williams-telemetry-v2/01-clean-head-verify-core.log` and `02-live-telemetry.log`.
@@ -56,7 +56,7 @@ Date: 2026-07-10
 - P2.1 draw canvas orchestration owner: committed at `cc6477e0111568091a8665f76fa13d1083c67426`; clean-head dist/core verification is green; waiver authorizes separate P2.1 acceptance only
 - P2.2a cached pass compositor owner: accepted-test candidate `8eda8c5ce19f54fd839e72e3031a2424a4e658f3`; focused/Pages/dist/core and browser gates complete; first performance evidence classified `invalid-environment-regime`; replacement rerun02 classified `invalid-experiment / multiple-admission-failures`
 - P2.2b transformed frame compositor owner: committed at `9479e9e6`; deterministic, Pages, browser matrix, and `perf:gate` acceptance are green; rerun07 ended in a terminal pre-execute harness fault and supplies no Williams performance verdict
-- Review / UltraQA: rerun07 evidence and governance reviews classify the terminal state as trustworthy `exit 1 / harness fault`; final branch closeout review follows the terminal-truth commit
+- Review / UltraQA: final code review reports zero blocker and `APPROVE`; first-principles architecture review reports renderer implementation `CLEAR`; evidence/UltraQA review reports implementation `APPROVE` and formal integration `BLOCK` under the frozen rerun07 terminal mapping
 - Integration / push / cleanup: main integration is closed by the rerun07 terminal mapping; recovery-branch push and support-worktree cleanup remain authorized
 
 ## Williams rerun07 terminal harness-fault record 2026-07-13
@@ -72,6 +72,16 @@ The `finally` path restored original Balanced GUID `381b4222-f694-41f0-9685-ff5b
 The governance terminal mapping classifies this result as `exit 1 / harness fault`. Every rerun07 result is terminal and the authorization allows zero repetition. P2 implementation remains verified by deterministic, Pages, browser-matrix, and `perf:gate` evidence. Williams performance acceptance remains unresolved. Main integration, ready-for-merge status, P2 completion, and task archival stay closed. The P2 branch and control overlay may be pushed as recovery/audit branches.
 
 Cleanup removed both rerun07 detached measurement worktrees and their verified dependency junctions, then pruned worktree metadata. The tracked-clean control overlay branch was pushed at `bd98c580`; its support worktree was then removed and pruned. The isolated P2 implementation worktree remains registered because the branch is not integrated. The dirty parent checkout remains unchanged.
+
+## Final recovery-branch verification 2026-07-13
+
+The tracked-clean terminal-truth checkpoint `72ccbc3a71cbc4bbea386af867eab67cd8f1bfb0` ran the required sequence `verify:pages-dist -> verify:dist-drift -> verify:core` under one root-owned live process. The sequence exited `0`. The final core report contains 67 results, every result has exit code `0`, and seven main-thread lanes remain intentionally outside the deterministic core plan. Report: `.runtime/reports/generated/verify-core.json`, SHA256 `70947a928c08fa6f0735b321ef2cfcd5f7cf23cfe25bc973b161fdcb5b661f2b`. Combined stdout: `.runtime/tests/renderer-frame-orchestration-p2-20260710/terminal-closeout/clean-head-gates.stdout.log`, SHA256 `bb853b56e460c574a1f28fff713f921f33852fae9a16153b73fea6d9d73310dd`. The post-run P2 worktree remained tracked-clean.
+
+Browser evidence is bound to the same final product source tree. `p2-2b-browser-matrix-summary.log` preserves the first city attempt as `exit=1`; the later authoritative repair result is `p2-2b-city-rendering-final.stdout.log`, which passed 8/8. The other authoritative browser results remain main-thread 71/71, scenario resilience 3/3, physical runtime 1/1, TNO 2/2, and water 12/12. The final performance-gate log reports PASS; its separate exit-code artifact was not written, so the log text and hash are the exact available evidence.
+
+Three independent read-only closeout reviews found zero renderer-code blocker. Code review approved frame order, cached-pass math, transformed-frame behavior, source/dist parity, and composition-root writes. First-principles review confirmed `RendererRuntimeContext` is unchanged, public facade and state-write allowlist have zero P2 diff, and pass authority remains in the existing catalog/pipeline. Evidence/UltraQA review approved implementation completion and retained the formal integration block. Architecture counting is `23,473 -> 23,269`, a 204-line reduction, with the enforced ceiling at 23,269.
+
+Fresh ancestry verification after `git fetch origin --prune` records `origin/main@17aeedf5b295d08fe08965fa5d6f89b0dfb6426c` as an ancestor of the P2 branch, with `0 behind / 47 ahead` at checkpoint `72ccbc3a`. Governance keeps `origin/main` unchanged. The authorized next action is recovery-branch push; the isolated P2 worktree and active task documents remain retained.
 
 ## P2 upstream integration 2026-07-11
 

@@ -351,11 +351,20 @@ Terminal evidence:
 - failure `expected exactly one temporary power scheme; found 0`
 - cleanup: original Balanced active; temporary GUID absent; both detached measurement worktrees and dependency junctions removed and pruned
 
-- [x] Reach cumulative extracted lines >=150: `map_renderer.js` moved from 23,472 to 23,269 lines, a cumulative reduction of 203 lines.
-- [ ] Run independent code review, first-principles review, and UltraQA.
-- [ ] Recheck integration ancestry and overlap.
+- [x] Reach cumulative extracted lines >=150: the current `origin/main` baseline and architecture counting move `map_renderer.js` from 23,473 to 23,269 lines, a cumulative reduction of 204 lines.
+- [x] Run independent code review, first-principles review, and UltraQA: code `APPROVE`, architecture implementation `CLEAR`, evidence implementation `APPROVE`, formal integration `BLOCK` under rerun07 governance.
+- [x] Recheck integration ancestry and overlap: `origin/main@17aeedf5` is an ancestor of terminal-truth checkpoint `72ccbc3a`; checkpoint state is `0 behind / 47 ahead`; renderer/metadata/docs remain red-overlap surfaces for future integration.
 - [ ] Push verified result.
 - [ ] Clean isolated worktree after recovery recording.
+
+Final recovery-branch gate evidence:
+
+- [x] Clean-head `verify:pages-dist -> verify:dist-drift -> verify:core` exited `0` at `72ccbc3a`.
+- [x] `verify:core` recorded 67/67 exit-zero results; report SHA256 `70947a928c08fa6f0735b321ef2cfcd5f7cf23cfe25bc973b161fdcb5b661f2b`.
+- [x] Combined clean-head stdout SHA256 `bb853b56e460c574a1f28fff713f921f33852fae9a16153b73fea6d9d73310dd`; post-run P2 worktree tracked-clean.
+- [x] Preserve browser supersession truth: the matrix summary retains the first city failure; `p2-2b-city-rendering-final.stdout.log` is authoritative at 8/8.
+- [x] Preserve exact perf evidence strength: the final log reports PASS and hashes to `98796574bd75ed3647cd4d42d7da654556031769bd4e4f626917d4cb1908507e`; no standalone exit-code artifact exists.
+- [x] Keep the P2 worktree and active docs because formal integration and archival remain blocked.
 ## Current admission note
 
 State: P2.1 admitted under scoped governance waiver.
