@@ -715,6 +715,23 @@ test("Williams crossover tooling routes to child-safe governance plus an explici
   }
 });
 
+test("dated schema-2 baseline artifacts route to the perf contract", () => {
+  const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === "infra:render-sample-role-policy");
+  assert.ok(entry);
+  for (const sourceRef of [
+    "docs/perf/baseline_2026-07-14.json",
+    "docs/perf/baseline_2026-07-14.md",
+  ]) {
+    assert.ok(entry.sourceRefs.includes(sourceRef), `${sourceRef} must be declared by the perf contract`);
+    const report = buildRecommendation([sourceRef]);
+    assert.deepEqual(report.unmatchedChangedFiles, []);
+    assert.ok(
+      report.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      `${sourceRef} must select ${entry.commandRef}`,
+    );
+  }
+});
+
 test("city policy and live power preflight have named verification ownership", () => {
   const cityPolicyEntry = VERIFICATION_DOMAINS.find((entry) => entry.id === "verify-core:test:node:city-points-render-owner");
   assert.ok(cityPolicyEntry);

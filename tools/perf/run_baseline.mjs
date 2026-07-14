@@ -1200,7 +1200,7 @@ function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
   return mismatches;
 }
 
-function collectBaselineContractMismatches(currentReport, baselineReport) {
+export function collectBaselineContractMismatches(currentReport, baselineReport) {
   const mismatches = [
     ...getPerfReportContractMismatches(currentReport, "current"),
     ...getPerfReportContractMismatches(baselineReport, "baseline"),

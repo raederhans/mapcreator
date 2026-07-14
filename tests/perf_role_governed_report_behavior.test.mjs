@@ -14,6 +14,7 @@ import {
   evaluateGovernedDecision,
 } from "../tools/perf/analyze_render_sample_roles.mjs";
 import {
+  collectBaselineContractMismatches,
   summarizeSnapshot,
   validateGateBaselineReport,
   validateGateCurrentReport,
@@ -290,6 +291,52 @@ test("baseline admission requires the current schema-2 oracle", () => {
     () => validateGateBaselineReport(legacyReport, ["tno_1962"], "legacy.json"),
     /schema mismatch/,
   );
+});
+
+test("baseline identity comparison rejects each schema-2 workload drift independently", () => {
+  const makeReport = () => ({
+    schemaVersion: 2,
+    benchmarkMetricsSchemaVersion: "3.3",
+    probeSchema: "mc_perf_snapshot",
+    environment: {
+      platform: "win32",
+      nodeMajor: 22,
+      browser: "chromium-headless",
+      browserVersion: "145.0.7632.6",
+      packageLockSha256: "a".repeat(64),
+    },
+    config: {
+      scenarios: ["tno_1962"],
+      runs: 5,
+      warmups: 3,
+      urlQuery: { perf: 1 },
+    },
+    workloadIdentity: {
+      scenarios: {
+        tno_1962: {
+          manifestSha256: "b".repeat(64),
+          featureCount: 12865,
+        },
+      },
+    },
+  });
+
+  const cases = [
+    ["browserVersion", (report) => { report.environment.browserVersion = "146.0.0.0"; }, /browser version mismatch/],
+    ["packageLockSha256", (report) => { report.environment.packageLockSha256 = "c".repeat(64); }, /package lock mismatch/],
+    ["runs", (report) => { report.config.runs = 4; }, /runs mismatch/],
+    ["manifestSha256", (report) => { report.workloadIdentity.scenarios.tno_1962.manifestSha256 = "d".repeat(64); }, /manifestSha256 mismatch/],
+    ["featureCount", (report) => { report.workloadIdentity.scenarios.tno_1962.featureCount = 12866; }, /featureCount mismatch/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const baseline = makeReport();
+    const current = makeReport();
+    mutate(current);
+    const mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
 });
 
 test("snapshot summarization keeps non-number measurements out of gate summaries", () => {

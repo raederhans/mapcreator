@@ -208,6 +208,8 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tests/render_sample_role_policy_behavior.test.mjs",
       "tests/perf_role_governed_report_behavior.test.mjs",
       "tests/test_perf_gate_contract.py",
+      "docs/perf/baseline_2026-07-14.json",
+      "docs/perf/baseline_2026-07-14.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/renderer-draw-canvas-orchestration-owner-p2-1-20260710.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/context.md",
       "docs/archive/renderer-frame-orchestration-p2-20260710/task.md",
