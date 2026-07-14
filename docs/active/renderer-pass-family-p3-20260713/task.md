@@ -21,7 +21,8 @@
 - [x] Add the omitted worker, scenario, bathymetry, coastal-accent, urban, strategic-marker, city-label, and color-resolution couplings plus the water browser lane.
 - [x] Prove the strengthened no-sovereignty-write and canal regressions inside the complete water lane 12/12.
 - [x] Commit the final inventory/test/control-plane corrections with a Lore-protocol message.
-- [ ] Run the complete prescribed dist, core, browser, and performance baseline from the clean repair HEAD. Commands 1-9 pass; command 10 and one clean focused rerun reproduce the prescribed April gate red line.
+- [x] Run the complete prescribed ten-command dist, core, browser, and performance sequence from runtime candidate `89c7278a`; `final3-89c7278a` records commands 1-10 in order.
+- [ ] Obtain an all-green complete baseline. Commands 1-7 and 9 pass; command 8 records one setup-level chunk-infrastructure stall with 1/1 and ordered 2/2 focused reruns passing; command 10 remains red and historical clean runs reproduce the same performance failure shape.
 - [x] Run adversarial inventory verification and confirm zero route gaps.
 - [x] Finalize the delivery record and re-verify the exact candidate for branch publication.
 - [ ] Transition OMX Task 1 to completed with verification evidence. P3.0 is blocked pending independent performance attribution and a passing complete baseline.
