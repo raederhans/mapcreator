@@ -406,6 +406,11 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     sourceRefs: [
       "tools/renderer_pass_family_inventory.mjs",
       "tests/renderer_pass_family_inventory_behavior.test.mjs",
+      "js/core/renderer/render_pipeline_catalog.js",
+      "js/core/map_renderer/render_pass_catalog.js",
+      "js/core/map_renderer.js",
+      "js/core/renderer/transport_overview_render_owner.js",
+      "js/core/state/ui_state.js",
       "docs/active/renderer-pass-family-p3-20260713/plan.md",
       "docs/active/renderer-pass-family-p3-20260713/context.md",
       "docs/active/renderer-pass-family-p3-20260713/task.md",

@@ -892,7 +892,11 @@ async function clickLandFeature(page, featureId, { acceptAnyHit = false } = {}) 
     const actionStartedAt = await page.evaluate(async () => {
       const { state } = await import("/js/core/state.js");
       const previousActionAt = Number(state.renderPassCache?.lastActionAt || 0);
+      const actionAdvanceDeadline = Date.now() + 1000;
       while (Date.now() <= previousActionAt) {
+        if (Date.now() >= actionAdvanceDeadline) {
+          throw new Error(`Timed out waiting for the action clock to advance beyond ${previousActionAt}`);
+        }
         await new Promise((resolve) => setTimeout(resolve, 1));
       }
       return Date.now();

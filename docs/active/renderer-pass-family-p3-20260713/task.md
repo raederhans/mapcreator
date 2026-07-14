@@ -5,7 +5,7 @@
 - [x] Freeze the exact 13-pass family and phase inventory.
 - [x] Apply all source-grounded ontology corrections.
 - [x] Add the named Node contract entry.
-- [x] Add one child-safe renderer-runtime metadata route with seven exact `sourceRefs`.
+- [x] Add one child-safe renderer-runtime metadata route covering every source read by the contract.
 - [x] Extend metadata and verify-core runner coverage.
 - [x] Record the coupling matrix and production-zero boundaries.
 - [x] Run every assigned child-safe deterministic check.
@@ -25,13 +25,18 @@
 - [ ] Obtain an all-green complete baseline. Commands 1-7 and 9 pass; command 8 records one setup-level chunk-infrastructure stall with 1/1 and ordered 2/2 focused reruns passing; command 10 remains red and historical clean runs reproduce the same performance failure shape.
 - [x] Run adversarial inventory verification and confirm zero route gaps.
 - [x] Finalize the delivery record and re-verify the exact candidate for branch publication.
+- [x] Audit the P3 functional commit family and remove the self-mirrored inventory oracle.
+- [x] Separate entry-host identity from delegated-owner dependencies and verify static reachability.
+- [x] Route every production source read by the inventory contract and remove global metadata-count coupling.
+- [x] Bound the TNO test-only action-clock wait with a regression contract.
+- [x] Complete and record the clean current-main performance control attribution.
 - [ ] Transition OMX Task 1 to completed with verification evidence. P3.0 is blocked pending independent performance attribution and a passing complete baseline.
 
 ## Owned files
 
 Core tooling: `tools/renderer_pass_family_inventory.mjs`, `tools/verification/verification_domains.mjs`, `package.json`.
 
-Tests: `tests/renderer_pass_family_inventory_behavior.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/perf_role_governed_report_behavior.test.mjs`, `tests/e2e/tno_open_ocean_rendering.spec.js`.
+Tests: `tests/renderer_pass_family_inventory_behavior.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/perf_role_governed_report_behavior.test.mjs`, `tests/e2e/tno_open_ocean_rendering.spec.js`, `tests/test_e2e_structural_tooling.py`.
 
 Docs: this task directory, `docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md`, `docs/active/_worktree_registry.md`, and the appended P3 lesson in `lessons learned.md`.
 

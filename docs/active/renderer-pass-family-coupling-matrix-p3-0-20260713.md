@@ -2,12 +2,12 @@
 
 Exact base: `origin/main@63dd0bb5e23afd340afe2dc0dcc74095cc4cb2cd`.
 
-| Pass | Entry | Family | Current owner / status | Runtime reads | Writes | Delegates | Browser tests | Risk tier | Perf sensitivity | Planned phase |
+| Pass | Entry | Family | Entry host / status | Runtime reads | Writes | Delegates | Browser tests | Risk tier | Perf sensitivity | Planned phase |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | background | `drawBackgroundPass` | foundation | `js/core/map_renderer.js` / inline | viewport, appearance, scenario, map-data, render-cache | pass-surface, owner-cache, runtime-state, diagnostics | ocean render; bathymetry asset URL policy; intensity field mask | water rendering | high | high | hold |
-| physicalBase | `drawPhysicalBasePass` | foundation | physical layer owner / delegated-existing | viewport, appearance, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, runtime-state, diagnostics | whole pass to physical layer owner | physical-layer runtime contract | medium | high | existing-delegated |
+| physicalBase | `drawPhysicalBasePass` | foundation | `js/core/map_renderer.js` / delegated-existing | viewport, appearance, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, runtime-state, diagnostics | whole pass to physical layer owner | physical-layer runtime contract | medium | high | existing-delegated |
 | political | `drawPoliticalPass` | political | `js/core/map_renderer.js` / inline | viewport, appearance, scenario, map-data, interaction, render-cache, diagnostics | pass-surface, owner-cache, runtime-state, diagnostics | raster worker client; worker packet builder; render-request boundary; color resolution; political collection; spatial index; visible-frame diagnostics | scenario resilience; water rendering; TNO contracts | high | high | P3.3a |
-| hgoPreview | `drawHgoPreviewPass` | hgo-preview | HGO runtime preview owner / delegated-existing | viewport, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, diagnostics | HGO frame commit | dedicated browser lane gap | medium | high | existing-delegated |
+| hgoPreview | `drawHgoPreviewPass` | hgo-preview | `js/core/map_renderer.js` / delegated-existing | viewport, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, diagnostics | HGO runtime preview owner; HGO frame commit | dedicated browser lane gap | medium | high | existing-delegated |
 | contextBase | `drawContextBasePass` | context | `js/core/map_renderer.js` / inline | viewport, appearance, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, runtime-state, diagnostics | physical layer; river layer; color resolution | physical-layer runtime; water rendering | high | high | P3.2 |
 | contextScenario | `drawContextScenarioPass` | context | `js/core/map_renderer.js` / inline | viewport, appearance, scenario, map-data, interaction, render-cache | pass-surface, owner-cache, runtime-state, diagnostics | scenario water cache; relief overlay; color resolution | scenario resilience; water rendering; TNO contracts | high | high | P3.2 |
 | effects | `drawEffectsPass` | visual-effects | `js/core/map_renderer.js` / inline | viewport, appearance, interaction, render-cache | pass-surface, owner-cache, runtime-state | render-request boundary for async texture rerender | layer regression | medium | high | P3.1 |
@@ -27,3 +27,5 @@ Exact base: `origin/main@63dd0bb5e23afd340afe2dc0dcc74095cc4cb2cd`.
 ## Frozen P3 boundaries
 
 P3 keeps render pass order, both production catalogs, `renderPassToCache()`, P2 frame owners, the public facade, and the state-write allowlist unchanged. `RendererRuntimeContext` stays a runtime context and does not become an effects bus. Political work begins with P3.3a preflight.
+
+`Entry host` names the module containing the pass entry function. `Delegates` is a reviewed dependency snapshot whose paths must exist and remain statically reachable from that host; it does not claim full per-call-site ownership proof.

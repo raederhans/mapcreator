@@ -571,3 +571,6 @@
 ### 核心基线证据要可重建并绑定身份
 - 默认 `verify:core` 入口使用的单元测试应通过 tracked fixture 或测试内临时 fixture 重建输入；被 `.gitignore` 排除的历史 `.runtime` 报告只服务显式离线复核，并通过路径与哈希参数注入，确保 clean worktree 能重复执行核心验证。
 - 性能 gate 的 oracle 同步记录 schema、scenario manifest、feature count、sample role、精确 Chromium 与采样次数；工作负载或采样语义变化先进入独立归因调查，明确批准后再建立新日期 oracle，并保留旧 oracle 作为历史证据。
+
+### 清单合同要区分入口、委托与可证明范围
+- 清单字段分别记录 entry host 和 delegated owner；合同直接读取的生产源全部进入验证路由。人工审查的依赖快照验证路径存在与静态可达性，并避免复制整份清单作为自证 oracle。

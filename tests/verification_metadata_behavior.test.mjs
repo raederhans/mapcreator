@@ -70,6 +70,11 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   const expectedSourceRefs = [
     "tools/renderer_pass_family_inventory.mjs",
     "tests/renderer_pass_family_inventory_behavior.test.mjs",
+    "js/core/renderer/render_pipeline_catalog.js",
+    "js/core/map_renderer/render_pass_catalog.js",
+    "js/core/map_renderer.js",
+    "js/core/renderer/transport_overview_render_owner.js",
+    "js/core/state/ui_state.js",
     "docs/active/renderer-pass-family-p3-20260713/plan.md",
     "docs/active/renderer-pass-family-p3-20260713/context.md",
     "docs/active/renderer-pass-family-p3-20260713/task.md",
@@ -97,19 +102,10 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     supervisorDomain: "renderer-runtime",
     routeRegistry: true,
   });
-  assert.deepEqual({
-    total: VERIFICATION_DOMAINS.length,
-    routes: buildVerificationMetadataRoutes().length,
-    defaults: commandRefsFromGroups(buildVerifyCoreDefaultGroups()).length,
-    mainThread: buildVerifyCoreMainThreadGroup().commands.length,
-    optionalMainThread: getVerifyCoreOptionalMainThreadCommands().length,
-  }, {
-    total: 82,
-    routes: 41,
-    defaults: 70,
-    mainThread: 4,
-    optionalMainThread: 5,
-  });
+  assert.ok(buildVerificationMetadataRoutes().some((route) => route.commandRef === entry.commandRef));
+  assert.ok(commandRefsFromGroups(buildVerifyCoreDefaultGroups()).includes(entry.commandRef));
+  assert.equal(buildVerifyCoreMainThreadGroup().commands.some((command) => command.commandRef === entry.commandRef), false);
+  assert.equal(getVerifyCoreOptionalMainThreadCommands().some((command) => command.commandRef === entry.commandRef), false);
 
   for (const sourceRef of expectedSourceRefs.filter((candidate) => candidate !== "package.json")) {
     const report = buildRecommendation([sourceRef]);
