@@ -31,6 +31,18 @@
 - [x] Bound the TNO test-only action-clock wait with a regression contract.
 - [x] Complete and record the clean current-main performance control attribution.
 - [x] Transition P3.0 inventory work to ready-for-integration with verification evidence. P3.1 admission remains blocked pending the performance-oracle governance decision.
+- [x] Integrate and push the exact audited P3.0 head `e695f2a5` to remote main and the P3 recovery branch.
+- [x] Isolate schema-2 performance governance from the runtime continuation worktree.
+- [x] Audit, validate, integrate, and push schema-2 performance governance at `6fe21918`; fresh Water 12/12, core 70/70, and standard performance gate all pass.
+- [ ] P3.1 RED: add and run the visual-effects pass owner behavior contract before production code.
+- [ ] P3.1 GREEN: implement the visual-effects pass owner, thin wrappers, inventory/metadata/architecture wiring, and generated dist parity.
+- [ ] P3.1 VERIFY: pass focused, adaptive, core, browser, and standard performance gates; record the exact evidence.
+- [ ] P3.2 RED: add and run the context pass orchestrator behavior contract before production code.
+- [ ] P3.2 GREEN: implement the context pass owner, atomically retarget existing source-scan contracts, and update inventory/metadata/architecture/dist.
+- [ ] P3.2 VERIFY: pass focused, adaptive, core, browser, and standard performance gates; record the exact evidence.
+- [ ] P3.3a PRECHECK: freeze political pass dependencies, effect order, worker/cache boundaries, state writes, and browser/performance lanes without production changes.
+- [ ] P3.3b RED/GREEN: extract only top-level political orchestration into one canonical owner while preserving worker, cache, drawing, state, and facade ownership.
+- [ ] P3 CLOSEOUT: run three independent reviews, clean-head deterministic/browser/performance acceptance, push/integrate main, archive this task folder, and remove only the integrated runtime worktree.
 
 ## Owned files
 
