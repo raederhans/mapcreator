@@ -28,4 +28,4 @@ Exact base: `origin/main@63dd0bb5e23afd340afe2dc0dcc74095cc4cb2cd`.
 
 P3 keeps render pass order, both production catalogs, `renderPassToCache()`, P2 frame owners, the public facade, and the state-write allowlist unchanged. `RendererRuntimeContext` stays a runtime context and does not become an effects bus. Political work begins with P3.3a preflight.
 
-`Entry host` names the module containing the pass entry function. `Delegates` is a reviewed dependency snapshot whose paths must exist and remain statically reachable from that host; it does not claim full per-call-site ownership proof.
+`Entry host` names the module containing the pass entry function. `Delegates` is a reviewed dependency snapshot whose paths must exist and remain directly imported by the entry host; the HGO frame commit uses its explicit one-hop preview-owner edge. This matrix does not claim full per-call-site ownership proof.

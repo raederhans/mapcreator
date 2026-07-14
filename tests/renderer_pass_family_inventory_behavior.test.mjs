@@ -36,7 +36,13 @@ const ENUM_CONTRACTS = [
   [RENDER_PASS_STATE_READ_CLASS_IDS, ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache", "clock", "diagnostics"]],
   [RENDER_PASS_STATE_WRITE_CLASS_IDS, ["pass-surface", "owner-cache", "runtime-state", "diagnostics"]],
 ];
-const REACHABLE_MODULES_BY_ENTRY = new Map();
+const STATIC_IMPORTS_BY_MODULE = new Map();
+const DEPENDENCY_IMPORT_HOST_OVERRIDES = new Map([
+  [
+    "js/core/map_renderer/hgo_runtime_preview_frame_commit.js",
+    "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
+  ],
+]);
 
 function readText(...parts) {
   return fs.readFileSync(path.join(REPO_ROOT, ...parts), "utf8");
@@ -65,28 +71,18 @@ function resolveStaticImport(importerPath, specifier) {
   return path.posix.normalize(path.posix.join(path.posix.dirname(importerPath), specifier));
 }
 
-function collectReachableModules(entryPath) {
-  if (REACHABLE_MODULES_BY_ENTRY.has(entryPath)) {
-    return REACHABLE_MODULES_BY_ENTRY.get(entryPath);
+function collectStaticImports(modulePath) {
+  if (STATIC_IMPORTS_BY_MODULE.has(modulePath)) {
+    return STATIC_IMPORTS_BY_MODULE.get(modulePath);
   }
-  const pending = [entryPath];
-  const reachable = new Set();
-  while (pending.length) {
-    const modulePath = pending.pop();
-    if (reachable.has(modulePath)) continue;
-    reachable.add(modulePath);
-    const absolutePath = path.join(REPO_ROOT, ...modulePath.split("/"));
-    if (!fs.existsSync(absolutePath)) continue;
-    const source = fs.readFileSync(absolutePath, "utf8");
-    const specifiers = [...source.matchAll(/(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g)]
-      .map((match) => match[1]);
-    for (const specifier of specifiers) {
-      const resolved = resolveStaticImport(modulePath, specifier);
-      if (resolved && !reachable.has(resolved)) pending.push(resolved);
-    }
-  }
-  REACHABLE_MODULES_BY_ENTRY.set(entryPath, reachable);
-  return reachable;
+  const source = readText(...modulePath.split("/"));
+  const imports = new Set(
+    [...source.matchAll(/(?:import|export)\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g)]
+      .map((match) => resolveStaticImport(modulePath, match[1]))
+      .filter(Boolean),
+  );
+  STATIC_IMPORTS_BY_MODULE.set(modulePath, imports);
+  return imports;
 }
 
 test("inventory shape, enums, records, and nested arrays are frozen", () => {
@@ -159,7 +155,6 @@ test("all 13 records resolve entry hosts and reviewed dependency anchors", () =>
   );
   for (const record of RENDER_PASS_FAMILY_INVENTORY) {
     const entryHostSource = readText(...record.entryHostPath.split("/"));
-    const reachableModules = collectReachableModules(record.entryHostPath);
     assert.match(entryHostSource, new RegExp(`function\\s+${record.entryFunction}\\s*\\(`), `${record.passName} entry should exist in its host`);
     assert.equal(record.stateWriteClass.includes("pass-surface"), true);
     assert.equal(record.canvasOrSvg, "canvas");
@@ -167,7 +162,12 @@ test("all 13 records resolve entry hosts and reviewed dependency anchors", () =>
     for (const dependencyPath of record.existingDependencyOwners) {
       assert.equal(dependencyPath.includes("\\"), false, `${record.passName} dependencies should use POSIX paths`);
       assert.equal(fs.existsSync(path.join(REPO_ROOT, dependencyPath)), true, `${dependencyPath} should exist`);
-      assert.equal(reachableModules.has(dependencyPath), true, `${record.passName} dependency should be reachable from its entry host: ${dependencyPath}`);
+      const importHostPath = DEPENDENCY_IMPORT_HOST_OVERRIDES.get(dependencyPath) || record.entryHostPath;
+      assert.equal(
+        collectStaticImports(importHostPath).has(dependencyPath),
+        true,
+        `${record.passName} dependency should be directly imported by ${importHostPath}: ${dependencyPath}`,
+      );
     }
   }
   assert.ok(

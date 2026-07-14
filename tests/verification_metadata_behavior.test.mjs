@@ -73,6 +73,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     "js/core/renderer/render_pipeline_catalog.js",
     "js/core/map_renderer/render_pass_catalog.js",
     "js/core/map_renderer.js",
+    "js/core/map_renderer/hgo_runtime_preview_render_owner.js",
     "js/core/renderer/transport_overview_render_owner.js",
     "js/core/state/ui_state.js",
     "docs/active/renderer-pass-family-p3-20260713/plan.md",
@@ -104,8 +105,8 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   });
   assert.ok(buildVerificationMetadataRoutes().some((route) => route.commandRef === entry.commandRef));
   assert.ok(commandRefsFromGroups(buildVerifyCoreDefaultGroups()).includes(entry.commandRef));
-  assert.equal(buildVerifyCoreMainThreadGroup().commands.some((command) => command.commandRef === entry.commandRef), false);
-  assert.equal(getVerifyCoreOptionalMainThreadCommands().some((command) => command.commandRef === entry.commandRef), false);
+  assert.equal(buildVerifyCoreMainThreadGroup().commands.includes(entry.commandRef), false);
+  assert.equal(getVerifyCoreOptionalMainThreadCommands().includes(entry.commandRef), false);
 
   for (const sourceRef of expectedSourceRefs.filter((candidate) => candidate !== "package.json")) {
     const report = buildRecommendation([sourceRef]);
@@ -120,6 +121,11 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   assert.equal(
     unrelatedReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
     false,
+  );
+  const hgoOwnerReport = buildRecommendation(["js/core/map_renderer/hgo_runtime_preview_render_owner.js"]);
+  assert.equal(
+    hgoOwnerReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+    true,
   );
 });
 

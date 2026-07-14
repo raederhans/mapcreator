@@ -906,8 +906,8 @@ const page = {
 
     def test_tno_land_feature_action_clock_wait_has_a_local_deadline(self) -> None:
         source = (REPO_ROOT / "tests" / "e2e" / "tno_open_ocean_rendering.spec.js").read_text(encoding="utf-8")
-        self.assertIn("const actionAdvanceDeadline = Date.now() + 1000;", source)
-        self.assertIn("Date.now() >= actionAdvanceDeadline", source)
+        self.assertIn("const actionAdvanceDeadline = performance.now() + 1000;", source)
+        self.assertIn("performance.now() >= actionAdvanceDeadline", source)
         self.assertIn("Timed out waiting for the action clock to advance", source)
 
     def test_shared_city_fixture_captures_failure_context_before_reset_cleanup(self) -> None:
