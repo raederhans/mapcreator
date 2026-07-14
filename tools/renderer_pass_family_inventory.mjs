@@ -252,7 +252,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     plannedPhase: "P3.2",
     riskTier: "high",
     stateReadClass: ["viewport", "appearance", "scenario", "map-data", "interaction", "render-cache"],
-    stateWriteClass: ["pass-surface", "owner-cache", "diagnostics"],
+    stateWriteClass: ["pass-surface", "owner-cache", "runtime-state", "diagnostics"],
     canvasOrSvg: "canvas",
     existingDependencyOwners: [
       "js/core/renderer/transport_overview_render_owner.js",
@@ -263,7 +263,7 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
     ],
     browserLanes: ["test:e2e:city-rendering", "test:e2e:scenario-resilience", "test:e2e:tno-contracts"],
     perfSensitivity: "high",
-    notes: "P3.2 transport, strategic and city marker orchestration",
+    notes: "P3.2 transport, strategic and city marker orchestration with shared transport style normalization",
   }),
   freezeRecord({
     passName: "textureLabels",

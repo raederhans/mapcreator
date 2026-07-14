@@ -20,11 +20,11 @@
 - [x] Complete independent root-cause, history, architecture, patch, and contract reviews.
 - [x] Add the omitted worker, scenario, bathymetry, coastal-accent, urban, strategic-marker, city-label, and color-resolution couplings plus the water browser lane.
 - [x] Prove the strengthened no-sovereignty-write and canal regressions inside the complete water lane 12/12.
-- [ ] Commit the final inventory/test/control-plane corrections with a Lore-protocol message.
-- [ ] Run the complete prescribed dist, core, browser, and performance baseline from the clean repair HEAD.
-- [ ] Run adversarial inventory verification and confirm zero route gaps.
-- [ ] Finalize the delivery record, re-verify the exact final HEAD, and push the exact branch.
-- [ ] Transition OMX Task 1 to completed with verification evidence.
+- [x] Commit the final inventory/test/control-plane corrections with a Lore-protocol message.
+- [ ] Run the complete prescribed dist, core, browser, and performance baseline from the clean repair HEAD. Commands 1-9 pass; command 10 and one clean focused rerun reproduce the prescribed April gate red line.
+- [x] Run adversarial inventory verification and confirm zero route gaps.
+- [x] Finalize the delivery record and re-verify the exact candidate for branch publication.
+- [ ] Transition OMX Task 1 to completed with verification evidence. P3.0 is blocked pending independent performance attribution and a passing complete baseline.
 
 ## Owned files
 

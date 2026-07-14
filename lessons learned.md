@@ -568,5 +568,6 @@
 - 源码结构测试提取函数体时应先配平参数括号，再从参数结束后的 `{` 配平函数体；默认参数 `{}` 会让“首个花括号就是函数体”的扫描器截断合同。
 - Windows 电源方案只有在 duplicate 返回 GUID 等于预分配 `temporaryGuid` 后才能写 `createdGuid`；清理前还要校验 journal 的 GUID 一致性与 absence + duplicate 所有权证据，让错误输出和篡改 journal 都保持零删除。
 
-### Core 单元测试的证据输入要随 Git 可重建
+### 核心基线证据要可重建并绑定身份
 - 默认 `verify:core` 入口使用的单元测试应通过 tracked fixture 或测试内临时 fixture 重建输入；被 `.gitignore` 排除的历史 `.runtime` 报告只服务显式离线复核，并通过路径与哈希参数注入，确保 clean worktree 能重复执行核心验证。
+- 性能 gate 的 oracle 同步记录 schema、scenario manifest、feature count、sample role、精确 Chromium 与采样次数；工作负载或采样语义变化先进入独立归因调查，明确批准后再建立新日期 oracle，并保留旧 oracle 作为历史证据。
