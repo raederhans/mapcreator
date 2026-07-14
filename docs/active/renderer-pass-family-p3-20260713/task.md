@@ -22,7 +22,7 @@
 - [x] Prove the strengthened no-sovereignty-write and canal regressions inside the complete water lane 12/12.
 - [x] Commit the final inventory/test/control-plane corrections with a Lore-protocol message.
 - [x] Run the complete prescribed ten-command dist, core, browser, and performance sequence from runtime candidate `89c7278a`; `final3-89c7278a` records commands 1-10 in order.
-- [ ] Obtain an all-green complete baseline. Commands 1-7 and 9 pass; command 8 records one setup-level chunk-infrastructure stall with 1/1 and ordered 2/2 focused reruns passing; command 10 remains red and historical clean runs reproduce the same performance failure shape.
+- [x] Resolve the complete-baseline disposition. Clean audit commit `d8991c8b` passes core 70/70 and the exact changed Water spec 2/2; the current-main control reproduces the startup gate red, so performance-oracle governance remains a separate P3.1 admission item.
 - [x] Run adversarial inventory verification and confirm zero route gaps.
 - [x] Finalize the delivery record and re-verify the exact candidate for branch publication.
 - [x] Audit the P3 functional commit family and remove the self-mirrored inventory oracle.
@@ -30,7 +30,7 @@
 - [x] Route every production source read by the inventory contract and remove global metadata-count coupling.
 - [x] Bound the TNO test-only action-clock wait with a regression contract.
 - [x] Complete and record the clean current-main performance control attribution.
-- [ ] Transition OMX Task 1 to completed with verification evidence. P3.0 is blocked pending independent performance attribution and a passing complete baseline.
+- [x] Transition P3.0 inventory work to ready-for-integration with verification evidence. P3.1 admission remains blocked pending the performance-oracle governance decision.
 
 ## Owned files
 
