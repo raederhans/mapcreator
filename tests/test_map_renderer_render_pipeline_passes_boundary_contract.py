@@ -7,6 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
 RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
+VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_effects_pass_owner.js"
 EXACT_AFTER_SETTLE_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "exact_after_settle_pass_catalog.js"
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
@@ -24,6 +25,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
+        visual_effects_owner_content = VISUAL_EFFECTS_PASS_OWNER_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
         exact_pass_catalog_content = EXACT_AFTER_SETTLE_PASS_CATALOG_JS.read_text(encoding="utf-8")
         exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
@@ -36,7 +38,50 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "import { createRenderPipelinePassesOwner } from './renderer/render_pipeline_passes.js';",
             renderer_imports,
         )
+        self.assertIn(
+            "import { createVisualEffectsPassOwner } from './renderer/visual_effects_pass_owner.js';",
+            renderer_imports,
+        )
         self.assertIn("let renderPipelinePassesOwner = null;", renderer_content)
+        self.assertIn("let visualEffectsPassOwner = null;", renderer_content)
+        self.assertIn("function getVisualEffectsPassOwner() {", renderer_content)
+        self.assertIn("visualEffectsPassOwner = createVisualEffectsPassOwner({", renderer_content)
+        self.assertIn(
+            "function drawEffectsPass(k, options = undefined) {\n  return getVisualEffectsPassOwner().drawEffectsPass(k, options);\n}",
+            renderer_content,
+        )
+        self.assertIn(
+            "function drawLineEffectsPass(k, options = undefined) {\n  return getVisualEffectsPassOwner().drawLineEffectsPass(k, options);\n}",
+            renderer_content,
+        )
+        self.assertIn(
+            "function drawTextureLabelEffectsPass(k) {\n  return getVisualEffectsPassOwner().drawTextureLabelEffectsPass(k);\n}",
+            renderer_content,
+        )
+        self.assertIn(
+            "function drawDayNightPass(k, options = undefined) {\n  return getVisualEffectsPassOwner().drawDayNightPass(k, options);\n}",
+            renderer_content,
+        )
+        self.assertIn("export function createVisualEffectsPassOwner({", visual_effects_owner_content)
+        for token in (
+            "runtimeState",
+            "RendererRuntimeContext",
+            "document.",
+            "window.",
+            "globalThis",
+            "d3.",
+            'from "../map_renderer.js"',
+        ):
+            self.assertNotIn(token, visual_effects_owner_content)
+        for function_name in (
+            "drawOldPaperTexture",
+            "drawGraticuleTextureLines",
+            "drawGraticuleTextureLabels",
+            "drawDraftGridTexture",
+            "drawDayNightShadowLayer",
+            "drawNightLightsLayer",
+        ):
+            self.assertIn(f"function {function_name}(", renderer_content)
         self.assertIn("function getRenderPipelinePassesOwner() {", renderer_content)
         self.assertNotIn("EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES", renderer_content)
         self.assertNotIn(
@@ -152,6 +197,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
 
     def test_hgo_preview_ready_replaces_normal_overlay_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        visual_effects_owner_content = VISUAL_EFFECTS_PASS_OWNER_JS.read_text(encoding="utf-8")
         draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_commit_content = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
@@ -284,7 +330,8 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "drawBordersPass",
             "drawLabelsPass",
         ):
-            pass_body = renderer_content.split(f"function {function_name}(", 1)[1].split("\nfunction ", 1)[0]
+            source = visual_effects_owner_content if function_name == "drawTextureLabelEffectsPass" else renderer_content
+            pass_body = source.split(f"function {function_name}(", 1)[1].split("\n  function ", 1)[0].split("\nfunction ", 1)[0]
             self.assertRegex(
                 pass_body,
                 re.compile(

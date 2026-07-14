@@ -47,6 +47,7 @@ const FILES = Object.freeze({
   scenarioWaterCachePolicyOwner: "js/core/renderer/scenario_water_cache_policy_owner.js",
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
+  visualEffectsPassOwner: "js/core/renderer/visual_effects_pass_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
@@ -150,7 +151,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23269,
+  [FILES.renderer]: 23267,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -171,6 +172,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.drawCanvasOrchestrationOwner]: 320,
   [FILES.cachedPassCompositorOwner]: 320,
   [FILES.transformedFrameCompositorOwner]: 420,
+  [FILES.visualEffectsPassOwner]: 180,
   [FILES.clickSelectionTransactionOwner]: 120,
   [FILES.hitCanvasSchedulingOwner]: 220,
   [FILES.mapHoverInteractionOwner]: 260,
@@ -480,6 +482,7 @@ function collectFailures() {
   const cachedPassCompositorOwnerTest = readProjectFile(FILES.cachedPassCompositorOwnerTest);
   const transformedFrameCompositorOwner = readProjectFile(FILES.transformedFrameCompositorOwner);
   const transformedFrameCompositorOwnerTest = readProjectFile(FILES.transformedFrameCompositorOwnerTest);
+  const visualEffectsPassOwner = readProjectFile(FILES.visualEffectsPassOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
@@ -605,6 +608,7 @@ function collectFailures() {
     [FILES.cachedPassCompositorOwnerTest]: cachedPassCompositorOwnerTest,
     [FILES.transformedFrameCompositorOwner]: transformedFrameCompositorOwner,
     [FILES.transformedFrameCompositorOwnerTest]: transformedFrameCompositorOwnerTest,
+    [FILES.visualEffectsPassOwner]: visualEffectsPassOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
@@ -5598,6 +5602,40 @@ function collectFailures() {
       ],
     },
     {
+      ownerPath: FILES.visualEffectsPassOwner,
+      ownerTokens: [
+        "export function createVisualEffectsPassOwner({",
+        "function drawEffectsPass(",
+        "function drawLineEffectsPass(",
+        "function drawTextureLabelEffectsPass(",
+        "function drawDayNightPass(",
+        "return Object.freeze({",
+      ],
+      ownerForbiddenTokens: [
+        "import ",
+        "runtimeState",
+        "RendererRuntimeContext",
+        "document.",
+        "window.",
+        "globalThis",
+        "d3.",
+      ],
+      rendererRequiredTokens: [
+        "import { createVisualEffectsPassOwner } from \"./renderer/visual_effects_pass_owner.js\";",
+        "let visualEffectsPassOwner = null;",
+        "function getVisualEffectsPassOwner() {",
+        "return getVisualEffectsPassOwner().drawEffectsPass(k, options);",
+        "return getVisualEffectsPassOwner().drawLineEffectsPass(k, options);",
+        "return getVisualEffectsPassOwner().drawTextureLabelEffectsPass(k);",
+        "return getVisualEffectsPassOwner().drawDayNightPass(k, options);",
+      ],
+      rendererForbiddenTokens: [
+        "function drawEffectsPass(k, { interactive = false } = {}) {",
+        "function drawLineEffectsPass(k, { interactive = false } = {}) {",
+        "function drawDayNightPass(k, { interactive = false } = {}) {",
+      ],
+    },
+    {
       ownerPath: FILES.renderPipelineCatalog,
       ownerTokens: [
         "export const IDLE_RENDER_PASS_DEFINITIONS = [",
@@ -5665,6 +5703,11 @@ function collectFailures() {
         failures.push(`${rule.ownerPath} must own token: ${token}`);
       }
     }
+    for (const token of rule.ownerForbiddenTokens || []) {
+      if (ownerSource.includes(token)) {
+        failures.push(`${rule.ownerPath} must not own forbidden token: ${token}`);
+      }
+    }
     for (const token of rule.rendererRequiredTokens || []) {
       const targetPath = rule.rendererRequiredPath || FILES.renderer;
       if (!sources[targetPath].includes(token)) {
@@ -5676,6 +5719,21 @@ function collectFailures() {
       if (sources[targetPath].includes(token)) {
         failures.push(`${targetPath} must not own extracted token: ${token}`);
       }
+    }
+  }
+
+  for (const relativePath of [
+    "js/core/renderer/visual_effects_pass_helper.js",
+    "js/core/renderer/visual_effects_pass_controller.js",
+    "js/core/renderer/visual_effects_pass_adapter.js",
+    "js/core/renderer/shared_visual_effects_pass_owner.js",
+    "js/core/map_renderer/visual_effects_pass_owner.js",
+    "js/core/map_renderer/visual_effects_pass_helper.js",
+    "js/core/map_renderer/visual_effects_pass_controller.js",
+    "js/core/map_renderer/visual_effects_pass_adapter.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`${relativePath} duplicates the canonical visual effects pass owner.`);
     }
   }
 

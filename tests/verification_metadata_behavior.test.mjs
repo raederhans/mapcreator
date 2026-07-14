@@ -140,6 +140,45 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   }
 });
 
+test("P3.1 visual effects owner and pipeline boundary routes stay in the child-safe renderer lane", () => {
+  const expectedEntries = [
+    {
+      id: "verify-core:test:node:visual-effects-pass-owner",
+      commandRef: "test:node:visual-effects-pass-owner",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/visual_effects_pass_owner.js",
+        "tests/visual_effects_pass_owner_behavior.test.mjs",
+      ],
+    },
+    {
+      id: "verify-core:test:python:map-renderer-render-pipeline-passes-boundary",
+      commandRef: "test:python:map-renderer-render-pipeline-passes-boundary",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/visual_effects_pass_owner.js",
+        "tests/test_map_renderer_render_pipeline_passes_boundary_contract.py",
+      ],
+    },
+  ];
+
+  for (const expected of expectedEntries) {
+    const entry = VERIFICATION_DOMAINS.find((candidate) => candidate.id === expected.id);
+    assert.ok(entry, `${expected.id} should exist`);
+    assert.equal(entry.commandRef, expected.commandRef);
+    assert.equal(entry.domain, "renderer-runtime");
+    assert.equal(entry.ownerHint, "renderer-runtime");
+    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.verifyCoreDefaultGroup, "renderer-owner");
+    assert.equal(entry.routeRegistry, true);
+    for (const sourceRef of expected.requiredSourceRefs) {
+      assert.ok(entry.sourceRefs.includes(sourceRef), `${entry.id} should route ${sourceRef}`);
+    }
+    assert.ok(buildVerificationMetadataRoutes().some((route) => route.commandRef === entry.commandRef));
+    assert.ok(commandRefsFromGroups(buildVerifyCoreDefaultGroups()).includes(entry.commandRef));
+  }
+});
+
 test("verify-core default plan is generated from verification metadata", () => {
   const packageJson = readJson("package.json");
   const metadataDefaultRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());

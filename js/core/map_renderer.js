@@ -208,6 +208,7 @@ import {
   toHitResult as toCandidateHitResult,
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
+import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_owner.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
 import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";
@@ -987,6 +988,7 @@ let borderDrawOwner = null;
 let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
+let visualEffectsPassOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
@@ -3114,6 +3116,34 @@ function getHgoRuntimePreviewRenderOwner() {
     nowMs,
   });
   return hgoRuntimePreviewRenderOwner;
+}
+
+function getVisualEffectsPassOwner() {
+  if (visualEffectsPassOwner) {
+    return visualEffectsPassOwner;
+  }
+  visualEffectsPassOwner = createVisualEffectsPassOwner({
+    getters: {
+      getTextureStyleConfig,
+      getDayNightStyleConfig,
+      isBootInteractionReady,
+      isHgoRuntimePreviewReady,
+    },
+    helpers: {
+      normalizeTextureMode,
+      getCurrentSolarState,
+    },
+    effects: {
+      drawOldPaperTexture,
+      drawGraticuleTextureLines,
+      drawDraftGridTexture,
+      drawGraticuleTextureLabels,
+      drawDayNightShadowLayer,
+      drawNightLightsLayer,
+      recordRenderPerfMetric,
+    },
+  });
+  return visualEffectsPassOwner;
 }
 
 function getRenderPipelinePassesOwner() {
@@ -17700,40 +17730,16 @@ function drawHgoPreviewPass() {
 }
 
 
-function drawEffectsPass(k, { interactive = false } = {}) {
-  const texture = getTextureStyleConfig();
-  if (normalizeTextureMode(texture.mode) !== "paper") return;
-  if (!isBootInteractionReady()) return;
-  drawOldPaperTexture(k, { interactive });
+function drawEffectsPass(k, options = undefined) {
+  return getVisualEffectsPassOwner().drawEffectsPass(k, options);
 }
 
-function drawLineEffectsPass(k, { interactive = false } = {}) {
-  const texture = getTextureStyleConfig();
-  const mode = String(texture.mode || "none").trim().toLowerCase();
-  if (!isBootInteractionReady()) return;
-  if (mode === "graticule") {
-    drawGraticuleTextureLines(k, { interactive });
-    return;
-  }
-  if (mode === "draft_grid") {
-    drawDraftGridTexture(k, { interactive });
-  }
+function drawLineEffectsPass(k, options = undefined) {
+  return getVisualEffectsPassOwner().drawLineEffectsPass(k, options);
 }
 
 function drawTextureLabelEffectsPass(k) {
-  if (isHgoRuntimePreviewReady()) {
-    recordRenderPerfMetric("drawTextureLabelEffectsPass", 0, {
-      skipped: true,
-      reason: "hgo-runtime-preview",
-    });
-    return;
-  }
-  const texture = getTextureStyleConfig();
-  const mode = String(texture.mode || "none").trim().toLowerCase();
-  if (!isBootInteractionReady()) return;
-  if (mode === "graticule") {
-    drawGraticuleTextureLabels(k);
-  }
+  return getVisualEffectsPassOwner().drawTextureLabelEffectsPass(k);
 }
 
 function drawContextBasePass(k, { interactive = false } = {}) {
@@ -17901,13 +17907,8 @@ function drawContextScenarioPass(k, { interactive = false } = {}) {
   });
 }
 
-function drawDayNightPass(k, { interactive = false } = {}) {
-  const config = getDayNightStyleConfig();
-  if (!config.enabled) return;
-  if (!isBootInteractionReady()) return;
-  const solarState = getCurrentSolarState(config);
-  drawDayNightShadowLayer(k, config, solarState);
-  drawNightLightsLayer(k, config, solarState);
+function drawDayNightPass(k, options = undefined) {
+  return getVisualEffectsPassOwner().drawDayNightPass(k, options);
 }
 
 function drawBordersPass(k, { interactive = false } = {}) {

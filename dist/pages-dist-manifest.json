@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 889412,
+      "size_bytes": 889260,
       "source_kind": "dist"
     },
     {
@@ -46278,6 +46278,11 @@
     {
       "path": "app/js/core/renderer/visible_frame_diagnostics_owner.js",
       "size_bytes": 11124,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/visual_effects_pass_owner.js",
+      "size_bytes": 3579,
       "source_kind": "dist"
     },
     {
@@ -47422,7 +47427,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467751,
+      "size_bytes": 1467885,
       "source_kind": "dist"
     },
     {
@@ -47552,9 +47557,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9424,
+      "file_count": 9425,
       "path": "app",
-      "size_bytes": 965656376
+      "size_bytes": 965659803
     },
     {
       "file_count": 57,
@@ -47564,7 +47569,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467751
+      "size_bytes": 1467885
     },
     {
       "file_count": 1,
@@ -47587,5 +47592,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972222488
+  "total_bytes": 972226049
 }
