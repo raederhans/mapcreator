@@ -26,7 +26,7 @@ The approved planning records remain immutable. Current source at the exact base
 11. `contextMarkers` includes `runtime-state` writes because every transport overview draw resolves its family/visual configuration through `ensureTransportOverviewStyleConfigState(runtimeState)`, which normalizes `styleConfig.transportOverview` in place.
 12. The inventory field is `entryHostPath`: all 13 pass entries live in `js/core/map_renderer.js`. Existing delegated owners for `physicalBase` and `hgoPreview` are recorded in `existingDependencyOwners`, keeping entry location and delegation meaning separate.
 13. The central contract is source-grounded by the two production catalogs, the entry host, HGO preview owner, transport normalization owner, and UI-state normalization source. Its reviewed dependency snapshot verifies path existence plus direct import edges, with one explicit HGO preview-owner to frame-commit edge; the former mirrored `EXPECTED_INVENTORY` oracle was removed.
-14. The verification route includes every production source read by the central contract. Route assertions bind this command locally and no longer freeze unrelated repository-wide metadata totals.
+14. The verification route includes the `js/` and `dist/` scopes scanned by the central contract, covering dependency-owner deletion and forbidden production imports. Route assertions bind this command locally and no longer freeze unrelated repository-wide metadata totals.
 
 ## 13-pass source review
 

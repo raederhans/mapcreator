@@ -143,7 +143,7 @@ function routeMatchesChangedFile(route, changedFile, importGraph = null) {
   }
 
   if (isCheckedInPagesDistFile(changedFile)) {
-    return route.id === "infra:pages-dist";
+    return route.id === "infra:pages-dist" || isDirectRouteMatch(route, changedFile);
   }
 
   if (isPagesDistSourceMirrorFile(changedFile)) {

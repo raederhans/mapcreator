@@ -68,6 +68,8 @@ test("verification metadata validates against package scripts and supervisor dom
 
 test("P3.0 renderer pass family route is child-safe, exact, and part of renderer-owner", () => {
   const expectedSourceRefs = [
+    "js",
+    "dist",
     "tools/renderer_pass_family_inventory.mjs",
     "tests/renderer_pass_family_inventory_behavior.test.mjs",
     "js/core/renderer/render_pipeline_catalog.js",
@@ -127,6 +129,15 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     hgoOwnerReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
     true,
   );
+  for (const routedProductPath of ["js/core/renderer/ocean_render_owner.js", "dist/app.js"]) {
+    const productReport = buildRecommendation([routedProductPath]);
+    assert.equal(productReport.unmatchedChangedFiles.length, 0, `${routedProductPath} should be routed`);
+    assert.equal(
+      productReport.recommendedCommands.some((command) => command.commandRef === entry.commandRef),
+      true,
+      `${routedProductPath} should select the inventory contract`,
+    );
+  }
 });
 
 test("verify-core default plan is generated from verification metadata", () => {

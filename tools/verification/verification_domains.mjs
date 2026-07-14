@@ -404,6 +404,8 @@ export const VERIFICATION_DOMAINS = Object.freeze([
     commandType: "package-script",
     packageScriptRequired: true,
     sourceRefs: [
+      "js",
+      "dist",
       "tools/renderer_pass_family_inventory.mjs",
       "tests/renderer_pass_family_inventory_behavior.test.mjs",
       "js/core/renderer/render_pipeline_catalog.js",
