@@ -19,9 +19,10 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
 const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];
-const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-04-20.json");
-const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", "baseline_2026-04-20.md");
-const DEFAULT_RAW_DIR = path.join(REPO_ROOT, ".runtime", "output", "perf", "baseline_2026-04-20");
+const PERF_BASELINE_DATE = "2026-07-14";
+const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.json`);
+const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.md`);
+const DEFAULT_RAW_DIR = path.join(REPO_ROOT, ".runtime", "output", "perf", `baseline_${PERF_BASELINE_DATE}`);
 const ACTIVE_SERVER_PATH = path.join(REPO_ROOT, ".runtime", "dev", "active_server.json");
 const PERF_SERVER_RUNTIME_ROOT = path.join(REPO_ROOT, ".runtime", "tmp", "perf-baseline-runtime");
 const PERF_SERVER_ACTIVE_SERVER_PATH = path.join(PERF_SERVER_RUNTIME_ROOT, "dev", "active_server.json");
@@ -36,7 +37,6 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
 const MIN_GATE_WARMUPS = 3;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
 const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;
-const LEGACY_PERF_REPORT_SCHEMA_VERSION = 1;
 const PERF_URL_QUERY = Object.freeze({
   render_profile: "balanced",
   startup_interaction: "full",
@@ -521,7 +521,7 @@ function parseNodeMajor(value) {
   return Number.parseInt(match.groups.major, 10) || 0;
 }
 
-function collectEnvironment() {
+function collectEnvironment({ browserVersion = "", packageLockSha256 = "" } = {}) {
   return {
     os: `${os.platform()} ${os.release()}`,
     platform: os.platform(),
@@ -529,6 +529,8 @@ function collectEnvironment() {
     node: process.version,
     nodeMajor: parseNodeMajor(process.version),
     browser: "chromium-headless",
+    browserVersion: String(browserVersion || "").trim(),
+    packageLockSha256: String(packageLockSha256 || "").trim(),
   };
 }
 
@@ -932,7 +934,7 @@ function buildMarkdown(report) {
     .filter((scenarioId) => !DEFAULT_GATE_SCENARIOS.includes(scenarioId))
     .join(", ");
   const lines = [
-    "# Perf baseline 2026-04-20",
+    `# Perf baseline ${PERF_BASELINE_DATE}`,
     "",
     "## Environment",
     `- Generated at: ${report.generatedAt}`,
@@ -940,6 +942,8 @@ function buildMarkdown(report) {
     `- OS: ${report.environment.os}`,
     `- Node: ${report.environment.node}`,
     `- Browser: ${report.environment.browser}`,
+    `- Browser version: ${report.environment.browserVersion}`,
+    `- package-lock.json SHA256: ${report.environment.packageLockSha256}`,
     `- Gate scenarios: ${gateScenarios}`,
     `- Observation samples: ${observationScenarios}`,
     "",
@@ -1013,17 +1017,23 @@ async function resolveGitHead() {
   }
 }
 
+async function sha256File(filePath) {
+  const bytes = await fs.readFile(filePath);
+  return crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
 async function runMeasurements(options) {
   const serverLeaseRef = {
     current: await ensureServerBaseUrl(),
   };
   const browser = await chromium.launch({ headless: true });
+  const browserVersion = browser.version();
   try {
     const scenarios = {};
     for (const scenarioId of options.scenarios) {
       scenarios[scenarioId] = await runScenarioSeries(browser, serverLeaseRef, scenarioId, options);
     }
-    return { baseUrl: serverLeaseRef.current?.baseUrl || "", scenarios };
+    return { baseUrl: serverLeaseRef.current?.baseUrl || "", browserVersion, scenarios };
   } finally {
     await browser.close();
     await stopServer(serverLeaseRef.current?.serverOwner || null);
@@ -1043,15 +1053,12 @@ const PERF_REPORT_CONTRACT_FIELDS = [
   { key: "probeSchema", expected: "mc_perf_snapshot" },
 ];
 
-function getPerfReportContractMismatches(report, label = "report", { allowLegacySchema = false } = {}) {
-  const expectedSchemas = allowLegacySchema
-    ? [LEGACY_PERF_REPORT_SCHEMA_VERSION, CURRENT_PERF_REPORT_SCHEMA_VERSION]
-    : [CURRENT_PERF_REPORT_SCHEMA_VERSION];
+function getPerfReportContractMismatches(report, label = "report") {
   const mismatches = PERF_REPORT_CONTRACT_FIELDS
     .filter(({ key, expected }) => report?.[key] !== expected)
     .map(({ key, expected }) => `${label}.${key} expected=${JSON.stringify(expected)} actual=${JSON.stringify(report?.[key])}`);
-  if (!expectedSchemas.includes(report?.schemaVersion)) {
-    mismatches.unshift(`${label}.schemaVersion expected=${JSON.stringify(expectedSchemas)} actual=${JSON.stringify(report?.schemaVersion)}`);
+  if (report?.schemaVersion !== CURRENT_PERF_REPORT_SCHEMA_VERSION) {
+    mismatches.unshift(`${label}.schemaVersion expected=${CURRENT_PERF_REPORT_SCHEMA_VERSION} actual=${JSON.stringify(report?.schemaVersion)}`);
   }
   return mismatches;
 }
@@ -1088,11 +1095,7 @@ export function validateGateBaselineReport(baselineReport, scenarioIds, baseline
   if (!baselineReport || typeof baselineReport !== "object") {
     throw new Error(`[perf-baseline] Baseline report is invalid: ${baselinePath}`);
   }
-  const baselineContractMismatches = getPerfReportContractMismatches(
-    baselineReport,
-    "baseline",
-    { allowLegacySchema: true }
-  );
+  const baselineContractMismatches = getPerfReportContractMismatches(baselineReport, "baseline");
   if (baselineContractMismatches.length) {
     throw new Error(
       `[perf-baseline] Baseline report schema mismatch: ${baselinePath}\n${baselineContractMismatches.map((item) => `- ${item}`).join("\n")}`
@@ -1200,7 +1203,7 @@ function collectGovernedRenderSampleRoleMismatches(report, scenarioIds) {
 function collectBaselineContractMismatches(currentReport, baselineReport) {
   const mismatches = [
     ...getPerfReportContractMismatches(currentReport, "current"),
-    ...getPerfReportContractMismatches(baselineReport, "baseline", { allowLegacySchema: true }),
+    ...getPerfReportContractMismatches(baselineReport, "baseline"),
   ];
   const baselinePlatform = normalizeOsPlatform(
     baselineReport?.environment?.platform || baselineReport?.environment?.os
@@ -1228,6 +1231,18 @@ function collectBaselineContractMismatches(currentReport, baselineReport) {
     mismatches.push(`browser mismatch: baseline=${baselineBrowser} current=${currentBrowser}`);
   }
 
+  const baselineBrowserVersion = String(baselineReport?.environment?.browserVersion || "").trim();
+  const currentBrowserVersion = String(currentReport?.environment?.browserVersion || "").trim();
+  if (baselineBrowserVersion !== currentBrowserVersion) {
+    mismatches.push(`browser version mismatch: baseline=${baselineBrowserVersion || "<missing>"} current=${currentBrowserVersion || "<missing>"}`);
+  }
+
+  const baselinePackageLockSha256 = String(baselineReport?.environment?.packageLockSha256 || "").trim();
+  const currentPackageLockSha256 = String(currentReport?.environment?.packageLockSha256 || "").trim();
+  if (baselinePackageLockSha256 !== currentPackageLockSha256) {
+    mismatches.push(`package lock mismatch: baseline=${baselinePackageLockSha256 || "<missing>"} current=${currentPackageLockSha256 || "<missing>"}`);
+  }
+
   const baselineQuery = baselineReport?.config?.urlQuery || {};
   const currentQuery = currentReport?.config?.urlQuery || {};
   if (JSON.stringify(baselineQuery) !== JSON.stringify(currentQuery)) {
@@ -1239,6 +1254,27 @@ function collectBaselineContractMismatches(currentReport, baselineReport) {
   const currentWarmups = finiteNumber(currentReport?.config?.warmups, NaN);
   if (Number.isFinite(baselineWarmups) && Number.isFinite(currentWarmups) && baselineWarmups !== currentWarmups) {
     mismatches.push(`warmups mismatch: baseline=${baselineWarmups} current=${currentWarmups}`);
+  }
+
+  const baselineRuns = finiteNumber(baselineReport?.config?.runs, NaN);
+  const currentRuns = finiteNumber(currentReport?.config?.runs, NaN);
+  if (Number.isFinite(baselineRuns) && Number.isFinite(currentRuns) && baselineRuns !== currentRuns) {
+    mismatches.push(`runs mismatch: baseline=${baselineRuns} current=${currentRuns}`);
+  }
+
+  for (const scenarioId of currentReport?.config?.scenarios || []) {
+    const baselineIdentity = baselineReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
+    const currentIdentity = currentReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
+    const baselineManifestSha256 = String(baselineIdentity.manifestSha256 || "").trim();
+    const currentManifestSha256 = String(currentIdentity.manifestSha256 || "").trim();
+    if (baselineManifestSha256 !== currentManifestSha256) {
+      mismatches.push(`${scenarioId}.manifestSha256 mismatch: baseline=${baselineManifestSha256 || "<missing>"} current=${currentManifestSha256 || "<missing>"}`);
+    }
+    const baselineFeatureCount = finiteNumber(baselineIdentity.featureCount, NaN);
+    const currentFeatureCount = finiteNumber(currentIdentity.featureCount, NaN);
+    if (baselineFeatureCount !== currentFeatureCount) {
+      mismatches.push(`${scenarioId}.featureCount mismatch: baseline=${baselineFeatureCount} current=${currentFeatureCount}`);
+    }
   }
 
   return mismatches;
@@ -1261,6 +1297,7 @@ async function main() {
   }
 
   const measurement = await runMeasurements(options);
+  const packageLockSha256 = await sha256File(path.join(REPO_ROOT, "package-lock.json"));
   const report = {
     schemaVersion: CURRENT_PERF_REPORT_SCHEMA_VERSION,
     benchmarkMetricsSchemaVersion: "3.3",
@@ -1281,7 +1318,10 @@ async function main() {
       threshold: options.threshold,
       urlQuery: options.urlQuery,
     },
-    environment: collectEnvironment(),
+    environment: collectEnvironment({
+      browserVersion: measurement.browserVersion,
+      packageLockSha256,
+    }),
     workloadIdentity: buildReportWorkloadIdentity(options, measurement),
     scenarios: measurement.scenarios,
   };

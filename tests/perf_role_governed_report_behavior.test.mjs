@@ -272,6 +272,26 @@ test("baseline admission rejects coerced gate metrics before comparison", () => 
   }
 });
 
+test("baseline admission requires the current schema-2 oracle", () => {
+  const validSummary = {
+    totalStartupMs: 100,
+    scenarioAppliedMs: 100,
+    applyScenarioBundleMs: 100,
+    refreshScenarioApplyMs: 100,
+    renderSampleMedianMs: 100,
+  };
+  const legacyReport = {
+    schemaVersion: 1,
+    benchmarkMetricsSchemaVersion: "3.3",
+    probeSchema: "mc_perf_snapshot",
+    scenarios: { tno_1962: { summary: validSummary } },
+  };
+  assert.throws(
+    () => validateGateBaselineReport(legacyReport, ["tno_1962"], "legacy.json"),
+    /schema mismatch/,
+  );
+});
+
 test("snapshot summarization keeps non-number measurements out of gate summaries", () => {
   const summary = summarizeSnapshot({
     bootMetrics: { total: { durationMs: true } },

@@ -8,8 +8,8 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_JSON = REPO_ROOT / "package.json"
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "perf-pr-gate.yml"
-BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-04-20.md"
-BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-04-20.json"
+BASELINE_MD = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-14.md"
+BASELINE_JSON = REPO_ROOT / "docs" / "perf" / "baseline_2026-07-14.json"
 PERF_SCRIPT = REPO_ROOT / "tools" / "perf" / "run_baseline.mjs"
 RENDER_SAMPLE_ROLE_POLICY = REPO_ROOT / "tools" / "perf" / "render_sample_role_policy.mjs"
 RENDER_SAMPLE_ROLE_ANALYZER = REPO_ROOT / "tools" / "perf" / "analyze_render_sample_roles.mjs"
@@ -38,6 +38,7 @@ class PerfGateContractTest(unittest.TestCase):
         )
         self.assertIn("--warmups 3", perf_baseline_script)
         self.assertIn("--scenarios tno_1962,hoi4_1939", perf_gate_script)
+        self.assertIn("--runs 5", perf_gate_script)
         self.assertIn("--warmups 3", perf_gate_script)
         self.assertNotIn("blank_base", perf_gate_script)
 
@@ -73,10 +74,10 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn('benchmarkMetricsSchemaVersion: "3.3"', script)
         self.assertIn('probeSchema: "mc_perf_snapshot"', script)
         self.assertIn('const PERF_REPORT_CONTRACT_FIELDS = [', script)
-        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline", { allowLegacySchema: true })', script)
+        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
         self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
         self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
-        self.assertIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION = 1;", script)
+        self.assertNotIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION", script)
         self.assertIn('from "./render_sample_role_policy.mjs";', script)
         self.assertIn("canonicalRenderSampleMs", script)
         self.assertIn("renderSampleRoleSummary", script)
@@ -88,6 +89,11 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;", script)
         self.assertIn('throw new Error(`[perf-baseline] Gate warmups must be at least ${MIN_GATE_WARMUPS}; received ${options.warmups}.`);', script)
         self.assertIn("warmups mismatch: baseline=", script)
+        self.assertIn("runs mismatch: baseline=", script)
+        self.assertIn("browser version mismatch: baseline=", script)
+        self.assertIn("package lock mismatch: baseline=", script)
+        self.assertIn("manifestSha256 mismatch", script)
+        self.assertIn("featureCount mismatch", script)
         self.assertIn('if (activeScenarioId !== normalizeScenarioId(scenarioId)) {', script)
         self.assertIn('{ key: "scenarioAppliedMs", label: "scenarioAppliedMs" }', script)
         self.assertIn('{ key: "applyScenarioBundleMs", label: "applyScenarioBundleMs" }', script)
@@ -227,17 +233,30 @@ class PerfGateContractTest(unittest.TestCase):
 
     def test_checked_in_baseline_keeps_report_identity_and_worker_summary_fields(self):
         baseline_payload = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))
-        self.assertEqual(baseline_payload.get("schemaVersion"), 1)
+        self.assertEqual(baseline_payload.get("schemaVersion"), 2)
         self.assertEqual(baseline_payload.get("benchmarkMetricsSchemaVersion"), "3.3")
         self.assertEqual(baseline_payload.get("probeSchema"), "mc_perf_snapshot")
         self.assertRegex(str(baseline_payload.get("gitHead", "")), r"^[0-9a-f]{40}$")
+        self.assertEqual(baseline_payload.get("config", {}).get("runs"), 5)
         self.assertEqual(baseline_payload.get("config", {}).get("warmups"), 3)
+        self.assertRegex(str(baseline_payload.get("environment", {}).get("browserVersion", "")), r"\d+")
+        self.assertRegex(str(baseline_payload.get("environment", {}).get("packageLockSha256", "")), r"^[0-9a-f]{64}$")
+        role_policy = baseline_payload.get("renderSampleRolePolicy", {})
+        self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
+        self.assertEqual(role_policy.get("canonicalRoleId"), "last-post-promotion-idle-scenario-frame-v1")
         for scenario_id in ("tno_1962", "hoi4_1939"):
-            summary = baseline_payload.get("scenarios", {}).get(scenario_id, {}).get("summary", {})
+            scenario = baseline_payload.get("scenarios", {}).get(scenario_id, {})
+            summary = scenario.get("summary", {})
             self.assertIn("workerDecodeMs", summary)
             self.assertIn("workerMetaBuildMs", summary)
             self.assertIsInstance(summary.get("workerDecodeMs"), (int, float))
             self.assertIsInstance(summary.get("workerMetaBuildMs"), (int, float))
+            identity = baseline_payload.get("workloadIdentity", {}).get("scenarios", {}).get(scenario_id, {})
+            self.assertRegex(str(identity.get("manifestSha256", "")), r"^[0-9a-f]{64}$")
+            self.assertGreater(int(identity.get("featureCount", 0)), 0)
+            role_summary = scenario.get("renderSampleRoleSummary", {})
+            self.assertEqual(role_summary.get("matchedRunCount"), 5)
+            self.assertEqual(role_summary.get("mismatchCount"), 0)
 
     def test_editor_benchmark_locks_identity_and_fill_black_pixel_contract(self):
         script = EDITOR_BENCHMARK_SCRIPT.read_text(encoding="utf-8")
