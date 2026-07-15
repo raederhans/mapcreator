@@ -1227,27 +1227,29 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
 
   const baselineBrowser = String(baselineReport?.environment?.browser || "").trim();
   const currentBrowser = String(currentReport?.environment?.browser || "").trim();
-  if (baselineBrowser !== currentBrowser) {
+  if (!baselineBrowser || !currentBrowser || baselineBrowser !== currentBrowser) {
     mismatches.push(`browser mismatch: baseline=${baselineBrowser || "<missing>"} current=${currentBrowser || "<missing>"}`);
   }
 
   const baselineBrowserVersion = String(baselineReport?.environment?.browserVersion || "").trim();
   const currentBrowserVersion = String(currentReport?.environment?.browserVersion || "").trim();
-  if (baselineBrowserVersion !== currentBrowserVersion) {
+  if (!baselineBrowserVersion || !currentBrowserVersion || baselineBrowserVersion !== currentBrowserVersion) {
     mismatches.push(`browser version mismatch: baseline=${baselineBrowserVersion || "<missing>"} current=${currentBrowserVersion || "<missing>"}`);
   }
 
   const baselinePackageLockSha256 = String(baselineReport?.environment?.packageLockSha256 || "").trim();
   const currentPackageLockSha256 = String(currentReport?.environment?.packageLockSha256 || "").trim();
-  if (baselinePackageLockSha256 !== currentPackageLockSha256) {
+  if (!baselinePackageLockSha256 || !currentPackageLockSha256 || baselinePackageLockSha256 !== currentPackageLockSha256) {
     mismatches.push(`package lock mismatch: baseline=${baselinePackageLockSha256 || "<missing>"} current=${currentPackageLockSha256 || "<missing>"}`);
   }
 
-  const baselineQuery = baselineReport?.config?.urlQuery || {};
-  const currentQuery = currentReport?.config?.urlQuery || {};
-  if (JSON.stringify(baselineQuery) !== JSON.stringify(currentQuery)) {
+  const baselineQuery = baselineReport?.config?.urlQuery;
+  const currentQuery = currentReport?.config?.urlQuery;
+  const baselineQueryValid = !!baselineQuery && typeof baselineQuery === "object" && !Array.isArray(baselineQuery);
+  const currentQueryValid = !!currentQuery && typeof currentQuery === "object" && !Array.isArray(currentQuery);
+  if (!baselineQueryValid || !currentQueryValid || JSON.stringify(baselineQuery) !== JSON.stringify(currentQuery)) {
     mismatches.push(
-      `urlQuery mismatch: baseline=${JSON.stringify(baselineQuery)} current=${JSON.stringify(currentQuery)}`
+      `urlQuery mismatch: baseline=${baselineQueryValid ? JSON.stringify(baselineQuery) : "<missing>"} current=${currentQueryValid ? JSON.stringify(currentQuery) : "<missing>"}`
     );
   }
   const baselineWarmups = finiteNumber(baselineReport?.config?.warmups, NaN);
@@ -1262,13 +1264,21 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     mismatches.push(`runs mismatch: baseline=${baselineRuns} current=${currentRuns}`);
   }
 
-  const baselineScenarios = Array.isArray(baselineReport?.config?.scenarios)
-    ? baselineReport.config.scenarios.map((scenarioId) => String(scenarioId || ""))
+  const baselineScenarioValues = baselineReport?.config?.scenarios;
+  const currentScenarioValues = currentReport?.config?.scenarios;
+  const baselineScenariosValid = Array.isArray(baselineScenarioValues)
+    && baselineScenarioValues.length > 0
+    && baselineScenarioValues.every((scenarioId) => String(scenarioId || "").trim());
+  const currentScenariosValid = Array.isArray(currentScenarioValues)
+    && currentScenarioValues.length > 0
+    && currentScenarioValues.every((scenarioId) => String(scenarioId || "").trim());
+  const baselineScenarios = baselineScenariosValid
+    ? baselineScenarioValues.map((scenarioId) => String(scenarioId))
     : [];
-  const currentScenarios = Array.isArray(currentReport?.config?.scenarios)
-    ? currentReport.config.scenarios.map((scenarioId) => String(scenarioId || ""))
+  const currentScenarios = currentScenariosValid
+    ? currentScenarioValues.map((scenarioId) => String(scenarioId))
     : [];
-  if (JSON.stringify(baselineScenarios) !== JSON.stringify(currentScenarios)) {
+  if (!baselineScenariosValid || !currentScenariosValid || JSON.stringify(baselineScenarios) !== JSON.stringify(currentScenarios)) {
     mismatches.push(`scenarios mismatch: baseline=${JSON.stringify(baselineScenarios)} current=${JSON.stringify(currentScenarios)}`);
   }
 

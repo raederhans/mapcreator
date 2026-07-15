@@ -343,15 +343,20 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
   }
 });
 
+const missingSchema2IdentityCases = [
+  ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
+  ["nodeMajor", (report) => { delete report.environment.nodeMajor; }, /node major mismatch/],
+  ["browser", (report) => { delete report.environment.browser; }, /browser mismatch/],
+  ["browserVersion", (report) => { delete report.environment.browserVersion; }, /browser version mismatch/],
+  ["packageLockSha256", (report) => { delete report.environment.packageLockSha256; }, /package lock mismatch/],
+  ["runs", (report) => { delete report.config.runs; }, /runs mismatch/],
+  ["warmups", (report) => { delete report.config.warmups; }, /warmups mismatch/],
+  ["scenarios", (report) => { delete report.config.scenarios; }, /scenarios mismatch/],
+  ["urlQuery", (report) => { delete report.config.urlQuery; }, /urlQuery mismatch/],
+];
+
 test("baseline identity comparison rejects missing schema-2 workload fields", () => {
-  const cases = [
-    ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
-    ["nodeMajor", (report) => { delete report.environment.nodeMajor; }, /node major mismatch/],
-    ["browser", (report) => { delete report.environment.browser; }, /browser mismatch/],
-    ["runs", (report) => { delete report.config.runs; }, /runs mismatch/],
-    ["warmups", (report) => { delete report.config.warmups; }, /warmups mismatch/],
-    ["scenarios", (report) => { delete report.config.scenarios; }, /scenarios mismatch/],
-  ];
+  const cases = missingSchema2IdentityCases;
 
   for (const [label, mutate, expected] of cases) {
     const baseline = makeSchema2IdentityReport();
@@ -359,6 +364,22 @@ test("baseline identity comparison rejects missing schema-2 workload fields", ()
     mutate(baseline);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
+});
+
+test("baseline identity comparison rejects current-side and bilateral schema-2 identity gaps", () => {
+  for (const [label, mutate, expected] of missingSchema2IdentityCases) {
+    const baseline = makeSchema2IdentityReport();
+    const current = makeSchema2IdentityReport();
+    mutate(current);
+    let mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+
+    mutate(baseline);
+    mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} bilateral gap should still produce one focused mismatch`);
     assert.match(mismatches[0], expected);
   }
 });
