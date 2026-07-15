@@ -71,6 +71,29 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertTrue(summary_json.exists())
         self.assertTrue(summary_md.exists())
 
+    def test_visual_color_readiness_keeps_shared_interaction_infra_gate(self) -> None:
+        support_source = (REPO_ROOT / "tests" / "e2e" / "support" / "playwright-app.js").read_text(encoding="utf-8")
+        scenario_source = (
+            REPO_ROOT
+            / "tests"
+            / "e2e"
+            / "dev"
+            / "scenario_chunk_exact_after_settle_regression.dev.spec.js"
+        ).read_text(encoding="utf-8")
+
+        shared_chunk_idle = support_source[
+            support_source.index("async function waitForChunkIdle"):
+            support_source.index("async function waitForRenderIdle")
+        ]
+        political_color_wait = scenario_source[
+            scenario_source.index("async function waitForFullPoliticalColorCoverage"):
+            scenario_source.index("async function collectPostEditPoliticalSnapshot")
+        ]
+
+        self.assertIn("&& !loadState.pendingInfraPromotion", shared_chunk_idle)
+        self.assertNotIn("&& !loadState.pendingInfraPromotion", political_color_wait)
+        self.assertIn("pendingInfraPromotion: !!loadState.pendingInfraPromotion", political_color_wait)
+
     def test_pages_public_release_gate_requires_explicit_candidate_url(self) -> None:
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
         scripts = package_json["scripts"]

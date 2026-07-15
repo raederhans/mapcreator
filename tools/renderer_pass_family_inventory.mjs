@@ -57,7 +57,7 @@ const freezeRecord = (record) => Object.freeze({
   browserLanes: Object.freeze(record.browserLanes),
 });
 
-// 该表是 P3 提取的审计合同：顺序对齐运行时 pass universe，状态与依赖字段决定验证路由和迁移边界。
+// 该表是 P3 提取的审计合同：顺序对齐运行时 pass universe，状态与依赖字段为验证路由和迁移评审提供输入。
 export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
   freezeRecord({
     passName: "background",
