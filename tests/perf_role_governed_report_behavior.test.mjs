@@ -384,6 +384,27 @@ test("baseline identity comparison rejects current-side and bilateral schema-2 i
   }
 });
 
+test("baseline identity comparison rejects missing scenario workload identity on either side", () => {
+  const cases = [
+    ["manifestSha256", (report) => { delete report.workloadIdentity.scenarios.tno_1962.manifestSha256; }, /manifestSha256 mismatch/],
+    ["featureCount", (report) => { delete report.workloadIdentity.scenarios.tno_1962.featureCount; }, /featureCount mismatch/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const baseline = makeSchema2IdentityReport();
+    const current = makeSchema2IdentityReport();
+    mutate(baseline);
+    let mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} baseline-side gap should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+
+    mutate(current);
+    mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} bilateral gap should still produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
+});
+
 test("snapshot summarization keeps non-number measurements out of gate summaries", () => {
   const summary = summarizeSnapshot({
     bootMetrics: { total: { durationMs: true } },

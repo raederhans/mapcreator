@@ -1287,12 +1287,12 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     const currentIdentity = currentReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
     const baselineManifestSha256 = String(baselineIdentity.manifestSha256 || "").trim();
     const currentManifestSha256 = String(currentIdentity.manifestSha256 || "").trim();
-    if (baselineManifestSha256 !== currentManifestSha256) {
+    if (!baselineManifestSha256 || !currentManifestSha256 || baselineManifestSha256 !== currentManifestSha256) {
       mismatches.push(`${scenarioId}.manifestSha256 mismatch: baseline=${baselineManifestSha256 || "<missing>"} current=${currentManifestSha256 || "<missing>"}`);
     }
     const baselineFeatureCount = finiteNumber(baselineIdentity.featureCount, NaN);
     const currentFeatureCount = finiteNumber(currentIdentity.featureCount, NaN);
-    if (baselineFeatureCount !== currentFeatureCount) {
+    if (!Number.isFinite(baselineFeatureCount) || !Number.isFinite(currentFeatureCount) || baselineFeatureCount !== currentFeatureCount) {
       mismatches.push(`${scenarioId}.featureCount mismatch: baseline=${baselineFeatureCount} current=${currentFeatureCount}`);
     }
   }
