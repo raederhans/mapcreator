@@ -391,14 +391,21 @@ test("baseline identity comparison rejects missing scenario workload identity on
   ];
 
   for (const [label, mutate, expected] of cases) {
-    const baseline = makeSchema2IdentityReport();
-    const current = makeSchema2IdentityReport();
+    let baseline = makeSchema2IdentityReport();
+    let current = makeSchema2IdentityReport();
     mutate(baseline);
     let mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} baseline-side gap should produce one focused mismatch`);
     assert.match(mismatches[0], expected);
 
+    baseline = makeSchema2IdentityReport();
+    current = makeSchema2IdentityReport();
     mutate(current);
+    mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} current-side gap should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+
+    mutate(baseline);
     mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} bilateral gap should still produce one focused mismatch`);
     assert.match(mismatches[0], expected);
