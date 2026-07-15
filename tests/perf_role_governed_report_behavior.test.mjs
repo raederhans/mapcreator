@@ -293,13 +293,15 @@ test("baseline admission requires the current schema-2 oracle", () => {
   );
 });
 
-test("baseline identity comparison rejects each schema-2 workload drift independently", () => {
-  const makeReport = () => ({
+function makeSchema2IdentityReport() {
+  return {
     schemaVersion: 2,
     benchmarkMetricsSchemaVersion: "3.3",
     probeSchema: "mc_perf_snapshot",
     environment: {
+      os: "win32 10.0.26200",
       platform: "win32",
+      node: "v22.23.0",
       nodeMajor: 22,
       browser: "chromium-headless",
       browserVersion: "145.0.7632.6",
@@ -319,8 +321,10 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
         },
       },
     },
-  });
+  };
+}
 
+test("baseline identity comparison rejects each schema-2 workload drift independently", () => {
   const cases = [
     ["browserVersion", (report) => { report.environment.browserVersion = "146.0.0.0"; }, /browser version mismatch/],
     ["packageLockSha256", (report) => { report.environment.packageLockSha256 = "c".repeat(64); }, /package lock mismatch/],
@@ -330,9 +334,29 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
   ];
 
   for (const [label, mutate, expected] of cases) {
-    const baseline = makeReport();
-    const current = makeReport();
+    const baseline = makeSchema2IdentityReport();
+    const current = makeSchema2IdentityReport();
     mutate(current);
+    const mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
+});
+
+test("baseline identity comparison rejects missing schema-2 workload fields", () => {
+  const cases = [
+    ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
+    ["nodeMajor", (report) => { delete report.environment.nodeMajor; }, /node major mismatch/],
+    ["browser", (report) => { delete report.environment.browser; }, /browser mismatch/],
+    ["runs", (report) => { delete report.config.runs; }, /runs mismatch/],
+    ["warmups", (report) => { delete report.config.warmups; }, /warmups mismatch/],
+    ["scenarios", (report) => { delete report.config.scenarios; }, /scenarios mismatch/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const baseline = makeSchema2IdentityReport();
+    const current = makeSchema2IdentityReport();
+    mutate(baseline);
     const mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
     assert.match(mismatches[0], expected);

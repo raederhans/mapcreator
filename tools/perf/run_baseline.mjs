@@ -1206,29 +1206,29 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     ...getPerfReportContractMismatches(baselineReport, "baseline"),
   ];
   const baselinePlatform = normalizeOsPlatform(
-    baselineReport?.environment?.platform || baselineReport?.environment?.os
+    baselineReport?.environment?.platform
   );
   const currentPlatform = normalizeOsPlatform(
-    currentReport?.environment?.platform || currentReport?.environment?.os
+    currentReport?.environment?.platform
   );
-  if (baselinePlatform && currentPlatform && baselinePlatform !== currentPlatform) {
-    mismatches.push(`os platform mismatch: baseline=${baselinePlatform} current=${currentPlatform}`);
+  if (!baselinePlatform || !currentPlatform || baselinePlatform !== currentPlatform) {
+    mismatches.push(`os platform mismatch: baseline=${baselinePlatform || "<missing>"} current=${currentPlatform || "<missing>"}`);
   }
 
   const baselineNodeMajor = parseNodeMajor(
-    baselineReport?.environment?.nodeMajor || baselineReport?.environment?.node
+    baselineReport?.environment?.nodeMajor
   );
   const currentNodeMajor = parseNodeMajor(
-    currentReport?.environment?.nodeMajor || currentReport?.environment?.node
+    currentReport?.environment?.nodeMajor
   );
-  if (baselineNodeMajor > 0 && currentNodeMajor > 0 && baselineNodeMajor !== currentNodeMajor) {
-    mismatches.push(`node major mismatch: baseline=${baselineNodeMajor} current=${currentNodeMajor}`);
+  if (!baselineNodeMajor || !currentNodeMajor || baselineNodeMajor !== currentNodeMajor) {
+    mismatches.push(`node major mismatch: baseline=${baselineNodeMajor || "<missing>"} current=${currentNodeMajor || "<missing>"}`);
   }
 
   const baselineBrowser = String(baselineReport?.environment?.browser || "").trim();
   const currentBrowser = String(currentReport?.environment?.browser || "").trim();
-  if (baselineBrowser && currentBrowser && baselineBrowser !== currentBrowser) {
-    mismatches.push(`browser mismatch: baseline=${baselineBrowser} current=${currentBrowser}`);
+  if (baselineBrowser !== currentBrowser) {
+    mismatches.push(`browser mismatch: baseline=${baselineBrowser || "<missing>"} current=${currentBrowser || "<missing>"}`);
   }
 
   const baselineBrowserVersion = String(baselineReport?.environment?.browserVersion || "").trim();
@@ -1252,14 +1252,24 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
   }
   const baselineWarmups = finiteNumber(baselineReport?.config?.warmups, NaN);
   const currentWarmups = finiteNumber(currentReport?.config?.warmups, NaN);
-  if (Number.isFinite(baselineWarmups) && Number.isFinite(currentWarmups) && baselineWarmups !== currentWarmups) {
+  if (!Number.isFinite(baselineWarmups) || !Number.isFinite(currentWarmups) || baselineWarmups !== currentWarmups) {
     mismatches.push(`warmups mismatch: baseline=${baselineWarmups} current=${currentWarmups}`);
   }
 
   const baselineRuns = finiteNumber(baselineReport?.config?.runs, NaN);
   const currentRuns = finiteNumber(currentReport?.config?.runs, NaN);
-  if (Number.isFinite(baselineRuns) && Number.isFinite(currentRuns) && baselineRuns !== currentRuns) {
+  if (!Number.isFinite(baselineRuns) || !Number.isFinite(currentRuns) || baselineRuns !== currentRuns) {
     mismatches.push(`runs mismatch: baseline=${baselineRuns} current=${currentRuns}`);
+  }
+
+  const baselineScenarios = Array.isArray(baselineReport?.config?.scenarios)
+    ? baselineReport.config.scenarios.map((scenarioId) => String(scenarioId || ""))
+    : [];
+  const currentScenarios = Array.isArray(currentReport?.config?.scenarios)
+    ? currentReport.config.scenarios.map((scenarioId) => String(scenarioId || ""))
+    : [];
+  if (JSON.stringify(baselineScenarios) !== JSON.stringify(currentScenarios)) {
+    mismatches.push(`scenarios mismatch: baseline=${JSON.stringify(baselineScenarios)} current=${JSON.stringify(currentScenarios)}`);
   }
 
   for (const scenarioId of currentReport?.config?.scenarios || []) {
