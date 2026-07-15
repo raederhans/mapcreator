@@ -140,7 +140,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   }
 });
 
-test("P3.1 and P3.2 pass-family owners stay in the child-safe renderer lane", () => {
+test("P3.1, P3.2, and P3.3a pass-family contracts stay in the child-safe renderer lane", () => {
   const expectedEntries = [
     {
       id: "verify-core:test:node:visual-effects-pass-owner",
@@ -158,6 +158,15 @@ test("P3.1 and P3.2 pass-family owners stay in the child-safe renderer lane", ()
         "js/core/map_renderer.js",
         "js/core/renderer/context_pass_orchestrator_owner.js",
         "tests/context_pass_orchestrator_owner_behavior.test.mjs",
+      ],
+    },
+    {
+      id: "verify-core:test:node:renderer-political-pass-orchestration-preflight",
+      commandRef: "test:node:renderer-political-pass-orchestration-preflight",
+      requiredSourceRefs: [
+        "js/core",
+        "tests/renderer_political_pass_orchestration_preflight.test.mjs",
+        "docs/active/renderer-political-pass-preflight-p3-3a-20260714.md",
       ],
     },
     {
@@ -242,6 +251,18 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
       `visual effects owner should select ${commandRef}`,
     );
   }
+
+  const politicalPreflightReport = buildRecommendation([
+    "tests/renderer_political_pass_orchestration_preflight.test.mjs",
+  ]);
+  const politicalPreflightCommandRefs = new Set(
+    politicalPreflightReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(politicalPreflightReport.unmatchedChangedFiles, []);
+  assert.equal(
+    politicalPreflightCommandRefs.has("test:node:renderer-political-pass-orchestration-preflight"),
+    true,
+  );
 
   assert.match(
     packageJson.scripts["test:python:map-renderer-render-pipeline-passes-boundary"],

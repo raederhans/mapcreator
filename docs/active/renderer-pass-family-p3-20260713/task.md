@@ -40,7 +40,7 @@
 - [x] P3.2 RED: the context pass orchestrator behavior contract passes syntax validation and fails with the expected missing canonical owner module before production code exists.
 - [x] P3.2 GREEN: implemented the context pass owner, atomically retargeted existing source-scan contracts, and updated inventory, metadata, architecture, and generated Pages dist.
 - [x] P3.2 VERIFY: focused/adaptive gates pass; clean-head core is 73/73, main-thread is 77/77, the serial browser matrix is fully green, Pages/dist parity passes, and the same-SHA standard performance rerun passes with the original policy.
-- [ ] P3.3a PRECHECK: freeze political pass dependencies, effect order, worker/cache boundaries, state writes, and browser/performance lanes without production changes.
+- [x] P3.3a PRECHECK: froze political pass dependencies, effect order, worker/cache/partial-repaint boundaries, state writes, and browser/performance lanes with zero production/dist changes; focused contracts and clean `verify:core` 74/74 pass.
 - [ ] P3.3b RED/GREEN: extract only top-level political orchestration into one canonical owner while preserving worker, cache, drawing, state, and facade ownership.
 - [ ] P3 CLOSEOUT: run three independent reviews, clean-head deterministic/browser/performance acceptance, push/integrate main, archive this task folder, and remove only the integrated runtime worktree.
 

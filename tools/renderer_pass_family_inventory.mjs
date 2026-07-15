@@ -114,7 +114,12 @@ export const RENDER_PASS_FAMILY_INVENTORY = Object.freeze([
       "js/core/renderer/spatial_index_runtime_owner.js",
       "js/core/renderer/visible_frame_diagnostics_owner.js",
     ],
-    browserLanes: ["test:e2e:scenario-resilience", "test:e2e:water-rendering", "test:e2e:tno-contracts"],
+    browserLanes: [
+      "test:e2e:dev:political-progressive-recovery",
+      "test:e2e:scenario-resilience",
+      "test:e2e:water-rendering",
+      "test:e2e:tno-contracts",
+    ],
     perfSensitivity: "high",
     notes: "P3.3a preflight scope only; worker client, packet builder, and accepted-result render request remain inline dependencies",
   }),

@@ -201,6 +201,15 @@ test("browser lanes resolve to package scripts and preserve the known HGO gap", 
     RENDER_PASS_FAMILY_INVENTORY.find((record) => record.passName === "textureLabels").browserLanes,
     ["test:e2e:layer:regression"],
   );
+  assert.deepEqual(
+    RENDER_PASS_FAMILY_INVENTORY.find((record) => record.passName === "political").browserLanes,
+    [
+      "test:e2e:dev:political-progressive-recovery",
+      "test:e2e:scenario-resilience",
+      "test:e2e:water-rendering",
+      "test:e2e:tno-contracts",
+    ],
+  );
 });
 
 test("inventory remains data-only and isolated from the product source graph", () => {
