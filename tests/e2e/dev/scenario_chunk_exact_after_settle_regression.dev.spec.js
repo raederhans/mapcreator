@@ -149,7 +149,6 @@ async function waitForFullPoliticalColorCoverage(page, { timeout = 30_000 } = {}
         && !state?.exactAfterSettleHandle
         && !loadState.pendingPromotion
         && !loadState.pendingVisualPromotion
-        && !loadState.pendingInfraPromotion
         && !loadState.promotionScheduled
         && !loadState.refreshScheduled
         && !loadState.promotionCommitInFlight

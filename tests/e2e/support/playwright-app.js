@@ -265,8 +265,7 @@ async function waitForChunkIdle(page, { timeout = 120_000 } = {}) {
         && !loadState.promotionScheduled
         && !loadState.refreshScheduled
         && !loadState.promotionCommitInFlight
-        && !loadState.pendingVisualPromotion
-        && !loadState.pendingInfraPromotion;
+        && !loadState.pendingVisualPromotion;
     }, undefined, { timeout });
   } catch (error) {
     const snapshot = await readRuntimeIdleSnapshot(page);

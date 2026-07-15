@@ -1,32 +1,31 @@
-# P3.0 Render-Pass Family Inventory Plan
+# P3 Render-Pass Family Plan
 
 ## Objective
 
-Freeze the current 13-pass renderer ontology in repository-owned data, one central contract test, one child-safe verification route, and one coupling matrix. Product runtime changes remain zero.
+Complete the render-pass family ownership sequence: freeze the 13-pass ontology, extract the visual-effects, context, and political top-level orchestration owners, preserve pass order and effect ownership, then land the verified P3 branch onto current `origin/main`.
 
 ## Phases
 
-1. Trace both catalogs, every pass entry, current owner, state coupling, browser evidence, and performance sensitivity from `origin/main@63dd0bb5e23afd340afe2dc0dcc74095cc4cb2cd`.
-2. Add the frozen data-only inventory and exact static contract.
-3. Add the named package script and renderer-runtime verification metadata route with seven exact `sourceRefs`.
-4. Record the source-grounded ontology and worktree delivery evidence.
-5. Run the child-safe deterministic sequence, adaptive selector check, production-zero probe, review, and Lore commit.
-6. Repair any reproducible docs/tests/tooling baseline failure, then run the prescribed clean-HEAD dist, core, browser, and performance sequence under one App-leader live-process owner.
-7. Run adversarial inventory verification, finalize the delivery record, push the exact branch, and leave the worktree ready for P3.1 continuation.
+1. P3.0: trace both catalogs, freeze every pass entry/family/owner/coupling, and add the repository-owned inventory plus matrix contracts.
+2. P3.1: extract the visual-effects pass family into one canonical owner while keeping bottom-level drawing and style-normalization effects in the composition root.
+3. P3.2: extract the context pass family into one canonical owner while keeping layer/cache/metric effects in existing owners or the composition root.
+4. P3.3a: add production-zero political-pass preflight contracts.
+5. P3.3b: extract only top-level political-pass orchestration into one canonical owner while keeping worker, cache, drawing, state writes, partial repaint, progressive recovery, and facade ownership in the composition root.
+6. P3 closeout: record wait-contract evidence, rerun final deterministic/main-thread/browser/performance gates, rebase over current `origin/main`, archive the active task folder, integrate main, and clean the verified isolated worktree.
 
 ## Boundaries
 
-- Production renderer, `js/**`, `dist/**`, UI/CSS/data, scenario assets, public facade, state-write allowlist, and P2 owners stay unchanged.
-- Render pass order, both runtime catalogs, `renderPassToCache()`, and `RendererRuntimeContext` stay unchanged.
-- P3.1 remains the four visual-effects passes; P3.2 remains the three context passes; P3.3a remains political preflight only.
-- The formal Team lane owns the completed child-safe targeted checks. The App leader owns the remaining dist, full-core, browser, performance, push, and integration lanes.
+- UI/CSS/data, scenario assets, public facade, state-write allowlist, P2 frame owners, `renderPassToCache()`, pass order, and `RendererRuntimeContext` stay stable across P3.
+- P3 owners remain import-free/state-free orchestration owners. All concrete drawing, worker/cache algorithms, metrics writes, and scheduling effects stay in existing owners or the map-renderer composition root.
+- Williams crossover remains a separate performance-research lane. P3 acceptance uses the standard schema-2 `perf:gate`.
+- The App leader owns final dist, full-core, browser, performance, push, integration, archival, and cleanup lanes.
 
 ## Acceptance
 
-- The inventory contains 13 unique frozen records in idle catalog order and matches both catalog sets.
-- Every family, phase, entry, owner, dependency, lane, risk, state class, surface, and performance field is machine checked.
-- Metadata projection becomes 82 total entries, 41 route entries, 70 verify-core default commands, 4 main-thread commands, and 5 optional main-thread commands.
-- Adaptive selection reports zero unmatched changed files.
-- Base-to-HEAD production-path changes and product imports of the inventory both equal zero.
-- Targeted checks pass, every prescribed baseline command exits zero on a clean exact HEAD, and Williams crossover stays outside this phase.
-- The adaptive selector reports zero route gaps, adversarial inventory checks pass, and the pushed branch retains the verified exact HEAD.
+- The inventory contains 13 unique records in idle catalog order and matches both catalog sets.
+- P3.1/P3.2/P3.3b owners are canonical, route-covered, behavior-tested, and registered in verify-core.
+- `map_renderer.js` remains the entry host with thin wrappers for owned pass families.
+- Pass order, public facade, state-write allowlist, and runtime context remain stable.
+- Pages/dist parity, `verify:core`, `verify:core:main-thread`, serial browser lanes, and standard `perf:gate` pass on the final integrated candidate.
+- Adaptive selection reports zero unmatched changed files and zero route gaps.
+- The active P3 folder is archived after integration, and the dirty parent checkout remains untouched.

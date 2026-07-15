@@ -81,6 +81,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
     "docs/active/renderer-pass-family-p3-20260713/plan.md",
     "docs/active/renderer-pass-family-p3-20260713/context.md",
     "docs/active/renderer-pass-family-p3-20260713/task.md",
+    "docs/active/renderer-pass-family-p3-closeout-20260715.md",
     "docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md",
     "package.json",
   ];

@@ -145,3 +145,12 @@ Both production catalogs contain the same 13-pass set. The inventory follows `ID
 - The P3.3a preflight contract was upgraded atomically from owner absence to one canonical owner. Existing scenario-chunk and Python render-pipeline source contracts now read the canonical owner plus bounded composition-root helpers instead of treating the old inline function as the algorithm host.
 - The pass inventory records `political` as `owned-p3` at P3.3b. Verification metadata adds named Node and Python default-core contracts and routes the scenario-chunk, worker-packet, political-collection, Pages/dist, six browser, and standard performance lanes.
 - Focused owner, preflight, inventory, scenario-chunk, and Python boundary contracts are green. Full adaptive, dist, clean-core, main-thread, browser, and performance acceptance remains the current live-process-owner checkpoint.
+
+## 2026-07-15 P3.3b acceptance and wait-contract closeout
+
+- Functional P3.3b is pushed at `a18ee17fe2aba894f3e9455513d166a2a9d7d032` on `codex/renderer-pass-family-p3-runtime-20260714`.
+- The functional branch completed focused/static checks, canonical Pages generation, source/dist parity, clean `verify:core`, `verify:core:main-thread`, serial browser lanes, and standard `perf:gate` before the E2E wait-contract closeout.
+- A full current-main control and the P3 branch both exposed the same deferred-infra wait shape in `test:e2e:dev:scenario-chunk-runtime`: political color/pixel coverage was already satisfied while `pendingInfraPromotion` remained true under suite load.
+- The closeout repair updates only E2E wait contracts. `waitForFullPoliticalColorCoverage()` and `waitForChunkIdle()` still wait for promotion, visual promotion, refresh, and render commit readiness; they retain `pendingInfraPromotion` in failure snapshots as diagnostic evidence rather than visual/readiness admission.
+- Post-repair browser evidence passes: scenario chunk runtime `8/8`, political progressive recovery `3/3`, scenario resilience `3/3`, physical-layer runtime contract `1/1`, Water `12/12`, City `8/8`, TNO contracts `2/2`, and standard `perf:gate`.
+- Current `origin/main` has one later performance-boundary tooling commit `d5695acc13b38c1ae4e77f887a2add69985cbf95`. Final P3 integration therefore requires rebasing or merging the P3 runtime branch over current remote main, rerunning final gates, and then archiving this active task folder.

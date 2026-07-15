@@ -574,3 +574,6 @@
 
 ### 清单合同要区分入口、委托与可证明范围
 - 清单字段分别记录 entry host 和 delegated owner；合同直接读取的生产源全部进入验证路由。人工审查的依赖快照验证路径存在与静态可达性，并避免复制整份清单作为自证 oracle。
+
+### E2E 等待条件要区分视觉完成和基础设施 backlog
+- 颜色覆盖、render idle、交互稳定这类浏览器断言应等待 visual promotion、refresh、commit 和像素/状态合同；deferred infra promotion 这类后台 backlog 保留在失败快照中做诊断，避免把已完成的用户可见路径误判成超时。

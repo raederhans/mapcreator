@@ -42,7 +42,9 @@
 - [x] P3.2 VERIFY: focused/adaptive gates pass; clean-head core is 73/73, main-thread is 77/77, the serial browser matrix is fully green, Pages/dist parity passes, and the same-SHA standard performance rerun passes with the original policy.
 - [x] P3.3a PRECHECK: froze political pass dependencies, effect order, worker/cache/partial-repaint boundaries, state writes, and browser/performance lanes with zero production/dist changes; focused contracts and clean `verify:core` 74/74 pass.
 - [x] P3.3b RED/GREEN: extract only top-level political orchestration into one canonical owner while preserving worker, cache, drawing, state, and facade ownership.
-- [ ] P3 CLOSEOUT: run three independent reviews, clean-head deterministic/browser/performance acceptance, push/integrate main, archive this task folder, and remove only the integrated runtime worktree.
+- [x] P3.3b VERIFY: focused/static checks, Pages/dist parity, clean core, main-thread, serial browser matrix, and standard `perf:gate` passed for pushed functional commit `a18ee17f`.
+- [x] P3.3b WAIT-CONTRACT CLOSEOUT: classify deferred `pendingInfraPromotion` as diagnostic-only for political color coverage and render-idle E2E helpers; current-main and P3 both reproduced the same suite-order stall, and post-fix browser lanes pass.
+- [ ] P3 CLOSEOUT: rerun final post-closeout deterministic/main-thread gates, rebase over current `origin/main`, push/integrate main, archive this task folder, and remove only the integrated runtime worktree.
 
 ## Owned files
 
@@ -52,4 +54,4 @@ Tests: `tests/renderer_pass_family_inventory_behavior.test.mjs`, `tests/verifica
 
 Docs: this task directory, `docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md`, `docs/active/_worktree_registry.md`, and the appended P3 lesson in `lessons learned.md`.
 
-Production runtime files and generated dist remain outside the owned change set.
+Production runtime files and generated dist are owned only by the completed P3.1-P3.3b functional commits. The current closeout owns E2E wait helpers and control-plane truth.
