@@ -36,7 +36,7 @@
 - [x] Audit, validate, integrate, and push schema-2 performance governance at `6fe21918`; fresh Water 12/12, core 70/70, and standard performance gate all pass.
 - [x] P3.1 RED: add and run the visual-effects pass owner behavior contract before production code.
 - [x] P3.1 GREEN: implement the visual-effects pass owner, thin wrappers, inventory/metadata/architecture wiring, and generated dist parity.
-- [ ] P3.1 VERIFY: pass focused, adaptive, core, browser, and standard performance gates; record the exact evidence.
+- [x] P3.1 VERIFY: focused and adaptive checks pass; clean-head core is 72/72, main-thread is 76/76, Texture is 3/3, City is 8/8, Pages/dist parity passes, and the schema-2 standard performance gate passes.
 - [ ] P3.2 RED: add and run the context pass orchestrator behavior contract before production code.
 - [ ] P3.2 GREEN: implement the context pass owner, atomically retarget existing source-scan contracts, and update inventory/metadata/architecture/dist.
 - [ ] P3.2 VERIFY: pass focused, adaptive, core, browser, and standard performance gates; record the exact evidence.

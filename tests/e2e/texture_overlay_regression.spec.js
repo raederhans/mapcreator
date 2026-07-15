@@ -113,8 +113,8 @@ test("clean mode disables texture opacity and old paper affects land plus key wa
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
 
-  await page.locator("#labelMapStyle").evaluate((summary) => { summary.parentElement.open = true; });
-  await page.locator("[data-appearance-tab='texture']").click();
+  await page.locator("#labelMapContent").evaluate((summary) => { summary.parentElement.open = true; });
+  await page.locator("[data-map-content-tab='texture']").click();
   await page.locator("#textureSelect").selectOption("none");
   await expect(page.locator("#textureOpacity")).toBeDisabled();
 
@@ -143,8 +143,8 @@ test("graticule and draft grid expose dynamic controls and produce visible pixel
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
 
-  await page.locator("#labelMapStyle").evaluate((summary) => { summary.parentElement.open = true; });
-  await page.locator("[data-appearance-tab='texture']").click();
+  await page.locator("#labelMapContent").evaluate((summary) => { summary.parentElement.open = true; });
+  await page.locator("[data-map-content-tab='texture']").click();
   await page.locator("#textureSelect").selectOption("graticule");
   await page.locator("#textureGraticuleMajorStep").evaluate((element) => {
     element.value = "10";
@@ -240,8 +240,8 @@ test("texture overlay payload rehydrates new controls back into state and UI", a
   await gotoApp(page, "/", { waitUntil: "domcontentloaded" });
   await waitForAppInteractive(page);
 
-  await page.locator("#labelMapStyle").evaluate((summary) => { summary.parentElement.open = true; });
-  await page.locator("[data-appearance-tab='texture']").click();
+  await page.locator("#labelMapContent").evaluate((summary) => { summary.parentElement.open = true; });
+  await page.locator("[data-map-content-tab='texture']").click();
 
   const payload = {
     mode: "draft_grid",
