@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 886690,
+      "size_bytes": 884458,
       "source_kind": "dist"
     },
     {
@@ -46063,6 +46063,11 @@
     {
       "path": "app/js/core/renderer/political_collection_owner.js",
       "size_bytes": 21033,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/political_pass_orchestrator_owner.js",
+      "size_bytes": 9073,
       "source_kind": "dist"
     },
     {
@@ -47432,7 +47437,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468025,
+      "size_bytes": 1468167,
       "source_kind": "dist"
     },
     {
@@ -47562,9 +47567,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9426,
+      "file_count": 9427,
       "path": "app",
-      "size_bytes": 965665164
+      "size_bytes": 965672005
     },
     {
       "file_count": 57,
@@ -47574,7 +47579,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468025
+      "size_bytes": 1468167
     },
     {
       "file_count": 1,
@@ -47597,5 +47602,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972231550
+  "total_bytes": 972238533
 }

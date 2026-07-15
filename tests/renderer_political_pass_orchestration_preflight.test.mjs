@@ -13,7 +13,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 
 const MAP_RENDERER_PATH = "js/core/map_renderer.js";
 const PREFLIGHT_DOC_PATH = "docs/active/renderer-political-pass-preflight-p3-3a-20260714.md";
-const FUTURE_OWNER_PATH = "js/core/renderer/political_pass_orchestrator_owner.js";
+const CANONICAL_OWNER_PATH = "js/core/renderer/political_pass_orchestrator_owner.js";
 const PUBLIC_FACADE_PATH = "js/core/map_renderer/public.js";
 const RUNTIME_CONTEXT_PATH = "js/core/map_renderer/renderer_runtime_context.js";
 const STATE_WRITE_ALLOWLIST_PATH = "tools/eslint-rules/state-writer-allowlist.json";
@@ -116,12 +116,26 @@ function maskStringAndCommentContent(source) {
 }
 
 function extractFunctionSource(source, functionName) {
-  const marker = `function ${functionName}`;
+  const marker = `function ${functionName}(`;
   const start = source.indexOf(marker);
   assert.notEqual(start, -1, `Expected function to exist: ${functionName}`);
-  const openBrace = source.indexOf("{", start + marker.length);
-  assert.notEqual(openBrace, -1, `Expected function body to start: ${functionName}`);
   const maskedSource = maskStringAndCommentContent(source);
+  const openParen = start + marker.length - 1;
+  let parameterDepth = 0;
+  let closeParen = -1;
+  for (let index = openParen; index < source.length; index += 1) {
+    if (maskedSource[index] === "(") parameterDepth += 1;
+    if (maskedSource[index] === ")") {
+      parameterDepth -= 1;
+      if (parameterDepth === 0) {
+        closeParen = index;
+        break;
+      }
+    }
+  }
+  assert.notEqual(closeParen, -1, `Expected function parameters to close: ${functionName}`);
+  const openBrace = source.indexOf("{", closeParen + 1);
+  assert.notEqual(openBrace, -1, `Expected function body to start: ${functionName}`);
   let depth = 0;
   for (let index = openBrace; index < source.length; index += 1) {
     if (maskedSource[index] === "{") depth += 1;
@@ -173,94 +187,99 @@ test("P3.3a document locks the political-pass preflight and P3.3b seam", () => {
   }
 });
 
-test("current political pass keeps its exact top-level orchestration order", () => {
-  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
-  const drawSource = extractFunctionSource(rendererSource, "drawPoliticalPass");
+test("implemented political owner keeps the frozen top-level orchestration order", () => {
+  const ownerSource = readRepoFile(CANONICAL_OWNER_PATH);
+  const drawSource = extractFunctionSource(ownerSource, "drawPoliticalPass");
   assertOrderedTokens(drawSource, [
     "if (isHgoRuntimePreviewReady())",
     'recordRenderPerfMetric("drawPoliticalPass", 0, {',
-    "const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;",
-    "const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();",
-    "const sceneIdentity = getVisibleFrameIdentity(transform);",
-    "const workerIdentity = createPoliticalRasterWorkerIdentity({",
+    "const identity = resolvePoliticalPassIdentity(k);",
     "recordPoliticalRasterWorkerSnapshot();",
-    "const politicalOverscanPx = getPoliticalPassViewportOverscanPx();",
-    'const visibleItemsResult = debugMode === "PROD"',
+    "const viewport = resolvePoliticalPassViewport(identity);",
+    "if (viewport.visibleStats)",
     'recordRenderPerfMetric("politicalPassVisibleItems", 0, {',
-    "if (renderDiag.enabled)",
-    "const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);",
-    "drawPoliticalWorkerBitmapResult(consumedBitmapResult, workerIdentity)",
+    "if (isRenderDiagnosticsEnabled())",
+    "publishPoliticalPassDiagnostics({ identity, viewport });",
+    "const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(identity.workerIdentity);",
+    "drawPoliticalWorkerBitmapResult(consumedBitmapResult, identity.workerIdentity)",
+    "recordPoliticalRasterWorkerSnapshot();",
     'reason: "political-raster-worker-bitmap"',
     "const backgroundStartedAt = nowMs();",
-    "const backgroundSummary = drawPoliticalBackgroundFills({",
-    'recordRenderPerfMetric("drawPoliticalBackgroundFillsPass"',
-    "if (!runtimeState.landData?.features?.length)",
+    "const backgroundSummary = drawPoliticalBackgroundFills({ identity, viewport });",
+    '"drawPoliticalBackgroundFillsPass"',
+    "if (!hasPoliticalLandFeatures())",
     'reason: "missing-land-data"',
-    "const workerPacketState = isPoliticalRasterWorkerBitmapEnabled()",
-    "requestPoliticalRasterWorkerPass({",
+    "const packetState = isPoliticalRasterWorkerBitmapEnabled()",
+    "buildPoliticalRasterWorkerPacketEffect({ identity, viewport })",
+    "requestPoliticalRasterWorkerPassEffect({ identity, viewport, packetState });",
     "recordPoliticalRasterWorkerSnapshot();",
     "const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();",
     "const progressiveRecoveryCoarseSkipCandidate = (",
     "const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate",
-    "const skipFineFeatureLoopForProgressiveRecovery = (",
-    "if (skipFineFeatureLoopForProgressiveRecovery)",
+    "if (progressiveRecoveryCoarseSkipCandidate && !visiblePoliticalForegroundColorOverride)",
     'reason: "progressive-coarse-underlay"',
+    "const featureMetrics = drawPoliticalFineFeatureLoop({ k, identity, viewport });",
+    'recordRenderPerfMetric("drawPoliticalFeatureFillLoop"',
+    'recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop"',
+    "clearPendingPoliticalColorEdit({",
     'reason: "fine-feature-loop"',
-  ], "drawPoliticalPass order");
+  ], "political owner order");
 });
 
 test("worker identity, bitmap consumption, packet request, and repaint callback remain root-owned", () => {
-  const drawSource = extractFunctionSource(readRepoFile(MAP_RENDERER_PATH), "drawPoliticalPass");
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const ownerSource = extractFunctionSource(readRepoFile(CANONICAL_OWNER_PATH), "drawPoliticalPass");
+  const identitySource = extractFunctionSource(rendererSource, "resolvePoliticalPassIdentity");
+  const viewportSource = extractFunctionSource(rendererSource, "resolvePoliticalPassViewport");
+  const packetSource = extractFunctionSource(rendererSource, "buildPoliticalPassWorkerPacket");
+  const requestSource = extractFunctionSource(rendererSource, "requestPoliticalPassWorker");
   assert.match(
-    drawSource,
-    /const politicalScreenRects = \[\{[\s\S]*?minX: -politicalOverscanPx,[\s\S]*?minY: -politicalOverscanPx,[\s\S]*?maxX: canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: canvasHeight \+ politicalOverscanPx,[\s\S]*?\}\];/,
+    viewportSource,
+    /const politicalScreenRects = \[\{[\s\S]*?minX: -politicalOverscanPx,[\s\S]*?minY: -politicalOverscanPx,[\s\S]*?maxX: identity\.canvasWidth \+ politicalOverscanPx,[\s\S]*?maxY: identity\.canvasHeight \+ politicalOverscanPx,[\s\S]*?\}\];/,
   );
   assert.match(
-    drawSource,
+    identitySource,
     /createPoliticalRasterWorkerIdentity\(\{[\s\S]*?sceneGeneration: sceneIdentity\.sceneGeneration,[\s\S]*?scenarioDataGeneration: sceneIdentity\.scenarioDataGeneration,[\s\S]*?selectionVersion: sceneIdentity\.selectionVersion \|\| Number\(loadState\?\.selectionVersion \|\| 0\),[\s\S]*?passSignature: getRenderPassSignature\("political", transform\),/,
   );
   assert.match(
-    drawSource,
-    /requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: workerIdentity,[\s\S]*?rasterPacket: workerPacketState\.packet,[\s\S]*?packetBuildMs: workerPacketState\.packetBuildMs/,
+    packetSource,
+    /buildPoliticalRasterWorkerPacket\(\{[\s\S]*?visibleItems: viewport\.visibleItems,[\s\S]*?transform: identity\.transform,[\s\S]*?canvasWidth: identity\.canvasWidth,[\s\S]*?canvasHeight: identity\.canvasHeight/,
   );
   assert.match(
-    drawSource,
-    /: \{ packet: null, packetBuildMs: 0, reason: "bitmap-flag-disabled" \};[\s\S]*?requestPoliticalRasterWorkerPass\(\{/,
+    requestSource,
+    /requestPoliticalRasterWorkerPass\(\{[\s\S]*?identity: identity\.workerIdentity,[\s\S]*?rasterPacket: packetState\.packet,[\s\S]*?packetBuildMs: packetState\.packetBuildMs/,
   );
   assert.match(
-    drawSource,
-    /canvasPxWidth: workerPacketState\.packet\?\.canvasPxWidth \|\| Math\.max\(0, Math\.round\(canvasWidth \* Number\(runtimeState\.dpr \|\| 1\)\)\),[\s\S]*?canvasPxHeight: workerPacketState\.packet\?\.canvasPxHeight \|\| Math\.max\(0, Math\.round\(canvasHeight \* Number\(runtimeState\.dpr \|\| 1\)\)\),/,
+    requestSource,
+    /canvasPxWidth: packetState\.packet\?\.canvasPxWidth[\s\S]*?Math\.round\(identity\.canvasWidth \* Number\(runtimeState\.dpr \|\| 1\)\)[\s\S]*?canvasPxHeight: packetState\.packet\?\.canvasPxHeight[\s\S]*?Math\.round\(identity\.canvasHeight \* Number\(runtimeState\.dpr \|\| 1\)\)/,
   );
-  const callbackStart = drawSource.indexOf("onAcceptedBitmapResult: () => {");
-  assert.notEqual(callbackStart, -1);
-  const callbackTail = drawSource.slice(callbackStart);
-  const callbackEndMatch = callbackTail.match(/\r?\n    \},\r?\n  \}\);/);
-  assert.ok(callbackEndMatch, "accepted bitmap callback should retain its request-closing boundary");
-  const callbackSource = callbackTail.slice(0, callbackEndMatch.index);
-  assertOrderedTokens(callbackSource, [
+  assertOrderedTokens(requestSource, [
+    "onAcceptedBitmapResult: () => {",
     'invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");',
     'requestRendererRender("political-raster-worker-bitmap-ready", {',
     "fallback: () => render(),",
   ], "accepted bitmap callback");
-  assert.equal((drawSource.match(/recordPoliticalRasterWorkerSnapshot\(\);/g) || []).length, 3);
+  assert.equal((ownerSource.match(/recordPoliticalRasterWorkerSnapshot\(\);/g) || []).length, 3);
+  assert.match(
+    ownerSource,
+    /: \{ packet: null, packetBuildMs: 0, reason: "bitmap-flag-disabled" \};[\s\S]*?requestPoliticalRasterWorkerPassEffect\(/,
+  );
 });
 
 test("progressive recovery keeps pending edits and visible overrides ahead of coarse skip", () => {
-  const drawSource = extractFunctionSource(readRepoFile(MAP_RENDERER_PATH), "drawPoliticalPass");
+  const drawSource = extractFunctionSource(readRepoFile(CANONICAL_OWNER_PATH), "drawPoliticalPass");
   assert.match(
     drawSource,
     /const progressiveRecoveryCoarseSkipCandidate = \([\s\S]*?!!backgroundSummary\?\.progressive[\s\S]*?!backgroundSummary\?\.deferredFullCacheReady[\s\S]*?String\(backgroundSummary\?\.coarseUnderlay \|\| ""\) === "admin0"[\s\S]*?&& !pendingPoliticalColorEdit[\s\S]*?\);/,
   );
   assert.match(
     drawSource,
-    /const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate[\s\S]*?\? hasVisiblePoliticalForegroundColorOverride\(visibleItems\)[\s\S]*?: false;/,
+    /const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate[\s\S]*?\? hasVisiblePoliticalForegroundColorOverride\(viewport\.visibleItems\)[\s\S]*?: false;/,
   );
-  assert.match(
-    drawSource,
-    /const skipFineFeatureLoopForProgressiveRecovery = \([\s\S]*?progressiveRecoveryCoarseSkipCandidate[\s\S]*?&& !visiblePoliticalForegroundColorOverride[\s\S]*?\);/,
+  const skipStart = drawSource.indexOf(
+    "if (progressiveRecoveryCoarseSkipCandidate && !visiblePoliticalForegroundColorOverride)",
   );
-  const skipStart = drawSource.indexOf("if (skipFineFeatureLoopForProgressiveRecovery)");
-  const fineStart = drawSource.indexOf("const islandNeighbors", skipStart);
+  const fineStart = drawSource.indexOf("const featureMetrics = drawPoliticalFineFeatureLoop", skipStart);
   const skipSource = drawSource.slice(skipStart, fineStart);
   assertOrderedTokens(skipSource, [
     'recordRenderPerfMetric("drawPoliticalFeatureFillLoop", 0, {',
@@ -288,17 +307,30 @@ test("partial political repaint stays upstream and composition-root owned", () =
   assert.equal(partialSource.includes("political_pass_orchestrator_owner"), false);
 });
 
-test("fine feature drawing, pending-edit clearing, diagnostics, and result construction remain composition-root effects", () => {
-  const drawSource = extractFunctionSource(readRepoFile(MAP_RENDERER_PATH), "drawPoliticalPass");
-  assert.ok(drawSource.includes("renderDiag.politicalPass = {"));
-  assert.equal(/runtimeState\.[A-Za-z0-9_$]+\s*=(?!=)/.test(drawSource), false);
-  assertOrderedTokens(drawSource, [
+test("fine drawing, diagnostics, recovery resolution, and state writes remain root effects", () => {
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  const diagnosticsSource = extractFunctionSource(rendererSource, "publishPoliticalPassDiagnostics");
+  const recoverySource = extractFunctionSource(rendererSource, "getPoliticalRecoveryQuality");
+  const fineSource = extractFunctionSource(rendererSource, "drawPoliticalFineFeatureLoop");
+  const ownerSource = extractFunctionSource(readRepoFile(CANONICAL_OWNER_PATH), "drawPoliticalPass");
+  assert.ok(diagnosticsSource.includes("renderDiag.politicalPass = {"));
+  const recoveryQualityWrite = [
+    "runtimeState.politicalRecoveryQuality",
+    " = resolved;",
+  ].join("");
+  assert.ok(recoverySource.includes(recoveryQualityWrite));
+  assert.equal(/runtimeState\.[A-Za-z0-9_$]+\s*=(?!=)/.test(ownerSource), false);
+  assertOrderedTokens(fineSource, [
     "const islandNeighbors = debugMode === \"ISLANDS\" ? getIslandNeighborGraph() : null;",
     "const featureMetrics = {",
-    "if (Array.isArray(visibleItems))",
-    "orderPoliticalShellUnderlayFirst(visibleItems).forEach",
+    "if (Array.isArray(viewport.visibleItems))",
+    "orderPoliticalShellUnderlayFirst(viewport.visibleItems).forEach",
     "const featureEntries = runtimeState.landData.features.map",
     "orderPoliticalShellUnderlayFirst(featureEntries).forEach",
+    "return featureMetrics;",
+  ], "fine political root loop");
+  assertOrderedTokens(ownerSource, [
+    "const featureMetrics = drawPoliticalFineFeatureLoop({ k, identity, viewport });",
     'recordRenderPerfMetric("drawPoliticalFeatureFillLoop"',
     'recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop"',
     "clearPendingPoliticalColorEdit({",
@@ -306,17 +338,25 @@ test("fine feature drawing, pending-edit clearing, diagnostics, and result const
     'politicalDataStage: "fine"',
     'reason: "fine-feature-loop"',
   ], "fine political result");
-  assert.equal((drawSource.match(/return createPoliticalPassDrawResult\(/g) || []).length, 4);
-  assert.equal((maskStringAndCommentContent(drawSource).match(/^\s*return;\s*$/gm) || []).length, 1);
+  assert.equal((ownerSource.match(/return createPoliticalPassDrawResult\(/g) || []).length, 4);
+  assert.equal((maskStringAndCommentContent(ownerSource).match(/^\s*return;\s*$/gm) || []).length, 1);
 });
 
-test("P3.3a keeps the future owner absent and locks protected architecture surfaces", () => {
+test("P3.3b installs one canonical owner and keeps protected architecture surfaces independent", () => {
   const sourceFiles = listRepoSourceFiles("js/core");
-  assert.deepEqual(sourceFiles.filter(isPoliticalPassOwnerCandidate), []);
-  assert.equal(fs.existsSync(path.join(REPO_ROOT, ...FUTURE_OWNER_PATH.split("/"))), false);
+  assert.deepEqual(sourceFiles.filter(isPoliticalPassOwnerCandidate), [CANONICAL_OWNER_PATH]);
+  assert.equal(fs.existsSync(path.join(REPO_ROOT, ...CANONICAL_OWNER_PATH.split("/"))), true);
+  const rendererSource = readRepoFile(MAP_RENDERER_PATH);
+  assert.ok(rendererSource.includes(
+    'import { createPoliticalPassOrchestratorOwner } from "./renderer/political_pass_orchestrator_owner.js";',
+  ));
+  assert.match(
+    extractFunctionSource(rendererSource, "drawPoliticalPass"),
+    /^function drawPoliticalPass\(k\) \{\s*return getPoliticalPassOrchestratorOwner\(\)\.drawPoliticalPass\(k\);\s*\}$/,
+  );
   assert.equal(readRepoFile(PUBLIC_FACADE_PATH).includes("political_pass_orchestrator_owner"), false);
   assert.equal(readRepoFile(RUNTIME_CONTEXT_PATH).includes("politicalPass"), false);
-  assert.equal(readRepoFile(STATE_WRITE_ALLOWLIST_PATH).includes(FUTURE_OWNER_PATH), false);
+  assert.equal(readRepoFile(STATE_WRITE_ALLOWLIST_PATH).includes(CANONICAL_OWNER_PATH), false);
   for (const protectedPath of [
     "js/core/renderer/render_pipeline_catalog.js",
     "js/core/map_renderer/render_pass_catalog.js",
@@ -336,7 +376,8 @@ test("P3.3a keeps the future owner absent and locks protected architecture surfa
 
   const politicalRecord = RENDER_PASS_FAMILY_INVENTORY.find((record) => record.passName === "political");
   assert.ok(politicalRecord);
-  assert.equal(politicalRecord.implementationStatus, "inline");
-  assert.equal(politicalRecord.plannedPhase, "P3.3a");
+  assert.equal(politicalRecord.implementationStatus, "owned-p3");
+  assert.ok(politicalRecord.existingDependencyOwners.includes(CANONICAL_OWNER_PATH));
+  assert.equal(politicalRecord.plannedPhase, "P3.3b");
   assert.ok(politicalRecord.browserLanes.includes("test:e2e:dev:political-progressive-recovery"));
 });

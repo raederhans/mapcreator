@@ -49,6 +49,7 @@ const FILES = Object.freeze({
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   visualEffectsPassOwner: "js/core/renderer/visual_effects_pass_owner.js",
   contextPassOrchestratorOwner: "js/core/renderer/context_pass_orchestrator_owner.js",
+  politicalPassOrchestratorOwner: "js/core/renderer/political_pass_orchestrator_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
@@ -152,7 +153,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23180,
+  [FILES.renderer]: 23156,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -164,6 +165,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
   [FILES.contextPassOrchestratorOwner]: 280,
+  [FILES.politicalPassOrchestratorOwner]: 280,
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
@@ -486,6 +488,7 @@ function collectFailures() {
   const transformedFrameCompositorOwnerTest = readProjectFile(FILES.transformedFrameCompositorOwnerTest);
   const visualEffectsPassOwner = readProjectFile(FILES.visualEffectsPassOwner);
   const contextPassOrchestratorOwner = readProjectFile(FILES.contextPassOrchestratorOwner);
+  const politicalPassOrchestratorOwner = readProjectFile(FILES.politicalPassOrchestratorOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
@@ -613,6 +616,7 @@ function collectFailures() {
     [FILES.transformedFrameCompositorOwnerTest]: transformedFrameCompositorOwnerTest,
     [FILES.visualEffectsPassOwner]: visualEffectsPassOwner,
     [FILES.contextPassOrchestratorOwner]: contextPassOrchestratorOwner,
+    [FILES.politicalPassOrchestratorOwner]: politicalPassOrchestratorOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
@@ -5672,6 +5676,52 @@ function collectFailures() {
       ],
     },
     {
+      ownerPath: FILES.politicalPassOrchestratorOwner,
+      ownerTokens: [
+        "export function createPoliticalPassOrchestratorOwner({",
+        "function resolveRecoveryQuality(",
+        "function drawPoliticalPass(k)",
+        "const identity = resolvePoliticalPassIdentity(k);",
+        "const viewport = resolvePoliticalPassViewport(identity);",
+        "const featureMetrics = drawPoliticalFineFeatureLoop({ k, identity, viewport });",
+        "return Object.freeze({ drawPoliticalPass });",
+      ],
+      ownerForbiddenTokens: [
+        "import ",
+        "runtimeState",
+        "RendererRuntimeContext",
+        "document.",
+        "window.",
+        "globalThis",
+        "d3.",
+        "getContext(",
+        "drawPoliticalFeature(",
+        "buildPoliticalRasterWorkerPacket(",
+        "tryPartialPoliticalPassRepaint(",
+        "orderPoliticalShellUnderlayFirst(",
+        "invalidateRenderPasses(",
+        "requestRendererRender(",
+      ],
+      rendererRequiredTokens: [
+        "import { createPoliticalPassOrchestratorOwner } from \"./renderer/political_pass_orchestrator_owner.js\";",
+        "let politicalPassOrchestratorOwner = null;",
+        "function getPoliticalPassOrchestratorOwner() {",
+        "function resolvePoliticalPassIdentity(k) {",
+        "function resolvePoliticalPassViewport(identity) {",
+        "function publishPoliticalPassDiagnostics({ identity, viewport }) {",
+        "function drawPoliticalPassBackground({ identity, viewport }) {",
+        "function buildPoliticalPassWorkerPacket({ identity, viewport }) {",
+        "function requestPoliticalPassWorker({ identity, packetState }) {",
+        "function drawPoliticalFineFeatureLoop({ k, identity, viewport }) {",
+        "resolvePoliticalRecoveryQuality: getPoliticalRecoveryQuality,",
+        "return getPoliticalPassOrchestratorOwner().drawPoliticalPass(k);",
+        "tryPartialPoliticalPassRepaint,",
+      ],
+      rendererForbiddenTokens: [
+        "function drawPoliticalPass(k) {\n  if (isHgoRuntimePreviewReady())",
+      ],
+    },
+    {
       ownerPath: FILES.renderPipelineCatalog,
       ownerTokens: [
         "export const IDLE_RENDER_PASS_DEFINITIONS = [",
@@ -5786,6 +5836,35 @@ function collectFailures() {
     if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
       failures.push(`${relativePath} duplicates the canonical context pass orchestrator owner.`);
     }
+  }
+
+  for (const relativePath of [
+    "js/core/renderer/political_pass_owner.js",
+    "js/core/renderer/political_pass_helper.js",
+    "js/core/renderer/political_pass_controller.js",
+    "js/core/renderer/political_pass_adapter.js",
+    "js/core/renderer/political_pass_orchestrator_helper.js",
+    "js/core/renderer/political_pass_orchestrator_controller.js",
+    "js/core/renderer/political_pass_orchestrator_adapter.js",
+    "js/core/renderer/shared_political_pass_orchestrator_owner.js",
+    "js/core/map_renderer/political_pass_orchestrator_owner.js",
+    "js/core/map_renderer/political_pass_orchestrator_helper.js",
+    "js/core/map_renderer/political_pass_orchestrator_controller.js",
+    "js/core/map_renderer/political_pass_orchestrator_adapter.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`${relativePath} duplicates the canonical political pass orchestrator owner.`);
+    }
+  }
+
+  if (publicFacadeSource.includes("political_pass_orchestrator_owner")) {
+    failures.push(`${FILES.publicFacade} must not expose the political pass orchestrator owner.`);
+  }
+  if (readProjectFile("js/core/map_renderer/renderer_runtime_context.js").includes("politicalPass")) {
+    failures.push("RendererRuntimeContext must remain a read model without political pass orchestration.");
+  }
+  if (stateWriteAllowlist.includes(FILES.politicalPassOrchestratorOwner)) {
+    failures.push(`${FILES.politicalPassOrchestratorOwner} must not enter the state-write allowlist.`);
   }
 
   return failures;

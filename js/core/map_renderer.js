@@ -210,6 +210,7 @@ import {
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_owner.js";
 import { createContextPassOrchestratorOwner } from "./renderer/context_pass_orchestrator_owner.js";
+import { createPoliticalPassOrchestratorOwner } from "./renderer/political_pass_orchestrator_owner.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
 import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";
@@ -991,6 +992,7 @@ let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let visualEffectsPassOwner = null;
 let contextPassOrchestratorOwner = null;
+let politicalPassOrchestratorOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
@@ -3210,6 +3212,44 @@ function getContextPassOrchestratorOwner() {
     },
   });
   return contextPassOrchestratorOwner;
+}
+
+function getPoliticalPassOrchestratorOwner() {
+  if (politicalPassOrchestratorOwner) {
+    return politicalPassOrchestratorOwner;
+  }
+  politicalPassOrchestratorOwner = createPoliticalPassOrchestratorOwner({
+    getters: {
+      isHgoRuntimePreviewReady,
+      isRenderDiagnosticsEnabled: () => renderDiag.enabled,
+      hasPoliticalLandFeatures: () => !!runtimeState.landData?.features?.length,
+      isPoliticalRasterWorkerBitmapEnabled,
+      hasPendingPoliticalColorEdit,
+    },
+    resolvers: {
+      resolvePoliticalPassIdentity,
+      resolvePoliticalPassViewport,
+      hasVisiblePoliticalForegroundColorOverride,
+    },
+    helpers: {
+      nowMs,
+      createPoliticalPassDrawResult,
+    },
+    effects: {
+      recordRenderPerfMetric,
+      resolvePoliticalRecoveryQuality: getPoliticalRecoveryQuality,
+      recordPoliticalRasterWorkerSnapshot,
+      publishPoliticalPassDiagnostics,
+      consumePoliticalRasterWorkerBitmapResult,
+      drawPoliticalWorkerBitmapResult,
+      drawPoliticalBackgroundFills: drawPoliticalPassBackground,
+      buildPoliticalRasterWorkerPacket: buildPoliticalPassWorkerPacket,
+      requestPoliticalRasterWorkerPass: requestPoliticalPassWorker,
+      drawPoliticalFineFeatureLoop,
+      clearPendingPoliticalColorEdit,
+    },
+  });
+  return politicalPassOrchestratorOwner;
 }
 
 function getRenderPipelinePassesOwner() {
@@ -16977,14 +17017,7 @@ function recordPoliticalRasterWorkerSnapshot() {
   recordRenderPerfMetric("politicalRasterWorker.fallbackCount", 0, { count: nextState.fallbackCount });
 }
 
-function drawPoliticalPass(k) {
-  if (isHgoRuntimePreviewReady()) {
-    recordRenderPerfMetric("drawPoliticalPass", 0, {
-      skipped: true,
-      reason: "hgo-runtime-preview",
-    });
-    return;
-  }
+function resolvePoliticalPassIdentity(k) {
   const transform = runtimeState.zoomTransform || globalThis.d3?.zoomIdentity;
   const [canvasWidth, canvasHeight] = getLogicalCanvasDimensions();
   const loadState = runtimeState.runtimeChunkLoadState && typeof runtimeState.runtimeChunkLoadState === "object"
@@ -17012,96 +17045,88 @@ function drawPoliticalPass(k) {
     },
     passSignature: getRenderPassSignature("political", transform),
   });
-  recordPoliticalRasterWorkerSnapshot();
+  return {
+    k,
+    transform,
+    canvasWidth,
+    canvasHeight,
+    dpr: sceneIdentity.dpr,
+    sceneIdentity,
+    workerIdentity,
+  };
+}
+
+function resolvePoliticalPassViewport(identity) {
   const politicalOverscanPx = getPoliticalPassViewportOverscanPx();
   const politicalScreenRects = [{
     minX: -politicalOverscanPx,
     minY: -politicalOverscanPx,
-    maxX: canvasWidth + politicalOverscanPx,
-    maxY: canvasHeight + politicalOverscanPx,
+    maxX: identity.canvasWidth + politicalOverscanPx,
+    maxY: identity.canvasHeight + politicalOverscanPx,
   }];
   const visibleItemsResult = debugMode === "PROD"
     ? collectVisibleLandSpatialItemsWithStats({ overscanPx: politicalOverscanPx })
     : null;
   const visibleItems = visibleItemsResult ? visibleItemsResult.items : null;
-  if (visibleItemsResult?.stats) {
-    recordRenderPerfMetric("politicalPassVisibleItems", 0, {
-      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : 0,
-      ...visibleItemsResult.stats,
-    });
-  }
-  if (renderDiag.enabled) {
-    const layout = getRenderPassLayout("political");
-    renderDiag.politicalPass = {
-      transform: cloneZoomTransform(transform),
-      transformBucket: getTransformBucketSignature(transform),
-      passSignature: getRenderPassSignature("political", transform),
-      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
-      overscanPx: politicalOverscanPx,
-      layout,
-      stats: visibleItemsResult?.stats || null,
-      dirtyReason: String(getRenderPassCacheState().reasons?.political || ""),
-      phase: String(runtimeState.renderPhase || ""),
-    };
-    publishRenderDiagnostics();
-  }
-  const consumedBitmapResult = consumePoliticalRasterWorkerBitmapResult(workerIdentity);
-  if (consumedBitmapResult && drawPoliticalWorkerBitmapResult(consumedBitmapResult, workerIdentity)) {
-    recordPoliticalRasterWorkerSnapshot();
-    return createPoliticalPassDrawResult(sceneIdentity, {
-      politicalDataStage: "fine",
-      fullPoliticalReady: true,
-      finePoliticalCacheReady: true,
-      reason: "political-raster-worker-bitmap",
-    });
-  }
-  const backgroundStartedAt = nowMs();
-  const backgroundSummary = drawPoliticalBackgroundFills({
-    transform,
-    visibleItems,
+  return {
+    overscanPx: politicalOverscanPx,
     screenRects: politicalScreenRects,
+    visibleItems,
+    visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
+    visibleStats: visibleItemsResult?.stats || null,
+  };
+}
+
+function publishPoliticalPassDiagnostics({ identity, viewport }) {
+  const layout = getRenderPassLayout("political");
+  renderDiag.politicalPass = {
+    transform: cloneZoomTransform(identity.transform),
+    transformBucket: getTransformBucketSignature(identity.transform),
+    passSignature: getRenderPassSignature("political", identity.transform),
+    visibleItemCount: viewport.visibleItemCount,
+    overscanPx: viewport.overscanPx,
+    layout,
+    stats: viewport.visibleStats,
+    dirtyReason: String(getRenderPassCacheState().reasons?.political || ""),
+    phase: String(runtimeState.renderPhase || ""),
+  };
+  publishRenderDiagnostics();
+}
+
+function drawPoliticalPassBackground({ identity, viewport }) {
+  return drawPoliticalBackgroundFills({
+    transform: identity.transform,
+    visibleItems: viewport.visibleItems,
+    screenRects: viewport.screenRects,
     returnSummary: true,
   });
-  recordRenderPerfMetric("drawPoliticalBackgroundFillsPass", nowMs() - backgroundStartedAt, {
-    groupCount: Number(backgroundSummary?.groupCount || 0),
-    entryCount: Number(backgroundSummary?.entryCount || 0),
-    reusedPathCount: Number(backgroundSummary?.reusedPathCount || 0),
-    builtPathCount: Number(backgroundSummary?.builtPathCount || 0),
-    pathlessEntryCount: Number(backgroundSummary?.pathlessEntryCount || 0),
-    cacheHit: !!backgroundSummary?.cacheHit,
-    recoveryQuality: String(backgroundSummary?.recoveryQuality || getPoliticalRecoveryQuality()),
-    progressive: !!backgroundSummary?.progressive,
-    deferredFullCacheReady: !!backgroundSummary?.deferredFullCacheReady,
-    deferredFullCacheScheduled: !!backgroundSummary?.deferredFullCacheScheduled,
-    coarseUnderlay: String(backgroundSummary?.coarseUnderlay || ""),
+}
+
+function buildPoliticalPassWorkerPacket({ identity, viewport }) {
+  return buildPoliticalRasterWorkerPacket({
+    visibleItems: viewport.visibleItems,
+    transform: identity.transform,
+    canvasWidth: identity.canvasWidth,
+    canvasHeight: identity.canvasHeight,
   });
-  if (!runtimeState.landData?.features?.length) {
-    return createPoliticalPassDrawResult(sceneIdentity, {
-      politicalDataStage: "not-ready",
-      fullPoliticalReady: false,
-      finePoliticalCacheReady: false,
-      reason: "missing-land-data",
-    });
-  }
-  const workerPacketState = isPoliticalRasterWorkerBitmapEnabled()
-    ? buildPoliticalRasterWorkerPacket({
-      visibleItems,
-      transform,
-      canvasWidth,
-      canvasHeight,
-    })
-    : { packet: null, packetBuildMs: 0, reason: "bitmap-flag-disabled" };
+}
+
+function requestPoliticalPassWorker({ identity, packetState }) {
   requestPoliticalRasterWorkerPass({
-    identity: workerIdentity,
-    rasterPacket: workerPacketState.packet,
-    packetBuildMs: workerPacketState.packetBuildMs,
+    identity: identity.workerIdentity,
+    rasterPacket: packetState.packet,
+    packetBuildMs: packetState.packetBuildMs,
     renderHint: {
       pass: "political",
       surface: "main",
-      canvasPxWidth: workerPacketState.packet?.canvasPxWidth || Math.max(0, Math.round(canvasWidth * Number(runtimeState.dpr || 1))),
-      canvasPxHeight: workerPacketState.packet?.canvasPxHeight || Math.max(0, Math.round(canvasHeight * Number(runtimeState.dpr || 1))),
-      packetFeatureCount: Array.isArray(workerPacketState.packet?.entries) ? workerPacketState.packet.entries.length : 0,
-      packetReason: String(workerPacketState.reason || ""),
+      canvasPxWidth: packetState.packet?.canvasPxWidth
+        || Math.max(0, Math.round(identity.canvasWidth * Number(runtimeState.dpr || 1))),
+      canvasPxHeight: packetState.packet?.canvasPxHeight
+        || Math.max(0, Math.round(identity.canvasHeight * Number(runtimeState.dpr || 1))),
+      packetFeatureCount: Array.isArray(packetState.packet?.entries)
+        ? packetState.packet.entries.length
+        : 0,
+      packetReason: String(packetState.reason || ""),
     },
     onAcceptedBitmapResult: () => {
       invalidateRenderPasses("political", "political-raster-worker-bitmap-ready");
@@ -17111,44 +17136,9 @@ function drawPoliticalPass(k) {
       });
     },
   });
-  recordPoliticalRasterWorkerSnapshot();
-  const pendingPoliticalColorEdit = hasPendingPoliticalColorEdit();
-  const progressiveRecoveryCoarseSkipCandidate = (
-    !!backgroundSummary?.progressive
-    && !backgroundSummary?.deferredFullCacheReady
-    && String(backgroundSummary?.coarseUnderlay || "") === "admin0"
-    && !pendingPoliticalColorEdit
-  );
-  const visiblePoliticalForegroundColorOverride = progressiveRecoveryCoarseSkipCandidate
-    ? hasVisiblePoliticalForegroundColorOverride(visibleItems)
-    : false;
-  const skipFineFeatureLoopForProgressiveRecovery = (
-    progressiveRecoveryCoarseSkipCandidate
-    && !visiblePoliticalForegroundColorOverride
-  );
-  if (skipFineFeatureLoopForProgressiveRecovery) {
-    recordRenderPerfMetric("drawPoliticalFeatureFillLoop", 0, {
-      renderedCount: 0,
-      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
-      skipped: true,
-      reason: "progressive-coarse-underlay",
-      recoveryQuality: String(backgroundSummary?.recoveryQuality || getPoliticalRecoveryQuality()),
-    });
-    recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop", 0, {
-      renderedCount: 0,
-      visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
-      skipped: true,
-      reason: "progressive-coarse-underlay",
-      recoveryQuality: String(backgroundSummary?.recoveryQuality || getPoliticalRecoveryQuality()),
-    });
-    return createPoliticalPassDrawResult(sceneIdentity, {
-      politicalDataStage: "coarse",
-      fullPoliticalReady: !!backgroundSummary?.deferredFullCacheReady || !!sceneIdentity.fullPoliticalReady,
-      finePoliticalCacheReady: false,
-      coarseUnderlay: String(backgroundSummary?.coarseUnderlay || ""),
-      reason: "progressive-coarse-underlay",
-    });
-  }
+}
+
+function drawPoliticalFineFeatureLoop({ k, identity, viewport }) {
   const islandNeighbors = debugMode === "ISLANDS" ? getIslandNeighborGraph() : null;
   const featureMetrics = {
     fillMs: 0,
@@ -17156,14 +17146,14 @@ function drawPoliticalPass(k) {
     renderedCount: 0,
     renderedIds: new Set(),
   };
-  if (Array.isArray(visibleItems)) {
-    orderPoliticalShellUnderlayFirst(visibleItems).forEach((item) => {
+  if (Array.isArray(viewport.visibleItems)) {
+    orderPoliticalShellUnderlayFirst(viewport.visibleItems).forEach((item) => {
       drawPoliticalFeature(item.feature, item.drawOrder, {
         k,
-        canvasWidth,
-        canvasHeight,
+        canvasWidth: identity.canvasWidth,
+        canvasHeight: identity.canvasHeight,
         islandNeighbors,
-        transform,
+        transform: identity.transform,
         skipScreenCheck: true,
         useCachedPath: true,
         allowBuildPath: false,
@@ -17175,10 +17165,10 @@ function drawPoliticalPass(k) {
     const drawFeature = (feature, index) => {
       drawPoliticalFeature(feature, index, {
         k,
-        canvasWidth,
-        canvasHeight,
+        canvasWidth: identity.canvasWidth,
+        canvasHeight: identity.canvasHeight,
         islandNeighbors,
-        transform,
+        transform: identity.transform,
         useCachedPath: true,
         allowBuildPath: false,
         countPathBuild: false,
@@ -17192,25 +17182,11 @@ function drawPoliticalPass(k) {
     }));
     orderPoliticalShellUnderlayFirst(featureEntries).forEach(({ feature, index }) => drawFeature(feature, index));
   }
-  recordRenderPerfMetric("drawPoliticalFeatureFillLoop", Number(featureMetrics.fillMs || 0), {
-    renderedCount: Number(featureMetrics.renderedCount || 0),
-    visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
-  });
-  recordRenderPerfMetric("drawPoliticalFeatureStrokeLoop", Number(featureMetrics.strokeMs || 0), {
-    renderedCount: Number(featureMetrics.renderedCount || 0),
-    visibleItemCount: Array.isArray(visibleItems) ? visibleItems.length : null,
-  });
-  clearPendingPoliticalColorEdit({
-    renderedCount: Number(featureMetrics.renderedCount || 0),
-    renderedIds: featureMetrics.renderedIds,
-    paintSource: "political-pass",
-  });
-  return createPoliticalPassDrawResult(sceneIdentity, {
-    politicalDataStage: "fine",
-    fullPoliticalReady: true,
-    finePoliticalCacheReady: true,
-    reason: "fine-feature-loop",
-  });
+  return featureMetrics;
+}
+
+function drawPoliticalPass(k) {
+  return getPoliticalPassOrchestratorOwner().drawPoliticalPass(k);
 }
 
 function getContextScenarioLayerCacheEntry(layerName) {

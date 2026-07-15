@@ -140,7 +140,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   }
 });
 
-test("P3.1, P3.2, and P3.3a pass-family contracts stay in the child-safe renderer lane", () => {
+test("P3.1 through P3.3b pass-family contracts stay in the child-safe renderer lane", () => {
   const expectedEntries = [
     {
       id: "verify-core:test:node:visual-effects-pass-owner",
@@ -170,12 +170,32 @@ test("P3.1, P3.2, and P3.3a pass-family contracts stay in the child-safe rendere
       ],
     },
     {
+      id: "verify-core:test:node:political-pass-orchestrator-owner",
+      commandRef: "test:node:political-pass-orchestrator-owner",
+      requiredSourceRefs: [
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "tests/political_pass_orchestrator_owner_behavior.test.mjs",
+        "docs/active/renderer-political-pass-orchestrator-owner-p3-3b-20260714.md",
+        "package.json",
+      ],
+    },
+    {
+      id: "verify-core:test:python:map-renderer-political-pass-orchestrator-boundary",
+      commandRef: "test:python:map-renderer-political-pass-orchestrator-boundary",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/political_pass_orchestrator_owner.js",
+        "tests/test_map_renderer_political_pass_orchestrator_boundary_contract.py",
+      ],
+    },
+    {
       id: "verify-core:test:python:map-renderer-render-pipeline-passes-boundary",
       commandRef: "test:python:map-renderer-render-pipeline-passes-boundary",
       requiredSourceRefs: [
         "js/core/map_renderer.js",
         "js/core/renderer/visual_effects_pass_owner.js",
         "js/core/renderer/context_pass_orchestrator_owner.js",
+        "js/core/renderer/political_pass_orchestrator_owner.js",
         "tests/test_map_renderer_render_pipeline_passes_boundary_contract.py",
       ],
     },
@@ -264,6 +284,38 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
     true,
   );
 
+  const politicalReport = buildRecommendation([
+    "js/core/renderer/political_pass_orchestrator_owner.js",
+  ]);
+  const politicalCommandRefs = new Set(
+    politicalReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(politicalReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:political-pass-orchestrator-owner",
+    "test:node:renderer-political-pass-orchestration-preflight",
+    "test:python:map-renderer-political-pass-orchestrator-boundary",
+    "test:node:renderer-pass-family-inventory",
+    "test:python:map-renderer-render-pipeline-passes-boundary",
+    "test:node:scenario-chunk-contracts",
+    "test:node:political-raster-worker-packet",
+    "test:node:political-collection-fragment-camouflage",
+    "verify:pages-dist",
+    "perf:gate",
+    "test:e2e:dev:political-progressive-recovery",
+    "test:e2e:dev:scenario-chunk-runtime",
+    "test:e2e:scenario-resilience",
+    "test:e2e:physical-layer-runtime-contract",
+    "test:e2e:water-rendering",
+    "test:e2e:tno-contracts",
+  ]) {
+    assert.equal(
+      politicalCommandRefs.has(commandRef),
+      true,
+      `political pass owner should select ${commandRef}`,
+    );
+  }
+
   assert.match(
     packageJson.scripts["test:python:map-renderer-render-pipeline-passes-boundary"],
     /tests\.test_map_renderer_render_pipeline_passes_boundary_contract[\s\S]*tests\.test_map_renderer_strategic_values_render_contract/,
@@ -274,6 +326,11 @@ test("P3 pass-family owner changes select their full contract, dist, browser, an
   assert.ok(
     pipelineBoundaryEntry.sourceRefs.includes(
       "tests/test_map_renderer_strategic_values_render_contract.py",
+    ),
+  );
+  assert.ok(
+    pipelineBoundaryEntry.sourceRefs.includes(
+      "js/core/renderer/political_pass_orchestrator_owner.js",
     ),
   );
 });
