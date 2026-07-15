@@ -1266,19 +1266,23 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
 
   const baselineScenarioValues = baselineReport?.config?.scenarios;
   const currentScenarioValues = currentReport?.config?.scenarios;
+  const normalizeScenarioList = (scenarioValues) => Array.isArray(scenarioValues)
+    ? scenarioValues.map((scenarioId) => String(scenarioId || "").trim())
+    : [];
+  const baselineScenarios = normalizeScenarioList(baselineScenarioValues);
+  const currentScenarios = normalizeScenarioList(currentScenarioValues);
   const baselineScenariosValid = Array.isArray(baselineScenarioValues)
     && baselineScenarioValues.length > 0
-    && baselineScenarioValues.every((scenarioId) => String(scenarioId || "").trim());
+    && baselineScenarios.every(Boolean)
+    && new Set(baselineScenarios).size === baselineScenarios.length;
   const currentScenariosValid = Array.isArray(currentScenarioValues)
     && currentScenarioValues.length > 0
-    && currentScenarioValues.every((scenarioId) => String(scenarioId || "").trim());
-  const baselineScenarios = baselineScenariosValid
-    ? baselineScenarioValues.map((scenarioId) => String(scenarioId))
+    && currentScenarios.every(Boolean)
+    && new Set(currentScenarios).size === currentScenarios.length;
+  const baselineGateScenarios = baselineScenariosValid && currentScenariosValid
+    ? baselineScenarios.filter((scenarioId) => currentScenarios.includes(scenarioId))
     : [];
-  const currentScenarios = currentScenariosValid
-    ? currentScenarioValues.map((scenarioId) => String(scenarioId))
-    : [];
-  if (!baselineScenariosValid || !currentScenariosValid || JSON.stringify(baselineScenarios) !== JSON.stringify(currentScenarios)) {
+  if (!baselineScenariosValid || !currentScenariosValid || JSON.stringify(baselineGateScenarios) !== JSON.stringify(currentScenarios)) {
     mismatches.push(`scenarios mismatch: baseline=${JSON.stringify(baselineScenarios)} current=${JSON.stringify(currentScenarios)}`);
   }
 

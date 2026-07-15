@@ -343,6 +343,42 @@ test("baseline identity comparison rejects each schema-2 workload drift independ
   }
 });
 
+test("baseline identity comparison accepts observation-only scenario supersets", () => {
+  const baseline = makeSchema2IdentityReport();
+  const current = makeSchema2IdentityReport();
+  const hoi4Identity = {
+    manifestSha256: "d".repeat(64),
+    featureCount: 12602,
+  };
+  baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
+  current.config.scenarios = ["tno_1962", "hoi4_1939"];
+  baseline.workloadIdentity.scenarios.blank_base = {
+    manifestSha256: "c".repeat(64),
+    featureCount: 11294,
+  };
+  baseline.workloadIdentity.scenarios.hoi4_1939 = { ...hoi4Identity };
+  current.workloadIdentity.scenarios.hoi4_1939 = { ...hoi4Identity };
+
+  assert.deepEqual(collectBaselineContractMismatches(current, baseline), []);
+
+  baseline.config.scenarios = ["blank_base", "tno_1962"];
+  assert.deepEqual(
+    collectBaselineContractMismatches(current, baseline),
+    ['scenarios mismatch: baseline=["blank_base","tno_1962"] current=["tno_1962","hoi4_1939"]'],
+  );
+
+  baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
+  current.config.scenarios = ["hoi4_1939", "tno_1962"];
+  assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+
+  current.config.scenarios = ["tno_1962", "tno_1962"];
+  assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+
+  current.config.scenarios = ["tno_1962", "hoi4_1939"];
+  baseline.config.scenarios = ["blank_base", "tno_1962", "tno_1962", "hoi4_1939"];
+  assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
+});
+
 const missingSchema2IdentityCases = [
   ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
   ["nodeMajor", (report) => { delete report.environment.nodeMajor; }, /node major mismatch/],
