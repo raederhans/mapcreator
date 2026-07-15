@@ -271,6 +271,10 @@ async function waitForCanvasLuminanceDelta(page, baselineSample, threshold, { ti
   }, { timeout }).toBeGreaterThan(threshold);
 }
 
+async function waitForVisualRenderIdle(page, options = {}) {
+  await waitForRenderIdle(page, { ...options, requireInfra: false });
+}
+
 async function configureCityLights(page, style, enabled, overrides = {}) {
   const targetManualUtcMinutes = Number.isFinite(overrides.manualUtcMinutes)
     ? overrides.manualUtcMinutes
@@ -375,7 +379,7 @@ async function configureCityLights(page, style, enabled, overrides = {}) {
   await page.evaluate(() => {
     globalThis.renderApp?.();
   });
-  await waitForRenderIdle(page, { timeout: 30000 });
+  await waitForVisualRenderIdle(page, { timeout: 30000 });
 }
 
 async function ensureScenario(page, scenarioId) {
@@ -407,7 +411,7 @@ async function ensureScenario(page, scenarioId) {
   }
 
   await waitForScenarioApplyIdle(page, { scenarioId, timeout: 30000 });
-  await waitForRenderIdle(page, { scenarioId, timeout: 30000 });
+  await waitForVisualRenderIdle(page, { scenarioId, timeout: 30000 });
 }
 
 async function setMapZoom(page, percent) {
@@ -421,7 +425,7 @@ async function setMapZoom(page, percent) {
     const scale = Number(state.zoomTransform?.k || 1);
     return Math.abs(scale - targetScale) < 0.02;
   }, Math.max(0.01, Number(percent) / 100), { timeout: 30000 });
-  await waitForRenderIdle(page, { timeout: 30000 });
+  await waitForVisualRenderIdle(page, { timeout: 30000 });
 }
 
 async function sampleWindowLuminance(page, point, radiusPx = 20) {

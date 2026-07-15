@@ -103,6 +103,26 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         self.assertIn("requireInfraIdle: false", city_label_source)
         self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_lights_source)
         self.assertIn("requireInfraIdle: false", city_lights_source)
+        self.assertIn("async function waitForVisualRenderIdle(page, options = {})", city_lights_source)
+        self.assertIn("await waitForRenderIdle(page, { ...options, requireInfra: false });", city_lights_source)
+
+        visual_wait_callers = (
+            city_lights_source[
+                city_lights_source.index("async function configureCityLights"):
+                city_lights_source.index("async function ensureScenario")
+            ],
+            city_lights_source[
+                city_lights_source.index("async function ensureScenario"):
+                city_lights_source.index("async function setMapZoom")
+            ],
+            city_lights_source[
+                city_lights_source.index("async function setMapZoom"):
+                city_lights_source.index("async function sampleWindowLuminance")
+            ],
+        )
+        for caller_source in visual_wait_callers:
+            self.assertIn("await waitForVisualRenderIdle(page", caller_source)
+            self.assertNotIn("await waitForRenderIdle(page", caller_source)
 
     def test_pages_public_release_gate_requires_explicit_candidate_url(self) -> None:
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
