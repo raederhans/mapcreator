@@ -8,6 +8,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_PIPELINE_PASSES_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_passes.js"
 RENDER_PIPELINE_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "render_pipeline_catalog.js"
 VISUAL_EFFECTS_PASS_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "visual_effects_pass_owner.js"
+CONTEXT_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "context_pass_orchestrator_owner.js"
 EXACT_AFTER_SETTLE_PASS_CATALOG_JS = REPO_ROOT / "js" / "core" / "renderer" / "exact_after_settle_pass_catalog.js"
 EXACT_AFTER_SETTLE_PLANS_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_refresh_plans.js"
 EXACT_AFTER_SETTLE_SCHEDULER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "exact_after_settle_scheduler.js"
@@ -26,6 +27,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
         draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         owner_content = RENDER_PIPELINE_PASSES_JS.read_text(encoding="utf-8")
         visual_effects_owner_content = VISUAL_EFFECTS_PASS_OWNER_JS.read_text(encoding="utf-8")
+        context_pass_owner_content = CONTEXT_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         pipeline_catalog_content = RENDER_PIPELINE_CATALOG_JS.read_text(encoding="utf-8")
         exact_pass_catalog_content = EXACT_AFTER_SETTLE_PASS_CATALOG_JS.read_text(encoding="utf-8")
         exact_plan_content = EXACT_AFTER_SETTLE_PLANS_JS.read_text(encoding="utf-8")
@@ -42,10 +44,17 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "import { createVisualEffectsPassOwner } from './renderer/visual_effects_pass_owner.js';",
             renderer_imports,
         )
+        self.assertIn(
+            "import { createContextPassOrchestratorOwner } from './renderer/context_pass_orchestrator_owner.js';",
+            renderer_imports,
+        )
         self.assertIn("let renderPipelinePassesOwner = null;", renderer_content)
         self.assertIn("let visualEffectsPassOwner = null;", renderer_content)
+        self.assertIn("let contextPassOrchestratorOwner = null;", renderer_content)
         self.assertIn("function getVisualEffectsPassOwner() {", renderer_content)
         self.assertIn("visualEffectsPassOwner = createVisualEffectsPassOwner({", renderer_content)
+        self.assertIn("function getContextPassOrchestratorOwner() {", renderer_content)
+        self.assertIn("contextPassOrchestratorOwner = createContextPassOrchestratorOwner({", renderer_content)
         self.assertIn(
             "function drawEffectsPass(k, options = undefined) {\n  return getVisualEffectsPassOwner().drawEffectsPass(k, options);\n}",
             renderer_content,
@@ -62,7 +71,19 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "function drawDayNightPass(k, options = undefined) {\n  return getVisualEffectsPassOwner().drawDayNightPass(k, options);\n}",
             renderer_content,
         )
+        for function_name in (
+            "drawContextBasePass",
+            "drawContextMarkersPass",
+            "drawContextScenarioPass",
+        ):
+            self.assertIn(
+                f"function {function_name}(k, options = undefined) {{\n"
+                f"  return getContextPassOrchestratorOwner().{function_name}(k, options);\n"
+                "}",
+                renderer_content,
+            )
         self.assertIn("export function createVisualEffectsPassOwner({", visual_effects_owner_content)
+        self.assertIn("export function createContextPassOrchestratorOwner({", context_pass_owner_content)
         for token in (
             "runtimeState",
             "RendererRuntimeContext",
@@ -73,6 +94,19 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             'from "../map_renderer.js"',
         ):
             self.assertNotIn(token, visual_effects_owner_content)
+            self.assertNotIn(token, context_pass_owner_content)
+        for token in (
+            "runtimeState",
+            "getTransportOverviewRenderOwner",
+            "getPhysicalLandMaskInfo",
+            "getEffectiveCityCollection",
+            "getStrategicValuesResourceFeatureCount",
+            "document.",
+            "window.",
+            "globalThis",
+            "d3.",
+        ):
+            self.assertNotIn(token, context_pass_owner_content)
         for function_name in (
             "drawOldPaperTexture",
             "drawGraticuleTextureLines",
@@ -82,6 +116,40 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "drawNightLightsLayer",
         ):
             self.assertIn(f"function {function_name}(", renderer_content)
+        for function_name in (
+            "drawPhysicalContourLayer",
+            "drawUrbanLayer",
+            "drawRiversLayer",
+            "drawStrategicResourceMarkersLayer",
+            "drawCityPointsLayer",
+            "drawScenarioRegionOverlaysPass",
+            "drawScenarioReliefOverlaysPass",
+        ):
+            self.assertIn(f"function {function_name}(", renderer_content)
+        self.assertIn("function resolveContextBaseDeferredSnapshot() {", renderer_content)
+        self.assertIn("function resolveContextMarkersDeferredSnapshot() {", renderer_content)
+        for token in (
+            "maskInfo: getPhysicalLandMaskInfo(),",
+            "urbanFeatureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),",
+            "cityFeatureCount: getFeatureCollectionFeatureCount(getEffectiveCityCollection()),",
+            "strategicResourceFeatureCount: getStrategicValuesResourceFeatureCount(",
+            "airportFeatureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),",
+            "portFeatureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),",
+            "roadFeatureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),",
+            "railwayFeatureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),",
+        ):
+            self.assertIn(token, renderer_content)
+        for token in (
+            "getTransportOverviewRenderOwner().drawRoadsLayer(k, options)",
+            "getTransportOverviewRenderOwner().drawRailwaysLayer(k, options)",
+            "getTransportOverviewRenderOwner().drawAirportsLayer(k, options)",
+            "getTransportOverviewRenderOwner().drawPortsLayer(k, options)",
+            "drawStrategicResourceMarkersLayer,",
+            "drawCityPointsLayer,",
+            "drawScenarioRegionOverlaysPass,",
+            "drawScenarioReliefOverlaysPass,",
+        ):
+            self.assertIn(token, renderer_content)
         self.assertIn("function getRenderPipelinePassesOwner() {", renderer_content)
         self.assertNotIn("EXACT_AFTER_SETTLE_DEFERRED_PASS_NAMES", renderer_content)
         self.assertNotIn(
@@ -198,6 +266,7 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
     def test_hgo_preview_ready_replaces_normal_overlay_passes(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
         visual_effects_owner_content = VISUAL_EFFECTS_PASS_OWNER_JS.read_text(encoding="utf-8")
+        context_pass_owner_content = CONTEXT_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         draw_canvas_owner_content = DRAW_CANVAS_ORCHESTRATION_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_owner_content = HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS.read_text(encoding="utf-8")
         hgo_preview_commit_content = HGO_RUNTIME_PREVIEW_FRAME_COMMIT_JS.read_text(encoding="utf-8")
@@ -330,8 +399,27 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
             "drawBordersPass",
             "drawLabelsPass",
         ):
-            source = visual_effects_owner_content if function_name == "drawTextureLabelEffectsPass" else renderer_content
+            if function_name == "drawTextureLabelEffectsPass":
+                source = visual_effects_owner_content
+            elif function_name in {
+                "drawContextBasePass",
+                "drawContextMarkersPass",
+                "drawContextScenarioPass",
+            }:
+                source = context_pass_owner_content
+            else:
+                source = renderer_content
             pass_body = source.split(f"function {function_name}(", 1)[1].split("\n  function ", 1)[0].split("\nfunction ", 1)[0]
+            if function_name in {
+                "drawContextBasePass",
+                "drawContextMarkersPass",
+                "drawContextScenarioPass",
+            }:
+                self.assertIn(
+                    f'if (recordHgoSkip("{function_name}", startedAt, interactive)) return;',
+                    pass_body,
+                )
+                continue
             self.assertRegex(
                 pass_body,
                 re.compile(
@@ -341,6 +429,12 @@ class MapRendererRenderPipelinePassesBoundaryContractTest(unittest.TestCase):
                     re.S,
                 ),
             )
+        record_hgo_skip_body = context_pass_owner_content.split("function recordHgoSkip(", 1)[1].split(
+            "\n\n  function drawContextBasePass",
+            1,
+        )[0]
+        self.assertIn("if (!isHgoRuntimePreviewReady()) return false;", record_hgo_skip_body)
+        self.assertIn('reason: "hgo-runtime-preview"', record_hgo_skip_body)
 
     def test_empty_click_clears_water_and_special_selection(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")

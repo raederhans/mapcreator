@@ -48,6 +48,7 @@ const FILES = Object.freeze({
   renderPipelinePasses: "js/core/renderer/render_pipeline_passes.js",
   renderPipelineCatalog: "js/core/renderer/render_pipeline_catalog.js",
   visualEffectsPassOwner: "js/core/renderer/visual_effects_pass_owner.js",
+  contextPassOrchestratorOwner: "js/core/renderer/context_pass_orchestrator_owner.js",
   renderPassCatalog: "js/core/map_renderer/render_pass_catalog.js",
   renderInvalidationCatalog: "js/core/map_renderer/render_invalidation_catalog.js",
   rendererSurfaceHostPreflightDoc: "docs/active/renderer-surface-host-preflight-20260626.md",
@@ -151,7 +152,7 @@ const FORBIDDEN_TRANSACTION_RESET_HELPER_PATHS = Object.freeze([
 ]);
 
 const LINE_BUDGETS = Object.freeze({
-  [FILES.renderer]: 23267,
+  [FILES.renderer]: 23180,
   [FILES.scenarioRefreshRuntime]: 729,
   [FILES.scenarioVisualInvalidationExecutor]: 260,
   [FILES.exactAfterSettleScheduler]: 760,
@@ -162,6 +163,7 @@ const LINE_BUDGETS = Object.freeze({
   [FILES.projectedGeometryBoundsOwner]: 420,
   [FILES.viewportReadModelOwner]: 260,
   [FILES.viewportCommandOwner]: 220,
+  [FILES.contextPassOrchestratorOwner]: 280,
   [FILES.rendererViewportUpdateOwner]: 220,
   [FILES.rendererStartupTransactionOwner]: 220,
   [FILES.setMapDataTransactionOwner]: 260,
@@ -483,6 +485,7 @@ function collectFailures() {
   const transformedFrameCompositorOwner = readProjectFile(FILES.transformedFrameCompositorOwner);
   const transformedFrameCompositorOwnerTest = readProjectFile(FILES.transformedFrameCompositorOwnerTest);
   const visualEffectsPassOwner = readProjectFile(FILES.visualEffectsPassOwner);
+  const contextPassOrchestratorOwner = readProjectFile(FILES.contextPassOrchestratorOwner);
   const rendererFrameCompositorBoundaryTest = readProjectFile(FILES.rendererFrameCompositorBoundaryTest);
   const rendererClickSelectionTransactionPreflightDoc = readProjectFile(
     FILES.rendererClickSelectionTransactionPreflightDoc,
@@ -609,6 +612,7 @@ function collectFailures() {
     [FILES.transformedFrameCompositorOwner]: transformedFrameCompositorOwner,
     [FILES.transformedFrameCompositorOwnerTest]: transformedFrameCompositorOwnerTest,
     [FILES.visualEffectsPassOwner]: visualEffectsPassOwner,
+    [FILES.contextPassOrchestratorOwner]: contextPassOrchestratorOwner,
     [FILES.rendererFrameCompositorBoundaryTest]: rendererFrameCompositorBoundaryTest,
     [FILES.rendererClickSelectionTransactionPreflightDoc]: rendererClickSelectionTransactionPreflightDoc,
     [FILES.rendererClickSelectionDecisionOwnerDoc]: rendererClickSelectionDecisionOwnerDoc,
@@ -5636,6 +5640,38 @@ function collectFailures() {
       ],
     },
     {
+      ownerPath: FILES.contextPassOrchestratorOwner,
+      ownerTokens: [
+        "export function createContextPassOrchestratorOwner({",
+        "function drawContextBasePass(",
+        "function drawContextMarkersPass(",
+        "function drawContextScenarioPass(",
+        "return Object.freeze({",
+      ],
+      ownerForbiddenTokens: [
+        "import ",
+        "runtimeState",
+        "RendererRuntimeContext",
+        "document.",
+        "window.",
+        "globalThis",
+        "d3.",
+      ],
+      rendererRequiredTokens: [
+        "import { createContextPassOrchestratorOwner } from \"./renderer/context_pass_orchestrator_owner.js\";",
+        "let contextPassOrchestratorOwner = null;",
+        "function getContextPassOrchestratorOwner() {",
+        "return getContextPassOrchestratorOwner().drawContextBasePass(k, options);",
+        "return getContextPassOrchestratorOwner().drawContextMarkersPass(k, options);",
+        "return getContextPassOrchestratorOwner().drawContextScenarioPass(k, options);",
+      ],
+      rendererForbiddenTokens: [
+        "function drawContextBasePass(k, { interactive = false } = {}) {",
+        "function drawContextMarkersPass(k, { interactive = false } = {}) {",
+        "function drawContextScenarioPass(k, { interactive = false } = {}) {",
+      ],
+    },
+    {
       ownerPath: FILES.renderPipelineCatalog,
       ownerTokens: [
         "export const IDLE_RENDER_PASS_DEFINITIONS = [",
@@ -5734,6 +5770,21 @@ function collectFailures() {
   ]) {
     if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
       failures.push(`${relativePath} duplicates the canonical visual effects pass owner.`);
+    }
+  }
+
+  for (const relativePath of [
+    "js/core/renderer/context_pass_orchestrator_helper.js",
+    "js/core/renderer/context_pass_orchestrator_controller.js",
+    "js/core/renderer/context_pass_orchestrator_adapter.js",
+    "js/core/renderer/shared_context_pass_orchestrator_owner.js",
+    "js/core/map_renderer/context_pass_orchestrator_owner.js",
+    "js/core/map_renderer/context_pass_orchestrator_helper.js",
+    "js/core/map_renderer/context_pass_orchestrator_controller.js",
+    "js/core/map_renderer/context_pass_orchestrator_adapter.js",
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, relativePath))) {
+      failures.push(`${relativePath} duplicates the canonical context pass orchestrator owner.`);
     }
   }
 

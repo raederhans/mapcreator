@@ -14,30 +14,33 @@ test("physical layer source contracts stay wired to the expected renderer and st
   const physicalLayerOwnerSource = readRepoFile("js", "core", "renderer", "physical_layer_render_owner.js");
   const scenarioReliefOverlayOwnerSource = readRepoFile("js", "core", "renderer", "scenario_relief_overlay_render_owner.js");
   const mainSource = readRepoFile("js", "main.js");
+  const startupReadyHandoffSource = readRepoFile("js", "bootstrap", "startup_ready_handoff.js");
   const startupDataPipelineSource = readRepoFile("js", "bootstrap", "startup_data_pipeline.js");
   const appearanceControllerSource = readRepoFile("js", "ui", "toolbar", "appearance_controls_controller.js");
   const physicalOwnerSource = readRepoFile("js", "ui", "toolbar", "appearance_physical_owner.js");
   const interactionFunnelSource = readRepoFile("js", "core", "interaction_funnel.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
+  const renderPipelineCatalogSource = readRepoFile("js", "core", "renderer", "render_pipeline_catalog.js");
+  const contextPassOwnerSource = readRepoFile("js", "core", "renderer", "context_pass_orchestrator_owner.js");
   const exactSchedulerSource = readRepoFile("js", "core", "map_renderer", "exact_after_settle_scheduler.js");
 
   const physicalBaseStart = physicalLayerOwnerSource.indexOf("function drawPhysicalBasePass");
   const physicalBaseEnd = physicalLayerOwnerSource.indexOf("function drawPhysicalAtlasLayer");
-  const contextBaseStart = rendererSource.indexOf("function drawContextBasePass");
-  const contextBaseEnd = rendererSource.indexOf("function drawContextMarkersPass");
+  const contextBaseStart = contextPassOwnerSource.indexOf("function drawContextBasePass");
+  const contextBaseEnd = contextPassOwnerSource.indexOf("function drawContextMarkersPass");
   const physicalBaseSource =
     physicalBaseStart >= 0 && physicalBaseEnd > physicalBaseStart
       ? physicalLayerOwnerSource.slice(physicalBaseStart, physicalBaseEnd)
       : "";
   const contextBaseSource =
     contextBaseStart >= 0 && contextBaseEnd > contextBaseStart
-      ? rendererSource.slice(contextBaseStart, contextBaseEnd)
+      ? contextPassOwnerSource.slice(contextBaseStart, contextBaseEnd)
       : "";
-  const contextMarkersStart = rendererSource.indexOf("function drawContextMarkersPass");
-  const contextMarkersEnd = rendererSource.indexOf("function drawContextScenarioPass");
+  const contextMarkersStart = contextPassOwnerSource.indexOf("function drawContextMarkersPass");
+  const contextMarkersEnd = contextPassOwnerSource.indexOf("function drawContextScenarioPass");
   const contextMarkersSource =
     contextMarkersStart >= 0 && contextMarkersEnd > contextMarkersStart
-      ? rendererSource.slice(contextMarkersStart, contextMarkersEnd)
+      ? contextPassOwnerSource.slice(contextMarkersStart, contextMarkersEnd)
       : "";
   const releaseDeferredContextStart = rendererSource.indexOf("function releaseDeferredContextBasePass");
   const releaseDeferredContextEnd = rendererSource.indexOf("registerRuntimeHook(runtimeState, \"releaseDeferredContextBasePassFn\"", releaseDeferredContextStart);
@@ -57,7 +60,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
     hasSafeBlendFallback:
       /return VALID_BLEND_MODES\.has\(mode\) \? mode : safeFallback;/.test(rendererSource),
     hasPhysicalBasePass:
-      /\["physicalBase", \(k\) => drawPhysicalBasePass\(k\)\]/.test(renderPipelinePassesSource)
+      /passName: "physicalBase", drawKey: "drawPhysicalBasePass"/.test(renderPipelineCatalogSource)
       && /drawPhysicalBasePass,/.test(rendererSource),
     hasPhysicalLayerOwner:
       /import \{ createPhysicalLayerRenderOwner \} from "\.\/renderer\/physical_layer_render_owner\.js";/.test(rendererSource)
@@ -79,11 +82,6 @@ test("physical layer source contracts stay wired to the expected renderer and st
     scenarioReliefOwnerKeepsPhaseAndCoastalAccentSkips:
       /runtimeState\.renderPhase === RENDER_PHASE_INTERACTING \|\| runtimeState\.renderPhase === RENDER_PHASE_SETTLING/.test(scenarioReliefOverlayOwnerSource)
       && /kind === "new_shoreline" \|\| kind === "lake_shoreline"[\s\S]*?isScenarioCoastalAccentEnabled\(\)/.test(scenarioReliefOverlayOwnerSource),
-    physicalBaseDrawsBeforePolitical:
-      renderPipelinePassesSource.indexOf('["physicalBase", (k) => drawPhysicalBasePass(k)]')
-        < renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
-      && renderPipelinePassesSource.indexOf('["political", (k) => drawPoliticalPass(k)]')
-        < renderPipelinePassesSource.indexOf('["contextBase", (k) => drawContextBasePass(k)]'),
     hasPhysicalReliefOverlayHelper:
       /function drawPhysicalReliefOverlayLayer\(k, \{ interactive = false, clipAlreadyApplied = false \} = \{\}\)/.test(physicalLayerOwnerSource)
       && /return getPhysicalLayerRenderOwner\(\)\.drawPhysicalReliefOverlayLayer\(k, \{ interactive, clipAlreadyApplied \}\);/.test(rendererSource),
@@ -110,7 +108,7 @@ test("physical layer source contracts stay wired to the expected renderer and st
       !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(")
       && contextBaseSource.includes("drawPhysicalContourLayer(k, { interactive });"),
     deferredContextBaseSkipsReliefOverlay:
-      /if \((?:runtimeState|state)\.deferContextBasePass && !interactive\) \{/.test(contextBaseSource)
+      /if \(getDeferContextBasePass\(\) && !interactive\) \{/.test(contextBaseSource)
       && !contextBaseSource.includes("drawPhysicalReliefOverlayLayer(k, { interactive: false });"),
     contourUsesSourceOver:
       /drawPhysicalContourLayer[\s\S]*?context\.globalCompositeOperation = "source-over";/.test(physicalLayerOwnerSource),
@@ -175,19 +173,17 @@ test("physical layer source contracts stay wired to the expected renderer and st
       /const PHYSICAL_CONTOUR_LAYER_SET = \[[\s\S]*?"physical_contours_major",[\s\S]*?"physical_contours_minor",[\s\S]*?\];/.test(startupDataPipelineSource)
       && /if \(normalized === "physical-contours-set"\) \{[\s\S]*?return PHYSICAL_CONTOUR_LAYER_SET;/.test(startupDataPipelineSource),
     schedulesDeferredContourWarmup:
-      /if \((?:runtimeState|state)\.showPhysical\) \{[\s\S]*?requestedLayerNames\.push\("physical-set"\);[\s\S]*?requestedContourLayerNames\.push\("physical-contours-set"\);/.test(mainSource)
-      && /postReadyScheduler\.scheduleTask\("post-ready-contour-warmup", async \(\) => \{[\s\S]*?await ensureContextLayerDataReady\(requestedContourLayerNames, \{[\s\S]*?reason: "post-ready-contours",[\s\S]*?renderNow: false,[\s\S]*?requestMainRender\("post-ready-contours"\);/.test(mainSource),
+      /if \(targetRuntime\.showPhysical\) \{[\s\S]*?requestedLayerNames\.push\("physical-set"\);[\s\S]*?requestedContourLayerNames\.push\("physical-contours-set"\);/.test(startupReadyHandoffSource)
+      && /postReadyScheduler\.scheduleTask\("post-ready-contour-warmup", async \(\) => \{[\s\S]*?await ensureContextLayerDataReady\(requestedContourLayerNames, \{[\s\S]*?reason: "post-ready-contours",[\s\S]*?renderNow: false,[\s\S]*?requestMainRender\("post-ready-contours"\);/.test(startupReadyHandoffSource),
     toolbarToggleLoadsFullPhysicalSet:
       /ensureContextLayerDataFn\(\["physical-set", "physical-contours-set"\], \{ reason: "toolbar-toggle", renderNow: true \}\)/.test(physicalOwnerSource)
       && /physicalOwner\.bindEvents\(\);/.test(appearanceControllerSource),
     projectImportLoadsFullPhysicalSet:
       /callRuntimeHook\(state, "ensureContextLayerDataFn", \["physical-set", "physical-contours-set"\], \{[\s\S]*?reason: "project-import",[\s\S]*?renderNow: false,/.test(interactionFunnelSource),
     contextMarkersStagedMetricsCoverTransportLines:
-      /if \((?:runtimeState|state)\.deferContextBasePass && !interactive\) \{/.test(contextMarkersSource)
-      && contextMarkersSource.includes('collectContextMetric("drawRoadsLayer", 0, {')
-      && contextMarkersSource.includes('collectContextMetric("drawRailwaysLayer", 0, {')
-      && /collectContextMetric\("drawRoadsLayer", 0, \{[\s\S]*?reason: "staged-apply",/.test(contextMarkersSource)
-      && /collectContextMetric\("drawRailwaysLayer", 0, \{[\s\S]*?reason: "staged-apply",/.test(contextMarkersSource),
+      /if \(getDeferContextBasePass\(\) && !interactive\) \{/.test(contextMarkersSource)
+      && /collectContextMetric\([\s\S]*?"drawRoadsLayer",[\s\S]*?createDeferredMetricPayload\(snapshot\.roadFeatureCount\)/.test(contextMarkersSource)
+      && /collectContextMetric\([\s\S]*?"drawRailwaysLayer",[\s\S]*?createDeferredMetricPayload\(snapshot\.railwayFeatureCount\)/.test(contextMarkersSource),
     contextBreakdownCoversTransportLines:
       /const CONTEXT_BREAKDOWN_METRIC_NAMES = new Set\(\[[\s\S]*?"drawRoadsLayer",[\s\S]*?"drawRailwaysLayer",/.test(rendererSource),
     releaseDeferredContextCancelsStagedContextWork:

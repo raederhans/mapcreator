@@ -99,3 +99,18 @@ Both production catalogs contain the same 13-pass set. The inventory follows `ID
 - Texture controls moved from the Appearance tabs to the Map Content tabs in the existing UI information architecture. `tests/e2e/texture_overlay_regression.spec.js` now opens `#labelMapContent` and activates `[data-map-content-tab='texture']` in all three cases. The red run timed out on the retired selector; the green run passes 3/3 in 50 seconds without product-code changes.
 - The clean-head core prerequisite initially exposed a missing local Playwright installation in the isolated worktree. `npm ci` restored the locked dependency set (`playwright@1.58.2`), the targeted role-policy suite passed 38/38, and the full 72-command core rerun passed. This was an environment setup gap with zero tracked dependency changes.
 - P3.1 functional implementation is commit `80cbb747d39f4c4288428513a54444626e21c2f4`. The browser-contract repair and acceptance truth form the following P3.1 closeout commit before P3.2 begins.
+
+## 2026-07-14 P3.2 RED checkpoint
+
+- The new `tests/context_pass_orchestrator_owner_behavior.test.mjs` freezes all three pass APIs, HGO guards, session cleanup, deferred metric order/payloads, normal layer order, lazy resolver access, `null` option failure timing, and dependency fail-fast behavior.
+- Syntax validation passes. The first execution fails at import with `ERR_MODULE_NOT_FOUND` for the absent canonical `js/core/renderer/context_pass_orchestrator_owner.js`, establishing the required pre-implementation red state.
+- The factory boundary uses `getters`, `resolvers`, `helpers`, and `effects`. `getDeferContextBasePass` exposes the raw flag; the owner retains the `defer && !interactive` policy. Effect-bearing deferred data resolution remains in composition-root resolver closures.
+
+## 2026-07-14 P3.2 GREEN checkpoint
+
+- `js/core/renderer/context_pass_orchestrator_owner.js` now owns the pass-level orchestration for `contextBase`, `contextMarkers`, and `contextScenario`. Physical, urban, river, transport, strategic marker, city, region, relief, cache, and runtime-state effects remain in the `map_renderer.js` composition root or their existing owners.
+- `map_renderer.js` now exposes three stable thin wrappers and two composition-root deferred snapshot resolvers. Its split-line count is `23,180`, and the architecture ceiling is lowered from `23,267` to `23,180`; the new owner ceiling is `280`.
+- Focused behavior and source-boundary evidence passes: context owner `9/9`, pass inventory `6/6`, physical owner `6/6`, river owner `8/8`, physical contracts `2/2`, river contracts `2/2`, scenario chunk contracts `57/57`, and the combined Python renderer/strategic boundary `6/6`.
+- Static review found two verification-quality defects and both are repaired: the strategic-values owner slice now ends at the exact indented function anchor, and all strategic signature assertions are bounded to the owning signature function. The named Python entrance now executes both renderer-pipeline and strategic-values boundary modules.
+- Owner-only SF-ATS selection now includes the physical, river, scenario, strategic, Pages/dist, standard performance, and declared browser lanes. The visual-effects owner receives the same Pages/performance correction. Metadata tests lock these expectations against future false-green routing.
+- Canonical Pages generation passes at `927.19 MiB` and adds the owner mirror under `dist/app/js/core/renderer/`. Full clean-head core, main-thread browser, focused browser matrix, standard performance, and commit evidence remain the P3.2 VERIFY step.

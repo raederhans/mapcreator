@@ -16,6 +16,7 @@ function readJsonRepoFile(...relativeParts) {
 test("river layer contracts keep zoom gating, render metrics, and targeted regression coverage", () => {
   const rendererSource = readRepoFile("js", "core", "map_renderer.js");
   const riverOwnerSource = readRepoFile("js", "core", "renderer", "river_layer_render_owner.js");
+  const contextPassOwnerSource = readRepoFile("js", "core", "renderer", "context_pass_orchestrator_owner.js");
   const riverSpecSource = readRepoFile("tests", "e2e", "river_layer_regression.spec.js");
 
   const drawRiversLayerStart = rendererSource.indexOf("function drawRiversLayer");
@@ -32,11 +33,11 @@ test("river layer contracts keep zoom gating, render metrics, and targeted regre
       ? riverOwnerSource.slice(ownerDrawStart, ownerDrawEnd)
       : "";
 
-  const contextBaseStart = rendererSource.indexOf("function drawContextBasePass");
-  const contextBaseEnd = rendererSource.indexOf("function drawContextMarkersPass", contextBaseStart);
+  const contextBaseStart = contextPassOwnerSource.indexOf("function drawContextBasePass");
+  const contextBaseEnd = contextPassOwnerSource.indexOf("function drawContextMarkersPass", contextBaseStart);
   const contextBaseSource =
     contextBaseStart >= 0 && contextBaseEnd > contextBaseStart
-      ? rendererSource.slice(contextBaseStart, contextBaseEnd)
+      ? contextPassOwnerSource.slice(contextBaseStart, contextBaseEnd)
       : "";
 
   const checks = {

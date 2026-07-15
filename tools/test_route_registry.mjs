@@ -217,7 +217,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:perf-gate",
     commandRef: "perf:gate",
-    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js",
+    sourceRef: "tools/perf/run_baseline.mjs,ops/browser-mcp/editor-performance-benchmark.py,js/core/renderer/cached_pass_compositor_owner.js,js/core/map_renderer/transformed_frame_compositor_owner.js,js/core/renderer/visual_effects_pass_owner.js,js/core/renderer/context_pass_orchestrator_owner.js",
     domain: "perf",
     ownerHint: "perf-runtime",
     layer: "heavy",
@@ -229,7 +229,7 @@ const INFRASTRUCTURE_ROUTES = [
   {
     id: "infra:pages-dist",
     commandRef: "verify:pages-dist",
-    sourceRef: "tools/build_pages_dist.py,tests/test_pages_dist_startup_shell.py,js/core/map_renderer.js,js/core/map_renderer,.github/workflows/verify-shared.yml",
+    sourceRef: "tools/build_pages_dist.py,tests/test_pages_dist_startup_shell.py,js/core/map_renderer.js,js/core/map_renderer,js/core/renderer,.github/workflows/verify-shared.yml",
     domain: "pages-dist",
     ownerHint: "deploy-runtime",
     layer: "heavy",

@@ -1224,6 +1224,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
   const bundleLoaderSource = readRepoFile("js", "core", "scenario", "bundle_loader.js");
   const postApplyEffectsSource = readRepoFile("js", "core", "scenario_post_apply_effects.js");
   const renderPipelinePassesSource = readRepoFile("js", "core", "renderer", "render_pipeline_passes.js");
+  const contextPassOwnerSource = readRepoFile("js", "core", "renderer", "context_pass_orchestrator_owner.js");
   const renderCacheOwnerSource = readRepoFile("js", "core", "renderer", "render_cache_owner.js");
   const cachedPassCompositorOwnerSource = readRepoFile("js", "core", "renderer", "cached_pass_compositor_owner.js");
   const transformedFrameCompositorOwnerSource = readRepoFile("js", "core", "map_renderer", "transformed_frame_compositor_owner.js");
@@ -1242,7 +1243,7 @@ test("exact-after-settle keeps scenario overlays on the contextScenario reuse pa
 
   const contract = {
     drawContextScenarioPassKeepsScenarioOverlayBoundary:
-      /function drawContextScenarioPass\(k, \{ interactive = false \} = \{\}\) \{[\s\S]*?drawScenarioRegionOverlaysPass\(k\);[\s\S]*?drawScenarioReliefOverlaysPass\(k\);[\s\S]*?recordRenderPerfMetric\("drawContextScenarioPass"/.test(rendererSource),
+      /function drawContextScenarioPass\(k, \{ interactive = false \} = \{\}\) \{[\s\S]*?drawScenarioRegionOverlaysPass\(k\);[\s\S]*?drawScenarioReliefOverlaysPass\(k\);[\s\S]*?recordRenderPerfMetric\("drawContextScenarioPass"/.test(contextPassOwnerSource),
     signatureOnlyContextScenarioInvalidationUsesTransformReuse:
       /passName === "contextScenario"[\s\S]*?shouldEnableContextScenarioTransformReuse\(\)[\s\S]*?cache\.dirty\[passName\] = false;[\s\S]*?recordRenderPerfMetric\("contextScenarioReuseSkipped", 0, \{/.test(renderPipelinePassesSource)
       && /shouldEnableContextScenarioTransformReuse,/.test(rendererSource),

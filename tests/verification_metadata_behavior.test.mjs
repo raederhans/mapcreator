@@ -140,7 +140,7 @@ test("P3.0 renderer pass family route is child-safe, exact, and part of renderer
   }
 });
 
-test("P3.1 visual effects owner and pipeline boundary routes stay in the child-safe renderer lane", () => {
+test("P3.1 and P3.2 pass-family owners stay in the child-safe renderer lane", () => {
   const expectedEntries = [
     {
       id: "verify-core:test:node:visual-effects-pass-owner",
@@ -152,11 +152,21 @@ test("P3.1 visual effects owner and pipeline boundary routes stay in the child-s
       ],
     },
     {
+      id: "verify-core:test:node:context-pass-orchestrator-owner",
+      commandRef: "test:node:context-pass-orchestrator-owner",
+      requiredSourceRefs: [
+        "js/core/map_renderer.js",
+        "js/core/renderer/context_pass_orchestrator_owner.js",
+        "tests/context_pass_orchestrator_owner_behavior.test.mjs",
+      ],
+    },
+    {
       id: "verify-core:test:python:map-renderer-render-pipeline-passes-boundary",
       commandRef: "test:python:map-renderer-render-pipeline-passes-boundary",
       requiredSourceRefs: [
         "js/core/map_renderer.js",
         "js/core/renderer/visual_effects_pass_owner.js",
+        "js/core/renderer/context_pass_orchestrator_owner.js",
         "tests/test_map_renderer_render_pipeline_passes_boundary_contract.py",
       ],
     },
@@ -177,6 +187,74 @@ test("P3.1 visual effects owner and pipeline boundary routes stay in the child-s
     assert.ok(buildVerificationMetadataRoutes().some((route) => route.commandRef === entry.commandRef));
     assert.ok(commandRefsFromGroups(buildVerifyCoreDefaultGroups()).includes(entry.commandRef));
   }
+});
+
+test("P3 pass-family owner changes select their full contract, dist, browser, and perf lanes", () => {
+  const packageJson = readJson("package.json");
+  const contextReport = buildRecommendation([
+    "js/core/renderer/context_pass_orchestrator_owner.js",
+  ]);
+  const contextCommandRefs = new Set(
+    contextReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(contextReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:context-pass-orchestrator-owner",
+    "test:node:renderer-pass-family-inventory",
+    "test:python:map-renderer-render-pipeline-passes-boundary",
+    "test:node:physical-layer-contracts",
+    "test:node:river-layer-contracts",
+    "test:node:scenario-chunk-contracts",
+    "verify:pages-dist",
+    "perf:gate",
+    "test:e2e:physical-layer-runtime-contract",
+    "test:e2e:water-rendering",
+    "test:e2e:scenario-resilience",
+    "test:e2e:tno-contracts",
+    "test:e2e:city-rendering",
+  ]) {
+    assert.equal(
+      contextCommandRefs.has(commandRef),
+      true,
+      `context owner should select ${commandRef}`,
+    );
+  }
+
+  const visualReport = buildRecommendation([
+    "js/core/renderer/visual_effects_pass_owner.js",
+  ]);
+  const visualCommandRefs = new Set(
+    visualReport.recommendedCommands.map((command) => command.commandRef),
+  );
+  assert.deepEqual(visualReport.unmatchedChangedFiles, []);
+  for (const commandRef of [
+    "test:node:visual-effects-pass-owner",
+    "test:node:renderer-pass-family-inventory",
+    "test:python:map-renderer-render-pipeline-passes-boundary",
+    "verify:pages-dist",
+    "perf:gate",
+    "test:e2e:layer:regression",
+    "test:e2e:city-rendering",
+  ]) {
+    assert.equal(
+      visualCommandRefs.has(commandRef),
+      true,
+      `visual effects owner should select ${commandRef}`,
+    );
+  }
+
+  assert.match(
+    packageJson.scripts["test:python:map-renderer-render-pipeline-passes-boundary"],
+    /tests\.test_map_renderer_render_pipeline_passes_boundary_contract[\s\S]*tests\.test_map_renderer_strategic_values_render_contract/,
+  );
+  const pipelineBoundaryEntry = VERIFICATION_DOMAINS.find((candidate) => (
+    candidate.id === "verify-core:test:python:map-renderer-render-pipeline-passes-boundary"
+  ));
+  assert.ok(
+    pipelineBoundaryEntry.sourceRefs.includes(
+      "tests/test_map_renderer_strategic_values_render_contract.py",
+    ),
+  );
 });
 
 test("verify-core default plan is generated from verification metadata", () => {

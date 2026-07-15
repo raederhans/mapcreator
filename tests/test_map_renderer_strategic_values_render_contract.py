@@ -4,17 +4,19 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
+CONTEXT_PASS_ORCHESTRATOR_OWNER_JS = REPO_ROOT / "js" / "core" / "renderer" / "context_pass_orchestrator_owner.js"
 
 
 class MapRendererStrategicValuesRenderContractTest(unittest.TestCase):
     def test_resource_markers_are_owned_by_context_markers_pass(self):
         renderer_content = MAP_RENDERER_JS.read_text(encoding="utf-8")
+        context_owner_content = CONTEXT_PASS_ORCHESTRATOR_OWNER_JS.read_text(encoding="utf-8")
         imports = renderer_content.replace('"', "'")
-        context_markers_body = renderer_content.split(
+        context_markers_body = context_owner_content.split(
             "function drawContextMarkersPass(k, { interactive = false } = {}) {",
             1,
         )[1].split(
-            "\nfunction drawContextScenarioPass",
+            "\n  function drawContextScenarioPass",
             1,
         )[0]
         context_signature_body = renderer_content.split(
@@ -22,6 +24,13 @@ class MapRendererStrategicValuesRenderContractTest(unittest.TestCase):
             1,
         )[1].split(
             "\n  }",
+            1,
+        )[0]
+        context_flag_signature_body = renderer_content.split(
+            "function getVisibleContextFlagSignature() {",
+            1,
+        )[1].split(
+            "\n}\n\nfunction countFeatureCollectionFeatures",
             1,
         )[0]
 
@@ -40,14 +49,19 @@ class MapRendererStrategicValuesRenderContractTest(unittest.TestCase):
         self.assertIn("!isScenarioStrategicValuesUsable(payload)", renderer_content)
         self.assertIn('"diagnostic-errors"', renderer_content)
         self.assertIn("drawStrategicResourceMarkersLayer(k, { interactive });", context_markers_body)
-        self.assertIn('collectContextMetric("drawStrategicResourceMarkersLayer", 0, {', context_markers_body)
+        self.assertIn('"drawStrategicResourceMarkersLayer",', context_markers_body)
+        self.assertIn("createDeferredMetricPayload(snapshot.strategicResourceFeatureCount)", context_markers_body)
         self.assertIn(
             'runtimeState.showStrategicResourceMarkers ? "strategic-resources:on" : "strategic-resources:off"',
             context_signature_body,
         )
         self.assertIn(
-            '`strategic:${Number(runtimeState.scenarioStrategicValuesRevision || 0)}:${String(runtimeState.strategicChoroplethMetric || "")}`',
-            context_signature_body,
+            '`strategic-rev:${Number(runtimeState.scenarioStrategicValuesRevision || 0)}`',
+            context_flag_signature_body,
+        )
+        self.assertIn(
+            '`strategic-metric:${String(runtimeState.strategicChoroplethMetric || "")}`',
+            context_flag_signature_body,
         )
 
 

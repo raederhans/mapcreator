@@ -209,6 +209,7 @@ import {
 } from "./map_renderer/interaction_hit_candidates.js";
 import { createRenderPipelinePassesOwner } from "./renderer/render_pipeline_passes.js";
 import { createVisualEffectsPassOwner } from "./renderer/visual_effects_pass_owner.js";
+import { createContextPassOrchestratorOwner } from "./renderer/context_pass_orchestrator_owner.js";
 import { createRenderCacheOwner } from "./renderer/render_cache_owner.js";
 import { createCachedPassCompositorOwner } from "./renderer/cached_pass_compositor_owner.js";
 import { createTransformedFrameCompositorOwner } from "./map_renderer/transformed_frame_compositor_owner.js";
@@ -989,6 +990,7 @@ let interactionBorderSnapshotOwner = null;
 let spatialIndexRuntimeOwner = null;
 let renderPipelinePassesOwner = null;
 let visualEffectsPassOwner = null;
+let contextPassOrchestratorOwner = null;
 let renderCacheOwner = null;
 let cachedPassCompositorOwner = null;
 let transformedFrameCompositorOwner = null;
@@ -3144,6 +3146,70 @@ function getVisualEffectsPassOwner() {
     },
   });
   return visualEffectsPassOwner;
+}
+
+function resolveContextBaseDeferredSnapshot() {
+  return {
+    maskInfo: getPhysicalLandMaskInfo(),
+    urbanFeatureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
+    airportFeatureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
+    roadFeatureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
+    railwayFeatureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
+    portFeatureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
+  };
+}
+
+function resolveContextMarkersDeferredSnapshot() {
+  return {
+    cityFeatureCount: getFeatureCollectionFeatureCount(getEffectiveCityCollection()),
+    strategicResourceFeatureCount: getStrategicValuesResourceFeatureCount(
+      runtimeState.scenarioStrategicValuesData,
+    ),
+    airportFeatureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
+    portFeatureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
+    roadFeatureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
+    railwayFeatureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
+  };
+}
+
+function getContextPassOrchestratorOwner() {
+  if (contextPassOrchestratorOwner) {
+    return contextPassOrchestratorOwner;
+  }
+  contextPassOrchestratorOwner = createContextPassOrchestratorOwner({
+    getters: {
+      isHgoRuntimePreviewReady,
+      getDeferContextBasePass: () => runtimeState.deferContextBasePass,
+    },
+    resolvers: {
+      resolveContextBaseDeferredSnapshot,
+      resolveContextMarkersDeferredSnapshot,
+    },
+    helpers: {
+      nowMs,
+    },
+    effects: {
+      beginContextMetricSession,
+      endContextMetricSession,
+      collectContextMetric,
+      recordRenderPerfMetric,
+      recordDeferredRiversLayerMetric,
+      drawPhysicalContourLayer,
+      drawUrbanLayer,
+      drawRiversLayer,
+      drawRoadsLayer: (k, options) => getTransportOverviewRenderOwner().drawRoadsLayer(k, options),
+      drawRailwaysLayer: (k, options) =>
+        getTransportOverviewRenderOwner().drawRailwaysLayer(k, options),
+      drawAirportsLayer: (k, options) =>
+        getTransportOverviewRenderOwner().drawAirportsLayer(k, options),
+      drawPortsLayer: (k, options) => getTransportOverviewRenderOwner().drawPortsLayer(k, options),
+      drawStrategicResourceMarkersLayer,
+      drawCityPointsLayer,
+      drawScenarioRegionOverlaysPass,
+      drawScenarioReliefOverlaysPass,
+    },
+  });
+  return contextPassOrchestratorOwner;
 }
 
 function getRenderPipelinePassesOwner() {
@@ -17742,169 +17808,16 @@ function drawTextureLabelEffectsPass(k) {
   return getVisualEffectsPassOwner().drawTextureLabelEffectsPass(k);
 }
 
-function drawContextBasePass(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  if (isHgoRuntimePreviewReady()) {
-    recordRenderPerfMetric("drawContextBasePass", nowMs() - startedAt, {
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hgo-runtime-preview",
-    });
-    return;
-  }
-  let deferred = false;
-  beginContextMetricSession();
-  try {
-    if (runtimeState.deferContextBasePass && !interactive) {
-      deferred = true;
-      const maskInfo = getPhysicalLandMaskInfo();
-      collectContextMetric("drawPhysicalContourLayer", 0, {
-        featureCount: 0,
-        majorFeatureCount: 0,
-        minorFeatureCount: 0,
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-        maskSource: maskInfo.maskSource,
-        maskFeatureCount: maskInfo.maskFeatureCount,
-        maskArcRefEstimate: maskInfo.maskArcRefEstimate,
-      });
-      collectContextMetric("drawUrbanLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.urbanData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawAirportsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawRoadsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawRailwaysLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawPortsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      recordDeferredRiversLayerMetric({ interactive: false, reason: "staged-apply" });
-    } else {
-      drawPhysicalContourLayer(k, { interactive });
-      drawUrbanLayer(k, { interactive });
-      drawRiversLayer(k, { interactive });
-    }
-  } finally {
-    endContextMetricSession();
-  }
-  recordRenderPerfMetric("drawContextBasePass", nowMs() - startedAt, {
-    interactive: !!interactive,
-    deferred,
-  });
+function drawContextBasePass(k, options = undefined) {
+  return getContextPassOrchestratorOwner().drawContextBasePass(k, options);
 }
 
-function drawContextMarkersPass(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  if (isHgoRuntimePreviewReady()) {
-    recordRenderPerfMetric("drawContextMarkersPass", nowMs() - startedAt, {
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hgo-runtime-preview",
-    });
-    return;
-  }
-  let deferred = false;
-  beginContextMetricSession();
-  try {
-    if (runtimeState.deferContextBasePass && !interactive) {
-      deferred = true;
-      collectContextMetric("drawCityPointsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(getEffectiveCityCollection()),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawStrategicResourceMarkersLayer", 0, {
-        featureCount: getStrategicValuesResourceFeatureCount(runtimeState.scenarioStrategicValuesData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawAirportsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.airportsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawPortsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.portsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawRoadsLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.roadsData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-      collectContextMetric("drawRailwaysLayer", 0, {
-        featureCount: getFeatureCollectionFeatureCount(runtimeState.railwaysData),
-        interactive: false,
-        skipped: true,
-        reason: "staged-apply",
-      });
-    } else {
-      const transportOverviewOwner = getTransportOverviewRenderOwner();
-      transportOverviewOwner.drawRoadsLayer(k, { interactive });
-      transportOverviewOwner.drawRailwaysLayer(k, { interactive });
-      transportOverviewOwner.drawAirportsLayer(k, { interactive });
-      transportOverviewOwner.drawPortsLayer(k, { interactive });
-      drawStrategicResourceMarkersLayer(k, { interactive });
-      if (interactive) {
-        drawCityPointsLayer(k, { interactive: true });
-      }
-    }
-  } finally {
-    endContextMetricSession();
-  }
-  recordRenderPerfMetric("drawContextMarkersPass", nowMs() - startedAt, {
-    interactive: !!interactive,
-    deferred,
-  });
+function drawContextMarkersPass(k, options = undefined) {
+  return getContextPassOrchestratorOwner().drawContextMarkersPass(k, options);
 }
 
-function drawContextScenarioPass(k, { interactive = false } = {}) {
-  const startedAt = nowMs();
-  if (isHgoRuntimePreviewReady()) {
-    recordRenderPerfMetric("drawContextScenarioPass", nowMs() - startedAt, {
-      interactive: !!interactive,
-      skipped: true,
-      reason: "hgo-runtime-preview",
-    });
-    return;
-  }
-  beginContextMetricSession();
-  try {
-    drawScenarioRegionOverlaysPass(k);
-    drawScenarioReliefOverlaysPass(k);
-  } finally {
-    endContextMetricSession();
-  }
-  recordRenderPerfMetric("drawContextScenarioPass", nowMs() - startedAt, {
-    interactive: !!interactive,
-  });
+function drawContextScenarioPass(k, options = undefined) {
+  return getContextPassOrchestratorOwner().drawContextScenarioPass(k, options);
 }
 
 function drawDayNightPass(k, options = undefined) {

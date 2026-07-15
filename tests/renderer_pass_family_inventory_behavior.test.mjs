@@ -141,7 +141,15 @@ test("family and planned-phase membership stays binding", () => {
   assert.deepEqual(namesFor("plannedPhase", "existing-delegated"), ["physicalBase", "hgoPreview"]);
   assert.deepEqual(namesFor("plannedPhase", "future-review"), ["labels"]);
   assert.deepEqual(namesFor("implementationStatus", "thin-wrapper"), ["borders", "labels"]);
-  assert.deepEqual(namesFor("implementationStatus", "owned-p3"), ["effects", "lineEffects", "dayNight", "textureLabels"]);
+  assert.deepEqual(namesFor("implementationStatus", "owned-p3"), [
+    "contextBase",
+    "contextScenario",
+    "effects",
+    "lineEffects",
+    "dayNight",
+    "contextMarkers",
+    "textureLabels",
+  ]);
   assert.deepEqual(namesFor("implementationStatus", "hold"), []);
 });
 

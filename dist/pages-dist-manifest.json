@@ -45762,7 +45762,7 @@
     },
     {
       "path": "app/js/core/map_renderer.js",
-      "size_bytes": 889260,
+      "size_bytes": 886690,
       "source_kind": "dist"
     },
     {
@@ -46018,6 +46018,11 @@
     {
       "path": "app/js/core/renderer/context_layer_resolver.js",
       "size_bytes": 19956,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/renderer/context_pass_orchestrator_owner.js",
+      "size_bytes": 7931,
       "source_kind": "dist"
     },
     {
@@ -47427,7 +47432,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467885,
+      "size_bytes": 1468025,
       "source_kind": "dist"
     },
     {
@@ -47557,9 +47562,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9425,
+      "file_count": 9426,
       "path": "app",
-      "size_bytes": 965659803
+      "size_bytes": 965665164
     },
     {
       "file_count": 57,
@@ -47569,7 +47574,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1467885
+      "size_bytes": 1468025
     },
     {
       "file_count": 1,
@@ -47592,5 +47597,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972226049
+  "total_bytes": 972231550
 }
