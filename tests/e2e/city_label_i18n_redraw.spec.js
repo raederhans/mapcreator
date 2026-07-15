@@ -6,6 +6,7 @@ const {
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
 test.setTimeout(90_000);
+test.use({ sharedCityRequireInfraIdle: false });
 const EN_LABEL = "Asteria";
 const ZH_LABEL = "°¢²â³Ç";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
@@ -129,6 +130,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
     zoomPercent: 320,
     installLabelDrawHook: true,
     timeout: 120_000,
+    requireInfraIdle: false,
   });
   await ensureLanguage(page, "en");
 

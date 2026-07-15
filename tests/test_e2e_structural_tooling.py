@@ -90,9 +90,19 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
             scenario_source.index("async function collectPostEditPoliticalSnapshot")
         ]
 
-        self.assertIn("&& !loadState.pendingInfraPromotion", shared_chunk_idle)
+        self.assertIn("requireInfra = true", shared_chunk_idle)
+        self.assertIn("&& (!requiresInfra || !loadState.pendingInfraPromotion)", shared_chunk_idle)
         self.assertNotIn("&& !loadState.pendingInfraPromotion", political_color_wait)
         self.assertIn("pendingInfraPromotion: !!loadState.pendingInfraPromotion", political_color_wait)
+
+        fixtures_source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        city_label_source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
+        city_lights_source = (REPO_ROOT / "tests" / "e2e" / "city_lights_layer_regression.spec.js").read_text(encoding="utf-8")
+        self.assertIn("sharedCityRequireInfraIdle: [true", fixtures_source)
+        self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_label_source)
+        self.assertIn("requireInfraIdle: false", city_label_source)
+        self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_lights_source)
+        self.assertIn("requireInfraIdle: false", city_lights_source)
 
     def test_pages_public_release_gate_requires_explicit_candidate_url(self) -> None:
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
@@ -916,6 +926,11 @@ const page = {
 
     def test_shared_city_fixtures_restore_runtime_snapshots_on_reset(self) -> None:
         source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        reset_call = """await resetSharedCityRuntimeState(page, {
+      storageKeys,
+      timeout: resetTimeout,
+      requireInfraIdle: sharedCityRequireInfraIdle,
+    });"""
         self.assertIn("captureSharedCityRuntimeSnapshot", source)
         self.assertIn("__sharedCityWorldCitiesSnapshot", source)
         self.assertIn("__sharedCityScenarioOverridesSnapshot", source)
@@ -925,7 +940,7 @@ const page = {
         self.assertIn("scenarioOverrideCount", source)
         self.assertIn("display-name overrides remained after reset", source)
         self.assertIn("const resetTimeout = Math.max(30_000, Number(testInfo.timeout) || 0);", source)
-        self.assertIn("await resetSharedCityRuntimeState(page, { storageKeys, timeout: resetTimeout });", source)
+        self.assertIn(reset_call, source)
 
     def test_tno_land_feature_action_clock_wait_has_a_local_deadline(self) -> None:
         source = (REPO_ROOT / "tests" / "e2e" / "tno_open_ocean_rendering.spec.js").read_text(encoding="utf-8")
@@ -935,11 +950,16 @@ const page = {
 
     def test_shared_city_fixture_captures_failure_context_before_reset_cleanup(self) -> None:
         source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        reset_call = """await resetSharedCityRuntimeState(page, {
+          storageKeys,
+          timeout: resetTimeout,
+          requireInfraIdle: sharedCityRequireInfraIdle,
+        });"""
         failed_index = source.index("const failed = testInfo.status !== testInfo.expectedStatus;")
         snapshot_index = source.index("const failureSnapshot = await readFailureContextSnapshot(page, DEFAULT_FAILURE_SELECTORS);", failed_index)
         write_index = source.index("await writeFailureContextArtifact(testInfo, failureSnapshot);", snapshot_index)
         cleanup_index = source.index("await clearPageEventListeners(page);", write_index)
-        reset_index = source.index("await resetSharedCityRuntimeState(page, { storageKeys, timeout: resetTimeout });", cleanup_index)
+        reset_index = source.index(reset_call, cleanup_index)
         self.assertLess(failed_index, snapshot_index)
         self.assertLess(snapshot_index, write_index)
         self.assertLess(write_index, cleanup_index)

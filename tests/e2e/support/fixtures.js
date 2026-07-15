@@ -28,8 +28,12 @@ async function clearPageEventListeners(page) {
   }
 }
 
-async function waitForSharedCityExactRender(page, { scenarioId = "", timeout = 30_000 } = {}) {
-  await waitForRenderIdle(page, { scenarioId, timeout });
+async function waitForSharedCityExactRender(page, {
+  scenarioId = "",
+  timeout = 30_000,
+  requireInfraIdle = true,
+} = {}) {
+  await waitForRenderIdle(page, { scenarioId, timeout, requireInfra: requireInfraIdle });
   await page.waitForFunction(async () => {
     const { state } = await import("/js/core/state.js");
     return String(state.renderPhase || "") === "idle"
@@ -38,7 +42,10 @@ async function waitForSharedCityExactRender(page, { scenarioId = "", timeout = 3
   }, undefined, { timeout });
 }
 
-async function ensureSharedCityBaseDataLoaded(page, reason = "shared-city-runtime", { timeout = 120_000 } = {}) {
+async function ensureSharedCityBaseDataLoaded(page, reason = "shared-city-runtime", {
+  timeout = 120_000,
+  requireInfraIdle = true,
+} = {}) {
   await page.evaluate(async (loadReason) => {
     const { state } = await import("/js/core/state.js");
     if (typeof state.ensureBaseCityDataFn === "function") {
@@ -51,7 +58,7 @@ async function ensureSharedCityBaseDataLoaded(page, reason = "shared-city-runtim
       && Array.isArray(state.worldCitiesData?.features)
       && state.worldCitiesData.features.length > 0;
   }, undefined, { timeout });
-  await waitForSharedCityExactRender(page, { timeout });
+  await waitForSharedCityExactRender(page, { timeout, requireInfraIdle });
 }
 
 async function captureSharedCityRuntimeSnapshot(page) {
@@ -71,7 +78,10 @@ async function captureSharedCityRuntimeSnapshot(page) {
   });
 }
 
-async function ensureSharedCityScenario(page, scenarioId, { timeout = 120_000 } = {}) {
+async function ensureSharedCityScenario(page, scenarioId, {
+  timeout = 120_000,
+  requireInfraIdle = true,
+} = {}) {
   const expectedScenarioId = String(scenarioId || "").trim();
   await page.waitForFunction((targetScenarioId) => {
     const select = document.querySelector("#scenarioSelect");
@@ -91,23 +101,33 @@ async function ensureSharedCityScenario(page, scenarioId, { timeout = 120_000 } 
     }
   }
   await waitForScenarioApplyIdle(page, { scenarioId: expectedScenarioId, timeout });
-  await waitForSharedCityExactRender(page, { scenarioId: expectedScenarioId, timeout });
+  await waitForSharedCityExactRender(page, {
+    scenarioId: expectedScenarioId,
+    timeout,
+    requireInfraIdle,
+  });
 }
 
-async function setSharedCityZoomPercent(page, percent, { timeout = 30_000 } = {}) {
+async function setSharedCityZoomPercent(page, percent, {
+  timeout = 30_000,
+  requireInfraIdle = true,
+} = {}) {
   await page.evaluate(async (targetPercent) => {
     const { setZoomPercent } = await import("/js/core/map_renderer.js");
     setZoomPercent(targetPercent);
   }, percent);
-  await waitForSharedCityExactRender(page, { timeout });
+  await waitForSharedCityExactRender(page, { timeout, requireInfraIdle });
 }
 
-async function resetSharedCityZoom(page, { timeout = 30_000 } = {}) {
+async function resetSharedCityZoom(page, {
+  timeout = 30_000,
+  requireInfraIdle = true,
+} = {}) {
   await page.evaluate(async () => {
     const { resetZoomToFit } = await import("/js/core/map_renderer.js");
     resetZoomToFit();
   });
-  await waitForSharedCityExactRender(page, { timeout });
+  await waitForSharedCityExactRender(page, { timeout, requireInfraIdle });
 }
 
 async function installSharedCityLabelDrawHook(page) {
@@ -162,6 +182,7 @@ async function installSharedCityLabelDrawHook(page) {
 async function seedSharedCityViewSettings(page, payload, {
   storageKey = VIEW_SETTINGS_STORAGE_KEY,
   timeout = 30_000,
+  requireInfraIdle = true,
 } = {}) {
   await page.evaluate(async ({ targetStorageKey, nextPayload }) => {
     localStorage.setItem(targetStorageKey, JSON.stringify(nextPayload));
@@ -174,12 +195,13 @@ async function seedSharedCityViewSettings(page, payload, {
     targetStorageKey: storageKey,
     nextPayload: payload,
   });
-  await waitForSharedCityExactRender(page, { timeout });
+  await waitForSharedCityExactRender(page, { timeout, requireInfraIdle });
 }
 
 async function resetSharedCityRuntimeState(page, {
   storageKeys = DEFAULT_STORAGE_KEYS,
   timeout = 30_000,
+  requireInfraIdle = true,
 } = {}) {
   const normalizedStorageKeys = normalizeStorageKeys(storageKeys);
   await page.evaluate(async ({ targetStorageKeys }) => {
@@ -226,7 +248,7 @@ async function resetSharedCityRuntimeState(page, {
   }, {
     targetStorageKeys: normalizedStorageKeys,
   });
-  await waitForSharedCityExactRender(page, { timeout });
+  await waitForSharedCityExactRender(page, { timeout, requireInfraIdle });
 }
 
 async function prepareSharedCityRuntimeState(page, {
@@ -237,10 +259,15 @@ async function prepareSharedCityRuntimeState(page, {
   zoomPercent = null,
   installLabelDrawHook = false,
   timeout = 120_000,
+  requireInfraIdle = true,
 } = {}) {
   await waitForAppInteractive(page, { timeout });
   await waitForShellReady(page, { timeout });
-  await resetSharedCityRuntimeState(page, { storageKeys, timeout: Math.min(timeout, 30_000) });
+  await resetSharedCityRuntimeState(page, {
+    storageKeys,
+    timeout: Math.min(timeout, 30_000),
+    requireInfraIdle,
+  });
   if (installLabelDrawHook) {
     await installSharedCityLabelDrawHook(page);
   }
@@ -248,18 +275,22 @@ async function prepareSharedCityRuntimeState(page, {
     await seedSharedCityViewSettings(page, viewSettingsPayload, {
       storageKey: normalizeStorageKeys(storageKeys)[0] || VIEW_SETTINGS_STORAGE_KEY,
       timeout: Math.min(timeout, 30_000),
+      requireInfraIdle,
     });
   }
   const zoomSettleTimeout = Math.min(timeout, 60_000);
-  await ensureSharedCityScenario(page, scenarioId, { timeout });
-  await resetSharedCityZoom(page, { timeout: zoomSettleTimeout });
+  await ensureSharedCityScenario(page, scenarioId, { timeout, requireInfraIdle });
+  await resetSharedCityZoom(page, { timeout: zoomSettleTimeout, requireInfraIdle });
   if (loadBaseCityDataReason) {
-    await ensureSharedCityBaseDataLoaded(page, loadBaseCityDataReason, { timeout });
+    await ensureSharedCityBaseDataLoaded(page, loadBaseCityDataReason, { timeout, requireInfraIdle });
   } else {
-    await waitForSharedCityExactRender(page, { scenarioId, timeout });
+    await waitForSharedCityExactRender(page, { scenarioId, timeout, requireInfraIdle });
   }
   if (Number.isFinite(Number(zoomPercent))) {
-    await setSharedCityZoomPercent(page, Number(zoomPercent), { timeout: zoomSettleTimeout });
+    await setSharedCityZoomPercent(page, Number(zoomPercent), {
+      timeout: zoomSettleTimeout,
+      requireInfraIdle,
+    });
   }
   await captureSharedCityRuntimeSnapshot(page);
 }
@@ -347,6 +378,7 @@ async function attachSharedCityLeakArtifact(testInfo, snapshot, issues = []) {
 
 const test = base.test.extend({
   useSharedCityBoot: [process.env.PLAYWRIGHT_SHARED_CITY_BOOT !== "0", { option: true, scope: "worker" }],
+  sharedCityRequireInfraIdle: [true, { option: true }],
   sharedCityBootPath: ["/", { option: true, scope: "worker" }],
   sharedCityBootProfile: ["city-runtime-default", { option: true, scope: "worker" }],
   sharedCityBootHarness: [async ({
@@ -381,6 +413,7 @@ const test = base.test.extend({
     sharedCityBootHarness,
     sharedCityBootPath,
     sharedCityBootProfile,
+    sharedCityRequireInfraIdle,
   }, use, testInfo) => {
     const usingSharedBoot = useSharedCityBoot && sharedCityBootHarness;
     const context = usingSharedBoot ? sharedCityBootHarness.context : await browser.newContext();
@@ -400,7 +433,11 @@ const test = base.test.extend({
     }
 
     await clearPageEventListeners(page);
-    await resetSharedCityRuntimeState(page, { storageKeys, timeout: resetTimeout });
+    await resetSharedCityRuntimeState(page, {
+      storageKeys,
+      timeout: resetTimeout,
+      requireInfraIdle: sharedCityRequireInfraIdle,
+    });
 
     let resetSnapshot = null;
     let resetIssues = [];
@@ -422,7 +459,11 @@ const test = base.test.extend({
       }
       try {
         await clearPageEventListeners(page);
-        await resetSharedCityRuntimeState(page, { storageKeys, timeout: resetTimeout });
+        await resetSharedCityRuntimeState(page, {
+          storageKeys,
+          timeout: resetTimeout,
+          requireInfraIdle: sharedCityRequireInfraIdle,
+        });
         resetSnapshot = await readSharedCityLeakSnapshot(page, {
           bootProfile,
           storageKeys,

@@ -18,6 +18,7 @@ const IGNORED_NETWORK_PATTERNS = [
 ];
 
 test.setTimeout(240000);
+test.use({ sharedCityRequireInfraIdle: false });
 
 function shouldIgnoreConsoleIssue(text) {
   return IGNORED_CONSOLE_PATTERNS.some((pattern) => pattern.test(String(text || '')));
@@ -218,6 +219,7 @@ async function waitForMapReady(page) {
     scenarioApplyReason: "city-lights-layer-regression",
     loadBaseCityDataReason: "e2e-city-lights-regression",
     timeout: 30_000,
+    requireInfraIdle: false,
   });
 }
 

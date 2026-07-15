@@ -254,10 +254,10 @@ async function waitForScenarioApplyIdle(page, { scenarioId = "", timeout = 120_0
   }
 }
 
-async function waitForChunkIdle(page, { timeout = 120_000 } = {}) {
+async function waitForChunkIdle(page, { timeout = 120_000, requireInfra = true } = {}) {
   try {
     await primeStateRef(page);
-    await page.waitForFunction(() => {
+    await page.waitForFunction((requiresInfra) => {
       const state = globalThis.__playwrightStateRef || null;
       const loadState = state?.runtimeChunkLoadState || {};
       return !!state
@@ -266,8 +266,8 @@ async function waitForChunkIdle(page, { timeout = 120_000 } = {}) {
         && !loadState.refreshScheduled
         && !loadState.promotionCommitInFlight
         && !loadState.pendingVisualPromotion
-        && !loadState.pendingInfraPromotion;
-    }, undefined, { timeout });
+        && (!requiresInfra || !loadState.pendingInfraPromotion);
+    }, requireInfra, { timeout });
   } catch (error) {
     const snapshot = await readRuntimeIdleSnapshot(page);
     const wrapped = new Error(
@@ -278,9 +278,9 @@ async function waitForChunkIdle(page, { timeout = 120_000 } = {}) {
   }
 }
 
-async function waitForRenderIdle(page, { scenarioId = "", timeout = 120_000 } = {}) {
+async function waitForRenderIdle(page, { scenarioId = "", timeout = 120_000, requireInfra = true } = {}) {
   await waitForScenarioApplyIdle(page, { scenarioId, timeout });
-  await waitForChunkIdle(page, { timeout });
+  await waitForChunkIdle(page, { timeout, requireInfra });
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
     return !!state
@@ -296,7 +296,7 @@ async function waitForRenderIdle(page, { scenarioId = "", timeout = 120_000 } = 
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   }));
   await waitForScenarioApplyIdle(page, { scenarioId, timeout });
-  await waitForChunkIdle(page, { timeout });
+  await waitForChunkIdle(page, { timeout, requireInfra });
   await page.waitForFunction(() => {
     const state = globalThis.__playwrightStateRef || null;
     return !!state
