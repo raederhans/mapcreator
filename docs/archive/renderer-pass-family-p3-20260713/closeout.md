@@ -2,13 +2,13 @@
 
 ## Status
 
-P3 is implementation-complete and acceptance-complete through the P3 runtime branch functional commit:
+P3 is implementation-complete, acceptance-complete, and archived for integration through the P3 runtime branch closeout commit:
 
 ```text
-a18ee17fe2aba894f3e9455513d166a2a9d7d032
+6580887b64889f027c3966e0e9eb78e8f33266e1
 ```
 
-The final open actions are the wait-contract/docs closeout commit, rebase over current `origin/main`, final clean-head gates, main integration, archive, push, and isolated worktree cleanup.
+Final post-rebase gates are green. The remaining operations are fast-forward main push, remote confirmation, and isolated worktree cleanup.
 
 ## Delivered ownership
 
@@ -28,6 +28,19 @@ Changed files:
 
 - `tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js`
 - `tests/e2e/support/playwright-app.js`
+
+## Final post-rebase acceptance
+
+- `npm run verify:core` passed `76/76`.
+- `npm run verify:core:main-thread` passed `80/80`.
+- `npm run test:e2e:dev:scenario-chunk-runtime` passed `8/8`.
+- `npm run test:e2e:dev:political-progressive-recovery` passed `3/3`.
+- `npm run test:e2e:scenario-resilience` passed `3/3`.
+- `npm run test:e2e:physical-layer-runtime-contract` passed `1/1`.
+- `npm run test:e2e:water-rendering` passed `12/12`.
+- `npm run test:e2e:city-rendering` passed `8/8`.
+- `npm run test:e2e:tno-contracts` passed `2/2`.
+- `npm run perf:gate` passed against `docs/perf/baseline_2026-07-14.json`.
 
 Post-repair evidence:
 

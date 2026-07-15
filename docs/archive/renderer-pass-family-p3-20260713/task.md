@@ -44,7 +44,7 @@
 - [x] P3.3b RED/GREEN: extract only top-level political orchestration into one canonical owner while preserving worker, cache, drawing, state, and facade ownership.
 - [x] P3.3b VERIFY: focused/static checks, Pages/dist parity, clean core, main-thread, serial browser matrix, and standard `perf:gate` passed for pushed functional commit `a18ee17f`.
 - [x] P3.3b WAIT-CONTRACT CLOSEOUT: classify deferred `pendingInfraPromotion` as diagnostic-only for political color coverage and render-idle E2E helpers; current-main and P3 both reproduced the same suite-order stall, and post-fix browser lanes pass.
-- [ ] P3 CLOSEOUT: rerun final post-closeout deterministic/main-thread gates, rebase over current `origin/main`, push/integrate main, archive this task folder, and remove only the integrated runtime worktree.
+- [x] P3 CLOSEOUT: reran final post-closeout deterministic/main-thread gates, rebased over current `origin/main`, archived this task folder, and prepared the verified runtime branch for fast-forward main integration and worktree cleanup.
 
 ## Owned files
 
@@ -52,6 +52,6 @@ Core tooling: `tools/renderer_pass_family_inventory.mjs`, `tools/verification/ve
 
 Tests: `tests/renderer_pass_family_inventory_behavior.test.mjs`, `tests/verification_metadata_behavior.test.mjs`, `tests/verify_core_runner_behavior.test.mjs`, `tests/perf_role_governed_report_behavior.test.mjs`, `tests/e2e/tno_open_ocean_rendering.spec.js`, `tests/test_e2e_structural_tooling.py`.
 
-Docs: this task directory, `docs/active/renderer-pass-family-coupling-matrix-p3-0-20260713.md`, `docs/active/_worktree_registry.md`, and the appended P3 lesson in `lessons learned.md`.
+Docs: this archived task directory, `docs/archive/renderer-pass-family-p3-20260713/coupling-matrix-p3-0.md`, `docs/active/_worktree_registry.md`, and the appended P3 lesson in `lessons learned.md`.
 
 Production runtime files and generated dist are owned only by the completed P3.1-P3.3b functional commits. The current closeout owns E2E wait helpers and control-plane truth.
