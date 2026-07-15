@@ -202,6 +202,7 @@ function runPowerShell(script, spawnSyncFn = spawnSync) {
 }
 
 function missingWindow(phase, status, detail) {
+  // 能力缺失仍返回完整 schema，让上层以 typed invalid evidence 收口，同时保留原始失败原因。
   return {
     schemaVersion: WILLIAMS_TELEMETRY_CADENCE.windowSchemaVersion,
     phase,
@@ -345,6 +346,7 @@ export function encodeWindowsJobRunnerSpec({
   if (!String(evidencePath || "").trim()) throw new TypeError("evidencePath is required");
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) throw new TypeError("timeoutMs must be a positive integer");
   if (!Array.isArray(args)) throw new TypeError("args must be an array");
+  // 每个字段按行独立 base64，保留空参数、引号和末尾反斜杠，避免 shell 重解析 argv。
   return [
     WINDOWS_JOB_RUNNER_PROTOCOL_ID,
     base64Line(executablePath),
@@ -591,6 +593,7 @@ export async function prepareWindowsJobRunner({
   let preparedExecutablePath = compiled.executablePath;
   let preparedBinary = compiled.binary;
   try {
+    // evidence 副本使用 no-clobber 写入；能力探针和正式测量随后绑定同一份不可变 binary descriptor。
     if (evidenceBinaryPath) {
       await fs.mkdir(path.dirname(evidenceBinaryPath), { recursive: true });
       await fs.copyFile(compiled.executablePath, evidenceBinaryPath, fsConstants.COPYFILE_EXCL);

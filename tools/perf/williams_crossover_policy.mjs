@@ -299,6 +299,7 @@ export function buildWilliamsPreregistration({
   powerSchemeHelper = null,
   expectedPowerSchemeGuid = "",
 } = {}) {
+  // 预注册把样本角色、区组顺序、阈值和遥测节奏冻结为实验输入，后续分析只校验和复算。
   return {
     schemaVersion: WILLIAMS_CROSSOVER_SCHEMA_VERSION,
     policyId: WILLIAMS_CROSSOVER_POLICY_ID,
@@ -542,6 +543,7 @@ export function validateWilliamsTelemetryCadence(window, {
   scheduler = WILLIAMS_TELEMETRY_CADENCE.scheduler,
   timestampSemantics = WILLIAMS_TELEMETRY_CADENCE.timestampSemantics,
 } = {}) {
+  // priming 属于采集准备期；严格 cadence 只统计 measured samples，二者时间边界仍需完整可审计。
   const errors = [];
   if (!window || typeof window !== "object") {
     return Object.freeze({
@@ -893,6 +895,7 @@ function validateTelemetryEnvironment(window, label, expectedBlock, preregistrat
 }
 
 function buildTelemetryAdmission(blocks, preregistration, powerLifecycleWindow = null) {
+  // admission 同时约束区组内 pre/post、跨区组时间顺序和统一机器状态，防止环境漂移伪装成代码差异。
   const errors = [];
   const blockSummaries = new Map();
   const powerSchemes = new Set();
@@ -1486,6 +1489,7 @@ export function analyzeWilliamsCrossoverEvidence({
   blocks = [],
   manifestValidation = { status: "missing", errors: ["manifest.missing"] },
 } = {}) {
+  // 先汇总所有证据完整性错误，再计算性能方向；invalid experiment 不会被数值结果覆盖。
   const powerLifecycleValidation = validateWilliamsPowerSchemeLifecycle(
     powerSchemeLifecycle,
     preregistration,

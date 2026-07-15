@@ -98,6 +98,7 @@ export function analyzeRenderSampleRole({ scenarioId, snapshot, summary = null }
   const canonicalCandidates = samples.filter((sample) => (
     isCanonicalCandidate(sample, requestedScenarioId, promotionRecordedAt)
   ));
+  // canonical 角色只允许出现在最后一帧；promotion 前的额外样本保留为启动成本证据。
   const preCanonicalSamples = samples.slice(0, -1);
   const firstRole = classifyFirstRenderSampleRole(rawSamples[0]);
   const scenarioFirstSample = samples.find((sample) => (
@@ -217,6 +218,7 @@ export function summarizeRenderSampleRoleAnalyses(analyses = []) {
   const canonicalValues = governed
     .map((analysis) => analysis.canonicalRenderSampleMs)
     .filter((value) => Number.isFinite(value));
+  // legacy median 与 canonical median 分开汇总，避免旧指标掩盖样本角色不一致。
   const firstRoleComposition = normalized.reduce((composition, analysis) => {
     const role = analysis?.firstRole?.role === "scenario" ? "scenario" : "blank";
     composition[role] += 1;
