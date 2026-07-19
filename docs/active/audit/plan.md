@@ -24,7 +24,7 @@
 - [x] Stage 2: 两条独立 review lane 审查代码/测试质量与架构边界。
 - [x] Stage 3: 复现并最小修复确认的问题，补充回归覆盖。
 - [x] Stage 4: 执行 SF-ATS 自适应选择、目标测试和必要主线程检查。
-- [ ] Stage 5: 完成独立复核、提交、推送、Git/worktree 状态同步。
+- [x] Stage 5: 完成独立复核、提交、推送、Git/worktree 状态同步。
 
 ## Acceptance criteria
 

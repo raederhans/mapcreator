@@ -17,6 +17,7 @@
 | 2026-07-19 | 删除 city label 死 helper 后，timeout guardrail 报告一个 stale `waitForTimeout` allowlist 条目。 | 只删除 stale 条目，保留该 spec 仍需要的 long-timeout 许可。 |
 | 2026-07-19 | 运行期间 main 出现无关 `docs/archive/**` 删除和 `lessons learned.md` WIP。 | 原样保留，提交时采用显式路径暂存。 |
 | 2026-07-19 | 新 P4 worktree 与 main 同基线，只有未提交 inventory/测试/任务记录。 | 状态为开发中，未达到 `ready-for-integration`，本轮保持隔离。 |
+| 2026-07-19 | 功能提交 `4905fb696d9a5222aea628937fd2bc804109ae1f` 已推送到 `origin/main` 并确认远端同 SHA。 | 本 closeout 只记录审核完成事实，不吸收无关 WIP 或 P4 内容。 |
 
 ## Live process ownership
 
@@ -32,4 +33,4 @@
 
 ## Next step
 
-显式暂存本轮文件，检查 staged diff，创建 Lore commit 并推送。
+审核任务完成；后续只需观察 GitHub-hosted same-runner perf workflow 的真实运行结果。

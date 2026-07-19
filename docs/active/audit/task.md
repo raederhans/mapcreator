@@ -2,7 +2,7 @@
 
 ## Current status
 
-执行中：修复、live 验证和双重复审完成，正在提交与推送。
+完成：功能修复、live 验证、双重复审、Lore commit 与远端推送均已闭环。
 
 ## Checklist
 
@@ -13,7 +13,7 @@
 - [x] 完成架构/边界 review lane。
 - [x] 修复并补充回归覆盖。
 - [x] 运行 SF-ATS 自适应选择与目标验证。
-- [ ] 完成最终 review、Lore commit、push 与清理。
+- [x] 完成最终 review、Lore commit、push 与清理。
 
 ## Validation evidence
 
@@ -36,6 +36,7 @@
 | code-reviewer 最终复核 | APPROVE；原 HIGH/LOW 均关闭 |
 | architect 最终复核 | APPROVE；same-runner dependency/workload identity BLOCK 已关闭 |
 | `py -3 -m unittest tests.test_e2e_structural_tooling -q`（最终） | 36/36 passed；stale timeout allowlist 已删除 |
+| `git push origin main` | `07d95eaa..4905fb69` pushed；随后 `HEAD == origin/main == 4905fb696d9a5222aea628937fd2bc804109ae1f` |
 
 ## Open risks and remaining work
 
