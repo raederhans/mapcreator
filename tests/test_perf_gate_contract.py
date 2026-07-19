@@ -56,17 +56,25 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow_content)
         self.assertIn("npx playwright install chromium", workflow_content)
         self.assertIn("npm run perf:gate", workflow_content)
-        self.assertIn('"should_enforce_regressions=$($shouldEnforceRegressions.ToString().ToLowerInvariant())"', workflow_content)
-        enforcement_block = workflow_content[
-            workflow_content.index("$regressionEnforcementRuleNames = @("):
-            workflow_content.index("$shouldEnforceRegressions =")
+        self.assertIn(
+            '"should_enforce_regressions=$($shouldEnforceRegressions.ToString().ToLowerInvariant())"',
+            workflow_content,
+        )
+        rule_block = workflow_content[
+            workflow_content.index("$rules = @("):
+            workflow_content.index("$ruleHits = @()")
         ]
+        policy_pairs = dict(
+            re.findall(
+                r"name = '([^']+)'[\s\S]*?regression_policy = '(enforce|diagnostic)'[\s\S]*?patterns = @\(",
+                rule_block,
+            )
+        )
         for enforced_rule in (
             "runtime-js",
             "app-shell",
-            "dev-server",
         ):
-            self.assertIn(f"'{enforced_rule}'", enforcement_block)
+            self.assertEqual(policy_pairs.get(enforced_rule), "enforce")
         for diagnostic_rule in (
             "perf-workflow",
             "perf-baseline-docs",
@@ -74,10 +82,20 @@ class PerfGateContractTest(unittest.TestCase):
             "perf-scenario-data",
             "playwright-app-support",
             "perf-tools",
+            "dev-server",
             "node-manifests",
         ):
-            self.assertNotIn(f"'{diagnostic_rule}'", enforcement_block)
-        self.assertIn("$regressionMode = if ('${{ steps.classify.outputs.should_enforce_regressions }}' -eq 'true')", workflow_content)
+            self.assertEqual(policy_pairs.get(diagnostic_rule), "diagnostic")
+        self.assertEqual(len(policy_pairs), 10)
+        self.assertIn("regression_policy = $rule.regression_policy", workflow_content)
+        self.assertIn(
+            "Where-Object { $_.regression_policy -eq 'enforce' }",
+            workflow_content,
+        )
+        self.assertIn(
+            "$regressionMode = if ('${{ steps.classify.outputs.should_enforce_regressions }}' -eq 'true')",
+            workflow_content,
+        )
         self.assertIn("--regression-mode $regressionMode", workflow_content)
         self.assertLess(
             workflow_content.index("python -m pip install -r requirements-dev.lock.txt"),
@@ -87,7 +105,13 @@ class PerfGateContractTest(unittest.TestCase):
     def test_workflow_generates_base_baseline_on_the_same_runner(self):
         workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")
         self.assertIn('"base_sha=$baseSha"', workflow_content)
-        self.assertIn('"head_sha=$headSha"', workflow_content)
+        self.assertIn('"diff_head_sha=$diffHeadSha"', workflow_content)
+        self.assertIn('"candidate_sha=$candidateSha"', workflow_content)
+        self.assertIn("$candidateSha = (git rev-parse HEAD).Trim()", workflow_content)
+        self.assertIn(
+            '$diffRange = if ($baseSha) { "$baseSha...$diffHeadSha" } else { $diffHeadSha }',
+            workflow_content,
+        )
         self.assertIn("Generate same-runner base baseline", workflow_content)
         self.assertIn("git worktree add --detach", workflow_content)
         self.assertIn("perf-pr-gate-base.json", workflow_content)
@@ -100,6 +124,10 @@ class PerfGateContractTest(unittest.TestCase):
             workflow_content.index("      - name: Generate same-runner base baseline"):
             workflow_content.index("      - name: Run perf gate")
         ]
+        self.assertIn(
+            "$candidateSha = '${{ steps.classify.outputs.candidate_sha }}'",
+            same_runner_step,
+        )
         self.assertIn("$governedHeadInputs = @(", same_runner_step)
         for governed_input in (
             "package.json",
@@ -107,14 +135,15 @@ class PerfGateContractTest(unittest.TestCase):
             "data/scenarios/index.json",
             "data/scenarios/tno_1962",
             "data/scenarios/hoi4_1939",
-            "tools/perf/run_baseline.mjs",
-            "tools/perf/render_sample_role_policy.mjs",
+            "tools/perf",
+            "tools/dev_server.py",
         ):
             self.assertIn(f"'{governed_input}'", same_runner_step)
         self.assertIn(
-            "git -C $baseWorktree restore --source=$headSha --staged --worktree -- $governedHeadInputs",
+            "git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs",
             same_runner_step,
         )
+        self.assertNotIn("restore --source=$diffHeadSha", same_runner_step)
         self.assertIn("$baseEvidenceDir", same_runner_step)
         self.assertIn("perf-baseline-dev-server.out.log", same_runner_step)
         self.assertIn("perf-baseline-dev-server.err.log", same_runner_step)
@@ -127,6 +156,17 @@ class PerfGateContractTest(unittest.TestCase):
             same_runner_step.index("git -C $baseWorktree restore"),
             same_runner_step.index("npm ci"),
         )
+
+    def test_workflow_persists_perf_evidence_for_diagnostic_successes(self):
+        workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")
+        self.assertIn("- name: Upload perf evidence", workflow_content)
+        self.assertIn(
+            "if: always() && steps.classify.outputs.should_run_perf == 'true'",
+            workflow_content,
+        )
+        self.assertIn("name: perf-pr-gate-evidence", workflow_content)
+        self.assertIn(".runtime/output/perf/**", workflow_content)
+        self.assertNotIn("Upload perf failure artifacts", workflow_content)
         self.assertLess(
             workflow_content.index("Generate same-runner base baseline"),
             workflow_content.index("      - name: Run perf gate"),

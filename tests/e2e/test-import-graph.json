@@ -235,1043 +235,2572 @@
         "js/core/map_renderer.js",
         "js/core/state.js",
         "tests/e2e/support/expectations/console-allowlist.js",
-        "tests/e2e/support/fixtures.…43666 tokens truncated…hitecture: ${report.environment.arch}`', script)
-        self.assertIn('`- CPU: ${report.environment.cpuModel} (${report.environment.cpuCount} logical processors)`', script)
-        self.assertIn('`- Memory class: ${report.environment.memoryGiB} GiB`', script)
-        self.assertIn('`- Runner: ${JSON.stringify(report.environment.runnerIdentity)}`', script)
-        self.assertIn('const PERF_REPORT_CONTRACT_FIELDS = [', script)
-        self.assertIn(
-            "collectBaselineContractMismatches(report, baselineReportForGate)",
-            script,
-        )
-        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
-        self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
-        self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
-        self.assertNotIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION", script)
-        self.assertIn('from "./render_sample_role_policy.mjs";', script)
-        self.assertIn("canonicalRenderSampleMs", script)
-        self.assertIn("renderSampleRoleSummary", script)
-        self.assertIn("collectGovernedRenderSampleRoleMismatches", script)
-        self.assertIn("Perf gate render sample role mismatch.", script)
-        self.assertIn("renderSampleRoleMismatches", script)
-        self.assertIn("normalizePerfRegressionMode", script)
-        self.assertIn("shouldBlockOnPerfRegressions", script)
-        self.assertIn("regressionsEnforced", script)
-        self.assertIn("runWithTransientPerfNetworkRetry", script)
-        self.assertIn("getTransientNetworkFailure", script)
-        self.assertIn("net::ERR_NETWORK_CHANGED", script)
-        self.assertIn("net::ERR_CONNECTION_FAILED", script)
-        self.assertIn("getTransientNetworkFailure: diagnostics.getTransientNetworkFailure", script)
-        self.assertIn('const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];', script)
-        self.assertIn("const MIN_GATE_WARMUPS = 3;", script)
-        self.assertIn("const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;", script)
-        self.assertIn('throw new Error(`[perf-baseline] Gate warmups must be at least ${MIN_GATE_WARMUPS}; received ${options.warmups}.`);', script)
-        self.assertIn("warmups mismatch: baseline=", script)
-        self.assertIn("runs mismatch: baseline=", script)
-        self.assertIn("browser version mismatch: baseline=", script)
-        self.assertIn("package lock mismatch: baseline=", script)
-        self.assertIn("manifestSha256 mismatch", script)
-        self.assertIn("featureCount mismatch", script)
-        self.assertIn('if (activeScenarioId !== normalizeScenarioId(scenarioId)) {', script)
-        self.assertIn('{ key: "scenarioAppliedMs", label: "scenarioAppliedMs" }', script)
-        self.assertIn('{ key: "applyScenarioBundleMs", label: "applyScenarioBundleMs" }', script)
-        self.assertIn('{ key: "refreshScenarioApplyMs", label: "refreshScenarioApplyMs" }', script)
-        self.assertIn('{ key: "renderSampleMedianMs", label: "renderSampleMedianMs", threshold: 1.25 }', script)
-        self.assertIn("function summarizeSampleSpread", script)
-        self.assertIn("function buildReportWorkloadIdentity", script)
-        self.assertIn("sampleSpread: buildAggregateSampleSpread(runs)", script)
-        self.assertIn("workloadIdentity: buildScenarioWorkloadIdentity", script)
-        self.assertIn("workloadIdentity: buildReportWorkloadIdentity(options, measurement)", script)
-        self.assertIn("function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {})", script)
-        self.assertIn("function resolveDevServerPythonCommand()", script)
-        self.assertIn('import { spawn, spawnSync } from "node:child_process";', script)
-        self.assertIn("process.env.pythonLocation || process.env.Python_ROOT_DIR || process.env.Python3_ROOT_DIR", script)
-        self.assertIn('path.join(setupPythonRoot, process.platform === "win32" ? "python.exe" : "bin/python")', script)
-        self.assertIn('const pythonExecutable = resolveWindowsPythonExecutable();', script)
-        self.assertIn('return { command: pythonExecutable, args: ["tools/dev_server.py"] };', script)
-        self.assertIn('return { command: "python3", args: ["tools/dev_server.py"] };', script)
-        self.assertIn(
-            'const pythonProbe = spawnSync("py", ["-3", "-c", "import sys; print(sys.executable)"], {\n'
-            "    cwd: REPO_ROOT,\n"
-            '    encoding: "utf8",\n'
-            "    windowsHide: true,\n"
-            "  });",
-            script,
-        )
-        self.assertIn("pythonProbe.error", script)
-        self.assertIn("pythonProbe.status === null", script)
-        self.assertIn("pythonProbe.status !== 0", script)
-        self.assertIn("!pythonExecutable", script)
-        self.assertIn("truncateStderr(pythonProbe.stderr)", script)
-        self.assertNotIn('return { command: "py", args: ["-3", "tools/dev_server.py"] };', script)
-        self.assertIn("expectedPid = null", script)
-        self.assertIn("const metadataPid = Number(metadata?.pid);", script)
-        self.assertIn("isProcessIdRunning(metadataPid)", script)
-        self.assertIn("Number.isInteger(expectedNumericPid)", script)
-        self.assertIn("metadataPid === expectedNumericPid", script)
-        self.assertIn("normalizeMetadataPath(metadataCwd) === normalizeMetadataPath(REPO_ROOT)", script)
-        self.assertIn('MAPCREATOR_RUNTIME_ROOT: PERF_SERVER_RUNTIME_ROOT', script)
-        self.assertIn("function shouldReuseActiveServer()", script)
-        self.assertIn("process.env.PERF_REUSE_ACTIVE_SERVER", script)
-        self.assertIn("resolveExistingServerBaseUrl(PERF_SERVER_ACTIVE_SERVER_PATH, {", script)
-        self.assertIn("expectedPid: serverOwner.child.pid", script)
-        self.assertIn("if (!activeServerMetadataMatchesRepo(metadata, options))", script)
-        self.assertIn("async function ensureMeasurementServer(serverLease)", script)
-        self.assertIn("serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current)", script)
-        self.assertIn("async function readPerfRuntimeState(page)", script)
-        self.assertIn('globalThis.__mapcreator__?.snapshot', script)
-        self.assertNotIn('new URL("./js/core/state.js"', script)
-        self.assertIn('path.join(REPO_ROOT, ".runtime", "tests", "playwright", "perf-baseline")', script)
-        self.assertIn("function createPerfBrowserDiagnostics(page,", script)
-        self.assertIn('page.on("console"', script)
-        self.assertIn('page.on("pageerror"', script)
-        self.assertIn('page.on("requestfailed"', script)
-        self.assertIn('kind: "http-error"', script)
-        self.assertIn("[perf-baseline] Browser diagnostics:", script)
-        self.assertIn("runLabel: `warmup-${String(index + 1).padStart(2, \"0\")}`", script)
-        self.assertIn("runLabel: `run-${String(index + 1).padStart(2, \"0\")}`", script)
-        self.assertIn("manifestSha256", script)
-        self.assertIn("function validateGateCurrentReport(currentReport, scenarioIds", script)
-        self.assertIn("Current report has invalid gate metrics for scenarios", script)
-        self.assertIn('validateGateCurrentReport(report, options.scenarios, "current report")', script)
-        for field_name in (
-            "scenarioFullHydrateMs",
-            "interactionInfraMs",
-            "scenarioChunkPromotionInfraStageMs",
-            "scenarioChunkPromotionVisualStageMs",
-            "zoomEndToChunkVisibleMs",
-            "interactionRecoveryWindowMs",
-            "interactionRecoveryTaskMs",
-            "visibleFrameTransactionMs",
-            "visibleFrameTransactionCount",
-            "visibleFrameRejectedCount",
-            "visibleFrameMissingCount",
-            "continuityFrameStaleAgeMs",
-            "missingVisibleFrameCount",
-            "fillPatchInputToFirstPixelMs",
-            "postReadyMaxPendingAgeMs",
-            "postReadyMaxRetryCount",
-            "startupBundleSource",
-            "startupShellApplyReadyMs",
-            "loadScenarioBundleMs",
-            "drawContextScenarioPassMs",
-            "setMapDataFirstPaintMs",
-            "buildHitCanvasMs",
-            "settleExactRefreshMs",
-            "settleExactRefreshApplyMs",
-            "settleExactRefreshPassesMs",
-            "settleExactRefreshWaitForPaintMs",
-            "settleExactRefreshFinalizeMs",
-            "settleExactRefreshPhaseBreakdownMs",
-        ):
-            self.assertIn(field_name, script)
-        self.assertIn('bootMetrics["scenario-apply"]?.source', script)
-        self.assertIn("workerDecodeMs", script)
-        self.assertIn("workerMetaBuildMs", script)
-        self.assertIn("Perf gate baseline contract mismatch.", script)
+        "tests/e2e/support/fixtures.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_urban_rendering_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/full_visual_acceptance.dev.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/renderer/render_transaction_diagnostics.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js": {
+      "directDependencies": [
+        "js/core/feature_identity.js",
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/political-pixel-probe.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/feature_identity.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev/tno_ready_state_contract.dev.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev_workspace_i18n.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_localization_state.js",
+        "js/core/state.js",
+        "js/ui/dev_workspace.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/dev_workspace_render_boundary.spec.js": {
+      "directDependencies": [
+        "js/core/render_boundary.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/hoi4_1939_ui_smoke.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/hoi4_rk_russia_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/interaction_funnel_contract.spec.js": {
+      "directDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/main_shell_i18n.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/non_1962_runtime_matrix.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/physical_layer_regression.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/physical_layer_runtime_contract.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/project_save_load_roundtrip.spec.js": {
+      "directDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/release/pages_public_release_gate.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/release-smoke.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/release-smoke.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/review_regressions.spec.js": {
+      "directDependencies": [
+        "js/core/data_loader.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/data_loader.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/data_loader.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/startup_cache.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/river_layer_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/sample_guide_deeplink.spec.js": {
+      "directDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_apply_concurrency.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_apply_resilience.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_blank_exit.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/sovereignty_manager.js",
+        "js/core/state.js",
+        "js/ui/i18n.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_boundary_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_controls_dispatcher_contract.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/scenario_shell_overlay_contract.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/shortcut_history_render_boundary.spec.js": {
+      "directDependencies": [
+        "js/core/history_manager.js",
+        "js/core/render_boundary.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/history_manager.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/history_manager.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/render_boundary.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/sidebar_default_collapse.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/startup_bundle_recovery_contract.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_editing.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_roundtrip.spec.js": {
+      "directDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/strategic_overlay_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/texture_overlay_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_1962_ui_smoke.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_named_water_rendering.spec.js": {
+      "directDependencies": [
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_open_ocean_rendering.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "js/core/state/index.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/index.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/index.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/tno_startup_visible_context_layers_contract.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/transport_phase_b_main_map_smoke.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_country_pack_loading.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_industrial_variants.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_label_rotation.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/transport_workbench_port_coverage_tiers.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/transport_workbench_carrier.js",
+        "js/ui/transport_workbench_family_preview.js"
+      ]
+    },
+    "tests/e2e/ui_contract_foundation.spec.js": {
+      "directDependencies": [
+        "js/ui/ui_contract.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-selectors.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/ui_contract.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "js/ui/ui_contract.js"
+      ]
+    },
+    "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js": {
+      "directDependencies": [
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/ui_rework_support_transport_hardening.spec.js": {
+      "directDependencies": [
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/water_cache_strategy_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_resources.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    }
+  },
+  "reverseIndex": {
+    "js/bootstrap/startup_bootstrap_support.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "js/core/data_loader.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "js/core/dirty_state.js": [
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js"
+    ],
+    "js/core/feature_identity.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
+    ],
+    "js/core/history_manager.js": [
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "js/core/interaction_funnel.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/map_renderer.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/render_boundary.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "js/core/renderer/render_transaction_diagnostics.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js"
+    ],
+    "js/core/scenario_dispatcher.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/scenario_localization_state.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "js/core/scenario_manager.js": [
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js"
+    ],
+    "js/core/scenario_resources.js": [
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/sovereignty_manager.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js"
+    ],
+    "js/core/startup_cache.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "js/core/state.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/core/state/index.js": [
+      "tests/e2e/tno_open_ocean_rendering.spec.js"
+    ],
+    "js/core/state/ui_state.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "js/ui/dev_workspace.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "js/ui/i18n.js": [
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js"
+    ],
+    "js/ui/sidebar.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "js/ui/transport_workbench_carrier.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "js/ui/transport_workbench_family_preview.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "js/ui/ui_contract.js": [
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+    "tests/e2e/city_label_i18n_redraw.spec.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js"
+    ],
+    "tests/e2e/city_lights_layer_regression.spec.js": [
+      "tests/e2e/city_lights_layer_regression.spec.js"
+    ],
+    "tests/e2e/city_marker_visibility_regression.spec.js": [
+      "tests/e2e/city_marker_visibility_regression.spec.js"
+    ],
+    "tests/e2e/city_points_urban_runtime.spec.js": [
+      "tests/e2e/city_points_urban_runtime.spec.js"
+    ],
+    "tests/e2e/city_reveal_plan_regression.spec.js": [
+      "tests/e2e/city_reveal_plan_regression.spec.js"
+    ],
+    "tests/e2e/city_urban_rendering_regression.spec.js": [
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "tests/e2e/dev_workspace_i18n.spec.js": [
+      "tests/e2e/dev_workspace_i18n.spec.js"
+    ],
+    "tests/e2e/dev_workspace_render_boundary.spec.js": [
+      "tests/e2e/dev_workspace_render_boundary.spec.js"
+    ],
+    "tests/e2e/dev/full_visual_acceptance.dev.spec.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js"
+    ],
+    "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js": [
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
+    ],
+    "tests/e2e/dev/tno_ready_state_contract.dev.spec.js": [
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js"
+    ],
+    "tests/e2e/hoi4_1939_ui_smoke.spec.js": [
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js"
+    ],
+    "tests/e2e/hoi4_rk_russia_regression.spec.js": [
+      "tests/e2e/hoi4_rk_russia_regression.spec.js"
+    ],
+    "tests/e2e/interaction_funnel_contract.spec.js": [
+      "tests/e2e/interaction_funnel_contract.spec.js"
+    ],
+    "tests/e2e/main_shell_i18n.spec.js": [
+      "tests/e2e/main_shell_i18n.spec.js"
+    ],
+    "tests/e2e/non_1962_runtime_matrix.spec.js": [
+      "tests/e2e/non_1962_runtime_matrix.spec.js"
+    ],
+    "tests/e2e/physical_layer_regression.spec.js": [
+      "tests/e2e/physical_layer_regression.spec.js"
+    ],
+    "tests/e2e/physical_layer_runtime_contract.spec.js": [
+      "tests/e2e/physical_layer_runtime_contract.spec.js"
+    ],
+    "tests/e2e/project_save_load_roundtrip.spec.js": [
+      "tests/e2e/project_save_load_roundtrip.spec.js"
+    ],
+    "tests/e2e/release/pages_public_release_gate.spec.js": [
+      "tests/e2e/release/pages_public_release_gate.spec.js"
+    ],
+    "tests/e2e/review_regressions.spec.js": [
+      "tests/e2e/review_regressions.spec.js"
+    ],
+    "tests/e2e/river_layer_regression.spec.js": [
+      "tests/e2e/river_layer_regression.spec.js"
+    ],
+    "tests/e2e/sample_guide_deeplink.spec.js": [
+      "tests/e2e/sample_guide_deeplink.spec.js"
+    ],
+    "tests/e2e/scenario_apply_concurrency.spec.js": [
+      "tests/e2e/scenario_apply_concurrency.spec.js"
+    ],
+    "tests/e2e/scenario_apply_resilience.spec.js": [
+      "tests/e2e/scenario_apply_resilience.spec.js"
+    ],
+    "tests/e2e/scenario_blank_exit.spec.js": [
+      "tests/e2e/scenario_blank_exit.spec.js"
+    ],
+    "tests/e2e/scenario_boundary_regression.spec.js": [
+      "tests/e2e/scenario_boundary_regression.spec.js"
+    ],
+    "tests/e2e/scenario_controls_dispatcher_contract.spec.js": [
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js"
+    ],
+    "tests/e2e/scenario_shell_overlay_contract.spec.js": [
+      "tests/e2e/scenario_shell_overlay_contract.spec.js"
+    ],
+    "tests/e2e/shortcut_history_render_boundary.spec.js": [
+      "tests/e2e/shortcut_history_render_boundary.spec.js"
+    ],
+    "tests/e2e/sidebar_default_collapse.spec.js": [
+      "tests/e2e/sidebar_default_collapse.spec.js"
+    ],
+    "tests/e2e/startup_bundle_recovery_contract.spec.js": [
+      "tests/e2e/startup_bundle_recovery_contract.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_editing.spec.js": [
+      "tests/e2e/strategic_overlay_editing.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_roundtrip.spec.js": [
+      "tests/e2e/strategic_overlay_roundtrip.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js"
+    ],
+    "tests/e2e/strategic_overlay_smoke.spec.js": [
+      "tests/e2e/strategic_overlay_smoke.spec.js"
+    ],
+    "tests/e2e/support/expectations/console-allowlist.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/river_layer_regression.spec.js"
+    ],
+    "tests/e2e/support/fixtures.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-app-paths.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-app.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-frontline-panel.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-project-import.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ],
+    "tests/e2e/support/playwright-selectors.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+   …11293 tokens truncated…tures route to observability contract and city runtime specs',
+    changedFiles: ['tests/e2e/support/fixtures.js'],
+    expectedCommands: [
+      'python -m unittest tests.test_e2e_structural_tooling -q',
+      'node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js',
+    ],
+  },
+  {
+    name: 'dev tno ready spec routes to direct dev script',
+    changedFiles: ['tests/e2e/dev/tno_ready_state_contract.dev.spec.js'],
+    expectedCommands: ['test:e2e:dev:tno-ready-state'],
+  },
+  {
+    name: 'startup hydration behavior routes to node behavior test',
+    changedFiles: ['js/core/scenario/startup_hydration.js'],
+    expectedCommands: ['test:node:startup-hydration-behavior'],
+  },
+  {
+    name: 'scenario lifecycle behavior routes to node behavior test',
+    changedFiles: ['js/core/scenario/lifecycle_runtime.js'],
+    expectedCommands: ['test:node:scenario-lifecycle-runtime-behavior'],
+  },
+  {
+    name: 'tno water data routes to serial validator with locks',
+    changedFiles: ['data/scenarios/tno_1962/water_regions.geojson'],
+    expectedCommands: [
+      'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json',
+    ],
+    expectedExecutionOwners: ['main-thread'],
+    expectedResourceLocks: ['heavy-geo', 'scenario-data', '.runtime-output'],
+  },
+  {
+    name: 'backend route changes select node and python cloud support checks',
+    changedFiles: ['map_backend/routes.py'],
+    expectedCommands: ['test:node:backend-cloud-support', 'test:py:backend-cloud-support'],
+  },
+  {
+    name: 'thematic builder and contracts route to thematic contract suite',
+    changedFiles: [
+      'tools/build_thematic_layers.py',
+      'map_builder/thematic_layer_contracts.py',
+      'map_builder/thematic_wgi_ingest.py',
+      'data/thematic_layers/index.json',
+      'tests/test_thematic_layer_contracts.py',
+      'tests/test_thematic_wgi_source_ingest.py',
+    ],
+    expectedCommands: ['test:py:thematic-layer-contracts'],
+    expectedExecutionOwners: ['child-safe'],
+    expectedResourceLocks: [],
+  },
+  {
+    name: 'pytest style tno water file routes through pytest',
+    changedFiles: ['tests/test_tno_water_geometries.py'],
+    expectedCommands: ['python -m pytest tests/test_tno_water_geometries.py -q'],
+    forbiddenCommands: ['python -m unittest tests.test_tno_water_geometries -q'],
+  },
+];
 
-    def test_render_sample_role_policy_and_governed_analyzer_are_explicit_contracts(self):
-        policy = RENDER_SAMPLE_ROLE_POLICY.read_text(encoding="utf-8")
-        analyzer = RENDER_SAMPLE_ROLE_ANALYZER.read_text(encoding="utf-8")
-        package_payload = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
+for (const testCase of cases) {
+  const report = buildRecommendation(testCase.changedFiles);
+  const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+  for (const expectedCommand of testCase.expectedCommands) {
+    if (!commands.includes(expectedCommand)) {
+      throw new Error(`${testCase.name}: missing ${expectedCommand}; got ${commands.join(', ')}`);
+    }
+  }
+  for (const forbiddenCommand of testCase.forbiddenCommands || []) {
+    if (commands.includes(forbiddenCommand)) {
+      throw new Error(`${testCase.name}: saw forbidden ${forbiddenCommand}; got ${commands.join(', ')}`);
+    }
+  }
+  if (testCase.exactCommands) {
+    const expected = [...testCase.exactCommands].sort();
+    const actual = [...commands].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact commands ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  for (const expectedOwner of testCase.expectedExecutionOwners || []) {
+    if (!report.executionOwners.includes(expectedOwner)) {
+      throw new Error(`${testCase.name}: missing owner ${expectedOwner}; got ${report.executionOwners.join(', ')}`);
+    }
+  }
+  for (const expectedLock of testCase.expectedResourceLocks || []) {
+    if (!report.resourceLocks.includes(expectedLock)) {
+      throw new Error(`${testCase.name}: missing lock ${expectedLock}; got ${report.resourceLocks.join(', ')}`);
+    }
+  }
+  if (testCase.exactExecutionOwners) {
+    const expected = [...testCase.exactExecutionOwners].sort();
+    const actual = [...report.executionOwners].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact owners ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.exactResourceLocks) {
+    const expected = [...testCase.exactResourceLocks].sort();
+    const actual = [...report.resourceLocks].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact locks ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.exactMainThreadCommands) {
+    const expected = [...testCase.exactMainThreadCommands].sort();
+    const actual = report.mainThreadSerialVerification.map((entry) => entry.commandRef).sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected exact main-thread commands ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+  if (testCase.expectedUnmatched) {
+    const expected = [...testCase.expectedUnmatched].sort();
+    const actual = [...report.unmatchedChangedFiles].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`${testCase.name}: expected unmatched ${expected.join(', ')}; got ${actual.join(', ')}`);
+    }
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
 
-        self.assertIn('RENDER_SAMPLE_ROLE_POLICY_ID = "render-sample-role-v2"', policy)
-        self.assertIn('CANONICAL_RENDER_SAMPLE_ROLE_ID = "last-post-promotion-idle-scenario-frame-v1"', policy)
-        self.assertIn('GOVERNED_RENDER_SAMPLE_SCENARIOS = Object.freeze(["tno_1962", "hoi4_1939"])', policy)
-        for contract_token in (
-            '"declared-sample-count"',
-            '"sample-array-count"',
-            '"sample-sequence"',
-            '"canonical-candidate-unique"',
-            '"canonical-candidate-is-last"',
-            '"all-pre-canonical-samples-before-promotion"',
-            '"last-active-scenario"',
-            '"last-phase-idle"',
-            '"last-political-bg-progressive"',
-            '"last-context-scenario-positive"',
-            '"last-recorded-after-promotion"',
-        ):
-            self.assertIn(contract_token, policy)
-        self.assertIn("buildGovernedCompanionReport", analyzer)
-        self.assertIn("accepted-with-governed-reanalysis", analyzer)
-        self.assertIn("blocked-rerun-required", analyzer)
-        self.assertIn("DEFAULT_EXPECTED_SOURCE_SHA256", analyzer)
-        self.assertIn("rawFileCount", analyzer)
-        self.assertIn("roleMatches", analyzer)
-        self.assertIn("legacyDecision", analyzer)
-        self.assertIn("pathToFileURL", analyzer)
-        self.assertEqual(
-            package_payload["scripts"].get("test:node:render-sample-role-policy"),
-            "node --test tests/render_sample_role_policy_behavior.test.mjs tests/perf_role_governed_report_behavior.test.mjs",
-        )
-        self.assertEqual(
-            package_payload["scripts"].get("perf:analyze-render-sample-roles"),
-            "node tools/perf/analyze_render_sample_roles.mjs",
-        )
+    def test_verification_selector_routes_tno_water_health_gate(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
+const report = buildRecommendation(['data/scenarios/tno_1962/water_regions.geojson']);
+const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+if (!commands.includes(tnoWaterCommand)) {
+  throw new Error(`missing TNO water validator command: ${commands.join(', ')}`);
+}
+const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === tnoWaterCommand);
+if (!mainThreadEntry) {
+  throw new Error(`TNO water validator must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
+}
+for (const lock of ['heavy-geo', 'scenario-data', '.runtime-output']) {
+  if (!mainThreadEntry.resourceLocks.includes(lock)) {
+    throw new Error(`TNO water validator missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
+  }
+}
+const diagnostic = report.diagnosticNextSteps.find((entry) => entry.commandRef === tnoWaterCommand);
+if (!diagnostic || !diagnostic.guidance.ownerFiles.includes('tools/validate_tno_water_geometries.py')) {
+  throw new Error(`TNO water diagnostic guidance missing: ${JSON.stringify(report.diagnosticNextSteps)}`);
+}
+if (!report.advisoryNotes.some((note) => note.includes('main-thread serial ownership'))) {
+  throw new Error(`missing main-thread advisory note: ${report.advisoryNotes.join(' | ')}`);
+}
+const testReport = buildRecommendation(['tests/test_tno_water_geometries.py']);
+const testCommands = testReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!testCommands.includes('python -m pytest tests/test_tno_water_geometries.py -q')) {
+  throw new Error(`pytest-style TNO water test must use pytest: ${testCommands.join(', ')}`);
+}
+if (testCommands.includes('python -m unittest tests.test_tno_water_geometries -q')) {
+  throw new Error(`pytest-style TNO water test must not use unittest: ${testCommands.join(', ')}`);
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
 
-    def test_checked_in_baseline_keeps_report_identity_and_worker_summary_fields(self):
-        baseline_payload = json.loads(BASELINE_JSON.read_text(encoding="utf-8"))
-        self.assertEqual(baseline_payload.get("schemaVersion"), 2)
-        self.assertEqual(baseline_payload.get("benchmarkMetricsSchemaVersion"), "3.3")
-        self.assertEqual(baseline_payload.get("probeSchema"), "mc_perf_snapshot")
-        self.assertRegex(str(baseline_payload.get("gitHead", "")), r"^[0-9a-f]{40}$")
-        self.assertEqual(baseline_payload.get("config", {}).get("runs"), 5)
-        self.assertEqual(baseline_payload.get("config", {}).get("warmups"), 3)
-        environment = baseline_payload.get("environment", {})
-        self.assertEqual(environment.get("arch"), "x64")
-        self.assertEqual(environment.get("cpuCount"), 24)
-        self.assertEqual(environment.get("memoryGiB"), 64)
-        self.assertEqual(environment.get("runnerIdentity", {}).get("provider"), "local")
-        self.assertRegex(str(environment.get("browserVersion", "")), r"\d+")
-        self.assertRegex(str(environment.get("packageLockSha256", "")), r"^[0-9a-f]{64}$")
-        role_policy = baseline_payload.get("renderSampleRolePolicy", {})
-        self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
-        self.assertEqual(role_policy.get("canonicalRoleId"), "last-post-promotion-idle-scenario-frame-v1")
-        for scenario_id in ("tno_1962", "hoi4_1939"):
-            scenario = baseline_payload.get("scenarios", {}).get(scenario_id, {})
-            summary = scenario.get("summary", {})
-            self.assertIn("workerDecodeMs", summary)
-            self.assertIn("workerMetaBuildMs", summary)
-            self.assertIsInstance(summary.get("workerDecodeMs"), (int, float))
-            self.assertIsInstance(summary.get("workerMetaBuildMs"), (int, float))
-            identity = baseline_payload.get("workloadIdentity", {}).get("scenarios", {}).get(scenario_id, {})
-            self.assertRegex(str(identity.get("manifestSha256", "")), r"^[0-9a-f]{64}$")
-            self.assertGreater(int(identity.get("featureCount", 0)), 0)
-            role_summary = scenario.get("renderSampleRoleSummary", {})
-            self.assertEqual(role_summary.get("matchedRunCount"), 5)
-            self.assertEqual(role_summary.get("mismatchCount"), 0)
+    def test_verification_selector_routes_targeted_node_behavior_files(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const startupReport = buildRecommendation(['js/core/scenario/startup_hydration.js']);
+const startupCommands = startupReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!startupCommands.includes('test:node:startup-hydration-behavior')) {
+  throw new Error(`missing startup hydration node behavior route: ${startupCommands.join(', ')}`);
+}
+const lifecycleReport = buildRecommendation(['js/core/scenario/lifecycle_runtime.js']);
+const lifecycleCommands = lifecycleReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!lifecycleCommands.includes('test:node:scenario-lifecycle-runtime-behavior')) {
+  throw new Error(`missing scenario lifecycle node behavior route: ${lifecycleCommands.join(', ')}`);
+}
+const sampleGuideReport = buildRecommendation(['js/core/sample_project_import_workflow.js']);
+const sampleGuideCommands = sampleGuideReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sampleGuideCommands.includes('test:node:sample-project-contracts')) {
+  throw new Error(`missing sample project node contract route: ${sampleGuideCommands.join(', ')}`);
+}
+if (!sampleGuideCommands.includes('node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js')) {
+  throw new Error(`missing sample guide E2E route: ${sampleGuideCommands.join(', ')}`);
+}
+const sampleAssetReport = buildRecommendation(['landing/assets/sample-runs.json']);
+const sampleAssetCommands = sampleAssetReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sampleAssetCommands.includes('test:node:sample-project-contracts')) {
+  throw new Error(`missing sample asset node contract route: ${sampleAssetCommands.join(', ')}`);
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
 
-    def test_editor_benchmark_locks_identity_and_fill_black_pixel_contract(self):
-        script = EDITOR_BENCHMARK_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn('"schemaVersion": 1', script)
-        self.assertIn('"probeSchema": "mc_perf_snapshot"', script)
-        self.assertIn('"interactionProbeSchema": "mc_repeated_zoom_regions_v1"', script)
-        self.assertIn('"passAttributionSchema": "mc_pass_attribution_v1"', script)
-        self.assertIn('"benchmarkMetricsSchemaVersion": "3.3"', script)
-        self.assertIn('"servedRuntimeIdentity": build_served_runtime_identity', script)
-        self.assertIn('"metricValidity": build_metric_validity_by_scenario', script)
-        self.assertIn('"argv": sys.argv', script)
-        self.assertIn('"processId": os.getpid()', script)
-        self.assertIn("--repeated-zoom-regions", script)
-        self.assertIn("--repeated-zoom-cycles", script)
-        self.assertIn("--repeated-zoom-wheels-per-cycle", script)
-        self.assertIn('"repeatedZoomRegions": repeated_zoom_regions_probe', script)
-        self.assertIn('runtime_chunk_perf="1"', script)
-        self.assertIn("sample_canvas_black_pixel_details_js", script)
-        self.assertIn("usedJSHeapSize", script)
-        self.assertIn("const memoryBefore = await page.evaluate(() => {{ return", script)
-        self.assertIn("const memoryAfter = await page.evaluate(() => {{ return", script)
-        self.assertIn("timeout_sec = max(300, (len(regions) * cycles * max(20, wheels_per_cycle * 2)) + 240)", script)
-        self.assertIn("return run_code_json(js, timeout_sec=timeout_sec)", script)
-        self.assertIn("clone_runtime_chunk_load_state_summary_js", script)
-        self.assertIn("clone_repeated_zoom_render_metrics_summary_js", script)
-        self.assertIn("clone_repeated_zoom_pass_attribution_js", script)
-        self.assertIn("mc_black_pixel_attribution_v1", script)
-        self.assertIn("blank-frame-candidate", script)
-        self.assertIn("mergedLayerPayloadCacheLayerCount", script)
-        self.assertIn("includeHeavyMetrics: false", script)
-        self.assertIn("includeHeavyMetrics: true", script)
-        self.assertIn("includeBlackPixels: false", script)
-        self.assertIn("const includeBlackPixels = payload.includeBlackPixels !== false;", script)
-        self.assertIn("blackPixelRatio: blackPixelSamples?.ratio ?? null", script)
-        self.assertIn("payload.includeBlackPixels === false ? null", script)
-        self.assertIn("const readIdleState = async () => page.evaluate", script)
-        self.assertIn("const chunkState = state.runtimeChunkLoadState && typeof state.runtimeChunkLoadState === 'object'", script)
-        self.assertIn("chunkState.promotionCommitInFlight", script)
-        self.assertIn("chunkState.pendingPostCommitRefresh", script)
-        self.assertIn("chunkActive: !!snapshot.chunkActive", script)
-        self.assertIn("const postReadyActive = !!state.interactionInfrastructureBuildInFlight", script)
-        self.assertIn("postReadyActive: !!snapshot.postReadyActive", script)
-        self.assertIn("timedOut: !snapshot.settled", script)
-        self.assertIn("firstIdleAfterLastWheelMs = idleState?.timedOut", script)
-        self.assertIn("const attributionSampleContext = {{", script)
-        self.assertIn("firstIdleAfterLastWheelMs,", script)
-        self.assertIn("attributionSampleContext,", script)
-        self.assertIn("result.finalReset = await waitForIdle(7000)", script)
-        self.assertIn("activeScenarioId: await readActiveScenarioId()", script)
-        self.assertIn("result.activeScenarioId = await readActiveScenarioId()", script)
-        self.assertIn("attribution: Array.from(entry.attribution || [])", script)
-        self.assertIn("mc_long_task_attribution_v1", script)
-        self.assertIn("mc_long_task_attribution_gate_v1", script)
-        self.assertIn("mc_long_task_subowner_v1", script)
-        self.assertIn("LONG_TASK_ATTRIBUTION_ALLOWED_CATEGORIES", script)
-        self.assertIn("subOwner", script)
-        self.assertIn("subOwnerCounts", script)
-        self.assertIn("unknownSubOwnerCount", script)
-        self.assertIn("missingSubOwnerEvidenceCount", script)
-        self.assertIn("topSubOwnerActionable", script)
-        self.assertIn("shortArtifactPassed", script)
-        self.assertIn("fullArtifactPassed", script)
-        self.assertIn("category: 'render-pass'", script)
-        self.assertIn("schedulerMetric=${{schedulerEntry.metricName}}", script)
-        self.assertIn("scheduler-duration-overlap", script)
-        self.assertIn("scheduler:deferred-exact-context-pass", script)
-        self.assertIn("scheduler-label-observed", script)
-        self.assertRegex(
-            script,
-            r"const schedulerEntry = metricEntry\([\s\S]*?schedulerDeferredExactLabel \? 'scheduler:deferred-exact-context-pass' : 'scheduler:queue-depth'[\s\S]*?schedulerDeferredExactLabel \? 'scheduler-label-observed' : 'scheduler-duration-overlap'[\s\S]*?\);[\s\S]*?schedulerEntry\.durationMs >= 350 \|\| schedulerEntry\.durationMs >= durationMs \* 0\.25",
-        )
-        self.assertIn("partial-render-pass-overlap", script)
-        self.assertNotIn("if (schedulerDepth > 0) {{", script)
-        self.assertIn("hasMeaningfulBrowserAttribution", script)
-        self.assertNotIn("if (attribution.length) {{", script)
-        self.assertIn("unknownLongTaskCount", script)
-        self.assertIn("evidence: evidence.length ? [...evidence, 'no-pass-or-browser-attribution'] : ['no-pass-or-browser-attribution']", script)
-        self.assertIn('"git", "rev-parse", "HEAD"', script)
-        self.assertIn('SCENARIO_IDS = ["none", "hoi4_1939", "tno_1962"]', script)
-        self.assertIn('"politicalRasterWorker": political_raster_worker', script)
-        self.assertIn("def resolve_runtime_output_path", script)
-        self.assertIn("resolved.relative_to(runtime_root)", script)
-        self.assertIn("acceptedCount: Number(source.acceptedCount || 0)", script)
-        self.assertIn("rejectedStaleCount: Number(source.rejectedStaleCount || 0)", script)
-        self.assertIn("fallbackCount: Number(source.fallbackCount || 0)", script)
-        self.assertIn('"missing-last-action"', script)
-        self.assertIn("const sampleRegions = [", script)
-        self.assertIn("sampleContext.drawImage(canvas, sourceX, sourceY", script)
-        self.assertIn("const sampleEpochMs = (sampleContext = null) =>", script)
-        self.assertIn("return timeOrigin && sampledAt ? timeOrigin + sampledAt : sampledAt;", script)
-        self.assertNotIn("metricRecordedAt: sampleContext?.sampledAt || 0", script)
-        self.assertNotIn("metricRecordedAt: Math.max(0, Number(sampleContext?.sampledAt || 0))", script)
+    def test_verification_selector_routes_pages_dist_mirrors_to_pages_dist_gate(self) -> None:
+        script = """
+const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
+const report = buildRecommendation([
+  'dist/app/js/core/map_renderer/hit_canvas_scheduling_owner.js',
+  'dist/app/css/style.css',
+  'dist/pages-dist-manifest.json',
+]);
+const commands = report.recommendedCommands.map((entry) => entry.commandRef);
+if (!commands.includes('verify:pages-dist')) {
+  throw new Error(`missing Pages dist verification route: ${commands.join(', ')}`);
+}
+if (report.unmatchedChangedFiles.length) {
+  throw new Error(`Pages dist mirror files should be matched: ${report.unmatchedChangedFiles.join(', ')}`);
+}
+const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === 'verify:pages-dist');
+if (!mainThreadEntry) {
+  throw new Error(`Pages dist verification must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
+}
+for (const lock of ['dist', '.runtime-output']) {
+  if (!mainThreadEntry.resourceLocks.includes(lock)) {
+    throw new Error(`Pages dist verification missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
+  }
+}
+const sourceReport = buildRecommendation([
+  'js/core/map_renderer.js',
+  'js/core/map_renderer/render_pass_cache_host_owner.js',
+]);
+const sourceCommands = sourceReport.recommendedCommands.map((entry) => entry.commandRef);
+if (!sourceCommands.includes('verify:pages-dist')) {
+  throw new Error(`missing Pages dist source mirror route: ${sourceCommands.join(', ')}`);
+}
+for (const filePath of ['js/core/map_renderer.js', 'js/core/map_renderer/render_pass_cache_host_owner.js']) {
+  if (sourceReport.unmatchedChangedFiles.includes(filePath)) {
+    throw new Error(`Pages dist source mirror file should be matched: ${filePath}`);
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
 
-    def test_editor_benchmark_output_paths_stay_inside_runtime(self):
-        benchmark = load_editor_benchmark_module()
-        inside = benchmark.resolve_runtime_output_path(".runtime/output/perf/report.json", label="test")
-        self.assertEqual(inside, (REPO_ROOT / ".runtime" / "output" / "perf" / "report.json").resolve())
-        with self.assertRaises(ValueError):
-            benchmark.resolve_runtime_output_path("../outside.json", label="test")
+    def test_shared_city_fixtures_pass_wait_timeout_as_playwright_option(self) -> None:
+        script = """
+const fixtures = require('./tests/e2e/support/fixtures.js');
+const waitCalls = [];
+const page = {
+  waitForFunction(...args) {
+    waitCalls.push(args);
+    return Promise.resolve();
+  },
+  evaluate() {
+    return Promise.resolve();
+  },
+};
+(async () => {
+  await fixtures.waitForSharedCityExactRender(page, { timeout: 45_000 });
+  await fixtures.ensureSharedCityBaseDataLoaded(page, 'contract-shared-city', { timeout: 90_000 });
+  const sawExactTimeout = waitCalls.some((args) => args.length === 3 && args[2]?.timeout === 45_000);
+  const sawBaseDataTimeout = waitCalls.some((args) => args.length === 3 && args[2]?.timeout === 90_000);
+  if (!sawExactTimeout) {
+    throw new Error(`waitForSharedCityExactRender did not pass timeout as third argument: ${JSON.stringify(waitCalls)}`);
+  }
+  if (!sawBaseDataTimeout) {
+    throw new Error(`ensureSharedCityBaseDataLoaded did not pass timeout as third argument: ${JSON.stringify(waitCalls)}`);
+  }
+})();
+"""
+        result = run_command("node", "-e", script)
+        self.assert_command_ok(result)
 
-    def test_repeated_zoom_regions_metric_summarizes_degradation_black_longtask_and_memory(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "passAttributionSchema": "mc_pass_attribution_v1",
-                "cyclesPerRegion": 2,
-                "wheelsPerCycle": 5,
-                "regions": {
-                    "europe": {
-                        "cycles": [
-                            {
-                                "firstIdleAfterLastWheelMs": 100,
-                                "passAttribution": {
-                                    "passes": {
-                                        "politicalBg": {"durationMs": 12},
-                                    },
-                                },
-                                "longTaskAttribution": {
-                                    "schema": "mc_long_task_attribution_v1",
-                                    "unknownLongTaskCount": 0,
-                                    "topOwner": "render-pass",
-                                    "categoryCounts": {"render-pass": 1},
-                                    "tasks": [
-                                        {
-                                            "category": "render-pass",
-                                            "subOwner": "render-pass:politicalBg",
-                                            "subOwnerEvidence": {
-                                                "metricName": "politicalBg",
-                                                "metricDurationMs": 900,
-                                                "metricRecordedAt": 1000,
-                                                "taskWindowMs": [900, 1900],
-                                                "matchReason": "dominant-render-pass-overlap",
-                                                "renderPass": "politicalBg",
-                                            },
-                                            "subOwnerConfidence": "high",
-                                            "durationMs": 900,
-                                            "startTime": 123,
-                                            "evidence": ["politicalBg=900ms"],
-                                            "confidence": "high",
-                                        }
-                                    ],
-                                },
-                                "blackPixelAttribution": {
-                                    "classification": "normal",
-                                },
-                            },
-                            {
-                                "firstIdleAfterLastWheelMs": 125,
-                                "passAttribution": {
-                                    "passes": {
-                                        "politicalBg": {"durationMs": 18},
-                                    },
-                                },
-                                "longTaskAttribution": {
-                                    "schema": "mc_long_task_attribution_v1",
-                                    "unknownLongTaskCount": 1,
-                                    "topOwner": "unknown",
-                                    "categoryCounts": {"unknown": 1},
-                                    "tasks": [
-                                        {
-                                            "category": "unknown",
-                                            "subOwner": "unknown",
-                                            "subOwnerEvidence": {
-                                                "metricName": "unknown",
-                                                "metricDurationMs": 800,
-                                                "metricRecordedAt": 1200,
-                                                "taskWindowMs": [1000, 1800],
-                                                "matchReason": "no-subowner-match",
-                                            },
-                                            "subOwnerConfidence": "low",
-                                            "durationMs": 800,
-                                            "startTime": 456,
-                                            "evidence": ["no-pass-or-browser-attribution"],
-                                            "confidence": "low",
-                                        }
-                                    ],
-                                },
-                                "unknownLongTaskCount": 1,
-                                "blackPixelAttribution": {
-                                    "classification": "dark-content-candidate",
-                                },
-                            },
-                        ],
-                        "degradation": {"ratio": 1.25},
-                        "maxBlackPixelRatio": 0.02,
-                        "maxLongTaskMs": 30,
-                        "memoryDelta": {"usedJSHeapSize": 2048},
-                        "passAttributionSchema": "mc_pass_attribution_v1",
-                    }
-                },
-            },
-        }
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        self.assertTrue(metric["present"])
-        self.assertEqual(metric["durationMs"], 125)
-        self.assertEqual(metric["count"], 1.25)
-        self.assertTrue(metric["details"]["sameScenario"])
-        self.assertEqual(metric["details"]["interactionProbeSchema"], "mc_repeated_zoom_regions_v1")
-        self.assertEqual(metric["details"]["passAttributionSchema"], "mc_pass_attribution_v1")
-        self.assertEqual(metric["details"]["regions"]["europe"]["degradation"]["ratio"], 1.25)
-        self.assertEqual(metric["details"]["passAttribution"]["politicalBg"]["max"], 18)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["schema"], "mc_long_task_attribution_v1")
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerSchema"], "mc_long_task_subowner_v1")
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["unknownLongTaskCount"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["categoryCounts"]["render-pass"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["categoryCounts"]["unknown"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerCounts"]["render-pass:politicalBg"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["subOwnerCounts"]["unknown"], 1)
-        self.assertFalse(metric["details"]["longTask"]["attribution"]["gate"]["passed"])
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownLongTaskCount"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownTopOwnerCount"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["unknownSubOwnerCount"], 1)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["missingSubOwnerEvidenceCount"], 0)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["missingSubOwnerConfidenceCount"], 0)
-        self.assertEqual(metric["details"]["longTask"]["attribution"]["gate"]["invalidCategoryCount"], 0)
-        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["unknownLongTaskCount"], 1)
-        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerSchema"], "mc_long_task_subowner_v1")
-        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerCounts"]["render-pass:politicalBg"], 1)
-        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["subOwnerCounts"]["unknown"], 1)
-        self.assertEqual(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["unknownSubOwnerCount"], 1)
-        self.assertFalse(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["passed"])
-        self.assertEqual(metric["details"]["blackPixelClassification"]["normal"], 1)
-        self.assertEqual(metric["details"]["blackPixelClassification"]["dark-content-candidate"], 1)
+    def test_shared_city_worker_fixture_has_dedicated_boot_timeout(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        fixture_start = source.index("sharedCityBootHarness:")
+        fixture_end = source.index("\n  page: async", fixture_start)
+        fixture_source = source[fixture_start:fixture_end]
+        self.assertIn("const SHARED_CITY_BOOT_TIMEOUT_MS = 150_000;", source)
+        self.assertIn('}, { scope: "worker", timeout: SHARED_CITY_BOOT_TIMEOUT_MS }]', fixture_source)
+        self.assertIn("waitForAppInteractive(page, { timeout: 120_000 });", fixture_source)
+        self.assertIn("waitForShellReady(page, { timeout: 120_000 });", fixture_source)
 
-    def test_repeated_zoom_regions_longtask_subowners_pass_when_all_tasks_are_owned(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "passAttributionSchema": "mc_pass_attribution_v1",
-                "cyclesPerRegion": 1,
-                "wheelsPerCycle": 1,
-                "shortArtifactPass": True,
-                "fullArtifactPass": True,
-                "regions": {
-                    "europe": {
-                        "cycles": [
-                            {
-                                "firstIdleAfterLastWheelMs": 100,
-                                "longTaskAttribution": {
-                                    "schema": "mc_long_task_attribution_v1",
-                                    "subOwnerSchema": "mc_long_task_subowner_v1",
-                                    "unknownLongTaskCount": 0,
-                                    "unknownSubOwnerCount": 0,
-                                    "topOwner": "render-pass",
-                                    "topSubOwner": "render-pass:politicalBg",
-                                    "categoryCounts": {"render-pass": 1},
-                                    "subOwnerCounts": {"render-pass:politicalBg": 1},
-                                    "tasks": [
-                                        {
-                                            "category": "render-pass",
-                                            "subOwner": "render-pass:politicalBg",
-                                            "subOwnerEvidence": {
-                                                "metricName": "politicalBg",
-                                                "metricDurationMs": 900,
-                                                "metricRecordedAt": 1000,
-                                                "taskWindowMs": [900, 1900],
-                                                "matchReason": "dominant-render-pass-overlap",
-                                                "renderPass": "politicalBg",
-                                            },
-                                            "subOwnerConfidence": "high",
-                                            "durationMs": 900,
-                                            "startTime": 123,
-                                            "evidence": ["politicalBg=900ms"],
-                                            "confidence": "high",
-                                        }
-                                    ],
-                                },
-                            }
-                        ],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 900,
-                    }
-                },
-            },
-        }
+    def test_city_label_i18n_redraw_has_coherent_budget_and_cjk_sample(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
+        stable_wait_start = source.index("async function waitForStableExactRender")
+        stable_wait_end = source.index("\n}\n", stable_wait_start)
+        stable_wait_source = source[stable_wait_start:stable_wait_end]
+        self.assertIn("test.setTimeout(240_000);", source)
+        self.assertIn(r'const ZH_LABEL = "\u6d4b\u8bd5\u57ce";', source)
+        self.assertIn("}, undefined, { timeout });", stable_wait_source)
+        self.assertIn("async function clearCityLabelDrawLog(page)", source)
+        self.assertIn("async function waitForLabelDraw(page, label)", source)
+        self.assertIn("globalThis.__resetE2ECityLabelDraws?.();", source)
+        self.assertIn("globalThis.__e2eCityLabelDraws", source)
 
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        attribution = metric["details"]["longTask"]["attribution"]
+    def test_shared_city_fixtures_restore_runtime_snapshots_on_reset(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        reset_call = """await resetSharedCityRuntimeState(page, {
+      storageKeys,
+      timeout: resetTimeout,
+      requireInfraIdle: sharedCityRequireInfraIdle,
+    });"""
+        self.assertIn("captureSharedCityRuntimeSnapshot", source)
+        self.assertIn("__sharedCityWorldCitiesSnapshot", source)
+        self.assertIn("__sharedCityScenarioOverridesSnapshot", source)
+        self.assertIn('state.worldCitiesData = cloneRuntimeValue(globalThis.__sharedCityWorldCitiesSnapshot);', source)
+        self.assertIn('state.scenarioCityOverridesData = cloneRuntimeValue(globalThis.__sharedCityScenarioOverridesSnapshot);', source)
+        self.assertIn("worldOverrideCount", source)
+        self.assertIn("scenarioOverrideCount", source)
+        self.assertIn("display-name overrides remained after reset", source)
+        self.assertIn("const resetTimeout = Math.max(30_000, Number(testInfo.timeout) || 0);", source)
+        self.assertIn(reset_call, source)
 
-        self.assertEqual(attribution["subOwnerSchema"], "mc_long_task_subowner_v1")
-        self.assertEqual(attribution["subOwnerCounts"]["render-pass:politicalBg"], 1)
-        self.assertTrue(attribution["gate"]["passed"])
-        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 0)
-        self.assertEqual(attribution["gate"]["missingSubOwnerEvidenceCount"], 0)
-        self.assertEqual(attribution["gate"]["missingSubOwnerConfidenceCount"], 0)
-        self.assertTrue(attribution["gate"]["topSubOwnerActionable"])
-        self.assertTrue(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
-        self.assertTrue(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
+    def test_tno_land_feature_action_clock_wait_has_a_local_deadline(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "tno_open_ocean_rendering.spec.js").read_text(encoding="utf-8")
+        self.assertIn("const actionAdvanceDeadline = performance.now() + 1000;", source)
+        self.assertIn("performance.now() >= actionAdvanceDeadline", source)
+        self.assertIn("Timed out waiting for the action clock to advance", source)
 
-    def test_repeated_zoom_regions_without_long_tasks_does_not_fail_top_subowner_gate(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "passAttributionSchema": "mc_pass_attribution_v1",
-                "cyclesPerRegion": 1,
-                "wheelsPerCycle": 1,
-                "shortArtifactPass": True,
-                "fullArtifactPass": True,
-                "regions": {
-                    "europe": {
-                        "cycles": [
-                            {
-                                "firstIdleAfterLastWheelMs": 80,
-                                "longTaskAttribution": {
-                                    "schema": "mc_long_task_attribution_v1",
-                                    "subOwnerSchema": "mc_long_task_subowner_v1",
-                                    "thresholdMs": 750,
-                                    "unknownLongTaskCount": 0,
-                                    "unknownSubOwnerCount": 0,
-                                    "topOwner": "",
-                                    "topSubOwner": "",
-                                    "categoryCounts": {},
-                                    "subOwnerCounts": {},
-                                    "tasks": [],
-                                },
-                            }
-                        ],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 0,
-                    }
-                },
-            },
-        }
+    def test_shared_city_fixture_captures_failure_context_before_reset_cleanup(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        reset_call = """await resetSharedCityRuntimeState(page, {
+          storageKeys,
+          timeout: resetTimeout,
+          requireInfraIdle: sharedCityRequireInfraIdle,
+        });"""
+        failed_index = source.index("const failed = testInfo.status !== testInfo.expectedStatus;")
+        snapshot_index = source.index("const failureSnapshot = await readFailureContextSnapshot(page, DEFAULT_FAILURE_SELECTORS);", failed_index)
+        write_index = source.index("await writeFailureContextArtifact(testInfo, failureSnapshot);", snapshot_index)
+        cleanup_index = source.index("await clearPageEventListeners(page);", write_index)
+        reset_index = source.index(reset_call, cleanup_index)
+        self.assertLess(failed_index, snapshot_index)
+        self.assertLess(snapshot_index, write_index)
+        self.assertLess(write_index, cleanup_index)
+        self.assertLess(cleanup_index, reset_index)
 
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        attribution = metric["details"]["longTask"]["attribution"]
-        region_attribution = metric["details"]["regions"]["europe"]["longTaskAttribution"]
+    def test_verification_selector_routes_helper_workflow_and_dev_spec_changes(self) -> None:
+        helper_explain = run_command("node", "tools/select_verification_targets.mjs", "explain", "tests/e2e/support/playwright-app.js")
+        self.assert_command_ok(helper_explain)
+        helper_payload = json.loads(helper_explain.stdout)
+        self.assertEqual(helper_payload["mode"], "recommendation-fallback")
+        helper_commands = [entry["commandRef"] for entry in helper_payload["recommendation"]["recommendedCommands"]]
+        self.assertEqual(helper_commands[0], "python -m unittest tests.test_e2e_structural_tooling -q")
+        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", helper_commands)
+        self.assertIn("node tools/e2e_layering.mjs run-spec tests/e2e/ui_contract_foundation.spec.js", helper_commands)
 
-        self.assertTrue(attribution["gate"]["passed"])
-        self.assertEqual(attribution["gate"]["taskCount"], 0)
-        self.assertEqual(attribution["gate"]["unknownTopSubOwnerCount"], 0)
-        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 0)
-        self.assertTrue(region_attribution["gate"]["passed"])
-        self.assertEqual(region_attribution["gate"]["taskCount"], 0)
-        self.assertEqual(region_attribution["gate"]["unknownTopSubOwnerCount"], 0)
+        fixtures_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/fixtures.js", "--json")
+        self.assert_command_ok(fixtures_result)
+        fixtures_payload = json.loads(fixtures_result.stdout)
+        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", [entry["commandRef"] for entry in fixtures_payload["recommendedCommands"]])
 
-    def test_repeated_zoom_regions_missing_artifact_markers_stay_unknown(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "regions": {},
-            },
-        }
+        reporter_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/reporters/failure-context-reporter.js", "--json")
+        self.assert_command_ok(reporter_result)
+        reporter_payload = json.loads(reporter_result.stdout)
+        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", [entry["commandRef"] for entry in reporter_payload["recommendedCommands"]])
 
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+        workflow_result = run_command("node", "tools/select_verification_targets.mjs", ".github/workflows/pr-verify.yml", "--json")
+        self.assert_command_ok(workflow_result)
+        workflow_payload = json.loads(workflow_result.stdout)
+        workflow_commands = [entry["commandRef"] for entry in workflow_payload["recommendedCommands"]]
+        self.assertIn("node tools/select_verification_targets.mjs --check", workflow_commands)
+        self.assertIn("verify:test-import-graph", workflow_commands)
+        self.assertIn("verify:architecture-boundaries", workflow_commands)
 
-        selfIsNone = self.assertIsNone
-        selfIsNone(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
-        selfIsNone(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
-        selfIsNone(metric["details"]["longTask"]["attribution"]["gate"]["shortArtifactPassed"])
-        selfIsNone(metric["details"]["longTask"]["attribution"]["gate"]["fullArtifactPassed"])
+        dev_ready_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/dev/tno_ready_state_contract.dev.spec.js", "--json")
+        self.assert_command_ok(dev_ready_result)
+        dev_ready_payload = json.loads(dev_ready_result.stdout)
+        self.assertIn("test:e2e:dev:tno-ready-state", [entry["commandRef"] for entry in dev_ready_payload["recommendedCommands"]])
 
-    def test_repeated_zoom_regions_artifact_markers_require_real_booleans(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "shortArtifactPass": "false",
-                "fullArtifactPass": "0",
-                "regions": {},
-            },
-        }
+        dev_chunk_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js", "--json")
+        self.assert_command_ok(dev_chunk_result)
+        dev_chunk_payload = json.loads(dev_chunk_result.stdout)
+        self.assertIn("test:e2e:dev:scenario-chunk-runtime", [entry["commandRef"] for entry in dev_chunk_payload["recommendedCommands"]])
 
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
+        release_helper_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/release-smoke.js", "--json")
+        self.assert_command_ok(release_helper_result)
+        release_helper_payload = json.loads(release_helper_result.stdout)
+        release_helper_commands = [entry["commandRef"] for entry in release_helper_payload["recommendedCommands"]]
+        self.assertIn("test:node:release-smoke-helper", release_helper_commands)
+        self.assertIn("test:e2e:pages-public-release-gate", release_helper_commands)
 
-        self.assertIsNone(metric["details"]["artifactPassMarkers"]["shortArtifactPass"])
-        self.assertIsNone(metric["details"]["artifactPassMarkers"]["fullArtifactPass"])
-        self.assertIsNone(metric["details"]["longTask"]["attribution"]["gate"]["shortArtifactPassed"])
-        self.assertIsNone(metric["details"]["longTask"]["attribution"]["gate"]["fullArtifactPassed"])
+        release_spec_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/release/pages_public_release_gate.spec.js", "--json")
+        self.assert_command_ok(release_spec_result)
+        release_spec_payload = json.loads(release_spec_result.stdout)
+        release_spec_commands = [entry["commandRef"] for entry in release_spec_payload["recommendedCommands"]]
+        self.assertIn("test:e2e:pages-public-release-gate", release_spec_commands)
 
-    def test_repeated_zoom_regions_naked_subowner_is_not_actionable(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "regions": {
-                    "europe": {
-                        "cycles": [
-                            {
-                                "firstIdleAfterLastWheelMs": 100,
-                                "longTaskAttribution": {
-                                    "schema": "mc_long_task_attribution_v1",
-                                    "unknownLongTaskCount": 0,
-                                    "topOwner": "chunk-promotion",
-                                    "topSubOwner": "post-commit-replay",
-                                    "categoryCounts": {"chunk-promotion": 1},
-                                    "subOwnerCounts": {"post-commit-replay": 1},
-                                    "tasks": [
-                                        {
-                                            "category": "chunk-promotion",
-                                            "subOwner": "post-commit-replay",
-                                            "subOwnerEvidence": {"matchReason": "legacy-naked-subowner"},
-                                            "subOwnerConfidence": "medium",
-                                            "durationMs": 900,
-                                            "evidence": ["chunkMetric=zoomEndToChunkVisibleMs:900ms"],
-                                            "confidence": "medium",
-                                        }
-                                    ],
-                                },
-                            }
-                        ],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 900,
-                    }
-                },
-            },
-        }
+        release_node_result = run_command("node", "tools/select_verification_targets.mjs", "tests/release_smoke_retry_behavior.node.test.mjs", "--json")
+        self.assert_command_ok(release_node_result)
+        release_node_payload = json.loads(release_node_result.stdout)
+        release_node_commands = [entry["commandRef"] for entry in release_node_payload["recommendedCommands"]]
+        self.assertIn("test:node:release-smoke-helper", release_node_commands)
 
-        attribution = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]["details"]["longTask"]["attribution"]
+        unknown_result = run_command("node", "tools/select_verification_targets.mjs", "explain", "docs/unknown-route-sentinel.txt")
+        self.assertNotEqual(unknown_result.returncode, 0)
+        self.assertIn("No route found", f"{unknown_result.stdout}\n{unknown_result.stderr}")
 
-        self.assertFalse(attribution["gate"]["passed"])
-        self.assertFalse(attribution["gate"]["topSubOwnerActionable"])
-        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 1)
-        self.assertEqual(attribution["gate"]["unknownTopSubOwnerCount"], 1)
+    def test_verification_selector_routes_package_metadata_to_dev_scripts_and_guardrails(self) -> None:
+        for package_path in ("package.json", "package-lock.json"):
+            package_result = run_command("node", "tools/select_verification_targets.mjs", package_path, "--json")
+            self.assert_command_ok(package_result)
+            package_payload = json.loads(package_result.stdout)
+            package_commands = [entry["commandRef"] for entry in package_payload["recommendedCommands"]]
+            self.assertIn("test:e2e:dev:tno-ready-state", package_commands)
+            self.assertIn("test:e2e:dev:scenario-chunk-runtime", package_commands)
+            self.assertIn("verify:test-timeout-inventory", package_commands)
+            self.assertIn("verify:test-console-allowlist", package_commands)
+            self.assertIn("verify:test-timeout-guardrails", package_commands)
+            self.assertIn("verify:architecture-boundaries", package_commands)
+            self.assertIn("verify:perf-gate-contract", package_commands)
 
-    def test_repeated_zoom_regions_uses_aggregate_gate_when_tasks_are_truncated(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "regions": {
-                    "europe": {
-                        "cycles": [],
-                        "longTaskAttribution": [
-                            {
-                                "schema": "mc_long_task_attribution_v1",
-                                "subOwnerSchema": "mc_long_task_subowner_v1",
-                                "unknownLongTaskCount": 2,
-                                "topOwner": "unknown",
-                                "topSubOwner": "unknown",
-                                "categoryCounts": {"unknown": 2},
-                                "subOwnerCounts": {"unknown": 2},
-                                "subOwnerMaxMs": {"unknown": 1200},
-                                "gate": {
-                                    "schema": "mc_long_task_attribution_gate_v1",
-                                    "taskCount": 25,
-                                    "unknownLongTaskCount": 2,
-                                    "unknownTopOwnerCount": 1,
-                                    "unknownSubOwnerCount": 2,
-                                    "unknownTopSubOwnerCount": 1,
-                                    "invalidCategoryCount": 0,
-                                    "missingEvidenceCount": 0,
-                                    "missingConfidenceCount": 0,
-                                    "missingSubOwnerEvidenceCount": 0,
-                                    "missingSubOwnerConfidenceCount": 0,
-                                },
-                                "tasks": [
-                                    {
-                                        "category": "render-pass",
-                                        "subOwner": "render-pass:politicalBg",
-                                        "subOwnerEvidence": {"matchReason": "dominant-render-pass-overlap"},
-                                        "subOwnerConfidence": "high",
-                                        "durationMs": 800,
-                                        "evidence": ["politicalBg=800ms"],
-                                        "confidence": "high",
-                                    }
-                                ],
-                            }
-                        ],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 1200,
-                    }
-                },
-            },
-        }
+    def test_verify_shared_checks_checked_in_import_graph_before_building_artifact_copy(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        verify_index = workflow.index("npm run verify:test-import-graph")
+        build_index = workflow.index("node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json")
+        selector_check_index = workflow.index("node tools/select_verification_targets.mjs --check")
+        architecture_index = workflow.index("npm run verify:architecture-boundaries")
+        selector_explain_index = workflow.index("node tools/select_verification_targets.mjs --changed-files-list")
+        self.assertLess(verify_index, build_index)
+        self.assertLess(build_index, selector_check_index)
+        self.assertLess(selector_check_index, architecture_index)
+        self.assertLess(architecture_index, selector_explain_index)
+        self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
+        self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
 
-        region_gate = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]
+    def test_verify_shared_pr_fast_runner_covers_dynamic_node_and_python_fast_contracts(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
+        self.assertIn("tests.test_main_deferred_detail_promotion_boundary_contract", workflow)
+        self.assertIn("tests.test_perf_gate_contract", workflow)
+        self.assertIn("name.startsWith('test:node:')", workflow)
+        self.assertIn("spawnSync('npm', ['run', name]", workflow)
 
-        self.assertFalse(region_gate["passed"])
-        self.assertEqual(region_gate["taskCount"], 25)
-        self.assertEqual(region_gate["unknownLongTaskCount"], 2)
-        self.assertEqual(region_gate["unknownSubOwnerCount"], 2)
+    def test_failure_context_reporter_tracks_failure_context_attachment(self) -> None:
+        script = """
+const fs = require('fs');
+const path = require('path');
+const FailureContextReporter = require('./tests/e2e/support/reporters/failure-context-reporter.js');
+const outputFile = path.join('.runtime', 'tmp', 'failure-context-reporter-contract.ndjson');
+fs.rmSync(outputFile, { force: true });
+process.env.PLAYWRIGHT_FAILURE_CONTEXT_INDEX_FILE = outputFile;
+const reporter = new FailureContextReporter();
+reporter.onTestEnd(
+  { title: 'demo', location: { file: path.join(process.cwd(), 'tests/e2e/main_shell_i18n.spec.js') } },
+  {
+    status: 'failed',
+    retry: 0,
+    duration: 321,
+    parallelIndex: 0,
+    startTime: new Date('2026-05-01T00:00:00Z'),
+    error: { message: 'boom' },
+    attachments: [
+      {
+        name: 'failure-context',
+        path: path.join(process.cwd(), '.runtime/tests/playwright/demo/failure-context.json'),
+        contentType: 'application/json',
+      },
+    ],
+  }
+);
+const lines = fs.readFileSync(outputFile, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map((line) => JSON.parse(line));
+if (lines.length !== 1) {
+  throw new Error(`expected exactly one reporter line, got ${lines.length}`);
+}
+if (!String(lines[0].failureContextPath || '').endsWith('failure-context.json')) {
+  throw new Error(`expected failureContextPath, got ${lines[0].failureContextPath}`);
+}
+"""
+        result = run_command("node", "-e", script)
+        self.assert_command_ok(result)
 
-    def test_repeated_zoom_regions_aggregate_gate_sums_region_unknowns(self):
-        benchmark = load_editor_benchmark_module()
-
-        def cycle_with_unknown(render_duration, unknown_duration):
-            return {
-                "firstIdleAfterLastWheelMs": 100,
-                "longTaskAttribution": {
-                    "schema": "mc_long_task_attribution_v1",
-                    "subOwnerSchema": "mc_long_task_subowner_v1",
-                    "unknownLongTaskCount": 1,
-                    "unknownSubOwnerCount": 1,
-                    "topOwner": "render-pass",
-                    "topSubOwner": "render-pass:contextScenario",
-                    "categoryCounts": {"render-pass": 1, "unknown": 1},
-                    "subOwnerCounts": {"render-pass:contextScenario": 1, "unknown": 1},
-                    "tasks": [
-                        {
-                            "category": "render-pass",
-                            "subOwner": "render-pass:contextScenario",
-                            "subOwnerEvidence": {"matchReason": "dominant-render-pass-overlap"},
-                            "subOwnerConfidence": "high",
-                            "durationMs": render_duration,
-                            "evidence": ["contextScenario=900ms"],
-                            "confidence": "high",
-                        },
-                        {
-                            "category": "unknown",
-                            "subOwner": "unknown",
-                            "subOwnerEvidence": {"matchReason": "no-subowner-match"},
-                            "subOwnerConfidence": "low",
-                            "durationMs": unknown_duration,
-                            "evidence": ["no-pass-or-browser-attribution"],
-                            "confidence": "low",
-                        },
-                    ],
-                },
-            }
-
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "regions": {
-                    "europe": {
-                        "cycles": [cycle_with_unknown(1000, 800)],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 1000,
-                    },
-                    "east_asia": {
-                        "cycles": [cycle_with_unknown(1100, 850)],
-                        "degradation": {"ratio": 1.0},
-                        "maxLongTaskMs": 1100,
-                    },
-                },
-            },
-        }
-
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        attribution = metric["details"]["longTask"]["attribution"]
-
-        self.assertFalse(attribution["gate"]["passed"])
-        self.assertEqual(attribution["gate"]["unknownLongTaskCount"], 2)
-        self.assertEqual(attribution["gate"]["unknownSubOwnerCount"], 2)
-        self.assertTrue(metric["details"]["regions"]["europe"]["longTaskAttribution"]["gate"]["passed"])
-        self.assertTrue(metric["details"]["regions"]["east_asia"]["longTaskAttribution"]["gate"]["passed"])
-
-    def test_repeated_zoom_regions_metric_requires_active_scenario_match(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "hoi4_1939",
-            },
-            "repeatedZoomRegions": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "hoi4_1939",
-                "interactionProbeSchema": "mc_repeated_zoom_regions_v1",
-                "passAttributionSchema": "mc_pass_attribution_v1",
-                "cyclesPerRegion": 1,
-                "wheelsPerCycle": 1,
-                "regions": {
-                    "europe": {
-                        "cycles": [{"firstIdleAfterLastWheelMs": 100}],
-                        "degradation": {"ratio": 1.0},
-                    }
-                },
-            },
-        }
-
-        metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        self.assertTrue(metric["present"])
-        self.assertFalse(metric["details"]["sameScenario"])
-
-        del suite["repeatedZoomRegions"]["activeScenarioId"]
-        missing_active_metric = benchmark.build_suite_benchmark_metrics(suite)["repeatedZoomRegions"]
-        self.assertFalse(missing_active_metric["details"]["sameScenario"])
-
-    def test_fill_action_metrics_carry_black_pixel_ratio(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "singleFill": {
-                "lastActionDurationMs": 11,
-                "lastAction": "single-fill",
-                "blackPixelRatio": 0.12,
-            },
-            "doubleClickFill": {
-                "lastActionDurationMs": 22,
-                "lastAction": "double-click-fill",
-                "blackPixelRatio": 0.34,
-            },
-        }
-        metrics = benchmark.build_suite_benchmark_metrics(suite)["firstInteraction"]
-        self.assertEqual(metrics["singleFillAction"]["details"]["blackPixelRatio"], 0.12)
-        self.assertEqual(metrics["doubleClickFillAction"]["details"]["blackPixelRatio"], 0.34)
-        self.assertTrue(metrics["singleFillAction"]["details"]["validity"]["valid"])
-        self.assertTrue(metrics["doubleClickFillAction"]["details"]["validity"]["valid"])
-
-    def test_fill_action_metric_is_invalid_without_last_action(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "singleFill": {
-                "lastActionDurationMs": 11,
-                "blackPixelRatio": 0.12,
-            },
-        }
-
-        metric = benchmark.build_suite_benchmark_metrics(suite)["firstInteraction"]["singleFillAction"]
-        self.assertFalse(metric["present"])
-        self.assertIsNone(metric["durationMs"])
-        self.assertEqual(metric["details"]["validity"]["reason"], "missing-last-action")
-
-    def test_editor_metric_validity_report_groups_interaction_validity(self):
-        benchmark = load_editor_benchmark_module()
-        suites = {
-            "tno_1962": {
-                "benchmarkMetrics": {
-                    "firstInteraction": {
-                        "singleFillAction": {
-                            "details": {"validity": {"valid": False, "reason": "missing-last-action"}}
-                        },
-                        "doubleClickFillAction": {
-                            "details": {"validity": {"valid": True, "reason": "recorded-action"}}
-                        },
-                    }
-                }
-            }
-        }
-
-        validity = benchmark.build_metric_validity_by_scenario(suites)
-        self.assertFalse(validity["tno_1962"]["firstInteraction"]["singleFillAction"]["valid"])
-        self.assertEqual(
-            validity["tno_1962"]["firstInteraction"]["singleFillAction"]["reason"],
-            "missing-last-action",
-        )
-
-    def test_wheel_anchor_metric_prefers_last_wheel_clock_and_keeps_legacy_fallback(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "wheelAnchorTrace": {
-                "requestedScenarioId": "tno_1962",
-                "firstIdleAfterWheelMs": 900,
-                "firstIdleAfterLastWheelMs": 123,
-                "maxBlackPixelRatio": 0.1,
-            },
-        }
-
-        metric = benchmark.build_suite_benchmark_metrics(suite)["wheelAnchorTrace"]
-        self.assertEqual(metric["durationMs"], 123)
-        self.assertEqual(metric["details"]["firstIdleAfterWheelMs"], 900)
-        self.assertEqual(metric["details"]["firstIdleAfterLastWheelMs"], 123)
-        self.assertEqual(metric["details"]["maxBlackPixelRatio"], 0.1)
-        self.assertTrue(metric["details"]["sameScenario"])
-
-        del suite["wheelAnchorTrace"]["firstIdleAfterLastWheelMs"]
-        fallback_metric = benchmark.build_suite_benchmark_metrics(suite)["wheelAnchorTrace"]
-        self.assertEqual(fallback_metric["durationMs"], 900)
-        self.assertIsNone(fallback_metric["details"]["firstIdleAfterLastWheelMs"])
-
-    def test_zoom_end_chunk_visible_metric_preserves_end_to_visible_duration(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "zoomEndChunkVisible": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "renderMetrics": {
-                    "scenarioChunkPromotionVisualStage": {
-                        "durationMs": 12,
-                        "recordedAt": 300,
-                        "activeScenarioId": "tno_1962",
-                        "reason": "zoom-end",
-                    },
-                    "zoomEndToChunkVisibleMs": {
-                        "durationMs": 850,
-                        "recordedAt": 200,
-                        "scenarioId": "tno_1962",
-                    },
-                },
-                "runtimeChunkLoadState": {
-                    "lastZoomEndToChunkVisibleMetric": {
-                        "durationMs": 910,
-                        "recordedAt": 190,
-                        "scenarioId": "tno_1962",
-                    },
-                },
-                "metricBaselines": {
-                    "scenarioChunkPromotionVisualStageRecordedAt": 0,
-                    "zoomEndToChunkVisibleRecordedAt": 0,
-                    "lastZoomEndToChunkVisibleRecordedAt": 0,
-                },
-            },
-        }
-
-        metric = benchmark.build_suite_benchmark_metrics(suite)["zoomEndToChunkVisible"]
-        self.assertEqual(metric["durationMs"], 850)
-        self.assertEqual(metric["source"], "zoomEndChunkVisible.renderMetrics.zoomEndToChunkVisibleMs")
-        self.assertEqual(metric["details"]["selectedVia"], "fresh-same-scenario")
-        self.assertIn(
-            "zoomEndChunkVisible.renderMetrics.scenarioChunkPromotionVisualStage",
-            metric["details"]["candidateSources"],
-        )
-
-        del suite["zoomEndChunkVisible"]["renderMetrics"]["zoomEndToChunkVisibleMs"]
-        runtime_metric = benchmark.build_suite_benchmark_metrics(suite)["zoomEndToChunkVisible"]
-        self.assertEqual(runtime_metric["durationMs"], 910)
-        self.assertEqual(
-            runtime_metric["source"],
-            "zoomEndChunkVisible.runtimeChunkLoadState.lastZoomEndToChunkVisibleMetric",
-        )
-
-        del suite["zoomEndChunkVisible"]["runtimeChunkLoadState"]["lastZoomEndToChunkVisibleMetric"]
-        visual_fallback_metric = benchmark.build_suite_benchmark_metrics(suite)["zoomEndToChunkVisible"]
-        self.assertEqual(visual_fallback_metric["durationMs"], 12)
-        self.assertEqual(visual_fallback_metric["source"], "zoomEndChunkVisible.renderMetrics.scenarioChunkPromotionVisualStage")
-        self.assertEqual(visual_fallback_metric["details"]["selectedVia"], "visual-stage-fallback")
-
-class SettleExactMetricOwnershipTest(unittest.TestCase):
-    def test_settle_exact_metric_ignores_legacy_fast_exact_and_keeps_skip_probe(self):
-        benchmark = load_editor_benchmark_module()
-        suite = {
-            "scenarioId": "tno_1962",
-            "scenarioApply": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-            },
-            "zoomSettleFullRedraw": {
-                "requestedScenarioId": "tno_1962",
-                "activeScenarioId": "tno_1962",
-                "metricBaselines": {
-                    "settleExactRefreshRecordedAt": 100,
-                    "settlePoliticalFastExactRecordedAt": 100,
-                    "settlePoliticalFastExactSkippedRecordedAt": 100,
-                },
-                "renderMetrics": {
-                    "settleExactRefresh": {
-                        "durationMs": 320,
-                        "recordedAt": 200,
-                        "activeScenarioId": "tno_1962",
-                    },
-                    "settlePoliticalFastExact": {
-                        "durationMs": 12,
-                        "recordedAt": 300,
-                        "activeScenarioId": "tno_1962",
-                    },
-                    "settlePoliticalFastExactSkipped": {
-                        "durationMs": 0,
-                        "recordedAt": 250,
-                        "activeScenarioId": "tno_1962",
-                        "reason": "defer-to-sliced-exact-refresh",
-                    },
-                },
-            },
-        }
-        metric = benchmark.build_suite_benchmark_metrics(suite)["fullySettled"]["settleExactRefresh"]
-        self.assertEqual(metric["durationMs"], 320)
-        self.assertEqual(metric["source"], "zoomSettleFullRedraw.renderMetrics.settleExactRefresh")
-        self.assertNotIn("settlePoliticalFastExact", metric["details"].get("candidateSources", []))
-        script = EDITOR_BENCHMARK_SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("settlePoliticalFastExactSkipped", script)
-        self.assertNotIn('"zoomSettleFullRedraw.renderMetrics.settlePoliticalFastExact"', script)
+    def test_timing_reporter_appends_ndjson_entry(self) -> None:
+        script = """
+const fs = require('fs');
+const path = require('path');
+const TimingReporter = require('./tests/e2e/support/reporters/timing-reporter.js');
+const outputFile = path.join('.runtime', 'tmp', 'timing-reporter-contract.ndjson');
+fs.rmSync(outputFile, { force: true });
+process.env.PLAYWRIGHT_TIMING_OUTPUT_FILE = outputFile;
+const reporter = new TimingReporter();
+reporter.onTestEnd(
+  { title: 'demo', location: { file: path.join(process.cwd(), 'tests/e2e/ui_contract_foundation.spec.js') } },
+  {
+    status: 'passed',
+    retry: 0,
+    duration: 123,
+    parallelIndex: 1,
+    startTime: new Date('2026-05-01T00:00:00Z'),
+    attachments: [],
+  }
+);
+const lines = fs.readFileSync(outputFile, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map((line) => JSON.parse(line));
+if (lines.length !== 1) {
+  throw new Error(`expected exactly one timing line, got ${lines.length}`);
+}
+if (lines[0].specPath !== 'tests/e2e/ui_contract_foundation.spec.js') {
+  throw new Error(`unexpected specPath ${lines[0].specPath}`);
+}
+"""
+        result = run_command("node", "-e", script)
+        self.assert_command_ok(result)
 
 
 if __name__ == "__main__":
