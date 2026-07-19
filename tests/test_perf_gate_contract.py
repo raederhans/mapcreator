@@ -69,6 +69,9 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("git worktree add --detach", workflow_content)
         self.assertIn("perf-pr-gate-base.json", workflow_content)
         self.assertIn("--mode baseline", workflow_content)
+        self.assertIn("--scenarios tno_1962,hoi4_1939", workflow_content)
+        self.assertIn("--runs 5", workflow_content)
+        self.assertNotIn("--scenarios blank_base", workflow_content)
         self.assertIn("--baseline-json", workflow_content)
         same_runner_step = workflow_content[
             workflow_content.index("      - name: Generate same-runner base baseline"):
@@ -88,6 +91,14 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn(
             "git -C $baseWorktree restore --source=$headSha --staged --worktree -- $governedHeadInputs",
             same_runner_step,
+        )
+        self.assertIn("$baseEvidenceDir", same_runner_step)
+        self.assertIn("perf-baseline-dev-server.out.log", same_runner_step)
+        self.assertIn("perf-baseline-dev-server.err.log", same_runner_step)
+        self.assertIn("tests/playwright/perf-baseline", same_runner_step)
+        self.assertLess(
+            same_runner_step.index("$baseEvidenceDir"),
+            same_runner_step.index("git worktree remove --force"),
         )
         self.assertLess(
             same_runner_step.index("git -C $baseWorktree restore"),

@@ -18,6 +18,8 @@
 | 2026-07-19 | 运行期间 main 出现无关 `docs/archive/**` 删除和 `lessons learned.md` WIP。 | 原样保留，提交时采用显式路径暂存。 |
 | 2026-07-19 | 新 P4 worktree 与 main 同基线，只有未提交 inventory/测试/任务记录。 | 状态为开发中，未达到 `ready-for-integration`，本轮保持隔离。 |
 | 2026-07-19 | 功能提交 `4905fb696d9a5222aea628937fd2bc804109ae1f` 已推送到 `origin/main` 并确认远端同 SHA。 | 本 closeout 只记录审核完成事实，不吸收无关 WIP 或 P4 内容。 |
+| 2026-07-19 | GitHub Actions run `29690544801` 连续两次在 base baseline 失败；第三次日志显示默认观察场景 `blank_base` 等待 120 秒仍无 perf snapshot。 | base baseline 改为只运行 current gate 使用的 `tno_1962,hoi4_1939`，消除无关场景启动风险和额外耗时。 |
+| 2026-07-19 | 失败时浏览器诊断原本写在即将删除的 base worktree 中，且追加到 `Error.message` 的路径不会出现在优先打印的旧 stack。 | 删除 worktree 前复制 dev-server/浏览器证据，并把诊断路径同步追加到 stack。 |
 
 ## Live process ownership
 
@@ -25,7 +27,7 @@
 | --- | --- | --- | --- |
 | City label Playwright | 主线程 | `.runtime/tests/playwright/` | 最终文件状态 1/1 passed，43.5s；资源已释放 |
 | City lights Playwright | 主线程 | `.runtime/tests/playwright/` 与 `.runtime/browser/mcp-artifacts/screenshots/` | 1/1 passed，1.1m；page/console/network 问题均为空；资源已释放 |
-| Perf gate | 主线程 | `.runtime/output/perf/baseline_2026-07-14/perf-gate-current.json` | passed；合同、render-role、阈值失败均为 0；资源已释放 |
+| Perf gate | 主线程 | `.runtime/output/perf/baseline_2026-07-14/perf-gate-current.json` | follow-up 后再次 passed；两个 gate 场景的合同、render-role、阈值失败均为 0；资源已释放 |
 
 ## Handoff
 
@@ -33,4 +35,4 @@
 
 ## Next step
 
-审核任务完成；后续只需观察 GitHub-hosted same-runner perf workflow 的真实运行结果。
+提交并推送 follow-up，等待 GitHub-hosted same-runner base/current gate 完整通过后完成 closeout。

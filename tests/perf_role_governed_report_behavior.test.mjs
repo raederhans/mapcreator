@@ -14,6 +14,7 @@ import {
   evaluateGovernedDecision,
 } from "../tools/perf/analyze_render_sample_roles.mjs";
 import {
+  annotatePerfErrorWithDiagnostics,
   collectBaselineContractMismatches,
   summarizeSnapshot,
   validateGateBaselineReport,
@@ -307,6 +308,17 @@ test("gate scenario selection fails before measurement unless the canonical set 
       /Gate scenarios must exactly match/,
     );
   }
+});
+
+test("browser diagnostics remain visible in both error message and logged stack", () => {
+  const error = new Error("bootstrap failed");
+  annotatePerfErrorWithDiagnostics(
+    error,
+    ".runtime/tests/playwright/perf-baseline/tno_1962-warmup-01.json",
+  );
+
+  assert.match(error.message, /Browser diagnostics: \.runtime\/tests\/playwright\/perf-baseline/);
+  assert.match(error.stack, /Browser diagnostics: \.runtime\/tests\/playwright\/perf-baseline/);
 });
 
 function makeSchema2IdentityReport() {

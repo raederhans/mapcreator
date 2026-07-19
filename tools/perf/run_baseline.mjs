@@ -830,6 +830,20 @@ function createPerfBrowserDiagnostics(page, { scenarioId, runLabel, targetUrl } 
   };
 }
 
+export function annotatePerfErrorWithDiagnostics(error, relativeDiagnosticsPath) {
+  if (!error || typeof error !== "object") {
+    return error;
+  }
+  const diagnosticsLine = `[perf-baseline] Browser diagnostics: ${relativeDiagnosticsPath}`;
+  if ("message" in error && !String(error.message || "").includes(diagnosticsLine)) {
+    error.message = `${String(error.message || error)}\n${diagnosticsLine}`;
+  }
+  if ("stack" in error && typeof error.stack === "string" && !error.stack.includes(diagnosticsLine)) {
+    error.stack = `${error.stack}\n${diagnosticsLine}`;
+  }
+  return error;
+}
+
 async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
@@ -864,9 +878,7 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
     try {
       const diagnosticsPath = await diagnostics.write(error);
       const relativeDiagnosticsPath = path.relative(REPO_ROOT, diagnosticsPath).replaceAll("\\", "/");
-      if (error && typeof error === "object" && "message" in error) {
-        error.message = `${error.message}\n[perf-baseline] Browser diagnostics: ${relativeDiagnosticsPath}`;
-      }
+      annotatePerfErrorWithDiagnostics(error, relativeDiagnosticsPath);
     } catch (diagnosticsError) {
       console.warn(
         "[perf-baseline] Failed to write browser diagnostics:",

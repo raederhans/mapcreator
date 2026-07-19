@@ -25,6 +25,7 @@
 - [x] Stage 3: 复现并最小修复确认的问题，补充回归覆盖。
 - [x] Stage 4: 执行 SF-ATS 自适应选择、目标测试和必要主线程检查。
 - [x] Stage 5: 完成独立复核、提交、推送、Git/worktree 状态同步。
+- [ ] Stage 6: 修复 GitHub-hosted follow-up 失败，重新验证功能提交并完成最终 closeout。
 
 ## Acceptance criteria
 

@@ -261,7 +261,8 @@ jobs:
           $baseWorktree = Join-Path $env:GITHUB_WORKSPACE '.runtime/tmp/perf-pr-gate-base'
           $baselineJson = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base.json'
           $baselineRawDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-raw'
-          New-Item -ItemType Directory -Force -Path (Split-Path $baselineJson), $baselineRawDir | Out-Null
+          $baseEvidenceDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-evidence'
+          New-Item -ItemType Directory -Force -Path (Split-Path $baselineJson), $baselineRawDir, $baseEvidenceDir | Out-Null
 
           git worktree add --detach $baseWorktree $baseSha
           if ($LASTEXITCODE -ne 0) {
@@ -293,7 +294,7 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 throw 'Failed to install base worktree Chromium'
               }
-              node tools/perf/run_baseline.mjs --mode baseline --warmups 3 --write-markdown false --baseline-json $baselineJson --raw-dir $baselineRawDir
+              node tools/perf/run_baseline.mjs --mode baseline --scenarios tno_1962,hoi4_1939 --runs 5 --warmups 3 --write-markdown false --baseline-json $baselineJson --raw-dir $baselineRawDir
               if ($LASTEXITCODE -ne 0) {
                 throw 'Failed to generate same-runner base baseline'
               }
@@ -301,6 +302,16 @@ jobs:
               Pop-Location
             }
           } finally {
+            $baseEvidenceSources = @(
+              (Join-Path $baseWorktree '.runtime/tmp/perf-baseline-dev-server.out.log')
+              (Join-Path $baseWorktree '.runtime/tmp/perf-baseline-dev-server.err.log')
+              (Join-Path $baseWorktree '.runtime/tests/playwright/perf-baseline')
+            )
+            foreach ($source in $baseEvidenceSources) {
+              if (Test-Path -LiteralPath $source) {
+                Copy-Item -LiteralPath $source -Destination $baseEvidenceDir -Recurse -Force
+              }
+            }
             git worktree remove --force $baseWorktree
           }
 
