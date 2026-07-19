@@ -179,6 +179,7 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("runWithTransientPerfNetworkRetry", script)
         self.assertIn("getTransientNetworkFailure", script)
         self.assertIn("net::ERR_NETWORK_CHANGED", script)
+        self.assertIn("net::ERR_CONNECTION_FAILED", script)
         self.assertIn("getTransientNetworkFailure: diagnostics.getTransientNetworkFailure", script)
         self.assertIn('const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];', script)
         self.assertIn("const MIN_GATE_WARMUPS = 3;", script)

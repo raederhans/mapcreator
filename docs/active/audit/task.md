@@ -2,7 +2,7 @@
 
 ## Current status
 
-进行中：base baseline 场景错误已修复并在 GitHub-hosted runner 通过；分类式阈值策略与明确 Chromium 瞬时网络错误的单次恢复已完成本地验证，等待新提交的远端检查。
+进行中：base baseline 场景错误与分类式阈值策略已在 GitHub-hosted runner 验证；current 诊断新增 `ERR_CONNECTION_FAILED` 证据，有界恢复回归已完成，等待新提交的远端检查。
 
 ## Checklist
 
@@ -44,6 +44,8 @@
 | `npm run -s perf:gate -- --regression-mode diagnostic --raw-dir .runtime/output/perf/audit-diagnostic-mode` | exit 0；mode=`diagnostic`、enforced=`false`、合同/role/failure 均为 0 |
 | `.runtime/tests/playwright/perf-baseline/tno_1962-run-04-1784473788631.json` | 失败请求集中记录 `net::ERR_NETWORK_CHANGED`；页面已加载而应用启动被网络切换中断 |
 | `npm run -s perf:gate -- --raw-dir .runtime/output/perf/audit-enforce-mode-retry` | exit 0；mode=`enforce`、enforced=`true`、合同/role/failure 均为 0 |
+| GitHub Actions run `29693353672` | classifier=`diagnostic`；base baseline passed；current warmup-01 因 localhost `net::ERR_CONNECTION_FAILED` 失败，artifact `8444329507` 保留浏览器与 server 证据 |
+| `node --test tests/perf_role_governed_report_behavior.test.mjs` + perf contract（`ERR_CONNECTION_FAILED` follow-up） | 23/23 + 24/24 passed；泛化 `ERR_FAILED` 仍不在白名单 |
 | `npm run -s python -- -m unittest tests.test_e2e_structural_tooling -q` | 36/36 passed；锁定 shared city worker fixture 的独立 120 秒预算 |
 | `node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js` | 修正 fixture timeout 后 1/1 passed，测试 1.1m、run 2.0m |
 | `node tools/e2e_layering.mjs run-spec tests/e2e/city_lights_layer_regression.spec.js` | 1/1 passed，1.1m；page/console/network 问题均为空 |

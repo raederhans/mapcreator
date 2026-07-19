@@ -42,6 +42,7 @@ const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
 const TRANSIENT_PERF_NETWORK_FAILURE_CODES = Object.freeze([
   "net::ERR_NETWORK_CHANGED",
   "net::ERR_CONNECTION_RESET",
+  "net::ERR_CONNECTION_FAILED",
   "net::ERR_INTERNET_DISCONNECTED",
   "net::ERR_NETWORK_IO_SUSPENDED",
 ]);

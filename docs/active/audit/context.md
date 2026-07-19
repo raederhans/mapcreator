@@ -24,6 +24,7 @@
 | 2026-07-19 | 本地默认 `enforce` 复跑曾在 `tno_1962-run-04` 等待 120 秒；浏览器诊断记录同一时刻多个模块与数据请求出现 `net::ERR_NETWORK_CHANGED`，dev server 探针仍健康。 | 仅对四个明确的 Chromium 瞬时网络错误重建 browser context 并重试一次；普通启动错误直接失败，第二次瞬时错误继续失败。 |
 | 2026-07-19 | city label E2E 连续两次在 worker fixture setup 的默认 30 秒预算处结束；trace 中页面、场景 bundle 和模块均为 200，部分本机模块响应耗时 13–14 秒。 | 按 Playwright 官方 fixture 合同给共享 city worker fixture 独立 120 秒预算，使外层生命周期与内部 boot wait 一致；修复后 1/1 passed。 |
 | 2026-07-19 | 隔离的 `mapcreator-audit-20260719-followup` 保留一套旧版未提交测试方案；P4 worktree 继续有独立开发改动。 | 两个 worktree 都未达到 `ready-for-integration`；本轮不合并、不清理，避免旧测试耦合回流或干扰 P4。 |
+| 2026-07-19 | GitHub Actions run `29693353672` 的 base baseline 完整成功；current warmup-01 诊断记录 localhost 模块请求 `net::ERR_CONNECTION_FAILED`。 | 将这个明确错误码加入同一有界恢复白名单；继续排除泛化 `ERR_FAILED`，重试前由 server 探针决定复用或重启。 |
 
 ## Live process ownership
 
@@ -39,4 +40,4 @@
 
 ## Next step
 
-完成 SF-ATS 与 diff 复核，提交并推送分类式阈值和瞬时网络恢复 follow-up；等待 GitHub-hosted same-runner base/current gate 完整通过后完成 closeout。
+提交并推送 `ERR_CONNECTION_FAILED` 有界恢复 follow-up；等待 GitHub-hosted same-runner base/current gate 完整通过后完成 closeout。

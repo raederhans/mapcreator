@@ -351,6 +351,7 @@ test("explicit Chromium network-change failures get one isolated retry", async (
   assert.equal(result, "recovered");
   assert.deepEqual(attempts, [1, 2]);
   assert.equal(isTransientPerfNetworkFailure(new Error("net::ERR_CONNECTION_RESET")), true);
+  assert.equal(isTransientPerfNetworkFailure(new Error("net::ERR_CONNECTION_FAILED")), true);
   assert.equal(isTransientPerfNetworkFailure(new Error("scenario activation mismatch")), false);
 });
 
