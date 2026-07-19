@@ -2,7 +2,7 @@
 
 ## Current status
 
-进行中：base baseline 场景错误与分类式阈值策略已在 GitHub-hosted runner 验证；current 诊断新增 `ERR_CONNECTION_FAILED` 证据，有界恢复回归已完成，等待新提交的远端检查。
+完成：最近 8 个相关功能提交已审计并修复；follow-up `8c1f881a` 的性能、合同、transport 和 Pages 部署工作流全部成功。
 
 ## Checklist
 
@@ -20,7 +20,7 @@
 - [x] 用浏览器诊断证明本地 120 秒等待来自 `net::ERR_NETWORK_CHANGED`，并加入有界单次恢复。
 - [x] 修复共享 city worker fixture 的 30 秒外层预算与 120 秒内部启动等待冲突。
 - [x] 复核两个隔离 worktree，确认均未达到 `ready-for-integration`。
-- [ ] 完成 follow-up Lore commit、push、GitHub Actions 验证与清理。
+- [x] 完成 follow-up Lore commit、push、GitHub Actions 验证与清理。
 
 ## Validation evidence
 
@@ -46,6 +46,8 @@
 | `npm run -s perf:gate -- --raw-dir .runtime/output/perf/audit-enforce-mode-retry` | exit 0；mode=`enforce`、enforced=`true`、合同/role/failure 均为 0 |
 | GitHub Actions run `29693353672` | classifier=`diagnostic`；base baseline passed；current warmup-01 因 localhost `net::ERR_CONNECTION_FAILED` 失败，artifact `8444329507` 保留浏览器与 server 证据 |
 | `node --test tests/perf_role_governed_report_behavior.test.mjs` + perf contract（`ERR_CONNECTION_FAILED` follow-up） | 23/23 + 24/24 passed；泛化 `ERR_FAILED` 仍不在白名单 |
+| GitHub Actions run `29693893898` | perf-pr-gate success；base baseline 与 diagnostic current gate 完整通过，12m2s |
+| GitHub Actions runs `29693893889`, `29693893875`, `29693893945` | Scenario Contract、Transport Contract、Build/Deploy + Pages smoke 全部 success |
 | `npm run -s python -- -m unittest tests.test_e2e_structural_tooling -q` | 36/36 passed；锁定 shared city worker fixture 的独立 120 秒预算 |
 | `node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js` | 修正 fixture timeout 后 1/1 passed，测试 1.1m、run 2.0m |
 | `node tools/e2e_layering.mjs run-spec tests/e2e/city_lights_layer_regression.spec.js` | 1/1 passed，1.1m；page/console/network 问题均为空 |
@@ -57,6 +59,6 @@
 
 ## Open risks and remaining work
 
-- follow-up 提交仍需 GitHub-hosted same-runner workflow 最终证明。
 - `mapcreator-audit-20260719-followup` 是未提交旧方案，未整合；待独立清理流程确认恢复价值。
 - P4 worktree 仍处于未提交开发状态，本轮保持隔离。
+- Williams live telemetry、power-scheme preflight 与完整 crossover 实验属于专属重型 lane，本轮使用确定性治理测试覆盖后保持跳过。

@@ -25,6 +25,7 @@
 | 2026-07-19 | city label E2E 连续两次在 worker fixture setup 的默认 30 秒预算处结束；trace 中页面、场景 bundle 和模块均为 200，部分本机模块响应耗时 13–14 秒。 | 按 Playwright 官方 fixture 合同给共享 city worker fixture 独立 120 秒预算，使外层生命周期与内部 boot wait 一致；修复后 1/1 passed。 |
 | 2026-07-19 | 隔离的 `mapcreator-audit-20260719-followup` 保留一套旧版未提交测试方案；P4 worktree 继续有独立开发改动。 | 两个 worktree 都未达到 `ready-for-integration`；本轮不合并、不清理，避免旧测试耦合回流或干扰 P4。 |
 | 2026-07-19 | GitHub Actions run `29693353672` 的 base baseline 完整成功；current warmup-01 诊断记录 localhost 模块请求 `net::ERR_CONNECTION_FAILED`。 | 将这个明确错误码加入同一有界恢复白名单；继续排除泛化 `ERR_FAILED`，重试前由 server 探针决定复用或重启。 |
+| 2026-07-19 | follow-up `8c1f881ad1dceea12fd1a33b1e3946109ada668d` 的四条 GitHub Actions workflow 全部成功。 | 性能 base/current、合同矩阵、transport 合同和 Pages 部署 smoke 已形成远端终态证据，本审计完成。 |
 
 ## Live process ownership
 
@@ -40,4 +41,4 @@
 
 ## Next step
 
-提交并推送 `ERR_CONNECTION_FAILED` 有界恢复 follow-up；等待 GitHub-hosted same-runner base/current gate 完整通过后完成 closeout。
+保留未归属的文档 WIP、旧 audit worktree 和 P4 worktree，后续由各自 owner 独立处理。
