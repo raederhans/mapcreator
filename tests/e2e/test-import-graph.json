@@ -137,7 +137,154 @@
         "js/bootstrap/startup_bootstrap_support.js",
         "js/core/dirty_state.js",
         "js/core/interaction_funnel.js",
-        "js/core/map_rendere…46338 tokens truncated…nc } from "node:child_process";', script)
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/dirty_state.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_marker_visibility_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app.js"
+      ],
+      "transitiveDependencies": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/scenario_manager.js",
+        "js/core/state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_points_urban_runtime.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js"
+      ],
+      "transitiveDependencies": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.js",
+        "tests/e2e/support/playwright-app-paths.js",
+        "tests/e2e/support/playwright-app.js",
+        "tests/e2e/support/playwright-frontline-panel.js",
+        "tests/e2e/support/playwright-project-import.js",
+        "tests/e2e/support/playwright-selectors.js",
+        "tests/e2e/support/playwright-web-server.js",
+        "tests/e2e/support/startup-paths.js"
+      ],
+      "repoImpact": [
+        "js/bootstrap/startup_bootstrap_support.js",
+        "js/core/interaction_funnel.js",
+        "js/core/map_renderer.js",
+        "js/core/scenario_dispatcher.js",
+        "js/core/state.js",
+        "js/core/state/ui_state.js",
+        "js/ui/sidebar.js"
+      ]
+    },
+    "tests/e2e/city_reveal_plan_regression.spec.js": {
+      "directDependencies": [
+        "js/core/map_renderer.js",
+        "js/core/state.js",
+        "tests/e2e/support/expectations/console-allowlist.js",
+        "tests/e2e/support/fixtures.…43666 tokens truncated…hitecture: ${report.environment.arch}`', script)
+        self.assertIn('`- CPU: ${report.environment.cpuModel} (${report.environment.cpuCount} logical processors)`', script)
+        self.assertIn('`- Memory class: ${report.environment.memoryGiB} GiB`', script)
+        self.assertIn('`- Runner: ${JSON.stringify(report.environment.runnerIdentity)}`', script)
+        self.assertIn('const PERF_REPORT_CONTRACT_FIELDS = [', script)
+        self.assertIn(
+            "collectBaselineContractMismatches(report, baselineReportForGate)",
+            script,
+        )
+        self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
+        self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
+        self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
+        self.assertNotIn("const LEGACY_PERF_REPORT_SCHEMA_VERSION", script)
+        self.assertIn('from "./render_sample_role_policy.mjs";', script)
+        self.assertIn("canonicalRenderSampleMs", script)
+        self.assertIn("renderSampleRoleSummary", script)
+        self.assertIn("collectGovernedRenderSampleRoleMismatches", script)
+        self.assertIn("Perf gate render sample role mismatch.", script)
+        self.assertIn("renderSampleRoleMismatches", script)
+        self.assertIn("normalizePerfRegressionMode", script)
+        self.assertIn("shouldBlockOnPerfRegressions", script)
+        self.assertIn("regressionsEnforced", script)
+        self.assertIn("runWithTransientPerfNetworkRetry", script)
+        self.assertIn("getTransientNetworkFailure", script)
+        self.assertIn("net::ERR_NETWORK_CHANGED", script)
+        self.assertIn("net::ERR_CONNECTION_FAILED", script)
+        self.assertIn("getTransientNetworkFailure: diagnostics.getTransientNetworkFailure", script)
+        self.assertIn('const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];', script)
+        self.assertIn("const MIN_GATE_WARMUPS = 3;", script)
+        self.assertIn("const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;", script)
+        self.assertIn('throw new Error(`[perf-baseline] Gate warmups must be at least ${MIN_GATE_WARMUPS}; received ${options.warmups}.`);', script)
+        self.assertIn("warmups mismatch: baseline=", script)
+        self.assertIn("runs mismatch: baseline=", script)
+        self.assertIn("browser version mismatch: baseline=", script)
+        self.assertIn("package lock mismatch: baseline=", script)
+        self.assertIn("manifestSha256 mismatch", script)
+        self.assertIn("featureCount mismatch", script)
+        self.assertIn('if (activeScenarioId !== normalizeScenarioId(scenarioId)) {', script)
+        self.assertIn('{ key: "scenarioAppliedMs", label: "scenarioAppliedMs" }', script)
+        self.assertIn('{ key: "applyScenarioBundleMs", label: "applyScenarioBundleMs" }', script)
+        self.assertIn('{ key: "refreshScenarioApplyMs", label: "refreshScenarioApplyMs" }', script)
+        self.assertIn('{ key: "renderSampleMedianMs", label: "renderSampleMedianMs", threshold: 1.25 }', script)
+        self.assertIn("function summarizeSampleSpread", script)
+        self.assertIn("function buildReportWorkloadIdentity", script)
+        self.assertIn("sampleSpread: buildAggregateSampleSpread(runs)", script)
+        self.assertIn("workloadIdentity: buildScenarioWorkloadIdentity", script)
+        self.assertIn("workloadIdentity: buildReportWorkloadIdentity(options, measurement)", script)
+        self.assertIn("function activeServerMetadataMatchesRepo(metadata, { expectedPid = null } = {})", script)
+        self.assertIn("function resolveDevServerPythonCommand()", script)
+        self.assertIn('import { spawn, spawnSync } from "node:child_process";', script)
         self.assertIn("process.env.pythonLocation || process.env.Python_ROOT_DIR || process.env.Python3_ROOT_DIR", script)
         self.assertIn('path.join(setupPythonRoot, process.platform === "win32" ? "python.exe" : "bin/python")', script)
         self.assertIn('const pythonExecutable = resolveWindowsPythonExecutable();', script)
