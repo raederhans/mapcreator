@@ -18,6 +18,7 @@ export const REQUIRED_DOMAINS = [
   "test-routing",
   "playwright-observability",
   "architecture-boundaries",
+  "state-ownership",
   "renderer-runtime",
   "scenario-runtime",
   "startup",

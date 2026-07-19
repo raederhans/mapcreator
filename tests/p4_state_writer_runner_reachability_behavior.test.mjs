@@ -1,0 +1,59 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+
+import {
+  P4_STATE_WRITER_POLICY_TEST_FILES,
+  resolveP4StateWriterPolicyTestFiles,
+} from "../tools/run_p4_state_writer_policy_tests.mjs";
+import { buildNodeRoutes } from "../tools/test_route_registry.mjs";
+
+const EXPECTED_DEFAULT_SUITES = Object.freeze([
+  "tests/state_writer_policy_behavior.test.mjs",
+  "tests/state_writer_policy_soundness_behavior.test.mjs",
+  "tests/state_writer_scanner_soundness_behavior.test.mjs",
+  "tests/state_writer_policy_manifest_behavior.test.mjs",
+  "tests/p4_state_action_routes_behavior.test.mjs",
+  "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
+]);
+
+test("named P4 policy gate delegates to the complete runner default suite", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+
+  assert.equal(
+    packageJson.scripts["test:node:p4:state-writer-policy"],
+    "node tools/run_p4_state_writer_policy_tests.mjs",
+  );
+  assert.deepEqual(
+    P4_STATE_WRITER_POLICY_TEST_FILES,
+    EXPECTED_DEFAULT_SUITES,
+  );
+  assert.deepEqual(
+    resolveP4StateWriterPolicyTestFiles([]),
+    EXPECTED_DEFAULT_SUITES,
+  );
+});
+
+test("explicit focused runner requests remain isolated from the default suite", () => {
+  assert.deepEqual(
+    resolveP4StateWriterPolicyTestFiles([
+      "tests/state_writer_policy_behavior.test.mjs",
+    ]),
+    ["tests/state_writer_policy_behavior.test.mjs"],
+  );
+});
+
+test("node route discovery keeps wrapper-based named gates reachable", () => {
+  const route = buildNodeRoutes().find(
+    ({ commandRef }) => commandRef === "test:node:p4:state-writer-policy",
+  );
+
+  assert.ok(route);
+  assert.equal(route.domain, "state-ownership");
+  assert.ok(
+    route.sourceRef
+      .split(",")
+      .includes("tools/run_p4_state_writer_policy_tests.mjs"),
+    route.sourceRef,
+  );
+});

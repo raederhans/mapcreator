@@ -23,6 +23,40 @@ import {
 } from "../tools/verification/verification_metadata_helpers.mjs";
 
 const REPO_ROOT = process.cwd();
+const P4_POLICY_SOURCE_REFS = Object.freeze([
+  "tools/state_writer_inventory.mjs",
+  "tools/state_writer_policy.mjs",
+  "tools/state_writer_policy.json",
+  "tools/build_state_writer_policy.mjs",
+  "tools/check_state_writer_policy.mjs",
+  "tools/p4_state_action_phases.mjs",
+  "tools/run_p4_state_writer_policy_tests.mjs",
+  "tools/run_p4_state_write_boundary.mjs",
+  "tools/check_p4_state_action_routes.mjs",
+  "tests/state_writer_policy_behavior.test.mjs",
+  "tests/state_writer_scanner_soundness_behavior.test.mjs",
+  "tests/state_writer_policy_soundness_behavior.test.mjs",
+  "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
+  "tests/state_writer_policy_manifest_behavior.test.mjs",
+  "tests/p4_state_action_routes_behavior.test.mjs",
+  "tests/test_state_write_guardrail_contract.py",
+  "tests/supervisor_domain_registry_behavior.test.mjs",
+  "tests/verification_metadata_behavior.test.mjs",
+  "tests/verify_core_runner_behavior.test.mjs",
+  "docs/active/state-action-ownership-p4-20260719",
+  "docs/active/_worktree_registry.md",
+  "tools/eslint-rules/no-direct-state-mutation.js",
+  "tools/eslint-rules/state-writer-allowlist.json",
+  "tools/check_state_write_allowlist.mjs",
+  "tools/verification/verification_domains.mjs",
+  "tools/verification/verification_metadata_helpers.mjs",
+  "tools/test_route_registry.mjs",
+  "tools/select_verification_targets.mjs",
+  "tools/ai_test_supervisor/domain_registry.json",
+  "tools/ai_test_supervisor/check_supervisor_schemas.mjs",
+  "package.json",
+  "package-lock.json",
+]);
 
 function readJson(...parts) {
   return JSON.parse(fs.readFileSync(path.join(REPO_ROOT, ...parts), "utf8"));
@@ -64,6 +98,47 @@ test("verification metadata validates against package scripts and supervisor dom
       optionalMainThreadCount: getVerifyCoreOptionalMainThreadCommands().length,
     },
   );
+});
+
+test("P4.0 state ownership policy owns its files, routes, and verify-core commands", () => {
+  const policyEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:state-writer-policy"
+  ));
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:state-write-boundary"
+  ));
+  assert.ok(policyEntry);
+  assert.ok(boundaryEntry);
+  assert.deepEqual(policyEntry.sourceRefs, P4_POLICY_SOURCE_REFS);
+  for (const entry of [policyEntry, boundaryEntry]) {
+    assert.equal(entry.domain, "state-ownership");
+    assert.equal(entry.ownerHint, "state-ownership");
+    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.supervisorDomain, "state-ownership");
+    assert.equal(entry.verifyCoreDefaultGroup, "infra");
+    assert.equal(entry.routeRegistry, true);
+    assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
+  }
+  assert.deepEqual(
+    commandRefsFromGroups(buildVerifyCoreDefaultGroups()).filter((commandRef) => (
+      commandRef === policyEntry.commandRef || commandRef === boundaryEntry.commandRef
+    )),
+    [
+      "verify:p4:state-writer-policy",
+      "test:python:p4:state-write-boundary",
+    ],
+  );
+
+  for (const sourceRef of P4_POLICY_SOURCE_REFS) {
+    const report = buildRecommendation([sourceRef]);
+    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
+    const command = report.recommendedCommands.find((entry) => (
+      entry.commandRef === policyEntry.commandRef
+    ));
+    assert.ok(command, `${sourceRef} should select the P4 policy command`);
+    assert.ok(command.domains.includes("state-ownership"));
+    assert.equal(command.domains.includes("renderer-runtime"), false);
+  }
 });
 
 test("P3.0 renderer pass family route is child-safe, exact, and part of renderer-owner", () => {

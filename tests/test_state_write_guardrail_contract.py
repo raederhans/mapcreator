@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import re
 import subprocess
 import unittest
 
@@ -8,6 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 RULE_FILE = REPO_ROOT / "tools" / "eslint-rules" / "no-direct-state-mutation.js"
 ALLOWLIST_FILE = REPO_ROOT / "tools" / "eslint-rules" / "state-writer-allowlist.json"
 CHECK_SCRIPT = REPO_ROOT / "tools" / "check_state_write_allowlist.mjs"
+P4_POLICY_FILE = REPO_ROOT / "tools" / "state_writer_policy.json"
+P4_POLICY_BUILDER = REPO_ROOT / "tools" / "build_state_writer_policy.mjs"
+P4_POLICY_CHECKER = REPO_ROOT / "tools" / "check_state_writer_policy.mjs"
+P4_INVENTORY = REPO_ROOT / "tools" / "state_writer_inventory.mjs"
+P4_ACTIONS_DIR = REPO_ROOT / "js" / "core" / "state" / "actions"
 PACKAGE_JSON = REPO_ROOT / "package.json"
 
 
@@ -21,6 +27,58 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
         content = PACKAGE_JSON.read_text(encoding="utf-8")
         self.assertIn('"verify:state-write-allowlist"', content)
         self.assertIn("node tools/check_state_write_allowlist.mjs", content)
+
+    def test_p4_policy_foundation_files_exist(self):
+        for file_path in [
+            P4_POLICY_FILE,
+            P4_POLICY_BUILDER,
+            P4_POLICY_CHECKER,
+            P4_INVENTORY,
+        ]:
+            self.assertTrue(file_path.exists(), str(file_path))
+
+    def test_package_json_exposes_p4_policy_scripts(self):
+        scripts = json.loads(PACKAGE_JSON.read_text(encoding="utf-8")).get("scripts", {})
+        expected_scripts = {
+            "test:node:p4:state-writer-policy",
+            "verify:p4:state-writer-policy",
+            "test:python:p4:state-write-boundary",
+            "verify:p4:routes",
+        }
+        self.assertTrue(expected_scripts.issubset(scripts))
+
+    def test_p4_legacy_direct_projection_matches_existing_allowlist(self):
+        allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))
+        policy = json.loads(P4_POLICY_FILE.read_text(encoding="utf-8"))
+        projected = sorted(
+            writer["path"]
+            for writer in policy.get("writers", [])
+            if writer.get("authority") == "legacy-direct"
+        )
+        self.assertEqual(projected, sorted(allowlist.get("files", [])))
+
+    def test_p4_policy_checker_matches_current_workspace(self):
+        result = subprocess.run(
+            ["node", "tools/check_state_writer_policy.mjs", "--phase", "P4.0"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            details = "\n".join(
+                part for part in [result.stdout.strip(), result.stderr.strip()] if part
+            )
+            self.fail(details or "P4 state writer policy check failed")
+        self.assertIn("P4 state writer policy pass:", result.stdout)
+
+    def test_p4_zero_production_action_modules(self):
+        action_modules = (
+            sorted(P4_ACTIONS_DIR.glob("*.js"))
+            if P4_ACTIONS_DIR.exists()
+            else []
+        )
+        self.assertEqual(action_modules, [])
 
     def test_allowlist_script_matches_current_workspace(self):
         result = subprocess.run(
@@ -36,6 +94,43 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             )
             self.fail(details or "state write allowlist check failed")
         self.assertIn("State write allowlist passed", result.stdout)
+
+    def test_legacy_scanner_fixture_exclusions_are_exact_and_policy_tested(self):
+        checker_source = CHECK_SCRIPT.read_text(encoding="utf-8")
+        expected_fixtures = {
+            "tests/state_writer_policy_behavior.test.mjs",
+            "tests/state_writer_policy_manifest_behavior.test.mjs",
+            "tests/state_writer_policy_soundness_behavior.test.mjs",
+        }
+        fixture_match = re.search(
+            r"const\s+LEGACY_SCANNER_FIXTURE_PATHS\s*=\s*new\s+Set\(\s*\[(?P<body>.*?)\]\s*\);",
+            checker_source,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(fixture_match)
+        actual_fixtures = set(
+            re.findall(r'"([^"]+)"', fixture_match.group("body"))
+        )
+        self.assertEqual(actual_fixtures, expected_fixtures)
+
+        scripts = json.loads(PACKAGE_JSON.read_text(encoding="utf-8")).get("scripts", {})
+        self.assertEqual(
+            scripts.get("test:node:p4:state-writer-policy"),
+            "node tools/run_p4_state_writer_policy_tests.mjs",
+        )
+        runner_source = (
+            REPO_ROOT / "tools" / "run_p4_state_writer_policy_tests.mjs"
+        ).read_text(encoding="utf-8")
+        runner_match = re.search(
+            r"export\s+const\s+P4_STATE_WRITER_POLICY_TEST_FILES\s*=\s*Object\.freeze\(\s*\[(?P<body>.*?)\]\s*\);",
+            runner_source,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(runner_match)
+        runner_test_files = set(
+            re.findall(r'"([^"]+)"', runner_match.group("body"))
+        )
+        self.assertTrue(expected_fixtures.issubset(runner_test_files))
 
     def test_transport_workbench_state_owner_is_explicit_state_writer(self):
         allowlist = json.loads(ALLOWLIST_FILE.read_text(encoding="utf-8"))

@@ -1,10 +1,12 @@
 # Worktree Registry
 
-Last updated: 2026-07-15 post-P3 audit, recovery, synchronization, and repository cleanup are complete. Functional main `18d6ffae102caf41e2b53e7157bdae0ab1c1d8f4` passed the full deterministic and browser acceptance set; archived closeout `3dbe88da5748c4a30a091640fa592d006f441ae7` records the evidence. Local `main` and `origin/main` were synchronized before this final registry-only truth update. All completed audit/integration worktrees and superseded branches were removed; unique recovery refs remain preserved.
+Last updated: 2026-07-19 P4 global-state action ownership isolated worktree is synchronized to current `origin/main@68a62e540104025e1b3e976f77589f8b3eff2f36`. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.0 now has pinned Acorn parsing, stable parameter structural identities, canonical state-facade resolution, frozen semantic multisets and checkpoint history, Git-anchored retirement history, complete named-runner reachability and zero-gap exact-subphase routing; independent code/architecture review is CLEAR and checkpoint C is next.
 
 ## Integration Owner
 
-- Owner: none. The post-P3 integration lane is closed and every live-process resource is released.
+- Owner: primary Codex agent for `codex/state-action-ownership-p4-20260719`; scope is P4 task records, shared verification policy/configuration, phase commits, exact-SHA verification, integration, push, registry sync and eligible cleanup.
+- Live resources: primary Codex agent exclusively owns browser/dev-server/Playwright, dist, `.runtime-output`, perf, scenario-data and heavy-geo lanes. The final P4.0 pre-commit named gate completed 185/185 plus the repository checker, Python boundary completed 20/20, and no live process currently owns shared ports or outputs.
+- Shared P4.4 files: `index.html`, `css/style.css`, and `js/ui/toolbar.js` remain serial main-thread integration surfaces.
 - Parent WIP recovery: `codex/parent-wip-recovery-20260715@549cd350dcc565b7c4343e764f96da3050b991d4`, pushed to the matching remote branch. It preserves all 87 recovered WIP paths.
 - Binary parent backup: `.runtime/cleanup-backups/parent-wip-20260715.patch`, 148080 bytes, SHA256 `00b2734f7bcf58ff67773333ad02dbd6c03a66f617ee85d4f2d1f543fe302a7d`.
 - Functional verification: role-governance 42/42, perf contract 23/23, structural E2E tooling 36/36, City 8/8, scenario chunk 8/8, `verify:core` 76/76, `verify:core:main-thread` 80/80, standard `perf:gate` exit 0, Pages/dist 927.20 MiB with zero drift.
@@ -16,16 +18,17 @@ Last updated: 2026-07-15 post-P3 audit, recovery, synchronization, and repositor
 1. Treat `origin/main` containing functional checkpoint `18d6ffae` and archived closeout `3dbe88da` as the completed post-P3 audit baseline.
 2. Keep `codex/parent-wip-recovery-20260715`, `codex/stale-main-wip-preserve-20260708`, and other unique recovery refs until their dedicated replay reviews are complete.
 3. Use `docs/archive/post-p3-audit-cleanup-20260715/` as the durable audit and cleanup handoff.
-4. Start the next architecture phase from a fresh branch and worktree based on current `origin/main`; the recommended next lane is P4 global-state action ownership and writer allowlist burn-down.
+4. Complete P4.0 checkpoint/attestation, then continue sequentially with P4.1 boot/startup actions in the existing isolated P4 worktree.
 5. Keep specialized Williams measurement in its dedicated research lane; ordinary repository acceptance continues to use the schema-2 standard performance gate.
 
 ## Current Worktrees
 
-Current truth contains one registered, tracked-clean worktree. Completed audit and integration worktrees are removed from Git metadata and disk.
+Current truth contains the user-owned parent checkout plus one isolated P4 execution worktree. Completed P3 worktrees remain removed.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | `main` at current `origin/main` after the final registry push | post-P3 audited main | `complete`; tracked-clean | None. The former 87-path WIP is preserved on `codex/parent-wip-recovery-20260715@549cd350` and in the binary patch above. | Local/remote parity, one-worktree topology, branch cleanup audit, zero-gap selectors, deterministic/browser/perf gates. | Green. | Use this checkout as the sole local integration surface; create a fresh isolated worktree for P4 implementation. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main@68a62e54` | protected parent checkout; dirty user WIP | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured after P4 synchronization | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; use an isolated clean worktree for P4 implementation and later integration. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@68a62e54` | `origin/main@68a62e54` | P4.0 checkpoint C | Task records, state-writer tooling/tests/policy, verification metadata, package scripts and registry are P4.0 hot files. Product `js/**` diff remains empty. | Frozen policy contains 75 production direct writers and 1,187 production legacy memberships; targets are fixed at 54/949. Named policy passes 185/185, named reachability 3/3, Python boundary 20/20, workspace adaptive dry-run covers 31 changed / 211 recommendations with zero unmatched files, and the phase route gate covers 31 changed / 27 P4-owned files with zero unmatched files or gaps. Independent code/architecture review is CLEAR. | Yellow for verification control-plane; red for concurrent state-policy or shared P4.4 edits. | Create checkpoint C, verify exact SHA, add docs-only attestation A, verify and push, then begin P4.1. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 

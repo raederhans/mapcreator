@@ -86,6 +86,40 @@
       "regressionExpectation": "Boundary edits must preserve existing owner contracts or update the focused contract tests that describe the new boundary."
     },
     {
+      "id": "state-ownership",
+      "summary": "Binding-scoped global state writer authority, key ownership, alias coverage, and domain action migration.",
+      "ownerHints": ["state-ownership"],
+      "typicalSourceGlobs": [
+        "js/core/state/**",
+        "tools/state_writer_*.mjs",
+        "tools/state_writer_policy.json",
+        "tools/check_state_writer_policy.mjs",
+        "tools/check_p4_state_action_routes.mjs",
+        "tests/state_writer_*",
+        "tests/p4_state_action_routes_behavior.test.mjs",
+        "tests/test_state_write_guardrail_contract.py",
+        "docs/active/state-action-ownership-p4-*/**"
+      ],
+      "preferredChildSafeChecks": [
+        "npm run verify:p4:state-writer-policy",
+        "npm run test:python:p4:state-write-boundary"
+      ],
+      "preferredMainThreadChecks": [],
+      "mainRiskSignals": [
+        "legacy writer gains an unregistered key or operation",
+        "state alias mutation escapes binding-scoped scanning",
+        "action module is created outside js/core/state/actions",
+        "P4 changed file lacks a direct state-ownership route"
+      ],
+      "evidenceArtifacts": [
+        ".runtime/reports/generated/p4-state-actions/P4.0/state-writer-policy-tests.tap",
+        ".runtime/reports/generated/p4-state-actions/P4.0/policy-report.json",
+        ".runtime/reports/generated/p4-state-actions/P4.0/state-write-boundary.log",
+        ".runtime/reports/generated/p4-state-actions/P4.0/adaptive-selection.json"
+      ],
+      "regressionExpectation": "State ownership changes must preserve exact writer, binding, key, operation, alias, and route contracts while reducing legacy authority phase by phase."
+    },
+    {
       "id": "renderer-runtime",
       "summary": "Map renderer lifecycle, render requests, render phases, canvas surfaces, pass catalogs, and diagnostics.",
       "ownerHints": ["renderer-runtime", "architecture"],

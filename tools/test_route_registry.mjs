@@ -619,6 +619,14 @@ function resolveNodeScriptTestFiles(scripts, scriptName, command, seen = new Set
   return uniqueValues([...directFiles, ...childFiles]);
 }
 
+function extractNodeEntrypointPaths(command) {
+  return [
+    ...String(command || "").matchAll(
+      /\bnode\s+(?:(?:--[\w-]+(?:=\S+)?)\s+)*((?:tools|tests)\/[\w./-]+\.mjs)\b/g,
+    ),
+  ].map((match) => match[1]);
+}
+
 function collectFileDependencies(baseRepoPath) {
   const absolutePath = path.join(REPO_ROOT, baseRepoPath);
   if (!fs.existsSync(absolutePath)) {
@@ -640,6 +648,12 @@ function resolveNodeRouteDomain(scriptName, sourceRefs) {
     || haystack.includes("verify_core_runner")
     || haystack.includes("run_core_verification")
   ) return "test-routing";
+  if (
+    haystack.includes("p4:state-writer-policy")
+    || haystack.includes("state_writer_policy")
+    || haystack.includes("state_writer_inventory")
+    || haystack.includes("p4_state_action_routes")
+  ) return "state-ownership";
   if (haystack.includes("supervisor") || haystack.includes("ai_test_supervisor") || haystack.includes("sf-ats")) return "test-routing";
   if (haystack.includes("backend")) return "backend-cloud-support";
   if (haystack.includes("city") || haystack.includes("urban")) return "city-runtime";
@@ -717,9 +731,12 @@ export function buildNodeRoutes(packageJson = readJson(PACKAGE_JSON_PATH)) {
     .filter(([name]) => name.startsWith("test:node:"))
     .map(([name, command]) => {
       const testFiles = resolveNodeScriptTestFiles(scripts, name, command);
+      const entryFiles = extractNodeEntrypointPaths(command);
       const sourceRefs = uniqueValues([
+        ...entryFiles,
         ...testFiles,
-        ...testFiles.flatMap((testFile) => collectFileDependencies(testFile)),
+        ...[...entryFiles, ...testFiles]
+          .flatMap((sourceFile) => collectFileDependencies(sourceFile)),
       ]);
       const domain = resolveNodeRouteDomain(name, sourceRefs);
       return {

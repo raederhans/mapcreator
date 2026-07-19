@@ -69,6 +69,26 @@ test("domain ids are unique", () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
+test("state ownership domain exposes P4 policy and route evidence", () => {
+  const registry = readRegistry();
+  const domain = registry.domains.find((entry) => entry.id === "state-ownership");
+
+  assert.ok(domain);
+  assert.ok(domain.ownerHints.includes("state-ownership"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run verify:p4:state-writer-policy"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run test:python:p4:state-write-boundary"));
+  assert.equal(
+    domain.preferredChildSafeChecks.some((command) => command.includes("verify:p4:routes")),
+    false,
+  );
+  assert.ok(
+    domain.evidenceArtifacts.includes(
+      ".runtime/reports/generated/p4-state-actions/P4.0/policy-report.json",
+    ),
+  );
+  assert.deepEqual(domain.preferredMainThreadChecks, []);
+});
+
 test("every domain has required fields with expected shapes", () => {
   const registry = readRegistry();
 

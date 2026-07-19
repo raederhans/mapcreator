@@ -24,6 +24,8 @@ const PACKAGE_SCRIPTS = {
   "verify:test-import-graph": "node tools/check_test_import_graph.mjs",
   "verify:architecture-boundaries": "node tools/check_architecture_boundaries.mjs",
   "verify:state-write-allowlist": "node tools/check_state_write_allowlist.mjs",
+  "verify:p4:state-writer-policy": "npm run test:node:p4:state-writer-policy && node tools/check_state_writer_policy.mjs --phase P4.0",
+  "test:python:p4:state-write-boundary": "node tools/run_p4_state_write_boundary.mjs",
   "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
   "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
@@ -150,6 +152,8 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
   assert.equal(commandRefs(plan).includes("perf:williams-crossover:run"), false);
   assertCommandRefsInclude(plan, [
     "verify:state-write-allowlist",
+    "verify:p4:state-writer-policy",
+    "test:python:p4:state-write-boundary",
     "verify:pages-dist",
     "verify:dist-drift",
     "test:node:verification-metadata",
