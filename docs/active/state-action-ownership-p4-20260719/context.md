@@ -32,6 +32,7 @@
 | 2026-07-19 | `verify:test-import-graph` exposed one stale direct dependency left by upstream commit `4905fb69`; the spec had already removed its `scenario_dispatcher.js` import | Regenerated `tests/e2e/test-import-graph.json` with the canonical builder; the only tracked graph change removes that obsolete edge, and the import-graph check now passes. |
 | 2026-07-19 | The named policy package script uses a direct Node wrapper, while the route registry previously exposed only nested test files | Route discovery now records the wrapper entrypoint as a dependency; named-gate reachability passes 3/3 and P4.0 routing covers 31 changed files, 27 P4-owned files, zero unmatched files and zero gaps. |
 | 2026-07-19 | Scanner soundness fixtures intentionally contain state-write syntax that the legacy regex gate would classify as production-like test writes | Added an exact three-file fixture exclusion set to the legacy compatibility scanner and locked the compensation contract: every excluded fixture is parsed from the checker source and must enter the complete named AST-policy runner; Python boundary passes 20/20. |
+| 2026-07-19 | Functional checkpoint `3f255f5ac837a0c824806c566acb2e918b214701` completed its exact clean matrix | Policy identity reports tree `2cb288e242fbbbac2c99113126add515321b29db`, `trackedClean=true`; policy 185/185, Python 20/20, route 31/27/0/0 and core 78/78 pass. This docs-only attestation records that immutable evidence before exact A verification. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -39,7 +40,7 @@
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/` | not started |
-| P4.0 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.0/` | final pre-commit named gate PASS 185/185 plus repository checker; Python boundary PASS 20/20; exact-SHA C/A reruns remain |
+| P4.0 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.0/` | exact checkpoint C PASS: policy 185/185, Python 20/20, route 31/27/0/0 and core 78/78; docs-only A exact rerun remains |
 | Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | not started |
 | Performance gate | main integration owner | `.runtime/output/perf/` | not started |
 
@@ -49,4 +50,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Create checkpoint C, run the complete P4.0 matrix on exact `SHA_C`, write the docs-only attestation A, rerun the matrix on exact `SHA_A`, then push and begin P4.1.
+Commit this docs-only attestation A, rerun the complete clean P4.0 matrix on exact `SHA_A`, push, then begin P4.1.

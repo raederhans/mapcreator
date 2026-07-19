@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.0 checkpoint-ready` — AST parsing, closed candidate discovery, frozen progression, exact membership authorization and independent review repairs are implemented; final pre-commit gates are green and exact checkpoint C/A remain.
+`P4.0 attestation-candidate` — functional checkpoint C is committed and its exact clean matrix is green; docs-only attestation A and its clean verification matrix remain.
 
 ## Checklist
 
@@ -52,9 +52,28 @@
 | Default state ownership | 16 factory groups; 9 explicit keys; 402 pre-compat keys; 86 hooks; 488 post-compat keys; 0 collisions |
 | Production `js/**` diff | Empty |
 
+## P4.0 exact checkpoint C
+
+- Functional SHA: `3f255f5ac837a0c824806c566acb2e918b214701`
+- Verification tree: `2cb288e242fbbbac2c99113126add515321b29db`
+- Environment: Node `v22.23.0`; npm `11.18.0`; Python `3.12.10`
+- `node tools/check_state_writer_policy.mjs --phase P4.0 --require-clean`: PASS; `verificationSha` equals functional SHA and `trackedClean=true`
+- `npm run verify:p4:state-writer-policy`: PASS 185/185 plus repository checker
+- `npm run test:python:p4:state-write-boundary`: PASS 20/20
+- Branch-history route gate: PASS 31 changed / 27 P4-owned / 0 unmatched / 0 gaps
+- Branch-history adaptive dry-run: PASS 31 changed / 211 recommendations / 0 unmatched
+- Shared metadata, core-runner, architecture, allowlist, import-graph, selector and supervisor gates: PASS
+- `npm run verify:core`: PASS 78/78; Pages dist `927.20 MiB`
+- Report SHA256:
+  - policy report: `39aeb3fe93932364956b6421e7560d236d269f7ef5133b1556c02225e1904430`
+  - named policy TAP: `c26aa8b3d09f8376633ef7cbdc6e0454854bac86e04cdeb393f14b786074c35a`
+  - P4 route report: `be18dca7f341b5a381f4a29f1a4f014c44fd6a0c6cac7ffbd0934b8b620c48ea`
+  - adaptive exact-C report: `00f9bb11a20fd90be589c535fe0018c38c1c5e497b0fb0be6c1e76c71a40d5b1`
+  - verify-core report: `df0c3f591ac12da53f63c7a8361cacb01846397a1b490185e1ccf57a7f82ee64`
+
 ## Open risks and remaining work
 
-- Checkpoint C and docs-only attestation A remain.
+- Docs-only attestation A and its exact clean matrix remain.
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
