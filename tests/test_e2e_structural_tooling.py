@@ -99,7 +99,7 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         city_label_source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
         city_lights_source = (REPO_ROOT / "tests" / "e2e" / "city_lights_layer_regression.spec.js").read_text(encoding="utf-8")
         self.assertIn("sharedCityRequireInfraIdle: [true", fixtures_source)
-        self.assertIn('}, { scope: "worker", timeout: 120_000 }]', fixtures_source)
+        self.assertIn('}, { scope: "worker", timeout: SHARED_CITY_BOOT_TIMEOUT_MS }]', fixtures_source)
         self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_label_source)
         self.assertIn("requireInfraIdle: true", city_label_source)
         self.assertNotIn("async function ensureScenario", city_label_source)
@@ -660,6 +660,16 @@ const cases = [
     expectedUnmatched: [],
   },
   {
+    name: 'perf gate workflow routes to its contract without claiming a live runtime delta',
+    changedFiles: ['.github/workflows/perf-pr-gate.yml'],
+    expectedCommands: ['verify:perf-gate-contract'],
+    exactCommands: ['verify:perf-gate-contract'],
+    exactExecutionOwners: ['child-safe'],
+    exactResourceLocks: [],
+    exactMainThreadCommands: [],
+    expectedUnmatched: [],
+  },
+  {
     name: 'package metadata routes to dev e2e scripts and guardrails',
     changedFiles: ['package.json'],
     expectedCommands: [
@@ -946,6 +956,29 @@ const page = {
 """
         result = run_command("node", "-e", script)
         self.assert_command_ok(result)
+
+    def test_shared_city_worker_fixture_has_dedicated_boot_timeout(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
+        fixture_start = source.index("sharedCityBootHarness:")
+        fixture_end = source.index("\n  page: async", fixture_start)
+        fixture_source = source[fixture_start:fixture_end]
+        self.assertIn("const SHARED_CITY_BOOT_TIMEOUT_MS = 150_000;", source)
+        self.assertIn('}, { scope: "worker", timeout: SHARED_CITY_BOOT_TIMEOUT_MS }]', fixture_source)
+        self.assertIn("waitForAppInteractive(page, { timeout: 120_000 });", fixture_source)
+        self.assertIn("waitForShellReady(page, { timeout: 120_000 });", fixture_source)
+
+    def test_city_label_i18n_redraw_has_coherent_budget_and_cjk_sample(self) -> None:
+        source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
+        stable_wait_start = source.index("async function waitForStableExactRender")
+        stable_wait_end = source.index("\n}\n", stable_wait_start)
+        stable_wait_source = source[stable_wait_start:stable_wait_end]
+        self.assertIn("test.setTimeout(240_000);", source)
+        self.assertIn(r'const ZH_LABEL = "\u6d4b\u8bd5\u57ce";', source)
+        self.assertIn("}, undefined, { timeout });", stable_wait_source)
+        self.assertIn("async function clearCityLabelDrawLog(page)", source)
+        self.assertIn("async function waitForLabelDraw(page, label)", source)
+        self.assertIn("globalThis.__resetE2ECityLabelDraws?.();", source)
+        self.assertIn("globalThis.__e2eCityLabelDraws", source)
 
     def test_shared_city_fixtures_restore_runtime_snapshots_on_reset(self) -> None:
         source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")

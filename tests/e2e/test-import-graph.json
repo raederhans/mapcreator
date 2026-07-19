@@ -2315,493 +2315,161 @@
       "tests/e2e/tno_1962_ui_smoke.spec.js",
       "tests/e2e/ui_contract_foundation.spec.js"
     ],
-   …11293 tokens truncated…tures route to observability contract and city runtime specs',
-    changedFiles: ['tests/e2e/support/fixtures.js'],
-    expectedCommands: [
-      'python -m unittest tests.test_e2e_structural_tooling -q',
-      'node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js',
+    "tests/e2e/support/playwright-web-server.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
     ],
-  },
-  {
-    name: 'dev tno ready spec routes to direct dev script',
-    changedFiles: ['tests/e2e/dev/tno_ready_state_contract.dev.spec.js'],
-    expectedCommands: ['test:e2e:dev:tno-ready-state'],
-  },
-  {
-    name: 'startup hydration behavior routes to node behavior test',
-    changedFiles: ['js/core/scenario/startup_hydration.js'],
-    expectedCommands: ['test:node:startup-hydration-behavior'],
-  },
-  {
-    name: 'scenario lifecycle behavior routes to node behavior test',
-    changedFiles: ['js/core/scenario/lifecycle_runtime.js'],
-    expectedCommands: ['test:node:scenario-lifecycle-runtime-behavior'],
-  },
-  {
-    name: 'tno water data routes to serial validator with locks',
-    changedFiles: ['data/scenarios/tno_1962/water_regions.geojson'],
-    expectedCommands: [
-      'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json',
+    "tests/e2e/support/political-pixel-probe.js": [
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js"
     ],
-    expectedExecutionOwners: ['main-thread'],
-    expectedResourceLocks: ['heavy-geo', 'scenario-data', '.runtime-output'],
-  },
-  {
-    name: 'backend route changes select node and python cloud support checks',
-    changedFiles: ['map_backend/routes.py'],
-    expectedCommands: ['test:node:backend-cloud-support', 'test:py:backend-cloud-support'],
-  },
-  {
-    name: 'thematic builder and contracts route to thematic contract suite',
-    changedFiles: [
-      'tools/build_thematic_layers.py',
-      'map_builder/thematic_layer_contracts.py',
-      'map_builder/thematic_wgi_ingest.py',
-      'data/thematic_layers/index.json',
-      'tests/test_thematic_layer_contracts.py',
-      'tests/test_thematic_wgi_source_ingest.py',
+    "tests/e2e/support/release-smoke.js": [
+      "tests/e2e/release/pages_public_release_gate.spec.js"
     ],
-    expectedCommands: ['test:py:thematic-layer-contracts'],
-    expectedExecutionOwners: ['child-safe'],
-    expectedResourceLocks: [],
-  },
-  {
-    name: 'pytest style tno water file routes through pytest',
-    changedFiles: ['tests/test_tno_water_geometries.py'],
-    expectedCommands: ['python -m pytest tests/test_tno_water_geometries.py -q'],
-    forbiddenCommands: ['python -m unittest tests.test_tno_water_geometries -q'],
-  },
-];
-
-for (const testCase of cases) {
-  const report = buildRecommendation(testCase.changedFiles);
-  const commands = report.recommendedCommands.map((entry) => entry.commandRef);
-  for (const expectedCommand of testCase.expectedCommands) {
-    if (!commands.includes(expectedCommand)) {
-      throw new Error(`${testCase.name}: missing ${expectedCommand}; got ${commands.join(', ')}`);
-    }
-  }
-  for (const forbiddenCommand of testCase.forbiddenCommands || []) {
-    if (commands.includes(forbiddenCommand)) {
-      throw new Error(`${testCase.name}: saw forbidden ${forbiddenCommand}; got ${commands.join(', ')}`);
-    }
-  }
-  if (testCase.exactCommands) {
-    const expected = [...testCase.exactCommands].sort();
-    const actual = [...commands].sort();
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${testCase.name}: expected exact commands ${expected.join(', ')}; got ${actual.join(', ')}`);
-    }
-  }
-  for (const expectedOwner of testCase.expectedExecutionOwners || []) {
-    if (!report.executionOwners.includes(expectedOwner)) {
-      throw new Error(`${testCase.name}: missing owner ${expectedOwner}; got ${report.executionOwners.join(', ')}`);
-    }
-  }
-  for (const expectedLock of testCase.expectedResourceLocks || []) {
-    if (!report.resourceLocks.includes(expectedLock)) {
-      throw new Error(`${testCase.name}: missing lock ${expectedLock}; got ${report.resourceLocks.join(', ')}`);
-    }
-  }
-  if (testCase.exactExecutionOwners) {
-    const expected = [...testCase.exactExecutionOwners].sort();
-    const actual = [...report.executionOwners].sort();
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${testCase.name}: expected exact owners ${expected.join(', ')}; got ${actual.join(', ')}`);
-    }
-  }
-  if (testCase.exactResourceLocks) {
-    const expected = [...testCase.exactResourceLocks].sort();
-    const actual = [...report.resourceLocks].sort();
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${testCase.name}: expected exact locks ${expected.join(', ')}; got ${actual.join(', ')}`);
-    }
-  }
-  if (testCase.exactMainThreadCommands) {
-    const expected = [...testCase.exactMainThreadCommands].sort();
-    const actual = report.mainThreadSerialVerification.map((entry) => entry.commandRef).sort();
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${testCase.name}: expected exact main-thread commands ${expected.join(', ')}; got ${actual.join(', ')}`);
-    }
-  }
-  if (testCase.expectedUnmatched) {
-    const expected = [...testCase.expectedUnmatched].sort();
-    const actual = [...report.unmatchedChangedFiles].sort();
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${testCase.name}: expected unmatched ${expected.join(', ')}; got ${actual.join(', ')}`);
-    }
-  }
-}
-"""
-        result = run_command("node", "--input-type=module", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_verification_selector_routes_tno_water_health_gate(self) -> None:
-        script = """
-const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
-const tnoWaterCommand = 'python tools/validate_tno_water_geometries.py --scenario-dir data/scenarios/tno_1962 --report-path .runtime/reports/generated/tno_water_geometry_report.json';
-const report = buildRecommendation(['data/scenarios/tno_1962/water_regions.geojson']);
-const commands = report.recommendedCommands.map((entry) => entry.commandRef);
-if (!commands.includes(tnoWaterCommand)) {
-  throw new Error(`missing TNO water validator command: ${commands.join(', ')}`);
-}
-const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === tnoWaterCommand);
-if (!mainThreadEntry) {
-  throw new Error(`TNO water validator must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
-}
-for (const lock of ['heavy-geo', 'scenario-data', '.runtime-output']) {
-  if (!mainThreadEntry.resourceLocks.includes(lock)) {
-    throw new Error(`TNO water validator missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
-  }
-}
-const diagnostic = report.diagnosticNextSteps.find((entry) => entry.commandRef === tnoWaterCommand);
-if (!diagnostic || !diagnostic.guidance.ownerFiles.includes('tools/validate_tno_water_geometries.py')) {
-  throw new Error(`TNO water diagnostic guidance missing: ${JSON.stringify(report.diagnosticNextSteps)}`);
-}
-if (!report.advisoryNotes.some((note) => note.includes('main-thread serial ownership'))) {
-  throw new Error(`missing main-thread advisory note: ${report.advisoryNotes.join(' | ')}`);
-}
-const testReport = buildRecommendation(['tests/test_tno_water_geometries.py']);
-const testCommands = testReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!testCommands.includes('python -m pytest tests/test_tno_water_geometries.py -q')) {
-  throw new Error(`pytest-style TNO water test must use pytest: ${testCommands.join(', ')}`);
-}
-if (testCommands.includes('python -m unittest tests.test_tno_water_geometries -q')) {
-  throw new Error(`pytest-style TNO water test must not use unittest: ${testCommands.join(', ')}`);
-}
-"""
-        result = run_command("node", "--input-type=module", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_verification_selector_routes_targeted_node_behavior_files(self) -> None:
-        script = """
-const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
-const startupReport = buildRecommendation(['js/core/scenario/startup_hydration.js']);
-const startupCommands = startupReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!startupCommands.includes('test:node:startup-hydration-behavior')) {
-  throw new Error(`missing startup hydration node behavior route: ${startupCommands.join(', ')}`);
-}
-const lifecycleReport = buildRecommendation(['js/core/scenario/lifecycle_runtime.js']);
-const lifecycleCommands = lifecycleReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!lifecycleCommands.includes('test:node:scenario-lifecycle-runtime-behavior')) {
-  throw new Error(`missing scenario lifecycle node behavior route: ${lifecycleCommands.join(', ')}`);
-}
-const sampleGuideReport = buildRecommendation(['js/core/sample_project_import_workflow.js']);
-const sampleGuideCommands = sampleGuideReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!sampleGuideCommands.includes('test:node:sample-project-contracts')) {
-  throw new Error(`missing sample project node contract route: ${sampleGuideCommands.join(', ')}`);
-}
-if (!sampleGuideCommands.includes('node tools/e2e_layering.mjs run-spec tests/e2e/sample_guide_deeplink.spec.js')) {
-  throw new Error(`missing sample guide E2E route: ${sampleGuideCommands.join(', ')}`);
-}
-const sampleAssetReport = buildRecommendation(['landing/assets/sample-runs.json']);
-const sampleAssetCommands = sampleAssetReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!sampleAssetCommands.includes('test:node:sample-project-contracts')) {
-  throw new Error(`missing sample asset node contract route: ${sampleAssetCommands.join(', ')}`);
-}
-"""
-        result = run_command("node", "--input-type=module", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_verification_selector_routes_pages_dist_mirrors_to_pages_dist_gate(self) -> None:
-        script = """
-const { buildRecommendation } = await import('./tools/select_verification_targets.mjs');
-const report = buildRecommendation([
-  'dist/app/js/core/map_renderer/hit_canvas_scheduling_owner.js',
-  'dist/app/css/style.css',
-  'dist/pages-dist-manifest.json',
-]);
-const commands = report.recommendedCommands.map((entry) => entry.commandRef);
-if (!commands.includes('verify:pages-dist')) {
-  throw new Error(`missing Pages dist verification route: ${commands.join(', ')}`);
-}
-if (report.unmatchedChangedFiles.length) {
-  throw new Error(`Pages dist mirror files should be matched: ${report.unmatchedChangedFiles.join(', ')}`);
-}
-const mainThreadEntry = report.mainThreadSerialVerification.find((entry) => entry.commandRef === 'verify:pages-dist');
-if (!mainThreadEntry) {
-  throw new Error(`Pages dist verification must be main-thread serial: ${JSON.stringify(report.mainThreadSerialVerification)}`);
-}
-for (const lock of ['dist', '.runtime-output']) {
-  if (!mainThreadEntry.resourceLocks.includes(lock)) {
-    throw new Error(`Pages dist verification missing lock ${lock}: ${mainThreadEntry.resourceLocks.join(',')}`);
-  }
-}
-const sourceReport = buildRecommendation([
-  'js/core/map_renderer.js',
-  'js/core/map_renderer/render_pass_cache_host_owner.js',
-]);
-const sourceCommands = sourceReport.recommendedCommands.map((entry) => entry.commandRef);
-if (!sourceCommands.includes('verify:pages-dist')) {
-  throw new Error(`missing Pages dist source mirror route: ${sourceCommands.join(', ')}`);
-}
-for (const filePath of ['js/core/map_renderer.js', 'js/core/map_renderer/render_pass_cache_host_owner.js']) {
-  if (sourceReport.unmatchedChangedFiles.includes(filePath)) {
-    throw new Error(`Pages dist source mirror file should be matched: ${filePath}`);
-  }
-}
-"""
-        result = run_command("node", "--input-type=module", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_shared_city_fixtures_pass_wait_timeout_as_playwright_option(self) -> None:
-        script = """
-const fixtures = require('./tests/e2e/support/fixtures.js');
-const waitCalls = [];
-const page = {
-  waitForFunction(...args) {
-    waitCalls.push(args);
-    return Promise.resolve();
-  },
-  evaluate() {
-    return Promise.resolve();
-  },
-};
-(async () => {
-  await fixtures.waitForSharedCityExactRender(page, { timeout: 45_000 });
-  await fixtures.ensureSharedCityBaseDataLoaded(page, 'contract-shared-city', { timeout: 90_000 });
-  const sawExactTimeout = waitCalls.some((args) => args.length === 3 && args[2]?.timeout === 45_000);
-  const sawBaseDataTimeout = waitCalls.some((args) => args.length === 3 && args[2]?.timeout === 90_000);
-  if (!sawExactTimeout) {
-    throw new Error(`waitForSharedCityExactRender did not pass timeout as third argument: ${JSON.stringify(waitCalls)}`);
-  }
-  if (!sawBaseDataTimeout) {
-    throw new Error(`ensureSharedCityBaseDataLoaded did not pass timeout as third argument: ${JSON.stringify(waitCalls)}`);
-  }
-})();
-"""
-        result = run_command("node", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_shared_city_worker_fixture_has_dedicated_boot_timeout(self) -> None:
-        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
-        fixture_start = source.index("sharedCityBootHarness:")
-        fixture_end = source.index("\n  page: async", fixture_start)
-        fixture_source = source[fixture_start:fixture_end]
-        self.assertIn("const SHARED_CITY_BOOT_TIMEOUT_MS = 150_000;", source)
-        self.assertIn('}, { scope: "worker", timeout: SHARED_CITY_BOOT_TIMEOUT_MS }]', fixture_source)
-        self.assertIn("waitForAppInteractive(page, { timeout: 120_000 });", fixture_source)
-        self.assertIn("waitForShellReady(page, { timeout: 120_000 });", fixture_source)
-
-    def test_city_label_i18n_redraw_has_coherent_budget_and_cjk_sample(self) -> None:
-        source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
-        stable_wait_start = source.index("async function waitForStableExactRender")
-        stable_wait_end = source.index("\n}\n", stable_wait_start)
-        stable_wait_source = source[stable_wait_start:stable_wait_end]
-        self.assertIn("test.setTimeout(240_000);", source)
-        self.assertIn(r'const ZH_LABEL = "\u6d4b\u8bd5\u57ce";', source)
-        self.assertIn("}, undefined, { timeout });", stable_wait_source)
-        self.assertIn("async function clearCityLabelDrawLog(page)", source)
-        self.assertIn("async function waitForLabelDraw(page, label)", source)
-        self.assertIn("globalThis.__resetE2ECityLabelDraws?.();", source)
-        self.assertIn("globalThis.__e2eCityLabelDraws", source)
-
-    def test_shared_city_fixtures_restore_runtime_snapshots_on_reset(self) -> None:
-        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
-        reset_call = """await resetSharedCityRuntimeState(page, {
-      storageKeys,
-      timeout: resetTimeout,
-      requireInfraIdle: sharedCityRequireInfraIdle,
-    });"""
-        self.assertIn("captureSharedCityRuntimeSnapshot", source)
-        self.assertIn("__sharedCityWorldCitiesSnapshot", source)
-        self.assertIn("__sharedCityScenarioOverridesSnapshot", source)
-        self.assertIn('state.worldCitiesData = cloneRuntimeValue(globalThis.__sharedCityWorldCitiesSnapshot);', source)
-        self.assertIn('state.scenarioCityOverridesData = cloneRuntimeValue(globalThis.__sharedCityScenarioOverridesSnapshot);', source)
-        self.assertIn("worldOverrideCount", source)
-        self.assertIn("scenarioOverrideCount", source)
-        self.assertIn("display-name overrides remained after reset", source)
-        self.assertIn("const resetTimeout = Math.max(30_000, Number(testInfo.timeout) || 0);", source)
-        self.assertIn(reset_call, source)
-
-    def test_tno_land_feature_action_clock_wait_has_a_local_deadline(self) -> None:
-        source = (REPO_ROOT / "tests" / "e2e" / "tno_open_ocean_rendering.spec.js").read_text(encoding="utf-8")
-        self.assertIn("const actionAdvanceDeadline = performance.now() + 1000;", source)
-        self.assertIn("performance.now() >= actionAdvanceDeadline", source)
-        self.assertIn("Timed out waiting for the action clock to advance", source)
-
-    def test_shared_city_fixture_captures_failure_context_before_reset_cleanup(self) -> None:
-        source = (REPO_ROOT / "tests" / "e2e" / "support" / "fixtures.js").read_text(encoding="utf-8")
-        reset_call = """await resetSharedCityRuntimeState(page, {
-          storageKeys,
-          timeout: resetTimeout,
-          requireInfraIdle: sharedCityRequireInfraIdle,
-        });"""
-        failed_index = source.index("const failed = testInfo.status !== testInfo.expectedStatus;")
-        snapshot_index = source.index("const failureSnapshot = await readFailureContextSnapshot(page, DEFAULT_FAILURE_SELECTORS);", failed_index)
-        write_index = source.index("await writeFailureContextArtifact(testInfo, failureSnapshot);", snapshot_index)
-        cleanup_index = source.index("await clearPageEventListeners(page);", write_index)
-        reset_index = source.index(reset_call, cleanup_index)
-        self.assertLess(failed_index, snapshot_index)
-        self.assertLess(snapshot_index, write_index)
-        self.assertLess(write_index, cleanup_index)
-        self.assertLess(cleanup_index, reset_index)
-
-    def test_verification_selector_routes_helper_workflow_and_dev_spec_changes(self) -> None:
-        helper_explain = run_command("node", "tools/select_verification_targets.mjs", "explain", "tests/e2e/support/playwright-app.js")
-        self.assert_command_ok(helper_explain)
-        helper_payload = json.loads(helper_explain.stdout)
-        self.assertEqual(helper_payload["mode"], "recommendation-fallback")
-        helper_commands = [entry["commandRef"] for entry in helper_payload["recommendation"]["recommendedCommands"]]
-        self.assertEqual(helper_commands[0], "python -m unittest tests.test_e2e_structural_tooling -q")
-        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", helper_commands)
-        self.assertIn("node tools/e2e_layering.mjs run-spec tests/e2e/ui_contract_foundation.spec.js", helper_commands)
-
-        fixtures_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/fixtures.js", "--json")
-        self.assert_command_ok(fixtures_result)
-        fixtures_payload = json.loads(fixtures_result.stdout)
-        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", [entry["commandRef"] for entry in fixtures_payload["recommendedCommands"]])
-
-        reporter_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/reporters/failure-context-reporter.js", "--json")
-        self.assert_command_ok(reporter_result)
-        reporter_payload = json.loads(reporter_result.stdout)
-        self.assertIn("python -m unittest tests.test_e2e_structural_tooling -q", [entry["commandRef"] for entry in reporter_payload["recommendedCommands"]])
-
-        workflow_result = run_command("node", "tools/select_verification_targets.mjs", ".github/workflows/pr-verify.yml", "--json")
-        self.assert_command_ok(workflow_result)
-        workflow_payload = json.loads(workflow_result.stdout)
-        workflow_commands = [entry["commandRef"] for entry in workflow_payload["recommendedCommands"]]
-        self.assertIn("node tools/select_verification_targets.mjs --check", workflow_commands)
-        self.assertIn("verify:test-import-graph", workflow_commands)
-        self.assertIn("verify:architecture-boundaries", workflow_commands)
-
-        dev_ready_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/dev/tno_ready_state_contract.dev.spec.js", "--json")
-        self.assert_command_ok(dev_ready_result)
-        dev_ready_payload = json.loads(dev_ready_result.stdout)
-        self.assertIn("test:e2e:dev:tno-ready-state", [entry["commandRef"] for entry in dev_ready_payload["recommendedCommands"]])
-
-        dev_chunk_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js", "--json")
-        self.assert_command_ok(dev_chunk_result)
-        dev_chunk_payload = json.loads(dev_chunk_result.stdout)
-        self.assertIn("test:e2e:dev:scenario-chunk-runtime", [entry["commandRef"] for entry in dev_chunk_payload["recommendedCommands"]])
-
-        release_helper_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/support/release-smoke.js", "--json")
-        self.assert_command_ok(release_helper_result)
-        release_helper_payload = json.loads(release_helper_result.stdout)
-        release_helper_commands = [entry["commandRef"] for entry in release_helper_payload["recommendedCommands"]]
-        self.assertIn("test:node:release-smoke-helper", release_helper_commands)
-        self.assertIn("test:e2e:pages-public-release-gate", release_helper_commands)
-
-        release_spec_result = run_command("node", "tools/select_verification_targets.mjs", "tests/e2e/release/pages_public_release_gate.spec.js", "--json")
-        self.assert_command_ok(release_spec_result)
-        release_spec_payload = json.loads(release_spec_result.stdout)
-        release_spec_commands = [entry["commandRef"] for entry in release_spec_payload["recommendedCommands"]]
-        self.assertIn("test:e2e:pages-public-release-gate", release_spec_commands)
-
-        release_node_result = run_command("node", "tools/select_verification_targets.mjs", "tests/release_smoke_retry_behavior.node.test.mjs", "--json")
-        self.assert_command_ok(release_node_result)
-        release_node_payload = json.loads(release_node_result.stdout)
-        release_node_commands = [entry["commandRef"] for entry in release_node_payload["recommendedCommands"]]
-        self.assertIn("test:node:release-smoke-helper", release_node_commands)
-
-        unknown_result = run_command("node", "tools/select_verification_targets.mjs", "explain", "docs/unknown-route-sentinel.txt")
-        self.assertNotEqual(unknown_result.returncode, 0)
-        self.assertIn("No route found", f"{unknown_result.stdout}\n{unknown_result.stderr}")
-
-    def test_verification_selector_routes_package_metadata_to_dev_scripts_and_guardrails(self) -> None:
-        for package_path in ("package.json", "package-lock.json"):
-            package_result = run_command("node", "tools/select_verification_targets.mjs", package_path, "--json")
-            self.assert_command_ok(package_result)
-            package_payload = json.loads(package_result.stdout)
-            package_commands = [entry["commandRef"] for entry in package_payload["recommendedCommands"]]
-            self.assertIn("test:e2e:dev:tno-ready-state", package_commands)
-            self.assertIn("test:e2e:dev:scenario-chunk-runtime", package_commands)
-            self.assertIn("verify:test-timeout-inventory", package_commands)
-            self.assertIn("verify:test-console-allowlist", package_commands)
-            self.assertIn("verify:test-timeout-guardrails", package_commands)
-            self.assertIn("verify:architecture-boundaries", package_commands)
-            self.assertIn("verify:perf-gate-contract", package_commands)
-
-    def test_verify_shared_checks_checked_in_import_graph_before_building_artifact_copy(self) -> None:
-        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
-        verify_index = workflow.index("npm run verify:test-import-graph")
-        build_index = workflow.index("node tools/build_test_import_graph.mjs --graph-out .runtime/reports/generated/test-import-graph.json")
-        selector_check_index = workflow.index("node tools/select_verification_targets.mjs --check")
-        architecture_index = workflow.index("npm run verify:architecture-boundaries")
-        selector_explain_index = workflow.index("node tools/select_verification_targets.mjs --changed-files-list")
-        self.assertLess(verify_index, build_index)
-        self.assertLess(build_index, selector_check_index)
-        self.assertLess(selector_check_index, architecture_index)
-        self.assertLess(architecture_index, selector_explain_index)
-        self.assertIn(".runtime/reports/generated/test-import-graph.json", workflow)
-        self.assertIn(".runtime/tmp/verification-selector-changed-files.txt", workflow)
-
-    def test_verify_shared_pr_fast_runner_covers_dynamic_node_and_python_fast_contracts(self) -> None:
-        workflow = (REPO_ROOT / ".github" / "workflows" / "verify-shared.yml").read_text(encoding="utf-8")
-        self.assertIn("tests.test_main_deferred_detail_promotion_boundary_contract", workflow)
-        self.assertIn("tests.test_perf_gate_contract", workflow)
-        self.assertIn("name.startsWith('test:node:')", workflow)
-        self.assertIn("spawnSync('npm', ['run', name]", workflow)
-
-    def test_failure_context_reporter_tracks_failure_context_attachment(self) -> None:
-        script = """
-const fs = require('fs');
-const path = require('path');
-const FailureContextReporter = require('./tests/e2e/support/reporters/failure-context-reporter.js');
-const outputFile = path.join('.runtime', 'tmp', 'failure-context-reporter-contract.ndjson');
-fs.rmSync(outputFile, { force: true });
-process.env.PLAYWRIGHT_FAILURE_CONTEXT_INDEX_FILE = outputFile;
-const reporter = new FailureContextReporter();
-reporter.onTestEnd(
-  { title: 'demo', location: { file: path.join(process.cwd(), 'tests/e2e/main_shell_i18n.spec.js') } },
-  {
-    status: 'failed',
-    retry: 0,
-    duration: 321,
-    parallelIndex: 0,
-    startTime: new Date('2026-05-01T00:00:00Z'),
-    error: { message: 'boom' },
-    attachments: [
-      {
-        name: 'failure-context',
-        path: path.join(process.cwd(), '.runtime/tests/playwright/demo/failure-context.json'),
-        contentType: 'application/json',
-      },
+    "tests/e2e/support/startup-paths.js": [
+      "tests/e2e/city_label_i18n_redraw.spec.js",
+      "tests/e2e/city_lights_layer_regression.spec.js",
+      "tests/e2e/city_marker_visibility_regression.spec.js",
+      "tests/e2e/city_points_urban_runtime.spec.js",
+      "tests/e2e/city_reveal_plan_regression.spec.js",
+      "tests/e2e/city_urban_rendering_regression.spec.js",
+      "tests/e2e/dev/full_visual_acceptance.dev.spec.js",
+      "tests/e2e/dev/scenario_chunk_exact_after_settle_regression.dev.spec.js",
+      "tests/e2e/dev/tno_ready_state_contract.dev.spec.js",
+      "tests/e2e/dev_workspace_i18n.spec.js",
+      "tests/e2e/dev_workspace_render_boundary.spec.js",
+      "tests/e2e/hoi4_1939_ui_smoke.spec.js",
+      "tests/e2e/hoi4_rk_russia_regression.spec.js",
+      "tests/e2e/interaction_funnel_contract.spec.js",
+      "tests/e2e/main_shell_i18n.spec.js",
+      "tests/e2e/non_1962_runtime_matrix.spec.js",
+      "tests/e2e/physical_layer_regression.spec.js",
+      "tests/e2e/physical_layer_runtime_contract.spec.js",
+      "tests/e2e/project_save_load_roundtrip.spec.js",
+      "tests/e2e/release/pages_public_release_gate.spec.js",
+      "tests/e2e/review_regressions.spec.js",
+      "tests/e2e/river_layer_regression.spec.js",
+      "tests/e2e/sample_guide_deeplink.spec.js",
+      "tests/e2e/scenario_apply_concurrency.spec.js",
+      "tests/e2e/scenario_apply_resilience.spec.js",
+      "tests/e2e/scenario_blank_exit.spec.js",
+      "tests/e2e/scenario_boundary_regression.spec.js",
+      "tests/e2e/scenario_controls_dispatcher_contract.spec.js",
+      "tests/e2e/scenario_shell_overlay_contract.spec.js",
+      "tests/e2e/shortcut_history_render_boundary.spec.js",
+      "tests/e2e/sidebar_default_collapse.spec.js",
+      "tests/e2e/startup_bundle_recovery_contract.spec.js",
+      "tests/e2e/strategic_overlay_counter_canvas_smoke.spec.js",
+      "tests/e2e/strategic_overlay_editing.spec.js",
+      "tests/e2e/strategic_overlay_roundtrip.spec.js",
+      "tests/e2e/strategic_overlay_sidebar_entry_smoke.spec.js",
+      "tests/e2e/strategic_overlay_smoke.spec.js",
+      "tests/e2e/texture_overlay_regression.spec.js",
+      "tests/e2e/tno_1962_ui_smoke.spec.js",
+      "tests/e2e/tno_named_water_rendering.spec.js",
+      "tests/e2e/tno_open_ocean_rendering.spec.js",
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js",
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js",
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js",
+      "tests/e2e/transport_workbench_industrial_variants.spec.js",
+      "tests/e2e/transport_workbench_label_rotation.spec.js",
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js",
+      "tests/e2e/ui_contract_foundation.spec.js",
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js",
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js",
+      "tests/e2e/water_cache_strategy_regression.spec.js"
     ],
-  }
-);
-const lines = fs.readFileSync(outputFile, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map((line) => JSON.parse(line));
-if (lines.length !== 1) {
-  throw new Error(`expected exactly one reporter line, got ${lines.length}`);
+    "tests/e2e/texture_overlay_regression.spec.js": [
+      "tests/e2e/texture_overlay_regression.spec.js"
+    ],
+    "tests/e2e/tno_1962_ui_smoke.spec.js": [
+      "tests/e2e/tno_1962_ui_smoke.spec.js"
+    ],
+    "tests/e2e/tno_named_water_rendering.spec.js": [
+      "tests/e2e/tno_named_water_rendering.spec.js"
+    ],
+    "tests/e2e/tno_open_ocean_rendering.spec.js": [
+      "tests/e2e/tno_open_ocean_rendering.spec.js"
+    ],
+    "tests/e2e/tno_startup_visible_context_layers_contract.spec.js": [
+      "tests/e2e/tno_startup_visible_context_layers_contract.spec.js"
+    ],
+    "tests/e2e/transport_phase_b_main_map_smoke.spec.js": [
+      "tests/e2e/transport_phase_b_main_map_smoke.spec.js"
+    ],
+    "tests/e2e/transport_workbench_country_pack_loading.spec.js": [
+      "tests/e2e/transport_workbench_country_pack_loading.spec.js"
+    ],
+    "tests/e2e/transport_workbench_industrial_variants.spec.js": [
+      "tests/e2e/transport_workbench_industrial_variants.spec.js"
+    ],
+    "tests/e2e/transport_workbench_label_rotation.spec.js": [
+      "tests/e2e/transport_workbench_label_rotation.spec.js"
+    ],
+    "tests/e2e/transport_workbench_port_coverage_tiers.spec.js": [
+      "tests/e2e/transport_workbench_port_coverage_tiers.spec.js"
+    ],
+    "tests/e2e/ui_contract_foundation.spec.js": [
+      "tests/e2e/ui_contract_foundation.spec.js"
+    ],
+    "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js": [
+      "tests/e2e/ui_rework_mainline_shell_sidebar.spec.js"
+    ],
+    "tests/e2e/ui_rework_support_transport_hardening.spec.js": [
+      "tests/e2e/ui_rework_support_transport_hardening.spec.js"
+    ],
+    "tests/e2e/water_cache_strategy_regression.spec.js": [
+      "tests/e2e/water_cache_strategy_regression.spec.js"
+    ]
+  },
+  "unresolved": []
 }
-if (!String(lines[0].failureContextPath || '').endsWith('failure-context.json')) {
-  throw new Error(`expected failureContextPath, got ${lines[0].failureContextPath}`);
-}
-"""
-        result = run_command("node", "-e", script)
-        self.assert_command_ok(result)
-
-    def test_timing_reporter_appends_ndjson_entry(self) -> None:
-        script = """
-const fs = require('fs');
-const path = require('path');
-const TimingReporter = require('./tests/e2e/support/reporters/timing-reporter.js');
-const outputFile = path.join('.runtime', 'tmp', 'timing-reporter-contract.ndjson');
-fs.rmSync(outputFile, { force: true });
-process.env.PLAYWRIGHT_TIMING_OUTPUT_FILE = outputFile;
-const reporter = new TimingReporter();
-reporter.onTestEnd(
-  { title: 'demo', location: { file: path.join(process.cwd(), 'tests/e2e/ui_contract_foundation.spec.js') } },
-  {
-    status: 'passed',
-    retry: 0,
-    duration: 123,
-    parallelIndex: 1,
-    startTime: new Date('2026-05-01T00:00:00Z'),
-    attachments: [],
-  }
-);
-const lines = fs.readFileSync(outputFile, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map((line) => JSON.parse(line));
-if (lines.length !== 1) {
-  throw new Error(`expected exactly one timing line, got ${lines.length}`);
-}
-if (lines[0].specPath !== 'tests/e2e/ui_contract_foundation.spec.js') {
-  throw new Error(`unexpected specPath ${lines[0].specPath}`);
-}
-"""
-        result = run_command("node", "-e", script)
-        self.assert_command_ok(result)
-
-
-if __name__ == "__main__":
-    unittest.main()
