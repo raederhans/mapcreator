@@ -56,6 +56,29 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("python -m pip install -r requirements-dev.lock.txt", workflow_content)
         self.assertIn("npx playwright install chromium", workflow_content)
         self.assertIn("npm run perf:gate", workflow_content)
+        self.assertIn('"should_enforce_regressions=$($shouldEnforceRegressions.ToString().ToLowerInvariant())"', workflow_content)
+        enforcement_block = workflow_content[
+            workflow_content.index("$regressionEnforcementRuleNames = @("):
+            workflow_content.index("$shouldEnforceRegressions =")
+        ]
+        for enforced_rule in (
+            "runtime-js",
+            "app-shell",
+            "dev-server",
+        ):
+            self.assertIn(f"'{enforced_rule}'", enforcement_block)
+        for diagnostic_rule in (
+            "perf-workflow",
+            "perf-baseline-docs",
+            "scenario-registry",
+            "perf-scenario-data",
+            "playwright-app-support",
+            "perf-tools",
+            "node-manifests",
+        ):
+            self.assertNotIn(f"'{diagnostic_rule}'", enforcement_block)
+        self.assertIn("$regressionMode = if ('${{ steps.classify.outputs.should_enforce_regressions }}' -eq 'true')", workflow_content)
+        self.assertIn("--regression-mode $regressionMode", workflow_content)
         self.assertLess(
             workflow_content.index("python -m pip install -r requirements-dev.lock.txt"),
             workflow_content.index("      - name: Run perf gate"),
@@ -150,6 +173,13 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertIn("collectGovernedRenderSampleRoleMismatches", script)
         self.assertIn("Perf gate render sample role mismatch.", script)
         self.assertIn("renderSampleRoleMismatches", script)
+        self.assertIn("normalizePerfRegressionMode", script)
+        self.assertIn("shouldBlockOnPerfRegressions", script)
+        self.assertIn("regressionsEnforced", script)
+        self.assertIn("runWithTransientPerfNetworkRetry", script)
+        self.assertIn("getTransientNetworkFailure", script)
+        self.assertIn("net::ERR_NETWORK_CHANGED", script)
+        self.assertIn("getTransientNetworkFailure: diagnostics.getTransientNetworkFailure", script)
         self.assertIn('const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];', script)
         self.assertIn("const MIN_GATE_WARMUPS = 3;", script)
         self.assertIn("const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;", script)

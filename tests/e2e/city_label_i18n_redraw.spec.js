@@ -36,19 +36,6 @@ async function ensureLanguage(page, targetLanguage) {
   await waitForStableExactRender(page);
 }
 
-async function clearCityLabelDrawLog(page) {
-  await page.evaluate(() => {
-    globalThis.__resetE2ECityLabelDraws?.();
-  });
-}
-
-async function waitForLabelDraw(page, label) {
-  await page.waitForFunction((expectedLabel) => {
-    const log = Array.isArray(globalThis.__e2eCityLabelDraws) ? globalThis.__e2eCityLabelDraws : [];
-    return log.some((entry) => String(entry?.text || "") === expectedLabel);
-  }, label, { timeout: 20_000 });
-}
-
 test("language toggle redraws city labels immediately without needing pan or zoom", async ({ page }) => {
   const consoleIssues = [];
   const networkFailures = [];

@@ -16,6 +16,10 @@ import {
 import {
   annotatePerfErrorWithDiagnostics,
   collectBaselineContractMismatches,
+  isTransientPerfNetworkFailure,
+  normalizePerfRegressionMode,
+  runWithTransientPerfNetworkRetry,
+  shouldBlockOnPerfRegressions,
   summarizeSnapshot,
   validateGateBaselineReport,
   validateGateCurrentReport,
@@ -319,6 +323,57 @@ test("browser diagnostics remain visible in both error message and logged stack"
 
   assert.match(error.message, /Browser diagnostics: \.runtime\/tests\/playwright\/perf-baseline/);
   assert.match(error.stack, /Browser diagnostics: \.runtime\/tests\/playwright\/perf-baseline/);
+});
+
+test("regression policy blocks runtime regressions and keeps tooling-only deltas diagnostic", () => {
+  const failures = [{ scenarioId: "tno_1962", metricKey: "refreshScenarioApplyMs" }];
+
+  assert.equal(normalizePerfRegressionMode(undefined), "enforce");
+  assert.equal(normalizePerfRegressionMode("enforce"), "enforce");
+  assert.equal(normalizePerfRegressionMode("diagnostic"), "diagnostic");
+  assert.equal(shouldBlockOnPerfRegressions("enforce", failures), true);
+  assert.equal(shouldBlockOnPerfRegressions("diagnostic", failures), false);
+  assert.equal(shouldBlockOnPerfRegressions("enforce", []), false);
+  assert.throws(() => shouldBlockOnPerfRegressions("enforce", null), /failures must be an array/);
+  assert.throws(() => normalizePerfRegressionMode("ignore"), /regression mode/);
+});
+
+test("explicit Chromium network-change failures get one isolated retry", async () => {
+  const attempts = [];
+  const result = await runWithTransientPerfNetworkRetry(async () => {
+    attempts.push(attempts.length + 1);
+    if (attempts.length === 1) {
+      throw new Error("script request failed: net::ERR_NETWORK_CHANGED");
+    }
+    return "recovered";
+  });
+
+  assert.equal(result, "recovered");
+  assert.deepEqual(attempts, [1, 2]);
+  assert.equal(isTransientPerfNetworkFailure(new Error("net::ERR_CONNECTION_RESET")), true);
+  assert.equal(isTransientPerfNetworkFailure(new Error("scenario activation mismatch")), false);
+});
+
+test("network retry stays bounded and ordinary boot failures remain fail-closed", async () => {
+  let networkAttempts = 0;
+  await assert.rejects(
+    runWithTransientPerfNetworkRetry(async () => {
+      networkAttempts += 1;
+      throw new Error("net::ERR_NETWORK_CHANGED");
+    }),
+    /ERR_NETWORK_CHANGED/,
+  );
+  assert.equal(networkAttempts, 2);
+
+  let ordinaryAttempts = 0;
+  await assert.rejects(
+    runWithTransientPerfNetworkRetry(async () => {
+      ordinaryAttempts += 1;
+      throw new Error("scenario activation mismatch");
+    }),
+    /scenario activation mismatch/,
+  );
+  assert.equal(ordinaryAttempts, 1);
 });
 
 function makeSchema2IdentityReport() {

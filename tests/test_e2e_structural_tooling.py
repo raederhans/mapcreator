@@ -99,6 +99,7 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         city_label_source = (REPO_ROOT / "tests" / "e2e" / "city_label_i18n_redraw.spec.js").read_text(encoding="utf-8")
         city_lights_source = (REPO_ROOT / "tests" / "e2e" / "city_lights_layer_regression.spec.js").read_text(encoding="utf-8")
         self.assertIn("sharedCityRequireInfraIdle: [true", fixtures_source)
+        self.assertIn('}, { scope: "worker", timeout: 120_000 }]', fixtures_source)
         self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_label_source)
         self.assertIn("requireInfraIdle: true", city_label_source)
         self.assertNotIn("async function ensureScenario", city_label_source)

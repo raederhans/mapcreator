@@ -38,6 +38,13 @@ const DEV_SERVER_READY_TIMEOUT_MS = Math.max(
 const MIN_GATE_WARMUPS = 3;
 const DEFAULT_WARMUPS = MIN_GATE_WARMUPS;
 const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;
+const PERF_REGRESSION_MODES = new Set(["enforce", "diagnostic"]);
+const TRANSIENT_PERF_NETWORK_FAILURE_CODES = Object.freeze([
+  "net::ERR_NETWORK_CHANGED",
+  "net::ERR_CONNECTION_RESET",
+  "net::ERR_INTERNET_DISCONNECTED",
+  "net::ERR_NETWORK_IO_SUSPENDED",
+]);
 const PERF_URL_QUERY = Object.freeze({
   render_profile: "balanced",
   startup_interaction: "full",
@@ -66,6 +73,7 @@ function parseArgs(argv) {
     runs: 5,
     warmups: DEFAULT_WARMUPS,
     threshold: 1.15,
+    regressionMode: "enforce",
     baselineJson: DEFAULT_BASELINE_JSON,
     baselineMd: DEFAULT_BASELINE_MD,
     rawDir: DEFAULT_RAW_DIR,
@@ -90,6 +98,9 @@ function parseArgs(argv) {
     } else if (token === "--threshold" && next) {
       options.threshold = Math.max(1, Number(next) || 1.15);
       index += 1;
+    } else if (token === "--regression-mode" && next) {
+      options.regressionMode = normalizePerfRegressionMode(next);
+      index += 1;
     } else if (token === "--baseline-json" && next) {
       options.baselineJson = path.resolve(REPO_ROOT, next);
       index += 1;
@@ -108,6 +119,40 @@ function parseArgs(argv) {
     }
   }
   return options;
+}
+
+export function normalizePerfRegressionMode(value) {
+  const normalized = String(value || "enforce").trim().toLowerCase();
+  if (!PERF_REGRESSION_MODES.has(normalized)) {
+    throw new Error(`[perf-baseline] Unsupported regression mode: ${JSON.stringify(value)}.`);
+  }
+  return normalized;
+}
+
+export function shouldBlockOnPerfRegressions(regressionMode, failures) {
+  if (!Array.isArray(failures)) {
+    throw new Error("[perf-baseline] Regression failures must be an array.");
+  }
+  return normalizePerfRegressionMode(regressionMode) === "enforce" && failures.length > 0;
+}
+
+export function isTransientPerfNetworkFailure(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return TRANSIENT_PERF_NETWORK_FAILURE_CODES.some((code) => message.includes(code.toLowerCase()));
+}
+
+export async function runWithTransientPerfNetworkRetry(operation, { onRetry = null } = {}) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isTransientPerfNetworkFailure(error)) {
+      throw error;
+    }
+    if (typeof onRetry === "function") {
+      await onRetry(error);
+    }
+    return operation();
+  }
 }
 
 function parseUrlQueryOverrides(rawValue, baseQuery = PERF_URL_QUERY) {
@@ -755,6 +800,7 @@ async function collectPerfBrowserRuntimeSnapshot(page) {
 
 function createPerfBrowserDiagnostics(page, { scenarioId, runLabel, targetUrl } = {}) {
   const events = [];
+  let transientNetworkFailure = null;
   const pushEvent = (event) => {
     events.push({
       at: new Date().toISOString(),
@@ -780,12 +826,17 @@ function createPerfBrowserDiagnostics(page, { scenarioId, runLabel, targetUrl } 
     });
   });
   page.on("requestfailed", (request) => {
+    const failure = truncateDiagnosticText(request.failure()?.errorText || "");
+    const url = truncateDiagnosticText(request.url());
+    if (!transientNetworkFailure && isTransientPerfNetworkFailure(failure)) {
+      transientNetworkFailure = { failure, url };
+    }
     pushEvent({
       kind: "requestfailed",
       method: request.method(),
       resourceType: request.resourceType(),
-      url: truncateDiagnosticText(request.url()),
-      failure: truncateDiagnosticText(request.failure()?.errorText || ""),
+      url,
+      failure,
     });
   });
   page.on("response", (response) => {
@@ -805,6 +856,9 @@ function createPerfBrowserDiagnostics(page, { scenarioId, runLabel, targetUrl } 
     pushEvent({ kind: "page-crash" });
   });
   return {
+    getTransientNetworkFailure() {
+      return transientNetworkFailure;
+    },
     async write(error) {
       const diagnosticScenarioId = sanitizeDiagnosticPathPart(scenarioId);
       const diagnosticRunLabel = sanitizeDiagnosticPathPart(runLabel || "run");
@@ -855,7 +909,10 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
   });
   try {
     await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
-    await waitForPerfSnapshotReady(page, { timeoutMs: 120_000 });
+    await waitForPerfSnapshotReady(page, {
+      timeoutMs: 120_000,
+      getTransientNetworkFailure: diagnostics.getTransientNetworkFailure,
+    });
     await page.waitForTimeout(300);
     const snapshot = await page.evaluate(() => globalThis.__mc_perf__?.snapshot?.() ?? null);
     if (!snapshot) {
@@ -891,9 +948,22 @@ async function measureOneRun(browser, baseUrl, scenarioId, options = {}) {
   }
 }
 
-async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
+async function waitForPerfSnapshotReady(
+  page,
+  {
+    timeoutMs = 120_000,
+    getTransientNetworkFailure = null,
+  } = {},
+) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
+    const transientNetworkFailure =
+      typeof getTransientNetworkFailure === "function" ? getTransientNetworkFailure() : null;
+    if (transientNetworkFailure) {
+      throw new Error(
+        `[perf-baseline] transient network failure ${transientNetworkFailure.failure}: ${transientNetworkFailure.url}`
+      );
+    }
     const snapshot = await readPerfRuntimeState(page);
     if (snapshot.bootError) {
       throw new Error(`[perf-baseline] bootError=${snapshot.bootError}`);
@@ -923,6 +993,23 @@ async function waitForPerfSnapshotReady(page, { timeoutMs = 120_000 } = {}) {
   throw new Error(`[perf-baseline] app did not reach ready state in ${timeoutMs}ms: ${JSON.stringify(finalSnapshot)}`);
 }
 
+async function measureScenarioRun(browser, serverLeaseRef, scenarioId, options) {
+  return runWithTransientPerfNetworkRetry(
+    async () => {
+      serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
+      return measureOneRun(browser, serverLeaseRef.current.baseUrl, scenarioId, options);
+    },
+    {
+      onRetry(error) {
+        const reason = String(error?.message || error || "").split(/\r?\n/, 1)[0];
+        console.warn(
+          `[perf-baseline] Retrying ${scenarioId} ${options.runLabel || "run"} once after transient Chromium network failure: ${reason}`
+        );
+      },
+    },
+  );
+}
+
 async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
   const manifestIdentity = await readScenarioManifestIdentity(scenarioId);
   const featureCount = finiteNumber(manifestIdentity.featureCount);
@@ -930,9 +1017,7 @@ async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
   await ensureDir(scenarioDir);
   const warmups = [];
   for (let index = 0; index < options.warmups; index += 1) {
-    serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
-    const baseUrl = serverLeaseRef.current.baseUrl;
-    const run = await measureOneRun(browser, baseUrl, scenarioId, {
+    const run = await measureScenarioRun(browser, serverLeaseRef, scenarioId, {
       ...options,
       runLabel: `warmup-${String(index + 1).padStart(2, "0")}`,
       urlQuery: options.urlQuery,
@@ -941,9 +1026,7 @@ async function runScenarioSeries(browser, serverLeaseRef, scenarioId, options) {
   }
   const runs = [];
   for (let index = 0; index < options.runs; index += 1) {
-    serverLeaseRef.current = await ensureMeasurementServer(serverLeaseRef.current);
-    const baseUrl = serverLeaseRef.current.baseUrl;
-    const run = await measureOneRun(browser, baseUrl, scenarioId, {
+    const run = await measureScenarioRun(browser, serverLeaseRef, scenarioId, {
       ...options,
       runLabel: `run-${String(index + 1).padStart(2, "0")}`,
       urlQuery: options.urlQuery,
@@ -1142,6 +1225,14 @@ function compareAgainstBaseline(currentReport, baselineReport, threshold) {
     }
   }
   return failures;
+}
+
+function formatPerfRegressionFailures(failures) {
+  return failures
+    .map(
+      (failure) => `${failure.scenarioId}.${failure.metricKey}: current=${failure.currentValue.toFixed(1)}ms baseline=${failure.baselineValue.toFixed(1)}ms limit=${failure.limit.toFixed(1)}ms ratio=${failure.allowedRatio.toFixed(2)}`
+    )
+    .join("\n");
 }
 
 export function validateGateBaselineReport(baselineReport, scenarioIds, baselinePath) {
@@ -1459,6 +1550,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     gitHead,
     mode: options.mode,
+    regressionMode: options.regressionMode,
     baseUrl: measurement.baseUrl,
     config: {
       scenarios: options.scenarios,
@@ -1480,8 +1572,16 @@ async function main() {
     const contractMismatches = collectBaselineContractMismatches(report, baselineReportForGate);
     const renderSampleRoleMismatches = collectGovernedRenderSampleRoleMismatches(report, options.scenarios);
     const failures = compareAgainstBaseline(report, baselineReportForGate, options.threshold);
+    const regressionsEnforced = normalizePerfRegressionMode(options.regressionMode) === "enforce";
     const gateReportPath = path.join(options.rawDir, "perf-gate-current.json");
-    await writeJson(gateReportPath, { report, contractMismatches, renderSampleRoleMismatches, failures });
+    await writeJson(gateReportPath, {
+      report,
+      regressionMode: options.regressionMode,
+      regressionsEnforced,
+      contractMismatches,
+      renderSampleRoleMismatches,
+      failures,
+    });
     if (contractMismatches.length) {
       throw new Error(
         `Perf gate baseline contract mismatch.\n${contractMismatches.map((item) => `- ${item}`).join("\n")}`
@@ -1492,15 +1592,15 @@ async function main() {
         `Perf gate render sample role mismatch.\n${renderSampleRoleMismatches.map((item) => `- ${item}`).join("\n")}`
       );
     }
-    if (failures.length) {
-      const message = failures
-        .map(
-          (failure) => `${failure.scenarioId}.${failure.metricKey}: current=${failure.currentValue.toFixed(1)}ms baseline=${failure.baselineValue.toFixed(1)}ms limit=${failure.limit.toFixed(1)}ms ratio=${failure.allowedRatio.toFixed(2)}`
-        )
-        .join("\n");
-      throw new Error(`Perf gate failed.\n${message}`);
+    if (shouldBlockOnPerfRegressions(options.regressionMode, failures)) {
+      throw new Error(`Perf gate failed.\n${formatPerfRegressionFailures(failures)}`);
     }
-    console.log(`Perf gate passed against ${path.relative(REPO_ROOT, options.baselineJson)}`);
+    if (failures.length) {
+      console.warn(`Perf gate recorded diagnostic-only regressions.\n${formatPerfRegressionFailures(failures)}`);
+    }
+    console.log(
+      `Perf gate passed against ${path.relative(REPO_ROOT, options.baselineJson)} (regressionMode=${options.regressionMode})`
+    );
     return;
   }
 

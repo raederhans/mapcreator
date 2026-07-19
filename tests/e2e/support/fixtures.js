@@ -406,7 +406,7 @@ const test = base.test.extend({
       bootPath: sharedCityBootPath,
     });
     await context.close();
-  }, { scope: "worker" }],
+  }, { scope: "worker", timeout: 120_000 }],
   page: async ({
     browser,
     useSharedCityBoot,

@@ -151,6 +151,16 @@ jobs:
           }
 
           $matchedRuleNames = @($ruleHits | ForEach-Object { $_.name })
+          $regressionEnforcementRuleNames = @(
+            'runtime-js'
+            'app-shell'
+            'dev-server'
+          )
+          $regressionEnforcementRuleHits = @(
+            $matchedRuleNames |
+              Where-Object { $regressionEnforcementRuleNames -contains $_ }
+          )
+          $shouldEnforceRegressions = $regressionEnforcementRuleHits.Count -gt 0
           $shouldRunPerf = $ruleHits.Count -gt 0
           if ($shouldRunPerf) {
             $reason = "run npm run perf:gate because matched rules: $($matchedRuleNames -join ', ')"
@@ -166,6 +176,8 @@ jobs:
             changed_files = $changedFiles
             matched_rules = $ruleHits
             should_run_perf = $shouldRunPerf
+            should_enforce_regressions = $shouldEnforceRegressions
+            regression_enforcement_rules = $regressionEnforcementRuleHits
             reason = $reason
           }
 
@@ -192,6 +204,7 @@ jobs:
           $summary = @(
             '## Perf classifier audit'
             "- should run perf gate: $($shouldRunPerf.ToString().ToLowerInvariant())"
+            "- should enforce performance regressions: $($shouldEnforceRegressions.ToString().ToLowerInvariant())"
             "- reason: $reason"
             ''
             '### Changed files'
@@ -204,6 +217,7 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
 
           "should_run_perf=$($shouldRunPerf.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "should_enforce_regressions=$($shouldEnforceRegressions.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "base_sha=$baseSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "head_sha=$headSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "reason=$reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -317,7 +331,14 @@ jobs:
 
       - name: Run perf gate
         if: steps.classify.outputs.should_run_perf == 'true'
-        run: npm run perf:gate -- --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
+        shell: pwsh
+        run: |
+          $regressionMode = if ('${{ steps.classify.outputs.should_enforce_regressions }}' -eq 'true') {
+            'enforce'
+          } else {
+            'diagnostic'
+          }
+          npm run perf:gate -- --regression-mode $regressionMode --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
 
       - name: Upload perf failure artifacts
         if: failure() && steps.classify.outputs.should_run_perf == 'true'
