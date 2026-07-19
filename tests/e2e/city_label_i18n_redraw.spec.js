@@ -5,10 +5,10 @@ const {
 } = require("./support/fixtures");
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
 
-test.setTimeout(90_000);
+test.setTimeout(240_000);
 test.use({ sharedCityRequireInfraIdle: false });
 const EN_LABEL = "Asteria";
-const ZH_LABEL = "°¢²â³Ç";
+const ZH_LABEL = "\u6d4b\u8bd5\u57ce";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
 async function waitForStableExactRender(page, { timeout = 20_000 } = {}) {
@@ -17,7 +17,7 @@ async function waitForStableExactRender(page, { timeout = 20_000 } = {}) {
     return String(state.renderPhase || "") === "idle"
       && !state.deferExactAfterSettle
       && !state.exactAfterSettleHandle;
-  }, { timeout });
+  }, undefined, { timeout });
 }
 
 async function ensureLanguage(page, targetLanguage) {
@@ -34,6 +34,19 @@ async function ensureLanguage(page, targetLanguage) {
     return String(state.currentLanguage || "") === expectedLanguage;
   }, targetLanguage, { timeout: 20_000 });
   await waitForStableExactRender(page);
+}
+
+async function clearCityLabelDrawLog(page) {
+  await page.evaluate(() => {
+    globalThis.__resetE2ECityLabelDraws?.();
+  });
+}
+
+async function waitForLabelDraw(page, label) {
+  await page.waitForFunction((expectedLabel) => {
+    const log = Array.isArray(globalThis.__e2eCityLabelDraws) ? globalThis.__e2eCityLabelDraws : [];
+    return log.some((entry) => String(entry?.text || "") === expectedLabel);
+  }, label, { timeout: 20_000 });
 }
 
 test("language toggle redraws city labels immediately without needing pan or zoom", async ({ page }) => {
@@ -76,6 +89,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
     requireInfraIdle: true,
   });
   await ensureLanguage(page, "en");
+  await clearCityLabelDrawLog(page);
 
   const targetCityId = await page.evaluate(async ({ enLabel, zhLabel }) => {
     const { state } = await import("/js/core/state.js");
@@ -123,6 +137,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
 
   expect(targetCityId).toBeTruthy();
   await waitForStableExactRender(page);
+  await waitForLabelDraw(page, EN_LABEL);
 
   const readLabelState = async () => page.evaluate(async (expectedCityId) => {
     const { state } = await import("/js/core/state.js");
@@ -151,6 +166,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
   expect(englishState.currentLanguage).toBe("en");
   expect(englishState.label).toBe(EN_LABEL);
 
+  await clearCityLabelDrawLog(page);
   await page.locator("#btnToggleLang").click();
   await page.waitForFunction(async (previousRecordedAt) => {
     const { state } = await import("/js/core/state.js");
@@ -158,11 +174,13 @@ test("language toggle redraws city labels immediately without needing pan or zoo
       && Number(state.renderPerfMetrics?.drawLabelsPass?.recordedAt || 0) > Number(previousRecordedAt || 0);
   }, englishState.recordedAt, { timeout: 20_000 });
   await waitForStableExactRender(page);
+  await waitForLabelDraw(page, ZH_LABEL);
 
   const zhState = await readLabelState();
   expect(zhState.currentLanguage).toBe("zh");
   expect(zhState.label).toBe(ZH_LABEL);
 
+  await clearCityLabelDrawLog(page);
   await page.locator("#btnToggleLang").click();
   await page.waitForFunction(async (previousRecordedAt) => {
     const { state } = await import("/js/core/state.js");
@@ -170,6 +188,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
       && Number(state.renderPerfMetrics?.drawLabelsPass?.recordedAt || 0) > Number(previousRecordedAt || 0);
   }, zhState.recordedAt, { timeout: 20_000 });
   await waitForStableExactRender(page);
+  await waitForLabelDraw(page, EN_LABEL);
 
   const finalState = await readLabelState();
   expect(finalState.currentLanguage).toBe("en");

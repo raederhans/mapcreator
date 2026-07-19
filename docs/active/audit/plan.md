@@ -6,8 +6,8 @@
 
 ## Scope
 
-- 审计范围：`4eab36c98d16804590db8009c3c903c92a8972a5^..18d6ffae102caf41e2b53e7157bdae0ab1c1d8f4`
-- 共 8 个非纯文档提交，覆盖性能 gate 身份、场景身份、共享交互 idle、视觉就绪与 city lights E2E。
+- 审计范围：`4905fb696d9a5222aea628937fd2bc804109ae1f^..8a02bc8d4b306485ed4308b7b645f80607511524`，并复核同一功能簇的 `4905fb69`。
+- 覆盖 same-runner 性能 gate、PR merge candidate 身份、回归阻断策略、selector 路由与 city visual E2E。
 - 检查当前未提交修改、worktree、未合并分支，只整合已证明安全且属于本轮范围的交付。
 
 ## Sources of truth
@@ -26,6 +26,7 @@
 - [x] Stage 4: 执行 SF-ATS 自适应选择、目标测试和必要主线程检查。
 - [x] Stage 5: 完成独立复核、提交、推送、Git/worktree 状态同步。
 - [x] Stage 6: 修复 GitHub-hosted follow-up 失败，重新验证功能提交并完成最终 closeout。
+- [ ] Stage 7: 补强逐规则策略、PR candidate 身份、city visual 证据与测试预算，重新验证、提交并完成远端检查。
 
 ## Acceptance criteria
 

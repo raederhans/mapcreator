@@ -17,6 +17,7 @@ const DEFAULT_FAILURE_SELECTORS = Object.freeze(
   mergeSmokeFailureSelectors("bootShell", "mainShell", "scenarioShell", "cityRuntime"),
 );
 const PAGE_EVENT_NAMES = Object.freeze(["console", "pageerror", "requestfailed", "response"]);
+const SHARED_CITY_BOOT_TIMEOUT_MS = 150_000;
 
 function normalizeStorageKeys(storageKeys = DEFAULT_STORAGE_KEYS) {
   return [...new Set((Array.isArray(storageKeys) ? storageKeys : [storageKeys]).filter(Boolean).map((value) => String(value)))];
@@ -406,7 +407,7 @@ const test = base.test.extend({
       bootPath: sharedCityBootPath,
     });
     await context.close();
-  }, { scope: "worker", timeout: 120_000 }],
+  }, { scope: "worker", timeout: SHARED_CITY_BOOT_TIMEOUT_MS }],
   page: async ({
     browser,
     useSharedCityBoot,

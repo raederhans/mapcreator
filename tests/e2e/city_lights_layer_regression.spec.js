@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const { test, expect, prepareSharedCityRuntimeState } = require("./support/fixtures");
 const {
-  waitForShellReady,
   waitForRenderIdle,
 } = require("./support/playwright-app");
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");

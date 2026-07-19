@@ -42,18 +42,19 @@ jobs:
           $eventPayload = Get-Content -Raw -Path $env:GITHUB_EVENT_PATH | ConvertFrom-Json
           if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
             $baseSha = $eventPayload.pull_request.base.sha
-            $headSha = $eventPayload.pull_request.head.sha
+            $diffHeadSha = $eventPayload.pull_request.head.sha
           } else {
             $baseSha = $eventPayload.before
-            $headSha = if ($eventPayload.after) { $eventPayload.after } else { $env:GITHUB_SHA }
+            $diffHeadSha = if ($eventPayload.after) { $eventPayload.after } else { $env:GITHUB_SHA }
           }
+          $candidateSha = (git rev-parse HEAD).Trim()
 
           if (-not $baseSha -or $baseSha -match '^0+$') {
-            $baseSha = (git rev-parse "$headSha^" 2>$null)
+            $baseSha = (git rev-parse "$diffHeadSha^" 2>$null)
           }
 
-          if (-not $headSha) {
-            throw 'Unable to resolve head SHA for perf gate classifier'
+          if (-not $diffHeadSha -or -not $candidateSha) {
+            throw 'Unable to resolve diff head or checked-out candidate SHA for perf gate classifier'
           }
 
           git cat-file -e "$baseSha^{commit}" 2>$null
@@ -61,7 +62,7 @@ jobs:
             git fetch --no-tags --depth=50 origin $baseSha
           }
 
-          $diffRange = if ($baseSha) { "$baseSha...$headSha" } else { $headSha }
+          $diffRange = if ($baseSha) { "$baseSha...$diffHeadSha" } else { $diffHeadSha }
           $changedFiles = @(
             git diff --name-only $diffRange 2>$null |
               ForEach-Object { $_.Trim().Replace('\', '/') } |
@@ -79,51 +80,61 @@ jobs:
             @{
               name = 'perf-workflow'
               reason = 'perf gate workflow changed'
+              regression_policy = 'diagnostic'
               patterns = @('.github/workflows/perf-pr-gate.yml')
             },
             @{
               name = 'perf-baseline-docs'
               reason = 'perf baseline or perf docs changed'
+              regression_policy = 'diagnostic'
               patterns = @('docs/perf/**')
             },
             @{
               name = 'runtime-js'
               reason = 'runtime JavaScript can change measured behavior'
+              regression_policy = 'enforce'
               patterns = @('js/**')
             },
             @{
               name = 'app-shell'
               reason = 'app shell markup or styles can change startup and rendering behavior'
+              regression_policy = 'enforce'
               patterns = @('index.html', 'css/**', 'vendor/**')
             },
             @{
               name = 'scenario-registry'
               reason = 'scenario registry can change startup selection and measured scenario inputs'
+              regression_policy = 'diagnostic'
               patterns = @('data/scenarios/index.json')
             },
             @{
               name = 'perf-scenario-data'
               reason = 'measured scenario data changed'
+              regression_policy = 'diagnostic'
               patterns = @('data/scenarios/tno_1962/**', 'data/scenarios/hoi4_1939/**')
             },
             @{
               name = 'playwright-app-support'
               reason = 'playwright app support affects perf harness'
+              regression_policy = 'diagnostic'
               patterns = @('tests/e2e/support/**', 'playwright.config.cjs')
             },
             @{
               name = 'perf-tools'
               reason = 'perf tooling changed'
+              regression_policy = 'diagnostic'
               patterns = @('tools/perf/**')
             },
             @{
               name = 'dev-server'
               reason = 'dev server behavior affects perf runs'
+              regression_policy = 'diagnostic'
               patterns = @('tools/dev_server.py')
             },
             @{
               name = 'node-manifests'
               reason = 'dependency manifest can affect perf gate environment'
+              regression_policy = 'diagnostic'
               patterns = @('package.json', 'package-lock.json')
             }
           )
@@ -144,6 +155,7 @@ jobs:
               $ruleHits += [ordered]@{
                 name = $rule.name
                 reason = $rule.reason
+                regression_policy = $rule.regression_policy
                 patterns = $rule.patterns
                 files = $matchedFilesForRule
               }
@@ -151,14 +163,10 @@ jobs:
           }
 
           $matchedRuleNames = @($ruleHits | ForEach-Object { $_.name })
-          $regressionEnforcementRuleNames = @(
-            'runtime-js'
-            'app-shell'
-            'dev-server'
-          )
           $regressionEnforcementRuleHits = @(
-            $matchedRuleNames |
-              Where-Object { $regressionEnforcementRuleNames -contains $_ }
+            $ruleHits |
+              Where-Object { $_.regression_policy -eq 'enforce' } |
+              ForEach-Object { $_.name }
           )
           $shouldEnforceRegressions = $regressionEnforcementRuleHits.Count -gt 0
           $shouldRunPerf = $ruleHits.Count -gt 0
@@ -172,7 +180,8 @@ jobs:
 
           $audit = [ordered]@{
             base_sha = $baseSha
-            head_sha = $headSha
+            diff_head_sha = $diffHeadSha
+            candidate_sha = $candidateSha
             changed_files = $changedFiles
             matched_rules = $ruleHits
             should_run_perf = $shouldRunPerf
@@ -219,7 +228,8 @@ jobs:
           "should_run_perf=$($shouldRunPerf.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "should_enforce_regressions=$($shouldEnforceRegressions.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "base_sha=$baseSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "head_sha=$headSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "diff_head_sha=$diffHeadSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "candidate_sha=$candidateSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "reason=$reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Upload perf classifier audit
@@ -267,9 +277,9 @@ jobs:
         shell: pwsh
         run: |
           $baseSha = '${{ steps.classify.outputs.base_sha }}'
-          $headSha = '${{ steps.classify.outputs.head_sha }}'
-          if (-not $baseSha -or -not $headSha) {
-            throw 'Missing base or head SHA for same-runner performance baseline'
+          $candidateSha = '${{ steps.classify.outputs.candidate_sha }}'
+          if (-not $baseSha -or -not $candidateSha) {
+            throw 'Missing base or candidate SHA for same-runner performance baseline'
           }
 
           $baseWorktree = Join-Path $env:GITHUB_WORKSPACE '.runtime/tmp/perf-pr-gate-base'
@@ -290,10 +300,10 @@ jobs:
               'data/scenarios/index.json'
               'data/scenarios/tno_1962'
               'data/scenarios/hoi4_1939'
-              'tools/perf/run_baseline.mjs'
-              'tools/perf/render_sample_role_policy.mjs'
+              'tools/perf'
+              'tools/dev_server.py'
             )
-            git -C $baseWorktree restore --source=$headSha --staged --worktree -- $governedHeadInputs
+            git -C $baseWorktree restore --source=$candidateSha --staged --worktree -- $governedHeadInputs
             if ($LASTEXITCODE -ne 0) {
               throw 'Failed to project governed head inputs into the base worktree'
             }
@@ -340,11 +350,11 @@ jobs:
           }
           npm run perf:gate -- --regression-mode $regressionMode --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
 
-      - name: Upload perf failure artifacts
-        if: failure() && steps.classify.outputs.should_run_perf == 'true'
+      - name: Upload perf evidence
+        if: always() && steps.classify.outputs.should_run_perf == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: perf-pr-gate-failure-artifacts
+          name: perf-pr-gate-evidence
           if-no-files-found: ignore
           path: |
             .runtime/output/perf/**

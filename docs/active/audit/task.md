@@ -2,7 +2,7 @@
 
 ## Current status
 
-完成：最近 8 个相关功能提交已审计并修复；follow-up `8c1f881a` 的性能、合同、transport 和 Pages 部署工作流全部成功。
+进行中：已整合远端有界网络恢复与本轮逐规则阈值、PR candidate、证据上传、selector route、City canvas draw 和 timeout 修复；正在完成 rebase 后验证与远端检查。
 
 ## Checklist
 
@@ -18,9 +18,15 @@
 - [x] 证明 base/current 应用代码相同时单批次阈值会产生 runner 噪声假失败。
 - [x] 将运行时改动设为阈值阻断，将 gate/tooling 自检的数值差异设为诊断证据。
 - [x] 用浏览器诊断证明本地 120 秒等待来自 `net::ERR_NETWORK_CHANGED`，并加入有界单次恢复。
-- [x] 修复共享 city worker fixture 的 30 秒外层预算与 120 秒内部启动等待冲突。
-- [x] 复核两个隔离 worktree，确认均未达到 `ready-for-integration`。
-- [x] 完成 follow-up Lore commit、push、GitHub Actions 验证与清理。
+- [x] 完成 follow-up `8c1f881a` 的 Lore commit、push、GitHub Actions 验证与 closeout。
+- [x] 把 classifier 规则策略收口到每条规则，并区分 enforce / diagnostic。
+- [x] 分开 `diffHeadSha` 与实际 checkout `candidateSha`。
+- [x] 给 perf workflow 增加 SF-ATS 精确路由。
+- [x] 收紧 City label canvas draw 断言并删除 City Lights 未使用 import。
+- [x] 修复共享 city worker fixture 与 City label 用例预算合同。
+- [x] 完成 child-safe、City label、City lights 和 diff 检查。
+- [x] 复核 P4 worktree，确认仍处于独立开发状态。
+- [ ] 完成 Lore commit、push、GitHub Actions 验证与清理。
 
 ## Validation evidence
 
@@ -30,9 +36,9 @@
 | `git rev-list --left-right --count main...origin/main` | `0 0` |
 | `git status --short --branch` | clean `main...origin/main` |
 | `git worktree list --porcelain` | 仅当前 main worktree |
-| `node --test tests/perf_role_governed_report_behavior.test.mjs` | follow-up 后 23/23 passed；覆盖分类式阈值、网络错误识别、单次恢复和持续失败 |
-| `py -3 -m unittest tests.test_perf_gate_contract -q` | 24/24 passed |
-| `py -3 -m unittest tests.test_e2e_structural_tooling -q` | 36/36 passed |
+| `node --test tests/perf_role_governed_report_behavior.test.mjs` | 23/23 passed；覆盖分类式阈值、网络错误识别、单次恢复和持续失败 |
+| `py -3 -m unittest tests.test_perf_gate_contract -q` | 25/25 passed |
+| `py -3 -m unittest tests.test_e2e_structural_tooling -q` | 38/38 passed |
 | `node tools/select_verification_targets.mjs --check` | 337 routes passed |
 | SF-ATS changed-file dry-run | 13 files；5 个 unmatched 均为非生产 workflow/task-doc/timeout-allowlist 路径 |
 | SF-ATS follow-up dry-run | 9 files；19 个推荐命令；影响 perf、city-runtime、test-routing、playwright-observability；3 个 unmatched 均为 workflow/task docs |
@@ -49,8 +55,8 @@
 | GitHub Actions run `29693893898` | perf-pr-gate success；base baseline 与 diagnostic current gate 完整通过，12m2s |
 | GitHub Actions runs `29693893889`, `29693893875`, `29693893945` | Scenario Contract、Transport Contract、Build/Deploy + Pages smoke 全部 success |
 | `npm run -s python -- -m unittest tests.test_e2e_structural_tooling -q` | 36/36 passed；锁定 shared city worker fixture 的独立 120 秒预算 |
-| `node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js` | 修正 fixture timeout 后 1/1 passed，测试 1.1m、run 2.0m |
-| `node tools/e2e_layering.mjs run-spec tests/e2e/city_lights_layer_regression.spec.js` | 1/1 passed，1.1m；page/console/network 问题均为空 |
+| `node tools/e2e_layering.mjs run-spec tests/e2e/city_label_i18n_redraw.spec.js` | 最终合并状态 1/1 passed，测试 2.0m、run 3.2m；EN/ZH/EN 实际 canvas draw、console、network 全通过 |
+| `node tools/e2e_layering.mjs run-spec tests/e2e/city_lights_layer_regression.spec.js` | 1/1 passed，测试 2.7m、run 3.5m；page/console/network 问题均为空 |
 | 临时 base worktree 受治理输入投影探针 | exit 0；lockfile 与 TNO manifest 哈希匹配；worktree 已清理 |
 | code-reviewer 最终复核 | APPROVE；原 HIGH/LOW 均关闭 |
 | architect 最终复核 | APPROVE；same-runner dependency/workload identity BLOCK 已关闭 |
