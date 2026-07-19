@@ -18,6 +18,7 @@ import {
   summarizeSnapshot,
   validateGateBaselineReport,
   validateGateCurrentReport,
+  validateGateScenarioSelection,
 } from "../tools/perf/run_baseline.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -293,6 +294,21 @@ test("baseline admission requires the current schema-2 oracle", () => {
   );
 });
 
+test("gate scenario selection fails before measurement unless the canonical set is exact", () => {
+  assert.doesNotThrow(() => validateGateScenarioSelection(["tno_1962", "hoi4_1939"]));
+  for (const scenarios of [
+    ["tno_1962"],
+    ["hoi4_1939", "tno_1962"],
+    ["tno_1962", "tno_1962"],
+    ["blank_base", "tno_1962", "hoi4_1939"],
+  ]) {
+    assert.throws(
+      () => validateGateScenarioSelection(scenarios),
+      /Gate scenarios must exactly match/,
+    );
+  }
+});
+
 function makeSchema2IdentityReport() {
   return {
     schemaVersion: 2,
@@ -301,6 +317,19 @@ function makeSchema2IdentityReport() {
     environment: {
       os: "win32 10.0.26200",
       platform: "win32",
+      release: "10.0.26200",
+      arch: "x64",
+      cpuModel: "Fixture CPU",
+      cpuCount: 24,
+      memoryGiB: 64,
+      runnerIdentity: {
+        provider: "local",
+        environment: "local",
+        os: "win32",
+        arch: "x64",
+        imageOs: "win32",
+        imageVersion: "10.0.26200",
+      },
       node: "v22.23.0",
       nodeMajor: 22,
       browser: "chromium-headless",
@@ -308,7 +337,7 @@ function makeSchema2IdentityReport() {
       packageLockSha256: "a".repeat(64),
     },
     config: {
-      scenarios: ["tno_1962"],
+      scenarios: ["tno_1962", "hoi4_1939"],
       runs: 5,
       warmups: 3,
       urlQuery: { perf: 1 },
@@ -318,6 +347,10 @@ function makeSchema2IdentityReport() {
         tno_1962: {
           manifestSha256: "b".repeat(64),
           featureCount: 12865,
+        },
+        hoi4_1939: {
+          manifestSha256: "c".repeat(64),
+          featureCount: 12602,
         },
       },
     },
@@ -379,8 +412,36 @@ test("baseline identity comparison accepts observation-only scenario supersets",
   assert.match(collectBaselineContractMismatches(current, baseline)[0], /scenarios mismatch/);
 });
 
+test("baseline identity comparison rejects an incomplete canonical gate scenario set", () => {
+  const baseline = makeSchema2IdentityReport();
+  const current = makeSchema2IdentityReport();
+  baseline.config.scenarios = ["blank_base", "tno_1962", "hoi4_1939"];
+  current.config.scenarios = ["tno_1962"];
+
+  assert.match(
+    collectBaselineContractMismatches(current, baseline)[0],
+    /scenarios mismatch/,
+  );
+});
+
+test("baseline identity comparison reports invalid scenario collection types without throwing", () => {
+  const baseline = makeSchema2IdentityReport();
+  const current = makeSchema2IdentityReport();
+  current.config.scenarios = { tno_1962: true, hoi4_1939: true };
+
+  const mismatches = collectBaselineContractMismatches(current, baseline);
+  assert.equal(mismatches.length, 1);
+  assert.match(mismatches[0], /scenarios mismatch/);
+});
+
 const missingSchema2IdentityCases = [
   ["platform", (report) => { delete report.environment.platform; }, /os platform mismatch/],
+  ["release", (report) => { delete report.environment.release; }, /os release mismatch/],
+  ["arch", (report) => { delete report.environment.arch; }, /architecture mismatch/],
+  ["cpuModel", (report) => { delete report.environment.cpuModel; }, /CPU model mismatch/],
+  ["cpuCount", (report) => { delete report.environment.cpuCount; }, /CPU count mismatch/],
+  ["memoryGiB", (report) => { delete report.environment.memoryGiB; }, /memory class mismatch/],
+  ["runnerIdentity", (report) => { delete report.environment.runnerIdentity; }, /runner identity mismatch/],
   ["nodeMajor", (report) => { delete report.environment.nodeMajor; }, /node major mismatch/],
   ["browser", (report) => { delete report.environment.browser; }, /browser mismatch/],
   ["browserVersion", (report) => { delete report.environment.browserVersion; }, /browser version mismatch/],
@@ -416,6 +477,55 @@ test("baseline identity comparison rejects current-side and bilateral schema-2 i
     mutate(baseline);
     mismatches = collectBaselineContractMismatches(current, baseline);
     assert.equal(mismatches.length, 1, `${label} bilateral gap should still produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
+});
+
+test("baseline identity comparison rejects malformed exact platform and node identities", () => {
+  const cases = [
+    ["platform suffix", (report) => { report.environment.platform = "win32 extra"; }, /os platform mismatch/],
+    ["fractional nodeMajor", (report) => { report.environment.nodeMajor = 22.9; }, /node major mismatch/],
+    ["string nodeMajor", (report) => { report.environment.nodeMajor = "22junk"; }, /node major mismatch/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    let baseline = makeSchema2IdentityReport();
+    let current = makeSchema2IdentityReport();
+    mutate(baseline);
+    let mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} baseline-side drift should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+
+    baseline = makeSchema2IdentityReport();
+    current = makeSchema2IdentityReport();
+    mutate(current);
+    mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} current-side drift should produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+
+    mutate(baseline);
+    mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} bilateral drift should still produce one focused mismatch`);
+    assert.match(mismatches[0], expected);
+  }
+});
+
+test("baseline identity comparison rejects machine and runner drift", () => {
+  const cases = [
+    ["release", (report) => { report.environment.release = "10.0.99999"; }, /os release mismatch/],
+    ["arch", (report) => { report.environment.arch = "arm64"; }, /architecture mismatch/],
+    ["cpuModel", (report) => { report.environment.cpuModel = "Different CPU"; }, /CPU model mismatch/],
+    ["cpuCount", (report) => { report.environment.cpuCount += 1; }, /CPU count mismatch/],
+    ["memoryGiB", (report) => { report.environment.memoryGiB += 8; }, /memory class mismatch/],
+    ["runnerIdentity", (report) => { report.environment.runnerIdentity.imageVersion = "different"; }, /runner identity mismatch/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const baseline = makeSchema2IdentityReport();
+    const current = makeSchema2IdentityReport();
+    mutate(current);
+    const mismatches = collectBaselineContractMismatches(current, baseline);
+    assert.equal(mismatches.length, 1, `${label} should produce one focused mismatch`);
     assert.match(mismatches[0], expected);
   }
 });

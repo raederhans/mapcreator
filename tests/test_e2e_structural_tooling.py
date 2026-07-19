@@ -100,29 +100,31 @@ class E2eStructuralToolingContractTest(unittest.TestCase):
         city_lights_source = (REPO_ROOT / "tests" / "e2e" / "city_lights_layer_regression.spec.js").read_text(encoding="utf-8")
         self.assertIn("sharedCityRequireInfraIdle: [true", fixtures_source)
         self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_label_source)
-        self.assertIn("requireInfraIdle: false", city_label_source)
+        self.assertIn("requireInfraIdle: true", city_label_source)
+        self.assertNotIn("async function ensureScenario", city_label_source)
+        self.assertNotIn("async function ensureBaseCityDataLoaded", city_label_source)
+        self.assertNotIn("async function setZoomPercent", city_label_source)
         self.assertIn("test.use({ sharedCityRequireInfraIdle: false })", city_lights_source)
-        self.assertIn("requireInfraIdle: false", city_lights_source)
+        self.assertIn("requireInfraIdle: true", city_lights_source)
         self.assertIn("async function waitForVisualRenderIdle(page, options = {})", city_lights_source)
         self.assertIn("await waitForRenderIdle(page, { ...options, requireInfra: false });", city_lights_source)
+        self.assertNotIn("async function waitForScenarioInteractionsReady", city_lights_source)
+        self.assertNotIn("async function waitForDefaultScenario", city_lights_source)
+        self.assertNotIn("async function ensureScenario", city_lights_source)
 
-        visual_wait_callers = (
-            city_lights_source[
-                city_lights_source.index("async function configureCityLights"):
-                city_lights_source.index("async function ensureScenario")
-            ],
-            city_lights_source[
-                city_lights_source.index("async function ensureScenario"):
-                city_lights_source.index("async function setMapZoom")
-            ],
-            city_lights_source[
-                city_lights_source.index("async function setMapZoom"):
-                city_lights_source.index("async function sampleWindowLuminance")
-            ],
-        )
-        for caller_source in visual_wait_callers:
-            self.assertIn("await waitForVisualRenderIdle(page", caller_source)
-            self.assertNotIn("await waitForRenderIdle(page", caller_source)
+        appearance_wait_caller = city_lights_source[
+            city_lights_source.index("async function configureCityLights"):
+            city_lights_source.index("async function setMapZoom")
+        ]
+        self.assertIn("await waitForVisualRenderIdle(page", appearance_wait_caller)
+        self.assertNotIn("await waitForRenderIdle(page", appearance_wait_caller)
+
+        final_visual_wait_caller = city_lights_source[
+            city_lights_source.index("async function setMapZoom"):
+            city_lights_source.index("async function sampleWindowLuminance")
+        ]
+        self.assertIn("await waitForRenderIdle(page", final_visual_wait_caller)
+        self.assertNotIn("await waitForVisualRenderIdle(page", final_visual_wait_caller)
 
     def test_pages_public_release_gate_requires_explicit_candidate_url(self) -> None:
         package_json = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))

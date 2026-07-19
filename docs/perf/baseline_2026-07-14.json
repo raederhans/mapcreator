@@ -35,6 +35,18 @@
     "os": "win32 10.0.26200",
     "platform": "win32",
     "release": "10.0.26200",
+    "arch": "x64",
+    "cpuModel": "Intel(R) Core(TM) Ultra 9 285HX",
+    "cpuCount": 24,
+    "memoryGiB": 64,
+    "runnerIdentity": {
+      "provider": "local",
+      "environment": "local",
+      "os": "win32",
+      "arch": "x64",
+      "imageOs": "win32",
+      "imageVersion": "10.0.26200"
+    },
     "node": "v22.23.0",
     "nodeMajor": 22,
     "browser": "chromium-headless",

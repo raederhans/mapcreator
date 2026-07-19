@@ -15,9 +15,9 @@ permissions:
 jobs:
   perf-gate:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
-      PLAYWRIGHT_BROWSERS_PATH: .runtime/browser/ms-playwright
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.runtime/browser/ms-playwright
       PERF_DEV_SERVER_READY_TIMEOUT_MS: "90000"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -204,6 +204,8 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
 
           "should_run_perf=$($shouldRunPerf.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "base_sha=$baseSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "head_sha=$headSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "reason=$reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Upload perf classifier audit
@@ -246,9 +248,65 @@ jobs:
         if: steps.classify.outputs.should_run_perf == 'true'
         run: npx playwright install chromium
 
+      - name: Generate same-runner base baseline
+        if: steps.classify.outputs.should_run_perf == 'true'
+        shell: pwsh
+        run: |
+          $baseSha = '${{ steps.classify.outputs.base_sha }}'
+          $headSha = '${{ steps.classify.outputs.head_sha }}'
+          if (-not $baseSha -or -not $headSha) {
+            throw 'Missing base or head SHA for same-runner performance baseline'
+          }
+
+          $baseWorktree = Join-Path $env:GITHUB_WORKSPACE '.runtime/tmp/perf-pr-gate-base'
+          $baselineJson = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base.json'
+          $baselineRawDir = Join-Path $env:GITHUB_WORKSPACE '.runtime/output/perf/perf-pr-gate-base-raw'
+          New-Item -ItemType Directory -Force -Path (Split-Path $baselineJson), $baselineRawDir | Out-Null
+
+          git worktree add --detach $baseWorktree $baseSha
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to create base worktree for $baseSha"
+          }
+
+          try {
+            $governedHeadInputs = @(
+              'package.json'
+              'package-lock.json'
+              'data/scenarios/index.json'
+              'data/scenarios/tno_1962'
+              'data/scenarios/hoi4_1939'
+              'tools/perf/run_baseline.mjs'
+              'tools/perf/render_sample_role_policy.mjs'
+            )
+            git -C $baseWorktree restore --source=$headSha --staged --worktree -- $governedHeadInputs
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Failed to project governed head inputs into the base worktree'
+            }
+
+            Push-Location $baseWorktree
+            try {
+              npm ci
+              if ($LASTEXITCODE -ne 0) {
+                throw 'Failed to install base worktree dependencies'
+              }
+              npx playwright install chromium
+              if ($LASTEXITCODE -ne 0) {
+                throw 'Failed to install base worktree Chromium'
+              }
+              node tools/perf/run_baseline.mjs --mode baseline --warmups 3 --write-markdown false --baseline-json $baselineJson --raw-dir $baselineRawDir
+              if ($LASTEXITCODE -ne 0) {
+                throw 'Failed to generate same-runner base baseline'
+              }
+            } finally {
+              Pop-Location
+            }
+          } finally {
+            git worktree remove --force $baseWorktree
+          }
+
       - name: Run perf gate
         if: steps.classify.outputs.should_run_perf == 'true'
-        run: npm run perf:gate
+        run: npm run perf:gate -- --baseline-json .runtime/output/perf/perf-pr-gate-base.json --raw-dir .runtime/output/perf/perf-pr-gate-current
 
       - name: Upload perf failure artifacts
         if: failure() && steps.classify.outputs.should_run_perf == 'true'

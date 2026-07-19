@@ -3,7 +3,6 @@ const path = require("path");
 const { test, expect, prepareSharedCityRuntimeState } = require("./support/fixtures");
 const {
   waitForShellReady,
-  waitForScenarioApplyIdle,
   waitForRenderIdle,
 } = require("./support/playwright-app");
 const { getConsoleIgnorePatterns } = require("./support/expectations/console-allowlist");
@@ -219,26 +218,7 @@ async function waitForMapReady(page) {
     scenarioApplyReason: "city-lights-layer-regression",
     loadBaseCityDataReason: "e2e-city-lights-regression",
     timeout: 30_000,
-    requireInfraIdle: false,
-  });
-}
-
-async function waitForScenarioInteractionsReady(page) {
-  await waitForScenarioApplyIdle(page, { timeout: 30000 });
-}
-
-async function waitForDefaultScenario(page) {
-  await expect.poll(async () => page.evaluate(async () => {
-    const { state } = await import('/js/core/state.js');
-    return {
-      activeScenarioId: String(state.activeScenarioId || ''),
-      renderPhase: String(state.renderPhase || ''),
-      scenarioApplyInFlight: !!state.scenarioApplyInFlight,
-    };
-  }), { timeout: 30000 }).toEqual({
-    activeScenarioId: 'tno_1962',
-    renderPhase: 'idle',
-    scenarioApplyInFlight: false,
+    requireInfraIdle: true,
   });
 }
 
@@ -382,38 +362,6 @@ async function configureCityLights(page, style, enabled, overrides = {}) {
   await waitForVisualRenderIdle(page, { timeout: 30000 });
 }
 
-async function ensureScenario(page, scenarioId) {
-  await waitForScenarioInteractionsReady(page);
-  await page.waitForFunction((targetScenarioId) => {
-    const select = document.querySelector('#scenarioSelect');
-    return !!select && !!select.querySelector(`option[value="${targetScenarioId}"]`);
-  }, scenarioId);
-
-  const activeScenarioId = await page.evaluate(async () => {
-    const { state } = await import('/js/core/state.js');
-    return String(state.activeScenarioId || '');
-  });
-
-  if (activeScenarioId !== scenarioId) {
-    await page.evaluate(async (targetScenarioId) => {
-      const select = document.querySelector('#scenarioSelect');
-      if (select instanceof HTMLSelectElement) {
-        select.value = targetScenarioId;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      const { applyScenarioByIdCommand } = await import('/js/core/scenario_dispatcher.js');
-      await applyScenarioByIdCommand(targetScenarioId, {
-        renderMode: 'flush',
-        markDirtyReason: '',
-        showToastOnComplete: false,
-      });
-    }, scenarioId);
-  }
-
-  await waitForScenarioApplyIdle(page, { scenarioId, timeout: 30000 });
-  await waitForVisualRenderIdle(page, { scenarioId, timeout: 30000 });
-}
-
 async function setMapZoom(page, percent) {
   await page.evaluate(async (targetPercent) => {
     const { resetZoomToFit, setZoomPercent } = await import('/js/core/map_renderer.js');
@@ -425,7 +373,7 @@ async function setMapZoom(page, percent) {
     const scale = Number(state.zoomTransform?.k || 1);
     return Math.abs(scale - targetScale) < 0.02;
   }, Math.max(0.01, Number(percent) / 100), { timeout: 30000 });
-  await waitForVisualRenderIdle(page, { timeout: 30000 });
+  await waitForRenderIdle(page, { timeout: 30000 });
 }
 
 async function sampleWindowLuminance(page, point, radiusPx = 20) {

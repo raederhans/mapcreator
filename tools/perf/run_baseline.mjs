@@ -19,6 +19,7 @@ import {
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SCENARIOS = ["blank_base", "tno_1962", "hoi4_1939"];
 const DEFAULT_GATE_SCENARIOS = ["tno_1962", "hoi4_1939"];
+const NODE_PLATFORM_IDS = new Set(["aix", "android", "darwin", "freebsd", "linux", "openbsd", "sunos", "win32"]);
 const PERF_BASELINE_DATE = "2026-07-14";
 const DEFAULT_BASELINE_JSON = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.json`);
 const DEFAULT_BASELINE_MD = path.join(REPO_ROOT, "docs", "perf", `baseline_${PERF_BASELINE_DATE}.md`);
@@ -504,13 +505,43 @@ function getScenarioSampleRole(scenarioId) {
   return DEFAULT_GATE_SCENARIOS.includes(scenarioId) ? "gate" : "observation";
 }
 
-function normalizeOsPlatform(value) {
-  const label = String(value || "").trim();
-  if (!label) {
-    return "";
+function readCanonicalNodePlatform(value) {
+  return typeof value === "string" && NODE_PLATFORM_IDS.has(value) ? value : "";
+}
+
+function readPositiveIntegerIdentity(value) {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+}
+
+function readRequiredIdentityString(value) {
+  return typeof value === "string" && value.trim() === value && value ? value : "";
+}
+
+function readRunnerIdentity(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
   }
-  const [platformLabel = ""] = label.split(/\s+/, 1);
-  return platformLabel.trim();
+  const identity = {
+    provider: readRequiredIdentityString(value.provider),
+    environment: readRequiredIdentityString(value.environment),
+    os: readRequiredIdentityString(value.os),
+    arch: readRequiredIdentityString(value.arch),
+    imageOs: readRequiredIdentityString(value.imageOs),
+    imageVersion: readRequiredIdentityString(value.imageVersion),
+  };
+  return Object.values(identity).every(Boolean) ? identity : null;
+}
+
+function collectRunnerIdentity() {
+  const provider = process.env.GITHUB_ACTIONS === "true" ? "github-actions" : "local";
+  return {
+    provider,
+    environment: String(process.env.RUNNER_ENVIRONMENT || provider),
+    os: String(process.env.RUNNER_OS || os.platform()),
+    arch: String(process.env.RUNNER_ARCH || os.arch()),
+    imageOs: String(process.env.ImageOS || process.env.RUNNER_OS || os.platform()),
+    imageVersion: String(process.env.ImageVersion || os.release()),
+  };
 }
 
 function parseNodeMajor(value) {
@@ -522,10 +553,16 @@ function parseNodeMajor(value) {
 }
 
 function collectEnvironment({ browserVersion = "", packageLockSha256 = "" } = {}) {
+  const cpus = os.cpus();
   return {
     os: `${os.platform()} ${os.release()}`,
     platform: os.platform(),
     release: os.release(),
+    arch: os.arch(),
+    cpuModel: String(cpus[0]?.model || "").trim(),
+    cpuCount: cpus.length,
+    memoryGiB: Math.max(1, Math.round(os.totalmem() / (1024 ** 3))),
+    runnerIdentity: collectRunnerIdentity(),
     node: process.version,
     nodeMajor: parseNodeMajor(process.version),
     browser: "chromium-headless",
@@ -940,6 +977,10 @@ function buildMarkdown(report) {
     `- Generated at: ${report.generatedAt}`,
     `- Git HEAD: ${report.gitHead}`,
     `- OS: ${report.environment.os}`,
+    `- Architecture: ${report.environment.arch}`,
+    `- CPU: ${report.environment.cpuModel} (${report.environment.cpuCount} logical processors)`,
+    `- Memory class: ${report.environment.memoryGiB} GiB`,
+    `- Runner: ${JSON.stringify(report.environment.runnerIdentity)}`,
     `- Node: ${report.environment.node}`,
     `- Browser: ${report.environment.browser}`,
     `- Browser version: ${report.environment.browserVersion}`,
@@ -1205,20 +1246,62 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
     ...getPerfReportContractMismatches(currentReport, "current"),
     ...getPerfReportContractMismatches(baselineReport, "baseline"),
   ];
-  const baselinePlatform = normalizeOsPlatform(
+  const baselinePlatform = readCanonicalNodePlatform(
     baselineReport?.environment?.platform
   );
-  const currentPlatform = normalizeOsPlatform(
+  const currentPlatform = readCanonicalNodePlatform(
     currentReport?.environment?.platform
   );
   if (!baselinePlatform || !currentPlatform || baselinePlatform !== currentPlatform) {
     mismatches.push(`os platform mismatch: baseline=${baselinePlatform || "<missing>"} current=${currentPlatform || "<missing>"}`);
   }
 
-  const baselineNodeMajor = parseNodeMajor(
+  const baselineRelease = readRequiredIdentityString(baselineReport?.environment?.release);
+  const currentRelease = readRequiredIdentityString(currentReport?.environment?.release);
+  if (!baselineRelease || !currentRelease || baselineRelease !== currentRelease) {
+    mismatches.push(`os release mismatch: baseline=${baselineRelease || "<missing>"} current=${currentRelease || "<missing>"}`);
+  }
+
+  const baselineArch = readRequiredIdentityString(baselineReport?.environment?.arch);
+  const currentArch = readRequiredIdentityString(currentReport?.environment?.arch);
+  if (!baselineArch || !currentArch || baselineArch !== currentArch) {
+    mismatches.push(`architecture mismatch: baseline=${baselineArch || "<missing>"} current=${currentArch || "<missing>"}`);
+  }
+
+  const baselineCpuModel = readRequiredIdentityString(baselineReport?.environment?.cpuModel);
+  const currentCpuModel = readRequiredIdentityString(currentReport?.environment?.cpuModel);
+  if (!baselineCpuModel || !currentCpuModel || baselineCpuModel !== currentCpuModel) {
+    mismatches.push(`CPU model mismatch: baseline=${baselineCpuModel || "<missing>"} current=${currentCpuModel || "<missing>"}`);
+  }
+
+  const baselineCpuCount = readPositiveIntegerIdentity(baselineReport?.environment?.cpuCount);
+  const currentCpuCount = readPositiveIntegerIdentity(currentReport?.environment?.cpuCount);
+  if (!baselineCpuCount || !currentCpuCount || baselineCpuCount !== currentCpuCount) {
+    mismatches.push(`CPU count mismatch: baseline=${baselineCpuCount || "<missing>"} current=${currentCpuCount || "<missing>"}`);
+  }
+
+  const baselineMemoryGiB = readPositiveIntegerIdentity(baselineReport?.environment?.memoryGiB);
+  const currentMemoryGiB = readPositiveIntegerIdentity(currentReport?.environment?.memoryGiB);
+  if (!baselineMemoryGiB || !currentMemoryGiB || baselineMemoryGiB !== currentMemoryGiB) {
+    mismatches.push(`memory class mismatch: baseline=${baselineMemoryGiB || "<missing>"} current=${currentMemoryGiB || "<missing>"}`);
+  }
+
+  const baselineRunnerIdentity = readRunnerIdentity(baselineReport?.environment?.runnerIdentity);
+  const currentRunnerIdentity = readRunnerIdentity(currentReport?.environment?.runnerIdentity);
+  if (
+    !baselineRunnerIdentity
+    || !currentRunnerIdentity
+    || JSON.stringify(baselineRunnerIdentity) !== JSON.stringify(currentRunnerIdentity)
+  ) {
+    mismatches.push(
+      `runner identity mismatch: baseline=${baselineRunnerIdentity ? JSON.stringify(baselineRunnerIdentity) : "<missing>"} current=${currentRunnerIdentity ? JSON.stringify(currentRunnerIdentity) : "<missing>"}`
+    );
+  }
+
+  const baselineNodeMajor = readPositiveIntegerIdentity(
     baselineReport?.environment?.nodeMajor
   );
-  const currentNodeMajor = parseNodeMajor(
+  const currentNodeMajor = readPositiveIntegerIdentity(
     currentReport?.environment?.nodeMajor
   );
   if (!baselineNodeMajor || !currentNodeMajor || baselineNodeMajor !== currentNodeMajor) {
@@ -1273,20 +1356,28 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
   const currentScenarios = normalizeScenarioList(currentScenarioValues);
   const baselineScenariosValid = Array.isArray(baselineScenarioValues)
     && baselineScenarioValues.length > 0
+    && baselineScenarioValues.every((scenarioId) => typeof scenarioId === "string")
     && baselineScenarios.every(Boolean)
-    && new Set(baselineScenarios).size === baselineScenarios.length;
+    && new Set(baselineScenarios).size === baselineScenarios.length
+    && baselineScenarios.every((scenarioId) => DEFAULT_SCENARIOS.includes(scenarioId));
   const currentScenariosValid = Array.isArray(currentScenarioValues)
     && currentScenarioValues.length > 0
+    && currentScenarioValues.every((scenarioId) => typeof scenarioId === "string")
     && currentScenarios.every(Boolean)
     && new Set(currentScenarios).size === currentScenarios.length;
-  const baselineGateScenarios = baselineScenariosValid && currentScenariosValid
-    ? baselineScenarios.filter((scenarioId) => currentScenarios.includes(scenarioId))
+  const baselineGateScenarios = baselineScenariosValid
+    ? baselineScenarios.filter((scenarioId) => DEFAULT_GATE_SCENARIOS.includes(scenarioId))
     : [];
-  if (!baselineScenariosValid || !currentScenariosValid || JSON.stringify(baselineGateScenarios) !== JSON.stringify(currentScenarios)) {
+  if (
+    !baselineScenariosValid
+    || !currentScenariosValid
+    || JSON.stringify(baselineGateScenarios) !== JSON.stringify(DEFAULT_GATE_SCENARIOS)
+    || JSON.stringify(currentScenarios) !== JSON.stringify(DEFAULT_GATE_SCENARIOS)
+  ) {
     mismatches.push(`scenarios mismatch: baseline=${JSON.stringify(baselineScenarios)} current=${JSON.stringify(currentScenarios)}`);
   }
 
-  for (const scenarioId of currentReport?.config?.scenarios || []) {
+  for (const scenarioId of currentScenariosValid ? currentScenarios : []) {
     const baselineIdentity = baselineReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
     const currentIdentity = currentReport?.workloadIdentity?.scenarios?.[scenarioId] || {};
     const baselineManifestSha256 = String(baselineIdentity.manifestSha256 || "").trim();
@@ -1304,10 +1395,32 @@ export function collectBaselineContractMismatches(currentReport, baselineReport)
   return mismatches;
 }
 
+export function validateGateScenarioSelection(scenarioIds) {
+  const normalizedScenarioIds = Array.isArray(scenarioIds)
+    ? scenarioIds.map((scenarioId) => (
+      typeof scenarioId === "string" ? scenarioId.trim() : ""
+    ))
+    : [];
+  const matchesCanonicalGateSet =
+    normalizedScenarioIds.length === DEFAULT_GATE_SCENARIOS.length
+    && normalizedScenarioIds.every(
+      (scenarioId, index) => scenarioId === DEFAULT_GATE_SCENARIOS[index]
+    );
+
+  if (!matchesCanonicalGateSet) {
+    throw new Error(
+      `[perf-baseline] Gate scenarios must exactly match ${JSON.stringify(DEFAULT_GATE_SCENARIOS)}; received ${JSON.stringify(normalizedScenarioIds)}.`
+    );
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.mode === "gate" && options.warmups < MIN_GATE_WARMUPS) {
     throw new Error(`[perf-baseline] Gate warmups must be at least ${MIN_GATE_WARMUPS}; received ${options.warmups}.`);
+  }
+  if (options.mode === "gate") {
+    validateGateScenarioSelection(options.scenarios);
   }
   await ensureDir(options.rawDir);
   const gitHead = await resolveGitHead();

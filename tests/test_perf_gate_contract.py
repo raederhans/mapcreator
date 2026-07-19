@@ -61,8 +61,55 @@ class PerfGateContractTest(unittest.TestCase):
             workflow_content.index("      - name: Run perf gate"),
         )
 
+    def test_workflow_generates_base_baseline_on_the_same_runner(self):
+        workflow_content = WORKFLOW_FILE.read_text(encoding="utf-8")
+        self.assertIn('"base_sha=$baseSha"', workflow_content)
+        self.assertIn('"head_sha=$headSha"', workflow_content)
+        self.assertIn("Generate same-runner base baseline", workflow_content)
+        self.assertIn("git worktree add --detach", workflow_content)
+        self.assertIn("perf-pr-gate-base.json", workflow_content)
+        self.assertIn("--mode baseline", workflow_content)
+        self.assertIn("--baseline-json", workflow_content)
+        same_runner_step = workflow_content[
+            workflow_content.index("      - name: Generate same-runner base baseline"):
+            workflow_content.index("      - name: Run perf gate")
+        ]
+        self.assertIn("$governedHeadInputs = @(", same_runner_step)
+        for governed_input in (
+            "package.json",
+            "package-lock.json",
+            "data/scenarios/index.json",
+            "data/scenarios/tno_1962",
+            "data/scenarios/hoi4_1939",
+            "tools/perf/run_baseline.mjs",
+            "tools/perf/render_sample_role_policy.mjs",
+        ):
+            self.assertIn(f"'{governed_input}'", same_runner_step)
+        self.assertIn(
+            "git -C $baseWorktree restore --source=$headSha --staged --worktree -- $governedHeadInputs",
+            same_runner_step,
+        )
+        self.assertLess(
+            same_runner_step.index("git -C $baseWorktree restore"),
+            same_runner_step.index("npm ci"),
+        )
+        self.assertLess(
+            workflow_content.index("Generate same-runner base baseline"),
+            workflow_content.index("      - name: Run perf gate"),
+        )
+
     def test_baseline_markdown_declares_gate_vs_observation_roles(self):
         markdown = BASELINE_MD.read_text(encoding="utf-8")
+        self.assertIn("- Architecture: x64", markdown)
+        self.assertIn(
+            "- CPU: Intel(R) Core(TM) Ultra 9 285HX (24 logical processors)",
+            markdown,
+        )
+        self.assertIn("- Memory class: 64 GiB", markdown)
+        self.assertIn(
+            '- Runner: {"provider":"local","environment":"local","os":"win32","arch":"x64","imageOs":"win32","imageVersion":"10.0.26200"}',
+            markdown,
+        )
         self.assertIn("- Gate scenarios: tno_1962, hoi4_1939", markdown)
         self.assertIn("- Observation samples: blank_base", markdown)
         self.assertRegex(markdown, r"## Scenario: blank_base\s+- sample_role: observation")
@@ -73,7 +120,15 @@ class PerfGateContractTest(unittest.TestCase):
         script = PERF_SCRIPT.read_text(encoding="utf-8")
         self.assertIn('benchmarkMetricsSchemaVersion: "3.3"', script)
         self.assertIn('probeSchema: "mc_perf_snapshot"', script)
+        self.assertIn('`- Architecture: ${report.environment.arch}`', script)
+        self.assertIn('`- CPU: ${report.environment.cpuModel} (${report.environment.cpuCount} logical processors)`', script)
+        self.assertIn('`- Memory class: ${report.environment.memoryGiB} GiB`', script)
+        self.assertIn('`- Runner: ${JSON.stringify(report.environment.runnerIdentity)}`', script)
         self.assertIn('const PERF_REPORT_CONTRACT_FIELDS = [', script)
+        self.assertIn(
+            "collectBaselineContractMismatches(report, baselineReportForGate)",
+            script,
+        )
         self.assertIn('getPerfReportContractMismatches(baselineReport, "baseline")', script)
         self.assertIn('getPerfReportContractMismatches(currentReport, "current")', script)
         self.assertIn("const CURRENT_PERF_REPORT_SCHEMA_VERSION = 2;", script)
@@ -239,8 +294,13 @@ class PerfGateContractTest(unittest.TestCase):
         self.assertRegex(str(baseline_payload.get("gitHead", "")), r"^[0-9a-f]{40}$")
         self.assertEqual(baseline_payload.get("config", {}).get("runs"), 5)
         self.assertEqual(baseline_payload.get("config", {}).get("warmups"), 3)
-        self.assertRegex(str(baseline_payload.get("environment", {}).get("browserVersion", "")), r"\d+")
-        self.assertRegex(str(baseline_payload.get("environment", {}).get("packageLockSha256", "")), r"^[0-9a-f]{64}$")
+        environment = baseline_payload.get("environment", {})
+        self.assertEqual(environment.get("arch"), "x64")
+        self.assertEqual(environment.get("cpuCount"), 24)
+        self.assertEqual(environment.get("memoryGiB"), 64)
+        self.assertEqual(environment.get("runnerIdentity", {}).get("provider"), "local")
+        self.assertRegex(str(environment.get("browserVersion", "")), r"\d+")
+        self.assertRegex(str(environment.get("packageLockSha256", "")), r"^[0-9a-f]{64}$")
         role_policy = baseline_payload.get("renderSampleRolePolicy", {})
         self.assertEqual(role_policy.get("policyId"), "render-sample-role-v2")
         self.assertEqual(role_policy.get("canonicalRoleId"), "last-post-promotion-idle-scenario-frame-v1")

@@ -11,50 +11,6 @@ const EN_LABEL = "Asteria";
 const ZH_LABEL = "°¢²â³Ç";
 const IGNORED_CONSOLE_PATTERNS = getConsoleIgnorePatterns(__filename);
 
-async function ensureScenario(page, scenarioId, label) {
-  await page.waitForFunction((targetScenarioId) => {
-    const select = document.querySelector("#scenarioSelect");
-    return !!select && !!select.querySelector(`option[value="${targetScenarioId}"]`);
-  }, scenarioId, { timeout: 120_000 });
-
-  const initialScenarioId = await page.evaluate(async () => {
-    const { state } = await import("/js/core/state.js");
-    return String(state.activeScenarioId || "");
-  });
-  if (initialScenarioId !== scenarioId) {
-    await page.selectOption("#scenarioSelect", scenarioId);
-    const applyButton = page.locator("#applyScenarioBtn");
-    if ((await applyButton.isVisible()) && (await applyButton.isEnabled())) {
-      await applyButton.click();
-    }
-  }
-  await expect(page.locator("#scenarioStatus")).toContainText(label, { timeout: 20_000 });
-  await page.waitForTimeout(800);
-}
-
-async function ensureBaseCityDataLoaded(page, reason = "e2e-city-label-i18n") {
-  await page.evaluate(async (loadReason) => {
-    const { state } = await import("/js/core/state.js");
-    if (typeof state.ensureBaseCityDataFn === "function") {
-      await state.ensureBaseCityDataFn({ reason: loadReason, renderNow: true });
-    }
-  }, reason);
-  await page.waitForFunction(async () => {
-    const { state } = await import("/js/core/state.js");
-    return state.baseCityDataState === "loaded"
-      && Array.isArray(state.worldCitiesData?.features)
-      && state.worldCitiesData.features.length > 0;
-  }, { timeout: 120_000 });
-}
-
-async function setZoomPercent(page, percent) {
-  await page.evaluate(async (targetPercent) => {
-    const { setZoomPercent } = await import("/js/core/map_renderer.js");
-    setZoomPercent(targetPercent);
-  }, percent);
-  await page.waitForTimeout(700);
-}
-
 async function waitForStableExactRender(page, { timeout = 20_000 } = {}) {
   await page.waitForFunction(async () => {
     const { state } = await import("/js/core/state.js");
@@ -130,7 +86,7 @@ test("language toggle redraws city labels immediately without needing pan or zoo
     zoomPercent: 320,
     installLabelDrawHook: true,
     timeout: 120_000,
-    requireInfraIdle: false,
+    requireInfraIdle: true,
   });
   await ensureLanguage(page, "en");
 
