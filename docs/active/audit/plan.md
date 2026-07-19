@@ -26,7 +26,7 @@
 - [x] Stage 4: 执行 SF-ATS 自适应选择、目标测试和必要主线程检查。
 - [x] Stage 5: 完成独立复核、提交、推送、Git/worktree 状态同步。
 - [x] Stage 6: 修复 GitHub-hosted follow-up 失败，重新验证功能提交并完成最终 closeout。
-- [ ] Stage 7: 补强逐规则策略、PR candidate 身份、city visual 证据与测试预算，重新验证、提交并完成远端检查。
+- [x] Stage 7: 补强逐规则策略、PR candidate 身份、city visual 证据与测试预算，重新验证、提交并完成远端检查。
 
 ## Acceptance criteria
 

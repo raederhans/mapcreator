@@ -2,7 +2,7 @@
 
 ## Current status
 
-进行中：已整合远端有界网络恢复与本轮逐规则阈值、PR candidate、证据上传、selector route、City canvas draw 和 timeout 修复；正在完成 rebase 后验证与远端检查。
+已完成：逐规则阈值、PR candidate、证据上传、selector route、City canvas draw 和 timeout 修复已整合到 `main`；本地目标测试、GitHub-hosted same-runner perf gate 与 Pages 发布 smoke 均通过。
 
 ## Checklist
 
@@ -26,7 +26,7 @@
 - [x] 修复共享 city worker fixture 与 City label 用例预算合同。
 - [x] 完成 child-safe、City label、City lights 和 diff 检查。
 - [x] 复核 P4 worktree，确认仍处于独立开发状态。
-- [ ] 完成 Lore commit、push、GitHub Actions 验证与清理。
+- [x] 完成 Lore commit、push、GitHub Actions 验证与清理。
 
 ## Validation evidence
 
@@ -62,9 +62,12 @@
 | architect 最终复核 | APPROVE；same-runner dependency/workload identity BLOCK 已关闭 |
 | `py -3 -m unittest tests.test_e2e_structural_tooling -q`（最终） | 36/36 passed；stale timeout allowlist 已删除 |
 | `git push origin main` | `07d95eaa..4905fb69` pushed；随后 `HEAD == origin/main == 4905fb696d9a5222aea628937fd2bc804109ae1f` |
+| 最终审核 tree 校验 | 本地审核 tree 与远端 `8c79987611e9178772d7ce118f9bff93846d0a3c` 均为 `ff4baa07670851b84d4896b487b7cf42217dd700` |
+| GitHub Actions run `29695338530` attempt 2 | perf-pr-gate success，13m22s；same-runner base、current gate 与 `perf-pr-gate-evidence` 上传全部通过 |
+| GitHub Actions run `29695787577` attempt 2 | verify、build、deploy 与公开 Pages URL smoke 全部 success；首次动态模块传播窗口失败未复现 |
 
 ## Open risks and remaining work
 
-- `mapcreator-audit-20260719-followup` 是未提交旧方案，未整合；待独立清理流程确认恢复价值。
 - P4 worktree 仍处于未提交开发状态，本轮保持隔离。
 - Williams live telemetry、power-scheme preflight 与完整 crossover 实验属于专属重型 lane，本轮使用确定性治理测试覆盖后保持跳过。
+- GitHub Actions 提示其部分官方 actions 正被 runner 从 Node.js 20 强制迁移到 Node.js 24；当前检查通过，后续依赖维护可单独处理。

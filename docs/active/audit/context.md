@@ -30,6 +30,9 @@
 | 2026-07-19 | City label E2E 安装 draw hook 但只检查派生 label 与 pass 时间戳。 | 每次语言切换清空 draw log，并等待实际 canvas 文本记录。 |
 | 2026-07-19 | City label 首次复测命中 worker fixture 默认 30 秒预算，第二次复测命中用例 90 秒预算；trace 显示准备阶段已消耗约 84 秒。 | worker fixture 使用独立 150 秒预算，用例使用 240 秒预算，并修正 Playwright timeout 参数位置与 CJK 样例。 |
 | 2026-07-19 | 本地 checked-baseline enforce 复测时 Codex/浏览器栈持续占用约 25–33% CPU，TNO 与 HOI4 的启动、应用和渲染指标同步放大约 3 倍。 | 保留失败报告作为环境污染证据；远端 same-runner base/current 结果承担权威性能判定。 |
+| 2026-07-19 | HTTPS push 多次连接重置；GitHub Contents API 对两个大文件未保持目标 blob。 | 改用 Git Data API 写入精确 blob/tree；远端 `8c799876` 与本地审核 tree 均为 `ff4baa07`。 |
+| 2026-07-19 | 完整语义差异的 perf run `29695338530` attempt 2 完成 same-runner base/current 与 evidence 上传。 | 本轮性能工作流改动获得 GitHub-hosted 权威通过证据。 |
+| 2026-07-19 | Pages 首次 smoke 在发布后短暂无法动态导入 `state.js`；当前 URL 与模块随后均返回 HTTP 200，同一提交 attempt 2 完整通过。 | 判定为发布传播窗口；保留失败证据，不增加无复现依据的产品 fallback。 |
 
 ## Live process ownership
 
@@ -37,7 +40,7 @@
 | --- | --- | --- | --- |
 | City label Playwright | 主线程 | `.runtime/tests/playwright/audit-20260719-followup-city-label-final.log` | 1/1 passed，测试 1.6m、run 2.3m；实际 EN/ZH/EN canvas draw、console、network 通过；资源已释放 |
 | City lights Playwright | 主线程 | `.runtime/tests/playwright/audit-20260719-followup-city-lights.log` 与 `.runtime/browser/mcp-artifacts/screenshots/` | 1/1 passed，测试 2.7m、run 3.5m；page/console/network 问题均为空；资源已释放 |
-| Perf gate | 主线程 | `.runtime/output/perf/baseline_2026-07-14/perf-gate-current.json` | 本地 checked-baseline enforce 因桌面资源污染失败；合同与 render-role 通过，权威 same-runner 结果待远端；资源已释放 |
+| Perf gate | 主线程 | `.runtime/output/perf/baseline_2026-07-14/perf-gate-current.json` 与 GitHub artifact `perf-pr-gate-evidence` | 本地 checked-baseline enforce 记录桌面资源污染；远端 same-runner run `29695338530` attempt 2 全部通过；资源已释放 |
 
 ## Handoff
 
@@ -45,4 +48,4 @@
 
 ## Next step
 
-推送当前 follow-up，等待 GitHub-hosted same-runner workflow 完整通过；随后清理本 audit worktree，继续保留 P4 worktree 与 main checkout 文档 WIP。
+本轮审核已完成。继续保留 P4 worktree 与 main checkout 的 archive/lessons WIP，由各自任务独立推进。
