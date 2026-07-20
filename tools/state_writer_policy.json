@@ -332,12 +332,12 @@
     {
       "path": "js/bootstrap/post_ready_scheduler.js",
       "surface": "production",
-      "domain": "cross-domain",
+      "domain": "renderer",
       "authority": "legacy-target",
-      "migrationPhase": "multi-phase",
+      "migrationPhase": "P4.3",
       "bindings": [
         {
-          "id": "parameter:createPostReadyScheduler:0:103e4a84c5c3:37:9",
+          "id": "parameter:createPostReadyScheduler:0:103e4a84c5c3:43:9",
           "kind": "function-parameter",
           "name": "targetState",
           "functionName": "createPostReadyScheduler",
@@ -345,58 +345,11 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:targetState",
           "locator": {
-            "line": 37,
+            "line": 43,
             "column": 9
           },
           "authority": "legacy-target",
           "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "activePostReadyTaskKey",
-                "activePostReadyTaskStartedAt",
-                "postReadyTaskDiagnostics"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "activePostReadyTaskKey"
-                },
-                {
-                  "operation": "assign",
-                  "key": "activePostReadyTaskStartedAt"
-                },
-                {
-                  "operation": "assign",
-                  "key": "postReadyTaskDiagnostics"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 114,
-                  "column": 66,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "postReadyTaskDiagnostics",
-                  "sourceFingerprint": "ee2e05800ae28ea0939545485fe695b8cc5d4ad87fa624e70ba32b1299a9cf7e"
-                },
-                {
-                  "line": 116,
-                  "column": 12,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "postReadyTaskDiagnostics",
-                  "sourceFingerprint": "ee2e05800ae28ea0939545485fe695b8cc5d4ad87fa624e70ba32b1299a9cf7e"
-                }
-              ]
-            },
             {
               "domain": "renderer",
               "migrationPhase": "P4.3",
@@ -417,7 +370,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 115,
+                  "line": 121,
                   "column": 39,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -549,14 +502,6 @@
                   "sourceFingerprint": "a00cd23d29e16a2f4b920cdbd35ec32848ec7d2902fc94c678f111eed33bb015"
                 },
                 {
-                  "line": 279,
-                  "column": 28,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
                   "line": 289,
                   "column": 31,
                   "reason": "state-alias-escape",
@@ -565,79 +510,7 @@
                   "sourceFingerprint": "6a7552c27d6d5eae9d3dd56514ea9458cee555f874218de39754ea17715136e1"
                 },
                 {
-                  "line": 294,
-                  "column": 35,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 307,
-                  "column": 32,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 339,
-                  "column": 24,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 346,
-                  "column": 26,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 348,
-                  "column": 26,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 350,
-                  "column": 26,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 355,
-                  "column": 26,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 357,
-                  "column": 26,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 372,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 377,
+                  "line": 380,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -645,7 +518,7 @@
                   "sourceFingerprint": "57f7f25365c4bb356ed708a7e4165e9cd6d932f0b79c138cda033770ab0d6033"
                 },
                 {
-                  "line": 382,
+                  "line": 385,
                   "column": 11,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -653,15 +526,7 @@
                   "sourceFingerprint": "43679594631b32747d823199bd93632ab639c52b8e478eff158526d7a733b8af"
                 },
                 {
-                  "line": 387,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 388,
+                  "line": 391,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -669,15 +534,7 @@
                   "sourceFingerprint": "57f7f25365c4bb356ed708a7e4165e9cd6d932f0b79c138cda033770ab0d6033"
                 },
                 {
-                  "line": 395,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 396,
+                  "line": 399,
                   "column": 11,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -685,7 +542,7 @@
                   "sourceFingerprint": "43679594631b32747d823199bd93632ab639c52b8e478eff158526d7a733b8af"
                 },
                 {
-                  "line": 398,
+                  "line": 401,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -693,7 +550,7 @@
                   "sourceFingerprint": "b8b4e9cea77ef29a5e958f13addd4855c35d2f04a060c3a869f8c955fd4c9a34"
                 },
                 {
-                  "line": 404,
+                  "line": 407,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -701,15 +558,7 @@
                   "sourceFingerprint": "57f7f25365c4bb356ed708a7e4165e9cd6d932f0b79c138cda033770ab0d6033"
                 },
                 {
-                  "line": 410,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 411,
+                  "line": 414,
                   "column": 11,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -717,7 +566,7 @@
                   "sourceFingerprint": "43679594631b32747d823199bd93632ab639c52b8e478eff158526d7a733b8af"
                 },
                 {
-                  "line": 413,
+                  "line": 416,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -725,7 +574,7 @@
                   "sourceFingerprint": "b8b4e9cea77ef29a5e958f13addd4855c35d2f04a060c3a869f8c955fd4c9a34"
                 },
                 {
-                  "line": 417,
+                  "line": 420,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -733,7 +582,7 @@
                   "sourceFingerprint": "57f7f25365c4bb356ed708a7e4165e9cd6d932f0b79c138cda033770ab0d6033"
                 },
                 {
-                  "line": 418,
+                  "line": 421,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -741,7 +590,7 @@
                   "sourceFingerprint": "25e148c08a1e57e542795aceeb24b5dbb10312ea760f5e6bb102c475952c12e1"
                 },
                 {
-                  "line": 423,
+                  "line": 426,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -772,24 +621,15 @@
             {
               "domain": "boot",
               "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "longAnimationFrameObserver"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "longAnimationFrameObserver"
-                }
-              ],
+              "operations": [],
+              "keys": [],
+              "memberships": [],
               "aliasSites": [],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 101,
+                  "line": 102,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -797,7 +637,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 111,
+                  "line": 112,
                   "column": 26,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -805,7 +645,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 123,
+                  "line": 124,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -813,7 +653,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 190,
+                  "line": 191,
                   "column": 17,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -842,7 +682,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 200,
+                  "line": 201,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -862,7 +702,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 137,
+                  "line": 138,
                   "column": 48,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1679,7 +1519,7 @@
       "migrationPhase": "P4.1",
       "bindings": [
         {
-          "id": "parameter:runUiShellDebugBoot:0:103e4a84c5c3:75:9",
+          "id": "parameter:runUiShellDebugBoot:0:103e4a84c5c3:77:9",
           "kind": "function-parameter",
           "name": "targetState",
           "functionName": "runUiShellDebugBoot",
@@ -1687,7 +1527,7 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:targetState",
           "locator": {
-            "line": 75,
+            "line": 77,
             "column": 9
           },
           "authority": "legacy-target",
@@ -1695,24 +1535,15 @@
             {
               "domain": "boot",
               "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "uiShellDebug"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "uiShellDebug"
-                }
-              ],
+              "operations": [],
+              "keys": [],
+              "memberships": [],
               "aliasSites": [],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 106,
+                  "line": 108,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1750,49 +1581,43 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 360,
+                  "line": 361,
                   "column": 3,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "7c3f07c9b2554939aa77bc94d7c6f409b41bd01549548a31573ba74e70dc603a"
                 },
                 {
-                  "line": 361,
+                  "line": 362,
                   "column": 3,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "f4ae5f2a857231d048c6b709dd55b1d63ba28522269b7992c6208f576ee6072e"
                 },
                 {
-                  "line": 362,
+                  "line": 363,
                   "column": 3,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "0bdea54b10f65dbed590d87f39b17b32d8bc01fafc97a7cf850c0b234875c31e"
                 },
                 {
-                  "line": 363,
+                  "line": 364,
                   "column": 3,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "29083d66d736dae4b776a6c088c56883597b1f0442347616b694bafb79ea1686"
                 },
                 {
-                  "line": 367,
+                  "line": 368,
                   "column": 3,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "0a0466b1fafac8e10c1bcf7fcd56140b2421f368a1f26fd47ca57c0c859737f1"
                 },
                 {
-                  "line": 373,
-                  "column": 3,
-                  "reason": "ambiguous-alias-flow",
-                  "sourceFingerprint": "671e739f6e1ebafa45f421ed745456ac067166315b416eab1c18e1ab1f138761"
-                },
-                {
-                  "line": 403,
+                  "line": 404,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "7bc7cee2fe493b03a62603a7028069daa05faa64a7c9d849986a9b84bb754e1d"
                 },
                 {
-                  "line": 406,
+                  "line": 407,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "0371f861c934252c188641e8522c17024fea69f74cdd7b759bcfbdd08e973b6c"
@@ -1800,7 +1625,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 364,
+                  "line": 365,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1808,7 +1633,7 @@
                   "sourceFingerprint": "33b34d29a0a8bbc3501eb693ebe4090cee9cbacb8a80ac9722fd90713a024e74"
                 },
                 {
-                  "line": 368,
+                  "line": 369,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1816,7 +1641,7 @@
                   "sourceFingerprint": "4c9f1533402cb1b9a3214a88e6118a1430c390238dd9d4c99e0806f7995b2096"
                 },
                 {
-                  "line": 371,
+                  "line": 372,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1824,7 +1649,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 372,
+                  "line": 373,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1832,7 +1657,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 403,
+                  "line": 404,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -1840,7 +1665,7 @@
                   "sourceFingerprint": "46c1323de1afa02ae9ec883649a8c9d27d637f287e2b578abfa9c6c93cae8d0e"
                 },
                 {
-                  "line": 406,
+                  "line": 407,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -1852,7 +1677,7 @@
           ]
         },
         {
-          "id": "parameter:applyPreviewHierarchy:0:09fc96082d34:295:39",
+          "id": "parameter:applyPreviewHierarchy:0:09fc96082d34:296:39",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "applyPreviewHierarchy",
@@ -1860,7 +1685,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 295,
+            "line": 296,
             "column": 39
           },
           "authority": "legacy-target",
@@ -1898,7 +1723,7 @@
           ]
         },
         {
-          "id": "parameter:applyUiShellDebugTerritorySeed:0:09fc96082d34:346:63",
+          "id": "parameter:applyUiShellDebugTerritorySeed:0:09fc96082d34:347:63",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "applyUiShellDebugTerritorySeed",
@@ -1906,7 +1731,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 346,
+            "line": 347,
             "column": 63
           },
           "authority": "legacy-target",
@@ -1914,24 +1739,15 @@
             {
               "domain": "boot",
               "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "uiShellDebugTerritorySeeded"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "uiShellDebugTerritorySeeded"
-                }
-              ],
+              "operations": [],
+              "keys": [],
+              "memberships": [],
               "aliasSites": [],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 364,
+                  "line": 365,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1939,7 +1755,7 @@
                   "sourceFingerprint": "33b34d29a0a8bbc3501eb693ebe4090cee9cbacb8a80ac9722fd90713a024e74"
                 },
                 {
-                  "line": 368,
+                  "line": 369,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -1986,7 +1802,7 @@
                   ],
                   "operation": "assign",
                   "key": "hierarchyData",
-                  "line": 297,
+                  "line": 298,
                   "column": 3,
                   "sourceFingerprint": "d8ee88fbd7c2779c9e3ed16e9e242800482daced243180e5c61a24ef2efc8a6a"
                 },
@@ -1997,7 +1813,7 @@
                   ],
                   "operation": "assign",
                   "key": "hierarchyGroupsByCode",
-                  "line": 309,
+                  "line": 310,
                   "column": 3,
                   "sourceFingerprint": "3fec253ddbe861f7c68a7893eef1dda7959a6f1bbff78ae9ccfe96d6a8b56739"
                 },
@@ -2008,7 +1824,7 @@
                   ],
                   "operation": "assign",
                   "key": "countryGroupMetaByCode",
-                  "line": 319,
+                  "line": 320,
                   "column": 3,
                   "sourceFingerprint": "745778bd47746bf3a562c536b4f3f7e1386020ceda96186d4d7448eacc7120c2"
                 }
@@ -2096,7 +1912,7 @@
                   ],
                   "operation": "assign",
                   "key": "selectedInspectorCountryCode",
-                  "line": 335,
+                  "line": 336,
                   "column": 3,
                   "sourceFingerprint": "942eb70c80eaa7ab64ef77845085f5a5cd209d36e2b0e21faa332d8cf42168dc"
                 },
@@ -2107,7 +1923,7 @@
                   ],
                   "operation": "assign",
                   "key": "inspectorHighlightCountryCode",
-                  "line": 336,
+                  "line": 337,
                   "column": 3,
                   "sourceFingerprint": "9af03db07ea249b83bab022365c1283941037e0d88ba2683e824a05764d7ac25"
                 },
@@ -2118,7 +1934,7 @@
                   ],
                   "operation": "assign",
                   "key": "activeSovereignCode",
-                  "line": 337,
+                  "line": 338,
                   "column": 3,
                   "sourceFingerprint": "7c7985c426b2ef8c7434a3ae5facdcfbecf8eef2f0663e31575a0b4ff79e48bd"
                 },
@@ -2129,7 +1945,7 @@
                   ],
                   "operation": "collection-mutate",
                   "key": "expandedInspectorContinents",
-                  "line": 339,
+                  "line": 340,
                   "column": 5,
                   "sourceFingerprint": "625112eaaf8d3c18f8ab9ae510762cdfcb5db2286ada08731e54fb0f9a63da4d"
                 },
@@ -2140,7 +1956,7 @@
                   ],
                   "operation": "collection-mutate",
                   "key": "expandedInspectorReleaseParents",
-                  "line": 342,
+                  "line": 343,
                   "column": 5,
                   "sourceFingerprint": "31664b986fbefd3e4360a0f86ae8b9591b9415c96f19d55d5a5b23e50f336f08"
                 }
@@ -2172,7 +1988,7 @@
                   ],
                   "operation": "assign",
                   "key": "ui",
-                  "line": 331,
+                  "line": 332,
                   "column": 5,
                   "sourceFingerprint": "d7ef7cba6b8f73f5c921c90a996e02712650159b80b7ef5a814e063234882794"
                 },
@@ -2183,7 +1999,7 @@
                   ],
                   "operation": "assign",
                   "key": "ui",
-                  "line": 333,
+                  "line": 334,
                   "column": 3,
                   "sourceFingerprint": "8e07c82ac3b6ddd618fad4915a41abd4f4bf865b35406ffe506c176078086608"
                 },
@@ -2194,7 +2010,7 @@
                   ],
                   "operation": "assign",
                   "key": "ui",
-                  "line": 334,
+                  "line": 335,
                   "column": 3,
                   "sourceFingerprint": "5e667ca1f53515ed04466839d2b669b334b35175f73f956f0c073cfc8d26113d"
                 }
@@ -2206,7 +2022,7 @@
           ]
         },
         {
-          "id": "parameter:ensureUiShellInspectorDisclosureState:0:09fc96082d34:329:55",
+          "id": "parameter:ensureUiShellInspectorDisclosureState:0:09fc96082d34:330:55",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "ensureUiShellInspectorDisclosureState",
@@ -2214,7 +2030,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 329,
+            "line": 330,
             "column": 55
           },
           "authority": "legacy-target",
@@ -2283,7 +2099,7 @@
           ]
         },
         {
-          "id": "parameter:revealUiShellDebugTerritoryPanels:1:09fc96082d34:384:101",
+          "id": "parameter:revealUiShellDebugTerritoryPanels:1:09fc96082d34:385:101",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "revealUiShellDebugTerritoryPanels",
@@ -2291,7 +2107,7 @@
           "parameterIndex": 1,
           "parameterPath": "$",
           "locator": {
-            "line": 384,
+            "line": 385,
             "column": 101
           },
           "authority": "legacy-target",
@@ -2307,7 +2123,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 403,
+                  "line": 404,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -2315,7 +2131,7 @@
                   "sourceFingerprint": "46c1323de1afa02ae9ec883649a8c9d27d637f287e2b578abfa9c6c93cae8d0e"
                 },
                 {
-                  "line": 406,
+                  "line": 407,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -52754,7 +52570,7 @@
       "migrationPhase": "multi-phase",
       "bindings": [
         {
-          "id": "parameter:loadPublicSampleProjectIntoRuntime:1:103e4a84c5c3:98:9",
+          "id": "parameter:loadPublicSampleProjectIntoRuntime:1:103e4a84c5c3:100:9",
           "kind": "function-parameter",
           "name": "targetState",
           "functionName": "loadPublicSampleProjectIntoRuntime",
@@ -52762,7 +52578,7 @@
           "parameterIndex": 1,
           "parameterPath": "$/property:targetState",
           "locator": {
-            "line": 98,
+            "line": 100,
             "column": 9
           },
           "authority": "legacy-target",
@@ -52778,7 +52594,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 50,
+                  "line": 51,
                   "column": 8,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -52786,7 +52602,7 @@
                   "sourceFingerprint": "8cc4f7df2f3f1e91060b0fce9195c2e1fc5ddd840ef7473c69f9a032c265bb07"
                 },
                 {
-                  "line": 51,
+                  "line": 52,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -52794,60 +52610,11 @@
                   "sourceFingerprint": "8cc4f7df2f3f1e91060b0fce9195c2e1fc5ddd840ef7473c69f9a032c265bb07"
                 }
               ]
-            },
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "sampleProjectDeeplink"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "sampleProjectDeeplink"
-                }
-              ],
-              "aliasSites": [
-                {
-                  "alias": "targetState",
-                  "aliasChain": [
-                    "targetState"
-                  ],
-                  "operation": "assign",
-                  "key": "sampleProjectDeeplink",
-                  "line": 49,
-                  "column": 3,
-                  "sourceFingerprint": "764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6"
-                }
-              ],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 56,
-                  "column": 64,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "sampleProjectDeeplink",
-                  "sourceFingerprint": "764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6"
-                },
-                {
-                  "line": 57,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "sampleProjectDeeplink",
-                  "sourceFingerprint": "764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6"
-                }
-              ]
             }
           ]
         },
         {
-          "id": "parameter:writeSampleProjectState:0:09fc96082d34:42:66",
+          "id": "parameter:writeSampleProjectState:0:09fc96082d34:43:66",
           "kind": "function-parameter",
           "name": "targetState",
           "functionName": "writeSampleProjectState",
@@ -52855,7 +52622,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 42,
+            "line": 43,
             "column": 66
           },
           "authority": "legacy-target",
@@ -52871,7 +52638,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 50,
+                  "line": 51,
                   "column": 8,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -52879,49 +52646,12 @@
                   "sourceFingerprint": "8cc4f7df2f3f1e91060b0fce9195c2e1fc5ddd840ef7473c69f9a032c265bb07"
                 },
                 {
-                  "line": 51,
+                  "line": 52,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
                   "sourceFingerprint": "8cc4f7df2f3f1e91060b0fce9195c2e1fc5ddd840ef7473c69f9a032c265bb07"
-                }
-              ]
-            },
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "sampleProjectDeeplink"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "sampleProjectDeeplink"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 56,
-                  "column": 64,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "sampleProjectDeeplink",
-                  "sourceFingerprint": "764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6"
-                },
-                {
-                  "line": 57,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "sampleProjectDeeplink",
-                  "sourceFingerprint": "764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6"
                 }
               ]
             }
@@ -57600,10 +57330,10 @@
       "surface": "production",
       "domain": "cross-domain",
       "authority": "legacy-target",
-      "migrationPhase": "multi-phase",
+      "migrationPhase": "P4.2",
       "bindings": [
         {
-          "id": "parameter:createScenarioBundleRuntimeController:0:f980a917b31b:36:9",
+          "id": "parameter:createScenarioBundleRuntimeController:0:f980a917b31b:38:9",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "createScenarioBundleRuntimeController",
@@ -57611,31 +57341,11 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:state",
           "locator": {
-            "line": 36,
+            "line": 38,
             "column": 9
           },
           "authority": "legacy-target",
           "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupBootCacheState"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupBootCacheState"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": []
-            },
             {
               "domain": "content",
               "migrationPhase": "P4.2",
@@ -57647,7 +57357,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 153,
+                  "line": 151,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57655,7 +57365,7 @@
                   "sourceFingerprint": "951329b2da285ea49f3707fc3b94aa401e0ce6243d03c8b0340a9a8b1ccdd66d"
                 },
                 {
-                  "line": 160,
+                  "line": 158,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57663,7 +57373,7 @@
                   "sourceFingerprint": "951329b2da285ea49f3707fc3b94aa401e0ce6243d03c8b0340a9a8b1ccdd66d"
                 },
                 {
-                  "line": 244,
+                  "line": 236,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57671,7 +57381,7 @@
                   "sourceFingerprint": "951329b2da285ea49f3707fc3b94aa401e0ce6243d03c8b0340a9a8b1ccdd66d"
                 },
                 {
-                  "line": 251,
+                  "line": 243,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57679,7 +57389,7 @@
                   "sourceFingerprint": "951329b2da285ea49f3707fc3b94aa401e0ce6243d03c8b0340a9a8b1ccdd66d"
                 },
                 {
-                  "line": 293,
+                  "line": 279,
                   "column": 24,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57687,7 +57397,7 @@
                   "sourceFingerprint": "951329b2da285ea49f3707fc3b94aa401e0ce6243d03c8b0340a9a8b1ccdd66d"
                 },
                 {
-                  "line": 361,
+                  "line": 347,
                   "column": 30,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57714,7 +57424,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 172,
+                  "line": 170,
                   "column": 9,
                   "operation": "assign",
                   "key": "scenarioBundleCacheById",
@@ -57722,7 +57432,7 @@
                   "sourceFingerprint": "3bb3e6b795d59fc3aea7bce119cbbe8798be41214c9aa75d326b4dfa429481af"
                 },
                 {
-                  "line": 425,
+                  "line": 414,
                   "column": 7,
                   "operation": "assign",
                   "key": "scenarioBundleCacheById",
@@ -57733,7 +57443,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 294,
+                  "line": 280,
                   "column": 28,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57741,7 +57451,7 @@
                   "sourceFingerprint": "4a57bd69b98020452bab8ebe915ce28272bc31f45ccf0a91790ea4907e0a2d33"
                 },
                 {
-                  "line": 297,
+                  "line": 283,
                   "column": 70,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57749,7 +57459,7 @@
                   "sourceFingerprint": "1785dd8ba492589e975f33837bd25b3b9d90ca1b429602bdf96438e7ea65ab6d"
                 },
                 {
-                  "line": 298,
+                  "line": 284,
                   "column": 40,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57757,7 +57467,7 @@
                   "sourceFingerprint": "02aacdcf933f66b9e1dfd2320399ff56332b8127bfcbe36f0a0e0466c58db4f8"
                 },
                 {
-                  "line": 298,
+                  "line": 284,
                   "column": 112,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57765,7 +57475,7 @@
                   "sourceFingerprint": "1785dd8ba492589e975f33837bd25b3b9d90ca1b429602bdf96438e7ea65ab6d"
                 },
                 {
-                  "line": 299,
+                  "line": 285,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57773,7 +57483,7 @@
                   "sourceFingerprint": "1785dd8ba492589e975f33837bd25b3b9d90ca1b429602bdf96438e7ea65ab6d"
                 },
                 {
-                  "line": 308,
+                  "line": 294,
                   "column": 55,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57781,7 +57491,7 @@
                   "sourceFingerprint": "02aacdcf933f66b9e1dfd2320399ff56332b8127bfcbe36f0a0e0466c58db4f8"
                 },
                 {
-                  "line": 311,
+                  "line": 297,
                   "column": 14,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57789,7 +57499,7 @@
                   "sourceFingerprint": "1785dd8ba492589e975f33837bd25b3b9d90ca1b429602bdf96438e7ea65ab6d"
                 },
                 {
-                  "line": 347,
+                  "line": 333,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57797,7 +57507,7 @@
                   "sourceFingerprint": "2cf046205296d2df6785dcbdc72877e09e488149e67513bad8bada55fca96b1e"
                 },
                 {
-                  "line": 357,
+                  "line": 343,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57805,7 +57515,7 @@
                   "sourceFingerprint": "2cf046205296d2df6785dcbdc72877e09e488149e67513bad8bada55fca96b1e"
                 },
                 {
-                  "line": 372,
+                  "line": 361,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -57813,7 +57523,7 @@
                   "sourceFingerprint": "973d343576169e6a71067afc6ed49a4e4689bccfcc5100c155a610f6adbcea01"
                 },
                 {
-                  "line": 401,
+                  "line": 390,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61423,7 +61133,7 @@
       "migrationPhase": "multi-phase",
       "bindings": [
         {
-          "id": "parameter:createScenarioStartupHydrationController:0:f980a917b31b:62:9",
+          "id": "parameter:createScenarioStartupHydrationController:0:f980a917b31b:65:9",
           "kind": "function-parameter",
           "name": "state",
           "functionName": "createScenarioStartupHydrationController",
@@ -61431,41 +61141,11 @@
           "parameterIndex": 0,
           "parameterPath": "$/property:state",
           "locator": {
-            "line": 62,
+            "line": 65,
             "column": 9
           },
           "authority": "legacy-target",
           "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupReadonly",
-                "startupReadonlyReason",
-                "startupReadonlyUnlockInFlight"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupReadonly"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyReason"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": []
-            },
             {
               "domain": "scenario",
               "migrationPhase": "P4.2",
@@ -61476,7 +61156,7 @@
               "dynamicSites": [],
               "ambiguousSites": [
                 {
-                  "line": 241,
+                  "line": 244,
                   "column": 5,
                   "reason": "ambiguous-alias-flow",
                   "sourceFingerprint": "cba63493eb7a96e17415068290d268250533c7b0fcc26c1b9cc4a4875bd4ff5c"
@@ -61484,7 +61164,7 @@
               ],
               "unsupportedSites": [
                 {
-                  "line": 151,
+                  "line": 154,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61492,7 +61172,7 @@
                   "sourceFingerprint": "7c3f07c9b2554939aa77bc94d7c6f409b41bd01549548a31573ba74e70dc603a"
                 },
                 {
-                  "line": 193,
+                  "line": 196,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61500,7 +61180,7 @@
                   "sourceFingerprint": "7c3f07c9b2554939aa77bc94d7c6f409b41bd01549548a31573ba74e70dc603a"
                 },
                 {
-                  "line": 216,
+                  "line": 219,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61508,7 +61188,7 @@
                   "sourceFingerprint": "ca99bbfb0793f7b1eb6d4251839d3ad25f9404f7152de5daf4659ee208e07e43"
                 },
                 {
-                  "line": 241,
+                  "line": 244,
                   "column": 5,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -61516,7 +61196,7 @@
                   "sourceFingerprint": "70108d6aff7c322f204bd3d8929750fd0589ce00a4a1a6c1ef18ddabe205120c"
                 },
                 {
-                  "line": 252,
+                  "line": 255,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61524,15 +61204,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 261,
-                  "column": 40,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 272,
+                  "line": 275,
                   "column": 71,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61540,7 +61212,7 @@
                   "sourceFingerprint": "7c3f07c9b2554939aa77bc94d7c6f409b41bd01549548a31573ba74e70dc603a"
                 },
                 {
-                  "line": 305,
+                  "line": 308,
                   "column": 82,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61548,7 +61220,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 306,
+                  "line": 309,
                   "column": 45,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61556,7 +61228,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 329,
+                  "line": 335,
                   "column": 72,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61564,7 +61236,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 333,
+                  "line": 339,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61572,7 +61244,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 338,
+                  "line": 344,
                   "column": 49,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61580,7 +61252,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 343,
+                  "line": 349,
                   "column": 73,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61588,7 +61260,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 379,
+                  "line": 385,
                   "column": 53,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61596,7 +61268,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 389,
+                  "line": 395,
                   "column": 53,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61604,7 +61276,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 409,
+                  "line": 415,
                   "column": 47,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61612,7 +61284,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 410,
+                  "line": 416,
                   "column": 30,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61620,7 +61292,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 411,
+                  "line": 417,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61628,7 +61300,7 @@
                   "sourceFingerprint": "6ea74b18bbcf2d6368aa49da7ceb72d01d42a0fbae709c49c1a4801baf38424d"
                 },
                 {
-                  "line": 414,
+                  "line": 420,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61636,7 +61308,7 @@
                   "sourceFingerprint": "e4ede2497d5db50f330e9fa2bbd829b6ae58b465f71ac25c73e91e1c0c97611c"
                 },
                 {
-                  "line": 415,
+                  "line": 421,
                   "column": 38,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61644,7 +61316,7 @@
                   "sourceFingerprint": "b0abe6d22c074c65ec307fe1607a1779aeac6cc4035ae53e9831053005b820eb"
                 },
                 {
-                  "line": 416,
+                  "line": 422,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61652,7 +61324,7 @@
                   "sourceFingerprint": "6d4ffed843c07b5a40e5c2a7adfddaa1d4bea7b10333f109e2e721137dd62c09"
                 },
                 {
-                  "line": 417,
+                  "line": 423,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61660,7 +61332,7 @@
                   "sourceFingerprint": "11b07fe0d0fae21fa19ec0300d6117e1d62a6ba842a6c7073c96d00dd73d8145"
                 },
                 {
-                  "line": 422,
+                  "line": 428,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61668,7 +61340,7 @@
                   "sourceFingerprint": "86752c557b871ec3c319b8d81cdb2b95c3444ccf0c28e24b477bc043a8f144e3"
                 },
                 {
-                  "line": 425,
+                  "line": 431,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61676,7 +61348,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 426,
+                  "line": 432,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61684,7 +61356,7 @@
                   "sourceFingerprint": "2a6dc4421ec00275319ce0627cd3f7ef2511092386aa6a573db2dc8fd67b86b4"
                 },
                 {
-                  "line": 438,
+                  "line": 444,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61692,7 +61364,7 @@
                   "sourceFingerprint": "5bd6933b856cb2ea32a999c611b69623c5f5b9efd21eaf5831e3f839e944673e"
                 },
                 {
-                  "line": 467,
+                  "line": 473,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61700,7 +61372,7 @@
                   "sourceFingerprint": "69d395eba3ac93452fbe0ab15504d069272c67bb1e1f6f650a6488feb2c5ac4a"
                 },
                 {
-                  "line": 475,
+                  "line": 481,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61708,7 +61380,7 @@
                   "sourceFingerprint": "69d395eba3ac93452fbe0ab15504d069272c67bb1e1f6f650a6488feb2c5ac4a"
                 },
                 {
-                  "line": 476,
+                  "line": 482,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61716,7 +61388,7 @@
                   "sourceFingerprint": "b1604a7267243fbbc6b9620f979730797571a35cc2fd393e966f89b61d2edacc"
                 },
                 {
-                  "line": 479,
+                  "line": 485,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61724,7 +61396,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 480,
+                  "line": 486,
                   "column": 37,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61732,7 +61404,7 @@
                   "sourceFingerprint": "69d395eba3ac93452fbe0ab15504d069272c67bb1e1f6f650a6488feb2c5ac4a"
                 },
                 {
-                  "line": 512,
+                  "line": 518,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61740,7 +61412,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 518,
+                  "line": 524,
                   "column": 45,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61748,7 +61420,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 519,
+                  "line": 525,
                   "column": 52,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61756,7 +61428,7 @@
                   "sourceFingerprint": "61c820e2c1b09103c4c8146d371bdc4c2b42a1425c1dbfd6c6fcdb9ba55505be"
                 },
                 {
-                  "line": 524,
+                  "line": 530,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61764,7 +61436,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 531,
+                  "line": 537,
                   "column": 42,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61772,7 +61444,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 532,
+                  "line": 538,
                   "column": 35,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61780,7 +61452,7 @@
                   "sourceFingerprint": "fbf9028d104c8af8c04084512c2d5c8a92ff16298f06240f5827e92b66e9e5d4"
                 },
                 {
-                  "line": 541,
+                  "line": 547,
                   "column": 32,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61788,7 +61460,7 @@
                   "sourceFingerprint": "1e81d4498694fac31619afee49e67171724b8eaf8e2813f537d57e0ac0eacf50"
                 },
                 {
-                  "line": 689,
+                  "line": 695,
                   "column": 44,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61796,7 +61468,7 @@
                   "sourceFingerprint": "7c3f07c9b2554939aa77bc94d7c6f409b41bd01549548a31573ba74e70dc603a"
                 },
                 {
-                  "line": 699,
+                  "line": 705,
                   "column": 45,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61804,7 +61476,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 737,
+                  "line": 743,
                   "column": 43,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61812,7 +61484,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 758,
+                  "line": 764,
                   "column": 43,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61820,7 +61492,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 791,
+                  "line": 797,
                   "column": 67,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -61828,7 +61500,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 807,
+                  "line": 813,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -63131,6 +62803,707 @@
       ]
     },
     {
+      "path": "js/core/state/actions/boot_actions.js",
+      "surface": "production",
+      "domain": "boot",
+      "authority": "domain-action",
+      "migrationPhase": "P4.1",
+      "bindings": [
+        {
+          "id": "parameter:clearActivePostReadyTask:0:09fc96082d34:170:3",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "clearActivePostReadyTask",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 170,
+            "column": 3
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "activePostReadyTaskKey",
+                "activePostReadyTaskStartedAt"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "activePostReadyTaskKey"
+                },
+                {
+                  "operation": "assign",
+                  "key": "activePostReadyTaskStartedAt"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:clearStartupReadonlyStateFields:0:09fc96082d34:50:88",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "clearStartupReadonlyStateFields",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 50,
+            "column": 88
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupReadonly",
+                "startupReadonlyReason",
+                "startupReadonlySince",
+                "startupReadonlyUnlockInFlight"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupReadonly"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyReason"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlySince"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyUnlockInFlight"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:clearStartupReadonlyStateForReason:0:09fc96082d34:67:3",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "clearStartupReadonlyStateForReason",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 67,
+            "column": 3
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupReadonly",
+                "startupReadonlyReason",
+                "startupReadonlySince",
+                "startupReadonlyUnlockInFlight"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupReadonly"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyReason"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlySince"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyUnlockInFlight"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:commitStartupReadonlyStateFields:0:09fc96082d34:34:3",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "commitStartupReadonlyStateFields",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 34,
+            "column": 3
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupReadonly",
+                "startupReadonlyReason",
+                "startupReadonlySince",
+                "startupReadonlyUnlockInFlight"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupReadonly"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyReason"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlySince"
+                },
+                {
+                  "operation": "assign",
+                  "key": "startupReadonlyUnlockInFlight"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:replaceBootMetricsState:0:09fc96082d34:116:63",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "replaceBootMetricsState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 116,
+            "column": 63
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "bootMetrics"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "bootMetrics"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:replacePostReadyTaskDiagnostics:0:09fc96082d34:185:77",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "replacePostReadyTaskDiagnostics",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 185,
+            "column": 77
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "postReadyTaskDiagnostics"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "postReadyTaskDiagnostics"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:replaceSampleProjectDeeplinkState:0:09fc96082d34:146:77",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "replaceSampleProjectDeeplinkState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 146,
+            "column": 77
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "sampleProjectDeeplink"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "sampleProjectDeeplink"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:replaceStartupBootCacheState:0:09fc96082d34:125:72",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "replaceStartupBootCacheState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 125,
+            "column": 72
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupBootCacheState"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupBootCacheState"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setActivePostReadyTask:0:09fc96082d34:158:3",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setActivePostReadyTask",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 158,
+            "column": 3
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "activePostReadyTaskKey",
+                "activePostReadyTaskStartedAt"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "activePostReadyTaskKey"
+                },
+                {
+                  "operation": "assign",
+                  "key": "activePostReadyTaskStartedAt"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setBootPreviewVisibleState:0:09fc96082d34:17:60",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setBootPreviewVisibleState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 17,
+            "column": 60
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "bootPreviewVisible"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "bootPreviewVisible"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setBootStateFields:0:09fc96082d34:83:56",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setBootStateFields",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 83,
+            "column": 56
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "bootBlocking",
+                "bootCanContinueWithoutScenario",
+                "bootError",
+                "bootMessage",
+                "bootPhase",
+                "bootProgress"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "bootBlocking"
+                },
+                {
+                  "operation": "assign",
+                  "key": "bootCanContinueWithoutScenario"
+                },
+                {
+                  "operation": "assign",
+                  "key": "bootError"
+                },
+                {
+                  "operation": "assign",
+                  "key": "bootMessage"
+                },
+                {
+                  "operation": "assign",
+                  "key": "bootPhase"
+                },
+                {
+                  "operation": "assign",
+                  "key": "bootProgress"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setLongAnimationFrameObserver:0:09fc96082d34:196:72",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setLongAnimationFrameObserver",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 196,
+            "column": 72
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "longAnimationFrameObserver"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "longAnimationFrameObserver"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setStartupInitialScenarioChunkVisualPromotion:0:09fc96082d34:204:86",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setStartupInitialScenarioChunkVisualPromotion",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 204,
+            "column": 86
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupInitialScenarioChunkVisualPromotion"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupInitialScenarioChunkVisualPromotion"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setStartupInteractionMode:0:09fc96082d34:8:70",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setStartupInteractionMode",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 8,
+            "column": 70
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupInteractionMode"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupInteractionMode"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setStartupScenarioBootstrapCacheStatus:0:09fc96082d34:134:77",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setStartupScenarioBootstrapCacheStatus",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 134,
+            "column": 77
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "startupBootCacheState"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "startupBootCacheState"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setUiShellDebugState:0:09fc96082d34:212:54",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setUiShellDebugState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 212,
+            "column": 54
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "uiShellDebug"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "uiShellDebug"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        },
+        {
+          "id": "parameter:setUiShellDebugTerritorySeededState:0:09fc96082d34:221:69",
+          "kind": "function-parameter",
+          "name": "target",
+          "functionName": "setUiShellDebugTerritorySeededState",
+          "parameterName": "target",
+          "parameterIndex": 0,
+          "parameterPath": "$",
+          "locator": {
+            "line": 221,
+            "column": 69
+          },
+          "authority": "domain-action",
+          "grants": [
+            {
+              "domain": "boot",
+              "migrationPhase": "P4.1",
+              "operations": [
+                "assign"
+              ],
+              "keys": [
+                "uiShellDebugTerritorySeeded"
+              ],
+              "memberships": [
+                {
+                  "operation": "assign",
+                  "key": "uiShellDebugTerritorySeeded"
+                }
+              ],
+              "aliasSites": [],
+              "dynamicSites": [],
+              "ambiguousSites": [],
+              "unsupportedSites": []
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "js/core/state/appearance_preset_state.js",
       "surface": "production",
       "domain": "cross-domain",
@@ -63317,501 +63690,6 @@
                   "operation": "unsupported",
                   "key": "styleConfig",
                   "sourceFingerprint": "810d1a71db52ce4a5fc0b87587329bbd4caecd73786ec81a414b946247b875bb"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "path": "js/core/state/boot_state.js",
-      "surface": "production",
-      "domain": "cross-domain",
-      "authority": "legacy-target",
-      "migrationPhase": "multi-phase",
-      "bindings": [
-        {
-          "id": "parameter:clearStartupReadonlyStateFields:0:09fc96082d34:96:88",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "clearStartupReadonlyStateFields",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 96,
-            "column": 88
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupReadonly",
-                "startupReadonlyReason",
-                "startupReadonlySince",
-                "startupReadonlyUnlockInFlight"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupReadonly"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyReason"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlySince"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 106,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "startupReadonly",
-                  "sourceFingerprint": "c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:clearStartupReadonlyStateForReason:0:09fc96082d34:113:3",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "clearStartupReadonlyStateForReason",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 113,
-            "column": 3
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupReadonly",
-                "startupReadonlyReason",
-                "startupReadonlySince",
-                "startupReadonlyUnlockInFlight"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupReadonly"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyReason"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlySince"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight"
-                }
-              ],
-              "aliasSites": [
-                {
-                  "alias": "target",
-                  "aliasChain": [
-                    "target"
-                  ],
-                  "operation": "assign",
-                  "key": "startupReadonly",
-                  "line": 100,
-                  "column": 3,
-                  "sourceFingerprint": "c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203"
-                },
-                {
-                  "alias": "target",
-                  "aliasChain": [
-                    "target"
-                  ],
-                  "operation": "assign",
-                  "key": "startupReadonlyReason",
-                  "line": 101,
-                  "column": 3,
-                  "sourceFingerprint": "7eb7b4db5332ec90be9b6d7ffd481da6469f91b92a4eb42e8a6ce0cfc42e171c"
-                },
-                {
-                  "alias": "target",
-                  "aliasChain": [
-                    "target"
-                  ],
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight",
-                  "line": 102,
-                  "column": 3,
-                  "sourceFingerprint": "a5370b752db1488e96e063d743c30e1fe8d40415e16d8951cc8655da93135f43"
-                },
-                {
-                  "alias": "target",
-                  "aliasChain": [
-                    "target"
-                  ],
-                  "operation": "assign",
-                  "key": "startupReadonlySince",
-                  "line": 104,
-                  "column": 5,
-                  "sourceFingerprint": "47aa88504affccd10c2663abbd055eef7096fb96fb741270c4dab24af5ba7db1"
-                }
-              ],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 106,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "startupReadonly",
-                  "sourceFingerprint": "c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:replaceBootMetricsState:0:09fc96082d34:156:63",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "replaceBootMetricsState",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 156,
-            "column": 63
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "bootMetrics"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "bootMetrics"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 161,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "bootMetrics",
-                  "sourceFingerprint": "ea2121eb8b15d06ff7c0bec61797bb4172ccb15c8b0aa702aecb97571dedbf5f"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:setBootPreviewVisibleState:0:09fc96082d34:63:60",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "setBootPreviewVisibleState",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 63,
-            "column": 60
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "bootPreviewVisible"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "bootPreviewVisible"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 68,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "bootPreviewVisible",
-                  "sourceFingerprint": "8d9aa9324037bb46ba35f29a3e3830fbeb6dc0d56cd1545af6b22a708daf6f97"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:setBootStateFields:0:09fc96082d34:131:3",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "setBootStateFields",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 131,
-            "column": 3
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "cross-domain",
-              "migrationPhase": "multi-phase",
-              "operations": [],
-              "keys": [],
-              "memberships": [],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 153,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "522f9665270a778652ea163d6ab465961d4a2262e373b418d553d8a3f97027ec"
-                }
-              ]
-            },
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "bootBlocking",
-                "bootCanContinueWithoutScenario",
-                "bootError",
-                "bootMessage",
-                "bootPhase",
-                "bootProgress"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "bootBlocking"
-                },
-                {
-                  "operation": "assign",
-                  "key": "bootCanContinueWithoutScenario"
-                },
-                {
-                  "operation": "assign",
-                  "key": "bootError"
-                },
-                {
-                  "operation": "assign",
-                  "key": "bootMessage"
-                },
-                {
-                  "operation": "assign",
-                  "key": "bootPhase"
-                },
-                {
-                  "operation": "assign",
-                  "key": "bootProgress"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": []
-            }
-          ]
-        },
-        {
-          "id": "parameter:setStartupBootCacheState:0:09fc96082d34:164:68",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "setStartupBootCacheState",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 164,
-            "column": 68
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupBootCacheState"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupBootCacheState"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 176,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "startupBootCacheState",
-                  "sourceFingerprint": "6abc1793eab01ce357a0801c43b378bc5e5f8edd893c0ce23389d9374a2902e3"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:setStartupInteractionMode:0:09fc96082d34:55:70",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "setStartupInteractionMode",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 55,
-            "column": 70
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupInteractionMode"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupInteractionMode"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 60,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "startupInteractionMode",
-                  "sourceFingerprint": "dd257bc99628883a6e72bb124234d95800d3a5a17afe0f77b0a70437ed281e97"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "id": "parameter:setStartupReadonlyStateFields:0:09fc96082d34:74:3",
-          "kind": "function-parameter",
-          "name": "target",
-          "functionName": "setStartupReadonlyStateFields",
-          "parameterName": "target",
-          "parameterIndex": 0,
-          "parameterPath": "$",
-          "locator": {
-            "line": 74,
-            "column": 3
-          },
-          "authority": "legacy-target",
-          "grants": [
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupReadonly",
-                "startupReadonlyReason",
-                "startupReadonlySince",
-                "startupReadonlyUnlockInFlight"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupReadonly"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyReason"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlySince"
-                },
-                {
-                  "operation": "assign",
-                  "key": "startupReadonlyUnlockInFlight"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": [
-                {
-                  "line": 86,
-                  "column": 10,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "startupReadonly",
-                  "sourceFingerprint": "c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203"
                 }
               ]
             }
@@ -64925,7 +64803,7 @@
       "migrationPhase": "multi-phase",
       "bindings": [
         {
-          "id": "parameter:applyBaseLocalizationSnapshot:0:09fc96082d34:139:3",
+          "id": "parameter:applyBaseLocalizationSnapshot:0:09fc96082d34:140:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "applyBaseLocalizationSnapshot",
@@ -64933,7 +64811,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 139,
+            "line": 140,
             "column": 3
           },
           "authority": "legacy-target",
@@ -64966,7 +64844,7 @@
                   ],
                   "operation": "assign",
                   "key": "locales",
-                  "line": 124,
+                  "line": 125,
                   "column": 5,
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 }
@@ -64975,7 +64853,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65007,7 +64885,7 @@
           ]
         },
         {
-          "id": "parameter:beginBaseCitySupportLoad:0:09fc96082d34:163:50",
+          "id": "parameter:beginBaseCitySupportLoad:0:09fc96082d34:164:50",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "beginBaseCitySupportLoad",
@@ -65015,7 +64893,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 163,
+            "line": 164,
             "column": 50
           },
           "authority": "legacy-target",
@@ -65045,7 +64923,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 169,
+                  "line": 170,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65057,7 +64935,7 @@
           ]
         },
         {
-          "id": "parameter:beginFullLocalizationLoad:0:09fc96082d34:238:51",
+          "id": "parameter:beginFullLocalizationLoad:0:09fc96082d34:239:51",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "beginFullLocalizationLoad",
@@ -65065,7 +64943,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 238,
+            "line": 239,
             "column": 51
           },
           "authority": "legacy-target",
@@ -65095,7 +64973,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 244,
+                  "line": 245,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65107,7 +64985,7 @@
           ]
         },
         {
-          "id": "parameter:commitBaseCitySupportData:0:09fc96082d34:195:3",
+          "id": "parameter:commitBaseCitySupportData:0:09fc96082d34:196:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitBaseCitySupportData",
@@ -65115,7 +64993,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 195,
+            "line": 196,
             "column": 3
           },
           "authority": "legacy-target",
@@ -65131,7 +65009,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 203,
+                  "line": 204,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65139,7 +65017,7 @@
                   "sourceFingerprint": "1332546b6969a8664afcb1f60831cb2e438f9d9928768ceefd7716f63b291eef"
                 },
                 {
-                  "line": 210,
+                  "line": 211,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65212,7 +65090,7 @@
                   ],
                   "operation": "assign",
                   "key": "locales",
-                  "line": 124,
+                  "line": 125,
                   "column": 5,
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
@@ -65223,7 +65101,7 @@
                   ],
                   "operation": "assign",
                   "key": "locales",
-                  "line": 153,
+                  "line": 154,
                   "column": 3,
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
@@ -65234,7 +65112,7 @@
                   ],
                   "operation": "assign",
                   "key": "geoAliasToStableKey",
-                  "line": 155,
+                  "line": 156,
                   "column": 5,
                   "sourceFingerprint": "63cb3b3f2041301589c666a67d6e190801e0be4ccac5e01860f74d63d28c3206"
                 }
@@ -65243,7 +65121,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65251,7 +65129,7 @@
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
                 {
-                  "line": 217,
+                  "line": 218,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65259,7 +65137,7 @@
                   "sourceFingerprint": "ff7794d8e672153b0a36023dc539d7d00dd36bdf0c7dd31938b6d1da2a349959"
                 },
                 {
-                  "line": 218,
+                  "line": 219,
                   "column": 25,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65267,7 +65145,7 @@
                   "sourceFingerprint": "9f765f50967b3dd52ebbb05a999557b06fae1175182edab37209d412a8435a7b"
                 },
                 {
-                  "line": 225,
+                  "line": 226,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65299,7 +65177,7 @@
                   ],
                   "operation": "assign",
                   "key": "cityLayerRevision",
-                  "line": 158,
+                  "line": 159,
                   "column": 5,
                   "sourceFingerprint": "1e599933a8681804819d2f0cd79d267ba61e421f3bdfc9e537c93182936fb066"
                 }
@@ -65311,7 +65189,7 @@
           ]
         },
         {
-          "id": "parameter:commitContextLayerCollection:0:09fc96082d34:333:3",
+          "id": "parameter:commitContextLayerCollection:0:09fc96082d34:334:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitContextLayerCollection",
@@ -65319,7 +65197,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 333,
+            "line": 334,
             "column": 3
           },
           "authority": "legacy-target",
@@ -65340,7 +65218,7 @@
               "aliasSites": [],
               "dynamicSites": [
                 {
-                  "line": 343,
+                  "line": 344,
                   "column": 5,
                   "operation": "assign",
                   "key": "*",
@@ -65351,7 +65229,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 338,
+                  "line": 339,
                   "column": 9,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65388,7 +65266,7 @@
           ]
         },
         {
-          "id": "parameter:commitFullLocalizationData:0:09fc96082d34:263:3",
+          "id": "parameter:commitFullLocalizationData:0:09fc96082d34:264:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "commitFullLocalizationData",
@@ -65396,7 +65274,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 263,
+            "line": 264,
             "column": 3
           },
           "authority": "legacy-target",
@@ -65460,7 +65338,7 @@
                   ],
                   "operation": "assign",
                   "key": "locales",
-                  "line": 124,
+                  "line": 125,
                   "column": 5,
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
@@ -65471,7 +65349,7 @@
                   ],
                   "operation": "assign",
                   "key": "locales",
-                  "line": 153,
+                  "line": 154,
                   "column": 3,
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
@@ -65482,7 +65360,7 @@
                   ],
                   "operation": "assign",
                   "key": "geoAliasToStableKey",
-                  "line": 155,
+                  "line": 156,
                   "column": 5,
                   "sourceFingerprint": "63cb3b3f2041301589c666a67d6e190801e0be4ccac5e01860f74d63d28c3206"
                 }
@@ -65491,7 +65369,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65499,7 +65377,7 @@
                   "sourceFingerprint": "4fba71d7accf0c0581ead1676ce3cbd87b2e927263793768f9afaf99fce54164"
                 },
                 {
-                  "line": 279,
+                  "line": 280,
                   "column": 23,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65507,7 +65385,7 @@
                   "sourceFingerprint": "ff7794d8e672153b0a36023dc539d7d00dd36bdf0c7dd31938b6d1da2a349959"
                 },
                 {
-                  "line": 280,
+                  "line": 281,
                   "column": 29,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65515,7 +65393,7 @@
                   "sourceFingerprint": "9f765f50967b3dd52ebbb05a999557b06fae1175182edab37209d412a8435a7b"
                 },
                 {
-                  "line": 286,
+                  "line": 287,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65547,7 +65425,7 @@
                   ],
                   "operation": "assign",
                   "key": "cityLayerRevision",
-                  "line": 158,
+                  "line": 159,
                   "column": 5,
                   "sourceFingerprint": "1e599933a8681804819d2f0cd79d267ba61e421f3bdfc9e537c93182936fb066"
                 }
@@ -65559,7 +65437,7 @@
           ]
         },
         {
-          "id": "parameter:decodeStartupPrimaryCollectionsIntoState:0:09fc96082d34:546:3",
+          "id": "parameter:decodeStartupPrimaryCollectionsIntoState:0:09fc96082d34:547:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "decodeStartupPrimaryCollectionsIntoState",
@@ -65567,7 +65445,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 546,
+            "line": 547,
             "column": 3
           },
           "authority": "legacy-target",
@@ -65583,7 +65461,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 559,
+                  "line": 560,
                   "column": 55,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65591,7 +65469,7 @@
                   "sourceFingerprint": "23e2cc532125cab995725a68939a94c0c6cb26db61884ee75d4f83e1784946e3"
                 },
                 {
-                  "line": 565,
+                  "line": 566,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65599,7 +65477,7 @@
                   "sourceFingerprint": "76d0b0068c872b74176c0eb961c4dbf8689acbde288d7d76338ee73f48d5df63"
                 },
                 {
-                  "line": 569,
+                  "line": 570,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65607,7 +65485,7 @@
                   "sourceFingerprint": "6468fe10e2e547c2d68ef1265bbbf362d9422626675434054f11f5c778db7b86"
                 },
                 {
-                  "line": 575,
+                  "line": 576,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65615,7 +65493,7 @@
                   "sourceFingerprint": "791135bc4f0a9c13d3f7e8dc88d450edea0f5483978a80713b5bf4d042a236d3"
                 },
                 {
-                  "line": 579,
+                  "line": 580,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65623,7 +65501,7 @@
                   "sourceFingerprint": "553b14cc06013270af0b4096b7f3ccf865fc6cdb2f038fcd61b1c29bc004463f"
                 },
                 {
-                  "line": 583,
+                  "line": 584,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65631,7 +65509,7 @@
                   "sourceFingerprint": "ef824639a03c3fadcf3b57f9c7973dcb386435bb8b69773fa50af1d869e92b1e"
                 },
                 {
-                  "line": 587,
+                  "line": 588,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65639,7 +65517,7 @@
                   "sourceFingerprint": "4190aa5caa0064fad64e546f058ab091c72fb591e0ac29309e64415a19a18140"
                 },
                 {
-                  "line": 593,
+                  "line": 594,
                   "column": 57,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65703,7 +65581,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 559,
+                  "line": 560,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65711,7 +65589,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 565,
+                  "line": 566,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65719,7 +65597,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 569,
+                  "line": 570,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65727,7 +65605,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 575,
+                  "line": 576,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65735,7 +65613,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 579,
+                  "line": 580,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65743,7 +65621,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 583,
+                  "line": 584,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65751,7 +65629,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 587,
+                  "line": 588,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65759,7 +65637,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 593,
+                  "line": 594,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65767,7 +65645,7 @@
                   "sourceFingerprint": "23b0f2d1808841b4091afe28f894903a799605f90ae2fbc54403969be4939cbe"
                 },
                 {
-                  "line": 597,
+                  "line": 598,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65779,7 +65657,7 @@
           ]
         },
         {
-          "id": "parameter:ensureContextLayerLoadMaps:0:09fc96082d34:316:45",
+          "id": "parameter:ensureContextLayerLoadMaps:0:09fc96082d34:317:45",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "ensureContextLayerLoadMaps",
@@ -65787,7 +65665,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 316,
+            "line": 317,
             "column": 45
           },
           "authority": "legacy-target",
@@ -65825,7 +65703,7 @@
           ]
         },
         {
-          "id": "parameter:ensureLocalesContainer:0:09fc96082d34:122:41",
+          "id": "parameter:ensureLocalesContainer:0:09fc96082d34:123:41",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "ensureLocalesContainer",
@@ -65833,7 +65711,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 122,
+            "line": 123,
             "column": 41
           },
           "authority": "legacy-target",
@@ -65858,7 +65736,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 126,
+                  "line": 127,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65870,7 +65748,7 @@
           ]
         },
         {
-          "id": "parameter:failBaseCitySupportLoad:0:09fc96082d34:228:56",
+          "id": "parameter:failBaseCitySupportLoad:0:09fc96082d34:229:56",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "failBaseCitySupportLoad",
@@ -65878,7 +65756,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 228,
+            "line": 229,
             "column": 56
           },
           "authority": "legacy-target",
@@ -65913,7 +65791,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 235,
+                  "line": 236,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65925,7 +65803,7 @@
           ]
         },
         {
-          "id": "parameter:failFullLocalizationLoad:0:09fc96082d34:289:57",
+          "id": "parameter:failFullLocalizationLoad:0:09fc96082d34:290:57",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "failFullLocalizationLoad",
@@ -65933,7 +65811,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 289,
+            "line": 290,
             "column": 57
           },
           "authority": "legacy-target",
@@ -65968,7 +65846,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 296,
+                  "line": 297,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -65980,7 +65858,7 @@
           ]
         },
         {
-          "id": "parameter:hydrateHierarchyState:0:09fc96082d34:393:3",
+          "id": "parameter:hydrateHierarchyState:0:09fc96082d34:394:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "hydrateHierarchyState",
@@ -65988,7 +65866,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 393,
+            "line": 394,
             "column": 3
           },
           "authority": "legacy-target",
@@ -66004,7 +65882,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 411,
+                  "line": 412,
                   "column": 16,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66066,7 +65944,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 408,
+                  "line": 409,
                   "column": 20,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -66074,7 +65952,7 @@
                   "sourceFingerprint": "499de3a9a84f70741e28cdb958903b463b51e22b8cb306d26c6773e1b0908f5e"
                 },
                 {
-                  "line": 418,
+                  "line": 419,
                   "column": 3,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -66082,7 +65960,7 @@
                   "sourceFingerprint": "7c47e6b05be1e604f2e16f99990c93292e6f6de633d29800c656a69ef1a0ccbb"
                 },
                 {
-                  "line": 448,
+                  "line": 449,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66094,7 +65972,7 @@
           ]
         },
         {
-          "id": "parameter:hydrateStartupBaseContentState:0:09fc96082d34:493:3",
+          "id": "parameter:hydrateStartupBaseContentState:0:09fc96082d34:494:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "hydrateStartupBaseContentState",
@@ -66102,7 +65980,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 493,
+            "line": 494,
             "column": 3
           },
           "authority": "legacy-target",
@@ -66118,7 +65996,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 513,
+                  "line": 514,
                   "column": 33,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66126,26 +66004,6 @@
                   "sourceFingerprint": "2cbbc55663638c829ee0ad904c2757000d9938e78b3eb8a5f7530ba112403ad0"
                 }
               ]
-            },
-            {
-              "domain": "boot",
-              "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupBootCacheState"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupBootCacheState"
-                }
-              ],
-              "aliasSites": [],
-              "dynamicSites": [],
-              "ambiguousSites": [],
-              "unsupportedSites": []
             },
             {
               "domain": "content",
@@ -66342,7 +66200,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 515,
+                  "line": 516,
                   "column": 41,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66350,7 +66208,7 @@
                   "sourceFingerprint": "63cb3b3f2041301589c666a67d6e190801e0be4ccac5e01860f74d63d28c3206"
                 },
                 {
-                  "line": 537,
+                  "line": 538,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66382,7 +66240,7 @@
           ]
         },
         {
-          "id": "parameter:hydrateStoredViewSettings:0:09fc96082d34:455:3",
+          "id": "parameter:hydrateStoredViewSettings:0:09fc96082d34:456:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "hydrateStoredViewSettings",
@@ -66390,7 +66248,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 455,
+            "line": 456,
             "column": 3
           },
           "authority": "legacy-target",
@@ -66406,7 +66264,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 467,
+                  "line": 468,
                   "column": 11,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66443,7 +66301,7 @@
           ]
         },
         {
-          "id": "parameter:setBaseCityDataPromise:0:09fc96082d34:172:64",
+          "id": "parameter:setBaseCityDataPromise:0:09fc96082d34:173:64",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setBaseCityDataPromise",
@@ -66451,7 +66309,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 172,
+            "line": 173,
             "column": 64
           },
           "authority": "legacy-target",
@@ -66476,7 +66334,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 177,
+                  "line": 178,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66488,7 +66346,7 @@
           ]
         },
         {
-          "id": "parameter:setBaseLocalizationDataPromise:0:09fc96082d34:247:72",
+          "id": "parameter:setBaseLocalizationDataPromise:0:09fc96082d34:248:72",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setBaseLocalizationDataPromise",
@@ -66496,7 +66354,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 247,
+            "line": 248,
             "column": 72
           },
           "authority": "legacy-target",
@@ -66521,7 +66379,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 252,
+                  "line": 253,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66533,7 +66391,7 @@
           ]
         },
         {
-          "id": "parameter:setContextLayerLoadPromise:0:09fc96082d34:373:79",
+          "id": "parameter:setContextLayerLoadPromise:0:09fc96082d34:374:79",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setContextLayerLoadPromise",
@@ -66541,7 +66399,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 373,
+            "line": 374,
             "column": 79
           },
           "authority": "legacy-target",
@@ -66584,7 +66442,7 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadStateByName",
-                  "line": 318,
+                  "line": 319,
                   "column": 5,
                   "sourceFingerprint": "bbb02a917cf72c67b60dc677704c0980154335baf36193372c7497c771f31b8e"
                 },
@@ -66595,7 +66453,7 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadErrorByName",
-                  "line": 321,
+                  "line": 322,
                   "column": 5,
                   "sourceFingerprint": "e44e3282bc387bcbc5230e615789704a8925bef3a535375cb257cee933ff7ef2"
                 },
@@ -66606,14 +66464,14 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadPromiseByName",
-                  "line": 324,
+                  "line": 325,
                   "column": 5,
                   "sourceFingerprint": "4047d6c837049d6ece7d8e2286cdf30074110b8943d770a5f3b5a8ae53700060"
                 }
               ],
               "dynamicSites": [
                 {
-                  "line": 379,
+                  "line": 380,
                   "column": 5,
                   "operation": "assign",
                   "key": "contextLayerLoadPromiseByName",
@@ -66621,7 +66479,7 @@
                   "sourceFingerprint": "1fc48c9314312549d942b16f63b745a3dd8b53ee13d3c6ebdf1ec02672788d3a"
                 },
                 {
-                  "line": 382,
+                  "line": 383,
                   "column": 3,
                   "operation": "delete",
                   "key": "contextLayerLoadPromiseByName",
@@ -66635,7 +66493,7 @@
           ]
         },
         {
-          "id": "parameter:setContextLayerLoadState:0:09fc96082d34:359:3",
+          "id": "parameter:setContextLayerLoadState:0:09fc96082d34:360:3",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setContextLayerLoadState",
@@ -66643,7 +66501,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 359,
+            "line": 360,
             "column": 3
           },
           "authority": "legacy-target",
@@ -66681,7 +66539,7 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadStateByName",
-                  "line": 318,
+                  "line": 319,
                   "column": 5,
                   "sourceFingerprint": "bbb02a917cf72c67b60dc677704c0980154335baf36193372c7497c771f31b8e"
                 },
@@ -66692,7 +66550,7 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadErrorByName",
-                  "line": 321,
+                  "line": 322,
                   "column": 5,
                   "sourceFingerprint": "e44e3282bc387bcbc5230e615789704a8925bef3a535375cb257cee933ff7ef2"
                 },
@@ -66703,14 +66561,14 @@
                   ],
                   "operation": "assign",
                   "key": "contextLayerLoadPromiseByName",
-                  "line": 324,
+                  "line": 325,
                   "column": 5,
                   "sourceFingerprint": "4047d6c837049d6ece7d8e2286cdf30074110b8943d770a5f3b5a8ae53700060"
                 }
               ],
               "dynamicSites": [
                 {
-                  "line": 364,
+                  "line": 365,
                   "column": 3,
                   "operation": "assign",
                   "key": "contextLayerLoadStateByName",
@@ -66718,7 +66576,7 @@
                   "sourceFingerprint": "02c4d9a35189725d327ce3583367faaf118f70964a97ab03f70338457e86d84a"
                 },
                 {
-                  "line": 366,
+                  "line": 367,
                   "column": 5,
                   "operation": "assign",
                   "key": "contextLayerLoadErrorByName",
@@ -66726,7 +66584,7 @@
                   "sourceFingerprint": "b44c4cb387d1ccfb895dedddb1cdcd13901751e83b62a11eef4a8574dee251ee"
                 },
                 {
-                  "line": 368,
+                  "line": 369,
                   "column": 5,
                   "operation": "assign",
                   "key": "contextLayerLoadErrorByName",
@@ -66737,7 +66595,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 370,
+                  "line": 371,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66749,7 +66607,7 @@
           ]
         },
         {
-          "id": "parameter:setCurrentLanguage:0:09fc96082d34:113:61",
+          "id": "parameter:setCurrentLanguage:0:09fc96082d34:114:61",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setCurrentLanguage",
@@ -66757,7 +66615,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 113,
+            "line": 114,
             "column": 61
           },
           "authority": "legacy-target",
@@ -66782,7 +66640,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 119,
+                  "line": 120,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -66794,7 +66652,7 @@
           ]
         },
         {
-          "id": "parameter:setCustomPresets:0:09fc96082d34:180:56",
+          "id": "parameter:setCustomPresets:0:09fc96082d34:181:56",
           "kind": "function-parameter",
           "name": "target",
           "functionName": "setCustomPresets",
@@ -66802,7 +66660,7 @@
           "parameterIndex": 0,
           "parameterPath": "$",
           "locator": {
-            "line": 180,
+            "line": 181,
             "column": 56
           },
           "authority": "legacy-target",
@@ -66827,7 +66685,7 @@
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 188,
+                  "line": 189,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71019,24 +70877,15 @@
             {
               "domain": "boot",
               "migrationPhase": "P4.1",
-              "operations": [
-                "assign"
-              ],
-              "keys": [
-                "startupInitialScenarioChunkVisualPromotion"
-              ],
-              "memberships": [
-                {
-                  "operation": "assign",
-                  "key": "startupInitialScenarioChunkVisualPromotion"
-                }
-              ],
+              "operations": [],
+              "keys": [],
+              "memberships": [],
               "aliasSites": [],
               "dynamicSites": [],
               "ambiguousSites": [],
               "unsupportedSites": [
                 {
-                  "line": 54,
+                  "line": 55,
                   "column": 16,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71044,7 +70893,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 62,
+                  "line": 63,
                   "column": 68,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71052,7 +70901,7 @@
                   "sourceFingerprint": "2e51c4d469637774e394d4d8cf5c379bebc66669a88c5e54a716cd9277c294c7"
                 },
                 {
-                  "line": 85,
+                  "line": 86,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71060,7 +70909,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 99,
+                  "line": 100,
                   "column": 10,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71068,7 +70917,7 @@
                   "sourceFingerprint": "b77076c9d0566dbdb2e824e1e51116fe6572853f5ba6da6d9fb2bd02c943080a"
                 },
                 {
-                  "line": 110,
+                  "line": 111,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71076,7 +70925,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 121,
+                  "line": 122,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71084,7 +70933,7 @@
                   "sourceFingerprint": "67a78c3ba2284260cc3f01b1d02499f0a828533f2ed9950172262b1841b12516"
                 },
                 {
-                  "line": 124,
+                  "line": 125,
                   "column": 5,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71092,7 +70941,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 138,
+                  "line": 139,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71100,7 +70949,7 @@
                   "sourceFingerprint": "ae3b2d43938ea6a9bbe27db38d747d3e348210e00d236de02ed28cba9fa55ea7"
                 },
                 {
-                  "line": 141,
+                  "line": 142,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71108,7 +70957,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 154,
+                  "line": 155,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71116,20 +70965,12 @@
                   "sourceFingerprint": "866abcaf8b8ce1409dfe5830aebc2c17812a1fd32de99503c3ce26221a9f361a"
                 },
                 {
-                  "line": 157,
+                  "line": 158,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 163,
-                  "column": 7,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "e3fb6daca639819af078c986143f162bc744d9004b3ef4556ebeb3f80b3f1239"
                 },
                 {
                   "line": 164,
@@ -71137,7 +70978,7 @@
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
-                  "sourceFingerprint": "1e0a23ff5ff67deebb7522f5a82200ed310e2b57140d7b41b689087c5f598af2"
+                  "sourceFingerprint": "e3fb6daca639819af078c986143f162bc744d9004b3ef4556ebeb3f80b3f1239"
                 },
                 {
                   "line": 165,
@@ -71145,15 +70986,15 @@
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
-                  "sourceFingerprint": "dc0bfe592546db2ff4aa28a0106412c8c29879ff5154815f6deb8d262658c18c"
+                  "sourceFingerprint": "1e0a23ff5ff67deebb7522f5a82200ed310e2b57140d7b41b689087c5f598af2"
                 },
                 {
-                  "line": 168,
+                  "line": 166,
                   "column": 7,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
-                  "sourceFingerprint": "19f5ec6f35fa9db27cff7870c0fca9f32e45fd74a4dbfb9484a93588c4b01882"
+                  "sourceFingerprint": "dc0bfe592546db2ff4aa28a0106412c8c29879ff5154815f6deb8d262658c18c"
                 },
                 {
                   "line": 169,
@@ -71161,10 +71002,18 @@
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
                   "key": "*",
+                  "sourceFingerprint": "19f5ec6f35fa9db27cff7870c0fca9f32e45fd74a4dbfb9484a93588c4b01882"
+                },
+                {
+                  "line": 170,
+                  "column": 7,
+                  "reason": "state-alias-escape",
+                  "operation": "unsupported",
+                  "key": "*",
                   "sourceFingerprint": "14123fb558e893d1fb8a0e71066db0208eaf771c5fe8f2451ec377e029687c10"
                 },
                 {
-                  "line": 178,
+                  "line": 179,
                   "column": 12,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71172,7 +71021,7 @@
                   "sourceFingerprint": "dc9d76fe0ba58024633dc38a1139d708664d5872bfeea884c88a0020d54317cb"
                 },
                 {
-                  "line": 182,
+                  "line": 183,
                   "column": 19,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71180,7 +71029,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 231,
+                  "line": 232,
                   "column": 21,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71188,7 +71037,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 258,
+                  "line": 259,
                   "column": 24,
                   "reason": "unsupported-call-mutation",
                   "operation": "unsupported",
@@ -71196,23 +71045,7 @@
                   "sourceFingerprint": "beac1e2b823d4e3631330afc69840d9cae5c22d28f670572db4750bcfb5f8a72"
                 },
                 {
-                  "line": 406,
-                  "column": 30,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 415,
-                  "column": 29,
-                  "reason": "state-alias-escape",
-                  "operation": "unsupported",
-                  "key": "*",
-                  "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
-                },
-                {
-                  "line": 426,
+                  "line": 427,
                   "column": 22,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71220,7 +71053,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 515,
+                  "line": 516,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71228,7 +71061,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 534,
+                  "line": 535,
                   "column": 31,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71236,7 +71069,7 @@
                   "sourceFingerprint": "d23c17ff95b9435745f8c9c911b6f2aece529fdd7e24c3961fa51f5cc89765a0"
                 },
                 {
-                  "line": 569,
+                  "line": 570,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -71244,7 +71077,7 @@
                   "sourceFingerprint": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
                 },
                 {
-                  "line": 591,
+                  "line": 592,
                   "column": 20,
                   "reason": "state-alias-escape",
                   "operation": "unsupported",
@@ -98200,7 +98033,7 @@
     }
   },
   "progress": {
-    "latestPhase": "P4.0",
+    "latestPhase": "P4.1",
     "checkpoints": [
       {
         "phase": "P4.0",
@@ -98210,15 +98043,109 @@
         "productionLegacyAliasSites": 227,
         "productionLegacyAmbiguousSites": 901,
         "productionLegacyUnsupportedSites": 6692
+      },
+      {
+        "phase": "P4.1",
+        "productionLegacyDirectFiles": 75,
+        "productionLegacyMemberships": 1151,
+        "productionLegacyDynamicSites": 142,
+        "productionLegacyAliasSites": 222,
+        "productionLegacyAmbiguousSites": 900,
+        "productionLegacyUnsupportedSites": 6662
       }
     ],
     "retiredLegacySemanticAuthority": {
-      "bindings": [],
-      "memberships": [],
-      "aliasSites": [],
+      "bindings": [
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"replaceBootMetricsState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootPreviewVisibleState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupBootCacheState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupInteractionMode\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|legacy-target"
+      ],
+      "memberships": [
+        "js/bootstrap/post_ready_scheduler.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createPostReadyScheduler\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|activePostReadyTaskKey",
+        "js/bootstrap/post_ready_scheduler.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createPostReadyScheduler\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|activePostReadyTaskStartedAt",
+        "js/bootstrap/post_ready_scheduler.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createPostReadyScheduler\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|postReadyTaskDiagnostics",
+        "js/bootstrap/startup_bootstrap_support.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|longAnimationFrameObserver",
+        "js/bootstrap/ui_shell_boot.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"runUiShellDebugBoot\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|uiShellDebug",
+        "js/bootstrap/ui_shell_debug_seed.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"applyUiShellDebugTerritorySeed\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|uiShellDebugTerritorySeeded",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|sampleProjectDeeplink",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"writeSampleProjectState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|sampleProjectDeeplink",
+        "js/core/scenario/bundle_runtime.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioBundleRuntimeController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupBootCacheState",
+        "js/core/scenario/startup_hydration.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioStartupHydrationController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonly",
+        "js/core/scenario/startup_hydration.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioStartupHydrationController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyReason",
+        "js/core/scenario/startup_hydration.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioStartupHydrationController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyUnlockInFlight",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonly",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyReason",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlySince",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyUnlockInFlight",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonly",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyReason",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlySince",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyUnlockInFlight",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"replaceBootMetricsState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootMetrics",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootPreviewVisibleState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootPreviewVisible",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootBlocking",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootCanContinueWithoutScenario",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootError",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootMessage",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootPhase",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|bootProgress",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupBootCacheState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupBootCacheState",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupInteractionMode\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupInteractionMode",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonly",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyReason",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlySince",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupReadonlyUnlockInFlight",
+        "js/core/state/content_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"hydrateStartupBaseContentState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupBootCacheState",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|assign|startupInitialScenarioChunkVisualPromotion"
+      ],
+      "aliasSites": [
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|targetState|[\"targetState\"]|assign|sampleProjectDeeplink|764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|target|[\"target\"]|assign|startupReadonlyReason|7eb7b4db5332ec90be9b6d7ffd481da6469f91b92a4eb42e8a6ce0cfc42e171c",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|target|[\"target\"]|assign|startupReadonlySince|47aa88504affccd10c2663abbd055eef7096fb96fb741270c4dab24af5ba7db1",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|target|[\"target\"]|assign|startupReadonlyUnlockInFlight|a5370b752db1488e96e063d743c30e1fe8d40415e16d8951cc8655da93135f43",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|target|[\"target\"]|assign|startupReadonly|c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203"
+      ],
       "dynamicSites": [],
-      "ambiguousSites": [],
-      "unsupportedSites": []
+      "ambiguousSites": [
+        "js/bootstrap/ui_shell_debug_seed.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|ambiguous-alias-flow|671e739f6e1ebafa45f421ed745456ac067166315b416eab1c18e1ab1f138761"
+      ],
+      "unsupportedSites": [
+        "js/bootstrap/post_ready_scheduler.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createPostReadyScheduler\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|postReadyTaskDiagnostics|ee2e05800ae28ea0939545485fe695b8cc5d4ad87fa624e70ba32b1299a9cf7e",
+        "js/bootstrap/post_ready_scheduler.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createPostReadyScheduler\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|postReadyTaskDiagnostics|ee2e05800ae28ea0939545485fe695b8cc5d4ad87fa624e70ba32b1299a9cf7e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/bootstrap/startup_boot_overlay.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"../core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|sampleProjectDeeplink|764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"loadPublicSampleProjectIntoRuntime\",\"parameterName\":\"\",\"parameterIndex\":1,\"parameterPath\":\"$/property:targetState\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|sampleProjectDeeplink|764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"writeSampleProjectState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|sampleProjectDeeplink|764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6",
+        "js/core/sample_project_import_workflow.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"writeSampleProjectState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|sampleProjectDeeplink|764f1ffbb86b3b2274a71c5b8634ba9d13487bc65d39bb06027a08c2f764a8f6",
+        "js/core/scenario/startup_hydration.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"createScenarioStartupHydrationController\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$/property:state\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|scenario|P4.2|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|startupReadonly|c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"clearStartupReadonlyStateForReason\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|startupReadonly|c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"replaceBootMetricsState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|bootMetrics|ea2121eb8b15d06ff7c0bec61797bb4172ccb15c8b0aa702aecb97571dedbf5f",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootPreviewVisibleState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|bootPreviewVisible|8d9aa9324037bb46ba35f29a3e3830fbeb6dc0d56cd1545af6b22a708daf6f97",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setBootStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|cross-domain|multi-phase|state-alias-escape|unsupported|*|522f9665270a778652ea163d6ab465961d4a2262e373b418d553d8a3f97027ec",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupBootCacheState\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|startupBootCacheState|6abc1793eab01ce357a0801c43b378bc5e5f8edd893c0ce23389d9374a2902e3",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupInteractionMode\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|startupInteractionMode|dd257bc99628883a6e72bb124234d95800d3a5a17afe0f77b0a70437ed281e97",
+        "js/core/state/boot_state.js|{\"kind\":\"function-parameter\",\"name\":\"\",\"functionName\":\"setStartupReadonlyStateFields\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"$\",\"importSource\":\"\",\"importedName\":\"\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|startupReadonly|c20fb826e435bf8785ceecc74c9b25a79860465e574cace22dd61078e38e9203",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+        "js/main.js|{\"kind\":\"module\",\"name\":\"runtimeState\",\"functionName\":\"\",\"parameterName\":\"\",\"parameterIndex\":0,\"parameterPath\":\"\",\"importSource\":\"./core/state.js\",\"importedName\":\"state\",\"aliasSources\":[],\"aliasOperators\":[]}|boot|P4.1|state-alias-escape|unsupported|*|4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e"
+      ]
     }
   }
 }

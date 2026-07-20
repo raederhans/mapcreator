@@ -14,6 +14,7 @@ MAP_RENDERER_JS = REPO_ROOT / "js" / "core" / "map_renderer.js"
 RENDER_RUNTIME_BINDING_JS = REPO_ROOT / "js" / "bootstrap" / "render_runtime_binding.js"
 HGO_RUNTIME_PREVIEW_RENDER_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "hgo_runtime_preview_render_owner.js"
 MAP_HOVER_INTERACTION_OWNER_JS = REPO_ROOT / "js" / "core" / "map_renderer" / "map_hover_interaction_owner.js"
+SAMPLE_PROJECT_IMPORT_WORKFLOW_JS = REPO_ROOT / "js" / "core" / "sample_project_import_workflow.js"
 
 
 class RuntimeHooksBoundaryContractTest(unittest.TestCase):
@@ -48,7 +49,7 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
         self.assertIn('registerRuntimeHook(state, "restoreSupportSurfaceFromUrlFn", restoreSupportSurfaceFromUrl);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "updateScenarioContextBarFn", refreshScenarioContextBar);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "triggerScenarioGuideFn", triggerScenarioGuide);', toolbar_content)
-        self.assertIn('registerRuntimeHook(state, "refreshSampleProjectBannerFn", () => sampleProjectBannerController.render());', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "refreshSampleProjectBannerFn", refreshSampleProjectSurfaces);', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "renderHgoRuntimePreviewFn", (options = {}) => (', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "inspectHgoRuntimePreviewPointFn", (x, y, options = {}) => (', toolbar_content)
         self.assertIn('registerRuntimeHook(state, "renderCountryListFn", renderList);', sidebar_content)
@@ -80,16 +81,18 @@ class RuntimeHooksBoundaryContractTest(unittest.TestCase):
     def test_sample_project_banner_hook_stays_on_notification_bus(self):
         config_content = STATE_CONFIG_JS.read_text(encoding="utf-8")
         toolbar_content = TOOLBAR_JS.read_text(encoding="utf-8")
-        startup_content = (REPO_ROOT / "js" / "bootstrap" / "startup_sample_project_deeplink.js").read_text(encoding="utf-8")
+        workflow_content = SAMPLE_PROJECT_IMPORT_WORKFLOW_JS.read_text(encoding="utf-8")
         controller_content = (
             REPO_ROOT / "js" / "ui" / "toolbar" / "sample_project_banner_controller.js"
         ).read_text(encoding="utf-8")
 
         self.assertIn('refreshSampleProjectBannerFn: "sample-project:refresh-banner"', config_content)
         self.assertIn('REFRESH_SAMPLE_PROJECT_BANNER: STATE_BUS_EVENT_BY_HOOK_NAME.refreshSampleProjectBannerFn', config_content)
-        self.assertIn('callRuntimeHook(targetState, "refreshSampleProjectBannerFn", targetState.sampleProjectDeeplink);', startup_content)
-        self.assertIn('import { createSampleProjectBannerController } from "./toolbar/sample_project_banner_controller.js";', toolbar_content)
-        self.assertIn('registerRuntimeHook(state, "refreshSampleProjectBannerFn", () => sampleProjectBannerController.render());', toolbar_content)
+        self.assertIn('callRuntimeHook(targetState, "refreshSampleProjectBannerFn", committedState);', workflow_content)
+        self.assertIn("return committedState;", workflow_content)
+        self.assertIn("createSampleProjectBannerController,", toolbar_content)
+        self.assertIn('from "./toolbar/sample_project_banner_controller.js";', toolbar_content)
+        self.assertIn('registerRuntimeHook(state, "refreshSampleProjectBannerFn", refreshSampleProjectSurfaces);', toolbar_content)
         self.assertIn("export function resolveSampleProjectBannerView", controller_content)
 
     def test_hgo_runtime_preview_hooks_are_registered_for_renderer_mode(self):

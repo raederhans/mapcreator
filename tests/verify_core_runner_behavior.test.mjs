@@ -24,8 +24,11 @@ const PACKAGE_SCRIPTS = {
   "verify:test-import-graph": "node tools/check_test_import_graph.mjs",
   "verify:architecture-boundaries": "node tools/check_architecture_boundaries.mjs",
   "verify:state-write-allowlist": "node tools/check_state_write_allowlist.mjs",
-  "verify:p4:state-writer-policy": "npm run test:node:p4:state-writer-policy && node tools/check_state_writer_policy.mjs --phase P4.0",
+  "verify:p4:state-writer-policy": "npm run test:node:p4:state-writer-policy && node tools/check_state_writer_policy.mjs",
   "test:python:p4:state-write-boundary": "node tools/run_p4_state_write_boundary.mjs",
+  "test:node:p4:p4-1": "node --test tests/p4_phase_verification_runner_behavior.test.mjs tests/boot_actions_behavior.test.mjs",
+  "test:python:p4:p4-1-boundary": "npm run python -- -m unittest tests.test_boot_state_actions_boundary_contract tests.test_state_split_boundary_contract tests.test_state_write_guardrail_contract -q",
+  "verify:p4:p4-1": "node tools/run_p4_phase_verification.mjs --phase P4.1",
   "verify:test-console-allowlist": "node tools/check_console_allowlist_decay.mjs",
   "verify:test-timeout-guardrails": "node tools/check_test_timeout_guardrails.mjs",
   "verify:supervisor-contracts": "npm run verify:supervisor-schemas && npm run test:node:supervisor-contracts && npm run test:node:supervisor-routing",
@@ -154,6 +157,8 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "verify:state-write-allowlist",
     "verify:p4:state-writer-policy",
     "test:python:p4:state-write-boundary",
+    "test:node:p4:p4-1",
+    "test:python:p4:p4-1-boundary",
     "verify:pages-dist",
     "verify:dist-drift",
     "test:node:verification-metadata",
@@ -196,6 +201,7 @@ test("default plan excludes E2E and lists skipped main-thread checks", () => {
     "test:node:render-pass-commit-accounting-owner-suite",
     "test:node:hit-canvas-scheduling-owner-suite",
   ]);
+  assert.equal(commandRefs(plan).includes("verify:p4:p4-1"), false);
   assert.ok(commandRefs(plan).includes(
     "npm run python -- -m unittest tests.test_app_entry_resolver tests.test_main_deferred_detail_promotion_boundary_contract tests.test_scenario_chunk_refresh_contracts tests.test_scenario_renderer_bridge_boundary_contract tests.test_map_renderer_interaction_border_snapshot_orchestration_contract tests.test_perf_gate_contract tests.test_startup_shell -q",
   ));

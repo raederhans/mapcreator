@@ -1,3 +1,5 @@
+import { setUiShellDebugState } from "../core/state/actions/boot_actions.js";
+
 const UI_SHELL_BOOT_HELPER_NAMES = Object.freeze([
   "applyUiShellDebugTerritorySeed",
   "bootstrapDeferredUi",
@@ -78,7 +80,7 @@ export async function runUiShellDebugBoot({
   validateHooks(hooks);
   validateHelpers(helpers);
 
-  targetState.uiShellDebug = true;
+  setUiShellDebugState(targetState, true);
   documentRef.body?.classList.add("app-ui-shell-debug");
   helpers.setBootState("ui-shell", {
     message: getUiShellMessage(helpers.getBootLanguage),

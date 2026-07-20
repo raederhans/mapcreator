@@ -1,3 +1,9 @@
+import {
+  clearActivePostReadyTask,
+  replacePostReadyTaskDiagnostics,
+  setActivePostReadyTask,
+} from "../core/state/actions/boot_actions.js";
+
 export const POST_READY_IDLE_QUIET_MS = 850;
 export const POST_READY_IDLE_TIME_REMAINING_MS = 8;
 
@@ -78,7 +84,7 @@ export function createPostReadyScheduler({
     const maxRetryCount = pendingEntries.reduce((maxRetry, [_key, entry]) => (
       Math.max(maxRetry, Number(entry.retryCount || 0))
     ), 0);
-    targetState.postReadyTaskDiagnostics = {
+    const diagnostics = replacePostReadyTaskDiagnostics(targetState, {
       activeTaskKey: String(targetState.activePostReadyTaskKey || ""),
       activeTaskAgeMs: targetState.activePostReadyTaskStartedAt
         ? Math.max(0, currentMs - Number(targetState.activePostReadyTaskStartedAt || 0))
@@ -107,13 +113,13 @@ export function createPostReadyScheduler({
         hasPendingChunkInfraPromotion: !!targetState.runtimeChunkLoadState?.pendingInfraPromotion,
       },
       recordedAt: Date.now(),
-    };
+    });
     targetState.renderPerfMetrics = targetState.renderPerfMetrics && typeof targetState.renderPerfMetrics === "object"
       ? targetState.renderPerfMetrics
       : {};
-    targetState.renderPerfMetrics.postReadySchedulerState = { ...targetState.postReadyTaskDiagnostics };
+    targetState.renderPerfMetrics.postReadySchedulerState = { ...diagnostics };
     globalScope.__renderPerfMetrics = targetState.renderPerfMetrics;
-    return targetState.postReadyTaskDiagnostics;
+    return diagnostics;
   }
 
   function clearTaskInternal(taskKey, { recordDiagnostics = true } = {}) {
@@ -150,8 +156,7 @@ export function createPostReadyScheduler({
     });
     taskHandles.clear();
     taskDiagnostics.clear();
-    targetState.activePostReadyTaskKey = "";
-    targetState.activePostReadyTaskStartedAt = 0;
+    clearActivePostReadyTask(targetState);
     updateDiagnostics({ lastBlockedReason: String(reason || "reset").trim() || "reset" });
   }
 
@@ -202,16 +207,15 @@ export function createPostReadyScheduler({
   }
 
   function runTaskCallback(taskKey, callback) {
-    targetState.activePostReadyTaskKey = taskKey;
-    targetState.activePostReadyTaskStartedAt = nowMs();
+    setActivePostReadyTask(targetState, {
+      taskKey,
+      startedAt: nowMs(),
+    });
     taskDiagnostics.delete(taskKey);
     updateDiagnostics({ taskKey, lastStartedTaskKey: taskKey });
 
     const clearActiveTask = () => {
-      if (targetState.activePostReadyTaskKey === taskKey) {
-        targetState.activePostReadyTaskKey = "";
-        targetState.activePostReadyTaskStartedAt = 0;
-      }
+      clearActivePostReadyTask(targetState, { expectedTaskKey: taskKey });
       updateDiagnostics({ taskKey, lastFinishedTaskKey: taskKey });
     };
 

@@ -3,6 +3,7 @@ import {
   loadSampleProjectText,
   SampleProjectLoadError,
 } from "./sample_project_registry.js";
+import { replaceSampleProjectDeeplinkState } from "./state/actions/boot_actions.js";
 import { callRuntimeHook } from "./state/index.js";
 
 function getNow() {
@@ -46,15 +47,16 @@ export function writeSampleProjectState(targetState, patch = {}) {
   const currentState = targetState?.sampleProjectDeeplink && typeof targetState.sampleProjectDeeplink === "object"
     ? targetState.sampleProjectDeeplink
     : {};
-  targetState.sampleProjectDeeplink = {
+  const nextState = {
     ...currentState,
     ...resolvePreviousSampleState(currentState, patch),
     ...patch,
     updatedAt: getNow(),
   };
+  const committedState = replaceSampleProjectDeeplinkState(targetState, nextState);
   // runtime hook 是 Project banner 和 Guide sample card 的共同刷新入口；状态写入后立即广播，避免两个 UI 面板读到不同阶段。
-  callRuntimeHook(targetState, "refreshSampleProjectBannerFn", targetState.sampleProjectDeeplink);
-  return targetState.sampleProjectDeeplink;
+  callRuntimeHook(targetState, "refreshSampleProjectBannerFn", committedState);
+  return committedState;
 }
 
 export function resolveSampleProjectError(error) {

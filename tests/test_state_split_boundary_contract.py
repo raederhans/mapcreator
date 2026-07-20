@@ -19,6 +19,7 @@ STATE_BORDER_CACHE_JS = REPO_ROOT / "js" / "core" / "state" / "border_cache_stat
 STATE_RENDERER_RUNTIME_JS = REPO_ROOT / "js" / "core" / "state" / "renderer_runtime_state.js"
 STATE_SPATIAL_INDEX_JS = REPO_ROOT / "js" / "core" / "state" / "spatial_index_state.js"
 STATE_BOOT_JS = REPO_ROOT / "js" / "core" / "state" / "boot_state.js"
+STATE_BOOT_ACTIONS_JS = REPO_ROOT / "js" / "core" / "state" / "actions" / "boot_actions.js"
 STATE_CONTENT_JS = REPO_ROOT / "js" / "core" / "state" / "content_state.js"
 STATE_COLOR_JS = REPO_ROOT / "js" / "core" / "state" / "color_state.js"
 STATE_UI_JS = REPO_ROOT / "js" / "core" / "state" / "ui_state.js"
@@ -206,18 +207,21 @@ class StateSplitBoundaryContractTest(unittest.TestCase):
     def test_boot_state_owner_holds_boot_defaults(self):
         donor_content = STATE_JS.read_text(encoding="utf-8")
         owner_content = STATE_BOOT_JS.read_text(encoding="utf-8")
+        action_content = STATE_BOOT_ACTIONS_JS.read_text(encoding="utf-8")
 
         self.assertIn("export function createDefaultStartupBootCacheState()", owner_content)
         self.assertIn("export function createDefaultSampleProjectDeeplinkState()", owner_content)
         self.assertIn("export function createDefaultBootState()", owner_content)
         self.assertIn('export function setStartupInteractionMode(target, mode = "readonly")', owner_content)
         self.assertIn("export function setStartupBootCacheState(target, nextState = null)", owner_content)
-        self.assertIn("if (error !== undefined) {", owner_content)
-        self.assertIn("if (canContinueWithoutScenario !== undefined) {", owner_content)
+        self.assertIn("export function setBootStateFields(target, patch = {})", action_content)
+        self.assertIn("if (error !== undefined) {", action_content)
+        self.assertIn("if (canContinueWithoutScenario !== undefined) {", action_content)
         self.assertIn('bootPhase: "shell",', owner_content)
         self.assertIn('startupInteractionMode: "readonly",', owner_content)
         self.assertIn("startupBootCacheState: createDefaultStartupBootCacheState(),", owner_content)
         self.assertIn("sampleProjectDeeplink: createDefaultSampleProjectDeeplinkState(),", owner_content)
+        self.assertIn('from "./actions/boot_actions.js";', owner_content)
         self.assertIn("...createDefaultBootState(),", donor_content)
         self.assertIsNone(re.search(r'bootPhase:\s*"shell",', donor_content))
         self.assertIsNone(re.search(r'sampleProjectDeeplink:\s*\{', donor_content))

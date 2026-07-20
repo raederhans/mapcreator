@@ -2,6 +2,17 @@
 // 这里收口 startup/boot 壳层和只读解锁相关默认 shape，
 // 保持 state.js 继续作为公开 facade。
 
+import {
+  clearStartupReadonlyStateFields as clearStartupReadonlyStateFieldsAction,
+  clearStartupReadonlyStateForReason as clearStartupReadonlyStateForReasonAction,
+  commitStartupReadonlyStateFields,
+  replaceBootMetricsState as replaceBootMetricsStateAction,
+  replaceStartupBootCacheState,
+  setBootPreviewVisibleState as setBootPreviewVisibleStateAction,
+  setBootStateFields as setBootStateFieldsAction,
+  setStartupInteractionMode as setStartupInteractionModeAction,
+} from "./actions/boot_actions.js";
+
 export function createDefaultStartupBootCacheState() {
   return {
     enabled: false,
@@ -53,37 +64,23 @@ function normalizeStartupInteractionMode(mode = "readonly") {
 }
 
 export function setStartupInteractionMode(target, mode = "readonly") {
-  if (!target || typeof target !== "object") {
-    return "readonly";
-  }
-  target.startupInteractionMode = normalizeStartupInteractionMode(mode);
-  return target.startupInteractionMode;
+  return setStartupInteractionModeAction(target, normalizeStartupInteractionMode(mode));
 }
 
 export function setBootPreviewVisibleState(target, active) {
-  if (!target || typeof target !== "object") {
-    return false;
-  }
-  target.bootPreviewVisible = !!active;
-  return target.bootPreviewVisible;
+  return setBootPreviewVisibleStateAction(target, active);
 }
 
 export function setStartupReadonlyStateFields(
   target,
   { active, reason = "", unlockInFlight = false, since = Date.now() } = {},
 ) {
-  if (!target || typeof target !== "object") {
-    return false;
-  }
-  target.startupReadonly = !!active;
-  target.startupReadonlyReason = target.startupReadonly
-    ? String(reason || "detail-promotion").trim()
-    : "";
-  target.startupReadonlyUnlockInFlight = target.startupReadonly ? !!unlockInFlight : false;
-  target.startupReadonlySince = target.startupReadonly
-    ? (Number(target.startupReadonlySince) || Number(since) || Date.now())
-    : 0;
-  return target.startupReadonly;
+  return commitStartupReadonlyStateFields(target, {
+    active,
+    reason,
+    unlockInFlight,
+    since: active ? (Number(since) || Date.now()) : since,
+  });
 }
 
 export function hasStartupReadonlyReason(target, reason = "") {
@@ -94,16 +91,7 @@ export function hasStartupReadonlyReason(target, reason = "") {
 }
 
 export function clearStartupReadonlyStateFields(target, { preserveSince = true } = {}) {
-  if (!target || typeof target !== "object") {
-    return false;
-  }
-  target.startupReadonly = false;
-  target.startupReadonlyReason = "";
-  target.startupReadonlyUnlockInFlight = false;
-  if (!preserveSince) {
-    target.startupReadonlySince = 0;
-  }
-  return target.startupReadonly;
+  return clearStartupReadonlyStateFieldsAction(target, { preserveSince });
 }
 
 export function clearStartupReadonlyStateForReason(
@@ -114,8 +102,7 @@ export function clearStartupReadonlyStateForReason(
   if (!hasStartupReadonlyReason(target, reason)) {
     return false;
   }
-  clearStartupReadonlyStateFields(target, { preserveSince });
-  return true;
+  return clearStartupReadonlyStateForReasonAction(target, reason, { preserveSince });
 }
 
 export function setBootStateFields(
@@ -129,49 +116,30 @@ export function setBootStateFields(
     canContinueWithoutScenario,
   } = {},
 ) {
-  if (!target || typeof target !== "object") {
-    return null;
-  }
-  if (phase !== undefined) {
-    target.bootPhase = phase;
-  }
-  if (message !== undefined) {
-    target.bootMessage = message;
-  }
-  if (progress !== undefined) {
-    target.bootProgress = progress;
-  }
-  if (blocking !== undefined) {
-    target.bootBlocking = !!blocking;
-  }
-  if (error !== undefined) {
-    target.bootError = String(error || "");
-  }
-  if (canContinueWithoutScenario !== undefined) {
-    target.bootCanContinueWithoutScenario = !!canContinueWithoutScenario;
-  }
-  return target.bootPhase || null;
+  return setBootStateFieldsAction(target, {
+    phase,
+    message,
+    progress,
+    blocking,
+    error,
+    canContinueWithoutScenario,
+  });
 }
 
 export function replaceBootMetricsState(target, metrics = {}) {
-  if (!target || typeof target !== "object") {
-    return {};
-  }
-  target.bootMetrics = metrics && typeof metrics === "object" ? metrics : {};
-  return target.bootMetrics;
+  return replaceBootMetricsStateAction(target, metrics);
 }
 
 export function setStartupBootCacheState(target, nextState = null) {
   if (!target || typeof target !== "object") {
     return createDefaultStartupBootCacheState();
   }
-  target.startupBootCacheState = {
+  return replaceStartupBootCacheState(target, {
     ...createDefaultStartupBootCacheState(),
     ...(
       nextState && typeof nextState === "object"
         ? nextState
         : {}
     ),
-  };
-  return target.startupBootCacheState;
+  });
 }

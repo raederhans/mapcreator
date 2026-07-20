@@ -42,6 +42,12 @@ function createHarness({
   targetState = {},
 } = {}) {
   const calls = [];
+  const stateTarget = new Proxy(targetState, {
+    set(target, property, value) {
+      calls.push(`state:${String(property)}:${String(value)}`);
+      return Reflect.set(target, property, value);
+    },
+  });
   const bootStates = [];
   const initMapCalls = [];
   const setMapDataCalls = [];
@@ -134,7 +140,7 @@ function createHarness({
     renderApp,
     renderDispatcher,
     setMapDataCalls,
-    targetState,
+    targetState: stateTarget,
     territoryPreview,
   };
 }
@@ -190,6 +196,10 @@ test("runUiShellDebugBoot starts UI shell and exposes failure recovery state bef
 
   assert.equal(harness.targetState.uiShellDebug, true);
   assert.deepEqual(harness.documentRef.classNames, ["app-ui-shell-debug"]);
+  assert.ok(
+    harness.calls.indexOf("state:uiShellDebug:true")
+      < harness.calls.indexOf("bodyClass:app-ui-shell-debug"),
+  );
   assert.deepEqual(hookCalls, [
     ["renderDispatcher", harness.renderDispatcher],
     ["startupUiBootstrapPromise", deferredUiBootstrap.promise],

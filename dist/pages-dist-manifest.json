@@ -45547,7 +45547,7 @@
     },
     {
       "path": "app/js/bootstrap/post_ready_scheduler.js",
-      "size_bytes": 14500,
+      "size_bytes": 14461,
       "source_kind": "dist"
     },
     {
@@ -45557,12 +45557,12 @@
     },
     {
       "path": "app/js/bootstrap/startup_boot_overlay.js",
-      "size_bytes": 16693,
+      "size_bytes": 16810,
       "source_kind": "dist"
     },
     {
       "path": "app/js/bootstrap/startup_bootstrap_support.js",
-      "size_bytes": 14405,
+      "size_bytes": 14495,
       "source_kind": "dist"
     },
     {
@@ -45592,12 +45592,12 @@
     },
     {
       "path": "app/js/bootstrap/ui_shell_boot.js",
-      "size_bytes": 4619,
+      "size_bytes": 4706,
       "source_kind": "dist"
     },
     {
       "path": "app/js/bootstrap/ui_shell_debug_seed.js",
-      "size_bytes": 14767,
+      "size_bytes": 14868,
       "source_kind": "dist"
     },
     {
@@ -46312,7 +46312,7 @@
     },
     {
       "path": "app/js/core/sample_project_import_workflow.js",
-      "size_bytes": 6358,
+      "size_bytes": 6471,
       "source_kind": "dist"
     },
     {
@@ -46327,7 +46327,7 @@
     },
     {
       "path": "app/js/core/scenario/bundle_runtime.js",
-      "size_bytes": 19959,
+      "size_bytes": 19159,
       "source_kind": "dist"
     },
     {
@@ -46382,7 +46382,7 @@
     },
     {
       "path": "app/js/core/scenario/startup_hydration.js",
-      "size_bytes": 35394,
+      "size_bytes": 35554,
       "source_kind": "dist"
     },
     {
@@ -46501,13 +46501,18 @@
       "source_kind": "dist"
     },
     {
+      "path": "app/js/core/state/actions/boot_actions.js",
+      "size_bytes": 5841,
+      "source_kind": "dist"
+    },
+    {
       "path": "app/js/core/state/appearance_preset_state.js",
       "size_bytes": 14608,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/state/boot_state.js",
-      "size_bytes": 4736,
+      "size_bytes": 3955,
       "source_kind": "dist"
     },
     {
@@ -46532,7 +46537,7 @@
     },
     {
       "path": "app/js/core/state/content_state.js",
-      "size_bytes": 19698,
+      "size_bytes": 19779,
       "source_kind": "dist"
     },
     {
@@ -46637,7 +46642,7 @@
     },
     {
       "path": "app/js/main.js",
-      "size_bytes": 23389,
+      "size_bytes": 23451,
       "source_kind": "dist"
     },
     {
@@ -47437,7 +47442,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468167,
+      "size_bytes": 1468293,
       "source_kind": "dist"
     },
     {
@@ -47567,9 +47572,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9427,
+      "file_count": 9428,
       "path": "app",
-      "size_bytes": 965672005
+      "size_bytes": 965677037
     },
     {
       "file_count": 57,
@@ -47579,7 +47584,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468167
+      "size_bytes": 1468293
     },
     {
       "file_count": 1,
@@ -47602,5 +47607,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972238533
+  "total_bytes": 972243691
 }

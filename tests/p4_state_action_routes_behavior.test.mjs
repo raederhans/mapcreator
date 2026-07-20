@@ -93,6 +93,8 @@ test("parseArgs accepts adaptive selector changed-file conventions", () => {
     "tools/state_writer_policy.mjs, tests/state_writer_policy_behavior.test.mjs",
     "--json-out",
     ".runtime/custom/p4-routes.json",
+    "--history-base",
+    "P4.2a-checkpoint^",
     "--allow-empty",
   ]);
   assert.equal(args.phase, "P4.3");
@@ -102,7 +104,45 @@ test("parseArgs accepts adaptive selector changed-file conventions", () => {
     "tests/state_writer_policy_behavior.test.mjs",
   ]);
   assert.equal(args.jsonOut, ".runtime/custom/p4-routes.json");
+  assert.equal(args.historyBase, "P4.2a-checkpoint^");
   assert.equal(args.allowEmpty, true);
+});
+
+test("history discovery can be scoped to one exact phase boundary", () => {
+  let discoveryArgs = null;
+  const route = createRoute();
+  runP4StateActionRouteCheck({
+    args: {
+      phase: "P4.0",
+      changedFiles: [],
+      includeBranchHistory: false,
+      historyBase: "HEAD^",
+      allowEmpty: false,
+      jsonOut: ".runtime/report.json",
+    },
+    changedFileDiscoverer: (args) => {
+      discoveryArgs = args;
+      return ["tools/state_writer_policy.mjs"];
+    },
+    routeBuilder: () => [route],
+    recommendationBuilder: () => createRecommendation({ route }),
+    reportWriter: () => "C:/repo/.runtime/report.json",
+  });
+
+  assert.deepEqual(discoveryArgs, {
+    includeBranchHistory: false,
+    historyBase: "HEAD^",
+  });
+  assert.throws(
+    () => parseArgs([
+      "--phase",
+      "P4.1",
+      "--include-branch-history",
+      "--history-base",
+      "HEAD^",
+    ]),
+    /mutually exclusive/,
+  );
 });
 
 test("default report path is phase scoped", () => {
@@ -115,8 +155,14 @@ test("default report path is phase scoped", () => {
 test("P4 ownership includes production JS and explicit P4 policy surfaces", () => {
   assert.equal(isP4OwnedChangedFile("js/core/state/actions/boot_actions.js"), true);
   assert.equal(isP4OwnedChangedFile("tools/check_p4_state_action_routes.mjs"), true);
+  assert.equal(isP4OwnedChangedFile("tools/run_p4_phase_verification.mjs"), true);
+  assert.equal(isP4OwnedChangedFile("tools/state_action_delegation_contract.mjs"), true);
   assert.equal(isP4OwnedChangedFile("tests/p4_state_action_routes_behavior.test.mjs"), true);
-  assert.equal(isP4OwnedChangedFile("tests/boot_actions_behavior.test.mjs"), false);
+  assert.equal(isP4OwnedChangedFile("tests/boot_actions_behavior.test.mjs"), true);
+  assert.equal(
+    isP4OwnedChangedFile("tests/test_boot_state_actions_boundary_contract.py"),
+    true,
+  );
   assert.equal(isP4OwnedChangedFile("tests/e2e/test-import-graph.json"), false);
   assert.equal(isP4OwnedChangedFile("tools/check_test_import_graph.mjs"), false);
   assert.equal(isP4OwnedChangedFile("docs/active/state-action-ownership-p4-20260719/plan.md"), true);
@@ -277,6 +323,7 @@ test("runner writes the phase report and returns gate exit status", () => {
       phase: "P4.0",
       changedFiles: ["tools/state_writer_policy.mjs"],
       includeBranchHistory: false,
+      historyBase: "",
       allowEmpty: false,
       jsonOut: ".runtime/report.json",
     },

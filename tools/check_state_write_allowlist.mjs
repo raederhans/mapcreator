@@ -21,6 +21,7 @@ const EXTENSIONS = new Set([".js", ".mjs"]);
 const LEGACY_SCANNER_FIXTURE_PATHS = new Set([
   "tests/state_writer_policy_behavior.test.mjs",
   "tests/state_writer_policy_manifest_behavior.test.mjs",
+  "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
 ]);
 

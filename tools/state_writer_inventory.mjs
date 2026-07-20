@@ -3,6 +3,10 @@ import path from "node:path";
 import { parse } from "acorn";
 import * as walk from "acorn-walk";
 
+import {
+  findStateActionDelegationContractEntry,
+} from "./state_action_delegation_contract.mjs";
+
 const DEFAULT_PARAMETER_NAMES = Object.freeze([
   "target",
   "state",
@@ -2165,7 +2169,11 @@ function analyzeBindingMutations(
 
   function importedTargetHelperArgumentIndex(callNode) {
     const callee = unwrapChain(callNode?.callee);
-    if (callee?.type !== "Identifier") {
+    if (
+      callee?.type !== "Identifier"
+      || callNode?.optional === true
+      || callee.optional === true
+    ) {
       return -1;
     }
     const record = analysis.resolveIdentifier(callee);
@@ -2177,8 +2185,13 @@ function analyzeBindingMutations(
       return -1;
     }
     const source = resolveProjectLocalImportPath(record.importSource);
-    if (/^js\/core\/state\/actions\/[^/]+\.js$/.test(source)) {
-      return 0;
+    const actionContract =
+      findStateActionDelegationContractEntry(
+        source,
+        record.importedName,
+      );
+    if (actionContract) {
+      return actionContract.targetArgumentIndex;
     }
     if (source === "js/core/state/index.js") {
       return IMPORTED_COMPAT_TARGET_HELPERS.get(record.importedName) ?? -1;
@@ -2201,10 +2214,12 @@ function analyzeBindingMutations(
       const targetClassification =
         argumentClassifications[importedTargetIndex];
       if (
-        isExplicitTargetArgument(node.arguments[importedTargetIndex])
-        &&
-        targetClassification?.status === "exact"
-        && targetClassification.reference?.segments?.length === 0
+        importedTargetIndex < node.arguments.length
+        && isSanctionedImportedStateActionTargetArgument(
+          node.arguments[importedTargetIndex],
+          targetClassification,
+          aliasRecords,
+        )
       ) {
         delegatedArgumentIndexes.add(importedTargetIndex);
       }
@@ -2239,6 +2254,56 @@ function analyzeBindingMutations(
       });
     }
     return delegatedArgumentIndexes;
+  }
+
+  function isDirectStateRootArgument(argument, classification) {
+    return Boolean(
+      argument?.type === "Identifier"
+      && classification?.status === "exact"
+      && classification.reference?.segments?.length === 0,
+    );
+  }
+
+  function isSanctionedImportedStateActionTargetArgument(
+    argument,
+    classification,
+    aliasRecords,
+  ) {
+    if (isDirectStateRootArgument(argument, classification)) {
+      return true;
+    }
+    const node = unwrapChain(argument);
+    if (
+      node?.type !== "Identifier"
+      || classification?.status !== "maybe"
+    ) {
+      return false;
+    }
+    const record = analysis.resolveIdentifier(node);
+    if (
+      record?.kind !== "parameter"
+      || record.parameterPath !== "$"
+      || identityTransitionRecords.has(record)
+    ) {
+      return false;
+    }
+    const parameter =
+      record.ownerNode?.params?.[record.parameterIndex];
+    if (
+      parameter?.type !== "AssignmentPattern"
+      || parameter.left?.type !== "Identifier"
+      || analysis.resolveIdentifier(parameter.left) !== record
+    ) {
+      return false;
+    }
+    const defaultClassification = referenceClassification(
+      parameter.right,
+      aliasRecords,
+    );
+    return Boolean(
+      defaultClassification.status === "exact"
+      && defaultClassification.reference?.segments?.length === 0,
+    );
   }
 
   function isExplicitTargetArgument(argument) {

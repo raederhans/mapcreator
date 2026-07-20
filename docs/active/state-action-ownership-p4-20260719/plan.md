@@ -25,7 +25,7 @@
 
 ## Stages
 
-- [ ] P4.0 Writer policy foundation
+- [x] P4.0 Writer policy foundation
 - [ ] P4.1 Boot/startup actions
 - [ ] P4.2a Scenario readiness and atomic activation actions
 - [ ] P4.2b/P4.2c Scenario chunk and promotion actions

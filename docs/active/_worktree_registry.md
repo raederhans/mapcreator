@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-19 P4 global-state action ownership functional checkpoint `3f255f5ac837a0c824806c566acb2e918b214701` has completed its exact clean matrix. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.0 now has pinned Acorn parsing, stable parameter structural identities, canonical state-facade resolution, frozen semantic multisets and checkpoint history, Git-anchored retirement history, complete named-runner reachability and zero-gap exact-subphase routing; independent code/architecture review is CLEAR and attestation A is next.
+Last updated: 2026-07-19 P4.0 checkpoint C `3f255f5ac837a0c824806c566acb2e918b214701` and attestation A `f422e4c291b59e17f7d117b0518b6e222c4663e4` are exact-SHA green and pushed. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.1 Boot/startup action ownership is active in the isolated worktree.
 
 ## Integration Owner
 
@@ -28,7 +28,7 @@ Current truth contains the user-owned parent checkout plus one isolated P4 execu
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main@68a62e54` | protected parent checkout; dirty user WIP | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured after P4 synchronization | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; use an isolated clean worktree for P4 implementation and later integration. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@3f255f5a` | `origin/main@68a62e54` | P4.0 attestation A | Task records, state-writer tooling/tests/policy, verification metadata, package scripts and registry are P4.0 hot files. Product `js/**` diff remains empty. | Exact C is green: policy 185/185, Python boundary 20/20, route 31/27/0/0, core 78/78, Pages 927.20 MiB, tracked clean, and report hashes are recorded in the task ledger. Independent code/architecture review is CLEAR. | Yellow for verification control-plane; red for concurrent state-policy or shared P4.4 edits. | Commit docs-only A, verify exact SHA, push, then begin P4.1. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@f422e4c2` | `origin/main@68a62e54` | P4.1 checkpoint candidate | Boot action module/callers, delegation policy, tests, phase runner, policy checkpoint and verification metadata are hot files. | Focused P4.1 gates are green: Node 81/81 plus Boot 11/11, Python 17/17, policy 207/207, route 50/33/0/0, shared architecture/allowlist/import/metadata/supervisor gates PASS. | Yellow for shared P4 tooling and Boot callers; red for concurrent state-policy or shared P4.4 edits. | Generate canonical Pages output, commit C, verify exact C, attest exact A, push, then begin P4.2a. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 

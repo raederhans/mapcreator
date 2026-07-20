@@ -38,6 +38,7 @@ const DEFAULT_REPORT_ROOT = path.join(
 const POLICY_CONFIG_PATHS = Object.freeze([
   "package-lock.json",
   "tools/eslint-rules/state-writer-allowlist.json",
+  "tools/state_action_delegation_contract.mjs",
   "tools/state_writer_inventory.mjs",
   "tools/state_writer_policy.mjs",
   "tools/build_state_writer_policy.mjs",
@@ -47,7 +48,7 @@ const POLICY_CONFIG_PATHS = Object.freeze([
 
 function parseArgs(argv) {
   const args = {
-    phase: "P4.0",
+    phase: "",
     jsonOut: "",
     json: false,
     requireClean: false,
@@ -68,7 +69,9 @@ function parseArgs(argv) {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
-  args.phase = normalizeP4StateActionPhase(args.phase);
+  if (args.phase) {
+    args.phase = normalizeP4StateActionPhase(args.phase);
+  }
   return args;
 }
 
@@ -77,6 +80,7 @@ function runGit(args) {
     cwd: PROJECT_ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 16 * 1024 * 1024,
   });
 }
 
@@ -454,13 +458,16 @@ export function buildStateWriterCloseoutTargetViolations({
 }
 
 export async function buildStateWriterPolicyReport({
-  phase = "P4.0",
+  phase = "",
   policy = null,
   previousPolicy = undefined,
   requireClean = false,
 } = {}) {
-  const normalizedPhase = normalizeP4StateActionPhase(phase);
   const loadedPolicy = policy || await readStateWriterPolicy();
+  const requestedPhase = String(phase || "").trim()
+    || String(loadedPolicy?.progress?.latestPhase || "").trim()
+    || "P4.0";
+  const normalizedPhase = normalizeP4StateActionPhase(requestedPhase);
   const inventory = await scanStateWriterPolicySnapshot(loadedPolicy);
   const validation = validateStateWriterPolicySnapshot({
     policy: loadedPolicy,

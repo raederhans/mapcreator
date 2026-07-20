@@ -85,6 +85,7 @@ export function parseArgs(argv) {
     phase: null,
     changedFiles: [],
     includeBranchHistory: false,
+    historyBase: "",
     allowEmpty: false,
     jsonOut: null,
     printJson: false,
@@ -96,12 +97,16 @@ export function parseArgs(argv) {
     else if (token === "--changed-files") args.changedFiles.push(...splitChangedFiles(argv[++index]));
     else if (token === "--changed-files-list") args.changedFiles.push(...readChangedFileList(argv[++index]));
     else if (token === "--include-branch-history") args.includeBranchHistory = true;
+    else if (token === "--history-base") args.historyBase = String(argv[++index] || "").trim();
     else if (token === "--allow-empty") args.allowEmpty = true;
     else if (token === "--json-out") args.jsonOut = argv[++index];
     else if (token === "--json") args.printJson = true;
     else args.changedFiles.push(token);
   }
   args.phase = validatePhase(args.phase);
+  if (args.includeBranchHistory && args.historyBase) {
+    throw new Error("--include-branch-history and --history-base are mutually exclusive.");
+  }
   args.changedFiles = args.changedFiles.filter(Boolean);
   args.jsonOut = args.jsonOut || defaultP4RouteReportPath(args.phase);
   return args;
@@ -113,14 +118,20 @@ export function isP4OwnedChangedFile(changedFile) {
   if (
     normalized.startsWith("tests/state_writer_")
     || normalized.startsWith("tests/p4_")
+    || (
+      normalized.startsWith("tests/")
+      && normalized.includes("_actions_")
+    )
     || normalized === "tests/test_state_write_guardrail_contract.py"
   ) return true;
   if (
     normalized.startsWith("tools/state_writer_")
+    || normalized === "tools/state_action_delegation_contract.mjs"
     || normalized === "tools/build_state_writer_policy.mjs"
     || normalized === "tools/check_state_writer_policy.mjs"
     || normalized === "tools/check_p4_state_action_routes.mjs"
     || normalized === "tools/p4_state_action_phases.mjs"
+    || normalized === "tools/run_p4_phase_verification.mjs"
     || normalized === "tools/run_p4_state_writer_policy_tests.mjs"
     || normalized === "tools/run_p4_state_write_boundary.mjs"
   ) return true;
@@ -324,7 +335,10 @@ export function runP4StateActionRouteCheck({
 } = {}) {
   const changedFiles = args.changedFiles.length
     ? args.changedFiles
-    : changedFileDiscoverer({ includeBranchHistory: args.includeBranchHistory });
+    : changedFileDiscoverer({
+      includeBranchHistory: args.includeBranchHistory,
+      historyBase: args.historyBase,
+    });
   const routes = routeBuilder();
   const recommendation = recommendationBuilder(changedFiles, routes);
   const report = buildP4StateActionRouteReport({

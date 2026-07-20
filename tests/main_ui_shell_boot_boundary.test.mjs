@@ -74,17 +74,18 @@ test("main injects the complete UI shell helper surface", () => {
 
 test("UI shell boot owner exports expected API and owns moved debug tokens", () => {
   const ownerSource = readRepoFile("js", "bootstrap", "ui_shell_boot.js");
-  const targetStateWrite = ["targetState.uiShellDebug", "= true"].join(" ");
 
   assert.ok(ownerSource.includes("export function isUiShellDebugMode"));
   assert.ok(ownerSource.includes("export async function runUiShellDebugBoot"));
-  assert.ok(ownerSource.includes(targetStateWrite));
+  assert.ok(ownerSource.includes('import { setUiShellDebugState } from "../core/state/actions/boot_actions.js";'));
+  assert.ok(ownerSource.includes("setUiShellDebugState(targetState, true);"));
+  assert.equal(ownerSource.includes("targetState.uiShellDebug ="), false);
   assert.ok(ownerSource.includes('documentRef.body?.classList.add("app-ui-shell-debug")'));
   assert.ok(ownerSource.includes('flushReason: "ui-shell-render-now"'));
   assert.ok(ownerSource.includes("globalScope.__mapcreatorUiShellDebug = {"));
 });
 
-test("UI shell boot owner avoids direct runtime, renderer, and debug seed imports", () => {
+test("UI shell boot owner imports only the canonical boot action dependency", () => {
   const ownerSource = readRepoFile("js", "bootstrap", "ui_shell_boot.js");
   const forbiddenImportFragments = [
     'from "../core/state.js"',
@@ -94,8 +95,34 @@ test("UI shell boot owner avoids direct runtime, renderer, and debug seed import
     'from "./ui_shell_debug_seed.js"',
   ];
 
-  assert.equal(ownerSource.includes("import "), false);
+  const imports = ownerSource.match(/^import .*;$/gm) || [];
+  assert.deepEqual(imports, [
+    'import { setUiShellDebugState } from "../core/state/actions/boot_actions.js";',
+  ]);
   for (const fragment of forbiddenImportFragments) {
     assert.equal(ownerSource.includes(fragment), false, `owner imports ${fragment}`);
   }
+});
+
+test("UI shell territory seed commits boot ownership after preview state and before preset rebuild", () => {
+  const seedSource = readRepoFile("js", "bootstrap", "ui_shell_debug_seed.js");
+  const selectedInspectorWrite = [
+    "state",
+    ".selectedInspectorCountryCode = UI_SHELL_TERRITORY_PREVIEW_SELECTED_CODE;",
+  ].join("");
+  const legacySeededWrite = [
+    "state",
+    ".uiShellDebugTerritorySeeded =",
+  ].join("");
+  const selectedStateIndex = seedSource.indexOf(
+    selectedInspectorWrite,
+  );
+  const commitIndex = seedSource.indexOf("setUiShellDebugTerritorySeededState(state, true);");
+  const rebuildIndex = seedSource.indexOf("rebuildPresetState();", commitIndex);
+
+  assert.ok(seedSource.includes('from "../core/state/actions/boot_actions.js";'));
+  assert.ok(selectedStateIndex > 0);
+  assert.ok(commitIndex > selectedStateIndex);
+  assert.ok(rebuildIndex > commitIndex);
+  assert.equal(seedSource.includes(legacySeededWrite), false);
 });

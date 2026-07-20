@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { hydrateStartupBaseContentState } from "../js/core/state/content_state.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -140,4 +141,43 @@ test("main import list no longer carries the proven unused startup support helpe
   assert.equal(mainSource.includes("normalizeBatchFillScopes"), false);
   assert.ok(mainSource.includes("persistViewSettings"));
   assert.ok(mainSource.includes("postStartupSupportKeyUsageReport"));
+});
+
+test("main commits initial chunk promotion through the canonical boot action before inspecting result", () => {
+  const mainSource = readRepoFile("js", "main.js");
+  const awaitIndex = mainSource.indexOf(
+    "const result = await runtimeState.awaitInitialScenarioChunkVisualPromotionFn({",
+  );
+  const commitIndex = mainSource.indexOf(
+    "setStartupInitialScenarioChunkVisualPromotion(runtimeState, result);",
+    awaitIndex,
+  );
+  const resultCheckIndex = mainSource.indexOf("if (result && result.ok === false)", commitIndex);
+  const legacyDirectWrite = [
+    "runtimeState",
+    ".startupInitialScenarioChunkVisualPromotion =",
+  ].join("");
+
+  assert.ok(mainSource.includes('from "./core/state/actions/boot_actions.js";'));
+  assert.ok(awaitIndex > 0);
+  assert.ok(commitIndex > awaitIndex);
+  assert.ok(resultCheckIndex > commitIndex);
+  assert.equal(mainSource.includes(legacyDirectWrite), false);
+});
+
+test("startup content hydration adopts the loader cache object by identity", () => {
+  const startupBootCacheState = {
+    enabled: true,
+    baseTopology: "hit",
+    localization: "hit",
+    scenarioBootstrap: "probe",
+  };
+  const targetState = {};
+
+  hydrateStartupBaseContentState(targetState, {
+    topologyPrimary: { type: "Topology", objects: {}, arcs: [] },
+    startupBootCacheState,
+  });
+
+  assert.equal(targetState.startupBootCacheState, startupBootCacheState);
 });

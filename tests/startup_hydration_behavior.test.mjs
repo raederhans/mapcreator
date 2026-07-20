@@ -112,29 +112,36 @@ test("missing runtime source sha enters hydration health gate", () => {
 });
 
 test("startup hydration marks unrenderable runtime topology as fatal and keeps readonly", () => {
-  const state = {
-    activeScenarioId: "sample",
-    startupReadonly: false,
-    startupReadonlyReason: "",
-    startupReadonlyUnlockInFlight: false,
-    scenarioHydrationHealthGate: null,
-  };
-  const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state);
+  for (const initialSince of [4321, 0]) {
+    const state = {
+      activeScenarioId: "sample",
+      startupReadonly: false,
+      startupReadonlyReason: "",
+      startupReadonlyUnlockInFlight: false,
+      startupReadonlySince: initialSince,
+      scenarioHydrationHealthGate: null,
+    };
+    const { hydrateActiveScenarioBundle } = createMinimalHydrationController(state);
 
-  const hydrated = hydrateActiveScenarioBundle({
-    manifest: { scenario_id: "sample" },
-    runtimeTopologyPayload: {
-      type: "Topology",
-      objects: { political: { type: "GeometryCollection", geometries: [] } },
-      arcs: [],
-    },
-  });
+    const hydrated = hydrateActiveScenarioBundle({
+      manifest: { scenario_id: "sample" },
+      runtimeTopologyPayload: {
+        type: "Topology",
+        objects: { political: { type: "GeometryCollection", geometries: [] } },
+        arcs: [],
+      },
+    });
 
-  assert.equal(hydrated, false);
-  assert.equal(state.startupReadonly, true);
-  assert.equal(state.startupReadonlyReason, "scenario-health-gate");
-  assert.equal(state.scenarioHydrationHealthGate.status, "fatal");
-  assert.equal(state.scenarioHydrationHealthGate.reason, "scenario-runtime-topology-unrenderable");
+    assert.equal(hydrated, false);
+    assert.equal(state.startupReadonly, true);
+    assert.equal(state.startupReadonlyReason, "scenario-health-gate");
+    assert.equal(state.startupReadonlySince, initialSince);
+    assert.equal(state.scenarioHydrationHealthGate.status, "fatal");
+    assert.equal(
+      state.scenarioHydrationHealthGate.reason,
+      "scenario-runtime-topology-unrenderable",
+    );
+  }
 });
 
 test("startup hydration allows blank scenario runtime topology shells", () => {
@@ -722,6 +729,7 @@ test("startup hydration overlay mismatch degrades overlays and keeps startup rea
     startupReadonly: true,
     startupReadonlyReason: "scenario-health-gate",
     startupReadonlyUnlockInFlight: true,
+    startupReadonlySince: 9876,
     scenarioHydrationHealthGate: null,
   };
 
@@ -779,6 +787,7 @@ test("startup hydration overlay mismatch degrades overlays and keeps startup rea
   assert.equal(state.startupReadonly, false);
   assert.equal(state.startupReadonlyReason, "");
   assert.equal(state.startupReadonlyUnlockInFlight, false);
+  assert.equal(state.startupReadonlySince, 9876);
   assert.deepEqual(state.scenarioHydrationHealthGate, {
     status: "degraded",
     reason: "runtime-overlay-context-land-mask-version-mismatch",

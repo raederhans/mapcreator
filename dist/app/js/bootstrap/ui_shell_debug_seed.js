@@ -1,4 +1,5 @@
 import { state as runtimeState } from "../core/state.js";
+import { setUiShellDebugTerritorySeededState } from "../core/state/actions/boot_actions.js";
 import { normalizeCountryCode, rebuildPresetState } from "../core/releasable_manager.js";
 
 const UI_SHELL_TERRITORY_PREVIEW_SCENARIO_ID = "ui_shell_territory_preview";
@@ -370,7 +371,7 @@ function applyUiShellDebugTerritorySeed(state = runtimeState) {
   };
   applyPreviewHierarchy(state);
   ensureUiShellInspectorDisclosureState(state);
-  state.uiShellDebugTerritorySeeded = true;
+  setUiShellDebugTerritorySeededState(state, true);
   rebuildPresetState();
 
   return {

@@ -181,6 +181,14 @@ test("scheduleTask records pending diagnostics and runs through timeout fallback
   assert.equal(targetState.postReadyTaskDiagnostics.idleQuietMs, POST_READY_IDLE_QUIET_MS);
   assert.equal(targetState.postReadyTaskDiagnostics.minIdleTimeRemainingMs, POST_READY_IDLE_TIME_REMAINING_MS);
   assert.equal(targetState.renderPerfMetrics.postReadySchedulerState.pendingTaskCount, 1);
+  assert.notEqual(
+    targetState.renderPerfMetrics.postReadySchedulerState,
+    targetState.postReadyTaskDiagnostics,
+  );
+  assert.deepEqual(
+    targetState.renderPerfMetrics.postReadySchedulerState,
+    targetState.postReadyTaskDiagnostics,
+  );
   assert.equal(globalScope.__renderPerfMetrics, targetState.renderPerfMetrics);
 
   assert.equal(globalScope.__test.timeoutCalls[0].delay, 50);

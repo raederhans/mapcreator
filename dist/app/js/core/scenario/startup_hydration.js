@@ -9,6 +9,9 @@ import {
 } from "../state/index.js";
 import {
   clearStartupReadonlyStateForReason,
+  commitStartupReadonlyStateFields,
+} from "../state/actions/boot_actions.js";
+import {
   hasStartupReadonlyReason,
 } from "../state/boot_state.js";
 import {
@@ -318,9 +321,12 @@ function createScenarioStartupHydrationController({
           unlockInFlight: false,
         });
         if (handled === undefined) {
-          state.startupReadonly = true;
-          state.startupReadonlyReason = "scenario-health-gate";
-          state.startupReadonlyUnlockInFlight = false;
+          commitStartupReadonlyStateFields(state, {
+            active: true,
+            reason: "scenario-health-gate",
+            unlockInFlight: false,
+            since: Number(state.startupReadonlySince) || 0,
+          });
         }
         syncScenarioUi();
         syncCountryUi({ renderNow: false });

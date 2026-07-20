@@ -3,8 +3,9 @@ import { state as runtimeState } from "./core/state.js";
 import "./core/data_service.js";
 import {
   setBootPreviewVisibleState,
+  setStartupInitialScenarioChunkVisualPromotion,
   setStartupInteractionMode,
-} from "./core/state/boot_state.js";
+} from "./core/state/actions/boot_actions.js";
 import { createStartupBootOverlayController } from "./bootstrap/startup_boot_overlay.js";
 import { createStartupDataPipelineOwner } from "./bootstrap/startup_data_pipeline.js";
 import { createDeferredDetailPromotionOwner } from "./bootstrap/deferred_detail_promotion.js";
@@ -260,7 +261,7 @@ async function ensureStartupInitialScenarioChunkVisualReady({
     d3Client,
     renderNow: true,
   });
-  runtimeState.startupInitialScenarioChunkVisualPromotion = result;
+  setStartupInitialScenarioChunkVisualPromotion(runtimeState, result);
   if (result && result.ok === false) {
     const details = {
       status: String(result.status || "unknown"),

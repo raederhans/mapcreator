@@ -58,8 +58,17 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
         self.assertEqual(projected, sorted(allowlist.get("files", [])))
 
     def test_p4_policy_checker_matches_current_workspace(self):
+        policy = json.loads(P4_POLICY_FILE.read_text(encoding="utf-8"))
+        latest_phase = policy.get("progress", {}).get("latestPhase")
+        self.assertIsInstance(latest_phase, str)
+        self.assertTrue(latest_phase)
         result = subprocess.run(
-            ["node", "tools/check_state_writer_policy.mjs", "--phase", "P4.0"],
+            [
+                "node",
+                "tools/check_state_writer_policy.mjs",
+                "--phase",
+                latest_phase,
+            ],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
@@ -72,13 +81,16 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             self.fail(details or "P4 state writer policy check failed")
         self.assertIn("P4 state writer policy pass:", result.stdout)
 
-    def test_p4_zero_production_action_modules(self):
+    def test_p4_production_action_modules_match_current_policy(self):
         action_modules = (
             sorted(P4_ACTIONS_DIR.glob("*.js"))
             if P4_ACTIONS_DIR.exists()
             else []
         )
-        self.assertEqual(action_modules, [])
+        self.assertEqual(
+            [path.relative_to(REPO_ROOT).as_posix() for path in action_modules],
+            ["js/core/state/actions/boot_actions.js"],
+        )
 
     def test_allowlist_script_matches_current_workspace(self):
         result = subprocess.run(
@@ -100,6 +112,7 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
         expected_fixtures = {
             "tests/state_writer_policy_behavior.test.mjs",
             "tests/state_writer_policy_manifest_behavior.test.mjs",
+            "tests/state_writer_scanner_soundness_behavior.test.mjs",
             "tests/state_writer_policy_soundness_behavior.test.mjs",
         }
         fixture_match = re.search(

@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status on 2026-07-19: current `main@68a62e54` with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; P4 preserves every entry and performs all edits in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.0 policy hardening and fresh gate execution precede checkpoint C plus exact-SHA attestation A.
+- Current phase: P4.1 Boot/startup action ownership; P4.0 exact checkpoint C and attestation A are green and pushed.
 
 ## Decisions and deviations
 
@@ -33,6 +33,7 @@
 | 2026-07-19 | The named policy package script uses a direct Node wrapper, while the route registry previously exposed only nested test files | Route discovery now records the wrapper entrypoint as a dependency; named-gate reachability passes 3/3 and P4.0 routing covers 31 changed files, 27 P4-owned files, zero unmatched files and zero gaps. |
 | 2026-07-19 | Scanner soundness fixtures intentionally contain state-write syntax that the legacy regex gate would classify as production-like test writes | Added an exact three-file fixture exclusion set to the legacy compatibility scanner and locked the compensation contract: every excluded fixture is parsed from the checker source and must enter the complete named AST-policy runner; Python boundary passes 20/20. |
 | 2026-07-19 | Functional checkpoint `3f255f5ac837a0c824806c566acb2e918b214701` completed its exact clean matrix | Policy identity reports tree `2cb288e242fbbbac2c99113126add515321b29db`, `trackedClean=true`; policy 185/185, Python 20/20, route 31/27/0/0 and core 78/78 pass. This docs-only attestation records that immutable evidence before exact A verification. |
+| 2026-07-19 | Docs-only attestation `f422e4c291b59e17f7d117b0518b6e222c4663e4` completed the same exact clean matrix and was pushed | P4.0 is closed. P4.1 begins with an explicit action delegation contract, one canonical Boot action module and behavior-preserving caller migration. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -40,8 +41,8 @@
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/` | not started |
-| P4.0 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.0/` | exact checkpoint C PASS: policy 185/185, Python 20/20, route 31/27/0/0 and core 78/78; docs-only A exact rerun remains |
-| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | not started |
+| P4.0 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.0/` | exact C and exact A PASS; P4.0 closed |
+| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.0 exact A PASS; P4.1 canonical Pages generation is the next live lane |
 | Performance gate | main integration owner | `.runtime/output/perf/` | not started |
 
 ## Handoff
@@ -50,4 +51,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Commit this docs-only attestation A, rerun the complete clean P4.0 matrix on exact `SHA_A`, push, then begin P4.1.
+Generate the canonical P4.1 Pages mirror, commit functional checkpoint C, execute the exact-C matrix, then record and verify docs-only attestation A.

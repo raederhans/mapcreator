@@ -77,6 +77,9 @@ test("state ownership domain exposes P4 policy and route evidence", () => {
   assert.ok(domain.ownerHints.includes("state-ownership"));
   assert.ok(domain.preferredChildSafeChecks.includes("npm run verify:p4:state-writer-policy"));
   assert.ok(domain.preferredChildSafeChecks.includes("npm run test:python:p4:state-write-boundary"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run test:node:p4:p4-1"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run test:python:p4:p4-1-boundary"));
+  assert.ok(domain.preferredChildSafeChecks.includes("npm run verify:p4:p4-1"));
   assert.equal(
     domain.preferredChildSafeChecks.some((command) => command.includes("verify:p4:routes")),
     false,
@@ -84,6 +87,11 @@ test("state ownership domain exposes P4 policy and route evidence", () => {
   assert.ok(
     domain.evidenceArtifacts.includes(
       ".runtime/reports/generated/p4-state-actions/P4.0/policy-report.json",
+    ),
+  );
+  assert.ok(
+    domain.evidenceArtifacts.includes(
+      ".runtime/reports/generated/p4-state-actions/P4.1/phase-verification.json",
     ),
   );
   assert.deepEqual(domain.preferredMainThreadChecks, []);

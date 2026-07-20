@@ -1,6 +1,7 @@
 import {
   createDefaultTransportCountryOverlayState,
 } from "../transport_country_overlay.js";
+import { replaceStartupBootCacheState } from "./actions/boot_actions.js";
 
 // Content/data state defaults.
 // 这里收口 localization、topology、context layer 和底图数据默认 shape，
@@ -532,7 +533,7 @@ export function hydrateStartupBaseContentState(
   target.airportsData = null;
   target.portsData = null;
   if (startupBootCacheState && typeof startupBootCacheState === "object") {
-    target.startupBootCacheState = startupBootCacheState;
+    replaceStartupBootCacheState(target, startupBootCacheState);
   }
   return target.topologyPrimary;
 }

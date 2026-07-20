@@ -2,6 +2,8 @@
 // 这个模块负责 loadScenarioBundle 主交易、startup bootstrap cache probe/write、bundle assemble 与 cache-hit 恢复。
 // scenario_resources.js 继续保留 facade、startup hydration、optional layer 与对外 export 面。
 
+import { setStartupScenarioBootstrapCacheStatus } from "../state/actions/boot_actions.js";
+
 function createScenarioBundleRuntimeController({
   state,
   STARTUP_CACHE_KINDS,
@@ -102,14 +104,10 @@ function createScenarioBundleRuntimeController({
         })
       ) {
         if (!sourceShaMetadataMatches(manifest?.source, coreEntry?.payload?.source)) {
-          if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-            state.startupBootCacheState.scenarioBootstrap = "miss-source-sha";
-          }
+          setStartupScenarioBootstrapCacheStatus(state, "miss-source-sha");
           return null;
         }
-        if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-          state.startupBootCacheState.scenarioBootstrap = "hit";
-        }
+        setStartupScenarioBootstrapCacheStatus(state, "hit");
         const bundle = createScenarioBootstrapBundleFromCache({
           priorBundle,
           meta,
@@ -183,14 +181,10 @@ function createScenarioBundleRuntimeController({
         );
         return bundle;
       }
-      if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-        state.startupBootCacheState.scenarioBootstrap = "miss";
-      }
+      setStartupScenarioBootstrapCacheStatus(state, "miss");
     } catch (error) {
       console.warn(`[scenario] Startup bootstrap cache read failed for "${targetId}".`, error);
-      if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-        state.startupBootCacheState.scenarioBootstrap = "error";
-      }
+      setStartupScenarioBootstrapCacheStatus(state, "error");
     }
     return null;
   }
@@ -210,9 +204,7 @@ function createScenarioBundleRuntimeController({
       runtimeTopologyPayload: bundle.runtimeTopologyPayload,
       runtimePoliticalMeta: bundle.runtimePoliticalMeta,
     })) {
-      if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-        state.startupBootCacheState.scenarioBootstrap = "write-pending";
-      }
+      setStartupScenarioBootstrapCacheStatus(state, "write-pending");
       const cacheWrites = [
         writeStartupCacheEntry({
           kind: STARTUP_CACHE_KINDS.SCENARIO_BOOTSTRAP_CORE,
@@ -257,20 +249,14 @@ function createScenarioBundleRuntimeController({
         if (rejected) {
           throw rejected.reason;
         }
-        if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-          state.startupBootCacheState.scenarioBootstrap = "written";
-        }
+        setStartupScenarioBootstrapCacheStatus(state, "written");
       }).catch((error) => {
         console.warn(`[scenario] Startup bootstrap cache write failed for "${targetId}".`, error);
-        if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-          state.startupBootCacheState.scenarioBootstrap = "write-error";
-        }
+        setStartupScenarioBootstrapCacheStatus(state, "write-error");
       });
       return;
     }
-    if (state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-      state.startupBootCacheState.scenarioBootstrap = "skipped-incomplete";
-    }
+    setStartupScenarioBootstrapCacheStatus(state, "skipped-incomplete");
   }
 
   async function loadScenarioBundle(
@@ -362,8 +348,11 @@ function createScenarioBundleRuntimeController({
             geoLocalePatchUrl: geoLocalePatchDescriptor.url,
           })
           : "";
-      if (requestedBundleLevel === "bootstrap" && state.startupBootCacheState && typeof state.startupBootCacheState === "object") {
-        state.startupBootCacheState.scenarioBootstrap = scenarioBootstrapCoreCacheKey ? "probe" : "disabled";
+      if (requestedBundleLevel === "bootstrap") {
+        setStartupScenarioBootstrapCacheStatus(
+          state,
+          scenarioBootstrapCoreCacheKey ? "probe" : "disabled",
+        );
       }
       const cachedBootstrapBundle = await tryLoadBootstrapBundleFromPersistentCache({
         d3Client,

@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.0 attestation-candidate` — functional checkpoint C is committed and its exact clean matrix is green; docs-only attestation A and its clean verification matrix remain.
+`P4.1 checkpoint-candidate` — Boot/startup action ownership, its monotonic policy checkpoint and focused verification are complete; canonical Pages generation, functional checkpoint C and exact-SHA attestation remain.
 
 ## Checklist
 
@@ -14,7 +14,7 @@
 - [x] Lock default-key ownership and compatibility allowlist projection.
 - [x] Register package scripts, verification metadata, selector and supervisor routes.
 - [x] Produce P4.0 baseline report and zero-gap adaptive evidence.
-- [ ] Commit checkpoint C, verify exact `SHA_C`, commit attestation A, verify exact `SHA_A`, push.
+- [x] Commit checkpoint C, verify exact `SHA_C`, commit attestation A, verify exact `SHA_A`, push.
 - [ ] Execute P4.1–P4.5 in order.
 - [ ] Complete review, UltraQA, full acceptance, main integration and safe cleanup.
 
@@ -71,9 +71,49 @@
   - adaptive exact-C report: `00f9bb11a20fd90be589c535fe0018c38c1c5e497b0fb0be6c1e76c71a40d5b1`
   - verify-core report: `df0c3f591ac12da53f63c7a8361cacb01846397a1b490185e1ccf57a7f82ee64`
 
+## P4.0 exact attestation A
+
+- Attestation SHA: `f422e4c291b59e17f7d117b0518b6e222c4663e4`
+- Verification tree: `018d2e33a82f7d00f5c6b66529c310f86e3ccb15`
+- `node tools/check_state_writer_policy.mjs --phase P4.0 --require-clean`: PASS; `verificationSha` equals attestation SHA and `trackedClean=true`
+- `npm run verify:p4:state-writer-policy`: PASS 185/185 plus repository checker
+- `npm run test:python:p4:state-write-boundary`: PASS 20/20
+- Branch-history route gate: PASS 31 changed / 27 P4-owned / 0 unmatched / 0 gaps
+- Branch-history adaptive dry-run: PASS 31 changed / 211 recommendations / 0 unmatched
+- Shared metadata, core-runner, architecture, allowlist, import-graph, selector and supervisor gates: PASS
+- `npm run verify:core`: PASS 78/78; Pages dist `927.20 MiB`; dist drift zero
+- Report SHA256:
+  - policy report: `313d5662208c36a8888e738607a8c650efe4e4bf6c6a31ea10c699efa4dcfa44`
+  - P4 route report: `be18dca7f341b5a381f4a29f1a4f014c44fd6a0c6cac7ffbd0934b8b620c48ea`
+  - adaptive exact-A report: `00f9bb11a20fd90be589c535fe0018c38c1c5e497b0fb0be6c1e76c71a40d5b1`
+  - verify-core report: `df0c3f591ac12da53f63c7a8361cacb01846397a1b490185e1ccf57a7f82ee64`
+- Remote recovery branch: `origin/codex/state-action-ownership-p4-20260719`
+
+## P4.1 implementation checkpoint candidate
+
+- Canonical action owner: `js/core/state/actions/boot_actions.js`
+- Compatibility facade: `js/core/state/boot_state.js` retains defaults, normalization, reads and delegated public helpers.
+- Delegation authority: 17 registered action exports covering 22 Boot/startup keys; action diagnostics remain zero.
+- Caller migration covers startup boot overlay/support, post-ready scheduling, UI-shell boot/debug seed, sample-project state, scenario bundle/startup hydration and the main startup promotion result.
+- Policy progression:
+  - production legacy direct files: `75 → 75`
+  - production legacy memberships: `1187 → 1151`
+  - production alias sites: `227 → 222`
+  - production ambiguous sites: `901 → 900`
+  - production unsupported sites: `6692 → 6662`
+  - frozen P4.0 denominator and closeout target remain `1187` and `949`.
+- Focused verification:
+  - `npm run test:node:p4:p4-1`: PASS 81/81 before the compatibility-return regression; the focused Boot suite then passes 11/11.
+  - `npm run test:python:p4:p4-1-boundary`: PASS 17/17.
+  - `npm run verify:p4:state-writer-policy`: PASS 207/207 plus repository checker.
+  - P4.1 route gate: PASS 50 changed / 33 P4-owned / 0 unmatched / 0 gaps.
+  - architecture, state-write allowlist, test-import graph, verification metadata, core-runner and supervisor gates: PASS.
+- Independent code review: `PASS WITH WATCH`; the public `setBootStateFields` omitted-phase return parity has been restored and regression-tested.
+
 ## Open risks and remaining work
 
-- Docs-only attestation A and its exact clean matrix remain.
+- P4.1 still requires canonical Pages generation, functional checkpoint C, exact-C verification, docs-only attestation A, exact-A verification and push.
+- P4.2 admission must add caller-to-action call-edge evidence so a retired legacy membership is tied to a concrete delegated action invocation.
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.

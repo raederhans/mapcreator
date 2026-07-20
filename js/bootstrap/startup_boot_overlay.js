@@ -1,10 +1,10 @@
 import { state as runtimeState } from "../core/state.js";
 import {
+  commitStartupReadonlyStateFields,
   replaceBootMetricsState,
   setBootPreviewVisibleState,
   setBootStateFields,
-  setStartupReadonlyStateFields,
-} from "../core/state/boot_state.js";
+} from "../core/state/actions/boot_actions.js";
 import { callRuntimeHook } from "../core/state/index.js";
 import { getBootLanguage, nowMs } from "./startup_bootstrap_support.js";
 const state = runtimeState;
@@ -291,10 +291,13 @@ export function createStartupBootOverlayController() {
   };
 
   const setStartupReadonlyState = (active, { reason = "", unlockInFlight = false } = {}) => {
-    setStartupReadonlyStateFields(state, {
+    commitStartupReadonlyStateFields(state, {
       active,
       reason,
       unlockInFlight,
+      since: active
+        ? (Number(runtimeState.startupReadonlySince) || Date.now())
+        : 0,
     });
     if (!runtimeState.startupReadonly) {
       clearStartupReadonlyUnlockHandle();

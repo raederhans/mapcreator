@@ -91,14 +91,20 @@ test("ready-state post-boot scheduling order stays stable", () => {
 test("post-ready scheduler owner exports constants and keeps diagnostics contract", () => {
   const schedulerSource = readRepoFile("js", "bootstrap", "post_ready_scheduler.js");
 
+  assert.ok(schedulerSource.includes('from "../core/state/actions/boot_actions.js";'));
+  assert.ok(schedulerSource.includes("replacePostReadyTaskDiagnostics(targetState, {"));
+  assert.ok(schedulerSource.includes("setActivePostReadyTask(targetState, {"));
+  assert.ok(schedulerSource.includes("clearActivePostReadyTask(targetState"));
   assert.ok(schedulerSource.includes("export function createPostReadyScheduler"));
   assert.ok(schedulerSource.includes("export const POST_READY_IDLE_QUIET_MS = 850;"));
   assert.ok(schedulerSource.includes("export const POST_READY_IDLE_TIME_REMAINING_MS = 8;"));
   assert.ok(schedulerSource.includes("pendingTaskKeys"));
   assert.ok(schedulerSource.includes("maxRetryCount"));
   assert.ok(schedulerSource.includes("reasonStateHint"));
-  assert.ok(schedulerSource.includes("targetState.postReadyTaskDiagnostics"));
   assert.ok(schedulerSource.includes("targetState.renderPerfMetrics.postReadySchedulerState"));
   assert.ok(schedulerSource.includes("globalScope.__renderPerfMetrics"));
+  assert.equal(schedulerSource.includes("targetState.postReadyTaskDiagnostics ="), false);
+  assert.equal(schedulerSource.includes("targetState.activePostReadyTaskKey ="), false);
+  assert.equal(schedulerSource.includes("targetState.activePostReadyTaskStartedAt ="), false);
   assert.equal(/\bruntimeState\b|\bappState\b|\bconst state\b|\blet state\b/.test(schedulerSource), false);
 });

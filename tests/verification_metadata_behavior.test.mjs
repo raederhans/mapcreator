@@ -25,6 +25,7 @@ import {
 const REPO_ROOT = process.cwd();
 const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tools/state_writer_inventory.mjs",
+  "tools/state_action_delegation_contract.mjs",
   "tools/state_writer_policy.mjs",
   "tools/state_writer_policy.json",
   "tools/build_state_writer_policy.mjs",
@@ -136,6 +137,61 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
       entry.commandRef === policyEntry.commandRef
     ));
     assert.ok(command, `${sourceRef} should select the P4 policy command`);
+    assert.ok(command.domains.includes("state-ownership"));
+    assert.equal(command.domains.includes("renderer-runtime"), false);
+  }
+});
+
+test("P4.1 boot actions own their routes and exact phase verification stays out of verify-core", () => {
+  const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-1-boot-actions"
+  ));
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-1-boot-boundary"
+  ));
+  const exactPhaseEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "p4:p4-1-exact-phase"
+  ));
+
+  assert.ok(actionEntry);
+  assert.ok(boundaryEntry);
+  assert.ok(exactPhaseEntry);
+
+  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+    assert.equal(entry.domain, "state-ownership");
+    assert.equal(entry.ownerHint, "state-ownership");
+    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.supervisorDomain, "state-ownership");
+    assert.equal(entry.routeRegistry, true);
+    assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
+  }
+
+  assert.equal(actionEntry.verifyCoreDefaultGroup, "startup-node");
+  assert.equal(boundaryEntry.verifyCoreDefaultGroup, "startup-node");
+  assert.equal(exactPhaseEntry.verifyCoreDefaultGroup, undefined);
+  assert.ok(
+    exactPhaseEntry.sourceRefs.includes(
+      "tools/eslint-rules/state-writer-allowlist.json",
+    ),
+  );
+  assert.ok(
+    exactPhaseEntry.sourceRefs.includes(
+      "tests/state_writer_scanner_soundness_behavior.test.mjs",
+    ),
+  );
+
+  const defaultCommandRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());
+  assert.ok(defaultCommandRefs.includes(actionEntry.commandRef));
+  assert.ok(defaultCommandRefs.includes(boundaryEntry.commandRef));
+  assert.equal(defaultCommandRefs.includes(exactPhaseEntry.commandRef), false);
+
+  for (const sourceRef of exactPhaseEntry.sourceRefs) {
+    const report = buildRecommendation([sourceRef]);
+    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
+    const command = report.recommendedCommands.find((entry) => (
+      entry.commandRef === exactPhaseEntry.commandRef
+    ));
+    assert.ok(command, `${sourceRef} should select the P4.1 exact phase command`);
     assert.ok(command.domains.includes("state-ownership"));
     assert.equal(command.domains.includes("renderer-runtime"), false);
   }

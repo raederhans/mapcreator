@@ -1,4 +1,5 @@
 import { normalizeCityLayerStyleConfig, state as runtimeState } from "../core/state.js";
+import { setLongAnimationFrameObserver } from "../core/state/actions/boot_actions.js";
 import {
   hydrateHierarchyState,
   hydrateStoredViewSettings,
@@ -200,7 +201,7 @@ export function initLongAnimationFrameObserver() {
       globalThis.__renderPerfMetrics = runtimeState.renderPerfMetrics;
     });
     observer.observe({ type: "long-animation-frame", buffered: true });
-    runtimeState.longAnimationFrameObserver = observer;
+    setLongAnimationFrameObserver(runtimeState, observer);
   } catch (_error) {
     // Experimental API; ignore unsupported browsers.
   }

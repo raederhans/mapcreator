@@ -9,6 +9,13 @@ import {
   scanStateMutations,
 } from "./state_writer_inventory.mjs";
 import {
+  getStateActionDelegationContractEntriesForModule,
+  STATE_ACTION_DELEGATION_CONTRACT,
+  validateStateActionDelegationContract,
+  validateStateActionModuleSource,
+  validateStateActionPolicyBindings,
+} from "./state_action_delegation_contract.mjs";
+import {
   buildCanonicalStateKeyAuthorityIndex,
   buildDefaultStateOwnershipReport,
   discoverGlobalStateImportBindings,
@@ -1014,6 +1021,64 @@ function isCompatFacadePath(relativePath) {
   return normalizeRelativePath(relativePath) === "js/core/state/index.js";
 }
 
+export async function validateStateActionNonTargetParameterMutations(
+  relativePath,
+  source,
+  contractEntries =
+    getStateActionDelegationContractEntriesForModule(relativePath),
+) {
+  const discovery = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  );
+  if (discovery.diagnostics.length) {
+    return [];
+  }
+  const violations = [];
+  for (const entry of contractEntries || []) {
+    for (
+      const candidate of discovery.bindings.filter(
+        ({ functionName }) => functionName === entry.exportName,
+      )
+    ) {
+      if (
+        candidate.parameterIndex === entry.targetArgumentIndex
+        && candidate.parameterPath === "$"
+      ) {
+        continue;
+      }
+      const binding = createParameterBinding(candidate);
+      const mutationFindings = scanBinding(
+        source,
+        relativePath,
+        binding,
+      ).filter((finding) => !finding?.unsupported);
+      for (const finding of mutationFindings) {
+        violations.push({
+          code: "state-action-non-target-parameter-mutation",
+          modulePath: normalizeRelativePath(relativePath),
+          exportName: entry.exportName,
+          parameterName: candidate.parameterName,
+          parameterIndex: candidate.parameterIndex,
+          parameterPath: candidate.parameterPath,
+          operation: finding.operation,
+          key: finding.key,
+          line: finding.line,
+          column: finding.column,
+        });
+      }
+    }
+  }
+  return violations.sort(
+    (left, right) =>
+      left.exportName.localeCompare(right.exportName)
+      || left.parameterIndex - right.parameterIndex
+      || left.parameterPath.localeCompare(right.parameterPath)
+      || left.line - right.line
+      || left.column - right.column,
+  );
+}
+
 export async function discoverStateWriterBindingsForSource(
   relativePath,
   source,
@@ -1038,6 +1103,40 @@ export async function discoverStateWriterBindingsForSource(
       name: "",
       discoveryDiagnostics: discovery.diagnostics,
     }];
+  }
+  if (isActionPath(relativePath)) {
+    const nonTargetParameterMutationViolations =
+      await validateStateActionNonTargetParameterMutations(
+        relativePath,
+        source,
+      );
+    if (nonTargetParameterMutationViolations.length) {
+      const error = new Error(
+        `State action mutates a non-target parameter: ${relativePath}`,
+      );
+      error.code = "state-action-non-target-parameter-mutation";
+      error.violations = nonTargetParameterMutationViolations;
+      throw error;
+    }
+    const allParameterDiscovery = discoverFunctionParameterBindings(
+      source,
+      { parameterNames: null },
+    );
+    for (
+      const entry of
+      getStateActionDelegationContractEntriesForModule(relativePath)
+    ) {
+      const candidates = allParameterDiscovery.bindings.filter(
+        (candidate) =>
+          candidate.functionName === entry.exportName
+          && candidate.parameterIndex === entry.targetArgumentIndex
+          && candidate.parameterPath === "$",
+      );
+      if (candidates.length === 1) {
+        bindings.push(createParameterBinding(candidates[0]));
+      }
+    }
+    return dedupeBindings(bindings);
   }
   for (const candidate of discovery.bindings) {
     const exclusionKey = [
@@ -1100,7 +1199,10 @@ export async function discoverStateWriterBindingsForSource(
     );
     if (
       hasCanonicalStateMutation
-      || hasConservativeStateTargetEvidence
+      || (
+        previousParameterIdentities.has(priorIdentity)
+        && hasConservativeStateTargetEvidence
+      )
     ) {
       bindings.push(binding);
     }
@@ -1115,7 +1217,11 @@ export function hasCanonicalStateMutationFinding(
   stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex(),
 ) {
   return (Array.isArray(findings) ? findings : []).some((finding) => {
-    if (!finding?.key || finding.key === "*") {
+    if (
+      finding?.unsupported
+      || !finding?.key
+      || finding.key === "*"
+    ) {
       return false;
     }
     return !resolveStateWriterFindingAuthority(
@@ -1240,6 +1346,21 @@ async function discoverScannedCandidateBindings(
     }
     const source = await fs.readFile(absolutePath, "utf8");
     const surface = isTestPath(relativePath) ? "test" : "production";
+    if (isActionPath(relativePath)) {
+      const actionDelegationSourceViolations =
+        validateStateActionModuleSource(
+          source,
+          { filePath: relativePath },
+        );
+      if (actionDelegationSourceViolations.length) {
+        const error = new Error(
+          `State action delegation source is invalid: ${relativePath}`,
+        );
+        error.code = "state-action-delegation-source-invalid";
+        error.violations = actionDelegationSourceViolations;
+        throw error;
+      }
+    }
     const actionBoundaryViolations = validateDomainActionSourceBoundary(
       source,
       { filePath: relativePath },
@@ -1575,6 +1696,16 @@ export async function buildStateWriterPolicySnapshot({
   if (previousPolicy && !refreshP4Baseline) {
     resolveGitCommitSha(previousPolicy.baseline.sourceBaseSha);
   }
+  const actionDelegationContractViolations =
+    validateStateActionDelegationContract();
+  if (actionDelegationContractViolations.length) {
+    const error = new Error(
+      "State action delegation contract is invalid.",
+    );
+    error.code = "state-action-delegation-contract-invalid";
+    error.violations = actionDelegationContractViolations;
+    throw error;
+  }
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const defaultStateReport = await buildDefaultStateOwnershipReport();
   const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
@@ -1682,6 +1813,33 @@ export async function buildStateWriterPolicySnapshot({
       };
     })
     .sort((left, right) => left.path.localeCompare(right.path));
+  const activeActionModulePaths = [];
+  for (
+    const modulePath of stableUnique(
+      STATE_ACTION_DELEGATION_CONTRACT.map(
+        ({ modulePath: contractModulePath }) => contractModulePath,
+      ),
+    )
+  ) {
+    if (await fileExists(path.join(PROJECT_ROOT, modulePath))) {
+      activeActionModulePaths.push(modulePath);
+    }
+  }
+  const actionDelegationPolicyViolations =
+    validateStateActionPolicyBindings(
+      writers,
+      {
+        modulePaths: activeActionModulePaths,
+      },
+    );
+  if (actionDelegationPolicyViolations.length) {
+    const error = new Error(
+      "Generated state action delegation policy is invalid.",
+    );
+    error.code = "state-action-delegation-policy-invalid";
+    error.violations = actionDelegationPolicyViolations;
+    throw error;
+  }
 
   const productionProjection = legacyAllowlistPaths.filter(
     (relativePath) => !isTestPath(relativePath),

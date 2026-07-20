@@ -65,12 +65,24 @@ function runGitPathCommand(gitArgs, runner = spawnSync) {
 export function discoverChangedFiles({
   runner = spawnSync,
   includeBranchHistory = false,
+  historyBase = "",
 } = {}) {
   const discovered = new Set();
   // workspace 与 branch history 合并时只收集路径；实际 route 判定交给 selector，避免 Git 探测层携带业务语义。
-  const commands = includeBranchHistory
-    ? [...DEFAULT_DISCOVERY_COMMANDS, ...HISTORY_DISCOVERY_COMMANDS]
-    : DEFAULT_DISCOVERY_COMMANDS;
+  const normalizedHistoryBase = String(historyBase || "").trim();
+  const historyCommands = normalizedHistoryBase
+    ? [[
+      "diff",
+      "--name-only",
+      normalizedHistoryBase,
+      "HEAD",
+      "--diff-filter=ACMRD",
+      "-z",
+    ]]
+    : includeBranchHistory
+      ? HISTORY_DISCOVERY_COMMANDS
+      : [];
+  const commands = [...DEFAULT_DISCOVERY_COMMANDS, ...historyCommands];
   for (const gitArgs of commands) {
     const result = runGitPathCommand(gitArgs, runner);
     if (result.status === 0) {

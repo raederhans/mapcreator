@@ -2586,11 +2586,11 @@ test("direct immutable local helpers delegate exact target parameters", () => {
 
 test("safe target delegation rejects spread arguments", () => {
   const findings = scanModule(`
-    import { setBootState } from "../js/core/state/actions/boot_actions.js";
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
     function mutate(target) {
       target.bootStatus = "ready";
     }
-    setBootState(...${STATE_ROOT});
+    setBootStateFields(...${STATE_ROOT});
     mutate(...${member("startup")});
   `);
 
@@ -2617,12 +2617,12 @@ test("safe target delegation rejects spread arguments", () => {
 
 test("await wrappers preserve state provenance across escape boundaries", () => {
   const findings = scanModule(`
-    import { setBootState } from "../js/core/state/actions/boot_actions.js";
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
     function mutate(target) {
       target.bootStatus = "ready";
     }
     consume(await ${STATE_ROOT});
-    setBootState(await ${STATE_ROOT}, {});
+    setBootStateFields(await ${STATE_ROOT}, {});
     mutate(await ${member("startup")});
     async function expose() {
       return await ${member("bootStatus")};
@@ -2726,7 +2726,7 @@ test("mutable, aliased, member, and dynamic helper calls fail closed", () => {
 
 test("exact named action and compatibility imports own direct root delegation", () => {
   const findings = scanModule(`
-    import { setBootState as applyBoot } from "../js/core/state/actions/boot_actions.js";
+    import { setBootStateFields as applyBoot } from "../js/core/state/actions/boot_actions.js";
     import {
       bindStateCompatSurface,
       callRuntimeHook,
@@ -2768,8 +2768,8 @@ test("inexact action and compatibility calls fail closed", () => {
 
 test("trusted state action imports require the exact project-local module path", () => {
   const findings = scanModule(`
-    import { setBootState as packageAction } from "evil/state/actions/fake.js";
-    import { setBootState as siblingAction } from "../evil/state/actions/fake.js";
+    import { setBootStateFields as packageAction } from "evil/state/actions/fake.js";
+    import { setBootStateFields as siblingAction } from "../evil/state/actions/fake.js";
     packageAction(${STATE_ROOT}, {});
     siblingAction(${STATE_ROOT}, {});
   `);
@@ -2790,9 +2790,9 @@ test("trusted state action imports require the exact project-local module path",
 
 test("registered imported target helpers require an exact root argument", () => {
   const findings = scanModule(`
-    import { setBootState } from "../js/core/state/actions/boot_actions.js";
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
     import { callRuntimeHook } from "../js/core/state/index.js";
-    setBootState(${member("startup")}, {});
+    setBootStateFields(${member("startup")}, {});
     callRuntimeHook(${member("runtimeHooks")}, "renderNowFn");
   `);
 
@@ -2811,6 +2811,107 @@ test("registered imported target helpers require an exact root argument", () => 
       {
         operation: "unsupported",
         key: "runtimeHooks",
+        reason: "state-alias-escape",
+      },
+    ],
+  );
+});
+
+test("state action delegation trusts only registered direct named exports", () => {
+  const findings = scanModule(`
+    import {
+      setBootStateFields as registeredAlias,
+      stealState as unknownExport,
+      default as defaultAsNamed,
+    } from "../js/core/state/actions/boot_actions.js";
+    registeredAlias(${STATE_ROOT}, { phase: "ready" });
+    unknownExport(${STATE_ROOT});
+    defaultAsNamed(${STATE_ROOT});
+  `);
+
+  assert.deepEqual(
+    findings.map(({ operation, key, reason }) => ({
+      operation,
+      key,
+      reason,
+    })),
+    Array.from({ length: 2 }, () => ({
+      operation: "unsupported",
+      key: "*",
+      reason: "state-alias-escape",
+    })),
+  );
+});
+
+test("state action delegation rejects optional calls and local aliases", () => {
+  const findings = scanModule(`
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
+    const localAlias = setBootStateFields;
+    setBootStateFields?.(${STATE_ROOT}, { phase: "ready" });
+    localAlias(${STATE_ROOT}, { phase: "ready" });
+  `);
+
+  assert.deepEqual(
+    findings.map(({ operation, key, reason }) => ({
+      operation,
+      key,
+      reason,
+    })),
+    Array.from({ length: 2 }, () => ({
+      operation: "unsupported",
+      key: "*",
+      reason: "state-alias-escape",
+    })),
+  );
+});
+
+test("state action delegation rejects reassigned imports, bridge modules, and dynamic imports", () => {
+  const findings = scanModule(`
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
+    import { setBootStateFields as bridgedAction } from "./boot_actions_bridge.js";
+    setBootStateFields = replacement;
+    setBootStateFields(${STATE_ROOT}, { phase: "ready" });
+    bridgedAction(${STATE_ROOT}, { phase: "ready" });
+    (await import("../js/core/state/actions/boot_actions.js"))
+      .setBootStateFields(${STATE_ROOT}, { phase: "ready" });
+  `);
+
+  assert.deepEqual(
+    findings.map(({ operation, key, reason }) => ({
+      operation,
+      key,
+      reason,
+    })),
+    Array.from({ length: 3 }, () => ({
+      operation: "unsupported",
+      key: "*",
+      reason: "state-alias-escape",
+    })),
+  );
+});
+
+test("state action delegation rejects wrong-index and additional state arguments", () => {
+  const findings = scanModule(`
+    import { setBootStateFields } from "../js/core/state/actions/boot_actions.js";
+    setBootStateFields({ phase: "ready" }, ${STATE_ROOT});
+    setBootStateFields(${STATE_ROOT}, ${member("startup")});
+  `);
+
+  assert.deepEqual(
+    findings.map(({ operation, key, reason }) => ({
+      operation,
+      key,
+      reason,
+    })),
+    [
+      {
+        operation: "unsupported",
+        key: "*",
+        reason: "state-alias-escape",
+      },
+      {
+        operation: "unsupported",
+        key: "startup",
         reason: "state-alias-escape",
       },
     ],

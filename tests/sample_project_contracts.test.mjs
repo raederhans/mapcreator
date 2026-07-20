@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { FileManager } from "../js/core/file_manager.js";
-import { loadPublicSampleProjectIntoRuntime } from "../js/core/sample_project_import_workflow.js";
+import {
+  loadPublicSampleProjectIntoRuntime,
+  writeSampleProjectState,
+} from "../js/core/sample_project_import_workflow.js";
 import { scheduleStartupSampleProjectDeeplink } from "../js/bootstrap/startup_sample_project_deeplink.js";
 import { registerRuntimeHook } from "../js/core/state/index.js";
 import {
@@ -40,6 +43,36 @@ const PUBLIC_SCENARIO_IDS = [
 function readJson(relativePath) {
   return JSON.parse(readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8"));
 }
+
+test("sample project state commit, refresh hook, and return value share one root object", () => {
+  const targetState = {
+    sampleProjectDeeplink: {
+      status: "success",
+      sampleId: "previous-sample",
+      scenarioId: "previous-scenario",
+      title: "Previous sample",
+    },
+  };
+  let hookState = null;
+  registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", (sampleState) => {
+    hookState = sampleState;
+  });
+
+  try {
+    const result = writeSampleProjectState(targetState, {
+      status: "loading",
+      sampleId: "next-sample",
+    });
+
+    assert.equal(result, targetState.sampleProjectDeeplink);
+    assert.equal(hookState, targetState.sampleProjectDeeplink);
+    assert.equal(result, hookState);
+    assert.equal(result.previousSampleId, "previous-sample");
+    assert.ok(Number(result.updatedAt) > 0);
+  } finally {
+    registerRuntimeHook(targetState, "refreshSampleProjectBannerFn", null);
+  }
+});
 
 function resolveLandingUrl(url) {
   assert.match(url, /^\.\//, `sample URL must be relative: ${url}`);

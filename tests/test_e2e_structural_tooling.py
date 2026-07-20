@@ -336,6 +336,26 @@ for (const expected of requiredCalls) {
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_adaptive_runner_accepts_an_exact_history_base(self) -> None:
+        script = """
+const calls = [];
+const fakeRunner = (_bin, args) => {
+  calls.push(args.join(' '));
+  return { status: 0, stdout: '' };
+};
+const { discoverChangedFiles } = await import('./tools/run_adaptive_tests.mjs');
+discoverChangedFiles({ runner: fakeRunner, historyBase: 'HEAD^' });
+const exactCall = 'diff --name-only HEAD^ HEAD --diff-filter=ACMRD -z';
+if (!calls.some((entry) => entry.includes(exactCall))) {
+  throw new Error(`missing exact phase-boundary call ${exactCall}: ${calls.join(' | ')}`);
+}
+if (calls.some((entry) => entry.includes('origin/main...HEAD'))) {
+  throw new Error(`exact phase boundary must exclude broad branch history: ${calls.join(' | ')}`);
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_adaptive_runner_normalizes_nul_delimited_git_paths(self) -> None:
         script = """
 const { parseGitPathOutput } = await import('./tools/run_adaptive_tests.mjs');

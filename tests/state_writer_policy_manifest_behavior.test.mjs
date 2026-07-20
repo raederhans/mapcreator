@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import test from "node:test";
 
+import {
+  STATE_ACTION_DELEGATION_CONTRACT,
+  validateStateActionDelegationContract,
+  validateStateActionModuleSource,
+  validateStateActionPolicyBindings,
+} from "../tools/state_action_delegation_contract.mjs";
+import {
+  scanStateMutations,
+} from "../tools/state_writer_inventory.mjs";
 import {
   buildCanonicalStateKeyAuthorityIndex,
   buildCanonicalStateKeyAuthorityCatalog,
@@ -963,6 +973,418 @@ test("policy schema rejects duplicate operation and key memberships across grant
   );
 });
 
+test("state action delegation contract validates registered module exports and target signatures", () => {
+  const contractViolations =
+    validateStateActionDelegationContract();
+  assert.deepEqual(contractViolations, []);
+
+  const sourceViolations = validateStateActionModuleSource(
+    `
+      export function setBootStateFields(target, patch = {}) {
+        target.bootPhase = patch.phase;
+      }
+    `,
+    {
+      filePath: "js/core/state/actions/boot_actions.js",
+      contractEntries: [{
+        modulePath: "js/core/state/actions/boot_actions.js",
+        exportName: "setBootStateFields",
+        targetArgumentIndex: 0,
+      }],
+    },
+  );
+  assert.deepEqual(sourceViolations, []);
+});
+
+test("state action delegation contract rejects invalid and duplicate entries", () => {
+  const modulePath = "js/core/state/actions/boot_actions.js";
+  const violations = validateStateActionDelegationContract([
+    {
+      modulePath,
+      exportName: "setBootStateFields",
+      targetArgumentIndex: 0,
+    },
+    {
+      modulePath,
+      exportName: "setBootStateFields",
+      targetArgumentIndex: 0,
+    },
+    {
+      modulePath: "./js/core/state/actions/escape.js",
+      exportName: "default",
+      targetArgumentIndex: 1,
+    },
+    null,
+  ]);
+
+  assert.deepEqual(
+    violations.map(({ code }) => code),
+    [
+      "state-action-contract-entry-duplicate",
+      "state-action-contract-module-path-invalid",
+      "state-action-contract-export-name-invalid",
+      "state-action-contract-target-index-invalid",
+      "state-action-contract-entry-invalid",
+    ],
+  );
+});
+
+test("state action module source requires one direct named export with target at argument zero", () => {
+  const modulePath = "js/core/state/actions/boot_actions.js";
+  const contractEntries = [{
+    modulePath,
+    exportName: "setBootStateFields",
+    targetArgumentIndex: 0,
+  }];
+  const scan = (source) =>
+    validateStateActionModuleSource(source, {
+      filePath: modulePath,
+      contractEntries,
+    }).map(({ code }) => code);
+
+  const invalidSources = [
+    {
+      source: "export function other(target) { target.bootPhase = 'ready'; }",
+      expected: [
+        "state-action-direct-export-unregistered",
+        "state-action-direct-export-missing",
+      ],
+    },
+    {
+      source:
+        "export const setBootStateFields = (target) => { target.bootPhase = 'ready'; };",
+      expected: [
+        "state-action-direct-export-missing",
+        "state-action-export-not-direct-function",
+      ],
+    },
+    {
+      source:
+        "function setBootStateFields(target) {} export { setBootStateFields };",
+      expected: [
+        "state-action-direct-export-missing",
+        "state-action-export-not-direct-function",
+      ],
+    },
+    {
+      source:
+        "export { setBootStateFields } from './bridge.js';",
+      expected: [
+        "state-action-direct-export-missing",
+        "state-action-export-not-direct-function",
+      ],
+    },
+    {
+      source: "export default function(target) {}",
+      expected: [
+        "state-action-export-unregistered",
+        "state-action-direct-export-missing",
+      ],
+    },
+    {
+      source: "export * from './bridge.js';",
+      expected: [
+        "state-action-export-unregistered",
+        "state-action-direct-export-missing",
+      ],
+    },
+    {
+      source:
+        "export function setBootStateFields(options, target) { target.bootPhase = options.phase; }",
+      expected: ["state-action-target-parameter-name-invalid"],
+    },
+    {
+      source:
+        "export function setBootStateFields(target = {}) { target.bootPhase = 'ready'; }",
+      expected: ["state-action-target-parameter-shape-invalid"],
+    },
+    {
+      source:
+        "export function setBootStateFields(...target) { target.bootPhase = 'ready'; }",
+      expected: ["state-action-target-parameter-shape-invalid"],
+    },
+    {
+      source:
+        "export function setBootStateFields({ target }) { target.bootPhase = 'ready'; }",
+      expected: ["state-action-target-parameter-shape-invalid"],
+    },
+    {
+      source: "export function setBootStateFields(",
+      expected: ["state-action-source-parse-failed"],
+    },
+  ];
+
+  for (const { source, expected } of invalidSources) {
+    assert.deepEqual(scan(source), expected, source);
+  }
+});
+
+test("state action module source rejects unregistered target-first exports and unregistered modules", () => {
+  const modulePath = "js/core/state/actions/boot_actions.js";
+  const contractEntries = [{
+    modulePath,
+    exportName: "setBootStateFields",
+    targetArgumentIndex: 0,
+  }];
+  const violations = validateStateActionModuleSource(
+    `
+      export function setBootStateFields(target) {
+        target.bootPhase = "ready";
+      }
+      export function stealState(target) {
+        target.bootMessage = "escaped";
+      }
+      export function stealRuntimeState(state) {
+        state.bootError = "escaped";
+      }
+      const bridge = () => {};
+      export { bridge };
+    `,
+    { filePath: modulePath, contractEntries },
+  );
+  assert.deepEqual(
+    violations.map(({ code, exportName }) => ({ code, exportName })),
+    [
+      {
+        code: "state-action-direct-export-unregistered",
+        exportName: "stealState",
+      },
+      {
+        code: "state-action-direct-export-unregistered",
+        exportName: "stealRuntimeState",
+      },
+      {
+        code: "state-action-export-unregistered",
+        exportName: "bridge",
+      },
+    ],
+  );
+
+  assert.deepEqual(
+    validateStateActionModuleSource(
+      "export function stealState(target) {}",
+      {
+        filePath: "js/core/state/actions/unregistered_actions.js",
+        contractEntries,
+      },
+    ).map(({ code }) => code),
+    ["state-action-module-contract-missing"],
+  );
+});
+
+test("state action policy bindings require exact domain-action target authority with zero diagnostics", () => {
+  const modulePath = "js/core/state/actions/boot_actions.js";
+  const contractEntries = [{
+    modulePath,
+    exportName: "setBootStateFields",
+    targetArgumentIndex: 0,
+  }];
+  const createBinding = (overrides = {}) => ({
+    id: "parameter:setBootStateFields:0:fixture",
+    kind: "function-parameter",
+    functionName: "setBootStateFields",
+    parameterIndex: 0,
+    parameterPath: "$",
+    authority: "domain-action",
+    grants: [{
+      aliasSites: [],
+      dynamicSites: [],
+      ambiguousSites: [],
+      unsupportedSites: [],
+    }],
+    ...overrides,
+  });
+  const createWriter = (bindings, overrides = {}) => ({
+    path: modulePath,
+    authority: "domain-action",
+    bindings,
+    ...overrides,
+  });
+  const validate = (writers) =>
+    validateStateActionPolicyBindings(writers, {
+      contractEntries,
+      modulePaths: [modulePath],
+    }).map(({ code }) => code);
+
+  assert.deepEqual(validate([createWriter([createBinding()])]), []);
+  assert.deepEqual(validate([]), ["state-action-policy-writer-missing"]);
+  assert.deepEqual(
+    validate([
+      createWriter(
+        [createBinding()],
+        { authority: "legacy-target" },
+      ),
+    ]),
+    ["state-action-policy-writer-authority-invalid"],
+  );
+  assert.deepEqual(
+    validate([createWriter([])]),
+    ["state-action-policy-binding-missing"],
+  );
+  assert.deepEqual(
+    validate([
+      createWriter([
+        createBinding({
+          parameterIndex: 1,
+          parameterPath: "$/property:target",
+        }),
+      ]),
+    ]),
+    ["state-action-policy-binding-shape-invalid"],
+  );
+  assert.deepEqual(
+    validate([
+      createWriter([
+        createBinding({
+          grants: [{
+            aliasSites: [{}],
+            dynamicSites: [{}],
+            ambiguousSites: [{}],
+            unsupportedSites: [{}],
+          }],
+        }),
+      ]),
+    ]),
+    ["state-action-policy-binding-diagnostics-invalid"],
+  );
+  assert.deepEqual(
+    validate([
+      createWriter([
+        createBinding(),
+        createBinding({
+          id: "parameter:stealState:0:fixture",
+          functionName: "stealState",
+        }),
+      ]),
+    ]),
+    ["state-action-policy-binding-unregistered"],
+  );
+  assert.deepEqual(
+    validate([
+      createWriter([
+        createBinding(),
+        createBinding({
+          id: "parameter:stealState:0:fixture",
+          functionName: "stealState",
+          authority: "legacy-target",
+        }),
+      ]),
+    ]),
+    ["state-action-policy-binding-unregistered"],
+  );
+});
+
+test("policy generation validates registered action source shape and generated action bindings", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(
+    new URL("../tools/build_state_writer_policy.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /validateStateActionModuleSource\(\s*source,\s*\{\s*filePath:\s*relativePath/s,
+  );
+  assert.match(
+    source,
+    /validateStateActionPolicyBindings\(\s*writers,\s*\{/s,
+  );
+  assert.match(
+    source,
+    /state-action-delegation-source-invalid/,
+  );
+  assert.match(
+    source,
+    /state-action-delegation-policy-invalid/,
+  );
+});
+
+test("policy verification identity includes the state action delegation contract", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(
+    new URL("../tools/check_state_writer_policy.mjs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /const POLICY_CONFIG_PATHS = Object\.freeze\(\[[\s\S]*"tools\/state_action_delegation_contract\.mjs"/,
+  );
+});
+
+test("boot actions satisfy the delegation source and binding contracts as scanned", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const modulePath = "js/core/state/actions/boot_actions.js";
+  const source = await readFile(
+    new URL("../js/core/state/actions/boot_actions.js", import.meta.url),
+    "utf8",
+  );
+  assert.deepEqual(
+    validateStateActionModuleSource(source, { filePath: modulePath }),
+    [],
+  );
+
+  const discoveredBindings = await discoverStateWriterBindingsForSource(
+    modulePath,
+    source,
+    "production",
+    { scanAllParameters: true },
+  );
+  assert.deepEqual(
+    discoveredBindings.map(
+      ({ functionName, parameterIndex, parameterPath }) => ({
+        functionName,
+        parameterIndex,
+        parameterPath,
+      }),
+    ),
+    STATE_ACTION_DELEGATION_CONTRACT.map(
+      ({ exportName, targetArgumentIndex }) => ({
+        functionName: exportName,
+        parameterIndex: targetArgumentIndex,
+        parameterPath: "$",
+      }),
+    ).sort((left, right) =>
+      left.functionName.localeCompare(right.functionName)
+    ),
+  );
+  const authorityIndex = buildCanonicalStateKeyAuthorityIndex();
+  const policyBindings = STATE_ACTION_DELEGATION_CONTRACT.map((entry) => {
+    const binding = discoveredBindings.find(
+      (candidate) =>
+        candidate.functionName === entry.exportName
+        && candidate.parameterIndex === entry.targetArgumentIndex
+        && candidate.parameterPath === "$",
+    );
+    assert.ok(binding, `missing scanned binding for ${entry.exportName}`);
+    const findings = scanStateMutations(source, {
+      filePath: modulePath,
+      bindings: [binding],
+    });
+    return {
+      ...binding,
+      authority: "domain-action",
+      grants: buildStateWriterBindingGrants(
+        findings,
+        modulePath,
+        authorityIndex,
+        "production",
+      ),
+    };
+  });
+  assert.deepEqual(
+    validateStateActionPolicyBindings(
+      [{
+        path: modulePath,
+        authority: "domain-action",
+        bindings: policyBindings,
+      }],
+      { modulePaths: [modulePath] },
+    ),
+    [],
+  );
+});
+
 test("policy schema locks canonical binding authority and direct-module projection", () => {
   const fixture = createPolicyFixture();
   fixture.writers[0].bindings[0].authority = "compat-facade";
@@ -1447,8 +1869,10 @@ test("previous binding ordinals survive state-target parameter renaming", async 
 test("repository policy builder is deterministic and never auto-grants during verification", async () => {
   const checkedIn = await readStateWriterPolicy();
   const rebuilt = await buildStateWriterPolicySnapshot({
+    phase: checkedIn.progress.latestPhase,
     baseSha: checkedIn.baseline.sourceBaseSha,
     generatedAt: checkedIn.baseline.generatedAt,
+    previousPolicy: checkedIn,
   });
 
   assert.deepEqual(rebuilt, checkedIn);
@@ -1770,20 +2194,35 @@ test("P4.5b closeout turns missed frozen targets into policy violations", () => 
 });
 
 test("repository checker reports a passing closed-world policy and default-state shape", async () => {
-  const report = await buildStateWriterPolicyReport({ phase: "P4.0" });
+  const policy = await readStateWriterPolicy();
+  const report = await buildStateWriterPolicyReport();
+  const currentCheckpoint = policy.progress.checkpoints.find(
+    ({ phase }) => phase === policy.progress.latestPhase,
+  );
 
   assert.equal(report.verdict, "pass", JSON.stringify(report.violations, null, 2));
+  assert.equal(report.phase, policy.progress.latestPhase);
   assert.equal(report.metrics.unknownCandidateBindings, 0);
   assert.equal(report.metrics.stalePolicyBindings, 0);
-  assert.equal(report.metrics.legacyMemberships.production, 1187);
-  assert.equal(report.metrics.allMemberships.production, 1188);
-  assert.deepEqual(
-    report.metrics.bindingScoped.memberships,
-    report.frozenMetrics.bindingScopedMemberships,
+  assert.equal(
+    report.metrics.legacyMemberships.production,
+    currentCheckpoint.productionLegacyMemberships,
   );
-  assert.deepEqual(
-    report.metrics.bindingScoped.sites,
-    report.frozenMetrics.bindingScopedSites,
+  assert.ok(
+    report.metrics.legacyMemberships.production
+      <= report.frozenMetrics.bindingScopedMemberships.production.legacyCombined,
+  );
+  assert.ok(
+    report.metrics.bindingScoped.sites.alias.production.legacyCombined
+      <= report.frozenMetrics.bindingScopedSites.alias.production.legacyCombined,
+  );
+  assert.ok(
+    report.metrics.bindingScoped.sites.ambiguous.production.legacyCombined
+      <= report.frozenMetrics.bindingScopedSites.ambiguous.production.legacyCombined,
+  );
+  assert.ok(
+    report.metrics.bindingScoped.sites.unsupported.production.legacyCombined
+      <= report.frozenMetrics.bindingScopedSites.unsupported.production.legacyCombined,
   );
   assert.deepEqual(report.targets, {
     productionLegacyDirectFiles: 54,
@@ -1858,6 +2297,18 @@ test("P4.0 freezes closeout targets from the authoritative membership denominato
       "closeout-membership-target-drift",
       "closeout-direct-files-target-drift",
     ],
+  );
+});
+
+test("generic package verifier follows the checked-in policy phase", () => {
+  const packageJson = JSON.parse(
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const command = packageJson.scripts["verify:p4:state-writer-policy"];
+
+  assert.equal(
+    command,
+    "npm run test:node:p4:state-writer-policy && node tools/check_state_writer_policy.mjs",
   );
 });
 
