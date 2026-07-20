@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.1 checkpoint-candidate` — Boot/startup action ownership, its monotonic policy checkpoint and focused verification are complete; canonical Pages generation, functional checkpoint C and exact-SHA attestation remain.
+`P4.1 attestation-candidate` — functional checkpoint `8a01614f` is exact-C green; this docs-only change records immutable evidence before exact-A verification and push.
 
 ## Checklist
 
@@ -15,7 +15,8 @@
 - [x] Register package scripts, verification metadata, selector and supervisor routes.
 - [x] Produce P4.0 baseline report and zero-gap adaptive evidence.
 - [x] Commit checkpoint C, verify exact `SHA_C`, commit attestation A, verify exact `SHA_A`, push.
-- [ ] Execute P4.1–P4.5 in order.
+- [x] Complete P4.1 Boot/startup actions.
+- [ ] Execute P4.2–P4.5 in order.
 - [ ] Complete review, UltraQA, full acceptance, main integration and safe cleanup.
 
 ## Validation evidence
@@ -89,7 +90,7 @@
   - verify-core report: `df0c3f591ac12da53f63c7a8361cacb01846397a1b490185e1ccf57a7f82ee64`
 - Remote recovery branch: `origin/codex/state-action-ownership-p4-20260719`
 
-## P4.1 implementation checkpoint candidate
+## P4.1 implementation and exact checkpoint C
 
 - Canonical action owner: `js/core/state/actions/boot_actions.js`
 - Compatibility facade: `js/core/state/boot_state.js` retains defaults, normalization, reads and delegated public helpers.
@@ -103,17 +104,32 @@
   - production unsupported sites: `6692 → 6662`
   - frozen P4.0 denominator and closeout target remain `1187` and `949`.
 - Focused verification:
-  - `npm run test:node:p4:p4-1`: PASS 81/81 before the compatibility-return regression; the focused Boot suite then passes 11/11.
-  - `npm run test:python:p4:p4-1-boundary`: PASS 17/17.
-  - `npm run verify:p4:state-writer-policy`: PASS 207/207 plus repository checker.
-  - P4.1 route gate: PASS 50 changed / 33 P4-owned / 0 unmatched / 0 gaps.
+  - `npm run test:node:p4:p4-1`: PASS 82/82.
+  - `npm run test:python:p4:p4-1-boundary`: PASS 37/37, including the phase-aware general state-write boundary.
+  - `npm run verify:p4:state-writer-policy`: PASS 208/208 plus repository checker.
+  - P4.1 route gate: PASS 66 changed / 34 P4-owned / 0 unmatched / 0 gaps.
   - architecture, state-write allowlist, test-import graph, verification metadata, core-runner and supervisor gates: PASS.
 - Independent code review: `PASS WITH WATCH`; the public `setBootStateFields` omitted-phase return parity has been restored and regression-tested.
 
+### Exact checkpoint C
+
+- Functional SHA: `8a01614fbe98f1ee0faf73f011ee1e065861d29e`
+- Verification tree: `b433e9a62f64ca23fad1c75bc58b738df3f73b6d`
+- `npm run verify:p4:p4-1`: PASS; exact identity remained tracked-clean across all four phase commands.
+- `npm run verify:dist-drift`: PASS; canonical Pages dist remains 927.20 MiB.
+- `npm run verify:core`: PASS 80/80.
+- The initial core attempt exposed three stale P4.0-only assertions in `test_state_write_guardrail_contract.py`. Checkpoint C contains the phase-aware contract repair, adds that suite to the P4.1 exact Python command, and routes it through `verify:p4:p4-1`.
+- Report SHA256:
+  - phase verification: `32e8e57c033d9bdfbf58e81ec94f244acd820d33de06e7632b23f0d121f713fc`
+  - policy report: `b1b3d10f8b73643b2832523ec519ed036ca51148ee2b7e335e19c5fdb78176ec`
+  - adaptive route report: `b765ed2f4d778c3940c9fe8fc87bb7e7bbdf63632be57bf36344d6f5c1144a7b`
+  - verify-core report: `2c66bd1e2ac44c48e41ea98b78543ec79709199d12583118535149c7ed3243fa`
+
 ## Open risks and remaining work
 
-- P4.1 still requires canonical Pages generation, functional checkpoint C, exact-C verification, docs-only attestation A, exact-A verification and push.
-- P4.2 admission must add caller-to-action call-edge evidence so a retired legacy membership is tied to a concrete delegated action invocation.
+- P4.1 still requires docs-only attestation A, exact-A verification and push.
+- P4.2 admission must add a persistent caller-to-action ledger so every retired legacy membership remains tied to a concrete canonical action invocation.
+- P4.2a must lock complete readiness/activation/presentation rollback keys, validate all patches before commit, publish observers after commit and fence deferred metadata by request identity.
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.

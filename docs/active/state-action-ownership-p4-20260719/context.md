@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status on 2026-07-19: current `main@68a62e54` with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; P4 preserves every entry and performs all edits in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.1 Boot/startup action ownership; P4.0 exact checkpoint C and attestation A are green and pushed.
+- Current phase: P4.1 docs-only attestation A; functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` is exact-C green.
 
 ## Decisions and deviations
 
@@ -34,6 +34,8 @@
 | 2026-07-19 | Scanner soundness fixtures intentionally contain state-write syntax that the legacy regex gate would classify as production-like test writes | Added an exact three-file fixture exclusion set to the legacy compatibility scanner and locked the compensation contract: every excluded fixture is parsed from the checker source and must enter the complete named AST-policy runner; Python boundary passes 20/20. |
 | 2026-07-19 | Functional checkpoint `3f255f5ac837a0c824806c566acb2e918b214701` completed its exact clean matrix | Policy identity reports tree `2cb288e242fbbbac2c99113126add515321b29db`, `trackedClean=true`; policy 185/185, Python 20/20, route 31/27/0/0 and core 78/78 pass. This docs-only attestation records that immutable evidence before exact A verification. |
 | 2026-07-19 | Docs-only attestation `f422e4c291b59e17f7d117b0518b6e222c4663e4` completed the same exact clean matrix and was pushed | P4.0 is closed. P4.1 begins with an explicit action delegation contract, one canonical Boot action module and behavior-preserving caller migration. |
+| 2026-07-19 | P4.1 functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` completed its exact clean matrix | Boot/startup writes now delegate through `boot_actions.js`; Node 82/82, Python 37/37, policy, route 66/34/0/0, dist drift and `verify:core` 80/80 pass. The first core run exposed three stale P4.0-only Python assertions; the functional checkpoint includes their phase-aware repair and direct P4.1 execution route. |
+| 2026-07-19 | P4.2 admission review found legacy retirement could be proven by action membership without proving the old caller invokes that action | P4.2 begins with a production-zero caller-to-action edge ledger and P4.1 backfill before scenario authority is retired. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -41,8 +43,8 @@
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/` | not started |
-| P4.0 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.0/` | exact C and exact A PASS; P4.0 closed |
-| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.0 exact A PASS; P4.1 canonical Pages generation is the next live lane |
+| P4 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.0 exact C/A PASS; P4.1 exact C PASS |
+| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.1 exact C Pages build and dist drift PASS at 927.20 MiB |
 | Performance gate | main integration owner | `.runtime/output/perf/` | not started |
 
 ## Handoff
@@ -51,4 +53,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Generate the canonical P4.1 Pages mirror, commit functional checkpoint C, execute the exact-C matrix, then record and verify docs-only attestation A.
+Commit this docs-only P4.1 attestation A, execute the same exact clean matrix at A, push the branch, then begin the production-zero caller-to-action proof required for P4.2 admission.

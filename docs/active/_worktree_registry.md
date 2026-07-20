@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-19 P4.0 checkpoint C `3f255f5ac837a0c824806c566acb2e918b214701` and attestation A `f422e4c291b59e17f7d117b0518b6e222c4663e4` are exact-SHA green and pushed. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.1 Boot/startup action ownership is active in the isolated worktree.
+Last updated: 2026-07-19 P4.1 functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` is exact-C green: Node 82/82, Python 37/37, policy 208/208, route 66/34/0/0, dist drift and `verify:core` 80/80 pass. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.1 docs-only attestation A is the active step.
 
 ## Integration Owner
 
@@ -18,7 +18,7 @@ Last updated: 2026-07-19 P4.0 checkpoint C `3f255f5ac837a0c824806c566acb2e918b21
 1. Treat `origin/main` containing functional checkpoint `18d6ffae` and archived closeout `3dbe88da` as the completed post-P3 audit baseline.
 2. Keep `codex/parent-wip-recovery-20260715`, `codex/stale-main-wip-preserve-20260708`, and other unique recovery refs until their dedicated replay reviews are complete.
 3. Use `docs/archive/post-p3-audit-cleanup-20260715/` as the durable audit and cleanup handoff.
-4. Complete P4.0 checkpoint/attestation, then continue sequentially with P4.1 boot/startup actions in the existing isolated P4 worktree.
+4. Complete P4.1 attestation A, then add the production-zero caller-to-action proof before P4.2 scenario authority migration.
 5. Keep specialized Williams measurement in its dedicated research lane; ordinary repository acceptance continues to use the schema-2 standard performance gate.
 
 ## Current Worktrees
@@ -28,7 +28,7 @@ Current truth contains the user-owned parent checkout plus one isolated P4 execu
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main@68a62e54` | protected parent checkout; dirty user WIP | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured after P4 synchronization | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; use an isolated clean worktree for P4 implementation and later integration. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@f422e4c2` | `origin/main@68a62e54` | P4.1 checkpoint candidate | Boot action module/callers, delegation policy, tests, phase runner, policy checkpoint and verification metadata are hot files. | Focused P4.1 gates are green: Node 81/81 plus Boot 11/11, Python 17/17, policy 207/207, route 50/33/0/0, shared architecture/allowlist/import/metadata/supervisor gates PASS. | Yellow for shared P4 tooling and Boot callers; red for concurrent state-policy or shared P4.4 edits. | Generate canonical Pages output, commit C, verify exact C, attest exact A, push, then begin P4.2a. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@8a01614f` | `origin/main@68a62e54` | P4.1 attestation candidate | P4.1 task/context/plan and registry are the only pending tracked files. | Exact C is green: Node 82/82, Python 37/37, policy 208/208, route 66/34/0/0, dist drift and core 80/80 PASS. | Yellow for shared P4 tooling and scenario callers; red for concurrent state-policy or shared P4.4 edits. | Commit docs-only A, verify the same exact matrix, push, then begin P4.2 caller-edge admission. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 
