@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2a functional candidate` — six Scenario action modules, atomic apply/rollback and schema-2 caller-to-action proof are implemented; pre-commit Node/Python/policy/route checks and Pages generation pass, while exact C/A acceptance remains.
+`P4.2a exact-C green / attestation candidate` — functional checkpoint `6d0a08909a241ccfd1aac986224060e7535e0eb5` owns six Scenario action modules, atomic apply/rollback, deferred metadata commit leases and schema-2 caller-to-action proof. Exact phase, Scenario resilience, dist-drift and core gates pass on the tracked-clean checkpoint.
 
 ## Checklist
 
@@ -17,7 +17,7 @@
 - [x] Commit checkpoint C, verify exact `SHA_C`, commit attestation A, verify exact `SHA_A`, push.
 - [x] Complete P4.1 Boot/startup actions.
 - [x] Add P4.2 admission caller-to-action edge scanner, ledger schema and P4.1 backfill contracts.
-- [ ] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
+- [x] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
 - [ ] Execute P4.2–P4.5 in order.
 - [ ] Complete review, UltraQA, full acceptance, main integration and safe cleanup.
 
@@ -135,18 +135,38 @@
 - New P4.2a retirements use `retiredInPhase=recordedInPhase=P4.2a`, `backfilled=false`.
 - Phase admission registers seven action modules: one Boot module from P4.1 and six Scenario modules introduced in P4.2a. A future-phase module present on disk now fails closed.
 - Scenario readiness, activation, presentation, palette, request and rollback writes commit through explicit target-first actions. Prepare uses snapshot-restored transactional staging with observer, persistence and default-palette publication suppressed; validation precedes commit; observers publish after commit; restore preserves absent-property semantics.
-- Same-target cache and Promise reuse preserve the active apply epoch. New and queued transactions allocate a fresh epoch; deferred metadata and optional-layer writes require matching scenario, request and epoch.
+- Same-target cache and Promise reuse preserve the active apply epoch. New and queued transactions allocate a fresh epoch; deferred metadata shares identity-free fetch work while the latest request owns a manager-fenced commit lease, and optional-layer writes require matching scenario, request and epoch.
 - Latest-target arbitration clears a stale queued target when the user returns to the active target, and cache reuse is disabled while another apply owns the transaction so the final request remains authoritative.
 - Schema-2 policy contains 200 writers and 148 caller-to-action entries: 36 P4.1 backfills plus 112 P4.2a retirements.
 - Current checkpoint metrics are 75 production legacy-direct files, 1,039 legacy memberships, 142 dynamic sites, 222 alias sites, 681 ambiguous sites and 4,111 unsupported sites.
 - Policy snapshot reuse removes the checker’s duplicate writer scan: `139,970 ms → 75,147 ms` (`1.86×`) while preserving 5,967,610 output bytes and SHA256 `7b9e65bd09e849c5c8376834f5085a00dba87327bcf8c130a951961f8b4a6f79`.
-- Targeted Scenario apply ownership passes 8/8 and the complete P4.2a Node matrix passes 87/87. The P4 Python boundary/policy matrix passes 58/58. Batch-scanner and runner reachability pass 8/8. Exact P4.2a routing reports 59 changed paths, 36 P4-owned paths, zero unmatched files and zero route gaps.
+- Targeted Scenario apply ownership passes 8/8 and the complete P4.2a Node matrix passes 91/91. The P4 Python boundary/policy matrix passes 58/58. Batch-scanner, line-ending portability and runner reachability regressions pass. The broad branch admission route reports 59 changed paths / 36 P4-owned paths / zero unmatched files / zero route gaps; the exact functional follow-up route reports 5/5/0/0.
+
+### Exact checkpoint C
+
+- Functional SHA: `6d0a08909a241ccfd1aac986224060e7535e0eb5`
+- Verification tree: `39a9b9c0775c8dcef833fb8dd0e9696d730f0132`
+- Functional lineage: `0f6a3ef7` makes Scenario apply ownership atomic under contention; `ceea38ea` hardens deferred metadata leases; `6d0a0890` makes policy scanning portable across LF and CRLF checkouts.
+- `npm run verify:p4:p4-2a`: PASS on a stable clean identity; Node 91/91, Python 58/58, repository policy green and exact route 5 changed / 5 P4-owned / 0 unmatched / 0 gaps.
+- Exact Node count log: `.runtime/reports/generated/p4-state-actions/P4.2a/exact-c-node-91.log`, SHA256 `71c2da901eaa6c6c4f4d189849a1b8eddd85093926f7ca95cfc1c304fd41337d`.
+- `npm run test:e2e:scenario-resilience -- --output=.runtime/tests/playwright/p4/P4.2a/6d0a08909a241ccfd1aac986224060e7535e0eb5/scenario-resilience`: PASS 3/3; persistent output `.runtime/reports/generated/p4-state-actions/P4.2a/exact-c-scenario-resilience.log`, SHA256 `42555fff0ca533d063a72e71c5fad1bd80ad0bd6afe4c7a397d5fe28c3a2754f`.
+- `npm run verify:dist-drift`: PASS; canonical Pages dist is 927.27 MiB.
+- `npm run verify:core`: PASS 82/82; all command exit codes are zero and nine main-thread commands remain phase-owned skips.
+- The first core attempt lost its dist read lease to a concurrent Pages builder. Exact process inspection identified the second writer; serial ownership restored the tree, and the clean rerun passed. Cross-process dist locking remains a separate infrastructure follow-up.
+- Independent final review: `APPROVE`; blocker 0, major 0, minor 2. The future items are clearer historical-offset naming and an end-to-end batch-scan/delegation identity regression. Persistent review artifact: `.runtime/reports/generated/p4-state-actions/P4.2a/final-review.md`, SHA256 `409e9db8b9924f75c62eddf909648e01de04c33d3a7859c033edcfdcffd6d6a5`.
+- Report SHA256:
+  - phase verification: `3820e778498dffe6fb9dd5ebf5ed7f74742182704620043cf8e408f82abac3f7`
+  - policy report: `bfc7357de070382d5ef3809ef04bd6446db825a66c2a010635e09eef99fe4d87`
+  - adaptive route report: `935b0c19d3b02270f5159abd048e0f339374d6d5f7374f54462f8cf28dc9da5d`
+  - Scenario resilience last-run: `91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903`
+  - verify-core report: `0ccabb887b1dac4aaf072a915f34613ae544c2a8348e68d8a4e5fbca032964f7`
+  - Pages dist manifest: `16225e2fe790679ee86eb1b920340fea5e4ec00831bb7c2ffcf4cd9ef1689f1e`
 
 ## Open risks and remaining work
 
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
-- P4.2a still requires the clean checkpoint C and attestation A matrices: exact phase verification, Scenario resilience Playwright, dist drift and `verify:core`.
+- P4.2a requires the docs-only attestation A commit, the same exact-A matrix and remote SHA confirmation.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
 - Main-thread browser/performance/heavy-geo lanes outside the Scenario resilience acceptance case remain deferred to their owning phases.

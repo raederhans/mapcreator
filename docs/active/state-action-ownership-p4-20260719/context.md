@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status on 2026-07-19: current `main@68a62e54` with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; P4 preserves every entry and performs all edits in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.2a scenario readiness/activation atomicity and caller-to-action proof; P4.1 attestation `bb4ee4d1cabd54288973ce944485063432fdaecc` is exact-A green and pushed.
+- Current phase: P4.2a exact-C is green at `6d0a08909a241ccfd1aac986224060e7535e0eb5`; this task-record update is the docs-only attestation candidate before exact-A verification and push.
 
 ## Decisions and deviations
 
@@ -44,15 +44,18 @@
 | 2026-07-20 | Exact P4.2a routing initially reported five gaps and the batch scanner fixture lacked standard runner reachability | The two production files and three policy tests now enter the exact sourceRefs; the batch fixture enters both policy and P4.2a Node runners; targeted routing and reachability are green. |
 | 2026-07-20 | Policy checking repeated the full repository AST scan after candidate discovery | Snapshot checking now reuses candidate inventories. Output remains byte-identical at SHA256 `7b9e65bd09e849c5c8376834f5085a00dba87327bcf8c130a951961f8b4a6f79`; measured time falls from 139.97 seconds to 75.15 seconds. |
 | 2026-07-20 | Audit reproduced latest-target loss in both queued and already-draining transitions | Returning to the active target clears a stale queue entry; cached active bundles are reusable only with no active apply, so an in-flight different target receives the final target as a fresh queued request. The focused 8/8 regression and complete 87/87 P4.2a Node matrix pass. |
+| 2026-07-21 | Functional lineage `0f6a3ef7 → ceea38ea → 6d0a0890` closed contention, deferred metadata and checkout-portability gaps | Deferred metadata fetch work is identity-free and shareable; the latest request owns a manager-fenced commit lease. Policy snapshots preserve semantic identities across LF and CRLF while retaining exact binding, line, column, fingerprint, enclosing action and occurrence proof. |
+| 2026-07-21 | Exact-C matrix completed on SHA `6d0a08909a241ccfd1aac986224060e7535e0eb5`, tree `39a9b9c0775c8dcef833fb8dd0e9696d730f0132` | Phase verification passes Node 91/91, Python 58/58, policy and route 5/5/0/0; Scenario resilience passes 3/3; dist drift passes at 927.27 MiB; core passes 82/82. Independent review returned APPROVE with zero blocker and zero major findings. |
+| 2026-07-21 | One earlier core attempt overlapped a concurrent Pages builder during manifest traversal | Process evidence identified the shared dist writer. Serial lane ownership restored a clean dist tree and the full exact-C rerun passed; a cross-process dist lock is recorded as a later infrastructure improvement. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
 
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
-| Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/scenario-resilience/` | reserved for exact C/A after the functional checkpoint |
-| P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/` | schema-2 policy rebuilt at 148 ledger entries; Node 87/87, Python 58/58 and route 59/36/0/0 pass |
-| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.2a Pages build completed at 927.26 MiB; 12 changed source/mirror pairs have normalized byte parity; clean-checkpoint drift remains an exact-C gate |
+| Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/6d0a08909a241ccfd1aac986224060e7535e0eb5/scenario-resilience/` | exact-C Scenario resilience passes 3/3; lane returns for the exact-A rerun |
+| P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/` | schema-2 policy contains 200 writers and 148 ledger entries; exact-C Node 91/91, Python 58/58 and route 5/5/0/0 pass |
+| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | exact-C Pages/dist passes at 927.27 MiB under serial ownership; lane returns for the exact-A rerun |
 | Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
 
 ## Handoff
@@ -61,4 +64,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Collect the final independent review, create checkpoint C, then execute the exact C/A phase, Scenario resilience, dist-drift and core matrices.
+Commit this exact-C record as attestation A, rerun the phase, Scenario resilience, dist-drift and core matrices on that exact SHA, confirm the remote SHA, then enter P4.2b scenario chunk ownership.
