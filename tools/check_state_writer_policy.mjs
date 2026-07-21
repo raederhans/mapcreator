@@ -224,7 +224,32 @@ export function validateCallerToActionLedgerHistoryTransition({
       });
       continue;
     }
-    if (!isDeepStrictEqual(previousEntry, currentEntry)) {
+    const samePhaseObservationRefresh =
+      previousPhase === currentPhase
+      && previousEntry.recordedInPhase === currentPhase;
+    const expectedHistory = samePhaseObservationRefresh
+      ? { ...previousEntry }
+      : previousEntry;
+    const actualHistory = samePhaseObservationRefresh
+      ? { ...currentEntry }
+      : currentEntry;
+    if (samePhaseObservationRefresh) {
+      // The builder refreshes these live source coordinates within the phase
+      // that recorded the proof; snapshot validation still binds them to the
+      // currently observed action edge before this history check runs.
+      for (const field of [
+        "callerBindingId",
+        "start",
+        "end",
+        "line",
+        "column",
+        "sourceFingerprint",
+      ]) {
+        delete expectedHistory[field];
+        delete actualHistory[field];
+      }
+    }
+    if (!isDeepStrictEqual(expectedHistory, actualHistory)) {
       violations.push({
         code: "caller-action-ledger-history-drift",
         retiredMembershipIdentity:

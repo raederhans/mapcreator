@@ -91,14 +91,18 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
             content,
             re.compile(
                 r"applyDeferredScenarioMetadata\(bundle,\s*\{\s*"
-                r"scenarioId,\s*"
-                r"scenarioApplyEpoch:\s*transactionScenarioApplyEpoch,\s*"
-                r"scenarioApplyRequestId:\s*transactionScenarioApplyRequestId,\s*"
-                r"isScenarioApplyRequestCurrent,\s*"
+                r"scenarioId:\s*leaseContext\.scenarioId,\s*"
+                r"scenarioApplyEpoch:\s*leaseContext\.scenarioApplyEpoch,\s*"
+                r"scenarioApplyRequestId:\s*leaseContext\.scenarioApplyRequestId,\s*"
+                r"isScenarioApplyRequestCurrent:\s*"
+                r"leaseContext\.isScenarioApplyRequestCurrent,\s*"
                 r"\}\);",
                 re.DOTALL,
             ),
         )
+        self.assertIn("bundle.deferredMetadataLoadPromise", content)
+        self.assertIn("bundle.deferredMetadataCommitLease !== commitLease", content)
+        self.assertIn("const leaseContext = commitLease.currentnessContext;", content)
         self.assertIn("function applyScenarioOptionalLayerState(", content)
         self.assertIn("scenarioApplyRequestId = 0", content)
         self.assertIn("isScenarioApplyRequestCurrent = null", content)

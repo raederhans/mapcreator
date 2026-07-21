@@ -368,7 +368,7 @@ test("registered pure-reader target stays out of writer policy and fails closed 
       (total, { count }) => total + count,
       0,
     ),
-    24,
+    22,
   );
   assert.ok(
     contractEntry.conservativeFindings.every(

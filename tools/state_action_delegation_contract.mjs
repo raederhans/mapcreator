@@ -252,7 +252,7 @@ export const STATE_TARGET_PURE_READER_CONTRACT = Object.freeze([
     targetParameterIndex: 0,
     targetParameterPath: "$/property:targetState",
     sourceFingerprint:
-      "81f1b121b0c80ccc1b18effae50bfb2652ebb84702c48a49a9efbdbb53570ab4",
+      "47c43af8daaa53a0f3b791601a75d17cb9136cda6914a5daa6874b415443f964",
     conservativeFindings: [
       scenarioDetailConservativeFinding(
         SCENARIO_DETAIL_CURRENT_PATCH_FUNCTION_IDENTITY,
@@ -311,7 +311,7 @@ export const STATE_TARGET_PURE_READER_CONTRACT = Object.freeze([
         ],
         [
           "9b7c27f4636707683beb548569b03c1d2eaecde9490179330a84f69df58e9430",
-          3,
+          2,
         ],
         [
           "e0ae35c7b2c9744523e772fa0831a6af75a74595e7ca8b631d9d3ac7c82d1495",
@@ -347,10 +347,6 @@ export const STATE_TARGET_PURE_READER_CONTRACT = Object.freeze([
         ],
         [
           "1297675eb4c214963ade4245676beb37e6551ae26175acda39b8657c8e944127",
-          1,
-        ],
-        [
-          "0b619dcd4e21ae93115dd00db5a64742d4e8014723374bd5fb26b1d1e8a158cf",
           1,
         ],
       ].map(([sourceFingerprint, count]) =>

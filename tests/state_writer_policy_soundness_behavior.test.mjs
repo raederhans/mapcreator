@@ -775,6 +775,50 @@ test("checker transition preserves caller-to-action ledger history append-only",
   );
 });
 
+test("checker transition permits same-phase caller observation coordinate refresh", () => {
+  const backfill = createP41ToP42aBackfillPolicies();
+  const previousPolicy = structuredClone(backfill.currentPolicy);
+  const currentPolicy = structuredClone(previousPolicy);
+  Object.assign(currentPolicy.progress.callerToActionLedger.entries[0], {
+    callerBindingId: "module:runtimeState:shifted",
+    start: 900,
+    end: 940,
+    line: 90,
+    column: 7,
+    sourceFingerprint: "e".repeat(64),
+  });
+
+  const callerActionViolations =
+    policyChecker.validateStateWriterPolicyTransition({
+      previousPolicy,
+      currentPolicy,
+    }).filter(({ code }) => String(code).startsWith("caller-action-ledger-"));
+
+  assert.deepEqual(callerActionViolations, []);
+});
+
+test("checker transition keeps same-phase caller semantics and later coordinates frozen", () => {
+  const backfill = createP41ToP42aBackfillPolicies();
+  const previousPolicy = structuredClone(backfill.currentPolicy);
+  const semanticDrift = structuredClone(previousPolicy);
+  semanticDrift.progress.callerToActionLedger.entries[0].actionExportName =
+    "replaceBootMetricsState";
+  const laterCoordinateDrift = structuredClone(previousPolicy);
+  laterCoordinateDrift.progress.latestPhase = "P4.2b";
+  laterCoordinateDrift.progress.callerToActionLedger.entries[0].line += 1;
+
+  for (const currentPolicy of [semanticDrift, laterCoordinateDrift]) {
+    const codes = policyChecker.validateStateWriterPolicyTransition({
+      previousPolicy,
+      currentPolicy,
+    }).map(({ code }) => code);
+    assert.ok(
+      codes.includes("caller-action-ledger-history-drift"),
+      codes.join(", "),
+    );
+  }
+});
+
 test("checker transition permits the complete one-time P4.1 to P4.2a ledger backfill", () => {
   const { previousPolicy, currentPolicy } =
     createP41ToP42aBackfillPolicies();

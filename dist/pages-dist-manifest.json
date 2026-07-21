@@ -46427,7 +46427,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 55589,
+      "size_bytes": 56150,
       "source_kind": "dist"
     },
     {
@@ -46447,7 +46447,7 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 50199,
+      "size_bytes": 52334,
       "source_kind": "dist"
     },
     {
@@ -47604,7 +47604,7 @@
     {
       "file_count": 9434,
       "path": "app",
-      "size_bytes": 965739546
+      "size_bytes": 965742242
     },
     {
       "file_count": 57,
@@ -47637,5 +47637,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972307059
+  "total_bytes": 972309755
 }

@@ -194,6 +194,25 @@ function isScenarioApplyContextCurrent({
   return !(expectedRequestId > 0 && currentRequestId > 0 && expectedRequestId !== currentRequestId);
 }
 
+function recordScenarioApplyDiagnostic({
+  phase = "",
+  reason = "scenario-resources",
+  scenarioId = "",
+  requestedScenarioId = "",
+  searchParams = null,
+  extra = {},
+} = {}) {
+  recordRenderTransactionSnapshot(runtimeState, {
+    phase,
+    reason,
+    requestedScenarioId,
+    expectedScenarioId: scenarioId,
+    source: "scenario_resources",
+    searchParams,
+    extra,
+  });
+}
+
 function recordScenarioApplyStaleCallbackSkipped({
   callbackPhase = "",
   reason = "scenario-resources",
@@ -202,11 +221,10 @@ function recordScenarioApplyStaleCallbackSkipped({
   scenarioApplyRequestId = 0,
   extra = {},
 } = {}) {
-  recordRenderTransactionSnapshot(runtimeState, {
+  recordScenarioApplyDiagnostic({
     phase: "scenario-apply-stale-callback-skipped",
     reason,
-    expectedScenarioId: scenarioId,
-    source: "scenario_resources",
+    scenarioId,
     extra: {
       ...extra,
       allowScenarioMismatch: true,
@@ -497,14 +515,11 @@ function scheduleScenarioDeferredBundleMetadataLoad(
   } = {}
 ) {
   if (!bundle?.manifest || bundle?.bundleLevel !== "full") {
-    return;
-  }
-  if (bundle.deferredMetadataLoadPromise) {
-    return;
+    return null;
   }
   const scenarioId = normalizeScenarioId(bundle.manifest?.scenario_id || bundle.meta?.scenario_id);
   if (!scenarioId || !d3Client || typeof d3Client.json !== "function") {
-    return;
+    return null;
   }
   const transactionScenarioApplyEpoch =
     Math.max(0, Number(scenarioApplyEpoch || 0))
@@ -519,58 +534,107 @@ function scheduleScenarioDeferredBundleMetadataLoad(
     isScenarioApplyRequestCurrent,
     reason: "scenario-deferred-metadata",
   };
-  bundle.deferredMetadataLoadPromise = new Promise((resolve) => {
-    globalThis.setTimeout(async () => {
-      const [releasableCatalogResult, districtGroupsResult] = await Promise.all([
-        bundle.manifest?.releasable_catalog_url
-          ? loadOptionalScenarioResource(d3Client, bundle.manifest.releasable_catalog_url, {
-            scenarioId,
-            resourceLabel: "releasable_catalog",
-          })
-          : Promise.resolve({ ok: false, value: null, metrics: null, reason: "missing-url", errorMessage: "" }),
-        bundle.manifest?.district_groups_url
-          ? loadOptionalScenarioResource(d3Client, bundle.manifest.district_groups_url, {
-            scenarioId,
-            resourceLabel: "district_groups",
-          })
-          : Promise.resolve({ ok: false, value: null, metrics: null, reason: "missing-url", errorMessage: "" }),
-      ]);
-      if (releasableCatalogResult.ok) {
-        bundle.releasableCatalog = releasableCatalogResult.value || null;
-        if (bundle.loadDiagnostics?.optionalResources?.releasable_catalog) {
-          bundle.loadDiagnostics.optionalResources.releasable_catalog = {
-            ok: true,
-            reason: releasableCatalogResult.reason,
-            errorMessage: releasableCatalogResult.errorMessage,
-            metrics: releasableCatalogResult.metrics || null,
-          };
+  if (!bundle.deferredMetadataLoadPromise) {
+    bundle.deferredMetadataLoadPromise = new Promise((resolve) => {
+      globalThis.setTimeout(async () => {
+        const [releasableCatalogResult, districtGroupsResult] = await Promise.all([
+          bundle.manifest?.releasable_catalog_url
+            ? loadOptionalScenarioResource(d3Client, bundle.manifest.releasable_catalog_url, {
+              scenarioId,
+              resourceLabel: "releasable_catalog",
+            })
+            : Promise.resolve({ ok: false, value: null, metrics: null, reason: "missing-url", errorMessage: "" }),
+          bundle.manifest?.district_groups_url
+            ? loadOptionalScenarioResource(d3Client, bundle.manifest.district_groups_url, {
+              scenarioId,
+              resourceLabel: "district_groups",
+            })
+            : Promise.resolve({ ok: false, value: null, metrics: null, reason: "missing-url", errorMessage: "" }),
+        ]);
+        if (releasableCatalogResult.ok) {
+          bundle.releasableCatalog = releasableCatalogResult.value || null;
+          if (bundle.loadDiagnostics?.optionalResources?.releasable_catalog) {
+            bundle.loadDiagnostics.optionalResources.releasable_catalog = {
+              ok: true,
+              reason: releasableCatalogResult.reason,
+              errorMessage: releasableCatalogResult.errorMessage,
+              metrics: releasableCatalogResult.metrics || null,
+            };
+          }
         }
-      }
-      if (districtGroupsResult.ok) {
-        bundle.districtGroupsPayload = normalizeScenarioDistrictGroupsPayload(districtGroupsResult.value, scenarioId);
-        if (bundle.loadDiagnostics?.optionalResources?.district_groups) {
-          bundle.loadDiagnostics.optionalResources.district_groups = {
-            ok: true,
-            reason: districtGroupsResult.reason,
-            errorMessage: districtGroupsResult.errorMessage,
-            metrics: districtGroupsResult.metrics || null,
-          };
+        if (districtGroupsResult.ok) {
+          bundle.districtGroupsPayload = normalizeScenarioDistrictGroupsPayload(districtGroupsResult.value, scenarioId);
+          if (bundle.loadDiagnostics?.optionalResources?.district_groups) {
+            bundle.loadDiagnostics.optionalResources.district_groups = {
+              ok: true,
+              reason: districtGroupsResult.reason,
+              errorMessage: districtGroupsResult.errorMessage,
+              metrics: districtGroupsResult.metrics || null,
+            };
+          }
         }
-      }
-      if (shouldContinueScenarioApplyContext(
-        currentnessContext,
-        "deferred-metadata-before-apply"
-      )) {
-        applyDeferredScenarioMetadata(bundle, {
-          scenarioId,
-          scenarioApplyEpoch: transactionScenarioApplyEpoch,
-          scenarioApplyRequestId: transactionScenarioApplyRequestId,
-          isScenarioApplyRequestCurrent,
-        });
-      }
-      resolve();
-    }, 1200);
+        resolve();
+      }, 1200);
+    });
+  }
+  const commitLeaseKey = [
+    scenarioId,
+    transactionScenarioApplyEpoch,
+    transactionScenarioApplyRequestId,
+  ].join(":");
+  if (bundle.deferredMetadataCommitLease?.key === commitLeaseKey) {
+    bundle.deferredMetadataCommitLease.currentnessContext = currentnessContext;
+    return bundle.deferredMetadataCommitLease.promise;
+  }
+  const commitLease = {
+    key: commitLeaseKey,
+    currentnessContext,
+    promise: null,
+  };
+  commitLease.promise = bundle.deferredMetadataLoadPromise.then(() => {
+    if (bundle.deferredMetadataCommitLease !== commitLease) {
+      return false;
+    }
+    const leaseContext = commitLease.currentnessContext;
+    if (!shouldContinueScenarioApplyContext(
+      leaseContext,
+      "deferred-metadata-before-apply"
+    )) {
+      return false;
+    }
+    try {
+      return applyDeferredScenarioMetadata(bundle, {
+        scenarioId: leaseContext.scenarioId,
+        scenarioApplyEpoch: leaseContext.scenarioApplyEpoch,
+        scenarioApplyRequestId: leaseContext.scenarioApplyRequestId,
+        isScenarioApplyRequestCurrent: leaseContext.isScenarioApplyRequestCurrent,
+      });
+    } catch (error) {
+      recordScenarioApplyDiagnostic({
+        phase: "scenario-apply-deferred-metadata-commit-failed",
+        reason: leaseContext.reason,
+        scenarioId: leaseContext.scenarioId,
+        requestedScenarioId: leaseContext.scenarioId,
+        searchParams: getSearchParams(),
+        extra: {
+          allowScenarioMismatch: true,
+          callbackPhase: "deferred-metadata-commit",
+          resolution: "commit-failed",
+          errorCode: String(error?.code || ""),
+          errorMessage: String(error?.message || error || "Unknown deferred metadata commit error"),
+          scenarioApplyEpoch: leaseContext.scenarioApplyEpoch,
+          scenarioApplyRequestId: leaseContext.scenarioApplyRequestId,
+        },
+      });
+      console.warn(
+        `[scenario] Deferred metadata commit failed for "${leaseContext.scenarioId}".`,
+        error,
+      );
+      return false;
+    }
   });
+  bundle.deferredMetadataCommitLease = commitLease;
+  return commitLease.promise;
 }
 
 function applyDeferredScenarioMetadata(

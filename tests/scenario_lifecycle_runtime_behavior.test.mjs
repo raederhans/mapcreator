@@ -952,6 +952,67 @@ test("real scenario detail staging returns a readiness patch without focus, UI, 
     fallbackResult.scenarioReadinessPatch.topologyDetail,
     runtimeFallback,
   );
+
+  const unavailableResult = await prepareScenarioDetailTopologyState({
+    targetState: {
+      ...model,
+      topologyDetail: null,
+      runtimePoliticalTopology: null,
+      topologyBundleMode: "single",
+    },
+    loadDetailBundle: async () => ({
+      topologyDetail: null,
+      runtimePoliticalTopology: null,
+      detailSourceUsed: null,
+    }),
+    hasUsableTopology: (value) => !!value?.objects?.political,
+    detailSourceFallbackOrder: ["fallback"],
+  });
+  assert.equal(unavailableResult.detailPromoted, false);
+  assert.equal(unavailableResult.scenarioReadinessPatch.detailDeferred, false);
+  assert.equal(
+    unavailableResult.scenarioReadinessPatch.detailPromotionInFlight,
+    false,
+  );
+});
+
+test("real scenario detail staging preserves unexpected loader failure diagnostics", async () => {
+  const {
+    prepareScenarioDetailTopologyState,
+  } = await import("../js/core/scenario_manager.js");
+  const cause = Object.assign(new Error("detail decoder exploded"), {
+    code: "DETAIL_DECODER_BUG",
+  });
+
+  await assert.rejects(
+    prepareScenarioDetailTopologyState({
+      targetState: createBaseState({
+        topologyDetail: null,
+        runtimePoliticalTopology: null,
+        topologyBundleMode: "single",
+        detailDeferred: true,
+        detailPromotionCompleted: false,
+        detailPromotionInFlight: false,
+        detailSourceRequested: "requested-source",
+      }),
+      loadDetailBundle: async () => {
+        throw cause;
+      },
+      hasUsableTopology: (value) => !!value?.objects?.political,
+      detailSourceFallbackOrder: ["fallback-a", "fallback-b"],
+    }),
+    (error) => {
+      assert.equal(error.code, "SCENARIO_DETAIL_TOPOLOGY_STAGING_FAILED");
+      assert.equal(error.cause, cause);
+      assert.deepEqual(error.detailSourceKeys, [
+        "requested-source",
+        "fallback-a",
+        "fallback-b",
+      ]);
+      assert.match(error.message, /requested-source, fallback-a, fallback-b/);
+      return true;
+    },
+  );
 });
 
 test("real palette staging flags suppress default palette, render, library UI, and source-control observers", async () => {
@@ -1257,6 +1318,285 @@ test("deferred scenario metadata fake timer fences old scenario, epoch, and requ
     });
     await runCase({
       expectedApplied: true,
+    });
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("deferred scenario metadata shares one fetch while a same-scenario retry owns the current commit lease", async () => {
+  const {
+    scheduleScenarioDeferredBundleMetadataLoad,
+  } = await import("../js/core/scenario_resources.js");
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalFetch = globalThis.fetch;
+
+  try {
+    await withAppStateRestoredAsync(async () => {
+      let deferredTimerCallback = null;
+      let fetchCount = 0;
+      let commitCount = 0;
+      globalThis.setTimeout = (callback, delayMs) => {
+        if (Number(delayMs) === 1200 && !deferredTimerCallback) {
+          deferredTimerCallback = callback;
+        }
+        return 1;
+      };
+      globalThis.fetch = async () => {
+        fetchCount += 1;
+        return {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: async () => JSON.stringify({
+            scenario_id: "beta",
+            tags: {
+              BBB: {
+                districts: {
+                  retry: {
+                    feature_ids: ["feature-retry"],
+                  },
+                },
+              },
+            },
+          }),
+        };
+      };
+      applyAppStatePatch({
+        activeScenarioId: "beta",
+        currentScenarioApplyRequestId: 20,
+        renderTransactionDiagnostics: {
+          scenarioApplyEpochByScenarioId: {
+            beta: 10,
+          },
+        },
+        scenarioDistrictGroupsData: { id: "before" },
+        scenarioDistrictGroupByFeatureId: new Map([["before", "before"]]),
+        updateScenarioUIFn: () => {
+          commitCount += 1;
+        },
+      });
+      const bundle = {
+        bundleLevel: "full",
+        manifest: {
+          scenario_id: "beta",
+          district_groups_url: "/data/beta/districts.json",
+        },
+        loadDiagnostics: {
+          optionalResources: {
+            district_groups: {},
+          },
+        },
+      };
+      const firstCommit = scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+        d3Client: { json: async () => null },
+        scenarioApplyEpoch: 10,
+        scenarioApplyRequestId: 20,
+        isScenarioApplyRequestCurrent: () =>
+          Number(appState.currentScenarioApplyRequestId || 0) === 20,
+      });
+
+      applyAppStatePatch({
+        currentScenarioApplyRequestId: 21,
+        renderTransactionDiagnostics: {
+          scenarioApplyEpochByScenarioId: {
+            beta: 11,
+          },
+        },
+      });
+      const retryCommit = scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+        d3Client: { json: async () => null },
+        scenarioApplyEpoch: 11,
+        scenarioApplyRequestId: 21,
+        isScenarioApplyRequestCurrent: () =>
+          Number(appState.currentScenarioApplyRequestId || 0) === 21,
+      });
+
+      assert.equal(typeof deferredTimerCallback, "function");
+      await deferredTimerCallback();
+      await Promise.all([
+        bundle.deferredMetadataLoadPromise,
+        firstCommit,
+        retryCommit,
+      ]);
+
+      assert.equal(fetchCount, 1);
+      assert.equal(
+        String(appState.scenarioDistrictGroupsData?.scenario_id || ""),
+        "beta",
+      );
+      assert.equal(
+        appState.scenarioDistrictGroupByFeatureId.get("feature-retry"),
+        "retry",
+      );
+      assert.equal(commitCount, 1);
+
+      applyAppStatePatch({
+        currentScenarioApplyRequestId: 22,
+        renderTransactionDiagnostics: {
+          scenarioApplyEpochByScenarioId: {
+            beta: 12,
+          },
+        },
+        scenarioDistrictGroupsData: { id: "before-settled-retry" },
+        scenarioDistrictGroupByFeatureId: new Map(),
+      });
+      const settledRetryResult = await scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+        d3Client: { json: async () => null },
+        scenarioApplyEpoch: 12,
+        scenarioApplyRequestId: 22,
+        isScenarioApplyRequestCurrent: () =>
+          Number(appState.currentScenarioApplyRequestId || 0) === 22,
+      });
+      assert.equal(settledRetryResult, true);
+      assert.equal(fetchCount, 1);
+      assert.equal(
+        String(appState.scenarioDistrictGroupsData?.scenario_id || ""),
+        "beta",
+      );
+      assert.equal(commitCount, 2);
+
+      const observerError = Object.assign(new Error("scenario UI observer failed"), {
+        code: "UI_OBSERVER_FAIL",
+      });
+      applyAppStatePatch({
+        currentScenarioApplyRequestId: 23,
+        renderTransactionDiagnostics: {
+          scenarioApplyEpochByScenarioId: {
+            beta: 13,
+          },
+        },
+        scenarioDistrictGroupsData: { id: "before-observer-failure" },
+        scenarioDistrictGroupByFeatureId: new Map(),
+        updateScenarioUIFn: () => {
+          throw observerError;
+        },
+      });
+      const originalConsoleWarn = console.warn;
+      const observerWarnings = [];
+      let observerFailureResult = null;
+      try {
+        console.warn = (...args) => observerWarnings.push(args);
+        observerFailureResult = await scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+          d3Client: { json: async () => null },
+          scenarioApplyEpoch: 13,
+          scenarioApplyRequestId: 23,
+          isScenarioApplyRequestCurrent: () =>
+            Number(appState.currentScenarioApplyRequestId || 0) === 23,
+        });
+      } finally {
+        console.warn = originalConsoleWarn;
+      }
+      assert.equal(observerFailureResult, false);
+      assert.equal(observerWarnings.length, 1);
+      assert.equal(observerWarnings[0][1], observerError);
+      assert.equal(
+        String(appState.scenarioDistrictGroupsData?.scenario_id || ""),
+        "beta",
+      );
+      assert.equal(
+        String(appState.renderTransactionDiagnostics?.latestSnapshot?.phase || ""),
+        "scenario-apply-deferred-metadata-commit-failed",
+      );
+      assert.equal(
+        String(
+          appState.renderTransactionDiagnostics?.latestSnapshot?.extra?.errorCode
+          || "",
+        ),
+        "UI_OBSERVER_FAIL",
+      );
+    });
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("deferred scenario metadata upgrades an ambient same-request lease with the manager currentness fence", async () => {
+  const {
+    scheduleScenarioDeferredBundleMetadataLoad,
+  } = await import("../js/core/scenario_resources.js");
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalFetch = globalThis.fetch;
+
+  try {
+    await withAppStateRestoredAsync(async () => {
+      let deferredTimerCallback = null;
+      globalThis.setTimeout = (callback, delayMs) => {
+        if (Number(delayMs) === 1200 && !deferredTimerCallback) {
+          deferredTimerCallback = callback;
+        }
+        return 1;
+      };
+      globalThis.fetch = async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({
+          scenario_id: "alpha",
+          tags: {
+            AAA: {
+              districts: {
+                stale: {
+                  feature_ids: ["feature-stale"],
+                },
+              },
+            },
+          },
+        }),
+      });
+      applyAppStatePatch({
+        activeScenarioId: "alpha",
+        currentScenarioApplyRequestId: 20,
+        renderTransactionDiagnostics: {
+          scenarioApplyEpochByScenarioId: {
+            alpha: 10,
+          },
+        },
+        scenarioDistrictGroupsData: { id: "before" },
+        scenarioDistrictGroupByFeatureId: new Map([["before", "before"]]),
+      });
+      const bundle = {
+        bundleLevel: "full",
+        manifest: {
+          scenario_id: "alpha",
+          district_groups_url: "/data/alpha/districts.json",
+        },
+        loadDiagnostics: {
+          optionalResources: {
+            district_groups: {},
+          },
+        },
+      };
+
+      scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+        d3Client: { json: async () => null },
+        scenarioApplyEpoch: 10,
+        scenarioApplyRequestId: 20,
+      });
+      const explicitLease = scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+        d3Client: { json: async () => null },
+        scenarioApplyEpoch: 10,
+        scenarioApplyRequestId: 20,
+        isScenarioApplyRequestCurrent: () => false,
+      });
+
+      assert.equal(typeof deferredTimerCallback, "function");
+      await deferredTimerCallback();
+      await Promise.all([
+        bundle.deferredMetadataLoadPromise,
+        explicitLease,
+      ]);
+
+      assert.equal(
+        String(appState.scenarioDistrictGroupsData?.id || ""),
+        "before",
+      );
+      assert.equal(
+        appState.scenarioDistrictGroupByFeatureId.get("feature-stale"),
+        undefined,
+      );
     });
   } finally {
     globalThis.setTimeout = originalSetTimeout;

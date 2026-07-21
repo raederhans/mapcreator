@@ -245,11 +245,13 @@ class ScenarioStateActionsBoundaryContractTest(unittest.TestCase):
             content,
             re.compile(
                 r"applyDeferredScenarioMetadata\(bundle,\s*\{[\s\S]*?"
-                r"scenarioApplyEpoch:\s*transactionScenarioApplyEpoch,[\s\S]*?"
-                r"scenarioApplyRequestId:\s*transactionScenarioApplyRequestId,[\s\S]*?"
-                r"isScenarioApplyRequestCurrent,",
+                r"scenarioApplyEpoch:\s*leaseContext\.scenarioApplyEpoch,[\s\S]*?"
+                r"scenarioApplyRequestId:\s*leaseContext\.scenarioApplyRequestId,[\s\S]*?"
+                r"isScenarioApplyRequestCurrent:\s*"
+                r"leaseContext\.isScenarioApplyRequestCurrent,",
             ),
         )
+        self.assertIn("bundle.deferredMetadataCommitLease !== commitLease", content)
 
     def test_delegation_contract_registers_only_mutating_scenario_exports(self):
         content = DELEGATION_CONTRACT.read_text(encoding="utf-8")

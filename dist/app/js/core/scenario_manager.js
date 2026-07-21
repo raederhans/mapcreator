@@ -69,6 +69,7 @@ import {
   loadScenarioRegistry,
   resetScenarioChunkRuntimeState,
   releaseScenarioAuditPayload,
+  scheduleScenarioDeferredBundleMetadataLoad,
   scheduleScenarioChunkRefresh,
   scenarioBundleHasChunkedData,
   scenarioSupportsChunkedRuntime,
@@ -517,12 +518,15 @@ async function prepareScenarioDetailTopologyState({
         || detailSourceKeys[0]
         || targetState.detailSourceRequested,
     });
-  } catch {
-    return createResult(false, {
-      ...currentPatch(),
-      detailDeferred: false,
-      detailPromotionInFlight: false,
-    });
+  } catch (error) {
+    const detailSourceSummary = detailSourceKeys.join(", ") || "(default)";
+    const stagingError = new Error(
+      `[scenario] Detail topology staging failed. Tried sources: ${detailSourceSummary}.`,
+      { cause: error },
+    );
+    stagingError.code = "SCENARIO_DETAIL_TOPOLOGY_STAGING_FAILED";
+    stagingError.detailSourceKeys = [...detailSourceKeys];
+    throw stagingError;
   }
 }
 
@@ -1125,6 +1129,11 @@ async function runScenarioApplyRequest(request) {
       },
     });
     const bundle = await loadScenarioBundle(request.scenarioId, { bundleLevel: "full" });
+    void scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+      scenarioApplyEpoch: request.scenarioApplyEpoch,
+      scenarioApplyRequestId: request.requestId,
+      isScenarioApplyRequestCurrent: () => isScenarioApplyRequestCurrent(request),
+    });
     recordRenderTransactionSnapshot(runtimeState, {
       phase: "scenario-apply-load-bundle-complete",
       reason: request.markDirtyReason,
