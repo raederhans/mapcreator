@@ -1,6 +1,6 @@
 # Worktree Registry
 
-Last updated: 2026-07-21 P4.2a functional checkpoint `6d0a0890` is exact-C green with six Scenario action modules, atomic apply/rollback, latest-target arbitration, deferred metadata commit leases, 148 caller-to-action proofs and a schema-2 policy checkpoint at 75 legacy-direct files / 1,039 memberships. The protected parent checkout carries user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. Exact-C Node 91/91, Python 58/58, route 5/5/0/0, Scenario resilience 3/3, dist drift and core 82/82 pass; this docs update is the attestation candidate.
+Last updated: 2026-07-21 P4.2a exact-A `662d3dff` is green and integrated into `origin/main` with six Scenario action modules, atomic apply/rollback, latest-target arbitration, deferred metadata commit leases, 148 caller-to-action proofs and a schema-2 policy checkpoint at 75 legacy-direct files / 1,039 memberships. Exact-A Node 91/91, Python 58/58, route 4/4/0/0, Scenario resilience 3/3, dist drift and core 82/82 pass. This docs-only sync commit aligns remote main and the active P4 branch for P4.2b; the protected parent checkout remains pinned with every user-owned WIP entry intact.
 
 ## Integration Owner
 
@@ -18,17 +18,17 @@ Last updated: 2026-07-21 P4.2a functional checkpoint `6d0a0890` is exact-C green
 1. Treat `origin/main` containing functional checkpoint `18d6ffae` and archived closeout `3dbe88da` as the completed post-P3 audit baseline.
 2. Keep `codex/parent-wip-recovery-20260715`, `codex/stale-main-wip-preserve-20260708`, and other unique recovery refs until their dedicated replay reviews are complete.
 3. Use `docs/archive/post-p3-audit-cleanup-20260715/` as the durable audit and cleanup handoff.
-4. Commit the P4.2a docs-only attestation A, repeat the exact-A matrix, confirm the remote SHA, then continue into P4.2b scenario chunk ownership.
+4. Continue P4.2b scenario chunk ownership from the synchronized P4.2a milestone; keep the task directory active through the remaining P4 phases.
 5. Keep specialized Williams measurement in its dedicated research lane; ordinary repository acceptance continues to use the schema-2 standard performance gate.
 
 ## Current Worktrees
 
-Current truth contains the user-owned parent checkout plus one isolated P4 execution worktree. Completed P3 worktrees remain removed.
+Current truth contains the user-owned parent checkout plus one isolated P4 execution worktree. Remote main contains the P4.2a milestone, and the isolated branch remains the active P4.2b continuation lane. Completed P3 worktrees remain removed.
 
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main@68a62e54` | protected parent checkout; dirty user WIP | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured after P4 synchronization | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; use an isolated clean worktree for P4 implementation and later integration. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@6d0a0890` | `origin/main@68a62e54` | P4.2a exact-C green / attestation candidate | Scenario action modules, apply/rollback callers, deferred metadata leases, latest-target arbitration, state policy/scanner, exact routes, package runners and P4 task records. | Functional lineage `0f6a3ef7 → ceea38ea → 6d0a0890`; exact-C Node 91/91; Python 58/58; route 5/5/0/0; Scenario resilience 3/3; schema-2 policy 200 writers / 148 ledger entries; core 82/82; Pages/dist 927.27 MiB; final review APPROVE with blocker 0 / major 0. | Red for concurrent state-policy, scenario apply/rollback or shared P4.4 edits; browser/dist/runtime outputs remain main-owner lanes. | Commit attestation A, run its exact matrix, push and confirm remote; continue P4.2b before main integration. |
+| `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main` contains P4.2a exact-A `662d3dff` and this docs-sync descendant | protected parent checkout; dirty user WIP; intentionally pinned behind remote | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured before and after milestone integration | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; continue all P4 work in the isolated worktree. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719` at this registry sync commit | synchronized `origin/main` P4.2a milestone | P4 active / P4.2a integrated / P4.2b entry | Scenario action modules, apply/rollback callers, deferred metadata leases, latest-target arbitration, state policy/scanner, exact routes, package runners and P4 task records. | Exact-A `662d3dff`; Node 91/91; Python 58/58; route 4/4/0/0; Scenario resilience 3/3; schema-2 policy 200 writers / 148 ledger entries; core 82/82; Pages/dist 927.27 MiB; final review APPROVE with blocker 0 / major 0. | Red for concurrent state-policy, scenario apply/rollback or shared P4.4 edits; browser/dist/runtime outputs remain main-owner lanes. | Keep the worktree active and continue P4.2b from the synchronized remote tip. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 

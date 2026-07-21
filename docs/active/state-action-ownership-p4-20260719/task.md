@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.2a exact-C green / attestation candidate` — functional checkpoint `6d0a08909a241ccfd1aac986224060e7535e0eb5` owns six Scenario action modules, atomic apply/rollback, deferred metadata commit leases and schema-2 caller-to-action proof. Exact phase, Scenario resilience, dist-drift and core gates pass on the tracked-clean checkpoint.
+`P4.2a integrated / P4.2b entry` — exact attestation A `662d3dffa7982b1938617e0ea41ac9c012a05946` owns six Scenario action modules, atomic apply/rollback, deferred metadata commit leases and schema-2 caller-to-action proof. The exact-A matrix is green, the milestone has been fast-forwarded into `origin/main`, and this docs-only sync commit keeps the P4 continuation branch aligned for P4.2b.
 
 ## Checklist
 
@@ -18,8 +18,9 @@
 - [x] Complete P4.1 Boot/startup actions.
 - [x] Add P4.2 admission caller-to-action edge scanner, ledger schema and P4.1 backfill contracts.
 - [x] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
+- [x] Publish the P4.0–P4.2a milestone to `origin/main` and synchronize the P4 continuation branch.
 - [ ] Execute P4.2–P4.5 in order.
-- [ ] Complete review, UltraQA, full acceptance, main integration and safe cleanup.
+- [ ] Complete the remaining phase reviews, UltraQA, full P4 acceptance, final integration and safe cleanup.
 
 ## Validation evidence
 
@@ -162,11 +163,20 @@
   - verify-core report: `0ccabb887b1dac4aaf072a915f34613ae544c2a8348e68d8a4e5fbca032964f7`
   - Pages dist manifest: `16225e2fe790679ee86eb1b920340fea5e4ec00831bb7c2ffcf4cd9ef1689f1e`
 
+### Exact attestation A and milestone integration
+
+- Attestation SHA: `662d3dffa7982b1938617e0ea41ac9c012a05946`
+- Verification tree: `42837aaedae46c83c4b65e8074e7cddd64dbd29b`
+- `npm run verify:p4:p4-2a`: PASS; Node 91/91, Python 58/58, repository policy green and docs-only route 4 changed / 4 P4-owned / 0 unmatched / 0 gaps.
+- Scenario resilience: PASS 3/3 with `pageErrors=[]` and `unhandledConsoleErrors=[]`; dist drift passes at 927.27 MiB; core passes 82/82.
+- Exact attestation: `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/attestation.json`, SHA256 `0cff6736fce480201dcbf45c1d1d1e92e3db805766ccabd79fa93efba6d60018`.
+- `origin/main` fast-forwarded from `68a62e540104025e1b3e976f77589f8b3eff2f36` through exact-A; this docs-only sync commit advances `origin/main` and `origin/codex/state-action-ownership-p4-20260719` together as the P4.2b continuation point.
+
 ## Open risks and remaining work
 
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
 - Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
-- P4.2a requires the docs-only attestation A commit, the same exact-A matrix and remote SHA confirmation.
+- P4.2b begins from the synchronized P4.2a milestone; the active task directory remains the control surface until the remaining P4 phases and final closeout complete.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
 - Main-thread browser/performance/heavy-geo lanes outside the Scenario resilience acceptance case remain deferred to their owning phases.
