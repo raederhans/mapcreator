@@ -49,6 +49,7 @@
 | 2026-07-21 | One earlier core attempt overlapped a concurrent Pages builder during manifest traversal | Process evidence identified the shared dist writer. Serial lane ownership restored a clean dist tree and the full exact-C rerun passed; a cross-process dist lock is recorded as a later infrastructure improvement. |
 | 2026-07-21 | Exact-A `662d3dffa7982b1938617e0ea41ac9c012a05946`, tree `42837aaedae46c83c4b65e8074e7cddd64dbd29b`, completed the clean matrix and was pushed to `origin/main` | Node 91/91, Python 58/58, route 4/4/0/0, Scenario resilience 3/3, dist drift and core 82/82 remain the immutable P4.2a milestone evidence. |
 | 2026-07-21 | The user requested milestone integration before the remaining P4 phases | `origin/main` and the P4 continuation branch converge on this docs-only sync descendant; the dirty parent checkout stays pinned and P4 continues through P4.2b in the isolated worktree. |
+| 2026-07-21 | Integration-sync adaptive execution selected both P4.1 and P4.2a exact gates from shared active docs, then P4.1 failed closed with `phase-regression` | The selector now filters automatic P4 exact recommendations through the checked-in policy `progress.latestPhase`; historical route metadata and explicit commands remain intact, and a RED→GREEN shared-control-file regression locks the current-phase-only contract. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
@@ -58,7 +59,7 @@
 | Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/scenario-resilience/` | exact-A Scenario resilience passes 3/3; lane released for P4.2b |
 | P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Node 91/91, Python 58/58 and route 4/4/0/0 pass; lane released for P4.2b |
 | Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/` | exact-A Pages/dist passes at 927.27 MiB under serial ownership; lane released for P4.2b |
-| Integration sync adaptive validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/integration-sync/adaptive-execute.json` | one serialized post-commit run owns the nine selector commands; the lease ends with its terminal result |
+| Integration sync adaptive validation | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/integration-sync/adaptive-execute.json` | one serialized post-commit run owns the selector-selected child-safe commands; the lease ends with its terminal result |
 | Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
 
 ## Handoff

@@ -171,6 +171,7 @@
 - Scenario resilience: PASS 3/3 with `pageErrors=[]` and `unhandledConsoleErrors=[]`; dist drift passes at 927.27 MiB; core passes 82/82.
 - Exact attestation: `.runtime/reports/generated/p4-state-actions/P4.2a/662d3dffa7982b1938617e0ea41ac9c012a05946/attestation.json`, SHA256 `0cff6736fce480201dcbf45c1d1d1e92e3db805766ccabd79fa93efba6d60018`.
 - `origin/main` fast-forwarded from `68a62e540104025e1b3e976f77589f8b3eff2f36` through exact-A; this docs-only sync commit advances `origin/main` and `origin/codex/state-action-ownership-p4-20260719` together as the P4.2b continuation point.
+- The first integration-sync adaptive execution stopped on the historical `verify:p4:p4-1` route after the policy had advanced to P4.2a. Automatic recommendations now retain only the exact gate matching `tools/state_writer_policy.json#progress.latestPhase`; historical routes and explicit commands remain available, and shared P4 control files have a direct regression contract.
 
 ## Open risks and remaining work
 

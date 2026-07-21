@@ -144,7 +144,7 @@ test("P4.0 state ownership policy owns its files, routes, and verify-core comman
   }
 });
 
-test("P4.1 boot actions own their routes and exact phase verification stays out of verify-core", () => {
+test("P4.1 boot actions keep historical route metadata while adaptive selection upgrades the stale exact gate", () => {
   const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
     entry.id === "verify-core:p4:p4-1-boot-actions"
   ));
@@ -190,13 +190,36 @@ test("P4.1 boot actions own their routes and exact phase verification stays out 
   for (const sourceRef of exactPhaseEntry.sourceRefs) {
     const report = buildRecommendation([sourceRef]);
     assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
-    const command = report.recommendedCommands.find((entry) => (
+    const staleCommand = report.recommendedCommands.find((entry) => (
       entry.commandRef === exactPhaseEntry.commandRef
     ));
-    assert.ok(command, `${sourceRef} should select the P4.1 exact phase command`);
-    assert.ok(command.domains.includes("state-ownership"));
-    assert.equal(command.domains.includes("renderer-runtime"), false);
+    const currentCommand = report.recommendedCommands.find((entry) => (
+      entry.commandRef === "verify:p4:p4-2a"
+    ));
+    assert.equal(staleCommand, undefined, `${sourceRef} should not select the stale P4.1 exact phase command`);
+    assert.ok(currentCommand, `${sourceRef} should select the current P4.2a exact phase command`);
+    assert.ok(currentCommand.domains.includes("state-ownership"));
   }
+});
+
+test("shared P4 control files select only the policy current exact phase gate", () => {
+  const changedFiles = [
+    "docs/active/_worktree_registry.md",
+    "docs/active/state-action-ownership-p4-20260719/task.md",
+  ];
+  const report = buildRecommendation(changedFiles);
+  const exactPhaseCommands = report.recommendedCommands
+    .map((entry) => entry.commandRef)
+    .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
+
+  assert.deepEqual(exactPhaseCommands, ["verify:p4:p4-2a"]);
+  assert.throws(
+    () => buildRecommendation(
+      changedFiles,
+      buildRouteIndex().filter((route) => route.id !== "p4:p4-2a-exact-phase"),
+    ),
+    /No exact verification route is registered for current P4 phase P4\.2a/,
+  );
 });
 
 test("P4.2a scenario actions own their routes and exact phase verification stays out of verify-core", () => {

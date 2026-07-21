@@ -2,10 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { normalizeP4StateActionPhase } from "./p4_state_action_phases.mjs";
 import { buildRouteIndex, summarizeRoutes, validateRouteIndex, toRepoPath } from "./test_route_registry.mjs";
 
 const REPO_ROOT = process.cwd();
 const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
+const P4_STATE_WRITER_POLICY_PATH = path.join(REPO_ROOT, "tools", "state_writer_policy.json");
+const P4_EXACT_PHASE_ROUTE_PATTERN = /^p4:p4-(\d+)([a-z]?)-exact-phase$/;
 const BOOTSTRAP_FALLBACK_ROUTE_IDS = new Set([
   "e2e:tests/e2e/city_label_i18n_redraw.spec.js",
   "e2e:tests/e2e/startup_bundle_recovery_contract.spec.js",
@@ -36,6 +39,7 @@ const SAMPLE_GUIDE_RUNTIME_REFS = [
   "landing/styles.css",
 ];
 const GUIDANCE_ARRAY_FIELDS = ["taskEntry", "ownerFiles", "commonChecks", "riskSignals", "diagnostics"];
+let cachedP4LatestPhase = null;
 
 function parseArgs(argv) {
   const args = { command: "recommend", changedFiles: [], jsonOut: null, mdOut: null, format: "text" };
@@ -84,6 +88,47 @@ function routeSourceRefs(route) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+function p4ExactPhaseForRoute(route) {
+  const match = P4_EXACT_PHASE_ROUTE_PATTERN.exec(String(route?.id || ""));
+  if (!match) return null;
+  return normalizeP4StateActionPhase(`P4.${match[1]}${match[2]}`);
+}
+
+function readP4LatestPhase() {
+  if (cachedP4LatestPhase) return cachedP4LatestPhase;
+  const policy = JSON.parse(fs.readFileSync(P4_STATE_WRITER_POLICY_PATH, "utf8"));
+  const latestPhase = String(policy?.progress?.latestPhase || "").trim();
+  if (!latestPhase) {
+    throw new Error("State writer policy is missing progress.latestPhase");
+  }
+  cachedP4LatestPhase = normalizeP4StateActionPhase(latestPhase);
+  return cachedP4LatestPhase;
+}
+
+function resolveP4ExactPhaseSelection(routes) {
+  const exactPhaseRoutes = new Set(routes.filter((route) => p4ExactPhaseForRoute(route)));
+  if (!exactPhaseRoutes.size) {
+    return { exactPhaseRoutes, currentExactPhaseRoute: null };
+  }
+  const latestPhase = readP4LatestPhase();
+  const currentExactPhaseRoute = [...exactPhaseRoutes]
+    .find((route) => p4ExactPhaseForRoute(route) === latestPhase);
+  if (!currentExactPhaseRoute) {
+    throw new Error(`No exact verification route is registered for current P4 phase ${latestPhase}`);
+  }
+  return { exactPhaseRoutes, currentExactPhaseRoute };
+}
+
+function currentPhaseRoutesForChangedFile(routes, changedFile, importGraph, p4ExactPhaseSelection) {
+  const matchedRoutes = routes.filter((route) => routeMatchesChangedFile(route, changedFile, importGraph));
+  const matchedExactPhase = matchedRoutes.some((route) => p4ExactPhaseSelection.exactPhaseRoutes.has(route));
+  if (!matchedExactPhase) return matchedRoutes;
+  return [
+    ...matchedRoutes.filter((route) => !p4ExactPhaseSelection.exactPhaseRoutes.has(route)),
+    p4ExactPhaseSelection.currentExactPhaseRoute,
+  ];
 }
 
 function isDirectRouteMatch(route, changedFile) {
@@ -433,11 +478,12 @@ function skippedHeavyRoutes(allRoutes, selectedRoutes) {
 
 function buildRecommendation(changedFiles, allRoutes = buildRouteIndex()) {
   validateRouteIndex(allRoutes);
+  const p4ExactPhaseSelection = resolveP4ExactPhaseSelection(allRoutes);
   const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
   const importGraph = readImportGraph();
   const matchedRoutesByFile = normalizedChangedFiles.map((file) => ({
     changedFile: file,
-    routes: allRoutes.filter((route) => routeMatchesChangedFile(route, file, importGraph)),
+    routes: currentPhaseRoutesForChangedFile(allRoutes, file, importGraph, p4ExactPhaseSelection),
   }));
   const matchedRoutes = matchedRoutesByFile.flatMap((entry) => entry.routes);
   const commandEntries = buildCommandEntries(matchedRoutes, allRoutes);
