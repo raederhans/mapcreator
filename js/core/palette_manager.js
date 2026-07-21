@@ -479,7 +479,10 @@ function buildPaletteQuickSwatches(maxCount = 24) {
   return setPaletteQuickSwatchesState(runtimeState, swatches, maxCount);
 }
 
-function applyActivePaletteState({ overwriteCountryPalette = false } = {}) {
+function applyActivePaletteState({
+  overwriteCountryPalette = false,
+  syncDefaultPalette = true,
+} = {}) {
   applyActivePaletteRuntimeState(runtimeState, {
     fixedPaletteColorsByIso2: buildFixedPaletteColorsByIso2(
       runtimeState.activePalettePack,
@@ -487,7 +490,9 @@ function applyActivePaletteState({ overwriteCountryPalette = false } = {}) {
     ),
     activePaletteOceanMeta: runtimeState.activePalettePack?.ocean || null,
   });
-  syncResolvedDefaultCountryPalette({ overwriteCountryPalette });
+  if (syncDefaultPalette) {
+    syncResolvedDefaultCountryPalette({ overwriteCountryPalette });
+  }
   buildPaletteLibraryEntries();
   buildPaletteQuickSwatches();
 }
@@ -542,6 +547,8 @@ async function setActivePaletteSource(
   paletteId,
   {
     syncUI = true,
+    publishObservers = true,
+    syncDefaultPalette = true,
     overwriteCountryPalette = false,
     d3Client = globalThis.d3,
   } = {}
@@ -564,14 +571,23 @@ async function setActivePaletteSource(
       activePaletteMap: map,
       currentPaletteTheme: meta?.display_name || runtimeState.currentPaletteTheme,
     });
-    applyActivePaletteState({ overwriteCountryPalette });
-    if (typeof runtimeState.renderPaletteFn === "function") {
+    applyActivePaletteState({
+      overwriteCountryPalette,
+      syncDefaultPalette,
+    });
+    if (
+      publishObservers
+      && typeof runtimeState.renderPaletteFn === "function"
+    ) {
       runtimeState.renderPaletteFn(runtimeState.currentPaletteTheme);
     }
-    if (typeof runtimeState.updatePaletteLibraryUIFn === "function") {
+    if (
+      publishObservers
+      && typeof runtimeState.updatePaletteLibraryUIFn === "function"
+    ) {
       runtimeState.updatePaletteLibraryUIFn();
     }
-    if (syncUI) {
+    if (publishObservers && syncUI) {
       syncPaletteSourceControls();
     }
     return true;
@@ -585,7 +601,7 @@ async function setActivePaletteSource(
       );
     }
     restoreActivePaletteSourceState(runtimeState, previousState);
-    if (syncUI) {
+    if (publishObservers && syncUI) {
       syncPaletteSourceControls();
     }
     console.warn("[palette_manager] Failed to load palette source:", error);

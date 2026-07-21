@@ -45917,7 +45917,7 @@
     },
     {
       "path": "app/js/core/palette_manager.js",
-      "size_bytes": 20267,
+      "size_bytes": 20546,
       "source_kind": "dist"
     },
     {
@@ -46392,7 +46392,7 @@
     },
     {
       "path": "app/js/core/scenario_apply_pipeline.js",
-      "size_bytes": 35497,
+      "size_bytes": 44135,
       "source_kind": "dist"
     },
     {
@@ -46427,7 +46427,7 @@
     },
     {
       "path": "app/js/core/scenario_manager.js",
-      "size_bytes": 55862,
+      "size_bytes": 55589,
       "source_kind": "dist"
     },
     {
@@ -46437,7 +46437,7 @@
     },
     {
       "path": "app/js/core/scenario_post_apply_effects.js",
-      "size_bytes": 30037,
+      "size_bytes": 30421,
       "source_kind": "dist"
     },
     {
@@ -46447,12 +46447,12 @@
     },
     {
       "path": "app/js/core/scenario_resources.js",
-      "size_bytes": 48299,
+      "size_bytes": 50199,
       "source_kind": "dist"
     },
     {
       "path": "app/js/core/scenario_rollback.js",
-      "size_bytes": 26289,
+      "size_bytes": 23585,
       "source_kind": "dist"
     },
     {
@@ -46503,6 +46503,36 @@
     {
       "path": "app/js/core/state/actions/boot_actions.js",
       "size_bytes": 5841,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_activation_actions.js",
+      "size_bytes": 17603,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_apply_request_actions.js",
+      "size_bytes": 1667,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_palette_actions.js",
+      "size_bytes": 6896,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_presentation_actions.js",
+      "size_bytes": 15144,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_readiness_actions.js",
+      "size_bytes": 4336,
+      "source_kind": "dist"
+    },
+    {
+      "path": "app/js/core/state/actions/scenario_transaction_rollback_actions.js",
+      "size_bytes": 8639,
       "source_kind": "dist"
     },
     {
@@ -47442,7 +47472,7 @@
     },
     {
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468293,
+      "size_bytes": 1469152,
       "source_kind": "dist"
     },
     {
@@ -47572,9 +47602,9 @@
   },
   "top_level_directories": [
     {
-      "file_count": 9428,
+      "file_count": 9434,
       "path": "app",
-      "size_bytes": 965677037
+      "size_bytes": 965739546
     },
     {
       "file_count": 57,
@@ -47584,7 +47614,7 @@
     {
       "file_count": 1,
       "path": "pages-dist-manifest.json",
-      "size_bytes": 1468293
+      "size_bytes": 1469152
     },
     {
       "file_count": 1,
@@ -47607,5 +47637,5 @@
       "size_bytes": 0
     }
   ],
-  "total_bytes": 972243691
+  "total_bytes": 972307059
 }

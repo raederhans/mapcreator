@@ -1892,9 +1892,10 @@ test("perf contracts keep coarse first frame and benchmark app-path fallback bou
         return /isInteractionRecoverySettled\(\{ quietMs: 600 \}\)[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheComplete"[\s\S]*?scenarioPoliticalBackgroundDeferredFullCacheState = null;[\s\S]*?invalidateRenderPasses\("political", "progressive-political-full-cache-ready"\);[\s\S]*?const repaintRequested = requestRendererRender\("progressive-political-full-cache-ready", \{[\s\S]*?flush: false,[\s\S]*?if \(rendererSurfaceHost\.getContext\(\)\) render\(\);[\s\S]*?recordRenderPerfMetric\("scenarioPoliticalBackgroundDeferredFullCacheReadyRepaintRequest"[\s\S]*?repaintRequested: !!repaintRequested/.test(body);
       })(),
     chunkedRuntimeSkipsBlockingDetailPromotion:
-      /const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime\(bundle\)[\s\S]*?const detailPromoted = \(startupReadonly \|\| supportsChunkedPoliticalRuntime\)\s*\?\s*false\s*:\s*await ensureScenarioDetailTopologyLoaded\(\{ applyMapData: false \}\);/.test(scenarioApplyPipelineSource),
+      /async function stageScenarioReadinessPatch\([\s\S]*?if \(startupReadonly \|\| supportsChunkedPoliticalRuntime\) \{[\s\S]*?detailPromoted: false,[\s\S]*?return stagedReadiness;/.test(scenarioApplyPipelineSource)
+      && scenarioApplyPipelineSource.includes("await prepareScenarioDetailTopologyState();"),
     unconfirmedDetailPromotionStillWarnsBeforeHealthGate:
-      /if \(!detailReady && (?:runtimeState|state)\.topologyBundleMode !== "composite"\) \{[\s\S]*?console\.warn\("\[scenario\] Applying bundle without confirmed detail promotion; health gate will validate runtime topology\."\);/.test(scenarioApplyPipelineSource),
+      /if \(!detailReady && scenarioReadinessPatch\.topologyBundleMode !== "composite"\) \{[\s\S]*?console\.warn\("\[scenario\] Applying bundle without confirmed detail promotion; health gate will validate runtime topology\."\);/.test(scenarioApplyPipelineSource),
     coarseInteractiveMetricRecordedAfterPostApplyEffects:
       /const \{[\s\S]*?chunkPrewarmAwaited = true,[\s\S]*?chunkPrewarmDeferred = false,[\s\S]*?coarsePrewarmCommitted = false,[\s\S]*?\} = await runPostScenarioApplyEffects\([\s\S]*?deferChunkPrewarm,[\s\S]*?const canRecordPostApplyCoarseMetric = !hasChunkedRuntime \|\| coarsePrewarmCommitted;[\s\S]*?if \(chunkPrewarmDeferred\) \{[\s\S]*?recordScenarioPerfMetric\("timeToStartupShellApplyReady"[\s\S]*?source: "post-apply-startup-shell-ready"[\s\S]*?readinessLevel: "startup-shell-apply-ready"[\s\S]*?\} else if[\s\S]*?canRecordPostApplyCoarseMetric[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToPoliticalCoreReady"[\s\S]*?source: "post-apply-coarse-ready"[\s\S]*?if \(!chunkPrewarmDeferred && canRecordPostApplyCoarseMetric\) \{[\s\S]*?recordScenarioPerfMetric\([\s\S]*?"timeToInteractiveCoarseFrame"[\s\S]*?readinessLevel: "coarse-chunk"[\s\S]*?chunkPrewarmAwaited,[\s\S]*?chunkPrewarmDeferred,[\s\S]*?coarsePrewarmCommitted,/.test(scenarioManagerSource),
     chunkedCoarsePrewarmSuppressesDetailHealthToast:
@@ -2182,7 +2183,7 @@ test("TNO water topology contracts keep exclusive scenario water and shared surf
       && /if \(runtimeBaseCollection\) \{[\s\S]*?fullCollection = runtimeBaseCollection;[\s\S]*?\} else if \(hasScenarioRuntimePoliticalSource\) \{[\s\S]*?fullCollection = \{ type: "FeatureCollection", features: \[\] \};[\s\S]*?\} else if \(primaryTopology\?\.objects\?\.political/.test(rendererSource),
     scenarioApplyCommitsPreparedScenarioWaterPayloadOnly:
       /function buildScenarioActivationCommitState\(bundle,\s*staged\) \{[\s\S]*?const scenarioWaterRegionsData = staged\.scenarioWaterRegionsFromTopology \|\| null;[\s\S]*?scenarioWaterRegionsData,/.test(scenarioApplyPipelineSource)
-      && /commitScenarioActivationRuntimeState\(runtimeState,\s*nextRuntimeState\);/.test(scenarioApplyPipelineSource),
+      && /commitScenarioActivationAuthorityState\(\s*runtimeState,\s*transactionPatch\.scenarioActivationPatch,\s*\);/.test(scenarioApplyPipelineSource),
   };
 
   Object.entries(checks).forEach(([label, ok]) => {

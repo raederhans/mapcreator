@@ -27,9 +27,23 @@ test("P4.1 plan keeps focused policy and route commands exact", () => {
   );
 });
 
-test("unsupported phase plans fail closed", () => {
+test("P4.2a plan keeps scenario actions, policy, and route commands exact", () => {
+  const plan = buildP4PhaseVerificationPlan({ phase: "P4.2a" });
+  assert.deepEqual(plan.commands, [
+    "npm run test:node:p4:p4-2a",
+    "npm run test:python:p4:p4-2a-boundary",
+    "node tools/check_state_writer_policy.mjs --phase P4.2a --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.2a --history-base HEAD^",
+  ]);
+  assert.equal(
+    plan.reportPath.replaceAll("\\", "/"),
+    ".runtime/reports/generated/p4-state-actions/P4.2a/phase-verification.json",
+  );
+});
+
+test("unsupported future phase plans fail closed", () => {
   assert.throws(
-    () => buildP4PhaseVerificationPlan({ phase: "P4.2a" }),
+    () => buildP4PhaseVerificationPlan({ phase: "P4.2b" }),
     /no executable plan/,
   );
 });

@@ -11,10 +11,25 @@ import {
   restoreScenarioApplyRollbackSnapshot,
 } from "../js/core/scenario_rollback.js";
 import {
+  applyActivePaletteState,
+  setActivePaletteSource,
+} from "../js/core/palette_manager.js";
+import {
+  publishScenarioPaletteAndToolbarState,
+} from "../js/core/scenario_post_apply_effects.js";
+import {
   createPoliticalRasterWorkerIdentity,
   isPoliticalRasterWorkerResultCurrent,
 } from "../js/core/political_raster_worker_client.js";
-import { state as appState } from "../js/core/state.js";
+import {
+  STATE_BUS_EVENTS,
+  off,
+  subscribeStateBusEvent,
+} from "../js/core/state/index.js";
+import {
+  defaultCountryPalette,
+  state as appState,
+} from "../js/core/state.js";
 
 function createLifecycleRuntime(runtimeState, overrides = {}) {
   return createScenarioLifecycleRuntime({
@@ -136,8 +151,8 @@ function withAppStatePatch(patch, callback) {
   const previousValues = {};
   Object.keys(patch).forEach((key) => {
     previousValues[key] = appState[key];
-    appState[key] = patch[key];
   });
+  applyAppStatePatch(patch);
   try {
     return callback();
   } finally {
@@ -147,16 +162,74 @@ function withAppStatePatch(patch, callback) {
   }
 }
 
+function applyAppStatePatch(patch) {
+  Object.keys(patch).forEach((key) => {
+    appState[key] = patch[key];
+  });
+}
+
+function deleteAppStateKeys(keys) {
+  keys.forEach((key) => {
+    delete appState[key];
+  });
+}
+
+function readAppStateValue(key) {
+  return appState[key];
+}
+
+function hasAppStateKey(key) {
+  return Object.prototype.hasOwnProperty.call(appState, key);
+}
+
 function withAppStateRestored(callback) {
-  const previousValues = { ...appState };
+  const compatAccessorKeys = new Set(
+    Object.keys(appState).filter((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(appState, key);
+      return typeof descriptor?.get === "function"
+        && typeof descriptor?.set === "function";
+    }),
+  );
+  const previousValues = Object.fromEntries(
+    Object.entries(appState).filter(([key]) => !compatAccessorKeys.has(key)),
+  );
   try {
     return callback();
   } finally {
-    Object.keys(appState).forEach((key) => {
-      if (!Object.prototype.hasOwnProperty.call(previousValues, key)) {
-        delete appState[key];
-      }
+    deleteAppStateKeys(
+      Object.keys(appState).filter(
+        (key) =>
+          !compatAccessorKeys.has(key)
+          && !Object.prototype.hasOwnProperty.call(previousValues, key),
+      ),
+    );
+    Object.entries(previousValues).forEach(([key, value]) => {
+      appState[key] = value;
     });
+  }
+}
+
+async function withAppStateRestoredAsync(callback) {
+  const compatAccessorKeys = new Set(
+    Object.keys(appState).filter((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(appState, key);
+      return typeof descriptor?.get === "function"
+        && typeof descriptor?.set === "function";
+    }),
+  );
+  const previousValues = Object.fromEntries(
+    Object.entries(appState).filter(([key]) => !compatAccessorKeys.has(key)),
+  );
+  try {
+    return await callback();
+  } finally {
+    deleteAppStateKeys(
+      Object.keys(appState).filter(
+        (key) =>
+          !compatAccessorKeys.has(key)
+          && !Object.prototype.hasOwnProperty.call(previousValues, key),
+      ),
+    );
     Object.entries(previousValues).forEach(([key, value]) => {
       appState[key] = value;
     });
@@ -191,6 +264,46 @@ function createRenderableScenarioTopology() {
   };
 }
 
+const SCENARIO_READINESS_PATCH_KEYS = Object.freeze([
+  "topologyDetail",
+  "topologyBundleMode",
+  "detailDeferred",
+  "detailPromotionCompleted",
+  "detailPromotionInFlight",
+  "detailSourceRequested",
+]);
+
+function createScenarioReadinessStageResult(runtimeState, {
+  detailPromoted = true,
+} = {}) {
+  return {
+    detailPromoted,
+    scenarioReadinessPatch: Object.fromEntries(
+      SCENARIO_READINESS_PATCH_KEYS.map(
+        (key) => [key, runtimeState[key]],
+      ),
+    ),
+  };
+}
+
+test("scenario readiness stage fixture preserves the exact staged patch", () => {
+  const stagedValues = Object.fromEntries(
+    SCENARIO_READINESS_PATCH_KEYS.map(
+      (key, index) => [key, { key, index }],
+    ),
+  );
+  assert.deepEqual(
+    createScenarioReadinessStageResult(
+      stagedValues,
+      { detailPromoted: false },
+    ),
+    {
+      detailPromoted: false,
+      scenarioReadinessPatch: stagedValues,
+    },
+  );
+});
+
 function createApplyPipelineForRuntimeTest(runtimeState, overrides = {}) {
   return createScenarioApplyPipeline({
     runtimeState,
@@ -199,7 +312,8 @@ function createApplyPipelineForRuntimeTest(runtimeState, overrides = {}) {
     scenarioSupportsChunkedRuntime: () => false,
     scenarioBundleUsesChunkedLayer: () => false,
     scenarioBundleHasChunkedData: () => false,
-    ensureScenarioDetailTopologyLoaded: async () => true,
+    prepareScenarioDetailTopologyState: async () =>
+      createScenarioReadinessStageResult(runtimeState),
     hasUsablePoliticalTopology: () => true,
     scenarioNeedsDetailTopology: () => false,
     getScenarioDisplayName: () => "Sample",
@@ -207,6 +321,7 @@ function createApplyPipelineForRuntimeTest(runtimeState, overrides = {}) {
     hasActiveScenarioPaletteLoaded: () => true,
     applyActivePaletteState: () => {},
     setActivePaletteSource: async () => true,
+    publishScenarioPaletteAndToolbarState: () => {},
     getScenarioDefaultCountryCode: () => "AAA",
     getScenarioMapSemanticMode: () => "political",
     buildScenarioReleasableIndex: () => ({}),
@@ -240,6 +355,167 @@ function createApplyPipelineForRuntimeTest(runtimeState, overrides = {}) {
     normalizeScenarioFeatureCollection: (value) => value,
     cloneScenarioStateValue: (value) => value,
     ...overrides,
+  });
+}
+
+function createScenarioApplyBundleForRuntimeTest(scenarioId = "sample") {
+  return {
+    manifest: {
+      scenario_id: scenarioId,
+      baseline_hash: `${scenarioId}:baseline`,
+    },
+    countriesPayload: {
+      countries: {
+        AAA: {
+          display_name: "Alpha",
+          color_hex: "#111111",
+        },
+      },
+    },
+    ownersPayload: {
+      owners: {
+        "AAA-1": "AAA",
+      },
+    },
+    coresPayload: {
+      cores: {
+        "AAA-1": ["AAA"],
+      },
+    },
+    runtimeTopologyPayload: createRenderableScenarioTopology(),
+  };
+}
+
+function captureScenarioPrepareAuthorityState(model) {
+  return structuredClone({
+    topologyDetail: model.topologyDetail,
+    topologyBundleMode: model.topologyBundleMode,
+    detailDeferred: model.detailDeferred,
+    detailPromotionCompleted: model.detailPromotionCompleted,
+    detailPromotionInFlight: model.detailPromotionInFlight,
+    detailSourceRequested: model.detailSourceRequested,
+    activePaletteId: model.activePaletteId,
+    activePaletteMeta: model.activePaletteMeta,
+    activePalettePack: model.activePalettePack,
+    activePaletteMap: model.activePaletteMap,
+    currentPaletteTheme: model.currentPaletteTheme,
+    activePaletteOceanMeta: model.activePaletteOceanMeta,
+    fixedPaletteColorsByIso2: model.fixedPaletteColorsByIso2,
+    resolvedDefaultCountryPalette: model.resolvedDefaultCountryPalette,
+    paletteLibraryEntries: model.paletteLibraryEntries,
+    paletteQuickSwatches: model.paletteQuickSwatches,
+    paletteLoadErrorById: model.paletteLoadErrorById,
+    legendLabels: model.legendLabels,
+    legendConfig: model.legendConfig,
+  });
+}
+
+function cloneScenarioTransactionValue(value, seen = new WeakMap()) {
+  if (
+    value === null
+    || typeof value !== "object"
+  ) {
+    return value;
+  }
+  if (seen.has(value)) {
+    return seen.get(value);
+  }
+  if (value instanceof Map) {
+    const result = new Map();
+    seen.set(value, result);
+    value.forEach((entryValue, entryKey) => {
+      result.set(
+        cloneScenarioTransactionValue(entryKey, seen),
+        cloneScenarioTransactionValue(entryValue, seen),
+      );
+    });
+    return result;
+  }
+  if (value instanceof Set) {
+    const result = new Set();
+    seen.set(value, result);
+    value.forEach((entryValue) => {
+      result.add(cloneScenarioTransactionValue(entryValue, seen));
+    });
+    return result;
+  }
+  if (Array.isArray(value)) {
+    const result = [];
+    seen.set(value, result);
+    value.forEach((entryValue) => {
+      result.push(cloneScenarioTransactionValue(entryValue, seen));
+    });
+    return result;
+  }
+  const result = {};
+  seen.set(value, result);
+  Object.entries(value).forEach(([key, entryValue]) => {
+    result[key] = cloneScenarioTransactionValue(entryValue, seen);
+  });
+  return result;
+}
+
+const SCENARIO_ATOMIC_AUTHORITY_KEYS = Object.freeze([
+  "activeScenarioId",
+  "activeScenarioManifest",
+  "mapSemanticMode",
+  "scenarioCountriesByTag",
+  "scenarioRuntimeTopologyData",
+  "runtimePoliticalTopology",
+  "runtimePoliticalMetaSeed",
+  "runtimePoliticalFeatureCollectionSeed",
+  "scenarioLandMaskData",
+  "scenarioContextLandMaskData",
+  "scenarioWaterRegionsData",
+  "scenarioAtlantropaData",
+  "scenarioSpecialRegionsData",
+  "scenarioReliefOverlaysData",
+  "scenarioDistrictGroupsData",
+  "scenarioDistrictGroupByFeatureId",
+  "releasableCatalog",
+  "scenarioReleasableIndex",
+  "scenarioBaselineHash",
+  "scenarioBaselineOwnersByFeatureId",
+  "sovereigntyByFeatureId",
+  "countryNames",
+  "topologyDetail",
+  "topologyBundleMode",
+  "detailDeferred",
+  "detailPromotionCompleted",
+  "detailPromotionInFlight",
+  "detailSourceRequested",
+  "scenarioParentBorderEnabledBeforeActivate",
+  "scenarioDisplaySettingsBeforeActivate",
+  "scenarioOceanFillBeforeActivate",
+  "scenarioOceanStyleBeforeActivate",
+  "scenarioPresentationStyleBeforeActivate",
+  "showScenarioAtlantropa",
+  "locales",
+  "geoAliasToStableKey",
+]);
+
+function captureScenarioTransactionState(model) {
+  const presentKeys = SCENARIO_ATOMIC_AUTHORITY_KEYS.filter(
+    (key) => Object.prototype.hasOwnProperty.call(model, key),
+  );
+  const values = Object.fromEntries(
+    presentKeys.map((key) => [
+      key,
+      cloneScenarioTransactionValue(model[key]),
+    ]),
+  );
+  return { values, presentKeys };
+}
+
+function restoreScenarioTransactionState(model, snapshot) {
+  const presentKeys = new Set(snapshot.presentKeys);
+  SCENARIO_ATOMIC_AUTHORITY_KEYS.forEach((key) => {
+    if (!presentKeys.has(key)) {
+      delete model[key];
+    }
+  });
+  Object.entries(snapshot.values).forEach(([key, value]) => {
+    model[key] = cloneScenarioTransactionValue(value);
   });
 }
 
@@ -341,7 +617,8 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
     scenarioSupportsChunkedRuntime: () => false,
     scenarioBundleUsesChunkedLayer: () => false,
     scenarioBundleHasChunkedData: () => false,
-    ensureScenarioDetailTopologyLoaded: async () => true,
+    prepareScenarioDetailTopologyState: async () =>
+      createScenarioReadinessStageResult(runtimeState),
     hasUsablePoliticalTopology: () => true,
     scenarioNeedsDetailTopology: () => false,
     getScenarioDisplayName: () => "Sample",
@@ -401,8 +678,596 @@ test("scenario apply staging rejects unrenderable political runtime topology bef
   assert.equal(runtimeState.scenarioRuntimeTopologyData?.id, "scenario-runtime");
 });
 
+test("scenario prepare leaves readiness, palette, and observer state unchanged", async () => {
+  const model = createBaseState({
+    topologyDetail: null,
+    topologyBundleMode: "single",
+    detailDeferred: true,
+    detailPromotionCompleted: false,
+    detailPromotionInFlight: false,
+    detailSourceRequested: "detail-before",
+    activePaletteId: "palette-before",
+    activePaletteMeta: { id: "palette-before" },
+    activePalettePack: { id: "pack-before" },
+    activePaletteMap: { AAA: "#111111" },
+    currentPaletteTheme: "theme-before",
+  });
+  const observerEvents = [];
+  const paletteStageOptions = [];
+  const pipeline = createApplyPipelineForRuntimeTest(model, {
+    prepareScenarioDetailTopologyState: async () => ({
+      detailPromoted: true,
+      scenarioReadinessPatch: {
+        topologyDetail: { id: "prepared-detail" },
+        topologyBundleMode: "composite",
+        detailDeferred: false,
+        detailPromotionCompleted: true,
+        detailPromotionInFlight: false,
+        detailSourceRequested: "detail-prepared",
+      },
+    }),
+    hasActiveScenarioPaletteLoaded: () =>
+      Boolean(model.__paletteLoaded),
+    setActivePaletteSource: async (_paletteId, options) => {
+      paletteStageOptions.push(options);
+      model.activePaletteId = "palette-prepared";
+      model.activePaletteMeta = { id: "palette-prepared" };
+      model.activePalettePack = { id: "pack-prepared" };
+      model.activePaletteMap = { AAA: "#abcdef" };
+      model.currentPaletteTheme = "theme-prepared";
+      model.__paletteLoaded = true;
+      return true;
+    },
+    syncScenarioLocalizationState: () => observerEvents.push("localization"),
+    applyBlankScenarioPresentationDefaults: () => observerEvents.push("presentation"),
+    setScenarioAuditUiState: () => observerEvents.push("audit"),
+  });
+  const before = captureScenarioPrepareAuthorityState(model);
+
+  await pipeline.prepareScenarioApplyState(
+    createScenarioApplyBundleForRuntimeTest("prepare_atomic"),
+    { syncPalette: true },
+  );
+
+  assert.deepEqual(captureScenarioPrepareAuthorityState(model), before);
+  assert.deepEqual(observerEvents, []);
+  assert.equal(paletteStageOptions.length, 1);
+  assert.equal(paletteStageOptions[0]?.syncUI, false);
+  assert.equal(paletteStageOptions[0]?.publishObservers, false);
+  assert.equal(paletteStageOptions[0]?.syncDefaultPalette, false);
+});
+
+test("scenario palette publication waits for a validated commit and rollback keeps the previous default palette and UI", async () => {
+  await withAppStateRestoredAsync(async () => {
+    const previousDefaultPalette = { ...defaultCountryPalette };
+    const paletteEvents = [];
+    const listeners = [
+      [
+        STATE_BUS_EVENTS.RENDER_PALETTE,
+        subscribeStateBusEvent(
+          STATE_BUS_EVENTS.RENDER_PALETTE,
+          (theme) => paletteEvents.push(`render:${theme}`),
+        ),
+      ],
+      [
+        STATE_BUS_EVENTS.UPDATE_PALETTE_LIBRARY,
+        subscribeStateBusEvent(
+          STATE_BUS_EVENTS.UPDATE_PALETTE_LIBRARY,
+          () => paletteEvents.push("library"),
+        ),
+      ],
+      [
+        STATE_BUS_EVENTS.UPDATE_PALETTE_SOURCE,
+        subscribeStateBusEvent(
+          STATE_BUS_EVENTS.UPDATE_PALETTE_SOURCE,
+          () => paletteEvents.push("source"),
+        ),
+      ],
+    ];
+    const applyPaletteBaseline = () => {
+      applyAppStatePatch(createBaseState({
+        activePaletteId: "palette-before",
+        activePaletteMeta: { palette_id: "palette-before" },
+        activePalettePack: { entries: {} },
+        activePaletteMap: {},
+        currentPaletteTheme: "Palette Before",
+        fixedPaletteColorsByIso2: { AA: "#111111" },
+        resolvedDefaultCountryPalette: { AA: "#111111" },
+        paletteLibraryEntries: [],
+        paletteQuickSwatches: [],
+        paletteLoadErrorById: {},
+        legendLabels: [],
+        legendConfig: {},
+      }));
+      defaultCountryPalette.AA = "#111111";
+    };
+    const configurePaletteStage = () => ({
+      hasActiveScenarioPaletteLoaded: () =>
+        appState.activePaletteId === "palette-after",
+      setActivePaletteSource: async () => {
+        appState.activePaletteId = "palette-after";
+        appState.activePaletteMeta = { palette_id: "palette-after" };
+        appState.activePalettePack = {
+          entries: { AAA: { map_hex: "#abcdef" } },
+        };
+        appState.activePaletteMap = { AAA: { iso2: "AA" } };
+        appState.currentPaletteTheme = "Palette After";
+        appState.fixedPaletteColorsByIso2 = { AA: "#abcdef" };
+        appState.paletteLibraryEntries = [{ id: "AAA" }];
+        appState.paletteQuickSwatches = ["#abcdef"];
+        return true;
+      },
+      publishScenarioPaletteAndToolbarState,
+    });
+
+    try {
+      applyPaletteBaseline();
+      const phaseEvents = [];
+      const successPipeline = createApplyPipelineForRuntimeTest(appState, {
+        ...configurePaletteStage(),
+        validateScenarioActivationCommitState: () => {
+          phaseEvents.push("validate");
+          assert.equal(appState.currentPaletteTheme, "Palette Before");
+          assert.equal(defaultCountryPalette.AA, "#111111");
+          assert.deepEqual(paletteEvents, []);
+          return true;
+        },
+      });
+      const successBundle =
+        createScenarioApplyBundleForRuntimeTest("palette-success");
+      const successStaged = await successPipeline.prepareScenarioApplyState(
+        successBundle,
+        { syncPalette: true },
+      );
+      assert.deepEqual(phaseEvents, []);
+      assert.deepEqual(paletteEvents, []);
+      assert.equal(defaultCountryPalette.AA, "#111111");
+
+      successPipeline.applyPreparedScenarioState(
+        successBundle,
+        successStaged,
+      );
+      assert.deepEqual(phaseEvents, ["validate"]);
+      assert.deepEqual(paletteEvents, [
+        "render:Palette After",
+        "library",
+        "source",
+      ]);
+      assert.equal(appState.currentPaletteTheme, "Palette After");
+      assert.equal(defaultCountryPalette.AA, "#abcdef");
+
+      paletteEvents.length = 0;
+      applyPaletteBaseline();
+      const rollbackPipeline = createApplyPipelineForRuntimeTest(appState, {
+        ...configurePaletteStage(),
+        markLegacyColorStateDirty: () => {
+          throw new Error("post-commit rollback");
+        },
+      });
+      const rollbackBundle =
+        createScenarioApplyBundleForRuntimeTest("palette-rollback");
+      const rollbackStaged = await rollbackPipeline.prepareScenarioApplyState(
+        rollbackBundle,
+        { syncPalette: true },
+      );
+      assert.throws(
+        () => rollbackPipeline.applyPreparedScenarioState(
+          rollbackBundle,
+          rollbackStaged,
+        ),
+        /post-commit rollback/,
+      );
+      assert.equal(appState.currentPaletteTheme, "Palette Before");
+      assert.equal(defaultCountryPalette.AA, "#111111");
+      assert.deepEqual(paletteEvents, []);
+    } finally {
+      listeners.forEach(([eventName, listener]) => {
+        off(eventName, listener);
+      });
+      Object.keys(defaultCountryPalette).forEach((key) => {
+        delete defaultCountryPalette[key];
+      });
+      Object.assign(defaultCountryPalette, previousDefaultPalette);
+    }
+  });
+});
+
+test("real scenario detail staging returns a readiness patch without focus, UI, overlay, or default-topology publication", async () => {
+  const {
+    prepareScenarioDetailTopologyState,
+  } = await import("../js/core/scenario_manager.js");
+  const events = [];
+  const model = createBaseState({
+    activeScenarioId: "",
+    topologyDetail: null,
+    runtimePoliticalTopology: null,
+    defaultRuntimePoliticalTopology: { id: "default-before" },
+    topologyBundleMode: "single",
+    detailDeferred: true,
+    detailPromotionCompleted: false,
+    detailPromotionInFlight: false,
+    detailSourceRequested: "detail-before",
+    runtimeChunkLoadState: {
+      focusCountryOverride: "FR",
+      focusCountryOverrideSource: "before",
+      focusCountryOverrideExpiresAt: 123,
+    },
+  });
+  model.updateScenarioUIFn = () => events.push("ui");
+  model.scheduleScenarioChunkRefreshFn = () => events.push("focus");
+
+  const result = await prepareScenarioDetailTopologyState({
+    targetState: model,
+    loadDetailBundle: async () => ({
+      topologyDetail: { objects: { political: { id: "detail" } } },
+      runtimePoliticalTopology: { objects: { political: { id: "runtime" } } },
+      topologyBundleMode: "composite",
+      detailSourceUsed: "prepared-source",
+    }),
+    hasUsableTopology: (value) => !!value?.objects?.political,
+    detailSourceFallbackOrder: ["fallback"],
+  });
+
+  assert.equal(result.detailPromoted, true);
+  assert.deepEqual(result.scenarioReadinessPatch, {
+    topologyDetail: { objects: { political: { id: "detail" } } },
+    topologyBundleMode: "composite",
+    detailDeferred: false,
+    detailPromotionCompleted: true,
+    detailPromotionInFlight: false,
+    detailSourceRequested: "prepared-source",
+  });
+  assert.equal(model.topologyDetail, null);
+  assert.equal(model.runtimePoliticalTopology, null);
+  assert.deepEqual(model.defaultRuntimePoliticalTopology, { id: "default-before" });
+  assert.deepEqual(model.runtimeChunkLoadState, {
+    focusCountryOverride: "FR",
+    focusCountryOverrideSource: "before",
+    focusCountryOverrideExpiresAt: 123,
+  });
+  assert.deepEqual(events, []);
+
+  const runtimeFallback = {
+    objects: { political: { id: "runtime-fallback" } },
+  };
+  const fallbackResult = await prepareScenarioDetailTopologyState({
+    targetState: {
+      ...model,
+      topologyDetail: null,
+      runtimePoliticalTopology: null,
+      topologyBundleMode: "single",
+    },
+    loadDetailBundle: async () => ({
+      topologyDetail: null,
+      runtimePoliticalTopology: runtimeFallback,
+      topologyBundleMode: "single",
+      detailSourceUsed: "runtime-fallback-source",
+    }),
+    hasUsableTopology: (value) => !!value?.objects?.political,
+    detailSourceFallbackOrder: ["fallback"],
+  });
+  assert.equal(fallbackResult.detailPromoted, true);
+  assert.equal(fallbackResult.scenarioReadinessPatch.topologyBundleMode, "composite");
+  assert.equal(
+    fallbackResult.scenarioReadinessPatch.topologyDetail,
+    runtimeFallback,
+  );
+});
+
+test("real palette staging flags suppress default palette, render, library UI, and source-control observers", async () => {
+  await withAppStateRestoredAsync(async () => {
+    const previousDefaultPalette = { ...defaultCountryPalette };
+    const events = [];
+    try {
+      applyAppStatePatch({
+        activePaletteId: "before",
+        activePaletteMeta: null,
+        activePalettePack: null,
+        activePaletteMap: null,
+        currentPaletteTheme: "Before",
+        paletteRegistry: {
+          palettes: [{
+            palette_id: "prepared",
+            display_name: "Prepared",
+          }],
+        },
+        palettePackCacheById: {
+          prepared: {
+            entries: {
+              AAA: { map_hex: "#123456" },
+            },
+            quick_tags: ["AAA"],
+          },
+        },
+        paletteMapCacheById: {
+          prepared: {
+            mapped: {
+              AAA: { iso2: "AA" },
+            },
+          },
+        },
+        paletteLoadErrorById: {},
+        renderPaletteFn: () => events.push("render"),
+        updatePaletteLibraryUIFn: () => events.push("library-ui"),
+        updatePaletteSourceUIFn: () => events.push("source-ui"),
+      });
+
+      const applied = await setActivePaletteSource("prepared", {
+        syncUI: false,
+        publishObservers: false,
+        syncDefaultPalette: false,
+        overwriteCountryPalette: false,
+      });
+
+      assert.equal(applied, true);
+      assert.deepEqual(events, []);
+      assert.deepEqual(defaultCountryPalette, previousDefaultPalette);
+      applyActivePaletteState({
+        overwriteCountryPalette: false,
+        syncDefaultPalette: false,
+      });
+      assert.deepEqual(defaultCountryPalette, previousDefaultPalette);
+    } finally {
+      Object.keys(defaultCountryPalette).forEach((key) => {
+        delete defaultCountryPalette[key];
+      });
+      Object.assign(defaultCountryPalette, previousDefaultPalette);
+    }
+  });
+});
+
+test("scenario activation validator failure commits no state and publishes no observers", async () => {
+  const model = createBaseState({
+    activeScenarioId: "before-validator",
+    runtimePoliticalMetaSeed: { id: "meta-before" },
+    runtimePoliticalFeatureCollectionSeed: { id: "features-before" },
+    scenarioAtlantropaData: { id: "atlantropa-before" },
+  });
+  const observerEvents = [];
+  const pipeline = createApplyPipelineForRuntimeTest(model, {
+    validateScenarioActivationCommitState: () => {
+      throw new Error("injected activation validator failure");
+    },
+    syncScenarioLocalizationState: () => observerEvents.push("localization"),
+    setScenarioAuditUiState: () => observerEvents.push("audit"),
+    markLegacyColorStateDirty: () => observerEvents.push("legacy-color"),
+  });
+  const bundle = createScenarioApplyBundleForRuntimeTest("validator_target");
+  const staged = await pipeline.prepareScenarioApplyState(bundle, { syncPalette: false });
+  const before = captureScenarioTransactionState(model);
+
+  assert.throws(
+    () => pipeline.applyPreparedScenarioState(bundle, staged),
+    /injected activation validator failure/,
+  );
+  assert.deepEqual(captureScenarioTransactionState(model), before);
+  assert.deepEqual(observerEvents, []);
+});
+
+test("scenario activation restores the complete snapshot when a post-commit observer throws", async () => {
+  const model = createBaseState({
+    activeScenarioId: "before-observer",
+    runtimePoliticalMetaSeed: { id: "meta-before" },
+    runtimePoliticalFeatureCollectionSeed: { id: "features-before" },
+    scenarioAtlantropaData: { id: "atlantropa-before" },
+    scenarioPresentationStyleBeforeActivate: undefined,
+    showScenarioAtlantropa: false,
+    topologyDetail: { id: "detail-before" },
+    topologyBundleMode: "composite",
+    detailDeferred: false,
+    detailPromotionCompleted: true,
+    detailPromotionInFlight: false,
+    detailSourceRequested: "detail-before",
+  });
+  delete model.scenarioPresentationStyleBeforeActivate;
+  const pipeline = createApplyPipelineForRuntimeTest(model, {
+    captureScenarioActivationTransactionState: () => captureScenarioTransactionState(model),
+    restoreScenarioActivationTransactionState: (snapshot) => {
+      restoreScenarioTransactionState(model, snapshot);
+    },
+    validateScenarioActivationCommitState: () => true,
+    markLegacyColorStateDirty: () => {
+      throw new Error("injected post-commit observer failure");
+    },
+  });
+  const bundle = createScenarioApplyBundleForRuntimeTest("observer_target");
+  const staged = await pipeline.prepareScenarioApplyState(bundle, { syncPalette: false });
+  const before = captureScenarioTransactionState(model);
+
+  assert.throws(
+    () => pipeline.applyPreparedScenarioState(bundle, staged),
+    /injected post-commit observer failure/,
+  );
+  assert.deepEqual(captureScenarioTransactionState(model), before);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(model, "scenarioPresentationStyleBeforeActivate"),
+    false,
+  );
+});
+
+test("default activation rollback restores localization, audit, and blank defaults with absent-key semantics", async () => {
+  const model = createBaseState({
+    activeScenarioId: "before-default-observer",
+    mapSemanticMode: "political",
+  });
+  [
+    "scenarioGeoLocalePatchData",
+    "scenarioCityOverridesData",
+    "cityLayerRevision",
+    "scenarioAuditUi",
+    "locales",
+    "geoAliasToStableKey",
+    "showCityPoints",
+  ].forEach((key) => {
+    delete model[key];
+  });
+  const pipeline = createApplyPipelineForRuntimeTest(model, {
+    getScenarioMapSemanticMode: () => "blank",
+    syncScenarioLocalizationState: () => {
+      model.scenarioGeoLocalePatchData = { id: "geo-after" };
+      model.scenarioCityOverridesData = { id: "cities-after" };
+      model.cityLayerRevision = 42;
+      model.locales = { geo: { After: { en: "After" } } };
+      model.geoAliasToStableKey = { after: "After" };
+    },
+    applyBlankScenarioPresentationDefaults: () => {
+      model.showCityPoints = false;
+    },
+    setScenarioAuditUiState: () => {
+      model.scenarioAuditUi = {
+        loading: false,
+        loadedForScenarioId: "blank_target",
+        errorMessage: "",
+      };
+    },
+    markLegacyColorStateDirty: () => {
+      throw new Error("injected observer failure after localization");
+    },
+  });
+  const bundle = createScenarioApplyBundleForRuntimeTest("blank_target");
+  bundle.manifest.map_mode = "blank";
+  const staged = await pipeline.prepareScenarioApplyState(bundle, {
+    syncPalette: false,
+  });
+
+  assert.throws(
+    () => pipeline.applyPreparedScenarioState(bundle, staged),
+    /injected observer failure after localization/,
+  );
+  [
+    "scenarioGeoLocalePatchData",
+    "scenarioCityOverridesData",
+    "cityLayerRevision",
+    "scenarioAuditUi",
+    "locales",
+    "geoAliasToStableKey",
+    "showCityPoints",
+  ].forEach((key) => {
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(model, key),
+      false,
+      `${key} should remain absent after default rollback`,
+    );
+  });
+});
+
+test("deferred scenario metadata fake timer fences old scenario, epoch, and request while accepting the current request", async () => {
+  const {
+    scheduleScenarioDeferredBundleMetadataLoad,
+  } = await import("../js/core/scenario_resources.js");
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalFetch = globalThis.fetch;
+  const runCase = async ({
+    scheduledScenarioId = "alpha",
+    scheduledEpoch = 10,
+    scheduledRequestId = 20,
+    activeScenarioId = scheduledScenarioId,
+    currentEpoch = scheduledEpoch,
+    currentRequestId = scheduledRequestId,
+    expectedApplied,
+  }) => withAppStateRestoredAsync(async () => {
+    let timerCallback = null;
+    globalThis.setTimeout = (callback) => {
+      timerCallback = callback;
+      return 1;
+    };
+    applyAppStatePatch({
+      activeScenarioId,
+      currentScenarioApplyRequestId: currentRequestId,
+      renderTransactionDiagnostics: {
+        scenarioApplyEpochByScenarioId: {
+          [activeScenarioId]: currentEpoch,
+        },
+      },
+      scenarioDistrictGroupsData: { id: "before" },
+      scenarioDistrictGroupByFeatureId: new Map([["before", "before"]]),
+    });
+    const bundle = {
+      bundleLevel: "full",
+      manifest: {
+        scenario_id: scheduledScenarioId,
+        district_groups_url: `/data/${scheduledScenarioId}/districts.json`,
+      },
+      loadDiagnostics: {
+        optionalResources: {
+          district_groups: {},
+        },
+      },
+    };
+    scheduleScenarioDeferredBundleMetadataLoad(bundle, {
+      d3Client: {
+        json: async () => ({
+          scenario_id: scheduledScenarioId,
+          tags: {
+            AAA: {
+              districts: {
+                d1: {
+                  feature_ids: ["feature-1"],
+                },
+              },
+            },
+          },
+        }),
+      },
+      scenarioApplyEpoch: scheduledEpoch,
+      scenarioApplyRequestId: scheduledRequestId,
+      isScenarioApplyRequestCurrent: () => true,
+    });
+    assert.equal(typeof timerCallback, "function");
+    await timerCallback();
+    await bundle.deferredMetadataLoadPromise;
+    assert.equal(
+      appState.scenarioDistrictGroupsData?.scenario_id === scheduledScenarioId,
+      expectedApplied,
+    );
+  });
+
+  try {
+    globalThis.fetch = async (url) => {
+      const scenarioId = /\/data\/([^/]+)\//.exec(String(url || ""))?.[1] || "";
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        text: async () => JSON.stringify({
+          scenario_id: scenarioId,
+          tags: {
+            AAA: {
+              districts: {
+                d1: {
+                  feature_ids: ["feature-1"],
+                },
+              },
+            },
+          },
+        }),
+      };
+    };
+    await runCase({
+      activeScenarioId: "beta",
+      expectedApplied: false,
+    });
+    await runCase({
+      currentEpoch: 11,
+      expectedApplied: false,
+    });
+    await runCase({
+      currentRequestId: 21,
+      expectedApplied: false,
+    });
+    await runCase({
+      expectedApplied: true,
+    });
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("scenario apply commit state does not reuse stale live topology for bad non blank runtime topology", () => {
   const staleTopology = { objects: { political: { stale: true } } };
+  const defaultTopologyAtBuild = { objects: { political: { defaultAtBuild: true } } };
+  const defaultTopologyAtCommit = { objects: { political: { defaultAtCommit: true } } };
   const unrenderableTopology = {
     type: "Topology",
     objects: { political: { type: "GeometryCollection", geometries: [] } },
@@ -410,12 +1275,21 @@ test("scenario apply commit state does not reuse stale live topology for bad non
   };
   const runtimeState = createBaseState({
     activeScenarioId: "previous",
-    defaultRuntimePoliticalTopology: null,
+    defaultRuntimePoliticalTopology: defaultTopologyAtBuild,
     runtimePoliticalTopology: staleTopology,
     scenarioRuntimeTopologyData: { id: "previous-scenario-runtime" },
   });
   const pipeline = createApplyPipelineForRuntimeTest(runtimeState, {
     hasRenderableScenarioPoliticalTopology: () => false,
+    validateScenarioActivationCommitState: (activationPatch) => {
+      assert.equal(
+        activationPatch.useDefaultRuntimePoliticalTopology,
+        true,
+      );
+      assert.equal(activationPatch.runtimePoliticalTopology, null);
+      runtimeState.defaultRuntimePoliticalTopology = defaultTopologyAtCommit;
+      return true;
+    },
   });
 
   pipeline.applyPreparedScenarioState({
@@ -452,7 +1326,7 @@ test("scenario apply commit state does not reuse stale live topology for bad non
   });
 
   assert.equal(runtimeState.activeScenarioId, "sample");
-  assert.equal(runtimeState.runtimePoliticalTopology, null);
+  assert.equal(runtimeState.runtimePoliticalTopology, defaultTopologyAtCommit);
   assert.equal(runtimeState.scenarioRuntimeTopologyData, null);
 });
 
@@ -669,7 +1543,8 @@ test("blank scenario apply preserves ownerless editable runtime topology", async
     scenarioSupportsChunkedRuntime: () => false,
     scenarioBundleUsesChunkedLayer: () => false,
     scenarioBundleHasChunkedData: () => false,
-    ensureScenarioDetailTopologyLoaded: async () => true,
+    prepareScenarioDetailTopologyState: async () =>
+      createScenarioReadinessStageResult(runtimeState),
     hasUsablePoliticalTopology: () => true,
     scenarioNeedsDetailTopology: () => false,
     getScenarioDisplayName: () => "Blank",
@@ -693,9 +1568,19 @@ test("blank scenario apply preserves ownerless editable runtime topology", async
     buildScenarioRuntimeVersionTag: () => "blank:sha",
     mergeReleasableCatalogs: () => null,
     buildScenarioDistrictGroupByFeatureId: () => new Map(),
-    syncScenarioLocalizationState: () => phaseEvents.push(`pre:localization:${runtimeState.activeScenarioId}`),
-    applyBlankScenarioPresentationDefaults: () => phaseEvents.push(`pre:blank:${runtimeState.activeScenarioId}`),
-    setScenarioAuditUiState: () => phaseEvents.push(`pre:audit:${runtimeState.activeScenarioId}`),
+    validateScenarioActivationCommitState: (nextState, transactionPatch) => {
+      phaseEvents.push(`validate:${runtimeState.activeScenarioId}->${nextState.activeScenarioId}`);
+      assert.equal(nextState.useDefaultRuntimePoliticalTopology, false);
+      assert.equal(nextState.runtimePoliticalTopology, ownerlessBlankTopology);
+      assert.equal(
+        transactionPatch.scenarioPresentationPatch.activeSovereignCode,
+        "",
+      );
+      return true;
+    },
+    syncScenarioLocalizationState: () => phaseEvents.push(`observer:localization:${runtimeState.activeScenarioId}`),
+    applyBlankScenarioPresentationDefaults: () => phaseEvents.push(`observer:blank:${runtimeState.activeScenarioId}`),
+    setScenarioAuditUiState: () => phaseEvents.push(`observer:audit:${runtimeState.activeScenarioId}`),
     getScenarioBaselineHashFromBundle: () => "blank-baseline",
     markLegacyColorStateDirty: () => phaseEvents.push(`post:legacy:${runtimeState.activeScenarioId}`),
     syncScenarioInspectorSelection: (code) => phaseEvents.push(`post:inspector:${runtimeState.activeScenarioId}:${code}`),
@@ -725,9 +1610,10 @@ test("blank scenario apply preserves ownerless editable runtime topology", async
   assert.equal(runtimeState.activeSovereignCode, "");
   assert.deepEqual(runtimeState.sovereigntyByFeatureId, {});
   assert.deepEqual(phaseEvents, [
-    "pre:localization:",
-    "pre:blank:",
-    "pre:audit:",
+    "validate:->blank_base",
+    "observer:localization:blank_base",
+    "observer:blank:blank_base",
+    "observer:audit:blank_base",
     "post:legacy:blank_base",
     "post:inspector:blank_base:",
     "post:borders:blank_base",
@@ -974,19 +1860,34 @@ test("scenario rollback restores visible political data and advances scene data 
 
   restoreScenarioApplyRollbackSnapshot(rollbackSnapshot);
 
-  assert.equal(appState.activeScenarioId, "old_scenario");
-  assert.deepEqual(appState.scenarioPoliticalChunkData.features.map((feature) => feature.id), ["old-full"]);
-  assert.deepEqual(appState.scenarioPoliticalVisibleChunkData.features.map((feature) => feature.id), ["old-visible"]);
-  assert.equal(appState.scenarioDataGeneration, 12);
-  assert.equal(appState.scenarioDataGenerationReason, "scenario-rollback");
-  assert.equal(appState.sceneGeneration, 6);
-  assert.equal(appState.sceneGenerationReason, "scenario-rollback");
-  assert.equal(appState.sceneScenarioId, "old_scenario");
+  assert.equal(readAppStateValue("activeScenarioId"), "old_scenario");
+  assert.deepEqual(
+    readAppStateValue("scenarioPoliticalChunkData")
+      .features.map((feature) => feature.id),
+    ["old-full"],
+  );
+  assert.deepEqual(
+    readAppStateValue("scenarioPoliticalVisibleChunkData")
+      .features.map((feature) => feature.id),
+    ["old-visible"],
+  );
+  assert.equal(readAppStateValue("scenarioDataGeneration"), 12);
+  assert.equal(
+    readAppStateValue("scenarioDataGenerationReason"),
+    "scenario-rollback",
+  );
+  assert.equal(readAppStateValue("sceneGeneration"), 6);
+  assert.equal(
+    readAppStateValue("sceneGenerationReason"),
+    "scenario-rollback",
+  );
+  assert.equal(readAppStateValue("sceneScenarioId"), "old_scenario");
 
   const restoredIdentity = createPoliticalRasterWorkerIdentity({
-    sceneGeneration: appState.sceneGeneration,
-    scenarioDataGeneration: appState.scenarioDataGeneration,
-    scenarioId: appState.activeScenarioId,
+    sceneGeneration: readAppStateValue("sceneGeneration"),
+    scenarioDataGeneration:
+      readAppStateValue("scenarioDataGeneration"),
+    scenarioId: readAppStateValue("activeScenarioId"),
     selectionVersion: 1,
     topologyRevision: 1,
     colorRevision: 1,
@@ -997,6 +1898,91 @@ test("scenario rollback restores visible political data and advances scene data 
   });
   assert.equal(isPoliticalRasterWorkerResultCurrent(failedIdentity, restoredIdentity), false);
 }));
+
+function assertScenarioRollbackRestoresSentinels({
+  beforeValues,
+  failedValues,
+  absentKeys = [],
+}) {
+  return withAppStateRestored(() => {
+    applyAppStatePatch(beforeValues);
+    deleteAppStateKeys(absentKeys);
+    const rollbackSnapshot = captureScenarioApplyRollbackSnapshot();
+
+    applyAppStatePatch(failedValues);
+    restoreScenarioApplyRollbackSnapshot(rollbackSnapshot);
+
+    for (const [key, value] of Object.entries(beforeValues)) {
+      assert.deepEqual(
+        readAppStateValue(key),
+        value,
+        `${key} should restore from the rollback snapshot`,
+      );
+    }
+    absentKeys.forEach((key) => {
+      assert.equal(
+        hasAppStateKey(key),
+        false,
+        `${key} should be deleted when it was absent before the transaction`,
+      );
+    });
+  });
+}
+
+test("scenario rollback restores activation seed and Atlantropa sentinels", () => {
+  assertScenarioRollbackRestoresSentinels({
+    beforeValues: {
+      runtimePoliticalMetaSeed: { id: "meta-before" },
+      runtimePoliticalFeatureCollectionSeed: { id: "features-before" },
+      scenarioAtlantropaData: { id: "atlantropa-before" },
+    },
+    failedValues: {
+      runtimePoliticalMetaSeed: { id: "meta-failed" },
+      runtimePoliticalFeatureCollectionSeed: { id: "features-failed" },
+      scenarioAtlantropaData: { id: "atlantropa-failed" },
+    },
+  });
+});
+
+test("scenario rollback restores detail readiness sentinels", () => {
+  assertScenarioRollbackRestoresSentinels({
+    beforeValues: {
+      topologyDetail: { id: "detail-before" },
+      topologyBundleMode: "composite",
+      detailDeferred: false,
+      detailPromotionCompleted: true,
+      detailPromotionInFlight: false,
+      detailSourceRequested: "detail-before",
+    },
+    failedValues: {
+      topologyDetail: { id: "detail-failed" },
+      topologyBundleMode: "single",
+      detailDeferred: true,
+      detailPromotionCompleted: false,
+      detailPromotionInFlight: true,
+      detailSourceRequested: "detail-failed",
+    },
+  });
+});
+
+test("scenario rollback restores presentation and localization sentinels including absent properties", () => {
+  assertScenarioRollbackRestoresSentinels({
+    beforeValues: {
+      showScenarioAtlantropa: false,
+      mapSemanticMode: "political",
+      locales: { ui: { ready: "Before" }, geo: { AAA: "Alpha" } },
+      geoAliasToStableKey: { alpha: "AAA" },
+    },
+    failedValues: {
+      scenarioPresentationStyleBeforeActivate: { ocean: { fillColor: "#abcdef" } },
+      showScenarioAtlantropa: true,
+      mapSemanticMode: "blank",
+      locales: { ui: { ready: "Failed" }, geo: {} },
+      geoAliasToStableKey: { failed: "ZZZ" },
+    },
+    absentKeys: ["scenarioPresentationStyleBeforeActivate"],
+  });
+});
 
 test("scenario data health accepts current coarse collections before chunk payload promotion", () => {
   const health = withAppStatePatch({

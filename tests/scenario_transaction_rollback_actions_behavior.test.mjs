@@ -1,0 +1,634 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+import {
+  restoreScenarioActivationAfterColorDirtyState,
+  restoreScenarioActivationBeforeAuditState,
+  restoreScenarioActivationBeforeColorDirtyState,
+  SCENARIO_ACTIVATION_STATE_KEYS,
+} from "../js/core/state/actions/scenario_activation_actions.js";
+import {
+  restoreScenarioPaletteState,
+  SCENARIO_PALETTE_STATE_KEYS,
+} from "../js/core/state/actions/scenario_palette_actions.js";
+import {
+  restoreScenarioTransactionPresentationBeforeAuditState,
+  restoreScenarioTransactionPresentationState,
+  SCENARIO_PRESENTATION_STATE_KEYS,
+} from "../js/core/state/actions/scenario_presentation_actions.js";
+import {
+  restoreScenarioReadinessState,
+  SCENARIO_READINESS_STATE_KEYS,
+} from "../js/core/state/actions/scenario_readiness_actions.js";
+import {
+  captureScenarioTransactionRollbackOptionalState,
+  restoreScenarioTransactionSupplementAfterColorDirtyState,
+  restoreScenarioTransactionSupplementBeforeAuditState,
+  restoreScenarioTransactionSupplementBeforeColorDirtyState,
+  SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+  SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
+  SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+  validateScenarioTransactionRollbackSupplementalStatePatch,
+} from "../js/core/state/actions/scenario_transaction_rollback_actions.js";
+import { cloneScenarioStateValue } from "../js/core/scenario/shared.js";
+
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
+const ACTION_SOURCE = fs.readFileSync(
+  path.join(
+    REPO_ROOT,
+    "js/core/state/actions/scenario_transaction_rollback_actions.js",
+  ),
+  "utf8",
+);
+const ROLLBACK_SOURCE = fs.readFileSync(
+  path.join(REPO_ROOT, "js/core/scenario_rollback.js"),
+  "utf8",
+);
+
+const EXPECTED_SUPPLEMENTAL_KEYS = Object.freeze([
+  "defaultRuntimePoliticalTopology",
+  "scenarioHydrationHealthGate",
+  "scenarioDataHealth",
+  "activeScenarioPerformanceHints",
+  "scenarioPoliticalVisibleChunkData",
+  "activeScenarioChunks",
+  "runtimeChunkLoadState",
+  "scheduleScenarioChunkRefreshFn",
+  "awaitInitialScenarioChunkVisualPromotionFn",
+]);
+
+const ALL_DOMAIN_KEYS = Object.freeze([
+  ...SCENARIO_ACTIVATION_STATE_KEYS,
+  ...SCENARIO_READINESS_STATE_KEYS,
+  ...SCENARIO_PRESENTATION_STATE_KEYS,
+  ...SCENARIO_PALETTE_STATE_KEYS,
+]);
+
+const AUTHORITY_KEY_SETS = Object.freeze({
+  activation: SCENARIO_ACTIVATION_STATE_KEYS,
+  readiness: SCENARIO_READINESS_STATE_KEYS,
+  presentation: SCENARIO_PRESENTATION_STATE_KEYS,
+  palette: SCENARIO_PALETTE_STATE_KEYS,
+  supplemental: SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+});
+
+const EXPECTED_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY = Object.freeze({
+  defaultRuntimePoliticalTopology: "P4.2b",
+  scenarioHydrationHealthGate: "P4.2c",
+  scenarioDataHealth: "P4.2c",
+  activeScenarioPerformanceHints: "P4.2c",
+  scenarioPoliticalVisibleChunkData: "P4.2b",
+  activeScenarioChunks: "P4.2b",
+  runtimeChunkLoadState: "P4.2b",
+  scheduleScenarioChunkRefreshFn: "P4.2b",
+  awaitInitialScenarioChunkVisualPromotionFn: "P4.2b",
+});
+
+function sorted(values) {
+  return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+function extractFrozenStringArray(source, constantName) {
+  const match = source.match(
+    new RegExp(
+      `const ${constantName} = Object\\.freeze\\(\\[([\\s\\S]*?)\\n\\]\\);`,
+    ),
+  );
+  assert.ok(match, `${constantName} must remain a frozen string array`);
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+}
+
+function extractRollbackPatchValueKeys(source) {
+  const match = source.match(
+    /function buildScenarioTransactionRollbackStatePatch\(snapshot\) \{[\s\S]*?const values = \{\n(?<body>[\s\S]*?)\n  \};\n  return \{/,
+  );
+  assert.ok(match?.groups?.body, "rollback patch values object must remain statically discoverable");
+  return [...match.groups.body.matchAll(/^ {6}([A-Za-z_$][\w$]*):/gm)]
+    .map((entry) => entry[1]);
+}
+
+function createValues(keys) {
+  return Object.fromEntries(
+    keys.map((key, index) => [
+      key,
+      Object.freeze({ key, index }),
+    ]),
+  );
+}
+
+function createDomainSnapshot(keys, values, {
+  presentOptionalKeys = SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
+} = {}) {
+  const optionalKeys = new Set(SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS);
+  const presentKeys = keys.filter(
+    (key) => !optionalKeys.has(key) || presentOptionalKeys.includes(key),
+  );
+  return {
+    values: Object.fromEntries(keys.map((key) => [key, values[key]])),
+    presentKeys,
+  };
+}
+
+function createRollbackPlan({
+  presentOptionalKeys = SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
+} = {}) {
+  const values = createValues([
+    ...ALL_DOMAIN_KEYS,
+    ...SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+  ]);
+  values.ui = Object.freeze({
+    politicalEditingExpanded: true,
+    scenarioVisualAdjustmentsOpen: false,
+  });
+  values.styleConfig = Object.freeze({
+    ocean: Object.freeze({ fill: "#123456" }),
+  });
+  return {
+    values,
+    activation: createDomainSnapshot(
+      SCENARIO_ACTIVATION_STATE_KEYS,
+      values,
+      { presentOptionalKeys },
+    ),
+    readiness: createDomainSnapshot(
+      SCENARIO_READINESS_STATE_KEYS,
+      values,
+      { presentOptionalKeys },
+    ),
+    presentation: createDomainSnapshot(
+      SCENARIO_PRESENTATION_STATE_KEYS,
+      values,
+      { presentOptionalKeys },
+    ),
+    palette: createDomainSnapshot(
+      SCENARIO_PALETTE_STATE_KEYS,
+      values,
+      { presentOptionalKeys },
+    ),
+    supplemental: {
+      values: Object.fromEntries(
+        SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS.map((key) => [
+          key,
+          values[key],
+        ]),
+      ),
+    },
+  };
+}
+
+function restoreScenarioTransactionRollbackPlan(target, plan, effects = {}) {
+  validateScenarioTransactionRollbackSupplementalStatePatch(plan.supplemental);
+  restoreScenarioActivationBeforeAuditState(target, plan.activation);
+  restoreScenarioTransactionSupplementBeforeAuditState(
+    target,
+    plan.supplemental,
+  );
+  restoreScenarioTransactionPresentationBeforeAuditState(
+    target,
+    plan.presentation,
+  );
+  effects.audit?.();
+  restoreScenarioActivationBeforeColorDirtyState(target, plan.activation);
+  restoreScenarioReadinessState(target, plan.readiness);
+  restoreScenarioTransactionSupplementBeforeColorDirtyState(
+    target,
+    plan.supplemental,
+  );
+  effects.colorDirty?.();
+  restoreScenarioActivationAfterColorDirtyState(target, plan.activation);
+  restoreScenarioTransactionSupplementAfterColorDirtyState(
+    target,
+    plan.supplemental,
+  );
+  restoreScenarioTransactionPresentationState(target, plan.presentation);
+  restoreScenarioPaletteState(target, plan.palette);
+}
+
+test("scenario transaction rollback action owns the exact frozen supplemental keys", () => {
+  assert.equal(
+    Object.isFrozen(SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS),
+    true,
+  );
+  assert.deepEqual(
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+    EXPECTED_SUPPLEMENTAL_KEYS,
+  );
+  assert.equal(
+    new Set(SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS).size,
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS.length,
+  );
+  const canonicalKeys = new Set(ALL_DOMAIN_KEYS);
+  for (const key of SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS) {
+    assert.equal(
+      canonicalKeys.has(key),
+      false,
+      `${key} must remain outside existing canonical domain ownership`,
+    );
+  }
+});
+
+test("scenario rollback authority key sets are pairwise disjoint and cover the exact rollback patch", () => {
+  const authorityEntries = Object.entries(AUTHORITY_KEY_SETS);
+  for (let leftIndex = 0; leftIndex < authorityEntries.length; leftIndex += 1) {
+    const [leftName, leftKeys] = authorityEntries[leftIndex];
+    const leftSet = new Set(leftKeys);
+    assert.equal(leftSet.size, leftKeys.length, `${leftName} keys must be unique`);
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < authorityEntries.length;
+      rightIndex += 1
+    ) {
+      const [rightName, rightKeys] = authorityEntries[rightIndex];
+      const overlap = rightKeys.filter((key) => leftSet.has(key));
+      assert.deepEqual(
+        overlap,
+        [],
+        `${leftName} and ${rightName} must not share rollback authority`,
+      );
+    }
+  }
+
+  const authorityKeys = authorityEntries.flatMap(([, keys]) => keys);
+  assert.equal(authorityKeys.length, 110);
+  assert.deepEqual(
+    sorted(extractRollbackPatchValueKeys(ROLLBACK_SOURCE)),
+    sorted(authorityKeys),
+  );
+
+  const snapshotToAuthorityKey = Object.freeze({
+    scenarioUiState: "ui",
+    styleConfigOcean: "styleConfig",
+    scheduleScenarioChunkRefreshEnabled: "scheduleScenarioChunkRefreshFn",
+    awaitInitialScenarioChunkVisualPromotionEnabled:
+      "awaitInitialScenarioChunkVisualPromotionFn",
+  });
+  const requiredSnapshotKeys = extractFrozenStringArray(
+    ROLLBACK_SOURCE,
+    "ROLLBACK_REQUIRED_KEYS",
+  );
+  assert.equal(requiredSnapshotKeys.length, 110);
+  assert.deepEqual(
+    sorted(
+      requiredSnapshotKeys.map(
+        (key) => snapshotToAuthorityKey[key] || key,
+      ),
+    ),
+    sorted(authorityKeys),
+  );
+});
+
+test("scenario rollback supplemental authority has an exact frozen phase handoff", () => {
+  assert.equal(
+    Object.isFrozen(
+      SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+    EXPECTED_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+  );
+  assert.deepEqual(
+    Object.keys(
+      SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+    ),
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+  );
+  assert.deepEqual(
+    Object.values(
+      SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_HANDOFF_PHASE_BY_KEY,
+    ).reduce((counts, phase) => {
+      counts[phase] = (counts[phase] || 0) + 1;
+      return counts;
+    }, {}),
+    {
+      "P4.2b": 6,
+      "P4.2c": 3,
+    },
+  );
+});
+
+test("scenario transaction rollback optional capture clones only the frozen sentinel catalog", () => {
+  const target = Object.fromEntries(
+    SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS.map((key, index) => [
+      key,
+      { key, index },
+    ]),
+  );
+  target.unowned = { keep: true };
+  const captured = captureScenarioTransactionRollbackOptionalState(
+    target,
+    {
+      cloneValue(value) {
+        return value && typeof value === "object"
+          ? { ...value }
+          : value;
+      },
+    },
+  );
+
+  assert.deepEqual(
+    Object.keys(captured.values),
+    SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
+  );
+  assert.equal(Object.hasOwn(captured.values, "unowned"), false);
+  assert.deepEqual(
+    captured.presentKeys,
+    SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS,
+  );
+  for (const key of SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS) {
+    assert.deepEqual(captured.values[key], target[key]);
+    assert.notEqual(captured.values[key], target[key]);
+  }
+});
+
+test("scenario transaction supplemental capture deeply clones exact state and records hook presence", async () => {
+  const {
+    captureScenarioTransactionRollbackSupplementalState,
+  } = await import(
+    "../js/core/state/actions/scenario_transaction_rollback_actions.js"
+  );
+  assert.equal(
+    typeof captureScenarioTransactionRollbackSupplementalState,
+    "function",
+  );
+
+  const scheduleHook = () => {};
+  const promotionHook = () => {};
+  const target = {
+    defaultRuntimePoliticalTopology: {
+      capturedAt: new Date("2026-07-20T12:00:00.000Z"),
+      topologyById: new Map([["main", { version: 1 }]]),
+    },
+    scenarioHydrationHealthGate: {
+      requiredLayers: new Set(["political", "water"]),
+    },
+    scenarioDataHealth: { status: { ready: true } },
+    activeScenarioPerformanceHints: { detail: ["full"] },
+    scenarioPoliticalVisibleChunkData: { features: [{ id: "visible" }] },
+    activeScenarioChunks: { loaded: new Set(["political"]) },
+    runtimeChunkLoadState: {
+      refreshTimerId: 17,
+      promotionTimerId: 23,
+      promotionScheduled: true,
+      promotionCommitInFlight: true,
+      promotionCommitStatus: "running",
+      promotionCommitError: "stale",
+      pendingPostCommitRefresh: { reason: "stale" },
+      retained: new Map([["chunk", { id: "main" }]]),
+    },
+  };
+  const hookSources = new Map([
+    ["scheduleScenarioChunkRefreshFn", scheduleHook],
+    ["awaitInitialScenarioChunkVisualPromotionFn", promotionHook],
+  ]);
+
+  const captured = captureScenarioTransactionRollbackSupplementalState(
+    target,
+    {
+      cloneValue: cloneScenarioStateValue,
+      readHookSource: (_target, hookName) => hookSources.get(hookName) || null,
+      scheduleScenarioChunkRefreshSource: scheduleHook,
+      awaitInitialScenarioChunkVisualPromotionSource: promotionHook,
+    },
+  );
+
+  assert.deepEqual(Object.keys(captured.values), [
+    "defaultRuntimePoliticalTopology",
+    "scenarioHydrationHealthGate",
+    "scenarioDataHealth",
+    "activeScenarioPerformanceHints",
+    "scenarioPoliticalVisibleChunkData",
+    "activeScenarioChunks",
+    "runtimeChunkLoadState",
+    "scheduleScenarioChunkRefreshEnabled",
+    "awaitInitialScenarioChunkVisualPromotionEnabled",
+  ]);
+  assert.deepEqual(
+    captured.presentKeys,
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+  );
+  assert.equal(captured.values.scheduleScenarioChunkRefreshEnabled, true);
+  assert.equal(
+    captured.values.awaitInitialScenarioChunkVisualPromotionEnabled,
+    true,
+  );
+  assert.deepEqual(captured.values.defaultRuntimePoliticalTopology, {
+    capturedAt: new Date("2026-07-20T12:00:00.000Z"),
+    topologyById: new Map([["main", { version: 1 }]]),
+  });
+  assert.notEqual(
+    captured.values.defaultRuntimePoliticalTopology,
+    target.defaultRuntimePoliticalTopology,
+  );
+  assert.notEqual(
+    captured.values.defaultRuntimePoliticalTopology.capturedAt,
+    target.defaultRuntimePoliticalTopology.capturedAt,
+  );
+  assert.notEqual(
+    captured.values.defaultRuntimePoliticalTopology.topologyById,
+    target.defaultRuntimePoliticalTopology.topologyById,
+  );
+  assert.notEqual(
+    captured.values.scenarioHydrationHealthGate.requiredLayers,
+    target.scenarioHydrationHealthGate.requiredLayers,
+  );
+  assert.notEqual(
+    captured.values.scenarioPoliticalVisibleChunkData.features,
+    target.scenarioPoliticalVisibleChunkData.features,
+  );
+  assert.notEqual(
+    captured.values.runtimeChunkLoadState.retained,
+    target.runtimeChunkLoadState.retained,
+  );
+  assert.deepEqual(
+    {
+      refreshTimerId: captured.values.runtimeChunkLoadState.refreshTimerId,
+      promotionTimerId: captured.values.runtimeChunkLoadState.promotionTimerId,
+      promotionScheduled:
+        captured.values.runtimeChunkLoadState.promotionScheduled,
+      promotionCommitInFlight:
+        captured.values.runtimeChunkLoadState.promotionCommitInFlight,
+      promotionCommitStatus:
+        captured.values.runtimeChunkLoadState.promotionCommitStatus,
+      promotionCommitError:
+        captured.values.runtimeChunkLoadState.promotionCommitError,
+      pendingPostCommitRefresh:
+        captured.values.runtimeChunkLoadState.pendingPostCommitRefresh,
+    },
+    {
+      refreshTimerId: null,
+      promotionTimerId: null,
+      promotionScheduled: false,
+      promotionCommitInFlight: false,
+      promotionCommitStatus: "rolled-back",
+      promotionCommitError: "",
+      pendingPostCommitRefresh: null,
+    },
+  );
+
+  const absentHooks =
+    captureScenarioTransactionRollbackSupplementalState(target, {
+      cloneValue: cloneScenarioStateValue,
+      readHookSource: () => null,
+      scheduleScenarioChunkRefreshSource: scheduleHook,
+      awaitInitialScenarioChunkVisualPromotionSource: promotionHook,
+    });
+  assert.equal(absentHooks.values.scheduleScenarioChunkRefreshEnabled, false);
+  assert.equal(
+    absentHooks.values.awaitInitialScenarioChunkVisualPromotionEnabled,
+    false,
+  );
+  assert.deepEqual(
+    absentHooks.presentKeys,
+    SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS.slice(0, -2),
+  );
+});
+
+test("scenario rollback composes canonical domain restores around audit and color-dirty effects", () => {
+  const target = {
+    ui: {
+      preservedUiField: "keep",
+      politicalEditingExpanded: false,
+      scenarioVisualAdjustmentsOpen: true,
+    },
+    styleConfig: {
+      preservedStyleField: "keep",
+      ocean: { fill: "#000000" },
+    },
+  };
+  const originalUi = target.ui;
+  const originalStyleConfig = target.styleConfig;
+  const plan = createRollbackPlan();
+  const observed = [];
+
+  restoreScenarioTransactionRollbackPlan(target, plan, {
+    audit() {
+      observed.push({
+        effect: "audit",
+        scenarioAudit: target.scenarioAudit,
+        scenarioImportAudit: target.scenarioImportAudit,
+      });
+    },
+    colorDirty() {
+      observed.push({
+        effect: "color-dirty",
+        scenarioImportAudit: target.scenarioImportAudit,
+        scenarioPoliticalChunkData: target.scenarioPoliticalChunkData,
+      });
+    },
+  });
+
+  assert.equal(observed[0].effect, "audit");
+  assert.equal(observed[0].scenarioAudit, plan.values.scenarioAudit);
+  assert.equal(observed[0].scenarioImportAudit, undefined);
+  assert.equal(observed[1].effect, "color-dirty");
+  assert.equal(
+    observed[1].scenarioImportAudit,
+    plan.values.scenarioImportAudit,
+  );
+  assert.equal(observed[1].scenarioPoliticalChunkData, undefined);
+
+  for (const key of [
+    ...SCENARIO_ACTIVATION_STATE_KEYS,
+    ...SCENARIO_READINESS_STATE_KEYS,
+    ...SCENARIO_PALETTE_STATE_KEYS,
+    ...SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS,
+  ]) {
+    assert.equal(target[key], plan.values[key], `${key} should restore exactly`);
+  }
+  assert.equal(target.ui, originalUi);
+  assert.equal(target.ui.preservedUiField, "keep");
+  assert.equal(target.ui.politicalEditingExpanded, true);
+  assert.equal(target.ui.scenarioVisualAdjustmentsOpen, false);
+  assert.equal(target.styleConfig, originalStyleConfig);
+  assert.equal(target.styleConfig.preservedStyleField, "keep");
+  assert.equal(target.styleConfig.ocean, plan.values.styleConfig.ocean);
+});
+
+test("canonical domain restores preserve rollback absent-key semantics", () => {
+  const presentOptionalKeys = [
+    "mapSemanticMode",
+    "detailDeferred",
+    "showScenarioAtlantropa",
+    "locales",
+  ];
+  const plan = createRollbackPlan({ presentOptionalKeys });
+  const target = Object.fromEntries(
+    ALL_DOMAIN_KEYS.map((key) => [key, `stale:${key}`]),
+  );
+  target.ui = {};
+  target.styleConfig = {};
+
+  restoreScenarioTransactionRollbackPlan(target, plan);
+
+  for (const key of SCENARIO_TRANSACTION_ROLLBACK_OPTIONAL_STATE_KEYS) {
+    if (presentOptionalKeys.includes(key)) {
+      assert.equal(target[key], plan.values[key], `${key} should be assigned`);
+    } else {
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(target, key),
+        false,
+        `${key} should be deleted`,
+      );
+    }
+  }
+  assert.equal(target.activeScenarioId, plan.values.activeScenarioId);
+});
+
+test("scenario transaction supplemental action validates before mutation", () => {
+  const plan = createRollbackPlan();
+  const target = {
+    defaultRuntimePoliticalTopology: "before",
+  };
+  const before = structuredClone(target);
+  delete plan.supplemental.values.defaultRuntimePoliticalTopology;
+
+  assert.throws(
+    () =>
+      restoreScenarioTransactionSupplementBeforeAuditState(
+        target,
+        plan.supplemental,
+      ),
+    /missing required key: defaultRuntimePoliticalTopology/,
+  );
+  assert.deepEqual(target, before);
+  assert.throws(
+    () =>
+      restoreScenarioTransactionSupplementBeforeAuditState(
+        null,
+        createRollbackPlan().supplemental,
+      ),
+    /target must be an object/,
+  );
+});
+
+test("scenario transaction rollback action keeps a narrow static import-free state boundary", () => {
+  assert.doesNotMatch(ACTION_SOURCE, /^\s*import\s/m);
+  assert.doesNotMatch(
+    ACTION_SOURCE,
+    /\b(?:globalThis|window|document|runtimeState)\b/,
+  );
+  assert.doesNotMatch(ACTION_SOURCE, /\btarget\s*\[/);
+  assert.doesNotMatch(ACTION_SOURCE, /\bdelete\s+target\s*\[/);
+  for (const key of SCENARIO_TRANSACTION_ROLLBACK_SUPPLEMENTAL_STATE_KEYS) {
+    assert.match(
+      ACTION_SOURCE,
+      new RegExp(`\\btarget\\.${key}\\b`),
+      `${key} must have an explicit static target write`,
+    );
+  }
+  for (const key of ALL_DOMAIN_KEYS) {
+    assert.doesNotMatch(
+      ACTION_SOURCE,
+      new RegExp(`\\btarget\\.${key}\\s*=`),
+      `${key} must stay in its canonical domain action`,
+    );
+  }
+});

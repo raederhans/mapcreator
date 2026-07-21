@@ -15,7 +15,9 @@ const REPORT_DIR = path.join(
 );
 const REPORT_PATH = path.join(REPORT_DIR, "state-writer-policy-tests.tap");
 export const P4_STATE_WRITER_POLICY_TEST_FILES = Object.freeze([
+  "tests/state_action_delegation_edges_behavior.test.mjs",
   "tests/state_writer_policy_behavior.test.mjs",
+  "tests/state_writer_policy_batch_scan_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_manifest_behavior.test.mjs",

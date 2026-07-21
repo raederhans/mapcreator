@@ -142,6 +142,209 @@ function createProgressPolicy() {
   };
 }
 
+function createCallerActionBackfillEntry({
+  index,
+  callerPath,
+  callerBindingId,
+  callerBindingIdentity,
+  key,
+}) {
+  const actionModulePath = "js/core/state/actions/boot_actions.js";
+  const actionExportName = "setBootStateFields";
+  const targetArgumentIndex = 0;
+  const start = 100 + index * 10;
+  const end = start + 42;
+  const sourceFingerprint = `${(index % 16).toString(16)}`.repeat(64);
+  return {
+    retiredMembershipIdentity: [
+      callerPath,
+      callerBindingIdentity,
+      "boot",
+      "P4.1",
+      "assign",
+      key,
+    ].join("|"),
+    callerPath,
+    callerBindingId,
+    callerBindingIdentity,
+    domain: "boot",
+    migrationPhase: "P4.1",
+    operation: "assign",
+    key,
+    actionModulePath,
+    actionExportName,
+    targetArgumentIndex,
+    actionCallEdgeIdentity: [
+      callerPath,
+      callerBindingIdentity,
+      actionModulePath,
+      actionExportName,
+      targetArgumentIndex,
+      start,
+      end,
+      index,
+    ].join("|"),
+    occurrenceIndex: index,
+    start,
+    end,
+    line: 10 + index,
+    column: 3,
+    sourceFingerprint,
+    retiredInPhase: "P4.1",
+    recordedInPhase: "P4.2a",
+    backfilled: true,
+  };
+}
+
+function createP41ToP42aBackfillPolicies({
+  ledgerEntryCount = 36,
+} = {}) {
+  const callerPath = "js/bootstrap/backfill_fixture.js";
+  const callerBindingId =
+    "function:applyBackfillFixture:0:$/property:targetState";
+  const callerBindingIdentity = JSON.stringify({
+    kind: "function-parameter",
+    name: "",
+    functionName: "applyBackfillFixture",
+    parameterName: "",
+    parameterIndex: 0,
+    parameterPath: "$/property:targetState",
+    importSource: "",
+    importedName: "",
+    aliasSources: [],
+    aliasOperators: [],
+  });
+  const memberships = Array.from({ length: 36 }, (_, index) => ({
+    operation: "assign",
+    key: `bootFixture${String(index).padStart(2, "0")}`,
+  }));
+  const previousWriter = {
+    path: callerPath,
+    surface: "production",
+    domain: "boot",
+    authority: "legacy-target",
+    migrationPhase: "P4.1",
+    bindings: [{
+      id: callerBindingId,
+      kind: "function-parameter",
+      name: "targetState",
+      functionName: "applyBackfillFixture",
+      parameterName: "targetState",
+      parameterIndex: 0,
+      parameterPath: "$/property:targetState",
+      authority: "legacy-target",
+      grants: [{
+        domain: "boot",
+        migrationPhase: "P4.1",
+        operations: ["assign"],
+        keys: memberships.map(({ key }) => key),
+        memberships,
+        aliasSites: [],
+        dynamicSites: [],
+        ambiguousSites: [],
+        unsupportedSites: [],
+      }],
+    }],
+  };
+  const actionWriter = structuredClone(previousWriter);
+  actionWriter.path = "js/core/state/actions/boot_actions.js";
+  actionWriter.authority = "domain-action";
+  actionWriter.bindings[0].id = "function:setBootStateFields:0:$";
+  actionWriter.bindings[0].functionName = "setBootStateFields";
+  actionWriter.bindings[0].parameterPath = "$";
+  actionWriter.bindings[0].authority = "domain-action";
+  const frozenAuthority = buildLegacyStateWriterSemanticAuthority([
+    previousWriter,
+  ]);
+  const emptyAuthority = buildLegacyStateWriterSemanticAuthority([]);
+  const retiredAuthority = subtractLegacyStateWriterSemanticAuthority(
+    frozenAuthority,
+    emptyAuthority,
+  );
+  const baselineMetrics = {
+    phase: "P4.0",
+    productionLegacyDirectFiles: 1,
+    productionLegacyMemberships: 36,
+    productionLegacyDynamicSites: 0,
+    productionLegacyAliasSites: 0,
+    productionLegacyAmbiguousSites: 0,
+    productionLegacyUnsupportedSites: 0,
+  };
+  const common = {
+    schemaVersion: 1,
+    baseline: {
+      phase: "P4.0",
+      sourceBaseSha: "1".repeat(40),
+      generatedAt: "2026-07-19T00:00:00.000Z",
+    },
+    baselines: {
+      legacyDirectFiles: {
+        production: 1,
+        test: 0,
+        total: 1,
+      },
+      bindingScopedMemberships: {
+        production: {
+          legacyCombined: 36,
+        },
+      },
+      bindingScopedSites: {
+        dynamic: { production: { legacyCombined: 0 } },
+        alias: { production: { legacyCombined: 0 } },
+        ambiguous: { production: { legacyCombined: 0 } },
+        unsupported: { production: { legacyCombined: 0 } },
+      },
+      legacySemanticAuthority: frozenAuthority,
+    },
+  };
+  const previousPolicy = {
+    ...structuredClone(common),
+    writers: [structuredClone(actionWriter)],
+    progress: {
+      latestPhase: "P4.1",
+      checkpoints: [baselineMetrics],
+      retiredLegacySemanticAuthority:
+        structuredClone(retiredAuthority),
+    },
+  };
+  const entries = memberships
+    .map(({ key }, index) =>
+      createCallerActionBackfillEntry({
+        index,
+        callerPath,
+        callerBindingId,
+        callerBindingIdentity,
+        key,
+      })
+    )
+    .sort((left, right) =>
+      left.retiredMembershipIdentity.localeCompare(
+        right.retiredMembershipIdentity,
+      )
+      || left.actionCallEdgeIdentity.localeCompare(
+        right.actionCallEdgeIdentity,
+      )
+    )
+    .slice(0, ledgerEntryCount);
+  const currentPolicy = {
+    ...structuredClone(common),
+    writers: [actionWriter],
+    progress: {
+      latestPhase: "P4.2a",
+      checkpoints: [baselineMetrics],
+      retiredLegacySemanticAuthority: retiredAuthority,
+      callerToActionLedger: {
+        schemaVersion: 1,
+        entries,
+      },
+    },
+  };
+  return {
+    previousPolicy,
+    currentPolicy,
+  };
+}
+
 test("production binding discovery rejects non-named access to the canonical state facade", () => {
   for (const { source, filePath } of [
     {
@@ -539,5 +742,90 @@ test("checker transition freezes every previously committed progress checkpoint"
   assert.ok(
     codes.includes("p4-baseline-progress-checkpoint-drift"),
     codes.join(", "),
+  );
+});
+
+test("checker transition preserves caller-to-action ledger history append-only", () => {
+  const backfill = createP41ToP42aBackfillPolicies();
+  const previousPolicy = structuredClone(backfill.currentPolicy);
+  const removed = structuredClone(previousPolicy);
+  removed.progress.latestPhase = "P4.2b";
+  removed.progress.callerToActionLedger.entries.pop();
+  const modified = structuredClone(previousPolicy);
+  modified.progress.latestPhase = "P4.2b";
+  modified.progress.callerToActionLedger.entries[0].actionExportName =
+    "replaceBootMetricsState";
+
+  const missingCodes = policyChecker.validateStateWriterPolicyTransition({
+    previousPolicy,
+    currentPolicy: removed,
+  }).map(({ code }) => code);
+  assert.ok(
+    missingCodes.includes("caller-action-ledger-history-missing"),
+    missingCodes.join(", "),
+  );
+
+  const driftCodes = policyChecker.validateStateWriterPolicyTransition({
+    previousPolicy,
+    currentPolicy: modified,
+  }).map(({ code }) => code);
+  assert.ok(
+    driftCodes.includes("caller-action-ledger-history-drift"),
+    driftCodes.join(", "),
+  );
+});
+
+test("checker transition permits the complete one-time P4.1 to P4.2a ledger backfill", () => {
+  const { previousPolicy, currentPolicy } =
+    createP41ToP42aBackfillPolicies();
+  const callerActionViolations =
+    policyChecker.validateStateWriterPolicyTransition({
+      previousPolicy,
+      currentPolicy,
+    }).filter(({ code }) => String(code).startsWith("caller-action-ledger-"));
+
+  assert.deepEqual(callerActionViolations, []);
+});
+
+test("checker transition locks one-time caller-to-action backfill provenance", () => {
+  const { previousPolicy, currentPolicy } =
+    createP41ToP42aBackfillPolicies();
+  const forged = structuredClone(currentPolicy);
+  forged.progress.callerToActionLedger.entries[0] = {
+    ...forged.progress.callerToActionLedger.entries[0],
+    retiredInPhase: "P4.0",
+    recordedInPhase: "P4.1",
+    backfilled: false,
+  };
+
+  const violations = policyChecker.validateStateWriterPolicyTransition({
+    previousPolicy,
+    currentPolicy: forged,
+  });
+
+  assert.ok(
+    violations.some(
+      ({ code }) =>
+        code === "caller-action-ledger-backfill-provenance-invalid",
+    ),
+    JSON.stringify(violations, null, 2),
+  );
+});
+
+test("checker transition rejects a 35 of 36 P4.1 to P4.2a ledger backfill", () => {
+  const { previousPolicy, currentPolicy } =
+    createP41ToP42aBackfillPolicies({
+      ledgerEntryCount: 35,
+    });
+  const violations = policyChecker.validateStateWriterPolicyTransition({
+    previousPolicy,
+    currentPolicy,
+  });
+
+  assert.ok(
+    violations.some(
+      ({ code }) => code === "caller-action-ledger-backfill-incomplete",
+    ),
+    JSON.stringify(violations, null, 2),
   );
 });

@@ -6,6 +6,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
 import {
+  buildFrozenDerivedAliasTaintBaseline,
+  buildIncrementalDerivedAliasTaintBaseline,
+  buildLegacyStateWriterSemanticAuthority,
+  buildStateWriterDerivedAliasTaintModeManifest,
+  buildUnbaselinedLegacyDiagnosticCounts,
+  composeLegacySemanticBaseline,
   P4_CLOSEOUT_DIRECT_FILES_TARGET,
   P4_CLOSEOUT_MEMBERSHIP_RATIO,
   readStateWriterPolicy,
@@ -168,9 +174,308 @@ function validateProgressCheckpointHistoryTransition({
   return violations;
 }
 
+export function validateCallerToActionLedgerHistoryTransition({
+  previousPolicy = null,
+  currentPolicy = {},
+} = {}) {
+  if (!previousPolicy) {
+    return [];
+  }
+  const previousEntries = Array.isArray(
+    previousPolicy?.progress?.callerToActionLedger?.entries,
+  )
+    ? previousPolicy.progress.callerToActionLedger.entries
+    : [];
+  const currentEntries = Array.isArray(
+    currentPolicy?.progress?.callerToActionLedger?.entries,
+  )
+    ? currentPolicy.progress.callerToActionLedger.entries
+    : [];
+  const previousPhase = String(
+    previousPolicy?.progress?.latestPhase || "",
+  );
+  const currentPhase = String(
+    currentPolicy?.progress?.latestPhase || "",
+  );
+  const isOneTimeBackfill =
+    previousEntries.length === 0
+    && previousPhase === "P4.1"
+    && currentPhase === "P4.2a";
+  const violations = [];
+  const previouslyRetiredMemberships = new Set(
+    previousPolicy?.progress?.retiredLegacySemanticAuthority
+      ?.memberships || [],
+  );
+  const currentByRetiredIdentity = new Map(
+    currentEntries.map((entry) => [
+      entry.retiredMembershipIdentity,
+      entry,
+    ]),
+  );
+  for (const previousEntry of previousEntries) {
+    const currentEntry = currentByRetiredIdentity.get(
+      previousEntry.retiredMembershipIdentity,
+    );
+    if (!currentEntry) {
+      violations.push({
+        code: "caller-action-ledger-history-missing",
+        retiredMembershipIdentity:
+          previousEntry.retiredMembershipIdentity,
+      });
+      continue;
+    }
+    if (!isDeepStrictEqual(previousEntry, currentEntry)) {
+      violations.push({
+        code: "caller-action-ledger-history-drift",
+        retiredMembershipIdentity:
+          previousEntry.retiredMembershipIdentity,
+        expected: previousEntry,
+        actual: currentEntry,
+      });
+    }
+  }
+  const retiredMemberships = new Set(
+    currentPolicy?.progress?.retiredLegacySemanticAuthority
+      ?.memberships || [],
+  );
+  const ledgerMemberships = new Set(
+    currentEntries.map(
+      ({ retiredMembershipIdentity }) =>
+        retiredMembershipIdentity,
+    ),
+  );
+  const missingRetiredProofs = [...retiredMemberships]
+    .filter((identity) => !ledgerMemberships.has(identity));
+  const extraProofs = [...ledgerMemberships]
+    .filter((identity) => !retiredMemberships.has(identity));
+  if (
+    isOneTimeBackfill
+    && (
+      missingRetiredProofs.length
+      || extraProofs.length
+      || currentEntries.length !== retiredMemberships.size
+    )
+  ) {
+    violations.push({
+      code: "caller-action-ledger-backfill-incomplete",
+      expected: retiredMemberships.size,
+      actual: currentEntries.length,
+      missingRetiredMembershipIdentities: missingRetiredProofs,
+      extraRetiredMembershipIdentities: extraProofs,
+    });
+  }
+  if (isOneTimeBackfill) {
+    for (const entry of currentEntries) {
+      const wasPreviouslyRetired =
+        previouslyRetiredMemberships.has(
+          entry.retiredMembershipIdentity,
+        );
+      const provenanceValid = wasPreviouslyRetired
+        ? (
+          entry.backfilled === true
+          && entry.retiredInPhase === previousPhase
+          && entry.recordedInPhase === currentPhase
+        )
+        : (
+          entry.backfilled === false
+          && entry.retiredInPhase === currentPhase
+          && entry.recordedInPhase === currentPhase
+        );
+      if (!provenanceValid) {
+        violations.push({
+          code:
+            "caller-action-ledger-backfill-provenance-invalid",
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          expected: wasPreviouslyRetired
+            ? {
+              backfilled: true,
+              retiredInPhase: previousPhase,
+              recordedInPhase: currentPhase,
+            }
+            : {
+              backfilled: false,
+              retiredInPhase: currentPhase,
+              recordedInPhase: currentPhase,
+            },
+          actual: {
+            backfilled: entry.backfilled,
+            retiredInPhase: entry.retiredInPhase,
+            recordedInPhase: entry.recordedInPhase,
+          },
+        });
+      }
+    }
+  }
+  if (!isOneTimeBackfill) {
+    const previousIdentities = new Set(
+      previousEntries.map(
+        ({ retiredMembershipIdentity }) =>
+          retiredMembershipIdentity,
+      ),
+    );
+    for (const entry of currentEntries) {
+      if (previousIdentities.has(entry.retiredMembershipIdentity)) {
+        continue;
+      }
+      if (entry.recordedInPhase !== currentPhase) {
+        violations.push({
+          code: "caller-action-ledger-entry-invalid",
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          reason: "new-entry-recorded-phase-mismatch",
+          expected: currentPhase,
+          actual: entry.recordedInPhase,
+        });
+      }
+      if (
+        entry.backfilled !== false
+        || entry.retiredInPhase !== currentPhase
+      ) {
+        violations.push({
+          code: "caller-action-ledger-entry-invalid",
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          reason: "new-entry-provenance-mismatch",
+          expected: {
+            backfilled: false,
+            retiredInPhase: currentPhase,
+            recordedInPhase: currentPhase,
+          },
+          actual: {
+            backfilled: entry.backfilled,
+            retiredInPhase: entry.retiredInPhase,
+            recordedInPhase: entry.recordedInPhase,
+          },
+        });
+      }
+    }
+  }
+  return violations;
+}
+
+function stringMultisetCounts(values = []) {
+  const counts = new Map();
+  for (const value of Array.isArray(values) ? values : []) {
+    const normalized = String(value);
+    counts.set(normalized, (counts.get(normalized) || 0) + 1);
+  }
+  return counts;
+}
+
+export function validateDerivedAliasTaintBaselineTransition({
+  previousSchemaVersion = 1,
+  currentSchemaVersion = 1,
+  previousPhase = "",
+  currentPhase = "",
+  previousBaseline = null,
+  currentBaseline = null,
+  expectedBaseline = null,
+} = {}) {
+  const violations = [];
+  const previousVersion = Number(previousSchemaVersion);
+  const currentVersion = Number(currentSchemaVersion);
+  if (currentVersion < previousVersion) {
+    violations.push({
+      code: "derived-alias-taint-schema-version-regressed",
+      previousSchemaVersion: previousVersion,
+      currentSchemaVersion: currentVersion,
+    });
+    return violations;
+  }
+  if (currentVersion < 2) {
+    return violations;
+  }
+  if (!currentBaseline || typeof currentBaseline !== "object") {
+    return [{
+      code: "derived-alias-taint-baseline-transition-missing",
+    }];
+  }
+  if (
+    previousVersion < 2
+    && (
+      String(previousPhase || "") !== "P4.1"
+      || String(currentPhase || "") !== "P4.2a"
+    )
+  ) {
+    violations.push({
+      code: "derived-alias-taint-baseline-transition-phase-invalid",
+      previousPhase: String(previousPhase || ""),
+      currentPhase: String(currentPhase || ""),
+    });
+  }
+  if (!expectedBaseline) {
+    violations.push({
+      code: "derived-alias-taint-baseline-source-proof-missing",
+    });
+  } else if (!isDeepStrictEqual(currentBaseline, expectedBaseline)) {
+    violations.push({
+      code: "derived-alias-taint-baseline-source-proof-mismatch",
+      expected: expectedBaseline,
+      actual: currentBaseline,
+    });
+  }
+  if (previousVersion < 2 || !previousBaseline) {
+    return violations;
+  }
+  if (
+    Number(currentBaseline.algorithmVersion)
+      !== Number(previousBaseline.algorithmVersion)
+    || String(currentBaseline.sourceBaseSha || "")
+      !== String(previousBaseline.sourceBaseSha || "")
+  ) {
+    violations.push({
+      code: "derived-alias-taint-baseline-identity-drift",
+    });
+  }
+  const currentPaths = new Set(
+    Array.isArray(currentBaseline.paths)
+      ? currentBaseline.paths.map(String)
+      : [],
+  );
+  for (
+    const relativePath of
+      Array.isArray(previousBaseline.paths)
+        ? previousBaseline.paths
+        : []
+  ) {
+    if (!currentPaths.has(String(relativePath))) {
+      violations.push({
+        code: "derived-alias-taint-baseline-path-regressed",
+        path: String(relativePath),
+      });
+    }
+  }
+  for (const section of ["ambiguousSites", "unsupportedSites"]) {
+    const currentCounts = stringMultisetCounts(
+      currentBaseline?.diagnosticDelta?.[section],
+    );
+    for (
+      const [signature, previousCount] of
+        stringMultisetCounts(
+          previousBaseline?.diagnosticDelta?.[section],
+        )
+    ) {
+      const currentCount = currentCounts.get(signature) || 0;
+      if (currentCount < previousCount) {
+        violations.push({
+          code:
+            "derived-alias-taint-baseline-diagnostic-regressed",
+          section,
+          signature,
+          previousCount,
+          currentCount,
+        });
+      }
+    }
+  }
+  return violations;
+}
+
 export function validateStateWriterPolicyTransition({
   previousPolicy = null,
   currentPolicy = {},
+  expectedDerivedAliasTaintBaseline = null,
 } = {}) {
   if (!previousPolicy) {
     return [];
@@ -178,6 +483,10 @@ export function validateStateWriterPolicyTransition({
   const violations = [
     ...validateFrozenP4ProgressCheckpoint(currentPolicy),
     ...validateProgressCheckpointHistoryTransition({
+      previousPolicy,
+      currentPolicy,
+    }),
+    ...validateCallerToActionLedgerHistoryTransition({
       previousPolicy,
       currentPolicy,
     }),
@@ -189,29 +498,119 @@ export function validateStateWriterPolicyTransition({
       actual: currentPolicy?.baseline ?? null,
     });
   }
-  if (!isDeepStrictEqual(previousPolicy?.baselines, currentPolicy?.baselines)) {
+  const {
+    derivedAliasTaint: previousDerivedAliasTaint,
+    ...previousFrozenBaselines
+  } = previousPolicy?.baselines || {};
+  const {
+    derivedAliasTaint: currentDerivedAliasTaint,
+    ...currentFrozenBaselines
+  } = currentPolicy?.baselines || {};
+  if (
+    !isDeepStrictEqual(
+      previousFrozenBaselines,
+      currentFrozenBaselines,
+    )
+  ) {
     violations.push({
       code: "policy-baselines-drift",
-      expected: previousPolicy?.baselines ?? null,
-      actual: currentPolicy?.baselines ?? null,
+      expected: previousFrozenBaselines,
+      actual: currentFrozenBaselines,
     });
   }
   violations.push(
+    ...validateDerivedAliasTaintBaselineTransition({
+      previousSchemaVersion: previousPolicy?.schemaVersion,
+      currentSchemaVersion: currentPolicy?.schemaVersion,
+      previousPhase: previousPolicy?.progress?.latestPhase,
+      currentPhase: currentPolicy?.progress?.latestPhase,
+      previousBaseline: previousDerivedAliasTaint,
+      currentBaseline: currentDerivedAliasTaint,
+      expectedBaseline: expectedDerivedAliasTaintBaseline,
+    }),
+  );
+  const effectiveFrozenLegacySemanticAuthority =
+    composeLegacySemanticBaseline({
+      legacyBaseline:
+        previousPolicy?.baselines?.legacySemanticAuthority,
+      derivedAliasTaint: currentDerivedAliasTaint,
+    });
+  const effectivePreviousLegacySemanticAuthority =
+    composeLegacySemanticBaseline({
+      legacyBaseline:
+        buildLegacyStateWriterSemanticAuthority(
+          previousPolicy?.writers,
+        ),
+      derivedAliasTaint:
+        buildIncrementalDerivedAliasTaintBaseline({
+          currentBaseline: currentDerivedAliasTaint,
+          previousBaseline: previousDerivedAliasTaint,
+        }),
+    });
+  violations.push(
     ...validateLegacyStateWriterSemanticLedger({
-      baseline: previousPolicy?.baselines?.legacySemanticAuthority,
+      baseline: effectiveFrozenLegacySemanticAuthority,
       writers: currentPolicy?.writers,
       retired:
         currentPolicy?.progress?.retiredLegacySemanticAuthority,
       previousWriters: previousPolicy?.writers,
+      previousAuthorityBaseline:
+        effectivePreviousLegacySemanticAuthority,
       previousRetired:
         previousPolicy?.progress?.retiredLegacySemanticAuthority,
     }).violations,
     ...validateLegacyMembershipRetirementReplacements({
       previousWriters: previousPolicy?.writers,
       writers: currentPolicy?.writers,
+      callerToActionLedger:
+        currentPolicy?.progress?.callerToActionLedger,
     }),
   );
   return violations;
+}
+
+export async function recomputeDerivedAliasTaintBaseline({
+  previousPolicy = null,
+  currentPolicy = {},
+  candidatePaths = [],
+  runGit,
+  readSourceAtRevision,
+} = {}) {
+  if (Number(currentPolicy?.schemaVersion) < 2) {
+    return null;
+  }
+  const sourceBaseSha = String(
+    currentPolicy?.baseline?.sourceBaseSha || "",
+  );
+  const manifest =
+    buildStateWriterDerivedAliasTaintModeManifest({
+      previousPolicy,
+      sourceBaseSha,
+      candidatePaths,
+      ...(runGit ? { runGit } : {}),
+    });
+  const strictProductionPaths = Object.entries(
+    manifest.modeByPath,
+  )
+    .filter(
+      ([relativePath, mode]) =>
+        !relativePath.startsWith("tests/")
+        && mode === "strict",
+    )
+    .map(([relativePath]) => relativePath);
+  const expectedPaths = [
+    ...new Set([
+      ...(previousPolicy?.baselines?.derivedAliasTaint?.paths || []),
+      ...strictProductionPaths,
+    ]),
+  ].map(String).sort((left, right) => left.localeCompare(right));
+  return buildFrozenDerivedAliasTaintBaseline({
+    sourceBaseSha,
+    relativePaths: expectedPaths,
+    legacySemanticBaseline:
+      currentPolicy?.baselines?.legacySemanticAuthority,
+    ...(readSourceAtRevision ? { readSourceAtRevision } : {}),
+  });
 }
 
 function loadPreviousStateWriterPolicy({
@@ -473,12 +872,21 @@ export async function buildStateWriterPolicyReport({
     policy: loadedPolicy,
     legacyAllowlistPaths: inventory.legacyAllowlistPaths,
     scans: inventory.scans,
+    actionDelegations: inventory.actionDelegations,
   });
   const defaultStateReport = await buildDefaultStateOwnershipReport();
   const defaultState = compareDefaultStateBaselines(
     loadedPolicy,
     defaultStateReport,
   );
+  const currentLegacySemanticAuthority =
+    buildLegacyStateWriterSemanticAuthority(loadedPolicy?.writers);
+  const unbaselinedLegacyDiagnosticCounts =
+    buildUnbaselinedLegacyDiagnosticCounts({
+      legacySemanticAuthority: currentLegacySemanticAuthority,
+      derivedAliasTaint:
+        loadedPolicy?.baselines?.derivedAliasTaint,
+    });
   const currentProgressMetrics = {
     productionLegacyDirectFiles:
       validation.metrics.legacyDirectFiles.production,
@@ -489,9 +897,9 @@ export async function buildStateWriterPolicyReport({
     productionLegacyAliasSites:
       validation.metrics.bindingScoped.sites.alias.production.legacyCombined,
     productionLegacyAmbiguousSites:
-      validation.metrics.bindingScoped.sites.ambiguous.production.legacyCombined,
+      unbaselinedLegacyDiagnosticCounts.ambiguousSites,
     productionLegacyUnsupportedSites:
-      validation.metrics.bindingScoped.sites.unsupported.production.legacyCombined,
+      unbaselinedLegacyDiagnosticCounts.unsupportedSites,
   };
   const progression = validateStateWriterPolicyProgression({
     previousPolicy: loadedPolicy,
@@ -518,15 +926,51 @@ export async function buildStateWriterPolicyReport({
       policy: previousPolicy,
       violations: [],
     };
+  let expectedDerivedAliasTaintBaseline = null;
+  const derivedAliasTaintProofViolations = [];
+  if (Number(loadedPolicy?.schemaVersion) >= 2) {
+    try {
+      expectedDerivedAliasTaintBaseline =
+        await recomputeDerivedAliasTaintBaseline({
+          previousPolicy: previousPolicyState.policy,
+          currentPolicy: loadedPolicy,
+          candidatePaths: Object.keys(
+            inventory?.derivedAliasTaintModeManifest?.modeByPath
+              || {},
+          ),
+        });
+    } catch (error) {
+      derivedAliasTaintProofViolations.push({
+        code: "derived-alias-taint-baseline-source-proof-failed",
+        message: String(error?.message || error),
+      });
+    }
+  }
   const transitionViolations = previousPolicyState.policy
     ? validateStateWriterPolicyTransition({
       previousPolicy: previousPolicyState.policy,
       currentPolicy: loadedPolicy,
+      expectedDerivedAliasTaintBaseline,
     })
-    : [];
+    : validateDerivedAliasTaintBaselineTransition({
+      previousSchemaVersion: 1,
+      currentSchemaVersion: loadedPolicy?.schemaVersion,
+      previousPhase: previousPolicyState.policy?.progress?.latestPhase,
+      currentPhase: loadedPolicy?.progress?.latestPhase,
+      currentBaseline:
+        loadedPolicy?.baselines?.derivedAliasTaint,
+      expectedBaseline: expectedDerivedAliasTaintBaseline,
+    });
   const frozenProgressViolations = previousPolicyState.policy
     ? []
     : validateFrozenP4ProgressCheckpoint(loadedPolicy);
+  const effectiveLoadedLegacySemanticAuthority =
+    composeLegacySemanticBaseline({
+      legacyBaseline:
+        loadedPolicy?.baselines?.legacySemanticAuthority,
+      derivedAliasTaint:
+        loadedPolicy?.baselines?.derivedAliasTaint,
+    });
   const violations = [
     ...validation.violations,
     ...inventory.unknownCandidateBindings.map((binding) => ({
@@ -542,16 +986,17 @@ export async function buildStateWriterPolicyReport({
     ...frozenProgressViolations,
     ...identity.violations,
     ...previousPolicyState.violations,
+    ...derivedAliasTaintProofViolations,
     ...transitionViolations,
     ...validateFrozenCloseoutTargets(loadedPolicy?.baselines),
     ...validateLegacyStateWriterSemanticAuthority({
-      baseline: loadedPolicy?.baselines?.legacySemanticAuthority,
+      baseline: effectiveLoadedLegacySemanticAuthority,
       writers: loadedPolicy?.writers,
     }).violations,
     ...(previousPolicyState.policy
       ? []
       : validateLegacyStateWriterSemanticLedger({
-        baseline: loadedPolicy?.baselines?.legacySemanticAuthority,
+        baseline: effectiveLoadedLegacySemanticAuthority,
         writers: loadedPolicy?.writers,
         retired:
           loadedPolicy?.progress?.retiredLegacySemanticAuthority,

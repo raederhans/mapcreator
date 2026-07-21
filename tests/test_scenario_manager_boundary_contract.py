@@ -70,12 +70,18 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         self.assertIn("enterScenarioFatalRecovery({", content)
         self.assertIn('loadScenarioBundle(request.scenarioId, { bundleLevel: "full" })', content)
         self.assertIn("async function runScenarioApplyRequest(request) {", content)
-        self.assertIn("runtimeState.scenarioApplyInFlight = true;", content)
+        self.assertIn("beginScenarioApplyRequestState(runtimeState, {", content)
+        self.assertIn("clearActiveScenarioApplyRequestState(runtimeState);", content)
         self.assertIn("activeScenarioApplyPromise = (async () => {", content)
         self.assertIn("syncScenarioUi();", content)
         self.assertIn("getScenarioDefaultCountryCode as getBundleLoaderDefaultCountryCode", content)
         self.assertIn("function canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId)", content)
-        self.assertIn("if (canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId)) {", content)
+        self.assertIn("const reuseCachedScenarioBundle =", content)
+        self.assertIn("const reuseActiveScenarioApply = Boolean(", content)
+        self.assertIn("reuseCachedScenarioBundle || reuseActiveScenarioApply", content)
+        self.assertIn(": nextScenarioApplyEpoch(runtimeState, {", content)
+        self.assertIn("if (reuseCachedScenarioBundle) {", content)
+        self.assertIn("if (reuseActiveScenarioApply) {", content)
         self.assertIn("const cachedManifest = cachedScenarioBundle.manifest || null;", content)
         self.assertIn("const cachedBaselineHash = String(getScenarioBaselineHashFromBundle(cachedScenarioBundle) || \"\").trim();", content)
         self.assertIn("const requiresMeshPack = !!String(cachedManifest?.mesh_pack_url || \"\").trim();", content)
@@ -135,13 +141,19 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("prepareScenarioActivationContext(bundle)", content)
         self.assertIn("buildScenarioActivationCommitState(bundle, staged)", content)
-        self.assertIn("runScenarioActivationPreCommitPhase(bundle, staged)", content)
-        self.assertIn("commitScenarioActivationState(bundle, staged)", content)
+        self.assertIn("publishScenarioActivationStateObservers(bundle, staged)", content)
+        self.assertIn(
+            "buildScenarioActivationTransactionPatch(bundle, staged)",
+            content,
+        )
         self.assertIn("runScenarioActivationPostCommitPhase(bundle, staged)", content)
         self.assertIn("commitScenarioChunkRuntimeState(bundle, staged)", content)
         self.assertIn("prepareScenarioApplyState", content)
         self.assertIn("applyPreparedScenarioState", content)
-        self.assertIn("commitScenarioActivationRuntimeState(runtimeState, nextRuntimeState);", content)
+        self.assertIn("commitScenarioActivationAuthorityState(", content)
+        self.assertIn("commitScenarioReadinessState(", content)
+        self.assertIn("commitScenarioPresentationState(", content)
+        self.assertIn("commitScenarioPaletteState(", content)
         self.assertNotIn("runtimeState.scenarioRuntimeTopologyData =", content)
         self.assertNotIn("runtimeState.scenarioBaselineOwnersByFeatureId =", content)
         self.assertNotIn('runtimeState.countryNames = staged.mapSemanticMode', content)
@@ -169,9 +181,10 @@ class ScenarioManagerBoundaryContractTest(unittest.TestCase):
         body = match.group("body")
         self.assertRegex(
             body,
-            r"runScenarioActivationPreCommitPhase\(bundle,\s*staged\);"
-            r"[\s\S]*commitScenarioActivationState\(bundle,\s*staged\);"
-            r"[\s\S]*runScenarioActivationPostCommitPhase\(bundle,\s*staged\);",
+            r"assertCompleteScenarioActivationTransactionPatch\(transactionPatch\);"
+            r"[\s\S]*validateScenarioActivationCommitState\("
+            r"[\s\S]*commitScenarioActivationState\(transactionPatch,\s*staged\);"
+            r"[\s\S]*publishScenarioActivationObservers\(bundle,\s*staged\);",
         )
 
     def test_commit_scenario_activation_runtime_state_stays_pure_state_commit(self):

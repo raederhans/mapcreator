@@ -87,9 +87,18 @@ class StateWriteGuardrailContractTest(unittest.TestCase):
             if P4_ACTIONS_DIR.exists()
             else []
         )
+        policy = json.loads(P4_POLICY_FILE.read_text(encoding="utf-8"))
+        expected_action_modules = sorted(
+            writer["path"]
+            for writer in policy.get("writers", [])
+            if writer.get("authority") == "domain-action"
+            and writer.get("path", "").startswith(
+                "js/core/state/actions/"
+            )
+        )
         self.assertEqual(
             [path.relative_to(REPO_ROOT).as_posix() for path in action_modules],
-            ["js/core/state/actions/boot_actions.js"],
+            expected_action_modules,
         )
 
     def test_allowlist_script_matches_current_workspace(self):

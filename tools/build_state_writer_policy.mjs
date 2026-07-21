@@ -5,15 +5,26 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
+  DERIVED_ALIAS_TAINT_MODES,
   discoverFunctionParameterBindings,
+  normalizeDerivedAliasTaintMode,
+  scanStateMutationInventory,
   scanStateMutations,
 } from "./state_writer_inventory.mjs";
 import {
+  findStateActionCrossFileMigrationContractEntry,
+  getStateTargetPureReaderContractEntriesForModule,
   getStateActionDelegationContractEntriesForModule,
+  inspectStateTargetPureReaderFunctionSource,
+  STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
   STATE_ACTION_DELEGATION_CONTRACT,
+  STATE_TARGET_PURE_READER_CONTRACT,
+  validateStateActionCrossFileMigrationContract,
   validateStateActionDelegationContract,
+  validateStateActionModulePhaseAdmissions,
   validateStateActionModuleSource,
   validateStateActionPolicyBindings,
+  validateStateTargetPureReaderContract,
 } from "./state_action_delegation_contract.mjs";
 import {
   buildCanonicalStateKeyAuthorityIndex,
@@ -50,6 +61,7 @@ const EXCLUDED_PARAMETER_BINDINGS = new Set([
   "js/core/map_renderer.js#mergeHistorySnapshot#target",
   "js/core/map_renderer.js#recordScenarioPoliticalBackgroundDeferredFullCacheReadyRepaintDeferred#state",
   "js/core/renderer/spatial_index_runtime_builders.js#appendLandIndexEntriesRange#state",
+  "js/core/scenario_resources.js#scheduleScenarioDeferredBundleMetadataLoad#bundle",
   "js/core/state/color_state.js#replaceObjectContents#target",
   "js/ui/toolbar/special_zones_workbench_controller.js#renderActions#state",
   "js/ui/toolbar/special_zones_workbench_controller.js#renderLayerList#state",
@@ -172,7 +184,7 @@ const LEGACY_BINDING_AUTHORITIES = new Set([
   "legacy-target",
 ]);
 
-function stableLegacyBindingIdentity(binding = {}) {
+export function buildStableStateBindingIdentity(binding = {}) {
   const isFunctionParameter = binding.kind === "function-parameter";
   return JSON.stringify({
     kind: String(binding.kind || ""),
@@ -188,6 +200,126 @@ function stableLegacyBindingIdentity(binding = {}) {
     aliasSources: (binding.aliasSources || []).map(String),
     aliasOperators: (binding.aliasOperators || []).map(String),
   });
+}
+
+const stableLegacyBindingIdentity = buildStableStateBindingIdentity;
+
+export function buildStateActionCallEdgeIdentity({
+  callerPath = "",
+  callerBindingIdentity = "",
+  enclosingFunctionIdentity = "",
+  actionModulePath = "",
+  actionExportName = "",
+  targetArgumentIndex = 0,
+  occurrenceIndex = 0,
+} = {}) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      callerPath: normalizeRelativePath(callerPath),
+      callerBindingIdentity: String(callerBindingIdentity || ""),
+      enclosingFunctionIdentity: String(
+        enclosingFunctionIdentity || "",
+      ),
+      actionModulePath: normalizeRelativePath(actionModulePath),
+      actionExportName: String(actionExportName || ""),
+      targetArgumentIndex: Number(targetArgumentIndex),
+      occurrenceIndex: Number(occurrenceIndex),
+    }))
+    .digest("hex");
+}
+
+function buildLegacyStateActionCallEdgeIdentity({
+  callerPath = "",
+  callerBindingIdentity = "",
+  actionModulePath = "",
+  actionExportName = "",
+  targetArgumentIndex = 0,
+  occurrenceIndex = 0,
+} = {}) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      callerPath: normalizeRelativePath(callerPath),
+      callerBindingIdentity: String(callerBindingIdentity || ""),
+      actionModulePath: normalizeRelativePath(actionModulePath),
+      actionExportName: String(actionExportName || ""),
+      targetArgumentIndex: Number(targetArgumentIndex),
+      occurrenceIndex: Number(occurrenceIndex),
+    }))
+    .digest("hex");
+}
+
+export function parseLegacyMembershipSemanticSignature(signature = "") {
+  const source = String(signature || "");
+  const firstSeparator = source.indexOf("|");
+  if (firstSeparator <= 0 || source[firstSeparator + 1] !== "{") {
+    return null;
+  }
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let bindingEnd = -1;
+  for (let index = firstSeparator + 1; index < source.length; index += 1) {
+    const character = source[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+    if (character === "\"") {
+      inString = true;
+    } else if (character === "{") {
+      depth += 1;
+    } else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        bindingEnd = index + 1;
+        break;
+      }
+    }
+  }
+  if (
+    bindingEnd <= firstSeparator + 1
+    || source[bindingEnd] !== "|"
+  ) {
+    return null;
+  }
+  let binding;
+  try {
+    binding = JSON.parse(source.slice(firstSeparator + 1, bindingEnd));
+  } catch {
+    return null;
+  }
+  const tail = source.slice(bindingEnd + 1).split("|");
+  if (tail.length !== 4 || tail.some((entry) => !entry)) {
+    return null;
+  }
+  const [
+    domain,
+    migrationPhase,
+    operation,
+    key,
+  ] = tail;
+  return {
+    signature: source,
+    callerPath: normalizeRelativePath(source.slice(0, firstSeparator)),
+    callerBindingIdentity: JSON.stringify(binding),
+    callerBinding: binding,
+    domain,
+    migrationPhase,
+    operation,
+    key,
+    replacementKey: [
+      domain,
+      migrationPhase,
+      operation,
+      key,
+    ].join("|"),
+  };
 }
 
 function stableSiteFingerprint(site = {}) {
@@ -391,6 +523,372 @@ const LEGACY_SEMANTIC_SECTIONS = Object.freeze([
   "unsupportedSites",
 ]);
 
+const DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS = Object.freeze([
+  "ambiguousSites",
+  "unsupportedSites",
+]);
+
+export const DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION = 1;
+
+function subtractSignatureMultiset(observed = [], allowed = []) {
+  const remaining = signatureCounts(allowed);
+  const delta = [];
+  for (const signature of Array.isArray(observed) ? observed : []) {
+    const normalized = String(signature);
+    const allowedCount = remaining.get(normalized) || 0;
+    if (allowedCount > 0) {
+      remaining.set(normalized, allowedCount - 1);
+    } else {
+      delta.push(normalized);
+    }
+  }
+  return delta.sort();
+}
+
+export function buildDerivedAliasTaintDiagnosticDelta({
+  legacySemanticBaseline = {},
+  strictSemanticAuthority = {},
+} = {}) {
+  return Object.fromEntries(
+    DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS.map((section) => [
+      section,
+      subtractSignatureMultiset(
+        strictSemanticAuthority?.[section],
+        legacySemanticBaseline?.[section],
+      ),
+    ]),
+  );
+}
+
+export function buildUnbaselinedLegacyDiagnosticCounts({
+  legacySemanticAuthority = {},
+  derivedAliasTaint = null,
+} = {}) {
+  return {
+    ambiguousSites: subtractSignatureMultiset(
+      legacySemanticAuthority?.ambiguousSites,
+      derivedAliasTaint?.diagnosticDelta?.ambiguousSites,
+    ).length,
+    unsupportedSites: subtractSignatureMultiset(
+      legacySemanticAuthority?.unsupportedSites,
+      derivedAliasTaint?.diagnosticDelta?.unsupportedSites,
+    ).length,
+  };
+}
+
+export function buildIncrementalDerivedAliasTaintBaseline({
+  currentBaseline = null,
+  previousBaseline = null,
+} = {}) {
+  if (!currentBaseline) {
+    return null;
+  }
+  return {
+    algorithmVersion: currentBaseline.algorithmVersion,
+    sourceBaseSha: currentBaseline.sourceBaseSha,
+    paths: subtractSignatureMultiset(
+      currentBaseline.paths,
+      previousBaseline?.paths,
+    ),
+    diagnosticDelta: Object.fromEntries(
+      DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS.map((section) => [
+        section,
+        subtractSignatureMultiset(
+          currentBaseline?.diagnosticDelta?.[section],
+          previousBaseline?.diagnosticDelta?.[section],
+        ),
+      ]),
+    ),
+  };
+}
+
+export function composeLegacySemanticBaseline({
+  legacyBaseline = {},
+  derivedAliasTaint = null,
+} = {}) {
+  const composed = Object.fromEntries(
+    LEGACY_SEMANTIC_SECTIONS.map((section) => [
+      section,
+      [...(Array.isArray(legacyBaseline?.[section])
+        ? legacyBaseline[section]
+        : [])].map(String).sort(),
+    ]),
+  );
+  for (const section of DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS) {
+    composed[section] = [
+      ...composed[section],
+      ...(Array.isArray(
+        derivedAliasTaint?.diagnosticDelta?.[section],
+      )
+        ? derivedAliasTaint.diagnosticDelta[section]
+        : []),
+    ].map(String).sort();
+  }
+  return {
+    ...composed,
+    collisions: [...(Array.isArray(legacyBaseline?.collisions)
+      ? legacyBaseline.collisions
+      : [])].map(String).sort(),
+  };
+}
+
+function validateDerivedAliasTaintBaseline(
+  baseline,
+  { sourceBaseSha = "" } = {},
+) {
+  const violations = [];
+  if (!baseline || typeof baseline !== "object") {
+    return [{ code: "derived-alias-taint-baseline-missing" }];
+  }
+  if (
+    Number(baseline.algorithmVersion)
+    !== DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION
+  ) {
+    violations.push({
+      code: "derived-alias-taint-baseline-algorithm-invalid",
+    });
+  }
+  if (
+    !/^[0-9a-f]{40}$/i.test(String(baseline.sourceBaseSha || ""))
+    || (
+      sourceBaseSha
+      && String(baseline.sourceBaseSha)
+        !== String(sourceBaseSha)
+    )
+  ) {
+    violations.push({
+      code: "derived-alias-taint-baseline-source-invalid",
+    });
+  }
+  const paths = normalizeCandidatePathList(baseline.paths);
+  if (
+    JSON.stringify(paths)
+    !== JSON.stringify(baseline.paths || [])
+  ) {
+    violations.push({
+      code: "derived-alias-taint-baseline-paths-invalid",
+    });
+  }
+  for (const section of DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS) {
+    const signatures = Array.isArray(
+      baseline?.diagnosticDelta?.[section],
+    )
+      ? baseline.diagnosticDelta[section].map(String)
+      : null;
+    if (
+      !signatures
+      || JSON.stringify(signatures)
+        !== JSON.stringify([...signatures].sort())
+    ) {
+      violations.push({
+        code: "derived-alias-taint-baseline-delta-invalid",
+        section,
+      });
+    }
+  }
+  return violations;
+}
+
+function defaultReadSourceAtRevision(sourceBaseSha, relativePath) {
+  const revisionPath = `${sourceBaseSha}:${relativePath}`;
+  try {
+    execFileSync(
+      "git",
+      ["cat-file", "-e", revisionPath],
+      {
+        cwd: PROJECT_ROOT,
+        stdio: "ignore",
+      },
+    );
+  } catch {
+    return null;
+  }
+  try {
+    return execFileSync(
+      "git",
+      ["show", revisionPath],
+      {
+        cwd: PROJECT_ROOT,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      },
+    );
+  } catch (cause) {
+    const error = new Error(
+      `Unable to read frozen source: ${relativePath}`,
+      { cause },
+    );
+    error.code = "derived-alias-taint-frozen-source-read-failed";
+    error.sourceBaseSha = sourceBaseSha;
+    error.path = relativePath;
+    throw error;
+  }
+}
+
+function buildFrozenBaselineWritersByPath(
+  legacySemanticBaseline = {},
+) {
+  const bindingsByPath = new Map();
+  for (
+    const signature of
+      Array.isArray(legacySemanticBaseline?.bindings)
+        ? legacySemanticBaseline.bindings
+        : []
+  ) {
+    const normalized = String(signature);
+    const identityStart = normalized.indexOf("|{");
+    const identityEnd = normalized.lastIndexOf("}|");
+    if (identityStart < 0 || identityEnd <= identityStart) {
+      continue;
+    }
+    const relativePath = normalizeRelativePath(
+      normalized.slice(0, identityStart),
+    );
+    try {
+      const binding = JSON.parse(
+        normalized.slice(identityStart + 1, identityEnd + 1),
+      );
+      if (!bindingsByPath.has(relativePath)) {
+        bindingsByPath.set(relativePath, []);
+      }
+      bindingsByPath.get(relativePath).push(binding);
+    } catch {
+      continue;
+    }
+  }
+  return new Map(
+    [...bindingsByPath.entries()].map(
+      ([relativePath, bindings]) => [
+        relativePath,
+        { path: relativePath, bindings },
+      ],
+    ),
+  );
+}
+
+export async function buildFrozenDerivedAliasTaintBaseline({
+  sourceBaseSha = "",
+  relativePaths = [],
+  legacySemanticBaseline = {},
+  existingBaseline = null,
+  readSourceAtRevision = defaultReadSourceAtRevision,
+  stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex(),
+} = {}) {
+  const normalizedSourceBaseSha = String(sourceBaseSha || "").trim();
+  if (!/^[0-9a-f]{40}$/i.test(normalizedSourceBaseSha)) {
+    const error = new Error(
+      "Derived alias taint baseline requires a frozen source commit.",
+    );
+    error.code = "derived-alias-taint-baseline-source-invalid";
+    throw error;
+  }
+  const normalizedPaths = normalizeCandidatePathList(relativePaths)
+    .filter((relativePath) => !isTestPath(relativePath));
+  const previousBaseline = existingBaseline || {
+    algorithmVersion:
+      DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION,
+    sourceBaseSha: normalizedSourceBaseSha,
+    paths: [],
+    diagnosticDelta: {
+      ambiguousSites: [],
+      unsupportedSites: [],
+    },
+  };
+  const baselineViolations =
+    validateDerivedAliasTaintBaseline(
+      previousBaseline,
+      { sourceBaseSha: normalizedSourceBaseSha },
+    );
+  if (baselineViolations.length) {
+    const error = new Error(
+      "Derived alias taint baseline is invalid.",
+    );
+    error.code = "derived-alias-taint-baseline-invalid";
+    error.violations = baselineViolations;
+    throw error;
+  }
+  const recordedPaths = new Set(previousBaseline.paths);
+  const pendingPaths = normalizedPaths.filter(
+    (relativePath) => !recordedPaths.has(relativePath),
+  );
+  const strictHistoricalWriters = [];
+  const frozenBaselineWritersByPath =
+    buildFrozenBaselineWritersByPath(legacySemanticBaseline);
+  for (const relativePath of pendingPaths) {
+    const source = await readSourceAtRevision(
+      normalizedSourceBaseSha,
+      relativePath,
+    );
+    if (source === null || source === undefined) {
+      continue;
+    }
+    const { bindingInventories } =
+      await discoverStateWriterBindingsForSource(
+        relativePath,
+        String(source),
+        "production",
+        {
+          previousWriter:
+            frozenBaselineWritersByPath.get(relativePath),
+          scanAllParameters: true,
+          enforceCurrentContracts: false,
+          derivedAliasTaintMode:
+            DERIVED_ALIAS_TAINT_MODES.STRICT,
+          includeInventories: true,
+        },
+      );
+    const bindings = bindingInventories
+      .filter(({ findings }) => findings.length)
+      .map(({ binding, findings }) => ({
+        ...binding,
+        authority: bindingAuthority(
+          relativePath,
+          "production",
+          binding,
+        ),
+        grants: buildStateWriterBindingGrants(
+          findings,
+          relativePath,
+          stateKeyAuthorityIndex,
+          "production",
+        ),
+      }));
+    if (bindings.length) {
+      strictHistoricalWriters.push({
+        path: relativePath,
+        surface: "production",
+        bindings,
+      });
+    }
+  }
+  const strictSemanticAuthority =
+    buildLegacyStateWriterSemanticAuthority(
+      strictHistoricalWriters,
+    );
+  const pendingDelta = buildDerivedAliasTaintDiagnosticDelta({
+    legacySemanticBaseline,
+    strictSemanticAuthority,
+  });
+  return {
+    algorithmVersion:
+      DERIVED_ALIAS_TAINT_BASELINE_ALGORITHM_VERSION,
+    sourceBaseSha: normalizedSourceBaseSha,
+    paths: stableUnique([
+      ...previousBaseline.paths,
+      ...normalizedPaths,
+    ]),
+    diagnosticDelta: Object.fromEntries(
+      DERIVED_ALIAS_TAINT_DIAGNOSTIC_SECTIONS.map((section) => [
+        section,
+        [
+          ...previousBaseline.diagnosticDelta[section],
+          ...pendingDelta[section],
+        ].sort(),
+      ]),
+    ),
+  };
+}
+
 export function subtractLegacyStateWriterSemanticAuthority(
   baseline = {},
   current = {},
@@ -420,6 +918,7 @@ export function validateLegacyStateWriterSemanticLedger({
   writers = [],
   retired = null,
   previousWriters = null,
+  previousAuthorityBaseline = null,
   previousRetired = null,
 } = {}) {
   const current = buildLegacyStateWriterSemanticAuthority(writers);
@@ -457,7 +956,8 @@ export function validateLegacyStateWriterSemanticLedger({
   if (previousWriters) {
     violations.push(
       ...validateLegacyStateWriterSemanticAuthority({
-        baseline: buildLegacyStateWriterSemanticAuthority(previousWriters),
+        baseline: previousAuthorityBaseline
+          || buildLegacyStateWriterSemanticAuthority(previousWriters),
         writers,
         scope: "previous-active",
       }).violations,
@@ -542,9 +1042,918 @@ function collectMembershipRecords(
   return records;
 }
 
+export function normalizeStateActionDelegations(
+  actionDelegations = [],
+) {
+  const normalized = (Array.isArray(actionDelegations)
+    ? actionDelegations
+    : [])
+    .map((edge) => {
+      const callerPath = normalizeRelativePath(
+        edge?.callerPath || edge?.filePath,
+      );
+      const callerBindingId = String(
+        edge?.callerBindingId || edge?.bindingId || "",
+      );
+      const callerBindingIdentity = String(
+        edge?.callerBindingIdentity || "",
+      ) || buildStableStateBindingIdentity({
+        kind: edge?.bindingKind,
+        name: edge?.root,
+        functionName: edge?.functionName,
+        parameterName:
+          edge?.bindingKind === "function-parameter"
+            ? edge?.parameterName
+            : "",
+        parameterIndex: edge?.parameterIndex,
+        parameterPath: edge?.parameterPath,
+        importSource: edge?.importSource,
+        importedName: edge?.importedName,
+        aliasSources: edge?.aliasSources,
+        aliasOperators: edge?.aliasOperators,
+      });
+      return {
+        callerPath,
+        callerBindingId,
+        callerBindingIdentity,
+        enclosingFunctionIdentity: String(
+          edge?.enclosingFunctionIdentity || "",
+        ),
+        actionModulePath: normalizeRelativePath(edge?.actionModulePath),
+        actionExportName: String(edge?.actionExportName || ""),
+        targetArgumentIndex: Number(edge?.targetArgumentIndex),
+        start: Number(edge?.start || 0),
+        end: Number(edge?.end || 0),
+        line: Number(edge?.line || 0),
+        column: Number(edge?.column || 0),
+        sourceFingerprint: String(edge?.sourceFingerprint || ""),
+      };
+    })
+    .filter(
+      (edge) =>
+        edge.callerPath
+        && edge.callerBindingId
+        && edge.callerBindingIdentity
+        && edge.actionModulePath
+        && edge.actionExportName
+        && Number.isInteger(edge.targetArgumentIndex)
+        && edge.targetArgumentIndex >= 0,
+    )
+    .sort(
+      (left, right) =>
+        left.callerPath.localeCompare(right.callerPath)
+        || left.callerBindingIdentity.localeCompare(
+          right.callerBindingIdentity,
+        )
+        || left.actionModulePath.localeCompare(right.actionModulePath)
+        || left.actionExportName.localeCompare(right.actionExportName)
+        || left.targetArgumentIndex - right.targetArgumentIndex
+        || left.start - right.start
+        || left.end - right.end,
+    );
+  const occurrenceCounts = new Map();
+  const legacyOccurrenceCounts = new Map();
+  const bindingIdsByStableIdentity = new Map();
+  for (const edge of normalized) {
+    const stableIdentity = [
+      edge.callerPath,
+      edge.callerBindingIdentity,
+    ].join("|");
+    if (!bindingIdsByStableIdentity.has(stableIdentity)) {
+      bindingIdsByStableIdentity.set(stableIdentity, new Set());
+    }
+    bindingIdsByStableIdentity.get(stableIdentity)
+      .add(edge.callerBindingId);
+  }
+  const ambiguousBindingIdentities = [
+    ...bindingIdsByStableIdentity.entries(),
+  ].filter(([, bindingIds]) => bindingIds.size > 1);
+  if (ambiguousBindingIdentities.length) {
+    const error = new Error(
+      "Caller-to-action binding identity is ambiguous within one source file.",
+    );
+    error.code = "caller-action-binding-identity-ambiguous";
+    error.violations = ambiguousBindingIdentities.map(
+      ([stableIdentity, bindingIds]) => ({
+        stableIdentity,
+        bindingIds: [...bindingIds].sort(),
+      }),
+    );
+    throw error;
+  }
+  return normalized.map((edge) => {
+    const groupIdentity = [
+      edge.callerPath,
+      edge.callerBindingIdentity,
+      edge.enclosingFunctionIdentity,
+      edge.actionModulePath,
+      edge.actionExportName,
+      edge.targetArgumentIndex,
+    ].join("|");
+    const occurrenceIndex = occurrenceCounts.get(groupIdentity) || 0;
+    occurrenceCounts.set(groupIdentity, occurrenceIndex + 1);
+    const legacyGroupIdentity = [
+      edge.callerPath,
+      edge.callerBindingIdentity,
+      edge.actionModulePath,
+      edge.actionExportName,
+      edge.targetArgumentIndex,
+    ].join("|");
+    const legacyOccurrenceIndex =
+      legacyOccurrenceCounts.get(legacyGroupIdentity) || 0;
+    legacyOccurrenceCounts.set(
+      legacyGroupIdentity,
+      legacyOccurrenceIndex + 1,
+    );
+    return {
+      ...edge,
+      occurrenceIndex,
+      legacyOccurrenceIndex,
+      actionCallEdgeIdentity: buildStateActionCallEdgeIdentity({
+        ...edge,
+        occurrenceIndex,
+      }),
+      legacyActionCallEdgeIdentity:
+        buildLegacyStateActionCallEdgeIdentity({
+          ...edge,
+          occurrenceIndex: legacyOccurrenceIndex,
+        }),
+    };
+  });
+}
+
+function buildActionMembershipIndex(writers = []) {
+  const index = new Map();
+  for (const writer of Array.isArray(writers) ? writers : []) {
+    if (
+      writer?.surface !== "production"
+      || writer?.authority !== "domain-action"
+    ) {
+      continue;
+    }
+    for (const binding of Array.isArray(writer?.bindings)
+      ? writer.bindings
+      : []) {
+      if (binding?.authority !== "domain-action") {
+        continue;
+      }
+      const exportName = String(binding.functionName || "");
+      const contract = STATE_ACTION_DELEGATION_CONTRACT.find(
+        (entry) =>
+          entry.modulePath === writer.path
+          && entry.exportName === exportName,
+      );
+      if (!contract) {
+        continue;
+      }
+      const actionIdentity = `${writer.path}#${exportName}`;
+      if (!index.has(actionIdentity)) {
+        index.set(actionIdentity, new Set());
+      }
+      const memberships = index.get(actionIdentity);
+      for (const grant of Array.isArray(binding?.grants)
+        ? binding.grants
+        : []) {
+        for (const membership of Array.isArray(grant?.memberships)
+          ? grant.memberships
+          : []) {
+          memberships.add(
+            [
+              String(grant.domain || ""),
+              String(grant.migrationPhase || ""),
+              String(membership.operation || ""),
+              String(membership.key || ""),
+            ].join("|"),
+          );
+        }
+      }
+    }
+  }
+  return index;
+}
+
+function buildCallerToActionLedgerEntry({
+  retiredMembership,
+  retiredMutationEvidence,
+  edge,
+  crossFileMigration = null,
+  retiredInPhase,
+  recordedInPhase,
+  backfilled,
+}) {
+  return {
+    retiredMembershipIdentity: retiredMembership.signature,
+    callerPath: edge.callerPath,
+    callerBindingId: edge.callerBindingId,
+    callerBindingIdentity: edge.callerBindingIdentity,
+    enclosingFunctionIdentity: edge.enclosingFunctionIdentity,
+    retiredEnclosingFunctionIdentity:
+      retiredMutationEvidence.enclosingFunctionIdentity,
+    retiredMutationSiteFingerprint:
+      retiredMutationEvidence.siteFingerprint,
+    retiredMutationSiteCount:
+      retiredMutationEvidence.siteCount,
+    proofPrecision: retiredMutationEvidence.proofPrecision,
+    ...(crossFileMigration
+      ? {
+        retiredCallerPath:
+          crossFileMigration.retiredCallerPath,
+        retiredCallerBindingIdentity:
+          crossFileMigration.retiredCallerBindingIdentity,
+        crossFileMigrationContractIdentity:
+          crossFileMigration.contractIdentity,
+      }
+      : {}),
+    domain: retiredMembership.domain,
+    migrationPhase: retiredMembership.migrationPhase,
+    operation: retiredMembership.operation,
+    key: retiredMembership.key,
+    actionModulePath: edge.actionModulePath,
+    actionExportName: edge.actionExportName,
+    targetArgumentIndex: edge.targetArgumentIndex,
+    actionCallEdgeIdentity: edge.actionCallEdgeIdentity,
+    occurrenceIndex: edge.occurrenceIndex,
+    start: edge.start,
+    end: edge.end,
+    line: edge.line,
+    column: edge.column,
+    sourceFingerprint: edge.sourceFingerprint,
+    retiredInPhase: normalizeP4StateActionPhase(retiredInPhase),
+    recordedInPhase: normalizeP4StateActionPhase(recordedInPhase),
+    backfilled: Boolean(backfilled),
+  };
+}
+
+function normalizeMutationSiteEvidence(site = {}) {
+  const enclosingFunctionIdentity = String(
+    site?.enclosingFunctionIdentity || "",
+  );
+  const sourceFingerprint = String(
+    site?.sourceFingerprint || "",
+  );
+  const occurrenceIndex = Number(site?.occurrenceIndex);
+  if (
+    !enclosingFunctionIdentity
+    || !/^[0-9a-f]{64}$/i.test(sourceFingerprint)
+    || !Number.isInteger(occurrenceIndex)
+    || occurrenceIndex < 0
+  ) {
+    return null;
+  }
+  return {
+    enclosingFunctionIdentity,
+    sourceFingerprint,
+    occurrenceIndex,
+  };
+}
+
+function findPreviousRetiredMutationSites(
+  previousPolicy,
+  retiredMembership,
+) {
+  const writer = (previousPolicy?.writers || []).find(
+    ({ path: writerPath }) =>
+      normalizeRelativePath(writerPath)
+      === retiredMembership.callerPath,
+  );
+  const binding = (writer?.bindings || []).find(
+    (candidate) =>
+      buildStableStateBindingIdentity(candidate)
+      === retiredMembership.callerBindingIdentity,
+  );
+  const grant = (binding?.grants || []).find(
+    (candidate) =>
+      candidate?.domain === retiredMembership.domain
+      && candidate?.migrationPhase
+        === retiredMembership.migrationPhase,
+  );
+  const membership = (grant?.memberships || []).find(
+    (candidate) =>
+      candidate?.operation === retiredMembership.operation
+      && candidate?.key === retiredMembership.key,
+  );
+  return (membership?.mutationSites || [])
+    .map(normalizeMutationSiteEvidence)
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        left.enclosingFunctionIdentity.localeCompare(
+          right.enclosingFunctionIdentity,
+        )
+        || left.sourceFingerprint.localeCompare(
+          right.sourceFingerprint,
+        )
+        || left.occurrenceIndex - right.occurrenceIndex,
+    );
+}
+
+function lastEnclosingFunctionName(identity = "") {
+  try {
+    const parsed = JSON.parse(String(identity || ""));
+    return String(parsed?.ancestry?.at(-1)?.name || "");
+  } catch {
+    return "";
+  }
+}
+
+function buildRetiredMutationEvidence({
+  previousPolicy,
+  retiredMembership,
+  candidateEdges,
+  crossFileMigration = null,
+}) {
+  const mutationSites = findPreviousRetiredMutationSites(
+    previousPolicy,
+    retiredMembership,
+  );
+  if (crossFileMigration) {
+    const contractedMutationSites = (
+      crossFileMigration.retiredMutationSites || []
+    )
+      .map(normalizeMutationSiteEvidence)
+      .filter(Boolean)
+      .sort(
+        (left, right) =>
+          left.enclosingFunctionIdentity.localeCompare(
+            right.enclosingFunctionIdentity,
+          )
+          || left.sourceFingerprint.localeCompare(
+            right.sourceFingerprint,
+          )
+          || left.occurrenceIndex - right.occurrenceIndex,
+      );
+    if (
+      !contractedMutationSites.length
+      || JSON.stringify(
+        crossFileMigration.retiredMutationSites || [],
+      ) !== JSON.stringify(contractedMutationSites)
+    ) {
+      return {
+        error: "cross-file-retired-mutation-sites-invalid",
+      };
+    }
+    if (
+      mutationSites.length
+      && JSON.stringify(mutationSites)
+        !== JSON.stringify(contractedMutationSites)
+    ) {
+      return {
+        error:
+          "cross-file-retired-mutation-sites-do-not-match-policy",
+      };
+    }
+    const functionIdentities = [
+      ...new Set(
+        contractedMutationSites.map(
+          ({ enclosingFunctionIdentity }) =>
+            enclosingFunctionIdentity,
+        ),
+      ),
+    ];
+    if (functionIdentities.length !== 1) {
+      return {
+        error:
+          "cross-file-retired-membership-spans-multiple-enclosing-functions",
+      };
+    }
+    return {
+      enclosingFunctionIdentity: functionIdentities[0],
+      siteFingerprint: createHash("sha256")
+        .update(JSON.stringify(contractedMutationSites))
+        .digest("hex"),
+      siteCount: contractedMutationSites.length,
+      proofPrecision: "explicit-cross-file",
+    };
+  }
+  if (mutationSites.length) {
+    const functionIdentities = [
+      ...new Set(
+        mutationSites.map(
+          ({ enclosingFunctionIdentity }) =>
+            enclosingFunctionIdentity,
+        ),
+      ),
+    ];
+    if (functionIdentities.length !== 1) {
+      return {
+        error:
+          "retired-membership-spans-multiple-enclosing-functions",
+      };
+    }
+    return {
+      enclosingFunctionIdentity: functionIdentities[0],
+      siteFingerprint: createHash("sha256")
+        .update(JSON.stringify(mutationSites))
+        .digest("hex"),
+      siteCount: mutationSites.length,
+      proofPrecision: "exact-site",
+    };
+  }
+
+  let bindingFunctionName = "";
+  try {
+    bindingFunctionName = String(
+      JSON.parse(retiredMembership.callerBindingIdentity)
+        ?.functionName || "",
+    );
+  } catch {
+    bindingFunctionName = "";
+  }
+  const compatibleCandidates = bindingFunctionName
+    ? candidateEdges.filter(
+      ({ enclosingFunctionIdentity }) =>
+        lastEnclosingFunctionName(enclosingFunctionIdentity)
+        === bindingFunctionName,
+    )
+    : candidateEdges;
+  const enclosingFunctionIdentity = String(
+    compatibleCandidates[0]?.enclosingFunctionIdentity || "",
+  );
+  if (!enclosingFunctionIdentity) {
+    return {
+      error: "retired-membership-enclosing-function-unresolved",
+    };
+  }
+  return {
+    enclosingFunctionIdentity,
+    siteFingerprint: createHash("sha256")
+      .update(
+        [
+          retiredMembership.signature,
+          enclosingFunctionIdentity,
+          "historical-backfill",
+        ].join("|"),
+      )
+      .digest("hex"),
+    siteCount: 1,
+    proofPrecision: "historical-backfill",
+  };
+}
+
+function assertUniqueStableCallerBindingIdentities(writers = []) {
+  const bindingIdsByStableIdentity = new Map();
+  for (const writer of Array.isArray(writers) ? writers : []) {
+    if (
+      writer?.surface !== "production"
+      || !Array.isArray(writer?.bindings)
+    ) {
+      continue;
+    }
+    for (const binding of writer.bindings) {
+      if (!LEGACY_BINDING_AUTHORITIES.has(binding?.authority)) {
+        continue;
+      }
+      const stableIdentity = [
+        normalizeRelativePath(writer.path),
+        buildStableStateBindingIdentity(binding),
+      ].join("|");
+      if (!bindingIdsByStableIdentity.has(stableIdentity)) {
+        bindingIdsByStableIdentity.set(stableIdentity, new Set());
+      }
+      bindingIdsByStableIdentity.get(stableIdentity)
+        .add(String(binding.id || ""));
+    }
+  }
+  const ambiguousBindingIdentities = [
+    ...bindingIdsByStableIdentity.entries(),
+  ].filter(([, bindingIds]) => bindingIds.size > 1);
+  if (!ambiguousBindingIdentities.length) {
+    return;
+  }
+  const error = new Error(
+    "Caller-to-action binding identity is ambiguous within one source file.",
+  );
+  error.code = "caller-action-binding-identity-ambiguous";
+  error.violations = ambiguousBindingIdentities.map(
+    ([stableIdentity, bindingIds]) => ({
+      stableIdentity,
+      bindingIds: [...bindingIds].sort(),
+    }),
+  );
+  throw error;
+}
+
+export function buildCallerToActionLedger({
+  phase,
+  previousPolicy = null,
+  bootstrapSeedEntries = [],
+  writers = [],
+  retiredLegacySemanticAuthority = null,
+  actionDelegations = [],
+  crossFileMigrationContract =
+    STATE_ACTION_CROSS_FILE_MIGRATION_CONTRACT,
+} = {}) {
+  const normalizedPhase = normalizeP4StateActionPhase(phase);
+  const ledgerIntroductionPhaseIndex =
+    P4_STATE_ACTION_PHASES.indexOf("P4.2a");
+  const normalizedPhaseIndex =
+    P4_STATE_ACTION_PHASES.indexOf(normalizedPhase);
+  const retiredMembershipIdentities = [
+    ...(retiredLegacySemanticAuthority?.memberships || []),
+  ].sort();
+  const previousLedger =
+    previousPolicy?.progress?.callerToActionLedger;
+  const previousEntries = Array.isArray(previousLedger?.entries)
+    ? cloneJsonValue(previousLedger.entries)
+    : [];
+  const previousRetiredMembershipIdentities = new Set(
+    previousPolicy?.progress?.retiredLegacySemanticAuthority
+      ?.memberships || [],
+  );
+  if (
+    previousEntries.length === 0
+    && normalizedPhaseIndex < ledgerIntroductionPhaseIndex
+  ) {
+    return null;
+  }
+  assertUniqueStableCallerBindingIdentities(writers);
+  const crossFileMigrationContractViolations =
+    validateStateActionCrossFileMigrationContract(
+      crossFileMigrationContract,
+    );
+  if (crossFileMigrationContractViolations.length) {
+    const error = new Error(
+      "State action cross-file migration contract is invalid.",
+    );
+    error.code = "state-action-cross-file-migration-contract-invalid";
+    error.violations = crossFileMigrationContractViolations;
+    throw error;
+  }
+  const backfillAllowed =
+    previousPolicy
+    && previousEntries.length === 0
+    && previousRetiredMembershipIdentities.size > 0
+    && previousPolicy?.progress?.latestPhase === "P4.1"
+    && normalizedPhase === "P4.2a";
+  const normalizedBootstrapSeedEntries =
+    Array.isArray(bootstrapSeedEntries)
+      ? cloneJsonValue(bootstrapSeedEntries)
+      : [];
+  const bootstrapSeedByRetiredIdentity = new Map(
+    normalizedBootstrapSeedEntries.map((entry) => [
+      String(entry?.retiredMembershipIdentity || ""),
+      entry,
+    ]),
+  );
+  if (normalizedBootstrapSeedEntries.length) {
+    const seedCoverageValid =
+      bootstrapSeedByRetiredIdentity.size
+        === previousRetiredMembershipIdentities.size
+      && normalizedBootstrapSeedEntries.length
+        === bootstrapSeedByRetiredIdentity.size
+      && [...previousRetiredMembershipIdentities].every(
+        (identity) =>
+          bootstrapSeedByRetiredIdentity.has(identity),
+      );
+    const seedProvenanceValid =
+      normalizedBootstrapSeedEntries.every(
+        (entry) =>
+          entry?.backfilled === true
+          && entry?.retiredInPhase === "P4.1"
+          && entry?.recordedInPhase === "P4.2a"
+          && previousRetiredMembershipIdentities.has(
+            String(entry?.retiredMembershipIdentity || ""),
+          )
+          && String(entry?.callerPath || "")
+          && String(entry?.callerBindingIdentity || "")
+          && String(entry?.actionModulePath || "")
+          && String(entry?.actionExportName || "")
+          && Number.isInteger(Number(entry?.targetArgumentIndex))
+          && Number.isInteger(Number(entry?.occurrenceIndex))
+          && Number(entry?.occurrenceIndex) >= 0
+          && /^[0-9a-f]{64}$/i.test(
+            String(entry?.sourceFingerprint || ""),
+          ),
+      );
+    if (
+      !backfillAllowed
+      || !seedCoverageValid
+      || !seedProvenanceValid
+    ) {
+      const error = new Error(
+        "Caller-to-action ledger bootstrap seed is invalid.",
+      );
+      error.code = "caller-action-ledger-bootstrap-seed-invalid";
+      throw error;
+    }
+  }
+  if (
+    previousRetiredMembershipIdentities.size > 0
+    && previousEntries.length === 0
+    && !backfillAllowed
+  ) {
+    const error = new Error(
+      "Caller-to-action ledger backfill is permitted only at P4.2a.",
+    );
+    error.code = "caller-action-ledger-backfill-invalid";
+    throw error;
+  }
+
+  const entriesByRetiredIdentity = new Map(
+    previousEntries.map((entry) => [
+      entry.retiredMembershipIdentity,
+      entry,
+    ]),
+  );
+  const normalizedEdges =
+    normalizeStateActionDelegations(actionDelegations);
+  for (const entry of entriesByRetiredIdentity.values()) {
+    if (entry.recordedInPhase !== normalizedPhase) {
+      continue;
+    }
+    const observed = normalizedEdges.find(
+      (edge) =>
+        edge.actionCallEdgeIdentity === entry.actionCallEdgeIdentity
+        || edge.legacyActionCallEdgeIdentity
+          === entry.actionCallEdgeIdentity,
+    );
+    if (!observed) {
+      continue;
+    }
+    const matchedLegacyIdentity =
+      observed.actionCallEdgeIdentity
+        !== entry.actionCallEdgeIdentity
+      && observed.legacyActionCallEdgeIdentity
+        === entry.actionCallEdgeIdentity;
+    const observedOccurrenceIndex = matchedLegacyIdentity
+      ? observed.legacyOccurrenceIndex
+      : observed.occurrenceIndex;
+    const semanticObservationMatches =
+      observed.callerPath === entry.callerPath
+      && observed.callerBindingIdentity
+        === entry.callerBindingIdentity
+      && observed.actionModulePath === entry.actionModulePath
+      && observed.actionExportName === entry.actionExportName
+      && observed.targetArgumentIndex
+        === entry.targetArgumentIndex
+      && observedOccurrenceIndex === entry.occurrenceIndex
+      && (
+        !entry.enclosingFunctionIdentity
+        || observed.enclosingFunctionIdentity
+          === entry.enclosingFunctionIdentity
+      );
+    if (!semanticObservationMatches) {
+      continue;
+    }
+    Object.assign(entry, {
+      callerBindingId: observed.callerBindingId,
+      start: observed.start,
+      end: observed.end,
+      line: observed.line,
+      column: observed.column,
+      sourceFingerprint: observed.sourceFingerprint,
+    });
+  }
+  const actionMembershipIndex = buildActionMembershipIndex(writers);
+  const missingProofs = [];
+  for (const retiredMembershipIdentity of retiredMembershipIdentities) {
+    if (entriesByRetiredIdentity.has(retiredMembershipIdentity)) {
+      continue;
+    }
+    const retiredMembership =
+      parseLegacyMembershipSemanticSignature(
+        retiredMembershipIdentity,
+      );
+    if (!retiredMembership) {
+      missingProofs.push({
+        code: "caller-action-ledger-entry-invalid",
+        retiredMembershipIdentity,
+      });
+      continue;
+    }
+    const crossFileMigration =
+      findStateActionCrossFileMigrationContractEntry(
+        retiredMembershipIdentity,
+        crossFileMigrationContract,
+      ) || null;
+    const bootstrapSeed =
+      bootstrapSeedByRetiredIdentity.get(
+        retiredMembershipIdentity,
+      ) || null;
+    const candidateEdges = normalizedEdges.filter((edge) => {
+      if (crossFileMigration) {
+        if (
+          edge.callerPath
+            !== crossFileMigration.replacementCallerPath
+          || edge.callerBindingIdentity
+            !== crossFileMigration.replacementCallerBindingIdentity
+          || edge.enclosingFunctionIdentity
+            !== crossFileMigration
+              .replacementEnclosingFunctionIdentity
+          || edge.actionModulePath
+            !== crossFileMigration.actionModulePath
+          || edge.actionExportName
+            !== crossFileMigration.actionExportName
+          || edge.targetArgumentIndex
+            !== crossFileMigration.targetArgumentIndex
+          || edge.sourceFingerprint
+            !== crossFileMigration
+              .replacementActionSourceFingerprint
+        ) {
+          return false;
+        }
+      } else if (bootstrapSeed) {
+        if (
+          edge.callerPath !== bootstrapSeed.callerPath
+          || edge.callerBindingIdentity
+            !== bootstrapSeed.callerBindingIdentity
+          || edge.actionModulePath
+            !== bootstrapSeed.actionModulePath
+          || edge.actionExportName
+            !== bootstrapSeed.actionExportName
+          || edge.targetArgumentIndex
+            !== Number(bootstrapSeed.targetArgumentIndex)
+          || edge.sourceFingerprint
+            !== bootstrapSeed.sourceFingerprint
+          || edge.legacyOccurrenceIndex
+            !== Number(bootstrapSeed.occurrenceIndex)
+        ) {
+          return false;
+        }
+      } else if (
+        edge.callerPath !== retiredMembership.callerPath
+        || edge.callerBindingIdentity
+          !== retiredMembership.callerBindingIdentity
+      ) {
+        return false;
+      }
+      const memberships = actionMembershipIndex.get(
+        `${edge.actionModulePath}#${edge.actionExportName}`,
+      );
+      return memberships?.has(retiredMembership.replacementKey);
+    });
+    let retiredMutationEvidence = buildRetiredMutationEvidence({
+      previousPolicy,
+      retiredMembership,
+      candidateEdges,
+      crossFileMigration,
+    });
+    if (
+      bootstrapSeed
+      && retiredMutationEvidence.error
+      && candidateEdges.length === 1
+      && candidateEdges[0].enclosingFunctionIdentity
+    ) {
+      retiredMutationEvidence = {
+        enclosingFunctionIdentity:
+          candidateEdges[0].enclosingFunctionIdentity,
+        siteFingerprint: createHash("sha256")
+          .update(
+            [
+              retiredMembership.signature,
+              candidateEdges[0].enclosingFunctionIdentity,
+              "historical-bootstrap",
+            ].join("|"),
+          )
+          .digest("hex"),
+        siteCount: 1,
+        proofPrecision: "historical-backfill",
+      };
+    }
+    const candidate = retiredMutationEvidence.error
+      ? null
+      : crossFileMigration
+        ? candidateEdges[0]
+        : candidateEdges.find(
+          ({ enclosingFunctionIdentity }) =>
+            enclosingFunctionIdentity
+            === retiredMutationEvidence.enclosingFunctionIdentity,
+        );
+    if (!candidate) {
+      missingProofs.push({
+        code: "legacy-membership-retirement-replacement-missing",
+        path: retiredMembership.callerPath,
+        bindingIdentity: retiredMembership.callerBindingIdentity,
+        domain: retiredMembership.domain,
+        migrationPhase: retiredMembership.migrationPhase,
+        operation: retiredMembership.operation,
+        key: retiredMembership.key,
+        reason:
+          retiredMutationEvidence.error
+          || "matching-enclosing-function-action-edge-missing",
+      });
+      continue;
+    }
+    const backfilled =
+      previousRetiredMembershipIdentities.has(
+        retiredMembershipIdentity,
+      );
+    entriesByRetiredIdentity.set(
+      retiredMembershipIdentity,
+      buildCallerToActionLedgerEntry({
+        retiredMembership,
+        retiredMutationEvidence,
+        edge: candidate,
+        crossFileMigration,
+        retiredInPhase: backfilled
+          ? previousPolicy.progress.latestPhase
+          : normalizedPhase,
+        recordedInPhase: normalizedPhase,
+        backfilled,
+      }),
+    );
+  }
+  for (const previousIdentity of entriesByRetiredIdentity.keys()) {
+    if (!retiredMembershipIdentities.includes(previousIdentity)) {
+      missingProofs.push({
+        code: "caller-action-ledger-entry-invalid",
+        retiredMembershipIdentity: previousIdentity,
+        reason: "entry-not-retired",
+      });
+    }
+  }
+  if (missingProofs.length) {
+    const error = new Error(
+      `Caller-to-action proof generation failed for ${missingProofs.length} retired memberships.`,
+    );
+    error.code = "caller-action-ledger-proof-missing";
+    error.violations = missingProofs;
+    throw error;
+  }
+  return {
+    schemaVersion: 1,
+    entries: [...entriesByRetiredIdentity.values()].sort(
+      (left, right) =>
+        left.retiredMembershipIdentity.localeCompare(
+          right.retiredMembershipIdentity,
+        )
+        || left.actionCallEdgeIdentity.localeCompare(
+          right.actionCallEdgeIdentity,
+        ),
+    ),
+  };
+}
+
+export function extractP42aCallerToActionBootstrapSeed({
+  previousPolicy = null,
+  transitionPolicy = null,
+} = {}) {
+  const previousRetiredMembershipIdentities = new Set(
+    previousPolicy?.progress?.retiredLegacySemanticAuthority
+      ?.memberships || [],
+  );
+  if (
+    previousPolicy?.progress?.latestPhase !== "P4.1"
+    || previousPolicy?.progress?.callerToActionLedger
+    || previousRetiredMembershipIdentities.size === 0
+    || Number(transitionPolicy?.schemaVersion) !== 1
+    || transitionPolicy?.progress?.latestPhase !== "P4.2a"
+  ) {
+    const error = new Error(
+      "P4.2a caller-to-action ledger transition is invalid.",
+    );
+    error.code = "caller-action-ledger-transition-invalid";
+    throw error;
+  }
+  const entries = (
+    transitionPolicy?.progress?.callerToActionLedger?.entries || []
+  )
+    .filter(
+      (entry) =>
+        entry?.backfilled === true
+        && entry?.retiredInPhase === "P4.1"
+        && entry?.recordedInPhase === "P4.2a"
+        && previousRetiredMembershipIdentities.has(
+          String(entry?.retiredMembershipIdentity || ""),
+        ),
+    )
+    .map(cloneJsonValue)
+    .sort(
+      (left, right) =>
+        left.retiredMembershipIdentity.localeCompare(
+          right.retiredMembershipIdentity,
+        )
+        || left.actionCallEdgeIdentity.localeCompare(
+          right.actionCallEdgeIdentity,
+        ),
+    );
+  const seedIdentities = new Set(
+    entries.map(({ retiredMembershipIdentity }) =>
+      retiredMembershipIdentity
+    ),
+  );
+  if (
+    entries.length !== seedIdentities.size
+    || seedIdentities.size
+      !== previousRetiredMembershipIdentities.size
+    || [...previousRetiredMembershipIdentities].some(
+      (identity) => !seedIdentities.has(identity),
+    )
+  ) {
+    const error = new Error(
+      "P4.2a caller-to-action ledger transition lacks exact P4.1 coverage.",
+    );
+    error.code =
+      "caller-action-ledger-transition-coverage-invalid";
+    throw error;
+  }
+  return entries;
+}
+
 export function validateLegacyMembershipRetirementReplacements({
   previousWriters = [],
   writers = [],
+  callerToActionLedger = null,
 } = {}) {
   const previousRecords = collectMembershipRecords(previousWriters, {
     authorities: LEGACY_BINDING_AUTHORITIES,
@@ -555,11 +1964,13 @@ export function validateLegacyMembershipRetirementReplacements({
   const currentCounts = signatureCounts(
     currentRecords.map(({ signature }) => signature),
   );
-  const actionReplacementKeys = new Set(
-    collectMembershipRecords(writers, {
-      authorities: new Set(["domain-action"]),
-    }).map(({ replacementKey }) => replacementKey),
+  const ledgerByRetiredMembershipIdentity = new Map(
+    (callerToActionLedger?.entries || []).map((entry) => [
+      entry.retiredMembershipIdentity,
+      entry,
+    ]),
   );
+  const actionMembershipIndex = buildActionMembershipIndex(writers);
   const violations = [];
   for (const record of previousRecords) {
     const activeCount = currentCounts.get(record.signature) || 0;
@@ -567,7 +1978,36 @@ export function validateLegacyMembershipRetirementReplacements({
       currentCounts.set(record.signature, activeCount - 1);
       continue;
     }
-    if (!actionReplacementKeys.has(record.replacementKey)) {
+    const proof = ledgerByRetiredMembershipIdentity.get(
+      record.signature,
+    );
+    const proofRetiredCallerPath = String(
+      proof?.retiredCallerPath || proof?.callerPath || "",
+    );
+    const proofRetiredCallerBindingIdentity = String(
+      proof?.retiredCallerBindingIdentity
+        || proof?.callerBindingIdentity
+        || "",
+    );
+    if (
+      !proof
+      || proofRetiredCallerPath !== record.path
+      || proofRetiredCallerBindingIdentity
+        !== stableLegacyBindingIdentity(
+          previousWriters
+            .find(({ path: writerPath }) => writerPath === record.path)
+            ?.bindings?.find(({ id }) => id === record.bindingId),
+        )
+      || [
+        proof.domain,
+        proof.migrationPhase,
+        proof.operation,
+        proof.key,
+      ].join("|") !== record.replacementKey
+      || !actionMembershipIndex.get(
+        `${proof.actionModulePath}#${proof.actionExportName}`,
+      )?.has(record.replacementKey)
+    ) {
       violations.push({
         code: "legacy-membership-retirement-replacement-missing",
         path: record.path,
@@ -829,10 +2269,10 @@ function createProgressCheckpoint(phase, {
 function buildProgressState({
   phase,
   currentMetrics,
-  currentWriters,
-  frozenLegacySemanticAuthority,
   previousPolicy,
   refreshP4Baseline,
+  retiredLegacySemanticAuthority,
+  callerToActionLedger,
 }) {
   const checkpoint = createProgressCheckpoint(phase, currentMetrics);
   const previousCheckpoints =
@@ -843,17 +2283,17 @@ function buildProgressState({
     previousCheckpoints.map((entry) => [entry.phase, entry]),
   );
   checkpointsByPhase.set(checkpoint.phase, checkpoint);
-  return {
+  const progress = {
     latestPhase: checkpoint.phase,
     checkpoints: P4_STATE_ACTION_PHASES
       .filter((candidatePhase) => checkpointsByPhase.has(candidatePhase))
       .map((candidatePhase) => checkpointsByPhase.get(candidatePhase)),
-    retiredLegacySemanticAuthority:
-      subtractLegacyStateWriterSemanticAuthority(
-        frozenLegacySemanticAuthority,
-        buildLegacyStateWriterSemanticAuthority(currentWriters),
-      ),
+    retiredLegacySemanticAuthority,
   };
+  if (callerToActionLedger) {
+    progress.callerToActionLedger = callerToActionLedger;
+  }
+  return progress;
 }
 
 function bindingIdPart(value) {
@@ -901,6 +2341,38 @@ export async function readStateWriterPolicy() {
   return JSON.parse(await fs.readFile(STATE_WRITER_POLICY_PATH, "utf8"));
 }
 
+export function readStateWriterPolicyAtRevision(
+  revision = "HEAD",
+  {
+    runGit = (args) =>
+      execFileSync("git", args, {
+        cwd: PROJECT_ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+      }),
+  } = {},
+) {
+  const normalizedRevision =
+    String(revision || "HEAD").trim() || "HEAD";
+  try {
+    return JSON.parse(
+      runGit([
+        "show",
+        `${normalizedRevision}:tools/state_writer_policy.json`,
+      ]),
+    );
+  } catch (cause) {
+    const error = new Error(
+      `Unable to read state writer policy at ${normalizedRevision}.`,
+      { cause },
+    );
+    error.code = "state-writer-policy-revision-read-failed";
+    error.revision = normalizedRevision;
+    throw error;
+  }
+}
+
 function toScannerBinding(binding) {
   return {
     id: binding.id,
@@ -912,6 +2384,8 @@ function toScannerBinding(binding) {
       ? binding.parameterIndex
       : null,
     parameterPath: binding.parameterPath || "",
+    importSource: binding.importSource || "",
+    importedName: binding.importedName || "",
     aliasSources: binding.aliasSources || [],
     aliasOperators: binding.aliasOperators || [],
     locator: binding.locator || null,
@@ -1052,8 +2526,16 @@ export async function validateStateActionNonTargetParameterMutations(
         source,
         relativePath,
         binding,
-      ).filter((finding) => !finding?.unsupported);
+      );
       for (const finding of mutationFindings) {
+        const conservativeMutationEvidence = Boolean(
+          !finding?.unsupported
+          || finding.reason !== "state-alias-escape"
+          || finding.evidenceKind === "unknown-call-argument",
+        );
+        if (!conservativeMutationEvidence) {
+          continue;
+        }
         violations.push({
           code: "state-action-non-target-parameter-mutation",
           modulePath: normalizeRelativePath(relativePath),
@@ -1063,6 +2545,11 @@ export async function validateStateActionNonTargetParameterMutations(
           parameterPath: candidate.parameterPath,
           operation: finding.operation,
           key: finding.key,
+          unsupported: Boolean(finding.unsupported),
+          reason: String(finding.reason || ""),
+          evidenceKind: String(finding.evidenceKind || ""),
+          alias: String(finding.alias || ""),
+          aliasChain: (finding.aliasChain || []).map(String),
           line: finding.line,
           column: finding.column,
         });
@@ -1079,6 +2566,293 @@ export async function validateStateActionNonTargetParameterMutations(
   );
 }
 
+function stateTargetPureReaderCandidateIdentity(candidate = {}) {
+  return [
+    String(candidate.functionName || ""),
+    Number(candidate.parameterIndex),
+    String(candidate.parameterPath || ""),
+  ].join("|");
+}
+
+function stateTargetPureReaderConservativeFindingIdentity(
+  finding = {},
+) {
+  return [
+    String(finding.enclosingFunctionIdentity || ""),
+    String(finding.reason || ""),
+    String(finding.operation || ""),
+    String(finding.key || ""),
+    String(finding.sourceFingerprint || ""),
+  ].join("|");
+}
+
+function countStateTargetPureReaderConservativeFindings(
+  findings = [],
+) {
+  const counts = new Map();
+  for (
+    const finding of
+    Array.isArray(findings) ? findings : []
+  ) {
+    const identity =
+      stateTargetPureReaderConservativeFindingIdentity(finding);
+    counts.set(identity, (counts.get(identity) || 0) + 1);
+  }
+  return counts;
+}
+
+function filterStateTargetPureReaderModuleFindings({
+  relativePath,
+  binding,
+  findings = [],
+}) {
+  if (binding?.kind !== "module") {
+    return findings;
+  }
+  const contractEntries =
+    getStateTargetPureReaderContractEntriesForModule(relativePath);
+  if (!contractEntries.length) {
+    return findings;
+  }
+  const remainingContractCounts = new Map();
+  for (const entry of contractEntries) {
+    for (const finding of entry.conservativeFindings) {
+      const identity = [
+        String(finding.enclosingFunctionIdentity || ""),
+        String(finding.reason || ""),
+        String(finding.operation || ""),
+        String(finding.sourceFingerprint || ""),
+      ].join("|");
+      remainingContractCounts.set(
+        identity,
+        (remainingContractCounts.get(identity) || 0)
+          + Number(finding.count),
+      );
+    }
+  }
+  return findings.filter((finding) => {
+    const identity = [
+      String(finding.enclosingFunctionIdentity || ""),
+      String(finding.reason || ""),
+      String(finding.operation || ""),
+      String(finding.sourceFingerprint || ""),
+    ].join("|");
+    const remaining = remainingContractCounts.get(identity) || 0;
+    if (remaining < 1) {
+      return true;
+    }
+    remainingContractCounts.set(identity, remaining - 1);
+    return false;
+  });
+}
+
+export function applyStateWriterBindingFindingContracts({
+  relativePath,
+  binding,
+  findings = [],
+  enforceCurrentContracts = true,
+} = {}) {
+  return withoutRedundantContainerAliasEscapeFindings(
+    enforceCurrentContracts
+      ? filterStateTargetPureReaderModuleFindings({
+        relativePath,
+        binding,
+        findings,
+      })
+      : findings,
+  );
+}
+
+function validateStateTargetPureReaderBinding({
+  relativePath,
+  source,
+  entry,
+  candidate,
+}) {
+  const inspection = inspectStateTargetPureReaderFunctionSource(
+    source,
+    entry,
+  );
+  const violations = [...inspection.violations];
+  if (!inspection.functionSource) {
+    return violations;
+  }
+  const isolatedDiscovery = discoverFunctionParameterBindings(
+    inspection.functionSource,
+    { parameterNames: null },
+  );
+  const isolatedCandidates = isolatedDiscovery.bindings.filter(
+    (isolatedCandidate) =>
+      isolatedCandidate.functionName === entry.functionName
+      && isolatedCandidate.parameterName === entry.targetParameterName
+      && isolatedCandidate.parameterIndex === entry.targetParameterIndex
+      && isolatedCandidate.parameterPath === entry.targetParameterPath,
+  );
+  if (isolatedCandidates.length !== 1) {
+    violations.push({
+      code: "state-target-pure-reader-target-binding-missing",
+      modulePath: normalizeRelativePath(relativePath),
+      functionName: entry.functionName,
+      targetParameterName: entry.targetParameterName,
+      targetParameterIndex: entry.targetParameterIndex,
+      targetParameterPath: entry.targetParameterPath,
+      count: isolatedCandidates.length,
+    });
+    return violations;
+  }
+  const isolatedBinding = createParameterBinding(isolatedCandidates[0]);
+  const findings = scanStateMutationInventory(
+    inspection.functionSource,
+    {
+      filePath: relativePath,
+      bindings: [toScannerBinding(isolatedBinding)],
+      derivedAliasTaintMode:
+        DERIVED_ALIAS_TAINT_MODES.STRICT,
+    },
+  ).findings.map((finding) =>
+    withStateWriterFindingSourceFingerprint(
+      inspection.functionSource,
+      finding,
+    )
+  );
+  const observedConservativeFindings = [];
+  for (const finding of findings) {
+    if (
+      finding?.unsupported
+      && finding.reason === "state-alias-escape"
+    ) {
+      observedConservativeFindings.push(finding);
+      continue;
+    }
+    violations.push({
+      code: "state-target-pure-reader-mutation",
+      modulePath: normalizeRelativePath(relativePath),
+      functionName: entry.functionName,
+      targetParameterName: entry.targetParameterName,
+      operation: String(finding?.operation || ""),
+      key: String(finding?.key || ""),
+      reason: String(finding?.reason || ""),
+      sourceFingerprint: String(finding?.sourceFingerprint || ""),
+      line: Number(finding?.line || 0),
+      column: Number(finding?.column || 0),
+    });
+  }
+  const expectedCounts = new Map(
+    entry.conservativeFindings.map((finding) => [
+      stateTargetPureReaderConservativeFindingIdentity(finding),
+      Number(finding.count),
+    ]),
+  );
+  const observedCounts =
+    countStateTargetPureReaderConservativeFindings(
+      observedConservativeFindings,
+    );
+  for (const [identity, observedCount] of observedCounts) {
+    const expectedCount = expectedCounts.get(identity) || 0;
+    if (observedCount > expectedCount) {
+      violations.push({
+        code:
+          "state-target-pure-reader-conservative-finding-unregistered",
+        modulePath: normalizeRelativePath(relativePath),
+        functionName: entry.functionName,
+        targetParameterName: entry.targetParameterName,
+        escapeIdentity: identity,
+        expectedCount,
+        observedCount,
+      });
+    }
+  }
+  for (const [identity, expectedCount] of expectedCounts) {
+    const observedCount = observedCounts.get(identity) || 0;
+    if (observedCount < expectedCount) {
+      violations.push({
+        code:
+          "state-target-pure-reader-conservative-finding-missing",
+        modulePath: normalizeRelativePath(relativePath),
+        functionName: entry.functionName,
+        targetParameterName: entry.targetParameterName,
+        escapeIdentity: identity,
+        expectedCount,
+        observedCount,
+      });
+    }
+  }
+  if (
+    candidate.functionName !== entry.functionName
+    || candidate.parameterName !== entry.targetParameterName
+    || candidate.parameterIndex !== entry.targetParameterIndex
+    || candidate.parameterPath !== entry.targetParameterPath
+  ) {
+    violations.push({
+      code: "state-target-pure-reader-target-binding-drift",
+      modulePath: normalizeRelativePath(relativePath),
+      functionName: entry.functionName,
+      targetParameterName: entry.targetParameterName,
+    });
+  }
+  return violations;
+}
+
+function buildStateTargetPureReaderCandidateIdentities({
+  relativePath,
+  source,
+  allParameterDiscovery,
+}) {
+  const entries = getStateTargetPureReaderContractEntriesForModule(
+    relativePath,
+  );
+  if (!entries.length) {
+    return new Set();
+  }
+  const violations = [
+    ...validateStateTargetPureReaderContract(
+      STATE_TARGET_PURE_READER_CONTRACT,
+    ),
+  ];
+  const identities = new Set();
+  for (const entry of entries) {
+    const candidates = allParameterDiscovery.bindings.filter(
+      (candidate) =>
+        candidate.functionName === entry.functionName
+        && candidate.parameterName === entry.targetParameterName
+        && candidate.parameterIndex === entry.targetParameterIndex
+        && candidate.parameterPath === entry.targetParameterPath,
+    );
+    if (candidates.length !== 1) {
+      violations.push({
+        code: "state-target-pure-reader-target-binding-missing",
+        modulePath: normalizeRelativePath(relativePath),
+        functionName: entry.functionName,
+        targetParameterName: entry.targetParameterName,
+        targetParameterIndex: entry.targetParameterIndex,
+        targetParameterPath: entry.targetParameterPath,
+        count: candidates.length,
+      });
+      continue;
+    }
+    violations.push(
+      ...validateStateTargetPureReaderBinding({
+        relativePath,
+        source,
+        entry,
+        candidate: candidates[0],
+      }),
+    );
+    identities.add(
+      stateTargetPureReaderCandidateIdentity(candidates[0]),
+    );
+  }
+  if (violations.length) {
+    const error = new Error(
+      `State target pure-reader contract violated: ${relativePath}`,
+    );
+    error.code = "state-target-pure-reader-contract-violation";
+    error.violations = violations;
+    throw error;
+  }
+  return identities;
+}
+
 export async function discoverStateWriterBindingsForSource(
   relativePath,
   source,
@@ -1086,10 +2860,29 @@ export async function discoverStateWriterBindingsForSource(
   {
     previousWriter = null,
     scanAllParameters = false,
+    enforceCurrentContracts = true,
+    derivedAliasTaintMode =
+      DERIVED_ALIAS_TAINT_MODES.STRICT,
+    scanner = scanStateMutationInventory,
+    includeInventories = false,
   } = {},
 ) {
+  const normalizedDerivedAliasTaintMode =
+    normalizeDerivedAliasTaintMode(derivedAliasTaintMode);
   if (surface === "test") {
-    return ["state", "runtimeState", "appState"].map(createTestRootBinding);
+    const testBindings =
+      ["state", "runtimeState", "appState"].map(createTestRootBinding);
+    const bindingInventories =
+      scanStateWriterBindingInventoriesBatch(
+        source,
+        relativePath,
+        testBindings,
+        normalizedDerivedAliasTaintMode,
+        { scanner },
+      );
+    return includeInventories
+      ? { bindings: testBindings, bindingInventories }
+      : testBindings;
   }
 
   const bindings = discoverGlobalStateImportBindings(source, {
@@ -1097,14 +2890,25 @@ export async function discoverStateWriterBindingsForSource(
   }).map(createModuleBinding);
   const discovery = discoverFunctionParameterBindings(source);
   if (discovery.diagnostics.length) {
-    return [{
+    const diagnosticBindings = [{
       id: "syntax",
       kind: "module",
       name: "",
       discoveryDiagnostics: discovery.diagnostics,
     }];
+    const bindingInventories =
+      scanStateWriterBindingInventoriesBatch(
+        source,
+        relativePath,
+        diagnosticBindings,
+        normalizedDerivedAliasTaintMode,
+        { scanner },
+      );
+    return includeInventories
+      ? { bindings: diagnosticBindings, bindingInventories }
+      : diagnosticBindings;
   }
-  if (isActionPath(relativePath)) {
+  if (isActionPath(relativePath) && enforceCurrentContracts) {
     const nonTargetParameterMutationViolations =
       await validateStateActionNonTargetParameterMutations(
         relativePath,
@@ -1136,9 +2940,38 @@ export async function discoverStateWriterBindingsForSource(
         bindings.push(createParameterBinding(candidates[0]));
       }
     }
-    return dedupeBindings(bindings);
+    const actionBindings = dedupeBindings(bindings);
+    const bindingInventories =
+      scanStateWriterBindingInventoriesBatch(
+        source,
+        relativePath,
+        actionBindings,
+        normalizedDerivedAliasTaintMode,
+        { scanner },
+      );
+    return includeInventories
+      ? { bindings: actionBindings, bindingInventories }
+      : actionBindings;
   }
+  const allParameterDiscovery = discoverFunctionParameterBindings(
+    source,
+    { parameterNames: null },
+  );
+  const pureReaderCandidateIdentities = enforceCurrentContracts
+    ? buildStateTargetPureReaderCandidateIdentities({
+      relativePath,
+      source,
+      allParameterDiscovery,
+    })
+    : new Set();
   for (const candidate of discovery.bindings) {
+    if (
+      pureReaderCandidateIdentities.has(
+        stateTargetPureReaderCandidateIdentity(candidate),
+      )
+    ) {
+      continue;
+    }
     const exclusionKey = [
       relativePath,
       candidate.functionName,
@@ -1162,11 +2995,15 @@ export async function discoverStateWriterBindingsForSource(
           ].join("|"),
       ),
   );
-  const allParameterDiscovery = discoverFunctionParameterBindings(
-    source,
-    { parameterNames: null },
-  );
+  const candidateBindings = [];
   for (const candidate of allParameterDiscovery.bindings) {
+    if (
+      pureReaderCandidateIdentities.has(
+        stateTargetPureReaderCandidateIdentity(candidate),
+      )
+    ) {
+      continue;
+    }
     const priorIdentity = [
       candidate.functionName,
       Number(candidate.parameterIndex || 0),
@@ -1186,8 +3023,43 @@ export async function discoverStateWriterBindingsForSource(
     if (EXCLUDED_PARAMETER_BINDINGS.has(exclusionKey)) {
       continue;
     }
-    const binding = createParameterBinding(candidate);
-    const findings = scanBinding(source, relativePath, binding);
+    candidateBindings.push({
+      binding: createParameterBinding(candidate),
+      priorIdentity,
+    });
+  }
+  const specialBindings =
+    SPECIAL_BINDINGS_BY_PATH[relativePath] || [];
+  const scannedBindings = dedupeBindings([
+    ...bindings,
+    ...candidateBindings.map(({ binding }) => binding),
+    ...specialBindings,
+  ]);
+  const scannedBindingInventories =
+    scanStateWriterBindingInventoriesBatch(
+      source,
+      relativePath,
+      scannedBindings,
+      normalizedDerivedAliasTaintMode,
+      { scanner },
+    ).map((inventory) => ({
+      ...inventory,
+      findings: applyStateWriterBindingFindingContracts({
+        relativePath,
+        binding: inventory.binding,
+        findings: inventory.findings,
+        enforceCurrentContracts,
+      }),
+    }));
+  const inventoryByBindingId = new Map(
+    scannedBindingInventories.map((inventory) => [
+      inventory.binding.id,
+      inventory,
+    ]),
+  );
+  for (const { binding, priorIdentity } of candidateBindings) {
+    const findings =
+      inventoryByBindingId.get(binding.id)?.findings || [];
     const hasCanonicalStateMutation =
       hasCanonicalStateMutationFinding(
         findings,
@@ -1207,8 +3079,17 @@ export async function discoverStateWriterBindingsForSource(
       bindings.push(binding);
     }
   }
-  bindings.push(...(SPECIAL_BINDINGS_BY_PATH[relativePath] || []));
-  return dedupeBindings(bindings);
+  bindings.push(...specialBindings);
+  const selectedBindings = dedupeBindings(bindings);
+  if (!includeInventories) {
+    return selectedBindings;
+  }
+  return {
+    bindings: selectedBindings,
+    bindingInventories: selectedBindings.map(
+      (binding) => inventoryByBindingId.get(binding.id),
+    ),
+  };
 }
 
 export function hasCanonicalStateMutationFinding(
@@ -1232,9 +3113,12 @@ export function hasCanonicalStateMutationFinding(
   });
 }
 
-function scanBinding(source, relativePath, binding) {
-  if (binding.discoveryDiagnostics?.length) {
-    return binding.discoveryDiagnostics.map((diagnostic) => ({
+function buildBindingDiscoveryDiagnosticInventory(
+  relativePath,
+  binding,
+) {
+  return {
+    findings: binding.discoveryDiagnostics.map((diagnostic) => ({
       filePath: relativePath,
       bindingId: binding.id,
       bindingKind: binding.kind,
@@ -1258,69 +3142,591 @@ function scanBinding(source, relativePath, binding) {
           ].join("|"),
         )
         .digest("hex"),
-    }));
-  }
-  return scanStateMutations(source, {
-    filePath: relativePath,
-    bindings: [toScannerBinding(binding)],
-  }).map((finding) => {
-    const start = Math.max(0, Number(finding.start || 0));
-    const end = Math.max(start, Number(finding.end || start));
-    const sourceSlice = String(source || "")
-      .slice(start, end)
-      .replaceAll("\r\n", "\n")
-      .trim();
-    return {
-      ...finding,
-      sourceFingerprint: sourceSlice
-        ? createHash("sha256").update(sourceSlice).digest("hex")
-        : "",
-    };
+    })),
+    actionDelegations: [],
+  };
+}
+
+function withStateWriterFindingSourceFingerprint(source, finding) {
+  const start = Math.max(0, Number(finding.start || 0));
+  const end = Math.max(start, Number(finding.end || start));
+  const sourceSlice = String(source || "")
+    .slice(start, end)
+    .replaceAll("\r\n", "\n")
+    .trim();
+  return {
+    ...finding,
+    sourceFingerprint: sourceSlice
+      ? createHash("sha256").update(sourceSlice).digest("hex")
+      : "",
+  };
+}
+
+const CONTAINER_ALIAS_ESCAPE_EVIDENCE_KINDS = new Set([
+  "assignment-value",
+  "return-value",
+  "unknown-call-argument",
+]);
+
+function withoutRedundantContainerAliasEscapeFindings(
+  findings = [],
+) {
+  const sourceFindings = Array.isArray(findings)
+    ? findings
+    : [];
+  return sourceFindings.filter((finding) => {
+    if (
+      finding?.reason !== "state-alias-escape"
+      || !CONTAINER_ALIAS_ESCAPE_EVIDENCE_KINDS.has(
+        String(finding?.evidenceKind || ""),
+      )
+    ) {
+      return true;
+    }
+    const start = Number(finding?.start);
+    const end = Number(finding?.end);
+    if (
+      !Number.isInteger(start)
+      || !Number.isInteger(end)
+      || end <= start
+    ) {
+      return true;
+    }
+    const hasNestedFullRootEscape = sourceFindings.some(
+      (candidate) => {
+        if (
+          candidate === finding
+          || candidate?.bindingId !== finding.bindingId
+          || candidate?.enclosingFunctionIdentity
+            !== finding.enclosingFunctionIdentity
+          || candidate?.reason !== "state-alias-escape"
+          || candidate?.key !== "*"
+        ) {
+          return false;
+        }
+        const candidateStart = Number(candidate?.start);
+        const candidateEnd = Number(candidate?.end);
+        return Number.isInteger(candidateStart)
+          && Number.isInteger(candidateEnd)
+          && candidateStart >= start
+          && candidateEnd <= end
+          && (
+            candidateStart > start
+            || candidateEnd < end
+          );
+      },
+    );
+    return !hasNestedFullRootEscape;
   });
 }
 
-function discoverChangedProductionPaths(baseSha = "") {
-  const changed = new Set();
-  const resolvedBaseSha = String(baseSha || "").trim();
-  if (resolvedBaseSha) {
-    const output = execFileSync(
-      "git",
-      ["diff", "--name-only", resolvedBaseSha, "--", "js"],
-      {
-        cwd: PROJECT_ROOT,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      },
+const JAVASCRIPT_PARSE_FAILURE_REASONS = new Set([
+  "javascript-parse-error",
+  "unterminated-block-comment",
+  "unterminated-regular-expression",
+  "unterminated-string",
+  "unterminated-template",
+]);
+
+function isBatchJavaScriptParseFailure(inventory) {
+  return inventory.actionDelegations.length === 0
+    && inventory.findings.length === 1
+    && inventory.findings[0]?.unsupported
+    && inventory.findings[0]?.operation === "unsupported"
+    && JAVASCRIPT_PARSE_FAILURE_REASONS.has(
+      inventory.findings[0]?.reason,
     );
+}
+
+export function scanStateWriterBindingInventoriesBatch(
+  source,
+  relativePath,
+  bindings = [],
+  derivedAliasTaintMode =
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+  {
+    scanner = scanStateMutationInventory,
+  } = {},
+) {
+  const normalizedDerivedAliasTaintMode =
+    normalizeDerivedAliasTaintMode(derivedAliasTaintMode);
+  const orderedBindings = Array.isArray(bindings) ? bindings : [];
+  const inventoriesByBindingId = new Map();
+  const scannableBindings = [];
+  for (const binding of orderedBindings) {
+    if (binding.discoveryDiagnostics?.length) {
+      inventoriesByBindingId.set(
+        binding.id,
+        buildBindingDiscoveryDiagnosticInventory(
+          relativePath,
+          binding,
+        ),
+      );
+      continue;
+    }
+    scannableBindings.push(binding);
+    inventoriesByBindingId.set(binding.id, {
+      findings: [],
+      actionDelegations: [],
+    });
+  }
+
+  if (scannableBindings.length) {
+    const inventory = scanner(source, {
+      filePath: relativePath,
+      bindings: scannableBindings.map(toScannerBinding),
+      derivedAliasTaintMode:
+        normalizedDerivedAliasTaintMode,
+    });
+    if (isBatchJavaScriptParseFailure(inventory)) {
+      const parseFailure = inventory.findings[0];
+      for (const binding of scannableBindings) {
+        inventoriesByBindingId.get(binding.id).findings.push(
+          withStateWriterFindingSourceFingerprint(source, {
+            ...parseFailure,
+            bindingId: binding.id,
+            bindingKind: binding.kind,
+            root: binding.name,
+          }),
+        );
+      }
+    } else {
+      for (const finding of inventory.findings) {
+        const bindingInventory =
+          inventoriesByBindingId.get(finding.bindingId);
+        if (!bindingInventory) {
+          throw new Error(
+            `State writer batch scan returned an unknown binding: ${finding.bindingId}`,
+          );
+        }
+        bindingInventory.findings.push(
+          withStateWriterFindingSourceFingerprint(source, finding),
+        );
+      }
+      for (const edge of inventory.actionDelegations) {
+        const bindingInventory =
+          inventoriesByBindingId.get(edge.bindingId);
+        if (!bindingInventory) {
+          throw new Error(
+            `State writer batch scan returned an unknown binding delegation: ${edge.bindingId}`,
+          );
+        }
+        bindingInventory.actionDelegations.push(edge);
+      }
+      for (const binding of scannableBindings) {
+        const bindingInventory =
+          inventoriesByBindingId.get(binding.id);
+        bindingInventory.findings =
+          withoutRedundantContainerAliasEscapeFindings(
+            bindingInventory.findings,
+          );
+      }
+    }
+  }
+
+  return orderedBindings.map((binding) => ({
+    binding,
+    ...inventoriesByBindingId.get(binding.id),
+  }));
+}
+
+function scanBindingInventory(
+  source,
+  relativePath,
+  binding,
+  derivedAliasTaintMode =
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+) {
+  const [inventory] = scanStateWriterBindingInventoriesBatch(
+    source,
+    relativePath,
+    [binding],
+    derivedAliasTaintMode,
+  );
+  return inventory;
+}
+
+function scanBinding(
+  source,
+  relativePath,
+  binding,
+  derivedAliasTaintMode =
+    DERIVED_ALIAS_TAINT_MODES.STRICT,
+) {
+  return scanBindingInventory(
+    source,
+    relativePath,
+    binding,
+    derivedAliasTaintMode,
+  ).findings;
+}
+
+export const STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY =
+  Object.freeze({
+    algorithmVersion: 1,
+    scope:
+      "production-paths-changed-since-frozen-p4-baseline",
+  });
+
+function defaultDerivedAliasTaintRunGit(args) {
+  return execFileSync("git", args, {
+    cwd: PROJECT_ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+function normalizeCandidatePathList(candidatePaths = []) {
+  return stableUnique(
+    (Array.isArray(candidatePaths) ? candidatePaths : [])
+      .map(normalizeRelativePath)
+      .filter(Boolean),
+  );
+}
+
+function derivedAliasTaintEnabledPathHash(
+  modeByPath = {},
+) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify(
+        Object.entries(modeByPath)
+          .filter(
+            ([, mode]) =>
+              mode === DERIVED_ALIAS_TAINT_MODES.STRICT,
+          )
+          .map(([relativePath]) => relativePath)
+          .sort((left, right) => left.localeCompare(right)),
+      ),
+    )
+    .digest("hex");
+}
+
+export function resolveStateWriterDerivedAliasTaintMode({
+  relativePath = "",
+  surface = "",
+  changedProductionPaths = [],
+  persistentStrictProductionPaths = [],
+} = {}) {
+  const normalizedPath = normalizeRelativePath(relativePath);
+  const normalizedSurface = String(surface || "")
+    || (isTestPath(normalizedPath) ? "test" : "production");
+  if (normalizedSurface === "test") {
+    return DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE;
+  }
+  const changed = changedProductionPaths instanceof Set
+    ? changedProductionPaths
+    : new Set(normalizeCandidatePathList(changedProductionPaths));
+  const persistent = persistentStrictProductionPaths instanceof Set
+    ? persistentStrictProductionPaths
+    : new Set(
+      normalizeCandidatePathList(persistentStrictProductionPaths),
+    );
+  return (
+    isActionPath(normalizedPath)
+    || changed.has(normalizedPath)
+    || persistent.has(normalizedPath)
+  )
+    ? DERIVED_ALIAS_TAINT_MODES.STRICT
+    : DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE;
+}
+
+export function validateStateWriterDerivedAliasTaintModeManifest(
+  manifest = {},
+) {
+  const violations = [];
+  if (
+    Number(manifest.algorithmVersion)
+    !== STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY.algorithmVersion
+  ) {
+    violations.push({
+      code: "derived-alias-taint-algorithm-version-invalid",
+    });
+  }
+  if (
+    String(manifest.scope || "")
+    !== STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY.scope
+  ) {
+    violations.push({
+      code: "derived-alias-taint-scope-invalid",
+    });
+  }
+  if (
+    !/^[0-9a-f]{40}$/.test(
+      String(manifest.sourceBaseSha || ""),
+    )
+  ) {
+    violations.push({
+      code: "derived-alias-taint-source-base-invalid",
+    });
+  }
+  const changedProductionPaths =
+    normalizeCandidatePathList(
+      manifest.changedProductionPaths,
+    );
+  if (
+    JSON.stringify(changedProductionPaths)
+    !== JSON.stringify(manifest.changedProductionPaths || [])
+  ) {
+    violations.push({
+      code: "derived-alias-taint-changed-paths-invalid",
+    });
+  }
+  const changed = new Set(changedProductionPaths);
+  const persistentStrictProductionPaths =
+    normalizeCandidatePathList(
+      manifest.persistentStrictProductionPaths,
+    );
+  if (
+    JSON.stringify(persistentStrictProductionPaths)
+    !== JSON.stringify(
+      manifest.persistentStrictProductionPaths || [],
+    )
+  ) {
+    violations.push({
+      code:
+        "derived-alias-taint-persistent-strict-paths-invalid",
+    });
+  }
+  const persistent = new Set(persistentStrictProductionPaths);
+  const modeByPath =
+    manifest.modeByPath
+    && typeof manifest.modeByPath === "object"
+    && !Array.isArray(manifest.modeByPath)
+      ? manifest.modeByPath
+      : {};
+  for (const [relativePath, mode] of Object.entries(modeByPath)) {
+    try {
+      normalizeDerivedAliasTaintMode(mode);
+    } catch {
+      violations.push({
+        code: "derived-alias-taint-path-mode-invalid",
+        path: relativePath,
+        mode,
+      });
+      continue;
+    }
+    if (
+      changed.has(relativePath)
+      && mode !== DERIVED_ALIAS_TAINT_MODES.STRICT
+    ) {
+      violations.push({
+        code:
+          "derived-alias-taint-changed-path-resolved-legacy",
+        path: relativePath,
+      });
+    }
+    if (
+      persistent.has(relativePath)
+      && mode !== DERIVED_ALIAS_TAINT_MODES.STRICT
+    ) {
+      violations.push({
+        code:
+          "derived-alias-taint-persistent-path-resolved-legacy",
+        path: relativePath,
+      });
+    }
+    if (
+      isActionPath(relativePath)
+      && mode !== DERIVED_ALIAS_TAINT_MODES.STRICT
+    ) {
+      violations.push({
+        code:
+          "derived-alias-taint-action-path-resolved-legacy",
+        path: relativePath,
+      });
+    }
+    if (
+      isTestPath(relativePath)
+      && mode !== DERIVED_ALIAS_TAINT_MODES.LEGACY_BASELINE
+    ) {
+      violations.push({
+        code: "derived-alias-taint-test-path-resolved-strict",
+        path: relativePath,
+      });
+    }
+  }
+  for (const relativePath of changedProductionPaths) {
+    if (!(relativePath in modeByPath)) {
+      violations.push({
+        code: "derived-alias-taint-changed-path-mode-missing",
+        path: relativePath,
+      });
+    }
+  }
+  for (const relativePath of persistentStrictProductionPaths) {
+    if (isTestPath(relativePath)) {
+      violations.push({
+        code:
+          "derived-alias-taint-persistent-test-path-invalid",
+        path: relativePath,
+      });
+    }
+  }
+  const expectedEnabledPathHash =
+    derivedAliasTaintEnabledPathHash(modeByPath);
+  if (
+    String(manifest.enabledPathHash || "")
+    !== expectedEnabledPathHash
+  ) {
+    violations.push({
+      code: "derived-alias-taint-enabled-path-hash-invalid",
+      expected: expectedEnabledPathHash,
+      actual: String(manifest.enabledPathHash || ""),
+    });
+  }
+  return violations;
+}
+
+export function buildStateWriterDerivedAliasTaintModeManifest({
+  previousPolicy = null,
+  sourceBaseSha = "",
+  candidatePaths = [],
+  runGit = defaultDerivedAliasTaintRunGit,
+} = {}) {
+  const frozenSourceBaseSha = String(
+    previousPolicy?.baseline?.sourceBaseSha || sourceBaseSha || "",
+  ).trim();
+  if (!frozenSourceBaseSha) {
+    const error = new Error(
+      "Derived alias taint requires a source baseline commit.",
+    );
+    error.code = "derived-alias-taint-source-base-missing";
+    throw error;
+  }
+  const resolvedFrozenSourceBaseSha = resolveGitCommitSha(
+    frozenSourceBaseSha,
+    { runGit },
+  );
+  const requestedSourceBaseSha = String(
+    sourceBaseSha || "",
+  ).trim();
+  if (requestedSourceBaseSha) {
+    const resolvedRequestedSourceBaseSha =
+      requestedSourceBaseSha === frozenSourceBaseSha
+        ? resolvedFrozenSourceBaseSha
+        : resolveGitCommitSha(
+          requestedSourceBaseSha,
+          { runGit },
+        );
+    if (
+      resolvedRequestedSourceBaseSha
+      !== resolvedFrozenSourceBaseSha
+    ) {
+      const error = new Error(
+        "Derived alias taint source baseline drifted from the frozen policy.",
+      );
+      error.code = "derived-alias-taint-baseline-drift";
+      error.expected = resolvedFrozenSourceBaseSha;
+      error.actual = resolvedRequestedSourceBaseSha;
+      throw error;
+    }
+  }
+  try {
+    runGit([
+      "merge-base",
+      "--is-ancestor",
+      resolvedFrozenSourceBaseSha,
+      "HEAD",
+    ]);
+  } catch (cause) {
+    const error = new Error(
+      "Derived alias taint source baseline is not an ancestor of HEAD.",
+      { cause },
+    );
+    error.code = "derived-alias-taint-baseline-not-ancestor";
+    error.sourceBaseSha = resolvedFrozenSourceBaseSha;
+    throw error;
+  }
+
+  const changed = new Set();
+  try {
+    const output = runGit([
+      "diff",
+      "--name-only",
+      resolvedFrozenSourceBaseSha,
+      "--",
+      "js",
+    ]);
     for (const entry of String(output || "").split(/\r?\n/)) {
       const normalized = normalizeRelativePath(entry).trim();
       if (normalized.endsWith(".js")) {
         changed.add(normalized);
       }
     }
+  } catch (cause) {
+    const error = new Error(
+      "Unable to diff production paths from the frozen state-writer baseline.",
+      { cause },
+    );
+    error.code = "derived-alias-taint-git-diff-failed";
+    error.sourceBaseSha = resolvedFrozenSourceBaseSha;
+    throw error;
   }
-  const untrackedOutput = execFileSync(
-    "git",
-    [
+  try {
+    const untrackedOutput = runGit([
       "ls-files",
       "--others",
       "--exclude-standard",
       "--",
       "js",
-    ],
-    {
-      cwd: PROJECT_ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
-  for (const entry of String(untrackedOutput || "").split(/\r?\n/)) {
-    const normalized = normalizeRelativePath(entry).trim();
-    if (normalized.endsWith(".js")) {
-      changed.add(normalized);
+    ]);
+    for (const entry of String(untrackedOutput || "").split(/\r?\n/)) {
+      const normalized = normalizeRelativePath(entry).trim();
+      if (normalized.endsWith(".js")) {
+        changed.add(normalized);
+      }
     }
+  } catch (cause) {
+    const error = new Error(
+      "Unable to discover untracked production paths for derived alias taint.",
+      { cause },
+    );
+    error.code = "derived-alias-taint-git-status-failed";
+    throw error;
   }
-  return changed;
+  const changedProductionPaths = [...changed]
+    .sort((left, right) => left.localeCompare(right));
+  const persistentStrictProductionPaths =
+    normalizeCandidatePathList(
+      previousPolicy?.baselines?.derivedAliasTaint?.paths,
+    ).filter((relativePath) => !isTestPath(relativePath));
+  const persistent = new Set(persistentStrictProductionPaths);
+  const modeByPath = Object.fromEntries(
+    normalizeCandidatePathList(candidatePaths).map((relativePath) => [
+      relativePath,
+      resolveStateWriterDerivedAliasTaintMode({
+        relativePath,
+        changedProductionPaths: changed,
+        persistentStrictProductionPaths: persistent,
+      }),
+    ]),
+  );
+  const manifest = Object.freeze({
+    algorithmVersion:
+      STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY.algorithmVersion,
+    scope: STATE_WRITER_DERIVED_ALIAS_TAINT_POLICY.scope,
+    sourceBaseSha: resolvedFrozenSourceBaseSha,
+    changedProductionPaths: Object.freeze(changedProductionPaths),
+    persistentStrictProductionPaths: Object.freeze(
+      persistentStrictProductionPaths,
+    ),
+    modeByPath: Object.freeze(modeByPath),
+    enabledPathHash:
+      derivedAliasTaintEnabledPathHash(modeByPath),
+  });
+  const violations =
+    validateStateWriterDerivedAliasTaintModeManifest(manifest);
+  if (violations.length) {
+    const error = new Error(
+      "Derived alias taint mode manifest is invalid.",
+    );
+    error.code = "derived-alias-taint-manifest-invalid";
+    error.violations = violations;
+    throw error;
+  }
+  return manifest;
 }
 
 async function discoverScannedCandidateBindings(
@@ -1331,14 +3737,19 @@ async function discoverScannedCandidateBindings(
   } = {},
 ) {
   const candidates = [];
+  const actionDelegations = [];
   const candidatePaths = await discoverCandidatePaths(legacyAllowlistPaths);
   const previousWritersByPath = new Map(
     (previousPolicy?.writers || [])
       .map((writer) => [writer.path, writer]),
   );
-  const changedProductionPaths = discoverChangedProductionPaths(
-    baseSha || previousPolicy?.baseline?.sourceBaseSha,
-  );
+  const derivedAliasTaintModeManifest =
+    buildStateWriterDerivedAliasTaintModeManifest({
+      previousPolicy,
+      sourceBaseSha:
+        baseSha || previousPolicy?.baseline?.sourceBaseSha,
+      candidatePaths,
+    });
   for (const relativePath of candidatePaths) {
     const absolutePath = path.join(PROJECT_ROOT, relativePath);
     if (!(await fileExists(absolutePath))) {
@@ -1346,6 +3757,8 @@ async function discoverScannedCandidateBindings(
     }
     const source = await fs.readFile(absolutePath, "utf8");
     const surface = isTestPath(relativePath) ? "test" : "production";
+    const derivedAliasTaintMode =
+      derivedAliasTaintModeManifest.modeByPath[relativePath];
     if (isActionPath(relativePath)) {
       const actionDelegationSourceViolations =
         validateStateActionModuleSource(
@@ -1372,17 +3785,30 @@ async function discoverScannedCandidateBindings(
       error.violations = actionBoundaryViolations;
       throw error;
     }
-    const bindings = await discoverStateWriterBindingsForSource(
+    const {
+      bindings,
+      bindingInventories,
+    } = await discoverStateWriterBindingsForSource(
       relativePath,
       source,
       surface,
       {
         previousWriter: previousWritersByPath.get(relativePath),
-        scanAllParameters: changedProductionPaths.has(relativePath),
+        scanAllParameters:
+          derivedAliasTaintMode
+          === DERIVED_ALIAS_TAINT_MODES.STRICT,
+        derivedAliasTaintMode,
+        includeInventories: true,
       },
     );
-    for (const binding of bindings) {
-      const findings = scanBinding(source, relativePath, binding);
+    for (
+      const {
+        binding,
+        findings,
+        actionDelegations: bindingActionDelegations,
+      } of bindingInventories
+    ) {
+      actionDelegations.push(...bindingActionDelegations);
       if (!findings.length) {
         continue;
       }
@@ -1394,11 +3820,16 @@ async function discoverScannedCandidateBindings(
       });
     }
   }
-  return candidates.sort(
-    (left, right) =>
-      left.path.localeCompare(right.path)
-      || left.binding.id.localeCompare(right.binding.id),
-  );
+  return {
+    candidates: candidates.sort(
+      (left, right) =>
+        left.path.localeCompare(right.path)
+        || left.binding.id.localeCompare(right.binding.id),
+    ),
+    actionDelegations:
+      normalizeStateActionDelegations(actionDelegations),
+    derivedAliasTaintModeManifest,
+  };
 }
 
 function createGrantKey(domain, migrationPhase) {
@@ -1545,10 +3976,36 @@ export function buildStateWriterBindingGrants(
     }
     grant.operations.add(finding.operation);
     const membershipKey = `${finding.operation}|${finding.key}`;
-    grant.memberships.set(membershipKey, {
-      operation: finding.operation,
-      key: finding.key,
-    });
+    if (!grant.memberships.has(membershipKey)) {
+      grant.memberships.set(membershipKey, {
+        operation: finding.operation,
+        key: finding.key,
+        mutationSites: [],
+      });
+    }
+    const membership = grant.memberships.get(membershipKey);
+    if (
+      surface === "production"
+      && !isActionPath(relativePath)
+      && finding.enclosingFunctionIdentity
+      && /^[0-9a-f]{64}$/i.test(
+        String(finding.sourceFingerprint || ""),
+      )
+    ) {
+      const occurrenceIndex = membership.mutationSites.filter(
+        (site) =>
+          site.enclosingFunctionIdentity
+            === finding.enclosingFunctionIdentity
+          && site.sourceFingerprint
+            === finding.sourceFingerprint,
+      ).length;
+      membership.mutationSites.push({
+        enclosingFunctionIdentity:
+          finding.enclosingFunctionIdentity,
+        sourceFingerprint: finding.sourceFingerprint,
+        occurrenceIndex,
+      });
+    }
     if (finding.key !== "*") {
       grant.keys.add(finding.key);
     }
@@ -1597,11 +4054,30 @@ export function buildStateWriterBindingGrants(
       migrationPhase: grant.migrationPhase,
       operations: stableUnique([...grant.operations]),
       keys: stableUnique([...grant.keys]),
-      memberships: [...grant.memberships.values()].sort(
-        (left, right) =>
-          left.operation.localeCompare(right.operation)
-          || left.key.localeCompare(right.key),
-      ),
+      memberships: [...grant.memberships.values()]
+        .map((membership) => ({
+          operation: membership.operation,
+          key: membership.key,
+          ...(membership.mutationSites.length
+            ? {
+              mutationSites: [...membership.mutationSites].sort(
+                (left, right) =>
+                  left.enclosingFunctionIdentity.localeCompare(
+                    right.enclosingFunctionIdentity,
+                  )
+                  || left.sourceFingerprint.localeCompare(
+                    right.sourceFingerprint,
+                  )
+                  || left.occurrenceIndex - right.occurrenceIndex,
+              ),
+            }
+            : {}),
+        }))
+        .sort(
+          (left, right) =>
+            left.operation.localeCompare(right.operation)
+            || left.key.localeCompare(right.key),
+        ),
       aliasSites: [...grant.aliasSites.values()].sort(
         (left, right) =>
           left.line - right.line
@@ -1668,6 +4144,7 @@ export async function buildStateWriterPolicySnapshot({
   generatedAt = "",
   phase = "P4.0",
   previousPolicy = null,
+  callerToActionBootstrapSeed = [],
   refreshP4Baseline = false,
 } = {}) {
   const normalizedPhase = normalizeP4StateActionPhase(phase);
@@ -1706,10 +4183,24 @@ export async function buildStateWriterPolicySnapshot({
     error.violations = actionDelegationContractViolations;
     throw error;
   }
+  const crossFileMigrationContractViolations =
+    validateStateActionCrossFileMigrationContract();
+  if (crossFileMigrationContractViolations.length) {
+    const error = new Error(
+      "State action cross-file migration contract is invalid.",
+    );
+    error.code = "state-action-cross-file-migration-contract-invalid";
+    error.violations = crossFileMigrationContractViolations;
+    throw error;
+  }
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const defaultStateReport = await buildDefaultStateOwnershipReport();
   const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
-  const scannedCandidates = await discoverScannedCandidateBindings(
+  const {
+    candidates: scannedCandidates,
+    actionDelegations,
+    derivedAliasTaintModeManifest,
+  } = await discoverScannedCandidateBindings(
     legacyAllowlistPaths,
     {
       previousPolicy: refreshP4Baseline ? null : previousPolicy,
@@ -1825,6 +4316,19 @@ export async function buildStateWriterPolicySnapshot({
       activeActionModulePaths.push(modulePath);
     }
   }
+  const actionModulePhaseAdmissionViolations =
+    validateStateActionModulePhaseAdmissions({
+      modulePaths: activeActionModulePaths,
+      phase: normalizedPhase,
+    });
+  if (actionModulePhaseAdmissionViolations.length) {
+    const error = new Error(
+      "Generated state action modules exceed the admitted phase.",
+    );
+    error.code = "state-action-module-phase-admission-invalid";
+    error.violations = actionModulePhaseAdmissionViolations;
+    throw error;
+  }
   const actionDelegationPolicyViolations =
     validateStateActionPolicyBindings(
       writers,
@@ -1886,6 +4390,36 @@ export async function buildStateWriterPolicySnapshot({
       buildLegacyStateWriterSemanticAuthority(writers),
   };
   currentBaselines.closeoutTargets = buildP4CloseoutTargets(currentBaselines);
+  const derivedAliasTaintEnabled =
+    previousPolicy
+    && !refreshP4Baseline
+    && compareP4StateActionPhases(normalizedPhase, "P4.2a") >= 0;
+  const strictProductionPaths = Object.entries(
+    derivedAliasTaintModeManifest.modeByPath,
+  )
+    .filter(
+      ([relativePath, mode]) =>
+        !isTestPath(relativePath)
+        && mode === DERIVED_ALIAS_TAINT_MODES.STRICT,
+    )
+    .map(([relativePath]) => relativePath);
+  const derivedAliasTaint = derivedAliasTaintEnabled
+    ? await buildFrozenDerivedAliasTaintBaseline({
+      sourceBaseSha: previousPolicy.baseline.sourceBaseSha,
+      relativePaths: strictProductionPaths,
+      legacySemanticBaseline:
+        previousPolicy.baselines.legacySemanticAuthority,
+      existingBaseline:
+        previousPolicy.baselines.derivedAliasTaint || null,
+      stateKeyAuthorityIndex,
+    })
+    : null;
+  const unbaselinedLegacyDiagnosticCounts =
+    buildUnbaselinedLegacyDiagnosticCounts({
+      legacySemanticAuthority:
+        currentBaselines.legacySemanticAuthority,
+      derivedAliasTaint,
+    });
   const currentProgressMetrics = {
     productionLegacyDirectFiles: productionProjection.length,
     productionLegacyMemberships:
@@ -1895,10 +4429,53 @@ export async function buildStateWriterPolicySnapshot({
     productionLegacyAliasSites:
       bindingScopedMetrics.sites.alias.production.legacyCombined,
     productionLegacyAmbiguousSites:
-      bindingScopedMetrics.sites.ambiguous.production.legacyCombined,
+      derivedAliasTaint
+        ? unbaselinedLegacyDiagnosticCounts.ambiguousSites
+        : bindingScopedMetrics.sites.ambiguous.production.legacyCombined,
     productionLegacyUnsupportedSites:
-      bindingScopedMetrics.sites.unsupported.production.legacyCombined,
+      derivedAliasTaint
+        ? unbaselinedLegacyDiagnosticCounts.unsupportedSites
+        : bindingScopedMetrics.sites.unsupported.production.legacyCombined,
   };
+  const frozenLegacySemanticAuthority =
+    previousPolicy && !refreshP4Baseline
+      ? previousPolicy.baselines.legacySemanticAuthority
+      : currentBaselines.legacySemanticAuthority;
+  const effectiveFrozenLegacySemanticAuthority =
+    composeLegacySemanticBaseline({
+      legacyBaseline: frozenLegacySemanticAuthority,
+      derivedAliasTaint,
+    });
+  const incrementalDerivedAliasTaint =
+    buildIncrementalDerivedAliasTaintBaseline({
+      currentBaseline: derivedAliasTaint,
+      previousBaseline:
+        previousPolicy?.baselines?.derivedAliasTaint,
+    });
+  const effectivePreviousLegacySemanticAuthority =
+    previousPolicy && !refreshP4Baseline
+      ? composeLegacySemanticBaseline({
+        legacyBaseline:
+          buildLegacyStateWriterSemanticAuthority(
+            previousPolicy.writers,
+          ),
+        derivedAliasTaint: incrementalDerivedAliasTaint,
+      })
+      : null;
+  const retiredLegacySemanticAuthority =
+    subtractLegacyStateWriterSemanticAuthority(
+      effectiveFrozenLegacySemanticAuthority,
+      buildLegacyStateWriterSemanticAuthority(writers),
+    );
+  const callerToActionLedger = buildCallerToActionLedger({
+    phase: normalizedPhase,
+    previousPolicy: refreshP4Baseline ? null : previousPolicy,
+    bootstrapSeedEntries:
+      refreshP4Baseline ? [] : callerToActionBootstrapSeed,
+    writers,
+    retiredLegacySemanticAuthority,
+    actionDelegations,
+  });
   const progression = validateStateWriterPolicyProgression({
     previousPolicy: refreshP4Baseline ? null : previousPolicy,
     phase: normalizedPhase,
@@ -1915,23 +4492,23 @@ export async function buildStateWriterPolicySnapshot({
     previousPolicy && !refreshP4Baseline
       ? [
         ...validateLegacyStateWriterSemanticAuthority({
-          baseline: previousPolicy?.baselines?.legacySemanticAuthority,
+          baseline: effectiveFrozenLegacySemanticAuthority,
           writers,
         }).violations,
         ...validateLegacyStateWriterSemanticLedger({
-          baseline: previousPolicy?.baselines?.legacySemanticAuthority,
+          baseline: effectiveFrozenLegacySemanticAuthority,
           writers,
-          retired: subtractLegacyStateWriterSemanticAuthority(
-            previousPolicy?.baselines?.legacySemanticAuthority,
-            buildLegacyStateWriterSemanticAuthority(writers),
-          ),
+          retired: retiredLegacySemanticAuthority,
           previousWriters: previousPolicy?.writers,
+          previousAuthorityBaseline:
+            effectivePreviousLegacySemanticAuthority,
           previousRetired:
             previousPolicy?.progress?.retiredLegacySemanticAuthority,
         }).violations,
         ...validateLegacyMembershipRetirementReplacements({
           previousWriters: previousPolicy?.writers,
           writers,
+          callerToActionLedger,
         }),
       ]
       : currentBaselines.legacySemanticAuthority.collisions.map(
@@ -1966,9 +4543,13 @@ export async function buildStateWriterPolicySnapshot({
   const baselines = preserveFrozenBaseline
     ? cloneJsonValue(previousPolicy.baselines)
     : currentBaselines;
+  if (derivedAliasTaint) {
+    baselines.derivedAliasTaint =
+      cloneJsonValue(derivedAliasTaint);
+  }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: derivedAliasTaint ? 2 : 1,
     stateFacade: "js/core/state.js#state",
     baseline,
     writers,
@@ -1981,11 +4562,10 @@ export async function buildStateWriterPolicySnapshot({
     progress: buildProgressState({
       phase: normalizedPhase,
       currentMetrics: currentProgressMetrics,
-      currentWriters: writers,
-      frozenLegacySemanticAuthority:
-        baselines.legacySemanticAuthority,
       previousPolicy,
       refreshP4Baseline,
+      retiredLegacySemanticAuthority,
+      callerToActionLedger,
     }),
   };
 }
@@ -2006,7 +4586,11 @@ function policyBindingSignatures(policy) {
 export async function scanStateWriterPolicySnapshot(policy) {
   const legacyAllowlistPaths = await readLegacyStateWriterAllowlist();
   const policySignatures = policyBindingSignatures(policy);
-  const candidates = await discoverScannedCandidateBindings(
+  const {
+    candidates,
+    actionDelegations,
+    derivedAliasTaintModeManifest,
+  } = await discoverScannedCandidateBindings(
     legacyAllowlistPaths,
     {
       previousPolicy: policy,
@@ -2018,6 +4602,12 @@ export async function scanStateWriterPolicySnapshot(policy) {
       (candidate) =>
         `${candidate.path}|${bindingSignature(candidate.binding)}`,
     ),
+  );
+  const candidatesBySignature = new Map(
+    candidates.map((candidate) => [
+      `${candidate.path}|${bindingSignature(candidate.binding)}`,
+      candidate,
+    ]),
   );
   const unknownCandidateBindings = [...candidateSignatures]
     .filter((signature) => !policySignatures.has(signature))
@@ -2042,22 +4632,30 @@ export async function scanStateWriterPolicySnapshot(policy) {
       });
       continue;
     }
-    const source = await fs.readFile(absolutePath, "utf8");
-    for (const binding of writer.bindings || []) {
-      if (binding.authority === "compatibility-only") {
-        continue;
-      }
+    const bindings = (writer.bindings || []).filter(
+      (binding) => binding.authority !== "compatibility-only",
+    );
+    for (const binding of bindings) {
+      const candidate = candidatesBySignature.get(
+        `${writer.path}|${bindingSignature(binding)}`,
+      );
       scans.push({
         path: writer.path,
         surface: writer.surface,
         bindingId: binding.id,
-        findings: scanBinding(source, writer.path, binding),
+        findings: applyStateWriterBindingFindingContracts({
+          relativePath: writer.path,
+          binding,
+          findings: candidate?.findings || [],
+        }),
       });
     }
   }
   return {
     legacyAllowlistPaths,
     scans,
+    actionDelegations,
+    derivedAliasTaintModeManifest,
     unknownCandidateBindings,
     stalePolicyBindings,
   };
@@ -2095,14 +4693,31 @@ function parseCliArgs(argv) {
 
 async function main() {
   const args = parseCliArgs(process.argv.slice(2));
-  const previousPolicy = args.refreshP4Baseline
+  const workingPolicy = args.refreshP4Baseline
     ? null
     : await readStateWriterPolicy().catch(() => null);
+  let previousPolicy = workingPolicy;
+  let callerToActionBootstrapSeed = [];
+  if (
+    !args.refreshP4Baseline
+    && args.phase === "P4.2a"
+    && Number(workingPolicy?.schemaVersion) === 1
+    && workingPolicy?.progress?.latestPhase === "P4.2a"
+    && !workingPolicy?.baselines?.derivedAliasTaint
+  ) {
+    previousPolicy = readStateWriterPolicyAtRevision("HEAD");
+    callerToActionBootstrapSeed =
+      extractP42aCallerToActionBootstrapSeed({
+        previousPolicy,
+        transitionPolicy: workingPolicy,
+      });
+  }
   const policy = await buildStateWriterPolicySnapshot({
     baseSha: args.baseSha,
     generatedAt: args.generatedAt,
     phase: args.phase,
     previousPolicy,
+    callerToActionBootstrapSeed,
     refreshP4Baseline: args.refreshP4Baseline,
   });
   const serialized = `${JSON.stringify(policy, null, 2)}\n`;
@@ -2119,6 +4734,9 @@ async function main() {
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
   main().catch((error) => {
     console.error(error?.stack || error);
+    if (Array.isArray(error?.violations)) {
+      console.error(JSON.stringify(error.violations, null, 2));
+    }
     process.exitCode = 1;
   });
 }

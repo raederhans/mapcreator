@@ -19,8 +19,6 @@ class ScenarioLifecycleRuntimeBoundaryContractTest(unittest.TestCase):
         self.assertIn("function restorePaintModeAfterScenario()", content)
         self.assertIn("function resetToScenarioBaseline(", content)
         self.assertIn("function clearActiveScenario(", content)
-        self.assertIn("recalculateScenarioOwnerControllerDiffCount,", content)
-        self.assertIn("recalculateScenarioOwnerControllerDiffCount();", content)
         self.assertIn("releaseScenarioAuditPayload(previousScenarioId, { syncUi: false });", content)
         self.assertIn('resetScenarioChunkRuntimeState({ scenarioId: "" });', content)
         self.assertIn("const hasBaselineDetailTopology = !!runtimeState.topologyDetail?.objects?.political;", content)

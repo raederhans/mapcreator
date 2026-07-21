@@ -52,7 +52,18 @@ import {
 import {
   state as runtimeStateFacade,
 } from "../js/core/state.js";
+import {
+  buildStateActionCrossFileMigrationContractIdentity,
+  findStateActionDelegationContractEntry,
+  findStateActionCrossFileMigrationContractEntry,
+  validateStateActionCrossFileMigrationContract,
+} from "./state_action_delegation_contract.mjs";
+import {
+  compareP4StateActionPhases,
+  normalizeP4StateActionPhase,
+} from "./p4_state_action_phases.mjs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { parse } from "acorn";
 import * as walk from "acorn-walk";
 
@@ -969,6 +980,366 @@ export function getLegacyDirectAllowlistProjection(policy = {}) {
   );
 }
 
+function isRegisteredP4Phase(value) {
+  try {
+    normalizeP4StateActionPhase(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validateCallerToActionLedgerSchema(policy = {}) {
+  const violations = [];
+  violations.push(
+    ...validateStateActionCrossFileMigrationContract(),
+  );
+  const progress = policy?.progress;
+  if (!progress) {
+    return violations;
+  }
+  const latestPhase = String(progress.latestPhase || "");
+  const ledger = progress.callerToActionLedger;
+  if (!ledger) {
+    if (!["P4.0", "P4.1"].includes(latestPhase)) {
+      violations.push(
+        createViolation("caller-action-ledger-entry-invalid", {
+          reason: "ledger-missing",
+          latestPhase,
+        }),
+      );
+    }
+    return violations;
+  }
+  if (Number(ledger.schemaVersion) !== 1) {
+    violations.push(
+      createViolation("caller-action-ledger-schema-version-invalid", {
+        schemaVersion: ledger.schemaVersion,
+      }),
+    );
+  }
+  const entries = Array.isArray(ledger.entries) ? ledger.entries : null;
+  if (!entries) {
+    violations.push(
+      createViolation("caller-action-ledger-entry-invalid", {
+        reason: "entries-not-array",
+      }),
+    );
+    return violations;
+  }
+  const sortedEntries = [...entries].sort(
+    (left, right) =>
+      String(left?.retiredMembershipIdentity || "").localeCompare(
+        String(right?.retiredMembershipIdentity || ""),
+      )
+      || String(left?.actionCallEdgeIdentity || "").localeCompare(
+        String(right?.actionCallEdgeIdentity || ""),
+      ),
+  );
+  if (JSON.stringify(entries) !== JSON.stringify(sortedEntries)) {
+    violations.push(
+      createViolation("caller-action-ledger-order-invalid"),
+    );
+  }
+  const retiredMemberships = new Set(
+    progress?.retiredLegacySemanticAuthority?.memberships || [],
+  );
+  const seenRetiredMemberships = new Set();
+  for (const [index, entry] of entries.entries()) {
+    const retiredMembershipIdentity = String(
+      entry?.retiredMembershipIdentity || "",
+    );
+    if (seenRetiredMemberships.has(retiredMembershipIdentity)) {
+      violations.push(
+        createViolation("caller-action-ledger-entry-duplicate", {
+          index,
+          retiredMembershipIdentity,
+        }),
+      );
+    }
+    seenRetiredMemberships.add(retiredMembershipIdentity);
+    const callerPath = String(entry?.callerPath || "");
+    const callerBindingId = String(entry?.callerBindingId || "");
+    const callerBindingIdentity = String(
+      entry?.callerBindingIdentity || "",
+    );
+    const domain = String(entry?.domain || "");
+    const migrationPhase = String(entry?.migrationPhase || "");
+    const operation = String(entry?.operation || "");
+    const key = String(entry?.key || "");
+    const actionModulePath = String(entry?.actionModulePath || "");
+    const actionExportName = String(entry?.actionExportName || "");
+    const actionCallEdgeIdentity = String(
+      entry?.actionCallEdgeIdentity || "",
+    );
+    const crossFileMigration =
+      findStateActionCrossFileMigrationContractEntry(
+        retiredMembershipIdentity,
+      );
+    const retiredCallerPath = String(
+      entry?.retiredCallerPath || callerPath,
+    );
+    const retiredCallerBindingIdentity = String(
+      entry?.retiredCallerBindingIdentity
+        || callerBindingIdentity,
+    );
+    const crossFileMigrationContractIdentity = String(
+      entry?.crossFileMigrationContractIdentity || "",
+    );
+    const expectedRetiredIdentity = [
+      retiredCallerPath,
+      retiredCallerBindingIdentity,
+      domain,
+      migrationPhase,
+      operation,
+      key,
+    ].join("|");
+    let parsedBindingIdentity = null;
+    let parsedRetiredBindingIdentity = null;
+    try {
+      parsedBindingIdentity = JSON.parse(callerBindingIdentity);
+    } catch {
+      parsedBindingIdentity = null;
+    }
+    try {
+      parsedRetiredBindingIdentity = JSON.parse(
+        retiredCallerBindingIdentity,
+      );
+    } catch {
+      parsedRetiredBindingIdentity = null;
+    }
+    const actionContract =
+      findStateActionDelegationContractEntry(
+        actionModulePath,
+        actionExportName,
+      );
+    const actionWriter = (policy?.writers || []).find(
+      (writer) =>
+        writer?.path === actionModulePath
+        && writer?.authority === "domain-action",
+    );
+    const actionBinding = actionWriter?.bindings?.find(
+      (binding) =>
+        binding?.authority === "domain-action"
+        && binding?.functionName === actionExportName,
+    );
+    const actionOwnsMembership = (
+      actionBinding?.grants || []
+    ).some(
+      (grant) =>
+        grant?.domain === domain
+        && grant?.migrationPhase === migrationPhase
+        && (grant?.memberships || []).some(
+          (membership) =>
+            membership?.operation === operation
+            && membership?.key === key,
+        ),
+    );
+    const targetArgumentIndex = Number(entry?.targetArgumentIndex);
+    const occurrenceIndex = Number(entry?.occurrenceIndex);
+    const start = Number(entry?.start);
+    const end = Number(entry?.end);
+    const line = Number(entry?.line);
+    const column = Number(entry?.column);
+    const sourceFingerprint = String(entry?.sourceFingerprint || "");
+    const enclosingFunctionIdentity = String(
+      entry?.enclosingFunctionIdentity || "",
+    );
+    const retiredEnclosingFunctionIdentity = String(
+      entry?.retiredEnclosingFunctionIdentity || "",
+    );
+    const retiredMutationSiteFingerprint = String(
+      entry?.retiredMutationSiteFingerprint || "",
+    );
+    const retiredMutationSiteCount = Number(
+      entry?.retiredMutationSiteCount,
+    );
+    const proofPrecision = String(entry?.proofPrecision || "");
+    const crossFileMutationSites = (
+      crossFileMigration?.retiredMutationSites || []
+    ).map((site) => ({
+      enclosingFunctionIdentity: String(
+        site?.enclosingFunctionIdentity || "",
+      ),
+      sourceFingerprint: String(
+        site?.sourceFingerprint || "",
+      ),
+      occurrenceIndex: Number(site?.occurrenceIndex),
+    }));
+    const crossFileRetiredEnclosingFunctionIdentities =
+      new Set(
+        crossFileMutationSites.map(
+          ({ enclosingFunctionIdentity: identity }) =>
+            identity,
+        ),
+      );
+    const crossFileRetiredEnclosingFunctionIdentity =
+      crossFileRetiredEnclosingFunctionIdentities.size === 1
+        ? [...crossFileRetiredEnclosingFunctionIdentities][0]
+        : "";
+    const crossFileMutationSiteFingerprint =
+      crossFileMutationSites.length
+        ? createHash("sha256")
+          .update(JSON.stringify(crossFileMutationSites))
+          .digest("hex")
+        : "";
+    const crossFileProofValid = crossFileMigration
+      ? (
+        retiredCallerPath
+          === crossFileMigration.retiredCallerPath
+        && retiredCallerBindingIdentity
+          === crossFileMigration.retiredCallerBindingIdentity
+        && callerPath
+          === crossFileMigration.replacementCallerPath
+        && callerBindingIdentity
+          === crossFileMigration.replacementCallerBindingIdentity
+        && enclosingFunctionIdentity
+          === crossFileMigration
+            .replacementEnclosingFunctionIdentity
+        && retiredEnclosingFunctionIdentity
+          === crossFileRetiredEnclosingFunctionIdentity
+        && actionModulePath
+          === crossFileMigration.actionModulePath
+        && actionExportName
+          === crossFileMigration.actionExportName
+        && targetArgumentIndex
+          === crossFileMigration.targetArgumentIndex
+        && sourceFingerprint
+          === crossFileMigration
+            .replacementActionSourceFingerprint
+        && crossFileMigrationContractIdentity
+          === crossFileMigration.contractIdentity
+        && crossFileMigrationContractIdentity
+          === buildStateActionCrossFileMigrationContractIdentity(
+            crossFileMigration,
+          )
+        && retiredMutationSiteFingerprint
+          === crossFileMutationSiteFingerprint
+        && retiredMutationSiteCount
+          === crossFileMutationSites.length
+        && proofPrecision === "explicit-cross-file"
+      )
+      : (
+        !entry?.retiredCallerPath
+        && !entry?.retiredCallerBindingIdentity
+        && !crossFileMigrationContractIdentity
+        && proofPrecision !== "explicit-cross-file"
+      );
+    const retiredInPhase = String(entry?.retiredInPhase || "");
+    const recordedInPhase = String(entry?.recordedInPhase || "");
+    const registeredRetiredPhase =
+      isRegisteredP4Phase(retiredInPhase);
+    const registeredRecordedPhase =
+      isRegisteredP4Phase(recordedInPhase);
+    const registeredLatestPhase =
+      isRegisteredP4Phase(latestPhase);
+    const phaseOrderValid =
+      registeredRetiredPhase
+      && registeredRecordedPhase
+      && registeredLatestPhase
+      && compareP4StateActionPhases(
+        retiredInPhase,
+        recordedInPhase,
+      ) <= 0
+      && compareP4StateActionPhases(
+        recordedInPhase,
+        latestPhase,
+      ) <= 0;
+    const provenanceValid = entry?.backfilled === true
+      ? (
+        retiredInPhase === "P4.1"
+        && recordedInPhase === "P4.2a"
+      )
+      : (
+        entry?.backfilled === false
+        && retiredInPhase === recordedInPhase
+      );
+    const preciseProofRequired =
+      registeredRecordedPhase
+      && compareP4StateActionPhases(
+        recordedInPhase,
+        "P4.2a",
+      ) > 0;
+    const preciseProofValid =
+      crossFileMigration
+        ? crossFileProofValid
+        : (
+          crossFileProofValid
+          && (
+            !preciseProofRequired
+            || (
+              enclosingFunctionIdentity
+              && retiredEnclosingFunctionIdentity
+              && enclosingFunctionIdentity
+                === retiredEnclosingFunctionIdentity
+              && /^[0-9a-f]{64}$/i.test(
+                retiredMutationSiteFingerprint,
+              )
+              && Number.isInteger(retiredMutationSiteCount)
+              && retiredMutationSiteCount > 0
+              && proofPrecision === "exact-site"
+            )
+          )
+        );
+    const entryInvalid =
+      !retiredMembershipIdentity
+      || !callerPath
+      || !callerBindingId
+      || !parsedBindingIdentity
+      || !parsedRetiredBindingIdentity
+      || !domain
+      || !migrationPhase
+      || !operation
+      || !key
+      || !actionModulePath
+      || !actionExportName
+      || retiredMembershipIdentity !== expectedRetiredIdentity
+      || !retiredMemberships.has(retiredMembershipIdentity)
+      || !actionContract
+      || !actionOwnsMembership
+      || !Number.isInteger(targetArgumentIndex)
+      || targetArgumentIndex !== actionContract?.targetArgumentIndex
+      || !Number.isInteger(occurrenceIndex)
+      || occurrenceIndex < 0
+      || !Number.isInteger(start)
+      || start < 0
+      || !Number.isInteger(end)
+      || end < start
+      || !Number.isInteger(line)
+      || line < 1
+      || !Number.isInteger(column)
+      || column < 0
+      || !/^[0-9a-f]{64}$/i.test(sourceFingerprint)
+      || !/^[0-9a-f]{64}$/i.test(actionCallEdgeIdentity)
+      || !phaseOrderValid
+      || !provenanceValid
+      || !preciseProofValid;
+    if (entryInvalid) {
+      violations.push(
+        createViolation("caller-action-ledger-entry-invalid", {
+          index,
+          retiredMembershipIdentity,
+        }),
+      );
+    }
+  }
+  if (
+    seenRetiredMemberships.size !== retiredMemberships.size
+    || [...retiredMemberships].some(
+      (identity) => !seenRetiredMemberships.has(identity),
+    )
+  ) {
+    violations.push(
+      createViolation("caller-action-ledger-entry-invalid", {
+        reason: "retired-membership-coverage-mismatch",
+        expected: retiredMemberships.size,
+        actual: seenRetiredMemberships.size,
+      }),
+    );
+  }
+  return violations;
+}
+
 export function validateStateWriterPolicySchema(policy = {}) {
   const violations = [];
   const semanticSections = [
@@ -1021,9 +1392,111 @@ export function validateStateWriterPolicySchema(policy = {}) {
   ]);
   const surfaces = new Set(["production", "test"]);
   const seenWriterPaths = new Set();
-  if (Number(policy?.schemaVersion) !== 1) {
+  const domainActionAuthorityByMembership = new Map();
+  const schemaVersion = Number(policy?.schemaVersion);
+  if (![1, 2].includes(schemaVersion)) {
     violations.push(createViolation("unsupported-schema-version"));
   }
+  const derivedAliasTaint =
+    policy?.baselines?.derivedAliasTaint;
+  if (schemaVersion === 1 && derivedAliasTaint !== undefined) {
+    violations.push(
+      createViolation(
+        "derived-alias-taint-policy-schema-version-invalid",
+      ),
+    );
+  }
+  if (schemaVersion === 2) {
+    if (
+      !derivedAliasTaint
+      || typeof derivedAliasTaint !== "object"
+      || Array.isArray(derivedAliasTaint)
+    ) {
+      violations.push(
+        createViolation("derived-alias-taint-baseline-missing"),
+      );
+    } else {
+      if (Number(derivedAliasTaint.algorithmVersion) !== 1) {
+        violations.push(
+          createViolation(
+            "derived-alias-taint-baseline-algorithm-invalid",
+          ),
+        );
+      }
+      const sourceBaseSha = String(
+        derivedAliasTaint.sourceBaseSha || "",
+      );
+      if (
+        !/^[0-9a-f]{40}$/.test(sourceBaseSha)
+        || sourceBaseSha
+          !== String(policy?.baseline?.sourceBaseSha || "")
+      ) {
+        violations.push(
+          createViolation(
+            "derived-alias-taint-baseline-source-invalid",
+          ),
+        );
+      }
+      const paths = derivedAliasTaint.paths;
+      const normalizedPaths = normalizeStringList(paths);
+      if (
+        !Array.isArray(paths)
+        || JSON.stringify(paths) !== JSON.stringify(normalizedPaths)
+        || paths.some(
+          (relativePath) =>
+            !relativePath.startsWith("js/")
+            || !relativePath.endsWith(".js")
+            || relativePath.includes("\\")
+            || relativePath.includes("/tests/"),
+        )
+      ) {
+        violations.push(
+          createViolation(
+            "derived-alias-taint-baseline-paths-invalid",
+          ),
+        );
+      }
+      const diagnosticDelta =
+        derivedAliasTaint.diagnosticDelta;
+      const diagnosticSections = [
+        "ambiguousSites",
+        "unsupportedSites",
+      ];
+      if (
+        !diagnosticDelta
+        || typeof diagnosticDelta !== "object"
+        || Array.isArray(diagnosticDelta)
+        || JSON.stringify(Object.keys(diagnosticDelta).sort())
+          !== JSON.stringify(diagnosticSections)
+      ) {
+        violations.push(
+          createViolation(
+            "derived-alias-taint-baseline-delta-shape-invalid",
+          ),
+        );
+      } else {
+        for (const section of diagnosticSections) {
+          const entries = diagnosticDelta[section];
+          if (
+            !Array.isArray(entries)
+            || entries.some(
+              (entry) => typeof entry !== "string" || !entry,
+            )
+            || JSON.stringify(entries)
+              !== JSON.stringify([...entries].sort())
+          ) {
+            violations.push(
+              createViolation(
+                "derived-alias-taint-baseline-delta-invalid",
+                { section },
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+  violations.push(...validateCallerToActionLedgerSchema(policy));
   if (policy?.baselines) {
     validateSemanticMultiset(
       policy.baselines.legacySemanticAuthority,
@@ -1266,6 +1739,100 @@ export function validateStateWriterPolicySchema(policy = {}) {
             );
           }
           membershipKeys.add(membershipKey);
+          if (
+            writer.surface === "production"
+            && binding.authority === "domain-action"
+          ) {
+            const authorityKey = [
+              String(grant.domain || ""),
+              String(grant.migrationPhase || ""),
+              operation,
+              key,
+            ].join("|");
+            const previousModulePath =
+              domainActionAuthorityByMembership.get(authorityKey);
+            if (
+              previousModulePath
+              && previousModulePath !== writerPath
+            ) {
+              violations.push(
+                createViolation(
+                  "duplicate-domain-action-membership-authority",
+                  {
+                    domain: String(grant.domain || ""),
+                    migrationPhase:
+                      String(grant.migrationPhase || ""),
+                    operation,
+                    key,
+                    firstModulePath: previousModulePath,
+                    duplicateModulePath: writerPath,
+                  },
+                ),
+              );
+            } else if (!previousModulePath) {
+              domainActionAuthorityByMembership.set(
+                authorityKey,
+                writerPath,
+              );
+            }
+          }
+          if (membership?.mutationSites !== undefined) {
+            const mutationSites = Array.isArray(
+              membership.mutationSites,
+            )
+              ? membership.mutationSites
+              : [];
+            const mutationSiteIdentities = new Set();
+            if (!Array.isArray(membership.mutationSites)) {
+              violations.push(
+                createViolation(
+                  "grant-membership-mutation-sites-invalid",
+                  {
+                    path: writerPath,
+                    bindingId,
+                    operation,
+                    key,
+                  },
+                ),
+              );
+            }
+            for (const site of mutationSites) {
+              const enclosingFunctionIdentity = String(
+                site?.enclosingFunctionIdentity || "",
+              );
+              const sourceFingerprint = String(
+                site?.sourceFingerprint || "",
+              );
+              const occurrenceIndex = Number(
+                site?.occurrenceIndex,
+              );
+              const siteIdentity = [
+                enclosingFunctionIdentity,
+                sourceFingerprint,
+                occurrenceIndex,
+              ].join("|");
+              if (
+                !enclosingFunctionIdentity
+                || !/^[0-9a-f]{64}$/i.test(sourceFingerprint)
+                || !Number.isInteger(occurrenceIndex)
+                || occurrenceIndex < 0
+                || mutationSiteIdentities.has(siteIdentity)
+              ) {
+                violations.push(
+                  createViolation(
+                    "grant-membership-mutation-site-invalid",
+                    {
+                      path: writerPath,
+                      bindingId,
+                      operation,
+                      key,
+                    },
+                  ),
+                );
+              }
+              mutationSiteIdentities.add(siteIdentity);
+            }
+          }
           const previousGrantIndex = membershipGrantIndexes.get(membershipKey);
           if (
             previousGrantIndex !== undefined
@@ -1893,10 +2460,156 @@ export function validateStateWriterPolicySnapshot({
   policy = {},
   legacyAllowlistPaths = [],
   scans = [],
+  actionDelegations = [],
 } = {}) {
   const violations = [];
   const stateKeyAuthorityIndex = buildCanonicalStateKeyAuthorityIndex();
   violations.push(...validateStateWriterPolicySchema(policy));
+  const ledgerEntries = Array.isArray(
+    policy?.progress?.callerToActionLedger?.entries,
+  )
+    ? policy.progress.callerToActionLedger.entries
+    : [];
+  const currentLedgerEntries = ledgerEntries.filter(
+    ({ recordedInPhase }) =>
+      recordedInPhase === policy?.progress?.latestPhase,
+  );
+  const normalizedActionDelegations = (
+    Array.isArray(actionDelegations) ? actionDelegations : []
+  ).map((edge) => ({
+    callerPath: String(edge?.callerPath || edge?.filePath || ""),
+    callerBindingId: String(
+      edge?.callerBindingId || edge?.bindingId || "",
+    ),
+    callerBindingIdentity: String(
+      edge?.callerBindingIdentity || "",
+    ),
+    enclosingFunctionIdentity: String(
+      edge?.enclosingFunctionIdentity || "",
+    ),
+    actionModulePath: String(edge?.actionModulePath || ""),
+    actionExportName: String(edge?.actionExportName || ""),
+    targetArgumentIndex: Number(edge?.targetArgumentIndex),
+    actionCallEdgeIdentity: String(
+      edge?.actionCallEdgeIdentity || "",
+    ),
+    legacyActionCallEdgeIdentity: String(
+      edge?.legacyActionCallEdgeIdentity || "",
+    ),
+    occurrenceIndex: Number(edge?.occurrenceIndex),
+    legacyOccurrenceIndex: Number(
+      edge?.legacyOccurrenceIndex,
+    ),
+    start: Number(edge?.start),
+    end: Number(edge?.end),
+    line: Number(edge?.line),
+    column: Number(edge?.column),
+    sourceFingerprint: String(edge?.sourceFingerprint || ""),
+  }));
+  let missingCallerActionProofs = 0;
+  for (const entry of ledgerEntries) {
+    const observed = normalizedActionDelegations.find(
+      ({
+        actionCallEdgeIdentity,
+        legacyActionCallEdgeIdentity,
+      }) =>
+        actionCallEdgeIdentity === entry.actionCallEdgeIdentity
+        || legacyActionCallEdgeIdentity
+          === entry.actionCallEdgeIdentity,
+    );
+    if (!observed) {
+      missingCallerActionProofs += 1;
+      violations.push(
+        createViolation("caller-action-ledger-observation-missing", {
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          actionCallEdgeIdentity: entry.actionCallEdgeIdentity,
+        }),
+      );
+      continue;
+    }
+    const matchedLegacyIdentity =
+      observed.actionCallEdgeIdentity
+        !== entry.actionCallEdgeIdentity
+      && observed.legacyActionCallEdgeIdentity
+        === entry.actionCallEdgeIdentity;
+    const observedOccurrenceIndex = matchedLegacyIdentity
+      ? observed.legacyOccurrenceIndex
+      : observed.occurrenceIndex;
+    const expectedSemanticObservation = {
+      callerPath: entry.callerPath,
+      callerBindingIdentity: entry.callerBindingIdentity,
+      actionModulePath: entry.actionModulePath,
+      actionExportName: entry.actionExportName,
+      targetArgumentIndex: entry.targetArgumentIndex,
+      actionCallEdgeIdentity: entry.actionCallEdgeIdentity,
+      occurrenceIndex: entry.occurrenceIndex,
+      ...(entry.enclosingFunctionIdentity
+        ? {
+          enclosingFunctionIdentity:
+            entry.enclosingFunctionIdentity,
+        }
+        : {}),
+    };
+    const actualSemanticObservation = {
+      callerPath: observed.callerPath,
+      callerBindingIdentity: observed.callerBindingIdentity,
+      actionModulePath: observed.actionModulePath,
+      actionExportName: observed.actionExportName,
+      targetArgumentIndex: observed.targetArgumentIndex,
+      actionCallEdgeIdentity: entry.actionCallEdgeIdentity,
+      occurrenceIndex: observedOccurrenceIndex,
+      ...(entry.enclosingFunctionIdentity
+        ? {
+          enclosingFunctionIdentity:
+            observed.enclosingFunctionIdentity,
+        }
+        : {}),
+    };
+    const wasRecordedThisPhase =
+      entry.recordedInPhase === policy?.progress?.latestPhase;
+    const expectedExactObservation = {
+      ...expectedSemanticObservation,
+      callerBindingId: entry.callerBindingId,
+      start: entry.start,
+      end: entry.end,
+      line: entry.line,
+      column: entry.column,
+      sourceFingerprint: entry.sourceFingerprint,
+    };
+    const actualExactObservation = {
+      ...actualSemanticObservation,
+      callerBindingId: observed.callerBindingId,
+      start: observed.start,
+      end: observed.end,
+      line: observed.line,
+      column: observed.column,
+      sourceFingerprint: observed.sourceFingerprint,
+    };
+    if (
+      JSON.stringify(actualSemanticObservation)
+        !== JSON.stringify(expectedSemanticObservation)
+      || (
+        wasRecordedThisPhase
+        && JSON.stringify(actualExactObservation)
+          !== JSON.stringify(expectedExactObservation)
+      )
+    ) {
+      missingCallerActionProofs += 1;
+      violations.push(
+        createViolation("caller-action-ledger-observation-mismatch", {
+          retiredMembershipIdentity:
+            entry.retiredMembershipIdentity,
+          expected: wasRecordedThisPhase
+            ? expectedExactObservation
+            : expectedSemanticObservation,
+          actual: wasRecordedThisPhase
+            ? actualExactObservation
+            : actualSemanticObservation,
+        }),
+      );
+    }
+  }
 
   const expectedProjection = getLegacyDirectAllowlistProjection(policy);
   const actualProjection = stablePathList(legacyAllowlistPaths);
@@ -2377,6 +3090,15 @@ export function validateStateWriterPolicySnapshot({
         production: bindingScoped.memberships.production.all,
         test: bindingScoped.memberships.test.all,
         total: bindingScoped.memberships.total.all,
+      },
+      callerToActionLedger: {
+        totalEntries: ledgerEntries.length,
+        backfilledEntries: ledgerEntries.filter(
+          ({ backfilled }) => backfilled === true,
+        ).length,
+        recordedThisPhase: currentLedgerEntries.length,
+        observedEdges: normalizedActionDelegations.length,
+        missingProofs: missingCallerActionProofs,
       },
       bindingScoped,
       unregisteredConcreteKeyAuthorities,

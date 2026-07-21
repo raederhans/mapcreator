@@ -3,7 +3,30 @@
 // scenario_manager.js 继续保留事务协调、回滚、post-apply、入口控制。
 
 import { buildScenarioOwnerColorMapDetails } from "./palette_runtime_bridge.js";
-import { commitScenarioActivationRuntimeState } from "./state/scenario_runtime_state.js";
+import {
+  SCENARIO_READINESS_STATE_KEYS,
+  captureScenarioReadinessState,
+  commitScenarioReadinessState,
+  restoreScenarioReadinessState,
+} from "./state/actions/scenario_readiness_actions.js";
+import {
+  SCENARIO_ACTIVATION_STATE_KEYS,
+  captureScenarioActivationState,
+  commitScenarioActivationState as commitScenarioActivationAuthorityState,
+  restoreScenarioActivationState,
+} from "./state/actions/scenario_activation_actions.js";
+import {
+  SCENARIO_PRESENTATION_STATE_KEYS,
+  captureScenarioPresentationState,
+  commitScenarioPresentationState,
+  restoreScenarioPresentationState,
+} from "./state/actions/scenario_presentation_actions.js";
+import {
+  SCENARIO_PALETTE_STATE_KEYS,
+  captureScenarioPaletteState,
+  commitScenarioPaletteState,
+  restoreScenarioPaletteState,
+} from "./state/actions/scenario_palette_actions.js";
 import {
   normalizeScenarioStrategicValuesPayload,
 } from "./scenario/strategic_values.js";
@@ -35,6 +58,22 @@ const SCENARIO_OWNER_COLOR_PROPERTY_KEYS = Object.freeze([
   "scenario_shell_owner_hint",
   "scenario_shell_controller_hint",
 ]);
+
+function hasOwnStateKey(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function cloneAuthoritySnapshot(snapshot, cloneScenarioStateValue) {
+  return {
+    values: Object.fromEntries(
+      Object.entries(snapshot?.values || {}).map(([key, value]) => [
+        key,
+        cloneScenarioStateValue(value),
+      ]),
+    ),
+    presentKeys: [...(snapshot?.presentKeys || [])],
+  };
+}
 
 function normalizeScenarioOwnerColorTag(value) {
   const tag = String(value || "").trim().toUpperCase();
@@ -153,7 +192,7 @@ function createScenarioApplyPipeline({
   scenarioSupportsChunkedRuntime,
   scenarioBundleUsesChunkedLayer,
   scenarioBundleHasChunkedData,
-  ensureScenarioDetailTopologyLoaded,
+  prepareScenarioDetailTopologyState,
   hasUsablePoliticalTopology,
   scenarioNeedsDetailTopology,
   getScenarioDisplayName,
@@ -161,6 +200,7 @@ function createScenarioApplyPipeline({
   hasActiveScenarioPaletteLoaded,
   applyActivePaletteState,
   setActivePaletteSource,
+  publishScenarioPaletteAndToolbarState,
   getScenarioDefaultCountryCode,
   getScenarioMapSemanticMode,
   buildScenarioReleasableIndex,
@@ -194,7 +234,127 @@ function createScenarioApplyPipeline({
   hasRenderableScenarioPoliticalTopology,
   normalizeScenarioFeatureCollection,
   cloneScenarioStateValue,
+  validateScenarioActivationCommitState:
+    validateScenarioActivationCommitStateOverride = null,
+  captureScenarioActivationTransactionState:
+    captureScenarioActivationTransactionStateOverride = null,
+  restoreScenarioActivationTransactionState:
+    restoreScenarioActivationTransactionStateOverride = null,
 } = {}) {
+  function captureDefaultScenarioActivationTransactionState({
+    clonePresentationValues = false,
+  } = {}) {
+    const presentationSnapshot =
+      captureScenarioPresentationState(runtimeState);
+    return {
+      readiness: captureScenarioReadinessState(runtimeState),
+      activation: captureScenarioActivationState(runtimeState),
+      presentation: clonePresentationValues
+        ? cloneAuthoritySnapshot(
+          presentationSnapshot,
+          cloneScenarioStateValue,
+        )
+        : presentationSnapshot,
+      palette: captureScenarioPaletteState(
+        runtimeState,
+        {
+          clonePaletteLoadErrorById: cloneScenarioStateValue,
+        },
+      ),
+    };
+  }
+
+  function restoreDefaultScenarioActivationTransactionState(snapshot) {
+    restoreScenarioReadinessState(runtimeState, snapshot.readiness);
+    restoreScenarioActivationState(runtimeState, snapshot.activation);
+    restoreScenarioPresentationState(runtimeState, snapshot.presentation);
+    restoreScenarioPaletteState(
+      runtimeState,
+      snapshot.palette,
+    );
+  }
+
+  const validateScenarioActivationCommitState =
+    typeof validateScenarioActivationCommitStateOverride === "function"
+      ? validateScenarioActivationCommitStateOverride
+      : () => true;
+  const captureScenarioActivationTransactionState =
+    typeof captureScenarioActivationTransactionStateOverride === "function"
+      ? captureScenarioActivationTransactionStateOverride
+      : () => captureDefaultScenarioActivationTransactionState({
+        clonePresentationValues: true,
+      });
+  const restoreScenarioActivationTransactionState =
+    typeof restoreScenarioActivationTransactionStateOverride === "function"
+      ? restoreScenarioActivationTransactionStateOverride
+      : restoreDefaultScenarioActivationTransactionState;
+
+  async function stageScenarioReadinessPatch({
+    startupReadonly,
+    supportsChunkedPoliticalRuntime,
+  }) {
+    if (startupReadonly || supportsChunkedPoliticalRuntime) {
+      return {
+        detailPromoted: false,
+        scenarioReadinessPatch:
+          captureScenarioReadinessState(runtimeState).values,
+      };
+    }
+    const stagedReadiness =
+      await prepareScenarioDetailTopologyState();
+    assertCompleteAuthorityPatch(
+      stagedReadiness?.scenarioReadinessPatch,
+      SCENARIO_READINESS_STATE_KEYS,
+      "scenarioReadinessPatch",
+    );
+    return stagedReadiness;
+  }
+
+  async function stageScenarioPalettePatch(bundle, { syncPalette }) {
+    const paletteSnapshot = captureScenarioPaletteState(
+      runtimeState,
+      {
+        clonePaletteLoadErrorById: cloneScenarioStateValue,
+      },
+    );
+    try {
+      if (syncPalette) {
+        const targetPaletteId = getScenarioTargetPaletteId(bundle.manifest);
+        if (hasActiveScenarioPaletteLoaded(targetPaletteId)) {
+          applyActivePaletteState({
+            overwriteCountryPalette: false,
+            syncDefaultPalette: false,
+          });
+        } else {
+          const paletteApplied = await setActivePaletteSource(
+            targetPaletteId,
+            {
+              syncUI: false,
+              publishObservers: false,
+              syncDefaultPalette: false,
+              overwriteCountryPalette: false,
+            },
+          );
+          if (
+            !paletteApplied
+            || !hasActiveScenarioPaletteLoaded(targetPaletteId)
+          ) {
+            throw new Error(
+              `Unable to load palette for scenario "${normalizeScenarioId(
+                bundle.manifest?.scenario_id || bundle.meta?.scenario_id,
+              )}".`,
+            );
+          }
+        }
+      }
+      return captureScenarioPaletteState(runtimeState, {
+        clonePaletteLoadErrorById: cloneScenarioStateValue,
+      }).values;
+    } finally {
+      restoreScenarioPaletteState(runtimeState, paletteSnapshot);
+    }
+  }
+
   function prepareScenarioActivationContext(bundle) {
     // 这里缓存“进入场景前”的显示状态，只在第一次激活场景时截一份基线。
     // 后续场景切换沿用这份快照，避免每次 apply 都把已经是 scenario 态的值继续覆盖回去。
@@ -230,13 +390,11 @@ function createScenarioApplyPipeline({
     // 真正写入 runtimeState 时只认这份对象，避免 apply 流程在多个阶段分散写字段。
     const hasRenderableRuntimeTopology = staged.mapSemanticMode === "blank"
       || hasRenderableScenarioPoliticalTopology(staged.runtimeTopologyPayload);
-    const runtimePoliticalTopology = staged.mapSemanticMode === "blank"
-      ? (staged.runtimeTopologyPayload || null)
-      : (
-        hasRenderableRuntimeTopology
-          ? staged.runtimeTopologyPayload
-          : (runtimeState.defaultRuntimePoliticalTopology || null)
-      );
+    const useDefaultRuntimePoliticalTopology =
+      staged.mapSemanticMode !== "blank" && !hasRenderableRuntimeTopology;
+    const runtimePoliticalTopology = useDefaultRuntimePoliticalTopology
+      ? null
+      : (staged.runtimeTopologyPayload || null);
     const scenarioRuntimeTopologyData = hasRenderableRuntimeTopology
       ? (staged.runtimeTopologyPayload || null)
       : null;
@@ -263,11 +421,6 @@ function createScenarioApplyPipeline({
       });
     }
     return {
-      scenarioParentBorderEnabledBeforeActivate:
-        cloneScenarioStateValue(staged.scenarioParentBorderEnabledBeforeActivate),
-      scenarioDisplaySettingsBeforeActivate:
-        cloneScenarioStateValue(staged.scenarioDisplaySettingsBeforeActivate),
-      scenarioOceanFillBeforeActivate: staged.scenarioOceanFillBeforeActivate,
       activeScenarioId: staged.scenarioId,
       scenarioBorderMode: "scenario_owner_only",
       activeScenarioManifest: staged.scenarioManifest,
@@ -276,6 +429,7 @@ function createScenarioApplyPipeline({
       activeScenarioMeshPack: bundle.meshPackPayload || null,
       scenarioRuntimeTopologyData,
       runtimePoliticalTopology,
+      useDefaultRuntimePoliticalTopology,
       scenarioPoliticalChunkData,
       runtimePoliticalMetaSeed: bundle.runtimePoliticalMeta || null,
       runtimePoliticalFeatureCollectionSeed: getScenarioDecodedCollection(bundle, "politicalData") || null,
@@ -314,12 +468,82 @@ function createScenarioApplyPipeline({
       scenarioFixedOwnerColors: fixedOwnerColors,
       sovereignBaseColors: fixedOwnerColors,
       countryBaseColors: fixedOwnerColors,
-      activeSovereignCode: staged.mapSemanticMode === "blank" ? "" : staged.defaultCountryCode,
+    };
+  }
+
+  function buildScenarioPresentationCommitState(staged) {
+    return {
+      ...captureScenarioPresentationState(runtimeState).values,
+      scenarioParentBorderEnabledBeforeActivate:
+        staged.scenarioParentBorderEnabledBeforeActivate,
+      scenarioDisplaySettingsBeforeActivate:
+        staged.scenarioDisplaySettingsBeforeActivate,
+      scenarioOceanFillBeforeActivate:
+        staged.scenarioOceanFillBeforeActivate,
+      activeSovereignCode:
+        staged.mapSemanticMode === "blank" ? "" : staged.defaultCountryCode,
       selectedWaterRegionId: "",
       selectedSpecialRegionId: "",
       hoveredWaterRegionId: null,
       hoveredSpecialRegionId: null,
     };
+  }
+
+  function assertCompleteAuthorityPatch(patch, keys, label) {
+    if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+      throw new TypeError(
+        `[scenario_apply_pipeline] ${label} must be an object`,
+      );
+    }
+    keys.forEach((key) => {
+      if (!hasOwnStateKey(patch, key)) {
+        throw new Error(
+          `[scenario_apply_pipeline] ${label} missing required key: ${key}`,
+        );
+      }
+    });
+  }
+
+  function buildScenarioActivationTransactionPatch(bundle, staged) {
+    return {
+      scenarioReadinessPatch: staged.scenarioReadinessPatch
+        || captureScenarioReadinessState(runtimeState).values,
+      scenarioPalettePatch: staged.scenarioPalettePatch
+        || captureScenarioPaletteState(runtimeState, {
+          clonePaletteLoadErrorById: cloneScenarioStateValue,
+        }).values,
+      scenarioActivationPatch: buildScenarioActivationCommitState(
+        bundle,
+        staged,
+      ),
+      scenarioPresentationPatch:
+        buildScenarioPresentationCommitState(staged),
+    };
+  }
+
+  function assertCompleteScenarioActivationTransactionPatch(
+    transactionPatch,
+  ) {
+    assertCompleteAuthorityPatch(
+      transactionPatch?.scenarioReadinessPatch,
+      SCENARIO_READINESS_STATE_KEYS,
+      "scenarioReadinessPatch",
+    );
+    assertCompleteAuthorityPatch(
+      transactionPatch?.scenarioPalettePatch,
+      SCENARIO_PALETTE_STATE_KEYS,
+      "scenarioPalettePatch",
+    );
+    assertCompleteAuthorityPatch(
+      transactionPatch?.scenarioActivationPatch,
+      SCENARIO_ACTIVATION_STATE_KEYS,
+      "scenarioActivationPatch",
+    );
+    assertCompleteAuthorityPatch(
+      transactionPatch?.scenarioPresentationPatch,
+      SCENARIO_PRESENTATION_STATE_KEYS,
+      "scenarioPresentationPatch",
+    );
   }
 
   function normalizeScenarioApplyStrategicValuesPayload(payload, bundle, scenarioId) {
@@ -334,10 +558,9 @@ function createScenarioApplyPipeline({
     });
   }
 
-  function runScenarioActivationPreCommitPhase(bundle, staged) {
-    // pre-commit 先同步会影响后续提交结果的辅助状态，
-    // commit 阶段只落 runtimeState 字段，post-commit 再触发 UI/render/chunk 副作用。
-    // 这样排是为了把“提交真相源”和“提交后的连锁刷新”拆开，定位 apply 异常时更容易看出卡在哪一段。
+  function publishScenarioActivationStateObservers(bundle, staged) {
+    // runtime commit 完成后再发布 localization、blank presentation 与 audit
+    // observers；异常由外层 transaction snapshot 恢复全部受控字段。
     syncScenarioLocalizationState({
       cityOverridesPayload: staged.mapSemanticMode === "blank" ? null : (staged.scenarioCityOverridesPayload || null),
       geoLocalePatchPayload: staged.mapSemanticMode === "blank" ? null : (bundle.geoLocalePatchPayload || null),
@@ -352,10 +575,26 @@ function createScenarioApplyPipeline({
     });
   }
 
-  function commitScenarioActivationState(bundle, staged) {
-    const nextRuntimeState = buildScenarioActivationCommitState(bundle, staged);
-    commitScenarioActivationRuntimeState(runtimeState, nextRuntimeState);
-    return nextRuntimeState;
+  function commitScenarioActivationState(transactionPatch, staged) {
+    commitScenarioReadinessState(
+      runtimeState,
+      transactionPatch.scenarioReadinessPatch,
+    );
+    if (staged.scenarioPaletteSyncRequested) {
+      commitScenarioPaletteState(
+        runtimeState,
+        transactionPatch.scenarioPalettePatch,
+      );
+    }
+    commitScenarioActivationAuthorityState(
+      runtimeState,
+      transactionPatch.scenarioActivationPatch,
+    );
+    commitScenarioPresentationState(
+      runtimeState,
+      transactionPatch.scenarioPresentationPatch,
+    );
+    return transactionPatch.scenarioActivationPatch;
   }
 
   function runScenarioActivationPostCommitPhase(bundle, staged) {
@@ -366,6 +605,11 @@ function createScenarioApplyPipeline({
     syncScenarioOceanFillForActivation(bundle.manifest);
     applyScenarioPerformanceHints(bundle.manifest);
     commitScenarioChunkRuntimeState(bundle, staged);
+  }
+
+  function publishScenarioActivationObservers(bundle, staged) {
+    publishScenarioActivationStateObservers(bundle, staged);
+    runScenarioActivationPostCommitPhase(bundle, staged);
   }
 
   function commitScenarioChunkRuntimeState(bundle, staged) {
@@ -457,16 +701,20 @@ function createScenarioApplyPipeline({
     const startupReadonly = interactionLevel === "readonly-startup";
     const supportsChunkedPoliticalRuntime = scenarioSupportsChunkedRuntime(bundle)
       && (!!bundle?.manifest?.detail_chunk_manifest_url || !!bundle?.manifest?.runtime_meta_url);
-    const detailPromoted = (startupReadonly || supportsChunkedPoliticalRuntime)
-      ? false
-      : await ensureScenarioDetailTopologyLoaded({ applyMapData: false });
+    const {
+      detailPromoted,
+      scenarioReadinessPatch,
+    } = await stageScenarioReadinessPatch({
+      startupReadonly,
+      supportsChunkedPoliticalRuntime,
+    });
     const politicalChunkedReady =
       supportsChunkedPoliticalRuntime
       || (scenarioBundleUsesChunkedLayer(bundle, "political")
         && scenarioBundleHasChunkedData(bundle));
     const detailReady = (
-      runtimeState.topologyBundleMode === "composite"
-      && hasUsablePoliticalTopology(runtimeState.topologyDetail)
+      scenarioReadinessPatch.topologyBundleMode === "composite"
+      && hasUsablePoliticalTopology(scenarioReadinessPatch.topologyDetail)
     ) || !!detailPromoted || politicalChunkedReady;
     // detailReady 只表示“允许进入 apply 的最低入场条件已经满足”。
     // 后续的 hydration health gate、chunk 接管和 post-commit 细化仍可能继续补齐更多 runtime 面。
@@ -480,28 +728,13 @@ function createScenarioApplyPipeline({
       console.error(`[scenario] ${message}`);
       throw new Error(message);
     }
-    if (!detailReady && runtimeState.topologyBundleMode !== "composite") {
+    if (!detailReady && scenarioReadinessPatch.topologyBundleMode !== "composite") {
       console.warn("[scenario] Applying bundle without confirmed detail promotion; health gate will validate runtime topology.");
     }
-    if (syncPalette) {
-      const targetPaletteId = getScenarioTargetPaletteId(bundle.manifest);
-      if (hasActiveScenarioPaletteLoaded(targetPaletteId)) {
-        applyActivePaletteState({ overwriteCountryPalette: false });
-      } else {
-        const paletteApplied = await setActivePaletteSource(
-          targetPaletteId,
-          {
-            syncUI: true,
-            overwriteCountryPalette: false,
-          }
-        );
-        if (!paletteApplied || !hasActiveScenarioPaletteLoaded(targetPaletteId)) {
-          throw new Error(
-            `Unable to load palette for scenario "${normalizeScenarioId(bundle.manifest?.scenario_id || bundle.meta?.scenario_id)}".`
-          );
-        }
-      }
-    }
+    const scenarioPalettePatch = await stageScenarioPalettePatch(
+      bundle,
+      { syncPalette },
+    );
 
     const scenarioId = normalizeScenarioId(bundle.manifest.scenario_id || bundle.meta?.scenario_id);
     if (!scenarioId) {
@@ -653,8 +886,8 @@ function createScenarioApplyPipeline({
     });
     const fixedScenarioCountryColors = getScenarioFixedOwnerColors(countryMap);
     const scenarioColorDetails = buildScenarioOwnerColorMapDetails(countryMap, {
-      palettePack: runtimeState.activePalettePack,
-      paletteMap: runtimeState.activePaletteMap,
+      palettePack: scenarioPalettePatch.activePalettePack,
+      paletteMap: scenarioPalettePatch.activePaletteMap,
       seedColorByTag: seedScenarioColorMap,
       fallbackColorByTag: fixedScenarioCountryColors,
       ownerTags: ownerColorTags,
@@ -698,6 +931,9 @@ function createScenarioApplyPipeline({
       resolvedOwners,
       cores,
       releasableIndex,
+      scenarioReadinessPatch,
+      scenarioPalettePatch,
+      scenarioPaletteSyncRequested: !!syncPalette,
       ...activationContext,
     };
     recordRenderTransactionSnapshot(runtimeState, {
@@ -727,6 +963,10 @@ function createScenarioApplyPipeline({
   }
 
   function applyPreparedScenarioState(bundle, staged) {
+    const transactionSnapshot =
+      captureScenarioActivationTransactionState();
+    const transactionPatch =
+      buildScenarioActivationTransactionPatch(bundle, staged);
     recordRenderTransactionSnapshot(runtimeState, {
       phase: "scenario-apply-precommit-start",
       reason: "applyPreparedScenarioState",
@@ -738,55 +978,91 @@ function createScenarioApplyPipeline({
         scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
       },
     });
-    runScenarioActivationPreCommitPhase(bundle, staged);
-    recordRenderTransactionSnapshot(runtimeState, {
-      phase: "scenario-apply-runtime-commit-start",
-      reason: "applyPreparedScenarioState",
-      requestedScenarioId: staged?.scenarioId,
-      source: "scenario_apply_pipeline",
-      extra: {
-        allowScenarioMismatch: true,
-        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
-        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
-      },
-    });
-    commitScenarioActivationState(bundle, staged);
-    recordRenderTransactionSnapshot(runtimeState, {
-      phase: "scenario-apply-runtime-commit-complete",
-      reason: "applyPreparedScenarioState",
-      requestedScenarioId: staged?.scenarioId,
-      expectedScenarioId: staged?.scenarioId,
-      source: "scenario_apply_pipeline",
-      extra: {
-        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
-        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
-        runtimeTopologyWritten: !!runtimeState.scenarioRuntimeTopologyData,
-        runtimePoliticalTopologySource: runtimeState.runtimePoliticalTopology === staged?.runtimeTopologyPayload
-          ? "staged"
-          : "runtime-or-default",
-        scenarioWaterFeatureCount: Array.isArray(runtimeState.scenarioWaterRegionsData?.features)
-          ? runtimeState.scenarioWaterRegionsData.features.length
-          : 0,
-        scenarioAtlantropaFeatureCount: Array.isArray(runtimeState.scenarioAtlantropaData?.features)
-          ? runtimeState.scenarioAtlantropaData.features.length
-          : 0,
-        scenarioSpecialFeatureCount: Array.isArray(runtimeState.scenarioSpecialRegionsData?.features)
-          ? runtimeState.scenarioSpecialRegionsData.features.length
-          : 0,
-      },
-    });
-    runScenarioActivationPostCommitPhase(bundle, staged);
-    recordRenderTransactionSnapshot(runtimeState, {
-      phase: "scenario-apply-postcommit-complete",
-      reason: "applyPreparedScenarioState",
-      requestedScenarioId: staged?.scenarioId,
-      expectedScenarioId: staged?.scenarioId,
-      source: "scenario_apply_pipeline",
-      extra: {
-        scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
-        scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
-      },
-    });
+    try {
+      assertCompleteScenarioActivationTransactionPatch(transactionPatch);
+      const activationCommitAccepted =
+        validateScenarioActivationCommitState(
+          transactionPatch.scenarioActivationPatch,
+          transactionPatch,
+        );
+      if (activationCommitAccepted === false) {
+        throw new Error(
+          "[scenario_apply_pipeline] scenario activation commit validation rejected the transaction",
+        );
+      }
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-apply-runtime-commit-start",
+        reason: "applyPreparedScenarioState",
+        requestedScenarioId: staged?.scenarioId,
+        source: "scenario_apply_pipeline",
+        extra: {
+          allowScenarioMismatch: true,
+          scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+          scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
+        },
+      });
+      commitScenarioActivationState(transactionPatch, staged);
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-apply-runtime-commit-complete",
+        reason: "applyPreparedScenarioState",
+        requestedScenarioId: staged?.scenarioId,
+        expectedScenarioId: staged?.scenarioId,
+        source: "scenario_apply_pipeline",
+        extra: {
+          scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+          scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
+          runtimeTopologyWritten:
+            !!transactionPatch.scenarioActivationPatch
+              .scenarioRuntimeTopologyData,
+          runtimePoliticalTopologySource:
+            transactionPatch.scenarioActivationPatch
+              .runtimePoliticalTopology === staged?.runtimeTopologyPayload
+            ? "staged"
+            : "runtime-or-default",
+          scenarioWaterFeatureCount: Array.isArray(
+            transactionPatch.scenarioActivationPatch
+              .scenarioWaterRegionsData?.features,
+          )
+            ? transactionPatch.scenarioActivationPatch
+              .scenarioWaterRegionsData.features.length
+            : 0,
+          scenarioAtlantropaFeatureCount: Array.isArray(
+            transactionPatch.scenarioActivationPatch
+              .scenarioAtlantropaData?.features,
+          )
+            ? transactionPatch.scenarioActivationPatch
+              .scenarioAtlantropaData.features.length
+            : 0,
+          scenarioSpecialFeatureCount: Array.isArray(
+            transactionPatch.scenarioActivationPatch
+              .scenarioSpecialRegionsData?.features,
+          )
+            ? transactionPatch.scenarioActivationPatch
+              .scenarioSpecialRegionsData.features.length
+            : 0,
+        },
+      });
+      publishScenarioActivationObservers(bundle, staged);
+      if (staged.scenarioPaletteSyncRequested) {
+        publishScenarioPaletteAndToolbarState({
+          overwriteCountryPalette: false,
+        });
+      }
+      recordRenderTransactionSnapshot(runtimeState, {
+        phase: "scenario-apply-postcommit-complete",
+        reason: "applyPreparedScenarioState",
+        requestedScenarioId: staged?.scenarioId,
+        expectedScenarioId: staged?.scenarioId,
+        source: "scenario_apply_pipeline",
+        extra: {
+          scenarioApplyEpoch: Math.max(0, Number(staged?.scenarioApplyEpoch || 0)),
+          scenarioApplyRequestId: Math.max(0, Number(staged?.scenarioApplyRequestId || 0)),
+        },
+      });
+    } catch (error) {
+      restoreScenarioActivationTransactionState(transactionSnapshot);
+      throw error;
+    }
   }
 
   return {

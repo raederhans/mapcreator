@@ -1,11 +1,11 @@
 # Worktree Registry
 
-Last updated: 2026-07-19 P4.1 functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` is exact-C green: Node 82/82, Python 37/37, policy 208/208, route 66/34/0/0, dist drift and `verify:core` 80/80 pass. The protected parent checkout carries only user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. P4.1 docs-only attestation A is the active step.
+Last updated: 2026-07-20 P4.2a functional candidate contains six Scenario action modules, atomic apply/rollback, latest-target arbitration, 148 caller-to-action proofs and a schema-2 policy checkpoint at 75 legacy-direct files / 1,039 memberships. The protected parent checkout carries user-owned selected `docs/archive/**` deletions and `lessons learned.md`; every entry remains untouched. Pre-commit Node 87/87, Python 58/58 and route 59/36/0/0 pass; final independent review precedes checkpoint C.
 
 ## Integration Owner
 
 - Owner: primary Codex agent for `codex/state-action-ownership-p4-20260719`; scope is P4 task records, shared verification policy/configuration, phase commits, exact-SHA verification, integration, push, registry sync and eligible cleanup.
-- Live resources: primary Codex agent exclusively owns browser/dev-server/Playwright, dist, `.runtime-output`, perf, scenario-data and heavy-geo lanes. The final P4.0 pre-commit named gate completed 185/185 plus the repository checker, Python boundary completed 20/20, and no live process currently owns shared ports or outputs.
+- Live resources: primary Codex agent exclusively owns browser/dev-server/Playwright, dist, `.runtime-output`, policy reports, perf, scenario-data and heavy-geo lanes. The P4.2a policy performance probe is complete; no live process currently owns shared ports or outputs.
 - Shared P4.4 files: `index.html`, `css/style.css`, and `js/ui/toolbar.js` remain serial main-thread integration surfaces.
 - Parent WIP recovery: `codex/parent-wip-recovery-20260715@549cd350dcc565b7c4343e764f96da3050b991d4`, pushed to the matching remote branch. It preserves all 87 recovered WIP paths.
 - Binary parent backup: `.runtime/cleanup-backups/parent-wip-20260715.patch`, 148080 bytes, SHA256 `00b2734f7bcf58ff67773333ad02dbd6c03a66f617ee85d4f2d1f543fe302a7d`.
@@ -18,7 +18,7 @@ Last updated: 2026-07-19 P4.1 functional checkpoint `8a01614fbe98f1ee0faf73f011e
 1. Treat `origin/main` containing functional checkpoint `18d6ffae` and archived closeout `3dbe88da` as the completed post-P3 audit baseline.
 2. Keep `codex/parent-wip-recovery-20260715`, `codex/stale-main-wip-preserve-20260708`, and other unique recovery refs until their dedicated replay reviews are complete.
 3. Use `docs/archive/post-p3-audit-cleanup-20260715/` as the durable audit and cleanup handoff.
-4. Complete P4.1 attestation A, then add the production-zero caller-to-action proof before P4.2 scenario authority migration.
+4. Complete P4.2a checkpoint C and exact C/A acceptance, then continue into P4.2b scenario chunk ownership.
 5. Keep specialized Williams measurement in its dedicated research lane; ordinary repository acceptance continues to use the schema-2 standard performance gate.
 
 ## Current Worktrees
@@ -28,7 +28,7 @@ Current truth contains the user-owned parent checkout plus one isolated P4 execu
 | Worktree | Branch / HEAD | Base | Status | Dirty / hot files | Evidence | Overlap risk | Integration action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `C:\Users\raede\Desktop\dev\mapcreator` | local `main@68a62e54` | `origin/main@68a62e54` | protected parent checkout; dirty user WIP | selected `docs/archive/**` deletions and `lessons learned.md` | `git status --short --branch` recaptured after P4 synchronization | Red for any direct edit, stage, stash, restore, reset, move or cleanup. | Preserve exactly; use an isolated clean worktree for P4 implementation and later integration. |
-| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@8a01614f` | `origin/main@68a62e54` | P4.1 attestation candidate | P4.1 task/context/plan and registry are the only pending tracked files. | Exact C is green: Node 82/82, Python 37/37, policy 208/208, route 66/34/0/0, dist drift and core 80/80 PASS. | Yellow for shared P4 tooling and scenario callers; red for concurrent state-policy or shared P4.4 edits. | Commit docs-only A, verify the same exact matrix, push, then begin P4.2 caller-edge admission. |
+| `C:\Users\raede\.codex\worktrees\mapcreator-state-actions-p4-20260719` | `codex/state-action-ownership-p4-20260719@bb4ee4d` | `origin/main@68a62e54` | P4.2a functional candidate | Scenario action modules, apply/rollback callers, latest-target arbitration, state policy/scanner, exact routes, package runners and P4 task records. | Focused ownership 8/8; Node 87/87; Python 58/58; route 59/36/0/0; schema-2 policy 200 writers / 148 ledger entries; Pages 927.26 MiB with normalized source/mirror parity; snapshot output byte-identical with 1.86x checker speedup. | Red for concurrent state-policy, scenario apply/rollback or shared P4.4 edits; browser/dist/runtime outputs remain main-owner lanes. | Collect final independent review, commit C, run exact C/A acceptance and push; continue P4.2b before main integration. |
 
 ## P3.1 Visual-Effects Pass Delivery Package 2026-07-14
 

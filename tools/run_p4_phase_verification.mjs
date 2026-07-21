@@ -15,6 +15,12 @@ const P4_PHASE_COMMANDS = Object.freeze({
     "node tools/check_state_writer_policy.mjs --phase P4.1 --require-clean",
     "node tools/check_p4_state_action_routes.mjs --phase P4.1 --history-base HEAD^",
   ]),
+  "P4.2a": Object.freeze([
+    "npm run test:node:p4:p4-2a",
+    "npm run test:python:p4:p4-2a-boundary",
+    "node tools/check_state_writer_policy.mjs --phase P4.2a --require-clean",
+    "node tools/check_p4_state_action_routes.mjs --phase P4.2a --history-base HEAD^",
+  ]),
 });
 
 function normalizeRepoPath(value) {

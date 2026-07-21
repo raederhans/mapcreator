@@ -1,4 +1,9 @@
 import { countryNames, createDefaultScenarioReleasableIndex, defaultCountryPalette, normalizeMapSemanticMode, state as runtimeState } from "./state.js";
+import {
+  beginScenarioApplyRequestState,
+  clearActiveScenarioApplyRequestState,
+  setLatestScenarioApplyRequestState,
+} from "./state/actions/scenario_apply_request_actions.js";
 import { ensureSovereigntyState, markLegacyColorStateDirty } from "./sovereignty_manager.js";
 import {
   invalidateOceanBackgroundVisualState,
@@ -21,7 +26,6 @@ import {
   buildScenarioDistrictGroupByFeatureId,
   normalizeScenarioDistrictGroupsPayload,
 } from "./scenario_districts.js";
-import { ensureDetailTopologyBoundary } from "./render_boundary.js";
 import { applyActivePaletteState, setActivePaletteSource, syncResolvedDefaultCountryPalette } from "./palette_manager.js";
 import { markDirty } from "./dirty_state.js";
 import {
@@ -37,6 +41,7 @@ import {
   scenarioNeedsDetailTopology,
 } from "./scenario_data_health.js";
 import {
+  publishScenarioPaletteAndToolbarState,
   runPostRollbackRestoreEffects,
   runPostScenarioApplyEffects,
   runPostScenarioClearEffects,
@@ -44,7 +49,6 @@ import {
 } from "./scenario_post_apply_effects.js";
 import {
   setScenarioAuditUiState,
-  syncCountryUi,
   syncScenarioUi,
 } from "./scenario_ui_sync.js";
 import { syncScenarioLocalizationState } from "./scenario_localization_state.js";
@@ -430,93 +434,95 @@ function setScenarioViewMode(
   return false;
 }
 
-async function ensureScenarioDetailTopologyLoaded({ applyMapData = true } = {}) {
-  // detail promotion 是 scenario apply 前后的共享边界：优先交给 render_boundary，只有它无法处理时才在这里补载 detail bundle。
-  const syncScenarioReadyUiAfterPromotion = () => {
-    refreshScenarioDataHealth({
-      showWarningToast: false,
-      showErrorToast: false,
-    });
-    syncScenarioUi();
-    syncCountryUi({ renderNow: false });
-  };
-  {
-    const promoted = await ensureDetailTopologyBoundary({ applyMapData });
-    if (promoted) return true;
+async function prepareScenarioDetailTopologyState({
+  targetState = runtimeState,
+  loadDetailBundle = loadDeferredDetailBundle,
+  hasUsableTopology = hasUsablePoliticalTopology,
+  detailSourceFallbackOrder = SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER,
+} = {}) {
+  const currentPatch = () => ({
+    topologyDetail: targetState.topologyDetail,
+    topologyBundleMode: targetState.topologyBundleMode,
+    detailDeferred: targetState.detailDeferred,
+    detailPromotionCompleted: targetState.detailPromotionCompleted,
+    detailPromotionInFlight: targetState.detailPromotionInFlight,
+    detailSourceRequested: targetState.detailSourceRequested,
+  });
+  const createResult = (
+    detailPromoted,
+    patch = currentPatch(),
+  ) => ({
+    detailPromoted: !!detailPromoted,
+    scenarioReadinessPatch: patch,
+  });
+  const hasDetailNow = hasUsableTopology(targetState.topologyDetail);
+  if (hasDetailNow) {
+    return createResult(
+      targetState.topologyBundleMode !== "composite",
+      {
+        ...currentPatch(),
+        topologyBundleMode: "composite",
+        detailDeferred: false,
+        detailPromotionCompleted: true,
+        detailPromotionInFlight: false,
+      },
+    );
   }
-  const hasDetailNow = hasUsablePoliticalTopology(runtimeState.topologyDetail);
-  if (hasDetailNow && runtimeState.topologyBundleMode !== "composite") {
-    runtimeState.topologyBundleMode = "composite";
-    if (applyMapData) {
-      setMapData({ refitProjection: false, resetZoom: false });
-    }
-    runtimeState.detailDeferred = false;
-    runtimeState.detailPromotionCompleted = true;
-    syncScenarioReadyUiAfterPromotion();
-    return true;
+  if (targetState.detailPromotionInFlight) {
+    return createResult(false);
   }
-  if (hasDetailNow && runtimeState.topologyBundleMode === "composite") {
-    return false;
-  }
-  if (runtimeState.detailPromotionInFlight) {
-    return false;
-  }
-  runtimeState.detailPromotionInFlight = true;
+  const detailSourceKeys = Array.from(new Set([
+    String(targetState.detailSourceRequested || "").trim(),
+    String(targetState.activeScenarioManifest?.detail_source || "").trim(),
+    ...(Array.isArray(detailSourceFallbackOrder)
+      ? detailSourceFallbackOrder
+      : []),
+  ].filter(Boolean)));
   try {
-    const detailSourceKeys = Array.from(new Set([
-      String(runtimeState.detailSourceRequested || "").trim(),
-      String(runtimeState.activeScenarioManifest?.detail_source || "").trim(),
-      ...SCENARIO_DETAIL_SOURCE_FALLBACK_ORDER,
-    ].filter(Boolean)));
-    try {
-      const {
-        topologyDetail,
-        runtimePoliticalTopology,
-        detailSourceUsed,
-      } = await loadDeferredDetailBundle({
-        detailSourceKey: detailSourceKeys[0] || runtimeState.detailSourceRequested,
-        detailSourceKeys,
-      });
-
-      const runtimeFallback = runtimePoliticalTopology || runtimeState.runtimePoliticalTopology || null;
-      const resolvedDetail = hasUsablePoliticalTopology(topologyDetail)
-        ? topologyDetail
-        : (hasUsablePoliticalTopology(runtimeFallback) ? runtimeFallback : null);
-      if (!resolvedDetail) {
-        console.warn(
-          `[scenario] Detail promotion resolved no usable topology. Tried sources: ${detailSourceKeys.join(", ") || "(default)"}.`
-        );
-        runtimeState.detailDeferred = false;
-        return false;
-      }
-
-      if (!hasUsablePoliticalTopology(topologyDetail) && hasUsablePoliticalTopology(runtimeFallback)) {
-        console.warn("[scenario] Detail promotion using runtime political fallback.");
-      }
-      runtimeState.topologyDetail = resolvedDetail;
-      runtimeState.runtimePoliticalTopology = runtimeFallback;
-      runtimeState.topologyBundleMode = "composite";
-      runtimeState.detailDeferred = false;
-      runtimeState.detailPromotionCompleted = true;
-      runtimeState.detailSourceRequested = detailSourceUsed || detailSourceKeys[0] || runtimeState.detailSourceRequested;
-      if (applyMapData) {
-        setMapData({ refitProjection: false, resetZoom: false });
-      }
-      syncScenarioReadyUiAfterPromotion();
-      return true;
-    } catch (error) {
-      runtimeState.detailDeferred = false;
-      console.warn(
-        `[scenario] Detail topology could not be promoted. Tried sources: ${detailSourceKeys.join(", ") || "(default)"}. Staying on coarse map.`,
-        error
+    const {
+      topologyDetail,
+      runtimePoliticalTopology,
+      detailSourceUsed,
+    } = await loadDetailBundle({
+      detailSourceKey:
+        detailSourceKeys[0] || targetState.detailSourceRequested,
+      detailSourceKeys,
+    });
+    const runtimeFallback =
+      runtimePoliticalTopology
+      || targetState.runtimePoliticalTopology
+      || null;
+    const resolvedDetail = hasUsableTopology(topologyDetail)
+      ? topologyDetail
+      : (
+        hasUsableTopology(runtimeFallback)
+          ? runtimeFallback
+          : null
       );
-      return false;
+    if (!resolvedDetail) {
+      return createResult(false, {
+        ...currentPatch(),
+        detailDeferred: false,
+        detailPromotionInFlight: false,
+      });
     }
-  } catch (error) {
-    console.warn("Unable to force-load detail topology before scenario apply:", error);
-    return false;
-  } finally {
-    runtimeState.detailPromotionInFlight = false;
+    return createResult(true, {
+      topologyDetail: resolvedDetail,
+      topologyBundleMode: "composite",
+      detailDeferred: false,
+      detailPromotionCompleted: true,
+      detailPromotionInFlight: false,
+      detailSourceRequested:
+        detailSourceUsed
+        || detailSourceKeys[0]
+        || targetState.detailSourceRequested,
+    });
+  } catch {
+    return createResult(false, {
+      ...currentPatch(),
+      detailDeferred: false,
+      detailPromotionInFlight: false,
+    });
   }
 }
 
@@ -531,7 +537,7 @@ const {
   scenarioSupportsChunkedRuntime,
   scenarioBundleUsesChunkedLayer,
   scenarioBundleHasChunkedData,
-  ensureScenarioDetailTopologyLoaded,
+  prepareScenarioDetailTopologyState,
   hasUsablePoliticalTopology,
   scenarioNeedsDetailTopology,
   getScenarioDisplayName,
@@ -539,6 +545,7 @@ const {
   hasActiveScenarioPaletteLoaded,
   applyActivePaletteState,
   setActivePaletteSource,
+  publishScenarioPaletteAndToolbarState,
   getScenarioDefaultCountryCode,
   getScenarioMapSemanticMode,
   buildScenarioReleasableIndex,
@@ -1096,13 +1103,12 @@ async function runScenarioApplyRequest(request) {
     });
     return null;
   }
-  runtimeState.scenarioApplyInFlight = true;
+  beginScenarioApplyRequestState(runtimeState, {
+    requestId: request.requestId,
+    targetId: request.scenarioId,
+  });
   activeScenarioApplyTargetId = request.scenarioId;
   activeScenarioApplyRequestId = request.requestId;
-  runtimeState.currentScenarioApplyRequestId = request.requestId;
-  runtimeState.currentScenarioApplyTargetId = request.scenarioId;
-  runtimeState.scenarioApplyActiveRequestId = request.requestId;
-  runtimeState.scenarioApplyActiveTargetId = request.scenarioId;
   activeScenarioApplyPromise = (async () => {
     // 同一时刻只允许一个 scenario apply；UI 先同步为“加载中”，finally 再同步结束态，避免控件读到中间状态。
     syncScenarioUi();
@@ -1151,9 +1157,7 @@ async function runScenarioApplyRequest(request) {
       activeScenarioApplyPromise = null;
       activeScenarioApplyTargetId = "";
       activeScenarioApplyRequestId = 0;
-      runtimeState.scenarioApplyInFlight = false;
-      runtimeState.scenarioApplyActiveRequestId = 0;
-      runtimeState.scenarioApplyActiveTargetId = "";
+      clearActiveScenarioApplyRequestState(runtimeState);
       syncScenarioUi();
     }
   }
@@ -1285,18 +1289,39 @@ async function applyScenarioById(
   if (!normalizedScenarioId) {
     throw new Error("[scenario] Scenario id is required.");
   }
-  const scenarioApplyEpoch = nextScenarioApplyEpoch(runtimeState, {
-    scenarioId: normalizedScenarioId,
-    reason: markDirtyReason,
-  });
+  const cachedScenarioBundle = runtimeState.scenarioBundleCacheById?.[normalizedScenarioId] || null;
+  const reuseCachedScenarioBundle =
+    !runtimeState.scenarioApplyInFlight
+    && !activeScenarioApplyPromise
+    && canReuseActiveScenarioBundle(
+      cachedScenarioBundle,
+      normalizedScenarioId,
+    );
+  const reuseActiveScenarioApply = Boolean(
+    runtimeState.scenarioApplyInFlight
+    && activeScenarioApplyPromise
+    && (
+      !activeScenarioApplyTargetId
+      || activeScenarioApplyTargetId === normalizedScenarioId
+    ),
+  );
+  const scenarioApplyEpoch =
+    reuseCachedScenarioBundle || reuseActiveScenarioApply
+      ? 0
+      : nextScenarioApplyEpoch(runtimeState, {
+        scenarioId: normalizedScenarioId,
+        reason: markDirtyReason,
+      });
   const request = createScenarioApplyRequest(normalizedScenarioId, {
     renderNow,
     markDirtyReason,
     showToastOnComplete,
     scenarioApplyEpoch,
   });
-  runtimeState.latestScenarioApplyRequestId = request.requestId;
-  runtimeState.latestScenarioApplyTargetId = request.scenarioId;
+  setLatestScenarioApplyRequestState(runtimeState, {
+    requestId: Number(request.requestId),
+    targetId: normalizedScenarioId,
+  });
   recordRenderTransactionSnapshot(runtimeState, {
     phase: "scenario-apply-requested",
     reason: markDirtyReason,
@@ -1311,8 +1336,8 @@ async function applyScenarioById(
       showToastOnComplete: !!showToastOnComplete,
     },
   });
-  const cachedScenarioBundle = runtimeState.scenarioBundleCacheById?.[normalizedScenarioId] || null;
-  if (canReuseActiveScenarioBundle(cachedScenarioBundle, normalizedScenarioId)) {
+  if (reuseCachedScenarioBundle) {
+    latestQueuedScenarioApplyRequest = null;
     recordRenderTransactionSnapshot(runtimeState, {
       phase: "scenario-apply-cache-hit",
       reason: markDirtyReason,
@@ -1328,11 +1353,13 @@ async function applyScenarioById(
     return cachedScenarioBundle;
   }
   if (runtimeState.scenarioApplyInFlight && activeScenarioApplyPromise) {
-    if (!activeScenarioApplyTargetId || activeScenarioApplyTargetId === normalizedScenarioId) {
+    if (reuseActiveScenarioApply) {
+      latestQueuedScenarioApplyRequest = null;
       recordScenarioApplyRequestSnapshot(request, {
         phase: "scenario-apply-reused-active-target",
         reason: markDirtyReason,
-        expectedScenarioId: activeScenarioApplyTargetId || normalizedScenarioId,
+        expectedScenarioId:
+          activeScenarioApplyTargetId || normalizedScenarioId,
         details: {
           resolution: "reused-active-target",
           reusedScenarioApplyRequestId: activeScenarioApplyRequestId,
@@ -1488,6 +1515,7 @@ export {
   getScenarioRegistryEntries,
   normalizeScenarioId,
   normalizeScenarioViewMode,
+  prepareScenarioDetailTopologyState,
   resetToScenarioBaseline,
   setScenarioViewMode,
 };

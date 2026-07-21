@@ -2,7 +2,7 @@
 
 ## Current status
 
-`P4.1 attestation-candidate` — functional checkpoint `8a01614f` is exact-C green; this docs-only change records immutable evidence before exact-A verification and push.
+`P4.2a functional candidate` — six Scenario action modules, atomic apply/rollback and schema-2 caller-to-action proof are implemented; pre-commit Node/Python/policy/route checks and Pages generation pass, while exact C/A acceptance remains.
 
 ## Checklist
 
@@ -16,6 +16,8 @@
 - [x] Produce P4.0 baseline report and zero-gap adaptive evidence.
 - [x] Commit checkpoint C, verify exact `SHA_C`, commit attestation A, verify exact `SHA_A`, push.
 - [x] Complete P4.1 Boot/startup actions.
+- [x] Add P4.2 admission caller-to-action edge scanner, ledger schema and P4.1 backfill contracts.
+- [ ] Complete P4.2a scenario readiness/activation/presentation/request actions and atomic apply/rollback wiring.
 - [ ] Execute P4.2–P4.5 in order.
 - [ ] Complete review, UltraQA, full acceptance, main integration and safe cleanup.
 
@@ -125,12 +127,26 @@
   - adaptive route report: `b765ed2f4d778c3940c9fe8fc87bb7e7bbdf63632be57bf36344d6f5c1144a7b`
   - verify-core report: `2c66bd1e2ac44c48e41ea98b78543ec79709199d12583118535149c7ed3243fa`
 
+## P4.2a admission evidence
+
+- Caller-to-action scanner accepts only canonical named imports, exact/defaulted full-root targets and registered action exports.
+- The policy ledger requires semantic liveness for every historical retirement and exact source identity for the current phase.
+- P4.1 backfill is fixed at 36 entries with `retiredInPhase=P4.1`, `recordedInPhase=P4.2a`, `backfilled=true`.
+- New P4.2a retirements use `retiredInPhase=recordedInPhase=P4.2a`, `backfilled=false`.
+- Phase admission registers seven action modules: one Boot module from P4.1 and six Scenario modules introduced in P4.2a. A future-phase module present on disk now fails closed.
+- Scenario readiness, activation, presentation, palette, request and rollback writes commit through explicit target-first actions. Prepare uses snapshot-restored transactional staging with observer, persistence and default-palette publication suppressed; validation precedes commit; observers publish after commit; restore preserves absent-property semantics.
+- Same-target cache and Promise reuse preserve the active apply epoch. New and queued transactions allocate a fresh epoch; deferred metadata and optional-layer writes require matching scenario, request and epoch.
+- Latest-target arbitration clears a stale queued target when the user returns to the active target, and cache reuse is disabled while another apply owns the transaction so the final request remains authoritative.
+- Schema-2 policy contains 200 writers and 148 caller-to-action entries: 36 P4.1 backfills plus 112 P4.2a retirements.
+- Current checkpoint metrics are 75 production legacy-direct files, 1,039 legacy memberships, 142 dynamic sites, 222 alias sites, 681 ambiguous sites and 4,111 unsupported sites.
+- Policy snapshot reuse removes the checker’s duplicate writer scan: `139,970 ms → 75,147 ms` (`1.86×`) while preserving 5,967,610 output bytes and SHA256 `7b9e65bd09e849c5c8376834f5085a00dba87327bcf8c130a951961f8b4a6f79`.
+- Targeted Scenario apply ownership passes 8/8 and the complete P4.2a Node matrix passes 87/87. The P4 Python boundary/policy matrix passes 58/58. Batch-scanner and runner reachability pass 8/8. Exact P4.2a routing reports 59 changed paths, 36 P4-owned paths, zero unmatched files and zero route gaps.
+
 ## Open risks and remaining work
 
-- P4.1 still requires docs-only attestation A, exact-A verification and push.
-- P4.2 admission must add a persistent caller-to-action ledger so every retired legacy membership remains tied to a concrete canonical action invocation.
-- P4.2a must lock complete readiness/activation/presentation rollback keys, validate all patches before commit, publish observers after commit and fence deferred metadata by request identity.
 - The policy records eight exact locator-scoped non-state exclusions; future exclusions require equally narrow evidence.
 - Conservative dynamic/unsupported parameter discovery can create explicit migration friction; every new candidate remains fail-closed and must receive exact authority or a narrow proved exclusion.
+- Action-proof helper traversal remains the dominant local policy-tooling cost: `map_renderer.js` measures about 60.75 seconds and `scenario/chunk_runtime.js` about 7.4 seconds. Exact-context memoization requires a dedicated follow-up because helper output depends on alias state, parameter classifications, reachability and enclosing identity.
+- P4.2a still requires the clean checkpoint C and attestation A matrices: exact phase verification, Scenario resilience Playwright, dist drift and `verify:core`.
 - P4.4 requires fresh appearance/transport admission evidence before shared UI files are touched.
-- Browser, dist and performance lanes remain outside the production-zero P4.0 evidence scope.
+- Main-thread browser/performance/heavy-geo lanes outside the Scenario resilience acceptance case remain deferred to their owning phases.

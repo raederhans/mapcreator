@@ -8,7 +8,7 @@
 - Parent checkout: `C:\Users\raede\Desktop\dev\mapcreator`
 - Parent status on 2026-07-19: current `main@68a62e54` with user-owned deletions under selected `docs/archive/**` task shells plus `lessons learned.md`; P4 preserves every entry and performs all edits in the isolated worktree.
 - Durable consensus evidence exists in `.omx/plans/architect-review-global-state-action-ownership-p4.md` and `.omx/plans/critic-review-global-state-action-ownership-p4.md`; both final verdicts are `APPROVE` in Architect → Critic order.
-- Current phase: P4.1 docs-only attestation A; functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` is exact-C green.
+- Current phase: P4.2a scenario readiness/activation atomicity and caller-to-action proof; P4.1 attestation `bb4ee4d1cabd54288973ce944485063432fdaecc` is exact-A green and pushed.
 
 ## Decisions and deviations
 
@@ -36,16 +36,24 @@
 | 2026-07-19 | Docs-only attestation `f422e4c291b59e17f7d117b0518b6e222c4663e4` completed the same exact clean matrix and was pushed | P4.0 is closed. P4.1 begins with an explicit action delegation contract, one canonical Boot action module and behavior-preserving caller migration. |
 | 2026-07-19 | P4.1 functional checkpoint `8a01614fbe98f1ee0faf73f011ee1e065861d29e` completed its exact clean matrix | Boot/startup writes now delegate through `boot_actions.js`; Node 82/82, Python 37/37, policy, route 66/34/0/0, dist drift and `verify:core` 80/80 pass. The first core run exposed three stale P4.0-only Python assertions; the functional checkpoint includes their phase-aware repair and direct P4.1 execution route. |
 | 2026-07-19 | P4.2 admission review found legacy retirement could be proven by action membership without proving the old caller invokes that action | P4.2 begins with a production-zero caller-to-action edge ledger and P4.1 backfill before scenario authority is retired. |
+| 2026-07-19 | Caller-to-action ledger v1 now proves canonical named action imports and exact full-root target delegation | The 36 P4.1 retirements are backfilled at P4.2a; every later retirement requires a live semantic edge. Current v1 action export names remain compatibility API through P4 closeout. |
+| 2026-07-19 | P4.2a RED contracts lock externally unobservable prepare staging, complete transaction capture/commit/restore, post-commit observer publication and deferred metadata request fencing | Scenario mutations now flow through six canonical action modules while side-effect ordering remains in the scenario composition roots; palette materialization uses snapshot-restored transactional staging. |
+| 2026-07-20 | The checked-in P4.1 policy is the only progression authority; the dirty schema-v1 P4.2a snapshot contributes exactly 36 validated historical caller mappings during one-time bootstrap | Current action edges regenerate every ledger proof, and later schema-v2 rebuilds use the generated policy directly. |
+| 2026-07-20 | Strict alias diagnostics separated real state references from scanner identity churn and pure-reader duplication | Activation fallback resolves inside its action, rollback snapshots use registered read-only capture exports, request payloads cross as normalized scalars, and container fingerprints derive from stable state leaves. |
+| 2026-07-20 | Independent review reproduced same-target reuse invalidating the active apply epoch | Epoch allocation now occurs only for new or queued transactions; cache and same-target Promise reuse keep the active epoch and pass a focused 34-test runtime regression. |
+| 2026-07-20 | Exact P4.2a routing initially reported five gaps and the batch scanner fixture lacked standard runner reachability | The two production files and three policy tests now enter the exact sourceRefs; the batch fixture enters both policy and P4.2a Node runners; targeted routing and reachability are green. |
+| 2026-07-20 | Policy checking repeated the full repository AST scan after candidate discovery | Snapshot checking now reuses candidate inventories. Output remains byte-identical at SHA256 `7b9e65bd09e849c5c8376834f5085a00dba87327bcf8c130a951961f8b4a6f79`; measured time falls from 139.97 seconds to 75.15 seconds. |
+| 2026-07-20 | Audit reproduced latest-target loss in both queued and already-draining transitions | Returning to the active target clears a stale queue entry; cached active bundles are reusable only with no active apply, so an in-flight different target receives the final target as a fresh queued request. The focused 8/8 regression and complete 87/87 P4.2a Node matrix pass. |
 | 2026-07-19 | Developer priority requires appearance + transport platformization and serial shared-file integration | P4.4 admission will re-audit that lane; `index.html`, `css/style.css`, and `js/ui/toolbar.js` stay main-thread-only. |
 
 ## Live process ownership
 
 | Process | Owner | Log path | State |
 | --- | --- | --- | --- |
-| Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/` | not started |
-| P4 policy suite and generated reports | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.0 exact C/A PASS; P4.1 exact C PASS |
-| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.1 exact C Pages build and dist drift PASS at 927.20 MiB |
-| Performance gate | main integration owner | `.runtime/output/perf/` | not started |
+| Browser / Playwright / dev server | main integration owner | `.runtime/tests/playwright/p4/P4.2a/scenario-resilience/` | reserved for exact C/A after the functional checkpoint |
+| P4 policy suite and generated reports | `/root` main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/` | schema-2 policy rebuilt at 148 ledger entries; Node 87/87, Python 58/58 and route 59/36/0/0 pass |
+| Dist / Pages builder | main integration owner | `.runtime/reports/generated/p4-state-actions/` | P4.2a Pages build completed at 927.26 MiB; 12 changed source/mirror pairs have normalized byte parity; clean-checkpoint drift remains an exact-C gate |
+| Policy performance probe | main integration owner | `.runtime/reports/generated/p4-state-actions/P4.2a/performance/` | complete; snapshot output byte-identical and checker 1.86x faster |
 
 ## Handoff
 
@@ -53,4 +61,4 @@ P4 uses one active task directory. Phase facts, validation exits, artifact paths
 
 ## Next step
 
-Commit this docs-only P4.1 attestation A, execute the same exact clean matrix at A, push the branch, then begin the production-zero caller-to-action proof required for P4.2 admission.
+Collect the final independent review, create checkpoint C, then execute the exact C/A phase, Scenario resilience, dist-drift and core matrices.

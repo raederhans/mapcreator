@@ -157,8 +157,23 @@ function getCurrentScenarioApplyRequestId() {
   return Math.max(0, Number(runtimeState.currentScenarioApplyRequestId || 0));
 }
 
+function getCurrentScenarioApplyEpoch(scenarioId = "") {
+  const normalizedScenarioId = normalizeScenarioId(scenarioId);
+  if (!normalizedScenarioId) return 0;
+  return Math.max(
+    0,
+    Number(
+      runtimeState.renderTransactionDiagnostics
+        ?.scenarioApplyEpochByScenarioId
+        ?.[normalizedScenarioId]
+        || 0
+    )
+  );
+}
+
 function isScenarioApplyContextCurrent({
   scenarioId = "",
+  scenarioApplyEpoch = 0,
   scenarioApplyRequestId = 0,
   isScenarioApplyRequestCurrent = null,
 } = {}) {
@@ -167,6 +182,11 @@ function isScenarioApplyContextCurrent({
   }
   const normalizedScenarioId = normalizeScenarioId(scenarioId);
   if (normalizedScenarioId && normalizedScenarioId !== normalizeScenarioId(runtimeState.activeScenarioId)) {
+    return false;
+  }
+  const expectedApplyEpoch = Math.max(0, Number(scenarioApplyEpoch || 0));
+  const currentApplyEpoch = getCurrentScenarioApplyEpoch(normalizedScenarioId);
+  if (expectedApplyEpoch > 0 && currentApplyEpoch > 0 && expectedApplyEpoch !== currentApplyEpoch) {
     return false;
   }
   const expectedRequestId = Math.max(0, Number(scenarioApplyRequestId || 0));
@@ -467,7 +487,15 @@ function normalizeScenarioRuntimePoliticalMeta(meta) {
   return normalizeStartupBundleRuntimePoliticalMeta(meta);
 }
 
-function scheduleScenarioDeferredBundleMetadataLoad(bundle, { d3Client = globalThis.d3 } = {}) {
+function scheduleScenarioDeferredBundleMetadataLoad(
+  bundle,
+  {
+    d3Client = globalThis.d3,
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
+  } = {}
+) {
   if (!bundle?.manifest || bundle?.bundleLevel !== "full") {
     return;
   }
@@ -478,6 +506,19 @@ function scheduleScenarioDeferredBundleMetadataLoad(bundle, { d3Client = globalT
   if (!scenarioId || !d3Client || typeof d3Client.json !== "function") {
     return;
   }
+  const transactionScenarioApplyEpoch =
+    Math.max(0, Number(scenarioApplyEpoch || 0))
+    || getCurrentScenarioApplyEpoch(scenarioId);
+  const transactionScenarioApplyRequestId =
+    Math.max(0, Number(scenarioApplyRequestId || 0))
+    || getCurrentScenarioApplyRequestId();
+  const currentnessContext = {
+    scenarioId,
+    scenarioApplyEpoch: transactionScenarioApplyEpoch,
+    scenarioApplyRequestId: transactionScenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
+    reason: "scenario-deferred-metadata",
+  };
   bundle.deferredMetadataLoadPromise = new Promise((resolve) => {
     globalThis.setTimeout(async () => {
       const [releasableCatalogResult, districtGroupsResult] = await Promise.all([
@@ -516,22 +557,45 @@ function scheduleScenarioDeferredBundleMetadataLoad(bundle, { d3Client = globalT
           };
         }
       }
-      if (normalizeScenarioId(runtimeState.activeScenarioId) === scenarioId) {
-        applyDeferredScenarioMetadata(bundle, { scenarioId });
+      if (shouldContinueScenarioApplyContext(
+        currentnessContext,
+        "deferred-metadata-before-apply"
+      )) {
+        applyDeferredScenarioMetadata(bundle, {
+          scenarioId,
+          scenarioApplyEpoch: transactionScenarioApplyEpoch,
+          scenarioApplyRequestId: transactionScenarioApplyRequestId,
+          isScenarioApplyRequestCurrent,
+        });
       }
       resolve();
     }, 1200);
   });
 }
 
-function applyDeferredScenarioMetadata(bundle, { scenarioId = "" } = {}) {
+function applyDeferredScenarioMetadata(
+  bundle,
+  {
+    scenarioId = "",
+    scenarioApplyEpoch = 0,
+    scenarioApplyRequestId = 0,
+    isScenarioApplyRequestCurrent = null,
+  } = {}
+) {
   const normalizedScenarioId = normalizeScenarioId(
     scenarioId || bundle?.manifest?.scenario_id || bundle?.meta?.scenario_id
   );
-  if (
-    !normalizedScenarioId
-    || normalizeScenarioId(runtimeState.activeScenarioId) !== normalizedScenarioId
-  ) {
+  const currentnessContext = {
+    scenarioId: normalizedScenarioId,
+    scenarioApplyEpoch,
+    scenarioApplyRequestId,
+    isScenarioApplyRequestCurrent,
+    reason: "scenario-deferred-metadata",
+  };
+  if (!normalizedScenarioId || !shouldContinueScenarioApplyContext(
+    currentnessContext,
+    "deferred-metadata-commit"
+  )) {
     return false;
   }
   if (bundle.releasableCatalog) {
@@ -1245,5 +1309,6 @@ export {
   loadScenarioRegistry,
   enforceScenarioHydrationHealthGate,
   releaseScenarioAuditPayload,
+  scheduleScenarioDeferredBundleMetadataLoad,
   validateImportedScenarioBaseline,
 };

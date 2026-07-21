@@ -464,6 +464,11 @@ test("destructuring detection separates writes from state-reference escapes", ()
       },
       {
         operation: "unsupported",
+        key: "*",
+        reason: "state-alias-escape",
+      },
+      {
+        operation: "unsupported",
         key: "bootStatus",
         reason: "state-alias-escape",
       },
@@ -2222,13 +2227,15 @@ test("expression-bodied arrows report root and nested return escapes once", () =
 
 test("pure intrinsic reads require unshadowed global bindings", () => {
   const globals = scanModule(`
+    Array.from(${member("scenarioApplyPendingRequests")});
     Object.keys(${STATE_ROOT});
     Reflect.get(${STATE_ROOT}, "ready");
     String(${member("activeScenarioId")});
     Number(${member("scenarioDataGeneration")});
   `);
   const shadowed = scanModule(`
-    function inspect(Object, Reflect, String, Number) {
+    function inspect(Array, Object, Reflect, String, Number) {
+      Array.from(${member("scenarioApplyPendingRequests")});
       Object.keys(${STATE_ROOT});
       Reflect.get(${STATE_ROOT}, "ready");
       String(${member("activeScenarioId")});
@@ -2244,6 +2251,11 @@ test("pure intrinsic reads require unshadowed global bindings", () => {
       reason,
     })),
     [
+      {
+        operation: "unsupported",
+        key: "scenarioApplyPendingRequests",
+        reason: "state-alias-escape",
+      },
       { operation: "unsupported", key: "*", reason: "state-alias-escape" },
       { operation: "unsupported", key: "*", reason: "state-alias-escape" },
       {
@@ -2258,6 +2270,131 @@ test("pure intrinsic reads require unshadowed global bindings", () => {
       },
     ],
   );
+});
+
+test("unregistered intrinsic call paths remain fail-closed", () => {
+  const findings = scanModule(`
+    Object.prototype.hasOwnProperty.call(${STATE_ROOT}, "activeScenarioId");
+  `);
+
+  assert.deepEqual(
+    findings.map(({ operation, key, reason }) => ({
+      operation,
+      key,
+      reason,
+    })),
+    [
+      {
+        operation: "unsupported",
+        key: "*",
+        reason: "state-alias-escape",
+      },
+    ],
+  );
+});
+
+test("registered static intrinsic reads fail closed after local mutation", () => {
+  const fixtures = [
+    `
+      Array.from = consumeUnknown;
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Array = FakeArray;
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Object.hasOwn = consumeUnknown;
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      Object = FakeObject;
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      String = consumeUnknown;
+      String(${member("activeScenarioId")});
+    `,
+    `
+      Object.defineProperty(Array, "from", { value: consumeUnknown });
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Reflect.set(Object, "hasOwn", consumeUnknown);
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      ({ from: Array.from } = replacements);
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      globalThis.Array.from = consumeUnknown;
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Object.defineProperty(
+        globalThis,
+        "Array",
+        { value: FakeArray },
+      );
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Reflect.set(window, "Object", FakeObject);
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      const IntrinsicArray = Array;
+      IntrinsicArray.from = consumeUnknown;
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      const realm = globalThis;
+      realm.Object.hasOwn = consumeUnknown;
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      const define = Object.defineProperty;
+      define(Array, "from", { value: consumeUnknown });
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Object.assign(globalThis, { Array: FakeArray });
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      Object.defineProperties(globalThis, {
+        Object: { value: FakeObject },
+      });
+      Object.hasOwn(${STATE_ROOT}, "activeScenarioId");
+    `,
+    `
+      Object.assign(globalThis, replacements);
+      String(${member("activeScenarioId")});
+    `,
+    `
+      const { defineProperty } = Object;
+      defineProperty(Array, "from", { value: consumeUnknown });
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+    `
+      const { Array: IntrinsicArray } = globalThis;
+      IntrinsicArray.from = consumeUnknown;
+      Array.from(${member("scenarioApplyPendingRequests")});
+    `,
+  ];
+
+  for (const source of fixtures) {
+    assert.equal(
+      scanModule(source).some(
+        ({ operation, reason }) =>
+          operation === "unsupported"
+          && reason === "state-alias-escape",
+      ),
+      true,
+      source,
+    );
+  }
 });
 
 test("generic tracked receiver methods remain conservative", () => {

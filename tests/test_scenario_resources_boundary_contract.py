@@ -74,8 +74,31 @@ class ScenarioResourcesBoundaryContractTest(unittest.TestCase):
     def test_resources_module_keeps_runtime_state_write_helpers(self):
         content = SCENARIO_RESOURCES.read_text(encoding="utf-8")
 
-        self.assertIn("function applyDeferredScenarioMetadata(bundle, { scenarioId = \"\" } = {}) {", content)
-        self.assertIn("applyDeferredScenarioMetadata(bundle, { scenarioId });", content)
+        self.assertRegex(
+            content,
+            re.compile(
+                r"function applyDeferredScenarioMetadata\(\s*"
+                r"bundle,\s*\{\s*"
+                r"scenarioId = \"\",\s*"
+                r"scenarioApplyEpoch = 0,\s*"
+                r"scenarioApplyRequestId = 0,\s*"
+                r"isScenarioApplyRequestCurrent = null,\s*"
+                r"\} = \{\}\s*\)",
+                re.DOTALL,
+            ),
+        )
+        self.assertRegex(
+            content,
+            re.compile(
+                r"applyDeferredScenarioMetadata\(bundle,\s*\{\s*"
+                r"scenarioId,\s*"
+                r"scenarioApplyEpoch:\s*transactionScenarioApplyEpoch,\s*"
+                r"scenarioApplyRequestId:\s*transactionScenarioApplyRequestId,\s*"
+                r"isScenarioApplyRequestCurrent,\s*"
+                r"\}\);",
+                re.DOTALL,
+            ),
+        )
         self.assertIn("function applyScenarioOptionalLayerState(", content)
         self.assertIn("scenarioApplyRequestId = 0", content)
         self.assertIn("isScenarioApplyRequestCurrent = null", content)

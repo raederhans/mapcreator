@@ -535,8 +535,16 @@ class ScenarioChunkRefreshContractsTest(unittest.TestCase):
                 re.S,
             ),
         )
-        self.assertIn("const detailPromoted = (startupReadonly || supportsChunkedPoliticalRuntime)", self.scenario_apply_pipeline_source)
-        self.assertIn("await ensureScenarioDetailTopologyLoaded({ applyMapData: false });", self.scenario_apply_pipeline_source)
+        self.assertRegex(
+            self.scenario_apply_pipeline_source,
+            re.compile(
+                r"async function stageScenarioReadinessPatch\([\s\S]*?"
+                r"if \(startupReadonly \|\| supportsChunkedPoliticalRuntime\) \{[\s\S]*?"
+                r"detailPromoted: false,[\s\S]*?"
+                r"await prepareScenarioDetailTopologyState\(\);",
+                re.S,
+            ),
+        )
         readonly_unlock_source = self.deferred_detail_promotion_source[
             self.deferred_detail_promotion_source.index("async function unlockStartupReadonlyWithDetail("):
             self.deferred_detail_promotion_source.index("function scheduleDeferredDetailPromotion(", self.deferred_detail_promotion_source.index("async function unlockStartupReadonlyWithDetail("))

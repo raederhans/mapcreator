@@ -9,7 +9,9 @@ import {
 import { buildNodeRoutes } from "../tools/test_route_registry.mjs";
 
 const EXPECTED_DEFAULT_SUITES = Object.freeze([
+  "tests/state_action_delegation_edges_behavior.test.mjs",
   "tests/state_writer_policy_behavior.test.mjs",
+  "tests/state_writer_policy_batch_scan_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_manifest_behavior.test.mjs",
@@ -40,6 +42,18 @@ test("explicit focused runner requests remain isolated from the default suite", 
       "tests/state_writer_policy_behavior.test.mjs",
     ]),
     ["tests/state_writer_policy_behavior.test.mjs"],
+  );
+});
+
+test("exact P4.2a Node gate reaches the batch scanner regression suite", () => {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  const exactPhaseCommand = packageJson.scripts["test:node:p4:p4-2a"];
+
+  assert.ok(
+    exactPhaseCommand
+      .split(/\s+/)
+      .includes("tests/state_writer_policy_batch_scan_behavior.test.mjs"),
+    exactPhaseCommand,
   );
 });
 

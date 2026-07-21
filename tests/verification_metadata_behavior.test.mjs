@@ -34,7 +34,9 @@ const P4_POLICY_SOURCE_REFS = Object.freeze([
   "tools/run_p4_state_writer_policy_tests.mjs",
   "tools/run_p4_state_write_boundary.mjs",
   "tools/check_p4_state_action_routes.mjs",
+  "tests/state_action_delegation_edges_behavior.test.mjs",
   "tests/state_writer_policy_behavior.test.mjs",
+  "tests/state_writer_policy_batch_scan_behavior.test.mjs",
   "tests/state_writer_scanner_soundness_behavior.test.mjs",
   "tests/state_writer_policy_soundness_behavior.test.mjs",
   "tests/p4_state_writer_runner_reachability_behavior.test.mjs",
@@ -192,6 +194,51 @@ test("P4.1 boot actions own their routes and exact phase verification stays out 
       entry.commandRef === exactPhaseEntry.commandRef
     ));
     assert.ok(command, `${sourceRef} should select the P4.1 exact phase command`);
+    assert.ok(command.domains.includes("state-ownership"));
+    assert.equal(command.domains.includes("renderer-runtime"), false);
+  }
+});
+
+test("P4.2a scenario actions own their routes and exact phase verification stays out of verify-core", () => {
+  const actionEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-2a-scenario-actions"
+  ));
+  const boundaryEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "verify-core:p4:p4-2a-scenario-boundary"
+  ));
+  const exactPhaseEntry = VERIFICATION_DOMAINS.find((entry) => (
+    entry.id === "p4:p4-2a-exact-phase"
+  ));
+
+  assert.ok(actionEntry);
+  assert.ok(boundaryEntry);
+  assert.ok(exactPhaseEntry);
+
+  for (const entry of [actionEntry, boundaryEntry, exactPhaseEntry]) {
+    assert.equal(entry.domain, "state-ownership");
+    assert.equal(entry.ownerHint, "state-ownership");
+    assert.equal(entry.executionOwner, "child-safe");
+    assert.equal(entry.supervisorDomain, "state-ownership");
+    assert.equal(entry.routeRegistry, true);
+    assert.ok(buildVerificationMetadataRoutes().some((route) => route.id === entry.id));
+  }
+
+  assert.equal(actionEntry.verifyCoreDefaultGroup, "scenario-project-chunk");
+  assert.equal(boundaryEntry.verifyCoreDefaultGroup, "scenario-project-chunk");
+  assert.equal(exactPhaseEntry.verifyCoreDefaultGroup, undefined);
+
+  const defaultCommandRefs = commandRefsFromGroups(buildVerifyCoreDefaultGroups());
+  assert.ok(defaultCommandRefs.includes(actionEntry.commandRef));
+  assert.ok(defaultCommandRefs.includes(boundaryEntry.commandRef));
+  assert.equal(defaultCommandRefs.includes(exactPhaseEntry.commandRef), false);
+
+  for (const sourceRef of exactPhaseEntry.sourceRefs) {
+    const report = buildRecommendation([sourceRef]);
+    assert.equal(report.unmatchedChangedFiles.length, 0, `${sourceRef} should be routed`);
+    const command = report.recommendedCommands.find((entry) => (
+      entry.commandRef === exactPhaseEntry.commandRef
+    ));
+    assert.ok(command, `${sourceRef} should select the P4.2a exact phase command`);
     assert.ok(command.domains.includes("state-ownership"));
     assert.equal(command.domains.includes("renderer-runtime"), false);
   }

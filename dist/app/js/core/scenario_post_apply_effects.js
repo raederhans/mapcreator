@@ -24,6 +24,9 @@ import {
 import {
   recordRenderTransactionSnapshot,
 } from "./renderer/render_transaction_diagnostics.js";
+import {
+  syncResolvedDefaultCountryPalette,
+} from "./palette_manager.js";
 import { refreshScenarioShellOverlays } from "./scenario_shell_overlay.js";
 import { syncCountryUi } from "./scenario_ui_sync.js";
 import { requestRender } from "./render_boundary.js";
@@ -43,8 +46,18 @@ function runPaletteAndToolbarRefreshCallbacks() {
   emitStateBusEvent(STATE_BUS_EVENTS.UPDATE_DYNAMIC_BORDER_STATUS);
 }
 
-function runPostScenarioUiReplay({ full = true, renderNow = false } = {}) {
+function publishScenarioPaletteAndToolbarState({
+  overwriteCountryPalette = false,
+} = {}) {
+  const resolvedDefaults = syncResolvedDefaultCountryPalette({
+    overwriteCountryPalette,
+  });
   runPaletteAndToolbarRefreshCallbacks();
+  return resolvedDefaults;
+}
+
+function runPostScenarioUiReplay({ full = true, renderNow = false } = {}) {
+  publishScenarioPaletteAndToolbarState();
   if (full) {
     syncCountryUi({ renderNow });
   }
@@ -765,7 +778,7 @@ function runPostScenarioClearEffects({ renderNow = false } = {}) {
 }
 
 function runPostRollbackRestoreEffects({ renderNow = false } = {}) {
-  runPaletteAndToolbarRefreshCallbacks();
+  publishScenarioPaletteAndToolbarState();
   setMapData({ refitProjection: false, resetZoom: false });
   rebuildPresetState();
   refreshScenarioOpeningOwnerBorders({ renderNow: false, reason: "scenario-rollback" });
@@ -775,6 +788,7 @@ function runPostRollbackRestoreEffects({ renderNow = false } = {}) {
 }
 
 export {
+  publishScenarioPaletteAndToolbarState,
   runPostScenarioUiReplay,
   runPostRollbackRestoreEffects,
   runPostScenarioApplyEffects,
