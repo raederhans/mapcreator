@@ -95,23 +95,30 @@ export function discoverChangedFiles({
   return [...discovered].sort();
 }
 
-export function commandToProcess(commandRef) {
+export function commandToProcess(commandRef, platform = process.platform) {
   const normalized = String(commandRef || "").trim();
   if (!normalized) return null;
   if (/^(node|python|npm)\b/.test(normalized)) {
     const tokens = normalized.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-    if (tokens[0] === "npm" && process.platform === "win32") {
+    const args = tokens.slice(1).map((token) => token.replace(/^"(.*)"$/, "$1"));
+    if (tokens[0] === "python" && platform === "win32") {
+      return {
+        bin: process.execPath,
+        args: ["tools/run_python.mjs", ...args],
+      };
+    }
+    if (tokens[0] === "npm" && platform === "win32") {
       return {
         bin: "cmd.exe",
-        args: ["/d", "/s", "/c", "npm", ...tokens.slice(1).map((token) => token.replace(/^\"(.*)\"$/, "$1"))],
+        args: ["/d", "/s", "/c", "npm", ...args],
       };
     }
     return {
       bin: tokens[0],
-      args: tokens.slice(1).map((token) => token.replace(/^"(.*)"$/, "$1")),
+      args,
     };
   }
-  if (process.platform === "win32") {
+  if (platform === "win32") {
     return {
       bin: "cmd.exe",
       args: ["/d", "/s", "/c", "npm", "run", normalized],

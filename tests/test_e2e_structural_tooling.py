@@ -370,6 +370,42 @@ if (files[0] !== 'js/ui/sidebar.js' || files[1] !== 'tests/e2e/dev/tno_ready_sta
         result = run_command("node", "--input-type=module", "-e", script)
         self.assert_command_ok(result)
 
+    def test_adaptive_runner_uses_project_python_wrapper_on_windows(self) -> None:
+        script = """
+import process from 'node:process';
+const { commandToProcess } = await import('./tools/run_adaptive_tests.mjs');
+const cases = [
+  {
+    commandRef: 'python -m unittest tests.test_e2e_structural_tooling -q',
+    args: ['-m', 'unittest', 'tests.test_e2e_structural_tooling', '-q'],
+  },
+  {
+    commandRef: 'python tools/check_state_writer_policy.py --report "C:/Temp Path/report.json"',
+    args: ['tools/check_state_writer_policy.py', '--report', 'C:/Temp Path/report.json'],
+  },
+  {
+    commandRef: 'python -m pytest "tests/path with spaces.py" -q',
+    args: ['-m', 'pytest', 'tests/path with spaces.py', '-q'],
+  },
+];
+for (const testCase of cases) {
+  const windowsCommand = commandToProcess(testCase.commandRef, 'win32');
+  const expectedWindowsCommand = {
+    bin: process.execPath,
+    args: ['tools/run_python.mjs', ...testCase.args],
+  };
+  if (JSON.stringify(windowsCommand) !== JSON.stringify(expectedWindowsCommand)) {
+    throw new Error(`unexpected Windows Python command: ${JSON.stringify(windowsCommand)}`);
+  }
+  const linuxCommand = commandToProcess(testCase.commandRef, 'linux');
+  if (JSON.stringify(linuxCommand) !== JSON.stringify({ bin: 'python', args: testCase.args })) {
+    throw new Error(`unexpected Linux Python command: ${JSON.stringify(linuxCommand)}`);
+  }
+}
+"""
+        result = run_command("node", "--input-type=module", "-e", script)
+        self.assert_command_ok(result)
+
     def test_adaptive_execute_plan_blocks_main_thread_by_default(self) -> None:
         script = """
 const { buildExecutionPlan } = await import('./tools/run_adaptive_tests.mjs');
