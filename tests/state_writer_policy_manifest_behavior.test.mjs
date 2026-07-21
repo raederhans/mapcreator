@@ -3322,7 +3322,7 @@ test("P4.2a bootstrap seed selects and regenerates the current action edge", () 
   );
 });
 
-test("same-phase policy rebuild refreshes exact caller-action observation coordinates", () => {
+test("same-phase policy rebuild preserves byte offsets and refreshes stable caller evidence", () => {
   const entry = createCallerActionLedgerEntry(0);
   const initialEdge = createActionDelegationObservation(entry);
   const [normalizedInitialEdge] =
@@ -3364,8 +3364,8 @@ test("same-phase policy rebuild refreshes exact caller-action observation coordi
     },
     {
       callerBindingId: movedEdge.callerBindingId,
-      start: movedEdge.start,
-      end: movedEdge.end,
+      start: entry.start,
+      end: entry.end,
       line: movedEdge.line,
       column: movedEdge.column,
       sourceFingerprint: movedEdge.sourceFingerprint,
@@ -3456,6 +3456,24 @@ test("policy snapshot requires the retired caller to reach its registered action
         && retiredMembershipIdentity === entry.retiredMembershipIdentity,
     ),
     JSON.stringify(missingEdge.violations, null, 2),
+  );
+
+  const shiftedOffsets = validateStateWriterPolicySnapshot({
+    policy,
+    legacyAllowlistPaths: [],
+    scans,
+    actionDelegations: [
+      createActionDelegationObservation(entry, {
+        start: entry.start + 20,
+        end: entry.end + 20,
+      }),
+    ],
+  });
+  assert.ok(
+    !shiftedOffsets.violations.some(
+      ({ code }) => code === "caller-action-ledger-observation-mismatch",
+    ),
+    JSON.stringify(shiftedOffsets.violations, null, 2),
   );
 
   const wrongBinding = validateStateWriterPolicySnapshot({

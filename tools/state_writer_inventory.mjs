@@ -22,6 +22,10 @@ export const DERIVED_ALIAS_TAINT_MODES = Object.freeze({
   LEGACY_BASELINE: "legacy-baseline",
 });
 
+export function normalizeJavaScriptSource(source = "") {
+  return String(source).replace(/\r\n?/g, "\n");
+}
+
 export function normalizeDerivedAliasTaintMode(
   value = DERIVED_ALIAS_TAINT_MODES.STRICT,
 ) {
@@ -781,7 +785,7 @@ function buildAstAnalysis(ast) {
 let lastJavaScriptAnalysisCache = null;
 
 function parseAndAnalyzeJavaScript(source = "") {
-  const input = String(source);
+  const input = normalizeJavaScriptSource(source);
   if (lastJavaScriptAnalysisCache?.source === input) {
     return lastJavaScriptAnalysisCache.result;
   }
@@ -4552,7 +4556,8 @@ export function discoverFunctionParameterBindings(
   source = "",
   { parameterNames = DEFAULT_PARAMETER_NAMES } = {},
 ) {
-  const { parsed, analysis } = parseAndAnalyzeJavaScript(source);
+  const normalizedSource = normalizeJavaScriptSource(source);
+  const { parsed, analysis } = parseAndAnalyzeJavaScript(normalizedSource);
   if (!parsed.ast) {
     return {
       bindings: [],
@@ -4604,10 +4609,11 @@ export function scanStateMutationInventory(
     analysisInstrumentation = null,
   } = {},
 ) {
+  const normalizedSource = normalizeJavaScriptSource(source);
   const normalizedDerivedAliasTaintMode =
     normalizeDerivedAliasTaintMode(derivedAliasTaintMode);
   const normalizedBindings = normalizeBindings(bindings);
-  const { parsed, analysis } = parseAndAnalyzeJavaScript(source);
+  const { parsed, analysis } = parseAndAnalyzeJavaScript(normalizedSource);
   if (!parsed.ast) {
     return {
       findings: [
@@ -4628,7 +4634,7 @@ export function scanStateMutationInventory(
         resolution,
         {
           filePath,
-          source,
+          source: normalizedSource,
           derivedAliasTaintMode:
             normalizedDerivedAliasTaintMode,
           analysisTraversalMode,

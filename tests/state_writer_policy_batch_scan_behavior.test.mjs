@@ -174,6 +174,22 @@ test("batch binding inventory is byte-equivalent to legacy single-binding scans"
   );
 });
 
+test("state writer inventory is stable across LF and CRLF checkouts", () => {
+  const options = {
+    filePath: FILE_PATH,
+    bindings: [MODULE_BINDING, PARAMETER_BINDING].map(toScannerBinding),
+    derivedAliasTaintMode: DERIVED_ALIAS_TAINT_MODES.STRICT,
+  };
+
+  const lfInventory = scanStateMutationInventory(SOURCE, options);
+  const crlfInventory = scanStateMutationInventory(
+    SOURCE.replaceAll("\n", "\r\n"),
+    options,
+  );
+
+  assert.deepEqual(crlfInventory, lfInventory);
+});
+
 test("batch binding inventory invokes the scanner once for all scannable bindings", () => {
   const calls = [];
   const scanner = (source, options) => {

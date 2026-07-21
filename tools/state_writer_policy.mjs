@@ -2571,8 +2571,6 @@ export function validateStateWriterPolicySnapshot({
     const expectedExactObservation = {
       ...expectedSemanticObservation,
       callerBindingId: entry.callerBindingId,
-      start: entry.start,
-      end: entry.end,
       line: entry.line,
       column: entry.column,
       sourceFingerprint: entry.sourceFingerprint,
@@ -2580,8 +2578,6 @@ export function validateStateWriterPolicySnapshot({
     const actualExactObservation = {
       ...actualSemanticObservation,
       callerBindingId: observed.callerBindingId,
-      start: observed.start,
-      end: observed.end,
       line: observed.line,
       column: observed.column,
       sourceFingerprint: observed.sourceFingerprint,

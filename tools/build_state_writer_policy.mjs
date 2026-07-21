@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   DERIVED_ALIAS_TAINT_MODES,
   discoverFunctionParameterBindings,
+  normalizeJavaScriptSource,
   normalizeDerivedAliasTaintMode,
   scanStateMutationInventory,
   scanStateMutations,
@@ -1697,8 +1698,7 @@ export function buildCallerToActionLedger({
     }
     Object.assign(entry, {
       callerBindingId: observed.callerBindingId,
-      start: observed.start,
-      end: observed.end,
+      // Preserve recorded byte offsets because checkout line endings can shift them.
       line: observed.line,
       column: observed.column,
       sourceFingerprint: observed.sourceFingerprint,
@@ -3148,11 +3148,11 @@ function buildBindingDiscoveryDiagnosticInventory(
 }
 
 function withStateWriterFindingSourceFingerprint(source, finding) {
+  const normalizedSource = normalizeJavaScriptSource(source);
   const start = Math.max(0, Number(finding.start || 0));
   const end = Math.max(start, Number(finding.end || start));
-  const sourceSlice = String(source || "")
+  const sourceSlice = normalizedSource
     .slice(start, end)
-    .replaceAll("\r\n", "\n")
     .trim();
   return {
     ...finding,
@@ -3755,7 +3755,9 @@ async function discoverScannedCandidateBindings(
     if (!(await fileExists(absolutePath))) {
       continue;
     }
-    const source = await fs.readFile(absolutePath, "utf8");
+    const source = normalizeJavaScriptSource(
+      await fs.readFile(absolutePath, "utf8"),
+    );
     const surface = isTestPath(relativePath) ? "test" : "production";
     const derivedAliasTaintMode =
       derivedAliasTaintModeManifest.modeByPath[relativePath];
