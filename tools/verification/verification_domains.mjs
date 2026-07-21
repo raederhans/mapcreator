@@ -637,6 +637,7 @@ export const VERIFICATION_DOMAINS = Object.freeze([
       "tools/build_state_writer_policy.mjs",
       "tools/check_state_writer_policy.mjs",
       "tools/check_p4_state_action_routes.mjs",
+      "tools/select_verification_targets.mjs",
       "tools/run_p4_phase_verification.mjs",
       "tools/run_p4_state_writer_policy_tests.mjs",
       "tests/state_action_delegation_edges_behavior.test.mjs",

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { buildRecommendation } from "../tools/select_verification_targets.mjs";
+import { buildRouteIndex } from "../tools/test_route_registry.mjs";
 import {
   P4_PHASE_EXPECTED_COMMANDS,
   buildP4StateActionRouteReport,
@@ -187,6 +189,55 @@ test("direct state-ownership route with the expected phase command passes", () =
   ]);
 });
 
+test("historical owner routes stay direct while the selector upgrades execution to the current phase", () => {
+  const changedFile = "js/core/state/actions/boot_actions.js";
+  const routes = buildRouteIndex();
+  const recommendation = buildRecommendation([changedFile], routes);
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.2a",
+    changedFiles: [changedFile],
+    recommendation,
+    routes,
+  });
+
+  assert.equal(report.verdict, "pass");
+  assert.ok(report.files[0].directStateOwnershipRecommendations.length > 0);
+  assert.deepEqual(report.files[0].matchedExpectedPhaseCommands, ["verify:p4:p4-2a"]);
+  assert.equal(
+    report.files[0].directStateOwnershipRecommendations.some((route) => (
+      route.commandRef === "verify:p4:p4-2a"
+    )),
+    false,
+  );
+});
+
+test("the current selector control plane has zero P4.2a route gaps", () => {
+  const changedFiles = [
+    "tools/select_verification_targets.mjs",
+    "tools/check_p4_state_action_routes.mjs",
+    "tools/run_adaptive_tests.mjs",
+    "tools/verification/verification_domains.mjs",
+    "tests/scenario_transaction_rollback_actions_behavior.test.mjs",
+    "tests/verification_metadata_behavior.test.mjs",
+    "tests/p4_state_action_routes_behavior.test.mjs",
+    "tests/test_e2e_structural_tooling.py",
+    "docs/active/state-action-ownership-p4-20260719/context.md",
+    "docs/active/state-action-ownership-p4-20260719/task.md",
+  ];
+  const routes = buildRouteIndex();
+  const recommendation = buildRecommendation(changedFiles, routes);
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.2a",
+    changedFiles,
+    recommendation,
+    routes,
+  });
+
+  assert.equal(report.verdict, "pass");
+  assert.deepEqual(report.routeGaps, []);
+  assert.deepEqual(report.unmatchedChangedFiles, []);
+});
+
 test("generic selector-only coverage is rejected for P4-owned files", () => {
   const genericRoute = createRoute({
     id: "infra:verification-selector",
@@ -243,6 +294,40 @@ test("a direct state-ownership route with only another phase command fails", () 
     report.routeGaps.map((gap) => gap.code),
     ["missing-expected-phase-command"],
   );
+});
+
+test("the current phase command must remain in the state-ownership domain", () => {
+  const changedFile = "js/core/state/actions/boot_actions.js";
+  const directRoute = createRoute({
+    id: "verify-core:p4:p4-1-boot-actions",
+    commandRef: "test:node:p4:p4-1",
+    sourceRef: changedFile,
+  });
+  const currentRoute = createRoute({
+    id: "p4:p4-2a-exact-phase",
+    commandRef: "verify:p4:p4-2a",
+    sourceRef: "docs/active/state-action-ownership-p4-20260719",
+  });
+  const recommendation = createRecommendation({ changedFile, route: directRoute });
+  recommendation.matchedByFile[0].recommendedCommands.push({
+    commandRef: currentRoute.commandRef,
+    domains: ["test-routing"],
+    ownerHints: ["test-infra"],
+    resourceLocks: [],
+    executionOwners: ["child-safe"],
+    routeIds: [currentRoute.id],
+    expandedSpecs: [],
+    guidance: {},
+  });
+  const report = buildP4StateActionRouteReport({
+    phase: "P4.2a",
+    changedFiles: [changedFile],
+    recommendation,
+    routes: [directRoute, currentRoute],
+  });
+
+  assert.equal(report.verdict, "fail");
+  assert.deepEqual(report.routeGaps.map((gap) => gap.code), ["missing-expected-phase-command"]);
 });
 
 test("selector unmatched files fail even outside the P4-owned path set", () => {

@@ -220,6 +220,19 @@ test("shared P4 control files select only the policy current exact phase gate", 
     ),
     /No exact verification route is registered for current P4 phase P4\.2a/,
   );
+
+  const renamedHistoricalRoutes = buildRouteIndex().map((route) => (
+    route.id === "p4:p4-1-exact-phase"
+      ? Object.freeze({ ...route, id: "p4:historical-boot-exact" })
+      : route
+  ));
+  for (const sourceRef of [...changedFiles, "js/core/state/actions/boot_actions.js"]) {
+    const renamedReport = buildRecommendation([sourceRef], renamedHistoricalRoutes);
+    const renamedExactCommands = renamedReport.recommendedCommands
+      .map((entry) => entry.commandRef)
+      .filter((commandRef) => commandRef.startsWith("verify:p4:p4-"));
+    assert.deepEqual(renamedExactCommands, ["verify:p4:p4-2a"]);
+  }
 });
 
 test("P4.2a scenario actions own their routes and exact phase verification stays out of verify-core", () => {

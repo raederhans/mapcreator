@@ -178,6 +178,14 @@ function routeWasRecommended(route, fileRecommendation) {
   ));
 }
 
+function recommendedStateOwnershipCommands(fileRecommendation) {
+  return [...new Set(
+    (fileRecommendation.recommendedCommands || [])
+      .filter((entry) => (entry.domains || []).includes("state-ownership"))
+      .map((entry) => entry.commandRef),
+  )].sort();
+}
+
 function toDirectRecommendation(route) {
   return {
     routeId: route.id,
@@ -232,9 +240,9 @@ export function buildP4StateActionRouteReport({
       ? directStateOwnershipRoutesForFile(routes || [], changedFile)
       : [];
     const recommendedDirectRoutes = directRoutes.filter((route) => routeWasRecommended(route, selectorEntry));
+    const stateOwnershipCommands = recommendedStateOwnershipCommands(selectorEntry);
     const matchedExpectedPhaseCommands = [...new Set(
-      recommendedDirectRoutes
-        .map((route) => route.commandRef)
+      stateOwnershipCommands
         .filter((commandRef) => expectedPhaseCommands.includes(commandRef)),
     )].sort();
     const fileGaps = [];
@@ -263,6 +271,7 @@ export function buildP4StateActionRouteReport({
         "The direct state-ownership recommendation does not include an accepted command for this phase.",
         {
           recommendedDirectCommands: recommendedDirectRoutes.map((route) => route.commandRef).sort(),
+          recommendedStateOwnershipCommands: stateOwnershipCommands,
           expectedPhaseCommands,
         },
       ));

@@ -8,7 +8,7 @@ import { buildRouteIndex, summarizeRoutes, validateRouteIndex, toRepoPath } from
 const REPO_ROOT = process.cwd();
 const IMPORT_GRAPH_PATH = path.join(REPO_ROOT, "tests", "e2e", "test-import-graph.json");
 const P4_STATE_WRITER_POLICY_PATH = path.join(REPO_ROOT, "tools", "state_writer_policy.json");
-const P4_EXACT_PHASE_ROUTE_PATTERN = /^p4:p4-(\d+)([a-z]?)-exact-phase$/;
+const P4_EXACT_PHASE_COMMAND_PATTERN = /^verify:p4:p4-(\d+)([a-z]?)$/;
 const BOOTSTRAP_FALLBACK_ROUTE_IDS = new Set([
   "e2e:tests/e2e/city_label_i18n_redraw.spec.js",
   "e2e:tests/e2e/startup_bundle_recovery_contract.spec.js",
@@ -91,7 +91,7 @@ function routeSourceRefs(route) {
 }
 
 function p4ExactPhaseForRoute(route) {
-  const match = P4_EXACT_PHASE_ROUTE_PATTERN.exec(String(route?.id || ""));
+  const match = P4_EXACT_PHASE_COMMAND_PATTERN.exec(String(route?.commandRef || ""));
   if (!match) return null;
   return normalizeP4StateActionPhase(`P4.${match[1]}${match[2]}`);
 }

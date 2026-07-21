@@ -105,7 +105,8 @@ function extractFrozenStringArray(source, constantName) {
 }
 
 function extractRollbackPatchValueKeys(source) {
-  const match = source.match(
+  const normalizedSource = source.replace(/\r\n?/g, "\n");
+  const match = normalizedSource.match(
     /function buildScenarioTransactionRollbackStatePatch\(snapshot\) \{[\s\S]*?const values = \{\n(?<body>[\s\S]*?)\n  \};\n  return \{/,
   );
   assert.ok(match?.groups?.body, "rollback patch values object must remain statically discoverable");
@@ -280,6 +281,15 @@ test("scenario rollback authority key sets are pairwise disjoint and cover the e
       ),
     ),
     sorted(authorityKeys),
+  );
+});
+
+test("scenario rollback patch discovery is portable across line endings", () => {
+  const lfSource = ROLLBACK_SOURCE.replace(/\r\n?/g, "\n");
+  const crlfSource = lfSource.replaceAll("\n", "\r\n");
+  assert.deepEqual(
+    extractRollbackPatchValueKeys(crlfSource),
+    extractRollbackPatchValueKeys(lfSource),
   );
 });
 
